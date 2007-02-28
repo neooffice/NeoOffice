@@ -334,41 +334,20 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	// require a new print job.
 	if ( bNewJobData )
 	{
-		Paper nOldPaperFormat = mpVCLPageFormat->getPaperType();
-		long nOldPaperWidth;
-		long nOldPaperHeight;
-		if ( nOldPaperFormat == PAPER_USER )
-		{
-			Size aSize( mpVCLPageFormat->getPageSize() );
-			Size aResolution( mpVCLPageFormat->getTextResolution() );
-			nOldPaperWidth = aSize.Width() * 2540 / aResolution.Width();
-			nOldPaperHeight = aSize.Height() * 2540 / aResolution.Height();
-		}
-		else
-		{
-			nOldPaperWidth = 0;
-			nOldPaperHeight = 0;
-		}
+		Size aOldSize( mpVCLPageFormat->getPageSize() );
+		Size aOldResolution( mpVCLPageFormat->getTextResolution() );
+		long nOldPaperWidth = aOldSize.Width() * 2540 / aOldResolution.Width();
+		long nOldPaperHeight = aOldSize.Height() * 2540 / aOldResolution.Height();
 
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
 
-		Paper nPaperFormat = mpVCLPageFormat->getPaperType();
-		long nPaperWidth;
-		long nPaperHeight;
-		if ( nPaperFormat == PAPER_USER )
-		{
-			Size aSize( mpVCLPageFormat->getPageSize() );
-			Size aResolution( mpVCLPageFormat->getTextResolution() );
-			nPaperWidth = aSize.Width() * 2540 / aResolution.Width();
-			nPaperHeight = aSize.Height() * 2540 / aResolution.Height();
-		}
-		else
-		{
-			nPaperWidth = 0;
-			nPaperHeight = 0;
-		}
+		Size aSize( mpVCLPageFormat->getPageSize() );
+		Size aResolution( mpVCLPageFormat->getTextResolution() );
+		long nPaperWidth = aSize.Width() * 2540 / aResolution.Width();
+		long nPaperHeight = aSize.Height() * 2540 / aResolution.Height();
 
-		if ( nPaperFormat != nOldPaperFormat || nPaperWidth != nOldPaperWidth || nPaperHeight != nOldPaperHeight )
+		bool bSamePaper = ( ( nPaperWidth == nOldPaperWidth && nPaperHeight == nOldPaperHeight ) || ( nPaperWidth == nOldPaperHeight && nPaperHeight == nOldPaperWidth ) );
+		if ( !bSamePaper )
 		{
 			EndJob();
 			delete mpVCLPrintJob;

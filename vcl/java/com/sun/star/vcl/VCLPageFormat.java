@@ -346,7 +346,8 @@ public final class VCLPageFormat {
 
 		pageFormat = job.defaultPage();
 
-		pageFormat.setOrientation(oldOrientation);
+		// Fix bug 2202 by using new native printer orientation
+		pageFormat.setOrientation(paperOrientation);
 
 	}
 
