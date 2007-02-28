@@ -485,22 +485,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		gettimeofday( &aCurrentTime, NULL );
 		if ( aCurrentTime >= pSalData->maTimeout )
 		{
-			::std::list< JavaSalFrame* >::const_iterator it;
-			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->mbVisible )
-					(*it)->mpVCLFrame->enableFlushing( sal_False );
-			}
+			NSApplication_enableFlushing( FALSE );
 
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
 
-			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->mbVisible )
-					(*it)->mpVCLFrame->enableFlushing( sal_True );
-			}
+			NSApplication_enableFlushing( TRUE );
 		}
 	}
 
@@ -552,9 +543,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			nCount = 0;
 		}
 
+		NSApplication_enableFlushing( FALSE );
+
 		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
+
+		NSApplication_enableFlushing( TRUE );
 
 		switch ( nID )
 		{

@@ -70,6 +70,63 @@
 
 @end
 
+@interface EnableFlushing : NSObject
+{
+	BOOL				mbEnable;
+}
+- (void)enableFlushing:(id)pObject;
+- (id)initWithEnable:(BOOL)bEnable;
+@end
+
+@implementation EnableFlushing
+
+- (void)enableFlushing:(id)pObject
+{
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSArray *pArray = [pApp windows];
+		if ( pArray )
+		{
+			int nCount = [pArray count];
+			int i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSWindow *pWindow = (NSWindow *)[pArray objectAtIndex:i];
+				if ( pWindow && [pWindow isVisible] && [pWindow isFlushWindowDisabled] != mbEnable )
+				{
+					if ( mbEnable )
+						[pWindow enableFlushWindow];
+					else
+						[pWindow disableFlushWindow];
+				}
+ 			}
+ 		}
+	}
+}
+
+- (id)initWithEnable:(BOOL)bEnable;
+{
+	[super init];
+ 
+	mbEnable = bEnable;
+ 
+	return self;
+}
+
+@end
+
+void NSApplication_enableFlushing( BOOL bEnable )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	EnableFlushing *pEnableFlushing = [[EnableFlushing alloc] initWithEnable:bEnable];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pEnableFlushing performSelectorOnMainThread:@selector(enableFlushing:) withObject:pEnableFlushing waitUntilDone:NO modes:pModes];
+
+	[pPool release];
+}
+
 id NSApplication_getModalWindow()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
