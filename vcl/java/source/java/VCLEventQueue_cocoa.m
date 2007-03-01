@@ -223,6 +223,11 @@ const static NSString *pCancelInputMethodText = @" ";
 	}
 
 	[super orderOut:pSender];
+
+	// More fixes for bug 2151
+	NSView *pContentView = [self contentView];
+	if ( pContentView )
+		[pContentView setNeedsDisplay:NO];
 }
 
 - (void)resignKeyWindow

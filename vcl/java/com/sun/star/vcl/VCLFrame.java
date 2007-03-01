@@ -825,7 +825,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Add a panel as the only component
 		panel = new VCLFrame.NoPaintPanel(this);
-		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
 		if (bitCount <= 4)
 			bitCount = 4;
@@ -1005,6 +1004,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		panel = null;
 		queue = null;
+		window.removeNotify();
 		window = null;
 
 		disposed = true;
@@ -2072,8 +2072,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				window.setFocusable(false);
 				window.setFocusableWindowState(false);
 			}
+			
+			window.removeAll();
+			window.add(panel);
 			window.show();
-			panel.setVisible(true);
 			if (focusable) {
 				window.setFocusable(true);
 				window.setFocusableWindowState(true);
@@ -2083,7 +2085,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			enableFlushing(false);
-			panel.setVisible(false);
+			window.removeAll();
 			window.hide();
 		}
 
@@ -2167,6 +2169,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		window.removeAll();
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MINIMIZED, this, 0));
 
 	}
@@ -2180,6 +2184,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (disposed || !window.isShowing())
 			return;
+
+		window.removeAll();
+		window.add(panel);
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_DEMINIMIZED, this, 0));
 
@@ -2260,18 +2267,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			super(o);
 			frame = f;
 			initialize();
-
-		}
-
-		/**
-		 * Called by the garbage collector on an object when garbage collection
-		 * determines that there are no more references to the object.
-		 */
-		protected void finalize() throws Throwable
-		{
-			// Fix bug 1145 by destroying the native window and fix bugs
-			// 1899 and  2151 by destroying it in the finalizer
-			removeNotify();
 
 		}
 
