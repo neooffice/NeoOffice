@@ -201,11 +201,6 @@ public final class VCLGraphics {
 	private static Method setPixelMethod = null;
 
 	/**
-	 * The hidden window image.
-	 */
-	private static VCLImage hiddenWindowImage = new VCLImage(1, 1, 32);
-
-	/**
 	 * The image50 image.
 	 */
 	private static VCLImage image50 = null;
@@ -2173,19 +2168,17 @@ public final class VCLGraphics {
 
 		if (frame != null) {
 			notifyGraphicsChanged();
-			if (image != null)
-				image = null;
-			if (frame.getWindow().isShowing()) {
-				Panel p = frame.getPanel();
+
+			Panel p = frame.getPanel();
+			if (p != null) {
 				Rectangle bounds = p.getBounds();
 				graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
-				bitCount = frame.getBitCount();
 			}
-			else {
-				image = hiddenWindowImage;
-				graphicsBounds = new Rectangle(0, 0, image.getWidth(), image.getHeight());
-				bitCount = image.getBitCount();
-			}
+
+			if (graphicsBounds.isEmpty())
+				graphicsBounds = new Rectangle(0, 0, 1, 1);
+
+			bitCount = frame.getBitCount();
 			resetClipRegion();
 		}
 
