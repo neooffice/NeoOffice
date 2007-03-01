@@ -223,6 +223,9 @@ const static NSString *pCancelInputMethodText = @" ";
 	}
 
 	[super orderOut:pSender];
+
+	// More fixes for bug 2151
+	[self setNeedsUpdate:NO];
 }
 
 - (void)resignKeyWindow
