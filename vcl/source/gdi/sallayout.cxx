@@ -1462,6 +1462,9 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
     int nCount = 0;
     long nYPos = pG->maLinearPos.Y();
     long nOldFlags = pG->mnGlyphIndex;
+#ifdef USE_JAVA
+    long nUnexpectedOffset = 0;
+#endif	// USE_JAVA
     for(;;)
     {
         // update return data with glyph info
@@ -1487,8 +1490,15 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
         }
         else
         {
+#ifdef USE_JAVA
+            // Fix bug 2183 by allowing a tiny amount of unexpected x-position
+            // in a glyph run
+            nUnexpectedOffset += pG->mnOrigWidth - nGlyphAdvance;
+            if( abs( nUnexpectedOffset ) > ( pG->mnOrigWidth / 5 ) )
+#else	// USE_JAVA
             // stop when next x-position is unexpected
             if( pG->mnOrigWidth != nGlyphAdvance )
+#endif	// USE_JAVA
                 break;
         }
 
