@@ -230,6 +230,8 @@ void NSPrintInfo_setInDialog( BOOL bIn )
 
 BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 {
+	// Since we have moved adjusting for ratation to the higher level code,
+	// we now always return NO
 	BOOL bRet = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -252,10 +254,6 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 			fprintf( stderr, "PaperSize Before: %f %f\n", aOldSize.width, aOldSize.height );
 			fprintf( stderr, "PaperSize After: %f %f\n", aSize.width, aSize.height );
 		}
-
-		// Fix bug 1678 by handling when the selected paper is rotated
-		if ( [(NSPrintInfo *)pNSPrintInfo orientation] != nOldOrientation )
-			bRet = YES;
 	}
 
 	[pPool release];
