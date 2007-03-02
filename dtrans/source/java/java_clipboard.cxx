@@ -84,11 +84,20 @@ JavaClipboard::~JavaClipboard()
 
 void SAL_CALL JavaClipboard::flushClipboard( ) throw( RuntimeException )
 {
+	Reference< XTransferable > aContents;
+
+	ClearableMutexGuard aGuard( maMutex );
+
 	if ( mbSystemClipboard )
+		aContents = Reference< XTransferable >( maContents );
+
+	aGuard.clear();
+
+	if ( aContents.is() )
 	{
 		DTransTransferable *pTransferable = NULL;
-		if ( maContents.is() )
-			pTransferable = (DTransTransferable *)maContents.get();
+		if ( aContents.is() )
+			pTransferable = (DTransTransferable *)aContents.get();
 
 		if ( pTransferable )
 			pTransferable->flush();
@@ -174,11 +183,26 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 			aOldContents = pTransferable->getTransferable();
 		else
 			aOldContents = Reference< XTransferable >();
+
+		// Fix bug 2191 by releasing our mutex so that when the solar mutex
+		// is locked we don't deadlock
+		maMutex.release();
 		pTransferable = DTransClipboard::setContents( xTransferable );
-		if ( pTransferable )
-			maContents = Reference< XTransferable >( pTransferable );
+		maMutex.acquire();
+
+		// Make sure that another thread didn't already change the clipboard
+		// contents while we released our mutex
+		if ( maContents == xTransferable )
+		{
+			if ( pTransferable )
+				maContents = Reference< XTransferable >( pTransferable );
+			else
+				maContents = Reference< XTransferable >();
+		}
 		else
-			maContents = Reference< XTransferable >();
+		{
+			aOldContents = xTransferable;
+		}
 	}
 
 	list< Reference< XClipboardListener > > listeners( maListeners );
@@ -215,6 +239,8 @@ sal_Int8 SAL_CALL JavaClipboard::getRenderingCapabilities() throw( RuntimeExcept
 
 void SAL_CALL JavaClipboard::addClipboardListener( const Reference< XClipboardListener >& listener ) throw( RuntimeException )
 {
+	MutexGuard aGuard( maMutex );
+
 	maListeners.push_back( listener );
 }
 
@@ -222,6 +248,8 @@ void SAL_CALL JavaClipboard::addClipboardListener( const Reference< XClipboardLi
 
 void SAL_CALL JavaClipboard::removeClipboardListener( const Reference< XClipboardListener >& listener ) throw( RuntimeException )
 {
+	MutexGuard aGuard( maMutex );
+
 	maListeners.remove( listener );
 }
 
