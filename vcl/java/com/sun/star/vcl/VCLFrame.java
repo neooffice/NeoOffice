@@ -1571,8 +1571,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
 		// events.
+		int modifiers = e.getModifiersEx();
 		if (!isFloatingWindow() && !window.isFocused()) {
-			int modifiers = e.getModifiersEx();
 			if (modifiers != InputEvent.BUTTON1_DOWN_MASK) {
 				ignoreMouseReleasedModifiers = e.getModifiersEx();
 				return;
@@ -1580,6 +1580,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		ignoreMouseReleasedModifiers = 0;
+
+		// Strange but true, fix bugs 1583 and 2166 by forcing by posting a
+		// synthetic mouse entered event
+		MouseEvent mouseEntered = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		queue.postCachedEvent(new VCLEvent(mouseEntered, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
