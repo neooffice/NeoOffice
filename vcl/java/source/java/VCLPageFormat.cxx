@@ -70,7 +70,7 @@
 
 typedef void Java_apple_awt_CPrinterJob_getDefaultPage_Type( JNIEnv *, jobject, jobject );
 typedef void Java_apple_awt_CPrinterJob_printLoop_Type( JNIEnv *, jobject, jboolean );
-typedef void Java_apple_awt_CPrinterJob_printLoopBoolean_Type( JNIEnv *, jobject, jboolean, jint, jint );
+typedef jboolean Java_apple_awt_CPrinterJob_printLoopBoolean_Type( JNIEnv *, jobject, jboolean, jint, jint );
 typedef void Java_apple_awt_CPrinterJob_validatePaper_Type( JNIEnv *, jobject, jobject, jobject );
 
 static ::vos::OModule aModule;
@@ -168,14 +168,18 @@ static void JNICALL Java_apple_awt_CPrinterJob_printLoop( JNIEnv *pEnv, jobject 
 
 static jboolean JNICALL Java_apple_awt_CPrinterJob_printLoopBoolean( JNIEnv *pEnv, jobject object, jboolean _par0, jint _par1, jint _par2 )
 {
+	jboolean bRet = JNI_FALSE;
+
 	if ( pPrintLoop )
 	{
 		// Make this object's print info pointer the shared print info since
 		// the JVM's native methods use the shared print info
 		NSPrintInfo_setSharedPrintInfo( GetNSPrintInfo( pEnv, object ) );
 
-		pPrintLoopBoolean( pEnv, object, _par0, _par1, _par2 );
+		bRet = pPrintLoopBoolean( pEnv, object, _par0, _par1, _par2 );
 	}
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
@@ -730,6 +734,8 @@ void com_sun_star_vcl_VCLPageFormat::setPaperType( Paper _par0, long _par1, long
 
 	updatePageFormat( bLandscape ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT );
 }
+
+// ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLPageFormat::updatePageFormat( Orientation _par0 )
 {

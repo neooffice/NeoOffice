@@ -250,10 +250,10 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 		{
 			[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
 			[(NSPrintInfo *)pNSPrintInfo setPaperSize:aOldSize];
-			fprintf( stderr, "PaperSize Requested: %f %f\n", (float)nWidth, (float)nHeight );
-			fprintf( stderr, "PaperSize Before: %f %f\n", aOldSize.width, aOldSize.height );
-			fprintf( stderr, "PaperSize After: %f %f\n", aSize.width, aSize.height );
 		}
+
+		if ( [(NSPrintInfo *)pNSPrintInfo orientation] != NSPortraitOrientation )
+			bRet = YES;
 	}
 
 	[pPool release];
