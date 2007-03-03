@@ -227,7 +227,10 @@ const static NSString *pCancelInputMethodText = @" ";
 	// More fixes for bug 2151
 	NSView *pContentView = [self contentView];
 	if ( pContentView )
+	{
+		[pContentView displayIfNeeded];
 		[pContentView setNeedsDisplay:NO];
+	}
 }
 
 - (void)resignKeyWindow
@@ -251,6 +254,8 @@ static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
 - (void)interpretKeyEvents:(NSArray *)pEvents;
+- (void)setNeedsDisplay:(BOOL)bFlag;
+- (void)setNeedsDisplayInRect:(NSRect)aInvalidRect;
 @end
 
 @implementation VCLView
@@ -305,6 +310,22 @@ static VCLResponder *pSharedResponder = nil;
 	}
 
 	[super interpretKeyEvents:pEvents];
+}
+
+- (void)setNeedsDisplay:(BOOL)bFlag
+{
+	if ( bFlag && ( ![self window] || ![[self window] isVisible] ) )
+		[super setNeedsDisplay:NO];
+	else
+		[super setNeedsDisplay:bFlag];
+}
+
+- (void)setNeedsDisplayInRect:(NSRect)aInvalidRect
+{
+	if ( ![self window] || ![[self window] isVisible] )
+		[super setNeedsDisplay:NO];
+	else
+		[super setNeedsDisplayInRect:aInvalidRect];
 }
 
 @end
