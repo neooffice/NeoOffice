@@ -230,8 +230,6 @@ void NSPrintInfo_setInDialog( BOOL bIn )
 
 BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 {
-	// Since we have moved adjusting for ratation to the higher level code,
-	// we now always return NO
 	BOOL bRet = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -244,16 +242,22 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
 		[(NSPrintInfo *)pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
 
-		// Fix bug 2101 by handling cases where setting of paper size fails
 		NSSize aSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
 		if ( aSize.width < 1.0 || aSize.height < 1.0 )
 		{
+			// Fix bug 2101 by handling cases where setting of paper size fails
 			[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
 			[(NSPrintInfo *)pNSPrintInfo setPaperSize:aOldSize];
 		}
-
-		if ( [(NSPrintInfo *)pNSPrintInfo orientation] != NSPortraitOrientation )
-			bRet = YES;
+		else
+		{
+			// Fix bugs 543, 1678, and 2202 by detecting when the paper should
+			// be rotated determining the minimum unmatched area
+			long nDiff = powl( (long)aSize.width - nWidth, 2 ) + powl( (long)aSize.height - nHeight, 2 );
+			long nRotatedDiff = powl( (long)aSize.width - nHeight, 2 ) + powl( (long)aSize.height - nWidth, 2 );
+			if ( nDiff > nRotatedDiff )
+				bRet = YES;
+		}
 	}
 
 	[pPool release];

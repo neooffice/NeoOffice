@@ -169,6 +169,7 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 	}
 	else
 	{
+		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
 	}
 
@@ -266,6 +267,8 @@ JavaSalPrinter::JavaSalPrinter()
 	mbGraphics = FALSE;
 	mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
 	mpVCLPageFormat = NULL;
+	mnPaperWidth = 0;
+	mnPaperHeight = 0;
 }
 
 // -----------------------------------------------------------------------
@@ -295,7 +298,14 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 	// Set paper type
 	if ( !bFirstPass )
+	{
+		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
+		Size aSize( mpVCLPageFormat->getPageSize() );
+		Size aResolution( mpVCLPageFormat->getTextResolution() );
+		mnPaperWidth = aSize.Width() * 2540 / aResolution.Width();
+		mnPaperHeight = aSize.Height() * 2540 / aResolution.Height();
+	}
 
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
@@ -334,27 +344,24 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	// require a new print job.
 	if ( bNewJobData )
 	{
-		Size aOldSize( mpVCLPageFormat->getPageSize() );
-		Size aOldResolution( mpVCLPageFormat->getTextResolution() );
-		long nOldPaperWidth = aOldSize.Width() * 2540 / aOldResolution.Width();
-		long nOldPaperHeight = aOldSize.Height() * 2540 / aOldResolution.Height();
-
+		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
+	}
 
-		Size aSize( mpVCLPageFormat->getPageSize() );
-		Size aResolution( mpVCLPageFormat->getTextResolution() );
-		long nPaperWidth = aSize.Width() * 2540 / aResolution.Width();
-		long nPaperHeight = aSize.Height() * 2540 / aResolution.Height();
+	Size aSize( mpVCLPageFormat->getPageSize() );
+	Size aResolution( mpVCLPageFormat->getTextResolution() );
+	long nPaperWidth = aSize.Width() * 2540 / aResolution.Width();
+	long nPaperHeight = aSize.Height() * 2540 / aResolution.Height();
 
-		bool bSamePaper = ( ( nPaperWidth == nOldPaperWidth && nPaperHeight == nOldPaperHeight ) || ( nPaperWidth == nOldPaperHeight && nPaperHeight == nOldPaperWidth ) );
-		if ( !bSamePaper )
-		{
-			EndJob();
-			delete mpVCLPrintJob;
-			mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
-			if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData ) )
-				return NULL;
-		}
+	if ( nPaperWidth != mnPaperWidth || nPaperHeight != mnPaperHeight )
+	{
+		mnPaperWidth = nPaperWidth;
+		mnPaperHeight = nPaperHeight;
+		EndJob();
+		delete mpVCLPrintJob;
+		mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
+		if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData ) )
+			return NULL;
 	}
 
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = mpVCLPrintJob->startPage( pSetupData->meOrientation );

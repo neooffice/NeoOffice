@@ -337,8 +337,6 @@ public final class VCLPageFormat {
 	 */
 	public void updatePageFormat(int o) {
 
-		int oldOrientation = pageFormat.getOrientation();
-
 		if (o == ORIENTATION_PORTRAIT)
 			paperOrientation = PageFormat.PORTRAIT;
 		else
