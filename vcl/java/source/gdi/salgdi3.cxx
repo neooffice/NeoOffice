@@ -746,7 +746,9 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 	if ( pVCLFont )
 		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
 
-	return !rRect.IsEmpty();
+	// Fix bug 2191 by always returning true so that the OOo code doesn't
+	// exeecute its "draw the glyph and see which pixels are black" code
+	return true;
 }
 
 // -----------------------------------------------------------------------
