@@ -176,12 +176,15 @@ const static NSString *pCancelInputMethodText = @" ";
 	[super becomeKeyWindow];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	NSResponder *pResponder = [self firstResponder];
-	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
-		if ( [pResponder hasMarkedText] )
-			[pResponder insertText:pCancelInputMethodText];
-		[pResponder abandonInput];
+		NSResponder *pResponder = [self firstResponder];
+		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pResponder hasMarkedText] )
+				[pResponder insertText:pCancelInputMethodText];
+			[pResponder abandonInput];
+		}
 	}
 }
 
@@ -191,7 +194,7 @@ const static NSString *pCancelInputMethodText = @" ";
 	BOOL bRet = [super makeFirstResponder:pResponder];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( bRet )
+	if ( bRet && [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		if ( pOldResponder && [pOldResponder respondsToSelector:@selector(abandonInput)] && [pOldResponder respondsToSelector:@selector(hasMarkedText)] && [pOldResponder respondsToSelector:@selector(insertText:)] )
 		{
@@ -214,31 +217,41 @@ const static NSString *pCancelInputMethodText = @" ";
 - (void)orderOut:(id)pSender
 {
 	// Fix bug 1819 by forcing cancellation of the input method
-	NSResponder *pResponder = [self firstResponder];
-	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
-		if ( [pResponder hasMarkedText] )
-			[pResponder insertText:pCancelInputMethodText];
-		[pResponder abandonInput];
+		NSResponder *pResponder = [self firstResponder];
+		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pResponder hasMarkedText] )
+				[pResponder insertText:pCancelInputMethodText];
+			[pResponder abandonInput];
+		}
+
+		[super orderOut:pSender];
+
+		// More fixes for bug 2151
+		NSView *pContentView = [self contentView];
+		if ( pContentView )
+			[pContentView displayIfNeeded];
 	}
-
-	[super orderOut:pSender];
-
-	// More fixes for bug 2151
-	NSView *pContentView = [self contentView];
-	if ( pContentView )
-		[pContentView displayIfNeeded];
+	else
+	{
+		[super orderOut:pSender];
+	}
 }
 
 - (void)resignKeyWindow
 {
 	// Fix bug 1819 by forcing cancellation of the input method
-	NSResponder *pResponder = [self firstResponder];
-	if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
-		if ( [pResponder hasMarkedText] )
-			[pResponder insertText:pCancelInputMethodText];
-		[pResponder abandonInput];
+		NSResponder *pResponder = [self firstResponder];
+		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pResponder hasMarkedText] )
+				[pResponder insertText:pCancelInputMethodText];
+			[pResponder abandonInput];
+		}
 	}
 
 	[super resignKeyWindow];
@@ -259,7 +272,8 @@ static VCLResponder *pSharedResponder = nil;
 {
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
-	if ( pEvents )
+	NSWindow *pWindow = [self window];
+	if ( pEvents && pWindow && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		NSEvent *pEvent = [pEvents objectAtIndex:0];
 		if ( pEvent )
@@ -336,9 +350,9 @@ static VCLResponder *pSharedResponder = nil;
 	if ( pSharedResponder )
 		[pSharedResponder retain];
 
-	[VCLView poseAsClass:[NSView class]];
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
+	[VCLView poseAsClass:[NSView class]];
 }
 
 @end
