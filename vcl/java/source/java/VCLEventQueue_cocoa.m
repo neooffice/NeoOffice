@@ -175,7 +175,7 @@ const static NSString *pCancelInputMethodText = @" ";
 	[super becomeKeyWindow];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
@@ -193,7 +193,7 @@ const static NSString *pCancelInputMethodText = @" ";
 	BOOL bRet = [super makeFirstResponder:pResponder];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( bRet && [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( bRet && [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		if ( pOldResponder && [pOldResponder respondsToSelector:@selector(abandonInput)] && [pOldResponder respondsToSelector:@selector(hasMarkedText)] && [pOldResponder respondsToSelector:@selector(insertText:)] )
 		{
@@ -216,7 +216,7 @@ const static NSString *pCancelInputMethodText = @" ";
 - (void)resignKeyWindow
 {
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
