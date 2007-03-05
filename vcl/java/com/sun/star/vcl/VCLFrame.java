@@ -2087,8 +2087,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			enableFlushing(false);
-			window.removeAll();
 			window.hide();
+			window.removeAll();
 		}
 
 	}
