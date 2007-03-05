@@ -165,7 +165,6 @@ const static NSString *pCancelInputMethodText = @" ";
 @interface VCLWindow : NSWindow
 - (void)becomeKeyWindow;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
-- (void)orderOut:(id)pSender;
 - (void)resignKeyWindow;
 @end
 
@@ -212,32 +211,6 @@ const static NSString *pCancelInputMethodText = @" ";
 	}
 
 	return bRet;
-}
-
-- (void)orderOut:(id)pSender
-{
-	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [[self className] isEqualToString:@"CocoaAppWindow"] )
-	{
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
-		{
-			if ( [pResponder hasMarkedText] )
-				[pResponder insertText:pCancelInputMethodText];
-			[pResponder abandonInput];
-		}
-
-		[super orderOut:pSender];
-
-		// More fixes for bug 2151
-		NSView *pContentView = [self contentView];
-		if ( pContentView )
-			[pContentView displayIfNeeded];
-	}
-	else
-	{
-		[super orderOut:pSender];
-	}
 }
 
 - (void)resignKeyWindow
