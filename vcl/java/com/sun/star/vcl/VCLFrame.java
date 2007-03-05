@@ -1602,14 +1602,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		// Use adjusted modifiers
-		int modifiers = queue.getLastAdjustedMouseModifiers();
-		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
-
 		// The JVM can get confused when we click on a non-focused window. In
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
 		// events.
+		int modifiers = queue.getLastAdjustedMouseModifiers();
 		if (ignoreMouseReleasedModifiers != 0 && (ignoreMouseReleasedModifiers & modifiers) == modifiers) {
 			ignoreMouseReleasedModifiers &= ~modifiers;
 			return;
