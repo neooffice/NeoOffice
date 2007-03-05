@@ -1581,10 +1581,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		ignoreMouseReleasedModifiers = 0;
 
-		// Strange but true, fix bugs 1583 and 2166 by forcing by posting a
-		// synthetic mouse entered event
-		MouseEvent mouseEntered = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
-		queue.postCachedEvent(new VCLEvent(mouseEntered, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
+		// Strange but true, fix bugs 1583 and 2166 by posting a synthetic
+		// mouse moved event
+		MouseEvent mouseMoved = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		queue.postCachedEvent(new VCLEvent(mouseMoved, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
 
@@ -1602,11 +1602,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		// Use adjusted modifiers
+		int modifiers = queue.getLastAdjustedMouseModifiers();
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+
 		// The JVM can get confused when we click on a non-focused window. In
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
 		// events.
-		int modifiers = queue.getLastAdjustedMouseModifiers();
 		if (ignoreMouseReleasedModifiers != 0 && (ignoreMouseReleasedModifiers & modifiers) == modifiers) {
 			ignoreMouseReleasedModifiers &= ~modifiers;
 			return;
