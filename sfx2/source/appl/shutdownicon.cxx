@@ -143,6 +143,12 @@
 #define MATH_URL			"private:factory/smath"
 #define BASE_URL			"private:factory/sdatabase?Interactive"
 
+#define WRITER_FALLBACK_DESC			"Text Document"
+#define CALC_FALLBACK_DESC				"Spreadsheet"
+#define IMPRESS_WIZARD_FALLBACK_DESC	"Presentation"
+#define DRAW_FALLBACK_DESC				"Drawing"
+#define BASE_FALLBACK_DESC				"Database"
+
 #endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star::uno;
@@ -773,13 +779,14 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 					SvtModuleOptions::EModule	eModuleIdentifier;
 					MenuCommand					nMenuItemID;
 					const char*					pAsciiURLDescription;
+					const char*					pFallbackDescription;
 				} aMenuItems[] =
 				{
-					{ SvtModuleOptions::E_SWRITER, WRITER_COMMAND_ID, WRITER_URL },
-					{ SvtModuleOptions::E_SCALC, CALC_COMMAND_ID, CALC_URL },
-					{ SvtModuleOptions::E_SIMPRESS, IMPRESS_COMMAND_ID, IMPRESS_WIZARD_URL },
-					{ SvtModuleOptions::E_SDRAW, DRAW_COMMAND_ID, DRAW_URL },
-					{ SvtModuleOptions::E_SDATABASE, BASE_COMMAND_ID, BASE_URL }
+					{ SvtModuleOptions::E_SWRITER, WRITER_COMMAND_ID, WRITER_URL, WRITER_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SCALC, CALC_COMMAND_ID, CALC_URL, CALC_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SIMPRESS, IMPRESS_COMMAND_ID, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SDRAW, DRAW_COMMAND_ID, DRAW_URL, DRAW_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SDATABASE, BASE_COMMAND_ID, BASE_URL, BASE_FALLBACK_DESC }
 				};
 
 				// Disable shutdown
@@ -809,6 +816,13 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 					aIDs[ nItems ] = aMenuItems[i].nMenuItemID;
 					aDesc = XubString( GetUrlDescription( sURL ) );
 					aDesc.EraseAllChars( '~' );
+					// Fix bug 2206 by putting in some default text if the
+					// description is an empty string
+					if ( !aDesc.Len() )
+					{
+						aDesc = XubString( ::rtl::OUString::createFromAscii( aMenuItems[i].pFallbackDescription ) );
+						aDesc.EraseAllChars( '~' );
+					}
 					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
 				}
 
