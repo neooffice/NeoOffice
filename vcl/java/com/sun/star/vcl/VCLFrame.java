@@ -1602,6 +1602,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		// Cache only extended modifiers for synthetic mouse move event
+		int remainingModifiers = e.getModifiersEx();
+
 		// Use adjusted modifiers
 		int modifiers = queue.getLastAdjustedMouseModifiers();
 		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
@@ -1616,6 +1619,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONUP, VCLFrame.findFrame(e.getComponent()), 0));
+
+		// Strange but true, fix bug 2157 by posting a synthetic mouse moved
+		// event
+		MouseEvent mouseMoved = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), remainingModifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		queue.postCachedEvent(new VCLEvent(mouseMoved, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 	}
 
