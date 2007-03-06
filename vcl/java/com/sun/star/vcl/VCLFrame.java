@@ -2090,8 +2090,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			// Hide the window
 			enableFlushing(false);
-			window.hide();
+			// We absolutely must remove all components before closing the
+			// window or bug 2151 will occur sporadically
 			window.removeAll();
+			window.hide();
 		}
 
 	}
