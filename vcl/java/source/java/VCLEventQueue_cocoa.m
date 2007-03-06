@@ -246,7 +246,7 @@ static VCLResponder *pSharedResponder = nil;
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
 	NSWindow *pWindow = [self window];
-	if ( pEvents && pWindow && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
+	if ( pEvents && pWindow && [pWindow isVisible] && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
 	{
 		NSEvent *pEvent = [pEvents objectAtIndex:0];
 		if ( pEvent )
