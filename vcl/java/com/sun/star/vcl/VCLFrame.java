@@ -1583,7 +1583,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Strange but true, fix bugs 1583 and 2166 by posting a synthetic
 		// mouse moved event
-		MouseEvent mouseMoved = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		MouseEvent mouseMoved = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), e.getModifiers() | queue.getLastAdjustedMouseModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 		queue.postCachedEvent(new VCLEvent(mouseMoved, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
