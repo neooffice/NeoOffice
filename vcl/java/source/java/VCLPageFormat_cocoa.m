@@ -242,6 +242,8 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
 		[(NSPrintInfo *)pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
 
+		// Fix bug 2202 by setting the orientation back to the original state
+		[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
 		NSSize aSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
 		if ( aSize.width < 1.0 || aSize.height < 1.0 )
 		{
