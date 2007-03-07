@@ -188,6 +188,9 @@ public final class VCLPrintJob implements Printable, Runnable {
 			catch (Throwable t) {}
 		}
 
+		if (pageFormat != null)
+			pageFormat.setEditable(true);
+
 		queue.setShutdownDisabled(false);
 
 	}
@@ -317,6 +320,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			job = pageFormat.getPrinterJob();
 			job.setPrintable(this, pageFormat.getPageFormat());
 			job.setJobName(n);
+			pageFormat.setEditable(false);
 			jobStarted = true;
 		}
 

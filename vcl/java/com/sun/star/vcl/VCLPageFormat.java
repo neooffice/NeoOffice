@@ -112,6 +112,11 @@ public final class VCLPageFormat {
 	private static int printerTextResolution = 300;
 
 	/**
+	 * The editable flag.
+	 */
+	private boolean editable = true;
+ 
+	/**
 	 * Cached <code>VCLImage</code>.
 	 */
 	private VCLImage image = null;
@@ -312,7 +317,22 @@ public final class VCLPageFormat {
 	 */
 	public void setCopies(int n) {
 
+		if (!editable)
+			return;
+
 		job.setCopies(n);
+
+	}
+
+	/**
+	 * Set the editability of this component.
+	 *
+	 * @param b <code>true</code> to make this component editable or else
+	 *  <code>false</code>
+	 */
+	void setEditable(boolean b) {
+
+		editable = b;
 
 	}
 
@@ -322,6 +342,11 @@ public final class VCLPageFormat {
 	 * @param o the page orientation
 	 */
 	public void setOrientation(int o) {
+
+		// Fix bug 2202 by not allowing the orientation to change while in
+		// a print job
+		if (!editable)
+			return;
 
 		if (o == ORIENTATION_PORTRAIT)
 			pageFormat.setOrientation(PageFormat.PORTRAIT);
@@ -344,8 +369,7 @@ public final class VCLPageFormat {
 
 		pageFormat = job.defaultPage();
 
-		// Fix bug 2202 by using new native printer orientation
-		pageFormat.setOrientation(paperOrientation);
+		setOrientation(o);
 
 	}
 

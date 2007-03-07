@@ -236,30 +236,16 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 
 	if ( pNSPrintInfo && nWidth > 0 && nHeight > 0 )
 	{
-		NSPrintingOrientation nOldOrientation = [(NSPrintInfo *)pNSPrintInfo orientation];
-		NSSize aOldSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
-
 		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
 		[(NSPrintInfo *)pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
-
-		// Fix bug 2202 by setting the orientation back to the original state
-		[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
 		NSSize aSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
-		if ( aSize.width < 1.0 || aSize.height < 1.0 )
-		{
-			// Fix bug 2101 by handling cases where setting of paper size fails
-			[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
-			[(NSPrintInfo *)pNSPrintInfo setPaperSize:aOldSize];
-		}
-		else
-		{
-			// Fix bugs 543, 1678, and 2202 by detecting when the paper should
-			// be rotated determining the minimum unmatched area
-			long nDiff = powl( (long)aSize.width - nWidth, 2 ) + powl( (long)aSize.height - nHeight, 2 );
-			long nRotatedDiff = powl( (long)aSize.width - nHeight, 2 ) + powl( (long)aSize.height - nWidth, 2 );
-			if ( nDiff > nRotatedDiff )
-				bRet = YES;
-		}
+
+		// Fix bugs 543, 1678, and 2202 by detecting when the paper should
+		// be rotated determining the minimum unmatched area
+		long nDiff = powl( (long)aSize.width - nWidth, 2 ) + powl( (long)aSize.height - nHeight, 2 );
+		long nRotatedDiff = powl( (long)aSize.width - nHeight, 2 ) + powl( (long)aSize.height - nWidth, 2 );
+		if ( nDiff > nRotatedDiff )
+			bRet = YES;
 	}
 
 	[pPool release];
