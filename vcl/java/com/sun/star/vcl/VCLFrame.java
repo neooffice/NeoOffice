@@ -1790,6 +1790,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		fullScreenMode = b;
 
+		panel.setFullScreenMode(fullScreenMode);
 		if (window instanceof VCLFrame.NoPaintDialog)
 			((VCLFrame.NoPaintDialog)window).setFullScreenMode(fullScreenMode);
 		else if (window instanceof VCLFrame.NoPaintFrame)
@@ -2344,10 +2345,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (isUndecorated()) {
 				setFocusable(b);
 				setFocusableWindowState(b);
-
-				// Set background to black in full screen mode
-				setBackground(b ? Color.black : Color.white);
 			}
+
+			// Set background to black in full screen mode
+			setBackground(b ? Color.black : Color.white);
 
 		}
 
@@ -2489,10 +2490,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (isUndecorated()) {
 				setFocusable(b);
 				setFocusableWindowState(b);
-
-				// Set background to black in full screen mode
-				setBackground(b ? Color.black : Color.white);
 			}
+
+			// Set background to black in full screen mode
+			setBackground(b ? Color.black : Color.white);
 
 		}
 
@@ -2551,7 +2552,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintPanel(VCLFrame f) {
 
 			frame = f;
-			setBackground(new Color(0x00000000, true));
+			setBackground(Color.white);
 			enableInputMethods(true);
 
 		}
@@ -2581,6 +2582,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				frame.paint(clip.getBounds());
 			else
 				frame.paint(new Rectangle(getSize()));
+
+		}
+
+		/**
+		 * Set the native panel to show or hide in full screen mode.
+		 *
+		 * @param b <code>true</code> sets this panel to full screen mode and
+		 *  <code>false</code> sets it to normal mode
+		 */
+		void setFullScreenMode(boolean b) {
+
+			// Set background to black in full screen mode
+			setBackground(b ? Color.black : Color.white);
 
 		}
 
