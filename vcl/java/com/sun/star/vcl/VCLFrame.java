@@ -825,6 +825,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Add a panel as the only component
 		panel = new VCLFrame.NoPaintPanel(this);
+		window.add(panel);
 		bitCount = panel.getColorModel().getPixelSize();
 		if (bitCount <= 4)
 			bitCount = 4;
@@ -2086,21 +2087,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				window.setFocusableWindowState(false);
 			}
 			
-			window.removeAll();
-			window.add(panel);
 			window.show();
 			if (focusable) {
 				window.setFocusable(true);
 				window.setFocusableWindowState(true);
 			}
+			panel.setVisible(true);
 			enableFlushing(true);
 		}
 		else {
 			// Hide the window
 			enableFlushing(false);
-			// We absolutely must remove all components before closing the
-			// window or bug 2151 will occur sporadically
-			window.removeAll();
+			panel.setVisible(false);
 			window.hide();
 		}
 
@@ -2184,7 +2182,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		window.removeAll();
+		panel.setVisible(false);
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MINIMIZED, this, 0));
 
@@ -2200,8 +2198,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		window.removeAll();
-		window.add(panel);
+		panel.setVisible(true);
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_DEMINIMIZED, this, 0));
 

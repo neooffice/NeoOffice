@@ -1807,14 +1807,22 @@ public final class VCLGraphics {
 			return null;
 
 		Graphics2D g;
-		if (image != null)
+		if (image != null) {
 			g = image.getImage().createGraphics();
-		else if (frame != null)
-			g = (Graphics2D)frame.getPanel().getGraphics();
-		else if (graphics != null)
+		}
+		else if (frame != null) {
+			Panel p = frame.getPanel();
+			if (p != null && p.isShowing())
+				g = (Graphics2D)p.getGraphics();
+			else
+				g = null;
+		}
+		else if (graphics != null) {
 			g = (Graphics2D)graphics.create();
-		else
+		}
+		else {
 			g = null;
+		}
 
 		if (g != null) {
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);

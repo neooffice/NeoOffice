@@ -164,6 +164,7 @@ const static NSString *pCancelInputMethodText = @" ";
 
 @interface VCLWindow : NSWindow
 - (void)becomeKeyWindow;
+- (void)displayIfNeeded;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
@@ -186,6 +187,15 @@ const static NSString *pCancelInputMethodText = @" ";
 			[pResponder abandonInput];
 		}
 	}
+}
+
+- (void)displayIfNeeded
+{
+	// Fix bug 2151 by not allowing any updates if the window is hidden
+	if ( ![self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
+		return;
+
+	[super displayIfNeeded];
 }
 
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder
