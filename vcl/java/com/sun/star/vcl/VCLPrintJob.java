@@ -336,13 +336,24 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Start the printing thread if it has not yet been started
 		if (!printStarted && printThread == null) {
-			printStarted = false;
 			printThread = new Thread(this);
 			printThread.start();
 			try {
 				wait();
 			}
 			catch (Throwable t) {}
+
+			// Fix bug 2101 by trying to set the printable a second time
+			if (printThread == null) {
+				job.setPrintable(this, pageFormat.getPageFormat());
+				printStarted = false;
+				printThread = new Thread(this);
+				printThread.start();
+				try {
+					wait();
+				}
+				catch (Throwable t) {}
+			}
 		}
 
 		// Mac OS X wants each page printed twice so skip the first as it
