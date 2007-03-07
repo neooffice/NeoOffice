@@ -168,6 +168,7 @@ static VCLBitmapBuffer aSharedListViewFrameBuffer;
 static VCLBitmapBuffer aSharedDisclosureBtnBuffer;
 static VCLBitmapBuffer aSharedSeparatorLineBuffer;
 static VCLBitmapBuffer aSharedListViewHeaderBuffer;
+static VCLBitmapBuffer aSharedBevelButtonBuffer;
 
 // =======================================================================
 
@@ -1487,6 +1488,47 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 // =======================================================================
 
 /**
+ * (static) Draw a native bevel button frame.  This is used for buttons in
+ * toolbars.
+ *
+ * @param pGraphics		pointer to the graphics object where the button should
+ *						be painted
+ * @param rDestBounds	destination drawing rectangle for the disclosure button
+ * @param nState		current control enabled/disabled/focused state
+ * @param aValue		control value
+ */
+static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+{
+	VCLBitmapBuffer *pBuffer = &aSharedBevelButtonBuffer;
+	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+	if ( bRet )
+	{
+		HIThemeButtonDrawInfo aButtonDrawInfo;
+		InitButtonDrawInfo( &aButtonDrawInfo, nState );
+		
+		aButtonDrawInfo.kind = kThemeBevelButton;
+		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+			aButtonDrawInfo.value = kThemeButtonOn;
+			
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+	}
+
+	pBuffer->ReleaseContext();
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() );
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * Determine if support exists for drawing a particular native widget in the
  * interface.
  *
@@ -1588,6 +1630,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 		
 		case CTRL_LISTVIEWBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
+				isSupported = TRUE;
+			break;
+		
+		case CTRL_TOOLBAR:
+			if( nPart == PART_BUTTON )
 				isSupported = TRUE;
 			break;
 			
@@ -1818,6 +1865,14 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			{
 				Rectangle ctrlRect = rControlRegion.GetBoundRect();
 				bOK = DrawNativeListBoxFrame( this, ctrlRect, nState );
+			}
+			break;
+		
+		case CTRL_TOOLBAR:
+			if( nPart == PART_BUTTON )
+			{
+				Rectangle ctrlRect = rControlRegion.GetBoundRect();
+				bOK = DrawNativeBevelButton( this, ctrlRect, nState, aValue );
 			}
 			break;
 	}
@@ -2359,6 +2414,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		
 		case CTRL_LISTVIEWBOX:
 			if ( nPart == PART_ENTIRE_CONTROL )
+			{
+				Rectangle controlRect = rControlRegion.GetBoundRect();
+				rNativeBoundingRegion = Region( controlRect );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+
+				bReturn = TRUE;
+			}
+			break;
+		
+		case CTRL_TOOLBAR:
+			if ( nPart == PART_BUTTON )
 			{
 				Rectangle controlRect = rControlRegion.GetBoundRect();
 				rNativeBoundingRegion = Region( controlRect );
