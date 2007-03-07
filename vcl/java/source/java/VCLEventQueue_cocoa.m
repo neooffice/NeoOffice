@@ -165,6 +165,7 @@ const static NSString *pCancelInputMethodText = @" ";
 @interface VCLWindow : NSWindow
 - (void)becomeKeyWindow;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 @end
 
@@ -228,6 +229,39 @@ const static NSString *pCancelInputMethodText = @" ";
 	}
 
 	[super resignKeyWindow];
+}
+
+- (BOOL)performKeyEquivalent:(NSEvent *)pEvent
+{
+	BOOL bRet = [super performKeyEquivalent:pEvent];
+
+	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
+	// for non-Java windows
+	if ( !bRet && pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask && [self isVisible] && ![[self className] isEqualToString:@"CocoaAppWindow"] )
+	{
+		NSString *pChars = [pEvent charactersIgnoringModifiers];
+		NSResponder *pResponder = [self firstResponder];
+		if ( pChars && pResponder )
+		{
+			if ( [pChars isEqualToString:@"c"] && [pResponder respondsToSelector:@selector(copy:)] )
+			{
+				[pResponder copy:self];
+				bRet = YES;
+			}
+			else if ( [pChars isEqualToString:@"v"] && [pResponder respondsToSelector:@selector(paste:)] )
+			{
+				[pResponder paste:self];
+				bRet = YES;
+			}
+			else if ( [pChars isEqualToString:@"x"] && [pResponder respondsToSelector:@selector(cut:)] )
+			{
+				[pResponder cut:self];
+				bRet = YES;
+			}
+		}
+	}
+
+	return bRet;
 }
 
 @end
