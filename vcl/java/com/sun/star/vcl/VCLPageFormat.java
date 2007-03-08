@@ -180,8 +180,7 @@ public final class VCLPageFormat {
 	 */
 	public Rectangle getImageableBounds() {
 
-		int orientation = pageFormat.getOrientation();
-		if ((paperOrientation == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) || (paperOrientation != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT))
+		if (paperOrientation == PageFormat.PORTRAIT)
 			return new Rectangle((int)(pageFormat.getImageableX() * printerTextResolution / 72), (int)(pageFormat.getImageableY() * printerTextResolution / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution / 72));
 		else
 			return new Rectangle((int)(pageFormat.getImageableY() * printerTextResolution / 72), (int)(pageFormat.getImageableX() * printerTextResolution / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution / 72));
@@ -195,8 +194,7 @@ public final class VCLPageFormat {
 	 */
 	public int getOrientation() {
 
-		int orientation = pageFormat.getOrientation();
-		if ((paperOrientation == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) || (paperOrientation != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT))
+		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
 			return ORIENTATION_PORTRAIT;
 		else
 			return ORIENTATION_LANDSCAPE;
@@ -345,6 +343,11 @@ public final class VCLPageFormat {
 	 */
 	public void setOrientation(int o) {
 
+		if (o == ORIENTATION_PORTRAIT)
+			paperOrientation = PageFormat.PORTRAIT;
+		else
+			paperOrientation = PageFormat.LANDSCAPE;
+
 		// Fix bug 2202 by not allowing the orientation to change while in
 		// a print job
 		if (!editable)
@@ -363,11 +366,6 @@ public final class VCLPageFormat {
 	 * @param o the page orientation
 	 */
 	public void updatePageFormat(int o) {
-
-		if (o == ORIENTATION_PORTRAIT)
-			paperOrientation = PageFormat.PORTRAIT;
-		else
-			paperOrientation = PageFormat.LANDSCAPE;
 
 		pageFormat = job.defaultPage();
 
