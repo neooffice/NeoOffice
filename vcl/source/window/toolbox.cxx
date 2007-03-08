@@ -1905,12 +1905,15 @@ static void ImplAddButtonBorder( long &rWidth, long& rHeight, USHORT aOutStyle, 
         rHeight += SMALLBUTTON_VSIZE;
     }
 
+#ifndef USE_JAVA
+    // Fix bug 2230 by not changing the button sizes
     if( bNativeButtons )
     {
         // give more border space for rounded buttons
         rWidth += 2;
         rHeight += 4;
     }
+#endif	// !USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -3650,9 +3653,9 @@ void ToolBox::ImplDrawItem( USHORT nPos, BOOL bHighlight, BOOL bPaint, BOOL bLay
         if ( !pItem->mbEnabled || !IsEnabled() )
 #ifdef USE_JAVA
             nImageStyle |= IMAGE_DRAW_SEMITRANSPARENT;
-#else
+#else	// USE_JAVA
             nImageStyle |= IMAGE_DRAW_DISABLE;
-#endif
+#endif	// USE_JAVA
 
         // #i35563# the dontknow state indicates different states at the same time
         // which should not be rendered disabled but normal
