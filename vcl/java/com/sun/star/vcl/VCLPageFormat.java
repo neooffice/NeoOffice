@@ -180,10 +180,15 @@ public final class VCLPageFormat {
 	 */
 	public Rectangle getImageableBounds() {
 
+		int width = (int)(pageFormat.getImageableWidth() * printerTextResolution / 72);
+		int height = (int)(pageFormat.getImageableHeight() * printerTextResolution / 72);
+		int x = (int)((pageFormat.getWidth() - pageFormat.getImageableX() - pageFormat.getImageableWidth()) * printerTextResolution / 72);
+		int y = (int)((pageFormat.getHeight() - pageFormat.getImageableY() - pageFormat.getImageableHeight()) * printerTextResolution / 72);
+
 		if (paperOrientation == PageFormat.PORTRAIT)
-			return new Rectangle((int)(pageFormat.getImageableX() * printerTextResolution / 72), (int)(pageFormat.getImageableY() * printerTextResolution / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution / 72));
+			return new Rectangle(x, y, width, height);
 		else
-			return new Rectangle((int)(pageFormat.getImageableY() * printerTextResolution / 72), (int)(pageFormat.getImageableX() * printerTextResolution / 72), (int)(pageFormat.getImageableHeight() * printerTextResolution / 72), (int)(pageFormat.getImageableWidth() * printerTextResolution / 72));
+			return new Rectangle(y, x, height, width);
 
 	}
 
@@ -194,7 +199,7 @@ public final class VCLPageFormat {
 	 */
 	public int getOrientation() {
 
-		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
+		if (paperOrientation == PageFormat.PORTRAIT)
 			return ORIENTATION_PORTRAIT;
 		else
 			return ORIENTATION_LANDSCAPE;

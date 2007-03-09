@@ -373,7 +373,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 			double scaleY = transform.getScaleY();
 
 			// Set the origin to the origin of the printable area
-			printGraphics.translate((int)printPageFormat.getImageableX(), (int)printPageFormat.getImageableY());
+			int orientation = printPageFormat.getOrientation();
+			if (orientation == PageFormat.PORTRAIT)
+				printGraphics.translate((double)(printPageFormat.getWidth() - printPageFormat.getImageableX() - printPageFormat.getImageableWidth()), (double)(printPageFormat.getHeight() - printPageFormat.getImageableY() - printPageFormat.getImageableHeight()));
+			else
+				printGraphics.translate((double)(printPageFormat.getHeight() - printPageFormat.getImageableY() - printPageFormat.getImageableHeight()), (double)(printPageFormat.getWidth() - printPageFormat.getImageableX() - printPageFormat.getImageableWidth()));
 
 			if (pageFormat.getPaperOrientation() != PageFormat.PORTRAIT) {
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT)
@@ -383,22 +387,21 @@ public final class VCLPrintJob implements Printable, Runnable {
 			}
 
 			// Rotate the page if necessary
-			int orientation = printPageFormat.getOrientation();
 			float rotatedPageAngle = 0.0f;
 			if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 				if (orientation == PageFormat.REVERSE_LANDSCAPE) {
-					printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
+					printGraphics.translate(0, (double)printPageFormat.getImageableHeight());
 					rotatedPageAngle = (float)Math.toRadians(-90);
 					printGraphics.rotate(rotatedPageAngle);
 				}
 				else {
-					printGraphics.translate((int)printPageFormat.getImageableWidth(), 0);
+					printGraphics.translate((double)printPageFormat.getImageableWidth(), 0);
 					rotatedPageAngle = (float)Math.toRadians(-90);
 					printGraphics.rotate(rotatedPageAngle);
 				}
 			}
 			else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
-				printGraphics.translate(0, (int)printPageFormat.getImageableHeight());
+				printGraphics.translate(0, (double)printPageFormat.getImageableHeight());
 				rotatedPageAngle = (float)Math.toRadians(-90);
 				printGraphics.rotate(rotatedPageAngle);
 			}
