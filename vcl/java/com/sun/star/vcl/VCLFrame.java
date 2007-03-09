@@ -1005,7 +1005,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		panel = null;
 		queue = null;
-		window.removeNotify();
 		window = null;
 
 		disposed = true;
@@ -2101,6 +2100,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			enableFlushing(false);
 			panel.setVisible(false);
 			window.hide();
+			window.removeNotify();
 		}
 
 	}
@@ -2413,18 +2413,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			initialize();
-
-		}
-
-		/**
-		 * Called by the garbage collector on an object when garbage collection
-		 * determines that there are no more references to the object.
-		 */
-		protected void finalize() throws Throwable
-		{
-			// Fix bug 1145 by destroying the native window and fix bugs
-			// 1899 and  2151 by destroying it in the finalizer
-			removeNotify();
 
 		}
 
