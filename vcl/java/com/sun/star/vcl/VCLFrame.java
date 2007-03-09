@@ -2577,8 +2577,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void paint(Graphics g) {
 
-			super.paint(g);
-
 			Shape clip = g.getClip();
 			if (clip != null)
 				frame.paint(clip.getBounds());

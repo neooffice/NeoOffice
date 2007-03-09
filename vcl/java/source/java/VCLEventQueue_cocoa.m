@@ -166,6 +166,10 @@ const static NSString *pCancelInputMethodText = @" ";
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (void)orderBack:(id)pSender;
+- (void)orderFront:(id)pSender;
+- (void)orderFrontRegardless;
+- (void)orderWindow:(NSWindowOrderingMode)nPlace relativeTo:(int)nOtherWindowNumber;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 @end
@@ -222,6 +226,35 @@ const static NSString *pCancelInputMethodText = @" ";
 	}
 
 	return bRet;
+}
+
+- (void)orderBack:(id)pSender
+{
+	[super displayIfNeeded];
+
+	[super orderBack:pSender];
+}
+
+- (void)orderFront:(id)pSender
+{
+	[super displayIfNeeded];
+
+	[super orderFront:pSender];
+}
+
+- (void)orderFrontRegardless
+{
+	[super displayIfNeeded];
+
+	[super orderFrontRegardless];
+}
+
+- (void)orderWindow:(NSWindowOrderingMode)nPlace relativeTo:(int)nOtherWindowNumber
+{
+	if ( nPlace != NSWindowOut )
+		[super displayIfNeeded];
+
+	[super orderWindow:nPlace relativeTo:nOtherWindowNumber];
 }
 
 - (void)resignKeyWindow
