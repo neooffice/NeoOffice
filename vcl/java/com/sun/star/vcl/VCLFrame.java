@@ -1005,6 +1005,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		panel = null;
 		queue = null;
+		window.removeNotify();
 		window = null;
 
 		disposed = true;
