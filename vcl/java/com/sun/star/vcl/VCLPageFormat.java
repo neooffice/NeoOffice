@@ -185,7 +185,8 @@ public final class VCLPageFormat {
 		int x = (int)((pageFormat.getWidth() - pageFormat.getImageableX() - pageFormat.getImageableWidth()) * printerTextResolution / 72);
 		int y = (int)((pageFormat.getHeight() - pageFormat.getImageableY() - pageFormat.getImageableHeight()) * printerTextResolution / 72);
 
-		if (paperOrientation == PageFormat.PORTRAIT)
+		// Part of fix for bug 2202: Always return the portrait paper settings
+		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
 			return new Rectangle(x, y, width, height);
 		else
 			return new Rectangle(y, x, height, width);
@@ -235,7 +236,8 @@ public final class VCLPageFormat {
 	 */
 	public Dimension getPageSize() {
 
-		if (paperOrientation == PageFormat.PORTRAIT)
+		// Part of fix for bug 2202: Always return the portrait paper settings
+		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
 			return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
 		else
 			return new Dimension((int)(pageFormat.getHeight() * printerTextResolution / 72), (int)(pageFormat.getWidth() * printerTextResolution / 72));
@@ -260,17 +262,10 @@ public final class VCLPageFormat {
 	 */
 	public int getPaperType() {
 
+		// Part of fix for bug 2202: Always return the portrait paper settings
 		Paper paper = pageFormat.getPaper();
-		long width;
-		long height;
-		if (paperOrientation == PageFormat.PORTRAIT) {
-			width = Math.round(paper.getWidth());
-			height = Math.round(paper.getHeight());
-		}
-		else {
-			width = Math.round(paper.getHeight());
-			height = Math.round(paper.getWidth());
-		}
+		long width = Math.round(paper.getWidth());
+		long height = Math.round(paper.getHeight());
 
 		if (width == 842 && height == 1191)
 			return VCLPageFormat.PAPER_A3;
