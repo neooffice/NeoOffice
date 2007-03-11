@@ -383,35 +383,35 @@ public final class VCLPrintJob implements Printable, Runnable {
 			}
 
 			// Set the origin to the origin of the printable area. Fix offset
-			// bugs in bug 2202 by only making a single translate call and
-			// casting values to integers.
+			// bugs in bug 2202 by only making a single translate and rotating
+			// to reverse landscape instead of landscape.
 			int orientation = printPageFormat.getOrientation();
-			int translateX;
-			int translateY;
+			double translateX;
+			double translateY;
 			if (orientation == PageFormat.PORTRAIT) {
-				translateX = (int)(printPageFormat.getWidth() - printPageFormat.getImageableX() - printPageFormat.getImageableWidth());
-				translateY = (int)(printPageFormat.getHeight() - printPageFormat.getImageableY() - printPageFormat.getImageableHeight());
+				translateX = (double)printPageFormat.getImageableX();
+				translateY = (double)printPageFormat.getImageableY();
 			}
 			else {
-				translateX = (int)(printPageFormat.getHeight() - printPageFormat.getImageableY() - printPageFormat.getImageableHeight());
-				translateY = (int)(printPageFormat.getWidth() - printPageFormat.getImageableX() - printPageFormat.getImageableWidth());
+				translateX = (double)printPageFormat.getImageableY();
+				translateY = (double)printPageFormat.getImageableX();
 			}
 
 			// Calculate rotation and translation
 			float rotatedPageAngle = 0.0f;
 			if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 				if (orientation == PageFormat.REVERSE_LANDSCAPE) {
-					translateY += (int)printPageFormat.getImageableHeight();
-					rotatedPageAngle = (float)Math.toRadians(-90);
+					translateX += (double)printPageFormat.getImageableWidth();
+					rotatedPageAngle = (float)Math.toRadians(90);
 				}
 				else {
-					translateX += (int)printPageFormat.getImageableWidth();
+					translateY += (double)printPageFormat.getImageableHeight();
 					rotatedPageAngle = (float)Math.toRadians(-90);
 				}
 			}
 			else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
-				translateY += (int)printPageFormat.getImageableHeight();
-				rotatedPageAngle = (float)Math.toRadians(-90);
+				translateX += (double)printPageFormat.getImageableWidth();
+				rotatedPageAngle = (float)Math.toRadians(90);
 			}
 
 			printGraphics.translate(translateX, translateY);
