@@ -80,6 +80,11 @@ public final class VCLPrintJob implements Printable, Runnable {
 	private boolean jobStarted = false;
 
 	/**
+	 * The job name.
+	 */
+	private String jobName = null;
+
+	/**
 	 * The last page queue.
 	 */
 	VCLGraphics.PageQueue lastPageQueue = null;
@@ -160,6 +165,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			lastPageQueue = null;
 		}
 		job = null;
+		jobName = null;
 		printGraphics = null;
 		printPageFormat = null;
 		printThread = null;
@@ -318,12 +324,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 	public boolean startJob(VCLPageFormat p, String n, float s) {
 
 		if (!jobStarted) {
+			jobName = n;
 			pageFormat = p;
 			scale = s;
 			job = pageFormat.getPrinterJob();
-			job.setPrintable(this, pageFormat.getPageFormat());
-			job.setJobName(n);
-			pageFormat.setEditable(false);
 			jobStarted = true;
 		}
 
@@ -343,6 +347,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Start the printing thread if it has not yet been started
 		if (!printStarted && printThread == null) {
+			job.setPrintable(this, pageFormat.getPageFormat());
+			job.setJobName(jobName);
+			pageFormat.setEditable(false);
+
 			printThread = new Thread(this);
 			printThread.start();
 			try {
@@ -352,8 +360,10 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 			// Fix bug 2101 by trying to set the printable a second time
 			if (printThread == null) {
-				job.setPrintable(this, pageFormat.getPageFormat());
 				printStarted = false;
+				job.setPrintable(this, pageFormat.getPageFormat());
+				job.setJobName(jobName);
+
 				printThread = new Thread(this);
 				printThread.start();
 				try {
