@@ -235,10 +235,6 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		printGraphics = (Graphics2D)g;
 		printPageFormat = f;
-		AffineTransform transform = printGraphics.getTransform();
-		transform.setToTranslation(0.0, 0.0);
-		printGraphics.setTransform(transform);
-		printGraphics.scale(scale, scale);
 
 		// Notify other threads and wait until painting is finished
 		if (!endJob) {
@@ -379,49 +375,43 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Get the current page's printGraphics context
 		if (printStarted && printThread != null) {
-			// The printer graphics' transform returns zero for scaling when
-			// the graphics is rotated so we need to cache our own copy
-			AffineTransform transform = printGraphics.getTransform();
-			double scaleX = transform.getScaleX();
-			double scaleY = transform.getScaleY();
-
-			if (pageFormat.getPaperOrientation() != PageFormat.PORTRAIT) {
+			int orientation = printPageFormat.getOrientation();
+			if (pageFormat.getPaperOrientation() != orientation) {
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT)
 					o = VCLPageFormat.ORIENTATION_LANDSCAPE;
 				else
 					o = VCLPageFormat.ORIENTATION_PORTRAIT;
 			}
 
+			// Scale before doing any translations
+			printGraphics.scale(scale, scale);
+
 			// Set the origin to the origin of the printable area. Fix offset
-			// bugs in bug 2202 by only making a single translate and rotating
-			// to reverse landscape instead of landscape.
-			int orientation = printPageFormat.getOrientation();
+			// bugs in bug 2202 by only making a single translate.
 			double translateX;
 			double translateY;
-			if (orientation == PageFormat.PORTRAIT) {
-				translateX = (double)printPageFormat.getImageableX();
-				translateY = (double)printPageFormat.getImageableY();
-			}
-			else {
-				translateX = (double)printPageFormat.getImageableY();
-				translateY = (double)printPageFormat.getImageableX();
-			}
-
-			// Calculate rotation and translation
-			float rotatedPageAngle = 0.0f;
+			float rotatedPageAngle;
 			if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
 				if (orientation == PageFormat.REVERSE_LANDSCAPE) {
-					translateX += (double)printPageFormat.getImageableWidth();
-					rotatedPageAngle = (float)Math.toRadians(90);
-				}
-				else {
-					translateY += (double)printPageFormat.getImageableHeight();
+					translateX = (double)printPageFormat.getImageableX();
+					translateY = (double)(printPageFormat.getImageableY() + printPageFormat.getImageableHeight());
 					rotatedPageAngle = (float)Math.toRadians(-90);
 				}
+				else {
+					translateX = (double)(printPageFormat.getImageableX() + printPageFormat.getImageableWidth());
+					translateY = (double)printPageFormat.getImageableY();
+					rotatedPageAngle = (float)Math.toRadians(90);
+				}
 			}
-			else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT ) {
-				translateX += (double)printPageFormat.getImageableWidth();
-				rotatedPageAngle = (float)Math.toRadians(90);
+			else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT) {
+				translateX = (double)printPageFormat.getImageableX();
+				translateY = (double)(printPageFormat.getImageableY() + printPageFormat.getImageableHeight());
+				rotatedPageAngle = (float)Math.toRadians(-90);
+			}
+			else {
+				translateX = (double)printPageFormat.getImageableX();
+				translateY = (double)printPageFormat.getImageableY();
+				rotatedPageAngle = 0.0f;
 			}
 
 			printGraphics.translate(translateX, translateY);
@@ -438,7 +428,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 				printGraphics.scale(pageScaleX, pageScaleY);
 			}
 
-			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPageAngle, (float)(scaleX * pageScaleX), (float)(scaleY * pageScaleY));
+			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPageAngle, (float)(scale * pageScaleX), (float)(scale * pageScaleY));
 		}
 		else {
 			graphics = null;

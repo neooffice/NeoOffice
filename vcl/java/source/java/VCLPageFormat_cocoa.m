@@ -236,6 +236,7 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 
 	if ( pNSPrintInfo && nWidth > 0 && nHeight > 0 )
 	{
+		NSPrintingOrientation nOldOrientation = [(NSPrintInfo *)pNSPrintInfo orientation];
 		NSSize aOldSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
 
 		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
@@ -253,9 +254,11 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 			// be rotated determining the minimum unmatched area
 			long nDiff = powl( (long)aSize.width - nWidth, 2 ) + powl( (long)aSize.height - nHeight, 2 );
 			long nRotatedDiff = powl( (long)aSize.width - nHeight, 2 ) + powl( (long)aSize.height - nWidth, 2 );
-			if ( nDiff > nRotatedDiff )
+			if (  nDiff > nRotatedDiff )
 				bRet = YES;
 		}
+
+		[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
 	}
 
 	[pPool release];

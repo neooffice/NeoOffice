@@ -143,7 +143,7 @@ public final class VCLPageFormat {
 
 		job = PrinterJob.getPrinterJob();
 		pageFormat = job.defaultPage();
-		pageFormat.setOrientation(paperOrientation);
+		pageFormat.setOrientation(PageFormat.PORTRAIT);
 		image = new VCLImage(1, 1, 32, this);
 
 	}
@@ -186,10 +186,13 @@ public final class VCLPageFormat {
 		int y = (int)((pageFormat.getHeight() - pageFormat.getImageableY() - pageFormat.getImageableHeight()) * printerTextResolution / 72);
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
-		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
+/*
+		if (paperOrientation == PageFormat.PORTRAIT)
 			return new Rectangle(x, y, width, height);
 		else
 			return new Rectangle(y, x, height, width);
+*/
+			return new Rectangle(x, y, width, height);
 
 	}
 
@@ -237,10 +240,13 @@ public final class VCLPageFormat {
 	public Dimension getPageSize() {
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
-		if (pageFormat.getOrientation() == PageFormat.PORTRAIT)
+/*
+		if (paperOrientation == PageFormat.PORTRAIT)
 			return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
 		else
 			return new Dimension((int)(pageFormat.getHeight() * printerTextResolution / 72), (int)(pageFormat.getWidth() * printerTextResolution / 72));
+*/
+		return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
 
 	}
 
@@ -348,15 +354,9 @@ public final class VCLPageFormat {
 		else
 			paperOrientation = PageFormat.LANDSCAPE;
 
-		// Fix bug 2202 by not allowing the orientation to change while in
+		// Fix bug 2202 by always setting the Java page format to portrait
 		// a print job
-		if (!editable)
-			return;
-
-		if (o == ORIENTATION_PORTRAIT)
-			pageFormat.setOrientation(PageFormat.PORTRAIT);
-		else
-			pageFormat.setOrientation(PageFormat.LANDSCAPE);
+		pageFormat.setOrientation(PageFormat.PORTRAIT);
 
 	}
 
