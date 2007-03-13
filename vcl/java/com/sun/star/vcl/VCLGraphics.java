@@ -399,6 +399,16 @@ public final class VCLGraphics {
 	private VCLImage image = null;
 
 	/**
+	 * The minimum rectangle width.
+	 */
+	private int minRectWidth = 1;
+
+	/**
+	 * The minimum rectangle height.
+	 */
+	private int minRectHeight = 1;
+
+	/**
 	 * The printer page format.
 	 */
 	private VCLPageFormat pageFormat = null;
@@ -493,6 +503,25 @@ public final class VCLGraphics {
 		}
 		graphics = (Graphics2D)g;
 		bitCount = 24;
+
+		// Calculate the minimum rectangle bounds
+		Dimension pageResolution = pageFormat.getPageResolution();
+		if (rotatedPageAngle != 0.0f) {
+			minRectWidth = pageResolution.height / 72;
+			if (pageResolution.height % 72 != 0)
+				minRectWidth++;
+			minRectHeight = pageResolution.width / 72;
+			if (pageResolution.width % 72 != 0)
+				minRectHeight++;
+		}
+		else {
+			minRectWidth = pageResolution.width / 72;
+			if (pageResolution.width % 72 != 0)
+				minRectWidth++;
+			minRectHeight = pageResolution.height / 72;
+			if (pageResolution.height % 72 != 0)
+				minRectHeight++;
+		}
 
 		// Mac OS X sometimes mangles images when multiple images are rendered
 		// to a printer so we need to combine all images into one image and
@@ -1073,6 +1102,12 @@ public final class VCLGraphics {
 		}
 
 		Rectangle destBounds = new Rectangle(x1 < x2 ? x1 : x2, y1 < y2 ? y1 : y2, x1 < x2 ? x2 - x1 : x1 - x2, y1 < y2 ? y2 - y1 : y1 - y2);
+
+		// Apply fix for bug 2236 to horizontal and vertical lines
+		if (graphics != null && (x1 == x2 || y1 == y2)) {
+			drawRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height, color, true);
+			return;
+		}
 		destBounds.width++;
 		destBounds.height++;
 		destBounds = destBounds.intersection(graphicsBounds);
@@ -1135,6 +1170,15 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
+
+		// Apply fix for bug 2236 to rectangular polygons
+		if (graphics != null) {
+			Area area = new Area(polygon);
+			if (area.isRectangular()) {
+				drawRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height, color, fill);
+				return;
+			}
+		}
 		if (!fill) {
 			destBounds.x--;
 			destBounds.y--;
@@ -1199,6 +1243,13 @@ public final class VCLGraphics {
 
 		if (npoints == 0)
 			return;
+
+		// Apply fix for bug 2236 to polylines
+		if (graphics != null) {
+			for (int i = 1; i < npoints; i++)
+				drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i], color);
+			return;
+		}
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
@@ -1368,6 +1419,18 @@ public final class VCLGraphics {
 			height *= -1;
 		}
 
+		// Fix bug 2236 by rounding the width and height when printing so that
+		// we aren't doing non-integer widths and heights when measured in a
+		// 72 DPI scale
+		if (graphics != null) {
+			if (width == 0 || width % minRectWidth != 0)
+				width += minRectWidth;
+			width = (width / minRectWidth) * minRectWidth;
+			if (height == 0 || height % minRectHeight != 0)
+				height += minRectHeight;
+			height = (height / minRectHeight) * minRectHeight;
+		}
+
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1395,10 +1458,18 @@ public final class VCLGraphics {
 				while (clipRects.hasNext()) {
 					Rectangle clipRect = (Rectangle)clipRects.next();
 					g.setClip(clipRect);
-					if (fill)
+					if (fill) {
 						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
-					else
+					}
+					else if (graphics != null) {
+						g.fillRect(x, y, width, minRectHeight);
+						g.fillRect(x + width - minRectWidth, y, minRectWidth, height);
+						g.fillRect(x, y + height - minRectHeight, width, minRectHeight);
+						g.fillRect(x, y, minRectWidth, height);
+					}
+					else {
 						g.drawRect(x, y, width - 1, height - 1);
+					}
 				}
 			}
 			catch (Throwable t) {
