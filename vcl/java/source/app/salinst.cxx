@@ -539,9 +539,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		nCount = 0;
 	}
 
-	// Dispatch any pending AWT events
-	int nMaxEvents = bHandleAllCurrentEvents ? 100 : 1;
-	while ( nMaxEvents-- > 0 && !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
+	// the bHandleAllCurrentEvents parameter is true
+	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
 
@@ -560,13 +560,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		{
 			case SALEVENT_KEYUP:
 				// Fix bug 1971 by breaking after releasing a key
-				nMaxEvents = 0;
 				break;
 			case SALEVENT_MOUSEBUTTONDOWN:
 				// Fix bug 437 by ensuring that if the next event is a
 				// SALEVENT_MOUSEBUTTONUP event, it will be dispatched
 				// before the painting timer runs
-				nMaxEvents++;
 				OThread::yield();
 				break;
 		}
