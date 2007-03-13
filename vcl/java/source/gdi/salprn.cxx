@@ -267,6 +267,7 @@ JavaSalPrinter::JavaSalPrinter()
 	mbGraphics = FALSE;
 	mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
 	mpVCLPageFormat = NULL;
+	mePaperFormat = PAPER_USER;
 	mnPaperWidth = 0;
 	mnPaperHeight = 0;
 }
@@ -300,11 +301,10 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 	if ( !bFirstPass )
 	{
 		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
+		mePaperFormat = pSetupData->mePaperFormat;
+		mnPaperWidth = pSetupData->mnPaperWidth;
+		mnPaperHeight = pSetupData->mnPaperHeight;
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
-		Size aSize( mpVCLPageFormat->getPageSize() );
-		Size aResolution( mpVCLPageFormat->getTextResolution() );
-		mnPaperWidth = aSize.Width() * 2540 / aResolution.Width();
-		mnPaperHeight = aSize.Height() * 2540 / aResolution.Height();
 	}
 
 	// Fix bug by detecting when an OOo printer job is being reused for serial
@@ -344,24 +344,20 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	// require a new print job.
 	if ( bNewJobData )
 	{
-		mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
-	}
+		bool bEndJob = false;
+		if ( pSetupData->mePaperFormat != mePaperFormat )
+			bEndJob = true;
+		else if ( pSetupData->mePaperFormat == PAPER_USER && ( pSetupData->mnPaperWidth != mnPaperWidth || pSetupData->mnPaperHeight != mnPaperHeight ) )
+			bEndJob = true;
 
-	Size aSize( mpVCLPageFormat->getPageSize() );
-	Size aResolution( mpVCLPageFormat->getTextResolution() );
-	long nPaperWidth = aSize.Width() * 2540 / aResolution.Width();
-	long nPaperHeight = aSize.Height() * 2540 / aResolution.Height();
-
-	if ( nPaperWidth != mnPaperWidth || nPaperHeight != mnPaperHeight )
-	{
-		mnPaperWidth = nPaperWidth;
-		mnPaperHeight = nPaperHeight;
-		EndJob();
-		delete mpVCLPrintJob;
-		mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
-		if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData ) )
-			return NULL;
+		if ( bEndJob )
+		{
+			EndJob();
+			delete mpVCLPrintJob;
+			mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
+			if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData ) )
+				return NULL;
+		}
 	}
 
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = mpVCLPrintJob->startPage( pSetupData->meOrientation );

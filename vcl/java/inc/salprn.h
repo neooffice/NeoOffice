@@ -95,6 +95,7 @@ public:
 	XubString				maJobName;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
+	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;
 
