@@ -412,7 +412,7 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	{
 		// Seems we are the one and only, so start listening thread
 		pGlobalOfficeIPCThread = pThread;
-		pThread->createWithStack( 1024 ); // starts thread
+		pThread->create(); // starts thread
 	}
 	else
 	{
