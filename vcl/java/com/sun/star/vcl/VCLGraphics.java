@@ -401,12 +401,12 @@ public final class VCLGraphics {
 	/**
 	 * The minimum rectangle width.
 	 */
-	private int minRectWidth = 1;
+	private float minRectWidth = 1;
 
 	/**
 	 * The minimum rectangle height.
 	 */
-	private int minRectHeight = 1;
+	private float minRectHeight = 1;
 
 	/**
 	 * The printer page format.
@@ -507,20 +507,12 @@ public final class VCLGraphics {
 		// Calculate the minimum rectangle bounds
 		Dimension pageResolution = pageFormat.getPageResolution();
 		if (rotatedPageAngle != 0.0f) {
-			minRectWidth = pageResolution.height / 72;
-			if (pageResolution.height % 72 != 0)
-				minRectWidth++;
-			minRectHeight = pageResolution.width / 72;
-			if (pageResolution.width % 72 != 0)
-				minRectHeight++;
+			minRectWidth = (float)pageResolution.height / 72;
+			minRectHeight = (float)pageResolution.width / 72;
 		}
 		else {
-			minRectWidth = pageResolution.width / 72;
-			if (pageResolution.width % 72 != 0)
-				minRectWidth++;
-			minRectHeight = pageResolution.height / 72;
-			if (pageResolution.height % 72 != 0)
-				minRectHeight++;
+			minRectWidth = (float)pageResolution.width / 72;
+			minRectHeight = (float)pageResolution.height / 72;
 		}
 
 		// Mac OS X sometimes mangles images when multiple images are rendered
@@ -1423,12 +1415,10 @@ public final class VCLGraphics {
 		// we aren't doing non-integer widths and heights when measured in a
 		// 72 DPI scale
 		if (graphics != null) {
-			if (width == 0 || width % minRectWidth != 0)
-				width += minRectWidth;
-			width = (width / minRectWidth) * minRectWidth;
-			if (height == 0 || height % minRectHeight != 0)
-				height += minRectHeight;
-			height = (height / minRectHeight) * minRectHeight;
+			int widthUnits = (int)((float)width / minRectWidth) + 1;
+			width = (int)((minRectWidth * widthUnits) + 0.5);
+			int heightUnits = (int)((float)height / minRectHeight) + 1;
+			height = (int)((minRectHeight * heightUnits) + 0.5);
 		}
 
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
@@ -1462,10 +1452,10 @@ public final class VCLGraphics {
 						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
 					}
 					else if (graphics != null) {
-						g.fillRect(x, y, width, minRectHeight);
-						g.fillRect(x + width - minRectWidth, y, minRectWidth, height);
-						g.fillRect(x, y + height - minRectHeight, width, minRectHeight);
-						g.fillRect(x, y, minRectWidth, height);
+						g.fillRect(x, y, width, (int)minRectHeight);
+						g.fillRect(x + width - (int)minRectWidth, y, (int)minRectWidth, height);
+						g.fillRect(x, y + height - (int)minRectHeight, width, (int)minRectHeight);
+						g.fillRect(x, y, (int)minRectWidth, height);
 					}
 					else {
 						g.drawRect(x, y, width - 1, height - 1);
