@@ -1,10 +1,40 @@
 Index: patches/src680/apply
 ===================================================================
---- patches/src680/apply	(revision 8621)
+--- patches/src680/apply	(revision 8991)
 +++ patches/src680/apply	(working copy)
-@@ -1928,5 +1928,3 @@
+@@ -173,7 +173,8 @@
+ dbaccess-default-varchar-lenght.diff, i#62664, jianhua
+ 
+ #Improve the behavior of input field dialog.
+-sw-input-field-dialog.diff, Zhang Yun
++# Disable because it causes NeoOffice bug 2234
++# sw-input-field-dialog.diff, Zhang Yun
+ 
+ # Improve the behavior of input fields inline editing.
+ sw-input-field-inline-edit.diff, Zhang Yun
+@@ -458,12 +459,14 @@
+ # Replace usability numb Zoom dialog with a Combo Box
+ # FIXME: this conflicts with Sun's duplication of this work,
+ # eg. print preview
+-zoom-combobox.diff, michael
++# Disable because it causes NeoOffice bug 2201
++# zoom-combobox.diff, michael
+ # temporary hacks to remove warnings in the unused code,
+ # required by the SUSE build system
+ warning-uninitialized-variables-sc.diff, i#49351, pmladek
+ # Make the delete key happy again in starcalc  - wontfix [!]
+-gui-sc-delete.diff, i#17965, michael
++# Disable because it causes NeoOffice backspace and delete events to be backwards
++# gui-sc-delete.diff, i#17965, michael
+ # Fix for b.x.c 62193
+ sc-sheet-double-click-rename.diff, i#45245, jody
+ # adds to Autofilter Empty-NonEmpty options bxc #62165
+@@ -2009,8 +2012,6 @@
  
  # fix lpsolve build for OSX
  macosx-lpsolve-makefile.diff
 -# don't include malloc.h on OSX
 -macosx-sfx2-objstor.diff, i#73121
+ 
+ [ UnUsedButNotYetRemovedFromSVN ]
+ # diffs kept for reference as there might soon be a need to resurrect
