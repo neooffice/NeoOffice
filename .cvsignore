@@ -1,0 +1,7 @@
+build
+build.*
+custom.mk
+source
+install
+cd_install
+patch_install
