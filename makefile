@@ -149,6 +149,7 @@ build.ooo-build_checkout: build.oo_checkout
 	touch "$@"
 
 build.odf-converter_checkout:
+	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; svn co $(ODF-CONVERTER_TAG) $(ODF-CONVERTER_SVNROOT) "$(ODF-CONVERTER_PACKAGE)"
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(ODF-CONVERTER_PACKAGE)"
