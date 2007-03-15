@@ -143,6 +143,8 @@ public final class VCLPageFormat {
 
 		job = PrinterJob.getPrinterJob();
 		pageFormat = job.defaultPage();
+		// We always set the page format to portrait as all of the fixes for
+		// for bug 2202 depend on this
 		pageFormat.setOrientation(PageFormat.PORTRAIT);
 		image = new VCLImage(1, 1, 32, this);
 
@@ -186,13 +188,7 @@ public final class VCLPageFormat {
 		int y = (int)((pageFormat.getHeight() - pageFormat.getImageableY() - pageFormat.getImageableHeight()) * printerTextResolution / 72);
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
-/*
-		if (paperOrientation == PageFormat.PORTRAIT)
-			return new Rectangle(x, y, width, height);
-		else
-			return new Rectangle(y, x, height, width);
-*/
-			return new Rectangle(x, y, width, height);
+		return new Rectangle(x, y, width, height);
 
 	}
 
@@ -240,12 +236,6 @@ public final class VCLPageFormat {
 	public Dimension getPageSize() {
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
-/*
-		if (paperOrientation == PageFormat.PORTRAIT)
-			return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
-		else
-			return new Dimension((int)(pageFormat.getHeight() * printerTextResolution / 72), (int)(pageFormat.getWidth() * printerTextResolution / 72));
-*/
 		return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
 
 	}
@@ -317,6 +307,17 @@ public final class VCLPageFormat {
 	}
 
 	/**
+	 * Returns the editable state
+	 *
+	 * @return the editable state
+	 */
+	public boolean isEditable() {
+
+		return editable;
+
+	}
+
+	/**
 	 * Set the number of copies.
 	 *
 	 * @param n the number of copies
@@ -349,14 +350,13 @@ public final class VCLPageFormat {
 	 */
 	public void setOrientation(int o) {
 
+		if (!editable)
+			return;
+
 		if (o == ORIENTATION_PORTRAIT)
 			paperOrientation = PageFormat.PORTRAIT;
 		else
 			paperOrientation = PageFormat.LANDSCAPE;
-
-		// Fix bug 2202 by always setting the Java page format to portrait
-		// a print job
-		pageFormat.setOrientation(PageFormat.PORTRAIT);
 
 	}
 
@@ -366,6 +366,9 @@ public final class VCLPageFormat {
 	 * @param o the page orientation
 	 */
 	public void updatePageFormat(int o) {
+
+		if (!editable)
+			return;
 
 		pageFormat = job.defaultPage();
 

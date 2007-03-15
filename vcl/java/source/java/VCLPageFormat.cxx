@@ -605,6 +605,29 @@ const Size com_sun_star_vcl_VCLPageFormat::getTextResolution()
 
 // ----------------------------------------------------------------------------
 
+sal_Bool com_sun_star_vcl_VCLPageFormat::isEditable()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isEditable", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLPageFormat::setCopies( int _par0 )
 {
 	static jmethodID mID = NULL;
@@ -655,6 +678,9 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 {
 	sal_Bool out = sal_False;
 
+	if (!isEditable())
+		return out;
+
 	SalData *pSalData = GetSalData();
 
 	JavaSalFrame *pFocusFrame = pSalData->mpFocusFrame;
@@ -679,7 +705,7 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		if ( out )
 			updatePageFormat( ORIENTATION_PORTRAIT );
 	}
-	
+
 	return out;
 }
 
@@ -687,6 +713,9 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 
 void com_sun_star_vcl_VCLPageFormat::setPaperType( Paper _par0, long _par1, long _par2 )
 {
+	if (!isEditable())
+		return;
+
 	void *pNSPrintInfo = getNativePrinterJob();
 
 	if ( _par0 == PAPER_A3 )
