@@ -1417,8 +1417,19 @@ public final class VCLGraphics {
 		if (graphics != null) {
 			int widthUnits = (int)((float)width / minRectWidth) + 1;
 			width = (int)((minRectWidth * widthUnits) + 0.5);
+			int oldX = x;
+			int xUnits = (int)((float)x / minRectWidth);
+			x = (int)((minRectWidth * xUnits) + 0.5);
+			if ((float)(oldX - x) / minRectWidth >= 0.5)
+				width++;
+
 			int heightUnits = (int)((float)height / minRectHeight) + 1;
 			height = (int)((minRectHeight * heightUnits) + 0.5);
+			int oldY = y;
+			int yUnits = (int)((float)y / minRectHeight);
+			y = (int)((minRectHeight * yUnits) + 0.5);
+			if ((float)(oldY - y) / minRectHeight >= 0.5)
+				height++;
 		}
 
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);

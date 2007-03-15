@@ -37,6 +37,8 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 
+static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
+
 // Fix for bugs 1685, 1694, and 1859. Java 1.5 and higher will arbitrarily
 // change the selected font by creating a new font from the font's family
 // name and style. We fix these bugs by prepending the font names to the
@@ -181,7 +183,7 @@ const static NSString *pCancelInputMethodText = @" ";
 	[super becomeKeyWindow];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
@@ -196,7 +198,7 @@ const static NSString *pCancelInputMethodText = @" ";
 - (void)displayIfNeeded
 {
 	// Fix bug 2151 by not allowing any updates if the window is hidden
-	if ( ![self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( ![self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 		return;
 
 	[super displayIfNeeded];
@@ -208,7 +210,7 @@ const static NSString *pCancelInputMethodText = @" ";
 	BOOL bRet = [super makeFirstResponder:pResponder];
 
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( bRet && [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( bRet && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		if ( pOldResponder && [pOldResponder respondsToSelector:@selector(abandonInput)] && [pOldResponder respondsToSelector:@selector(hasMarkedText)] && [pOldResponder respondsToSelector:@selector(insertText:)] )
 		{
@@ -230,28 +232,34 @@ const static NSString *pCancelInputMethodText = @" ";
 
 - (void)orderBack:(id)pSender
 {
-	[super displayIfNeeded];
+	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
+		[super displayIfNeeded];
 
 	[super orderBack:pSender];
 }
 
 - (void)orderFront:(id)pSender
 {
-	[super displayIfNeeded];
+	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
+		[super displayIfNeeded];
+
 
 	[super orderFront:pSender];
 }
 
 - (void)orderFrontRegardless
 {
-	[super displayIfNeeded];
+	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
+		[super displayIfNeeded];
 
 	[super orderFrontRegardless];
 }
 
 - (void)orderWindow:(NSWindowOrderingMode)nPlace relativeTo:(int)nOtherWindowNumber
 {
-	if ( nPlace != NSWindowOut )
+	if ( nPlace != NSWindowOut && [[self className] isEqualToString:pCocoaAppWindowString] )
+		[super displayIfNeeded];
+
 		[super displayIfNeeded];
 
 	[super orderWindow:nPlace relativeTo:nOtherWindowNumber];
@@ -260,7 +268,7 @@ const static NSString *pCancelInputMethodText = @" ";
 - (void)resignKeyWindow
 {
 	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [self isVisible] && [[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
@@ -280,7 +288,7 @@ const static NSString *pCancelInputMethodText = @" ";
 
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows
-	if ( !bRet && pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask && [self isVisible] && ![[self className] isEqualToString:@"CocoaAppWindow"] )
+	if ( !bRet && pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask && [self isVisible] && ![[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
 		NSResponder *pResponder = [self firstResponder];
@@ -323,7 +331,7 @@ static VCLResponder *pSharedResponder = nil;
 	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
 	// character as the JVM only seems to process the first character
 	NSWindow *pWindow = [self window];
-	if ( pEvents && pWindow && [pWindow isVisible] && [[pWindow className] isEqualToString:@"CocoaAppWindow"] )
+	if ( pEvents && pWindow && [pWindow isVisible] && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSEvent *pEvent = [pEvents objectAtIndex:0];
 		if ( pEvent )
