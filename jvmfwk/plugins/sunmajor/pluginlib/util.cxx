@@ -893,8 +893,7 @@ rtl::Reference<VendorBase> getJREInfoByPath(
     
     //check if the directory path is good, that is a JRE was already recognized.
     //Then we need not detect it again
-    MapIt entry2 = find_if(mapJREs.begin(), mapJREs.end(),
-                           SameOrSubDirJREMap(sResolvedDir));
+    MapIt entry2 = mapJREs.find(sResolvedDir);
     if (entry2 != mapJREs.end())
     {
         JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION ": ")
@@ -1032,7 +1031,7 @@ rtl::Reference<VendorBase> getJREInfoByPath(
         }
     }    
     if (ret.is() == false)
-        vecBadPaths.push_back(sResolvedDir);
+        vecBadPaths.push_back(sFilePath);
     else
     {
         JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION ": ")

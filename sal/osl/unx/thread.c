@@ -137,7 +137,7 @@ static void* osl_thread_start_Impl (void * pData);
 static void  osl_thread_cleanup_Impl (void * pData);
 
 static oslThread osl_thread_create_Impl (
-	oslWorkerFunction pWorker, void * pThreadData, short nFlags, sal_Int32 nFrames );
+	oslWorkerFunction pWorker, void * pThreadData, short nFlags);
 
 static void osl_thread_join_cleanup_Impl (void * opaque);
 static void osl_thread_wait_cleanup_Impl (void * opaque);
@@ -291,8 +291,7 @@ static void* osl_thread_start_Impl (void* pData)
 static oslThread osl_thread_create_Impl (
 	oslWorkerFunction pWorker,
 	void*             pThreadData,
-	short             nFlags,
-	sal_Int32         nFrames)
+	short             nFlags)
 {
 	Thread_Impl* pImpl;
     int nRet=0;
@@ -307,24 +306,10 @@ static oslThread osl_thread_create_Impl (
 
     pthread_mutex_lock (&(pImpl->m_Lock));
 
-	pthread_attr_t attr;
-	pthread_attr_init (&attr);
-
-#if defined (LINUX) || defined (SOLARIS)
-	if (nFrames > 0)
-	{
-	  size_t stack_size = sysconf (_SC_THREAD_STACK_MIN);
-	  if (nFrames * 128 > stack_size)
-		  stack_size = nFrames * 128;
-//	  if (!getenv ("DISABLE_SIZE"))
-		  pthread_attr_setstacksize (&attr, stack_size);
-//	  fprintf (stderr, "Set stack size %d\n", stack_size);
-	}
-#endif
-
 	if ((nRet = pthread_create (
 		&(pImpl->m_hThread),
-		&attr, osl_thread_start_Impl,
+		PTHREAD_ATTR_DEFAULT,
+		osl_thread_start_Impl,
 		(void*)(pImpl))) != 0)
 	{
 	    OSL_TRACE("osl_thread_create_Impl(): errno: %d, %s\n",
@@ -360,21 +345,7 @@ oslThread osl_createThread (
     return osl_thread_create_Impl (
 		pWorker,
 		pThreadData,
-		THREADIMPL_FLAGS_ATTACHED,
-		-1);
-}
-
-oslThread
-osl_createThreadWithStack(
-		oslWorkerFunction pWorker,
-		void *            pThreadData,
-		sal_Int32         nFrames)
-{
-    return osl_thread_create_Impl (
-		pWorker,
-		pThreadData,
-		THREADIMPL_FLAGS_ATTACHED,
-		nFrames);
+		THREADIMPL_FLAGS_ATTACHED);
 }
 
 /*****************************************************************************/
@@ -388,21 +359,7 @@ oslThread osl_createSuspendedThread (
 		pWorker,
 		pThreadData,
 		THREADIMPL_FLAGS_ATTACHED |
-		THREADIMPL_FLAGS_SUSPENDED,
-		-1);
-}
-
-oslThread osl_createSuspendedThreadWithStack (
-	oslWorkerFunction pWorker,
-	void *            pThreadData,
-	sal_Int32         nFrames)
-{
-    return osl_thread_create_Impl (
-		pWorker,
-		pThreadData,
-		THREADIMPL_FLAGS_ATTACHED |
-		THREADIMPL_FLAGS_SUSPENDED,
-		nFrames);
+		THREADIMPL_FLAGS_SUSPENDED );
 }
 
 /*****************************************************************************/
