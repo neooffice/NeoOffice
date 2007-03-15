@@ -894,7 +894,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 					<desc>Specifies if the letter at the beginning of a sentence should be capitalized automatically.</desc>
 					<label>Capitalize first letter of every sentence</label>
 				</info>
-				<value>true</value>
+				<value>false</value>
 			</prop>
 			<prop oor:name="ChangeUnderlineWeight" oor:type="xs:boolean">
 				<info>
@@ -1032,14 +1032,14 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 						<desc>Specifies the maximum cache size for all graphical display objects.</desc>
 						<label>Total Graphic Cache Size</label>
 					</info>
-					<value>10240000</value>
+					<value>20480000</value>
 				</prop>
 				<prop oor:name="ObjectCacheSize" oor:type="xs:int">
 					<info>
 						<desc>Specifies the maximum cache size for a single graphic display object.</desc>
 						<label>Graphic Object Cache Size</label>
 					</info>
-					<value>2560000</value>
+					<value>5120000</value>
 				</prop>
 				<prop oor:name="ObjectReleaseTime" oor:type="xs:int">
 					<info>
@@ -1140,7 +1140,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 					<info>
 						<desc>Specifies the directory that is displayed when the dialog for opening a graphic or for saving a new graphic is called.</desc>
 					</info>
-					<value>$(insturl)/share/gallery</value>
+					<value>$(userurl)/gallery</value>
 				</prop>
 				<prop oor:name="Help" oor:type="xs:string">
 					<info>
@@ -1289,7 +1289,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 					<info>
 						<desc>Specifies the default directory used by the dialog for opening a graphic or for saving a new graphic.</desc>
 					</info>
-					<value>$(insturl)/share/gallery</value>
+					<value>$(insturl)/user/gallery</value>
 				</prop>
 				<prop oor:name="Help" oor:type="xs:string">
 					<info>
@@ -2188,7 +2188,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 						<desc>Specifies an additional limit if Font Antialiasing is enabled. Fonts that are smaller than the specified limit are not anti-aliased.</desc>
 						<label>Font Antialiasing Minimum Pixel Height</label>
 					</info>
-					<value>8</value>
+					<value>1</value>
 				</prop>
 			</group>
 		</group>
@@ -2823,25 +2823,25 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 						<info>
 							<desc>Specifies if convertible MathType OLE objects are converted into Math objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 					<prop oor:name="WinWordToWriter" oor:type="xs:boolean">
 						<info>
 							<desc>Specifies if convertible WinWord OLE objects are converted into Writer objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 					<prop oor:name="ExcelToCalc" oor:type="xs:boolean">
 						<info>
 							<desc>Specifies if convertible Excel OLE objects are converted into Calc objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 					<prop oor:name="PowerPointToImpress" oor:type="xs:boolean">
 						<info>
 							<desc>Specifies if convertible PowerPoint OLE objects are converted into Impress objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 				</group>
 				<group oor:name="Export">
@@ -2852,25 +2852,25 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 						<info>
 							<desc>Specifies if embedded Math objects are converted into MathType objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 					<prop oor:name="WriterToWinWord" oor:type="xs:boolean">
 						<info>
 							<desc>Specifies if embedded Writer objects are converted into WinWord objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 					<prop oor:name="CalcToExcel" oor:type="xs:boolean">
 						<info>
 							<desc>Specifies if embedded Calc objects are converted into Excel objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 					<prop oor:name="ImpressToPowerPoint" oor:type="xs:boolean">
 						<info>
 							<desc>Specifies if embedded Impress objects are converted into PowerPoint objects.</desc>
 						</info>
-						<value>false</value>
+						<value>true</value>
 					</prop>
 				</group>
 			</group>
@@ -3487,6 +3487,13 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 					<info>
 						<desc>Contains settings for HTML import.</desc>
 					</info>
+					<prop oor:name="NumbersEnglishUS" oor:type="xs:boolean">
+						<info>
+							<desc>Specifies if numbers should be parsed according to the en-US locale instead of the user&apos;s locale.</desc>
+							<label>Use &apos;English (USA)&apos; locale for numbers</label>
+						</info>
+						<value>false</value>
+					</prop>
 					<prop oor:name="UnknownTag" oor:type="xs:boolean">
 						<info>
 							<desc>Specifies if unknown tags should be imported as fields.</desc>
@@ -3892,6 +3899,74 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 						</info>
 						<value>false</value>
 					</prop>
+					<prop oor:name="Printing" oor:type="xs:int">
+						<info>
+							<desc>Specifies what printing is allowed.</desc>
+						</info>
+						<constraints>
+							<enumeration oor:value="0">
+								<info>
+									<desc>The document cannot be printed.</desc>
+								</info>
+							</enumeration>
+							<enumeration oor:value="1">
+								<info>
+									<desc>The document can be printed at low resolution only.</desc>
+								</info>
+							</enumeration>
+							<enumeration oor:value="2">
+								<info>
+									<desc>The document can be printed at maximum resolution.</desc>
+								</info>
+							</enumeration>
+						</constraints>
+						<value>2</value>
+					</prop>
+					<prop oor:name="Changes" oor:type="xs:int">
+						<info>
+							<desc>Specifies the change allowed to the document.</desc>
+						</info>
+						<constraints>
+							<enumeration oor:value="0">
+								<info>
+									<desc>The document cannot be changed.</desc>
+								</info>
+							</enumeration>
+							<enumeration oor:value="1">
+								<info>
+									<desc>Inserting deleting and rotating pages is allowed.</desc>
+								</info>
+							</enumeration>
+							<enumeration oor:value="2">
+								<info>
+									<desc>Filling of form field is allowed.</desc>
+								</info>
+							</enumeration>
+							<enumeration oor:value="3">
+								<info>
+									<desc>Both filling of form field and commenting is allowed.</desc>
+								</info>
+							</enumeration>
+							<enumeration oor:value="4">
+								<info>
+									<desc>All the changes of the previous selections are permitted, with the only exclusion of page extraction (copy).</desc>
+								</info>
+							</enumeration>
+						</constraints>
+						<value>4</value>
+					</prop>
+					<prop oor:name="EnableCopyingOfContent" oor:type="xs:boolean">
+						<info>
+							<desc>Specifies that the pages and the document content can be extracted to be used in other documents (copy and paste).</desc>
+						</info>
+						<value>true</value>
+					</prop>
+					<prop oor:name="EnableTextAccessForAccessibilityTools" oor:type="xs:boolean">
+						<info>
+							<desc>Specifies that the document content can be extracted to be used in accessibility applications.</desc>
+						</info>
+						<value>true</value>
+					</prop>
 				</group>
 			</group>
 		</group>
@@ -3929,7 +4004,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 					</enumeration>
 					<enumeration oor:value="1">
 						<info>
-							<desc>32x32 pixel icons</desc>
+							<desc>larger icons</desc>
 						</info>
 					</enumeration>
 				</constraints>

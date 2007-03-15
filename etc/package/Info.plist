@@ -419,6 +419,7 @@
 				<string>application/vnd.aportisdoc</string>
 				<string>application/x-pocket-word</string>
 				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.document</string>
+				<string>application/vnd.ms-works</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
