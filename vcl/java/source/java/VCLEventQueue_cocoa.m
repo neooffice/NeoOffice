@@ -168,10 +168,6 @@ const static NSString *pCancelInputMethodText = @" ";
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
-- (void)orderBack:(id)pSender;
-- (void)orderFront:(id)pSender;
-- (void)orderFrontRegardless;
-- (void)orderWindow:(NSWindowOrderingMode)nPlace relativeTo:(int)nOtherWindowNumber;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 @end
@@ -228,41 +224,6 @@ const static NSString *pCancelInputMethodText = @" ";
 	}
 
 	return bRet;
-}
-
-- (void)orderBack:(id)pSender
-{
-	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
-		[super displayIfNeeded];
-
-	[super orderBack:pSender];
-}
-
-- (void)orderFront:(id)pSender
-{
-	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
-		[super displayIfNeeded];
-
-
-	[super orderFront:pSender];
-}
-
-- (void)orderFrontRegardless
-{
-	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
-		[super displayIfNeeded];
-
-	[super orderFrontRegardless];
-}
-
-- (void)orderWindow:(NSWindowOrderingMode)nPlace relativeTo:(int)nOtherWindowNumber
-{
-	if ( nPlace != NSWindowOut && [[self className] isEqualToString:pCocoaAppWindowString] )
-		[super displayIfNeeded];
-
-		[super displayIfNeeded];
-
-	[super orderWindow:nPlace relativeTo:nOtherWindowNumber];
 }
 
 - (void)resignKeyWindow
