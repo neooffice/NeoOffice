@@ -111,17 +111,6 @@ update_installation() {
 	chmod -Rf u+w "$1/Contents/presets" || exit 1
 	chmod -Rf u+w "$1/Contents/share" || exit 1
 
-	# Xalan and Xerces are now in their own endorsed subdirectory
-	rm -f "$1/Contents/MacOS/classes/xalan.jar"
-	rm -f "$1/Contents/MacOS/classes/xercesImpl.jar"
-	rm -f "$1/Contents/MacOS/classes/xml-apis.jar"
-
-	# Register libavmediaquicktime.dylib component
-	DYLD_LIBRARY_PATH="$1/Contents/MacOS"; export DYLD_LIBRARY_PATH
-	"$2/Contents/Resources/regcomp.bin" -revoke -r "$1/Contents/MacOS/services.rdb" -c "$1/Contents/MacOS/classes/avmedia.jar"
-	"$2/Contents/Resources/regcomp.bin" -register -r "$1/Contents/MacOS/services.rdb" -c "$1/Contents/MacOS/libavmediaquicktime.dylib"
-	unset DYLD_LIBRARY_PATH
-
     # Touch shared libraries to fix bug 280
 	DYLD_LIBRARY_PATH="$1/Contents/MacOS"; export DYLD_LIBRARY_PATH
 	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.dylib*"`; do
