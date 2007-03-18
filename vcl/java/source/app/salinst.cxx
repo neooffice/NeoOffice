@@ -558,8 +558,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 		switch ( nID )
 		{
-			case SALEVENT_KEYUP:
-				// Fix bug 1971 by breaking after releasing a key
+			case SALEVENT_CLOSE:
+				// Fix bug 1971 by breaking after closing a window
 				break;
 			case SALEVENT_MOUSEBUTTONDOWN:
 				// Fix bug 437 by ensuring that if the next event is a
