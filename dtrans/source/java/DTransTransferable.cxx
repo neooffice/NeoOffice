@@ -463,10 +463,12 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 							CFRange aRange;
 							aRange.location = 0;
 							aRange.length = CFStringGetLength( aCFString );
-							UniChar aBuf[ aRange.length ];
+							// [ed 3/24/07 Place on to heap, not stack.  Bug #2171
+							UniChar *aBuf = new UniChar[ aRange.length ];
 							CFStringGetCharacters( aCFString, aRange, aBuf );
 							aString = OUString( (sal_Unicode *)aBuf, aRange.length );
 							CFRelease( aCFString );
+							delete aBuf;
 						}
 					}
 					else
