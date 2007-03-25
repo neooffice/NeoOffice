@@ -806,7 +806,7 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
