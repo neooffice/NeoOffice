@@ -688,10 +688,16 @@ public final class VCLGraphics {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
 					}
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (srcBounds.width == destWidth && srcBounds.height == destHeight) {
+						g.setClip(userClip);
 						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+					}
+					else {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+						}
 					}
 				}
 				catch (Throwable t) {
@@ -838,10 +844,16 @@ public final class VCLGraphics {
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
 					}
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (srcBounds.width == destWidth && srcBounds.height == destHeight) {
+						g.setClip(userClip);
 						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+					}
+					else {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+						}
 					}
 				}
 			}
