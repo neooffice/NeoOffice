@@ -560,7 +560,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     boost::scoped_array<JavaVMOption> sarOptions(
 #ifdef USE_JAVA
-        new JavaVMOption[cOptions + 7]);
+        new JavaVMOption[cOptions + 8]);
 #else	// USE_JAVA
         new JavaVMOption[cOptions + 1]);
 #endif	// USE_JAVA
@@ -632,6 +632,27 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+1].optionString = (char *)aExtPath.getStr();
     options[i+1].extraInfo = NULL;
 
+    // Set the endorsed directory to use the JVM's XML parser
+    rtl::OString aBootPath( "-Xbootclasspath/p:" );
+    rtl::OUString aExe;
+    osl_getExecutableFile( &aExe.pData );
+    rtl::OUString aExeSysPath;
+    if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
+    {
+        rtl::OString aDirPath = rtl::OString( aExeSysPath, aExeSysPath.lastIndexOf('/'), RTL_TEXTENCODING_UTF8 );
+        aDirPath += rtl::OString( "/classes/" );
+        aBootPath += aDirPath;
+        aBootPath += rtl::OString( "serializer.jar:" );
+        aBootPath += aDirPath;
+        aBootPath += rtl::OString( "xalan.jar:" );
+        aBootPath += aDirPath;
+        aBootPath += rtl::OString( "xercesImpl.jar:" );
+        aBootPath += aDirPath;
+        aBootPath += rtl::OString( "xml-apis.jar" );
+    }
+    options[i+2].optionString = (char *)aBootPath.getStr();
+    options[i+2].extraInfo = NULL;
+
     rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
     rtl::OUString aJavaLibPath( pInfo->sLocation );
     aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf('/') );
@@ -657,22 +678,22 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     // Set the library path to include the executable path but none of the
     // extensions
-    options[i+2].optionString = (char *)aLibPath.getStr();
-    options[i+2].extraInfo = NULL;
+    options[i+3].optionString = (char *)aLibPath.getStr();
+    options[i+3].extraInfo = NULL;
 
     // Set miscellaneous optimizations for the JVM
-    options[i+3].optionString = "-Xrs";
-    options[i+3].extraInfo = NULL;
+    options[i+4].optionString = "-Xrs";
+    options[i+4].extraInfo = NULL;
 
     // We need to turn off some of Java 1.4's graphics optimizations as
     // they cause full screen window positioning, clipping, and image
     // drawing speed to get messed up
-    options[i+4].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
-    options[i+4].extraInfo = NULL;
+    options[i+5].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
+    options[i+5].extraInfo = NULL;
 
     // Fix bug 1800 by explicitly setting the look and feel to Aqua
-    options[i+5].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
-    options[i+5].extraInfo = NULL;
+    options[i+6].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
+    options[i+6].extraInfo = NULL;
 
     // Set the Java max memory to the greater of half of physical user
     // memory or 256 MB.
@@ -692,8 +713,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OStringBuffer aBuf( "-Xmx" );
     aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
     aBuf.append( "m" );
-    options[i+6].optionString = (char *)aBuf.makeStringAndClear().getStr();
-    options[i+6].extraInfo = NULL;
+    options[i+7].optionString = (char *)aBuf.makeStringAndClear().getStr();
+    options[i+7].extraInfo = NULL;
    
     vm_args.version= JNI_VERSION_1_4;
 #else	// USE_JAVA
@@ -701,7 +722,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif	// USE_JAVA
     vm_args.options= options;
 #ifdef USE_JAVA
-    vm_args.nOptions= cOptions + 7;
+    vm_args.nOptions= cOptions + 8;
 #else	// USE_JAVA
     vm_args.nOptions= cOptions + 1;
 #endif	// USE_JAVA
