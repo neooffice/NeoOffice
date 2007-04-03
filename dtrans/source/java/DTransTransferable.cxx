@@ -468,7 +468,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 							CFStringGetCharacters( aCFString, aRange, aBuf );
 							aString = OUString( (sal_Unicode *)aBuf, aRange.length );
 							CFRelease( aCFString );
-							delete aBuf;
+							delete[] aBuf;
 						}
 					}
 					else
