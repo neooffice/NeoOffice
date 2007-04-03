@@ -234,31 +234,97 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+	NSPrintInfo *pInfo = (NSPrintInfo *)pNSPrintInfo;
 	if ( pNSPrintInfo && nWidth > 0 && nHeight > 0 )
 	{
-		NSPrintingOrientation nOldOrientation = [(NSPrintInfo *)pNSPrintInfo orientation];
-		NSSize aOldSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
+		// [NSPrintInfo setPaperSize:] doesn't seem to actually validate that
+		// the requested paper size is supported by the printer so use the
+		// Carbon APIs to find the closest matching paper size
+		PMPrintSession aSession = nil;
+		if ( [pInfo respondsToSelector:@selector(_pmPrintSession)] )
+			aSession = (PMPrintSession)[pInfo _pmPrintSession];
 
-		[(NSPrintInfo *)pNSPrintInfo setOrientation:NSPortraitOrientation];
-		[(NSPrintInfo *)pNSPrintInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
+		if ( aSession )
+		{
+			// Note that NULL is a valid PMPrinter value
+			PMPrinter aPrinter = NULL;
+			PMSessionGetCurrentPrinter( aSession, &aPrinter );
+
+			CFArrayRef aPaperList;
+			if ( PMPrinterGetPaperList( aPrinter, &aPaperList ) == noErr )
+			{
+				unsigned nCount = CFArrayGetCount( aPaperList );
+				double fClosestMatch = -1.0;
+				double fClosestWidth = (double)nWidth;
+				double fClosestHeight = (double)nHeight;
+				BOOL bBiggerFound = NO;
+				unsigned i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					PMPaper aPaper = (PMPaper)CFArrayGetValueAtIndex( aPaperList, i);
+					if ( aPaper )
+					{
+						double fWidth;
+						double fHeight;
+						if ( PMPaperGetWidth( aPaper, &fWidth ) == noErr && PMPaperGetHeight( aPaper, &fHeight ) == noErr )
+						{
+							double fDiff = pow( (double)fWidth - nWidth, 2 ) + pow( (double)fHeight - nHeight, 2 );
+							double fRotatedDiff = pow( (double)fWidth - nHeight, 2 ) + pow( (double)fHeight - nWidth, 2 );
+
+							BOOL bBigger = NO;
+							if ( fDiff > fRotatedDiff )
+							{
+								fDiff = fRotatedDiff;
+								if ( (long)( fWidth + 0.5 ) > nHeight - 1 && (long)( fHeight + 0.5 ) > nWidth - 1 )
+									bBigger = YES;
+							}
+							else if ( (long)( fWidth + 0.5 ) > nWidth - 1 && (long)( fHeight + 0.5 ) > nHeight - 1 )
+							{
+								bBigger = YES;
+							}
+
+							// Don't override bigger matches with smaller
+							// matches even if the smaller match is closer
+							if ( fClosestMatch < 0.0 || ( fDiff < fClosestMatch && ! ( !bBigger && bBiggerFound ) ) )
+							{
+								fClosestMatch = fDiff;
+								fClosestWidth = fWidth;
+								fClosestHeight = fHeight;
+								if ( bBigger )
+									bBiggerFound = bBigger;
+							}
+						}
+					}
+				}
+
+				nWidth = (long)fClosestWidth;
+				nHeight = (long)fClosestHeight;
+			}
+		}
+
+		NSPrintingOrientation nOldOrientation = [pInfo orientation];
+		NSSize aOldSize = [pInfo paperSize];
+
+		[pInfo setOrientation:NSPortraitOrientation];
+		[pInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
 
 		// Fix bug 2202 by setting the orientation back to the original state
-		NSSize aSize = [(NSPrintInfo *)pNSPrintInfo paperSize];
+		NSSize aSize = [pInfo paperSize];
 		if ( aSize.width < 1.0 || aSize.height < 1.0 )
 		{
-			[(NSPrintInfo *)pNSPrintInfo setPaperSize:aOldSize];
+			[pInfo setPaperSize:aOldSize];
 		}
 		else
 		{
 			// Fix bugs 543, 1678, and 2202 by detecting when the paper should
 			// be rotated determining the minimum unmatched area
-			long nDiff = powl( (long)aSize.width - nWidth, 2 ) + powl( (long)aSize.height - nHeight, 2 );
-			long nRotatedDiff = powl( (long)aSize.width - nHeight, 2 ) + powl( (long)aSize.height - nWidth, 2 );
-			if (  nDiff > nRotatedDiff )
+			double fDiff = pow( (double)aSize.width - nWidth, 2 ) + pow( (double)aSize.height - nHeight, 2 );
+			double fRotatedDiff = pow( (double)aSize.width - nHeight, 2 ) + pow( (double)aSize.height - nWidth, 2 );
+			if ( fDiff > fRotatedDiff )
 				bRet = YES;
 		}
 
-		[(NSPrintInfo *)pNSPrintInfo setOrientation:nOldOrientation];
+		[pInfo setOrientation:nOldOrientation];
 	}
 
 	[pPool release];
