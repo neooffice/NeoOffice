@@ -223,6 +223,26 @@ id NSPrintInfo_create()
 	return pRet;
 }
 
+void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *pHeight, float *pImageableX, float *pImageableY, float *pImageableWidth, float *pImageableHeight )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSPrintInfo *pInfo = (NSPrintInfo *)pNSPrintInfo;
+	if ( pInfo && pWidth && pHeight && pImageableX && pImageableY && pImageableWidth && pImageableHeight )
+	{
+		NSSize aSize = [pInfo paperSize];
+		NSRect aRect = [pInfo imageablePageBounds];
+		*pWidth = aSize.width;
+		*pHeight = aSize.height;
+		*pImageableX = aRect.origin.x;
+		*pImageableY = aSize.height - aRect.origin.y - aRect.size.height;
+		*pImageableWidth = aRect.size.width;
+		*pImageableHeight = aRect.size.height;
+	}
+
+	[pPool release];
+}
+
 void NSPrintInfo_setInDialog( BOOL bIn )
 {
 	[VCLPrintInfo setInDialog:bIn];
@@ -237,71 +257,6 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 	NSPrintInfo *pInfo = (NSPrintInfo *)pNSPrintInfo;
 	if ( pNSPrintInfo && nWidth > 0 && nHeight > 0 )
 	{
-		// [NSPrintInfo setPaperSize:] doesn't seem to actually validate that
-		// the requested paper size is supported by the printer so use the
-		// Carbon APIs to find the closest matching paper size
-		PMPrintSession aSession = nil;
-		if ( [pInfo respondsToSelector:@selector(_pmPrintSession)] )
-			aSession = (PMPrintSession)[pInfo _pmPrintSession];
-
-		if ( aSession )
-		{
-			// Note that NULL is a valid PMPrinter value
-			PMPrinter aPrinter = NULL;
-			PMSessionGetCurrentPrinter( aSession, &aPrinter );
-
-			CFArrayRef aPaperList;
-			if ( PMPrinterGetPaperList( aPrinter, &aPaperList ) == noErr )
-			{
-				unsigned nCount = CFArrayGetCount( aPaperList );
-				double fClosestMatch = -1.0;
-				double fClosestWidth = (double)nWidth;
-				double fClosestHeight = (double)nHeight;
-				BOOL bBiggerFound = NO;
-				unsigned i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					PMPaper aPaper = (PMPaper)CFArrayGetValueAtIndex( aPaperList, i);
-					if ( aPaper )
-					{
-						double fWidth;
-						double fHeight;
-						if ( PMPaperGetWidth( aPaper, &fWidth ) == noErr && PMPaperGetHeight( aPaper, &fHeight ) == noErr )
-						{
-							double fDiff = pow( (double)fWidth - nWidth, 2 ) + pow( (double)fHeight - nHeight, 2 );
-							double fRotatedDiff = pow( (double)fWidth - nHeight, 2 ) + pow( (double)fHeight - nWidth, 2 );
-
-							BOOL bBigger = NO;
-							if ( fDiff > fRotatedDiff )
-							{
-								fDiff = fRotatedDiff;
-								if ( (long)( fWidth + 0.5 ) > nHeight - 1 && (long)( fHeight + 0.5 ) > nWidth - 1 )
-									bBigger = YES;
-							}
-							else if ( (long)( fWidth + 0.5 ) > nWidth - 1 && (long)( fHeight + 0.5 ) > nHeight - 1 )
-							{
-								bBigger = YES;
-							}
-
-							// Don't override bigger matches with smaller
-							// matches even if the smaller match is closer
-							if ( fClosestMatch < 0.0 || ( fDiff < fClosestMatch && ! ( !bBigger && bBiggerFound ) ) )
-							{
-								fClosestMatch = fDiff;
-								fClosestWidth = fWidth;
-								fClosestHeight = fHeight;
-								if ( bBigger )
-									bBiggerFound = bBigger;
-							}
-						}
-					}
-				}
-
-				nWidth = (long)fClosestWidth;
-				nHeight = (long)fClosestHeight;
-			}
-		}
-
 		NSPrintingOrientation nOldOrientation = [pInfo orientation];
 		NSSize aOldSize = [pInfo paperSize];
 

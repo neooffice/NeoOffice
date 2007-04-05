@@ -46,6 +46,7 @@ BEGIN_C
 BOOL NSPageLayout_finished( id pDialog );
 BOOL NSPageLayout_result( id pDialog );
 id NSPrintInfo_create();
+void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *pHeight, float *pImageableX, float *pImageableY, float *pImageableWidth, float *pImageableHeight );
 void NSPrintInfo_setInDialog( BOOL bIn );
 BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight );
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo );

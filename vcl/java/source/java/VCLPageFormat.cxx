@@ -71,13 +71,11 @@
 typedef void Java_apple_awt_CPrinterJob_getDefaultPage_Type( JNIEnv *, jobject, jobject );
 typedef void Java_apple_awt_CPrinterJob_printLoop_Type( JNIEnv *, jobject, jboolean );
 typedef jboolean Java_apple_awt_CPrinterJob_printLoopBoolean_Type( JNIEnv *, jobject, jboolean, jint, jint );
-typedef void Java_apple_awt_CPrinterJob_validatePaper_Type( JNIEnv *, jobject, jobject, jobject );
 
 static ::vos::OModule aModule;
 static Java_apple_awt_CPrinterJob_getDefaultPage_Type *pGetDefaultPage = NULL;
 static Java_apple_awt_CPrinterJob_printLoop_Type *pPrintLoop = NULL;
 static Java_apple_awt_CPrinterJob_printLoopBoolean_Type *pPrintLoopBoolean = NULL;
-static Java_apple_awt_CPrinterJob_validatePaper_Type *pValidatePaper = NULL;
 
 using namespace rtl;
 using namespace vcl;
@@ -186,13 +184,44 @@ static jboolean JNICALL Java_apple_awt_CPrinterJob_printLoopBoolean( JNIEnv *pEn
 
 static void JNICALL Java_apple_awt_CPrinterJob_validatePaper( JNIEnv *pEnv, jobject object, jobject _par0, jobject _par1 )
 {
-	if ( pValidatePaper )
+	void *pInfo = GetNSPrintInfo( pEnv, object );
+	if ( pInfo )
 	{
 		// Make this object's print info pointer the shared print info since
 		// the JVM's native methods use the shared print info
-		NSPrintInfo_setSharedPrintInfo( GetNSPrintInfo( pEnv, object ) );
+		NSPrintInfo_setSharedPrintInfo( pInfo );
 
-		pValidatePaper( pEnv, object, _par0, _par1 );
+		// Fix bug 2263 by forcing the paper to match the paper dimensions
+		// already set in the shared print info
+		float fWidth = 0;
+		float fHeight = 0;
+		float fImageableX = 0;
+		float fImageableY = 0;
+		float fImageableWidth = 0;
+		float fImageableHeight = 0;
+		NSPrintInfo_getPrintInfoDimensions( pInfo, &fWidth, &fHeight, &fImageableX, &fImageableY, &fImageableWidth, &fImageableHeight );
+		if ( fWidth > 0 && fHeight > 0 && fImageableWidth > 0 && fImageableHeight > 0 )
+		{
+			static jmethodID mID = NULL;
+			if ( !mID )
+			{
+				char *cSignature = "(Ljava/awt/print/Paper;FFFFFF)V";
+				mID = pEnv->GetStaticMethodID( com_sun_star_vcl_VCLPageFormat::getMyClass(), "validatePaper", cSignature );
+			}
+			OSL_ENSURE( mID, "Unknown method id!" );
+			if ( mID )
+			{
+				jvalue args[7];
+				args[0].l = _par1;
+				args[1].f = jfloat( fWidth );
+				args[2].f = jfloat( fHeight );
+				args[3].f = jfloat( fImageableX );
+				args[4].f = jfloat( fImageableY );
+				args[5].f = jfloat( fImageableWidth );
+				args[6].f = jfloat( fImageableHeight );
+				pEnv->CallStaticVoidMethodA( com_sun_star_vcl_VCLPageFormat::getMyClass(), mID, args );
+			}
+		}
 	}
 }
 
@@ -249,7 +278,6 @@ jclass com_sun_star_vcl_VCLPageFormat::getMyClass()
 					pGetDefaultPage = (Java_apple_awt_CPrinterJob_getDefaultPage_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_getDefaultPage" ) );
 					pPrintLoop = (Java_apple_awt_CPrinterJob_printLoop_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_printLoop" ) );
 					pPrintLoopBoolean = (Java_apple_awt_CPrinterJob_printLoopBoolean_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_printLoop" ) );
-					pValidatePaper = (Java_apple_awt_CPrinterJob_validatePaper_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CPrinterJob_validatePaper" ) );
 				}
 			}
 		}

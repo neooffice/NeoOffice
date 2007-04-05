@@ -112,6 +112,24 @@ public final class VCLPageFormat {
 	private static int printerTextResolution = 300;
 
 	/**
+	 * Set the paper dimensions to the specified values.
+	 *
+	 * @param p the paper
+	 * @param w the width to set the paper to
+	 * @param h the height to set the paper to
+	 * @param ix the x coordinate to set the paper's imageable area to
+	 * @param iy the y coordinate to set the paper's imageable area to
+	 * @param iw the height to set the paper's imageable area to
+	 * @param ih the width to set the paper's imageable area to
+	 */
+	public static void validatePaper(Paper p, float w, float h, float ix, float iy, float iw, float ih) {
+
+		p.setSize(w, h);
+		p.setImageableArea(ix, iy, iw, ih);
+
+	}
+
+	/**
 	 * The editable flag.
 	 */
 	private boolean editable = true;
