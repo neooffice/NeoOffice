@@ -161,6 +161,10 @@ public final class VCLPageFormat {
 
 		job = PrinterJob.getPrinterJob();
 		pageFormat = job.defaultPage();
+		try {
+			pageFormat = job.validatePage(pageFormat);
+		}
+		catch (Throwable t) {}
 		// We always set the page format to portrait as all of the fixes for
 		// for bug 2202 depend on this
 		pageFormat.setOrientation(PageFormat.PORTRAIT);
@@ -389,6 +393,10 @@ public final class VCLPageFormat {
 			return;
 
 		pageFormat = job.defaultPage();
+		try {
+			pageFormat = job.validatePage(pageFormat);
+		}
+		catch (Throwable t) {}
 
 		setOrientation(o);
 
