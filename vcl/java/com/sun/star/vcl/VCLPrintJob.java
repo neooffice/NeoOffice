@@ -383,52 +383,32 @@ public final class VCLPrintJob implements Printable, Runnable {
 					o = VCLPageFormat.ORIENTATION_PORTRAIT;
 			}
 
-			// Scale before doing any translations
-			printGraphics.scale(scale, scale);
-
-			// Set the origin to the origin of the printable area. Fix offset
-			// bugs in bug 2202 by only making a single translate.
-			double translateX;
-			double translateY;
 			float rotatedPageAngle;
-			if (o == VCLPageFormat.ORIENTATION_PORTRAIT && orientation != PageFormat.PORTRAIT) {
-				if (orientation == PageFormat.REVERSE_LANDSCAPE) {
-					translateX = (double)printPageFormat.getImageableX();
-					translateY = (double)(printPageFormat.getImageableY() + printPageFormat.getImageableHeight());
-					rotatedPageAngle = (float)Math.toRadians(-90);
-				}
-				else {
-					translateX = (double)(printPageFormat.getImageableX() + printPageFormat.getImageableWidth());
-					translateY = (double)printPageFormat.getImageableY();
-					rotatedPageAngle = (float)Math.toRadians(90);
-				}
-			}
-			else if (o != VCLPageFormat.ORIENTATION_PORTRAIT && orientation == PageFormat.PORTRAIT) {
-				translateX = (double)printPageFormat.getImageableX();
-				translateY = (double)(printPageFormat.getImageableY() + printPageFormat.getImageableHeight());
+			if (o != VCLPageFormat.ORIENTATION_PORTRAIT) {
+				printGraphics.translate((double)printPageFormat.getImageableX(), (double)(printPageFormat.getImageableY() + printPageFormat.getImageableHeight()));
 				rotatedPageAngle = (float)Math.toRadians(-90);
 			}
 			else {
-				translateX = (double)printPageFormat.getImageableX();
-				translateY = (double)printPageFormat.getImageableY();
+				// Strangely, Java does not detect that the underlying NSView
+				// has flipped coordinates in unrotated graphics only so we
+				// need to translate using the bottom margin instead of the top
+				// margin
+				printGraphics.translate((double)printPageFormat.getImageableX(), (double)(printPageFormat.getHeight() - printPageFormat.getImageableY() - printPageFormat.getImageableHeight()));
 				rotatedPageAngle = 0.0f;
 			}
 
-			printGraphics.translate(translateX, translateY);
 			printGraphics.rotate(rotatedPageAngle);
 
 			// Scale to printer resolution
 			Dimension pageResolution = pageFormat.getPageResolution();
-			double pageScaleX = (double)72 / pageResolution.width;
-			double pageScaleY = (double)72 / pageResolution.height;
-			if (rotatedPageAngle != 0.0f) {
+			double pageScaleX = (double)scale * 72 / pageResolution.width;
+			double pageScaleY = (double)scale * 72 / pageResolution.height;
+			if (rotatedPageAngle != 0.0f)
 				printGraphics.scale(pageScaleY, pageScaleX);
-			}
-			else {
+			else
 				printGraphics.scale(pageScaleX, pageScaleY);
-			}
 
-			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPageAngle, (float)(scale * pageScaleX), (float)(scale * pageScaleY));
+			graphics = new VCLGraphics(printGraphics, pageFormat, rotatedPageAngle, (float)pageScaleX, (float)pageScaleY);
 		}
 		else {
 			graphics = null;
