@@ -1583,9 +1583,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		ignoreMouseReleasedModifiers = 0;
 
 		// Strange but true, fix bugs 1583 and 2166 by posting a synthetic
-		// mouse moved event. Use no modifiers so that the OOo direct cursor
-		// feature works.
-		MouseEvent mouseMoved = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), 0, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		// mouse moved event
+		MouseEvent mouseMoved = new MouseEvent(e.getComponent(), MouseEvent.MOUSE_MOVED, e.getWhen(), e.getModifiers() | queue.getLastAdjustedMouseModifiers(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 		queue.postCachedEvent(new VCLEvent(mouseMoved, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEBUTTONDOWN, this, 0));
