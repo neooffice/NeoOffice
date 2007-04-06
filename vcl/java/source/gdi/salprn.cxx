@@ -221,12 +221,26 @@ void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 {
 	Size aSize( mpVCLPageFormat->getPageSize() );
 	Rectangle aRect( mpVCLPageFormat->getImageableBounds() );
-	rPageWidth = aSize.Width();
-	rPageHeight = aSize.Height();
-	rPageOffX = aRect.nLeft;
-	rPageOffY = aRect.nTop;
-	rOutWidth = aRect.nRight - aRect.nLeft + 1;
-	rOutHeight = aRect.nBottom - aRect.nTop + 1;
+
+	// Fix bug 2263 by detecting if the OOo code wants rotated bounds
+	if ( pSetupData->meOrientation != ORIENTATION_PORTRAIT )
+	{
+		rPageWidth = aSize.Height();
+		rPageHeight = aSize.Width();
+		rPageOffX = aRect.nTop;
+		rPageOffY = aRect.nLeft;
+		rOutWidth = aRect.nBottom - aRect.nTop + 1;
+		rOutHeight = aRect.nRight - aRect.nLeft + 1;
+	}
+	else
+	{
+		rPageWidth = aSize.Width();
+		rPageHeight = aSize.Height();
+		rPageOffX = aRect.nLeft;
+		rPageOffY = aRect.nTop;
+		rOutWidth = aRect.nRight - aRect.nLeft + 1;
+		rOutHeight = aRect.nBottom - aRect.nTop + 1;
+	}
 }
 
 // -----------------------------------------------------------------------
