@@ -585,10 +585,12 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( Application::GetSettings().GetLayoutRTL() )
 					pMouseEvent->mnX = pFrame->maGeometry.nWidth - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration - pMouseEvent->mnX - 1;
 
-				pFrame->CallCallback( nID, pMouseEvent );
-
+				// Fix bugs 1583, 2166, and 2320 by setting the last pointer
+				// state before dispatching the event
 				pSalData->maLastPointerState.mnState = pMouseEvent->mnCode;
 				pSalData->maLastPointerState.maPos = Point( aScreenPoint.X(), aScreenPoint.Y() );
+
+				pFrame->CallCallback( nID, pMouseEvent );
 
     			if ( pPopupWindow )
 				{
