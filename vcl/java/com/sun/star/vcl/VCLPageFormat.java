@@ -166,7 +166,7 @@ public final class VCLPageFormat {
 		}
 		catch (Throwable t) {}
 		// We always set the page format to portrait as all of the fixes for
-		// for bug 2202 depend on this
+		// for bugs 2202 depend on this
 		pageFormat.setOrientation(PageFormat.PORTRAIT);
 		image = new VCLImage(1, 1, 32, this);
 
@@ -259,17 +259,6 @@ public final class VCLPageFormat {
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
 		return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
-
-	}
-
-	/**
-	 * Get the paper orientation
-	 *
-	 * @return the paper orientation
-	 */
-	int getPaperOrientation() {
-
-		return paperOrientation;
 
 	}
 
@@ -371,9 +360,6 @@ public final class VCLPageFormat {
 	 * @param o the page orientation
 	 */
 	public void setOrientation(int o) {
-
-		if (!editable)
-			return;
 
 		if (o == ORIENTATION_PORTRAIT)
 			paperOrientation = PageFormat.PORTRAIT;

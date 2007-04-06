@@ -375,13 +375,13 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Get the current page's printGraphics context
 		if (printStarted && printThread != null) {
-			int orientation = printPageFormat.getOrientation();
-			if (pageFormat.getPaperOrientation() != orientation) {
+			if (printPageFormat.getOrientation() != PageFormat.PORTRAIT) {
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT)
 					o = VCLPageFormat.ORIENTATION_LANDSCAPE;
 				else
 					o = VCLPageFormat.ORIENTATION_PORTRAIT;
 			}
+			pageFormat.setOrientation(o);
 
 			float rotatedPageAngle;
 			if (o != VCLPageFormat.ORIENTATION_PORTRAIT) {
