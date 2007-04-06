@@ -222,7 +222,7 @@ void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 	Size aSize( mpVCLPageFormat->getPageSize() );
 	Rectangle aRect( mpVCLPageFormat->getImageableBounds() );
 
-	// Fix bug 2263 by detecting if the OOo code wants rotated bounds
+	// Fix bug 2278 by detecting if the OOo code wants rotated bounds
 	if ( pSetupData->meOrientation != ORIENTATION_PORTRAIT )
 	{
 		rPageWidth = aSize.Height();
