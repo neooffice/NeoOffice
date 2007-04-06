@@ -251,7 +251,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	}
 
 	BYTE *pCGBits = pBuffer->mpBits + ( _par2 * pBuffer->mnScanlineSize ) + ( _par1 * sizeof( jint ) );
-	CGDataProviderRef aProvider = CGDataProviderCreateWithData( pBuffer, pCGBits, pBuffer->mnScanlineSize * ( pBuffer->mnHeight - _par2 ), ReleaseBitmapBufferCallback );
+	CGDataProviderRef aProvider = CGDataProviderCreateWithData( pBuffer, pCGBits, pBuffer->mnScanlineSize * ( _par4 - _par2 ), ReleaseBitmapBufferCallback );
 	if ( !aProvider )
 	{
 		delete[] pBuffer->mpBits;
