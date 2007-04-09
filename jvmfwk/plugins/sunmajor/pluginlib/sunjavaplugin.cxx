@@ -560,7 +560,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     boost::scoped_array<JavaVMOption> sarOptions(
 #ifdef USE_JAVA
-        new JavaVMOption[cOptions + 8]);
+        new JavaVMOption[cOptions + 9]);
 #else	// USE_JAVA
         new JavaVMOption[cOptions + 1]);
 #endif	// USE_JAVA
@@ -695,6 +695,10 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+6].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
     options[i+6].extraInfo = NULL;
 
+    // Java 1.5 and higher on Leopard needs Quartz to be explicitly turned on
+    options[i+7].optionString = "-Dapple.awt.graphics.UseQuartz=true";
+    options[i+7].extraInfo = NULL;
+
     // Set the Java max memory to the greater of half of physical user
     // memory or 256 MB.
     int pMib[2];
@@ -713,8 +717,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OStringBuffer aBuf( "-Xmx" );
     aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
     aBuf.append( "m" );
-    options[i+7].optionString = (char *)aBuf.makeStringAndClear().getStr();
-    options[i+7].extraInfo = NULL;
+    options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
+    options[i+8].extraInfo = NULL;
    
     vm_args.version= JNI_VERSION_1_4;
 #else	// USE_JAVA
@@ -722,7 +726,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif	// USE_JAVA
     vm_args.options= options;
 #ifdef USE_JAVA
-    vm_args.nOptions= cOptions + 8;
+    vm_args.nOptions= cOptions + 9;
 #else	// USE_JAVA
     vm_args.nOptions= cOptions + 1;
 #endif	// USE_JAVA
