@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import "VCLPageFormat_cocoa.h"
 #import "VCLPrintJob_cocoa.h"
 
 @interface ShowPrintDialog : NSObject
@@ -109,8 +110,7 @@
 
 - (void)showPrintDialog:(id)pObject
 {
-	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
-	if ( pPanel && [mpInfo respondsToSelector:@selector(pmPrintSettings)] )
+	if ( [mpInfo respondsToSelector:@selector(pmPrintSettings)] )
 
 	{
 		// Set the job name from the window title
@@ -126,7 +126,11 @@
 			if ( pTitle)
 				PMSetJobNameCFString( aSettings, (CFStringRef)pTitle );
 		}
+	}
 
+	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
+	if ( pPanel )
+	{
 		// Fix bug 1548 by setting to print all pages
 		NSMutableDictionary *pDictionary = [mpInfo dictionary];
 		if ( pDictionary )
