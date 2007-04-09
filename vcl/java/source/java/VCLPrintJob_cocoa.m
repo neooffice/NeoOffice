@@ -110,22 +110,24 @@
 
 - (void)showPrintDialog:(id)pObject
 {
-	if ( [mpInfo respondsToSelector:@selector(pmPrintSettings)] )
+	// Set the job name from the window title
+	PMPrintSettings aSettings = nil;
+	if ( [mpInfo respondsToSelector:@selector(PMPrintSettings)] )
+		aSettings = (PMPrintSettings)[mpInfo PMPrintSettings];
+	else if ( [mpInfo respondsToSelector:@selector(pmPrintSettings)] )
 
+		aSettings = (PMPrintSettings)[mpInfo pmPrintSettings];
+
+	if ( aSettings )
 	{
-		// Set the job name from the window title
-		PMPrintSettings aSettings = (PMPrintSettings)[mpInfo pmPrintSettings];
-		if ( aSettings )
-		{
-			NSString *pTitle = [mpWindow title];
-			if ( pTitle )
-				pTitle = [pTitle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-			else
-				pTitle = [NSString stringWithString:@"Untitled"];
+		NSString *pTitle = [mpWindow title];
+		if ( pTitle )
+			pTitle = [pTitle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+		else
+			pTitle = [NSString stringWithString:@"Untitled"];
 
-			if ( pTitle)
-				PMSetJobNameCFString( aSettings, (CFStringRef)pTitle );
-		}
+		if ( pTitle)
+			PMSetJobNameCFString( aSettings, (CFStringRef)pTitle );
 	}
 
 	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
