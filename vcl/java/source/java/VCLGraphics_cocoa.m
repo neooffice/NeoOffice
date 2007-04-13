@@ -111,6 +111,112 @@
 
 @end
 
+@interface DrawEPSInRect : NSObject
+{
+	void*				mpPtr;
+	unsigned			mnSize;
+	float				mfX;
+	float				mfY;
+	float				mfWidth;
+	float				mfHeight;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
+- (void)drawEPSInRect:(id)pObject;
+- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawEPSInRect
+
+- (void)drawEPSInRect:(id)pObject
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+	{
+		NSView *pPrintView = [pOperation view];
+		if ( pPrintView )
+		{
+			NSRect aBounds = [pPrintView bounds];
+			FlippedView *pFlippedView = [[FlippedView alloc] initWithFrame:NSMakeRect( 0, 0, aBounds.size.width, aBounds.size.height )];
+			if ( pFlippedView )
+			{
+				NSView *pFocusView = [NSView focusView];
+				if ( pFocusView )
+					[pFocusView unlockFocus];
+
+				[pPrintView addSubview:pFlippedView];
+				[pFlippedView lockFocus];
+
+				NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+				if ( pContext )
+				{
+					CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+					if ( pContext )
+					{
+						// [pFlippedView translateOriginToPoint:NSMakePoint( mfTranslateX, mfTranslateY )];
+						// [pFlippedView rotateByAngle: mfRotateAngle];
+						// [pFlippedView scaleUnitSquareToSize:NSMakeSize( mfScaleX, mfScaleY )];
+						// Fix bug 1218 by setting the clip here and not in Java
+						CGContextSaveGState( aContext );
+						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+						CGContextRotateCTM( aContext, mfRotateAngle );
+						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+
+						NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
+						if ( pData )
+						{
+							NSEPSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
+							if ( pImage )
+								[pImage drawInRect:NSMakeRect( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 )];
+						}
+
+						CGContextRestoreGState( aContext );
+					}
+				}
+
+				[pFlippedView unlockFocus];
+				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
+			}
+		}
+	}
+}
+
+- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	mpPtr = pPtr;
+	mnSize = nSize;
+	mfX = fX;
+	mfY = fY;
+	mfWidth = fWidth;
+	mfHeight = fHeight;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
 @interface DrawImageInRect : NSObject
 {
 	CGImageRef			maImage;
@@ -219,6 +325,27 @@ void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth,
 		else
 		{
 			[pDrawImageInRect drawImageInRect:pDrawImageInRect];
+		}
+	}
+
+	[pPool release];
+}
+
+void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pPtr && nSize && fWidth && fHeight )
+	{
+		DrawEPSInRect *pDrawEPSInRect = [[DrawEPSInRect alloc] initWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDrawEPSInRect performSelectorOnMainThread:@selector(drawEPSInRect:) withObject:pDrawEPSInRect waitUntilDone:YES modes:pModes];
+		}
+		else
+		{
+			[pDrawEPSInRect drawEPSInRect:pDrawEPSInRect];
 		}
 	}
 
