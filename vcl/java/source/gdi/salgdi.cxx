@@ -293,7 +293,8 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 			{
 				// Don't delete the copied buffer and let the Java native
                 // method print the buffer directly
-				mpVCLGraphics->drawEPS( pPtr, nSize, nX, nY, nWidth, nHeight );
+				memcpy( pPtrCopy, pPtr, nSize );
+				mpVCLGraphics->drawEPS( pPtrCopy, nSize, nX, nY, nWidth, nHeight );
 				bRet = TRUE;
 			}
 		}
