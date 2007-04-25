@@ -235,7 +235,7 @@ void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *
 		*pWidth = aSize.width;
 		*pHeight = aSize.height;
 		*pImageableX = aRect.origin.x;
-		*pImageableY = aRect.origin.y;
+		*pImageableY = aSize.height - aRect.origin.y - aRect.size.height;
 		*pImageableWidth = aRect.size.width;
 		*pImageableHeight = aRect.size.height;
 	}

@@ -389,11 +389,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 				rotatedPageAngle = (float)Math.toRadians(-90);
 			}
 			else {
-				// Strangely, Java does not detect that the underlying NSView
-				// has flipped coordinates in unrotated graphics only so we
-				// need to translate using the bottom margin instead of the top
-				// margin
-				printGraphics.translate((double)printPageFormat.getImageableX(), (double)(printPageFormat.getHeight() - printPageFormat.getImageableY() - printPageFormat.getImageableHeight()));
+				printGraphics.translate((double)printPageFormat.getImageableX(), (double)printPageFormat.getImageableY());
 				rotatedPageAngle = 0.0f;
 			}
 
