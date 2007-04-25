@@ -40,13 +40,13 @@
 #endif
 
 static NSString *pBlankItem = @" ";
+static NSOpenPanel *pOpenPanel = nil;
+static NSSavePanel *pSavePanel = nil;
 
 @interface InitializeFileDialogs : NSObject
 {
-	NSSavePanel*			mpFilePanel;
 	BOOL					mbUseFileOpenDialog;
 }
-- (void)dealloc;
 - (NSSavePanel *)filePanel;
 - (id)init:(BOOL)bUseFileOpenDialog;
 - (void)initialize:(id)pObject;
@@ -54,24 +54,18 @@ static NSString *pBlankItem = @" ";
 
 @implementation InitializeFileDialogs
 
-- (void)dealloc
-{
-	if ( mpFilePanel )
-		[mpFilePanel release];
-
-	[super dealloc];
-}
-
 - (NSSavePanel *)filePanel
 {
-	return mpFilePanel;
+	if ( mbUseFileOpenDialog )
+		return (NSSavePanel *)pOpenPanel;
+	else
+		return pSavePanel;
 }
 
 - (id)init:(BOOL)bUseFileOpenDialog
 {
 	[super init];
 
-	mpFilePanel = nil;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	return self;
@@ -80,12 +74,23 @@ static NSString *pBlankItem = @" ";
 - (void)initialize:(id)pObject
 {
 	if ( mbUseFileOpenDialog )
-		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+	{
+		if ( !pOpenPanel )
+		{
+			pOpenPanel = (NSSavePanel *)[NSOpenPanel openPanel];
+			if ( pOpenPanel )
+				[pOpenPanel retain];
+		}
+	}
 	else
-		mpFilePanel = [NSSavePanel savePanel];
-
-	if ( mpFilePanel )
-		[mpFilePanel retain];
+	{
+		if ( !pSavePanel )
+		{
+			pSavePanel = [NSSavePanel savePanel];
+			if ( pSavePanel )
+				[pSavePanel retain];
+		}
+	}
 }
 
 @end
