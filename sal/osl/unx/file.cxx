@@ -755,6 +755,15 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
             /* open the file */
             fd = open( buffer, flags, mode );
+#ifdef MACOSX
+            /*
+             * Some filesystems do not support any locking so open the file
+             * without any locking and detect the ENOTSUP errno when we try
+             * to lock the file.
+             */
+            if ( fd < 0 )
+                fd = open( buffer, flags & ~( O_EXLOCK | O_SHLOCK ), mode );
+#endif
             if ( fd >= 0 )
             {
 #ifndef HAVE_O_EXLOCK
