@@ -282,17 +282,18 @@ public final class VCLScreen {
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null && n >= 0) {
 			GraphicsDevice[] gd = ge.getScreenDevices();
-			if (gd != null || n < gd.length)
-				return null;
+			if (gd != null && n < gd.length) {
+				Rectangle r = gd[n].getDefaultConfiguration().getBounds();
+				if (!r.isEmpty()) {
+					if (b) {
+						Insets insets = VCLScreen.getScreenInsets(gd[n]);
+						if (insets != null)
+							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+					}
 
-			Rectangle r = gd[n].getDefaultConfiguration().getBounds();
-			if (b) {
-				Insets insets = VCLScreen.getScreenInsets(gd[n]);
-				if (insets != null)
-					r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+					return r;
+				}
 			}
-			if (!r.isEmpty())
-				return r;
 		}
 
 		return null;

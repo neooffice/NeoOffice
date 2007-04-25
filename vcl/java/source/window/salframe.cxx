@@ -47,6 +47,9 @@
 #ifndef _SV_SALMENU_H
 #include <salmenu.h>
 #endif
+#ifndef _SV_SALSYS_H
+#include <salsys.h>
+#endif
 #ifndef _SV_SETTINGS_HXX
 #include <settings.hxx>
 #endif
@@ -465,12 +468,19 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 	if ( bFullScreen == mbFullScreen )
 		return;
 
-	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
+	mbUseMainScreenOnly = FALSE;
 
+	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 	if ( bFullScreen )
 	{
 		memcpy( &maOriginalGeometry, &maGeometry, sizeof( SalFrameGeometry ) );
-		Rectangle aWorkArea( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
+
+		JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
+		Rectangle aWorkArea;
+		if ( pSalSystem )
+			aWorkArea = pSalSystem->GetDisplayWorkAreaPosSizePixel( nDisplay );
+		if ( aWorkArea.IsEmpty() )
+			aWorkArea = Rectangle( Point( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration ), Size( maGeometry.nWidth, maGeometry.nHeight ) );
 		GetWorkArea( aWorkArea );
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
@@ -522,18 +532,6 @@ void JavaSalFrame::StartPresentation( BOOL bStart )
 	else if ( !bStart && pSalData->mpPresentationFrame != this )
 		return;
 
-	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
-	// it on the main runloop thread.  Bug 484
-	if ( !pSetSystemUIModeTimerUPP )
-		pSetSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
-	if ( pSetSystemUIModeTimerUPP )
-	{
-		if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pSetSystemUIModeTimerUPP, (void *)( bStart ? true : false ), NULL );
-		else
-			SetSystemUIModeTimerCallback( NULL, (void *)( bStart ? true : false ) );
-	}
-
 	mbPresentation = bStart;
 
 	if ( mbPresentation )
@@ -542,6 +540,7 @@ void JavaSalFrame::StartPresentation( BOOL bStart )
 		pSalData->mpPresentationFrame = NULL;
 
 	// Adjust window size if in full screen mode
+	bool bRunTimer = true;
 	if ( mbFullScreen )
 	{
 		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
@@ -550,6 +549,30 @@ void JavaSalFrame::StartPresentation( BOOL bStart )
 		GetWorkArea( aWorkArea );
 
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
+
+		JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
+		if ( pSalSystem )
+		{
+			Rectangle aBounds( mpVCLFrame->getBounds() );
+			Rectangle aScreenBounds( pSalSystem->GetDisplayScreenPosSizePixel( 0 ) );
+			if ( !aBounds.IsEmpty() && !aScreenBounds.IsEmpty() && aBounds.Intersection( aScreenBounds ).IsEmpty() )
+				bRunTimer = false;
+		}
+	}
+
+	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
+	// it on the main runloop thread.  Bug 484
+	if ( bRunTimer )
+	{
+		if ( !pSetSystemUIModeTimerUPP )
+			pSetSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
+		if ( pSetSystemUIModeTimerUPP )
+		{
+			if ( GetCurrentEventLoop() != GetMainEventLoop() )
+				InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pSetSystemUIModeTimerUPP, (void *)( mbPresentation ? true : false ), NULL );
+			else
+				SetSystemUIModeTimerCallback( NULL, (void *)( mbPresentation ? true : false ) );
+		}
 	}
 }
 

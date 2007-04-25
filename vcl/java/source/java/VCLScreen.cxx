@@ -230,7 +230,7 @@ const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( unsigned int _par0,
 		{
 			jvalue args[2];
 			args[0].i = jint( _par0 );
-			args[1].z = jint( _par1 );
+			args[1].z = jboolean( _par1 );
 			jobject tempObj = t.pEnv->CallStaticObjectMethodA( getMyClass(), mID, args );
 			if ( tempObj )
 			{
