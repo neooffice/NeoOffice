@@ -311,6 +311,7 @@ static NSString *pBlankItem = @" ";
 	[mpFilePanel setDelegate:self];
 	[mpFilePanel setCanCreateDirectories:YES];
 	[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
+	[mpFilePanel setAllowsOtherFileTypes:YES];
 
 	if ( mbUseFileOpenDialog )
 	{
@@ -891,6 +892,11 @@ static NSString *pBlankItem = @" ";
 		}
 		else
 		{
+			// Fix bug 2302 by setting the initial required file type
+			NSArray *pTypes = (NSArray *)[mpFilters objectForKey:[self selectedItem:COCOA_CONTROL_ID_FILETYPE]];
+			if ( pTypes && [pTypes count] > 0)
+				[mpFilePanel setRequiredFileType:[pTypes objectAtIndex:0]];
+
 			mnResult = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
 		}
 
@@ -1175,7 +1181,7 @@ void NSFileDialog_release( id pDialog )
 	if ( pDialog )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(release:) withObject:pDialog waitUntilDone:YES modes:pModes];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(release:) withObject:pDialog waitUntilDone:NO modes:pModes];
 	}
 
 	[pPool release];
