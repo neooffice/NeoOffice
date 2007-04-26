@@ -230,14 +230,18 @@ void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *
 	NSPrintInfo *pInfo = (NSPrintInfo *)pNSPrintInfo;
 	if ( pInfo && pWidth && pHeight && pImageableX && pImageableY && pImageableWidth && pImageableHeight )
 	{
+		// Fix bug 2333 by setting the imageable bounds to the page bounds as
+		// using the true imageable bounds does cause uncontrollable shifting
+		// and clipping in the OOo code. The downside of this fix is that the
+		// user will never get a warning about too small margins in the
+		// Format :: Page dialog, but this seems to be a necessary tradeoff.
 		NSSize aSize = [pInfo paperSize];
-		NSRect aRect = [pInfo imageablePageBounds];
 		*pWidth = aSize.width;
 		*pHeight = aSize.height;
-		*pImageableX = aRect.origin.x;
-		*pImageableY = aSize.height - aRect.origin.y - aRect.size.height;
-		*pImageableWidth = aRect.size.width;
-		*pImageableHeight = aRect.size.height;
+		*pImageableX = 0;
+		*pImageableY = 0;
+		*pImageableWidth = aSize.width;
+		*pImageableHeight = aSize.height;
 	}
 
 	[pPool release];
