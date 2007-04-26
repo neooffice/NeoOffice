@@ -410,16 +410,6 @@ public final class VCLGraphics {
 	private VCLImage image = null;
 
 	/**
-	 * The minimum rectangle width.
-	 */
-	private float minRectWidth = 1;
-
-	/**
-	 * The minimum rectangle height.
-	 */
-	private float minRectHeight = 1;
-
-	/**
 	 * The printer page format.
 	 */
 	private VCLPageFormat pageFormat = null;
@@ -514,17 +504,6 @@ public final class VCLGraphics {
 		}
 		graphics = (Graphics2D)g;
 		bitCount = 24;
-
-		// Calculate the minimum rectangle bounds
-		Dimension pageResolution = pageFormat.getPageResolution();
-		if (rotatedPageAngle != 0.0f) {
-			minRectWidth = (float)pageResolution.height / 72;
-			minRectHeight = (float)pageResolution.width / 72;
-		}
-		else {
-			minRectWidth = (float)pageResolution.width / 72;
-			minRectHeight = (float)pageResolution.height / 72;
-		}
 
 		// Mac OS X sometimes mangles images when multiple images are rendered
 		// to a printer so we need to combine all images into one image and
@@ -1194,12 +1173,6 @@ public final class VCLGraphics {
 		}
 
 		Rectangle destBounds = new Rectangle(x1 < x2 ? x1 : x2, y1 < y2 ? y1 : y2, x1 < x2 ? x2 - x1 : x1 - x2, y1 < y2 ? y2 - y1 : y1 - y2);
-
-		// Apply fix for bug 2236 to horizontal and vertical lines
-		if (graphics != null && (x1 == x2 || y1 == y2)) {
-			drawRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height, color, true);
-			return;
-		}
 		destBounds.width++;
 		destBounds.height++;
 		destBounds = destBounds.intersection(graphicsBounds);
@@ -1222,13 +1195,23 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-				g.setColor(new Color(color));
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.drawLine(x1, y1, x2, y2);
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clip = (Rectangle)clipRects.next();
+						drawLine0(x1, y1, x2, y2, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					}
+				}
+				else {
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					g.setColor(new Color(color));
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.drawLine(x1, y1, x2, y2);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1238,6 +1221,29 @@ public final class VCLGraphics {
 		}
 
 	}
+
+	/**
+	 * Draws a line, using the current color, between the points
+	 * <code>(x1, y1)</code> and <code>(x2, y2)</code> to the underlying
+	 * graphics.
+	 *
+	 * @param x1 the first point's x coordinate
+	 * @param y1 the first point's y coordinate
+	 * @param x2 the second point's x coordinate
+	 * @param y2 the second point's y coordinate
+	 * @param color the color of the line
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
+	 * @param translateX the horizontal translation
+	 * @param translateY the vertical translation
+	 * @param rotateAngle the rotation angle
+	 * @param scaleX the horizontal scale factor
+	 * @param scaleY the vertical scale factor
+	 */
+	native void drawLine0(float x1, float y1, float x2, float y2, int color, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws or fills the specified polygon with the specified color.
@@ -1262,15 +1268,6 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-
-		// Apply fix for bug 2236 to rectangular polygons
-		if (graphics != null) {
-			Area area = new Area(polygon);
-			if (area.isRectangular()) {
-				drawRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height, color, fill);
-				return;
-			}
-		}
 		if (!fill) {
 			destBounds.x--;
 			destBounds.y--;
@@ -1297,16 +1294,26 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-				g.setColor(new Color(color));
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					if (fill)
-						g.fillPolygon(polygon);
-					else
-						g.drawPolygon(polygon);
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clip = (Rectangle)clipRects.next();
+						drawPolygon0(npoints, xpoints, ypoints, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					}
+				}
+				else {
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					g.setColor(new Color(color));
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						if (fill)
+							g.fillPolygon(polygon);
+						else
+							g.drawPolygon(polygon);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1316,6 +1323,29 @@ public final class VCLGraphics {
 		g.dispose();
 
 	}
+
+	/**
+	 * Draws or fills the specified polygon with the specified color to the
+	 * underlying graphics.
+	 *
+	 * @param npoints the total number of points in the polygon
+	 * @param xpoints the array of x coordinates
+	 * @param ypoints the array of y coordinates
+	 * @param color the color of the polygon
+	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
+	 *  to draw just the outline
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
+	 * @param translateX the horizontal translation
+	 * @param translateY the vertical translation
+	 * @param rotateAngle the rotation angle
+	 * @param scaleX the horizontal scale factor
+	 * @param scaleY the vertical scale factor
+	 */
+	native void drawPolygon0(int npoints, int[] xpoints, int[] ypoints, int color, boolean fill, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified polyline with the specified color.
@@ -1335,13 +1365,6 @@ public final class VCLGraphics {
 
 		if (npoints == 0)
 			return;
-
-		// Apply fix for bug 2236 to polylines
-		if (graphics != null) {
-			for (int i = 1; i < npoints; i++)
-				drawLine(xpoints[i - 1], ypoints[i - 1], xpoints[i], ypoints[i], color);
-			return;
-		}
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
@@ -1369,13 +1392,23 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-				g.setColor(new Color(color));
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
-					g.drawPolyline(xpoints, ypoints, npoints);
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clip = (Rectangle)clipRects.next();
+						drawPolyline0(npoints, xpoints, ypoints, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					}
+				}
+				else {
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					g.setColor(new Color(color));
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						g.drawPolyline(xpoints, ypoints, npoints);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1385,6 +1418,27 @@ public final class VCLGraphics {
 		}
 
 	}
+
+	/**
+	 * Draws the specified polyline with the specified color to the
+	 * underlying graphics.
+	 *
+	 * @param npoints the total number of points in the polygon
+	 * @param xpoints the array of x coordinates
+	 * @param ypoints the array of y coordinates
+	 * @param color the color of the polygon
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
+	 * @param translateX the horizontal translation
+	 * @param translateY the vertical translation
+	 * @param rotateAngle the rotation angle
+	 * @param scaleX the horizontal scale factor
+	 * @param scaleY the vertical scale factor
+	 */
+	native void drawPolyline0(int npoints, int[] xpoints, int[] ypoints, int color, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws or fills the specified set of polygons with the specified color.
@@ -1412,7 +1466,7 @@ public final class VCLGraphics {
 			drawPolygon(npoints[0], xpoints[0], ypoints[0], color, fill);
 			return;
 		}
-		else if (xor) {
+		else if (graphics != null || xor) {
 			// Fix bug 786 by drawing overlapping polygons in XOR mode
 			for (int i = 0; i < npoly; i++)
 				drawPolygon(npoints[i], xpoints[i], ypoints[i], color, fill);
@@ -1491,8 +1545,8 @@ public final class VCLGraphics {
 	 * @param width the width of the rectangle
 	 * @param height the height of the rectangle
 	 * @param color the color of the rectangle
-	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
-	 *  to draw just the outline
+	 * @param fill <code>true</code> to fill the rectangle and
+	 *  <code>false</code> to draw just the outline
 	 */
 	public void drawRect(int x, int y, int width, int height, int color, boolean fill) {
 
@@ -1509,27 +1563,6 @@ public final class VCLGraphics {
 		if (height < 0) {
 			y += height;
 			height *= -1;
-		}
-
-		// Fix bug 2236 by rounding the width and height when printing so that
-		// we aren't doing non-integer widths and heights when measured in a
-		// 72 DPI scale
-		if (graphics != null) {
-			int widthUnits = (int)((float)width / minRectWidth) + 1;
-			width = (int)((minRectWidth * widthUnits) + 0.5);
-			int oldX = x;
-			int xUnits = (int)((float)x / minRectWidth);
-			x = (int)((minRectWidth * xUnits) + 0.5);
-			if ((float)(oldX - x) / minRectWidth >= 0.5)
-				width++;
-
-			int heightUnits = (int)((float)height / minRectHeight) + 1;
-			height = (int)((minRectHeight * heightUnits) + 0.5);
-			int oldY = y;
-			int yUnits = (int)((float)y / minRectHeight);
-			y = (int)((minRectHeight * yUnits) + 0.5);
-			if ((float)(oldY - y) / minRectHeight >= 0.5)
-				height++;
 		}
 
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
@@ -1552,24 +1585,29 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				if (xor)
-					g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-				g.setColor(new Color(color));
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					Rectangle clipRect = (Rectangle)clipRects.next();
-					g.setClip(clipRect);
-					if (fill) {
-						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clip = (Rectangle)clipRects.next();
+						if (fill)
+							drawRect0(clip.x, clip.y, clip.width, clip.height, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+						else
+							drawRect0(x, y, width - 1, height - 1, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
-					else if (graphics != null) {
-						g.fillRect(x, y, width, (int)minRectHeight);
-						g.fillRect(x + width - (int)minRectWidth, y, (int)minRectWidth, height);
-						g.fillRect(x, y + height - (int)minRectHeight, width, (int)minRectHeight);
-						g.fillRect(x, y, (int)minRectWidth, height);
-					}
-					else {
-						g.drawRect(x, y, width - 1, height - 1);
+				}
+				else {
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					g.setColor(new Color(color));
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						Rectangle clipRect = (Rectangle)clipRects.next();
+						g.setClip(clipRect);
+						if (fill)
+							g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+						else
+							g.drawRect(x, y, width - 1, height - 1);
 					}
 				}
 			}
@@ -1580,6 +1618,30 @@ public final class VCLGraphics {
 		}
 
 	}
+
+	/**
+	 * Draws or fills the specified rectangle with the specified color to
+	 * the underlying graphics.
+	 *
+	 * @param x the x coordinate of the rectangle
+	 * @param y the y coordinate of the rectangle
+	 * @param width the width of the rectangle
+	 * @param height the height of the rectangle
+	 * @param color the color of the rectangle
+	 * @param fill <code>true</code> to fill the rectangle and
+	 *  <code>false</code> to draw just the outline
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
+	 * @param translateX the horizontal translation
+	 * @param translateY the vertical translation
+	 * @param rotateAngle the rotation angle
+	 * @param scaleX the horizontal scale factor
+	 * @param scaleY the vertical scale factor
+	 */
+	native void drawRect0(float x, float y, float width, float height, int color, boolean fill, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws a pushbutton into the graphics using the default Swing LAF.

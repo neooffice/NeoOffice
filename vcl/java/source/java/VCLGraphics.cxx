@@ -327,7 +327,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 	}
 }
 
-// ============================================================================
+// ----------------------------------------------------------------------------
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
 {
@@ -348,6 +348,72 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 		NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawLine0( JNIEnv *pEnv, jobject object, jfloat _par0, jfloat _par1, jfloat _par2, jfloat _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jboolean _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14 )
+{
+	CGContext_drawLine( _par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14 );
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolygon0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jintArray _par2, jint _par3, jboolean _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jboolean _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14 )
+{
+	if ( _par0 > 0 && _par1 && pEnv->GetArrayLength( _par1 ) >= _par0 && _par2 && pEnv->GetArrayLength( _par2 ) >= _par0  )
+	{
+		float aXPoints[ _par0 ];
+		float aYPoints[ _par0 ];
+
+		jboolean bCopy;
+		bCopy = sal_False;
+		jint *pXBits = (jint *)pEnv->GetPrimitiveArrayCritical( _par1, &bCopy );
+		bCopy = sal_False;
+		jint *pYBits = (jint *)pEnv->GetPrimitiveArrayCritical( _par2, &bCopy );
+		for ( jint i = 0; i < _par0; i++ )
+		{
+			aXPoints[ i ] = (float)pXBits[ i ];
+			aYPoints[ i ] = (float)pYBits[ i ];
+		}
+		pEnv->ReleasePrimitiveArrayCritical( _par2, pYBits, 0 );
+		pEnv->ReleasePrimitiveArrayCritical( _par1, pXBits, 0 );
+		
+		CGContext_drawPolygon( _par0, aXPoints, aYPoints, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14 );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyline0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jintArray _par2, jint _par3, jfloat _par4, jfloat _par5, jfloat _par6, jfloat _par7, jboolean _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13 )
+{
+	if ( _par0 > 0 && _par1 && pEnv->GetArrayLength( _par1 ) >= _par0 && _par2 && pEnv->GetArrayLength( _par2 ) >= _par0  )
+	{
+		float aXPoints[ _par0 ];
+		float aYPoints[ _par0 ];
+
+		jboolean bCopy;
+		bCopy = sal_False;
+		jint *pXBits = (jint *)pEnv->GetPrimitiveArrayCritical( _par1, &bCopy );
+		bCopy = sal_False;
+		jint *pYBits = (jint *)pEnv->GetPrimitiveArrayCritical( _par2, &bCopy );
+		for ( jint i = 0; i < _par0; i++ )
+		{
+			aXPoints[ i ] = (float)pXBits[ i ];
+			aYPoints[ i ] = (float)pYBits[ i ];
+		}
+		pEnv->ReleasePrimitiveArrayCritical( _par2, pYBits, 0 );
+		pEnv->ReleasePrimitiveArrayCritical( _par1, pXBits, 0 );
+		
+		CGContext_drawPolyline( _par0, aXPoints, aYPoints, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13 );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawRect0( JNIEnv *pEnv, jobject object, jfloat _par0, jfloat _par1, jfloat _par2, jfloat _par3, jint _par4, jboolean _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
+{
+	CGContext_drawRect( _par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
 }
 
 // ----------------------------------------------------------------------------
@@ -395,7 +461,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[5]; 
+			JNINativeMethod pMethods[9]; 
 			pMethods[0].name = "drawBitmap0";
 			pMethods[0].signature = "([IIIIIIIFFFFFFFFZFFFFF)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
@@ -405,13 +471,25 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].name = "drawEPS0";
 			pMethods[2].signature = "(JJFFFFFFFFZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
-			pMethods[3].name = "notifyGraphicsChanged";
-			pMethods[3].signature = "(J)V";
-			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
-			pMethods[4].name = "releaseNativeBitmaps";
-			pMethods[4].signature = "()V";
-			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 5 );
+			pMethods[3].name = "drawLine0";
+			pMethods[3].signature = "(FFFFIFFFFZFFFFF)V";
+			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawLine0;
+			pMethods[4].name = "drawPolygon0";
+			pMethods[4].signature = "(I[I[IIZFFFFZFFFFF)V";
+			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolygon0;
+			pMethods[5].name = "drawPolyline0";
+			pMethods[5].signature = "(I[I[IIFFFFZFFFFF)V";
+			pMethods[5].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolyline0;
+			pMethods[6].name = "drawRect0";
+			pMethods[6].signature = "(FFFFIZFFFFZFFFFF)V";
+			pMethods[6].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawRect0;
+			pMethods[7].name = "notifyGraphicsChanged";
+			pMethods[7].signature = "(J)V";
+			pMethods[7].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
+			pMethods[8].name = "releaseNativeBitmaps";
+			pMethods[8].signature = "()V";
+			pMethods[8].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 9 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );

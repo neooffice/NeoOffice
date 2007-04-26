@@ -310,6 +310,500 @@
 
 @end
 
+@interface DrawLine : NSObject
+{
+	float				mfX1;
+	float				mfY1;
+	float				mfX2;
+	float				mfY2;
+	int					mnColor;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
+- (void)drawLine:(id)pObject;
+- (id)init:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawLine
+
+- (void)drawLine:(id)pObject
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+	{
+		NSView *pPrintView = [pOperation view];
+		if ( pPrintView )
+		{
+			NSRect aBounds = [pPrintView bounds];
+			FlippedView *pFlippedView = [[FlippedView alloc] initWithFrame:NSMakeRect( 0, 0, aBounds.size.width, aBounds.size.height )];
+			if ( pFlippedView )
+			{
+				NSView *pFocusView = [NSView focusView];
+				if ( pFocusView )
+					[pFocusView unlockFocus];
+
+				[pPrintView addSubview:pFlippedView];
+				[pFlippedView lockFocus];
+
+				NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+				if ( pContext )
+				{
+					CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+					if ( aContext )
+					{
+						// Fix bug 1218 by setting the clip here and not in Java
+						CGContextSaveGState( aContext );
+						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+						CGContextRotateCTM( aContext, mfRotateAngle );
+						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+
+						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+						CGPoint aPoints[ 2 ];
+						aPoints[ 0 ].x = mfX1;
+						aPoints[ 0 ].y = mfY1;
+						aPoints[ 1 ].x = mfX2;
+						aPoints[ 1 ].y = mfY2;
+						CGContextStrokeLineSegments( aContext, aPoints, 2 );
+
+						CGContextRestoreGState( aContext );
+					}
+				}
+
+				[pFlippedView unlockFocus];
+				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
+			}
+		}
+	}
+}
+
+- (id)init:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	mfX1 = fX1;
+	mfY1 = fY1;
+	mfX2 = fX2;
+	mfY2 = fY2;
+	mnColor = nColor;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
+@interface DrawPolygon : NSObject
+{
+	int					mnPoints;
+	float*				mpXPoints;
+	float*				mpYPoints;
+	int					mnColor;
+	BOOL				mbFill;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
+- (void)drawPolygon:(id)pObject;
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawPolygon
+
+- (void)drawPolygon:(id)pObject
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+	{
+		NSView *pPrintView = [pOperation view];
+		if ( pPrintView )
+		{
+			NSRect aBounds = [pPrintView bounds];
+			FlippedView *pFlippedView = [[FlippedView alloc] initWithFrame:NSMakeRect( 0, 0, aBounds.size.width, aBounds.size.height )];
+			if ( pFlippedView )
+			{
+				NSView *pFocusView = [NSView focusView];
+				if ( pFocusView )
+					[pFocusView unlockFocus];
+
+				[pPrintView addSubview:pFlippedView];
+				[pFlippedView lockFocus];
+
+				NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+				if ( pContext )
+				{
+					CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+					if ( aContext )
+					{
+						// Fix bug 1218 by setting the clip here and not in Java
+						CGContextSaveGState( aContext );
+						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+						CGContextRotateCTM( aContext, mfRotateAngle );
+						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+
+						CGContextBeginPath( aContext );
+						CGContextMoveToPoint( aContext, mpXPoints[ 0 ], mpYPoints[ 0 ] );
+						int i = 1;
+						for ( ; i < mnPoints; i++ )
+							CGContextAddLineToPoint( aContext, mpXPoints[ i ], mpYPoints[ i ] );
+						CGContextClosePath( aContext );
+						if ( mbFill )
+						{
+							CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+							CGContextFillPath( aContext );
+						}
+						else
+						{
+							CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+							CGContextStrokePath( aContext );
+						}
+
+						CGContextRestoreGState( aContext );
+					}
+				}
+
+				[pFlippedView unlockFocus];
+				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
+			}
+		}
+	}
+}
+
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	mnPoints = nPoints;
+	mpXPoints = pXPoints;
+	mpYPoints = pYPoints;
+	mnColor = nColor;
+	mbFill = bFill;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
+@interface DrawPolyline : NSObject
+{
+	int					mnPoints;
+	float*				mpXPoints;
+	float*				mpYPoints;
+	int					mnColor;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
+- (void)drawPolyline:(id)pObject;
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawPolyline
+
+- (void)drawPolyline:(id)pObject
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+	{
+		NSView *pPrintView = [pOperation view];
+		if ( pPrintView )
+		{
+			NSRect aBounds = [pPrintView bounds];
+			FlippedView *pFlippedView = [[FlippedView alloc] initWithFrame:NSMakeRect( 0, 0, aBounds.size.width, aBounds.size.height )];
+			if ( pFlippedView )
+			{
+				NSView *pFocusView = [NSView focusView];
+				if ( pFocusView )
+					[pFocusView unlockFocus];
+
+				[pPrintView addSubview:pFlippedView];
+				[pFlippedView lockFocus];
+
+				NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+				if ( pContext )
+				{
+					CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+					if ( aContext )
+					{
+						// Fix bug 1218 by setting the clip here and not in Java
+						CGContextSaveGState( aContext );
+						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+						CGContextRotateCTM( aContext, mfRotateAngle );
+						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+
+						CGContextBeginPath( aContext );
+						CGContextMoveToPoint( aContext, mpXPoints[ 0 ], mpYPoints[ 0 ] );
+						int i = 1;
+						for ( ; i < mnPoints; i++ )
+							CGContextAddLineToPoint( aContext, mpXPoints[ i ], mpYPoints[ i ] );
+						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+						CGContextStrokePath( aContext );
+
+						CGContextRestoreGState( aContext );
+					}
+				}
+
+				[pFlippedView unlockFocus];
+				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
+			}
+		}
+	}
+}
+
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	mnPoints = nPoints;
+	mpXPoints = pXPoints;
+	mpYPoints = pYPoints;
+	mnColor = nColor;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
+@interface DrawRect : NSObject
+{
+	float				mfX;
+	float				mfY;
+	float				mfWidth;
+	float				mfHeight;
+	int					mnColor;
+	BOOL				mbFill;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
+- (void)drawRect:(id)pObject;
+- (id)init:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawRect
+
+- (void)drawRect:(id)pObject
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+	{
+		NSView *pPrintView = [pOperation view];
+		if ( pPrintView )
+		{
+			NSRect aBounds = [pPrintView bounds];
+			FlippedView *pFlippedView = [[FlippedView alloc] initWithFrame:NSMakeRect( 0, 0, aBounds.size.width, aBounds.size.height )];
+			if ( pFlippedView )
+			{
+				NSView *pFocusView = [NSView focusView];
+				if ( pFocusView )
+					[pFocusView unlockFocus];
+
+				[pPrintView addSubview:pFlippedView];
+				[pFlippedView lockFocus];
+
+				NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+				if ( pContext )
+				{
+					CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+					if ( aContext )
+					{
+						// Fix bug 1218 by setting the clip here and not in Java
+						CGContextSaveGState( aContext );
+						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+						CGContextRotateCTM( aContext, mfRotateAngle );
+						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+
+						if ( mbFill )
+						{
+							CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+							CGContextFillRect( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ) );
+						}
+						else
+						{
+							CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+							CGContextStrokeRect( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ) );
+						}
+
+						CGContextRestoreGState( aContext );
+					}
+				}
+
+				[pFlippedView unlockFocus];
+				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
+			}
+		}
+	}
+}
+
+- (id)init:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	mfX = fX;
+	mfY = fY;
+	mfWidth = fWidth;
+	mfHeight = fHeight;
+	mnColor = nColor;
+	mbFill = bFill;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
+void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	DrawLine *pDrawLine = [[DrawLine alloc] init:fX1 y1:fY1 x2:fX2 y2:fY2 color:nColor clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	if ( bDrawInMainThread )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pDrawLine performSelectorOnMainThread:@selector(drawLine:) withObject:pDrawLine waitUntilDone:YES modes:pModes];
+	}
+	else
+	{
+		[pDrawLine drawLine:pDrawLine];
+	}
+
+	[pPool release];
+}
+
+void CGContext_drawPolygon( int nPoints, float *pXPoints, float *pYPoints, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( nPoints && pXPoints && pYPoints )
+	{
+		DrawPolygon *pDrawPolygon = [[DrawPolygon alloc] initWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDrawPolygon performSelectorOnMainThread:@selector(drawPolygon:) withObject:pDrawPolygon waitUntilDone:YES modes:pModes];
+		}
+		else
+		{
+			[pDrawPolygon drawPolygon:pDrawPolygon];
+		}
+	}
+
+	[pPool release];
+}
+
+void CGContext_drawPolyline( int nPoints, float *pXPoints, float *pYPoints, int nColor, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( nPoints && pXPoints && pYPoints )
+	{
+		DrawPolyline *pDrawPolyline = [[DrawPolyline alloc] initWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDrawPolyline performSelectorOnMainThread:@selector(drawPolyline:) withObject:pDrawPolyline waitUntilDone:YES modes:pModes];
+		}
+		else
+		{
+			[pDrawPolyline drawPolyline:pDrawPolyline];
+		}
+	}
+
+	[pPool release];
+}
+
+void CGContext_drawRect( float fX, float fY, float fWidth, float fHeight, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	DrawRect *pDrawRect = [[DrawRect alloc] init:fX y:fY width:fWidth height:fHeight color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	if ( bDrawInMainThread )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pDrawRect performSelectorOnMainThread:@selector(drawRect:) withObject:pDrawRect waitUntilDone:YES modes:pModes];
+	}
+	else
+	{
+		[pDrawRect drawRect:pDrawRect];
+	}
+
+	[pPool release];
+}
+
 void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
