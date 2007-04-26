@@ -77,7 +77,7 @@ static NSSavePanel *pSavePanel = nil;
 	{
 		if ( !pOpenPanel )
 		{
-			pOpenPanel = (NSSavePanel *)[NSOpenPanel openPanel];
+			pOpenPanel = [NSOpenPanel openPanel];
 			if ( pOpenPanel )
 				[pOpenPanel retain];
 		}
