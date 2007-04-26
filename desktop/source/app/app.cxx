@@ -2866,6 +2866,10 @@ void Desktop::OpenDefault()
     OUString aUserInstallURL;
     ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
 
+    OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
+    OUString aOpenProgName = aOpenProgDir;
+    aOpenProgName += OUString::createFromAscii( "open" );
+
     OUString aProductKey;
     aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
 #endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
@@ -2911,10 +2915,15 @@ void Desktop::OpenDefault()
         aURL += OUString::createFromAscii( "&buildmachine=" );
         aURL += OUString( RTL_CONSTASCII_USTRINGPARAM( BUILD_MACHINE ) );
 
-        ProcessDocumentsRequest aRequest;
-        aRequest.pcProcessed = NULL;
-        aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
-        OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
+        // Open URL
+        OUString aArgListArray[ 1 ];
+        aArgListArray[ 0 ] = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+
+        ::vos::OSecurity aSecurity;
+        ::vos::OEnvironment aEnv;
+        ::vos::OArgumentList aArgumentList( aArgListArray, 1 );
+        ::vos::OProcess aProcess( aOpenProgName, aOpenProgDir );
+        aProcess.execute( OProcess::TOption_Detached, aSecurity, aArgumentList, aEnv );
     }
 #endif	// PRODUCT_WELCOME_URL || BUILD_MACHINE
 
@@ -3005,11 +3014,17 @@ void Desktop::OpenDefault()
 #endif	// POWERPC
                             }
 
-                            ProcessDocumentsRequest aRequest;
-                            aRequest.pcProcessed = NULL;
-                            aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
-                            OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
-                            bUpdateTimeStamp = true;
+                            // Open URL
+                            OUString aArgListArray[ 1 ];
+                            aArgListArray[ 0 ] = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+
+                            ::vos::OSecurity aSecurity;
+                            ::vos::OEnvironment aEnv;
+                            ::vos::OArgumentList aArgumentList( aArgListArray, 1 );
+                            ::vos::OProcess aProcess( aOpenProgName, aOpenProgDir );
+                            ::vos::OProcess::TProcessError aProcessError = aProcess.execute( OProcess::TOption_Detached, aSecurity, aArgumentList, aEnv );
+                            if ( aProcessError == OProcess::E_None )
+                                bUpdateTimeStamp = true;
                         }
                     }
                     else
