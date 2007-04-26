@@ -40,60 +40,6 @@
 #endif
 
 static NSString *pBlankItem = @" ";
-static NSOpenPanel *pOpenPanel = nil;
-static NSSavePanel *pSavePanel = nil;
-
-@interface InitializeFileDialogs : NSObject
-{
-	BOOL					mbUseFileOpenDialog;
-}
-- (NSSavePanel *)filePanel;
-- (id)init:(BOOL)bUseFileOpenDialog;
-- (void)initialize:(id)pObject;
-@end
-
-@implementation InitializeFileDialogs
-
-- (NSSavePanel *)filePanel
-{
-	if ( mbUseFileOpenDialog )
-		return (NSSavePanel *)pOpenPanel;
-	else
-		return pSavePanel;
-}
-
-- (id)init:(BOOL)bUseFileOpenDialog
-{
-	[super init];
-
-	mbUseFileOpenDialog = bUseFileOpenDialog;
-
-	return self;
-}
-
-- (void)initialize:(id)pObject
-{
-	if ( mbUseFileOpenDialog )
-	{
-		if ( !pOpenPanel )
-		{
-			pOpenPanel = [NSOpenPanel openPanel];
-			if ( pOpenPanel )
-				[pOpenPanel retain];
-		}
-	}
-	else
-	{
-		if ( !pSavePanel )
-		{
-			pSavePanel = [NSSavePanel savePanel];
-			if ( pSavePanel )
-				[pSavePanel retain];
-		}
-	}
-}
-
-@end
 
 @interface ShowFileDialog : NSObject
 {
@@ -104,6 +50,15 @@ static NSSavePanel *pSavePanel = nil;
 	NSMutableDictionary*	mpFilters;
 	void*					mpPicker;
 	int						mnResult;
+	BOOL					mbShowAutoExtension;
+	BOOL					mbShowFilterOptions;
+	BOOL					mbShowImageTemplate;
+	BOOL					mbShowLink;
+	BOOL					mbShowPassword;
+	BOOL					mbShowReadOnly;
+	BOOL					mbShowSelection;
+	BOOL					mbShowTemplate;
+	BOOL					mbShowVersion;
 	NSMutableDictionary*	mpTextFields;
 	BOOL					mbUseFileOpenDialog;
 }
@@ -116,10 +71,13 @@ static NSSavePanel *pSavePanel = nil;
 - (NSArray *)filenames;
 - (NSArray *)items:(int)nID;
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
+- (void)initialize:(id)pObject;
 - (BOOL)isChecked:(int)nID;
 - (NSString *)label:(int)nID;
+- (NSSavePanel *)panel;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
 - (void *)picker;
+- (void)release:(id)pObject;
 - (int)result;
 - (NSString *)selectedItem:(int)nID;
 - (int)selectedItemIndex:(int)nID;
@@ -312,6 +270,15 @@ static NSSavePanel *pSavePanel = nil;
 	mpDefaultName = nil;
 	mpPicker = pPicker;
 	mnResult = NSCancelButton;
+	mbShowAutoExtension = bShowAutoExtension;
+	mbShowFilterOptions = bShowFilterOptions;
+	mbShowImageTemplate = bShowImageTemplate;
+	mbShowLink = bShowLink;
+	mbShowPassword = bShowPassword;
+	mbShowReadOnly = bShowReadOnly;
+	mbShowSelection = bShowSelection;
+	mbShowTemplate = bShowTemplate;
+	mbShowVersion = bShowVersion;
 	mbUseFileOpenDialog = bUseFileOpenDialog;
 
 	mpControls = [[NSMutableDictionary alloc] init];
@@ -326,40 +293,40 @@ static NSSavePanel *pSavePanel = nil;
 	if ( mpTextFields )
 		[mpTextFields retain];
 
-	// Fix bug 1601 by ensuring the first save and open panels are created on
-	// the main thread
-	InitializeFileDialogs *pInitializer = [[InitializeFileDialogs alloc] init:mbUseFileOpenDialog];
-	if ( pInitializer )
+	return self;
+}
+
+- (void)initialize:(id)pObject
+{
+	if ( mbUseFileOpenDialog )
+		mpFilePanel = (NSSavePanel *)[NSOpenPanel openPanel];
+	else
+		mpFilePanel = [NSSavePanel savePanel];
+
+	if ( !mpFilePanel )
+		return;
+
+	[mpFilePanel retain];
+
+	[mpFilePanel setDelegate:self];
+	[mpFilePanel setCanCreateDirectories:YES];
+	[mpFilePanel setCanSelectHiddenExtension:mbShowAutoExtension];
+
+	if ( mbUseFileOpenDialog )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pInitializer performSelectorOnMainThread:@selector(initialize:) withObject:pInitializer waitUntilDone:YES modes:pModes];
-		mpFilePanel = [pInitializer filePanel];
-	}
+		NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
 
-	if ( mpFilePanel )
-	{
-		[mpFilePanel retain];
+		[pOpenPanel setCanChooseFiles:mbChooseFiles];
+		[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
 
-		[mpFilePanel setDelegate:self];
-		[mpFilePanel setCanCreateDirectories:YES];
-		[mpFilePanel setCanSelectHiddenExtension:bShowAutoExtension];
-
-		if ( mbUseFileOpenDialog )
-		{
-			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-
-			[pOpenPanel setCanChooseFiles:mbChooseFiles];
-			[pOpenPanel setTreatsFilePackagesAsDirectories:NO];
-
-			if ( mbChooseFiles )
-				[pOpenPanel setCanChooseDirectories:NO];
-			else
-				[pOpenPanel setCanChooseDirectories:YES];
-		}
+		if ( mbChooseFiles )
+			[pOpenPanel setCanChooseDirectories:NO];
 		else
-		{
-			[mpFilePanel setTreatsFilePackagesAsDirectories:NO];
-		}
+			[pOpenPanel setCanChooseDirectories:YES];
+	}
+	else
+	{
+		[mpFilePanel setTreatsFilePackagesAsDirectories:NO];
 	}
 
 	// Create file type popup
@@ -389,7 +356,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create filter options checkbox
-	if ( bShowFilterOptions )
+	if ( mbShowFilterOptions )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -402,7 +369,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create image template popup
-	if ( bShowImageTemplate )
+	if ( mbShowImageTemplate )
 	{
 		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
 		if ( pPopup )
@@ -423,7 +390,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create link checkbox
-	if ( bShowLink )
+	if ( mbShowLink )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -436,7 +403,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create password checkbox
-	if ( bShowPassword )
+	if ( mbShowPassword )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -449,7 +416,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create read only checkbox
-	if ( bShowReadOnly )
+	if ( mbShowReadOnly )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -462,7 +429,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create selection checkbox
-	if ( bShowSelection )
+	if ( mbShowSelection )
 	{
 		NSButton *pButton = [[NSButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 )];
 		if ( pButton )
@@ -475,7 +442,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create template popup
-	if ( bShowTemplate )
+	if ( mbShowTemplate )
 	{
 		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
 		if ( pPopup )
@@ -496,7 +463,7 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	// Create template popup
-	if ( bShowVersion )
+	if ( mbShowVersion )
 	{
 		NSPopUpButton *pPopup = [[NSPopUpButton alloc] initWithFrame:NSMakeRect( 0, 0, 0, 0 ) pullsDown:NO];
 		if ( pPopup )
@@ -515,8 +482,6 @@ static NSSavePanel *pSavePanel = nil;
 			[mpTextFields setValue:pTextField forKey:[[NSNumber numberWithInt:COCOA_CONTROL_ID_VERSION] stringValue]];
 		}
 	}
-
-	return self;
 }
 
 - (BOOL)isChecked:(int)nID
@@ -557,6 +522,11 @@ static NSSavePanel *pSavePanel = nil;
 	}
 
 	return pRet;
+}
+
+- (NSSavePanel *)panel
+{
+	return mpFilePanel;
 }
 
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
@@ -633,6 +603,11 @@ static NSSavePanel *pSavePanel = nil;
 - (void *)picker
 {
 	return mpPicker;
+}
+
+- (void)release:(id)pObject
+{
+	[self release];
 }
 
 - (int)result;
@@ -807,6 +782,9 @@ static NSSavePanel *pSavePanel = nil;
 
 - (void)showFileDialog:(id)pObject;
 {
+	if ( [mpFilePanel isVisible] )
+		return;
+
 	mnResult = NSCancelButton;
 
 	// Create accessory view
@@ -1028,7 +1006,16 @@ id NSFileDialog_create( void *pPicker, BOOL bUseFileOpenDialog, BOOL bChooseFile
 
 	pRet = [[ShowFileDialog alloc] initWithPicker:pPicker useFileOpenDialog:bUseFileOpenDialog chooseFiles:bChooseFiles showAutoExtension:bShowAutoExtension showFilterOptions:bShowFilterOptions showImageTemplate:bShowImageTemplate showLink:bShowLink showPassword:bShowPassword showReadOnly:bShowReadOnly showSelection:bShowSelection showTemplate:bShowTemplate showVersion:bShowVersion];
 	if ( pRet )
-		[pRet retain];
+	{
+		// Fix bug 1601 by ensuring the first save and open panels are created
+		// on the main thread
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pRet performSelectorOnMainThread:@selector(initialize:) withObject:pRet waitUntilDone:YES modes:pModes];
+		if ( [pRet panel] )
+			[pRet retain];
+		else
+			pRet = nil;
+	}
 
 	[pPool release];
 
@@ -1186,7 +1173,10 @@ void NSFileDialog_release( id pDialog )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		[(ShowFileDialog *)pDialog release];
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(release:) withObject:pDialog waitUntilDone:YES modes:pModes];
+	}
 
 	[pPool release];
 }
