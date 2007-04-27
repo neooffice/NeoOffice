@@ -76,6 +76,7 @@ static NSString *pBlankItem = @" ";
 - (NSString *)label:(int)nID;
 - (NSSavePanel *)panel;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
+- (NSString *)panel:(id)pObject userEnteredFilename:(NSString *)pFilename confirmed:(BOOL)bOK;
 - (void *)picker;
 - (void)release:(id)pObject;
 - (int)result;
@@ -101,6 +102,7 @@ static NSString *pBlankItem = @" ";
 }
 - (void)dismissPopUp;
 - (id)initWithShowFileDialog:(ShowFileDialog *)pDialog control:(int)nID;
+- (void)drawTitleWithFrame:(NSRect)aCellFrame inView:(NSView *)pControlView;
 @end
 
 @implementation ShowFileDialog
@@ -601,6 +603,23 @@ static NSString *pBlankItem = @" ";
 	return bRet;
 }
 
+- (NSString *)panel:(id)pObject userEnteredFilename:(NSString *)pFilename confirmed:(BOOL)bOK
+{
+	if ( !mbUseFileOpenDialog && bOK && ![mpFilePanel isExtensionHidden] )
+	{
+		// Fix second issue in bug 2302 by temporarily clearing the allowed
+		// file types and then marking them for redisplay so that we can
+		// reenable them after the "are you sure you want to replace this
+		// file" dialog is close
+		[mpFilePanel setAllowedFileTypes:nil];
+		NSView *pView = [mpFilePanel contentView];
+		if ( pView )
+			[pView setNeedsDisplay:YES];
+	}
+
+	return pFilename;
+}
+
 - (void *)picker
 {
 	return mpPicker;
@@ -883,7 +902,8 @@ static NSString *pBlankItem = @" ";
 			[mpFilePanel setAccessoryView:pAccessoryView];
 		}
 
-		[mpFilePanel validateVisibleColumns];
+		// Fix bug 2302 by updating filtering
+		[self setSelectedFilter:[self selectedFilter]];
 
 		if ( mbUseFileOpenDialog )
 		{
@@ -892,11 +912,6 @@ static NSString *pBlankItem = @" ";
 		}
 		else
 		{
-			// Fix bug 2302 by setting the initial required file type
-			NSArray *pTypes = (NSArray *)[mpFilters objectForKey:[self selectedItem:COCOA_CONTROL_ID_FILETYPE]];
-			if ( pTypes && [pTypes count] > 0)
-				[mpFilePanel setRequiredFileType:[pTypes objectAtIndex:0]];
-
 			mnResult = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
 		}
 
@@ -938,6 +953,14 @@ static NSString *pBlankItem = @" ";
 	mpDialog = pDialog;
 
 	return self;
+}
+
+- (void)drawTitleWithFrame:(NSRect)aCellFrame inView:(NSView *)pControlView;
+{
+	// Reset allowed file types that may have been unset elsewhere
+	[mpDialog setSelectedFilter:[mpDialog selectedFilter]];
+
+	[super drawTitleWithFrame:aCellFrame inView:pControlView];
 }
 
 @end
