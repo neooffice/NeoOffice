@@ -36,13 +36,29 @@
 #import <Cocoa/Cocoa.h>
 #include "objmisc_cocoa.h"
 
-/**
- * Perform a SetWindowModified on a WindowRef that has been extracted from
- * a Cocoa window.
- */
-void DoCocoaSetWindowModifiedBit( unsigned long winRef, bool isModified )
+@interface DoSetModified : NSObject
 {
-	if(winRef)
+	unsigned long theRef;
+	BOOL theState;
+}
+- (id)initWithState:(BOOL)state winRef:(unsigned long)theRef;
+- (void)setModified:(id)pObject;
+@end
+
+@implementation DoSetModified
+- (id)initWithState:(BOOL)state winRef:(unsigned long)r;
+{
+	[super init];
+
+	theRef=r;
+	theState=state;
+
+	return(self);
+}
+
+- (void)setModified:(id)ignore
+{
+	if(theRef)
 	{
 		NSEnumerator *windowIter=[[NSApp windows] objectEnumerator];
 		id winObject;
@@ -50,11 +66,28 @@ void DoCocoaSetWindowModifiedBit( unsigned long winRef, bool isModified )
 		while(winObject=[windowIter nextObject])
 		{
 			NSWindow *theWin=(NSWindow *)winObject;
-			if([theWin windowRef]==(WindowRef)winRef)
+			if([theWin windowRef]==(WindowRef)theRef)
 			{
-				[theWin setDocumentEdited: ((isModified) ? YES : NO)];
+				[theWin setDocumentEdited: theState];
 				break;
 			}
 		}
 	}
+}
+@end
+
+/**
+ * Perform a SetWindowModified on a WindowRef that has been extracted from
+ * a Cocoa window.
+ */
+void DoCocoaSetWindowModifiedBit( unsigned long winRef, bool isModified )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	DoSetModified *pDoSetModified = [[DoSetModified alloc] initWithState:((isModified) ? YES : NO) winRef:winRef];
+	
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pDoSetModified performSelectorOnMainThread:@selector(setModified:) withObject:pDoSetModified waitUntilDone:YES modes:pModes];
+
+	[pPool release];
 }
