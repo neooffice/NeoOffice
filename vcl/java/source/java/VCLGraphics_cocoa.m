@@ -365,13 +365,11 @@
 						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 
+						CGContextBeginPath( aContext );
+						CGContextMoveToPoint( aContext, mfX1, mfY1 );
+						CGContextAddLineToPoint( aContext, mfX2, mfY2 );
 						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-						CGPoint aPoints[ 2 ];
-						aPoints[ 0 ].x = mfX1;
-						aPoints[ 0 ].y = mfY1;
-						aPoints[ 1 ].x = mfX2;
-						aPoints[ 1 ].y = mfY2;
-						CGContextStrokeLineSegments( aContext, aPoints, 2 );
+						CGContextStrokePath( aContext );
 
 						CGContextRestoreGState( aContext );
 					}
