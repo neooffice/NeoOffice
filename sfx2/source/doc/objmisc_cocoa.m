@@ -34,19 +34,19 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#include "objmisc_cocoa.h"
+#import "objmisc_cocoa.h"
 
 @interface DoSetModified : NSObject
 {
-	unsigned long theRef;
+	WindowRef theRef;
 	BOOL theState;
 }
-- (id)initWithState:(BOOL)state winRef:(unsigned long)theRef;
+- (id)initWithState:(BOOL)state winRef:(WindowRef)r;
 - (void)setModified:(id)pObject;
 @end
 
 @implementation DoSetModified
-- (id)initWithState:(BOOL)state winRef:(unsigned long)r;
+- (id)initWithState:(BOOL)state winRef:(WindowRef)r
 {
 	[super init];
 
@@ -58,19 +58,14 @@
 
 - (void)setModified:(id)ignore
 {
-	if(theRef)
+	NSEnumerator *windowIter=[[NSApp windows] objectEnumerator];
+	NSWindow *theWin;
+	while((theWin=(NSWindow *)[windowIter nextObject])!=nil)
 	{
-		NSEnumerator *windowIter=[[NSApp windows] objectEnumerator];
-		id winObject;
-		
-		while(winObject=[windowIter nextObject])
+		if([theWin windowRef]==theRef)
 		{
-			NSWindow *theWin=(NSWindow *)winObject;
-			if([theWin windowRef]==(WindowRef)theRef)
-			{
-				[theWin setDocumentEdited: theState];
-				break;
-			}
+			[theWin setDocumentEdited: theState];
+			break;
 		}
 	}
 }
@@ -84,10 +79,12 @@ void DoCocoaSetWindowModifiedBit( unsigned long winRef, bool isModified )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	DoSetModified *pDoSetModified = [[DoSetModified alloc] initWithState:((isModified) ? YES : NO) winRef:winRef];
-	
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pDoSetModified performSelectorOnMainThread:@selector(setModified:) withObject:pDoSetModified waitUntilDone:YES modes:pModes];
+	if ( winRef )
+	{
+		DoSetModified *pDoSetModified = [[DoSetModified alloc] initWithState:((isModified) ? YES : NO) winRef:(WindowRef)winRef];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pDoSetModified performSelectorOnMainThread:@selector(setModified:) withObject:pDoSetModified waitUntilDone:YES modes:pModes];
+	}
 
 	[pPool release];
 }
