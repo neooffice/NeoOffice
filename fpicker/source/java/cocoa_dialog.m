@@ -882,7 +882,8 @@ static NSString *pBlankItem = @" ";
 			[mpFilePanel setAccessoryView:pAccessoryView];
 		}
 
-		[mpFilePanel validateVisibleColumns];
+		// Fix bug 2302 by updating filtering
+		[self setSelectedFilter:[self selectedFilter]];
 
 		if ( mbUseFileOpenDialog )
 		{
