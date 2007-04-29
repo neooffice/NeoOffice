@@ -1012,10 +1012,6 @@ id NSFileDialog_create( void *pPicker, BOOL bUseFileOpenDialog, BOOL bChooseFile
 		// on the main thread
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(ShowFileDialog *)pRet performSelectorOnMainThread:@selector(initialize:) withObject:pRet waitUntilDone:YES modes:pModes];
-		if ( [pRet panel] )
-			[pRet retain];
-		else
-			pRet = nil;
 	}
 
 	[pPool release];
