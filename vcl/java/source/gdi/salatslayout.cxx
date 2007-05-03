@@ -855,6 +855,8 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	// than the original width
 	if ( nWidth + 1 < mnOrigWidth )
 		mfGlyphScaleX = (float)nWidth / mnOrigWidth;
+	else
+		mfGlyphScaleX = 1.0;
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
@@ -1283,9 +1285,10 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
 				continue;
 
+			// Fix bug 2390 by ignoring the value of nErr passed by reference
 			::std::list< Polygon > aPolygonList;
 			OSStatus nErr;
-			if ( ATSUGlyphGetCubicPaths( pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].style, pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr || nErr != noErr )
+			if ( ATSUGlyphGetCubicPaths( pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].style, pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
 				continue;
 
 			PolyPolygon aPolyPolygon;
