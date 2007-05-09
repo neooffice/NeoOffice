@@ -79,8 +79,8 @@ ifeq ("$(UNAME)","powerpc")
 OO_ENV_X11:=$(BUILD_HOME)/MacOSXPPCEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
 else
-OO_ENV_X11:=$(BUILD_HOME)/MacOSXIntelEnv.Set
-OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXIntelEnvJava.Set
+OO_ENV_X11:=$(BUILD_HOME)/MacOSXX86Env.Set
+OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX86EnvJava.Set
 endif
 OO_LANGUAGES=ALL
 NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimporter.tgz
