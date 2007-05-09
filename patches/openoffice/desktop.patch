@@ -1,0 +1,38 @@
+--- source/deployment/registry/package/dp_package.cxx	2007-05-06 20:06:58.000000000 -0700
++++ source/deployment/registry/package/dp_package.cxx	2007-05-08 13:01:14.000000000 -0700
+@@ -660,8 +660,9 @@
+ 	try 
+ 	{
+ 		css::uno::Reference<css::xml::dom::XNode> xRoot = desc.getRootElement();
++		BackendImpl *pBackendImpl = getMyBackend();
+ 		css::uno::Reference<css::xml::xpath::XXPathAPI> xPath(
+-            DescriptionInfoset(getMyBackend()->getComponentContext(), xRoot).
++            DescriptionInfoset(pBackendImpl->getComponentContext(), xRoot).
+             getXpath());
+ 
+ 		css::uno::Reference<css::xml::dom::XNode> nodeSimpleLic = 
+@@ -688,7 +689,10 @@
+         OSL_ASSERT(aContextName.getLength());
+         if (sAccept.equals(OUSTR("user")) && aContextName.equals(OUSTR("shared")))
+         {
+-            css::deployment::LicenseIndividualAgreementException exc(OUString(), 0, m_name);
++            OUString aString;
++            Reference< XInterface > aRef;
++            OUString aName( m_name );
++            css::deployment::LicenseIndividualAgreementException exc(aString, aRef, aName);
+ 
+             bool approve = false;
+             bool abort = false;
+@@ -722,7 +726,11 @@
+             
+         if ( !(bInstalled && bSuppress)) 
+         {
+-		    css::deployment::LicenseException licExc(OUString(), 0, m_name, sLicense);    		
++            OUString aString;
++            Reference< XInterface > aRef;
++            OUString aName( m_name );
++            OUString aLicense( sLicense );
++		    css::deployment::LicenseException licExc(aString, aRef, aName, aLicense);    		
+ 		    bool approve = false;
+ 		    bool abort = false;
+ 		    if (! interactContinuation(

@@ -18,3 +18,67 @@ diff -u -r1.35 cell.cxx
  
  // STATIC DATA -----------------------------------------------------------
  
+--- source/ui/vba/vbachart.cxx	2007-05-06 20:07:28.000000000 -0700
++++ source/ui/vba/vbachart.cxx	2007-05-08 14:39:47.000000000 -0700
+@@ -1003,7 +1003,7 @@
+ 	}
+ 	catch (uno::Exception& e)
+ 	{
+-		script::BasicErrorException( rtl::OUString(), uno::Reference< uno::XInterface >(), SbERR_METHOD_FAILED, rtl::OUString() );	
++		throw script::BasicErrorException( rtl::OUString(), uno::Reference< uno::XInterface >(), SbERR_METHOD_FAILED, rtl::OUString() );	
+ 	}
+ 	return _nNotUpDown;
+ }
+@@ -1020,7 +1020,7 @@
+ 	}
+ 	catch ( uno::Exception& e )
+ 	{
+-		script::BasicErrorException( rtl::OUString(), uno::Reference< uno::XInterface >(), SbERR_METHOD_FAILED, rtl::OUString() );	
++		throw script::BasicErrorException( rtl::OUString(), uno::Reference< uno::XInterface >(), SbERR_METHOD_FAILED, rtl::OUString() );	
+ 	}
+ 	return bHasMarkers;
+ }
+--- source/ui/vba/vbawindow.cxx.bak	2007-05-06 20:07:32.000000000 -0700
++++ source/ui/vba/vbawindow.cxx	2007-05-08 15:39:36.000000000 -0700
+@@ -288,7 +288,8 @@
+ 		if ( ( nCrudLen + nCrudIndex ) == sTitle.getLength() )
+ 		{
+ 			sTitle = sTitle.copy( 0, nCrudIndex );
+-			ScVbaWorkbook workbook( uno::Reference< vba::XHelperInterface >( ScVbaGlobals::getGlobalsImpl( mxContext )->getApplication(), uno::UNO_QUERY_THROW ), mxContext, m_xModel );
++			uno::Reference< vba::XHelperInterface > xApplication( ScVbaGlobals::getGlobalsImpl( mxContext )->getApplication(), uno::UNO_QUERY_THROW );
++			ScVbaWorkbook workbook( xApplication, mxContext, m_xModel );
+ 			rtl::OUString sName = workbook.getName();
+ 			// rather bizare hack to make sure the name behavior
+ 			// is like XL
+@@ -425,7 +426,8 @@
+ void
+ ScVbaWindow::Activate() throw (css::uno::RuntimeException)
+ {
+-	ScVbaWorkbook workbook( uno::Reference< vba::XHelperInterface >( ScVbaGlobals::getGlobalsImpl( mxContext )->getApplication(), uno::UNO_QUERY_THROW ), mxContext, m_xModel );
++	uno::Reference< vba::XHelperInterface > xApplication( ScVbaGlobals::getGlobalsImpl( mxContext )->getApplication(), uno::UNO_QUERY_THROW );
++	ScVbaWorkbook workbook( xApplication, mxContext, m_xModel );
+ 
+ 	workbook.Activate();
+ }
+@@ -433,7 +435,8 @@
+ void
+ ScVbaWindow::Close( const uno::Any& SaveChanges, const uno::Any& FileName, const uno::Any& RouteWorkBook ) throw (uno::RuntimeException)
+ {
+-	ScVbaWorkbook workbook( uno::Reference< vba::XHelperInterface >( ScVbaGlobals::getGlobalsImpl( mxContext )->getApplication(), uno::UNO_QUERY_THROW ), mxContext, m_xModel );
++	uno::Reference< vba::XHelperInterface > xApplication( ScVbaGlobals::getGlobalsImpl( mxContext )->getApplication(), uno::UNO_QUERY_THROW );
++	ScVbaWorkbook workbook( xApplication, mxContext, m_xModel );
+ 	workbook.Close(SaveChanges, FileName, RouteWorkBook );
+ }
+ 
+--- source/ui/vba/vbawindows.cxx.bak	2007-05-06 20:07:32.000000000 -0700
++++ source/ui/vba/vbawindows.cxx	2007-05-08 15:49:06.000000000 -0700
+@@ -142,7 +142,8 @@
+ 			{
+ 				m_windows.push_back( xNext );
+ 				uno::Reference< frame::XModel > xModel( xNext, uno::UNO_QUERY_THROW ); // that the spreadsheetdocument is a xmodel is a given
+-				ScVbaWindow window( uno::Reference< vba::XHelperInterface >(),  m_xContext, xModel );
++				uno::Reference< vba::XHelperInterface > aRef;
++				ScVbaWindow window( aRef,  m_xContext, xModel );
+ 				rtl::OUString sCaption;
+ 				window.getCaption() >>= sCaption;
+ 				namesToIndices[ sCaption ] = nIndex++;

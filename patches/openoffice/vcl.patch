@@ -1,15 +1,19 @@
---- inc/salgdi.hxx	2007-01-20 15:17:49.000000000 -0800
-+++ inc/salgdi.hxx	2007-01-20 14:50:33.000000000 -0800
-@@ -171,6 +171,8 @@
+Index: inc/salgdi.hxx
+===================================================================
+RCS file: /cvs/gsl/vcl/inc/Attic/salgdi.hxx,v
+retrieving revision 1.36
+diff -u -r1.36 salgdi.hxx
+--- inc/salgdi.hxx	14 Nov 2006 15:22:46 -0000	1.36
++++ inc/salgdi.hxx	7 May 2007 20:24:38 -0000
+@@ -171,6 +171,7 @@
      virtual BOOL        getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState,
                                                  const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& aCaption,
                                                  Region &rNativeBoundingRegion, Region &rNativeContentRegion );
 +    virtual BOOL        getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor );
-+
- public:
-     // public SalGraphics methods, the interface to the independent vcl part
  
-@@ -439,6 +441,13 @@
+     /** Render bitmap with alpha channel
+ 
+@@ -463,6 +464,13 @@
  										 Region &rNativeBoundingRegion,
  										 Region &rNativeContentRegion,
                                           const OutputDevice *pOutDev );
@@ -239,6 +243,20 @@ retrieving revision 1.82
 diff -u -r1.82 makefile.mk
 --- util/makefile.mk	6 Oct 2006 10:07:49 -0000	1.82
 +++ util/makefile.mk	7 Jan 2007 02:17:54 -0000
+@@ -185,6 +185,13 @@
+     SHL1STDLIBS+=   $(FREETYPELIB)
+ .ENDIF # USE_BUILTIN_RASTERIZER
+ 
++.IF "$(OS)"=="MACOSX"
++SHL1STDLIBS += -framework CoreFoundation
++.IF "$(GUI)"=="UNX"
++SHL1STDLIBS += -lX11
++.ENDIF		# "$(GUI)"=="UNX"
++.ENDIF		# "$(OS)"=="MACOSX"
++
+ SHL1LIBS=   $(LIB1TARGET)
+ .IF "$(GUI)"!="UNX"
+ SHL1OBJS=   $(SLO)$/salshl.obj
 @@ -275,7 +275,7 @@
  .IF "$(USE_XINERAMA)" != "NO"
  

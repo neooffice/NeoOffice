@@ -1,0 +1,17 @@
+Index: source/engine/userpaintoverlay.cxx
+===================================================================
+RCS file: /cvs/graphics/slideshow/source/engine/userpaintoverlay.cxx,v
+retrieving revision 1.10
+diff -u -r1.10 userpaintoverlay.cxx
+--- source/engine/userpaintoverlay.cxx	13 Dec 2006 15:22:07 -0000	1.10
++++ source/engine/userpaintoverlay.cxx	8 May 2007 14:16:25 -0000
+@@ -43,7 +43,9 @@
+ #include <cppuhelper/exc_hlp.hxx>
+ 
+ #include <com/sun/star/awt/MouseButton.hpp>
++#if !defined MACOSX || __GNUC__ > 3
+ #include <com/sun/star/presentation/XSlideShowView.hpp>
++#endif	// !MACOSX || __GNUC__ > 3
+ 
+ #include <basegfx/polygon/b2dpolygon.hxx>
+ #include <cppcanvas/basegfxfactory.hxx>
