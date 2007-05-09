@@ -4,7 +4,7 @@ RCS file: /cvs/installation/instsetoo_native/util/makefile.mk,v
 retrieving revision 1.62.2.2
 diff -u -r1.62.2.2 makefile.mk
 --- util/makefile.mk	1 Mar 2007 11:46:53 -0000	1.62.2.2
-+++ util/makefile.mk	7 May 2007 03:57:04 -0000
++++ util/makefile.mk	9 May 2007 21:37:23 -0000
 @@ -109,9 +109,9 @@
  .ELSE			# "$(GUI)"!="WNT" && "$(EPM)"=="NO" && "$(USE_PACKAGER)"==""
  .IF "$(UPDATER)"=="" || "$(USE_PACKAGER)"==""
@@ -33,16 +33,19 @@ diff -u -r1.62.2.2 makefile.mk
  .ENDIF                  # "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
  
  .IF "$(PKGFORMAT)"!=""
-@@ -223,7 +214,7 @@
- .IF "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!="portable"
+@@ -220,7 +211,11 @@
+ .ELSE			# "$(PKGFORMAT)"!=""
+ openofficewithjre_% :
+ .ENDIF			# "$(PKGFORMAT)"!=""
++.IF "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!="portable"
  	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice_wJRE -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist.txt -u $(OUT) -buildid $(BUILD) -msitemplate $(MSIOFFICETEMPLATEDIR) -msilanguage $(COMMONMISC)$/win_ulffiles -addchildprojects -addsystemintegration $(subst,xxx,$(@:e:s/.//) $(PKGFORMATSWITCH))
- .ELSE			# "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
--	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist_language.txt -u $(OUT) -buildid $(BUILD) -destdir $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice_languagepack$/install$/ $(@:b))_inprogress$/ -simple staging -languagepack
++.ELSE			# "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
 +	+$(PERL) -w $(SOLARENV)$/bin$/make_installer.pl -f $(PRJ)$/util$/openoffice.lst -l $(subst,$(@:s/_/ /:1)_, $(@:b)) -p OpenOffice -packagelist $(PRJ)$/inc_openoffice$/unix$/packagelist.txt -u $(OUT) -buildid $(BUILD) -destdir $(subst,$(@:s/_/ /:1)_,$(OUT)$/OpenOffice_languagepack$/install$/ $(@:b))_inprogress$/ -simple staging -languagepack
- .ENDIF			# "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
++.ENDIF			# "$(OS)"!="MACOSX" || "$(PKGFORMAT)"!=""
  
  .IF "$(PKGFORMAT)"!=""
-@@ -244,7 +235,11 @@
+ $(foreach,i,$(alllangiso) openofficedev_$i) : $$@{$(PKGFORMAT:^".")}
+@@ -240,7 +235,11 @@
  .ELSE			# "$(PKGFORMAT)"!=""
  ooolanguagepack_% :
  .ENDIF			# "$(PKGFORMAT)"!=""
