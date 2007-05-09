@@ -16,7 +16,7 @@
 	</node>
 
 	<node oor:name="writer_Lotus_1_2_3_10_DOS_StarWriter" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+        <prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
 		<prop oor:name="Extensions"><value>wk1 wks</value></prop>
 		<prop oor:name="MediaType"/>
@@ -29,7 +29,7 @@
 	</node>
 
 	<node oor:name="writer_Lotus_1_2_3_10_WIN_StarWriter" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+        <prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
 		<prop oor:name="Extensions"><value>wk1 wks</value></prop>
 		<prop oor:name="MediaType"/>
@@ -137,7 +137,7 @@
 		<prop oor:name="URLPattern"/>
 		<prop oor:name="Extensions"><value>doc</value></prop>
 		<prop oor:name="MediaType"><value>application/msword</value></prop>
-		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="Preferred"><value>true</value></prop>
 		<prop oor:name="PreferredFilter"><value>MS Word 97</value></prop>
 		<prop oor:name="UIName">
 			<value>Microsoft Word 97/2000/XP</value>
@@ -185,7 +185,7 @@
 	</node>
 
 	<node oor:name="writer_StarWriter_10" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+        <prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
 		<prop oor:name="Extensions"><value>sdw</value></prop>
 		<prop oor:name="MediaType"/>
@@ -198,7 +198,7 @@
 	</node>
 
 	<node oor:name="writer_StarWriter_20" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+        <prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
 		<prop oor:name="Extensions"><value>sdw</value></prop>
 		<prop oor:name="MediaType"/>
@@ -289,7 +289,7 @@
 	</node>
 
 	<node oor:name="writer_StarWriter_DOS" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+        <prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
 		<prop oor:name="Extensions"><value>txt</value></prop>
 		<prop oor:name="MediaType"/>
@@ -323,6 +323,201 @@
 		<prop oor:name="PreferredFilter"><value>MS_Works</value></prop>
 		<prop oor:name="UIName">
 			<value>Microsoft Works Document</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_T602_Document" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.Writer.T602ImportFilter</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>602 txt</value></prop>
+		<prop oor:name="MediaType"><value>application/x-t602</value></prop>
+		<prop oor:name="Preferred"><value>true</value></prop>
+		<prop oor:name="PreferredFilter"><value>T602Document</value></prop>
+		<prop oor:name="UIName">
+			<value>T602 Document</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_LotusWordPro_Document" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.Writer.LotusWordProImportFilter</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>lwp</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>LotusWordPro</value></prop>
+		<prop oor:name="UIName">
+			<value>LotusWordPro Document</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_Text" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>txt</value></prop>
+		<prop oor:name="MediaType"><value>text/plain</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>Text</value></prop>
+		<prop oor:name="UIName">
+			<value>Text</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_Text_encoded" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>txt</value></prop>
+		<prop oor:name="MediaType"><value>text/plain</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>Text (encoded)</value></prop>
+		<prop oor:name="UIName">
+			<value>Text - encoded</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_JustSystem_Ichitaro_10" oor:op="replace" >
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>jtd</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>writer_JustSystem_Ichitaro_10</value></prop>
+		<prop oor:name="UIName">
+			<value>Ichitaro 8/9/10/11</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_JustSystem_Ichitaro_10_template" oor:op="replace" >
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>jtt</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>writer_JustSystem_Ichitaro_10_template</value></prop>
+		<prop oor:name="UIName">
+			<value>Ichitaro 8/9/10/11 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_MIZI_Hwp_97" oor:op="replace" >
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>hwp</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>writer_MIZI_Hwp_97</value></prop>
+		<prop oor:name="UIName">
+			<value>Hangul WP 97</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer_StarOffice_XML_Writer_Template" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>stw</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>true</value></prop>
+		<prop oor:name="PreferredFilter"><value>writer_StarOffice_XML_Writer_Template</value></prop>
+		<prop oor:name="UIName">
+			<value>Writer 6.0 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Writer 6.0</value></prop>
+	</node>
+
+	<node oor:name="writer_WPSSystem_WPS2000_10" oor:op="replace" >
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>wps</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>writer_WPSSystem_WPS2000_10</value></prop>
+		<prop oor:name="UIName">
+			<value>WPS 2000/Office 1.0</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="pdf_Portable_Document_Format" oor:op="replace" >
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>pdf</value></prop>
+		<prop oor:name="MediaType"><value>application/pdf</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"/>
+		<prop oor:name="UIName">
+			<value>PDF - Portable Document Format</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="writer8_template" oor:op="replace">
+		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>ott</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.oasis.opendocument.text-template</value></prop>
+		<prop oor:name="Preferred"><value>true</value></prop>
+		<prop oor:name="PreferredFilter"><value>writer8_template</value></prop>
+		<prop oor:name="UIName">
+			<value xml:lang="en-US">Writer 8 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Writer 8 Template</value></prop>
+	</node>
+
+	<node oor:name="writer8" oor:op="replace">
+		<prop oor:name="DetectService"><value>com.sun.star.text.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"><value>private:factory/swriter</value></prop>
+		<prop oor:name="Extensions"><value>odt</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.oasis.opendocument.text</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>writer8</value></prop>
+		<prop oor:name="UIName">
+			<value xml:lang="en-US">Writer 8</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Writer 8</value></prop>
+	</node>
+
+	<node oor:name="writer_MS_Word_2003_XML" oor:op="replace">
+		<prop oor:name="DetectService"><value>com.sun.star.comp.filters.XMLFilterDetect</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>xml</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>MS Word 2003 XML</value></prop>
+		<prop oor:name="UIName">
+			<value xml:lang="en-US">Microsoft Word 2003 XML</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>doctype:wordDocument</value></prop>
+	</node>
+
+	<node oor:name="LaTeX" oor:op="replace">
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>tex</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"/>
+		<prop oor:name="UIName">
+			<value>LaTeX 2e</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="BibTeX" oor:op="replace">
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>bib</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"/>
+		<prop oor:name="UIName">
+			<value>BibTeX</value>
 		</prop>
 		<prop oor:name="ClipboardFormat"/>
 	</node>

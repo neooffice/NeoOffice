@@ -24,6 +24,7 @@
     Aug 16 2005 workaround for #i53365#
     Aug 19 2005 fixed missing list processing in embedded sections
     Aug 19 2005 #i53535#, fixed wrong handling of Database parameter
+		Oct 17 2006 #i70462#, disabled sorting to avoid output of error messages to console
 ***********************************************************************//-->
 
 <!--
@@ -457,10 +458,16 @@
 
 <!-- SORT -->
 <xsl:template match="sort" >
+  <!-- sorting disabled due to #i70462#
 	<xsl:apply-templates><xsl:sort select="descendant::paragraph"/></xsl:apply-templates>
+	//-->
+	<xsl:apply-templates />
 </xsl:template>
 <xsl:template match="sort" mode="embedded">
+<!-- sorting disabled due to #i70462#
 	<xsl:apply-templates><xsl:sort select="descendant::paragraph"/></xsl:apply-templates>
+	//-->
+	<xsl:apply-templates />
 </xsl:template>
 
 <!-- SWITCH -->
