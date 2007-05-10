@@ -218,6 +218,8 @@ void JavaSalBitmap::NotifyGraphicsChanged()
 	// Force copying of the buffer if it has not already been done
 	if ( mpVCLGraphics )
 	{
+		mpVCLGraphics->removeGraphicsChangeListener( this );
+
 		if ( mnBitCount == 32 )
 		{
 			long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
@@ -232,7 +234,6 @@ void JavaSalBitmap::NotifyGraphicsChanged()
 			}
 		}
 
-		mpVCLGraphics->removeGraphicsChangeListener( this );
 		delete mpVCLGraphics;
 		mpVCLGraphics = NULL;
 
