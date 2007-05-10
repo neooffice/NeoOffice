@@ -151,6 +151,11 @@ public final class VCLGraphics {
 	private static CreateCopyComposite createCopyComposite = new CreateCopyComposite();
 
 	/**
+	 * The copyBitsMethod method.
+	 */
+	private static Method copyBitsMethod = null;
+
+	/**
 	 * The drawBitmapMethod method.
 	 */
 	private static Method drawBitmapMethod = null;
@@ -159,6 +164,11 @@ public final class VCLGraphics {
 	 * The drawBitmapBufferMethod method.
 	 */
 	private static Method drawBitmapBufferMethod = null;
+
+	/**
+	 * The drawCheckBox method.
+	 */
+	private static Method drawCheckBoxMethod = null;
 
 	/**
 	 * The drawEPSMethod method.
@@ -196,9 +206,29 @@ public final class VCLGraphics {
 	private static Method drawPolyPolygonMethod = null;
 
 	/**
+	 * The drawPushButton method.
+	 */
+	private static Method drawPushButtonMethod = null;
+
+	/**
+	 * The drawRadioButton method.
+	 */
+	private static Method drawRadioButtonMethod = null;
+
+	/**
 	 * The drawRect method.
 	 */
 	private static Method drawRectMethod = null;
+
+	/**
+	 * The invert method.
+	 */
+	private static Method invertMethod = null;
+
+	/**
+	 * The invertPolygon method.
+	 */
+	private static Method invertPolygonMethod = null;
 
 	/**
 	 * The setPixel method.
@@ -318,13 +348,25 @@ public final class VCLGraphics {
 
 		// Set the method references
 		try {
-			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
+			copyBitsMethod = VCLGraphics.class.getMethod("copyBits", new Class[]{ VCLGraphics.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, boolean.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, boolean.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
 		try {
 			drawBitmapBufferMethod = VCLGraphics.class.getMethod("drawBitmapBuffer", new Class[]{ long.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawCheckBoxMethod = VCLGraphics.class.getMethod("drawCheckBox", new Class[]{ int.class, int.class, int.class, int.class, String.class, boolean.class, boolean.class, boolean.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -366,7 +408,31 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
+			drawPushButtonMethod = VCLGraphics.class.getMethod("drawPushButton", new Class[]{ int.class, int.class, int.class, int.class, String.class, boolean.class, boolean.class, boolean.class, boolean.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawRadioButtonMethod = VCLGraphics.class.getMethod("drawRadioButton", new Class[]{ int.class, int.class, int.class, int.class, String.class, boolean.class, boolean.class, boolean.class, int.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
 			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			invertMethod = VCLGraphics.class.getMethod("invert", new Class[]{ int.class, int.class, int.class, int.class, int.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			invertPolygonMethod = VCLGraphics.class.getMethod("invert", new Class[]{ int.class, int[].class, int[].class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -388,6 +454,11 @@ public final class VCLGraphics {
 	 * The change listeners.
 	 */
 	private LinkedList changeListeners = null;
+
+	/** 
+	 * The disposed flag.
+	 */
+	private boolean disposed = false;
 
 	/**
 	 * The frame that the graphics draws to.
@@ -458,6 +529,9 @@ public final class VCLGraphics {
 
 		frame = f;
 		resetGraphics();
+
+		// Queue drawing operations to reduce flicker
+		pageQueue = new VCLGraphics.PageQueue(this);
 
 	}
 
@@ -564,6 +638,7 @@ public final class VCLGraphics {
 
 		VCLImage img = null;
 
+		flush();
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
@@ -588,10 +663,16 @@ public final class VCLGraphics {
 	 */
 	void dispose() {
 
+		if (disposed)
+			return;
+
+		disposed = true;
 		notifyGraphicsChanged();
 		changeListeners = null;
-		if (pageQueue != null)
-			pageQueue.drawOperations();
+
+		// Flush any queued drawing operations
+		flush();
+
 		pageQueue = null;
 		graphics = null;
 		image = null;
@@ -646,8 +727,10 @@ public final class VCLGraphics {
 
 		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight) {
 			BufferedImage img = null;
-			if (vg.getImage() != null)
+			if (vg.getImage() != null) {
+				vg.flush();
 				img = vg.getImage().getImage();
+			}
 
 			if (img == null) {
 				VCLImage srcImage = vg.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
@@ -664,6 +747,7 @@ public final class VCLGraphics {
 				srcImage.dispose();
 			}
 
+			flush();
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
@@ -697,6 +781,12 @@ public final class VCLGraphics {
 			}
 		}
 		else {
+			if (pageQueue != null) {
+				VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.copyBitsMethod, new Object[]{ vg, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight), new Boolean(allowXOR) });
+				pageQueue.postDrawingOperation(pqi);
+				return;
+			}
+
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
@@ -753,6 +843,7 @@ public final class VCLGraphics {
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
 
+		flush();
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
@@ -781,12 +872,17 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param destHeight the height of the graphics to copy to
+	 * @param flush if <code>true</code> draw immediately otherwise allow the
+	 *  drawing operation to be queued
 	 */
-	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight, boolean flush) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight), new Boolean(flush) });
 			pageQueue.postDrawingOperation(pqi);
+			if (flush)
+				flush();
 			return;
 		}
 
@@ -1658,6 +1754,12 @@ public final class VCLGraphics {
 	 */
 	public void drawPushButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, boolean isDefault) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPushButtonMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), title, new Boolean(enabled), new Boolean(focused), new Boolean(pressed), new Boolean(isDefault) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1770,6 +1872,12 @@ public final class VCLGraphics {
 	 */
 	public void drawRadioButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawRadioButtonMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), title, new Boolean(enabled), new Boolean(focused), new Boolean(pressed), new Integer(buttonState) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1866,6 +1974,12 @@ public final class VCLGraphics {
 	 */
 	public void drawCheckBox(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawCheckBoxMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), title, new Boolean(enabled), new Boolean(focused), new Boolean(pressed), new Integer(buttonState) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1954,6 +2068,16 @@ public final class VCLGraphics {
 	 * {@link #unionClipRegion(long, long, long, long)} methods.
 	 */
 	public void endSetClipRegion() {}
+
+	/**
+	 * Flush any pending drawing operations.
+	 */
+	void flush() {
+
+		if (pageQueue != null && (disposed || graphics == null))
+			pageQueue.drawOperations();
+
+	}
 
 	/**
 	 * Returns the bit count of the underlying graphics device.
@@ -2115,6 +2239,7 @@ public final class VCLGraphics {
 
 		int pixel = 0xff000000;
 
+		flush();
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
@@ -2180,6 +2305,12 @@ public final class VCLGraphics {
 		// No inverting allowed for printing
 		if (graphics != null)
 			return;
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.invertMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), new Integer(options) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
 
 		Rectangle destBounds = new Rectangle(x, y, width, height);
 		destBounds = destBounds.intersection(graphicsBounds);
@@ -2276,6 +2407,12 @@ public final class VCLGraphics {
 		// No inverting allowed for printing
 		if (graphics != null)
 			return;
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.invertPolygonMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(options) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
@@ -2409,6 +2546,7 @@ public final class VCLGraphics {
 	public void resetGraphics() {
 
 		if (frame != null) {
+			flush();
 			notifyGraphicsChanged();
 
 			Panel p = frame.getPanel();
@@ -2552,6 +2690,10 @@ public final class VCLGraphics {
 
 		void drawOperations() {
 
+			Area oldUserClip = graphics.userClip;
+			LinkedList oldUserClipList = graphics.userClipList;
+			boolean oldXOR = graphics.xor;
+
 			graphics.pageQueue = null;
 
 			// Invoke all of the queued drawing operations
@@ -2571,7 +2713,11 @@ public final class VCLGraphics {
 			}
 			drawingTail = null;
 
-			graphics = null;
+			graphics.userClip = oldUserClip;
+			graphics.userClipList = oldUserClipList;
+			graphics.xor = oldXOR;
+
+			graphics.pageQueue = this;
 
 		}
 
@@ -2581,6 +2727,7 @@ public final class VCLGraphics {
 			if (graphics.userClip != null) {
 				i.clip = new Area(graphics.userClip);
 				i.clipList = new LinkedList(graphics.userClipList);
+				i.xor = graphics.xor;
 			}
 
 			if (drawingHead != null) {
@@ -2610,6 +2757,8 @@ public final class VCLGraphics {
 		PageQueueItem next = null;
 
 		Object[] params = null;
+
+		boolean xor = false;
 
 		PageQueueItem(Method m, Object[] p) {
 

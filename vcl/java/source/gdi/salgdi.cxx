@@ -318,7 +318,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 							if ( bRet )
 							{
 								t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
-								mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, nWidth, nHeight, nX, nY, nWidth, nHeight );
+								mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, nWidth, nHeight, nX, nY, nWidth, nHeight, sal_False );
 							}
 							else
 							{

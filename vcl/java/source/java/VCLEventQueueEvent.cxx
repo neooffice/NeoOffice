@@ -302,7 +302,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	// Handle events that require a JavaSalFrame pointer
 	JavaSalFrame *pFrame = getFrame();
 	bool bFound = false;
-	JavaSalFrame* pFlushingDisabled = NULL;
 	if ( pFrame && pFrame->GetInstance() )
 	{
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
@@ -310,11 +309,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pFrame == *it )
 			{
 				bFound = true;
-				if ( pFrame->mbVisible )
-				{
-					pFlushingDisabled = pFrame;
-					pFrame->mpVCLFrame->enableFlushing( sal_False );
-				}
 				break;
 			}
 		}
@@ -729,18 +723,20 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 	}
 
-	if ( pFlushingDisabled )
+/*
+	if ( pFrame )
 	{
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
-			if ( pFlushingDisabled == *it )
+			if ( pFrame == *it )
 			{
-				if ( pFlushingDisabled->mbVisible )
-					pFlushingDisabled->mpVCLFrame->enableFlushing( sal_True );
+				if ( pFrame->mbVisible )
+					pFrame->mpVCLFrame->flush();
 				break;
 			}
 		}
 	}
+*/
 }
 
 // ----------------------------------------------------------------------------

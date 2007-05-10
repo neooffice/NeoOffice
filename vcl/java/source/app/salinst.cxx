@@ -485,21 +485,14 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		gettimeofday( &aCurrentTime, NULL );
 		if ( aCurrentTime >= pSalData->maTimeout )
 		{
-			::std::list< JavaSalFrame* >::const_iterator it;
-			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->mbVisible )
-					(*it)->mpVCLFrame->enableFlushing( sal_False );
-			}
-
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
 
-			for ( it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
 				if ( (*it)->mbVisible )
-					(*it)->mpVCLFrame->enableFlushing( sal_True );
+					(*it)->mpVCLFrame->flush();
 			}
 		}
 	}
@@ -541,9 +534,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
 	// the bHandleAllCurrentEvents parameter is true
+	bool bFlush = false;
 	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
+		bFlush = true;
 
 		if ( nCount )
 		{
@@ -568,6 +563,15 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				// timer runs
 				OThread::yield();
 				break;
+		}
+	}
+
+	if ( bFlush )
+	{
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( (*it)->mbVisible )
+				(*it)->mpVCLFrame->flush();
 		}
 	}
 

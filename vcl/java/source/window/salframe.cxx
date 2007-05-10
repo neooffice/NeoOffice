@@ -641,7 +641,7 @@ void JavaSalFrame::SetPointerPos( long nX, long nY )
 
 void JavaSalFrame::Flush()
 {
-	mpVCLFrame->sync();
+	mpVCLFrame->flush();
 }
 
 // -----------------------------------------------------------------------

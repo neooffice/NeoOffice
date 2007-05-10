@@ -256,7 +256,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLFrame::enableFlushing( sal_Bool _par0 )
+void com_sun_star_vcl_VCLFrame::flush()
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -264,15 +264,13 @@ void com_sun_star_vcl_VCLFrame::enableFlushing( sal_Bool _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Z)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "enableFlushing", cSignature );
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "flush", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
-			args[0].z = jboolean( _par0 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
 		}
 	}
 }

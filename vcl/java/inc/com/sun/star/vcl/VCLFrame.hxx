@@ -63,7 +63,7 @@ public:
 
 	void				addChild( JavaSalFrame *_par0 );
 	void				dispose();
-	void				enableFlushing( sal_Bool _par0 );
+	void				flush();
 	const Rectangle		getBounds();
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
