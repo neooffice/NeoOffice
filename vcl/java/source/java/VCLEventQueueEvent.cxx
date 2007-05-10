@@ -722,21 +722,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			break;
 		}
 	}
-
-/*
-	if ( pFrame )
-	{
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( pFrame == *it )
-			{
-				if ( pFrame->mbVisible )
-					pFrame->mpVCLFrame->flush();
-				break;
-			}
-		}
-	}
-*/
 }
 
 // ----------------------------------------------------------------------------
