@@ -194,7 +194,7 @@ public final class VCLImage {
 	 * 
 	 * @return the height of the underlying image.
 	 */
-	int getHeight() {
+	public int getHeight() {
 
 		return height;
 
@@ -216,7 +216,7 @@ public final class VCLImage {
 	 * 
 	 * @return the width of the underlying image
 	 */
-	int getWidth() {
+	public int getWidth() {
 
 		return width;
 
