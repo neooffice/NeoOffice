@@ -314,6 +314,12 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( JNIEnv *pEnv, jobject object )
 {
+	// Release the initial retain
+	ClearableMutexGuard aGuard( aBitmapBufferMutex );
+	for ( ::std::map< BitmapBuffer*, USHORT >::const_iterator it = aBitmapBufferMap.begin(); it != aBitmapBufferMap.end(); ++it )
+		ReleaseBitmapBufferCallback( it->first, NULL, 0 );
+	aGuard.clear();
+
 	while ( aCGImageList.size() )
 	{
 		CGImageRelease( aCGImageList.front() );
@@ -662,6 +668,19 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 
 void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
 {
+	// Mark the bitmap buffer for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par0 )
+	{
+		ClearableMutexGuard aGuard( aBitmapBufferMutex );
+		::std::map< BitmapBuffer*, USHORT >::iterator it = aBitmapBufferMap.find( _par0 );
+		if ( it != aBitmapBufferMap.end() )
+			it->second++;
+		else
+			aBitmapBufferMap[ _par0 ] = 1;
+		aGuard.clear();
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -739,6 +758,24 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 
 void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2, long _par3, long _par4, long _par5 )
 {
+	// Mark the EPS data for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par0 )
+	{
+		bool bFound = false;
+		for ( ::std::list< jlong >::const_iterator it = aEPSDataList.begin(); it != aEPSDataList.end(); ++it )
+		{
+			if ( *it == (jlong)_par0 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aEPSDataList.push_back( (jlong)_par0 );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
