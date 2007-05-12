@@ -634,7 +634,7 @@ void com_sun_star_vcl_VCLGraphics::copyBits( BYTE *_par0, long _par1, long _par2
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, sal_Bool _par9 )
+void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -642,13 +642,13 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLBitmap;IIIIIIIIZ)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLBitmap;IIIIIIII)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawBitmap", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[10];
+			jvalue args[9];
 			args[0].l = _par0->getJavaObject();
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
@@ -658,7 +658,6 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
-			args[9].z = jboolean( _par9 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

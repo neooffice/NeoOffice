@@ -355,7 +355,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, boolean.class });
+			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -874,16 +874,12 @@ public final class VCLGraphics {
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
-	 * @param flush if <code>true</code> draw immediately otherwise allow the
-	 *  drawing operation to be queued
 	 */
-	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight, boolean flush) {
+	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight), new Boolean(flush) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
 			pageQueue.postDrawingOperation(pqi);
-			if (flush)
-				flush();
 			return;
 		}
 
