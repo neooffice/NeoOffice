@@ -467,10 +467,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		pSalData->maPendingDocumentEventsList.pop_front();
 		pEvent->dispatch();
 		delete pEvent;
-
-		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible )
-			pSalData->mpPresentationFrame->Flush();
-
 		return;
 	}
 
