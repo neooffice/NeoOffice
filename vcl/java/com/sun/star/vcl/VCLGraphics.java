@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
@@ -795,6 +796,8 @@ public final class VCLGraphics {
 						Rectangle clipRect = (Rectangle)clipRects.next();
 						g.copyArea(srcX + clipRect.x - destX, srcY + clipRect.y - destY, clipRect.width, clipRect.height, destX - srcX, destY - srcY);
 					}
+					if (userPolygonClipList != null)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -904,6 +907,8 @@ public final class VCLGraphics {
 							if (!clip.isEmpty())
 								clipList.add(clip);
 						}
+						if (userPolygonClipList != null)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						clipList.add(destBounds);
@@ -945,6 +950,8 @@ public final class VCLGraphics {
 							g.setClip((Rectangle)clipRects.next());
 							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 						}
+						if (userPolygonClipList != null)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						g.setClip(userClip);
@@ -1043,6 +1050,8 @@ public final class VCLGraphics {
 					Rectangle clip = (Rectangle)clipRects.next();
 					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
+				if (userPolygonClipList != null)
+					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1127,6 +1136,8 @@ public final class VCLGraphics {
 					g.setClip(clip);
 					drawEPS0(epsData, epsDataSize, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
+				if (userPolygonClipList != null)
+					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1285,6 +1296,8 @@ public final class VCLGraphics {
 						Rectangle clip = (Rectangle)clipRects.next();
 						drawLine0(x1, y1, x2, y2, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClipList != null)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
@@ -1381,6 +1394,8 @@ public final class VCLGraphics {
 						Rectangle clip = (Rectangle)clipRects.next();
 						drawPolygon0(npoints, xpoints, ypoints, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClipList != null)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
@@ -1476,6 +1491,8 @@ public final class VCLGraphics {
 						Rectangle clip = (Rectangle)clipRects.next();
 						drawPolyline0(npoints, xpoints, ypoints, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClipList != null)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
@@ -1649,6 +1666,8 @@ public final class VCLGraphics {
 						else
 							drawRect0(x, y, width - 1, height - 1, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClipList != null)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
@@ -2280,6 +2299,8 @@ public final class VCLGraphics {
 						g.setClip(clipRect);
 						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
 					}
+					if (userPolygonClipList != null)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2379,6 +2400,8 @@ public final class VCLGraphics {
 						g.setClip(clipRect);
 						g.fillPolygon(polygon);
 					}
+					if (userPolygonClipList != null)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2580,6 +2603,11 @@ public final class VCLGraphics {
 					userClip = a;
 				else
 					userClip.add(a);
+
+				if (userClipList == null)
+					userClipList = new LinkedList();
+				userClipList.add(a.getBounds());
+
 				if (userPolygonClipList == null)
 					userPolygonClipList = new LinkedList();
 				userPolygonClipList.add(p);
@@ -2883,6 +2911,16 @@ public final class VCLGraphics {
 		void setDefault(boolean b) {
 
 			isDefault = b;
+
+		}
+
+	}
+
+	final static class PolygonClipException extends AWTException {
+
+		public PolygonClipException(String msg) {
+
+			super(msg);
 
 		}
 
