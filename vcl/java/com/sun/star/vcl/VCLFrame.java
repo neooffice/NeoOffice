@@ -1755,6 +1755,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (window instanceof VCLFrame.NoPaintFrame)
 			((VCLFrame.NoPaintFrame)window).setFullScreenMode(fullScreenMode);
 
+		// Run the garbage collector as we are guaranteed to be creating or
+		// releasing one or more large bitmaps
+		System.gc();
+
 	}
 
 	/**
