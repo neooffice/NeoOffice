@@ -467,6 +467,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		pSalData->maPendingDocumentEventsList.pop_front();
 		pEvent->dispatch();
 		delete pEvent;
+
+		if ( pSalData->mpPresentationFrame && pSalData->mpPresentationFrame->mbVisible )
+			pSalData->mpPresentationFrame->Flush();
+
 		return;
 	}
 
@@ -492,7 +496,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
 				if ( (*it)->mbVisible )
-					(*it)->mpVCLFrame->flush();
+					(*it)->Flush();
 			}
 		}
 	}
@@ -571,7 +575,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( (*it)->mbVisible )
-				(*it)->mpVCLFrame->flush();
+				(*it)->Flush();
 		}
 	}
 
