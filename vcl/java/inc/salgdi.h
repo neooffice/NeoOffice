@@ -105,6 +105,7 @@ public:
 	virtual					~JavaSalGraphics();
 
 	virtual BOOL			unionClipRegion( long nX, long nY, long nWidth, long nHeight );
+	virtual BOOL			unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry );
 	virtual void			drawPixel( long nX, long nY );
 	virtual void			drawPixel( long nX, long nY, SalColor nSalColor );
 	virtual void			drawLine( long nX1, long nY1, long nX2, long nY2 );

@@ -1676,3 +1676,62 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 		}
 	}
 }
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I[I[[I[[I)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "unionClipRegion", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		jclass tempClass = t.pEnv->FindClass( "[I" );
+		if ( mID && tempClass )
+		{
+			jboolean bCopy;
+			jsize elements( _par0 );
+			jintArray ptsarray = t.pEnv->NewIntArray( elements );
+			bCopy = sal_False;
+			jint *pPtsBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( ptsarray, &bCopy );
+			memcpy( pPtsBits, (jint *)_par1, elements * sizeof( jint ) );
+			t.pEnv->ReleasePrimitiveArrayCritical( ptsarray, pPtsBits, 0 );
+			
+			jintArray tempArray = t.pEnv->NewIntArray( 0 );
+			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
+			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
+			for ( jsize i = 0; i < elements; i++ )
+			{
+				jsize points( _par1[ i ] );
+				const SalPoint *pPts = _par2[ i ];
+				jintArray xarray = t.pEnv->NewIntArray( points );
+				jintArray yarray = t.pEnv->NewIntArray( points );
+				bCopy = sal_False;
+				jint *pXBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( xarray, &bCopy );
+				bCopy = sal_False;
+				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
+				for ( jsize j = 0; j < points; j++ )
+				{
+					pXBits[ j ] = pPts[ j ].mnX;
+					pYBits[ j ] = pPts[ j ].mnY;
+				}
+				t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
+				t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
+				t.pEnv->SetObjectArrayElement( yptsarray, i, yarray );
+				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
+			}
+
+			jvalue args[4];
+			args[0].i = jint( _par0 );
+			args[1].l = ptsarray;
+			args[2].l = xptsarray;
+			args[3].l = yptsarray;
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}

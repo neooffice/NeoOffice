@@ -516,6 +516,11 @@ public final class VCLGraphics {
 	private LinkedList userClipList = null;
 
 	/**
+	 * The cached polygon clipping list.
+	 */
+	private LinkedList userPolygonClipList = null;
+
+	/**
 	 * The XOR mode.
 	 */
 	private boolean xor = false;
@@ -615,6 +620,7 @@ public final class VCLGraphics {
 
 		userClip = null;
 		userClipList = null;
+		userPolygonClipList = null;
 
 	}
 
@@ -680,6 +686,7 @@ public final class VCLGraphics {
 		pageFormat = null;
 		userClip = null;
 		userClipList = null;
+		userPolygonClipList = null;
 
 	}
 
@@ -885,23 +892,23 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					AffineTransform transform = g.getTransform();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
@@ -918,11 +925,31 @@ public final class VCLGraphics {
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
 					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
 					if (xor) {
+						LinkedList clipList = new LinkedList();
+						if (userClipList != null) {
+							Iterator clipRects = userClipList.iterator();
+							while (clipRects.hasNext()) {
+								Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+								if (!clip.isEmpty())
+									clipList.add(clip);
+							}
+						}
+						else {
+							clipList.add(destBounds);
+						}
+
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+						}
 					}
-					g.setClip(userClip);
-					g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+					else {
+						g.setClip(userClip);
+						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1549,40 +1576,12 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				if (xor) {
-					LinkedList clipList = new LinkedList();
-					if (userClipList != null) {
-						Iterator clipRects = userClipList.iterator();
-						while (clipRects.hasNext()) {
-							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-							if (!clip.isEmpty())
-								clipList.add(clip);
-						}
-					}
-					else {
-						clipList.add(destBounds);
-					}
-
-					g.setComposite(VCLGraphics.xorImageComposite);
-					VCLGraphics.xorImageComposite.setXORMode(Color.black);
-					g.setColor(new Color(color));
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
-						if (fill)
-							g.fill(area);
-						else
-							g.draw(area);
-					}
-				}
-				else {
-					g.setColor(new Color(color));
-					g.setClip(userClip);
-					if (fill)
-						g.fill(area);
-					else
-						g.draw(area);
-				}
+				g.setColor(new Color(color));
+				g.setClip(userClip);
+				if (fill)
+					g.fill(area);
+				else
+					g.draw(area);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -2428,6 +2427,7 @@ public final class VCLGraphics {
 
 		userClip = null;
 		userClipList = null;
+		userPolygonClipList = null;
 
 	}
 
@@ -2528,6 +2528,9 @@ public final class VCLGraphics {
 	public void unionClipRegion(int x, int y, int width, int height) {
 
 		Rectangle bounds = new Rectangle(x, y, width, height);
+		if (bounds.isEmpty())
+			return;
+
 		Area area = new Area(bounds);
 		if (userClip != null)
 			userClip.add(area);
@@ -2546,6 +2549,41 @@ public final class VCLGraphics {
 			if (userClipList == null)
 				userClipList = new LinkedList();
 			userClipList.add(bounds);
+		}
+
+	}
+
+	/**
+	 * Unions the cached clipping area with the specified poly polygon. The
+	 * cached clipping area is not actually applied until the
+	 * {@link #endSetClipRegion()} method is called. Note that some drawing
+	 * methods in this class cannot handle non-rectangular clip regions so
+	 * this method will likely leave too big of a clip region for such
+	 * methods.
+	 *
+	 * @param npoly the number of polygons
+	 * @param npoints the array of the total number of points in each polygon
+	 * @param xpoints the array of arrays of x coordinates
+	 * @param ypoints the array of arrays of y coordinates
+	 */
+	public void unionClipRegion(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints) {
+
+		userClip = null;
+		userClipList = null;
+		userPolygonClipList = null;
+
+		for (int i = 0; i < npoly; i++) {
+			Polygon p = new Polygon(xpoints[i], ypoints[i], npoints[i]);
+			Area a = new Area(p);
+			if (a != null && !a.isEmpty()) {
+				if (userClip == null)
+					userClip = a;
+				else
+					userClip.add(a);
+				if (userPolygonClipList == null)
+					userPolygonClipList = new LinkedList();
+				userPolygonClipList.add(p);
+			}
 		}
 
 	}
