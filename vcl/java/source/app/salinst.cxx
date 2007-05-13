@@ -489,11 +489,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
 
-			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->mbVisible )
-					(*it)->Flush();
-			}
+			com_sun_star_vcl_VCLFrame::flushAllFrames();
 		}
 	}
 
@@ -567,13 +563,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	}
 
 	if ( bFlush )
-	{
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( (*it)->mbVisible )
-				(*it)->Flush();
-		}
-	}
+		com_sun_star_vcl_VCLFrame::flushAllFrames();
 
 	if ( nCount )
 	{

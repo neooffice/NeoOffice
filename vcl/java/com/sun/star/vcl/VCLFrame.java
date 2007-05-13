@@ -642,6 +642,55 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Flushes all of the native windows.
+	 */
+	public static void flushAllFrames() {
+
+		boolean isDispatchThread = EventQueue.isDispatchThread();
+
+		LinkedList windowList = new LinkedList();
+
+		Frame[] frames = Frame.getFrames();
+		for (int i = 0; i < frames.length; i++) {
+			Window[] windows = frames[i].getOwnedWindows();
+			for (int j = 0; j < windows.length; j++)
+				windowList.add(windows[j]);
+			windowList.add(frames[i]);
+		}
+
+		if (!isDispatchThread) {
+			Iterator iterator = windowList.iterator();
+			while (iterator.hasNext()) {
+				VCLFrame f = findFrame((Component)iterator.next());
+				if (f != null) {
+					synchronized (f) {
+						if (!f.disposed)
+							f.graphics.flush();
+					}
+				}
+			}
+
+			FlushAllFramesHandler handler = new FlushAllFramesHandler();
+			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+			Thread.yield();
+			return;
+		}
+		else {
+			Iterator iterator = windowList.iterator();
+			while (iterator.hasNext()) {
+				VCLFrame f = findFrame((Component)iterator.next());
+				if (f != null) {
+					synchronized (f) {
+						f.enableFlushing(true);
+						f.enableFlushing(false);
+					}
+				}
+			}
+		}
+
+	}
+
+	/**
 	 * Initialize static data members.
 	 */
 	static {
@@ -725,6 +774,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The disposed flag.
 	 */
 	private boolean disposed = false;
+
+	/**
+	 * The flushing enabled flag.
+	 */
+	private boolean flushingEnabled = true;
 
 	/**
 	 * The frame pointer.
@@ -1008,14 +1062,45 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Flushes the native window.
+	 * Enable or disable flushing of the native window.
+	 *
+	 * @param b <code>true</code> to enable flushing and <code>false</code> to
+	 *  disable flushing
 	 */
-	public void flush() {
+	public void enableFlushing(boolean b) {
 
-		if (!window.isShowing())
+		// Fix occasional crashing by invoking this in the Java event dispatch
+		// thread
+		if (!EventQueue.isDispatchThread())	{
+			VCLFrame.FlushingHandler handler = new VCLFrame.FlushingHandler(this, b);
+			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+			Thread.yield();
 			return;
+		}
 
-		graphics.flush();
+		synchronized (this) {
+			if (!disposed && b != flushingEnabled && panel.isShowing()) {
+				Graphics2D g = (Graphics2D)panel.getGraphics();
+				if (g != null) {
+					try {
+						if (g instanceof sun.java2d.SunGraphics2D) {
+							sun.java2d.SurfaceData sd = ((sun.java2d.SunGraphics2D)g).getSurfaceData();
+							if (sd instanceof apple.awt.CPeerSurfaceData) {
+								if (b)
+									((apple.awt.CPeerSurfaceData)sd).enableFlushing();
+								else if (!fullScreenMode)
+									((apple.awt.CPeerSurfaceData)sd).disableFlushing();
+								flushingEnabled = b;
+							}
+						}
+					}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
+					g.dispose();
+				}
+			}
+		}
 
 	}
 
@@ -2057,9 +2142,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				window.setFocusable(true);
 				window.setFocusableWindowState(true);
 			}
+			enableFlushing(true);
 		}
 		else {
 			// Hide the window
+			enableFlushing(false);
 			panel.setVisible(false);
 			window.hide();
 			window.removeNotify();
@@ -2557,6 +2644,56 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void update(Graphics g) {
 
 			paint(g);
+
+		}
+
+	}
+
+	/**
+	 * A class that handles flushing updates.
+	 */
+	final class FlushingHandler implements Runnable {
+
+		/**
+		 * The flushing enabled flag.
+		 */
+		private boolean flushingEnabled = true;
+
+		/**
+		 * The <code>VCLFrame</code>.
+		 */
+		private VCLFrame frame = null;
+
+		/**
+		 * Constructs a new <code>VCLFrame.FlushingHandler</code> instance.
+		 *
+		 * @param f the <code>VCLFrame</code>
+		 * @param b <code>true</code> to enable flushing and <code>false</code>
+		 *  to disable flushing
+		 */
+		FlushingHandler(VCLFrame f, boolean b) {
+
+			frame = f;
+			flushingEnabled = b;
+
+		}
+
+		public void run() {
+
+			frame.enableFlushing(flushingEnabled);
+
+		}
+
+	}
+
+	/**
+	 * A class that flushes all <code>VCLFrame</code> instances.
+	 */
+	final static class FlushAllFramesHandler implements Runnable {
+
+		public void run() {
+
+			VCLFrame.flushAllFrames();
 
 		}
 

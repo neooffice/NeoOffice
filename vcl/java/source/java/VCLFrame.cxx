@@ -185,6 +185,25 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLFrame::flushAllFrames()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "flushAllFrames", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallStaticVoidMethod( getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
@@ -251,27 +270,6 @@ void com_sun_star_vcl_VCLFrame::dispose()
 
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLFrame::flush()
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "flush", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-		}
 	}
 }
 
