@@ -602,7 +602,7 @@ public final class VCLGraphics {
 
 		// No listeners allowed for printing
 		if (graphics != null) {
-			notifyGraphicsChanged(listener);
+			notifyGraphicsChanged(listener, disposed);
 			return;
 		}
 
@@ -2411,8 +2411,10 @@ public final class VCLGraphics {
 	 * Notifies the specified change listener.
 	 *
 	 * @param listener a pointer to a C++ JavaSalBitmap instance
+	 * @param disposed <code>true</code> if this graphics has been disposed,
+	 *  otherwise <code>false</code>
 	 */
-	native void notifyGraphicsChanged(long listener);
+	native void notifyGraphicsChanged(long listener, boolean disposed);
 
 	/**
 	 * Notifies all change listeners.
@@ -2421,7 +2423,7 @@ public final class VCLGraphics {
 
 		if (changeListeners != null) {
 			while (changeListeners.size() > 0)
-				notifyGraphicsChanged(((Long)changeListeners.removeLast()).longValue());
+				notifyGraphicsChanged(((Long)changeListeners.removeLast()).longValue(), disposed);
 		}
 
 	}

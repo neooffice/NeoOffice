@@ -213,14 +213,14 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 
 // ------------------------------------------------------------------
 
-void JavaSalBitmap::NotifyGraphicsChanged()
+void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 {
 	// Force copying of the buffer if it has not already been done
 	if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->removeGraphicsChangeListener( this );
 
-		if ( mnBitCount == 32 )
+		if ( !bDisposed && mnBitCount == 32 )
 		{
 			long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
 			if ( !mpBits )
@@ -462,7 +462,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	pBuffer->maPalette = maPalette;
 
-	NotifyGraphicsChanged();
+	NotifyGraphicsChanged( false );
 
 	if ( !mpBits )
 	{

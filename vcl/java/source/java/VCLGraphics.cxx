@@ -292,7 +292,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( JNIEnv *pEnv, jobject object, jlong _par0 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( JNIEnv *pEnv, jobject object, jlong _par0, jboolean _par1 )
 {
 	JavaSalBitmap *pBitmap = (JavaSalBitmap *)_par0;
 	if ( pBitmap )
@@ -302,7 +302,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
         {
             if ( *it == pBitmap )
 			{
-				pBitmap->NotifyGraphicsChanged();
+				pBitmap->NotifyGraphicsChanged( _par1 );
 				return;
 			}
         }
@@ -490,7 +490,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[6].signature = "(FFFFIZFFFFZFFFFF)V";
 			pMethods[6].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawRect0;
 			pMethods[7].name = "notifyGraphicsChanged";
-			pMethods[7].signature = "(J)V";
+			pMethods[7].signature = "(JZ)V";
 			pMethods[7].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
 			pMethods[8].name = "releaseNativeBitmaps";
 			pMethods[8].signature = "()V";

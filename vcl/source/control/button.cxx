@@ -3461,7 +3461,7 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
                             {
                                 // Force the pixels to be fixed otherwise the
                                 // image will be blank when passed to the image list
-                                ((JavaSalBitmap *)pSalBmp)->NotifyGraphicsChanged();
+                                ((JavaSalBitmap *)pSalBmp)->NotifyGraphicsChanged( false );
 
                                 Bitmap aBmp( pSalBmp );
                                 pSVData->maCtrlData.mpRadioImgList->AddImage( i + 1, Image( aBmp ) );
@@ -4419,7 +4419,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                             {
                                 // Force the pixels to be fixed otherwise the
                                 // image will be blank when passed to the image list
-                                ((JavaSalBitmap *)pSalBmp)->NotifyGraphicsChanged();
+                                ((JavaSalBitmap *)pSalBmp)->NotifyGraphicsChanged( false );
 
                                 // OOo will change some semi-transparent pixels
                                 // to pink so force those pixels to fully
