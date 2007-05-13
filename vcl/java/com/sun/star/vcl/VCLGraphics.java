@@ -720,7 +720,7 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight) {
+		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight || userPolygonClipList != null) {
 			BufferedImage img = null;
 			if (vg.getImage() != null) {
 				vg.flush();
@@ -796,8 +796,6 @@ public final class VCLGraphics {
 						Rectangle clipRect = (Rectangle)clipRects.next();
 						g.copyArea(srcX + clipRect.x - destX, srcY + clipRect.y - destY, clipRect.width, clipRect.height, destX - srcX, destY - srcY);
 					}
-					if (userPolygonClipList != null)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -1863,6 +1861,7 @@ public final class VCLGraphics {
 					srcImage.dispose();
 				}
 				else {
+					VCLGraphics.radioButton.setSize(d.width, d.height);
 					g.setClip(userClip);
 					g.translate(bounds.x, bounds.y);
 					VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
