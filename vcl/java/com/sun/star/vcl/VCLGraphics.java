@@ -2443,10 +2443,10 @@ public final class VCLGraphics {
 	void notifyGraphicsChanged() {
 
 		if (changeListeners != null) {
-			boolean d = disposed;
-			if (!disposed && frame != null) {
+			boolean d = false;
+			if (frame != null) {
 				Panel p = frame.getPanel();
-				disposed = (p != null && p.isShowing());
+				d = (p == null || !p.isShowing());
 			}
 
 			while (changeListeners.size() > 0)
@@ -2595,10 +2595,10 @@ public final class VCLGraphics {
 			userPolygonClip = false;
 		}
 		else {
+			// Don't change userPolygonClip flag
 			if (userClipList == null)
 				userClipList = new LinkedList();
 			userClipList.add(bounds);
-			userPolygonClip = true;
 		}
 
 	}
