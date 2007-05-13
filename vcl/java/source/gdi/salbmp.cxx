@@ -290,8 +290,6 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 	if ( !mpVCLGraphics )
 		return false;
 
-	mpVCLGraphics->addGraphicsChangeListener( this );
-
 	mnBitCount = mpVCLGraphics->getBitCount();
 	if ( mnBitCount != 32 )
 	{
@@ -307,6 +305,8 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 		maPalette = rPal;
 		maPalette.SetEntryCount( nColors );
 	}
+
+	mpVCLGraphics->addGraphicsChangeListener( this );
 
 	return true;
 }
