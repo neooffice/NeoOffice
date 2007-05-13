@@ -1715,15 +1715,16 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2 )
+sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2 )
 {
 	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I[I[[I[[I)V";
+			char *cSignature = "(I[I[[I[[I)Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "unionClipRegion", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1767,7 +1768,8 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_p
 			args[1].l = ptsarray;
 			args[2].l = xptsarray;
 			args[3].l = yptsarray;
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 		}
 	}
+	return out;
 }

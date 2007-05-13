@@ -138,8 +138,7 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 
 BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
 {
-	mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry );
-	return TRUE;
+	return mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry );
 }
 
 // -----------------------------------------------------------------------
