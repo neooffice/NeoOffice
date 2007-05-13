@@ -754,11 +754,33 @@ public final class VCLGraphics {
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
 					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
 					if (xor && allowXOR) {
+						LinkedList clipList = new LinkedList();
+						if (userClipList != null) {
+							Iterator clipRects = userClipList.iterator();
+							while (clipRects.hasNext()) {
+								Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+								if (!clip.isEmpty())
+									clipList.add(clip);
+							}
+						}
+						else {
+							clipList.add(destBounds);
+						}
+
 						g.setComposite(VCLGraphics.xorImageComposite);
 						VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+						}
+						if (userPolygonClipList != null)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
-					g.setClip(userClip);
-					g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+					else {
+						g.setClip(userClip);
+						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2422,8 +2444,14 @@ public final class VCLGraphics {
 	void notifyGraphicsChanged() {
 
 		if (changeListeners != null) {
+			boolean d = disposed;
+			if (!disposed && frame != null) {
+				Panel p = frame.getPanel();
+				disposed = (p != null && p.isShowing());
+			}
+
 			while (changeListeners.size() > 0)
-				notifyGraphicsChanged(((Long)changeListeners.removeLast()).longValue(), disposed);
+				notifyGraphicsChanged(((Long)changeListeners.removeLast()).longValue(), d);
 		}
 
 	}
