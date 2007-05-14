@@ -2630,6 +2630,7 @@ public final class VCLGraphics {
 			while (drawingHead != null) {
 				graphics.userClip = drawingHead.clip;
 				graphics.userClipList = drawingHead.clipList;
+				graphics.userPolygonClip = drawingHead.polygonClip;
 				try {
 					drawingHead.method.invoke(graphics, drawingHead.params);
 				}
@@ -2688,6 +2689,8 @@ public final class VCLGraphics {
 		PageQueueItem next = null;
 
 		Object[] params = null;
+
+		boolean polygonClip = false;
 
 		boolean xor = false;
 
