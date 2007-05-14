@@ -155,8 +155,11 @@ public final class VCLImage {
 	 */
 	public void dispose() {
 
-		if (graphics != null)
-			graphics.dispose();
+		if (graphics != null) {
+			if (!graphics.dispose())
+				return;
+		}
+
 		graphics = null;
 		image = null;
 		pageFormat = null;

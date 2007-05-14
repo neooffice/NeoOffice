@@ -630,11 +630,18 @@ public final class VCLGraphics {
 	/**
 	 * Disposes the underlying graphics and releases any system resources that
 	 * it is using.
+	 *
+	 * return <code>true</code> if disposed succeeded, otherwise
+	 * <code>false</code>
 	 */
-	void dispose() {
+	boolean dispose() {
 
-		if (disposed)
-			return;
+		// Don't all VCLImage.dispose() dispose this object if there are
+		// change listeners registered
+		if (image != null && changeListeners != null && changeListeners.size() > 0)
+			return false;
+		else if (disposed)
+			return true;
 
 		disposed = true;
 		notifyGraphicsChanged();
@@ -648,6 +655,8 @@ public final class VCLGraphics {
 		pageFormat = null;
 		userClip = null;
 		userClipList = null;
+
+		return true;
 
 	}
 
