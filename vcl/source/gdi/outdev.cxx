@@ -119,12 +119,11 @@
 
 #include <com/sun/star/awt/XGraphics.hpp>
 
+#ifdef USE_JAVA
+
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
-
-#ifdef USE_JAVA
-
 
 #endif	 // USE_JAVA
 
