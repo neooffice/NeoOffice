@@ -646,36 +646,23 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public static void flushAllFrames() {
 
-		boolean isDispatchThread = EventQueue.isDispatchThread();
-
-		LinkedList windowList = new LinkedList();
-
-		Frame[] frames = Frame.getFrames();
-		for (int i = 0; i < frames.length; i++) {
-			Window[] windows = frames[i].getOwnedWindows();
-			for (int j = 0; j < windows.length; j++)
-				windowList.add(windows[j]);
-			windowList.add(frames[i]);
-		}
-
-		if (!isDispatchThread) {
-			Iterator iterator = windowList.iterator();
-			while (iterator.hasNext()) {
-				VCLFrame f = findFrame((Component)iterator.next());
-				if (f != null) {
-					synchronized (f) {
-						if (!f.disposed)
-							f.graphics.flush();
-					}
-				}
-			}
-
+		if (!EventQueue.isDispatchThread()) {
 			FlushAllFramesHandler handler = new FlushAllFramesHandler();
 			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
 			Thread.yield();
 			return;
 		}
 		else {
+			LinkedList windowList = new LinkedList();
+
+			Frame[] frames = Frame.getFrames();
+			for (int i = 0; i < frames.length; i++) {
+				Window[] windows = frames[i].getOwnedWindows();
+				for (int j = 0; j < windows.length; j++)
+					windowList.add(windows[j]);
+				windowList.add(frames[i]);
+			}
+
 			Iterator iterator = windowList.iterator();
 			while (iterator.hasNext()) {
 				VCLFrame f = findFrame((Component)iterator.next());

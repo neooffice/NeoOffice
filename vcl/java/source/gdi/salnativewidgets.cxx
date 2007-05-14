@@ -193,12 +193,21 @@ VCLBitmapBuffer::~VCLBitmapBuffer()
 
 BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 {
-	Destroy();
-	mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
-	if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
+	bool bReused = false;
+	if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight )
+	{
+		ReleaseContext();
+		bReused = true;
+	}
+	else
 	{
 		Destroy();
-		return FALSE;
+		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
+		if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
+		{
+			Destroy();
+			return FALSE;
+		}
 	}
 
 	VCLThreadAttach t;
@@ -217,8 +226,10 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 	}
 
 	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN;
-	mnWidth = nWidth;
-	mnHeight = nHeight;
+	if ( nWidth > mnWidth )
+		mnWidth = nWidth;
+	if ( nHeight > mnHeight )
+		mnHeight = nHeight;
 	mnScanlineSize = mnWidth * sizeof( jint );
 	mnBitCount = 32;
 
@@ -230,6 +241,9 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight )
 		Destroy();
 		return FALSE;
 	}
+
+	if ( bReused )
+		memset( mpBits, 0, mnScanlineSize * mnHeight );
 
 	if ( !maContext )
 	{

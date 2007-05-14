@@ -152,11 +152,6 @@ public final class VCLGraphics {
 	private static CreateCopyComposite createCopyComposite = new CreateCopyComposite();
 
 	/**
-	 * The copyBitsMethod method.
-	 */
-	private static Method copyBitsMethod = null;
-
-	/**
 	 * The drawBitmapMethod method.
 	 */
 	private static Method drawBitmapMethod = null;
@@ -220,16 +215,6 @@ public final class VCLGraphics {
 	 * The drawRect method.
 	 */
 	private static Method drawRectMethod = null;
-
-	/**
-	 * The invert method.
-	 */
-	private static Method invertMethod = null;
-
-	/**
-	 * The invertPolygon method.
-	 */
-	private static Method invertPolygonMethod = null;
 
 	/**
 	 * The setPixel method.
@@ -349,12 +334,6 @@ public final class VCLGraphics {
 
 		// Set the method references
 		try {
-			copyBitsMethod = VCLGraphics.class.getMethod("copyBits", new Class[]{ VCLGraphics.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, boolean.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
 			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
 		}
 		catch (Throwable t) {
@@ -422,18 +401,6 @@ public final class VCLGraphics {
 		}
 		try {
 			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
-			invertMethod = VCLGraphics.class.getMethod("invert", new Class[]{ int.class, int.class, int.class, int.class, int.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
-			invertPolygonMethod = VCLGraphics.class.getMethod("invert", new Class[]{ int.class, int[].class, int[].class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -535,9 +502,6 @@ public final class VCLGraphics {
 
 		frame = f;
 		resetGraphics();
-
-		// Queue drawing operations to reduce flicker
-		pageQueue = new VCLGraphics.PageQueue(this);
 
 	}
 
@@ -645,7 +609,6 @@ public final class VCLGraphics {
 
 		VCLImage img = null;
 
-		flush();
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
@@ -676,10 +639,8 @@ public final class VCLGraphics {
 		disposed = true;
 		notifyGraphicsChanged();
 		changeListeners = null;
-
-		// Flush any queued drawing operations
-		flush();
-
+		if (pageQueue != null)
+			pageQueue.drawOperations();
 		pageQueue = null;
 		graphics = null;
 		image = null;
@@ -721,10 +682,8 @@ public final class VCLGraphics {
 
 		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight || userPolygonClip) {
 			BufferedImage img = null;
-			if (vg.getImage() != null) {
-				vg.flush();
+			if (vg.getImage() != null)
 				img = vg.getImage().getImage();
-			}
 
 			if (img == null) {
 				VCLImage srcImage = vg.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
@@ -741,7 +700,6 @@ public final class VCLGraphics {
 				srcImage.dispose();
 			}
 
-			flush();
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
@@ -788,12 +746,6 @@ public final class VCLGraphics {
 			}
 		}
 		else {
-			if (pageQueue != null) {
-				VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.copyBitsMethod, new Object[]{ vg, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight), new Boolean(allowXOR) });
-				pageQueue.postDrawingOperation(pqi);
-				return;
-			}
-
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
@@ -863,7 +815,6 @@ public final class VCLGraphics {
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
 
-		flush();
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
@@ -2007,16 +1958,6 @@ public final class VCLGraphics {
 	public void endSetClipRegion() {}
 
 	/**
-	 * Flush any pending drawing operations.
-	 */
-	void flush() {
-
-		if (pageQueue != null && (disposed || graphics == null))
-			pageQueue.drawOperations();
-
-	}
-
-	/**
 	 * Returns the bit count of the underlying graphics device.
 	 *
 	 * @return the bit count of the underlying graphics device
@@ -2176,7 +2117,6 @@ public final class VCLGraphics {
 
 		int pixel = 0xff000000;
 
-		flush();
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
@@ -2242,12 +2182,6 @@ public final class VCLGraphics {
 		// No inverting allowed for printing
 		if (graphics != null)
 			return;
-
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.invertMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), new Integer(options) });
-			pageQueue.postDrawingOperation(pqi);
-			return;
-		}
 
 		Rectangle destBounds = new Rectangle(x, y, width, height);
 		destBounds = destBounds.intersection(graphicsBounds);
@@ -2340,12 +2274,6 @@ public final class VCLGraphics {
 		// No inverting allowed for printing
 		if (graphics != null)
 			return;
-
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.invertPolygonMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(options) });
-			pageQueue.postDrawingOperation(pqi);
-			return;
-		}
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
@@ -2484,7 +2412,6 @@ public final class VCLGraphics {
 	public void resetGraphics() {
 
 		if (frame != null) {
-			flush();
 			notifyGraphicsChanged();
 
 			Panel p = frame.getPanel();
@@ -2685,6 +2612,7 @@ public final class VCLGraphics {
 
 			Area oldUserClip = graphics.userClip;
 			LinkedList oldUserClipList = graphics.userClipList;
+			boolean oldUserPolygonClip = graphics.userPolygonClip;
 			boolean oldXOR = graphics.xor;
 
 			graphics.pageQueue = null;
@@ -2708,6 +2636,7 @@ public final class VCLGraphics {
 
 			graphics.userClip = oldUserClip;
 			graphics.userClipList = oldUserClipList;
+			graphics.userPolygonClip = oldUserPolygonClip;
 			graphics.xor = oldXOR;
 
 			graphics.pageQueue = this;
