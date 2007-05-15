@@ -719,7 +719,7 @@ public final class VCLGraphics {
 					destY += (int)((srcBounds.y - srcY) * scaleY);
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
 					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
-					if (xor && allowXOR) {
+					if (!userPolygonClip) {
 						LinkedList clipList = new LinkedList();
 						if (userClipList != null) {
 							Iterator clipRects = userClipList.iterator();
@@ -733,17 +733,21 @@ public final class VCLGraphics {
 							clipList.add(destBounds);
 						}
 
-						g.setComposite(VCLGraphics.xorImageComposite);
-						VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						if (xor && allowXOR) {
+							g.setComposite(VCLGraphics.xorImageComposite);
+							VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						}
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
 							g.setClip((Rectangle)clipRects.next());
 							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 						}
-						if (userPolygonClip)
-							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
+						if (xor && allowXOR) {
+							g.setComposite(VCLGraphics.xorImageComposite);
+							VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						}
 						g.setClip(userClip);
 						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
@@ -904,7 +908,7 @@ public final class VCLGraphics {
 					destY += (int)((srcBounds.y - srcY) * scaleY);
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
 					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
-					if (xor) {
+					if (!userPolygonClip) {
 						LinkedList clipList = new LinkedList();
 						if (userClipList != null) {
 							Iterator clipRects = userClipList.iterator();
@@ -918,17 +922,21 @@ public final class VCLGraphics {
 							clipList.add(destBounds);
 						}
 
-						g.setComposite(VCLGraphics.xorImageComposite);
-						VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						if (xor) {
+							g.setComposite(VCLGraphics.xorImageComposite);
+							VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						}
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
 							g.setClip((Rectangle)clipRects.next());
 							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 						}
-						if (userPolygonClip)
-							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
+						if (xor) {
+							g.setComposite(VCLGraphics.xorImageComposite);
+							VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						}
 						g.setClip(userClip);
 						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
@@ -2579,7 +2587,8 @@ public final class VCLGraphics {
 					if (userClipList == null)
 						userClipList = new LinkedList();
 					userClipList.add(a.getBounds());
-					userPolygonClip = true;
+					if (!userPolygonClip && !a.isRectangular())
+						userPolygonClip = true;
 				}
 			}
 		}
