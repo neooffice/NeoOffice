@@ -709,16 +709,45 @@ public final class VCLGraphics {
 				srcImage.dispose();
 			}
 
+			// Prescale image if necessary so that we can catch out of memory
+			// exceptions
+			if (srcWidth != destWidth || srcHeight != destHeight) {
+				destX = destBounds.x - destX;
+				destY = destBounds.y - destY;
+
+				// Make sure source bounds don't fall outside the bitmap
+				float scaleX = destWidth / srcWidth;
+				float scaleY = destHeight / srcHeight;
+				destX += (int)((srcBounds.x - srcX) * scaleX);
+				destY += (int)((srcBounds.y - srcY) * scaleY);
+				destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
+				destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
+
+				VCLImage srcImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
+				VCLGraphics srcGraphics = srcImage.getGraphics();
+				Graphics2D g = srcGraphics.getGraphics();
+				if (g != null) {
+					try {
+						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+					}
+					catch (Throwable t) {
+						t.printStackTrace();
+					}
+					g.dispose();
+				}
+				copyBits(srcGraphics, 0, 0, destBounds.width, destBounds.height, destBounds.x, destBounds.y, destBounds.width, destBounds.height, allowXOR);
+				srcImage.dispose();
+				return;
+			}
+
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
 					// Make sure source bounds don't fall outside the bitmap
-					float scaleX = destWidth / srcWidth;
-					float scaleY = destHeight / srcHeight;
-					destX += (int)((srcBounds.x - srcX) * scaleX);
-					destY += (int)((srcBounds.y - srcY) * scaleY);
-					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
-					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
+					destX += srcBounds.x - srcX;
+					destY += srcBounds.x - srcY;
+					destWidth += srcBounds.width - srcWidth;
+					destHeight += srcBounds.height - srcHeight;
 					if (!userPolygonClip) {
 						LinkedList clipList = new LinkedList();
 						if (userClipList != null) {
@@ -856,7 +885,6 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
-	 * @param destHeight the height of the graphics to copy to
 	 */
 	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
 
@@ -873,6 +901,37 @@ public final class VCLGraphics {
 		Rectangle destBounds = new Rectangle(destX, destY, destWidth, destHeight).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
+
+		// Prescale image if necessary so that we can catch out of memory
+		// exceptions
+		if (graphics == null && (srcWidth != destWidth || srcHeight != destHeight)) {
+			destX = destBounds.x - destX;
+			destY = destBounds.y - destY;
+
+			// Make sure source bounds don't fall outside the bitmap
+			float scaleX = destWidth / srcWidth;
+			float scaleY = destHeight / srcHeight;
+			destX += (int)((srcBounds.x - srcX) * scaleX);
+			destY += (int)((srcBounds.y - srcY) * scaleY);
+			destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
+			destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
+
+			VCLImage srcImage = new VCLImage(destBounds.width, destBounds.height, bitCount);
+			VCLGraphics srcGraphics = srcImage.getGraphics();
+			Graphics2D g = srcGraphics.getGraphics();
+			if (g != null) {
+				try {
+					g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
+			}
+			copyBits(srcGraphics, 0, 0, destBounds.width, destBounds.height, destBounds.x, destBounds.y, destBounds.width, destBounds.height, true);
+			srcImage.dispose();
+			return;
+		}
 
 		Graphics2D g = getGraphics();
 		if (g != null) {
@@ -902,12 +961,10 @@ public final class VCLGraphics {
 				}
 				else {
 					// Make sure source bounds don't fall outside the bitmap
-					float scaleX = destWidth / srcWidth;
-					float scaleY = destHeight / srcHeight;
-					destX += (int)((srcBounds.x - srcX) * scaleX);
-					destY += (int)((srcBounds.y - srcY) * scaleY);
-					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
-					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
+					destX += srcBounds.x - srcX;
+					destY += srcBounds.y - srcY;
+					destWidth += srcBounds.width - srcWidth;
+					destHeight += srcBounds.height - srcHeight;
 					if (!userPolygonClip) {
 						LinkedList clipList = new LinkedList();
 						if (userClipList != null) {
