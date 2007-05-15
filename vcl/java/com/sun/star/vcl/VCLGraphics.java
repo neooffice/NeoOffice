@@ -1341,8 +1341,8 @@ public final class VCLGraphics {
 			destBounds.y--;
 			destBounds.width += 2;
 			destBounds.height += 2;
-			destBounds = destBounds.intersection(graphicsBounds);
 		}
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
