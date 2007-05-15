@@ -67,13 +67,38 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	if ( !pJavaSrcGraphics )
 		pJavaSrcGraphics = this;
 
-	mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight, sal_True );
+	// Don't do anything if the source is a printer
+	if ( pJavaSrcGraphics->mpPrinter )
+		return;
+
+	if ( mpPrinter || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+	{
+		SalTwoRect aPosAry;
+		memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
+
+		JavaSalBitmap *pBitmap = (JavaSalBitmap *)pJavaSrcGraphics->getBitmap( pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight );
+		if ( pBitmap )
+		{
+			aPosAry.mnSrcX = 0;
+			aPosAry.mnSrcY = 0;
+			drawBitmap( &aPosAry, *pBitmap );
+			delete pBitmap;
+		}
+	}
+	else
+	{
+		mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight, sal_True );
+	}
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, USHORT nFlags )
 {
+	// Don't do anything if this is a printer
+	if ( mpPrinter )
+		return;
+
 	mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
 }
 
