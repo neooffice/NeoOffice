@@ -62,16 +62,15 @@
 #include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
-#include "../app/salinst_cocoa.h"
 
 using namespace vcl;
 using namespace vos;
 
 // ============================================================================
 
-JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWindowShowing( JNIEnv *pEnv, jobject object )
+JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive( JNIEnv *pEnv, jobject object )
 {
-	return ( NSApplication_getModalWindow() ? JNI_TRUE : JNI_FALSE );
+	return ( NSApplication_isActive() ? JNI_TRUE : JNI_FALSE );
 }
 
 // ============================================================================
@@ -144,9 +143,9 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		{
 			// Register the native methods for our class
 			JNINativeMethod aMethod; 
-			aMethod.name = "isNativeModalWindowShowing";
+			aMethod.name = "isApplicationActive";
 			aMethod.signature = "()Z";
-			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isNativeModalWindowShowing;
+			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
 			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
 		}
 

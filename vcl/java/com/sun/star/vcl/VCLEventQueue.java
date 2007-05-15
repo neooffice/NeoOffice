@@ -338,11 +338,13 @@ public final class VCLEventQueue implements Runnable {
 	}
 
 	/**
-	 * Returns <code>true</code> if a native modal window showing.
+	 * Returns <code>true</code> if the application is active and a native
+	 * modal window is not showing.
 	 *
-	 * @return <code>true</code> if a native modal window showing
+	 * @return <code>true</code> if the application is active and a native
+	 *  modal window is not showing.
 	 */
-	public native boolean isNativeModalWindowShowing();
+	public native boolean isApplicationActive();
 
 	/**
 	 * Add an event to the cache.
@@ -690,7 +692,7 @@ public final class VCLEventQueue implements Runnable {
 			boolean ret = super.dispatchEvent(e);
 
 			// Fix bug 1924 by checking if a native modal window is showing
-			if (getFocusOwner() == null && !queue.isNativeModalWindowShowing()) {
+			if (getFocusOwner() == null && queue.isApplicationActive()) {
 				Component c = getPermanentFocusOwner();
 				if (c != null)
 					c.requestFocusInWindow();
