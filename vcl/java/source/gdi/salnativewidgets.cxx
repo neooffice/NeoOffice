@@ -447,7 +447,7 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 	if( nState & CTRL_STATE_ENABLED )
 		pTrackDrawInfo->enableState = kThemeTrackActive;
 	else
-		pTrackDrawInfo->enableState = kThemeTrackDisabled;
+		pTrackDrawInfo->enableState = kThemeTrackInactive;
 	if( pHITrackInfo )
 		pHITrackInfo->enableState = pTrackDrawInfo->enableState;
 	if( pScrollbarValue )
@@ -827,6 +827,9 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
@@ -876,6 +879,9 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 		aButtonDrawInfo.kind = kThemePopupButton;
@@ -921,6 +927,9 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		// Fix bug 2031 by always filling the background with white
 		HIRect destRect;
 		destRect.origin.x = 0;
@@ -979,6 +988,9 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
 		if ( bRet )
 		{
+			if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+				nState = 0;
+
 			HIThemeButtonDrawInfo aButtonDrawInfo;
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
 	
@@ -1067,6 +1079,9 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
 		if ( bRet )
 		{
+			if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+				nState = 0;
+
 			HIThemeButtonDrawInfo aButtonDrawInfo;
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
 	
@@ -1110,6 +1125,9 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
 		jint *pBits = (jint *)pBuffer->mpBits;
 		for ( long i = 0; i < nPixels; i++ )
@@ -1157,6 +1175,9 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeTabDrawInfo104 pTabDrawInfo;
 		InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
 
@@ -1196,6 +1217,9 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeTabPaneDrawInfo104 pTabPaneDrawInfo;
 		InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
 
@@ -1233,6 +1257,9 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeGroupBoxDrawInfo pGroupBoxDrawInfo;
 		InitPrimaryGroupBoxDrawInfo( &pGroupBoxDrawInfo, nState );
 
@@ -1305,6 +1332,9 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeFrameDrawInfo pFrameInfo;
 		InitEditFieldDrawInfo( &pFrameInfo, nState );
 
@@ -1345,6 +1375,9 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeFrameDrawInfo pFrameInfo;
 		InitListBoxDrawInfo( &pFrameInfo, nState );
 
@@ -1386,6 +1419,9 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeButtonDrawInfo pButtonInfo;
 		InitDisclosureButtonDrawInfo( &pButtonInfo, nState, pValue );
 
@@ -1424,6 +1460,9 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeSeparatorDrawInfo pSepInfo;
 		InitSeparatorDrawInfo( &pSepInfo, nState );
 		
@@ -1468,7 +1507,10 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		VCLBitmapBuffer *pBuffer = &aSharedListViewHeaderBuffer;
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), themeListViewHeaderHeight, pGraphics );
 		if ( bRet )
-		{		
+		{
+			if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+				nState = 0;
+
 			HIThemeButtonDrawInfo pButtonInfo;
 			InitListViewHeaderButtonDrawInfo( &pButtonInfo, nState, pValue );
 			
@@ -1508,6 +1550,9 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
+		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 		
@@ -1716,6 +1761,9 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
+				if ( mpFrame && mpFrame != GetSalData()->mpFocusFrame )
+					nState = 0;
+
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
 				bOK = TRUE;
@@ -1725,6 +1773,9 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
+				if ( mpFrame && mpFrame != GetSalData()->mpFocusFrame )
+					nState = 0;
+
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				bOK = TRUE;
@@ -1734,6 +1785,9 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
+				if ( mpFrame && mpFrame != GetSalData()->mpFocusFrame )
+					nState = 0;
+
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
 				mpVCLGraphics->drawCheckBox( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				bOK = TRUE;

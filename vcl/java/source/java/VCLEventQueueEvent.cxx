@@ -59,6 +59,9 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _SV_CTRL_HXX
+#include <ctrl.hxx>
+#endif
 #ifndef _SV_FLOATWIN_HXX
 #include <floatwin.hxx>
 #endif
@@ -108,6 +111,25 @@ static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rSc
 	}
 
 	return NULL;
+}
+
+// ----------------------------------------------------------------------------
+
+static void InvalidateControls( Window *pWindow )
+{
+	if ( pWindow && pWindow->IsReallyVisible() )
+	{
+		Control *pCtrl = dynamic_cast< Control * >( pWindow );
+		if ( pCtrl )
+		{
+			pCtrl->Invalidate();
+			return;
+		}
+
+		USHORT nCount = pWindow->GetChildCount();
+		for ( USHORT i = 0; i < nCount; i++ )
+			InvalidateControls( pWindow->GetChild( i ) );
+	}
 }
 
 // ============================================================================
@@ -427,12 +449,27 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_GETFOCUS:
 		{
 			// Ignore focus events for floating windows
-			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame && !pFrame->IsFloatingFrame() )
+			if ( !bDeleteDataOnly )
 			{
-				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
-					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
-				pSalData->mpFocusFrame = pFrame;
-				pFrame->CallCallback( nID, NULL );
+				if ( !pFrame )
+				{
+					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+						pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
+					pSalData->mpFocusFrame = NULL;
+				}
+				else if ( pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame && !pFrame->IsFloatingFrame() )
+				{
+					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+						pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
+					pSalData->mpFocusFrame = pFrame;
+
+					Window *pWindow = Application::GetFirstTopLevelWindow();
+					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+						pWindow = Application::GetNextTopLevelWindow( pWindow );
+					InvalidateControls( pWindow );
+
+					pFrame->CallCallback( nID, NULL );
+				}
 			}
 
 			break;
@@ -441,9 +478,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			if ( !bDeleteDataOnly && pFrame && pFrame == pSalData->mpFocusFrame )
 			{
-				if ( pFrame->mbVisible )
-					pFrame->CallCallback( nID, NULL );
 				pSalData->mpFocusFrame = NULL;
+				if ( pFrame->mbVisible )
+				{
+					Window *pWindow = Application::GetFirstTopLevelWindow();
+					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+						pWindow = Application::GetNextTopLevelWindow( pWindow );
+					InvalidateControls( pWindow );
+
+					pFrame->CallCallback( nID, NULL );
+				}
 			}
 
 			break;
