@@ -231,6 +231,8 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		
 						delete pData;
 					}
+
+					aVCLBitmap.dispose();
 				}
 			}
 
@@ -381,6 +383,8 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 				delete pData;
 			}
+
+			aVCLBitmap.dispose();
 		}
 
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
@@ -534,6 +538,8 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 				delete pData;
 			}
+
+			aVCLBitmap.dispose();
 		}
 
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );

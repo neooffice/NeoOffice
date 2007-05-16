@@ -647,6 +647,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public static void flushAllFrames() {
 
 		if (!EventQueue.isDispatchThread()) {
+			VCLEventQueue.runGCIfNeeded(0);
+
 			FlushAllFramesHandler handler = new FlushAllFramesHandler();
 			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
 			Thread.yield();

@@ -91,6 +91,25 @@ com_sun_star_vcl_VCLBitmap::com_sun_star_vcl_VCLBitmap( long nDX, long nDY, USHO
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLBitmap::dispose()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "dispose", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 java_lang_Object *com_sun_star_vcl_VCLBitmap::getData()
 {
 	static jmethodID mID = NULL;

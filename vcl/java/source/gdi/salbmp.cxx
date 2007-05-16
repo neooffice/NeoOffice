@@ -198,6 +198,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 		}
 		else
 		{
+			pVCLBitmap->dispose();
 			delete pVCLBitmap;
 			pVCLBitmap = NULL;
 		}
@@ -246,7 +247,10 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap )
 {
 	if ( pVCLBitmap )
+	{
+		pVCLBitmap->dispose();
 		delete pVCLBitmap;
+	}
 }
 
 // ------------------------------------------------------------------

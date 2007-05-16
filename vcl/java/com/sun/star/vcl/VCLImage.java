@@ -49,11 +49,6 @@ import java.awt.image.WritableRaster;
 public final class VCLImage {
 
 	/**
-	 * The LARGE_IMAGE_PIXELS constant.
-	 */
-	public static int LARGE_IMAGE_PIXELS = 500 * 500;
-
-	/**
 	 * The bit count.
 	 */
 	private int bitCount = 0;
@@ -112,12 +107,15 @@ public final class VCLImage {
 		// Always set bit count to 32
 		bitCount = 32;
 
+		VCLEventQueue.runGCIfNeeded(0);
+
 		// Create the image
 		try {
 			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
 		}
 		catch (OutOfMemoryError ome) {
-			System.gc();
+			// Force the garbage collector to run
+			VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
 			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
 		}
 
@@ -150,23 +148,18 @@ public final class VCLImage {
 	}
 
 	/**
- 	 * Disposes the image and releases any system resources that it is
+	 * Disposes the image and releases any system resources that it is
 	 * using.
 	 */
 	public void dispose() {
 
 		if (graphics != null) {
-			if (!graphics.dispose())
-				return;
+			graphics.dispose();
+			graphics = null;
 		}
-
-		graphics = null;
 		image = null;
 		pageFormat = null;
-
-		// Run the garbage collector after disposing large images
-		if (width * height > VCLImage.LARGE_IMAGE_PIXELS)
-			System.gc();
+		VCLEventQueue.runGCIfNeeded(0);
 
 	}
 

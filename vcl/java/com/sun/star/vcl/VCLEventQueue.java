@@ -102,6 +102,11 @@ public final class VCLEventQueue implements Runnable {
 	public final static int INPUT_ANY = VCLEventQueue.INPUT_MOUSE | VCLEventQueue.INPUT_KEYBOARD | VCLEventQueue.INPUT_PAINT | VCLEventQueue.INPUT_TIMER | VCLEventQueue.INPUT_OTHER;
 
 	/**
+	 * The GC_DISPOSED_PIXELS constant.
+	 */
+	public final static long GC_DISPOSED_PIXELS = 1024 * 1024;
+
+	/**
 	 * The GC_INTERVAL_1 constant.
 	 */
 	public final static long GC_INTERVAL_1 = 60000;
@@ -119,7 +124,7 @@ public final class VCLEventQueue implements Runnable {
 	/**
 	 * The GC_MEMORY_2 constant.
 	 */
-	public final static long GC_MEMORY_2 = 4 * 1024 * 1024;
+	public final static long GC_MEMORY_2 = 4 * GC_DISPOSED_PIXELS;
 
 	/**
 	 * The GC_MEMORY_3 constant.
@@ -127,34 +132,76 @@ public final class VCLEventQueue implements Runnable {
 	public final static long GC_MEMORY_3 = GC_MEMORY_2 / 2;
 
 	/**
-	 * The last adjusted mouse modifiers.
+	 * The GC_DISPOSED_PIXELS garbage collection.
 	 */
-	private int lastAdjustedMouseModifiers = 0;
+	private static long disposedPixels = 0;
 
 	/**
 	 * The next GC_INTERVAL_1 garbage collection.
 	 */
-	private long nextGCInterval1 = 0;
+	private static long nextGCInterval1 = 0;
 
 	/**
 	 * The next GC_INTERVAL_2 garbage collection.
 	 */
-	private long nextGCInterval2 = 0;
+	private static long nextGCInterval2 = 0;
 
 	/**
 	 * The next GC_INTERVAL_3 garbage collection.
 	 */
-	private long nextGCInterval3 = 0;
+	private static long nextGCInterval3 = 0;
 
 	/**
 	 * The next GC_MEMORY_2 garbage collection.
 	 */
-	private long nextGCUseMemory2 = 0;
+	private static long nextGCUseMemory2 = 0;
 
 	/**
 	 * The next GC_MEMORY_2 garbage collection.
 	 */
-	private long nextGCUseMemory3 = 0;
+	private static long nextGCUseMemory3 = 0;
+
+	/**
+	 * Run the garbage collector if necessary.
+	 */
+	static void runGCIfNeeded(long pixels) {
+
+		boolean needToRunGC = false;
+
+		if (pixels > 0)
+			disposedPixels += pixels;
+
+		if (disposedPixels >= GC_DISPOSED_PIXELS) {
+			needToRunGC = true;
+		}
+		else {
+			Runtime runtime = Runtime.getRuntime();
+			long currentTime = System.currentTimeMillis();
+			long currentUseMemory = runtime.totalMemory() - runtime.freeMemory();
+			if (currentTime >= nextGCInterval1 || (currentTime >= nextGCInterval2 && currentUseMemory >= nextGCUseMemory2) || (currentTime >= nextGCInterval3 && currentUseMemory >= nextGCUseMemory3))
+				needToRunGC = true;
+		}
+
+		if (needToRunGC) {
+			System.gc();
+
+			Runtime runtime = Runtime.getRuntime();
+			long currentTime = System.currentTimeMillis();
+			long currentUseMemory = runtime.totalMemory() - runtime.freeMemory();
+			disposedPixels = 0;
+			nextGCInterval1 = currentTime + GC_INTERVAL_1;
+			nextGCInterval2 = currentTime + GC_INTERVAL_2;
+			nextGCInterval3 = currentTime + GC_INTERVAL_3;
+			nextGCUseMemory2 = currentUseMemory + GC_MEMORY_2;
+			nextGCUseMemory3 = currentUseMemory + GC_MEMORY_3;
+		}
+
+	}
+
+	/**
+	 * The last adjusted mouse modifiers.
+	 */
+	private int lastAdjustedMouseModifiers = 0;
 
 	/**
 	 * The shutdown disabled flag.
@@ -297,20 +344,7 @@ public final class VCLEventQueue implements Runnable {
 			if (wait > 0 && queueList[0].head == null && queueList[1].head == null) {
 				// Since we are going to block, this is a good time to run the
 				// garbage collector
-				Runtime runtime = Runtime.getRuntime();
-				long currentTime = System.currentTimeMillis();
-				long currentUseMemory = runtime.totalMemory() - runtime.freeMemory();
-				if (currentTime >= nextGCInterval1 || (currentTime >= nextGCInterval2 && currentUseMemory >= nextGCUseMemory2) || (currentTime >= nextGCInterval3 && currentUseMemory >= nextGCUseMemory3))
-				{
-					System.gc();
-					currentTime = System.currentTimeMillis();
-					currentUseMemory = runtime.totalMemory() - runtime.freeMemory();
-					nextGCInterval1 = currentTime + VCLEventQueue.GC_INTERVAL_1;
-					nextGCInterval2 = currentTime + VCLEventQueue.GC_INTERVAL_2;
-					nextGCInterval3 = currentTime + VCLEventQueue.GC_INTERVAL_3;
-					nextGCUseMemory2 = currentUseMemory + VCLEventQueue.GC_MEMORY_2;
-					nextGCUseMemory3 = currentUseMemory + VCLEventQueue.GC_MEMORY_3;
-				}
+				VCLEventQueue.runGCIfNeeded(0);
 
 				try {
 					queueList.wait(wait);

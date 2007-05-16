@@ -423,11 +423,6 @@ public final class VCLGraphics {
 	 */
 	private LinkedList changeListeners = null;
 
-	/** 
-	 * The disposed flag.
-	 */
-	private boolean disposed = false;
-
 	/**
 	 * The frame that the graphics draws to.
 	 */
@@ -566,7 +561,7 @@ public final class VCLGraphics {
 
 		// No listeners allowed for printing
 		if (graphics != null) {
-			notifyGraphicsChanged(listener, disposed);
+			notifyGraphicsChanged(listener, false);
 			return;
 		}
 
@@ -630,20 +625,9 @@ public final class VCLGraphics {
 	/**
 	 * Disposes the underlying graphics and releases any system resources that
 	 * it is using.
-	 *
-	 * return <code>true</code> if disposed succeeded, otherwise
-	 * <code>false</code>
 	 */
 	boolean dispose() {
 
-		// Don't all VCLImage.dispose() dispose this object if there are
-		// change listeners registered
-		if (image != null && changeListeners != null && changeListeners.size() > 0)
-			return false;
-		else if (disposed)
-			return true;
-
-		disposed = true;
 		notifyGraphicsChanged();
 		changeListeners = null;
 		if (pageQueue != null)
@@ -2054,10 +2038,6 @@ public final class VCLGraphics {
 	 * @return the graphics context
 	 */
 	Graphics2D getGraphics(boolean notify) {
-
-		// Don't bother painting if we haven't attached to the panel yet
-		if (frame != null && image != null)
-			return null;
 
 		Graphics2D g;
 		if (image != null) {

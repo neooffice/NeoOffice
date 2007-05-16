@@ -311,6 +311,7 @@ void VCLBitmapBuffer::Destroy()
 
 	if ( mpVCLBitmap )
 	{
+		mpVCLBitmap->dispose();
 		delete mpVCLBitmap;
 		mpVCLBitmap = NULL;
 	}

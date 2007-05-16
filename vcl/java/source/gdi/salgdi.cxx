@@ -336,6 +336,8 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 
 					delete pData;
 				}
+
+				aVCLBitmap.dispose();
 			}
 		}
 	}
