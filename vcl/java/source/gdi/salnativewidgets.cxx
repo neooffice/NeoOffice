@@ -1765,7 +1765,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
+				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
@@ -1777,7 +1777,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
+				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
@@ -1789,7 +1789,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
+				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
