@@ -451,24 +451,22 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Ignore focus events for floating windows
 			if ( !bDeleteDataOnly )
 			{
-				if ( !pFrame )
+				if ( pFrame != pSalData->mpFocusFrame )
 				{
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 						pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
 					pSalData->mpFocusFrame = NULL;
 				}
-				else if ( pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame && !pFrame->IsFloatingFrame() )
+
+				if ( pFrame && pFrame->mbVisible && !pFrame->IsFloatingFrame() )
 				{
-					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
-						pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
 					pSalData->mpFocusFrame = pFrame;
+					pFrame->CallCallback( nID, NULL );
 
 					Window *pWindow = Application::GetFirstTopLevelWindow();
 					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
 						pWindow = Application::GetNextTopLevelWindow( pWindow );
 					InvalidateControls( pWindow );
-
-					pFrame->CallCallback( nID, NULL );
 				}
 			}
 
@@ -476,17 +474,26 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( !bDeleteDataOnly && pFrame && pFrame == pSalData->mpFocusFrame )
+			if ( !bDeleteDataOnly && pFrame )
 			{
-				pSalData->mpFocusFrame = NULL;
-				if ( pFrame->mbVisible )
+				if ( pFrame == pSalData->mpFocusFrame )
 				{
-					Window *pWindow = Application::GetFirstTopLevelWindow();
-					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
-						pWindow = Application::GetNextTopLevelWindow( pWindow );
-					InvalidateControls( pWindow );
-
+					pSalData->mpFocusFrame = NULL;
 					pFrame->CallCallback( nID, NULL );
+				}
+
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				{
+					if ( pFrame == *it )
+					{
+						if ( pFrame->mbVisible && !pFrame->IsFloatingFrame() )
+						{
+							Window *pWindow = Application::GetFirstTopLevelWindow();
+							while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+								pWindow = Application::GetNextTopLevelWindow( pWindow );
+							InvalidateControls( pWindow );
+						}
+					}
 				}
 			}
 
