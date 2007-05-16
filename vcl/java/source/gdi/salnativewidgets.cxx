@@ -48,6 +48,9 @@
 #ifndef _SV_SALBMP_H
 #include <salbmp.h>
 #endif
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
+#endif
 
 #ifndef _RTL_USTRING_H_
 #include <rtl/ustring.h>
@@ -828,7 +831,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeButtonDrawInfo aButtonDrawInfo;
@@ -880,7 +883,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeButtonDrawInfo aButtonDrawInfo;
@@ -928,7 +931,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		// Fix bug 2031 by always filling the background with white
@@ -989,7 +992,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
 		if ( bRet )
 		{
-			if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 				nState = 0;
 
 			HIThemeButtonDrawInfo aButtonDrawInfo;
@@ -1080,7 +1083,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
 		if ( bRet )
 		{
-			if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 				nState = 0;
 
 			HIThemeButtonDrawInfo aButtonDrawInfo;
@@ -1126,7 +1129,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
@@ -1176,7 +1179,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeTabDrawInfo104 pTabDrawInfo;
@@ -1218,7 +1221,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeTabPaneDrawInfo104 pTabPaneDrawInfo;
@@ -1258,7 +1261,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeGroupBoxDrawInfo pGroupBoxDrawInfo;
@@ -1333,7 +1336,7 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeFrameDrawInfo pFrameInfo;
@@ -1376,7 +1379,7 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeFrameDrawInfo pFrameInfo;
@@ -1420,7 +1423,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeButtonDrawInfo pButtonInfo;
@@ -1461,7 +1464,7 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeSeparatorDrawInfo pSepInfo;
@@ -1509,7 +1512,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), themeListViewHeaderHeight, pGraphics );
 		if ( bRet )
 		{
-			if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 				nState = 0;
 
 			HIThemeButtonDrawInfo pButtonInfo;
@@ -1551,7 +1554,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
 		HIThemeButtonDrawInfo aButtonDrawInfo;
@@ -1762,7 +1765,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && mpFrame != GetSalData()->mpFocusFrame )
+				if ( mpFrame && mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
@@ -1774,7 +1777,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && mpFrame != GetSalData()->mpFocusFrame )
+				if ( mpFrame && mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
@@ -1786,7 +1789,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 		case CTRL_CHECKBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-				if ( mpFrame && mpFrame != GetSalData()->mpFocusFrame )
+				if ( mpFrame && mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
 				Rectangle buttonRect = rControlRegion.GetBoundRect();
