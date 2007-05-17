@@ -530,11 +530,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
 	// the bHandleAllCurrentEvents parameter is true
-	bool bFlush = false;
 	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
-		bFlush = true;
 
 		if ( nCount )
 		{
@@ -546,6 +544,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		USHORT nID = pEvent->getID();
 		pEvent->dispatch();
 		delete pEvent;
+
+		com_sun_star_vcl_VCLFrame::flushAllFrames();
 
 		switch ( nID )
 		{
@@ -561,9 +561,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				break;
 		}
 	}
-
-	if ( bFlush )
-		com_sun_star_vcl_VCLFrame::flushAllFrames();
 
 	if ( nCount )
 	{
