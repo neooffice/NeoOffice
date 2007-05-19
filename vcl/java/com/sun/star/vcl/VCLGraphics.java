@@ -727,6 +727,8 @@ public final class VCLGraphics {
 							g.setClip((Rectangle)clipRects.next());
 							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 						}
+						if (userPolygonClip)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						g.setClip(userClip);
@@ -887,6 +889,8 @@ public final class VCLGraphics {
 							g.setClip((Rectangle)clipRects.next());
 							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 						}
+						if (userPolygonClip)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						g.setClip(userClip);
@@ -1342,6 +1346,8 @@ public final class VCLGraphics {
 							g.setClip((Rectangle)clipRects.next());
 							g.fillPolygon(polygon);
 						}
+						if (userPolygonClip)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						g.setClip(userClip);
@@ -1557,6 +1563,8 @@ public final class VCLGraphics {
 						g.setClip((Rectangle)clipRects.next());
 						g.fill(area);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					g.setClip(userClip);
@@ -1645,6 +1653,8 @@ public final class VCLGraphics {
 							g.setClip((Rectangle)clipRects.next());
 							g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
 						}
+						if (userPolygonClip)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						g.setClip(userClip);
