@@ -55,7 +55,9 @@ void HidePageSetupControls( NSView *pView )
 
 				if ( [pSubview isKindOfClass:[NSControl class]] )
 				{
-					[pSubview setHidden:YES];
+					if ( ![pSubview isKindOfClass:[NSButton class]] || [pSubview isKindOfClass:[NSPopUpButton class]] )
+						[pSubview setHidden:YES];
+
 					if ( [pSubview isKindOfClass:[NSTextField class]] && [(NSTextField *)pSubview isEditable] )
 						pScaleView = pSubview;
 				}
