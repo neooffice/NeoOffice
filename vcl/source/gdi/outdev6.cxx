@@ -210,8 +210,8 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 					{
 						pGraphics->SetLineColor( ImplColorToSal( maLineColor ) );
 						for( long i = nVertCount - 1; i >= 0L; i-- )
-							for( long j = nHorzCount - 1, nX = aHorzBuf[ j ] - aSrcPt.X(), Y = aVertBuf[ i ] - aSrcPt.Y(); j >= 0L && nX >= 0L && Y >= 0L; j--, nX = aHorzBuf[ j ] - aSrcPt.X() )
-								pGraphics->DrawPixel( nX, Y, NULL );
+							for( long j = nHorzCount - 1, X = aHorzBuf[ j ] - aSrcPt.X(), Y = aVertBuf[ i ] - aSrcPt.Y(); j >= 0L && X >= 0L && Y >= 0L; j--, nX = aHorzBuf[ j ] - aSrcPt.X() )
+								pGraphics->DrawPixel( X, Y, NULL );
 
 						SalTwoRect aPosAry;
 						aPosAry.mnSrcX = aDestPt.X();
