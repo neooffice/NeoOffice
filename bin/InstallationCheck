@@ -49,11 +49,13 @@ done
 
 # Check that the user is running Mac OS X 10.2 or higher
 if [ -x "/usr/bin/sw_vers" ] ; then
-    # Return 96 + 17 if it is a bad version
+    # Return 96 + 17 if it is a bad version. Note that we only allow Mac OS X
+    # 10.2.x because bug 1373 can occur on 10.3.x and later
     version=`/usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $2 }'`
     case "$version" in
-        10.[01]) exit 113;;
-        10.[01].*) exit 113;;
+        10.2) ;;
+        10.2.*) ;;
+		*) exit 113;
     esac
 fi
 
