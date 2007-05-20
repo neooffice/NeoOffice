@@ -39,6 +39,11 @@ export PATH
 
 if [ -d "$2/Contents" ] ; then
 
+	# Fix Apple installer bug described in bug 1373
+	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" ]; then
+		exit 1;
+	fi
+
 	# Save dictionary files for postflight scripts
 	if [ -d "$2/Contents/share/dict/ooo" -a ! -e "$2/ooo" ]; then
 		mv -f "$2/Contents/share/dict/ooo" "$2" || exit 1

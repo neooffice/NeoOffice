@@ -39,6 +39,11 @@ export PATH
 
 if [ -d "$2" ]; then
 
+	# Fix Apple installer bug described in bug 1373
+	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" ]; then
+		exit 1;
+	fi
+
 	tempfile="$INSTALLER_TEMP/out"
 	touch "$tempfile" || exit 1
 
