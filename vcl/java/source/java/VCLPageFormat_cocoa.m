@@ -38,58 +38,6 @@
 
 static BOOL bInDialog = NO;
 
-void HidePageSetupControls( NSView *pView )
-{
-	if ( pView )
-	{
-		NSArray *pArray = [pView subviews];
-		if ( pArray )
-		{
-			NSView *pScaleView = nil;
-			unsigned nCount = [pArray count];
-			unsigned i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSView *pSubview = (NSView *)[pArray objectAtIndex:i];
-				HidePageSetupControls( pSubview );
-
-				if ( [pSubview isKindOfClass:[NSControl class]] )
-				{
-					if ( ![pSubview isKindOfClass:[NSButton class]] || [pSubview isKindOfClass:[NSPopUpButton class]] )
-						[pSubview setHidden:YES];
-
-					if ( [pSubview isKindOfClass:[NSTextField class]] && [(NSTextField *)pSubview isEditable] )
-						pScaleView = pSubview;
-				}
-			}
-
-			// Show the label that matches the scale view
-			if ( pScaleView )
-			{
-				NSRect aScaleFrame = [pScaleView frame];
-				i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					NSView *pSubview = (NSView *)[pArray objectAtIndex:i];
-					if ( pSubview != pScaleView )
-					{
-						if ( [pSubview isKindOfClass:[NSTextField class]] && ![(NSTextField *)pSubview isEditable] )
-						{
-							NSRect aSubviewFrame = [pSubview frame];
-							if ( aSubviewFrame.origin.y < aScaleFrame.origin.y + aScaleFrame.size.height && aSubviewFrame.origin.y + aSubviewFrame.size.height > aScaleFrame.origin.y )
-							{
-								[pSubview setHidden:NO];
-								[pScaleView setHidden:NO];
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-}
-
 @interface VCLPrintInfo : NSPrintInfo
 + (void)setInDialog:(BOOL)bIn;
 - (id)copyWithZone:(NSZone *)pZone;
@@ -212,12 +160,6 @@ void HidePageSetupControls( NSView *pView )
 		mbFinished = NO;
 		[VCLPrintInfo setInDialog:YES];
 		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
-
-		// Disable all but the scale text field since the other controls have
-		// no effect
-		NSWindow *pSheet = (NSWindow *)[mpWindow attachedSheet];
-		if ( pSheet )
-			HidePageSetupControls( [pSheet contentView] );
 	}
 }
 
