@@ -324,13 +324,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	// Handle events that require a JavaSalFrame pointer
 	JavaSalFrame *pFrame = getFrame();
 	bool bFound = false;
-	if ( pFrame && pFrame->GetInstance() )
+	if ( pFrame )
 	{
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( pFrame == *it )
 			{
-				bFound = true;
+				bFound = pFrame->GetInstance();
 				break;
 			}
 		}

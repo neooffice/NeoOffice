@@ -1359,14 +1359,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public Rectangle getTextLocation(TextHitInfo offset) {
 
 		Rectangle bounds = new Rectangle(300, 300, 2, 12);
+		long f = 0;
 
 		synchronized (this) {
 			if (disposed || !window.isShowing())
 				return bounds;
+			f = frame;
 		}
 
 		// Get the position from the OOo code
-		Rectangle b = getTextLocation0(frame);
+		Rectangle b = getTextLocation0(f);
 
 		synchronized (this) {
 			if (disposed || !window.isShowing())

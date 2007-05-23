@@ -68,6 +68,10 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 {
 	jobject out = NULL;
 
+	JavaSalFrame *pFrame = (JavaSalFrame *)_par0;
+	if ( !pFrame )
+		return out;
+
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 
@@ -86,8 +90,17 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 		{
 			SalExtTextInputPosEvent aInputPosEvent;
 			memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, (JavaSalFrame *)_par0, &aInputPosEvent );
-			aEvent.dispatch();
+
+			// Fix bug 2426 by checking the frame pointer before any use
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+			{
+				if ( *it == pFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
+					aEvent.dispatch();
+					break;
+				}
+			}
 
 			jvalue args[4];
 			if ( aInputPosEvent.mbVertical )
