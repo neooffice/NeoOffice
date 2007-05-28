@@ -887,6 +887,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mpVCLFont )
 		return bRet;
 
+	int nEstimatedGlyphs = 0;
+
 	// Aggregate runs
 	bool bRunRTL;
 	int nMinCharPos;
@@ -911,6 +913,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						i--;
 					mpGraphics->maFallbackRuns.AddRun( i, nStart, bRunRTL );
 					maRuns.AddRun( i, nStart, bRunRTL );
+					nEstimatedGlyphs += nStart - i;
 					nStart = i;
 				}
 			}
@@ -926,6 +929,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						i++;
 					mpGraphics->maFallbackRuns.AddRun( nStart, i, bRunRTL );
 					maRuns.AddRun( nStart, i, bRunRTL );
+					nEstimatedGlyphs += i - nStart;
 					nStart = i;
 				}
 			}
@@ -948,16 +952,20 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( nMinCharPos >= nMinFallbackCharPos && nEndCharPos <= nEndFallbackCharPos )
 				{
 					maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
+					nEstimatedGlyphs += nEndCharPos - nMinCharPos;
 					break;
 				}
 				else if ( nMinCharPos <= nMinFallbackCharPos && nEndCharPos >= nEndFallbackCharPos )
 				{
 					maRuns.AddRun( nMinFallbackCharPos, nEndFallbackCharPos, bRunRTL );
+					nEstimatedGlyphs += nEndFallbackCharPos - nMinFallbackCharPos;
 					break;
 				}
 			}
 		}
 	}
+
+	SetGlyphCapacity( (int)( nEstimatedGlyphs * 1.1 ) );
 
 	Point aPos;
 	maRuns.ResetPos();

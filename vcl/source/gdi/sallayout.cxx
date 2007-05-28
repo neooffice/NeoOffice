@@ -1605,6 +1605,28 @@ void GenericSalLayout::SortGlyphItems()
     }
 }
 
+// -----------------------------------------------------------------------
+
+#ifdef USE_JAVA
+
+void GenericSalLayout::SetGlyphCapacity( int nGlyphCapacity )
+{
+    if ( mnGlyphCapacity < nGlyphCapacity )
+    {
+        mnGlyphCapacity = nGlyphCapacity;
+        GlyphItem* pNewGI = new GlyphItem[ mnGlyphCapacity ];
+        if( mpGlyphItems )
+        {
+            for( int i = 0; i < mnGlyphCount; ++i )
+                pNewGI[ i ] = mpGlyphItems[ i ];
+            delete[] mpGlyphItems;
+        }
+        mpGlyphItems = pNewGI;
+    }
+}
+
+#endif	// USE_JAVA
+
 // =======================================================================
 
 MultiSalLayout::MultiSalLayout( SalLayout& rBaseLayout )
