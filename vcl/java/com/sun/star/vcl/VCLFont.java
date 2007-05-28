@@ -102,46 +102,26 @@ public final class VCLFont {
 	private Font font = null;
 
 	/**
-	 * The cached orientation.
-	 */
-	private short orientation = 0;
-
-	/**
 	 * The cached X axis scale factor.
 	 */
 	private double scaleX = 0.0;
-
-	/**
-	 * The cached size.
-	 */
-	private int size = 0;
-
-	/**
-	 * The vertical flag.
-	 */
-	private boolean vertical = false;
 
 	/**
 	 * Constructs a new <code>VCLFont</code> instance.
 	 *
 	 * @param f the font
 	 * @param s the size of the font
-	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
-	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	VCLFont(Font f, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
+	VCLFont(Font f, int s, boolean a, double x) throws FontFormatException {
 
 		antialiased = a;
-		orientation = o;
 		scaleX = x;
-		size = s;
-		vertical = v;
 
 		// Cache font and font metrics
-		font = f.deriveFont((float)size);
+		font = f.deriveFont((float)s);
 
 	}
 
@@ -150,33 +130,15 @@ public final class VCLFont {
 	 *
 	 * @param n the name of the font
 	 * @param s the size of the font
-	 * @param o the orientation of the new <code>VCLFont</code> in degrees
 	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
 	 *  to disable antialiasing
-	 * @param v <code>true</code> if the font is vertical 
 	 * @param x the X axis scale factor
 	 */
-	public VCLFont(String n, int s, short o, boolean a, boolean v, double x) throws FontFormatException {
+	public VCLFont(String n, int s, boolean a, double x) throws FontFormatException {
 
-		this(new Font(n, Font.PLAIN, s), s, o, a, v, x);
-
-	}
-
-	/**
-	 * Creates a new <code>VCLFont</code> object by replicating this
-	 * <code>VCLFont</code> object and applying a new size.
-	 *
-	 * @param s the size for the new <code>VCLFont</code>
-	 * @param o the orientation of the new <code>VCLFont</code> in degrees
-	 * @param a <code>true</code> to enable antialiasing and <code>false</code>
-	 *  to disable antialiasing
-	 * @param v <code>true</code> if the font is vertical 
-	 * @param x the X axis scale factor
-	 * @return a new <code>VCLFont</code> object
-	 */
-	public VCLFont deriveFont(int s, short o, boolean a, boolean v, double x) throws FontFormatException {
-
-		return new VCLFont(font, s, o, a, v, x);
+		antialiased = a;
+		font = new Font(n, Font.PLAIN, s);
+		scaleX = x;
 
 	}
 
@@ -188,28 +150,6 @@ public final class VCLFont {
 	Font getFont() {
 
 		return font;
-
-	}
-
-	/**
-	 * Returns the font's name.
-	 *
-	 * @return the font's name
-	 */
-	public String getName() {
-
-		return font.getName();
-
-	}
-
-	/**
-	 * Returns the orientation of the <code>VCLFont</code> in degrees.
-	 *
-	 * @return the orientation of the <code>VCLFont</code>
-	 */
-	public short getOrientation() {
-
-		return orientation;
 
 	}
 
@@ -229,20 +169,9 @@ public final class VCLFont {
 	 *
 	 * @return the X axis scale factor
 	 */
-	public double getScaleX() {
+	double getScaleX() {
 
 		return scaleX;
-
-	}
-
-	/**
-	 * Returns the point size of the <code>Font</code>.
-	 *
-	 * @return the point size of the <code>Font</code>
-	 */
-	public int getSize() {
-
-		return size;
 
 	}
 
@@ -251,20 +180,9 @@ public final class VCLFont {
 	 *
 	 * @return <code>true</code> if the <code>Font</code> is antialiased 
 	 */
-	public boolean isAntialiased() {
+	boolean isAntialiased() {
 
 		return antialiased;
-
-	}
-
-	/**
-	 * Indicates whether or not the <code>Font</code> is vertical.
-	 *
-	 * @return <code>true</code> if the <code>Font</code> is vertical
-	 */
-	public boolean isVertical() {
-
-		return vertical;
 
 	}
 

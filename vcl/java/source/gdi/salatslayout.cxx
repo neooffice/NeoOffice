@@ -44,6 +44,7 @@
  ************************************************************************/
 
 #include <hash_map>
+#include <unicode/uchar.h>
 #include <unicode/uscript.h>
 
 #ifndef _SV_SALATSLAYOUT_HXX
@@ -65,10 +66,9 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
 
-// Fix bug 1418 by setting the cache size very small as the OOo 2.0.x code
-// lays out entire documents in the background and the cache will get full
-// very quickly
-#define LAYOUT_CACHE_MAX_SIZE 256
+// Set cache size based on number of Unicode characters so that we have finer
+// control over memory usage
+#define LAYOUT_CACHE_MAX_SIZE 51200
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -95,8 +95,9 @@ struct ImplHashEquality
 };
 
 struct ImplATSLayoutData {
-	static ::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >	maLayoutCache;
+	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
+	static int			mnLayoutCacheSize;
 
 	mutable int			mnRefCount;
 	ImplATSLayoutDataHash*	mpHash;
@@ -153,7 +154,7 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 
 // ============================================================================
 
-::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality > ImplATSLayoutData::maLayoutCache;
+::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality > ImplATSLayoutData::maLayoutCache;
 
 // ----------------------------------------------------------------------------
 
@@ -161,8 +162,13 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 
 // ----------------------------------------------------------------------------
 
+int ImplATSLayoutData::mnLayoutCacheSize = 0;
+
+// ----------------------------------------------------------------------------
+
 void ImplATSLayoutData::ClearLayoutDataCache()
 {
+	mnLayoutCacheSize = 0;
 	maLayoutCache.clear();
 
 	while ( maLayoutCacheList.size() )
@@ -187,25 +193,23 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	pLayoutHash->mbRTL = ( rArgs.mnFlags & SAL_LAYOUT_BIDI_RTL );
 	pLayoutHash->mbVertical = ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL );
 
-	// Copy the string so that we can cache it and add leading and trailing
-	// spaces so that ATSUGetGlyphInfo() will not fail as described in
-	// bug 554
-	pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-	memcpy( pLayoutHash->mpStr, rArgs.mpStr + rArgs.mnMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
+	pLayoutHash->mpStr = (sal_Unicode *)( rArgs.mpStr + rArgs.mnMinCharPos );
 	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
 
 	// Search cache for matching layout
-	::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
+	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
 	if ( it != maLayoutCache.end() )
 	{
 		pLayoutData = it->second;
-		rtl_freeMemory( pLayoutHash->mpStr );
 		delete pLayoutHash;
 		pLayoutHash = NULL;
 	}
 
 	if ( !pLayoutData )
 	{
+		// Copy the string so that we can cache it
+		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
+		memcpy( pLayoutHash->mpStr, rArgs.mpStr + rArgs.mnMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 		pLayoutData = new ImplATSLayoutData( rArgs, pLayoutHash, nFallbackLevel, pVCLFont );
 
 		if ( !pLayoutData )
@@ -217,16 +221,22 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 			return NULL;
 		}
 
-		maLayoutCache.insert( ::std::hash_multimap< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::value_type( pLayoutData->mpHash, pLayoutData ) );
-		maLayoutCacheList.push_front( pLayoutData );
-
 		// Limit cache size
-		if ( maLayoutCache.size() > LAYOUT_CACHE_MAX_SIZE )
+		if ( mnLayoutCacheSize > LAYOUT_CACHE_MAX_SIZE )
 		{
-			maLayoutCache.erase( maLayoutCacheList.back()->mpHash );
-			maLayoutCacheList.back()->Release();
-			maLayoutCacheList.pop_back();
+			int nTargetSize = (int)( LAYOUT_CACHE_MAX_SIZE * 0.8 );
+			while ( mnLayoutCacheSize > nTargetSize )
+			{
+				mnLayoutCacheSize -= maLayoutCacheList.back()->mpHash->mnLen;
+				maLayoutCache.erase( maLayoutCacheList.back()->mpHash );
+				maLayoutCacheList.back()->Release();
+				maLayoutCacheList.pop_back();
+			}
 		}
+
+		mnLayoutCacheSize += pLayoutData->mpHash->mnLen;
+		maLayoutCache.insert( ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::value_type( pLayoutData->mpHash, pLayoutData ) );
+		maLayoutCacheList.push_front( pLayoutData );
 	}
 
 	if ( pLayoutData )
@@ -260,7 +270,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHa
 		return;
 	}
 
-	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont->getJavaObject(), pVCLFont->getNativeFont() );
+	mpVCLFont = new com_sun_star_vcl_VCLFont( pVCLFont );
 	if ( !mpVCLFont )
 	{
 		Destroy();
@@ -804,7 +814,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 		if ( it != mpGraphics->maFallbackFonts.end() )
 		{
 			int nNativeFont = it->second->getNativeFont();	
-			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->getJavaObject(), nNativeFont );
+			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second );
 
 			// Prevent infinite fallback
 			if ( mpVCLFont )
@@ -823,7 +833,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	}
 	else
 	{
-		mpVCLFont = new com_sun_star_vcl_VCLFont( mpGraphics->mpVCLFont->getJavaObject(), mpGraphics->mpVCLFont->getNativeFont() );
+		mpVCLFont = new com_sun_star_vcl_VCLFont( mpGraphics->mpVCLFont );
 	}
 }
 
@@ -887,8 +897,38 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		mpGraphics->maFallbackRuns.Clear();
 		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 		{
-			mpGraphics->maFallbackRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
-			maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
+			// Significantly improve cache hit rate by splitting runs into
+			// their component words
+			if ( bRunRTL )
+			{
+				int nStart = nEndCharPos;
+				while ( nStart > nMinCharPos )
+				{
+					int i = nStart;
+					for ( ; i > nMinCharPos && !u_isUWhiteSpace( rArgs.mpStr[ i - 1 ] ); i-- )
+						;
+					if ( i == nStart)
+						i--;
+					mpGraphics->maFallbackRuns.AddRun( i, nStart, bRunRTL );
+					maRuns.AddRun( i, nStart, bRunRTL );
+					nStart = i;
+				}
+			}
+			else
+			{
+				int nStart = nMinCharPos;
+				while ( nStart < nEndCharPos )
+				{
+					int i = nStart;
+					for ( ; i < nEndCharPos && !u_isUWhiteSpace( rArgs.mpStr[ i ] ); i++ )
+						;
+					if ( i < nEndCharPos )
+						i++;
+					mpGraphics->maFallbackRuns.AddRun( nStart, i, bRunRTL );
+					maRuns.AddRun( nStart, i, bRunRTL );
+					nStart = i;
+				}
+			}
 		}
 	}
 	else
@@ -908,6 +948,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( nMinCharPos >= nMinFallbackCharPos && nEndCharPos <= nEndFallbackCharPos )
 				{
 					maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
+					break;
+				}
+				else if ( nMinCharPos <= nMinFallbackCharPos && nEndCharPos >= nEndFallbackCharPos )
+				{
+					maRuns.AddRun( nMinFallbackCharPos, nEndFallbackCharPos, bRunRTL );
 					break;
 				}
 			}
@@ -991,7 +1036,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
 			if ( it != mpGraphics->maFallbackFonts.end() )
 				delete it->second;
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont->getJavaObject(), pLayoutData->mpFallbackFont->getNativeFont() );
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont );
 			rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 

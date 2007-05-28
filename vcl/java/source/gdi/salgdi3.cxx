@@ -574,7 +574,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// Set font for graphics device
 		if ( mpVCLFont )
 			delete mpVCLFont;
-		mpVCLFont = new com_sun_star_vcl_VCLFont( maFallbackFonts[ nFallbackLevel ]->getJavaObject(), 0 );
+		mpVCLFont = new com_sun_star_vcl_VCLFont( maFallbackFonts[ nFallbackLevel ] );
 	}
 
 	return 0;
