@@ -629,6 +629,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
+	/** 
+	 * The pending flushing handlers.
+	 */
+	private static LinkedList pendingFlushingHandlers = new LinkedList();
+
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
@@ -649,9 +654,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!EventQueue.isDispatchThread()) {
 			VCLEventQueue.runGCIfNeeded(0);
 
-			FlushAllFramesHandler handler = new FlushAllFramesHandler();
-			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
-			Thread.yield();
+			boolean needToYield = false;
+			synchronized (VCLFrame.pendingFlushingHandlers) {
+				if (VCLFrame.pendingFlushingHandlers.size() == 0) {
+					FlushAllFramesHandler handler = new FlushAllFramesHandler();
+					Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+					VCLFrame.pendingFlushingHandlers.add(handler);
+					needToYield = true;
+				}
+			}
+
+			if (needToYield)
+				Thread.yield();
+
 			return;
 		}
 		else {
@@ -2685,6 +2700,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void run() {
 
 			VCLFrame.flushAllFrames();
+
+			synchronized (VCLFrame.pendingFlushingHandlers) {
+				VCLFrame.pendingFlushingHandlers.remove(this);
+			}
 
 		}
 
