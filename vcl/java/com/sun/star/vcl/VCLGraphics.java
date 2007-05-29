@@ -1136,23 +1136,21 @@ public final class VCLGraphics {
 				Font f = font.getFont();
 				g.setFont(f);
 
-				RenderingHints hints = g.getRenderingHints();
-				if (font.isAntialiased())
-					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-				else
+				if (!font.isAntialiased()) {
+					RenderingHints hints = g.getRenderingHints();
 					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-				g.setRenderingHints(hints);
+					g.setRenderingHints(hints);
+				}
 				g.setColor(new Color(color));
 
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
 
 				double advance = 0;
-				double fScaleX = font.getScaleX();
 				for (int i = 0; i < glyphs.length; i++) {
 					Point2D p = gv.getGlyphPosition(i);
 					p.setLocation(advance, p.getY());
 					gv.setGlyphPosition(i, p);
-					advance += advances[i] / fScaleX;
+					advance += advances[i];
 				}
 
 				g.setClip(userClip);
@@ -1164,14 +1162,14 @@ public final class VCLGraphics {
 
 				glyphOrientation &= VCLGraphics.GF_ROTMASK;
 				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-					g.scale(fScaleX, glyphScaleX);
+					g.scale(1.0 , glyphScaleX);
 					if (glyphOrientation == VCLGraphics.GF_ROTL)
 						g.rotate(Math.toRadians(-90));
 					else
 						g.rotate(Math.toRadians(90));
 				}
 				else {
-					g.scale(fScaleX * glyphScaleX, 1.0);
+					g.scale(glyphScaleX, 1.0);
 				}
 
 				// Draw the text to a scaled graphics
