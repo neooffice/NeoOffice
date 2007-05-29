@@ -43,6 +43,7 @@
  *
  ************************************************************************/
 
+#include <sys/sysctl.h>
 #include <hash_map>
 #include <unicode/uchar.h>
 #include <unicode/uscript.h>
@@ -65,10 +66,6 @@
 #ifndef _BGFX_POLYGON_B2DPOLYPOLYGON_HXX
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
-
-// Set cache size based on number of Unicode characters so that we have finer
-// control over memory usage
-#define LAYOUT_CACHE_MAX_SIZE 51200
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -222,10 +219,31 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 		}
 
 		// Limit cache size
-		if ( mnLayoutCacheSize > LAYOUT_CACHE_MAX_SIZE )
+		static int nLayoutCacheSize = 0;
+		static int nTargetCacheSize = 0;
+		if ( mnLayoutCacheSize > nLayoutCacheSize )
 		{
-			int nTargetSize = (int)( LAYOUT_CACHE_MAX_SIZE * 0.8 );
-			while ( mnLayoutCacheSize > nTargetSize )
+			if ( !nLayoutCacheSize )
+			{
+				// Set the layout cache size based on physical memory
+				int pMib[2];
+				size_t nMinMem = 256 * 1024 * 1024;
+				size_t nMaxMem = nMinMem * 4;
+				size_t nUserMem = 0;
+				size_t nLen = sizeof( nUserMem );
+				pMib[0] = CTL_HW;
+				pMib[1] = HW_USERMEM;
+				if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
+					nUserMem /= 2;
+				if ( nUserMem > nMaxMem )
+					nUserMem = nMaxMem;
+				else if ( nUserMem < nMinMem )
+					nUserMem = nMinMem;
+				nLayoutCacheSize = nUserMem / ( 1024 * 8 );
+				nTargetCacheSize = nLayoutCacheSize * 0.8;
+			}
+
+			while ( mnLayoutCacheSize > nTargetCacheSize )
 			{
 				mnLayoutCacheSize -= maLayoutCacheList.back()->mpHash->mnLen;
 				maLayoutCache.erase( maLayoutCacheList.back()->mpHash );
@@ -805,8 +823,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpVCLFont( NULL ),
 	mpKashidaLayoutData( NULL ),
 	mnOrigWidth( 0 ),
-	mfGlyphScaleX( 1.0 ),
-	mpLargestLayoutData( NULL )
+	mfGlyphScaleX( 1.0 )
 {
 	if ( mnFallbackLevel )
 	{
@@ -1149,8 +1166,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		maLayoutData.push_back( pLayoutData );
 		maLayoutMinCharPos.push_back( aFallbackArgs.mnMinCharPos );
-		if ( !mpLargestLayoutData || pLayoutData->mnGlyphCount > mpLargestLayoutData->mnGlyphCount )
-			mpLargestLayoutData = pLayoutData;
 	}
 
 	return bRet;
@@ -1160,10 +1175,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
-	if ( !mpLargestLayoutData )
-		return;
-
-	int nMaxGlyphs = mpLargestLayoutData->mnGlyphCount;
+	int nMaxGlyphs = 256;
 	long aGlyphArray[ nMaxGlyphs ];
 	long aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
@@ -1185,12 +1197,24 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			continue;
 		}
 
-		for ( i = 0 ; i < nGlyphCount && !IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
-			;
-		if ( i < nGlyphCount )
+		int nSkippedGlyphs = 0;
+		long nLastUnskippedGlyph = 0;
+		for ( i = 0 ; i < nGlyphCount; i++ )
 		{
-			nStart -= nGlyphCount - i;
-			nGlyphCount = i;
+			if ( IsSpacingGlyph( aGlyphArray[ i ] ) )
+			{
+				nSkippedGlyphs++;
+				nGlyphCount--;
+				aDXArray[ nLastUnskippedGlyph ] += aDXArray[ i ];
+			}
+
+			if ( nSkippedGlyphs )
+			{
+				nSkippedGlyphs++;
+				aGlyphArray[ i ] = aGlyphArray[ i + nSkippedGlyphs ];
+				aDXArray[ i ] = aDXArray[ i + nSkippedGlyphs ];
+				aCharPosArray[ i ] = aCharPosArray[ i + nSkippedGlyphs ];
+			}
 		}
 
 		long nTranslateX = 0;
@@ -1253,9 +1277,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVector ) const
 {
 	bool bRet = false;
-
-	if ( !mpLargestLayoutData )
-		return bRet;
 
 	if ( !pATSCubicMoveToUPP )
 		pATSCubicMoveToUPP = NewATSCubicMoveToUPP( SalATSCubicMoveToCallback );
@@ -1409,7 +1430,6 @@ void SalATSLayout::Destroy()
 
 	mnOrigWidth = 0;
 	mfGlyphScaleX = 1.0;
-	mpLargestLayoutData = NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -1420,9 +1440,6 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int n
 
 	nX = 0;
 	nY = 0;
-
-	if ( !mpLargestLayoutData )
-		return pRet;
 
 	int nRunIndex = 0;
 	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
