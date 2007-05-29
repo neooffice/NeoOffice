@@ -81,23 +81,6 @@
 #include <com/sun/star/uno/Sequence.hxx>
 #endif
 
-#ifdef USE_JAVA
-
-#ifndef _SV_OUTDATA_HXX
-#include <outdata.hxx>
-#endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
-#endif
-#ifndef _SV_SALVD_HXX
-#include <salvd.hxx>
-#endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-
-#endif	// USE_JAVA
-
 // ========================================================================
 
 DBG_NAMEEX( OutputDevice )
@@ -167,75 +150,9 @@ void OutputDevice::DrawGrid( const Rectangle& rRect, const Size& rDist, ULONG nF
 
 	if( nFlags & GRID_DOTS )
 	{
-#ifdef USE_JAVA
-		// Drawing pixels to a Java window or print graphics is extremly slow
-		// so draw to temporary virtual device if this is not a virtual device
-		VirtualDevice *pVirDev = dynamic_cast< VirtualDevice* >( this );
-		if ( pVirDev )
-		{
-			for( long i = 0L; i < nVertCount; i++ )
-				for( long j = 0L, Y = aVertBuf[ i ]; j < nHorzCount; j++ )
-					mpGraphics->DrawPixel( aHorzBuf[ j ], Y, this );
-		}
-		else
-		{
-			Point aSrcPt( aHorzBuf[ 0 ], aVertBuf[ 0 ] );
-			Size aSrcSize( aHorzBuf[ nHorzCount - 1 ] - aHorzBuf[ 0 ] + 1, aVertBuf[ nVertCount - 1] - aVertBuf[ 0 ] + 1 );
-			Point aDestPt( 0, 0 );
-
-			if ( aSrcPt.X() < 0 )
-			{
-				aDestPt.X() -= aSrcPt.X();
-				aSrcSize.setWidth( aSrcSize.Width() + aSrcPt.X() );
-				aSrcPt.X() = 0;
-			}
-			if ( aSrcPt.Y() < 0 )
-			{
-				aDestPt.Y() -= aSrcPt.Y();
-				aSrcSize.setHeight( aSrcSize.Height() + aSrcPt.Y() );
-				aSrcPt.Y() = 0;
-			}
-
-			if ( aSrcSize.Width() > 0 && aSrcSize.Height() > 0 )
-			{
-				ImplSVData* pSVData = ImplGetSVData();
-
-				// Use a SalVirtualDevice instance directly since the
-				// VirtualDevice construct will initialize all pixels to white
-				SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( mpGraphics, aSrcSize.Width(), aSrcSize.Height(), GetBitCount() );
-				if ( pSalVirDev )
-				{
-					SalGraphics *pGraphics = pSalVirDev->GetGraphics();
-					if ( pGraphics )
-					{
-						pGraphics->SetLineColor( ImplColorToSal( maLineColor ) );
-						for( long i = nVertCount - 1; i >= 0L; i-- )
-							for( long j = nHorzCount - 1, X = aHorzBuf[ j ] - aSrcPt.X(), Y = aVertBuf[ i ] - aSrcPt.Y(); j >= 0L && X >= 0L && Y >= 0L; j--, nX = aHorzBuf[ j ] - aSrcPt.X() )
-								pGraphics->DrawPixel( X, Y, NULL );
-
-						SalTwoRect aPosAry;
-						aPosAry.mnSrcX = aDestPt.X();
-						aPosAry.mnSrcY = aDestPt.Y();
-						aPosAry.mnSrcWidth = aSrcSize.Width();
-						aPosAry.mnSrcHeight = aSrcSize.Height();
-						aPosAry.mnDestX = aSrcPt.X();
-						aPosAry.mnDestY = aSrcPt.Y();
-						aPosAry.mnDestWidth = aPosAry.mnSrcWidth;
-						aPosAry.mnDestHeight = aPosAry.mnSrcHeight;
-						mpGraphics->CopyBits( &aPosAry, pGraphics, this, NULL );
-
-						pSalVirDev->ReleaseGraphics( pGraphics );
-					}
-
-					pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
-				}
-			}
-		}
-#else	// USE_JAVA
 		for( long i = 0L; i < nVertCount; i++ )
 			for( long j = 0L, Y = aVertBuf[ i ]; j < nHorzCount; j++ )
 				mpGraphics->DrawPixel( aHorzBuf[ j ], Y, this );
-#endif	// USE_JAVA
 	}
 	else
 	{

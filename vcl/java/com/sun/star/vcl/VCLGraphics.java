@@ -2567,8 +2567,9 @@ public final class VCLGraphics {
 						if (xor)
 							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 						g.setColor(new Color(color));
-						g.setClip(x, y, 1, 1);
-						g.fillRect(x, y, 1, 1);
+						// Fix bug 2438 by drawing a rectangle instead of
+						// filling it
+						g.drawRect(x, y, 1, 1);
 					}
 				}
 				catch (Throwable t) {
