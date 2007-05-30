@@ -2397,6 +2397,9 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
+		if (npoints == 0)
+			return;
+
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
