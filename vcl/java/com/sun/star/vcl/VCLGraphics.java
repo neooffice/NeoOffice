@@ -2595,10 +2595,10 @@ public final class VCLGraphics {
 						if (xor)
 							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 						g.setColor(new Color(color));
-						// Fix bug 2438 by drawing a rectangle instead of
+						// Fix bug 2438 by drawing a line instead of
 						// filling it and not setting any clip
 						g.setClip(null);
-						g.drawRect(x, y, 1, 1);
+						g.drawLine(x, y, x, y);
 					}
 				}
 				catch (Throwable t) {
