@@ -853,9 +853,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_pa
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				if ( _par1[ i ].mnX == _par1[ i ].mnY )
-					continue;
-				else if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+				if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
 					continue;
 
 				pXBits[ nPoints ] = _par1[ i ].mnX;
@@ -903,9 +901,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_p
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				if ( _par1[ i ].mnX == _par1[ i ].mnY )
-					continue;
-				else if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+				if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
 					continue;
 
 				pXBits[ nPoints ] = _par1[ i ].mnX;
@@ -961,9 +957,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 				for ( jsize j = 0; j < points; j++ )
 				{
-					if ( pPts[ j ].mnX == pPts[ j ].mnY )
-						continue;
-					else if ( j && pPts[ j ].mnX == pPts[ j - 1 ].mnX && pPts[ j ].mnY == pPts[ j - 1 ].mnY )
+					if ( j && pPts[ j ].mnX == pPts[ j - 1 ].mnX && pPts[ j ].mnY == pPts[ j - 1 ].mnY )
 						continue;
 
 					pXBits[ nPoints ] = pPts[ j ].mnX;
@@ -1580,9 +1574,7 @@ void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const SalPoint *_par1, S
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				if ( _par1[ i ].mnX == _par1[ i ].mnY )
-					continue;
-				else if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+				if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
 					continue;
 
 				pXBits[ nPoints ] = _par1[ i ].mnX;
