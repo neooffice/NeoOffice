@@ -1131,10 +1131,22 @@ public final class VCLGraphics {
 			return;
 		}
 
-		// Don't iterate through clip rectangles because if the text is not
-		// within the clip region, the next XOR operation seems to fail
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(graphicsBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
+			Graphics2D g2 = null;
 			try {
 				// The graphics may adjust the font
 				Font f = font.getFont();
@@ -1157,34 +1169,41 @@ public final class VCLGraphics {
 					advance += advances[i];
 				}
 
-				if (userClip != null)
-					g.setClip(userClip);
-				else
-					g.setClip(graphicsBounds);
-				g.translate(x, y);
+				// Significantly increase the overall drawing speed by only
+				// using rectangular clip regions
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g2 = (Graphics2D)g.create();
+					g2.setClip((Rectangle)clipRects.next());
+					g2.translate(x, y);
 
-				// Set rotation
-				if (orientation != 0)
-					g.rotate(Math.toRadians((double)orientation / 10) * -1);
+					// Set rotation
+					if (orientation != 0)
+						g2.rotate(Math.toRadians((double)orientation / 10) * -1);
 
-				glyphOrientation &= VCLGraphics.GF_ROTMASK;
-				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-					g.scale(1.0 , glyphScaleX);
-					if (glyphOrientation == VCLGraphics.GF_ROTL)
-						g.rotate(Math.toRadians(-90));
-					else
-						g.rotate(Math.toRadians(90));
+					glyphOrientation &= VCLGraphics.GF_ROTMASK;
+					if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
+						g2.scale(1.0 , glyphScaleX);
+						if (glyphOrientation == VCLGraphics.GF_ROTL)
+							g2.rotate(Math.toRadians(-90));
+						else
+							g2.rotate(Math.toRadians(90));
+					}
+					else {
+						g2.scale(glyphScaleX, 1.0);
+					}
+
+					// Draw the text to a scaled graphics
+					g2.drawGlyphVector(gv, translateX, translateY);
 				}
-				else {
-					g.scale(glyphScaleX, 1.0);
-				}
-
-				// Draw the text to a scaled graphics
-				g.drawGlyphVector(gv, translateX, translateY);
+				if (userPolygonClip)
+					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
+			if (g2 != null)
+				g2.dispose();
 			g.dispose();
 		}
 
