@@ -750,6 +750,8 @@ public final class VCLGraphics {
 						// Some versions of the JVM ignore clip in copyArea()
 						// so limit copying to the clip area
 						Rectangle clipRect = (Rectangle)clipRects.next();
+						// Fix bug 2439 by explicitly setting the clip
+						g.setClip(clipRect);
 						g.copyArea(srcX + clipRect.x - destX, srcY + clipRect.y - destY, clipRect.width, clipRect.height, destX - srcX, destY - srcY);
 					}
 				}
@@ -1055,7 +1057,7 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
@@ -1129,8 +1131,22 @@ public final class VCLGraphics {
 			return;
 		}
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(graphicsBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
+			Graphics2D g2 = null;
 			try {
 				// The graphics may adjust the font
 				Font f = font.getFont();
@@ -1153,32 +1169,41 @@ public final class VCLGraphics {
 					advance += advances[i];
 				}
 
-				g.setClip(userClip);
-				g.translate(x, y);
+				// Significantly increase the overall drawing speed by only
+				// using rectangular clip regions
+				Iterator clipRects = clipList.iterator();
+				while (clipRects.hasNext()) {
+					g2 = (Graphics2D)g.create();
+					g2.setClip((Rectangle)clipRects.next());
+					g2.translate(x, y);
 
-				// Set rotation
-				if (orientation != 0)
-					g.rotate(Math.toRadians((double)orientation / 10) * -1);
+					// Set rotation
+					if (orientation != 0)
+						g2.rotate(Math.toRadians((double)orientation / 10) * -1);
 
-				glyphOrientation &= VCLGraphics.GF_ROTMASK;
-				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-					g.scale(1.0 , glyphScaleX);
-					if (glyphOrientation == VCLGraphics.GF_ROTL)
-						g.rotate(Math.toRadians(-90));
-					else
-						g.rotate(Math.toRadians(90));
+					glyphOrientation &= VCLGraphics.GF_ROTMASK;
+					if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
+						g2.scale(1.0 , glyphScaleX);
+						if (glyphOrientation == VCLGraphics.GF_ROTL)
+							g2.rotate(Math.toRadians(-90));
+						else
+							g2.rotate(Math.toRadians(90));
+					}
+					else {
+						g2.scale(glyphScaleX, 1.0);
+					}
+
+					// Draw the text to a scaled graphics
+					g2.drawGlyphVector(gv, translateX, translateY);
 				}
-				else {
-					g.scale(glyphScaleX, 1.0);
-				}
-
-				// Draw the text to a scaled graphics
-				g.drawGlyphVector(gv, translateX, translateY);
-
+				if (userPolygonClip)
+					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
+			if (g2 != null)
+				g2.dispose();
 			g.dispose();
 		}
 
@@ -2568,7 +2593,8 @@ public final class VCLGraphics {
 							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 						g.setColor(new Color(color));
 						// Fix bug 2438 by drawing a rectangle instead of
-						// filling it
+						// filling it and not setting any clip
+						g.setClip(null);
 						g.drawRect(x, y, 1, 1);
 					}
 				}
