@@ -842,6 +842,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_pa
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jint nPoints = 0;
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
@@ -852,14 +853,20 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_pa
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				pXBits[ i ] = _par1[ i ].mnX;
-				pYBits[ i ] = _par1[ i ].mnY;
+				if ( _par1[ i ].mnX == _par1[ i ].mnY )
+					continue;
+				else if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+					continue;
+
+				pXBits[ nPoints ] = _par1[ i ].mnX;
+				pYBits[ nPoints ] = _par1[ i ].mnY;
+				nPoints++;
 			}
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
 			jvalue args[5];
-			args[0].i = jint( _par0 );
+			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
@@ -885,6 +892,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_p
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jint nPoints = 0;
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
@@ -895,14 +903,20 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_p
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				pXBits[ i ] = _par1[ i ].mnX;
-				pYBits[ i ] = _par1[ i ].mnY;
+				if ( _par1[ i ].mnX == _par1[ i ].mnY )
+					continue;
+				else if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+					continue;
+
+				pXBits[ nPoints ] = _par1[ i ].mnX;
+				pYBits[ nPoints ] = _par1[ i ].mnY;
+				nPoints++;
 			}
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
 			jvalue args[4];
-			args[0].i = jint( _par0 );
+			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
@@ -931,16 +945,12 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray ptsarray = t.pEnv->NewIntArray( elements );
-			bCopy = sal_False;
-			jint *pPtsBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( ptsarray, &bCopy );
-			memcpy( pPtsBits, (jint *)_par1, elements * sizeof( jint ) );
-			t.pEnv->ReleasePrimitiveArrayCritical( ptsarray, pPtsBits, 0 );
-			
 			jintArray tempArray = t.pEnv->NewIntArray( 0 );
 			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
 			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
 			for ( jsize i = 0; i < elements; i++ )
 			{
+				jint nPoints = 0;
 				jsize points( _par1[ i ] );
 				const SalPoint *pPts = _par2[ i ];
 				jintArray xarray = t.pEnv->NewIntArray( points );
@@ -951,11 +961,18 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 				for ( jsize j = 0; j < points; j++ )
 				{
-					pXBits[ j ] = pPts[ j ].mnX;
-					pYBits[ j ] = pPts[ j ].mnY;
+					if ( pPts[ j ].mnX == pPts[ j ].mnY )
+						continue;
+					else if ( j && pPts[ j ].mnX == pPts[ j - 1 ].mnX && pPts[ j ].mnY == pPts[ j - 1 ].mnY )
+						continue;
+
+					pXBits[ nPoints ] = pPts[ j ].mnX;
+					pYBits[ nPoints ] = pPts[ j ].mnY;
+					nPoints++;
 				}
 				t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 				t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
+				t.pEnv->SetIntArrayRegion( ptsarray, i, 1, &nPoints );
 				t.pEnv->SetObjectArrayElement( yptsarray, i, yarray );
 				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
 			}
@@ -1552,6 +1569,7 @@ void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const SalPoint *_par1, S
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jint nPoints = 0;
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
@@ -1562,14 +1580,20 @@ void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const SalPoint *_par1, S
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				pXBits[ i ] = _par1[ i ].mnX;
-				pYBits[ i ] = _par1[ i ].mnY;
+				if ( _par1[ i ].mnX == _par1[ i ].mnY )
+					continue;
+				else if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+					continue;
+
+				pXBits[ nPoints ] = _par1[ i ].mnX;
+				pYBits[ nPoints ] = _par1[ i ].mnY;
+				nPoints++;
 			}
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
 			jvalue args[4];
-			args[0].i = jint( _par0 );
+			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
