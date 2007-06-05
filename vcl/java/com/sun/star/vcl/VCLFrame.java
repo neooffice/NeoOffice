@@ -614,6 +614,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public final static int POINTER_TAB_SELECT_SW = 92;
 
+	/**
+	 * POINTER_PAINTBRUSH constant.
+	 */
+	public final static int POINTER_PAINTBRUSH = 93;
+	
 	/** 
 	 * The component to <code>VCLFrame</code> mapping.
 	 */
@@ -695,6 +700,598 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_NULL");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_NULL), c);
+		}
+				
+		url = cl.getSystemResource("com/sun/star/vcl/images/airbrush.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(5, 22), "POINTER_AIRBRUSH");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AIRBRUSH), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/ase.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(19, 16), "POINTER_AUTOSCROLL_E");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_E), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/asn.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 12), "POINTER_AUTOSCROLL_N");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_N), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/asne.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(21, 10), "POINTER_AUTOSCROLL_NE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_NE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/asns.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_AUTOSCROLL_NS");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_NS), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/asnswe");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_AUTOSCROLL_NSWE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_NSWE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/asnw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(10, 10), "POINTER_AUTOSCROLL_NW");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_NW), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/ass.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 19), "POINTER_AUTOSCROLL_S");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_S), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/asse.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(21, 21), "POINTER_AUTOSCROLL_SE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_SE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/assw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(21, 21), "POINTER_AUTOSCROLL_SW");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_SW), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/asw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(12, 15), "POINTER_AUTOSCROLL_W");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_W), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/aswe.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_AUTOSCROLL_WE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_AUTOSCROLL_WE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/chain.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 2), "POINTER_CHAIN");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_CHAIN), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/chainnot.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 2), "POINTER_CHAIN_NOTALLOWED");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_CHAIN_NOTALLOWED), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/chart.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 16), "POINTER_CHART");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_CHART), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/copydata.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_COPYDATA");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_COPYDATA), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/copydlnk.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_COPYDATALINK");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_COPYDATALINK), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/copyf.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_COPYFILE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_COPYFILE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/copyf2.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(7, 8), "POINTER_COPYFILES");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_COPYFILES), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/copyflnk.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_COPYFILELINK");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_COPYFILELINK), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/crook.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 14), "POINTER_CROOK");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_CROOK), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/crop.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(9, 9), "POINTER_CROP");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_CROP), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/cross.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_CROSS");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_CROSS), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/darc.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_ARC");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_ARC), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dbezier.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_BEZIER");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_BEZIER), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dcapt.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_CAPTION");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_CAPTION), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dcirccut.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_CIRCLECUT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_CIRCLECUT), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dconnect.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_CONNECT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_CONNECT), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dellipse.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_ELLIPSE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_ELLIPSE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/detectiv.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(12, 13), "POINTER_DETECTIVE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DETECTIVE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dfree.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_FREEHAND");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_FREEHAND), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dline.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_LINE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_LINE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dpie.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_PIE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_PIE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dpolygon.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_POLYGON");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_POLYGON), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/drect.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_RECT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_RECT), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/dtext.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_DRAW_TEXT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_DRAW_TEXT), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/fill.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(10, 22), "POINTER_FILL");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_FILL), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/hand.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_HAND");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_HAND), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/help.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_HELP");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_HELP), c);
+		}
+		
+		// NOTE:  Missing constant from Win32 :  HSIZE.CUR
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/hsizebar.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_HSIZEBAR");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_HSIZEBAR), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/hsplit.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_HSPLIT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_HSPLIT), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/linkdata.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_LINKDATA");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_LINKDATA), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/linkf.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_LINKFILE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_LINKFILE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/magnify.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(12, 13), "POINTER_MAGNIFY");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MAGNIFY), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/mirror.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(14, 12), "POINTER_MIRROR");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MIRROR), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/move.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(19, 16), "POINTER_MOVE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/movebw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEBEZIERWEIGHT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVEBEZIERWEIGHT), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/movedata.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEDATA");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVEDATA), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/movedlnk.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEDATALINK");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVEDATALINK), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/movef.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_MOVEFILE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVEFILE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/movef2.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(7, 8), "POINTER_MOVEFILES");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVEFILES), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/moveflnk.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_MOVEFILELINK");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVEFILELINK), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/movept.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEPOINT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_MOVEPOINT), c);
+		}
+		
+		// NOTE:  Unused POINTER_NESWSIZE
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/notallow.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_NOTALLOWED");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_NOTALLOWED), c);
+		}
+		
+		// NOTE:  Unused POINTER_NWSESIZE
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/pen.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(3, 27), "POINTER_PEN");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_PEN), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/pivotcol.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(7, 5), "POINTER_PIVOT_COL");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_PIVOT_COL), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/pivotdel.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 9), "POINTER_PIVOT_DELETE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_PIVOT_DELETE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/pivotfld.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 7), "POINTER_PIVOT_FIELD");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_PIVOT_FIELD), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/pivotrow.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(8, 7), "POINTER_PIVOT_ROW");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_PIVOT_ROW), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/pntbrsh.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(9, 16), "POINTER_PAINTBRUSH");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_PAINTBRUSH), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/refhand.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(13, 6), "POINTER_REFHAND");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_REFHAND), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/rotate.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_ROTATE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_ROTATE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblsele.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(30, 16), "POINTER_TAB_SELECT_E");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_E), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblsels.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 30), "POINTER_TAB_SELECT_S");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_S), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblselse.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(30, 30), "POINTER_TAB_SELECT_SE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_SE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblselsw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(1, 30), "POINTER_TAB_SELECT_SW");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_SW), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/tblselw.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(1, 16), "POINTER_TAB_SELECT_W");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TAB_SELECT_W), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/timemove.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_TIMEEVENT_MOVE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TIMEEVENT_MOVE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/timesize.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 17), "POINTER_TIMEEVENT_SIZE");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TIMEEVENT_SIZE), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/vshear.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_VSHEAR");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_VSHEAR), c);
+		}
+		
+		// NOTE:  Unused POINTER_VSIZE
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/vsizebar.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_VSIZEBAR");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_VSIZEBAR), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/vsplit.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 14), "POINTER_VSPLIT");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_VSPLIT), c);
+		}
+		
+		url = cl.getSystemResource("com/sun/star/vcl/images/vtext.gif");
+		if (url != null) {
+			Image img = toolkit.createImage(url);
+			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_TEXT_VERTICAL");
+			if (c != null)
+				customCursors.put(new Integer(POINTER_TEXT_VERTICAL), c);
 		}
 
 /*
