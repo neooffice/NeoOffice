@@ -1294,56 +1294,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				customCursors.put(new Integer(POINTER_TEXT_VERTICAL), c);
 		}
 
-/*
-		// TODO: Find the real cursor hot spot point and add the remaining
-		// cursor files.
-
-		// Create POINTER_TAB_SELECT_S
-		url = cl.getSystemResource("com/sun/star/vcl/images/tblsels.gif");
-		if (url != null) {
-			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(img.getWidth(null) / 2, img.getHeight(null)), "POINTER_TAB_SELECT_S");
-			if (c != null)
-				customCursors.put(new Integer(POINTER_TAB_SELECT_S), c);
-		}
-
-		// Create POINTER_TAB_SELECT_E
-		url = cl.getSystemResource("com/sun/star/vcl/images/tblsele.gif");
-		if (url != null) {
-			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(img.getWidth(null), img.getHeight(null) / 2), "POINTER_TAB_SELECT_E");
-			if (c != null)
-				customCursors.put(new Integer(POINTER_TAB_SELECT_E), c);
-		}
-
-		// Create POINTER_TAB_SELECT_SE
-		url = cl.getSystemResource("com/sun/star/vcl/images/tblselse.gif");
-		if (url != null) {
-			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(img.getWidth(null), img.getHeight(null)), "POINTER_TAB_SELECT_SE");
-			if (c != null)
-				customCursors.put(new Integer(POINTER_TAB_SELECT_SE), c);
-		}
-
-		// Create POINTER_TAB_SELECT_W
-		url = cl.getSystemResource("com/sun/star/vcl/images/tblselw.gif");
-		if (url != null) {
-			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, img.getHeight(null) / 2), "POINTER_TAB_SELECT_W");
-			if (c != null)
-				customCursors.put(new Integer(POINTER_TAB_SELECT_W), c);
-		}
-
-		// Create POINTER_TAB_SELECT_SW
-		url = cl.getSystemResource("com/sun/star/vcl/images/tblselsw.gif");
-		if (url != null) {
-			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, img.getHeight(null)), "POINTER_TAB_SWLECT_SE");
-			if (c != null)
-				customCursors.put(new Integer(POINTER_TAB_SELECT_SW), c);
-		}
-*/
-
 	}
 	
 	/**
