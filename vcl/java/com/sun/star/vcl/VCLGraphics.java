@@ -1323,11 +1323,21 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
 		if (!fill) {
-			destBounds.x--;
-			destBounds.y--;
-			destBounds.width += 2;
-			destBounds.height += 2;
+			destBounds.width++;
+			destBounds.height++;
 		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -1363,14 +1373,15 @@ public final class VCLGraphics {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color));
-					if (!userPolygonClip && fill) {
+					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
 							g.setClip((Rectangle)clipRects.next());
-							g.fillPolygon(polygon);
+							if (fill)
+								g.fillPolygon(polygon);
+							else
+								g.drawPolygon(polygon);
 						}
-						if (userPolygonClip)
-							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						g.setClip(userClip);
@@ -1433,31 +1444,41 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.x--;
-		destBounds.y--;
-		destBounds.width += 2;
-		destBounds.height += 2;
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
+		destBounds.width++;
+		destBounds.height++;
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
+
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
 
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
-					LinkedList clipList = new LinkedList();
-					if (userClipList != null) {
-						Iterator clipRects = userClipList.iterator();
-						while (clipRects.hasNext()) {
-							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-							if (!clip.isEmpty())
-								clipList.add(clip);
-						}
-					}
-					else {
-						clipList.add(destBounds);
-					}
-
 					AffineTransform transform = g.getTransform();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
@@ -1471,8 +1492,17 @@ public final class VCLGraphics {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color));
-					g.setClip(userClip);
-					g.drawPolyline(xpoints, ypoints, npoints);
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawPolyline(xpoints, ypoints, npoints);
+						}
+					}
+					else {
+						g.setClip(userClip);
+						g.drawPolyline(xpoints, ypoints, npoints);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1549,15 +1579,25 @@ public final class VCLGraphics {
 			else
 				area.add(a);
 		}
-		if (area == null || area.isEmpty())
+		if (area == null)
 			return;
 
 		Rectangle destBounds = area.getBounds();
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
 		if (!fill) {
-			destBounds.x--;
-			destBounds.y--;
-			destBounds.width += 2;
-			destBounds.height += 2;
+			destBounds.width++;
+			destBounds.height++;
 		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -1580,14 +1620,15 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				g.setColor(new Color(color));
-				if (!userPolygonClip && fill) {
+				if (!userPolygonClip) {
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						g.setClip((Rectangle)clipRects.next());
-						g.fill(area);
+						if (fill)
+							g.fill(area);
+						else
+							g.draw(area);
 					}
-					if (userPolygonClip)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					g.setClip(userClip);
@@ -1632,8 +1673,12 @@ public final class VCLGraphics {
 			y += height;
 			height *= -1;
 		}
-
-		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		Rectangle destBounds = new Rectangle(x, y, width, height);
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
@@ -2296,8 +2341,19 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
-		Rectangle destBounds = new Rectangle(x, y, width, height);
-		destBounds = destBounds.intersection(graphicsBounds);
+		if (width < 0) {
+			x += width;
+			width *= -1;
+		}
+		if (height < 0) {
+			y += height;
+			height *= -1;
+		}
+		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
+			destBounds.width++;
+			destBounds.height++;
+		}
 		if (destBounds.isEmpty())
 			return;
 
@@ -2326,8 +2382,17 @@ public final class VCLGraphics {
 					// Note: the JVM seems to have a bug and drawRect()
 					// draws dashed strokes one pixel above the
 					// specified y coordinate
-					g.setClip(userClip);
-					g.drawRect(x, y + 1, width - 1, height - 2);
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawRect(x, y + 1, width - 1, height - 2);
+						}
+					}
+					else {
+						g.setClip(userClip);
+						g.drawRect(x, y + 1, width - 1, height - 2);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2402,11 +2467,17 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
-			destBounds.x--;
-			destBounds.y--;
-			destBounds.width += 2;
-			destBounds.height += 2;
+			destBounds.width++;
+			destBounds.height++;
 		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -2434,8 +2505,17 @@ public final class VCLGraphics {
 					g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
 					g.setXORMode(Color.white);
 					g.setColor(Color.black);
-					g.setClip(userClip);
-					g.drawPolyline(xpoints, ypoints, npoints);
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawPolyline(xpoints, ypoints, npoints);
+						}
+					}
+					else {
+						g.setClip(userClip);
+						g.drawPolyline(xpoints, ypoints, npoints);
+					}
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2580,32 +2660,28 @@ public final class VCLGraphics {
 		if (!graphicsBounds.contains(x, y) || (userClip != null && !userClip.contains(x, y)))
 			return;
 
-		if (!xor && image != null) {
-			image.getImage().setRGB(x, y, color);
-		}
-		else {
-			Graphics2D g = getGraphics();
-			if (g != null) {
-				try {
-					if (graphics != null) {
-						AffineTransform transform = g.getTransform();
-						drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, x, y, 1, 1, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					else {
-						if (xor)
-							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-						g.setColor(new Color(color));
-						// Fix bug 2438 by drawing a line instead of
-						// filling it and not setting any clip
-						g.setClip(null);
-						g.drawLine(x, y, x, y);
-					}
+		// Don't use BitmapBuffer.setRGB() as it is flaky only small portions
+		// of the image have been painted prior to this call
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, x, y, 1, 1, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
-				catch (Throwable t) {
-					t.printStackTrace();
+				else {
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					g.setColor(new Color(color));
+					// Fix bug 2438 by drawing a line instead of
+					// filling it and not setting any clip
+					g.drawLine(x, y, x, y);
 				}
-				g.dispose();
 			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
 
 	}
