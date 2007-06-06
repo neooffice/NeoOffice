@@ -1162,11 +1162,12 @@ public final class VCLGraphics {
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
 
 				double advance = 0;
+				double fScaleX = font.getScaleX();
 				for (int i = 0; i < glyphs.length; i++) {
 					Point2D p = gv.getGlyphPosition(i);
 					p.setLocation(advance, p.getY());
 					gv.setGlyphPosition(i, p);
-					advance += advances[i];
+					advance += advances[i] / fScaleX;
 				}
 
 				// Significantly increase the overall drawing speed by only
@@ -1183,14 +1184,14 @@ public final class VCLGraphics {
 
 					glyphOrientation &= VCLGraphics.GF_ROTMASK;
 					if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-						g2.scale(1.0 , glyphScaleX);
+						g2.scale(fScaleX, glyphScaleX);
 						if (glyphOrientation == VCLGraphics.GF_ROTL)
 							g2.rotate(Math.toRadians(-90));
 						else
 							g2.rotate(Math.toRadians(90));
 					}
 					else {
-						g2.scale(glyphScaleX, 1.0);
+						g2.scale(fScaleX * glyphScaleX, 1.0);
 					}
 
 					// Draw the text to a scaled graphics
