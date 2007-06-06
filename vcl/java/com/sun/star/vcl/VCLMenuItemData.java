@@ -399,33 +399,19 @@ public final class VCLMenuItemData extends Component {
 			if(delegate!=null)
 				return(delegate.setChecked(newCheck));
 
-			boolean peersInvalidated=false;
-
+			// Fix bug 2407 by always forcing invalidation of checkboxes
+			// as changing the native menu items checked state can be
+			// flaky
 			isChecked=newCheck;
-			if(!isCheckbox) {
-				if(isChecked) {
-					isCheckbox=true;
+			isCheckbox=true;
 
-					// we were just set to checked, so we need to use instances
-					// of CheckMenuItem AWT objects instead of regular
-					// MenuItems. We need to invalidate our peers.
+			// we were just set to checked, so we need to use instances
+			// of CheckMenuItem AWT objects instead of regular
+			// MenuItems. We need to invalidate our peers.
 
-					unregisterAllAWTPeers();
-					peersInvalidated=true;
-				}
-			}
-			else {
-				// change state of our checkbox peers
+			unregisterAllAWTPeers();
 
-				Iterator e=awtPeers.iterator();
-				while(e.hasNext()) {
-					MenuItem cMI=(MenuItem)e.next();
-					if (cMI instanceof CheckboxMenuItem)
-						((CheckboxMenuItem)cMI).setState(isChecked);
-				}
-			}
-
-			return(peersInvalidated);
+			return true;
 		}
 
 	}
