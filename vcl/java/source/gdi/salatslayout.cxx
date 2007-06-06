@@ -45,7 +45,6 @@
 
 #include <sys/sysctl.h>
 #include <hash_map>
-#include <unicode/uchar.h>
 #include <unicode/uscript.h>
 
 #ifndef _SV_SALATSLAYOUT_HXX
@@ -924,7 +923,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				while ( nStart > nMinCharPos )
 				{
 					int i = nStart;
-					for ( ; i > nMinCharPos && !u_isUWhiteSpace( rArgs.mpStr[ i - 1 ] ); i-- )
+					for ( ; i > nMinCharPos && !IsSpacingGlyph( rArgs.mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
 						;
 					if ( i == nStart)
 						i--;
@@ -940,7 +939,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				while ( nStart < nEndCharPos )
 				{
 					int i = nStart;
-					for ( ; i < nEndCharPos && !u_isUWhiteSpace( rArgs.mpStr[ i ] ); i++ )
+					for ( ; i < nEndCharPos && !IsSpacingGlyph( rArgs.mpStr[ i ] | GF_ISCHAR ); i++ )
 						;
 					if ( i < nEndCharPos )
 						i++;
@@ -1129,8 +1128,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						continue;
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
-					// 0x0000ffff as spaces
-					if ( nGlyph >= 0x0000ffff )
+					// 0x0000ffff as spaces. Fix bug 2453 by treating all
+					// spacing characters as spaces.
+					if ( nGlyph >= 0x0000ffff || IsSpacingGlyph( nChar | GF_ISCHAR ) )
 						nGlyph = 0x0020 | GF_ISCHAR;
 
 					if ( pCurrentLayoutData->maVerticalFontStyle )
