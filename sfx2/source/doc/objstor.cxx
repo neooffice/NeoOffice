@@ -4073,9 +4073,18 @@ sal_Bool SfxObjectShell::GenerateAndStoreThumbnail( sal_Bool bEncrypted,
 					uno::Reference< document::XFilter > xFilter( xExporter, uno::UNO_QUERY_THROW );
 					xExporter->setSourceDocument( xComp );
 
-					com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aArgs( 1 );
-					aArgs[0].Name = ::rtl::OUString::createFromAscii( "OutputStream" );
-					aArgs[0].Value <<= com::sun::star::uno::Reference< com::sun::star::io::XOutputStream >( xPDFStream->getOutputStream() );
+					// Only save the first page. Note that the PDF filter
+					// library requires that the page range must be before the
+					// output stream in the property value sequence or else the
+					// the page range will be ignored
+					com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 1 );
+					aFilterData[0].Name = ::rtl::OUString::createFromAscii( "PageRange" );
+					aFilterData[0].Value <<= ::rtl::OUString::createFromAscii( "1-1" );
+					com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aArgs( 2 );
+					aArgs[0].Name = ::rtl::OUString::createFromAscii( "FilterData" );
+					aArgs[0].Value <<= aFilterData;
+					aArgs[1].Name = ::rtl::OUString::createFromAscii( "OutputStream" );
+					aArgs[1].Value <<= com::sun::star::uno::Reference< com::sun::star::io::XOutputStream >( xPDFStream->getOutputStream() );
 
 					if ( xFilter->filter( aArgs ) )
 					{
