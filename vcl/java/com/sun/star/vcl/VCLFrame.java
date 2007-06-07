@@ -1440,7 +1440,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.addFocusListener(this);
 		window.addInputMethodListener(this);
 		window.addKeyListener(this);
-		window.addWindowListener(this);
+		window.addMouseListener(this);
+		// Fix bug 2370 by listening for mouse events in the window frame
+		if (!undecorated) {
+			window.addMouseMotionListener(this);
+			window.addMouseWheelListener(this);
+			window.addWindowListener(this);
+		}
 		window.addWindowStateListener(this);
 
 	}
@@ -1584,6 +1590,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		window.removeFocusListener(this);
 		window.removeInputMethodListener(this);
 		window.removeKeyListener(this);
+		if (!undecorated) {
+			window.removeMouseListener(this);
+			window.removeMouseMotionListener(this);
+			window.removeMouseWheelListener(this);
+		}
 		window.removeWindowListener(this);
 		window.removeWindowStateListener(this);
 		queue.removeCachedEvents(frame);
