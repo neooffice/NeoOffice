@@ -925,8 +925,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					int i = nStart;
 					for ( ; i > nMinCharPos && !IsSpacingGlyph( rArgs.mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
 						;
-					if ( i == nStart)
-						i--;
+					for ( ; i > nMinCharPos && IsSpacingGlyph( rArgs.mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
+						;
 					mpGraphics->maFallbackRuns.AddRun( i, nStart, bRunRTL );
 					maRuns.AddRun( i, nStart, bRunRTL );
 					nEstimatedGlyphs += nStart - i;
@@ -941,8 +941,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					int i = nStart;
 					for ( ; i < nEndCharPos && !IsSpacingGlyph( rArgs.mpStr[ i ] | GF_ISCHAR ); i++ )
 						;
-					if ( i < nEndCharPos )
-						i++;
+					for ( ; i < nEndCharPos && IsSpacingGlyph( rArgs.mpStr[ i ] | GF_ISCHAR ); i++ )
+						;
 					mpGraphics->maFallbackRuns.AddRun( nStart, i, bRunRTL );
 					maRuns.AddRun( nStart, i, bRunRTL );
 					nEstimatedGlyphs += i - nStart;
