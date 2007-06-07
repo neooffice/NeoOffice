@@ -572,13 +572,22 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Find the real mouse frame
 				JavaSalFrame *pOriginalFrame = pFrame;
 				Point aScreenPoint( pMouseEvent->mnX + pFrame->maGeometry.nX, pMouseEvent->mnY + pFrame->maGeometry.nY );
-				if ( nID != SALEVENT_MOUSELEAVE )
+				if ( pSalData->mpCaptureFrame && pSalData->mpCaptureFrame->mbVisible )
+				{
+					if ( pSalData->mpCaptureFrame != pFrame )
+					{
+						pMouseEvent->mnX = aScreenPoint.X() - pSalData->mpCaptureFrame->maGeometry.nX;
+						pMouseEvent->mnY = aScreenPoint.Y() - pSalData->mpCaptureFrame->maGeometry.nY;
+						pFrame = pSalData->mpCaptureFrame;
+					}
+				}
+				else if ( nID != SALEVENT_MOUSELEAVE )
 				{
 					JavaSalFrame *pMouseFrame = FindMouseEventFrame( pFrame, aScreenPoint );
 					if ( pMouseFrame && pMouseFrame != pFrame && pMouseFrame->mbVisible )
 					{
-						pMouseEvent->mnX = aScreenPoint.X() - pMouseFrame->maGeometry.nX + pMouseFrame->maGeometry.nLeftDecoration;
-						pMouseEvent->mnY = aScreenPoint.Y() - pMouseFrame->maGeometry.nY + pMouseFrame->maGeometry.nTopDecoration;
+						pMouseEvent->mnX = aScreenPoint.X() - pMouseFrame->maGeometry.nX;
+						pMouseEvent->mnY = aScreenPoint.Y() - pMouseFrame->maGeometry.nY;
 						pFrame = pMouseFrame;
 					}
 				}

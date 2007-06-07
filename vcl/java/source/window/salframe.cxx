@@ -125,6 +125,7 @@ JavaSalFrame::~JavaSalFrame()
 {
 	Show( FALSE );
 	StartPresentation( FALSE );
+	CaptureMouse( FALSE );
 
 	if ( mpVCLFrame )
 	{
@@ -623,9 +624,11 @@ void JavaSalFrame::SetPointer( PointerStyle ePointerStyle )
 
 void JavaSalFrame::CaptureMouse( BOOL bCapture )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::CaptureMouse not implemented\n" );
-#endif
+	SalData *pSalData = GetSalData();
+	if ( bCapture )
+		pSalData->mpCaptureFrame = this;
+	else
+		pSalData->mpCaptureFrame = NULL;
 }
 
 // -----------------------------------------------------------------------
