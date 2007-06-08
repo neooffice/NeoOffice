@@ -59,6 +59,7 @@ public:
 						com_sun_star_vcl_VCLBitmap( long nDX, long nDY, USHORT nBitCount );
 	virtual				~com_sun_star_vcl_VCLBitmap() {};
 
+	void				dispose();
 	java_lang_Object*	getData();
 };
 

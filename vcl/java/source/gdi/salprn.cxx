@@ -107,12 +107,7 @@ void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 {
 	// Display a native page setup dialog
-	Orientation nOrientation = mpVCLPageFormat->getOrientation();
-	mpVCLPageFormat->setOrientation( pSetupData->meOrientation );
-
-	BOOL bOK = mpVCLPageFormat->setup();
-	if ( !bOK )
-		mpVCLPageFormat->setOrientation( nOrientation );
+	mpVCLPageFormat->setup();
 
 	// Update values
 	SetData( 0, pSetupData );

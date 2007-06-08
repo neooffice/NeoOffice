@@ -70,6 +70,7 @@ SalData::SalData()
 	mpLastDragFrame = NULL;
 	mbInSignalHandler = false;
 	mbDoubleScrollbarArrows = false;
+	mpCaptureFrame = NULL;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();

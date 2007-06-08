@@ -84,6 +84,8 @@ public final class VCLBitmap {
 		width = w;
 		height = h;
 
+		VCLEventQueue.runGCIfNeeded(0);
+
 		// Create the image. Note that all rasters are mapped to 32 bit rasters
 		// since this is what the JVM will convert all rasters to every time
 		// a non-32 bit raster is drawn.
@@ -91,9 +93,21 @@ public final class VCLBitmap {
 			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
 		}
 		catch (OutOfMemoryError ome) {
-			System.gc();
+			// Force the garbage collector to run
+			VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
 			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
 		}
+
+	}
+
+	/**
+	 * Disposes the image and releases any system resources that it is
+	 * using.
+	 */
+	public void dispose() {
+
+		image = null;
+		VCLEventQueue.runGCIfNeeded(0);
 
 	}
 

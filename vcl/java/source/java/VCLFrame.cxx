@@ -68,6 +68,10 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 {
 	jobject out = NULL;
 
+	JavaSalFrame *pFrame = (JavaSalFrame *)_par0;
+	if ( !pFrame )
+		return out;
+
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 
@@ -86,8 +90,17 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 		{
 			SalExtTextInputPosEvent aInputPosEvent;
 			memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
-			com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, (JavaSalFrame *)_par0, &aInputPosEvent );
-			aEvent.dispatch();
+
+			// Fix bug 2426 by checking the frame pointer before any use
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+			{
+				if ( *it == pFrame )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
+					aEvent.dispatch();
+					break;
+				}
+			}
 
 			jvalue args[4];
 			if ( aInputPosEvent.mbVertical )
@@ -185,6 +198,25 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLFrame::flushAllFrames()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "flushAllFrames", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallStaticVoidMethod( getMyClass(), mID );
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
@@ -251,29 +283,6 @@ void com_sun_star_vcl_VCLFrame::dispose()
 
 		if ( mID )
 			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
-	}
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLFrame::enableFlushing( sal_Bool _par0 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(Z)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "enableFlushing", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[1];
-			args[0].z = jboolean( _par0 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
 	}
 }
 

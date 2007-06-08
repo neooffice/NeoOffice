@@ -39,6 +39,40 @@
 
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
+@interface IsApplicationActive : NSObject
+{
+	BOOL					mbActive;
+}
+- (id)init;
+- (BOOL)isActive;
+- (void)isApplicationActive:(id)pObject;
+@end
+
+@implementation IsApplicationActive
+
+- (id)init
+{
+	[super init];
+
+	mbActive = YES;
+
+	return self;
+}
+
+- (BOOL)isActive
+{
+	return mbActive;
+}
+
+- (void)isApplicationActive:(id)pObject
+{
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+		mbActive = ( [pApp isActive] && ![pApp modalWindow] );
+}
+
+@end
+
 // Fix for bugs 1685, 1694, and 1859. Java 1.5 and higher will arbitrarily
 // change the selected font by creating a new font from the font's family
 // name and style. We fix these bugs by prepending the font names to the
@@ -375,6 +409,22 @@ static VCLResponder *pSharedResponder = nil;
 }
 
 @end
+
+BOOL NSApplication_isActive()
+{
+	BOOL bRet = YES;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	IsApplicationActive *pIsApplicationActive = [[IsApplicationActive alloc] init];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pIsApplicationActive performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActive waitUntilDone:YES modes:pModes];
+	bRet = [pIsApplicationActive isActive];
+
+	[pPool release];
+
+	return bRet;
+}
 
 void VCLEventQueue_installVCLEventQueueClasses(BOOL bUseKeyEntryFix)
 {

@@ -730,6 +730,9 @@ public final class VCLMenuItemData extends Component {
 						q.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_MENUDEACTIVATE, f, d.getVCLID(), d.getVCLCookie()));
 					}
 				}
+
+				// Fix bug 2407 by resetting the state to match the VCL state
+				setState(d.getChecked());
 			}
 
 		}

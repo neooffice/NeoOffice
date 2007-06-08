@@ -35,6 +35,7 @@
 
 package com.sun.star.vcl;
 
+import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Composite;
@@ -161,6 +162,11 @@ public final class VCLGraphics {
 	private static Method drawBitmapBufferMethod = null;
 
 	/**
+	 * The drawCheckBox method.
+	 */
+	private static Method drawCheckBoxMethod = null;
+
+	/**
 	 * The drawEPSMethod method.
 	 */
 	private static Method drawEPSMethod = null;
@@ -194,6 +200,16 @@ public final class VCLGraphics {
 	 * The drawPolyPolygon method.
 	 */
 	private static Method drawPolyPolygonMethod = null;
+
+	/**
+	 * The drawPushButton method.
+	 */
+	private static Method drawPushButtonMethod = null;
+
+	/**
+	 * The drawRadioButton method.
+	 */
+	private static Method drawRadioButtonMethod = null;
 
 	/**
 	 * The drawRect method.
@@ -330,6 +346,12 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
+			drawCheckBoxMethod = VCLGraphics.class.getMethod("drawCheckBox", new Class[]{ int.class, int.class, int.class, int.class, String.class, boolean.class, boolean.class, boolean.class, int.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
 			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class, float.class });
 		}
 		catch (Throwable t) {
@@ -361,6 +383,18 @@ public final class VCLGraphics {
 		}
 		try {
 			drawPolyPolygonMethod = VCLGraphics.class.getMethod("drawPolyPolygon", new Class[]{ int.class, int[].class, int[][].class, int[][].class, int.class, boolean.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawPushButtonMethod = VCLGraphics.class.getMethod("drawPushButton", new Class[]{ int.class, int.class, int.class, int.class, String.class, boolean.class, boolean.class, boolean.class, boolean.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawRadioButtonMethod = VCLGraphics.class.getMethod("drawRadioButton", new Class[]{ int.class, int.class, int.class, int.class, String.class, boolean.class, boolean.class, boolean.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -445,6 +479,11 @@ public final class VCLGraphics {
 	private LinkedList userClipList = null;
 
 	/**
+	 * The polygon clipping flag.
+	 */
+	private boolean userPolygonClip = false;
+
+	/**
 	 * The XOR mode.
 	 */
 	private boolean xor = false;
@@ -522,7 +561,7 @@ public final class VCLGraphics {
 
 		// No listeners allowed for printing
 		if (graphics != null) {
-			notifyGraphicsChanged(listener);
+			notifyGraphicsChanged(listener, false);
 			return;
 		}
 
@@ -541,6 +580,7 @@ public final class VCLGraphics {
 
 		userClip = null;
 		userClipList = null;
+		userPolygonClip = false;
 
 	}
 
@@ -586,7 +626,7 @@ public final class VCLGraphics {
 	 * Disposes the underlying graphics and releases any system resources that
 	 * it is using.
 	 */
-	void dispose() {
+	boolean dispose() {
 
 		notifyGraphicsChanged();
 		changeListeners = null;
@@ -599,6 +639,8 @@ public final class VCLGraphics {
 		pageFormat = null;
 		userClip = null;
 		userClipList = null;
+
+		return true;
 
 	}
 
@@ -644,7 +686,7 @@ public final class VCLGraphics {
 			clipList.add(destBounds);
 		}
 
-		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight) {
+		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight || userPolygonClip) {
 			BufferedImage img = null;
 			if (vg.getImage() != null)
 				img = vg.getImage().getImage();
@@ -674,20 +716,23 @@ public final class VCLGraphics {
 					destY += (int)((srcBounds.y - srcY) * scaleY);
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
 					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
-					if (xor && allowXOR) {
-						g.setComposite(VCLGraphics.xorImageComposite);
-						VCLGraphics.xorImageComposite.setXORMode(Color.black);
-					}
-					if (srcBounds.width == destWidth && srcBounds.height == destHeight) {
-						g.setClip(userClip);
-						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
-					}
-					else {
+
+					if (!userPolygonClip || (xor && allowXOR)) {
+						if (xor && allowXOR) {
+							g.setComposite(VCLGraphics.xorImageComposite);
+							VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						}
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
 							g.setClip((Rectangle)clipRects.next());
 							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 						}
+						if (userPolygonClip)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					}
+					else {
+						g.setClip(userClip);
+						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
 				}
 				catch (Throwable t) {
@@ -705,6 +750,8 @@ public final class VCLGraphics {
 						// Some versions of the JVM ignore clip in copyArea()
 						// so limit copying to the clip area
 						Rectangle clipRect = (Rectangle)clipRects.next();
+						// Fix bug 2439 by explicitly setting the clip
+						g.setClip(clipRect);
 						g.copyArea(srcX + clipRect.x - destX, srcY + clipRect.y - destY, clipRect.width, clipRect.height, destX - srcX, destY - srcY);
 					}
 				}
@@ -781,6 +828,7 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param destHeight the height of the graphics to copy to
 	 */
 	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
 
@@ -808,7 +856,7 @@ public final class VCLGraphics {
 			}
 		}
 		else {
-			clipList.add(graphicsBounds);
+			clipList.add(destBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -821,6 +869,8 @@ public final class VCLGraphics {
 						Rectangle clip = (Rectangle)clipRects.next();
 						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					// Make sure source bounds don't fall outside the bitmap
@@ -830,20 +880,23 @@ public final class VCLGraphics {
 					destY += (int)((srcBounds.y - srcY) * scaleY);
 					destWidth += (int)((srcBounds.width - srcWidth) * scaleX);
 					destHeight += (int)((srcBounds.height - srcHeight) * scaleY);
-					if (xor) {
-						g.setComposite(VCLGraphics.xorImageComposite);
-						VCLGraphics.xorImageComposite.setXORMode(Color.black);
-					}
-					if (srcBounds.width == destWidth && srcBounds.height == destHeight) {
-						g.setClip(userClip);
-						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
-					}
-					else {
+
+					if (!userPolygonClip || xor) {
+						if (xor) {
+							g.setComposite(VCLGraphics.xorImageComposite);
+							VCLGraphics.xorImageComposite.setXORMode(Color.black);
+						}
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
 							g.setClip((Rectangle)clipRects.next());
 							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 						}
+						if (userPolygonClip)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					}
+					else {
+						g.setClip(userClip);
+						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
 				}
 			}
@@ -938,6 +991,8 @@ public final class VCLGraphics {
 					Rectangle clip = (Rectangle)clipRects.next();
 					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
+				if (userPolygonClip)
+					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1002,13 +1057,13 @@ public final class VCLGraphics {
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
 		}
 		else {
-			clipList.add(graphicsBounds);
+			clipList.add(destBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -1022,6 +1077,8 @@ public final class VCLGraphics {
 					g.setClip(clip);
 					drawEPS0(epsData, epsDataSize, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
+				if (userPolygonClip)
+					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1088,19 +1145,18 @@ public final class VCLGraphics {
 		}
 
 		Graphics2D g = getGraphics();
-		Graphics2D g2 = null;
 		if (g != null) {
+			Graphics2D g2 = null;
 			try {
 				// The graphics may adjust the font
 				Font f = font.getFont();
 				g.setFont(f);
 
-				RenderingHints hints = g.getRenderingHints();
-				if (font.isAntialiased())
-					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-				else
+				if (!font.isAntialiased()) {
+					RenderingHints hints = g.getRenderingHints();
 					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-				g.setRenderingHints(hints);
+					g.setRenderingHints(hints);
+				}
 				g.setColor(new Color(color));
 
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
@@ -1114,6 +1170,8 @@ public final class VCLGraphics {
 					advance += advances[i] / fScaleX;
 				}
 
+				// Significantly increase the overall drawing speed by only
+				// using rectangular clip regions
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g2 = (Graphics2D)g.create();
@@ -1138,10 +1196,9 @@ public final class VCLGraphics {
 
 					// Draw the text to a scaled graphics
 					g2.drawGlyphVector(gv, translateX, translateY);
-
-					g2.dispose();
-					g2 = null;
 				}
+				if (userPolygonClip)
+					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1179,39 +1236,38 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					AffineTransform transform = g.getTransform();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						Rectangle clip = (Rectangle)clipRects.next();
 						drawLine0(x1, y1, x2, y2, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color));
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
-						g.drawLine(x1, y1, x2, y2);
-					}
+					g.setClip(userClip);
+					g.drawLine(x1, y1, x2, y2);
 				}
 			}
 			catch (Throwable t) {
@@ -1268,13 +1324,23 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		if (!fill) {
-			destBounds.x--;
-			destBounds.y--;
-			destBounds.width += 2;
-			destBounds.height += 2;
-			destBounds = destBounds.intersection(graphicsBounds);
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
 		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
+		if (!fill) {
+			destBounds.width++;
+			destBounds.height++;
+		}
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
@@ -1301,14 +1367,25 @@ public final class VCLGraphics {
 						Rectangle clip = (Rectangle)clipRects.next();
 						drawPolygon0(npoints, xpoints, ypoints, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color));
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							if (fill)
+								g.fillPolygon(polygon);
+							else
+								g.drawPolygon(polygon);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						if (fill)
 							g.fillPolygon(polygon);
 						else
@@ -1368,10 +1445,20 @@ public final class VCLGraphics {
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
-		destBounds.x--;
-		destBounds.y--;
-		destBounds.width += 2;
-		destBounds.height += 2;
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
+		destBounds.width++;
+		destBounds.height++;
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1399,14 +1486,22 @@ public final class VCLGraphics {
 						Rectangle clip = (Rectangle)clipRects.next();
 						drawPolyline0(npoints, xpoints, ypoints, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color));
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawPolyline(xpoints, ypoints, npoints);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.drawPolyline(xpoints, ypoints, npoints);
 					}
 				}
@@ -1485,15 +1580,25 @@ public final class VCLGraphics {
 			else
 				area.add(a);
 		}
-		if (area == null || area.isEmpty())
+		if (area == null)
 			return;
 
 		Rectangle destBounds = area.getBounds();
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
 		if (!fill) {
-			destBounds.x--;
-			destBounds.y--;
-			destBounds.width += 2;
-			destBounds.height += 2;
+			destBounds.width++;
+			destBounds.height++;
 		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -1515,14 +1620,19 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				if (xor) {
-					g.setComposite(VCLGraphics.xorImageComposite);
-					VCLGraphics.xorImageComposite.setXORMode(Color.black);
-				}
 				g.setColor(new Color(color));
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					g.setClip((Rectangle)clipRects.next());
+				if (!userPolygonClip) {
+					Iterator clipRects = clipList.iterator();
+					while (clipRects.hasNext()) {
+						g.setClip((Rectangle)clipRects.next());
+						if (fill)
+							g.fill(area);
+						else
+							g.draw(area);
+					}
+				}
+				else {
+					g.setClip(userClip);
 					if (fill)
 						g.fill(area);
 					else
@@ -1564,8 +1674,12 @@ public final class VCLGraphics {
 			y += height;
 			height *= -1;
 		}
-
-		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		Rectangle destBounds = new Rectangle(x, y, width, height);
+		if (destBounds.width == 0 || destBounds.height == 0) {
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			return;
+		}
+		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
@@ -1595,17 +1709,26 @@ public final class VCLGraphics {
 						else
 							drawRect0(x, y, width - 1, height - 1, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color));
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						Rectangle clipRect = (Rectangle)clipRects.next();
-						g.setClip(clipRect);
+					if (!userPolygonClip && fill) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+						}
+						if (userPolygonClip)
+							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					}
+					else {
+						g.setClip(userClip);
 						if (fill)
-							g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+							g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
 						else
 							g.drawRect(x, y, width - 1, height - 1);
 					}
@@ -1658,6 +1781,12 @@ public final class VCLGraphics {
 	 */
 	public void drawPushButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, boolean isDefault) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPushButtonMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), title, new Boolean(enabled), new Boolean(focused), new Boolean(pressed), new Boolean(isDefault) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1706,9 +1835,17 @@ public final class VCLGraphics {
 				}
 				else {
 					VCLGraphics.button.setSize(bounds.width, bounds.height);
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.translate(bounds.x, bounds.y);
+							VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
+							g.translate(bounds.x * -1, bounds.y * -1);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.translate(bounds.x, bounds.y);
 						VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
 						g.translate(bounds.x * -1, bounds.y * -1);
@@ -1770,6 +1907,12 @@ public final class VCLGraphics {
 	 */
 	public void drawRadioButton(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
 
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawRadioButtonMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), title, new Boolean(enabled), new Boolean(focused), new Boolean(pressed), new Integer(buttonState) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
@@ -1817,9 +1960,17 @@ public final class VCLGraphics {
 				}
 				else {
 					VCLGraphics.radioButton.setSize(d.width, d.height);
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.translate(bounds.x, bounds.y);
+							VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
+							g.translate(bounds.x * -1, bounds.y * -1);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.translate(bounds.x, bounds.y);
 						VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
 						g.translate(bounds.x * -1, bounds.y * -1);
@@ -1865,6 +2016,12 @@ public final class VCLGraphics {
 	 * @param buttonState	0 = off, 1 = on, 2 = mixed.  Note that Aqua does not provide mixed button state by default.
 	 */
 	public void drawCheckBox(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawCheckBoxMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), title, new Boolean(enabled), new Boolean(focused), new Boolean(pressed), new Integer(buttonState) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
 
 		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -1914,9 +2071,17 @@ public final class VCLGraphics {
 				}
 				else {
 					VCLGraphics.checkBoxButton.setSize(d.width, d.height);
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.translate(bounds.x, bounds.y);
+							VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
+							g.translate(bounds.x * -1, bounds.y * -1);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.translate(bounds.x, bounds.y);
 						VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
 						g.translate(bounds.x * -1, bounds.y * -1);
@@ -2035,10 +2200,6 @@ public final class VCLGraphics {
 	 * @return the graphics context
 	 */
 	Graphics2D getGraphics(boolean notify) {
-
-		// Don't bother painting if we haven't attached to the panel yet
-		if (frame != null && image != null)
-			return null;
 
 		Graphics2D g;
 		if (image != null) {
@@ -2181,8 +2342,19 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
-		Rectangle destBounds = new Rectangle(x, y, width, height);
-		destBounds = destBounds.intersection(graphicsBounds);
+		if (width < 0) {
+			x += width;
+			width *= -1;
+		}
+		if (height < 0) {
+			y += height;
+			height *= -1;
+		}
+		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
+		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
+			destBounds.width++;
+			destBounds.height++;
+		}
 		if (destBounds.isEmpty())
 			return;
 
@@ -2211,9 +2383,15 @@ public final class VCLGraphics {
 					// Note: the JVM seems to have a bug and drawRect()
 					// draws dashed strokes one pixel above the
 					// specified y coordinate
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawRect(x, y + 1, width - 1, height - 2);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.drawRect(x, y + 1, width - 1, height - 2);
 					}
 				}
@@ -2229,9 +2407,15 @@ public final class VCLGraphics {
 				try {
 					g.setXORMode(Color.white);
 					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.fillRect(x, y, width, height);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.fillRect(x, y, width, height);
 					}
 				}
@@ -2253,6 +2437,8 @@ public final class VCLGraphics {
 						g.setClip(clipRect);
 						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2277,13 +2463,22 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
+		if (npoints == 0)
+			return;
+
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
 		if ((options & VCLGraphics.SAL_INVERT_TRACKFRAME) == VCLGraphics.SAL_INVERT_TRACKFRAME) {
-			destBounds.x--;
-			destBounds.y--;
-			destBounds.width += 2;
-			destBounds.height += 2;
+			destBounds.width++;
+			destBounds.height++;
 		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
@@ -2311,9 +2506,15 @@ public final class VCLGraphics {
 					g.setStroke(new BasicStroke(stroke.getLineWidth(), BasicStroke.CAP_BUTT, BasicStroke.JOIN_MITER, stroke.getMiterLimit(), new float[]{ 1.0f, 1.0f }, 0.0f));
 					g.setXORMode(Color.white);
 					g.setColor(Color.black);
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawPolyline(xpoints, ypoints, npoints);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.drawPolyline(xpoints, ypoints, npoints);
 					}
 				}
@@ -2329,9 +2530,15 @@ public final class VCLGraphics {
 				try {
 					g.setXORMode(Color.white);
 					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.fillPolygon(polygon);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						g.fillPolygon(polygon);
 					}
 				}
@@ -2348,10 +2555,11 @@ public final class VCLGraphics {
 					g.setComposite(VCLGraphics.invertComposite);
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
-						Rectangle clipRect = (Rectangle)clipRects.next();
-						g.setClip(clipRect);
+						g.setClip((Rectangle)clipRects.next());
 						g.fillPolygon(polygon);
 					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				catch (Throwable t) {
 					t.printStackTrace();
@@ -2366,8 +2574,10 @@ public final class VCLGraphics {
 	 * Notifies the specified change listener.
 	 *
 	 * @param listener a pointer to a C++ JavaSalBitmap instance
+	 * @param disposed <code>true</code> if this graphics has been disposed,
+	 *  otherwise <code>false</code>
 	 */
-	native void notifyGraphicsChanged(long listener);
+	native void notifyGraphicsChanged(long listener, boolean disposed);
 
 	/**
 	 * Notifies all change listeners.
@@ -2375,8 +2585,14 @@ public final class VCLGraphics {
 	void notifyGraphicsChanged() {
 
 		if (changeListeners != null) {
+			boolean d = false;
+			if (frame != null) {
+				Panel p = frame.getPanel();
+				d = (p == null || !p.isShowing());
+			}
+
 			while (changeListeners.size() > 0)
-				notifyGraphicsChanged(((Long)changeListeners.removeLast()).longValue());
+				notifyGraphicsChanged(((Long)changeListeners.removeLast()).longValue(), d);
 		}
 
 	}
@@ -2400,6 +2616,7 @@ public final class VCLGraphics {
 
 		userClip = null;
 		userClipList = null;
+		userPolygonClip = false;
 
 	}
 
@@ -2444,30 +2661,28 @@ public final class VCLGraphics {
 		if (!graphicsBounds.contains(x, y) || (userClip != null && !userClip.contains(x, y)))
 			return;
 
-		if (!xor && image != null) {
-			image.getImage().setRGB(x, y, color);
-		}
-		else {
-			Graphics2D g = getGraphics();
-			if (g != null) {
-				try {
-					if (graphics != null) {
-						AffineTransform transform = g.getTransform();
-						drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, x, y, 1, 1, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					else {
-						if (xor)
-							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-						g.setColor(new Color(color));
-						g.setClip(x, y, 1, 1);
-						g.fillRect(x, y, 1, 1);
-					}
+		// Don't use BitmapBuffer.setRGB() as it is flaky only small portions
+		// of the image have been painted prior to this call
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, x, y, 1, 1, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
-				catch (Throwable t) {
-					t.printStackTrace();
+				else {
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					g.setColor(new Color(color));
+					// Fix bug 2438 by drawing a line instead of
+					// filling it and not setting any clip
+					g.drawLine(x, y, x, y);
 				}
-				g.dispose();
 			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
 		}
 
 	}
@@ -2499,6 +2714,9 @@ public final class VCLGraphics {
 	public void unionClipRegion(int x, int y, int width, int height) {
 
 		Rectangle bounds = new Rectangle(x, y, width, height);
+		if (bounds.isEmpty())
+			return;
+
 		Area area = new Area(bounds);
 		if (userClip != null)
 			userClip.add(area);
@@ -2508,16 +2726,69 @@ public final class VCLGraphics {
 		if (userClip.isEmpty()) {
 			userClip = null;
 			userClipList = null;
+			userPolygonClip = false;
 		}
 		else if (userClip.isRectangular()) {
 			userClipList = new LinkedList();
 			userClipList.add(userClip.getBounds());
+			userPolygonClip = false;
 		}
 		else {
+			// Don't change userPolygonClip flag
 			if (userClipList == null)
 				userClipList = new LinkedList();
 			userClipList.add(bounds);
 		}
+
+	}
+
+	/**
+	 * Unions the cached clipping area with the specified poly polygon. The
+	 * cached clipping area is not actually applied until the
+	 * {@link #endSetClipRegion()} method is called. Note that some drawing
+	 * methods in this class cannot handle non-rectangular clip regions so
+	 * this method will likely leave too big of a clip region for such
+	 * methods.
+	 *
+	 * @param npoly the number of polygons
+	 * @param npoints the array of the total number of points in each polygon
+	 * @param xpoints the array of arrays of x coordinates
+	 * @param ypoints the array of arrays of y coordinates
+	 * @return <code>true</code> if the clip region is not empty, otherwise
+	 *  <code>false</code>
+	 */
+	public boolean unionClipRegion(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints) {
+
+		for (int i = 0; i < npoly; i++) {
+			Polygon p = new Polygon(xpoints[i], ypoints[i], npoints[i]);
+			Area a = new Area(p);
+			if (a != null && !a.isEmpty()) {
+				if (userClip == null)
+					userClip = a;
+				else
+					userClip.add(a);
+
+				if (userClip.isEmpty()) {
+					userClip = null;
+					userClipList = null;
+					userPolygonClip = false;
+				}
+				else if (userClip.isRectangular()) {
+					userClipList = new LinkedList();
+					userClipList.add(userClip.getBounds());
+					userPolygonClip = false;
+				}
+				else {
+					if (userClipList == null)
+						userClipList = new LinkedList();
+					userClipList.add(a.getBounds());
+					if (!userPolygonClip && !a.isRectangular())
+						userPolygonClip = true;
+				}
+			}
+		}
+
+		return (userClip != null && !userClip.isEmpty());
 
 	}
 
@@ -2552,12 +2823,18 @@ public final class VCLGraphics {
 
 		void drawOperations() {
 
+			Area oldUserClip = graphics.userClip;
+			LinkedList oldUserClipList = graphics.userClipList;
+			boolean oldUserPolygonClip = graphics.userPolygonClip;
+			boolean oldXOR = graphics.xor;
+
 			graphics.pageQueue = null;
 
 			// Invoke all of the queued drawing operations
 			while (drawingHead != null) {
 				graphics.userClip = drawingHead.clip;
 				graphics.userClipList = drawingHead.clipList;
+				graphics.userPolygonClip = drawingHead.polygonClip;
 				try {
 					drawingHead.method.invoke(graphics, drawingHead.params);
 				}
@@ -2571,7 +2848,12 @@ public final class VCLGraphics {
 			}
 			drawingTail = null;
 
-			graphics = null;
+			graphics.userClip = oldUserClip;
+			graphics.userClipList = oldUserClipList;
+			graphics.userPolygonClip = oldUserPolygonClip;
+			graphics.xor = oldXOR;
+
+			graphics.pageQueue = this;
 
 		}
 
@@ -2581,6 +2863,7 @@ public final class VCLGraphics {
 			if (graphics.userClip != null) {
 				i.clip = new Area(graphics.userClip);
 				i.clipList = new LinkedList(graphics.userClipList);
+				i.xor = graphics.xor;
 			}
 
 			if (drawingHead != null) {
@@ -2610,6 +2893,10 @@ public final class VCLGraphics {
 		PageQueueItem next = null;
 
 		Object[] params = null;
+
+		boolean polygonClip = false;
+
+		boolean xor = false;
 
 		PageQueueItem(Method m, Object[] p) {
 
@@ -2805,6 +3092,16 @@ public final class VCLGraphics {
 		void setDefault(boolean b) {
 
 			isDefault = b;
+
+		}
+
+	}
+
+	final static class PolygonClipException extends AWTException {
+
+		public PolygonClipException(String msg) {
+
+			super(msg);
 
 		}
 

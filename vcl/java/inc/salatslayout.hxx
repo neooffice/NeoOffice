@@ -70,7 +70,6 @@ class SalATSLayout : public GenericSalLayout
 	::std::map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
 	long				mnOrigWidth;
 	float				mfGlyphScaleX;
-	ImplATSLayoutData*	mpLargestLayoutData;
 
 public:
 	static void			ClearLayoutDataCache();

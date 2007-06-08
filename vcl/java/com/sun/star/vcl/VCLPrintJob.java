@@ -40,6 +40,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.geom.AffineTransform;
+import java.awt.print.Pageable;
 import java.awt.print.PageFormat;
 import java.awt.print.Printable;
 import java.awt.print.PrinterAbortException;
@@ -52,7 +53,7 @@ import java.awt.print.PrinterJob;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLPrintJob implements Printable, Runnable {
+public final class VCLPrintJob implements Pageable, Printable, Runnable {
 
 	/**
 	 * The cached <code>VCLGraphics</code>.
@@ -202,6 +203,46 @@ public final class VCLPrintJob implements Printable, Runnable {
 	}
 
 	/**
+	 * Returns the number of pages.
+	 *
+	 * @return the number of pages
+	 */
+	public int getNumberOfPages() {
+
+		// On Leopard, return Pageable.UNKNOWN_NUMBER_OF_PAGES causes
+		// the JVM to display a native error dialog
+		return Integer.MAX_VALUE;
+
+	}
+
+	/**
+	 * Returns the page format.
+	 *
+	 * @param p the page index
+	 * @return the page format
+	 */
+	public PageFormat getPageFormat(int p) {
+
+		if (pageFormat != null)
+			return pageFormat.getPageFormat();
+		else
+			return null;
+
+	}
+
+	/**
+	 * Returns the printable
+	 *
+	 * @param p the page index
+	 * @return the printable
+	 */
+	public Printable getPrintable(int p) {
+
+		return this;
+
+	}
+
+	/**
 	 * Release the printGraphics for the current page.
 	 */
 	public synchronized void endPage() {
@@ -343,7 +384,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 
 		// Start the printing thread if it has not yet been started
 		if (!printStarted && printThread == null) {
-			job.setPrintable(this, pageFormat.getPageFormat());
+			job.setPageable(this);
 			job.setJobName(jobName);
 			pageFormat.setEditable(false);
 
@@ -357,7 +398,7 @@ public final class VCLPrintJob implements Printable, Runnable {
 			// Fix bug 2101 by trying to set the printable a second time
 			if (printThread == null) {
 				printStarted = false;
-				job.setPrintable(this, pageFormat.getPageFormat());
+				job.setPageable(this);
 				job.setJobName(jobName);
 
 				printThread = new Thread(this);

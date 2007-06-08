@@ -59,6 +59,9 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _SV_CTRL_HXX
+#include <ctrl.hxx>
+#endif
 #ifndef _SV_FLOATWIN_HXX
 #include <floatwin.hxx>
 #endif
@@ -108,6 +111,25 @@ static JavaSalFrame *FindMouseEventFrame( JavaSalFrame *pFrame, const Point &rSc
 	}
 
 	return NULL;
+}
+
+// ----------------------------------------------------------------------------
+
+static void InvalidateControls( Window *pWindow )
+{
+	if ( pWindow && pWindow->IsReallyVisible() )
+	{
+		Control *pCtrl = dynamic_cast< Control * >( pWindow );
+		if ( pCtrl )
+		{
+			pCtrl->Invalidate();
+			return;
+		}
+
+		USHORT nCount = pWindow->GetChildCount();
+		for ( USHORT i = 0; i < nCount; i++ )
+			InvalidateControls( pWindow->GetChild( i ) );
+	}
 }
 
 // ============================================================================
@@ -302,19 +324,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	// Handle events that require a JavaSalFrame pointer
 	JavaSalFrame *pFrame = getFrame();
 	bool bFound = false;
-	JavaSalFrame* pFlushingDisabled = NULL;
-	if ( pFrame && pFrame->GetInstance() )
+	if ( pFrame )
 	{
 		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 		{
 			if ( pFrame == *it )
 			{
-				bFound = true;
-				if ( pFrame->mbVisible )
-				{
-					pFlushingDisabled = pFrame;
-					pFrame->mpVCLFrame->enableFlushing( sal_False );
-				}
+				bFound = pFrame->GetInstance();
 				break;
 			}
 		}
@@ -433,23 +449,52 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		case SALEVENT_GETFOCUS:
 		{
 			// Ignore focus events for floating windows
-			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible && pFrame != pSalData->mpFocusFrame && !pFrame->IsFloatingFrame() )
+			if ( !bDeleteDataOnly )
 			{
-				if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
-					pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
-				pSalData->mpFocusFrame = pFrame;
-				pFrame->CallCallback( nID, NULL );
+				if ( pFrame != pSalData->mpFocusFrame )
+				{
+					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+						pSalData->mpFocusFrame->CallCallback( SALEVENT_LOSEFOCUS, NULL );
+					pSalData->mpFocusFrame = NULL;
+				}
+
+				if ( pFrame && pFrame->mbVisible && !pFrame->IsFloatingFrame() )
+				{
+					pSalData->mpFocusFrame = pFrame;
+					pFrame->CallCallback( nID, NULL );
+
+					Window *pWindow = Application::GetFirstTopLevelWindow();
+					while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+						pWindow = Application::GetNextTopLevelWindow( pWindow );
+					InvalidateControls( pWindow );
+				}
 			}
 
 			break;
 		}
 		case SALEVENT_LOSEFOCUS:
 		{
-			if ( !bDeleteDataOnly && pFrame && pFrame == pSalData->mpFocusFrame )
+			if ( !bDeleteDataOnly && pFrame )
 			{
-				if ( pFrame->mbVisible )
+				if ( pFrame == pSalData->mpFocusFrame )
+				{
+					pSalData->mpFocusFrame = NULL;
 					pFrame->CallCallback( nID, NULL );
-				pSalData->mpFocusFrame = NULL;
+				}
+
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				{
+					if ( pFrame == *it )
+					{
+						if ( pFrame->mbVisible && !pFrame->IsFloatingFrame() )
+						{
+							Window *pWindow = Application::GetFirstTopLevelWindow();
+							while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+								pWindow = Application::GetNextTopLevelWindow( pWindow );
+							InvalidateControls( pWindow );
+						}
+					}
+				}
 			}
 
 			break;
@@ -527,13 +572,22 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Find the real mouse frame
 				JavaSalFrame *pOriginalFrame = pFrame;
 				Point aScreenPoint( pMouseEvent->mnX + pFrame->maGeometry.nX, pMouseEvent->mnY + pFrame->maGeometry.nY );
-				if ( nID != SALEVENT_MOUSELEAVE )
+				if ( pSalData->mpCaptureFrame && pSalData->mpCaptureFrame->mbVisible )
+				{
+					if ( pSalData->mpCaptureFrame != pFrame )
+					{
+						pMouseEvent->mnX = aScreenPoint.X() - pSalData->mpCaptureFrame->maGeometry.nX;
+						pMouseEvent->mnY = aScreenPoint.Y() - pSalData->mpCaptureFrame->maGeometry.nY;
+						pFrame = pSalData->mpCaptureFrame;
+					}
+				}
+				else if ( nID != SALEVENT_MOUSELEAVE )
 				{
 					JavaSalFrame *pMouseFrame = FindMouseEventFrame( pFrame, aScreenPoint );
 					if ( pMouseFrame && pMouseFrame != pFrame && pMouseFrame->mbVisible )
 					{
-						pMouseEvent->mnX = aScreenPoint.X() - pMouseFrame->maGeometry.nX + pMouseFrame->maGeometry.nLeftDecoration;
-						pMouseEvent->mnY = aScreenPoint.Y() - pMouseFrame->maGeometry.nY + pMouseFrame->maGeometry.nTopDecoration;
+						pMouseEvent->mnX = aScreenPoint.X() - pMouseFrame->maGeometry.nX;
+						pMouseEvent->mnY = aScreenPoint.Y() - pMouseFrame->maGeometry.nY;
 						pFrame = pMouseFrame;
 					}
 				}
@@ -726,19 +780,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pFrame && pFrame->mbVisible )
 				pFrame->CallCallback( nID, pData );
 			break;
-		}
-	}
-
-	if ( pFlushingDisabled )
-	{
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-		{
-			if ( pFlushingDisabled == *it )
-			{
-				if ( pFlushingDisabled->mbVisible )
-					pFlushingDisabled->mpVCLFrame->enableFlushing( sal_True );
-				break;
-			}
 		}
 	}
 }

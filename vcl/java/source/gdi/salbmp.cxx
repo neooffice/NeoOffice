@@ -198,6 +198,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 		}
 		else
 		{
+			pVCLBitmap->dispose();
 			delete pVCLBitmap;
 			pVCLBitmap = NULL;
 		}
@@ -213,12 +214,14 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 
 // ------------------------------------------------------------------
 
-void JavaSalBitmap::NotifyGraphicsChanged()
+void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 {
 	// Force copying of the buffer if it has not already been done
 	if ( mpVCLGraphics )
 	{
-		if ( mnBitCount == 32 )
+		mpVCLGraphics->removeGraphicsChangeListener( this );
+
+		if ( !bDisposed && mnBitCount == 32 )
 		{
 			long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
 			if ( !mpBits )
@@ -232,7 +235,6 @@ void JavaSalBitmap::NotifyGraphicsChanged()
 			}
 		}
 
-		mpVCLGraphics->removeGraphicsChangeListener( this );
 		delete mpVCLGraphics;
 		mpVCLGraphics = NULL;
 
@@ -245,7 +247,10 @@ void JavaSalBitmap::NotifyGraphicsChanged()
 void JavaSalBitmap::ReleaseVCLBitmap( com_sun_star_vcl_VCLBitmap *pVCLBitmap )
 {
 	if ( pVCLBitmap )
+	{
+		pVCLBitmap->dispose();
 		delete pVCLBitmap;
+	}
 }
 
 // ------------------------------------------------------------------
@@ -289,8 +294,6 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 	if ( !mpVCLGraphics )
 		return false;
 
-	mpVCLGraphics->addGraphicsChangeListener( this );
-
 	mnBitCount = mpVCLGraphics->getBitCount();
 	if ( mnBitCount != 32 )
 	{
@@ -306,6 +309,8 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 		maPalette = rPal;
 		maPalette.SetEntryCount( nColors );
 	}
+
+	mpVCLGraphics->addGraphicsChangeListener( this );
 
 	return true;
 }
@@ -461,7 +466,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	pBuffer->mnScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
 	pBuffer->maPalette = maPalette;
 
-	NotifyGraphicsChanged();
+	NotifyGraphicsChanged( false );
 
 	if ( !mpBits )
 	{

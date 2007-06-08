@@ -292,7 +292,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( JNIEnv *pEnv, jobject object, jlong _par0 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( JNIEnv *pEnv, jobject object, jlong _par0, jboolean _par1 )
 {
 	JavaSalBitmap *pBitmap = (JavaSalBitmap *)_par0;
 	if ( pBitmap )
@@ -302,7 +302,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
         {
             if ( *it == pBitmap )
 			{
-				pBitmap->NotifyGraphicsChanged();
+				pBitmap->NotifyGraphicsChanged( _par1 );
 				return;
 			}
         }
@@ -314,6 +314,12 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( JNIEnv *pEnv, jobject object )
 {
+	// Release the initial retain
+	ClearableMutexGuard aGuard( aBitmapBufferMutex );
+	for ( ::std::map< BitmapBuffer*, USHORT >::const_iterator it = aBitmapBufferMap.begin(); it != aBitmapBufferMap.end(); ++it )
+		ReleaseBitmapBufferCallback( it->first, NULL, 0 );
+	aGuard.clear();
+
 	while ( aCGImageList.size() )
 	{
 		CGImageRelease( aCGImageList.front() );
@@ -484,7 +490,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[6].signature = "(FFFFIZFFFFZFFFFF)V";
 			pMethods[6].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawRect0;
 			pMethods[7].name = "notifyGraphicsChanged";
-			pMethods[7].signature = "(J)V";
+			pMethods[7].signature = "(JZ)V";
 			pMethods[7].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
 			pMethods[8].name = "releaseNativeBitmaps";
 			pMethods[8].signature = "()V";
@@ -661,6 +667,19 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 
 void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
 {
+	// Mark the bitmap buffer for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par0 )
+	{
+		ClearableMutexGuard aGuard( aBitmapBufferMutex );
+		::std::map< BitmapBuffer*, USHORT >::iterator it = aBitmapBufferMap.find( _par0 );
+		if ( it != aBitmapBufferMap.end() )
+			it->second++;
+		else
+			aBitmapBufferMap[ _par0 ] = 1;
+		aGuard.clear();
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -738,6 +757,24 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 
 void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2, long _par3, long _par4, long _par5 )
 {
+	// Mark the EPS data for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par0 )
+	{
+		bool bFound = false;
+		for ( ::std::list< jlong >::const_iterator it = aEPSDataList.begin(); it != aEPSDataList.end(); ++it )
+		{
+			if ( *it == (jlong)_par0 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aEPSDataList.push_back( (jlong)_par0 );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -805,6 +842,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_pa
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jint nPoints = 0;
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
@@ -815,14 +853,18 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_pa
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				pXBits[ i ] = _par1[ i ].mnX;
-				pYBits[ i ] = _par1[ i ].mnY;
+				if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+					continue;
+
+				pXBits[ nPoints ] = _par1[ i ].mnX;
+				pYBits[ nPoints ] = _par1[ i ].mnY;
+				nPoints++;
 			}
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
 			jvalue args[5];
-			args[0].i = jint( _par0 );
+			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
@@ -848,6 +890,7 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_p
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jint nPoints = 0;
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
@@ -858,14 +901,18 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_p
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				pXBits[ i ] = _par1[ i ].mnX;
-				pYBits[ i ] = _par1[ i ].mnY;
+				if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+					continue;
+
+				pXBits[ nPoints ] = _par1[ i ].mnX;
+				pYBits[ nPoints ] = _par1[ i ].mnY;
+				nPoints++;
 			}
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
 			jvalue args[4];
-			args[0].i = jint( _par0 );
+			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
@@ -894,16 +941,12 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray ptsarray = t.pEnv->NewIntArray( elements );
-			bCopy = sal_False;
-			jint *pPtsBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( ptsarray, &bCopy );
-			memcpy( pPtsBits, (jint *)_par1, elements * sizeof( jint ) );
-			t.pEnv->ReleasePrimitiveArrayCritical( ptsarray, pPtsBits, 0 );
-			
 			jintArray tempArray = t.pEnv->NewIntArray( 0 );
 			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
 			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
 			for ( jsize i = 0; i < elements; i++ )
 			{
+				jint nPoints = 0;
 				jsize points( _par1[ i ] );
 				const SalPoint *pPts = _par2[ i ];
 				jintArray xarray = t.pEnv->NewIntArray( points );
@@ -914,11 +957,16 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 				for ( jsize j = 0; j < points; j++ )
 				{
-					pXBits[ j ] = pPts[ j ].mnX;
-					pYBits[ j ] = pPts[ j ].mnY;
+					if ( j && pPts[ j ].mnX == pPts[ j - 1 ].mnX && pPts[ j ].mnY == pPts[ j - 1 ].mnY )
+						continue;
+
+					pXBits[ nPoints ] = pPts[ j ].mnX;
+					pYBits[ nPoints ] = pPts[ j ].mnY;
+					nPoints++;
 				}
 				t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 				t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
+				t.pEnv->SetIntArrayRegion( ptsarray, i, 1, &nPoints );
 				t.pEnv->SetObjectArrayElement( yptsarray, i, yarray );
 				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
 			}
@@ -1515,6 +1563,7 @@ void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const SalPoint *_par1, S
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
+			jint nPoints = 0;
 			jboolean bCopy;
 			jsize elements( _par0 );
 			jintArray xarray = t.pEnv->NewIntArray( elements );
@@ -1525,14 +1574,18 @@ void com_sun_star_vcl_VCLGraphics::invert( ULONG _par0, const SalPoint *_par1, S
 			jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 			for ( jsize i = 0; i < elements; i++ )
 			{
-				pXBits[ i ] = _par1[ i ].mnX;
-				pYBits[ i ] = _par1[ i ].mnY;
+				if ( i && _par1[ i ].mnX == _par1[ i - 1 ].mnX && _par1[ i ].mnY == _par1[ i - 1 ].mnY )
+					continue;
+
+				pXBits[ nPoints ] = _par1[ i ].mnX;
+				pYBits[ nPoints ] = _par1[ i ].mnY;
+				nPoints++;
 			}
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
 			jvalue args[4];
-			args[0].i = jint( _par0 );
+			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
@@ -1674,4 +1727,65 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2 )
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(I[I[[I[[I)Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "unionClipRegion", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		jclass tempClass = t.pEnv->FindClass( "[I" );
+		if ( mID && tempClass )
+		{
+			jboolean bCopy;
+			jsize elements( _par0 );
+			jintArray ptsarray = t.pEnv->NewIntArray( elements );
+			bCopy = sal_False;
+			jint *pPtsBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( ptsarray, &bCopy );
+			memcpy( pPtsBits, (jint *)_par1, elements * sizeof( jint ) );
+			t.pEnv->ReleasePrimitiveArrayCritical( ptsarray, pPtsBits, 0 );
+			
+			jintArray tempArray = t.pEnv->NewIntArray( 0 );
+			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
+			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
+			for ( jsize i = 0; i < elements; i++ )
+			{
+				jsize points( _par1[ i ] );
+				const SalPoint *pPts = _par2[ i ];
+				jintArray xarray = t.pEnv->NewIntArray( points );
+				jintArray yarray = t.pEnv->NewIntArray( points );
+				bCopy = sal_False;
+				jint *pXBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( xarray, &bCopy );
+				bCopy = sal_False;
+				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
+				for ( jsize j = 0; j < points; j++ )
+				{
+					pXBits[ j ] = pPts[ j ].mnX;
+					pYBits[ j ] = pPts[ j ].mnY;
+				}
+				t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
+				t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
+				t.pEnv->SetObjectArrayElement( yptsarray, i, yarray );
+				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
+			}
+
+			jvalue args[4];
+			args[0].i = jint( _par0 );
+			args[1].l = ptsarray;
+			args[2].l = xptsarray;
+			args[3].l = yptsarray;
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
+		}
+	}
+	return out;
 }

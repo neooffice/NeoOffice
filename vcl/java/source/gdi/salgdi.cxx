@@ -136,6 +136,13 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 
 // -----------------------------------------------------------------------
 
+BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
+{
+	return mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry );
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalGraphics::EndSetClipRegion()
 {
 	mpVCLGraphics->endSetClipRegion();
@@ -329,6 +336,8 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 
 					delete pData;
 				}
+
+				aVCLBitmap.dispose();
 			}
 		}
 	}

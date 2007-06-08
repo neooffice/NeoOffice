@@ -87,6 +87,7 @@ public:
 	bool					mbInSignalHandler;
 	::std::list< ::vcl::com_sun_star_vcl_VCLEvent* >	maPendingDocumentEventsList;
 	bool					mbDoubleScrollbarArrows;
+	JavaSalFrame*			mpCaptureFrame;
 
 							SalData();
 							~SalData();

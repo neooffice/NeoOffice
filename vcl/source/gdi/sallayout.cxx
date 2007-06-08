@@ -1492,9 +1492,9 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
         {
 #ifdef USE_JAVA
             // Fix bug 2183 by allowing a tiny amount of unexpected x-position
-            // in a glyph run
+            // in a glyph run. Decrease allowable amount to fix bug 2432.
             nUnexpectedOffset += pG->mnOrigWidth - nGlyphAdvance;
-            if( abs( nUnexpectedOffset ) > ( pG->mnOrigWidth / 5 ) )
+            if( abs( nUnexpectedOffset ) > ( pG->mnOrigWidth >> 3 ) )
 #else	// USE_JAVA
             // stop when next x-position is unexpected
             if( pG->mnOrigWidth != nGlyphAdvance )
@@ -1604,6 +1604,28 @@ void GenericSalLayout::SortGlyphItems()
         pGL[1].mnFlags &= ~GlyphItem::IS_IN_CLUSTER;
     }
 }
+
+// -----------------------------------------------------------------------
+
+#ifdef USE_JAVA
+
+void GenericSalLayout::SetGlyphCapacity( int nGlyphCapacity )
+{
+    if ( mnGlyphCapacity < nGlyphCapacity )
+    {
+        mnGlyphCapacity = nGlyphCapacity;
+        GlyphItem* pNewGI = new GlyphItem[ mnGlyphCapacity ];
+        if( mpGlyphItems )
+        {
+            for( int i = 0; i < mnGlyphCount; ++i )
+                pNewGI[ i ] = mpGlyphItems[ i ];
+            delete[] mpGlyphItems;
+        }
+        mpGlyphItems = pNewGI;
+    }
+}
+
+#endif	// USE_JAVA
 
 // =======================================================================
 
