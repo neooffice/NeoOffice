@@ -10,9 +10,14 @@
     <minVersion>1.4.2</minVersion>
     <maxVersion>1.5.999</maxVersion>
   </vendor>
+  <vendor name="Apple Inc.">
+    <minVersion>1.4.2</minVersion>
+    <maxVersion>1.5.999</maxVersion>
+  </vendor>
  </vendorInfos>
 
  <plugins>
   <library vendor="Apple Computer, Inc.">sunjavaplugin.dylib</library>
+  <library vendor="Apple Inc.">sunjavaplugin.dylib</library>
  </plugins>
 </javaSelection>
