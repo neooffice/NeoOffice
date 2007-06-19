@@ -491,7 +491,25 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 							BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
 							if ( pTransSrcBuffer )
 							{
-								BitmapBuffer *pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aPosAry, BMP_FORMAT_1BIT_MSB_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
+								// Fix bug 2475 by handling the case where the
+								// transparent bitmap is smaller than the main
+								// bitmap
+								SalTwoRect aTransPosAry;
+								memcpy( &aTransPosAry, &aPosAry, sizeof( SalTwoRect ) );
+								Size aTransSize( pTransJavaSalBitmap->GetSize() );
+								long nTransExcessWidth = aPosAry.mnSrcX + aPosAry.mnSrcWidth - aTransSize.Width();
+								if ( nTransExcessWidth > 0 )
+								{
+									aTransPosAry.mnSrcWidth -= nTransExcessWidth;
+									aTransPosAry.mnDestWidth = aTransPosAry.mnSrcWidth * aPosAry.mnSrcWidth / aPosAry.mnDestWidth;
+								}
+								long nTransExcessHeight = aPosAry.mnSrcY + aPosAry.mnSrcHeight - aTransSize.Height();
+								if ( nTransExcessHeight > 0 )
+								{
+									aTransPosAry.mnSrcHeight -= nTransExcessHeight;
+									aTransPosAry.mnDestHeight = aTransPosAry.mnSrcHeight * aPosAry.mnSrcHeight / aPosAry.mnDestHeight;
+								}
+								BitmapBuffer *pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aTransPosAry, BMP_FORMAT_1BIT_MSB_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
 								if ( pTransDestBuffer )
 								{
 									if ( pTransDestBuffer->mpBits )
@@ -503,11 +521,19 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 										FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_1BIT_MSB_PAL;
 										for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
 										{
+											bool bTransPixels = ( i < pTransDestBuffer->mnHeight );
 											for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
 											{
-												BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
-                                    			if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
+												if ( bTransPixels && j < pTransDestBuffer->mnWidth )
+												{
+													BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
+                                    				if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
+														pBits[ j ] = 0x00000000;
+												}
+												else
+												{
 													pBits[ j ] = 0x00000000;
+												}
 											}
 	
 											pBits += pDestBuffer->mnWidth;
