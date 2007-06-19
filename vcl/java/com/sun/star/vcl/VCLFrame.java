@@ -2595,7 +2595,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		if (c != null) {
-			window.setCursor(c);
+			// Set the cursor in all frames as the fix for bug 2370 exposes
+			// the fact that Java only shows the cursor for the current
+			// focus window
+			Frame[] frames = Frame.getFrames();
+			for (int i = 0; i < frames.length; i++) {
+				Window[] windows = frames[i].getOwnedWindows();
+				for (int j = 0; j < windows.length; j++)
+					windows[j].setCursor(c);
+				frames[i].setCursor(c);
+			}
+
 			Toolkit.getDefaultToolkit().sync();
 		}
 
