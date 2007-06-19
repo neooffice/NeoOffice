@@ -1371,8 +1371,12 @@ public final class VCLGraphics {
 						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 				}
 				else {
-					if (xor)
+					if (xor) {
+						// Smooth out image drawing for bug 2475 image
+						if (fill)
+							g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					}
 					g.setColor(new Color(color));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
@@ -1559,12 +1563,6 @@ public final class VCLGraphics {
 		}
 		else if (npoly == 1) {
 			drawPolygon(npoints[0], xpoints[0], ypoints[0], color, fill);
-			return;
-		}
-		else if (graphics != null || xor) {
-			// Fix bug 786 by drawing overlapping polygons in XOR mode
-			for (int i = 0; i < npoly; i++)
-				drawPolygon(npoints[i], xpoints[i], ypoints[i], color, fill);
 			return;
 		}
 
