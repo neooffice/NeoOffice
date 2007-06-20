@@ -241,6 +241,14 @@
 
 #include "../appl/app.hrc"
 
+#ifdef USE_JAVA
+
+#ifndef _COM_SUN_STAR_VIEW_XVIEWSETTINGSSUPPLIER_HPP_
+#include <com/sun/star/view/XViewSettingsSupplier.hpp>
+#endif
+
+#endif	// USE_JAVA
+
 extern sal_uInt32 CheckPasswd_Impl( SfxObjectShell*, SfxItemPool&, SfxMedium* );
 
 using namespace ::com::sun::star;
@@ -4086,11 +4094,28 @@ sal_Bool SfxObjectShell::GenerateAndStoreThumbnail( sal_Bool bEncrypted,
 					aArgs[1].Name = ::rtl::OUString::createFromAscii( "OutputStream" );
 					aArgs[1].Value <<= com::sun::star::uno::Reference< com::sun::star::io::XOutputStream >( xPDFStream->getOutputStream() );
 
-					if ( xFilter->filter( aArgs ) )
+					uno::Reference< frame::XController > xController = GetModel()->getCurrentController();
+					if ( xController.is() )
 					{
-						uno::Reference< embed::XTransactedObject > xTransact( xThumbnailStor, uno::UNO_QUERY_THROW );
-						xTransact->commit();
-						bResult = sal_True;
+						// Fix bug 2462 by setting the ShowOnlineLayout
+						// property to what it was before exporting to PDF
+						OUString aShowOnlineLayoutKey = OUString::createFromAscii( "ShowOnlineLayout" );
+						Reference < css::view::XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
+						Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
+						Any aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+
+						if ( xFilter->filter( aArgs ) )
+						{
+							uno::Reference< embed::XTransactedObject > xTransact( xThumbnailStor, uno::UNO_QUERY_THROW );
+							xTransact->commit();
+							bResult = sal_True;
+						}
+
+						if ( aShowOnlineLayout.hasValue() )
+						{
+                			xViewProps->setPropertyValue( aShowOnlineLayoutKey, aShowOnlineLayout );
+							xController->restoreViewData( xController->getViewData() );
+						}
 					}
 				}
 			}
