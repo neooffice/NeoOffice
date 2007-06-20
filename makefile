@@ -127,7 +127,6 @@ all: build.all
 
 # Include dependent makefiles
 include neo_configure.mk
-BUILD_MACHINE=peterlin:206-72-79-245.dsl.dock.net.
 
 # Create the build directory and checkout the OpenOffice.org sources
 build.oo_checkout:
