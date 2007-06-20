@@ -1,8 +1,18 @@
 Index: patches/src680/apply
 ===================================================================
---- patches/src680/apply	(revision 9363)
+--- patches/src680/apply	(revision 9613)
 +++ patches/src680/apply	(working copy)
-@@ -596,7 +596,8 @@
+@@ -161,7 +161,8 @@
+ linkoo-type.diff
+ 
+ #Improve the behavior of input field dialog.
+-sw-input-field-dialog.diff, Zhang Yun
++# Disable because it causes NeoOffice bug 2234
++# sw-input-field-dialog.diff, Zhang Yun
+ 
+ # Improve the behavior of input fields inline editing.
+ sw-input-field-inline-edit.diff, Zhang Yun
+@@ -626,7 +627,8 @@
  [ NotMacOSX ]
  
  # Make the delete key happy again in starcalc  - wontfix [!]
