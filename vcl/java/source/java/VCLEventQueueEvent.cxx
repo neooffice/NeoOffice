@@ -619,19 +619,12 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				FloatingWindow *pPopupWindow = NULL;
     			if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
-					for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+					ImplSVData* pSVData = ImplGetSVData();
+					if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat )
 					{
-						if ( pFrame == *it && pFrame->mbVisible )
-						{
-							ImplSVData* pSVData = ImplGetSVData();
-							if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat )
-							{
-								static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
-								if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-									pPopupWindow = pSVData->maWinData.mpFirstFloat;
-							}
-							break;
-						}
+						static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+						if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
+							pPopupWindow = pSVData->maWinData.mpFirstFloat;
 					}
 				}
 
