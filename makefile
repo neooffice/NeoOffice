@@ -109,9 +109,10 @@ OO_TAG:=-rOpenOffice_2_2_1
 OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_2_2_0_2
 OOO-BUILD_PACKAGE:=ooo-build
 OOO-BUILD_TAG:=
-OOO-BUILD_APPLY_TAG:=OOF680_m14
+OOO-BUILD_APPLY_TAG:=OOF680_m18
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 LIBWPD_SOURCE_URL=http://go-ooo.org/packages/libwpd/libwpd-0.8.8.tar.gz
+LIBWPG_SOURCE_URL=http://go-ooo.org/packages/SRC680/libwpg-0.1.0~cvs20070507.tar.gz
 LIBWPS_SOURCE_URL=http://go-ooo.org/packages/SRC680/libwps-0.1.0~svn20070129.tar.gz
 XT_SOURCE_URL=http://go-ooo.org/packages/xt/xt-20051206-src-only.zip
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
@@ -160,7 +161,6 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_binfilter_patch \
 	build.oo_chart2_patch \
 	build.oo_config_office_patch \
-	build.oo_desktop_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \
 	build.oo_instsetoo_native_patch \
@@ -169,9 +169,7 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_moz_patch \
 	build.oo_padmin_patch \
 	build.oo_sc_patch \
-	build.oo_sd_patch \
 	build.oo_sj2_patch \
-	build.oo_slideshow_patch \
 	build.oo_solenv_patch \
 	build.oo_store_patch \
 	build.oo_sw_patch \
@@ -217,6 +215,7 @@ build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_chec
 	cp "$(BUILD_HOME)/ooo-build/src/evolocal.odb" "$(BUILD_HOME)/extras/source/database"
 	mkdir -p "$(BUILD_HOME)/lpsolve/download" ; cd "$(BUILD_HOME)/lpsolve/download" ; curl -O "$(LPSOLVE_SOURCE_URL)"
 	mkdir -p "$(BUILD_HOME)/libwpd/download" ; cd "$(BUILD_HOME)/libwpd/download" ; curl -O "$(LIBWPD_SOURCE_URL)"
+	mkdir -p "$(BUILD_HOME)/libwpg/download" ; cd "$(BUILD_HOME)/libwpg/download" ; curl -O "$(LIBWPG_SOURCE_URL)"
 	mkdir -p "$(BUILD_HOME)/libwps/download" ; cd "$(BUILD_HOME)/libwps/download" ; curl -O "$(LIBWPS_SOURCE_URL)"
 	cd "$(BUILD_HOME)/xt/download" ; curl -O "$(XT_SOURCE_URL)"
 	touch "$@"

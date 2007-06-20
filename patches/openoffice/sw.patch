@@ -22,20 +22,3 @@ diff -u -r1.31 viewprt.cxx
              SwMiscConfig aMiscConfig;
              if(!bSilent && !bFromMerge &&
                      SW_MOD()->GetModuleConfig()->IsAskForMailMerge() && pSh->IsAnyDatabaseFieldInDoc())
-Index: source/core/view/viewimp.cxx
-===================================================================
-RCS file: /cvs/sw/sw/source/core/view/viewimp.cxx,v
-retrieving revision 1.33.28.1
-diff -u -r1.33.28.1 viewimp.cxx
---- source/core/view/viewimp.cxx	19 Jan 2007 14:09:35 -0000	1.33.28.1
-+++ source/core/view/viewimp.cxx	9 May 2007 05:23:46 -0000
-@@ -394,7 +394,8 @@
- 			if(pWindow)
- 			{
- 				// #i72754# use correct region calculation now
--				const Rectangle aRectPixel(Point(), pWindow->GetOutputSizePixel());
-+				Point aPoint;
-+				const Rectangle aRectPixel(aPoint, pWindow->GetOutputSizePixel());
- 				const Rectangle aRectLogic(pWindow->PixelToLogic(aRectPixel));
- 				const Region aRegionLogic(aRectLogic);
- 				ViewShell &rSh = *GetShell();
