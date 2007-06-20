@@ -261,7 +261,6 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 	NSPrintInfo *pInfo = (NSPrintInfo *)pNSPrintInfo;
 	if ( pNSPrintInfo && nWidth > 0 && nHeight > 0 )
 	{
-		NSPrintingOrientation nOldOrientation = [pInfo orientation];
 		NSSize aOldSize = [pInfo paperSize];
 
 		[pInfo setOrientation:NSPortraitOrientation];
@@ -282,8 +281,6 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 			if ( fDiff > fRotatedDiff )
 				bRet = YES;
 		}
-
-		[pInfo setOrientation:nOldOrientation];
 	}
 
 	[pPool release];
