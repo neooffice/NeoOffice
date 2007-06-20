@@ -1676,11 +1676,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		// Fix bug 1645 by ensuring that we don't lose focus to a floating
-		// window
+		// window. Fix bug 2478 by not letting us lose focus if the opposite
+		// component is this frame.
 		VCLFrame f = findFrame(e.getOppositeComponent());
 		if (f != null) {
 			synchronized (f) {
-				if (f.isFloatingWindow()) {
+				if (f == this || f.isFloatingWindow()) {
 					requestFocus();
 					return;
 				}
