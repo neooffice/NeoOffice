@@ -66,8 +66,6 @@ static ::std::list< CGImageRef > aCGImageList;
 static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
 static ::std::list< jlong > aEPSDataList;
-static ::std::map< ATSFontRef, CGFontRef > aATSFontMap;
-static ::osl::Mutex aATSFontMutex;
 
 using namespace osl;
 using namespace rtl;
@@ -420,32 +418,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyline0( JNIEnv *
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawRect0( JNIEnv *pEnv, jobject object, jfloat _par0, jfloat _par1, jfloat _par2, jfloat _par3, jint _par4, jboolean _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
 {
 	CGContext_drawRect( _par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
-}
-
-// ----------------------------------------------------------------------------
-
-CGFontRef CreateCachedCGFont( ATSFontRef aATSFont )
-{
-	CGFontRef aFont = NULL;
-
-	MutexGuard aGuard( aATSFontMutex );
-
-	::std::map< ATSFontRef, CGFontRef >::iterator it = aATSFontMap.find( aATSFont );
-	if ( it != aATSFontMap.end() )
-	{
-		aFont = it->second;
-	}
-	else
-	{
-		aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
-		if ( aFont )
-			aATSFontMap[ aATSFont ] = aFont;
-	}
-
-	if ( aFont )
-		CGFontRetain( aFont );
-
-	return aFont;
 }
 
 // ============================================================================

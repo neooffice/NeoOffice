@@ -47,7 +47,6 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
-CGFontRef CreateCachedCGFont( ATSFontRef aATSFont );
 void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 void CGContext_drawPolygon( int nPoints, float *pXPoints, float *pYPoints, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 void CGContext_drawPolyline( int nPoints, float *pXPoints, float *pYPoints, int nColor, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
