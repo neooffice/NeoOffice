@@ -379,18 +379,20 @@ static VCLResponder *pSharedResponder = nil;
 @interface InstallVCLEventQueueClasses : NSObject
 {
 	BOOL					mbUseKeyEntryFix;
+	BOOL					mbUseAWTFontFix;
 }
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix;
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix useAWTFontFix:(BOOL)bUseAWTFontFix;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix useAWTFontFix:(BOOL)bUseAWTFontFix
 {
 	[super init];
 
 	mbUseKeyEntryFix = bUseKeyEntryFix;
+	mbUseAWTFontFix = bUseAWTFontFix;
 
 	return self;
 }
@@ -403,7 +405,8 @@ static VCLResponder *pSharedResponder = nil;
 	if ( pSharedResponder )
 		[pSharedResponder retain];
 
-	[VCLFontManager poseAsClass:[NSFontManager class]];
+	if ( mbUseAWTFontFix )
+		[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];
 }
@@ -426,11 +429,11 @@ BOOL NSApplication_isActive()
 	return bRet;
 }
 
-void VCLEventQueue_installVCLEventQueueClasses(BOOL bUseKeyEntryFix)
+void VCLEventQueue_installVCLEventQueueClasses(BOOL bUseKeyEntryFix, BOOL bUseAWTFontFix)
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix useAWTFontFix:bUseAWTFontFix];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 
