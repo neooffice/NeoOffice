@@ -419,9 +419,20 @@ SHL5STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
 .ENDIF # UNX && !java
 
 .IF "$(GUIBASE)"=="java"
+
+SHL6TARGET= vcljava
+SHL6IMPLIB= i$(SHL6TARGET)
+SHL6OBJS=\
+    $(SLO)/AWTFont.obj \
+    $(SLO)/AWTFont_cocoa.obj
+SHL6STDLIBS= \
+    $(SALLIB) \
+    -framework AppKit
+
 JARCLASSDIRS = com
 JARTARGET = $(TARGET).jar
 JARCOMPRESS = TRUE
+
 .ENDIF
 
 # --- Allgemein ----------------------------------------------------------
