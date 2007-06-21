@@ -44,7 +44,9 @@ typedef void* id;
 BEGIN_C
 #endif
 BOOL NSApplication_isActive();
-void VCLEventQueue_installVCLEventQueueClasses(BOOL bUseKeyEntryFix, BOOL bUseAWTFontFix);
+void NSFontManager_acquire();
+void NSFontManager_release();
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix );
 #ifdef __cplusplus
 END_C
 #endif

@@ -420,12 +420,21 @@ SHL5STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
 
 .IF "$(GUIBASE)"=="java"
 
-SHL6TARGET= vcljava
+SHL6TARGET= vcljava1
 SHL6IMPLIB= i$(SHL6TARGET)
 SHL6OBJS=\
     $(SLO)/AWTFont.obj \
-    $(SLO)/AWTFont_cocoa.obj
+    $(SLO)/AWTFont1_cocoa.obj
 SHL6STDLIBS= \
+    $(SALLIB) \
+    -framework AppKit
+
+SHL7TARGET= vcljava2
+SHL7IMPLIB= i$(SHL6TARGET)
+SHL7OBJS=\
+    $(SLO)/AWTFont.obj \
+    $(SLO)/AWTFont2_cocoa.obj
+SHL7STDLIBS= \
     $(SALLIB) \
     -framework AppKit
 

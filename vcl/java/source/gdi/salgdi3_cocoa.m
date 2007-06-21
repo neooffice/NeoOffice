@@ -35,6 +35,7 @@
 
 #import <Cocoa/Cocoa.h>
 #import "salgdi3_cocoa.h"
+#import "../java/VCLEventQueue_cocoa.h"
 
 ATSFontRef NSFont_getATSFontRef( id pNSFont )
 {
@@ -44,7 +45,6 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 
 	if ( pNSFont )
 	{
-		CFStringRef aPSName = (CFStringRef)[(NSFont *)pNSFont fontName];
 		if ( [pNSFont respondsToSelector:@selector(_atsFontID)] )
 		{
 			aRet = (ATSFontRef)[pNSFont _atsFontID];
@@ -88,7 +88,11 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 				}
 				if ( bItalic )
 					nTraits |= NSItalicFontMask;
+
+				NSFontManager_acquire();
 				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
+				NSFontManager_release();
+
 				if ( pNewNSFont && pNewNSFont != pNSFont )
 				{
 					ATSFontRef aFont = NSFont_getATSFontRef( pNewNSFont );
