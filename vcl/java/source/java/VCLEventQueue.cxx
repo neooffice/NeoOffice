@@ -135,14 +135,16 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 			}
 		}
 
+		bool bUseAWTFontFix = ( IsRunningPanther() || IsRunningTiger() );
+
 		// Fix bugs 1390 and 1619 by inserting our own Cocoa class in place of
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-        VCLEventQueue_installVCLEventQueueClasses(bUseKeyEntryFix);
+        VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUseAWTFontFix );
 
 		// Load our AWTFont replacement class
-		if ( IsRunningPanther() || IsRunningTiger() )
+		if ( bUseAWTFontFix )
 			aAWTFontModule.load( OUString::createFromAscii( "libvcljava.dylib" ), SAL_LOADMODULE_GLOBAL | SAL_LOADMODULE_NOW );
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
