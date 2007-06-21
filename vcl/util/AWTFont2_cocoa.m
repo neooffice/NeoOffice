@@ -34,35 +34,90 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import <jni.h>
 #import "AWTFont_cocoa.h"
 
 // Fix for bug 1928. Java 1.5 and higher will try to set its own arbitrary
 // italic angle so we create a custom implementation of the JVM's private
 // AWTFont class to ignore the custom transform that Java passes in.
-// Note: this class should only be loaded dynamically as it should not be
-// used on Mac OS X 10.5 or later.
+// Note: this file should only be loaded on Mac OS X 10.5 or higher.
+
+static jmethodID mGetPSNameID = nil;
 
 @interface AWTFont : NSObject
 {
 	NSFont*				fFont;
-	float*				fTransform;
-	float				fPointSize;
-	NSCharacterSet*		fCharacterSet;
 	CGFontRef			fNativeCGFont;
+	BOOL				fIsFakeItalic;
 }
-+ (id)fontWithFont:(NSFont *)pFont matrix:(float *)pTransform;
-- (id)initWithFont:(NSFont *)pFont matrix:(float *)pTransform;
++ (id)awtFontForName:(NSString *)pName style:(int)nStyle isFakeItalic:(BOOL)bFakeItalic;
++ (id)nsFontForJavaFont:(jobject)aFont env:(JNIEnv *)pEnv;
+- (id)initWithFont:(NSFont *)pFont isFakeItalic:(BOOL)bFakeItalic;
 - (void)dealloc;
+- (void)finalize;
 @end
 
 @implementation AWTFont
 
-+ (id)fontWithFont:(NSFont *)pFont matrix:(float *)pTransform
++ (id)awtFontForName:(NSString *)pName style:(int)nStyle isFakeItalic:(BOOL)bFakeItalic
 {
-	return [[AWTFont alloc] initWithFont:pFont matrix:pTransform];
+	AWTFont *pRet = nil;
+
+	if ( pName )
+	{
+		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
+		if ( pFontManager )
+		{
+			NSFont *pFont = [NSFont fontWithName:pName size:(float)12];
+			if ( pFont )
+				pRet = [[AWTFont alloc] initWithFont:pFont isFakeItalic:bFakeItalic];
+		}
+	}
+
+	return pRet;
 }
 
-- (id)initWithFont:(NSFont *)pFont matrix:(float *)pTransform
++ (id)nsFontForJavaFont:(jobject)aFont env:(JNIEnv *)pEnv
+{
+	NSFont *pRet = nil;
+
+	if ( aFont && pEnv )
+	{
+		jclass aFontClass = (*pEnv)->GetObjectClass( pEnv, aFont );
+        if ( aFontClass )
+        {
+			if ( !mGetPSNameID )
+			{
+				char *cSignature = "()Ljava/lang/String;";
+				mGetPSNameID = (*pEnv)->GetMethodID( pEnv, aFontClass, "getPSName", cSignature );
+			}
+			if ( mGetPSNameID )
+			{
+				jstring tempObj = (jstring)( (*pEnv)->CallObjectMethod( pEnv, aFont, mGetPSNameID ) );
+				if ( tempObj )
+				{
+					jboolean bCopy = JNI_FALSE;
+					const char *pChars = (*pEnv)->GetStringUTFChars( pEnv, tempObj, &bCopy );
+					if ( pChars )
+					{
+						NSString *pName = [NSString stringWithUTF8String:pChars];
+						if ( pName )
+							pRet = [NSFont fontWithName:pName size:(float)12];
+					}
+				}
+				else if ( pEnv && (*pEnv)->ExceptionCheck( pEnv ) )
+				{
+					(*pEnv)->ExceptionDescribe( pEnv );
+					(*pEnv)->ExceptionClear( pEnv );
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
+
+- (id)initWithFont:(NSFont *)pFont isFakeItalic:(BOOL)bFakeItalic
 {
 	[super init];
 
@@ -70,17 +125,13 @@
 	if ( fFont )
 	{
 		[fFont retain];
-		fPointSize = [fFont pointSize];
-		fCharacterSet = [fFont coveredCharacterSet];
-		if ( fCharacterSet )
-			[fCharacterSet retain];
 
 		// Fix bug 1990 by caching and reusing CGFontRefs
 		if ( [fFont respondsToSelector:@selector(_atsFontID)] )
             fNativeCGFont = CreateCachedCGFont( (ATSFontRef)[fFont _atsFontID] );
 	}
 
-	fTransform = nil;
+	fIsFakeItalic = NO;
 
 	return self;
 }
@@ -90,12 +141,19 @@
 	if ( fFont )
 		[fFont release];
 
-	if ( fCharacterSet )
-		[fCharacterSet release];
-
 	CGFontRelease( fNativeCGFont );
 
 	[super dealloc];
+}
+
+- (void)finalize
+{
+	if ( fFont )
+		[fFont release];
+
+	CGFontRelease( fNativeCGFont );
+
+	[super finalize];
 }
 
 @end

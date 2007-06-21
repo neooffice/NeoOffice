@@ -37,6 +37,8 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 
+static BOOL bFontManagerLocked = NO;
+static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
 @interface IsApplicationActive : NSObject
@@ -88,9 +90,24 @@ static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
 - (NSArray *)availableFontFamilies
 {
-	NSMutableArray *pRet = [NSMutableArray arrayWithArray:[super availableFonts]];
-	if ( pRet )
-		[pRet addObjectsFromArray:[super availableFontFamilies]];
+	NSMutableArray *pRet = nil;
+
+	if ( pFontManagerLock )
+		[pFontManagerLock lock];
+
+	if ( bFontManagerLocked )
+	{
+		pRet = [super availableFontFamilies];
+	}
+	else
+	{
+		pRet = [NSMutableArray arrayWithArray:[super availableFonts]];
+		if ( pRet )
+			[pRet addObjectsFromArray:[super availableFontFamilies]];
+	}
+
+	if ( pFontManagerLock )
+		[pFontManagerLock unlock];
 
 	return pRet;
 }
@@ -99,19 +116,32 @@ static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 {
 	NSArray *pRet = nil;
 
-	NSFont *pFont = [NSFont fontWithName:family size:12];
-	if ( pFont )
+	if ( pFontManagerLock )
+		[pFontManagerLock lock];
+
+	if ( bFontManagerLocked )
 	{
-		NSMutableArray *pFontEntries = [NSMutableArray arrayWithCapacity:4];
-		if ( pFontEntries )
+		pRet = [super availableMembersOfFontFamily:family];
+	}
+	else
+	{
+		NSFont *pFont = [NSFont fontWithName:family size:12];
+		if ( pFont )
 		{
-			[pFontEntries addObject:[pFont fontName]];
-			[pFontEntries addObject:@""];
-			[pFontEntries addObject:[NSNumber numberWithInt:[self weightOfFont:pFont]]];
-			[pFontEntries addObject:[NSNumber numberWithUnsignedInt:[self traitsOfFont:pFont]]];
-			pRet = [NSArray arrayWithObject:pFontEntries];
+			NSMutableArray *pFontEntries = [NSMutableArray arrayWithCapacity:4];
+			if ( pFontEntries )
+			{
+				[pFontEntries addObject:[pFont fontName]];
+				[pFontEntries addObject:@""];
+				[pFontEntries addObject:[NSNumber numberWithInt:[self weightOfFont:pFont]]];
+				[pFontEntries addObject:[NSNumber numberWithUnsignedInt:[self traitsOfFont:pFont]]];
+				pRet = [NSArray arrayWithObject:pFontEntries];
+			}
 		}
 	}
+
+	if ( pFontManagerLock )
+		[pFontManagerLock unlock];
 
 	return pRet;
 }
@@ -379,34 +409,33 @@ static VCLResponder *pSharedResponder = nil;
 @interface InstallVCLEventQueueClasses : NSObject
 {
 	BOOL					mbUseKeyEntryFix;
-	BOOL					mbUseAWTFontFix;
 }
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix useAWTFontFix:(BOOL)bUseAWTFontFix;
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix useAWTFontFix:(BOOL)bUseAWTFontFix
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix
 {
 	[super init];
 
 	mbUseKeyEntryFix = bUseKeyEntryFix;
-	mbUseAWTFontFix = bUseAWTFontFix;
 
 	return self;
 }
 
 - (void)installVCLEventQueueClasses:(id)pObject
 {
+	pFontManagerLock = [[NSRecursiveLock alloc] init];
+
 	// Initialize statics
 	bUseKeyEntryFix = mbUseKeyEntryFix;
 	pSharedResponder = [[VCLResponder alloc] init];
 	if ( pSharedResponder )
 		[pSharedResponder retain];
 
-	if ( mbUseAWTFontFix )
-		[VCLFontManager poseAsClass:[NSFontManager class]];
+	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];
 }
@@ -429,11 +458,29 @@ BOOL NSApplication_isActive()
 	return bRet;
 }
 
-void VCLEventQueue_installVCLEventQueueClasses(BOOL bUseKeyEntryFix, BOOL bUseAWTFontFix)
+void NSFontManager_acquire()
+{
+	if ( pFontManagerLock )
+	{
+		[pFontManagerLock lock];
+		bFontManagerLocked = YES;
+	}
+}
+
+void NSFontManager_release()
+{
+	if ( pFontManagerLock )
+	{
+		bFontManagerLocked = NO;
+		[pFontManagerLock unlock];
+	}
+}
+
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix useAWTFontFix:bUseAWTFontFix];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 
