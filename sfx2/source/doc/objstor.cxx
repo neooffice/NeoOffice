@@ -973,11 +973,17 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
         	{
             	pImp->nLoadedFlags = 0;
 				pImp->bModelInitialized = sal_False;
-				String aUserData=pFilter->GetUserData();
-				// check whether a prepocessing step is requested in the configuration
-				static const char PREPROCESS_CONST[]="Preprocess=<";
-				int pos=aUserData.Search(::rtl::OUString::createFromAscii(PREPROCESS_CONST).getStr(), 0);
-				int end=aUserData.Search( '>', pos+strlen(PREPROCESS_CONST));
+// Start of ooo-build http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_2_2_1/patches/src680/sfx2-pre-and-postprocess-crash-fix.diff patch
+                int end, pos = STRING_NOTFOUND;
+                String aUserData;
+                static const char PREPROCESS_CONST[]="Preprocess=<";
+                if (pFilter) {
+                    aUserData=pFilter->GetUserData();
+                    // check whether a prepocessing step is requested in the configuration
+                    pos=aUserData.Search(::rtl::OUString::createFromAscii(PREPROCESS_CONST).getStr(), 0);
+                    end=aUserData.Search( '>', pos+strlen(PREPROCESS_CONST));
+                }
+// End of ooo-build http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_2_2_1/patches/src680/sfx2-pre-and-postprocess-crash-fix.diff patch
 				if (pos!=STRING_NOTFOUND && end!=STRING_NOTFOUND) {
 					String aAppName(aUserData, pos+strlen(PREPROCESS_CONST), end-(pos+strlen(PREPROCESS_CONST)));
 
@@ -4101,8 +4107,12 @@ sal_Bool SfxObjectShell::GenerateAndStoreThumbnail( sal_Bool bEncrypted,
 						// property to what it was before exporting to PDF
 						OUString aShowOnlineLayoutKey = OUString::createFromAscii( "ShowOnlineLayout" );
 						Reference < css::view::XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
-						Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
-						Any aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+						Any aShowOnlineLayout;
+						if ( xSettings.is() )
+						{
+							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
+							aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+						}
 
 						if ( xFilter->filter( aArgs ) )
 						{
@@ -4111,8 +4121,9 @@ sal_Bool SfxObjectShell::GenerateAndStoreThumbnail( sal_Bool bEncrypted,
 							bResult = sal_True;
 						}
 
-						if ( aShowOnlineLayout.hasValue() )
+						if ( aShowOnlineLayout.hasValue() && xSettings.is() )
 						{
+							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
                 			xViewProps->setPropertyValue( aShowOnlineLayoutKey, aShowOnlineLayout );
 							xController->restoreViewData( xController->getViewData() );
 						}
