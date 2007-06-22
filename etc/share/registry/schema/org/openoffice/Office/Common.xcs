@@ -4100,7 +4100,7 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
 					</enumeration>
 					<enumeration oor:value="1">
 						<info>
-							<desc>larger icons</desc>
+							<desc>32x32 pixel icons</desc>
 						</info>
 					</enumeration>
 				</constraints>
