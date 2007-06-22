@@ -4101,8 +4101,12 @@ sal_Bool SfxObjectShell::GenerateAndStoreThumbnail( sal_Bool bEncrypted,
 						// property to what it was before exporting to PDF
 						OUString aShowOnlineLayoutKey = OUString::createFromAscii( "ShowOnlineLayout" );
 						Reference < css::view::XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
-						Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
-						Any aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+						Any aShowOnlineLayout;
+						if ( xSettings.is() )
+						{
+							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
+							aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+						}
 
 						if ( xFilter->filter( aArgs ) )
 						{
@@ -4111,8 +4115,9 @@ sal_Bool SfxObjectShell::GenerateAndStoreThumbnail( sal_Bool bEncrypted,
 							bResult = sal_True;
 						}
 
-						if ( aShowOnlineLayout.hasValue() )
+						if ( aShowOnlineLayout.hasValue() && xSettings.is() )
 						{
+							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
                 			xViewProps->setPropertyValue( aShowOnlineLayoutKey, aShowOnlineLayout );
 							xController->restoreViewData( xController->getViewData() );
 						}
