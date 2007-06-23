@@ -131,6 +131,11 @@ update_installation() {
 	# plugins
 	touch -f "$1"
 
+	# Register the QuickLook plugin
+	if [ -x "/usr/bin/qlmanage" ] ; then
+		/usr/bin/qlmanage -r "$2/Library/QuickLook/neopeek.qlgenerator"
+	fi
+
 	return 0
 
 }
