@@ -84,6 +84,7 @@ OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXIntelEnvJava.Set
 endif
 OO_LANGUAGES=ALL
 NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimporter.tgz
+NEOPEEK_QLPLUGIN_URL:=http://trinity.neooffice.org/downloads/neopeek.qlgenerator.tgz
 
 # Product information
 OO_PRODUCT_NAME=OpenOffice.org
@@ -394,7 +395,8 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; curl -L "$(NEOLIGHT_MDIMPORTER_URL)" | tar zxvf -
-	cd "$(INSTALL_HOME)" ; curl -L -O "$(NEOLIGHT_MDIMPORTER_URL)"
+	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/QuickLook"
+	cd "$(INSTALL_HOME)/package/Contents/Library/QuickLook" ; curl -L "$(NEOPEEK_QLPLUGIN_URL)" | tar zxvf -
 	cd "$(INSTALL_HOME)/package" ; sh -e -c 'for i in `find "." -name ".DS_Store"` ; do rm "$${i}" ; done'
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
@@ -454,6 +456,8 @@ build.patch_package: build.package
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/Spotlight" ; curl -L "$(NEOLIGHT_MDIMPORTER_URL)" | tar zxvf -
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Library/QuickLook"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/QuickLook" ; curl -L "$(NEOPEEK_QLPLUGIN_URL)" | tar zxvf -
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
