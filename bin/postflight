@@ -176,7 +176,7 @@ if [ -d "$2" ]; then
 
 	# Register the QuickLook plugin
 	if [ -x "/usr/bin/qlmanage" ] ; then
-		/usr/bin/qlmanage -r "$2/Library/QuickLook/neopeek.qlgenerator"
+		/usr/bin/qlmanage -r
 	fi
 
 fi
