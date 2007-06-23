@@ -20,6 +20,11 @@
 				<string>application/x-stardraw</string>
 				<string>application/vnd.oasis.opendocument.graphics</string>
 			</array>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.oasis-open.opendocument.graphics</string>
+				<string>org.oasis.opendocument.graphics</string>
+			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Drawing Document</string>
 			<key>CFBundleTypeRole</key>
@@ -42,6 +47,11 @@
 				<string>application/vnd.stardivision.calc</string>
 				<string>application/x-starcalc</string>
 				<string>application/vnd.oasis.opendocument.spreadsheet</string>
+			</array>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.oasis-open.opendocument.spreadsheet</string>
+				<string>org.oasis.opendocument.spreadsheet</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Spreadsheet Document</string>
@@ -67,7 +77,12 @@
 				<string>application/vnd.stardivision.impress</string>
 				<string>application/vnd.stardivision.impress-packed</string>
 				<string>application/x-starimpress</string>
-				<string>application/vnd.oasis.openoffice.presentation</string>
+				<string>application/vnd.oasis.opendocument.presentation</string>
+			</array>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.oasis-open.opendocument.presentation</string>
+				<string>org.oasis.opendocument.presentation</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Presentation Document</string>
@@ -113,6 +128,11 @@
 				<string>application/vnd.stardivision.writer</string>
 				<string>application/x-starwriter</string>
 				<string>application/vnd.oasis.opendocument.text</string>
+			</array>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>org.oasis-open.opendocument.text</string>
+				<string>org.oasis.opendocument.text</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Text Document</string>
