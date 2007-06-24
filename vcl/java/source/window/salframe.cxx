@@ -701,7 +701,15 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
 
-	aStyleSettings.SetCursorBlinkTime( 500 );
+	long nBlinkRate = 500;
+	CFPropertyListRef aInsertionPointBlinkPref = CFPreferencesCopyValue( CFSTR( "NSTextInsertionPointBlinkPeriod" ), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
+	if ( aInsertionPointBlinkPref )
+	{
+		if ( CFGetTypeID( aInsertionPointBlinkPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)aInsertionPointBlinkPref, kCFNumberLongType, &nBlinkRate ) && nBlinkRate < 500 )
+			nBlinkRate = 500;
+		CFRelease( aInsertionPointBlinkPref );
+	}
+	aStyleSettings.SetCursorBlinkTime( nBlinkRate );
 	
 	RGBColor theColor;
 	
