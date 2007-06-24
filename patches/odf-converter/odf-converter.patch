@@ -1,55 +1,240 @@
-Index: build/common.mk
-===================================================================
---- build/common.mk	(revision 1367)
-+++ build/common.mk	(working copy)
-@@ -2,6 +2,11 @@
+--- Makefile	2007-01-29 22:35:40.000000000 -0800
++++ Makefile	2007-06-23 21:57:07.000000000 -0700
+@@ -4,9 +4,12 @@
  
- OS:=$(shell uname -o)
+ SUBDIRS= \
+ 	source/AdditionalTools/zlib123/contrib/minizip \
+-	source/OdfZipUtils \
+-	source/OdfConverterLib \
+-	source/OdfConverterTest
++	source/Common/OdfZipUtils \
++	source/Common/OdfConverterLib \
++	source/Word/Converter \
++	source/Presentation/Converter \
++	source/Spreadsheet/Converter \
++	source/Shell/OdfConverterTest
+ DISTFILES= \
+ 	build/common.mk \
+ 	source/AdditionalTools/zlib123/zconf.h \
+--- source/Common/OdfZipUtils/Makefile	2007-01-31 18:10:26.000000000 -0800
++++ source/Common/OdfZipUtils/Makefile	2007-06-21 18:40:31.000000000 -0700
+@@ -1,4 +1,4 @@
+-top_srcdir=../..
++top_srcdir=../../..
  
-+# uname doesn't have a -o option on all platforms
-+ifndef OS
-+OS:=$(shell uname)
-+endif
-+
- CC=gcc
- LD=ld
- CSC=gmcs
-Index: source/OdfConverterTest/Makefile
-===================================================================
---- source/OdfConverterTest/Makefile	(revision 1367)
-+++ source/OdfConverterTest/Makefile	(working copy)
-@@ -13,7 +13,11 @@
- UNZOPEN=_unzOpen@4
- OTHERLIBS=-lole32 -loleaut32 -lws2_32 -lpsapi -luser32 -lkernel32
- else
-+ifeq ($(OS),Darwin)
-+MACHINE_CONFIG_FILE=
-+else
- MACHINE_CONFIG_FILE=--machine-config "`pkg-config --variable=prefix mono`/etc/mono/2.0/machine.config"
-+endif
- EXEEXT=
- PATHSEP=:
- EXPORTDYNAMIC=-Wl,--export-dynamic
-@@ -52,7 +56,7 @@
- # Don't even try static linking to mono as we need to bundle glib and all of
+ include $(top_srcdir)/build/common.mk
+ 
+--- source/Common/OdfConverterLib/Makefile	2007-01-31 18:10:26.000000000 -0800
++++ source/Common/OdfConverterLib/Makefile	2007-06-21 18:41:16.000000000 -0700
+@@ -1,4 +1,4 @@
+-top_srcdir=../..
++top_srcdir=../../..
+ 
+ include $(top_srcdir)/build/common.mk
+ 
+--- source/Shell/OdfConverterTest/Makefile	2007-03-21 15:01:44.000000000 -0700
++++ source/Shell/OdfConverterTest/Makefile	2007-06-23 22:01:04.000000000 -0700
+@@ -1,4 +1,4 @@
+-top_srcdir=../..
++top_srcdir=../../..
+ include $(top_srcdir)/build/common.mk
+ 
+ ifeq ($(OS),Cygwin)
+@@ -28,27 +28,33 @@
+ 
+ SOURCE = \
+     OdfCommandLineException.cs \
+-    OdfConverterTest.cs \
++    OdfConverter.cs \
+     OoxValidator.cs \
+     OdfValidator.cs
+ DISTFILES=$(SOURCE) zlib.def
+ 
+ all-local: OdfConverterTest.exe OdfConverter$(EXEEXT)
+ 
+-OdfConverterTest.exe : Makefile $(SOURCE) ../OdfZipUtils/OdfZipUtils.dll ../OdfConverterLib/OdfConverterLib.dll
++OdfConverterTest.exe : Makefile $(SOURCE) ../../Common/OdfZipUtils/OdfZipUtils.dll ../../Common/OdfConverterLib/OdfConverterLib.dll ../../Word/Converter/Word.dll ../../Presentation/Converter/Presentation.dll ../../Spreadsheet/Converter/Spreadsheet.dll
+ 	$(CSC) $(CSC_DEBUG) -d:MONO -target:exe -out:OdfConverterTest.exe \
+-		-reference:../OdfZipUtils/OdfZipUtils.dll \
+-		-reference:../OdfConverterLib/OdfConverterLib.dll \
++		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
++		-reference:../../Word/Converter/Word.dll \
++		-reference:../../Presentation/Converter/Presentation.dll \
++		-reference:../../Spreadsheet/Converter/Spreadsheet.dll \
+ 		$(SOURCE)
+ 
+-OdfConverterTestStatic.exe : $(SOURCE) ../OdfZipUtils/OdfZipUtilsStatic.dll ../OdfConverterLib/OdfConverterLibStatic.dll
++OdfConverterTestStatic.exe : $(SOURCE) ../../Common/OdfZipUtils/OdfZipUtilsStatic.dll ../../Common/OdfConverterLib/OdfConverterLibStatic.dll ../../Word/Converter/WordStatic.dll ../../Presentation/Converter/PresentationStatic.dll ../../Spreadsheet/Converter/SpreadsheetStatic.dll
+ 	$(CSC) $(CSC_DEBUG) -d:MONO -target:exe -out:OdfConverterTestStatic.exe \
+-		-reference:../OdfZipUtils/OdfZipUtilsStatic.dll \
+-		-reference:../OdfConverterLib/OdfConverterLibStatic.dll \
++		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
++		-reference:../../Word/Converter/WordStatic.dll \
++		-reference:../../Presentation/Converter/PresentationStatic.dll \
++		-reference:../../Spreadsheet/Converter/SpreadsheetStatic.dll \
+ 		$(SOURCE)
+ 
+ main.c bundle.o : OdfConverterTestStatic.exe Makefile
+-	MONO_PATH='../OdfZipUtils$(PATHSEP)../OdfConverterLib' mkbundle2 -c -o main.c -oo bundle.o --deps $(MACHINE_CONFIG_FILE) OdfConverterTestStatic.exe
++	MONO_PATH='../../Common/OdfZipUtils$(PATHSEP)../../Common/OdfConverterLib$(PATHSEP)../../Word/Converter$(PATHSEP)../../Presentation/Converter$(PATHSEP)../../Spreadsheet/Converter' mkbundle2 -c -o main.c -oo bundle.o --deps $(MACHINE_CONFIG_FILE) OdfConverterTestStatic.exe
+ 
+ OdfConverter$(EXEEXT) : main.c bundle.o $(ZLIBDEP) Makefile
+ 	rm -f $@
+@@ -57,7 +63,7 @@
  # its dependencies which are not included in a standard Mac OS X installation
  	$(CC) -o OdfConverter -Wall `pkg-config --cflags mono` main.c \
--		`pkg-config --libs-only-L mono` -bind_at_load \
-+		`pkg-config --libs-only-L mono` -bind_at_load -all_load -lz \
- 	    ../AdditionalTools/zlib123/contrib/minizip/libzlibwapi.a \
+ 		`pkg-config --libs-only-L mono` -bind_at_load -all_load -lz \
+-	    ../AdditionalTools/zlib123/contrib/minizip/libzlibwapi.a \
++	    ../../AdditionalTools/zlib123/contrib/minizip/libzlibwapi.a \
  		`pkg-config --libs-only-l mono` bundle.o
  else
-Index: source/AdditionalTools/zlib123/contrib/minizip/Makefile
-===================================================================
---- source/AdditionalTools/zlib123/contrib/minizip/Makefile	(revision 1367)
-+++ source/AdditionalTools/zlib123/contrib/minizip/Makefile	(working copy)
-@@ -41,6 +41,9 @@
- libzlibwapi.a : $(SOURCE) Makefile
- 	$(CC) -c $(DEBUG) $(CFLAGS) $(SOURCE)
- 	ar rc libzlibwapi.a zip.o unzip.o ioapi.o # FIXME - do better
-+ifeq ($(OS),Darwin)
-+	ranlib libzlibwapi.a
-+endif
- 
- clean-local:
- 	rm -f *.o libzlibwapi.$(DLLEXT) libzlibwapi.a
+ 	$(CC) -o OdfConverter$(EXEEXT) -Wall `pkg-config --cflags mono` main.c \
+--- /dev/null	2007-06-23 21:46:50.000000000 -0700
++++ source/Word/Converter/Makefile	2007-06-23 21:43:47.000000000 -0700
+@@ -0,0 +1,46 @@
++top_srcdir=../../..
++
++include $(top_srcdir)/build/common.mk
++
++ID_SUFFIX=CleverAge.OdfConverter.Word.resources
++
++OOX2ODF_RES= \
++    $(wildcard resources/oox2odf/*.xsl) \
++    $(wildcard resources/oox2odf/*.xml) \
++    $(wildcard resources/oox2odf/*.dtd)
++OOX2ODF_XML= $(foreach file, $(OOX2ODF_RES), $(subst resources/oox2odf/,,$(file)))
++PREFIX1=-resource:resources/oox2odf
++ID_SUFFIX1=$(ID_SUFFIX).oox2odf
++RESOURCE_FLAGS+=${foreach file, $(OOX2ODF_XML), $(PREFIX1)/$(file),$(ID_SUFFIX1).$(file)}
++
++ODF2OOX_RES= \
++    $(wildcard resources/odf2oox/*.xsl) \
++    $(wildcard resources/odf2oox/*.xml) \
++    $(wildcard resources/odf2oox/*.dtd)
++ODF2OOX_XML= $(foreach file, $(ODF2OOX_RES), $(subst resources/odf2oox/,,$(file)))
++PREFIX2=-resource:resources/odf2oox
++ID_SUFFIX2=$(ID_SUFFIX).odf2oox
++RESOURCE_FLAGS+=${foreach file, $(ODF2OOX_XML), $(PREFIX2)/$(file),$(ID_SUFFIX2).$(file)}
++
++SOURCE=${wildcard *.cs}
++DISTFILES=$(SOURCE) $(ODF2OOX_RES) $(OOX2ODF_RES)
++
++all-local: Word.dll WordStatic.dll 
++Word.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
++		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
++		-out:Word.dll $(SOURCE)
++
++WordStatic.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
++		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
++		-out:WordStatic.dll $(SOURCE)
++
++clean-local:
++
++clean-local:
++	rm -f *.dll
++
++dist-local: dist-common
+--- /dev/null	2007-06-23 21:49:43.000000000 -0700
++++ source/Presentation/Converter/Makefile	2007-06-23 21:54:52.000000000 -0700
+@@ -0,0 +1,46 @@
++top_srcdir=../../..
++
++include $(top_srcdir)/build/common.mk
++
++ID_SUFFIX=CleverAge.OdfConverter.Presentation.resources
++
++OOX2ODF_RES= \
++    $(wildcard resources/oox2odf/*.xsl) \
++    $(wildcard resources/oox2odf/*.xml) \
++    $(wildcard resources/oox2odf/*.dtd)
++OOX2ODF_XML= $(foreach file, $(OOX2ODF_RES), $(subst resources/oox2odf/,,$(file)))
++PREFIX1=-resource:resources/oox2odf
++ID_SUFFIX1=$(ID_SUFFIX).oox2odf
++RESOURCE_FLAGS+=${foreach file, $(OOX2ODF_XML), $(PREFIX1)/$(file),$(ID_SUFFIX1).$(file)}
++
++ODF2OOX_RES= \
++    $(wildcard resources/odf2oox/*.xsl) \
++    $(wildcard resources/odf2oox/*.xml) \
++    $(wildcard resources/odf2oox/*.dtd)
++ODF2OOX_XML= $(foreach file, $(ODF2OOX_RES), $(subst resources/odf2oox/,,$(file)))
++PREFIX2=-resource:resources/odf2oox
++ID_SUFFIX2=$(ID_SUFFIX).odf2oox
++RESOURCE_FLAGS+=${foreach file, $(ODF2OOX_XML), $(PREFIX2)/$(file),$(ID_SUFFIX2).$(file)}
++
++SOURCE=${wildcard *.cs}
++DISTFILES=$(SOURCE) $(ODF2OOX_RES) $(OOX2ODF_RES)
++
++all-local: Presentation.dll PresentationStatic.dll 
++Presentation.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
++		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
++		-out:Presentation.dll $(SOURCE)
++
++PresentationStatic.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
++		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
++		-out:PresentationStatic.dll $(SOURCE)
++
++clean-local:
++
++clean-local:
++	rm -f *.dll
++
++dist-local: dist-common
+--- /dev/null	2007-06-23 21:49:43.000000000 -0700
++++ source/Spreadsheet/Converter/Makefile	2007-06-23 21:57:39.000000000 -0700
+@@ -0,0 +1,46 @@
++top_srcdir=../../..
++
++include $(top_srcdir)/build/common.mk
++
++ID_SUFFIX=CleverAge.OdfConverter.Spreadsheet.resources
++
++OOX2ODF_RES= \
++    $(wildcard resources/oox2odf/*.xsl) \
++    $(wildcard resources/oox2odf/*.xml) \
++    $(wildcard resources/oox2odf/*.dtd)
++OOX2ODF_XML= $(foreach file, $(OOX2ODF_RES), $(subst resources/oox2odf/,,$(file)))
++PREFIX1=-resource:resources/oox2odf
++ID_SUFFIX1=$(ID_SUFFIX).oox2odf
++RESOURCE_FLAGS+=${foreach file, $(OOX2ODF_XML), $(PREFIX1)/$(file),$(ID_SUFFIX1).$(file)}
++
++ODF2OOX_RES= \
++    $(wildcard resources/odf2oox/*.xsl) \
++    $(wildcard resources/odf2oox/*.xml) \
++    $(wildcard resources/odf2oox/*.dtd)
++ODF2OOX_XML= $(foreach file, $(ODF2OOX_RES), $(subst resources/odf2oox/,,$(file)))
++PREFIX2=-resource:resources/odf2oox
++ID_SUFFIX2=$(ID_SUFFIX).odf2oox
++RESOURCE_FLAGS+=${foreach file, $(ODF2OOX_XML), $(PREFIX2)/$(file),$(ID_SUFFIX2).$(file)}
++
++SOURCE=${wildcard *.cs}
++DISTFILES=$(SOURCE) $(ODF2OOX_RES) $(OOX2ODF_RES)
++
++all-local: Spreadsheet.dll SpreadsheetStatic.dll 
++Spreadsheet.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
++		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
++		-out:Spreadsheet.dll $(SOURCE)
++
++SpreadsheetStatic.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
++		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
++		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
++		-out:SpreadsheetStatic.dll $(SOURCE)
++
++clean-local:
++
++clean-local:
++	rm -f *.dll
++
++dist-local: dist-common
