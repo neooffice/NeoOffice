@@ -703,9 +703,9 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 
 	long nBlinkRate = 500;
 	CFPropertyListRef aInsertionPointBlinkPref = CFPreferencesCopyValue( CFSTR( "NSTextInsertionPointBlinkPeriod" ), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
-	if ( aInsertionPointBlinkPref && CFGetTypeID( aInsertionPointBlinkPref ) == CFNumberGetTypeID() && !CFNumberIsFloatType( (CFNumberRef)aInsertionPointBlinkPref ) )
+	if ( aInsertionPointBlinkPref )
 	{
-		if ( CFNumberGetValue( (CFNumberRef)aInsertionPointBlinkPref, kCFNumberLongType, &nBlinkRate ) && nBlinkRate < 500 )
+		if ( CFGetTypeID( aInsertionPointBlinkPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)aInsertionPointBlinkPref, kCFNumberLongType, &nBlinkRate ) && nBlinkRate < 500 )
 			nBlinkRate = 500;
 		CFRelease( aInsertionPointBlinkPref );
 	}

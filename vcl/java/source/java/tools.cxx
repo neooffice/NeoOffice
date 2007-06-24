@@ -126,10 +126,10 @@ bool vcl::IsFullKeyboardAccessEnabled( )
 	{
 		CFPropertyListRef keyboardNavigationPref = NULL;
 		keyboardNavigationPref = CFPreferencesCopyValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
-		if ( keyboardNavigationPref && CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && !CFNumberIsFloatType( (CFNumberRef)keyboardNavigationPref ) )
+		if ( keyboardNavigationPref )
 		{
-			long prefVal;
-			if ( CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberLongType, &prefVal ) )
+			int prefVal;
+			if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
 				isFullAccessEnabled = ( prefVal > 0 );
 			CFRelease( keyboardNavigationPref );
 		}
