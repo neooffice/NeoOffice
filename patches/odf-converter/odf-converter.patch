@@ -238,3 +238,51 @@
 +	rm -f *.dll
 +
 +dist-local: dist-common
+Index: source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl
+===================================================================
+--- source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl	(revision 2784)
++++ source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl	(working copy)
+@@ -115,16 +115,18 @@
+         <xsl:value-of select="."/>
+       </xsl:variable>
+       <!-- caution with 'Enters' because they can result with additional space in output text -->
+-      <t xml:space="preserve"><xsl:choose>
+-        <xsl:when test="not(contains($value, '_x'))"><xsl:value-of select="$value"/></xsl:when>
++      <xsl:choose>
++        <xsl:when test="not(contains($value, '_x'))">
++          <t xml:space="preserve"><xsl:value-of select="$value"/></t>
++        </xsl:when>
+         <xsl:otherwise>
+           <xsl:call-template name="HexaDecimalValue">
+             <xsl:with-param name="value">
+-              <xsl:value-of select="$value"/>
++              <t xml:space="preserve"><xsl:value-of select="$value"/></t>
+             </xsl:with-param>
+           </xsl:call-template>
+         </xsl:otherwise>
+-      </xsl:choose></t>
++      </xsl:choose>
+     </r>
+   </xsl:template>
+ 
+Index: source/Spreadsheet/Converter/resources/oox2odf/table_body.xsl
+===================================================================
+--- source/Spreadsheet/Converter/resources/oox2odf/table_body.xsl	(revision 2784)
++++ source/Spreadsheet/Converter/resources/oox2odf/table_body.xsl	(working copy)
+@@ -1175,11 +1175,14 @@
+ 
+       <xsl:when test="not(contains($string,'../')) and not(contains($string,'..\..\'))">
+ 
++        <xsl:value-of select="concat('../',$string)"/>
++        <!--
+         <xsl:value-of select="concat('../',$string)">
+-          <!--xsl:call-template name="Change20PercentToSpace">
++          <xsl:call-template name="Change20PercentToSpace">
+               <xsl:with-param name="slash" select="concat('..\',substring-after($string,''))"/>
+-            </xsl:call-template-->
++            </xsl:call-template>
+         </xsl:value-of>
++        -->
+ 
+       </xsl:when>
+ 
