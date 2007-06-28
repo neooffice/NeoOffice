@@ -154,6 +154,9 @@ build.odf-converter_checkout:
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; svn co $(ODF-CONVERTER_TAG) $(ODF-CONVERTER_SVNROOT) "$(ODF-CONVERTER_PACKAGE)"
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(ODF-CONVERTER_PACKAGE)"
+# odf-converter engineers seem to not know that creating a file on Windows and
+# then checking it into cvs or svn from a Unix machine foobar's the newlines
+	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/source" ; sh -e -c 'for i in `find . -name "*.xsl"` ; do cat "$${i}" | tr -d "\015" > "../out" ; mv -f "../out" "$${i}" ; done'
 	touch "$@"
 
 build.oo_patches: build.ooo-build_patches \
