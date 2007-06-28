@@ -147,7 +147,7 @@
 +
 +include $(top_srcdir)/build/common.mk
 +
-+ID_SUFFIX=CleverAge.OdfConverter.Presentation.resources
++ID_SUFFIX=Sonata.OdfConverter.Presentation.resources
 +
 +OOX2ODF_RES= \
 +    $(wildcard resources/oox2odf/*.xsl) \
