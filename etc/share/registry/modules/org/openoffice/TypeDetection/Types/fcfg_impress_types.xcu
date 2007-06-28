@@ -1,0 +1,265 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE oor:component-data SYSTEM "../../../../component-update.dtd">
+<oor:component-data xmlns:oor="http://openoffice.org/2001/registry" xmlns:xs="http://www.w3.org/2001/XMLSchema" oor:package="org.openoffice.TypeDetection" oor:name="Types">
+	<node oor:name="Types">
+	<node oor:name="draw_StarOffice_XML_Draw" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sxd</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.sun.xml.draw</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarOffice XML (Draw)</value></prop>
+		<prop oor:name="UIName">
+			<value>%productname% %formatversion% Zeichnung</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Draw 6.0</value></prop>
+	</node>
+
+	<node oor:name="impress_MS_PowerPoint_97" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>ppt pps</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.ms-powerpoint</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>MS PowerPoint 97</value></prop>
+		<prop oor:name="UIName">
+			<value>Microsoft PowerPoint 97/2000/XP</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="impress_MS_PowerPoint_97_Vorlage" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>pot</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.ms-powerpoint</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>MS PowerPoint 97 Vorlage</value></prop>
+		<prop oor:name="UIName">
+			<value>MS PowerPoint 97/2000 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="draw_StarDraw_30" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sdd</value></prop>
+		<prop oor:name="MediaType"><value>application/x-stardraw</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarDraw 3.0 (StarImpress)</value></prop>
+		<prop oor:name="UIName">
+			<value>StarDraw 3.0</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarDrawDocument</value></prop>
+	</node>
+
+	<node oor:name="draw_StarDraw_30_Vorlage" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>vor</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarDraw 3.0 Vorlage</value></prop>
+		<prop oor:name="UIName">
+			<value>StarDraw 3.0 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarDrawDocument </value></prop>
+	</node>
+
+	<node oor:name="draw_StarDraw_50" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sda</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.stardivision.draw</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarDraw 5.0</value></prop>
+		<prop oor:name="UIName">
+			<value>StarDraw 5.0</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarDraw 5.0</value></prop>
+	</node>
+
+	<node oor:name="draw_StarDraw_50_Vorlage" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>vor</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarDraw 5.0 Vorlage</value></prop>
+		<prop oor:name="UIName">
+			<value>StarDraw 5.0 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarDraw 5.0</value></prop>
+	</node>
+
+	<node oor:name="impress_StarImpress_40" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sdd</value></prop>
+		<prop oor:name="MediaType"><value>application/x-starimpress</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarImpress 4.0</value></prop>
+		<prop oor:name="UIName">
+			<value>StarImpress 4.0</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarDrawDocument 4.0</value></prop>
+	</node>
+
+	<node oor:name="impress_StarImpress_40_Vorlage" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>vor</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarImpress 4.0 Vorlage</value></prop>
+		<prop oor:name="UIName">
+			<value>StarImpress 4.0 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarDrawDocument 4.0</value></prop>
+	</node>
+
+	<node oor:name="impress_StarImpress_50" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sdd</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.stardivision.impress</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarImpress 5.0</value></prop>
+		<prop oor:name="UIName">
+			<value>StarImpress 5.0</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarImpress 5.0</value></prop>
+	</node>
+
+	<node oor:name="impress_StarImpress_50_Vorlage" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>vor</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarImpress 5.0 Vorlage</value></prop>
+		<prop oor:name="UIName">
+			<value>StarImpress 5.0 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>StarImpress 5.0</value></prop>
+	</node>
+
+	<node oor:name="impress_StarImpress_50_packed" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sdp</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.stardivision.impress-packed</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarImpress 5.0 (packed)</value></prop>
+		<prop oor:name="UIName">
+			<value>StarImpress (packed)</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="impress_StarOffice_XML_Impress" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sxi</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.sun.xml.impress</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>StarOffice XML (Impress)</value></prop>
+		<prop oor:name="UIName">
+			<value>%productname% %formatversion% Präsentation</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Impress 6.0</value></prop>
+	</node>
+
+	<node oor:name="impress_StarOffice_XML_Impress_Template" oor:op="replace" >
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>sti</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>impress_StarOffice_XML_Impress_Template</value></prop>
+		<prop oor:name="UIName">
+			<value>Impress 6.0 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Impress 6.0</value></prop>
+	</node>
+
+	<node oor:name="pdf_Portable_Document_Format" oor:op="replace" >
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>pdf</value></prop>
+		<prop oor:name="MediaType"><value>application/pdf</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"/>
+		<prop oor:name="UIName">
+			<value>PDF - Portable Document Format</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="pwp_PlaceWare" oor:op="replace" >
+		<prop oor:name="DetectService"/>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>pwp</value></prop>
+		<prop oor:name="MediaType"/>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"/>
+		<prop oor:name="UIName">
+			<value>PWP - PlaceWare</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"/>
+	</node>
+
+	<node oor:name="impress8" oor:op="replace">
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"><value>private:factory/simpress*</value></prop>
+		<prop oor:name="Extensions"><value>odp</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.oasis.opendocument.presentation</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>impress8</value></prop>
+		<prop oor:name="UIName">
+			<value xml:lang="en-US">Impress 8</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Impress 8</value></prop>
+	</node>
+
+	<node oor:name="impress8_template" oor:op="replace">
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"/>
+		<prop oor:name="Extensions"><value>otp</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.oasis.opendocument.presentation-template</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>impress8_template</value></prop>
+		<prop oor:name="UIName">
+			<value xml:lang="en-US">Impress 8 Template</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Impress 8 Template</value></prop>
+	</node>
+
+	<node oor:name="draw8" oor:op="replace">
+		<prop oor:name="DetectService"><value>com.sun.star.comp.draw.FormatDetector</value></prop>
+		<prop oor:name="URLPattern"><value>private:factory/sdraw*</value></prop>
+		<prop oor:name="Extensions"><value>odg</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.oasis.opendocument.graphics</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>draw8</value></prop>
+		<prop oor:name="UIName">
+			<value xml:lang="en-US">Draw 8</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Draw 8</value></prop>
+	</node>
+
+	<node oor:name="MOOXPTYPE" oor:op="replace">
+		<prop oor:name="URLPattern"><value>*.pptx</value></prop>
+		<prop oor:name="Extensions"><value>pptx</value></prop>
+		<prop oor:name="MediaType"><value>application/vnd.openxmlformats-officedocument.presentationml.presentation</value></prop>
+		<prop oor:name="Preferred"><value>false</value></prop>
+		<prop oor:name="PreferredFilter"><value>MOOXP</value></prop>
+		<prop oor:name="UIName">
+			<value xml:lang="x-default">Microsoft PowerPoint 2007 Document</value>
+		</prop>
+		<prop oor:name="ClipboardFormat"><value>Impress 8</value></prop>
+	</node>
+
+	</node>
+</oor:component-data>
