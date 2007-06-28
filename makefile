@@ -167,6 +167,7 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_config_office_patch \
 	build.oo_external_patch \
 	build.oo_forms_patch \
+	build.oo_framework_patch \
 	build.oo_instsetoo_native_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \

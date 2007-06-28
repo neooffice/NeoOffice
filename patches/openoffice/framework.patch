@@ -1,0 +1,25 @@
+Index: source/xml/saxnamespacefilter.cxx
+===================================================================
+RCS file: /cvs/framework/framework/source/xml/saxnamespacefilter.cxx,v
+retrieving revision 1.6
+diff -u -r1.6 saxnamespacefilter.cxx
+--- source/xml/saxnamespacefilter.cxx	12 Oct 2006 10:44:43 -0000	1.6
++++ source/xml/saxnamespacefilter.cxx	28 Jun 2007 22:39:20 -0000
+@@ -151,7 +151,16 @@
+ 		throw e;
+ 	}
+ 
+-	xDocumentHandler->startElement( aNamespaceElementName, pNewList );
++	try {
++		xDocumentHandler->startElement( aNamespaceElementName, pNewList );
++	}
++	catch ( RuntimeException& re )
++	{
++		re.Message = OUString( getErrorLineString() + re.Message );
++		SAXException e;
++		e.Message = re.Message;
++		throw e;
++	}
+ }
+ 
+ void SAL_CALL SaxNamespaceFilter::endElement(const rtl::OUString& aName)
