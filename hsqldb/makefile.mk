@@ -36,7 +36,7 @@
 
 PRJ=.
 
-PRJNAME=so_hsqldb
+PRJNAME=hsqldb
 TARGET=so_hsqldb
 
 .IF "$(SOLAR_JAVA)" != ""
@@ -55,10 +55,6 @@ CONVERTFILES=build$/build.xml\
 		doc/changelist_1_8_0.txt\
 		src/org/hsqldb/resources/sql-error-messages.properties
 PATCH_FILE_NAME=hsqldb_1_8_0
-
-# We need this hack in our build system because the OOo build rules will
-# only see the unmodified OOo patch file and not our replacement patch file
-GNUPATCH:=$(TYPE) /dev/stdin $(PWD)$/$(PATCH_FILE_NAME) | $(GNUPATCH)
 
 ADDITIONAL_FILES=makefile.mk
 
