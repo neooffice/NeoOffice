@@ -524,6 +524,8 @@ namespace
     	: public rtl::Static< String, BrandName > {};
     struct Version
     	: public rtl::Static< String, Version > {};
+    struct AboutBoxVersion
+    	: public rtl::Static< String, AboutBoxVersion > {};
     struct Extension
     	: public rtl::Static< String, Extension > {};
     struct XMLFileFormatName
@@ -543,6 +545,7 @@ void ReplaceStringHookProc( UniString& rStr )
     {
         String &rBrandName = BrandName::get();
         String &rVersion = Version::get();
+        String &rAboutBoxVersion = AboutBoxVersion::get();
         String &rExtension = Extension::get();
         String &rXMLFileFormatName = XMLFileFormatName::get();
         String &rXMLFileFormatVersion = XMLFileFormatVersion::get();
@@ -566,6 +569,10 @@ void ReplaceStringHookProc( UniString& rStr )
             aRet >>= aTmp;
             rVersion = aTmp;
 
+            aRet = ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::ABOUTBOXPRODUCTVERSION );
+            aRet >>= aTmp;
+            rAboutBoxVersion = aTmp;
+
             if ( !rExtension.Len() )
             {
                 aRet = ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::PRODUCTEXTENSION );
@@ -577,6 +584,7 @@ void ReplaceStringHookProc( UniString& rStr )
         nPro++;
         rStr.SearchAndReplaceAllAscii( "%PRODUCTNAME", rBrandName );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTVERSION", rVersion );
+        rStr.SearchAndReplaceAllAscii( "%ABOUTBOXPRODUCTVERSION", rAboutBoxVersion );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTEXTENSION", rExtension );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTXMLFILEFORMATNAME", rXMLFileFormatName );
         rStr.SearchAndReplaceAllAscii( "%PRODUCTXMLFILEFORMATVERSION", rXMLFileFormatVersion );
@@ -1799,7 +1807,7 @@ void Desktop::Main()
 
 	Application::SetFilterHdl( LINK( this, Desktop, ImplInitFilterHdl ) );
 
-    sal_Bool bTerminateRequested = sal_False;
+	sal_Bool bTerminateRequested = sal_False;
 
     // Preload function depends on an initialized sfx application!
     SetSplashScreenProgress(75);

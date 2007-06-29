@@ -679,7 +679,7 @@ sal_Bool FirstStartWizard::showOnlineUpdatePage()
 
         if ( xUpdateAccess.is() )
         {
-            sal_Bool bAutoUpdChk;
+            sal_Bool bAutoUpdChk = sal_False;
             Any result = xUpdateAccess->getByName( UNISTRING( "AutoCheckEnabled" ) );
             result >>= bAutoUpdChk;
             if ( bAutoUpdChk == sal_False )
