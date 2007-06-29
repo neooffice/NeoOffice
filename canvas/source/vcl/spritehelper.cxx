@@ -353,8 +353,7 @@ namespace vclcanvas
                             // or using alpha blending - cannot use
                             // XOR, thus, employing the still somewhat
                             // speedier triangle clip method
-                            const ::basegfx::B2DPolyPolygon aPreparedClip(::basegfx::tools::addPointsAtCutsAndTouches(aClipPoly));
-                            ::basegfx::B2DPolygon aTriangulatedClip(::basegfx::triangulator::triangulate(aPreparedClip)); 
+                            ::basegfx::B2DPolygon aTriangulatedClip(::basegfx::triangulator::triangulate(aClipPoly)); 
 
                             // restrict the clipping area to the visible portion of the output device.
                             Size aSize(rTargetSurface.GetOutputSizePixel());
@@ -403,7 +402,7 @@ namespace vclcanvas
                 if( mbShowSpriteBounds )
                 {
                     ::PolyPolygon aMarkerPoly( 
-                        ::canvas::tools::getBoundMarkPolyPolygon(
+                        ::canvas::tools::getBoundMarksPolyPolygon(
                             ::basegfx::B2DRectangle(aOutPos.X(),
                                                     aOutPos.Y(),
                                                     aOutPos.X() + aOutputSize.Width()-1,
