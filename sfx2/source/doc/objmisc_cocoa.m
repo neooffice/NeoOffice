@@ -15,7 +15,7 @@
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2007 by Edward Peterlin (OPENSTEP@neooffice.org)
+ *  Copyright 2007 Planamesa Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
