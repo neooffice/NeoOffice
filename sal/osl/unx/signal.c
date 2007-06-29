@@ -306,6 +306,7 @@ static sal_Bool DeInitSignal()
 	return sal_False;
 }
 
+#if defined (SAL_ENABLE_CRASH_REPORT) && defined(INCLUDE_BACKTRACE)
 /*****************************************************************************/
 /* Generate MD5 checksum	*/
 /*****************************************************************************/
@@ -383,6 +384,7 @@ static int fputs_xml( const char *string, FILE *stream )
 
 	return result;
 }
+#endif
 
 /* Create intermediate files and run crash reporter */
 
@@ -685,8 +687,8 @@ static int ReportCrash( int Signal )
 static void PrintStack( int sig )
 {
 #ifndef USE_JAVA
-	void *buffer[MAX_STACK_FRAMES];
 #ifndef MACOSX
+	void *buffer[MAX_STACK_FRAMES];
 	int size = backtrace( buffer, sizeof(buffer) / sizeof(buffer[0]) );
 #endif
 

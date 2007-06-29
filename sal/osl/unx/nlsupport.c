@@ -265,6 +265,12 @@ static rtl_Locale * _parse_locale( const char * locale )
 
 #if defined(SOLARIS)
 
+/* The values in the below list can be obtained with a script like
+ *  #!/bin/sh
+ *  for i in `locale -a`; do
+ *    LC_ALL=$i locale -k code_set_name
+ *  done
+ */
 const _pair _nl_language_list[] = {
     { "5601",           RTL_TEXTENCODING_EUC_KR         }, /* ko_KR.EUC */
     { "646",            RTL_TEXTENCODING_ISO_8859_1     }, /* fake: ASCII_US */
@@ -838,6 +844,8 @@ rtl_TextEncoding osl_getTextEncodingFromLocale( rtl_Locale * pLocale )
 }
 
 #ifdef MACOSX
+#include "system.h"
+
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
@@ -845,13 +853,16 @@ rtl_TextEncoding osl_getTextEncodingFromLocale( rtl_Locale * pLocale )
 
 /* OS X locale discovery function from dylib */
 int (*pGetOSXLocale)( char *, sal_uInt32 );
+
+oslModule SAL_CALL osl_psz_loadModule(const sal_Char *pszModuleName, sal_Int32 nRtldMode);
+void* SAL_CALL osl_psz_getSymbol(oslModule hModule, const sal_Char* pszSymbolName);
 /*****************************************************************************
  return the current process locale
  *****************************************************************************/
 
 void _imp_getProcessLocale( rtl_Locale ** ppLocale )
 {
-    static const char *locale = NULL;
+    static char *locale = NULL;
 
     /* basic thread safeness */
 //    pthread_mutex_lock( &aLocalMutex );

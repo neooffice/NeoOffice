@@ -387,10 +387,6 @@ sal_Bool macxp_checkCreateDirectory(const char *pszStr);
 }
 #endif
 #endif
-/* XCode < 2.1 (Mac OS X 10.3 Panther and earlier) does not have this in unistd.h (#i64769#) */
-#ifndef _SC_GETPW_R_SIZE_MAX
-#define _SC_GETPW_R_SIZE_MAX 71
-#endif
 
 #if !defined(_WIN32)  && !defined(_WIN16) && !defined(OS2)  && \
     !defined(LINUX)   && !defined(NETBSD) && !defined(FREEBSD) && !defined(SCO)  && \

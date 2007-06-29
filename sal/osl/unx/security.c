@@ -76,13 +76,48 @@ static sal_Bool SAL_CALL osl_psz_getUserName(oslSecurity Security, sal_Char* psz
 static sal_Bool SAL_CALL osl_psz_getHomeDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax);
 static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax);
 
-static oslSecurityImpl * newSecurityImpl(size_t * bufSize) {
-#if defined (MACOSX) || defined (FREEBSD)
-    /* #i64906#: sysconf(_SC_GETPW_R_SIZE_MAX) returns -1 on Mac OS X and FreeBSD */
-    size_t n = 1024;
+enum Result { KNOWN, UNKNOWN, ERROR };
+
+static enum Result sysconf_SC_GETPW_R_SIZE_MAX(size_t * value) {
+#if defined _SC_GETPW_R_SIZE_MAX
+    long m;
+    errno = 0;
+    m = sysconf(_SC_GETPW_R_SIZE_MAX);
+    if (m == -1) {
+        if (errno == 0 || errno == EINVAL) {
+            /* _SC_GETPW_R_SIZE_MAX has no limit; some platforms like certain
+               FreeBSD versions support sysconf(_SC_GETPW_R_SIZE_MAX) in a
+               broken way and always set EINVAL, so be resilient here: */
+            return UNKNOWN;
+        } else {
+            /* sysconf failed: */
+            return ERROR;
+        }
+    } else {
+        OSL_ASSERT(m >= 0 && (unsigned long) m < SIZE_MAX);
+        *value = (size_t) m;
+        return KNOWN;
+    }
 #else
-    size_t n = (size_t) sysconf(_SC_GETPW_R_SIZE_MAX);
+    /* some platforms like Mac OS X 1.3 do not define _SC_GETPW_R_SIZE_MAX: */
+    return UNKNOWN;
 #endif
+}
+
+static oslSecurityImpl * newSecurityImpl(size_t * bufSize) {
+    size_t n = 0;
+    switch (sysconf_SC_GETPW_R_SIZE_MAX(&n)) {
+    case KNOWN:
+        break;
+    case UNKNOWN:
+        /* choose something sensible (the callers of newSecurityImpl should
+           detect it if the allocated buffer is too small, so this could lead to
+           an error upstream, but not a crash): */
+        n = 1024;
+        break;
+    default: /* ERROR */
+        return NULL;
+    }
     if (n <= SIZE_MAX - offsetof(oslSecurityImpl, m_buffer)) {
         *bufSize = n;
         n += offsetof(oslSecurityImpl, m_buffer);

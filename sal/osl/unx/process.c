@@ -43,10 +43,6 @@
  */
 
 
-#ifdef LINUX
-#include <asm/param.h>
-#endif
-
 #ifdef FREEBSD
 #include <machine/param.h>
 #endif
@@ -1180,7 +1176,7 @@ void osl_getProcStat(pid_t pid, struct osl_procStat* procstat)
 		char* tmp=0;
 		char prstatbuf[512];
 		memset(prstatbuf,0,512);
-		read(fd,prstatbuf,512);
+		read(fd,prstatbuf,511);
 
 		close(fd);
 		/*printf("%s\n\n",prstatbuf);*/
@@ -1228,7 +1224,7 @@ void osl_getProcStatm(pid_t pid, struct osl_procStat* procstat)
 	{
 		char prstatmbuf[512];
 		memset(prstatmbuf,0,512);
-		read(fd,prstatmbuf,512);
+		read(fd,prstatmbuf,511);
 
 		close(fd);
 
@@ -1257,7 +1253,7 @@ void osl_getProcStatus(pid_t pid, struct osl_procStat* procstat)
 		char* tmp=0;
 		char prstatusbuf[512];
 		memset(prstatusbuf,0,512);
-		read(fd,prstatusbuf,512);
+		read(fd,prstatusbuf,511);
 
 		close(fd);
 
@@ -1471,15 +1467,24 @@ oslProcessError SAL_CALL osl_getProcessInfo(oslProcess Process, oslProcessData F
 			 *   to work in 2.0.36)
 			 */
 
-			unsigned long clockticks=sysconf(_SC_CLK_TCK);
+            long clktck;
+            unsigned long hz;
+            unsigned long userseconds;
+            unsigned long systemseconds;
 
-			unsigned long userseconds=(procstat.utime/clockticks);
-			unsigned long systemseconds=(procstat.stime/clockticks);
+            clktck = sysconf(_SC_CLK_TCK);
+            if (clktck < 0) {
+                return osl_Process_E_Unknown;
+            }
+            hz = (unsigned long) clktck;
+
+            userseconds = procstat.utime/hz;
+            systemseconds = procstat.stime/hz;
 
 			pInfo->UserTime.Seconds   = userseconds;
-			pInfo->UserTime.Nanosec   = procstat.utime - (userseconds * clockticks);
+			pInfo->UserTime.Nanosec   = procstat.utime - (userseconds * hz);
 			pInfo->SystemTime.Seconds = systemseconds;
-			pInfo->SystemTime.Nanosec = procstat.stime - (systemseconds * clockticks);
+			pInfo->SystemTime.Nanosec = procstat.stime - (systemseconds * hz);
 
 			pInfo->Fields |= osl_Process_CPUTIMES;
 		}

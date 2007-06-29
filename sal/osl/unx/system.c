@@ -79,7 +79,7 @@ struct passwd *getpwnam_r(const char* name, struct passwd* s, char* buffer, int 
 
   	pthread_mutex_lock(&getrtl_mutex);
 
-  	if ( res = getpwnam(name) )
+  	if ( (res = getpwnam(name)) )
   	{
 		int nname, npasswd, nclass, ngecos, ndir;
 
@@ -145,10 +145,11 @@ int getpwuid_r(uid_t uid, struct passwd *pwd, char *buffer,
            size_t buflen, struct passwd **result)
 {
   struct passwd* res;
+  int retval = 0;
 
   pthread_mutex_lock(&getrtl_mutex);
 
-  if ( res = getpwuid(uid) )
+  if ( (res = getpwuid(uid)) )
   {
     size_t pw_name, pw_passwd, pw_class, pw_gecos, pw_dir, pw_shell;
 
@@ -189,23 +190,18 @@ int getpwuid_r(uid_t uid, struct passwd *pwd, char *buffer,
       buffer += pw_shell;
 
       *result = pwd ;
-      res = 0 ;
+      retval = 0 ;
 
-    } else {
-
-      res = ENOMEM ;
-
-    }      
-  
-  } else {
-
-    res = errno ;
- 
-  } 
+    }
+    else
+        retval =  ENOMEM;
+  }
+  else
+      retval = errno ;
 
   pthread_mutex_unlock(&getrtl_mutex);
 
-  return res;
+  return retval;
 }
 #endif
 
@@ -215,7 +211,7 @@ struct tm *localtime_r(const time_t *timep, struct tm *buffer)
 
   	pthread_mutex_lock(&getrtl_mutex);
 
-	if (res = localtime(timep))
+	if ( (res = localtime(timep)))
 	{
 		memcpy(buffer, res, sizeof(struct tm));
 		res = buffer;
@@ -232,7 +228,7 @@ struct tm *gmtime_r(const time_t *timep, struct tm *buffer)
 
   	pthread_mutex_lock(&getrtl_mutex);
 
-	if (res = gmtime(timep))
+	if ( (res = gmtime(timep)) )
 	{
 		memcpy(buffer, res, sizeof(struct tm));
 		res = buffer;
@@ -363,9 +359,9 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 
   	pthread_mutex_lock(&getrtl_mutex);
 
-  	if ( res = gethostbyname(name) )
+  	if ( (res = gethostbyname(name)) )
   	{
-		int nname, naliases, naddr_list, naliasesdata, ncntaddr_list, n;
+		int nname, naliases, naddr_list, naliasesdata, n;
 		char **p, **parray, *data;
 		
 		/* Check buffer size before copying, we want to leave the
@@ -397,8 +393,8 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
       		result->h_name = buffer;
 			buffer += nname;
 
-			result->h_aliases = buffer;
 			parray = (char**)buffer;
+			result->h_aliases = parray;
 			data = buffer + (naliases+1)*sizeof(char*);
 			for ( p = res->h_aliases; *p != NULL; p++) {
 				n = strlen(*p)+1;
@@ -408,9 +404,8 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 			}
 			*parray = NULL;
 			buffer = data;
-			
-			result->h_addr_list = buffer;
 			parray = (char**)buffer;
+			result->h_addr_list = parray;
 			data = buffer + (naddr_list+1)*sizeof(char*);
 			for ( p = res->h_addr_list; *p != NULL; p++) {
 				*parray++ = data;

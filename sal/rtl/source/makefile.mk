@@ -45,6 +45,8 @@ PROJECTPCH4DLL=TRUE
 PROJECTPCH=cont_pch
 PROJECTPCHSOURCE=cont_pch
 
+TARGETTYPE=CUI
+
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
@@ -74,6 +76,7 @@ SLOFILES=   \
             $(SLO)$/random.obj      \
             $(SLO)$/locale.obj      \
             $(SLO)$/strimp.obj      \
+            $(SLO)$/hash.obj        \
             $(SLO)$/string.obj      \
             $(SLO)$/ustring.obj     \
             $(SLO)$/strbuf.obj      \
@@ -103,6 +106,7 @@ OBJFILES=   \
             $(OBJ)$/random.obj      \
             $(OBJ)$/locale.obj      \
             $(OBJ)$/strimp.obj      \
+            $(OBJ)$/hash.obj        \
             $(OBJ)$/string.obj      \
             $(OBJ)$/ustring.obj     \
             $(OBJ)$/strbuf.obj      \
@@ -118,6 +122,10 @@ OBJFILES=   \
             $(OBJ)$/logfile.obj     \
             $(OBJ)$/tres.obj        \
             $(OBJ)$/math.obj
+			
+APP1TARGET=gen_makefile
+APP1OBJS=$(SLO)$/gen_makefile.obj
+APP1LIBSALCPPRT=
 
 # --- Extra objs ----------------------------------------------------
 
@@ -139,6 +147,11 @@ SYSALLOCCDEFS+=-DFORCE_SYSALLOC
 #.ENDIF
 
 .ENDIF
+
+# --- Makefile snippet  --------------------------------------------
+
+# used by e.g. update info file
+BOOTSTRAPMK = $(OUT)$/inc$/rtlbootstrap.mk
 
 # --- Targets ------------------------------------------------------
 
@@ -165,4 +178,8 @@ $(ALWAYSDBGFILES):
 .ENDIF
 .ENDIF
 
+ALLTAR : $(BOOTSTRAPMK)
+
+$(BOOTSTRAPMK) : $(APP1TARGETN)
+	$< > $@
 
