@@ -9,7 +9,7 @@ cy,0,Welsh
 da,1,Danish
 de,1,German
 el,1,Greek
-en-GB,0,British English
+en-GB,1,British English
 en-US,1,American English
 eo,0,Esperanto
 es,1,Spanish
@@ -19,7 +19,7 @@ fa,1,Persian
 fi,0,Finnish
 fr,1,French
 ga,0,Irish
-gl,0,Galician
+gl,1,Galician
 gu-IN,0,Gujurati
 he,0,Hebrew
 hi-IN,1,Hindi
