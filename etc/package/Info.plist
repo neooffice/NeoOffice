@@ -536,6 +536,7 @@
 			<array>
 				<string>pps</string>
 				<string>ppt</string>
+				<string>pptx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sxi_sdd_ppt.icns</string>
@@ -545,6 +546,7 @@
 				<string>application/mspowerpoint</string>
 				<string>application/vnd.ms-powerpoint</string>
 				<string>application/x-mspowerpoint</string>
+				<string>application/vnd.openxmlformats-officedocument.presentationml.presentation</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
@@ -614,6 +616,7 @@
 				<string>xlc</string>
 				<string>xlm</string>
 				<string>xls</string>
+				<string>xlsx</string>
 				<string>xlw</string>
 				<string>xml</string>
 				<string>pxl</string>
@@ -633,6 +636,7 @@
 				<string>application/wk1</string>
 				<string>applivation/x-quattropro</string>
 				<string>application/x-pocket-excel</string>
+				<string>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
