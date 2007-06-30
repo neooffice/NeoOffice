@@ -90,8 +90,8 @@ SFX_OBJECTS = \
 	$(SLO)$/appreg.obj \
 	$(SLO)$/appserv.obj \
 	$(SLO)$/appuno.obj \
+	$(SLO)$/appbaslib.obj \
 	$(SLO)$/childwin.obj \
-	$(SLO)$/dlgcont.obj \
 	$(SLO)$/helpdispatch.obj \
 	$(SLO)$/helpinterceptor.obj \
 	$(SLO)$/imagemgr.obj\
@@ -101,9 +101,7 @@ SFX_OBJECTS = \
         $(SLO)$/linksrc.obj \
         $(SLO)$/lnkbase2.obj \
 	$(SLO)$/module.obj \
-	$(SLO)$/namecont.obj \
 	$(SLO)$/newhelp.obj \
-	$(SLO)$/scriptcont.obj \
 	$(SLO)$/sfxdll.obj \
 	$(SLO)$/sfxhelp.obj \
 	$(SLO)$/sfxpicklist.obj \
@@ -112,7 +110,6 @@ SFX_OBJECTS = \
 	$(SLO)$/workwin.obj \
         $(SLO)$/xpackcreator.obj \
     $(SLO)$/fwkhelper.obj \
-    $(SLO)$/modsizeexceeded.obj \
     $(SLO)$/updatedlg.obj
 
 .IF "$(OS)" == "MACOSX"

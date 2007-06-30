@@ -115,10 +115,11 @@
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
-
+#include <tools/link.hxx>
 #ifdef UNX // need symlink
 #include <unistd.h>
 #endif
+
 #include "sfxresid.hxx"
 
 #if defined USE_JAVA && defined MACOSX
@@ -259,7 +260,7 @@ SFX_IMPL_XSERVICEINFO( ShutdownIcon, "com.sun.star.office.Quickstart", "com.sun.
 SFX_IMPL_ONEINSTANCEFACTORY( ShutdownIcon );
 
 bool ShutdownIcon::bModalMode = false;
-ShutdownIcon* ShutdownIcon::pShutdownIcon = 0;
+ShutdownIcon* ShutdownIcon::pShutdownIcon = NULL;
 
 // To remove conditionals
 extern "C" {
@@ -347,7 +348,7 @@ void ShutdownIcon::deInitSystray()
 	if (!m_bInitialized)
 		return;
     if (m_pDeInitSystray)
-	m_pDeInitSystray();
+		m_pDeInitSystray();
 
 	m_bVeto = false;
 	m_pInitSystray = 0;
@@ -355,6 +356,8 @@ void ShutdownIcon::deInitSystray()
 	if (m_pPlugin)
 		delete m_pPlugin;
 	m_pPlugin = 0;
+    delete m_pFileDlg;
+	m_pFileDlg = NULL;
 	m_bInitialized = false;
 }
 
@@ -362,7 +365,8 @@ void ShutdownIcon::deInitSystray()
 ShutdownIcon::ShutdownIcon( Reference< XMultiServiceFactory > aSMgr ) :
 	ShutdownIconServiceBase( m_aMutex ),
 	m_bVeto ( false ),
-	m_pResMgr( 0 ),
+	m_pResMgr( NULL ),
+    m_pFileDlg( NULL ),
 	m_xServiceManager( aSMgr ),
 	m_pInitSystray( 0 ),
 	m_pDeInitSystray( 0 ),
@@ -387,7 +391,7 @@ void ShutdownIcon::OpenURL( const ::rtl::OUString& aURL, const ::rtl::OUString& 
         {
             com::sun::star::util::URL aDispatchURL;
             aDispatchURL.Complete = aURL;
-            
+
             Reference < com::sun::star::util::XURLTransformer > xURLTransformer(
                 ::comphelper::getProcessServiceFactory()->createInstance( OUString::createFromAscii("com.sun.star.util.URLTransformer") ),
                 com::sun::star::uno::UNO_QUERY );
@@ -422,118 +426,7 @@ void ShutdownIcon::FileOpen()
     {
         ::vos::OGuard aGuard( Application::GetSolarMutex() );
 		EnterModalMode();
-		// use ctor for filling up filters automatically! #89169#
-		FileDialogHelper dlg( WB_OPEN | SFXWB_MULTISELECTION, String() );
-        if ( ERRCODE_NONE == dlg.Execute() )
-		{
-			Reference< XFilePicker >	xPicker = dlg.GetFilePicker();
-
-			try
-			{
-
-				if ( xPicker.is() )
-				{
-
-					Reference < XFilePickerControlAccess > xPickerControls ( xPicker, UNO_QUERY );
-					Reference < XFilterManager > xFilterManager ( xPicker, UNO_QUERY );
-
-					Sequence< OUString >		sFiles = xPicker->getFiles();
-					int							nFiles = sFiles.getLength();
-
-                    int                         nArgs=0;
-                    Sequence< PropertyValue >   aArgs;
-
-                    // No default arguments anymore as they are provided by the dispatch 
-                    // provider automatically.
-
-					// pb: #102643# use the filedlghelper to get the current filter name,
-					// because it removes the extensions before you get the filter name.
-					OUString aFilterName( dlg.GetCurrentFilter() );
-
-					if ( xPickerControls.is() )
-					{
-
-						// Set readonly flag
-
-						sal_Bool	bReadOnly = sal_False;
-
-
-						xPickerControls->getValue( ExtendedFilePickerElementIds::CHECKBOX_READONLY, 0 ) >>= bReadOnly;
-
-						// #95239#: Only set porperty if readonly is set to TRUE
-
-						if ( bReadOnly )
-						{
-							aArgs.realloc( ++nArgs );
-							aArgs[nArgs-1].Name  = OUString::createFromAscii( "ReadOnly" );
-							aArgs[nArgs-1].Value <<= bReadOnly;
-						}
-
-						// Get version string
-
-						sal_Int32	iVersion = -1;
-
-						xPickerControls->getValue( ExtendedFilePickerElementIds::LISTBOX_VERSION, ControlActions::GET_SELECTED_ITEM_INDEX ) >>= iVersion;
-
-						if ( iVersion >= 0 )
-						{
-							sal_Int16	uVersion = (sal_Int16)iVersion;
-
-							aArgs.realloc( ++nArgs );
-							aArgs[nArgs-1].Name  = OUString::createFromAscii( "Version" );
-							aArgs[nArgs-1].Value <<= uVersion;
-						}
-
-						// Retrieve the current filter
-
-						if ( !aFilterName.getLength() )
-							xPickerControls->getValue( CommonFilePickerElementIds::LISTBOX_FILTER, ControlActions::GET_SELECTED_ITEM ) >>= aFilterName;
-
-					}
-
-
-					// Convert UI filter name to internal filter name
-
-					if ( aFilterName.getLength() )
-					{
-						const SfxFilter* pFilter = SFX_APP()->GetFilterMatcher().GetFilter4UIName( aFilterName, 0, SFX_FILTER_NOTINFILEDLG );
-
-						if ( pFilter )
-						{
-                            aFilterName = pFilter->GetFilterName();
-
-							if ( aFilterName.getLength() )
-							{
-								aArgs.realloc( ++nArgs );
-								aArgs[nArgs-1].Name  = OUString::createFromAscii( "FilterName" );
-								aArgs[nArgs-1].Value <<= aFilterName;
-							}
-						}
-					}
-
-					if ( 1 == nFiles )
-                        OpenURL( sFiles[0], OUString( RTL_CONSTASCII_USTRINGPARAM( "_default" ) ), aArgs );
-					else
-					{
-						OUString	aBaseDirURL = sFiles[0];
-						if ( aBaseDirURL.getLength() > 0 && aBaseDirURL[aBaseDirURL.getLength()-1] != '/' )
-							aBaseDirURL += OUString::createFromAscii("/");
-
-						int	iFiles;
-						for ( iFiles = 1; iFiles < nFiles; iFiles++ )
-						{
-							OUString	aURL = aBaseDirURL;
-							aURL += sFiles[iFiles];
-                            OpenURL( aURL, OUString( RTL_CONSTASCII_USTRINGPARAM( "_default" ) ), aArgs );
-						}
-					}
-				}
-			}
-			catch ( ... )
-			{
-			}
-		}
-		LeaveModalMode();
+        getInstance()->StartFileDialog();
     }
 }
 
@@ -606,6 +499,152 @@ OUString ShutdownIcon::GetUrlDescription( const OUString& aUrl )
 
 // ---------------------------------------------------------------------------
 
+void ShutdownIcon::StartFileDialog()
+{
+    ::vos::OGuard aGuard( Application::GetSolarMutex() );
+
+    if ( !m_pFileDlg )
+        m_pFileDlg = new FileDialogHelper( WB_OPEN | SFXWB_MULTISELECTION, String() );
+    m_pFileDlg->StartExecuteModal( STATIC_LINK( this, ShutdownIcon, DialogClosedHdl_Impl ) );
+}
+
+// ---------------------------------------------------------------------------
+
+IMPL_STATIC_LINK( ShutdownIcon, DialogClosedHdl_Impl, FileDialogHelper*, EMPTYARG )
+{
+    DBG_ASSERT( pThis->m_pFileDlg, "ShutdownIcon, DialogClosedHdl_Impl(): no file dialog" );
+
+    // use ctor for filling up filters automatically! #89169#
+    if ( ERRCODE_NONE == pThis->m_pFileDlg->GetError() )
+    {
+        Reference< XFilePicker >    xPicker = pThis->m_pFileDlg->GetFilePicker();
+
+        try
+        {
+
+            if ( xPicker.is() )
+            {
+
+                Reference < XFilePickerControlAccess > xPickerControls ( xPicker, UNO_QUERY );
+                Reference < XFilterManager > xFilterManager ( xPicker, UNO_QUERY );
+
+                Sequence< OUString >        sFiles = xPicker->getFiles();
+                int                         nFiles = sFiles.getLength();
+
+                int                         nArgs=3;
+                Sequence< PropertyValue >   aArgs(3);
+
+                Reference < com::sun::star::task::XInteractionHandler > xInteraction(
+                    ::comphelper::getProcessServiceFactory()->createInstance( OUString::createFromAscii("com.sun.star.task.InteractionHandler") ),
+                    com::sun::star::uno::UNO_QUERY );
+
+                aArgs[0].Name = OUString::createFromAscii( "InteractionHandler" );
+                aArgs[0].Value <<= xInteraction;
+
+                sal_Int16 nMacroExecMode = ::com::sun::star::document::MacroExecMode::USE_CONFIG;
+                aArgs[1].Name = OUString::createFromAscii( "MacroExecutionMode" );
+                aArgs[1].Value <<= nMacroExecMode;
+
+                sal_Int16 nUpdateDoc = ::com::sun::star::document::UpdateDocMode::ACCORDING_TO_CONFIG;
+                aArgs[2].Name = OUString::createFromAscii( "UpdateDocMode" );
+                aArgs[2].Value <<= nUpdateDoc;
+
+                // pb: #102643# use the filedlghelper to get the current filter name,
+                // because it removes the extensions before you get the filter name.
+                OUString aFilterName( pThis->m_pFileDlg->GetCurrentFilter() );
+
+                if ( xPickerControls.is() )
+                {
+
+                    // Set readonly flag
+
+                    sal_Bool    bReadOnly = sal_False;
+
+
+                    xPickerControls->getValue( ExtendedFilePickerElementIds::CHECKBOX_READONLY, 0 ) >>= bReadOnly;
+
+                    // #95239#: Only set porperty if readonly is set to TRUE
+
+                    if ( bReadOnly )
+                    {
+                        aArgs.realloc( ++nArgs );
+                        aArgs[nArgs-1].Name  = OUString::createFromAscii( "ReadOnly" );
+                        aArgs[nArgs-1].Value <<= bReadOnly;
+                    }
+
+                    // Get version string
+
+                    sal_Int32   iVersion = -1;
+
+                    xPickerControls->getValue( ExtendedFilePickerElementIds::LISTBOX_VERSION, ControlActions::GET_SELECTED_ITEM_INDEX ) >>= iVersion;
+
+                    if ( iVersion >= 0 )
+                    {
+                        sal_Int16   uVersion = (sal_Int16)iVersion;
+
+                        aArgs.realloc( ++nArgs );
+                        aArgs[nArgs-1].Name  = OUString::createFromAscii( "Version" );
+                        aArgs[nArgs-1].Value <<= uVersion;
+                    }
+
+                    // Retrieve the current filter
+
+                    if ( !aFilterName.getLength() )
+                        xPickerControls->getValue( CommonFilePickerElementIds::LISTBOX_FILTER, ControlActions::GET_SELECTED_ITEM ) >>= aFilterName;
+
+                }
+
+
+                // Convert UI filter name to internal filter name
+
+                if ( aFilterName.getLength() )
+                {
+                    const SfxFilter* pFilter = SFX_APP()->GetFilterMatcher().GetFilter4UIName( aFilterName, 0, SFX_FILTER_NOTINFILEDLG );
+
+                    if ( pFilter )
+                    {
+                        aFilterName = pFilter->GetFilterName();
+
+                        if ( aFilterName.getLength() )
+                        {
+                            aArgs.realloc( ++nArgs );
+                            aArgs[nArgs-1].Name  = OUString::createFromAscii( "FilterName" );
+                            aArgs[nArgs-1].Value <<= aFilterName;
+                        }
+                    }
+                }
+
+                if ( 1 == nFiles )
+                    OpenURL( sFiles[0], OUString( RTL_CONSTASCII_USTRINGPARAM( "_default" ) ), aArgs );
+                else
+                {
+                    OUString    aBaseDirURL = sFiles[0];
+                    if ( aBaseDirURL.getLength() > 0 && aBaseDirURL[aBaseDirURL.getLength()-1] != '/' )
+                        aBaseDirURL += OUString::createFromAscii("/");
+
+                    int iFiles;
+                    for ( iFiles = 1; iFiles < nFiles; iFiles++ )
+                    {
+                        OUString    aURL = aBaseDirURL;
+                        aURL += sFiles[iFiles];
+                        OpenURL( aURL, OUString( RTL_CONSTASCII_USTRINGPARAM( "_default" ) ), aArgs );
+                    }
+                }
+            }
+        }
+        catch ( ... )
+        {
+        }
+    }
+
+#ifdef WNT
+        LeaveModalMode();
+#endif
+    return 0;
+}
+
+// ---------------------------------------------------------------------------
+
 void ShutdownIcon::addTerminateListener()
 {
 	if ( getInstance() && getInstance()->m_xDesktop.is() )
@@ -663,7 +702,7 @@ ShutdownIcon* ShutdownIcon::createInstance()
 	} catch (...) {
 		delete pIcon;
 	}
-	
+
 	return pShutdownIcon;
 }
 

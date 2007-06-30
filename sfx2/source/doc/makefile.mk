@@ -52,10 +52,10 @@ SRC1FILES = \
         doc.src new.src doctdlg.src docvor.src doctempl.src sfxbasemodel.src graphhelp.src secmacrowarnings.src
 
 SLOFILES =	\
-                $(SLO)$/iframe.obj \
-                $(SLO)$/applet.obj \
-		$(SLO)$/commitlistener.obj \
-                $(SLO)$/plugin.obj \
+        $(SLO)$/iframe.obj \
+        $(SLO)$/applet.obj \
+        $(SLO)$/commitlistener.obj \
+        $(SLO)$/plugin.obj \
 		$(SLO)$/docfile.obj \
 		$(SLO)$/objuno.obj \
 		$(SLO)$/frmdescr.obj \
@@ -82,7 +82,8 @@ SLOFILES =	\
 		$(SLO)$/graphhelp.obj \
 		$(SLO)$/QuerySaveDocument.obj \
 		$(SLO)$/secmacrowarnings.obj \
-		$(SLO)$/opostponedtruncationstream.obj
+        $(SLO)$/opostponedtruncationstream.obj \
+        $(SLO)$/docinsert.obj
 
 .IF "$(OS)" == "MACOSX"
 .IF "$(GUIBASE)" == "java"

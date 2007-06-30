@@ -1535,21 +1535,6 @@ SfxObjectShellRef MakeObjectShellForOrganizer_Impl( const String& aTargetURL, BO
     return xDoc;
 }
 
-/*
-SfxToolBoxConfig* SfxObjectShell::GetToolBoxConfig_Impl()
-{
-    //TODO/LATER: new API after recync to docking1 cws???
-    if ( !pImp->pTbxConfig )
-	{
-        pImp->pTbxConfig = new SfxToolBoxConfig(
-//REMOVE				GetConfigManager() ? pImp->pCfgMgr : SFX_APP()->GetConfigManager_Impl() );
-										SFX_APP()->GetConfigManager_Impl() );
-	}
-
-    return pImp->pTbxConfig;
-} */
-
-
 sal_Bool SfxObjectShell::IsHelpDocument() const
 {
     const SfxFilter* pFilter = GetMedium()->GetFilter();

@@ -181,7 +181,7 @@ using namespace ::com::sun::star::script;
 #include "../appl/app.hrc"
 #include "secmacrowarnings.hxx"
 #include "sfxdlg.hxx"
-#include "scriptcont.hxx"
+#include "appbaslib.hxx"
 
 #ifdef MACOSX
 // [ed] 4/26/07 Includes for invoking NSWindow setDocumentEdited
@@ -1108,7 +1108,7 @@ void SfxObjectShell::CheckMacrosOnLoading_Impl()
 			if ( SvtSecurityOptions().GetMacroSecurityLevel() > 2
 				&& MacroExecMode::NEVER_EXECUTE == pImp->nMacroMode )
 			{
-				WarningBox aBox( NULL, SfxResId( MSG_WARNING_MACRO_ISDISABLED ) );
+                WarningBox aBox( GetDialogParent(), SfxResId( MSG_WARNING_MACRO_ISDISABLED ) );
 				aBox.Execute();
 			}
 		}
@@ -1128,7 +1128,8 @@ void SfxObjectShell::CheckMacrosOnLoading_Impl()
 	if ( !pImp->bSignatureErrorIsShown
 	&& GetDocumentSignatureState() == SIGNATURESTATE_SIGNATURES_BROKEN )
 	{
-		WarningBox( NULL, SfxResId( RID_XMLSEC_WARNING_BROKENSIGNATURE ) ).Execute();
+        WarningBox aBox( GetDialogParent(), SfxResId( RID_XMLSEC_WARNING_BROKENSIGNATURE ) );
+		aBox.Execute();
 		pImp->nMacroMode = MacroExecMode::NEVER_EXECUTE;
 		pImp->bSignatureErrorIsShown = sal_True;
 	}
@@ -1493,7 +1494,7 @@ ErrCode SfxObjectShell::CallXScript( const String& rScriptURL,
 		if ( pFact != NULL )
 		{
 			VclAbstractDialog* pDlg =
-				pFact->CreateScriptErrorDialog( NULL, aException );
+                pFact->CreateScriptErrorDialog( GetDialogParent(), aException );
 
 			if ( pDlg != NULL )
 			{
@@ -1892,7 +1893,8 @@ void SfxObjectShell::AdjustMacroMode( const String& /*rScriptType*/ )
 	{
 		// if the signature is broken, show here the warning before
 		// the macro warning
-		WarningBox( NULL, SfxResId( RID_XMLSEC_WARNING_BROKENSIGNATURE ) ).Execute();
+		WarningBox aBox( GetDialogParent(), SfxResId( RID_XMLSEC_WARNING_BROKENSIGNATURE ) );
+		aBox.Execute();
 		pImp->nMacroMode = MacroExecMode::NEVER_EXECUTE;
 		pImp->bSignatureErrorIsShown = sal_True;
 	}
@@ -1907,7 +1909,8 @@ void SfxObjectShell::AdjustMacroMode( const String& /*rScriptType*/ )
 		if ( !pImp->bMacroDisabledMessageIsShown )
 		{
 			String aMessage( SfxResId( STR_MACROS_DISABLED ) );
-			WarningBox( NULL, WB_OK, aMessage ).Execute();
+			WarningBox aBox( GetDialogParent(), WB_OK, aMessage );
+			aBox.Execute();
 			pImp->bMacroDisabledMessageIsShown = sal_True;
 		}
 
@@ -1998,12 +2001,13 @@ void SfxObjectShell::AdjustMacroMode( const String& /*rScriptType*/ )
 				// if there is a macro signature it must be handled as broken
 	    		nSignatureState = SIGNATURESTATE_SIGNATURES_BROKEN;
 			}
-			
+
 	    	if ( nSignatureState == SIGNATURESTATE_SIGNATURES_BROKEN )
 	    	{
 				if ( pImp->nMacroMode != MacroExecMode::FROM_LIST_AND_SIGNED_NO_WARN )
 				{
-					WarningBox( NULL, SfxResId( RID_XMLSEC_WARNING_BROKENSIGNATURE ) ).Execute();
+					WarningBox aBox( GetDialogParent(), SfxResId( RID_XMLSEC_WARNING_BROKENSIGNATURE ) );
+					aBox.Execute();
                     pImp->nMacroMode = MacroExecMode::NEVER_EXECUTE;
 					return;
 				}
@@ -2033,7 +2037,7 @@ void SfxObjectShell::AdjustMacroMode( const String& /*rScriptType*/ )
 
 				if ( pImp->nMacroMode != MacroExecMode::FROM_LIST_AND_SIGNED_NO_WARN )
 				{
-                    MacroWarning aDlg( NULL, true );
+                    MacroWarning aDlg( GetDialogParent(), true );
                     aDlg.SetDocumentURL( aReferer );
                     if( nNumOfInfos > 1 )
                         aDlg.SetStorage( xStore, aScriptingSignatureInformations );
@@ -2046,7 +2050,7 @@ void SfxObjectShell::AdjustMacroMode( const String& /*rScriptType*/ )
 			}
 			else if( pImp->nMacroMode == MacroExecMode::USE_CONFIG )
 			{
-                MacroWarning aWarning( NULL, false );
+                MacroWarning aWarning( GetDialogParent(), false );
                 aWarning.SetDocumentURL( aReferer );
 				if( aWarning.Execute() != RET_OK )
 					return;
@@ -2058,7 +2062,10 @@ void SfxObjectShell::AdjustMacroMode( const String& /*rScriptType*/ )
 		  || pImp->nMacroMode == MacroExecMode::FROM_LIST_AND_SIGNED_WARN )
 		{
             if ( pImp->nMacroMode == MacroExecMode::FROM_LIST_AND_SIGNED_WARN )
-				WarningBox( NULL, SfxResId( MSG_WARNING_MACRO_ISDISABLED ) ).Execute();
+			{
+				WarningBox aBox( GetDialogParent(), SfxResId( MSG_WARNING_MACRO_ISDISABLED ) );
+				aBox.Execute();
+			}
 	       	pImp->nMacroMode = MacroExecMode::NEVER_EXECUTE;
 			return;
 		}
@@ -2085,7 +2092,7 @@ void SfxObjectShell::AdjustMacroMode( const String& /*rScriptType*/ )
         if ( osl::FileBase::getSystemPathFromFileURL( aReferer, aSystemFileURL ) == osl::FileBase::E_None )
             aReferer = aSystemFileURL;
 
-		MacroWarning aWarning( NULL, false );
+        MacroWarning aWarning( GetDialogParent(), false );
 		aWarning.SetDocumentURL( aReferer );
 		bSecure = ( aWarning.Execute() == RET_OK );
 	}
@@ -2102,39 +2109,51 @@ sal_Int16 SfxObjectShell::GetMacroMode()
 
 Window* SfxObjectShell::GetDialogParent( SfxMedium* pLoadingMedium )
 {
-    Window* pWindow = NULL;
-
-    // test current view, if it contains this document
-    SfxViewFrame* pView = SfxViewFrame::Current();
-    if ( !pView || pView->GetObjectShell() != this )
-        // get the first visible(!) view
-        pView = SfxViewFrame::GetFirst( this );
-
-    if ( pView )
-        // found ViewFrame, get the frames container window
-        pWindow = VCLUnoHelper::GetWindow( pView->GetFrame()->GetFrameInterface()->getContainerWindow() );
-
-    if ( !pLoadingMedium )
-        // if there is no loading medium, take the medium of this document
-        pLoadingMedium = pMedium;
-/*
-    if ( !pWindow && pLoadingMedium )
+    Window* pWindow = 0;
+    SfxItemSet* pSet = pLoadingMedium ? pLoadingMedium->GetItemSet() : GetMedium()->GetItemSet();
+    SFX_ITEMSET_ARG( pSet, pUnoItem, SfxUnoAnyItem, SID_FILLFRAME, FALSE );
+    if ( pUnoItem )
     {
-        // is this document is loading currently?
-        SfxFrame* pFrame = pLoadingMedium->GetLoadTargetFrame();
-        if ( pFrame )
-            // get the frame it is loaded into
-            pWindow = VCLUnoHelper::GetWindow( pFrame->GetFrameInterface()->getContainerWindow() );
+        uno::Reference < frame::XFrame > xFrame;
+        pUnoItem->GetValue() >>= xFrame;
+        if ( xFrame.is() )
+            pWindow = VCLUnoHelper::GetWindow( xFrame->getContainerWindow() );
+    }
 
-        if ( pWindow )
+    if ( !pWindow )
+    {
+        SfxFrame* pFrame = 0;
+        SFX_ITEMSET_ARG( pSet, pFrameItem, SfxFrameItem, SID_DOCFRAME, FALSE );
+        if( pFrameItem && pFrameItem->GetFrame() )
+            // get target frame from ItemSet
+            pFrame = pFrameItem->GetFrame();
+        else
         {
-            // this frame may be invisible, show it if it is allowed
-            SFX_ITEMSET_ARG( pLoadingMedium->GetItemSet(), pHiddenItem, SfxBoolItem, SID_HIDDEN, sal_False );
-            if ( !pHiddenItem || !pHiddenItem->GetValue() )
-                pWindow->Show();
+            // try the current frame
+            SfxViewFrame* pView = SfxViewFrame::Current();
+            if ( !pView || pView->GetObjectShell() != this )
+                // get any visible frame
+                pView = SfxViewFrame::GetFirst(this);
+            if ( pView )
+                pFrame = pView->GetFrame();
+        }
+
+        if ( pFrame )
+            // get topmost window
+            pWindow = VCLUnoHelper::GetWindow( pFrame->GetFrameInterface()->getContainerWindow() );
+    }
+
+    if ( pWindow )
+    {
+        // this frame may be invisible, show it if it is allowed
+        SFX_ITEMSET_ARG( pSet, pHiddenItem, SfxBoolItem, SID_HIDDEN, sal_False );
+        if ( !pHiddenItem || !pHiddenItem->GetValue() )
+        {
+            pWindow->Show();
+            pWindow->ToTop();
         }
     }
-*/
+
     return pWindow;
 }
 
@@ -2194,81 +2213,18 @@ BOOL SfxObjectShell::IsUIActive()
     return pFrame && pFrame->GetFrame()->IsInPlace() && pFrame->GetFrame()->GetWorkWindow_Impl()->IsVisible_Impl();
 }
 
-void SfxObjectShell::UIActivate( BOOL bActivate )
+void SfxObjectShell::UIActivate( BOOL )
 {
-    SfxViewFrame* pFrame = SfxViewFrame::GetFirst( this );
-    //SfxViewFrame *pParent = pFrame->GetParentViewFrame_Impl();
-	if ( bActivate )
-	{
-        //if ( pParent )
-        //    pParent->SetIPFrame_Impl( GetIPFrame_Impl() );
-
-		// DoActivate erfolgte schon im InPlaceActivate
-        pFrame->GetFrame()->GetWorkWindow_Impl()->MakeVisible_Impl( TRUE );
-        SfxViewFrame::SetViewFrame( pFrame );
-        pFrame->GetDispatcher()->Update_Impl( TRUE );
-	}
-	else
-	{
-        //if ( pParent )
-			// Bei internem InPlace das Container-Dokument aktivieren
-        //    pParent->SetIPFrame_Impl( NULL );
-
-        //if ( pApp->GetViewFrame() == pFrame )
-			// Das muss nicht sein, es k"onnte auch die Task gewechselt worden sein
-        //    pApp->SetViewFrame( pParent );
-        pFrame->GetFrame()->GetWorkWindow_Impl()->MakeVisible_Impl( FALSE );
-        pFrame->GetDispatcher()->Update_Impl( TRUE );
-	}
 }
 
-void SfxObjectShell::InPlaceActivate( BOOL /*bActivate*/ )
+void SfxObjectShell::InPlaceActivate( BOOL )
 {
-    /*
-	if( bActivate )
-	{
-		DBG_ASSERT( pObjShell,
-					"SfxInPlaceObject::InPlaceActivate(): you must call SetShell() bevor" )
-		DBG_ASSERT (!pFrame, "Objekt ist noch aktiv!");
-
-		// IPFenster erzeugen
-		SfxInPlaceFrame *pIPFrame =
-						new SfxInPlaceFrame( *pObjShell );
-		pFrame = pIPFrame;
-		SetIPEnv( pIPFrame->GetEnv_Impl() );
-
-		if ( GetIPClient()->Owner() )
-		{
-            pFrame->SetParentViewFrame_Impl( SfxViewFrame::Current() );
-		}
-
-		pIPFrame->GetDispatcher()->Flush();
-		pIPFrame->DoActivate( FALSE );
-	}
-
-	SvInPlaceObject::InPlaceActivate( bActivate );
-
-	if ( !bActivate )
-	{
-		// Im UIActivate wurde SetViewFrame(0) gemacht, aber neuerdings
-		// gibt es dann kein Deactivate(TRUE), weil alter und neuer
-		// ViewFrame der Applikation verschiedene Bindings haben.
-		// Frame samt Fenstern jetzt im Deactivate wegwerfen
-		// DoDeactivate erfolgt im UIDeactivate
-
-		SfxObjectShell *pSh = pFrame->GetObjectShell();
-		SfxViewFrame *pParent = pFrame->GetParentViewFrame_Impl();
-		if ( pParent && pSh == SfxObjectShell::GetWorkingDocument() )
-			SfxObjectShell::SetWorkingDocument( pParent->GetObjectShell() );
-
-		pFrame->GetFrame()->DoClose();
-		pFrame = NULL;
-    } */
 }
 
 BOOL SfxObjectShell::HasMacrosLib_Impl() const
 {
-    BOOL bHasMacros = (pImp->pBasicLibContainer != 0);
+    Reference< XLibraryContainer > xContainer( pImp->pBasicManager->getLibraryContainer( SfxBasicManagerHolder::SCRIPTS ) );
+    BOOL bHasMacros = xContainer.is();
     try
     {
         if ( bHasMacros )
@@ -2277,20 +2233,20 @@ BOOL SfxObjectShell::HasMacrosLib_Impl() const
 
 			// if there are libraries except "Standard" library
 			// we assume that they are not empty (because they have been created by the user)
-			if ( pImp->pBasicLibContainer->hasElements() )
+			if ( xContainer->hasElements() )
 			{
 				::rtl::OUString aStdLibName( RTL_CONSTASCII_USTRINGPARAM( "Standard" ) );
-				uno::Sequence< ::rtl::OUString > aElements = pImp->pBasicLibContainer->getElementNames();
+				uno::Sequence< ::rtl::OUString > aElements = xContainer->getElementNames();
 				if ( aElements.getLength() )
 				{
 					if ( aElements.getLength() > 1 || !aElements[0].equals( aStdLibName ) )
 						bHasMacros = sal_True;
-					else	
+					else
 					{
 						// usually a "Standard" library is always present (design)
 						// for this reason we must check if it's empty
 						uno::Reference < container::XNameAccess > xLib;
-						uno::Any aAny = pImp->pBasicLibContainer->getByName( aStdLibName );
+						uno::Any aAny = xContainer->getByName( aStdLibName );
 						aAny >>= xLib;
 						if ( xLib.is() )
 							bHasMacros = xLib->hasElements();

@@ -206,7 +206,7 @@ void SAL_CALL SfxUnoControllerItem::statusChanged(const ::com::sun::star::frame:
 			}
 			else if ( pType == ::getCppuType((const sal_uInt32*)0) )
 			{
-				sal_uInt32 nTemp ;
+				sal_uInt32 nTemp = 0;
 				rEvent.State >>= nTemp ;
 				pItem = new SfxUInt32Item( pCtrlItem->GetId(), nTemp );
 			}
@@ -329,7 +329,7 @@ void SAL_CALL SfxStatusDispatcher::dispatch( const ::com::sun::star::util::URL&,
 {
 }
 
-void SAL_CALL SfxStatusDispatcher::dispatchWithNotification( 
+void SAL_CALL SfxStatusDispatcher::dispatchWithNotification(
     const ::com::sun::star::util::URL&,
     const ::com::sun::star::uno::Sequence< ::com::sun::star::beans::PropertyValue >&,
     const ::com::sun::star::uno::Reference< ::com::sun::star::frame::XDispatchResultListener >& ) throw( ::com::sun::star::uno::RuntimeException )
@@ -791,7 +791,7 @@ void SAL_CALL SfxDispatchController_Impl::dispatch( const ::com::sun::star::util
         }
         SfxAllItemSet aInternalSet( SFX_APP()->GetPool() );
         if (xFrameRef.is()) // an empty set is no problem ... but an empty frame reference can be a problem !
-            aInternalSet.Put( SfxUnoAnyItem( SID_DOCFRAME, css::uno::makeAny(xFrameRef) ) );
+            aInternalSet.Put( SfxUnoAnyItem( SID_FILLFRAME, css::uno::makeAny(xFrameRef) ) );
 
         sal_Bool bSuccess = sal_False;
         sal_Bool bFailure = sal_False;

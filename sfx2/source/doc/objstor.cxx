@@ -43,9 +43,6 @@
 #ifndef _SFXENUMITEM_HXX //autogen
 #include <svtools/eitem.hxx>
 #endif
-#ifndef _SVTOOLS_CMDPARSE_HXX
-#include <svtools/cmdparse.hxx>
-#endif
 #ifndef _SFXSTRITEM_HXX //autogen
 #include <svtools/stritem.hxx>
 #endif
@@ -207,6 +204,7 @@
 #include <vcl/bitmapex.hxx>
 #include <svtools/embedhlp.hxx>
 #include <rtl/logfile.hxx>
+#include <basic/modsizeexceeded.hxx>
 #include <com/sun/star/util/XMacroExpander.hpp>
 #include <osl/file.hxx>
 #include <osl/process.h>
@@ -230,14 +228,12 @@
 #include "dispatch.hxx"
 #include "openflag.hxx"
 #include "helper.hxx"
-#include "dlgcont.hxx"
 #include "filedlghelper.hxx"
-#include "scriptcont.hxx"
 #include "event.hxx"
 #include "fltoptint.hxx"
 #include "viewfrm.hxx"
 #include "graphhelp.hxx"
-#include "modsizeexceeded.hxx"
+#include "appbaslib.hxx"
 
 #include "../appl/app.hrc"
 
@@ -262,6 +258,8 @@ using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::document;
 using namespace ::rtl;
 using namespace ::cppu;
+
+using ::basic::SfxLibraryContainer;
 
 namespace css = ::com::sun::star;
 
@@ -787,13 +785,8 @@ sal_Bool SfxObjectShell::DoInitNew( SfxMedium* pMed )
 //REMOVE
 //REMOVE		// Force document library containers to release storage
 //REMOVE		SotStorageRef xDummyStorage;
-//REMOVE		SfxDialogLibraryContainer* pDialogCont = pImp->pDialogLibContainer;
-//REMOVE		if( pDialogCont )
-//REMOVE			pDialogCont->setStorage( xDummyStorage );
-//REMOVE
-//REMOVE		SfxScriptLibraryContainer* pBasicCont = pImp->pBasicLibContainer;
-//REMOVE		if( pBasicCont )
-//REMOVE			pBasicCont->setStorage( xDummyStorage );
+//REMOVE        pImp->pBasicManager->setStorage( SfxBasicManagerHolder::DIALOGS, xDummyStorage );
+//REMOVE        pImp->pBasicManager->setStorage( SfxBasicManagerHolder::SCRIPTS, xDummyStorage );
 //REMOVE	}
 
 //REMOVE	//-------------------------------------------------------------------------
@@ -973,7 +966,6 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
         	{
             	pImp->nLoadedFlags = 0;
 				pImp->bModelInitialized = sal_False;
-// Start of ooo-build http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_2_2_1/patches/src680/sfx2-pre-and-postprocess-crash-fix.diff patch
                 int end, pos = STRING_NOTFOUND;
                 String aUserData;
                 static const char PREPROCESS_CONST[]="Preprocess=<";
@@ -983,7 +975,6 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
                     pos=aUserData.Search(::rtl::OUString::createFromAscii(PREPROCESS_CONST).getStr(), 0);
                     end=aUserData.Search( '>', pos+strlen(PREPROCESS_CONST));
                 }
-// End of ooo-build http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_2_2_1/patches/src680/sfx2-pre-and-postprocess-crash-fix.diff patch
 				if (pos!=STRING_NOTFOUND && end!=STRING_NOTFOUND) {
 					String aAppName(aUserData, pos+strlen(PREPROCESS_CONST), end-(pos+strlen(PREPROCESS_CONST)));
 
@@ -1347,26 +1338,15 @@ sal_Bool SfxObjectShell::DoSave()
 					GetMedium()->GetStorage()->copyElementTo( aDialogsStorageName, xTmpStorage, aDialogsStorageName );
 
 				GetBasicManager();
-				SfxDialogLibraryContainer* pDialogCont = pImp->pDialogLibContainer;
-				SfxScriptLibraryContainer* pBasicCont = pImp->pBasicLibContainer;
 
 				// disconnect from the current storage
-				if( pDialogCont )
-					pDialogCont->setStorage( xTmpStorage );
-				if( pBasicCont )
-					pBasicCont->setStorage( xTmpStorage );
+                pImp->pBasicManager->setStorage( xTmpStorage );
 
 				// store to the current storage
-				if( pDialogCont )
-					pDialogCont->storeLibrariesToStorage( GetMedium()->GetStorage() );
-				if( pBasicCont )
-					pBasicCont->storeLibrariesToStorage( GetMedium()->GetStorage() );
+                pImp->pBasicManager->storeLibrariesToStorage( GetMedium()->GetStorage() );
 
 				// connect to the current storage back
-				if( pDialogCont )
-					pDialogCont->setStorage( GetMedium()->GetStorage() );
-				if( pBasicCont )
-					pBasicCont->setStorage( GetMedium()->GetStorage() );
+                pImp->pBasicManager->setStorage( GetMedium()->GetStorage() );
 			}
 			catch( uno::Exception& )
 			{
@@ -1458,8 +1438,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 	    || pImp->nScriptingSignatureState == SIGNATURESTATE_SIGNATURES_INVALID ) )
 	{
 		// the checking of the library modified state iterates over the libraries, should be done only when required
-		bTryToPreservScriptSignature = !( ( pImp->pDialogLibContainer && pImp->pDialogLibContainer->isContainerModified() )
-										|| ( pImp->pBasicLibContainer && pImp->pBasicLibContainer->isContainerModified() ) );
+		bTryToPreservScriptSignature = !pImp->pBasicManager->isAnyContainerModified();
 	}
 
     // use UCB for case sensitive/insensitive file name comparison
@@ -2114,15 +2093,7 @@ sal_Bool SfxObjectShell::ConnectTmpStorage_Impl(
 			bResult = SaveCompleted( xTmpStorage );
 
 			if ( bResult )
-			{
-				SfxDialogLibraryContainer* pDialogCont = pImp->pDialogLibContainer;
-				if( pDialogCont )
-					pDialogCont->setStorage( xTmpStorage );
-
-				SfxScriptLibraryContainer* pBasicCont = pImp->pBasicLibContainer;
-				if( pBasicCont )
-					pBasicCont->setStorage( xTmpStorage );
-			}
+                pImp->pBasicManager->setStorage( xTmpStorage );
 		}
 		catch( uno::Exception& )
 		{}
@@ -2237,9 +2208,13 @@ sal_Bool SfxObjectShell::DoSaveCompleted( SfxMedium* pNewMed )
         if ( !pFilter || IsPackageStorageFormat_Impl( *pMedium ) )
 		{
             uno::Reference < embed::XStorage > xOld = GetStorage();
+
+			// when the package based medium is broken and has no storage or if the storage
+			// is the same as the document storage the current document storage should be preserved
 			xStorage = pMedium->GetStorage();
 			bOk = SaveCompleted( xStorage );
-            if ( bOk && (!pOld || !pOld->HasStorage_Impl() || xOld != pOld->GetStorage() ) )
+            if ( bOk && xStorage.is() && xOld != xStorage 
+			  && (!pOld || !pOld->HasStorage_Impl() || xOld != pOld->GetStorage() ) )
 			{
                 // old own storage was not controlled by old Medium -> dispose it
 				try {
@@ -2264,13 +2239,7 @@ sal_Bool SfxObjectShell::DoSaveCompleted( SfxMedium* pNewMed )
 
         // TODO/LATER: may be this code will be replaced, but not sure
 		// Set storage in document library containers
-		SfxDialogLibraryContainer* pDialogCont = pImp->pDialogLibContainer;
-		if( pDialogCont )
-			pDialogCont->setStorage( xStorage );
-
-		SfxScriptLibraryContainer* pBasicCont = pImp->pBasicLibContainer;
-		if( pBasicCont )
-			pBasicCont->setStorage( xStorage );
+        pImp->pBasicManager->setStorage( xStorage );
 	}
 	else
 	{
@@ -3297,14 +3266,8 @@ sal_Bool SfxObjectShell::SaveAsOwnFormat( SfxMedium& rMedium )
 		// Initialize Basic
 		GetBasicManager();
 
-		// Save dialog container
-		SfxDialogLibraryContainer* pDialogCont = pImp->pDialogLibContainer;
-		if( pDialogCont )
-			pDialogCont->storeLibrariesToStorage( xStorage );
-
-		SfxScriptLibraryContainer* pBasicCont = pImp->pBasicLibContainer;
-		if( pBasicCont )
-			pBasicCont->storeLibrariesToStorage( xStorage );
+		// Save dialog/script container
+        pImp->pBasicManager->storeLibrariesToStorage( xStorage );
 
         return SaveAs( rMedium );
 	}
@@ -4196,11 +4159,12 @@ void SfxObjectShell::UpdateLinks()
 
 sal_Bool SfxObjectShell::QuerySaveSizeExceededModules_Impl( const uno::Reference< task::XInteractionHandler >& xHandler )
 {
+	if ( !pImp->pBasicManager->isValid() )
+		GetBasicManager();
 	uno::Sequence< rtl::OUString > sModules;
 	if ( xHandler.is() )
 	{
-		SfxScriptLibraryContainer* pBasicCont = pImp->pBasicLibContainer;
-		if( pBasicCont && pBasicCont->LegacyPsswdBinaryLimitExceeded( sModules ) )
+		if( pImp->pBasicManager->LegacyPsswdBinaryLimitExceeded( sModules ) )
 		{
 			ModuleSizeExceeded* pReq =  new ModuleSizeExceeded( sModules );
 			uno::Reference< task::XInteractionRequest > xReq( pReq );
@@ -4208,7 +4172,6 @@ sal_Bool SfxObjectShell::QuerySaveSizeExceededModules_Impl( const uno::Reference
 			return pReq->isApprove();
 		}
 	}
-
 	// No interaction handler, default is to continue to save
 	return sal_True;
 }
