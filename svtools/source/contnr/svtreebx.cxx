@@ -344,7 +344,8 @@ void SvTreeListBox::SetTabs()
 }
 
 void SvTreeListBox::InitEntry( SvLBoxEntry* pEntry,
-  const XubString& aStr, const Image& aCollEntryBmp, const Image& aExpEntryBmp)
+  const XubString& aStr, const Image& aCollEntryBmp, const Image& aExpEntryBmp,
+  SvLBoxButtonKind eButtonKind)
 {
 	DBG_CHKTHIS(SvTreeListBox,0);
 	SvLBoxButton* pButton;
@@ -353,7 +354,7 @@ void SvTreeListBox::InitEntry( SvLBoxEntry* pEntry,
 
 	if( nTreeFlags & TREEFLAG_CHKBTN )
 	{
-		pButton= new SvLBoxButton( pEntry,0,pCheckButtonData );
+		pButton= new SvLBoxButton( pEntry,eButtonKind,0,pCheckButtonData );
 		pEntry->AddItem( pButton );
 	}
 
@@ -424,7 +425,8 @@ IMPL_LINK_INLINE_START( SvTreeListBox, CheckButtonClick, SvLBoxButtonData *, pDa
 IMPL_LINK_INLINE_END( SvTreeListBox, CheckButtonClick, SvLBoxButtonData *, pData )
 
 SvLBoxEntry* SvTreeListBox::InsertEntry( const XubString& aText,SvLBoxEntry* pParent,
-									 BOOL bChildsOnDemand, ULONG nPos, void* pUser )
+									 BOOL bChildsOnDemand, ULONG nPos, void* pUser,
+                                     SvLBoxButtonKind eButtonKind )
 {
 	DBG_CHKTHIS(SvTreeListBox,0);
 	nTreeFlags |= TREEFLAG_MANINS;
@@ -437,7 +439,7 @@ SvLBoxEntry* SvTreeListBox::InsertEntry( const XubString& aText,SvLBoxEntry* pPa
 
 	SvLBoxEntry* pEntry = CreateEntry();
 	pEntry->SetUserData( pUser );
-	InitEntry( pEntry, aText, rDefColBmp, rDefExpBmp );
+	InitEntry( pEntry, aText, rDefColBmp, rDefExpBmp, eButtonKind );
 	pEntry->EnableChildsOnDemand( bChildsOnDemand );
 
     // Add the HC versions of the default images
@@ -474,7 +476,8 @@ SvLBoxEntry* SvTreeListBox::InsertEntry( const XubString& aText,SvLBoxEntry* pPa
 
 SvLBoxEntry* SvTreeListBox::InsertEntry( const XubString& aText,
 	const Image& aExpEntryBmp, const Image& aCollEntryBmp,
-	SvLBoxEntry* pParent, BOOL bChildsOnDemand, ULONG nPos, void* pUser )
+	SvLBoxEntry* pParent, BOOL bChildsOnDemand, ULONG nPos, void* pUser,
+    SvLBoxButtonKind eButtonKind )
 {
 	DBG_CHKTHIS(SvTreeListBox,0);
 	nTreeFlags |= TREEFLAG_MANINS;
@@ -484,7 +487,7 @@ SvLBoxEntry* SvTreeListBox::InsertEntry( const XubString& aText,
 
 	SvLBoxEntry* pEntry = CreateEntry();
 	pEntry->SetUserData( pUser );
-	InitEntry( pEntry, aText, aCollEntryBmp, aExpEntryBmp );
+	InitEntry( pEntry, aText, aCollEntryBmp, aExpEntryBmp, eButtonKind );
 
 	pEntry->EnableChildsOnDemand( bChildsOnDemand );
 
@@ -602,7 +605,7 @@ void SvTreeListBox::SetCheckButtonState( SvLBoxEntry* pEntry, SvButtonState eSta
 	if( nTreeFlags & TREEFLAG_CHKBTN )
 	{
 		SvLBoxButton* pItem = (SvLBoxButton*)(pEntry->GetFirstItem(SV_ITEM_ID_LBOXBUTTON));
-		if(!pItem)
+		if(!(pItem && pItem->CheckModification()))
 			return ;
 		switch( eState )
 		{
@@ -662,6 +665,7 @@ SvLBoxEntry* SvTreeListBox::CloneEntry( SvLBoxEntry* pSource )
 	XubString aStr;
 	Image aCollEntryBmp;
 	Image aExpEntryBmp;
+    SvLBoxButtonKind eButtonKind = SvLBoxButtonKind_enabledCheckbox;
 
 	SvLBoxString* pStringItem = (SvLBoxString*)(pSource->GetFirstItem(SV_ITEM_ID_LBOXSTRING));
 	if( pStringItem )
@@ -672,8 +676,11 @@ SvLBoxEntry* SvTreeListBox::CloneEntry( SvLBoxEntry* pSource )
 		aCollEntryBmp = pBmpItem->GetBitmap1( BMP_COLOR_NORMAL );
 		aExpEntryBmp  = pBmpItem->GetBitmap2( BMP_COLOR_NORMAL );
 	}
+    SvLBoxButton* pButtonItem = (SvLBoxButton*)(pSource->GetFirstItem(SV_ITEM_ID_LBOXBUTTON));
+    if( pButtonItem )
+        eButtonKind = pButtonItem->GetKind();
 	SvLBoxEntry* pClone = CreateEntry();
-	InitEntry( pClone, aStr, aCollEntryBmp, aExpEntryBmp );
+	InitEntry( pClone, aStr, aCollEntryBmp, aExpEntryBmp, eButtonKind );
 	pClone->SvListEntry::Clone( pSource );
 	pClone->EnableChildsOnDemand( pSource->HasChildsOnDemand() );
 	pClone->SetUserData( pSource->GetUserData() );

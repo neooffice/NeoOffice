@@ -442,7 +442,7 @@ void SvxProxyTabPage::ReadConfigData_Impl()
     try {
         Reference< container::XNameAccess > xNameAccess(m_xConfigurationUpdateAccess, UNO_QUERY_THROW);
 
-        sal_Int32 nIntValue;
+        sal_Int32 nIntValue = 0;
         OUString  aStringValue;
 
         if( xNameAccess->getByName(aProxyModePN) >>= nIntValue )
@@ -500,7 +500,7 @@ void SvxProxyTabPage::ReadConfigDefaults_Impl()
     {
         Reference< beans::XPropertyState > xPropertyState(m_xConfigurationUpdateAccess, UNO_QUERY_THROW);
 
-        sal_Int32 nIntValue;
+        sal_Int32 nIntValue = 0;
         OUString  aStringValue;
 
         if( xPropertyState->getPropertyDefault(aHttpProxyPN) >>= aStringValue )

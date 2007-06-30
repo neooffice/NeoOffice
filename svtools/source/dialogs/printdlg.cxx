@@ -211,7 +211,7 @@ void PrintDialog::ImplSetImages()
 
 void PrintDialog::ImplSetInfo()
 {
-	const QueueInfo* pInfo = (QueueInfo*)(maLbName.GetEntryData( maLbName.GetSelectEntryPos() ));
+	const QueueInfo* pInfo = Printer::GetQueueInfo( maLbName.GetSelectEntry(), true );
 	if ( pInfo )
 	{
 		maFiType.SetText( pInfo->GetDriver() );
@@ -616,6 +616,8 @@ short PrintDialog::Execute()
 		DBG_ERRORFILE( "PrinterSetupDialog::Execute() - No Printer or printer is printing" );
 		return FALSE;
 	}
+    
+    Printer::updatePrinters();
 
 	// Controls initialisieren
 	ImplFillPrnDlgListBox( mpPrinter, &maLbName, &maBtnProperties );

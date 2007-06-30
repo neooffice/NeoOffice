@@ -1043,9 +1043,10 @@ RecovDocList::~RecovDocList()
 void RecovDocList::InitEntry(      SvLBoxEntry* pEntry ,
                              const XubString&   sText  ,
                              const Image&       aImage1,
-                             const Image&       aImage2)
+                             const Image&       aImage2,
+                                   SvLBoxButtonKind eButtonKind)
 {
-    SvTabListBox::InitEntry(pEntry, sText, aImage1, aImage2);
+    SvTabListBox::InitEntry(pEntry, sText, aImage1, aImage2, eButtonKind);
     DBG_ASSERT( TabCount() == 2, "*RecovDocList::InitEntry(): structure missmatch" );
 
     SvLBoxString*       pCol = (SvLBoxString*)pEntry->GetItem(2);
@@ -1081,8 +1082,8 @@ RecoveryDialog::RecoveryDialog(Window*       pParent,
     , m_aNextStr            (                  ResId  ( STR_RECOVERY_NEXT              ) )
     , m_aTitleRecoveryInProgress(              ResId  ( STR_RECOVERY_INPROGRESS        ) )
     , m_aTitleRecoveryReport(                  ResId  ( STR_RECOVERY_REPORT            ) )
-    , m_aRecoveryOnlyDescr  (                  ResId  ( STR_RECOVERYONLY_DESCR         ) )
     , m_aRecoveryOnlyFinish (                  ResId  ( STR_RECOVERYONLY_FINISH        ) )
+    , m_aRecoveryOnlyFinishDescr(              ResId  ( STR_RECOVERYONLY_FINISH_DESCR  ) )
     , m_pDefButton          ( NULL                                                       )
     , m_pCore               ( pCore                                                      )
     , m_eRecoveryState      (RecoveryDialog::E_RECOVERY_PREPARED)
@@ -1136,10 +1137,7 @@ RecoveryDialog::RecoveryDialog(Window*       pParent,
     m_aNextBtn.Enable(TRUE);
     m_aNextBtn.SetClickHdl( LINK( this, RecoveryDialog, NextButtonHdl ) );
     m_aCancelBtn.SetClickHdl( LINK( this, RecoveryDialog, CancelButtonHdl ) );
-
-    if ( m_bRecoveryOnly )
-        m_aDescrFT.SetText( m_aRecoveryOnlyDescr );
-
+    
     // fill list box first time
     TURLList*                pURLList = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
@@ -1218,6 +1216,7 @@ short RecoveryDialog::execute()
                  // let the user decide the next step.
                  if ( m_bRecoveryOnly )
                  {
+                     m_aDescrFT.SetText(m_aRecoveryOnlyFinishDescr);
                      m_aNextBtn.SetText(m_aRecoveryOnlyFinish);
                      m_aNextBtn.Enable(TRUE);
                      m_aCancelBtn.Enable(FALSE);
