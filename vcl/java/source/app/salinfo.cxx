@@ -98,7 +98,7 @@ Rectangle JavaSalSystem::GetDisplayWorkAreaPosSizePixel( unsigned int nScreen )
 
 OUString JavaSalSystem::GetScreenName( unsigned int nScreen )
 {
-	return OUString::valueOf( nScreen );
+	return OUString::valueOf( (sal_Int32)nScreen );
 }
 
 // -----------------------------------------------------------------------
