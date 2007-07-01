@@ -1157,7 +1157,7 @@ public final class VCLGraphics {
 					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
 					g.setRenderingHints(hints);
 				}
-				g.setColor(new Color(color));
+				g.setColor(new Color(color, true));
 
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
 
@@ -1265,7 +1265,7 @@ public final class VCLGraphics {
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-					g.setColor(new Color(color));
+					g.setColor(new Color(color, true));
 					g.setClip(userClip);
 					g.drawLine(x1, y1, x2, y2);
 				}
@@ -1377,7 +1377,7 @@ public final class VCLGraphics {
 							g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					}
-					g.setColor(new Color(color));
+					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
@@ -1496,7 +1496,7 @@ public final class VCLGraphics {
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-					g.setColor(new Color(color));
+					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
@@ -1618,7 +1618,7 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				g.setColor(new Color(color));
+				g.setColor(new Color(color, true));
 				if (!userPolygonClip) {
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
@@ -1713,7 +1713,7 @@ public final class VCLGraphics {
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-					g.setColor(new Color(color));
+					g.setColor(new Color(color, true));
 					if (!userPolygonClip && fill) {
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
@@ -2671,7 +2671,7 @@ public final class VCLGraphics {
 				else {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-					g.setColor(new Color(color));
+					g.setColor(new Color(color, true));
 					// Fix bug 2438 by drawing a line instead of
 					// filling it and not setting any clip
 					g.drawLine(x, y, x, y);
