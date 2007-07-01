@@ -79,6 +79,9 @@
 #ifndef _RTL_DIGEST_H_
 #include <rtl/digest.h>
 #endif
+#ifndef _COM_SUN_STAR_UTIL_XURLTRANSFORMER_HPP_
+#include <com/sun/star/util/XURLTransformer.hpp>
+#endif
 
 #if defined USE_JAVA && defined MACOSX
 
@@ -199,6 +202,20 @@ public:
         int							m_aWidths[256];				 // character metrics
     };
 
+
+    enum ResourceKind { ResXObject, ResExtGState, ResShading, ResPattern };
+    typedef std::map< rtl::OString, sal_Int32 > ResourceMap;
+    struct ResourceDict
+    {
+        // note: handle fonts globally for performance
+        ResourceMap m_aXObjects;
+        ResourceMap m_aExtGStates;
+        ResourceMap m_aShadings;
+        ResourceMap m_aPatterns;
+        
+        void append( rtl::OStringBuffer&, sal_Int32 nFontDictObject );
+    };
+    
     struct PDFPage
     {
         PDFWriterImpl*				m_pWriter;
@@ -207,7 +224,7 @@ public:
         PDFWriter::Orientation		m_eOrientation;
         sal_Int32					m_nPageObject;
         sal_Int32					m_nPageIndex;
-        sal_Int32					m_nStreamObject;
+        std::vector<sal_Int32>		m_aStreamObjects;
         sal_Int32					m_nStreamLengthObject;
         sal_uInt64					m_nBeginStreamPos;
         std::vector<sal_Int32>		m_aAnnotations;
@@ -316,12 +333,19 @@ public:
         sal_Int32	m_nObject;
     };
 
-	// for bitmap tilings (drawWallpaper)
-    struct BitmapPatternEmit
+	// for tilings (drawWallpaper, begin/endPattern)
+    struct TilingEmit
     {
-        sal_Int32	m_nObject;
-        sal_Int32	m_nBitmapObject;
-        Rectangle	m_aRectangle;
+        sal_Int32                   m_nObject;
+        Rectangle                   m_aRectangle;
+        SvtGraphicFill::Transform   m_aTransform;
+        ResourceDict                m_aResources;
+        SvMemoryStream*             m_pTilingStream;
+        
+        TilingEmit()
+                : m_nObject( 0 ),
+                  m_pTilingStream( NULL )
+        {}
     };
 
     // for transparency group XObjects
@@ -518,8 +542,10 @@ public:
         sal_Int32					m_nRadioGroup;
         sal_Int32					m_nMaxLen;
         bool                        m_bSubmit;
+        bool                        m_bSubmitGet;
         sal_Int32                   m_nDest;
-        std::list<rtl::OUString>	m_aListEntries;
+        std::vector<rtl::OUString>	m_aListEntries;
+        std::vector<sal_Int32>      m_aSelectedEntries;
         PDFAppearanceMap			m_aAppearances;
         PDFWidget()
                 : m_eType( PDFWriter::PushButton ),
@@ -529,6 +555,7 @@ public:
                   m_nRadioGroup( -1 ),
                   m_nMaxLen( 0 ),
                   m_bSubmit( false ),
+                  m_bSubmitGet( false ),
                   m_nDest( -1 )
         {}
     };
@@ -595,7 +622,7 @@ public:
         }
 
     };
-    
+
     static const sal_Char* getStructureTag( PDFWriter::StructElement );
     static const sal_Char* getAttributeTag( PDFWriter::StructAttribute eAtr );
     static const sal_Char* getAttributeValueTag( PDFWriter::StructAttributeValue eVal );
@@ -628,6 +655,9 @@ private:
        link id is always the link's position in this vector
     */
     std::vector<PDFLink>				m_aLinks;
+    /* makes correctly encoded for export to PDF URLS
+    */
+    com::sun::star::uno::Reference< com::sun::star::util::XURLTransformer > m_xTrans;
     /* maps arbitrary link ids for structure attributes to real link ids
        (for setLinkPropertyId)
     */
@@ -666,7 +696,7 @@ private:
      *  to the file stream */
     std::list< GradientEmit >			m_aGradients;
     /* contains bitmap tiling patterns */
-    std::list< BitmapPatternEmit >		m_aTilings;
+    std::vector< TilingEmit >		    m_aTilings;
     std::list< TransparencyEmit >		m_aTransparentObjects;
     /*  contains all font subsets in use */
     FontSubsetData						m_aSubsets;
@@ -680,7 +710,10 @@ private:
 
     sal_Int32							m_nCatalogObject;
     sal_Int32							m_nResourceDict;
-    sal_Int32							m_nFontResourceDict;
+    ResourceDict                        m_aGlobalResourceDict;
+    sal_Int32                           m_nFontDictObject;
+    sal_Int32                           m_nZaDbObject;
+    sal_Int32                           m_nHelvRegObject;
 
     PDFWriter::PDFWriterContext			m_aContext;
     oslFileHandle						m_aFile;
@@ -694,6 +727,7 @@ private:
     {
         SvStream*		m_pStream;
         MapMode   		m_aMapMode;
+        ResourceDict    m_aResourceDict;
     };
     std::list< StreamRedirect >			m_aOutputStreams;
 
@@ -943,7 +977,7 @@ i12626
     /* writes all gradient patterns */
     bool emitGradients();
     /* writes a builtin font object and returns its objectid (or 0 in case of failure ) */
-    sal_Int32 emitBuiltinFont( ImplFontData* pFont );
+    sal_Int32 emitBuiltinFont( ImplFontData* pFont, sal_Int32 nObject = -1 );
     /* writes a type1 embedded font object and returns its mapping from font ids to object ids (or 0 in case of failure ) */
     std::map< sal_Int32, sal_Int32 > emitEmbeddedFont( ImplFontData* pFont, EmbedFont& rEmbed );
     /* writes a font descriptor and returns its object id (or 0) */
@@ -958,19 +992,34 @@ i12626
             m_nResourceDict = createObject();
         return m_nResourceDict;
     }
-
-    /* get font dict object number */
-    sal_Int32 getFontDictObj()
+    /* get the font dict object */
+    sal_Int32 getFontDictObject()
     {
-        if( m_nFontResourceDict <= 0 )
-            m_nFontResourceDict = createObject();
-        return m_nFontResourceDict;
+        if( m_nFontDictObject <= 0 )
+            m_nFontDictObject = createObject();
+        return m_nFontDictObject;
     }
+    /* get the object for HelvReg font */
+    sal_Int32 getHelvRegObject()
+    {
+        if( m_nHelvRegObject <= 0 )
+            m_nHelvRegObject = createObject();
+        return m_nHelvRegObject;
+    }
+    /* get the object for ZaDb font */
+    sal_Int32 getZaDbObject()
+    {
+        if( m_nZaDbObject <= 0 )
+            m_nZaDbObject = createObject();
+        return m_nZaDbObject;
+    }
+    /* push resource into current (redirected) resource dict */
+    void pushResource( ResourceKind eKind, const rtl::OString& rResource, sal_Int32 nObject );
 
     /* writes a the font dictionary and emits all font objects
      * returns object id of font directory (or 0 on error)
      */
-    sal_Int32 emitFonts();
+    bool emitFonts();
 	/* writes the Resource dictionary;
      * returns dict object id (or 0 on error)
      */
@@ -1012,6 +1061,10 @@ i12626
     // tab order explicit by using the structure tree
     void sortWidgets();
 
+    // updates the count numbers of outline items
+    sal_Int32 updateOutlineItemCount( std::vector< sal_Int32 >& rCounts,
+                                      sal_Int32 nItemLevel,
+                                      sal_Int32 nCurrentItemId );
     // default appearences for widgets
     sal_Int32 findRadioGroupWidget( const PDFWriter::RadioButtonWidget& rRadio );
     Font replaceFont( const Font& rControlFont, const Font& rAppSetFont );
@@ -1291,6 +1344,9 @@ public:
     void beginTransparencyGroup();
     void endTransparencyGroup( const Rectangle& rBoundingBox, sal_uInt32 nTransparentPercent );
     void endTransparencyGroup( const Rectangle& rBoundingBox, const Bitmap& rAlphaMask );
+    void beginPattern();
+    sal_Int32 endPattern( const Rectangle& rCell, const SvtGraphicFill::Transform& rTransform );
+    void drawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill );
 
     void emitComment( const char* pComment );
 

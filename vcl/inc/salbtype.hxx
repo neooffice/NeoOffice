@@ -778,7 +778,13 @@ inline USHORT BitmapPalette::GetBestIndex( const BitmapColor& rCol ) const
 inline ColorMask::ColorMask( ULONG nRedMask, ULONG nGreenMask, ULONG nBlueMask ) :
 			mnRMask( nRedMask ),
 			mnGMask( nGreenMask ),
-			mnBMask( nBlueMask )
+			mnBMask( nBlueMask ),
+            mnROrShift( 0L ),
+            mnGOrShift( 0L ),
+            mnBOrShift( 0L ),
+            mnROr( 0L ),
+            mnGOr( 0L ),
+            mnBOr( 0L )
 {
 	mnRShift = ( mnRMask ? ImplCalcMaskShift( mnRMask, mnROr, mnROrShift ) : 0L );
 	mnGShift = ( mnGMask ? ImplCalcMaskShift( mnGMask, mnGOr, mnGOrShift ) : 0L );

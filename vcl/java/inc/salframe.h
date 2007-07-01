@@ -135,6 +135,10 @@ public:
 	virtual SalPointerState	GetPointerState();
 	virtual void			SetParent( SalFrame* pNewParent );
 	virtual bool			SetPluginParent( SystemParentData* pNewParent );
+	virtual void			ResetClipRegion();
+	virtual void			BeginSetClipRegion( ULONG nRects );
+	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight );
+	virtual void			EndSetClipRegion();
 };
 
 #endif // _SV_SALFRAME_H

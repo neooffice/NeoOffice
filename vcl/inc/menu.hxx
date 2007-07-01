@@ -219,6 +219,7 @@ protected:
 #if _SOLAR__PRIVATE
 public:
     SAL_DLLPRIVATE void				ImplKillLayoutData() const;
+    SAL_DLLPRIVATE Menu*            ImplGetStartedFrom() const;
 #endif
 
 						    Menu();
@@ -399,6 +400,9 @@ public:
 
     void                HighlightItem( USHORT nItemPos );
     void                DeHighlight() { HighlightItem( 0xFFFF ); } // MENUITEMPOS_INVALID
+    
+    
+    void doLazyDelete();
 };
 
 // -----------

@@ -1108,9 +1108,9 @@ void PushButton::ImplDrawPushButtonFrame( Window* pDev,
         StyleSettings   aStyleSettings = aSettings.GetStyleSettings();
         aStyleSettings.Set3DColors( pDev->GetControlBackground() );
         aSettings.SetStyleSettings( aStyleSettings );
-        ((OutputDevice*)pDev)->SetSettings( aSettings );
+        pDev->OutputDevice::SetSettings( aSettings );
         rRect = aDecoView.DrawButton( rRect, nStyle );
-        ((OutputDevice*)pDev)->SetSettings( aOldSettings );
+        pDev->OutputDevice::SetSettings( aOldSettings );
     }
     else
         rRect = aDecoView.DrawButton( rRect, nStyle );

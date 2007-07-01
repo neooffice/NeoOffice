@@ -1083,7 +1083,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				{
 					// Fix bugs 1637 and 1797 by laying out mirrored characters
 					// separately
-					sal_Unicode nMirroredChar = GetMirroredChar( nChar );
+					sal_Unicode nMirroredChar = (sal_Unicode)GetMirroredChar( nChar );
 					if ( nMirroredChar != nChar )
 					{
 						::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );

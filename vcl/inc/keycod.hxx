@@ -175,8 +175,7 @@ inline BOOL KeyCode::IsDefinedKeyCodeEqual( const KeyCode& rKeyCode ) const
 {
 	if ( (eFunc == KEYFUNC_DONTKNOW) && (rKeyCode.eFunc == KEYFUNC_DONTKNOW) )
 		return (GetFullKeyCode() == rKeyCode.GetFullKeyCode());
-	else
-		return (GetFunction() == rKeyCode.GetFunction());
+	return (GetFunction() == rKeyCode.GetFunction());
 }
 
 inline KeyCode& KeyCode::operator = ( const KeyCode& rKeyCode )

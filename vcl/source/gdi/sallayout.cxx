@@ -81,9 +81,11 @@
 #pragma warning(pop)
 #endif 
 
+#include <algorithm>
+
 // =======================================================================
 
-int GetVerticalFlags( sal_Unicode nChar )
+int GetVerticalFlags( sal_UCS4 nChar )
 {
     if( (nChar >= 0x1100 && nChar <= 0x11f9)    // Hangul Jamo
      || (nChar == 0x2030 || nChar == 0x2031)    // per mille sign
@@ -114,7 +116,7 @@ int GetVerticalFlags( sal_Unicode nChar )
 
 // -----------------------------------------------------------------------
 
-sal_Unicode GetVerticalChar( sal_Unicode )
+sal_UCS4 GetVerticalChar( sal_UCS4 )
 {
     return 0; // #i14788# input method is responsible vertical char changes
 
@@ -163,16 +165,16 @@ sal_Unicode GetVerticalChar( sal_Unicode )
 
 // -----------------------------------------------------------------------
 
-sal_Unicode GetMirroredChar( sal_Unicode nChar )
+sal_UCS4 GetMirroredChar( sal_UCS4 nChar )
 {
-    nChar = (sal_Unicode)u_charMirror( nChar );
+    nChar = u_charMirror( nChar );
     return nChar;
 }
 
 // -----------------------------------------------------------------------
 
 // Get simple approximations for unicodes
-const char* GetAutofallback( sal_Unicode nChar )
+const char* GetAutofallback( sal_UCS4 nChar )
 {
     const char* pStr = NULL;
     switch( nChar )
@@ -256,13 +258,13 @@ const char* GetAutofallback( sal_Unicode nChar )
 
 // -----------------------------------------------------------------------
 
-sal_Unicode GetLocalizedChar( sal_Unicode nChar, LanguageType eLang )
+sal_UCS4 GetLocalizedChar( sal_UCS4 nChar, LanguageType eLang )
 {
     // currently only conversion from ASCII digits is interesting
     if( (nChar < '0') || ('9' < nChar) )
         return nChar;
 
-    sal_Unicode nOffset;
+    int nOffset;
     switch( eLang )
     {
         default:
@@ -358,13 +360,13 @@ sal_Unicode GetLocalizedChar( sal_Unicode nChar, LanguageType eLang )
 #endif
     }
 
-    nChar = sal::static_int_cast<sal_Unicode>(nChar + nOffset);
+    nChar += nOffset;
     return nChar;
 }
 
 // -----------------------------------------------------------------------
 
-inline bool IsControlChar( sal_Unicode cChar )
+inline bool IsControlChar( sal_UCS4 cChar )
 {
     // C0 control characters
     if( (0x0001 <= cChar) && (cChar <= 0x001F) )
@@ -641,48 +643,48 @@ void ImplLayoutArgs::AddRun( int nCharPos0, int nCharPos1, bool bRTL )
 
 bool ImplLayoutArgs::PrepareFallback()
 {
-    // return early if a fallback is not needed
+    // short circuit if no fallback is needed
     if( maReruns.IsEmpty() )
     {
         maRuns.Clear();
         return false;
     }
 
-    // convert the fallback request to a layout request
-
-    // sort out chars that were not requested anyway
-    ImplLayoutRuns aOrigRuns = maRuns;
-    maRuns.Clear();
+    // convert the fallback requests to layout requests
     bool bRTL;
-    int nMin1, nEnd1;
+    int nMin, nEnd;
+
+    // get the individual fallback requests
+    typedef std::vector<int> IntVector;
+    IntVector aPosVector;
+    aPosVector.reserve( mnLength );
     maReruns.ResetPos();
-    for(; maReruns.GetRun( &nMin1, &nEnd1, &bRTL ); maReruns.NextRun() )
+    for(; maReruns.GetRun( &nMin, &nEnd, &bRTL ); maReruns.NextRun() )
+        for( int i = nMin; i < nEnd; ++i )
+            aPosVector.push_back( i );
+    maReruns.Clear();
+
+    // sort the individual fallback requests
+    std::sort( aPosVector.begin(), aPosVector.end() );
+
+    // adjust fallback runs to have the same order and limits of the original runs
+    ImplLayoutRuns aNewRuns;
+    maRuns.ResetPos();
+    for(; maRuns.GetRun( &nMin, &nEnd, &bRTL ); maRuns.NextRun() )
     {
-        // find a matching layout run and clip the fallback run to it
-        // TODO: improve O(n^2) algorithm
-        int nMin2, nEnd2;
-        aOrigRuns.ResetPos();
-        for(; aOrigRuns.GetRun( &nMin2, &nEnd2, &bRTL ); aOrigRuns.NextRun() )
-        {
-            // ignore runs that don't overlap
-            if( nMin1 >= nEnd2 )
-                continue;
-            if( nEnd1 <= nMin2 )
-                continue;
-            // clip the fallback run to the layout run
-            if( nMin1 < nMin2 )
-                nMin1 = nMin2;
-            if( nEnd1 > nEnd2 )
-                nEnd1 = nEnd2;
-            // if there is something left request the fallback
-            if( nMin1 < nEnd1 )
-                maRuns.AddRun( nMin1, nEnd1, bRTL );
-            break;
+        if( !bRTL) {
+            IntVector::const_iterator it = std::lower_bound( aPosVector.begin(), aPosVector.end(), nMin );
+            for(; (it != aPosVector.end()) && (*it < nEnd); ++it )
+                aNewRuns.AddPos( *it, bRTL );
+        } else {
+            IntVector::const_iterator it = std::upper_bound( aPosVector.begin(), aPosVector.end(), nEnd );
+            while( (it != aPosVector.begin()) && (*--it >= nMin) )
+                aNewRuns.AddPos( *it, bRTL );
         }
     }
 
+    maRuns = aNewRuns;  // TODO: use vector<>::swap()
     maRuns.ResetPos();
-    maReruns.Clear();
     return true;
 }
 
@@ -782,7 +784,7 @@ Point SalLayout::GetDrawPosition( const Point& rRelative ) const
 // If the range doesn't match in 0x3000 and 0x30FB, please change
 // also ImplCalcKerning.
 
-int SalLayout::CalcAsianKerning( sal_Unicode c, bool bLeft, bool bVertical )
+int SalLayout::CalcAsianKerning( sal_UCS4 c, bool bLeft, bool bVertical )
 {
     // http://www.asahi-net.or.jp/~sd5a-ucd/freetexts/jis/x4051/1995/appendix.html
     static signed char nTable[0x30] =
@@ -1072,7 +1074,8 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
         n = pG->mnCharPos - rArgs.mnMinCharPos;
         if( (n < 0) || (nCharCount <= n) )
             continue;
-        pLogCluster[ n ] = i;
+        if( pLogCluster[ n ] < 0 )
+            pLogCluster[ n ] = i;
         if( nBasePointX < 0 )
             nBasePointX = pG->maLinearPos.X();
     }
@@ -1485,7 +1488,7 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
         long nGlyphAdvance = pG[1].maLinearPos.X() - pG->maLinearPos.X();
         if( pGlyphAdvAry )
         {
-            // override default advance with correct value
+            // override default advance width with correct value
             *(pGlyphAdvAry++) = nGlyphAdvance;
         }
         else
@@ -1683,6 +1686,7 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
         // for stretched text in a MultiSalLayout the target width needs to be
         // distributed by individually adjusting its virtual character widths
         long nTargetWidth = aMultiArgs.mnLayoutWidth;
+        nTargetWidth *= mnUnitsPerPixel; // convert target width to base font units
         aMultiArgs.mnLayoutWidth = 0;
 
         // we need to get the original unmodified layouts ready
@@ -1726,7 +1730,19 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             if( nWidthSum != nTargetWidth )
                 pJustificationArray[ nCharCount-1 ] = nTargetWidth;
 
-            // temporarily change the pDXArray
+            // the justification array is still in base level units
+            // => convert it to pixel units
+            if( mnUnitsPerPixel > 1 )
+            {
+                for( int i = 0; i < nCharCount; ++i )
+                {
+                    sal_Int32 nVal = pJustificationArray[ i ];
+                    nVal += (mnUnitsPerPixel + 1) / 2;
+                    pJustificationArray[ i ] = nVal / mnUnitsPerPixel;
+                }
+            }
+
+            // change the mpDXArray temporarilly (just for the justification)
             aMultiArgs.mpDXArray = pJustificationArray;
         }
     }
@@ -1944,29 +1960,36 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             }
         }
 
-        // if a justification array is available => override the advance width
+        // if a justification array is available
+        // => use it directly to calculate the corresponding run width
         if( aMultiArgs.mpDXArray )
         {
             // the run advance is the width from the first char
             // in the run to the first char in the next run
             nRunAdvance = 0;
-            int nRelPos = nCharPos[0] - mnMinCharPos;
-            if( nRelPos > 0 )
-                nRunAdvance += aMultiArgs.mpDXArray[ nRelPos-1 ];
-            nRelPos = nActiveCharPos - mnMinCharPos;
-            if( nRelPos > 0 )
-                nRunAdvance -= aMultiArgs.mpDXArray[ nRelPos-1 ];
-            if( nRunAdvance < 0 )
+            const bool bLTR = (nActiveCharPos < nCharPos[0]);
+            int nDXIndex = nCharPos[0] - mnMinCharPos - bLTR;
+            if( nDXIndex >= 0 )
+                nRunAdvance += aMultiArgs.mpDXArray[ nDXIndex ];
+            nDXIndex = nActiveCharPos - mnMinCharPos - bLTR;
+            if( nDXIndex >= 0 )
+                nRunAdvance -= aMultiArgs.mpDXArray[ nDXIndex ];
+            if( !bLTR )
                 nRunAdvance = -nRunAdvance;
-            // convert justification array units into fallback font units
-            nRunAdvance *= mpLayouts[n]->GetUnitsPerPixel();
+
+            // the requested width is still in pixel units
+            // => convert it to base level font units
+            nRunAdvance *= mnUnitsPerPixel;
+        }
+        else
+        {
+            // the measured width is still in fallback font units
+            // => convert it to base level font units
+            if( n > 0 ) // optimization: because (fUnitMul==1.0) for (n==0)
+            nRunAdvance = static_cast<long>(nRunAdvance*fUnitMul + 0.5);
         }
 
-        // adjust advance width from fallback font units to base units
-        if( n > 0 )
-            nRunAdvance = static_cast<long>(nRunAdvance*fUnitMul + 0.5);
-
-        // calculate new x position
+        // calculate new x position (in base level units)
         nXPos += nRunAdvance;
 
         // prepare for next fallback run

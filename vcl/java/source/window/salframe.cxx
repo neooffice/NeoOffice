@@ -948,3 +948,39 @@ void JavaSalFrame::SetMaxClientSize( long nWidth, long nHeight )
 	fprintf( stderr, "JavaSalFrame::SetMaxClientSize not implemented\n" );
 #endif
 }
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::ResetClipRegion()
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::ResetClipRegion not implemented\n" );
+#endif
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::BeginSetClipRegion not implemented\n" );
+#endif
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::UnionClipRegion not implemented\n" );
+#endif
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::EndSetClipRegion()
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::EndSetClipRegion not implemented\n" );
+#endif
+}

@@ -58,6 +58,7 @@ public:
 	virtual unsigned int	GetDefaultDisplayNumber();
 	virtual Rectangle		GetDisplayScreenPosSizePixel( unsigned int nScreen );
 	virtual Rectangle		GetDisplayWorkAreaPosSizePixel( unsigned int nScreen );
+	virtual rtl::OUString	GetScreenName( unsigned int nScreen );
 	virtual int				ShowNativeMessageBox( const String& rTitle, const String& rMessage, int nButtonCombination, int nDefaultButton );
 };
 

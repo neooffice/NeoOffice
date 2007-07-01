@@ -2523,11 +2523,11 @@ void Edit::SetMaxTextLen( xub_StrLen nMaxLen )
 	mnMaxTextLen = nMaxLen ? nMaxLen : EDIT_NOLIMIT;
 
 	if ( mpSubEdit )
-		mpSubEdit->SetMaxTextLen( nMaxLen );
+		mpSubEdit->SetMaxTextLen( mnMaxTextLen );
 	else
 	{
-		if ( maText.Len() > nMaxLen )
-			ImplDelete( Selection( nMaxLen, maText.Len() ), EDIT_DEL_RIGHT, EDIT_DELMODE_SIMPLE );
+		if ( maText.Len() > mnMaxTextLen )
+			ImplDelete( Selection( mnMaxTextLen, maText.Len() ), EDIT_DEL_RIGHT, EDIT_DELMODE_SIMPLE );
 	}
 }
 

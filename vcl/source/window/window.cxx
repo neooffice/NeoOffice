@@ -177,6 +177,9 @@
 #ifndef _COM_SUN_STAR_LANG_XCOMPONENT_HPP_
 #include <com/sun/star/lang/XComponent.hpp>
 #endif
+#ifndef _COM_SUN_STAR_LANG_XSERVICENAME_HPP_
+#include <com/sun/star/lang/XServiceName.hpp>
+#endif
 #ifndef _COM_SUN_STAR_ACCESSIBILITY_XACCESSIBLE_HPP_
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #endif
@@ -198,6 +201,7 @@
 #endif
 
 #include <pdfextoutdevdata.hxx>
+#include "lazydelete.hxx"
 
 using namespace rtl;
 using namespace ::com::sun::star::uno;
@@ -740,10 +744,6 @@ void Window::ImplInitWindowData( WindowType nType )
     mpWindowImpl->mbCreatedWithToolkit = FALSE;
     mpWindowImpl->mbSuppressAccessibilityEvents = FALSE; // TRUE: do not send any accessibility events
     mpWindowImpl->mbDrawSelectionBackground = FALSE;    // TRUE: draws transparent window background to indicate (toolbox) selection
-    mpWindowImpl->mbIsCanvasCreated	= FALSE;		    // TRUE: a canvas has been requested, thus, mxCanvasWindow must be
-                                                        // checked for every pos or size change. Since mxCanvasWindow is
-                                                        // a weak reference, checking for validity is somewhat expensive,
-                                                        // and is now guarded by this cheap bool check.
     mpWindowImpl->mbIsInTaskPaneList = FALSE;           // TRUE: window was added to the taskpanelist in the topmost system window
 
     mbEnableRTL         = TRUE;         // TRUE: this outdev will be mirrored if RTL window layout (UI mirroring) is globally active
@@ -829,11 +829,21 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
         if( nStyle & WB_NOSHADOW )
             nFrameStyle |= SAL_FRAME_STYLE_NOSHADOW;
 
-        if( mpWindowImpl->mnType == WINDOW_DIALOG          ||
-            mpWindowImpl->mnType == WINDOW_TABDIALOG       ||
-            mpWindowImpl->mnType == WINDOW_MODALDIALOG     ||
-            mpWindowImpl->mnType == WINDOW_MODELESSDIALOG )
-            nFrameStyle |= SAL_FRAME_STYLE_DIALOG;
+        switch (mpWindowImpl->mnType)
+        {
+            case WINDOW_DIALOG:
+            case WINDOW_TABDIALOG:
+            case WINDOW_MODALDIALOG:
+            case WINDOW_MODELESSDIALOG:
+            case WINDOW_MESSBOX:
+            case WINDOW_INFOBOX:
+            case WINDOW_WARNINGBOX:
+            case WINDOW_ERRORBOX:
+            case WINDOW_QUERYBOX:
+                nFrameStyle |= SAL_FRAME_STYLE_DIALOG;
+            default:
+                break;
+        }
 
         SalFrame* pParentFrame = NULL;
         if ( pParent )
@@ -1136,17 +1146,6 @@ void Window::ImplCallResize()
 
     Resize();
 
-    // Forward size to embedded java frame. As stated below, derived
-    // classes don't always call our Resize, thus this extra step here
-    // is required.
-    if( mpWindowImpl->mbIsCanvasCreated )
-    {
-        Reference< awt::XWindow > xCanvasWindow( mpWindowImpl->mxCanvasWindow );
-        if( xCanvasWindow.is() )
-            xCanvasWindow->setPosSize( mnOutOffX, mnOutOffY,
-                                       mnOutWidth, mnOutHeight, 0 );
-    }
-
     // #88419# Most classes don't call the base class in Resize() and Move(),
     // => Call ImpleResize/Move instead of Resize/Move directly...
     ImplCallEventListeners( VCLEVENT_WINDOW_RESIZE );
@@ -1193,17 +1192,6 @@ void Window::ImplCallMove()
 
     Move();
 
-    // Forward physical position to embedded java frame. As stated
-    // above, derived classes don't always call our Resize, thus this
-    // extra step here is required.
-    if( mpWindowImpl->mbIsCanvasCreated )
-    {
-        Reference< awt::XWindow > xCanvasWindow( mpWindowImpl->mxCanvasWindow );
-        if( xCanvasWindow.is() )
-            xCanvasWindow->setPosSize( mnOutOffX, mnOutOffY,
-                                       mnOutWidth, mnOutHeight, 0 );
-    }
-
     ImplCallEventListeners( VCLEVENT_WINDOW_MOVE );
 }
 
@@ -1234,7 +1222,7 @@ WinBits Window::ImplInitRes( const ResId& rResId )
 
     char* pRes = (char*)GetClassRes();
     pRes += 8;
-    ULONG nStyle = GetLongRes( (void*)pRes );
+    sal_uInt32 nStyle = (sal_uInt32)GetLongRes( (void*)pRes );
     ((ResId&)rResId).aWinBits = nStyle;
     return nStyle;
 }
@@ -1246,7 +1234,7 @@ void Window::ImplLoadRes( const ResId& /*rResId*/ )
     // newer move this line after IncrementRes
     char* pRes = (char*)GetClassRes();
     pRes += 12;
-    ULONG nHelpId = (ULONG)GetLongRes( (void*)pRes );
+    sal_uInt32 nHelpId = (sal_uInt32)GetLongRes( (void*)pRes );
     if ( !nHelpId )
         nHelpId = ImplAutoHelpID();
     SetHelpId( nHelpId );
@@ -3934,6 +3922,10 @@ void Window::ImplCallFocusChangeActivate( Window* pNewOverlapWindow,
 // -----------------------------------------------------------------------
 void Window::ImplGrabFocus( USHORT nFlags )
 {
+    // #143570# no focus for destructing windows
+    if( mpWindowImpl->mbInDtor )
+        return;
+
     // some event listeners do really bad stuff
     // => prepare for the worst
     ImplDelData aDogTag( this );
@@ -4318,17 +4310,18 @@ Window::Window( Window* pParent, const ResId& rResId )
 
 Window::~Window()
 {
+    vcl::LazyDeletor<Window>::Undelete( this );
+    
     DBG_DTOR( Window, ImplDbgCheckWindow );
     DBG_ASSERT( !mpWindowImpl->mbInDtor, "~Window - already in DTOR!" );
 
     // Dispose of the canvas implementation (which, currently, has an
     // own wrapper window as a child to this one.
-    Reference< ::com::sun::star::rendering::XCanvas >  xCanvas( mpWindowImpl->mxCanvas );
+    Reference< rendering::XCanvas > xCanvas( mpWindowImpl->mxCanvas );
     if( xCanvas.is() )
     {
-        ::com::sun::star::uno::Reference < ::com::sun::star::lang::XComponent >
-              xCanvasComponent( xCanvas,
-                                ::com::sun::star::uno::UNO_QUERY );
+        uno::Reference < lang::XComponent > xCanvasComponent( xCanvas,
+                                                              uno::UNO_QUERY );
         if( xCanvasComponent.is() )
             xCanvasComponent->dispose();
     }
@@ -4754,6 +4747,12 @@ Window::~Window()
 }
 
 // -----------------------------------------------------------------------
+void Window::doLazyDelete()
+{
+    vcl::LazyDeletor<Window>::Delete( this );
+}
+
+// -----------------------------------------------------------------------
 
 void Window::MouseMove( const MouseEvent& rMEvt )
 {
@@ -4841,15 +4840,6 @@ void Window::Draw( OutputDevice*, const Point&, const Size&, ULONG )
 void Window::Move()
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
-
-    // Forward physical position to embedded java frame
-    if( mpWindowImpl->mbIsCanvasCreated )
-    {
-        Reference< awt::XWindow > xCanvasWindow( mpWindowImpl->mxCanvasWindow );
-        if( xCanvasWindow.is() )
-            xCanvasWindow->setPosSize( mnOutOffX, mnOutOffY,
-                                       mnOutWidth, mnOutHeight, 0 );
-    }
 }
 
 // -----------------------------------------------------------------------
@@ -4857,15 +4847,6 @@ void Window::Move()
 void Window::Resize()
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
-
-    // Forward size to embedded java frame
-    if( mpWindowImpl->mbIsCanvasCreated )
-    {
-        Reference< awt::XWindow > xCanvasWindow( mpWindowImpl->mxCanvasWindow );
-        if( xCanvasWindow.is() )
-            xCanvasWindow->setPosSize( mnOutOffX, mnOutOffY,
-                                       mnOutWidth, mnOutHeight, 0 );
-    }
 }
 
 // -----------------------------------------------------------------------
@@ -5004,28 +4985,9 @@ void Window::UserEvent( ULONG, void* )
 
 // -----------------------------------------------------------------------
 
-void Window::StateChanged( StateChangedType nType )
+void Window::StateChanged( StateChangedType )
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
-
-    // Forward visible state to embedded java frame
-    if( mpWindowImpl->mbIsCanvasCreated )
-    {
-        Reference< awt::XWindow > xCanvasWindow( mpWindowImpl->mxCanvasWindow );
-        if( xCanvasWindow.is() )
-        {
-            switch( nType )
-            {
-                case STATE_CHANGE_VISIBLE:
-                    xCanvasWindow->setVisible( mpWindowImpl->mbVisible );
-                    break;
-
-                case STATE_CHANGE_ENABLE:
-                    xCanvasWindow->setEnable( !mpWindowImpl->mbDisabled );
-                    break;
-            }
-        }
-    }
 }
 
 // -----------------------------------------------------------------------
@@ -5954,6 +5916,12 @@ void Window::SetWindowRegionPixel()
 
     if ( mpWindowImpl->mpBorderWindow )
         mpWindowImpl->mpBorderWindow->SetWindowRegionPixel();
+    else if( mpWindowImpl->mbFrame )
+    {
+        mpWindowImpl->maWinRegion = Region( REGION_NULL);
+        mpWindowImpl->mbWinRegion = FALSE;
+        mpWindowImpl->mpFrame->ResetClipRegion();
+    }
     else
     {
         if ( mpWindowImpl->mbWinRegion )
@@ -5985,6 +5953,39 @@ void Window::SetWindowRegionPixel( const Region& rRegion )
 
     if ( mpWindowImpl->mpBorderWindow )
         mpWindowImpl->mpBorderWindow->SetWindowRegionPixel( rRegion );
+    else if( mpWindowImpl->mbFrame )
+    {
+        if( rRegion.GetType() != REGION_NULL )
+        {
+            mpWindowImpl->maWinRegion = rRegion;
+            mpWindowImpl->mbWinRegion = ! rRegion.IsEmpty();
+            if( mpWindowImpl->mbWinRegion )
+            {
+                // ClipRegion setzen/updaten
+                long                nX;
+                long                nY;
+                long                nWidth;
+                long                nHeight;
+                ULONG               nRectCount;
+                ImplRegionInfo      aInfo;
+                BOOL                bRegionRect;
+
+                nRectCount = mpWindowImpl->maWinRegion.GetRectCount();
+                mpWindowImpl->mpFrame->BeginSetClipRegion( nRectCount );
+                bRegionRect = mpWindowImpl->maWinRegion.ImplGetFirstRect( aInfo, nX, nY, nWidth, nHeight );
+                while ( bRegionRect )
+                {
+                    mpWindowImpl->mpFrame->UnionClipRegion( nX, nY, nWidth, nHeight );
+                    bRegionRect = mpWindowImpl->maWinRegion.ImplGetNextRect( aInfo, nX, nY, nWidth, nHeight );
+                }
+                mpWindowImpl->mpFrame->EndSetClipRegion();
+            }
+            else
+                SetWindowRegionPixel();
+        }
+        else
+            SetWindowRegionPixel();
+    }
     else
     {
         BOOL bInvalidate = FALSE;
@@ -6365,6 +6366,23 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
 
             if ( !mpWindowImpl->mbFrame )
             {
+                if( mpWindowImpl->mpWinData && mpWindowImpl->mpWinData->mbEnableNativeWidget )
+                {
+                    /*
+                    * #i48371# native theming: some themes draw outside the control
+                    * area we tell them to (bad thing, but we cannot do much about it ).
+                    * On hiding these controls they get invalidated with their window rectangle
+                    * which leads to the parts outside the control area being left and not
+                    * invalidated. Workaround: invalidate an area on the parent, too
+                    */
+                    const int workaround_border = 5;
+                    Rectangle aBounds( aInvRegion.GetBoundRect() );
+                    aBounds.Left()      -= workaround_border;
+                    aBounds.Top()       -= workaround_border;
+                    aBounds.Right()     += workaround_border;
+                    aBounds.Bottom()    += workaround_border;
+                    aInvRegion = aBounds;
+                }
                 if ( !mpWindowImpl->mbNoParentUpdate && !(nFlags & SHOW_NOPARENTUPDATE) )
                 {
                     if ( !aInvRegion.IsEmpty() )
@@ -9358,17 +9376,17 @@ BOOL Window::IsNativeWidgetEnabled() const
 #include <salframe.h>
 #endif
 
-Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
+Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSize, bool bFullscreen ) const
 {
     // try to retrieve hard reference from weak member
-    Reference< ::com::sun::star::rendering::XCanvas >  xCanvas( mpWindowImpl->mxCanvas );
+    Reference< rendering::XCanvas > xCanvas( mpWindowImpl->mxCanvas );
 
     // canvas still valid? Then we're done.
     if( xCanvas.is() )
         return xCanvas;
 
 
-    Sequence< Any > aArg( 4 );
+    Sequence< Any > aArg( 5 );
 
     // Feed any with operating system's window handle
     // ==============================================
@@ -9408,9 +9426,17 @@ Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
 # error Please forward window handle to canvas for your OS
 #endif
 
-    aArg[ 2 ] = makeAny( ::com::sun::star::awt::Rectangle( mnOutOffX, mnOutOffY, mnOutWidth, mnOutHeight ) );
+    if( bFullscreen )
+        aArg[ 2 ] = makeAny( ::com::sun::star::awt::Rectangle( 0, 0,
+                                                               rFullscreenSize.Width(),
+                                                               rFullscreenSize.Height() ) );
+    else
+        aArg[ 2 ] = makeAny( ::com::sun::star::awt::Rectangle( mnOutOffX, mnOutOffY, mnOutWidth, mnOutHeight ) );
 
     aArg[ 3 ] = makeAny( mpWindowImpl->mbAlwaysOnTop ? sal_True : sal_False );
+    aArg[ 4 ] = makeAny( Reference< awt::XWindow >( 
+                             const_cast<Window*>(this)->GetComponentInterface(),
+                             uno::UNO_QUERY ));
 
     Reference< XMultiServiceFactory > xFactory = vcl::unohelper::GetMultiServiceFactory();
 
@@ -9423,37 +9449,35 @@ Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
                 OUString( RTL_CONSTASCII_USTRINGPARAM(
                               "com.sun.star."
                               "rendering.CanvasFactory") ) ), UNO_QUERY );
-        if (xCanvasFactory.is())
-		{
-			OUString sService;
-#ifdef WNT // see #140456#
+        if(xCanvasFactory.is()) 
+        {
+            xCanvas.set( xCanvasFactory->createInstanceWithArguments(
+                             OUString() /* no preference */, 
+                             aArg ),
+                         UNO_QUERY );
+
+#ifdef WNT 
+            // see #140456# - if we're running on a multiscreen setup,
+            // avoid DX5 canvas (as it cannot cope with surfaces
+            // spanning multiple displays)
 			const sal_uInt32 nDisplay = static_cast< WinSalFrame* >( mpWindowImpl->mpFrame )->mnDisplay;
 			if( (nDisplay >= Application::GetScreenCount()) )
-				sService = OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.rendering.VCLCanvas" ) );
+            {
+                Reference<lang::XServiceName> xServiceName(xCanvas, UNO_QUERY);
+                if( xServiceName.is() && 
+                    xServiceName->getServiceName().endsWithIgnoreAsciiCaseAsciiL( 
+                        RTL_CONSTASCII_STRINGPARAM("DXCanvas")) )
+                {
+                    // oops - got DX5 canvas. fallback to VCL canvas instead.
+                    xCanvas.set( xCanvasFactory->createInstanceWithArguments(
+                                     OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.rendering.VCLCanvas" )),
+                                     aArg ),
+                                 UNO_QUERY );
+                }
+            }
 #endif
-            xCanvas.set( xCanvasFactory->createInstanceWithArguments(
-                             sService /* no preference */, aArg ),
-
-							 UNO_QUERY );
 
             mpWindowImpl->mxCanvas = xCanvas;
-
-            // now, try to retrieve an XWindow interface from the canvas
-            // (this is an implementation detail of the Java interface,
-            // which might vanish without notice).
-            Reference< awt::XWindow > xWindow( xCanvas, UNO_QUERY );
-            mpWindowImpl->mxCanvasWindow = xWindow;
-
-            if( xWindow.is() )
-            {
-                // provide canvas with current window states
-                xWindow->setVisible( mpWindowImpl->mbVisible );
-                xWindow->setEnable( !mpWindowImpl->mbDisabled );
-                xWindow->setPosSize( mnOutOffX, mnOutOffY,
-                                     mnOutWidth, mnOutHeight, 0 );
-            }
-
-            const_cast<Window*>(this)->mpWindowImpl->mbIsCanvasCreated = TRUE;
         }
     }
 
@@ -9461,101 +9485,14 @@ Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
     return xCanvas;
 }
 
+Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
+{
+    return ImplGetCanvas( Size(), false );
+}
+
 Reference< ::com::sun::star::rendering::XCanvas > Window::GetFullscreenCanvas( const Size& rFullscreenSize ) const
 {
-    // try to retrieve hard reference from weak member
-    Reference< ::com::sun::star::rendering::XCanvas >  xCanvas( mpWindowImpl->mxCanvas );
-
-    // canvas still valid? Then we're done.
-    if( xCanvas.is() )
-        return xCanvas;
-
-
-    Sequence< Any > aArg( 4 );
-
-    // Feed any with operating system's window handle
-    // ==============================================
-
-    // common: first any is VCL pointer to window (for VCL canvas)
-    aArg[ 0 ] = makeAny( reinterpret_cast<sal_Int64>(this) );
-
-    // Fetch system data structure
-    const SystemEnvData* pSysData;
-
-    // TODO(Q1): Make GetSystemData method virtual
-
-    // check whether we're a SysChild: have to fetch system data
-    // directly from SystemChildWindow, because the GetSystemData
-    // method is unfortunately not virtual
-    const SystemChildWindow* pSysChild = dynamic_cast< const SystemChildWindow* >( this );
-    if( pSysChild )
-        pSysData = pSysChild->GetSystemData();
-    else
-        pSysData = GetSystemData();
-
-#if defined( WIN ) || defined( WNT )
-    // take HWND for Windows
-    if( pSysData )
-        aArg[ 1 ] = makeAny( reinterpret_cast<sal_Int32>(pSysData->hWnd) );
-#elif defined( UNX )
-    // take XLIB window for X11, and fake a motif widget ID from
-    // that.
-
-    // feed the motif widget ID to canvas
-    //aArg[ 0 ] = makeAny( vcl::createMotifHandle( mpWindowImpl->mpFrame->maFrameData.GetWindow() ) );
-
-    // feed the X11 window handle to canvas
-    if( pSysData )
-        aArg[ 1 ] = makeAny( static_cast<sal_Int32>(pSysData->aWindow) );
-#else
-# error Please forward window handle to canvas for your OS
-#endif
-
-    aArg[ 2 ] = makeAny( ::com::sun::star::awt::Rectangle( 0, 0,
-                                                           rFullscreenSize.Width(),
-                                                           rFullscreenSize.Height() ) );
-
-    aArg[ 3 ] = makeAny( sal_True );
-
-    Reference< XMultiServiceFactory > xFactory = vcl::unohelper::GetMultiServiceFactory();
-
-    // Create canvas instance with window handle
-    // =========================================
-    if ( xFactory.is() )
-    {
-        Reference<lang::XMultiServiceFactory> xCanvasFactory(
-            xFactory->createInstance(
-                OUString( RTL_CONSTASCII_USTRINGPARAM(
-                              "com.sun.star."
-                              "rendering.CanvasFactory") ) ), UNO_QUERY );
-        if (xCanvasFactory.is()) {
-            xCanvas.set( xCanvasFactory->createInstanceWithArguments(
-                             OUString() /* no preference */, aArg ),
-                         UNO_QUERY );
-
-            mpWindowImpl->mxCanvas = xCanvas;
-
-            // now, try to retrieve an XWindow interface from the canvas
-            // (this is an implementation detail of the Java interface,
-            // which might vanish without notice).
-            Reference< awt::XWindow > xWindow( xCanvas, UNO_QUERY );
-            mpWindowImpl->mxCanvasWindow = xWindow;
-
-            if( xWindow.is() )
-            {
-                // provide canvas with current window states
-                xWindow->setVisible( mpWindowImpl->mbVisible );
-                xWindow->setEnable( !mpWindowImpl->mbDisabled );
-                xWindow->setPosSize( mnOutOffX, mnOutOffY,
-                                     mnOutWidth, mnOutHeight, 0 );
-            }
-
-            const_cast<Window*>(this)->mpWindowImpl->mbIsCanvasCreated = TRUE;
-        }
-    }
-
-    // no factory??? Empty reference, then.
-    return xCanvas;
+    return ImplGetCanvas( rFullscreenSize, true );
 }
 
 void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev, const Region* pOuterClip )

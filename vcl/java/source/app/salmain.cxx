@@ -65,7 +65,7 @@
 
 // ============================================================================
  
-SAL_IMPLEMENT_MAIN()
+SAL_IMPLEMENT_MAIN_WITH_ARGS(argc, argv)
 {
 	char *pCmdPath = argv[ 0 ];
 

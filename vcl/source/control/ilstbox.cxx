@@ -1588,8 +1588,8 @@ BOOL ImplListBoxWindow::ProcessKeyInput( const KeyEvent& rKEvt )
 					else if( nSelect >= (mnTop + mnMaxVisibleEntries) )
 						SetTopEntry( nSelect - mnMaxVisibleEntries + 1 );
 
-					if ( nSelect == mnCurrentPos )
-						nSelect = LISTBOX_ENTRY_NOTFOUND;
+                    if ( mpEntryList->IsEntryPosSelected( nSelect ) )
+                        nSelect = LISTBOX_ENTRY_NOTFOUND;
 
 					maSearchTimeout.Start();
 				}
@@ -1600,10 +1600,13 @@ BOOL ImplListBoxWindow::ProcessKeyInput( const KeyEvent& rKEvt )
 		}
 	}
 
-	if ( (nSelect != LISTBOX_ENTRY_NOTFOUND) &&
-		 ((nSelect != mnCurrentPos ) || ( eLET == LET_KEYSPACE)) )
+    if  (   ( nSelect != LISTBOX_ENTRY_NOTFOUND )
+        &&  (   ( !mpEntryList->IsEntryPosSelected( nSelect ) )
+            ||  ( eLET == LET_KEYSPACE )
+            )
+        )
 	{
-		DBG_ASSERT( (nSelect != mnCurrentPos) || mbMulti, "ImplListBox: Selecting same Entry" );
+		DBG_ASSERT( !mpEntryList->IsEntryPosSelected( nSelect ) || mbMulti, "ImplListBox: Selecting same Entry" );
 	    if( nSelect >= mpEntryList->GetEntryCount() )
             nSelect = mpEntryList->GetEntryCount()-1;
 		mnCurrentPos = nSelect;

@@ -154,6 +154,8 @@
 #include <configsettings.hxx>
 #endif
 
+#include "lazydelete.hxx"
+
 #include <map>
 
 namespace vcl
@@ -955,6 +957,8 @@ Menu::Menu( BOOL bMenubar )
 Menu::~Menu()
 {
     DBG_DTOR( Menu, NULL );
+    
+    vcl::LazyDeletor<Menu>::Undelete( this );
 
     ImplCallEventListeners( VCLEVENT_OBJECT_DYING, ITEMPOS_INVALID );
 
@@ -989,6 +993,11 @@ Menu::~Menu()
     ImplSetSalMenu( NULL );
 }
 
+void Menu::doLazyDelete()
+{
+    vcl::LazyDeletor<Menu>::Delete( this );
+}
+
 void Menu::ImplInit()
 {
     mnHighlightedItemPos = ITEMPOS_INVALID;
@@ -1013,6 +1022,11 @@ void Menu::ImplInit()
 #else	// USE_JAVA
     mpSalMenu = ImplGetSVData()->mpDefInst->CreateMenu( bIsMenuBar );
 #endif	// USE_JAVA
+}
+
+Menu* Menu::ImplGetStartedFrom() const
+{
+    return pStartedFrom;
 }
 
 void Menu::ImplLoadRes( const ResId& rResId )

@@ -44,6 +44,7 @@
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
 
+using namespace rtl;
 using namespace vcl;
 
 // =======================================================================
@@ -91,6 +92,16 @@ Rectangle JavaSalSystem::GetDisplayScreenPosSizePixel( unsigned int nScreen )
 Rectangle JavaSalSystem::GetDisplayWorkAreaPosSizePixel( unsigned int nScreen )
 {
 	return com_sun_star_vcl_VCLScreen::getScreenBounds( nScreen, sal_True );
+}
+
+// -----------------------------------------------------------------------
+
+OUString JavaSalSystem::GetScreenName( unsigned int nScreen )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalSystem::GetScreenName not implemented\n" );
+#endif
+	return OUString();
 }
 
 // -----------------------------------------------------------------------

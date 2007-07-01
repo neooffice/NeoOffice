@@ -5981,9 +5981,11 @@ ImplLayoutArgs OutputDevice::ImplPrepareLayoutArgs( String& rStr,
             if( (*pStr >= '0') && (*pStr <= '9') )
             {
                 // translate characters to local preference
-                sal_Unicode cChar = GetLocalizedChar( *pStr, meTextLanguage );
+                sal_UCS4 cChar = GetLocalizedChar( *pStr, meTextLanguage );
                 if( cChar != *pStr )
-                    rStr.SetChar( sal::static_int_cast<USHORT>(pStr - pBase), cChar );
+                    // TODO: are the localized digit surrogates?
+                    rStr.SetChar( static_cast<USHORT>(pStr - pBase),
+                                 static_cast<sal_Unicode>(cChar) );
             }
         }
     }
@@ -7308,6 +7310,14 @@ FontMetric OutputDevice::GetFontMetric() const
     aMetric.mpImplMetric->mnExtLeading  = ImplDevicePixelToLogicHeight( pMetric->mnExtLeading );
     aMetric.mpImplMetric->mnLineHeight  = ImplDevicePixelToLogicHeight( pMetric->mnAscent+pMetric->mnDescent+mnEmphasisAscent+mnEmphasisDescent );
     aMetric.mpImplMetric->mnSlant       = ImplDevicePixelToLogicHeight( pMetric->mnSlant );
+
+#ifdef UNX
+    // backwards compatible line metrics after fixing #i60945#
+    if( (meOutDevType == OUTDEV_VIRDEV)
+    &&  static_cast<const VirtualDevice*>(this)->ForceZeroExtleadBug() )
+        aMetric.mpImplMetric->mnExtLeading = 0;
+#endif
+
     return aMetric;
 }
 

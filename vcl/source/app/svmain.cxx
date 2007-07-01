@@ -427,9 +427,11 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
 
 void DeInitVCL()
 {
+    DBG_ASSERT( Application::GetTopWindowCount()==0, "DeInitVCL: some windows are still alive!" );
+
     ImplSVData* pSVData = ImplGetSVData();
     pSVData->mbDeInit = TRUE;
-    
+
     ImplImageTree::cleanup();
 
     delete pExceptionHandler;

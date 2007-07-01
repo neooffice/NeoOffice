@@ -1892,7 +1892,7 @@ void ImplBorderWindow::ImplInit( Window* pParent,
         {
 		    mpWindowImpl->mbOverlapWin	= TRUE;
 		    mpWindowImpl->mbFrame 		= TRUE;
-		    mbFrameBorder	= TRUE;
+		    mbFrameBorder	= (nOrgStyle & WB_NOBORDER) ? FALSE : TRUE;
         }
         else
         {

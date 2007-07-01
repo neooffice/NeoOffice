@@ -38,6 +38,7 @@ PRJ=..
 
 PRJNAME=vcl
 TARGET=vcl
+TARGETTYPE=GUI
 VERSION=$(UPD)
 USE_DEFFILE=TRUE
 
@@ -190,11 +191,16 @@ SHL1USE_EXPORTS=ordinal
     SHL1STDLIBS+=   $(FREETYPELIB)
 .ENDIF # USE_BUILTIN_RASTERIZER
 
+.IF "$(OS)"=="MACOSX"
+SHL1STDLIBS += -framework CoreFoundation
+.IF "$(GUI)"=="UNX"
+SHL1STDLIBS += -lX11
+.ENDIF		# "$(GUI)"=="UNX"
+.ENDIF		# "$(OS)"=="MACOSX"
+
 SHL1LIBS=   $(LIB1TARGET)
 .IF "$(GUI)"!="UNX"
 SHL1OBJS=   $(SLO)$/salshl.obj
-.ELIF "$(OS)"!="FREEBSD"
-SHL1STDLIBS+=-ldl
 .ENDIF
 
 .IF "$(GUI)" != "MAC"
@@ -216,6 +222,7 @@ DEFLIB1NAME =vcl
 
 SHL1STDLIBS += uwinapi.lib      \
                gdi32.lib        \
+               msimg32.lib     \
                winspool.lib     \
                ole32.lib        \
                shell32.lib      \
@@ -231,29 +238,9 @@ LINKFLAGSSHL += /ENTRY:LibMain@12
 
 # --- UNX ----------------------------------------------------------------
 
-.IF "$(GUI)"=="UNX"
-
-.IF "$(OS)"!="MACOSX" && "$(OS)"!="FREEBSD"
-SHL1STDLIBS+= -ldl
-.ENDIF
-
-.IF "$(GUIBASE)"=="aqua"
-SHL1STDLIBS += -framework Cocoa
-.ENDIF
-
-.IF "$(GUIBASE)"=="unx"
-SHL1STDLIBS += -lX11
-.ENDIF
-
-.IF "$(OS)"=="MACOSX"
 .IF "$(GUIBASE)" == "java"
 SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework AudioToolbox -framework AudioUnit -framework AppKit
-.ELSE
-SHL1STDLIBS += -framework Foundation -framework CoreFoundation
 .ENDIF
-.ENDIF # "$(OS)"=="MACOSX"
-
-.ENDIF          # "$(GUI)"=="UNX"
 
 # UNX sal plugins
 .IF "$(GUI)" == "UNX" && "$(GUIBASE)" != "java"
@@ -391,11 +378,7 @@ SHL4NOCHECK=TRUE
 
 
 SHL4STDLIBS+=-l$(SHL2TARGET)
-.IF "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
-SHL4STDLIBS+=$(SHL3STDLIBS) -lX11
-.ELSE
-SHL4STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
-.ENDIF # "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
+SHL4STDLIBS+=$(SHL3STDLIBS)
 .ENDIF # "$(ENABLE_GTK)" != ""
 
 # KDE plugin
@@ -409,11 +392,7 @@ SHL5DEPN=$(SHL2TARGETN)
 # libs for KDE plugin
 SHL5STDLIBS=$(KDE_LIBS)
 SHL5STDLIBS+=-l$(SHL2TARGET)
-.IF "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
-SHL5STDLIBS+=$(SHL3STDLIBS) -lX11
-.ELSE
-SHL5STDLIBS+=$(SHL3STDLIBS) -lX11 -ldl
-.ENDIF # "$(OS)"=="FREEBSD" || "$(OS)"=="MACOSX"
+SHL5STDLIBS+=$(SHL3STDLIBS)
 .ENDIF # "$(ENABLE_KDE)" != ""
 
 .ENDIF # UNX && !java

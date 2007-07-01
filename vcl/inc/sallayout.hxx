@@ -58,6 +58,8 @@ typedef unsigned short LanguageType;
 #include "dllapi.h"
 #endif
 
+typedef sal_uInt32 sal_UCS4;	// TODO: this should be moved to rtl
+
 class SalGraphics;
 class ImplFontData;
 
@@ -152,11 +154,11 @@ protected:
 };
 
 // helper functions often used with ImplLayoutArgs
-int GetVerticalFlags( sal_Unicode );
-sal_Unicode GetVerticalChar( sal_Unicode );
-VCL_DLLPUBLIC sal_Unicode GetMirroredChar( sal_Unicode );
-sal_Unicode GetLocalizedChar( sal_Unicode, LanguageType );
-VCL_DLLPUBLIC const char* GetAutofallback( sal_Unicode ) ;
+int GetVerticalFlags( sal_UCS4 );
+sal_UCS4 GetVerticalChar( sal_UCS4 );
+VCL_DLLPUBLIC sal_UCS4 GetMirroredChar( sal_UCS4 );
+sal_UCS4 GetLocalizedChar( sal_UCS4, LanguageType );
+VCL_DLLPUBLIC const char* GetAutofallback( sal_UCS4 ) ;
 
 // -------------
 // - SalLayout -
@@ -234,7 +236,7 @@ protected:
     void            SetOrientation( int nOrientation )      // in 0-3600 system
                     { mnOrientation = nOrientation; }
 
-    static int      CalcAsianKerning( sal_Unicode, bool bLeft, bool bVertical );
+    static int      CalcAsianKerning( sal_UCS4, bool bLeft, bool bVertical );
 
 private:
     // enforce proper copy semantic

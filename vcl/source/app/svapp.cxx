@@ -144,6 +144,7 @@
 #endif
 
 #include <utility>
+#include "lazydelete.hxx"
 
 using namespace ::com::sun::star::uno;
 
@@ -535,6 +536,10 @@ void Application::Reschedule( bool bAllEvents )
     pSVData->maAppData.mnDispatchLevel++;
     pSVData->mpDefInst->Yield( false, bAllEvents );
     pSVData->maAppData.mnDispatchLevel--;
+
+    // flush lazy deleted objects
+    if( pSVData->maAppData.mnDispatchLevel == 0 )
+        vcl::LazyDelete::flush();
 }
 
 // -----------------------------------------------------------------------
@@ -553,6 +558,10 @@ void Application::Yield( bool bAllEvents )
     pSVData->maAppData.mnDispatchLevel++;
     pSVData->mpDefInst->Yield( !pSVData->maAppData.mbAppQuit, bAllEvents );
     pSVData->maAppData.mnDispatchLevel--;
+    
+    // flush lazy deleted objects
+    if( pSVData->maAppData.mnDispatchLevel == 0 )
+        vcl::LazyDelete::flush();
 }
 
 // -----------------------------------------------------------------------
@@ -1353,6 +1362,12 @@ unsigned int Application::GetScreenCount()
 {
     SalSystem* pSys = ImplGetSalSystem();
     return pSys ? pSys->GetDisplayScreenCount() : 0;
+}
+
+rtl::OUString Application::GetScreenName( unsigned int nScreen )
+{
+    SalSystem* pSys = ImplGetSalSystem();
+    return pSys ? pSys->GetScreenName( nScreen ) : rtl::OUString();
 }
 
 bool Application::IsMultiDisplay()
