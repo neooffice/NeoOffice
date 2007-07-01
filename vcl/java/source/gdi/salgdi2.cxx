@@ -761,13 +761,3 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 #endif
 	return false;
 }
-
-// -----------------------------------------------------------------------
-
-bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency )
-{
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalGraphics::drawAlphaRect not implemented\n" );
-#endif
-	return false;
-}
