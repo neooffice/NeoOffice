@@ -5253,6 +5253,12 @@ bool PDFWriterImpl::emit()
     // needed for widget tab order
     sortWidgets();
 
+#ifdef USE_JAVA
+    // Encode the glyphs using the native font encoding
+    if ( !m_bUsingMtf )
+        encodeGlyphs();
+#endif	// USE_JAVA
+
     // emit catalog
     CHECK_RETURN( emitCatalog() );
 
@@ -5266,9 +5272,6 @@ bool PDFWriterImpl::emit()
     // Replay meta actions
     if ( !m_bUsingMtf )
     {
-        // Encode the glyphs using the native font encoding
-        encodeGlyphs();
-
         PDFWriterImpl aWriter( m_aContext, &m_aSubsets );
 		aWriter.setDocInfo( m_aDocInfo );
         for ( ULONG i = 0, nCount = m_aMtf.GetActionCount(); i < nCount; i++ )
