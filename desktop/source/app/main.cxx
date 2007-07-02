@@ -267,6 +267,9 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	aTmpPath += aCmdPath;
 	aTmpPath += ByteString( "/mono/2.0/machine.config" );
 	putenv( (char *)aTmpPath.GetBuffer() );
+	// Unset MONO_DISABLE_SHM variable as OdfConverter will abort with it set
+	aTmpPath = ByteString( "MONO_DISABLE_SHM=" );
+	putenv( (char *)aTmpPath.GetBuffer() );
 #endif	// USE_JAVA
 
 	RTL_LOGFILE_PRODUCT_TRACE( "PERFORMANCE - enter Main()" );
