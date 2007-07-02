@@ -324,7 +324,7 @@ install_info MigrationImpl::findInstallation()
     OUString usAltInstall;
     if (rtl::Bootstrap::get(OUString::createFromAscii("SYSUSERCONFIG"), usAltInstall))
     {
-        usAltInstall += OUString::createFromAscii("/Library/Preferences/NeoOffice-2.x");
+        usAltInstall += OUString::createFromAscii("/Library/Preferences/NeoOffice-2.1");
         Directory dir(usAltInstall);
         if (dir.open() == FileBase::E_None)
         {
