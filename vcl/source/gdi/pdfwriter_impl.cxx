@@ -5762,6 +5762,26 @@ bool PDFWriterImpl::emit()
                 }
                 break;
 
+	            case( META_BEGINPATTERN_PDF_ACTION ):
+                {
+                    aWriter.beginPattern();
+                }
+                break;
+
+	            case( META_ENDPATTERN_PDF_ACTION ):
+                {
+                    const MetaEndPatternPDFAction* pA = (const MetaEndPatternPDFAction*) pAction;
+                    aWriter.endPattern( pA->GetRect(), pA->GetTransform() );
+                }
+                break;
+
+	            case( META_POLYPOLYGON_PDF_ACTION ):
+                {
+                    const MetaPolyPolygonPDFAction* pA = (const MetaPolyPolygonPDFAction*) pAction;
+                    aWriter.drawPolyPolygon( pA->GetPolyPolygon(), pA->GetPattern(), pA->IsEOFill() );
+                }
+                break;
+
                 default:
                     DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
                 break;
@@ -9346,11 +9366,21 @@ void PDFWriterImpl::drawWallpaper( const Rectangle& rRect, const Wallpaper& rWal
 
 void PDFWriterImpl::beginPattern()
 {
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaBeginPatternPDFAction() );
+#endif	// USE_JAVA
+
     beginRedirect( new SvMemoryStream(), Rectangle() );
 }
 
 sal_Int32 PDFWriterImpl::endPattern( const Rectangle& rRect, const SvtGraphicFill::Transform& rTransform )
 {
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaEndPatternPDFAction( rRect, rTransform ) );
+#endif	// USE_JAVA
+
     Rectangle aConvertRect( rRect );
     m_aPages.back().convertRect( aConvertRect );
     
@@ -9388,6 +9418,11 @@ sal_Int32 PDFWriterImpl::endPattern( const Rectangle& rRect, const SvtGraphicFil
 
 void PDFWriterImpl::drawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill )
 {
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaPolyPolygonPDFAction( rPolyPoly, nPattern, bEOFill ) );
+#endif	// USE_JAVA
+
     if( nPattern < 0 || nPattern >= (sal_Int32)m_aTilings.size() )
         return;
     

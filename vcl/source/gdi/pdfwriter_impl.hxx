@@ -126,6 +126,9 @@
 #define META_BEGINCONTROLAPPEARANCE_PDF_ACTION	(10026)
 #define META_ENDCONTROLAPPEARANCE_PDF_ACTION	(10027)
 #define META_DIGITLANGUAGE_PDF_ACTION			(10028)
+#define META_BEGINPATTERN_PDF_ACTION			(10029)
+#define META_ENDPATTERN_PDF_ACTION				(10030)
+#define META_POLYPOLYGON_PDF_ACTION				(10031)
 
 class MetaAntiAliasPDFAction : public MetaAction
 {
@@ -1847,6 +1850,41 @@ public:
     ::vcl::PDFWriter::PageTransition	GetType() const { return meType; }
     sal_uInt32			GetMilliSeconds() const { return mnMilliSeconds; }
     sal_Int32			GetPage() const { return mnPage; }
+};
+
+class MetaBeginPatternPDFAction : public MetaAction
+{
+public:
+    					MetaBeginPatternPDFAction() : MetaAction( META_BEGINPATTERN_PDF_ACTION ) {}
+    virtual				~MetaBeginPatternPDFAction() {}
+};
+
+class MetaEndPatternPDFAction : public MetaAction
+{
+private:
+    Rectangle			maRect;
+    SvtGraphicFill::Transform	maTransform;
+
+public:
+    					MetaEndPatternPDFAction( const Rectangle& rRect, const SvtGraphicFill::Transform& rTransform ) : MetaAction( META_ENDPATTERN_PDF_ACTION ), maRect( rRect ), maTransform( rTransform ) {}
+    virtual				~MetaEndPatternPDFAction() {}
+
+    const Rectangle&	GetRect() const { return maRect; }
+    const SvtGraphicFill::Transform&	GetTransform() const { return maTransform; }
+};
+
+class MetaPolyPolygonPDFAction : public MetaPolyPolygonAction
+{
+private:
+    sal_Int32			mnPattern;
+    bool				mbEOFill;
+
+public:
+						MetaPolyPolygonPDFAction( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill ) : MetaPolyPolygonAction( rPolyPoly ), mnPattern( nPattern ), mbEOFill( bEOFill ) {}
+    virtual				~MetaPolyPolygonPDFAction() {}
+
+    sal_Int32			GetPattern() const { return mnPattern; }
+    bool				IsEOFill() const { return mbEOFill; }
 };
 
 #endif	// USE_JAVA && MACOSX
