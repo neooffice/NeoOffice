@@ -193,9 +193,9 @@ SHL1USE_EXPORTS=ordinal
 
 .IF "$(OS)"=="MACOSX"
 SHL1STDLIBS += -framework CoreFoundation
-.IF "$(GUI)"=="UNX"
+.IF "$(GUIBASE)"=="unx"
 SHL1STDLIBS += -lX11
-.ENDIF		# "$(GUI)"=="UNX"
+.ENDIF		# "$(GUIBASE)"=="unx"
 .ENDIF		# "$(OS)"=="MACOSX"
 
 SHL1LIBS=   $(LIB1TARGET)
