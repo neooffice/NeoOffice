@@ -248,6 +248,8 @@ bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight
 		if ( mnLineColor )
 			mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, ( mnLineColor & 0x00ffffff ) | nTransColor, FALSE );
 	}
+
+	return true;
 }
 
 // -----------------------------------------------------------------------
