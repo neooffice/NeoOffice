@@ -184,14 +184,16 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 			{
 				// Don't delete the bitmap buffer and let the Java native
 				// method print the bitmap buffer directly
-				BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
-				if ( pDestBuffer )
+				SalTwoRect aCopyPosAry;
+				memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
+				aCopyPosAry.mnDestX = 0;
+				aCopyPosAry.mnDestY = 0;
+				aCopyPosAry.mnDestWidth = aCopyPosAry.mnSrcWidth;
+				aCopyPosAry.mnDestHeight = aCopyPosAry.mnSrcHeight;
+				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+				if ( pCopyBuffer )
 				{
-					aPosAry.mnSrcX = 0;
-					aPosAry.mnSrcY = 0;
-					aPosAry.mnSrcWidth = pDestBuffer->mnWidth;
-					aPosAry.mnSrcHeight = pDestBuffer->mnHeight;
-					mpVCLGraphics->drawBitmapBuffer( pDestBuffer, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight );
+					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
 
 					bDrawn = true;
 				}
