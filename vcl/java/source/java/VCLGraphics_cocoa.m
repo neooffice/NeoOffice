@@ -98,9 +98,6 @@
 					CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
 					if ( pContext )
 					{
-						// [pFlippedView translateOriginToPoint:NSMakePoint( mfTranslateX, mfTranslateY )];
-						// [pFlippedView rotateByAngle: mfRotateAngle];
-						// [pFlippedView scaleUnitSquareToSize:NSMakeSize( mfScaleX, mfScaleY )];
 						// Fix bug 1218 by setting the clip here and not in Java
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
