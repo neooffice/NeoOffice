@@ -70,7 +70,7 @@ public:
 	virtual				~com_sun_star_vcl_VCLGraphics() {};
 
 	void				addGraphicsChangeListener( JavaSalBitmap *_par0 );
-	void				beginSetClipRegion();
+	void				beginSetClipRegion( sal_Bool _par0 );
 	void				copyBits( const com_sun_star_vcl_VCLGraphics *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, sal_Bool _par9 );
 	void				copyBits( BYTE *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, long _par9 );
 	void				drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 );
@@ -88,7 +88,7 @@ public:
 	const Rectangle		getPreferredRadioButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 	void				drawCheckBox( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
 	const Rectangle		getPreferredCheckBoxBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
-	void				endSetClipRegion();
+	void				endSetClipRegion( sal_Bool _par0 );
 	USHORT				getBitCount();
 	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, int _par2 );
 	SalColor			getPixel( long _par0, long _par1 );
@@ -97,12 +97,12 @@ public:
 	void				invert( long _par0, long _par1, long _par2, long _par3, SalInvert _par4 );
 	void				invert( ULONG _par0, const SalPoint *_par1, SalInvert _par2 );
 	void				removeGraphicsChangeListener( JavaSalBitmap *_par0 );
-	void				resetClipRegion();
+	void				resetClipRegion( sal_Bool _par0 );
 	void				resetGraphics();
 	void				setPixel( long _par0, long _par1, SalColor _par2 );
 	void				setXORMode( sal_Bool _par0 );
-	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3 );
-	sal_Bool			unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2 );
+	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 );
+	sal_Bool			unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3 );
 };
 
 } // namespace vcl

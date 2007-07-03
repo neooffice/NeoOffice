@@ -429,9 +429,39 @@ public final class VCLGraphics {
 	private VCLFrame frame = null;
 
 	/**
+	 * The frame's cached clipping area.
+	 */
+	private Area frameClip = null;
+
+	/**
+	 * The frame's cached clipping list.
+	 */
+	private LinkedList frameClipList = null;
+
+	/**
+	 * The frame's polygon clipping flag.
+	 */
+	private boolean framePolygonClip = false;
+
+	/**
 	 * The graphics context.
 	 */
 	private Graphics2D graphics = null;
+
+	/**
+	 * The graphics's cached clipping area.
+	 */
+	private Area graphicsClip = null;
+
+	/**
+	 * The graphics's cached clipping list.
+	 */
+	private LinkedList graphicsClipList = null;
+
+	/**
+	 * The graphics's polygon clipping flag.
+	 */
+	private boolean graphicsPolygonClip = false;
 
 	/**
 	 * The cached bounds of the graphics context.
@@ -573,14 +603,15 @@ public final class VCLGraphics {
 
 	/**
 	 * Sets the cached clipping area to an empty area. The cached clipping
-	 * area is not actually applied until the {@link #endSetClipRegion()}
+	 * area is not actually applied until the {@link #endSetClipRegion(boolean)}
 	 * method is called.
+	 *
+	 * @param b <code>true</code> if this clip is coming from the C++ SalFrame
+	 *  methods otherwise <code>false</code>
 	 */
-	public void beginSetClipRegion() {
+	public void beginSetClipRegion(boolean b) {
 
-		userClip = null;
-		userClipList = null;
-		userPolygonClip = false;
+		resetClipRegion(b);
 
 	}
 
@@ -636,6 +667,10 @@ public final class VCLGraphics {
 		graphics = null;
 		image = null;
 		frame = null;
+		frameClip = null;
+		frameClipList = null;
+		graphicsClip = null;
+		graphicsClipList = null;
 		pageFormat = null;
 		userClip = null;
 		userClipList = null;
@@ -2113,10 +2148,13 @@ public final class VCLGraphics {
 
 	/**
 	 * Applies the cached clipping area. The cached clipping area is set using
-	 * the {@link #beginSetClipRegion()} and the
-	 * {@link #unionClipRegion(long, long, long, long)} methods.
+	 * the {@link #beginSetClipRegion(boolean)} and the
+	 * {@link #unionClipRegion(long, long, long, long, boolean)} methods.
+	 *
+	 * @param b <code>true</code> if this clip is coming from the C++ SalFrame
+	 *  methods otherwise <code>false</code>
 	 */
-	public void endSetClipRegion() {}
+	public void endSetClipRegion(boolean b) {}
 
 	/**
 	 * Returns the bit count of the underlying graphics device.
@@ -2609,12 +2647,42 @@ public final class VCLGraphics {
 
 	/**
 	 * Resets the applied clipping area.
+	 *
+	 * @param b <code>true</code> if this clip is coming from the C++ SalFrame
+	 *  methods otherwise <code>false</code>
 	 */
-	public void resetClipRegion() {
+	public void resetClipRegion(boolean b) {
 
-		userClip = null;
-		userClipList = null;
-		userPolygonClip = false;
+		if (b) {
+			frameClip = null;
+			frameClipList = null;
+			framePolygonClip = false;
+			if (graphicsClip != null) {
+				userClip = new Area(graphicsClip);
+				userClipList = new LinkedList(graphicsClipList);
+				userPolygonClip = graphicsPolygonClip;
+			}
+			else {
+				userClip = null;
+				userClipList = null;
+				userPolygonClip = false;
+			}
+		}
+		else {
+			graphicsClip = null;
+			graphicsClipList = null;
+			graphicsPolygonClip = false;
+			if (frameClip != null) {
+				userClip = new Area(frameClip);
+				userClipList = new LinkedList(frameClipList);
+				userPolygonClip = framePolygonClip;
+			}
+			else {
+				userClip = null;
+				userClipList = null;
+				userPolygonClip = false;
+			}
+		}
 
 	}
 
@@ -2636,7 +2704,7 @@ public final class VCLGraphics {
 				graphicsBounds = new Rectangle(0, 0, 1, 1);
 
 			bitCount = frame.getBitCount();
-			resetClipRegion();
+			resetClipRegion(false);
 		}
 
 	}
@@ -2702,24 +2770,84 @@ public final class VCLGraphics {
 	/**
 	 * Unions the cached clipping area with the specified rectangle. The
 	 * cached clipping area is not actually applied until the
-	 * {@link #endSetClipRegion()} method is called.
+	 * {@link #endSetClipRegion(boolean)} method is called.
 	 *
 	 * @param x the x coordinate of the rectangle to add to clip region
 	 * @param y the y coordinate of the rectangle to add to clip region
 	 * @param width the width of the rectangle to add to clip region
 	 * @param height the height of the rectangle to add to clip region
+	 * @param b <code>true</code> if this clip is coming from the C++ SalFrame
+	 *  methods otherwise <code>false</code>
 	 */
-	public void unionClipRegion(int x, int y, int width, int height) {
+	public void unionClipRegion(int x, int y, int width, int height, boolean b) {
 
 		Rectangle bounds = new Rectangle(x, y, width, height);
 		if (bounds.isEmpty())
 			return;
 
 		Area area = new Area(bounds);
-		if (userClip != null)
+		Area currentClip;
+		LinkedList currentClipList;
+		boolean currentPolygonClip;
+		if (b) {
+			currentClip = frameClip;
+			currentClipList = frameClipList;
+			currentPolygonClip = framePolygonClip;
+		}
+		else {
+			currentClip = graphicsClip;
+			currentClipList = graphicsClipList;
+			currentPolygonClip = graphicsPolygonClip;
+		}
+
+		Area oldCurrentClip;
+		if (currentClip != null) {
+ 			oldCurrentClip = new Area(currentClip);
+			currentClip.add(area);
+		}
+		else {
+ 			oldCurrentClip = null;
+			currentClip = area;
+		}
+
+		if (currentClip.isEmpty()) {
+			currentClip = null;
+			currentClipList = null;
+			currentPolygonClip = false;
+		}
+		else if (currentClip.isRectangular()) {
+			currentClipList = new LinkedList();
+			currentClipList.add(currentClip.getBounds());
+			currentPolygonClip = false;
+		}
+		else {
+			// Don't change currentPolygonClip flag
+			if (currentClipList == null)
+				currentClipList = new LinkedList();
+			currentClipList.add(area.getBounds());
+		}
+
+		if (b) {
+			frameClip = currentClip;
+			frameClipList = currentClipList;
+			framePolygonClip = currentPolygonClip;
+		}
+		else {
+			graphicsClip = currentClip;
+			graphicsClipList = currentClipList;
+			graphicsPolygonClip = currentPolygonClip;
+		}
+
+		Area oldUserClip;
+		if (userClip != null) {
+ 			oldUserClip = new Area(userClip);
 			userClip.add(area);
-		else
+		}
+		else {
+ 			oldUserClip = null;
 			userClip = area;
+		}
+
 
 		if (userClip.isEmpty()) {
 			userClip = null;
@@ -2743,28 +2871,87 @@ public final class VCLGraphics {
 	/**
 	 * Unions the cached clipping area with the specified poly polygon. The
 	 * cached clipping area is not actually applied until the
-	 * {@link #endSetClipRegion()} method is called. Note that some drawing
-	 * methods in this class cannot handle non-rectangular clip regions so
-	 * this method will likely leave too big of a clip region for such
+	 * {@link #endSetClipRegion(boolean)} method is called. Note that some
+	 * drawing methods in this class cannot handle non-rectangular clip regions
+	 * so this method will likely leave too big of a clip region for such
 	 * methods.
 	 *
 	 * @param npoly the number of polygons
 	 * @param npoints the array of the total number of points in each polygon
 	 * @param xpoints the array of arrays of x coordinates
 	 * @param ypoints the array of arrays of y coordinates
+	 * @param b <code>true</code> if this clip is coming from the C++ SalFrame
+	 *  methods otherwise <code>false</code>
 	 * @return <code>true</code> if the clip region is not empty, otherwise
 	 *  <code>false</code>
 	 */
-	public boolean unionClipRegion(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints) {
+	public boolean unionClipRegion(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, boolean b) {
 
 		for (int i = 0; i < npoly; i++) {
 			Polygon p = new Polygon(xpoints[i], ypoints[i], npoints[i]);
 			Area a = new Area(p);
 			if (a != null && !a.isEmpty()) {
-				if (userClip == null)
-					userClip = a;
-				else
+				Area currentClip;
+				LinkedList currentClipList;
+				boolean currentPolygonClip;
+				if (b) {
+					currentClip = frameClip;
+					currentClipList = frameClipList;
+					currentPolygonClip = framePolygonClip;
+				}
+				else {
+					currentClip = graphicsClip;
+					currentClipList = graphicsClipList;
+					currentPolygonClip = graphicsPolygonClip;
+				}
+
+				Area oldCurrentClip;
+				if (currentClip != null) {
+ 					oldCurrentClip = new Area(currentClip);
+					currentClip.add(a);
+				}
+				else {
+ 					oldCurrentClip = null;
+					currentClip = a;
+				}
+
+				if (currentClip.isEmpty()) {
+					currentClip = null;
+					currentClipList = null;
+					currentPolygonClip = false;
+				}
+				else if (currentClip.isRectangular()) {
+					currentClipList = new LinkedList();
+					currentClipList.add(currentClip.getBounds());
+					currentPolygonClip = false;
+				}
+				else {
+					if (currentClipList == null)
+						currentClipList = new LinkedList();
+					if (!currentPolygonClip && !a.isRectangular())
+						currentPolygonClip = false;
+				}
+
+				if (b) {
+					frameClip = currentClip;
+					frameClipList = currentClipList;
+					framePolygonClip = currentPolygonClip;
+				}
+				else {
+					graphicsClip = currentClip;
+					graphicsClipList = currentClipList;
+					graphicsPolygonClip = currentPolygonClip;
+				}
+
+				Area oldUserClip;
+				if (userClip != null) {
+ 					oldUserClip = new Area(userClip);
 					userClip.add(a);
+				}
+				else {
+ 					oldUserClip = null;
+					userClip = a;
+				}
 
 				if (userClip.isEmpty()) {
 					userClip = null;
@@ -2779,7 +2966,6 @@ public final class VCLGraphics {
 				else {
 					if (userClipList == null)
 						userClipList = new LinkedList();
-					userClipList.add(a.getBounds());
 					if (!userPolygonClip && !a.isRectangular())
 						userPolygonClip = true;
 				}

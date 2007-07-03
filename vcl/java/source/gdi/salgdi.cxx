@@ -116,21 +116,21 @@ USHORT JavaSalGraphics::GetBitCount()
 
 void JavaSalGraphics::ResetClipRegion()
 {
-	mpVCLGraphics->resetClipRegion();
+	mpVCLGraphics->resetClipRegion( sal_False );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
 {
-	mpVCLGraphics->beginSetClipRegion();
+	mpVCLGraphics->beginSetClipRegion( sal_False );
 }
 
 // -----------------------------------------------------------------------
 
 BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-	mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight );
+	mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_False );
 	return TRUE;
 }
 
@@ -138,14 +138,14 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 
 BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
 {
-	return mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry );
+	return mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::EndSetClipRegion()
 {
-	mpVCLGraphics->endSetClipRegion();
+	mpVCLGraphics->endSetClipRegion( sal_False );
 }
 
 // -----------------------------------------------------------------------

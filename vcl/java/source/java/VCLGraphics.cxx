@@ -519,7 +519,7 @@ void com_sun_star_vcl_VCLGraphics::addGraphicsChangeListener( JavaSalBitmap *_pa
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::beginSetClipRegion()
+void com_sun_star_vcl_VCLGraphics::beginSetClipRegion( sal_Bool _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -527,12 +527,16 @@ void com_sun_star_vcl_VCLGraphics::beginSetClipRegion()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
+			char *cSignature = "(Z)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "beginSetClipRegion", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			args[0].z = jboolean( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
 	}
 }
 
@@ -1279,7 +1283,7 @@ const Rectangle com_sun_star_vcl_VCLGraphics::getPreferredCheckBoxBounds( long _
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::endSetClipRegion()
+void com_sun_star_vcl_VCLGraphics::endSetClipRegion( sal_Bool _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -1287,12 +1291,16 @@ void com_sun_star_vcl_VCLGraphics::endSetClipRegion()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
+			char *cSignature = "(Z)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "endSetClipRegion", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			args[0].z = jboolean( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
 	}
 }
 
@@ -1591,7 +1599,7 @@ void com_sun_star_vcl_VCLGraphics::removeGraphicsChangeListener( JavaSalBitmap *
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::resetClipRegion()
+void com_sun_star_vcl_VCLGraphics::resetClipRegion( sal_Bool _par0 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -1599,12 +1607,16 @@ void com_sun_star_vcl_VCLGraphics::resetClipRegion()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()V";
+			char *cSignature = "(Z)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "resetClipRegion", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+		{
+			jvalue args[1];
+			args[0].z = jboolean( _par0 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
 	}
 }
 
@@ -1677,7 +1689,7 @@ void com_sun_star_vcl_VCLGraphics::setXORMode( sal_Bool _par0 )
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long _par2, long _par3 )
+void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -1685,17 +1697,18 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIII)V";
+			char *cSignature = "(IIIIZ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "unionClipRegion", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[4];
+			jvalue args[5];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
+			args[4].z = jboolean( _par4 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -1703,7 +1716,7 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2 )
+sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3 )
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
@@ -1712,7 +1725,7 @@ sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I[I[[I[[I)Z";
+			char *cSignature = "(I[I[[I[[IZ)Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "unionClipRegion", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1751,11 +1764,12 @@ sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG
 				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
 			}
 
-			jvalue args[4];
+			jvalue args[5];
 			args[0].i = jint( _par0 );
 			args[1].l = ptsarray;
 			args[2].l = xptsarray;
 			args[3].l = yptsarray;
+			args[4].z = jboolean( _par3 );
 			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 		}
 	}

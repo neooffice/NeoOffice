@@ -953,34 +953,34 @@ void JavaSalFrame::SetMaxClientSize( long nWidth, long nHeight )
 
 void JavaSalFrame::ResetClipRegion()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::ResetClipRegion not implemented\n" );
-#endif
+	if ( !mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	mpGraphics->mpVCLGraphics->resetClipRegion( sal_True );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::BeginSetClipRegion not implemented\n" );
-#endif
+	if ( !mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	mpGraphics->mpVCLGraphics->beginSetClipRegion( sal_True );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::UnionClipRegion not implemented\n" );
-#endif
+	if ( !mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	mpGraphics->mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_True );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::EndSetClipRegion()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::EndSetClipRegion not implemented\n" );
-#endif
+	if ( !mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	mpGraphics->mpVCLGraphics->endSetClipRegion( sal_True );
 }
