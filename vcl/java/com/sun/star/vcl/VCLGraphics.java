@@ -1271,23 +1271,23 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
+		LinkedList clipList = new LinkedList();
+		if (userClipList != null) {
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+				if (!clip.isEmpty())
+					clipList.add(clip);
+			}
+		}
+		else {
+			clipList.add(destBounds);
+		}
+
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
-					LinkedList clipList = new LinkedList();
-					if (userClipList != null) {
-						Iterator clipRects = userClipList.iterator();
-						while (clipRects.hasNext()) {
-							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-							if (!clip.isEmpty())
-								clipList.add(clip);
-						}
-					}
-					else {
-						clipList.add(destBounds);
-					}
-
 					AffineTransform transform = g.getTransform();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
@@ -1301,8 +1301,17 @@ public final class VCLGraphics {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
-					g.setClip(userClip);
-					g.drawLine(x1, y1, x2, y2);
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.drawLine(x1, y1, x2, y2);
+						}
+					}
+					else {
+						g.setClip(userClip);
+						g.drawLine(x1, y1, x2, y2);
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -1435,8 +1444,8 @@ public final class VCLGraphics {
 			catch (Throwable t) {
 				t.printStackTrace();
 			}
+			g.dispose();
 		}
-		g.dispose();
 
 	}
 
@@ -1749,14 +1758,15 @@ public final class VCLGraphics {
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
-					if (!userPolygonClip && fill) {
+					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
 							g.setClip((Rectangle)clipRects.next());
-							g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+							if (fill)
+								g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+							else
+								g.drawRect(x, y, width - 1, height - 1);
 						}
-						if (userPolygonClip)
-							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
 						g.setClip(userClip);
@@ -2307,7 +2317,7 @@ public final class VCLGraphics {
 	 */
 	public int getPixel(int x, int y) {
 
-		if (graphics != null || !graphicsBounds.contains(x, y) || (userClip != null && !userClip.contains(x, y)))
+		if (graphics != null || !graphicsBounds.contains(x, y))
 			return 0xff000000;
 
 		int pixel = 0xff000000;
@@ -2690,7 +2700,6 @@ public final class VCLGraphics {
 				graphicsBounds = new Rectangle(0, 0, 1, 1);
 
 			bitCount = frame.getBitCount();
-			resetClipRegion(false);
 		}
 
 	}
@@ -2710,8 +2719,24 @@ public final class VCLGraphics {
 			return;
 		}
 
-		if (!graphicsBounds.contains(x, y) || (userClip != null && !userClip.contains(x, y)))
+		if (!graphicsBounds.contains(x, y))
 			return;
+
+		// Invoking Area.contains() does not seem to work
+		if (userClipList != null) {
+			boolean inClip = false;
+			Iterator clipRects = userClipList.iterator();
+			while (clipRects.hasNext()) {
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(graphicsBounds);
+				if (!clip.isEmpty() && clip.contains(x, y)) {
+					inClip = true;
+					break;
+				}
+			}
+
+			if (!inClip)
+				return;
+		}
 
 		// Don't use BitmapBuffer.setRGB() as it is flaky only small portions
 		// of the image have been painted prior to this call
@@ -2792,8 +2817,7 @@ public final class VCLGraphics {
 			currentClip = area;
 
 		if (currentClip.isEmpty()) {
-			currentClip = null;
-			currentClipList = null;
+			currentClipList = new LinkedList();
 			currentPolygonClip = false;
 		}
 		else if (currentClip.isRectangular()) {
@@ -2812,9 +2836,23 @@ public final class VCLGraphics {
 			frameClip = currentClip;
 			frameClipList = currentClipList;
 			framePolygonClip = currentPolygonClip;
-			if (graphicsClip != null) {
-				userClip = new Area(userClip);
-				userClipList = new LinkedList(userClipList);
+			if (frameClip != null && graphicsClip != null) {
+				// Don't change userPolygonClip flag
+				userClip = new Area(frameClip);
+				userClip.subtract(graphicsClip);
+				userClipList = new LinkedList();
+				if (graphicsClipList != null) {
+					Iterator graphicsClipRects = graphicsClipList.iterator();
+					while (graphicsClipRects.hasNext()) {
+						Rectangle currentGraphicsClip = (Rectangle)graphicsClipRects.next();
+						Iterator clipRects = graphicsClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(currentGraphicsClip);
+							if (!clip.isEmpty())
+								userClipList.add(clip);
+						}
+					}
+				}
 			}
 			else {
 				userClip = currentClip;
@@ -2826,38 +2864,28 @@ public final class VCLGraphics {
 			graphicsClip = currentClip;
 			graphicsClipList = currentClipList;
 			graphicsPolygonClip = currentPolygonClip;
-			if (frameClip != null) {
-				userClip = new Area(userClip);
-				userClipList = new LinkedList(userClipList);
+			if (graphicsClip != null && frameClip != null) {
+				// Don't change userPolygonClip flag
+				userClip = new Area(graphicsClip);
+				userClip.subtract(frameClip);
+				userClipList = new LinkedList();
+				if (graphicsClipList != null) {
+					Iterator frameClipRects = frameClipList.iterator();
+					while (frameClipRects.hasNext()) {
+						Rectangle currentFrameClip = (Rectangle)frameClipRects.next();
+						Iterator clipRects = graphicsClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(currentFrameClip);
+							if (!clip.isEmpty())
+								userClipList.add(clip);
+						}
+					}
+				}
 			}
 			else {
 				userClip = currentClip;
 				userClipList = currentClipList;
 				userPolygonClip = currentPolygonClip;
-			}
-		}
-
-		if (userClip != currentClip) {
-			if (userClip != null)
-				userClip.add(area);
-			else
-				userClip = area;
-
-			if (userClip.isEmpty()) {
-				userClip = null;
-				userClipList = null;
-				userPolygonClip = false;
-			}
-			else if (userClip.isRectangular()) {
-				userClipList = new LinkedList();
-				userClipList.add(userClip.getBounds());
-				userPolygonClip = false;
-			}
-			else {
-				// Don't change userPolygonClip flag
-				if (userClipList == null)
-					userClipList = new LinkedList();
-				userClipList.add(bounds);
 			}
 		}
 
@@ -2906,8 +2934,7 @@ public final class VCLGraphics {
 					currentClip = a;
 
 				if (currentClip.isEmpty()) {
-					currentClip = null;
-					currentClipList = null;
+					currentClipList = new LinkedList();
 					currentPolygonClip = false;
 				}
 				else if (currentClip.isRectangular()) {
@@ -2926,54 +2953,63 @@ public final class VCLGraphics {
 					frameClip = currentClip;
 					frameClipList = currentClipList;
 					framePolygonClip = currentPolygonClip;
-					if (graphicsClip != null) {
-						userClip = new Area(userClip);
-						userClipList = new LinkedList(userClipList);
-					}
-					else {
-						userClip = currentClip;
-						userClipList = currentClipList;
-						userPolygonClip = currentPolygonClip;
-					}
 				}
 				else {
 					graphicsClip = currentClip;
 					graphicsClipList = currentClipList;
 					graphicsPolygonClip = currentPolygonClip;
-					if (frameClip != null) {
-						userClip = new Area(userClip);
-						userClipList = new LinkedList(userClipList);
-					}
-					else {
-						userClip = currentClip;
-						userClipList = currentClipList;
-						userPolygonClip = currentPolygonClip;
+				}
+			}
+		}
+
+		if (b) {
+			if (frameClip != null && graphicsClip != null) {
+				// Don't change userPolygonClip flag
+				userClip = new Area(frameClip);
+				userClip.subtract(graphicsClip);
+				userClipList = new LinkedList();
+				if (graphicsClipList != null) {
+					Iterator graphicsClipRects = graphicsClipList.iterator();
+					while (graphicsClipRects.hasNext()) {
+						Rectangle currentGraphicsClip = (Rectangle)graphicsClipRects.next();
+						Iterator clipRects = graphicsClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(currentGraphicsClip);
+							if (!clip.isEmpty())
+								userClipList.add(clip);
+						}
 					}
 				}
-
-				if (userClip != currentClip) {
-					if (userClip != null)
-						userClip.add(a);
-					else
-						userClip = a;
-
-					if (userClip.isEmpty()) {
-						userClip = null;
-						userClipList = null;
-						userPolygonClip = false;
-					}
-					else if (userClip.isRectangular()) {
-						userClipList = new LinkedList();
-						userClipList.add(userClip.getBounds());
-						userPolygonClip = false;
-					}
-					else {
-						if (userClipList == null)
-							userClipList = new LinkedList();
-						if (!userPolygonClip && !a.isRectangular())
-							userPolygonClip = true;
+			}
+			else {
+				userClip = frameClip;
+				userClipList = frameClipList;
+				userPolygonClip = framePolygonClip;
+			}
+		}
+		else {
+			if (graphicsClip != null && frameClip != null) {
+				// Don't change userPolygonClip flag
+				userClip = new Area(graphicsClip);
+				userClip.subtract(frameClip);
+				userClipList = new LinkedList();
+				if (graphicsClipList != null) {
+					Iterator frameClipRects = frameClipList.iterator();
+					while (frameClipRects.hasNext()) {
+						Rectangle currentFrameClip = (Rectangle)frameClipRects.next();
+						Iterator clipRects = graphicsClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(currentFrameClip);
+							if (!clip.isEmpty())
+								userClipList.add(clip);
+						}
 					}
 				}
+			}
+			else {
+				userClip = graphicsClip;
+				userClipList = graphicsClipList;
+				userPolygonClip = graphicsPolygonClip;
 			}
 		}
 
