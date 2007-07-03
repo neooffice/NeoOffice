@@ -1137,7 +1137,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 {
                     // Fix bug 823 by handling inappropriate placement of
                     // kashidas by upper layers
-                    if ( pG > mpGlyphItems && pG[-1].IsRTLGlyph() && ( pG[-1].mnGlyphIndex & GF_IDXMASK ) < 0x0000FFFF && pG[-1].mnCharPos - pG->mnCharPos == 1 )
+                    if ( pG > mpGlyphItems && !IsSpacingGlyph( pG[-1].mnGlyphIndex ) && pG[-1].IsRTLGlyph() && ( pG[-1].mnGlyphIndex & GF_IDXMASK ) < 0x0000FFFF && pG[-1].mnCharPos - pG->mnCharPos == 1 )
                     {
                         UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG[-1].mnCharPos ], UCHAR_JOINING_TYPE );
                         UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG->mnCharPos ], UCHAR_JOINING_TYPE );
@@ -1145,7 +1145,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                             bHandled = true;
                     }
                 }
-                else
+                else if ( pG > mpGlyphItems )
                 {
                     // We don't want characters to be piled on top of each other
                     bHandled = true;
