@@ -2657,31 +2657,17 @@ public final class VCLGraphics {
 			frameClip = null;
 			frameClipList = null;
 			framePolygonClip = false;
-			if (graphicsClip != null) {
-				userClip = new Area(graphicsClip);
-				userClipList = new LinkedList(graphicsClipList);
-				userPolygonClip = graphicsPolygonClip;
-			}
-			else {
-				userClip = null;
-				userClipList = null;
-				userPolygonClip = false;
-			}
+			userClip = graphicsClip;
+			userClipList = graphicsClipList;
+			userPolygonClip = graphicsPolygonClip;
 		}
 		else {
 			graphicsClip = null;
 			graphicsClipList = null;
 			graphicsPolygonClip = false;
-			if (frameClip != null) {
-				userClip = new Area(frameClip);
-				userClipList = new LinkedList(frameClipList);
-				userPolygonClip = framePolygonClip;
-			}
-			else {
-				userClip = null;
-				userClipList = null;
-				userPolygonClip = false;
-			}
+			userClip = frameClip;
+			userClipList = frameClipList;
+			userPolygonClip = framePolygonClip;
 		}
 
 	}
@@ -2800,15 +2786,10 @@ public final class VCLGraphics {
 			currentPolygonClip = graphicsPolygonClip;
 		}
 
-		Area oldCurrentClip;
-		if (currentClip != null) {
- 			oldCurrentClip = new Area(currentClip);
+		if (currentClip != null)
 			currentClip.add(area);
-		}
-		else {
- 			oldCurrentClip = null;
+		else
 			currentClip = area;
-		}
 
 		if (currentClip.isEmpty()) {
 			currentClip = null;
@@ -2831,39 +2812,53 @@ public final class VCLGraphics {
 			frameClip = currentClip;
 			frameClipList = currentClipList;
 			framePolygonClip = currentPolygonClip;
+			if (graphicsClip != null) {
+				userClip = new Area(userClip);
+				userClipList = new LinkedList(userClipList);
+			}
+			else {
+				userClip = currentClip;
+				userClipList = currentClipList;
+				userPolygonClip = currentPolygonClip;
+			}
 		}
 		else {
 			graphicsClip = currentClip;
 			graphicsClipList = currentClipList;
 			graphicsPolygonClip = currentPolygonClip;
+			if (frameClip != null) {
+				userClip = new Area(userClip);
+				userClipList = new LinkedList(userClipList);
+			}
+			else {
+				userClip = currentClip;
+				userClipList = currentClipList;
+				userPolygonClip = currentPolygonClip;
+			}
 		}
 
-		Area oldUserClip;
-		if (userClip != null) {
- 			oldUserClip = new Area(userClip);
-			userClip.add(area);
-		}
-		else {
- 			oldUserClip = null;
-			userClip = area;
-		}
+		if (userClip != currentClip) {
+			if (userClip != null)
+				userClip.add(area);
+			else
+				userClip = area;
 
-
-		if (userClip.isEmpty()) {
-			userClip = null;
-			userClipList = null;
-			userPolygonClip = false;
-		}
-		else if (userClip.isRectangular()) {
-			userClipList = new LinkedList();
-			userClipList.add(userClip.getBounds());
-			userPolygonClip = false;
-		}
-		else {
-			// Don't change userPolygonClip flag
-			if (userClipList == null)
+			if (userClip.isEmpty()) {
+				userClip = null;
+				userClipList = null;
+				userPolygonClip = false;
+			}
+			else if (userClip.isRectangular()) {
 				userClipList = new LinkedList();
-			userClipList.add(bounds);
+				userClipList.add(userClip.getBounds());
+				userPolygonClip = false;
+			}
+			else {
+				// Don't change userPolygonClip flag
+				if (userClipList == null)
+					userClipList = new LinkedList();
+				userClipList.add(bounds);
+			}
 		}
 
 	}
@@ -2905,15 +2900,10 @@ public final class VCLGraphics {
 					currentPolygonClip = graphicsPolygonClip;
 				}
 
-				Area oldCurrentClip;
-				if (currentClip != null) {
- 					oldCurrentClip = new Area(currentClip);
+				if (currentClip != null)
 					currentClip.add(a);
-				}
-				else {
- 					oldCurrentClip = null;
+				else
 					currentClip = a;
-				}
 
 				if (currentClip.isEmpty()) {
 					currentClip = null;
@@ -2929,45 +2919,60 @@ public final class VCLGraphics {
 					if (currentClipList == null)
 						currentClipList = new LinkedList();
 					if (!currentPolygonClip && !a.isRectangular())
-						currentPolygonClip = false;
+						currentPolygonClip = true;
 				}
 
 				if (b) {
 					frameClip = currentClip;
 					frameClipList = currentClipList;
 					framePolygonClip = currentPolygonClip;
+					if (graphicsClip != null) {
+						userClip = new Area(userClip);
+						userClipList = new LinkedList(userClipList);
+					}
+					else {
+						userClip = currentClip;
+						userClipList = currentClipList;
+						userPolygonClip = currentPolygonClip;
+					}
 				}
 				else {
 					graphicsClip = currentClip;
 					graphicsClipList = currentClipList;
 					graphicsPolygonClip = currentPolygonClip;
+					if (frameClip != null) {
+						userClip = new Area(userClip);
+						userClipList = new LinkedList(userClipList);
+					}
+					else {
+						userClip = currentClip;
+						userClipList = currentClipList;
+						userPolygonClip = currentPolygonClip;
+					}
 				}
 
-				Area oldUserClip;
-				if (userClip != null) {
- 					oldUserClip = new Area(userClip);
-					userClip.add(a);
-				}
-				else {
- 					oldUserClip = null;
-					userClip = a;
-				}
+				if (userClip != currentClip) {
+					if (userClip != null)
+						userClip.add(a);
+					else
+						userClip = a;
 
-				if (userClip.isEmpty()) {
-					userClip = null;
-					userClipList = null;
-					userPolygonClip = false;
-				}
-				else if (userClip.isRectangular()) {
-					userClipList = new LinkedList();
-					userClipList.add(userClip.getBounds());
-					userPolygonClip = false;
-				}
-				else {
-					if (userClipList == null)
+					if (userClip.isEmpty()) {
+						userClip = null;
+						userClipList = null;
+						userPolygonClip = false;
+					}
+					else if (userClip.isRectangular()) {
 						userClipList = new LinkedList();
-					if (!userPolygonClip && !a.isRectangular())
-						userPolygonClip = true;
+						userClipList.add(userClip.getBounds());
+						userPolygonClip = false;
+					}
+					else {
+						if (userClipList == null)
+							userClipList = new LinkedList();
+						if (!userPolygonClip && !a.isRectangular())
+							userPolygonClip = true;
+					}
 				}
 			}
 		}
