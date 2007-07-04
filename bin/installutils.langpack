@@ -82,3 +82,9 @@ update_installation() {
 
 }
 
+check_running() {
+
+	check_installation "$1"
+	return "$?"
+
+}
