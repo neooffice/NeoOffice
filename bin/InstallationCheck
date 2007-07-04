@@ -37,7 +37,7 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
-commands="awk chmod chown echo file find grep id mv open pax ps rm sed sort touch uname"
+commands="awk basename chmod chown dirname echo file find grep id mv open pax ps rm sed sort touch uname"
 
 # Check that the required BSD command are installed
 for i in $commands ; do
@@ -70,15 +70,15 @@ if [ "$target_machine" != "$machine" ] ; then
 fi
 
 # Check that the user has a supported Java version
-javaversion=`java -version 2>&1 | grep '^java version '`
 javafound=
-if [ ! -z "$javaversion" ] ; then 
-    if echo "$javaversion" | grep -q 'java version "1\.4\.[23]' ; then 
-        javafound="$javaversion"
-    elif echo "$javaversion" | grep -q 'java version "1\.5\.' ; then 
-        javafound="$javaversion"
+for i in `find -L "/System/Library/Frameworks/JavaVM.framework/Versions" -type d -maxdepth 1` ; do
+    if [ -r "$i/Libraries/libjvm.dylib" ] ; then
+        case `basename "$i"` in
+            1.4.[23]*) javafound="$i" ; break;;
+            1.5.*) javafound="$i" ; break;;
+        esac
     fi
-fi
+done
 if [ -z "$javafound" ] ; then
     # Return 96 + 24 if we didn't find a supported Java version
     exit 120;
