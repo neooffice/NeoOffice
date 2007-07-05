@@ -975,7 +975,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				{
 					maRuns.AddRun( nMinFallbackCharPos, nEndFallbackCharPos, bRunRTL );
 					nEstimatedGlyphs += nEndFallbackCharPos - nMinFallbackCharPos;
-					break;
 				}
 			}
 		}
