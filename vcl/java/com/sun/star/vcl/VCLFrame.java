@@ -1995,8 +1995,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				boolean commitLast = false;
 				int lastCount = 0;
 				for (char c = lastText.first(); c != CharacterIterator.DONE; c = lastText.next()) {
-					// Only commit if there are uncommitted Indic characters
-					if (!commitLast && c >= 0x0900 && c < 0x0E00)
+					// Fix bug 2492 by only commiting if there are uncommitted
+					// characters in or below the Indic range
+					if (!commitLast && c < 0x0E00)
 						commitLast = true;
 					lastCount++;
 				}
