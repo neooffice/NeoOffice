@@ -762,7 +762,17 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
              * to lock the file.
              */
             if ( fd < 0 )
+            {
                 fd = open( buffer, flags & ~( O_EXLOCK | O_SHLOCK ), mode );
+
+                /*
+                 * Fix bug 2504 by trying without create flags if the previous
+                 * attempt was a create request and the last request failed
+                 * because the first call actually created the file.
+                 */
+                if ( fd < 0 && flags & O_CREAT )
+                    fd = open( buffer, flags & ~( O_CREAT | O_EXLOCK | O_SHLOCK ), mode );
+            }
 #endif
             if ( fd >= 0 )
             {
