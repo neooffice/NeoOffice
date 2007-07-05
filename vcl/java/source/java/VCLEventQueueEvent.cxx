@@ -619,8 +619,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				FloatingWindow *pPopupWindow = NULL;
     			if ( nID == SALEVENT_MOUSEBUTTONDOWN )
 				{
+					// Fix bug 2501 by only closing popup windows that are
+					// floating windows
 					ImplSVData* pSVData = ImplGetSVData();
-					if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat )
+					if ( !pFrame->IsFloatingFrame() && pSVData && pSVData->maWinData.mpFirstFloat && ((JavaSalFrame *)pSVData->maWinData.mpFirstFloat->ImplGetFrame())->IsFloatingFrame() )
 					{
 						static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
 						if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
