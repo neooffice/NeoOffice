@@ -57,7 +57,6 @@ class com_sun_star_vcl_VCLEvent;
 class com_sun_star_vcl_VCLEventQueue;
 class com_sun_star_vcl_VCLFrame;
 class com_sun_star_vcl_VCLMenuBar;
-class java_lang_Object;
 }
 
 class JavaSalGraphics;
@@ -72,7 +71,6 @@ class JavaSalFrame : public SalFrame
 {
 public:
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
-	::vcl::java_lang_Object*	mpPanel;
 	JavaSalGraphics*		mpGraphics;
 	ULONG					mnStyle;
 	JavaSalFrame*			mpParent;
