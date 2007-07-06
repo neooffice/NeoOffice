@@ -68,6 +68,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
+#ifndef _SV_DIALOG_HXX
+#include <dialog.hxx>
+#endif
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -198,6 +201,21 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 {
 	if ( bVisible == mbVisible )
 		return;
+
+	// Fix bug 2501 by closing any dialogs that are child windows of this
+	// window. This is necessary because in a few cases, the OOo code closes
+	// a dialog's parent and expects the dialog to still remain showing!
+	// Java, on the other hand, will forcefully close the window leaving the
+	// the OOo code in an irrecoverable state.
+	if ( !bVisible )
+	{
+		Window *pWindow = Application::GetFirstTopLevelWindow();
+		while ( pWindow && pWindow->ImplGetFrame() != this )
+			pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+		if ( pWindow )
+			Dialog::EndAllDialogs( pWindow );
+	}
 
 	SalData *pSalData = GetSalData();
 
