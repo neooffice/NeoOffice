@@ -71,6 +71,10 @@ ULINGULIB=libulingu.lib
 
 .INCLUDE : settings.mk
 
+.IF "$(PRODUCT_NAME)" != ""
+CDEFS += -DPRODUCT_NAME='"$(PRODUCT_NAME)"'
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 .IF "$(SYSTEM_HUNSPELL)" != "YES"
