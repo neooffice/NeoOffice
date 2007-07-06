@@ -2149,39 +2149,6 @@ void ImplBorderWindow::DataChanged( const DataChangedEvent& rDCEvt )
 
 // -----------------------------------------------------------------------
 
-#ifdef USE_JAVA
-
-long ImplBorderWindow::PreNotify( NotifyEvent& rNEvt )
-{
-	long nDone = 0;
-	const MouseEvent *pMouseEvt = NULL;
- 
-	if ( rNEvt.GetType() == EVENT_MOUSEMOVE && ( pMouseEvt = rNEvt.GetMouseEvent() ) )
-	{
-		if ( GetOutDevType() == OUTDEV_WINDOW && ( pMouseEvt->IsEnterWindow() || pMouseEvt->IsLeaveWindow() ) )
-		{
-			Window *pCtrl = GetWindow( WINDOW_CLIENT );
-			if ( pCtrl )
-			{
-				ControlType nCtrlType = 0;
-				ControlPart nCtrlPart = PART_ENTIRE_CONTROL;
-				ImplGetNativeControlData( pCtrl, nCtrlType, nCtrlPart );
-				if ( nCtrlType && pCtrl->IsNativeControlSupported( nCtrlType, nCtrlPart ) )
-				{
-					GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-					GetParent()->Update();
-				}
-			}
-		}
-	}
-
-	return nDone ? nDone : Window::PreNotify( rNEvt );
-}
-
-#endif	// USE_JAVA
-
-// -----------------------------------------------------------------------
-
 void ImplBorderWindow::InitView()
 {
 	if ( mbSmallOutBorder )
