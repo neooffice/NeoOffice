@@ -72,7 +72,6 @@ class JavaSalFrame : public SalFrame
 {
 public:
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
-	::vcl::java_lang_Object*	mpPanel;
 	JavaSalGraphics*		mpGraphics;
 	ULONG					mnStyle;
 	JavaSalFrame*			mpParent;
