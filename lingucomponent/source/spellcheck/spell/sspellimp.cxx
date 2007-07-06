@@ -96,10 +96,16 @@ static OUString aDelimiter = OUString::createFromAscii( "_" );
 static OUString ImplGetLocaleString( Locale aLocale )
 {
 	OUString aLocaleString( aLocale.Language );
-	aLocaleString += aDelimiter;
-	aLocaleString += aLocale.Country;
-	aLocaleString += aDelimiter; 
-	aLocaleString += aLocale.Variant; 
+	if ( aLocale.Country.getLength() )
+	{
+		aLocaleString += aDelimiter;
+		aLocaleString += aLocale.Country;
+		if ( aLocale.Variant.getLength() )
+		{
+			aLocaleString += aDelimiter; 
+			aLocaleString += aLocale.Variant; 
+		}
+	}
 	return aLocaleString;
 }
 
@@ -323,11 +329,12 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 	CFMutableArrayRef aLocales = NSSpellChecker_getLocales();
 	if ( aLocales )
 	{
+		int nStart = aSuppLocales.getLength();
 		CFIndex nItems = CFArrayGetCount( aLocales );
-		aSuppLocales.realloc( numdict + nItems );
-		Locale *pLocaleArray = aSuppLocales.getArray() + numdict;
+		aSuppLocales.realloc( nStart + nItems );
+		Locale *pLocaleArray = aSuppLocales.getArray();
 
-		CFIndex nItemsAdded = 0;
+		CFIndex nItemsAdded = nStart;
 		for ( CFIndex i = 0; i < nItems; i++ )
 		{
 			CFStringRef aString = (CFStringRef)CFArrayGetValueAtIndex( aLocales, i );
@@ -367,15 +374,11 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 				// and Chinese is not likely to have spellchecking support
 				// anytime soon as it is an ideographic language, we may
 				// never need to worry about this case.
-				OUString aLocaleString( aLang );
-				aLocaleString += aDelimiter;
-				aLocaleString += aCountry;
-				aLocaleString += aDelimiter;
-				aLocaleString += aVariant;
+				Locale aLocale( aLang, aCountry, aVariant );
+				OUString aLocaleString( ImplGetLocaleString( aLocale ) );
 				::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
 				if ( it == maNativeLocaleMap.end() )
 				{
-					Locale aLocale( aLang, aCountry, aVariant );
 					pLocaleArray[ nItemsAdded++ ] = aLocale;
 					CFRetain( aString );
 					maNativeLocaleMap[ aLocaleString ] = aString;
@@ -383,7 +386,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 			}
 		}
 
-		aSuppLocales.realloc( numdict + nItemsAdded );
+		aSuppLocales.realloc( nItemsAdded );
 		CFRelease( aLocales );
 	}
 #endif	// USE_JAVA
