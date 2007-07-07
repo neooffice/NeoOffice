@@ -90,21 +90,35 @@ CFMutableArrayRef NSSpellChecker_getLocales()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
+	NSMutableSet *pLocales = [NSMutableSet setWithCapacity:64];
 
-	if ( aRet && pChecker )
+	if ( aRet && pChecker && pLocales )
 	{
-		CFArrayRef aLocales = CFLocaleCopyAvailableLocaleIdentifiers();
-		if ( aLocales )
+		NSBundle *pBundle = [NSBundle bundleWithPath:@"/System/Library/Services/AppleSpell.service"];
+		if ( pBundle )
+			[pLocales addObjectsFromArray:[pBundle localizations]];
+		pBundle = [NSBundle mainBundle];
+		if ( pBundle )
+			[pLocales addObjectsFromArray:[pBundle localizations]];
+
+		NSArray *pLocaleArray = [pLocales allObjects];
+		if ( pLocaleArray )
 		{
-			CFIndex nCount = CFArrayGetCount( aLocales );
-			CFIndex i = 0;
+			unsigned nCount = [pLocales count];
+			unsigned i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				CFStringRef aLocale = (CFStringRef)CFArrayGetValueAtIndex( aLocales, i );
-				if ( aLocale && [pChecker setLanguage:(NSString *)aLocale] )
-					CFArrayAppendValue( aRet, aLocale );
+				NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
+				if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
+				{
+					CFStringRef aLocale = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault, pLocale );
+					if ( aLocale )
+					{
+						CFArrayAppendValue( aRet, aLocale );
+						CFRelease( aLocale );
+					}
+				}
 			}
-			CFRelease( aLocales );
 		}
 	}
 

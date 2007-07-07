@@ -132,14 +132,17 @@ SpellChecker::SpellChecker() :
 	bDisposing = FALSE;
 	pPropHelper = NULL;
         numdict = 0;
+#ifdef USE_JAVA
+	maLocales = NULL;
+#endif	// USE_JAVA
 }
 
 
 SpellChecker::~SpellChecker()
 {
 #ifdef USE_JAVA
-	for ( ::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.begin(); it != maNativeLocaleMap.end(); ++it )
-		CFRelease( it->second );
+	if ( maLocales )
+		CFRelease( maLocales );
 #endif	// USE_JAVA
 
   if (aDicts) {
@@ -326,68 +329,69 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
         }
 
 #ifdef USE_JAVA
-	CFMutableArrayRef aLocales = NSSpellChecker_getLocales();
-	if ( aLocales )
+	if ( !maLocales )
 	{
-		int nStart = aSuppLocales.getLength();
-		CFIndex nItems = CFArrayGetCount( aLocales );
-		aSuppLocales.realloc( nStart + nItems );
-		Locale *pLocaleArray = aSuppLocales.getArray();
-
-		CFIndex nItemsAdded = nStart;
-		for ( CFIndex i = 0; i < nItems; i++ )
+		maLocales = NSSpellChecker_getLocales();
+		if ( maLocales )
 		{
-			CFStringRef aString = (CFStringRef)CFArrayGetValueAtIndex( aLocales, i );
-			if ( aString )
+			int nStart = aSuppLocales.getLength();
+			CFIndex nItems = CFArrayGetCount( maLocales );
+			aSuppLocales.realloc( nStart + nItems );
+			Locale *pLocaleArray = aSuppLocales.getArray();
+
+			CFIndex nItemsAdded = nStart;
+			for ( CFIndex i = 0; i < nItems; i++ )
 			{
-				CFIndex nLen = CFStringGetLength( aString );
-				CFRange aRange = CFRangeMake( 0, nLen );
-				sal_Unicode pBuffer[ nLen + 1 ];
-				CFStringGetCharacters( aString, aRange, pBuffer );
-				pBuffer[ nLen ] = 0;
-				OUString aItem( pBuffer );
-
-				if ( !aItem.getLength() )
-					continue;
-
-				sal_Unicode cDelimiter = (sal_Unicode)'_';
-				sal_Int32 nIndex = 0;
-				OUString aLang = aItem.getToken( 0, cDelimiter, nIndex );
-				if ( nIndex < 0 )
+				CFStringRef aString = (CFStringRef)CFArrayGetValueAtIndex( maLocales, i );
+				if ( aString )
 				{
-					// Mac OS X will sometimes use "-" as its delimiter
-					cDelimiter = (sal_Unicode)'-';
-					nIndex = 0;
-					aLang = aItem.getToken( 0, cDelimiter, nIndex );
-				}
+					CFIndex nLen = CFStringGetLength( aString );
+					CFRange aRange = CFRangeMake( 0, nLen );
+					sal_Unicode pBuffer[ nLen + 1 ];
+					CFStringGetCharacters( aString, aRange, pBuffer );
+					pBuffer[ nLen ] = 0;
+					OUString aItem( pBuffer );
 
-				OUString aCountry;
-				if ( nIndex >= 0 )
-					aCountry = aItem.getToken( 0, cDelimiter, nIndex );
+					if ( !aItem.getLength() )
+						continue;
 
-				OUString aVariant;
-				if ( nIndex >= 0 )
-					aVariant = aItem.getToken( 0, cDelimiter, nIndex );
+					sal_Unicode cDelimiter = (sal_Unicode)'_';
+					sal_Int32 nIndex = 0;
+					OUString aLang = aItem.getToken( 0, cDelimiter, nIndex );
+					if ( nIndex < 0 )
+					{
+						// Mac OS X will sometimes use "-" as its delimiter
+						cDelimiter = (sal_Unicode)'-';
+						nIndex = 0;
+						aLang = aItem.getToken( 0, cDelimiter, nIndex );
+					}
 
-				// TODO: Handle the cases where the country is "Hans" or
-				// "Hant". Since these are only used with the "zh" locale
-				// and Chinese is not likely to have spellchecking support
-				// anytime soon as it is an ideographic language, we may
-				// never need to worry about this case.
-				Locale aLocale( aLang, aCountry, aVariant );
-				OUString aLocaleString( ImplGetLocaleString( aLocale ) );
-				::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
-				if ( it == maNativeLocaleMap.end() )
-				{
-					pLocaleArray[ nItemsAdded++ ] = aLocale;
-					CFRetain( aString );
-					maNativeLocaleMap[ aLocaleString ] = aString;
+					OUString aCountry;
+					if ( nIndex >= 0 )
+						aCountry = aItem.getToken( 0, cDelimiter, nIndex );
+
+					OUString aVariant;
+					if ( nIndex >= 0 )
+						aVariant = aItem.getToken( 0, cDelimiter, nIndex );
+	
+					// TODO: Handle the cases where the country is "Hans" or
+					// "Hant". Since these are only used with the "zh" locale
+					// and Chinese is not likely to have spellchecking support
+					// anytime soon as it is an ideographic language, we may
+					// never need to worry about this case.
+					Locale aLocale( aLang, aCountry, aVariant );
+					OUString aLocaleString( ImplGetLocaleString( aLocale ) );
+					::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
+					if ( it == maNativeLocaleMap.end() )
+					{
+						pLocaleArray[ nItemsAdded++ ] = aLocale;
+						maNativeLocaleMap[ aLocaleString ] = aString;
+					}
 				}
 			}
-		}
 
-		aSuppLocales.realloc( nItemsAdded );
-		CFRelease( aLocales );
+			aSuppLocales.realloc( nItemsAdded );
+		}
 	}
 #endif	// USE_JAVA
 
