@@ -181,7 +181,8 @@ build.oo_patches: build.ooo-build_patches \
 	build.oo_toolkit_patch \
 	build.oo_ucb_patch \
 	build.oo_vcl_patch \
-	build.oo_vos_patch
+	build.oo_vos_patch \
+	build.oo_macab_patch
 # Copy modified compiler scripts to work around gcc 3.3 breakage in Apple's
 # latest system updates
 	mkdir -p "$(COMPILERDIR)"
@@ -191,12 +192,25 @@ build.oo_patches: build.ooo-build_patches \
 build.oo_odk_patches: build.oo_patches
 	touch "$@"
 
-build.oo_external_patch: build.ooo-build_patches
+build.oo_external_patch: build.ooo-build_patches \
+	$(OO_PATCHES_HOME)/gpc231.tar.Z
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	gnutar zxf "$(OO_PATCHES_HOME)/gpc231.tar.Z" -C "$(BUILD_HOME)/external/gpc"
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
+	touch "$@"
+
+build.oo_macab_patch: build.ooo-build_patches \
+	$(OO_PATCHES_HOME)/macaddressbook01_integrate_ab.patch \
+	$(OO_PATCHES_HOME)/macaddressbook01_macab_driver.tar.gz \
+	$(OO_PATCHES_HOME)/macaddressbook01_macab_driver.patch
+	-( cd "$(BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$(OO_PATCHES_HOME)/macaddressbook01_integrate_ab.patch"
+	( cd "$(BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$(OO_PATCHES_HOME)/macaddressbook01_integrate_ab.patch"
+	chmod -Rf u+w "$(BUILD_HOME)/connectivity"
+	gnutar zxf "$(OO_PATCHES_HOME)/macaddressbook01_macab_driver.tar.gz" -C "$(BUILD_HOME)"
+	( cd "$(BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$(OO_PATCHES_HOME)/macaddressbook01_macab_driver.patch"
+	chmod -Rf u+w "$(BUILD_HOME)/connectivity"
 	touch "$@"
 
 build.oo_moz_patch: build.ooo-build_patches

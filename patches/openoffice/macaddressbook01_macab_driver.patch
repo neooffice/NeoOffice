@@ -1,0 +1,104 @@
+--- connectivity/source/drivers/macab/MacabAddressBook.cxx	2007-07-06 18:37:54.000000000 -0700
++++ connectivity/source/drivers/macab/MacabAddressBook.cxx	2007-07-08 14:31:13.000000000 -0700
+@@ -48,8 +48,10 @@
+ 
+ #include <vector>
+ 
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ #ifndef _CONNECTIVITY_COMMONTOOLS_HXX_
+ #include "connectivity/CommonTools.hxx"
+--- connectivity/source/drivers/macab/MacabAddressBook.hxx	2007-07-06 18:37:59.000000000 -0700
++++ connectivity/source/drivers/macab/MacabAddressBook.hxx	2007-07-08 14:31:31.000000000 -0700
+@@ -46,8 +46,10 @@
+ 
+ #include <vector>
+ 
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ namespace connectivity
+ {
+--- connectivity/source/drivers/macab/MacabGroup.hxx	2007-07-06 18:40:27.000000000 -0700
++++ connectivity/source/drivers/macab/MacabGroup.hxx	2007-07-08 14:31:44.000000000 -0700
+@@ -40,8 +40,10 @@
+ #include "MacabRecords.hxx"
+ #endif
+ 
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ 
+ namespace connectivity
+--- connectivity/source/drivers/macab/MacabRecord.cxx	2007-07-06 18:41:37.000000000 -0700
++++ connectivity/source/drivers/macab/MacabRecord.cxx	2007-07-08 14:31:59.000000000 -0700
+@@ -50,8 +50,10 @@
+ #include <com/sun/star/util/DateTime.hpp>
+ #endif
+ 
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ #ifndef _DBHELPER_DBCONVERSION_HXX_
+ #include <connectivity/dbconversion.hxx>
+--- connectivity/source/drivers/macab/MacabRecord.hxx	2007-07-06 18:41:58.000000000 -0700
++++ connectivity/source/drivers/macab/MacabRecord.hxx	2007-07-08 14:32:16.000000000 -0700
+@@ -40,8 +40,10 @@
+ #include <cppuhelper/compbase3.hxx>
+ #endif
+ 
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ namespace connectivity
+ {
+--- connectivity/source/drivers/macab/MacabRecords.cxx	2007-07-06 18:42:10.000000000 -0700
++++ connectivity/source/drivers/macab/MacabRecords.cxx	2007-07-08 14:32:46.000000000 -0700
+@@ -50,8 +50,10 @@
+ #include "macabutilities.hxx"
+ #endif
+ 
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ #ifndef _COM_SUN_STAR_UTIL_DATETIME_HPP_
+ #include <com/sun/star/util/DateTime.hpp>
+--- connectivity/source/drivers/macab/MacabRecords.hxx	2007-07-06 18:42:27.000000000 -0700
++++ connectivity/source/drivers/macab/MacabRecords.hxx	2007-07-08 14:33:04.000000000 -0700
+@@ -44,8 +44,10 @@
+ #include "MacabHeader.hxx"
+ #endif
+ 
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ #ifndef _COM_SUN_STAR_UTIL_DATETIME_HPP_
+ #include <com/sun/star/util/DateTime.hpp>
+--- connectivity/source/drivers/macab/macabutilities.hxx	2007-07-06 18:45:49.000000000 -0700
++++ connectivity/source/drivers/macab/macabutilities.hxx	2007-07-08 14:33:28.000000000 -0700
+@@ -45,8 +45,10 @@
+ #endif
+ 
+ #include <time.h>
++#include <premac.h>
+ #include <Carbon/Carbon.h>
+ #include <AddressBook/ABAddressBookC.h>
++#include <postmac.h>
+ 
+ namespace connectivity
+ {
