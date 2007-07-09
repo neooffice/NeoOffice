@@ -697,7 +697,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		URL url = cl.getSystemResource("com/sun/star/vcl/images/nullptr.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_NULL");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_NULL");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_NULL), c);
 		}
@@ -705,7 +705,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/airbrush.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(5, 22), "POINTER_AIRBRUSH");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 31), "POINTER_AIRBRUSH");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AIRBRUSH), c);
 		}
@@ -713,15 +713,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/ase.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(19, 16), "POINTER_AUTOSCROLL_E");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_E");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_E), c);
 		}
 		
-		url = cl.getSystemResource("com/sun/star/vcl/images/asn.gif");
+		url = cl.getSystemResource("com/sun/star/vcl/images/asn.gif2");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(16, 12), "POINTER_AUTOSCROLL_N");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_N");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_N), c);
 		}
@@ -729,7 +729,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/asne.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(21, 10), "POINTER_AUTOSCROLL_NE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_NE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_NE), c);
 		}
@@ -737,7 +737,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/asns.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_AUTOSCROLL_NS");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_NS");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_NS), c);
 		}
@@ -745,7 +745,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/asnswe");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_AUTOSCROLL_NSWE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_NSWE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_NSWE), c);
 		}
@@ -753,7 +753,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/asnw.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(10, 10), "POINTER_AUTOSCROLL_NW");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_NW");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_NW), c);
 		}
@@ -761,7 +761,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/ass.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 19), "POINTER_AUTOSCROLL_S");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_S");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_S), c);
 		}
@@ -769,7 +769,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/asse.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(21, 21), "POINTER_AUTOSCROLL_SE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_SE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_SE), c);
 		}
@@ -777,7 +777,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/assw.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(21, 21), "POINTER_AUTOSCROLL_SW");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_SW");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_SW), c);
 		}
@@ -785,7 +785,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/asw.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(12, 15), "POINTER_AUTOSCROLL_W");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_W");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_W), c);
 		}
@@ -793,7 +793,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/aswe.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_AUTOSCROLL_WE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_AUTOSCROLL_WE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_AUTOSCROLL_WE), c);
 		}
@@ -801,7 +801,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/chain.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 2), "POINTER_CHAIN");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_CHAIN");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_CHAIN), c);
 		}
@@ -809,7 +809,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/chainnot.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(2, 2), "POINTER_CHAIN_NOTALLOWED");
+			Cursor c = toolkit.createCustomCursor(img, new Point(10, 10), "POINTER_CHAIN_NOTALLOWED");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_CHAIN_NOTALLOWED), c);
 		}
@@ -817,7 +817,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/chart.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 16), "POINTER_CHART");
+			Cursor c = toolkit.createCustomCursor(img, new Point(11, 11), "POINTER_CHART");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_CHART), c);
 		}
@@ -825,7 +825,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/copydata.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_COPYDATA");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_COPYDATA");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_COPYDATA), c);
 		}
@@ -833,7 +833,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/copydlnk.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_COPYDATALINK");
+			Cursor c = toolkit.createCustomCursor(img, new Point(10, 2), "POINTER_COPYDATALINK");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_COPYDATALINK), c);
 		}
@@ -841,7 +841,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/copyf.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_COPYFILE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(5, 10), "POINTER_COPYFILE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_COPYFILE), c);
 		}
@@ -849,7 +849,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/copyf2.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(7, 8), "POINTER_COPYFILES");
+			Cursor c = toolkit.createCustomCursor(img, new Point(9, 10), "POINTER_COPYFILES");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_COPYFILES), c);
 		}
@@ -857,7 +857,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/copyflnk.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_COPYFILELINK");
+			Cursor c = toolkit.createCustomCursor(img, new Point(9, 7), "POINTER_COPYFILELINK");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_COPYFILELINK), c);
 		}
@@ -865,7 +865,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/crook.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 14), "POINTER_CROOK");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 17), "POINTER_CROOK");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_CROOK), c);
 		}
@@ -873,7 +873,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/crop.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(9, 9), "POINTER_CROP");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_CROP");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_CROP), c);
 		}
@@ -937,7 +937,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/detectiv.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(12, 13), "POINTER_DETECTIVE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_DETECTIVE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_DETECTIVE), c);
 		}
@@ -993,7 +993,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/fill.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(10, 22), "POINTER_FILL");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_FILL");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_FILL), c);
 		}
@@ -1001,7 +1001,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/hand.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_HAND");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_HAND");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_HAND), c);
 		}
@@ -1009,7 +1009,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/help.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_HELP");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_HELP");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_HELP), c);
 		}
@@ -1019,7 +1019,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/hsizebar.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_HSIZEBAR");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_HSIZEBAR");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_HSIZEBAR), c);
 		}
@@ -1027,7 +1027,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/hsplit.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_HSPLIT");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_HSPLIT");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_HSPLIT), c);
 		}
@@ -1035,7 +1035,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/linkdata.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_LINKDATA");
+			Cursor c = toolkit.createCustomCursor(img, new Point(10, 2), "POINTER_LINKDATA");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_LINKDATA), c);
 		}
@@ -1043,7 +1043,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/linkf.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_LINKFILE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(9, 7), "POINTER_LINKFILE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_LINKFILE), c);
 		}
@@ -1051,7 +1051,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/magnify.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(12, 13), "POINTER_MAGNIFY");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_MAGNIFY");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MAGNIFY), c);
 		}
@@ -1059,7 +1059,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/mirror.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(14, 12), "POINTER_MIRROR");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_MIRROR");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MIRROR), c);
 		}
@@ -1067,7 +1067,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/move.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(19, 16), "POINTER_MOVE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_MOVE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVE), c);
 		}
@@ -1075,7 +1075,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/movebw.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEBEZIERWEIGHT");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_MOVEBEZIERWEIGHT");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVEBEZIERWEIGHT), c);
 		}
@@ -1083,7 +1083,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/movedata.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEDATA");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_MOVEDATA");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVEDATA), c);
 		}
@@ -1091,7 +1091,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/movedlnk.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEDATALINK");
+			Cursor c = toolkit.createCustomCursor(img, new Point(3, 3), "POINTER_MOVEDATALINK");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVEDATALINK), c);
 		}
@@ -1099,7 +1099,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/movef.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_MOVEFILE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(5, 10), "POINTER_MOVEFILE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVEFILE), c);
 		}
@@ -1107,7 +1107,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/movef2.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(7, 8), "POINTER_MOVEFILES");
+			Cursor c = toolkit.createCustomCursor(img, new Point(9, 10), "POINTER_MOVEFILES");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVEFILES), c);
 		}
@@ -1115,7 +1115,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/moveflnk.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 8), "POINTER_MOVEFILELINK");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_MOVEFILELINK");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVEFILELINK), c);
 		}
@@ -1123,7 +1123,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/movept.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(0, 0), "POINTER_MOVEPOINT");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_MOVEPOINT");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_MOVEPOINT), c);
 		}
@@ -1133,7 +1133,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/notallow.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_NOTALLOWED");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_NOTALLOWED");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_NOTALLOWED), c);
 		}
@@ -1143,7 +1143,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/pen.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(3, 27), "POINTER_PEN");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 31), "POINTER_PEN");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_PEN), c);
 		}
@@ -1151,7 +1151,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/pivotcol.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(7, 5), "POINTER_PIVOT_COL");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_PIVOT_COL");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_PIVOT_COL), c);
 		}
@@ -1159,7 +1159,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/pivotdel.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 9), "POINTER_PIVOT_DELETE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_PIVOT_DELETE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_PIVOT_DELETE), c);
 		}
@@ -1167,7 +1167,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/pivotfld.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 7), "POINTER_PIVOT_FIELD");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_PIVOT_FIELD");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_PIVOT_FIELD), c);
 		}
@@ -1175,7 +1175,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/pivotrow.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(8, 7), "POINTER_PIVOT_ROW");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 3), "POINTER_PIVOT_ROW");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_PIVOT_ROW), c);
 		}
@@ -1183,7 +1183,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/pntbrsh.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(9, 16), "POINTER_PAINTBRUSH");
+			Cursor c = toolkit.createCustomCursor(img, new Point(4, 30), "POINTER_PAINTBRUSH");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_PAINTBRUSH), c);
 		}
@@ -1191,7 +1191,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/refhand.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(13, 6), "POINTER_REFHAND");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_REFHAND");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_REFHAND), c);
 		}
@@ -1199,7 +1199,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/rotate.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_ROTATE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_ROTATE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_ROTATE), c);
 		}
@@ -1207,7 +1207,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/tblsele.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(30, 16), "POINTER_TAB_SELECT_E");
+			Cursor c = toolkit.createCustomCursor(img, new Point(31, 16), "POINTER_TAB_SELECT_E");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_TAB_SELECT_E), c);
 		}
@@ -1215,7 +1215,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/tblsels.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 30), "POINTER_TAB_SELECT_S");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 31), "POINTER_TAB_SELECT_S");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_TAB_SELECT_S), c);
 		}
@@ -1223,7 +1223,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/tblselse.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(30, 30), "POINTER_TAB_SELECT_SE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(31, 31), "POINTER_TAB_SELECT_SE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_TAB_SELECT_SE), c);
 		}
@@ -1231,7 +1231,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/tblselsw.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(1, 30), "POINTER_TAB_SELECT_SW");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 31), "POINTER_TAB_SELECT_SW");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_TAB_SELECT_SW), c);
 		}
@@ -1239,7 +1239,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/tblselw.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(1, 16), "POINTER_TAB_SELECT_W");
+			Cursor c = toolkit.createCustomCursor(img, new Point(2, 16), "POINTER_TAB_SELECT_W");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_TAB_SELECT_W), c);
 		}
@@ -1255,7 +1255,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/timesize.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(16, 17), "POINTER_TIMEEVENT_SIZE");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_TIMEEVENT_SIZE");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_TIMEEVENT_SIZE), c);
 		}
@@ -1263,7 +1263,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/vshear.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_VSHEAR");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_VSHEAR");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_VSHEAR), c);
 		}
@@ -1273,7 +1273,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/vsizebar.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 15), "POINTER_VSIZEBAR");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_VSIZEBAR");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_VSIZEBAR), c);
 		}
@@ -1281,7 +1281,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		url = cl.getSystemResource("com/sun/star/vcl/images/vsplit.gif");
 		if (url != null) {
 			Image img = toolkit.createImage(url);
-			Cursor c = toolkit.createCustomCursor(img, new Point(15, 14), "POINTER_VSPLIT");
+			Cursor c = toolkit.createCustomCursor(img, new Point(16, 16), "POINTER_VSPLIT");
 			if (c != null)
 				customCursors.put(new Integer(POINTER_VSPLIT), c);
 		}
