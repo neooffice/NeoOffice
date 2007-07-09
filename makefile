@@ -370,12 +370,12 @@ ifeq ("$(PRODUCT_NAME)","NeoOffice")
 	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp"
 	cd "$(INSTALL_HOME)/package/Contents/tmp" ; unzip "$(PWD)/etc/package/NeoOfficeAquaElements.zip"
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 2.1.020211/Contents/MacOS/"*.bmp "program"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 2.1.020211/Contents/Resources/"*.icns "Resources"
-	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" .
-	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"` svtools svx
-	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
-	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 2.2.1.020211/Contents/MacOS/"*.bmp "program"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/NeoOffice Aqua Elements 2.2.1.020211/Contents/Resources/"*.icns "Resources"
+	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" .
+	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"` svtools svx
+	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
+	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Aqua Elements 2.2.1.020211/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp"
