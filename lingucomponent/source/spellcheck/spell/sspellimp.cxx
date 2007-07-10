@@ -409,6 +409,45 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 		getLocales();
 
 	INT32 nLen = aSuppLocales.getLength();
+#ifdef USE_JAVA
+	// Check native locales first 
+	OUString aLocaleString( ImplGetLocaleString( rLocale ) );
+	::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
+	if ( it != maNativeLocaleMap.end() )
+		return TRUE;
+
+	// Fix bug 2513 by checking for approximate matches in the native locales
+	if ( rLocale.Variant.getLength() )
+	{
+		Locale aLocale( rLocale.Language, rLocale.Country, OUString() );
+		aLocaleString = ImplGetLocaleString( aLocale );
+		it = maNativeLocaleMap.find( aLocaleString );
+		if ( it != maNativeLocaleMap.end() )
+		{
+			aSuppLocales.realloc( ++nLen );
+			Locale *pLocaleArray = aSuppLocales.getArray();
+			pLocaleArray[ nLen - 1 ] = aLocale;
+			maNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
+			return TRUE;
+		}
+	}
+
+	if ( rLocale.Country.getLength() )
+	{
+		Locale aLocale( rLocale.Language, OUString(), OUString() );
+		aLocaleString = ImplGetLocaleString( aLocale );
+		it = maNativeLocaleMap.find( aLocaleString );
+		if ( it != maNativeLocaleMap.end() )
+		{
+			aSuppLocales.realloc( ++nLen );
+			Locale *pLocaleArray = aSuppLocales.getArray();
+			pLocaleArray[ nLen - 1 ] = aLocale;
+			maNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
+			return TRUE;
+		}
+	}
+#endif	// USE_JAVA
+
 	for (INT32 i = 0;  i < nLen;  ++i)
 	{
 		const Locale *pLocale = aSuppLocales.getConstArray();
@@ -418,40 +457,6 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 			break;
 		}
 	}
-
-#ifdef USE_JAVA
-	// Fix bug 2513 by checking for approximate matches in the native locales
-	if ( !bRes && rLocale.Variant.getLength() )
-	{
-		Locale aLocale( rLocale.Language, rLocale.Country, OUString() );
-		OUString aLocaleString( ImplGetLocaleString( aLocale ) );
-		::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
-		if ( it != maNativeLocaleMap.end() )
-		{
-			aSuppLocales.realloc( ++nLen );
-			Locale *pLocaleArray = aSuppLocales.getArray();
-			pLocaleArray[ nLen - 1 ] = aLocale;
-			maNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
-			bRes = TRUE;
-		}
-	}
-
-	if ( !bRes && rLocale.Country.getLength() )
-	{
-		Locale aLocale( rLocale.Language, OUString(), OUString() );
-		OUString aLocaleString( ImplGetLocaleString( aLocale ) );
-		::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
-		if ( it != maNativeLocaleMap.end() )
-		{
-			aSuppLocales.realloc( ++nLen );
-			Locale *pLocaleArray = aSuppLocales.getArray();
-			pLocaleArray[ nLen - 1 ] = aLocale;
-			maNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
-			bRes = TRUE;
-		}
-	}
-#endif	// USE_JAVA
-
 	return bRes;
 }
 
