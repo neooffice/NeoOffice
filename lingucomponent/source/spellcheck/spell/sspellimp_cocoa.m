@@ -111,7 +111,7 @@ CFMutableArrayRef NSSpellChecker_getLocales()
 				NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
 				if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
 				{
-					CFStringRef aLocale = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault, pLocale );
+					CFStringRef aLocale = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault, (CFStringRef)pLocale );
 					if ( aLocale )
 					{
 						CFArrayAppendValue( aRet, aLocale );
