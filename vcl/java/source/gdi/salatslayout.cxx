@@ -227,7 +227,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 				// Set the layout cache size based on physical memory
 				int pMib[2];
 				size_t nMinMem = 256 * 1024 * 1024;
-				size_t nMaxMem = nMinMem * 4;
+				size_t nMaxMem = nMinMem * 2;
 				size_t nUserMem = 0;
 				size_t nLen = sizeof( nUserMem );
 				pMib[0] = CTL_HW;
