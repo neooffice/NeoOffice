@@ -113,13 +113,12 @@
  						multiLengthSecondLevel += multiHeaders[i]->getSize();
  					}
  					else
-@@ -473,7 +475,8 @@
+@@ -473,6 +475,8 @@
  				dictLabelString = propertyNameString + ::rtl::OUString::createFromAscii(": ") + fixLabel(dictKeyString);
  				dictLabel = OUStringToCFString(dictLabelString);
  				dictHeaders[i] = createHeaderForProperty(dictType, dictValues[i], dictLabel);
--				length += dictHeaders[i]->getSize();
 +				if (!dictHeaders[i])
 +					dictHeaders[i] = new MacabHeader();
+ 				length += dictHeaders[i]->getSize();
  				CFRelease(dictLabel);
  			}
- 
