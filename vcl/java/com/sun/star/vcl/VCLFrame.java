@@ -1342,6 +1342,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private Insets insets = null;
 
 	/**
+	 * The last committed input method event.
+	 */
+	private InputMethodEvent lastCommittedInputMethodEvent = null;
+
+	/**
 	 * The last uncommitted input method event.
 	 */
 	private InputMethodEvent lastUncommittedInputMethodEvent = null;
@@ -1540,6 +1545,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
+		lastCommittedInputMethodEvent = null;
 		lastUncommittedInputMethodEvent = null;
 
 		// Remove window and panel from mapping
@@ -1577,6 +1583,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		graphics.dispose();
 		graphics = null;
 		insets = null;
+		lastCommittedInputMethodEvent = null;
 		lastUncommittedInputMethodEvent = null;
 
 		// Unregister listeners
@@ -1976,6 +1983,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		lastCommittedInputMethodEvent = null;
+
 		AttributedCharacterIterator text = e.getText();
 		if (text == null)
 			return;
@@ -2015,6 +2024,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			lastUncommittedInputMethodEvent = e;
 		}
 		else {
+			// Fix bug 2492 by handling when Java duplicates committed input
+			// in a key typed event
+			if (count == 1)
+				lastCommittedInputMethodEvent = e;
 			lastUncommittedInputMethodEvent = null;
 		}
 
@@ -2116,8 +2129,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		// These are handled in the key pressed and released events.
 		char keyChar = e.getKeyChar();
+
+		// Fix bug 2492 by handling when Java duplicates committed input
+		// in a key typed event
+		if (lastCommittedInputMethodEvent != null) {
+			AttributedCharacterIterator text = lastCommittedInputMethodEvent.getText();
+			lastCommittedInputMethodEvent = null;
+			if (text != null && text.first() == keyChar)
+				return;
+		}
+
+		// These are handled in the key pressed and released events.
 		int modifiers = e.getModifiersEx();
 		if (keyChar == (char)0x03 || keyChar == (char)0x08 || keyChar == (char)0x0a || keyChar == (char)0x0d || keyChar == (char)0x7f)
 			return;
