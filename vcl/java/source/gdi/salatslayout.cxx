@@ -956,9 +956,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		bool bFallbackRunRTL;
 		int nMinFallbackCharPos;
 		int nEndFallbackCharPos;
-		bool bLastFallbackRunRTL;
-		int nMinLastFallbackCharPos;
-		int nEndLastFallbackCharPos;
 		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 		{
 			mpGraphics->maFallbackRuns.ResetPos();
@@ -1122,15 +1119,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					long nGlyph = pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
 					// Fix bug 2091 by suppressing zero glyphs if there is a
 					// fallback font
-
 					if ( !nGlyph && pCurrentLayoutData->mpFallbackFont )
 						continue;
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
-					// 0x0000ffff as spaces. Fix bug 2453 by treating all
-					// spacing characters as spaces.
-					if ( nGlyph >= 0x0000ffff || IsSpacingGlyph( nChar | GF_ISCHAR ) )
+					// 0x0000ffff glyphs as spaces
+					if ( nGlyph >= 0x0000ffff )
 						nGlyph = 0x0020 | GF_ISCHAR;
+
+					// Fix bug 2512 without breaking fix for bug 2453 by
+					// allowing spacing glyphs to go through but marking when
+					// glyph 3 is not a spacing glyph
+					if ( nGlyph == 3 && mbSpecialSpacingGlyph && !IsSpacingGlyph( nChar | GF_ISCHAR ) )
+						mbSpecialSpacingGlyph = false;
 
 					if ( pCurrentLayoutData->maVerticalFontStyle )
 						nGlyph |= GetVerticalFlags( nChar );
@@ -1188,7 +1189,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			break;
 
 		int i;
-		for ( i = 0; i < nGlyphCount && IsSpacingGlyph( aGlyphArray[ i ] ); i++ )
+		for ( i = 0; i < nGlyphCount && aGlyphArray[ i ] & GF_ISCHAR; i++ )
 			;
 		if ( i )
 		{
@@ -1200,7 +1201,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 		long nLastUnskippedGlyph = 0;
 		for ( i = 0 ; i < nGlyphCount; i++ )
 		{
-			if ( IsSpacingGlyph( aGlyphArray[ i ] ) )
+			if ( aGlyphArray[ i ] & GF_ISCHAR )
 			{
 				nSkippedGlyphs++;
 				nGlyphCount--;
@@ -1305,7 +1306,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		if ( !nGlyphCount )
 			break;
 
-		if ( IsSpacingGlyph( aGlyphArray[ 0 ] ) )
+		if ( aGlyphArray[ 0 ] & GF_ISCHAR )
 		{
 			bRet = true;
 			continue;

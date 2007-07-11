@@ -252,6 +252,10 @@ protected:
     mutable int     mnRefCount;
     mutable Point   maDrawOffset;
     Point           maDrawBase;
+
+#ifdef USE_JAVA
+    bool            mbSpecialSpacingGlyph;
+#endif	// USE_JAVA
 };
 
 // ------------------

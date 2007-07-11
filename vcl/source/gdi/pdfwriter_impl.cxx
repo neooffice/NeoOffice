@@ -6149,7 +6149,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             nGlyphFlags[i] = (pGlyphs[i] & GF_FLAGMASK);
 #ifndef WNT
 #ifdef USE_JAVA
-            if ( rLayout.IsSpacingGlyph( pGlyphs[i] ) )
+            if ( pGlyphs[i] & GF_ISCHAR )
                 pGlyphs[i] = 0;
             else
                 pGlyphs[i] &= GF_IDXMASK;
