@@ -102,3 +102,24 @@
  
  namespace connectivity
  {
+--- connectivity/source/drivers/macab/MacabRecords.cxx	2007-07-08 14:45:38.000000000 -0700
++++ connectivity/source/drivers/macab/MacabRecords.cxx	2007-07-11 13:05:01.000000000 -0700
+@@ -415,6 +415,8 @@
+ 						CFRelease(multiLabel);
+ 						multiLabel = OUStringToCFString(multiLabelString);
+ 						multiHeaders[i] = createHeaderForProperty(multiType, multiValue, multiLabel);
++						if (!multiHeaders[i])
++							multiHeaders[i] = new MacabHeader();
+ 						multiLengthSecondLevel += multiHeaders[i]->getSize();
+ 					}
+ 					else
+@@ -473,7 +475,8 @@
+ 				dictLabelString = propertyNameString + ::rtl::OUString::createFromAscii(": ") + fixLabel(dictKeyString);
+ 				dictLabel = OUStringToCFString(dictLabelString);
+ 				dictHeaders[i] = createHeaderForProperty(dictType, dictValues[i], dictLabel);
+-				length += dictHeaders[i]->getSize();
++				if (!dictHeaders[i])
++					dictHeaders[i] = new MacabHeader();
+ 				CFRelease(dictLabel);
+ 			}
+ 
