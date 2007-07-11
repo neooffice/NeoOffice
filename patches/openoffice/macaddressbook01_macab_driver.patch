@@ -102,9 +102,14 @@
  
  namespace connectivity
  {
---- connectivity/source/drivers/macab/MacabRecords.cxx	2007-07-08 14:45:38.000000000 -0700
-+++ connectivity/source/drivers/macab/MacabRecords.cxx	2007-07-11 13:05:01.000000000 -0700
-@@ -415,6 +415,8 @@
+Index: connectivity/source/drivers/macab/MacabRecords.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecords.cxx,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 MacabRecords.cxx
+--- connectivity/source/drivers/macab/MacabRecords.cxx	8 Jul 2007 19:20:58 -0000	1.1.2.1
++++ connectivity/source/drivers/macab/MacabRecords.cxx	11 Jul 2007 22:28:43 -0000
+@@ -413,6 +413,8 @@
  						CFRelease(multiLabel);
  						multiLabel = OUStringToCFString(multiLabelString);
  						multiHeaders[i] = createHeaderForProperty(multiType, multiValue, multiLabel);
@@ -113,7 +118,7 @@
  						multiLengthSecondLevel += multiHeaders[i]->getSize();
  					}
  					else
-@@ -473,6 +475,8 @@
+@@ -471,6 +473,8 @@
  				dictLabelString = propertyNameString + ::rtl::OUString::createFromAscii(": ") + fixLabel(dictKeyString);
  				dictLabel = OUStringToCFString(dictLabelString);
  				dictHeaders[i] = createHeaderForProperty(dictType, dictValues[i], dictLabel);
@@ -122,3 +127,12 @@
  				length += dictHeaders[i]->getSize();
  				CFRelease(dictLabel);
  			}
+@@ -515,6 +519,8 @@
+ 					arrLabelString = propertyNameString + ::rtl::OUString::valueOf(i);
+ 					arrLabel = OUStringToCFString(arrLabelString);
+ 					arrHeaders[i] = createHeaderForProperty(arrType, arrValue, arrLabel);
++					if (!arrHeaders[i])
++						arrHeaders[i] = new MacabHeader();
+ 					length += arrHeaders[i]->getSize();
+ 					CFRelease(arrLabel);
+ 				}
