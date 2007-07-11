@@ -707,6 +707,9 @@ SalLayout::SalLayout()
     mnOrientation( 0 ),
     mnRefCount( 1 ),
     maDrawOffset( 0, 0 )
+#ifdef USE_JAVA
+    , mbSpecialSpacingGlyph(true)
+#endif	// USE_JAVA
 {}
 
 // -----------------------------------------------------------------------
@@ -891,11 +894,14 @@ bool SalLayout::IsSpacingGlyph( long nGlyph ) const
             || (nChar >= 0x2000 && nChar <= 0x200F) // whitespace
             || (nChar == 0x3000);                   // ideographic space
     }
-#ifndef USE_JAVA
-    // Glyph ID 3 can be a valid glyph on Mac OS X
+#ifdef USE_JAVA
+    // Glyph ID 3 can be a valid glyph for some fonts on Mac OS X
+    else
+        bRet = ( mbSpecialSpacingGlyph && ( nGlyph & GF_IDXMASK ) == 3 );
+#else	// USE_JAVA
     else
         bRet = ((nGlyph & GF_IDXMASK) == 3);
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
     return bRet;
 }
 
