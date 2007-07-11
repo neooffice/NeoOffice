@@ -122,7 +122,7 @@ ODF-CONVERTER_PACKAGE=odf-converter
 ODF-CONVERTER_TAG:=--revision '{2007-06-23}'
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=-rHEAD
+NEO_TAG:=-rNeoOffice-2_2_1_Early_Access
 
 all: build.all
 
