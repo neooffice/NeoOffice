@@ -72,7 +72,6 @@ public:
 	Paper				getPaperType();
 	const Size			getTextResolution();
 	sal_Bool			isEditable();
-	void				setCopies( int _par0 );
 	void				setOrientation( Orientation _par0 );
 	void				setPaperType( Paper _par0, long _par1, long _par2 );
 	sal_Bool			setup();

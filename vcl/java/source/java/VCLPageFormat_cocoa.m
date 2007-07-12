@@ -36,6 +36,9 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 
+// Must not be static as this is used 
+NSString *VCLPrintDictionary = @"VCLPrintDictionary";
+
 static BOOL bInDialog = NO;
 
 @interface VCLPrintInfo : NSPrintInfo
@@ -76,6 +79,26 @@ static BOOL bInDialog = NO;
 
 + (NSPrintOperation *)printOperationWithView:(NSView *)aView printInfo:(NSPrintInfo *)aPrintInfo
 {
+	// Fix bugs 1688 and 2517 by restoring the print info's dictionary values
+	// set by the native print dialog
+	NSMutableDictionary *pDictionary = [(NSPrintInfo *)aPrintInfo dictionary];
+	if ( pDictionary )
+	{
+		NSDictionary *pDictClone = [pDictionary objectForKey:VCLPrintDictionary];
+		if ( pDictClone )
+		{
+			NSNumber *pNumber = [pDictClone objectForKey:NSPrintMustCollate];
+			if ( pNumber )
+				[pDictionary setObject:pNumber forKey:NSPrintMustCollate];
+
+			pNumber = [pDictClone objectForKey:NSPrintCopies];
+			if ( pNumber )
+				[pDictionary setObject:pNumber forKey:NSPrintCopies];
+
+			[pDictionary removeObjectForKey:VCLPrintDictionary];
+		}
+	}
+
 	NSPrintOperation *pOperation = [[VCLPrintOperation superclass] printOperationWithView:aView printInfo:aPrintInfo];
 
 	[NSPrintOperation setCurrentOperation:pOperation];

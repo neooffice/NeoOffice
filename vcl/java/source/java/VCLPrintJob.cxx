@@ -280,9 +280,6 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			pSalData->mpNativeModalSheetFrame = NULL;
 
 			out = (sal_Bool)NSPrintPanel_result( pDialog );
-
-			// Fix bug 1688 by explicitly setting the number of copies
-			_par0->setCopies( NSPrintPanel_copies( pDialog ) );
 		}
 	}
 
