@@ -37,6 +37,8 @@
 #import "VCLPageFormat_cocoa.h"
 #import "VCLPrintJob_cocoa.h"
 
+extern NSString *VCLPrintDictionary;
+
 @interface ShowPrintDialog : NSObject
 {
 	int						mnCopies;
@@ -95,6 +97,10 @@
 				if ( mnCopies < 1 )
 					mnCopies = 1;
 			}
+
+			NSDictionary *pDictClone = [NSDictionary dictionaryWithDictionary:pDictionary];
+			if ( pDictClone )
+				[pDictionary setObject:pDictClone forKey:VCLPrintDictionary];
 		}
 	}
 	else

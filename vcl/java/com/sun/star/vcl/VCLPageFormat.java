@@ -329,20 +329,6 @@ public final class VCLPageFormat {
 	}
 
 	/**
-	 * Set the number of copies.
-	 *
-	 * @param n the number of copies
-	 */
-	public void setCopies(int n) {
-
-		if (!editable)
-			return;
-
-		job.setCopies(n);
-
-	}
-
-	/**
 	 * Set the editability of this component.
 	 *
 	 * @param b <code>true</code> to make this component editable or else
