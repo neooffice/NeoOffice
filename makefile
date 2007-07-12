@@ -88,7 +88,7 @@ NEOPEEK_QLPLUGIN_URL:=http://trinity.neooffice.org/downloads/neopeek.qlgenerator
 
 # Product information
 OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=2.2
+OO_PRODUCT_VERSION=2.2.1
 OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
