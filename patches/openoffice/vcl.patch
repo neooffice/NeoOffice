@@ -266,3 +266,103 @@ diff -u -r1.82 makefile.mk
  .ELSE
  .IF "$(OS)" != "SOLARIS" || "$(USE_XINERAMA_VERSION)" == "Xorg"
  .IF "$(XINERAMA_LINK)" == "dynamic"
+--- inc/cmdevt.hxx	2006-07-14 01:53:15.000000000 -0700
++++ inc/cmdevt.hxx	2007-02-13 00:00:31.000000000 -0800
+@@ -181,7 +182,7 @@
+                         { return ((mnCode & KEY_MOD1) != 0); }
+     BOOL            IsMod2() const
+                         { return ((mnCode & KEY_MOD2) != 0); }
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+     BOOL	    IsMod5() const
+ 			{ return ((mnCode & KEY_MOD5) != 0); }
+ #endif
+--- inc/keycod.hxx	2007-01-24 07:07:15.000000000 -0800
++++ inc/keycod.hxx	2007-07-01 10:48:07.000000000 -0700
+@@ -95,7 +96,7 @@
+ 				KeyCode( KeyFuncType eFunction );
+ 
+ 	USHORT		GetFullCode() const { return nCode; }
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 	USHORT		GetFullKeyCode() const { return (nCode) ; }
+ #else
+ 	USHORT		GetFullKeyCode() const { return (nCode & ~KEY_CONTROLMOD); }
+@@ -116,7 +117,7 @@
+ 					{ return ((nCode & KEY_MOD1) != 0); }
+ 	BOOL		IsMod2() const
+ 					{ return ((nCode & KEY_MOD2) != 0); }
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 	//  [ericb 07/2006]] Remap ALT with mod5, working fine with Tiger
+ 	BOOL		IsMod5() const
+ 					{ return ((nCode & KEY_MOD5) != 0); }	
+--- inc/keycodes.hxx	2006-07-14 01:53:48.000000000 -0700
++++ inc/keycodes.hxx	2007-02-13 00:00:31.000000000 -0800
+@@ -178,7 +179,7 @@
+ #define KEY_SHIFT		((USHORT)0x1000)
+ #define KEY_MOD1		((USHORT)0x2000)
+ #define KEY_MOD2		((USHORT)0x4000)
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ #define KEY_MOD5	((USHORT)0x8000)
+ #define KEY_MODTYPE	((USHORT)0xF000)
+ #else
+--- source/window/keycod.cxx	2006-09-17 05:19:13.000000000 -0700
++++ source/window/keycod.cxx	2007-02-13 00:00:33.000000000 -0800
+@@ -63,7 +64,7 @@
+ 
+ 
+ // =======================================================================
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ static USHORT aImplKeyFuncTab[(KEYFUNC_FRONT+1)*3] =
+ {
+ 	0, 0, 0,												// KEYFUNC_DONTKNOW
+--- source/window/winproc.cxx	2006-10-13 01:33:12.000000000 -0700
++++ source/window/winproc.cxx	2007-02-13 00:00:33.000000000 -0800
+@@ -645,7 +646,7 @@
+                                 // create a uno mouse event out of the available data
+                                 ::com::sun::star::awt::MouseEvent aMouseEvent(
+                                     static_cast < ::com::sun::star::uno::XInterface * > ( 0 ),
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 				    nCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_MOD5),
+ #else
+                                     nCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2),
+@@ -2084,7 +2085,7 @@
+     return ImplHandleMouseEvent( pWindow, EVENT_MOUSEBUTTONDOWN, FALSE,
+                                  pEvent->mnX, pEvent->mnY,
+                                  pEvent->mnTime,
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 				 pEvent->mnButton | (pEvent->mnCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_MOD5)),
+ #else
+                                  pEvent->mnButton | (pEvent->mnCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2)),
+@@ -2099,7 +2100,7 @@
+     return ImplHandleMouseEvent( pWindow, EVENT_MOUSEBUTTONUP, FALSE,
+                                  pEvent->mnX, pEvent->mnY,
+                                  pEvent->mnTime,
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 				 pEvent->mnButton | (pEvent->mnCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_MOD5)),
+ #else
+                                  pEvent->mnButton | (pEvent->mnCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2)),
+@@ -2162,7 +2163,7 @@
+     Window* pTrackWin = pSVData->maWinData.mpTrackWin;
+     if ( pTrackWin )
+         pWindow = pTrackWin;
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+     USHORT nOldCode = pWindow->ImplGetWindowImpl()->mpFrameData->mnMouseCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_MOD5);
+ #else
+     USHORT nOldCode = pWindow->ImplGetWindowImpl()->mpFrameData->mnMouseCode & (KEY_SHIFT | KEY_MOD1 | KEY_MOD2);
+@@ -2170,7 +2171,7 @@
+     USHORT nNewCode = pEvent->mnCode;
+     if ( nOldCode != nNewCode )
+     {
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 	nNewCode |= pWindow->ImplGetWindowImpl()->mpFrameData->mnMouseCode & ~(KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_MOD5);
+ #else
+         nNewCode |= pWindow->ImplGetWindowImpl()->mpFrameData->mnMouseCode & ~(KEY_SHIFT | KEY_MOD1 | KEY_MOD2);
