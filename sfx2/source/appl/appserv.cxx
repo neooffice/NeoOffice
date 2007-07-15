@@ -217,6 +217,14 @@
 #include "sfxhelp.hxx"
 #include "updatedlg.hxx"
 
+#ifdef PRODUCT_SUPPORT_URL
+
+#ifndef _RTL_URI_HXX_
+#include <rtl/uri.hxx>
+#endif
+
+#endif	// PRODUCT_SUPPORT_URL
+
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::uno;
@@ -443,8 +451,30 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 		}
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+#ifdef PRODUCT_SUPPORT_URL
+        case SID_HELP_SUPPORTPAGE:
+        {
+            ::rtl::OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
+            ::rtl::OUString aOpenProgName = aOpenProgDir;
+            aOpenProgName += ::rtl::OUString::createFromAscii( "open" );
+
+            // Open URL
+            ::rtl::OUString aURL = ::rtl::OUString::createFromAscii( PRODUCT_SUPPORT_URL );
+            ::rtl::OUString aArgListArray[ 1 ];
+            aArgListArray[ 0 ] = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+
+            ::vos::OSecurity aSecurity;
+            ::vos::OEnvironment aEnv;
+            ::vos::OArgumentList aArgumentList( aArgListArray, 1 );
+            ::vos::OProcess aProcess( aOpenProgName, aOpenProgDir );
+            aProcess.execute( ::vos::OProcess::TOption_Detached, aSecurity, aArgumentList, aEnv );
+            break;
+        }
+        case SID_HELPINDEX:
+#else	// PRODUCT_SUPPORT_URL
         case SID_HELPINDEX:
         case SID_HELP_SUPPORTPAGE:
+#endif	// PRODUCT_SUPPORT_URL
         {
             Help* pHelp = Application::GetHelp();
             if ( pHelp )

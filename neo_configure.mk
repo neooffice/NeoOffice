@@ -11,6 +11,7 @@ build.neo_configure_phony:
 	echo "setenv PRODUCT_NAME '$(PRODUCT_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_DIR_NAME '$(PRODUCT_DIR_NAME)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_DONATION_URL '$(PRODUCT_DONATION_URL)'" >> "$(OO_ENV_JAVA)"
+	echo "setenv PRODUCT_SUPPORT_URL '$(PRODUCT_SUPPORT_URL)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_WELCOME_URL '$(PRODUCT_WELCOME_URL)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv PRODUCT_FILETYPE '$(PRODUCT_FILETYPE)'" >> "$(OO_ENV_JAVA)"
 	echo "setenv BUILD_MACHINE '$(BUILD_MACHINE)'" >> "$(OO_ENV_JAVA)"

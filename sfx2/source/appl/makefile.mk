@@ -46,6 +46,10 @@ LIBTARGET=NO
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
+.IF "$(PRODUCT_SUPPORT_URL)" != ""
+CDEFS += -DPRODUCT_SUPPORT_URL='"$(PRODUCT_SUPPORT_URL)"'
+.ENDIF
+
 # w.g. compilerbugs
 .IF "$(GUI)"=="WNT"
 CFLAGS+=-Od
