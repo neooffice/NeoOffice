@@ -136,3 +136,1942 @@ diff -u -r1.1.2.1 MacabRecords.cxx
  					length += arrHeaders[i]->getSize();
  					CFRelease(arrLabel);
  				}
+Index: connectivity/source/drivers/macab/MacabAddressBook.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabAddressBook.cxx,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 MacabAddressBook.cxx
+--- connectivity/source/drivers/macab/MacabAddressBook.cxx	8 Jul 2007 19:20:57 -0000	1.1.2.1
++++ connectivity/source/drivers/macab/MacabAddressBook.cxx	10 Jul 2007 02:23:39 -0000
+@@ -154,6 +154,7 @@
+ 			m_xMacabGroups[i] = new MacabGroup(m_aAddressBook, m_xMacabRecords, xGroup);
+ 		}
+ 		CFRelease(allGroups);
++		manageDuplicateGroups(m_xMacabGroups);
+ 		m_bRetrievedGroups = sal_True;
+ 	}
+ 
+@@ -207,3 +208,46 @@
+ 
+ 	return NULL;
+ }
++
++// -------------------------------------------------------------------------
++void MacabAddressBook::manageDuplicateGroups(::std::vector<MacabGroup *> _xGroups) const
++{
++	/* If we have two cases of groups, say, family, this makes it:
++	 * family
++	 * family (2)
++	 */
++	::std::vector<MacabGroup *>::reverse_iterator iter1, iter2;
++	sal_Int32 count;
++
++	for(iter1 = _xGroups.rbegin(); iter1 != _xGroups.rend(); ++iter1)
++	{
++		/* If the name matches the default table name, there is already
++		 * (obviously) a conflict. So, start the count of groups with this
++		 * name at 2 instead of 1.
++		 */
++		if( (*iter1)->getName() == getDefaultTableName() )
++			count = 2;
++		else
++			count = 1;
++
++		iter2 = iter1;
++		for( ++iter2; iter2 != _xGroups.rend(); ++iter2)
++		{
++			if( (*iter1)->getName() == (*iter2)->getName() )
++			{
++				count++;
++			}
++		}
++
++		// duplicate!
++		if(count != 1)
++		{
++			::rtl::OUString sName = (*iter1)->getName();
++			sName += ::rtl::OUString::createFromAscii(" (") +
++				::rtl::OUString::valueOf(count) +
++				::rtl::OUString::createFromAscii(")");
++			(*iter1)->setName(sName);
++		}
++	}
++}
++
+Index: connectivity/source/drivers/macab/MacabAddressBook.hxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabAddressBook.hxx,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 MacabAddressBook.hxx
+--- connectivity/source/drivers/macab/MacabAddressBook.hxx	8 Jul 2007 19:20:57 -0000	1.1.2.1
++++ connectivity/source/drivers/macab/MacabAddressBook.hxx	10 Jul 2007 02:23:40 -0000
+@@ -60,6 +60,8 @@
+ 				MacabRecords *m_xMacabRecords;
+ 				::std::vector<MacabGroup *> m_xMacabGroups;
+ 				sal_Bool m_bRetrievedGroups;
++			private:
++				void manageDuplicateGroups(::std::vector<MacabGroup *> _xGroups) const;
+ 			public:
+ 				MacabAddressBook();
+ 				~MacabAddressBook();
+Index: connectivity/source/drivers/macab/MacabRecords.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecords.cxx,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 MacabRecords.cxx
+--- connectivity/source/drivers/macab/MacabRecords.cxx	8 Jul 2007 19:20:58 -0000	1.1.2.1
++++ connectivity/source/drivers/macab/MacabRecords.cxx	10 Jul 2007 20:33:07 -0000
+@@ -70,6 +70,7 @@
+ 	addressBook = _addressBook;
+ 	recordType = kABPersonRecordType;
+ 	bootstrap_CF_types();
++	bootstrap_requiredProperties();
+ }
+ 
+ // -------------------------------------------------------------------------
+@@ -85,6 +86,7 @@
+ 	recordType = kABPersonRecordType;
+ 
+ 	bootstrap_CF_types();
++	bootstrap_requiredProperties();
+ }
+ 
+ // -------------------------------------------------------------------------
+@@ -97,11 +99,13 @@
+ 	addressBook = _addressBook;
+ 	recordType = kABPersonRecordType;
+ 	bootstrap_CF_types();
++	bootstrap_requiredProperties();
+ }
+ 
+ // -------------------------------------------------------------------------
+ void MacabRecords::initialize()
+ {
++
+ 	if(records != NULL)
+ 	{
+ 		sal_Int32 i;
+@@ -127,7 +131,6 @@
+ 	records = new MacabRecord *[recordsSize];
+ 
+ 	header = createHeaderForRecordType(allRecords, recordType);
+-	header->sortRecord();
+ 
+ 	for(i = 0; i < recordsSize; i++)
+ 	{
+@@ -277,45 +280,145 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* This is based on the possible fields required in the mail merge template
++ * in sw. If the fields possible there change, it would be optimal to
++ * change these fields as well.
++ */
++void MacabRecords::bootstrap_requiredProperties()
++{
++	numRequiredProperties = 7;
++	requiredProperties = new CFStringRef[numRequiredProperties];
++	requiredProperties[0] = kABTitleProperty;
++	requiredProperties[1] = kABFirstNameProperty;
++	requiredProperties[2] = kABLastNameProperty;
++	requiredProperties[3] = kABOrganizationProperty;
++	requiredProperties[4] = kABAddressProperty;
++	requiredProperties[5] = kABPhoneProperty;
++	requiredProperties[6] = kABEmailProperty;
++}
++
++// -------------------------------------------------------------------------
+ MacabHeader *MacabRecords::createHeaderForRecordType(const CFArrayRef _records, const CFStringRef _recordType) const
+ {
+-	CFArrayRef recordProperties = ABCopyArrayOfPropertiesForRecordType(addressBook, _recordType);
++	CFArrayRef allProperties = ABCopyArrayOfPropertiesForRecordType(addressBook, _recordType);
++	CFStringRef *nonRequiredProperties;
+ 	ABRecordRef record;
+ 	sal_Int32 numRecords = (sal_Int32) CFArrayGetCount(_records);
+-	sal_Int32 numProperties = (sal_Int32) CFArrayGetCount(recordProperties); 
+-	sal_Int32 i, j;
++	sal_Int32 numProperties = (sal_Int32) CFArrayGetCount(allProperties); 
++	sal_Int32 i, j, k;
+ 	CFStringRef property;
+ 	MacabHeader *headerDataForProperty;
+ 	MacabHeader *lcl_header = new MacabHeader();
++	MacabHeader *nonRequiredHeader = new MacabHeader();
++
++	sal_Int32 numNonRequiredProperties = numProperties - numRequiredProperties;
++	sal_Bool bFoundProperty;
++	sal_Bool bFoundRequiredProperties[numRequiredProperties];
++	nonRequiredProperties = new CFStringRef[numNonRequiredProperties];
++	k = 0;
++
++	for(i = 0; i < numRequiredProperties; i++)
++		bFoundRequiredProperties[i] = sal_False;
++
++	/* Determine the non-required properties... */
++	for(i = 0; i < numProperties; i++)
++	{
++		property = (CFStringRef) CFArrayGetValueAtIndex(allProperties, i);
++		bFoundProperty = sal_False;
++		for(j = 0; j < numRequiredProperties; j++)
++		{
++			if(CFEqual(property, requiredProperties[j]))
++			{
++				bFoundProperty = sal_True;
++				bFoundRequiredProperties[j] = sal_True;
++				break;
++			}
++		}
++
++		if(bFoundProperty == sal_False)
++		{
++			if(k == numNonRequiredProperties)
++			{
++				k++; // so that the OSL_ENSURE below fails
++				break;
++			}
++			nonRequiredProperties[k] = property;
++			k++;
++		}
++	}
++
++	// Somehow, we got too many or too few non-requird properties...
++	// Most likely, one of the required properties no longer exists, which
++	// we also test later.
++	OSL_ENSURE(k == numNonRequiredProperties, "MacabRecords::createHeaderForRecordType: Found an unexpected number of non-required properties");
++
++	/* Fill in required headers first... */
++	for(i = 0; i < numRequiredProperties; i++)
++	{
++		if(bFoundRequiredProperties[i] == sal_True)
++		{
++			/* The order of these matters (we want all address properties
++			 * before any phone properties, or else things will look weird),
++			 * so we get all possibilitities for each property, going through
++			 * each record, and then go onto the next property.
++			 * (Note: the reason that we have to go through all records
++			 * in the first place is that properties like address, phone, and
++			 * e-mail are multi-value properties with an unknown number of
++			 * values. A user could specify thirteen different kinds of
++			 * e-mail addresses for one of her or his contacts, and we need to
++			 * get all of them.
++			 */
++			for(j = 0; j < numRecords; j++)
++			{
++				record = (ABRecordRef) CFArrayGetValueAtIndex(_records, j);
++				headerDataForProperty = createHeaderForProperty(record,requiredProperties[i],_recordType,sal_True);
++				if(headerDataForProperty != NULL)
++				{
++					(*lcl_header) += headerDataForProperty;
++					delete headerDataForProperty;
++				}
++			}
++		}
++		else
++		{
++			// Couldn't find a required property...
++			OSL_ENSURE(false, ::rtl::OString("MacabRecords::createHeaderForRecordType: could not find required property: ") +
++						::rtl::OUStringToOString(CFStringToOUString(requiredProperties[i]), RTL_TEXTENCODING_ASCII_US));
++		}
++	}
+ 
+-	/* Go through the array... */
++	/* And now, non-required ones... */
+ 	for(i = 0; i < numRecords; i++)
+ 	{
+ 		/* This is the record */
+ 		record = (ABRecordRef) CFArrayGetValueAtIndex(_records, i);
+ 
+ 		/* Go through the properties array... */
+-		for(j = 0; j < numProperties; j++)
++		for(j = 0; j < numNonRequiredProperties; j++)
+ 		{
+-			/* Get the Property's string name */
+-			property = (CFStringRef) CFArrayGetValueAtIndex(recordProperties, j);
+-			headerDataForProperty = createHeaderForProperty(record,property,_recordType);
++			property = nonRequiredProperties[j];
++			headerDataForProperty = createHeaderForProperty(record,property,_recordType,sal_False);
+ 			if(headerDataForProperty != NULL)
+ 			{
+-				(*lcl_header) += headerDataForProperty;
++				(*nonRequiredHeader) += headerDataForProperty;
+ 				delete headerDataForProperty;
+ 			}
+ 		}
+ 
+ 	} // end of for loop through records
++	nonRequiredHeader->sortRecord();
+ 
+-	CFRelease(recordProperties);
++	(*lcl_header) += nonRequiredHeader;
++	delete nonRequiredHeader;
++
++	CFRelease(allProperties);
++	delete [] nonRequiredProperties;
+ 
+ 	return lcl_header;
+ }
+ 
+ // -------------------------------------------------------------------------
+-MacabHeader *MacabRecords::createHeaderForProperty(const ABRecordRef _record, const CFStringRef _propertyName, const CFStringRef _recordType) const
++MacabHeader *MacabRecords::createHeaderForProperty(const ABRecordRef _record, const CFStringRef _propertyName, const CFStringRef _recordType, const sal_Bool _isPropertyRequired) const
+ {
+ 	// local variables
+ 	CFTypeRef propertyValue;
+@@ -324,13 +427,16 @@
+ 
+ 	/* Get the property's value */
+ 	propertyValue = ABRecordCopyValue(_record,_propertyName);
+-	if(propertyValue == NULL)
++	if(propertyValue == NULL && _isPropertyRequired == sal_False)
+ 		return NULL;
+ 
+ 	propertyType = ABTypeOfProperty(addressBook, _recordType, _propertyName);
+ 	
+ 	result = createHeaderForProperty(propertyType, propertyValue, _propertyName);
+-	CFRelease(propertyValue);
++
++	if(propertyValue != NULL)
++		CFRelease(propertyValue);
++
+ 	return result;
+ }
+ 
+@@ -358,8 +464,13 @@
+ 		case kABMultiStringProperty:
+ 		case kABMultiRealProperty:
+ 		case kABMultiDataProperty:
++			/* For non-scalars, we can only get more information if the property
++			 * actually exists.
++			 */
++			if(_propertyValue != NULL)
+ 			{
+ 			sal_Int32 i;
++			
+ 			sal_Int32 multiLength = ABMultiValueCount((ABMutableMultiValueRef) _propertyValue);
+ 			CFStringRef multiLabel;
+ 			::rtl::OUString multiLabelString;
+@@ -388,6 +499,10 @@
+ 
+ 		case kABMultiArrayProperty:
+ 		case kABMultiDictionaryProperty:
++			/* For non-scalars, we can only get more information if the property
++			 * actually exists.
++			 */
++			if(_propertyValue != NULL)
+ 			{
+ 				sal_Int32 i,j,k;
+ 				sal_Int32 multiLengthFirstLevel = ABMultiValueCount((ABMutableMultiValueRef) _propertyValue);
+@@ -444,6 +559,10 @@
+ 			break;
+ 			
+ 		case kABDictionaryProperty:
++			/* For non-scalars, we can only get more information if the property
++			 * actually exists.
++			 */
++			if(_propertyValue != NULL)
+ 			{
+ 			/* Assume all keys are strings */
+ 			sal_Int32 numRecords = (sal_Int32) CFDictionaryGetCount((CFDictionaryRef) _propertyValue);
+@@ -497,6 +616,10 @@
+ 			break;
+ 
+ 		case kABArrayProperty:
++			/* For non-scalars, we can only get more information if the property
++			 * actually exists.
++			 */
++			if(_propertyValue != NULL)
+ 			{
+ 				sal_Int32 arrLength = (sal_Int32) CFArrayGetCount( (CFArrayRef) _propertyValue);
+ 				sal_Int32 i,j,k;
+Index: connectivity/source/drivers/macab/MacabRecords.hxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecords.hxx,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 MacabRecords.hxx
+--- connectivity/source/drivers/macab/MacabRecords.hxx	8 Jul 2007 19:20:58 -0000	1.1.2.1
++++ connectivity/source/drivers/macab/MacabRecords.hxx	10 Jul 2007 20:33:07 -0000
+@@ -71,9 +71,13 @@
+ 				MacabRecord **records;
+ 				ABAddressBookRef addressBook;
+ 				::rtl::OUString m_sName;
++				// cremlae, fill me
++				CFStringRef *requiredProperties;
++				sal_Int32 numRequiredProperties;
+ 			private:
+ 				void bootstrap_CF_types();
+-				MacabHeader *createHeaderForProperty(const ABRecordRef _record, const CFStringRef _propertyName, const CFStringRef _recordType) const;
++				void bootstrap_requiredProperties();
++				MacabHeader *createHeaderForProperty(const ABRecordRef _record, const CFStringRef _propertyName, const CFStringRef _recordType, const sal_Bool _isPropertyRequired) const;
+ 				MacabHeader *createHeaderForProperty(const ABPropertyType _propertyType, const CFTypeRef _propertyValue, const CFStringRef _propertyName) const;
+ 				void manageDuplicateHeaders(macabfield **_headerNames, const sal_Int32 _length) const;
+ 				ABPropertyType getABTypeFromCFType(const CFTypeID cf_type ) const;
+Index: connectivity/source/drivers/macab/MacabHeader.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabHeader.cxx,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 MacabHeader.cxx
+--- connectivity/source/drivers/macab/MacabHeader.cxx	8 Jul 2007 19:20:58 -0000	1.1.2.1
++++ connectivity/source/drivers/macab/MacabHeader.cxx	10 Jul 2007 20:33:07 -0000
+@@ -239,49 +239,8 @@
+ 	return sorted;
+ }
+ 
+-// -------------------------------------------------------------------------
+ sal_Int32 MacabHeader::compareFields(const macabfield *_field1, const macabfield *_field2) 
+ {
+-	/* In the header, all values are of type CFStringRefs, but the type
+-	 * refers to the type expected for data in this column. So, we always
+-	 * compare strings.
+-	 *
+-	 * Also: we do the comparison in two steps. First, if both fields are
+-	 * from the same category (e.g., address), and at least one of them has
+-	 * a counter (value ends with (%d)), then we put the one with the smallest
+-	 * counter first (if there is no counter, that basically means that the
+-	 * counter is 1).
+-	 *
+-	 * Second, if there is no counter, or the two fields are from different
+-	 * categories, we go through a hard-coded ordering scheme, basically
+-	 * checking each possibility in order and returning the appropriate
+-	 * comparison if we find a match. (So, we first check if either field is
+-	 * a first name. If the first field is, it is smaller than the second,
+-	 * no matter what, so we return -1. If the second field is, it is smaller
+-	 * than the first, no matter what, so we return 1. Then, we proceed to
+-	 * middle name... &c. This is not a very intelligent way of doing the
+-	 * ordering, but I honestly could not think of a better one, given:
+-	 *
+-	 *   a) Different fields need to be compared in different ways. Single
+-	 *   labels (like first name, last name, &c.) can be checked for
+-	 *   equality (is the label equal to "first"?). Labels with multiple
+-	 *   parts (e.g., address) must check only the first part of the string
+-	 *   (e.g., does the label _start with_ "address," so that
+-	 *   "address: city" matches). 
+-	 *
+-	 *   b) The ordering scheme is fairly arbitrary, based on my own opinion
+-	 *   of what would be most useful first (names and addresses) and what
+-	 *   would be least useful (UIDs, creation/modification dates).
+-	 *
+-	 * If you can think of a better system, please implement it!
+-	 *
+-	 * Final note: because OUStrings are easier to work with than CFStrings,
+-	 * and are more powerful, we have two ways of refering to the same
+-	 * string: _field1->value is the CFString, while string1 is the OUString.
+-	 * We use the former whenever we have to (inside a Carbon function) and
+-	 * the latter whenever we can.
+-	*/
+-	
+ 	if(_field1 == _field2)
+ 		return 0;
+ 	if(_field1 == NULL)
+@@ -289,301 +248,6 @@
+ 	if(_field2 == NULL)
+ 		return -1;
+ 
+-	::rtl::OUString string1 = CFStringToOUString((CFStringRef) _field1->value);
+-	::rtl::OUString string2 = CFStringToOUString((CFStringRef) _field2->value);
+-
+-	// If they start with the same word (are the same category of data), but
+-	// at least one has a (%d), it means that we're dealing with counters,
+-	// and the highest counter is always last.
+-	if(string1.endsWithIgnoreAsciiCaseAsciiL(")",1) )
+-	{
+-		sal_Int32 lastOpeningParen = string1.lastIndexOf('(')+1;
+-		::rtl::OUString sCounter1 = string1.copy(lastOpeningParen,string1.getLength()-1-lastOpeningParen);
+-		sal_Int32 nCounter1 = 0;
+-
+-		try
+-		{
+-			nCounter1 = sCounter1.toInt32();
+-		}
+-		catch(...)
+-		{
+-			// If it wasn't a number, this label (for some reason) just
+-			// ends in a parenthesis.
+-		}
+-
+-		if(nCounter1 != 0)
+-		{
+-			sal_Int32 firstSpace = string1.indexOf(' ');
+-
+-			// Same category of data
+-			if(string2.indexOf(string1.copy(0,firstSpace)) == 0)
+-			{
+-				if(string2.endsWithIgnoreAsciiCaseAsciiL(")",1) )
+-				{
+-					lastOpeningParen = string2.lastIndexOf('(')+1;
+-					::rtl::OUString sCounter2 = string2.copy(lastOpeningParen,string2.getLength()-1-lastOpeningParen);
+-					sal_Int32 nCounter2 = 0;
+-
+-					try
+-					{
+-						nCounter2 = sCounter2.toInt32();
+-						if(nCounter2 != 0 && nCounter1 != nCounter2)
+-						{
+-							return nCounter1 - nCounter2;
+-						}
+-					}
+-					catch(...)
+-					{
+-						// If it wasn't a number, this label (for some reason) just
+-						// ends in a parenthesis, but the first label really had a
+-						// number, so it must go after this one.
+-						return 1;
+-					}
+-
+-				}
+-				else
+-				{
+-					return 1;
+-				}
+-
+-			}
+-		}
+-	}
+-	else if(string2.endsWithIgnoreAsciiCaseAsciiL(")",1) )
+-	{
+-		sal_Int32 lastOpeningParen = string2.lastIndexOf('(')+1;
+-		::rtl::OUString sCounter2 = string2.copy(lastOpeningParen,string2.getLength()-1-lastOpeningParen);
+-		sal_Int32 nCounter2 = 0;
+-
+-		try
+-		{
+-			nCounter2 = sCounter2.toInt32();
+-		}
+-		catch(...)
+-		{
+-			// If it wasn't a number, this label (for some reason) just
+-			// ends in a parenthesis
+-		}
+-
+-		if(nCounter2 != 0)
+-		{
+-			sal_Int32 firstSpace = string1.indexOf(' ');
+-
+-			// Same category of data
+-			if(string2.indexOf(string1.copy(0,firstSpace)) == 0)
+-			{
+-				// We know that the first string didn't have a counter, but the
+-				// second one does, so the second must go after the first
+-				return -1;
+-			}
+-
+-		}
+-
+-	}
+-
+-	// Done dealing with counters...
+-
+-	/* Now, we order the fields manually. The order is:
+-	 * first, middle, last, organization, address, phone, e-mail, <x>, ABPersonFlags, Notes, modification, creation, UID
+-	 * Where <x> is everything not covered by the above.
+-	 */
+-
+-	// FIRST NAME
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABFirstNameProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABFirstNameProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-
+-	// MIDDLE NAME
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABMiddleNameProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABMiddleNameProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-
+-	// LAST NAME
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABLastNameProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABLastNameProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-
+-	// ORGANIZATION
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABOrganizationProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABOrganizationProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-	
+-	// ADDRESS
+-	if(CFStringHasPrefix(
+-		(CFStringRef) _field1->value,
+-		kABAddressProperty) )
+-	{
+-		// If both are addresses, for now, display them in alphabetical order
+-		if(CFStringHasPrefix(
+-			(CFStringRef) _field2->value,
+-			kABAddressProperty) )
+-		{
+-		}
+-
+-		// Otherwise, the address goes first
+-		else
+-			return -1;
+-	}
+-
+-	// If the first is not an address and the second is, the second goes
+-	// first.
+-	else if(CFStringHasPrefix(
+-		(CFStringRef) _field2->value,
+-		kABAddressProperty) )
+-	{
+-		return 1;
+-	}
+-
+-
+-	// PHONE
+-	if(CFStringHasPrefix(
+-		(CFStringRef) _field1->value,
+-		kABPhoneProperty) )
+-	{
+-		// If both are phone numbers, for now, display them in alphabetical order
+-		if(CFStringHasPrefix(
+-			(CFStringRef) _field2->value,
+-			kABPhoneProperty) )
+-		{
+-		}
+-
+-		// Otherwise, the phone number goes first
+-		else
+-			return -1;
+-	}
+-
+-	// If the first is not a phone number and the second is, the second goes
+-	// first.
+-	else if(CFStringHasPrefix(
+-		(CFStringRef) _field2->value,
+-		kABPhoneProperty) )
+-	{
+-		return 1;
+-	}
+-
+-	// EMAIL
+-	if(CFStringHasPrefix(
+-		(CFStringRef) _field1->value,
+-		kABEmailProperty) )
+-	{
+-		// If both are e-mail address, for now, display them in alphabetical order
+-		if(CFStringHasPrefix(
+-			(CFStringRef) _field2->value,
+-			kABEmailProperty) )
+-		{
+-		}
+-
+-		// Otherwise, the e-mail address goes first
+-		else
+-			return -1;
+-	}
+-
+-	// If the first is not an e-mail address and the second is, the second goes
+-	// first.
+-	else if(CFStringHasPrefix(
+-		(CFStringRef) _field2->value,
+-		kABEmailProperty) )
+-	{
+-		return 1;
+-	}
+-	
+-	// The following all go at the end. The order they are presented here
+-	// is the order in which they will appear (from the end of the list)
+-
+-	::rtl::OUString sVal;
+-
+-	// UID
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABUIDProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABUIDProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-	
+-	// MODIFICATION
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABModificationDateProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABModificationDateProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-	
+-	// CREATION
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABCreationDateProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABCreationDateProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-
+-	// NOTE
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABNoteProperty,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABNoteProperty,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-	
+-	// PERSONFLAGS
+-	if(CFStringCompare(
+-		(CFStringRef) _field1->value,
+-		kABPersonFlags,
+-		0) == kCFCompareEqualTo)
+-			return 1;
+-	if(CFStringCompare(
+-		(CFStringRef) _field2->value,
+-		kABPersonFlags,
+-		0) == kCFCompareEqualTo)
+-			return -1;
+-
+-	// If it wasn't one of the above, we don't have a rule for it. Compare
+-	// the strings using the (alphabetical) CFStringCompare function.
+ 	CFComparisonResult result = CFStringCompare(
+ 		(CFStringRef) _field1->value,
+ 		(CFStringRef) _field2->value,
+Index: connectivity/source/drivers/macab/MacabAddressBook.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabAddressBook.cxx,v
+retrieving revision 1.1.2.3
+diff -u -r1.1.2.3 MacabAddressBook.cxx
+--- connectivity/source/drivers/macab/MacabAddressBook.cxx	13 Jul 2007 20:02:33 -0000	1.1.2.3
++++ connectivity/source/drivers/macab/MacabAddressBook.cxx	13 Jul 2007 23:50:29 -0000
+@@ -87,8 +87,12 @@
+ }
+ 		
+ // -----------------------------------------------------------------------------
++/* Get the address book's default table name. This is the table name that
++ * refers to the table containing _all_ records in the address book.
++ */
+ const ::rtl::OUString & MacabAddressBook::getDefaultTableName()
+ {
++	/* This string probably needs to be localized. */
+ 	static const ::rtl::OUString aDefaultTableName
+ 		(::rtl::OUString::createFromAscii("Address Book"));
+ 
+@@ -98,6 +102,7 @@
+ // -----------------------------------------------------------------------------
+ MacabRecords *MacabAddressBook::getMacabRecords()
+ {
++	/* If the MacabRecords don't exist, create them. */
+ 	if(m_xMacabRecords == NULL)
+ 	{
+ 		m_xMacabRecords = new MacabRecords(m_aAddressBook);
+@@ -109,6 +114,9 @@
+ }
+ 
+ // -----------------------------------------------------------------------------
++/* Get the MacabRecords for a given name: either a group name or the
++ * default table name.
++ */
+ MacabRecords *MacabAddressBook::getMacabRecords(const ::rtl::OUString _tableName)
+ {
+ 	if(_tableName == getDefaultTableName())
+@@ -135,8 +143,10 @@
+ // -----------------------------------------------------------------------------
+ ::std::vector<MacabGroup *> MacabAddressBook::getMacabGroups()
+ {
++	/* If the MacabGroups haven't been created yet, create them. */
+ 	if(m_bRetrievedGroups == sal_False)
+ 	{
++		/* If the MacabRecords haven't been created yet, create them. */
+ 		if(m_xMacabRecords == NULL)
+ 		{
+ 			m_xMacabRecords = new MacabRecords(m_aAddressBook);
+@@ -150,12 +160,17 @@
+ 
+ 		sal_Int32 i;
+ 		ABGroupRef xGroup;
++
++		/* Go through each group and create a MacabGroup out of it. */
+ 		for(i = 0; i < nGroups; i++)
+ 		{
+ 			xGroup = (ABGroupRef) CFArrayGetValueAtIndex(allGroups, i);
+ 			m_xMacabGroups[i] = new MacabGroup(m_aAddressBook, m_xMacabRecords, xGroup);
+ 		}
++
+ 		CFRelease(allGroups);
++
++		/* Manage duplicates. */
+ 		manageDuplicateGroups(m_xMacabGroups);
+ 		m_bRetrievedGroups = sal_True;
+ 	}
+Index: connectivity/source/drivers/macab/MacabGroup.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabGroup.cxx,v
+retrieving revision 1.1.2.1
+diff -u -r1.1.2.1 MacabGroup.cxx
+--- connectivity/source/drivers/macab/MacabGroup.cxx	8 Jul 2007 19:20:58 -0000	1.1.2.1
++++ connectivity/source/drivers/macab/MacabGroup.cxx	13 Jul 2007 23:50:29 -0000
+@@ -48,6 +48,13 @@
+ 
+ using namespace connectivity::macab;
+ 
++// -------------------------------------------------------------------------
++/* A MacabGroup is basically a MacabRecords with a different constructor.
++ * It only exists as a different entity for clarification purposes (a group
++ * is its own entity in the Mac OS X Address Book) and because its
++ * construction is so unique (it is based on an already existent
++ * MacabRecords of the entire address book).
++ */
+ MacabGroup::MacabGroup(const ABAddressBookRef _addressBook, const MacabRecords *_allRecords, const ABGroupRef _xGroup)
+ 	: MacabRecords(_addressBook)
+ {
+@@ -69,6 +76,11 @@
+ 	records = new MacabRecord *[recordsSize];
+ 	setHeader(_allRecords->getHeader());
+ 
++	/* Go through each record in the group and try to find that record's UID
++	 * in the MacabRecords that was passed in. If it is found, add that
++	 * record to the group. Otherwise, report an error. (All records should
++	 * exist in the MacabRecords that was passed in.)
++	 */
+ 	nAllRecordsSize = _allRecords->size();
+ 	for(i = 0; i < recordsSize; i++)
+ 	{
+@@ -86,7 +98,7 @@
+ 					{
+ 						if(CFEqual(xRecordField->value, sGroupMemberUID))
+ 						{
+-							// insert into the MacabGroup
++							/* Found the matching UID! Insert into the group... */
+ 							insertRecord(_allRecords->getRecord(j));
+ 							bFound = sal_True;
+ 							break;
+Index: connectivity/source/drivers/macab/MacabHeader.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabHeader.cxx,v
+retrieving revision 1.1.2.2
+diff -u -r1.1.2.2 MacabHeader.cxx
+--- connectivity/source/drivers/macab/MacabHeader.cxx	13 Jul 2007 20:02:33 -0000	1.1.2.2
++++ connectivity/source/drivers/macab/MacabHeader.cxx	13 Jul 2007 23:50:29 -0000
+@@ -69,6 +69,9 @@
+ 		}
+ 		else
+ 		{
++			/* The constructor duplicates the macabfields it gets because they
++			 * are either deleted later or used for other purposes.
++			 */
+ 			fields[i] = new macabfield;
+ 			fields[i]->type = _fields[i]->type;
+ 			fields[i]->value = _fields[i]->value;
+@@ -93,9 +96,15 @@
+ // -------------------------------------------------------------------------
+ void MacabHeader::operator+= (const MacabHeader *r)
+ {
++	/* Add one MacabHeader to another. Anything not already in the header is
++	 * added to the end of it.
++	 */
+ 	sal_Int32 rSize = r->getSize();
+-	if(rSize != 0)
++	if(rSize != 0) // If the new header does actually have fields
+ 	{
++		/* If our header is currently empty, just copy all of the fields from
++		 * the new header to this one.
++		 */
+ 		if(size == 0)
+ 		{
+ 			sal_Int32 i;
+@@ -106,6 +115,15 @@
+ 				fields[i] = r->copy(i);
+ 			}
+ 		}
++
++		/* Otherwise, only add the duplicates. We do this with a two-pass
++		 * approach. First, find out how many fields to add, then reallocate
++		 * the size of the fields array and add the old ones at the end.
++		 * (More precisely, we create a _new_ fields array with the new length
++		 * allocated to it, then get all of the fields from the current
++		 * fields array to it, then copy the non-duplicates from the new
++		 * header to the end.)
++		 */
+ 		else
+ 		{
+ 			sal_Int32 i;
+@@ -173,6 +191,11 @@
+ // -------------------------------------------------------------------------
+ macabfield **MacabHeader::sortRecord(const sal_Int32 _start, const sal_Int32 _length)
+ {
++	/* Sort using mergesort. Because it uses mergesort, it is recursive and
++	 * not in place (so it creates a new array at every step of the
++	 * recursion), so if you prefer to use a different sort, please feel
++	 * free to implement it.
++	 */
+ 	macabfield** sorted = new macabfield *[_length];
+ 	if(_length <= 2)
+ 	{
+@@ -241,6 +264,14 @@
+ 
+ sal_Int32 MacabHeader::compareFields(const macabfield *_field1, const macabfield *_field2) 
+ {
++	/* Comparing two fields in a MacabHeader is different than comparing two
++	 * fields in a MacabRecord. It starts in the same way (if one of the two
++	 * fields is NULL, it belongs after the other, so it is considered
++	 * "greater"). But, then, all headers are CFStrings, no matter what
++	 * type they claim to be (since they actually hold the expected type for
++	 * the records with that header). That being said, all we have to do is
++	 * the built-in CFStringCompare.
++	 */
+ 	if(_field1 == _field2)
+ 		return 0;
+ 	if(_field1 == NULL)
+Index: connectivity/source/drivers/macab/MacabRecord.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecord.cxx,v
+retrieving revision 1.1.2.2
+diff -u -r1.1.2.2 MacabRecord.cxx
+--- connectivity/source/drivers/macab/MacabRecord.cxx	13 Jul 2007 18:17:42 -0000	1.1.2.2
++++ connectivity/source/drivers/macab/MacabRecord.cxx	13 Jul 2007 23:50:29 -0000
+@@ -42,10 +42,6 @@
+ #include "macabutilities.hxx"
+ #endif
+ 
+-/* cremlae
+-#include <math.h>
+-*/
+-
+ #ifndef _COM_SUN_STAR_UTIL_DATETIME_HPP_
+ #include <com/sun/star/util/DateTime.hpp>
+ #endif
+@@ -133,6 +129,10 @@
+ // -------------------------------------------------------------------------
+ macabfield *MacabRecord::copy(const sal_Int32 i) const
+ {
++	/* Note: copy(i) creates a new macabfield identical to that at
++	 * location i, whereas get(i) returns a pointer to the macabfield
++	 * at location i.
++	 */
+ 	if(i < size)
+ 	{
+ 		macabfield *_copy = new macabfield;
+@@ -148,6 +148,10 @@
+ // -------------------------------------------------------------------------
+ macabfield *MacabRecord::get(const sal_Int32 i) const
+ {
++	/* Note: copy(i) creates a new macabfield identical to that at
++	 * location i, whereas get(i) returns a pointer to the macabfield
++	 * at location i.
++	 */
+ 	if(i < size)
+ 	{
+ 		return fields[i];
+@@ -156,8 +160,14 @@
+ 	return NULL;
+ }
+ 
++// -------------------------------------------------------------------------
+ void MacabRecord::releaseFields()
+ {
++	/* This method is, at the moment, only used in MacabHeader.cxx, but
++	 * the idea is simple: if you are not destroying this object but want
++	 * to clear it of its macabfields, you should release each field's
++	 * value.
++	 */
+ 	sal_Int32 i;
+ 	for(i = 0; i < size; i++)
+ 		CFRelease(fields[i]->value);
+@@ -167,6 +177,10 @@
+ sal_Int32 MacabRecord::compareFields(const macabfield *_field1, const macabfield *_field2) 
+ {
+ 	
++	/* When comparing records, if either field is NULL (and the other is
++	 * not), that field is considered "greater than" the other, so that it
++	 * shows up later in the list when fields are ordered.
++	 */
+ 	if(_field1 == _field2)
+ 		return 0;
+ 	if(_field1 == NULL)
+@@ -174,13 +188,16 @@
+ 	if(_field2 == NULL)
+ 		return -1;
+ 
+-	// If they aren't the same type, for now, return the one with
+-	// the smaller type ID... for now.
++	/* If they aren't the same type, for now, return the one with
++	 * the smaller type ID... I don't know of a better way to compare
++	 * two different data types.
++	 */
+ 	if(_field1->type != _field2->type)
+ 		return(_field1->type - _field2->type);
+ 
+ 	CFComparisonResult result;
+ 
++	/* Carbon has a unique compare function for each data type: */
+ 	switch(_field1->type)
+ 	{
+ 		case kABStringProperty:
+@@ -213,6 +230,11 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Create a macabfield out of an OUString and type. Together with the
++ * method fieldToString() (below), it is possible to switch conveniently
++ * between an OUString and a macabfield (for use when creating and handling
++ * SQL statement).
++ */
+ macabfield *MacabRecord::createMacabField(const ::rtl::OUString _newFieldString, const ABPropertyType _abType)
+ {
+ 	macabfield *newField = NULL;
+@@ -276,6 +298,11 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Create an OUString out of a macabfield. Together with the method
++ * createMacabField() (above), it is possible to switch conveniently
++ * between an OUString and a macabfield (for use when creating and handling
++ * SQL statement).
++ */
+ ::rtl::OUString MacabRecord::fieldToString(const macabfield *_aField)
+ {
+ 	if(_aField == NULL)
+Index: connectivity/source/drivers/macab/MacabRecord.hxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecord.hxx,v
+retrieving revision 1.1.2.2
+diff -u -r1.1.2.2 MacabRecord.hxx
+--- connectivity/source/drivers/macab/MacabRecord.hxx	13 Jul 2007 18:17:42 -0000	1.1.2.2
++++ connectivity/source/drivers/macab/MacabRecord.hxx	13 Jul 2007 23:50:30 -0000
+@@ -49,6 +49,10 @@
+ {
+ 	namespace macab
+ 	{
++		/* a MacabRecord is at root a list of macabfields (which is just
++		 * something to hold both a CFTypeRef (a CoreFoundation object) and
++		 * its Address Book type.
++		 */
+ 		struct macabfield
+ 		{
+ 			CFTypeRef value;
+Index: connectivity/source/drivers/macab/MacabRecords.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecords.cxx,v
+retrieving revision 1.1.2.3
+diff -u -r1.1.2.3 MacabRecords.cxx
+--- connectivity/source/drivers/macab/MacabRecords.cxx	13 Jul 2007 20:02:32 -0000	1.1.2.3
++++ connectivity/source/drivers/macab/MacabRecords.cxx	13 Jul 2007 23:50:30 -0000
+@@ -65,28 +65,44 @@
+ // -------------------------------------------------------------------------
+ MacabRecords::MacabRecords(const ABAddressBookRef _addressBook, MacabHeader *_header, MacabRecord **_records, sal_Int32 _numRecords)
+ {
++	/* Variables passed in... */
+ 	header = _header;
+ 	recordsSize = _numRecords;
+ 	currentRecord = _numRecords;
+ 	records = _records;
+ 	addressBook = _addressBook;
++
++	/* Default variables... */
+ 	recordType = kABPersonRecordType;
++
++	/* Variables constructed... */
+ 	bootstrap_CF_types();
+ 	bootstrap_requiredProperties();
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Creates a MacabRecords from another: copies the length, name, and
++ * address book of the original, but the header or the records themselves.
++ * The idea is that the only reason to copy a MacabRecords is to create
++ * a filtered version of it, which can have the same length (to avoid
++ * resizing) and will work from the same base addressbook, but might have
++ * entirey different values and even (possibly in the future) a different
++ * header.
++ */
+ MacabRecords::MacabRecords(const MacabRecords *_copy)
+ {
++	/* Variables passed in... */
+ 	recordsSize = _copy->recordsSize;
+ 	addressBook = _copy->addressBook;
+ 	m_sName = _copy->m_sName;
+ 
++	/* Default variables... */
+ 	currentRecord = 0;
+ 	header = NULL;
+ 	records = new MacabRecord *[recordsSize];
+ 	recordType = kABPersonRecordType;
+ 
++	/* Variables constructed... */
+ 	bootstrap_CF_types();
+ 	bootstrap_requiredProperties();
+ }
+@@ -94,12 +110,17 @@
+ // -------------------------------------------------------------------------
+ MacabRecords::MacabRecords(const ABAddressBookRef _addressBook)
+ {
++	/* Variables passed in... */
++	addressBook = _addressBook;
++
++	/* Default variables... */
+ 	recordsSize = 0;
+ 	currentRecord = 0;
+ 	records = NULL;
+ 	header = NULL;
+-	addressBook = _addressBook;
+ 	recordType = kABPersonRecordType;
++
++	/* Variables constructed... */
+ 	bootstrap_CF_types();
+ 	bootstrap_requiredProperties();
+ }
+@@ -108,6 +129,11 @@
+ void MacabRecords::initialize()
+ {
+ 
++	/* Make sure everything is NULL before initializing. (We usually just
++	 * initialize after we use the constructor that takes only a
++	 * MacabAddressBook, so these variables will most likely already be
++	 * NULL.
++	 */
+ 	if(records != NULL)
+ 	{
+ 		sal_Int32 i;
+@@ -121,6 +147,9 @@
+ 	if(header != NULL)
+ 		delete header;
+ 
++	/* We can handle both default record Address Book record types in
++	 * this method, though only kABPersonRecordType is ever used.
++	 */
+ 	CFArrayRef allRecords;
+ 	if(CFStringCompare(recordType, kABPersonRecordType, 0) == kCFCompareEqualTo)
+ 		allRecords = ABCopyArrayOfAllPeople(addressBook);
+@@ -132,8 +161,10 @@
+ 	recordsSize = (sal_Int32) CFArrayGetCount(allRecords);
+ 	records = new MacabRecord *[recordsSize];
+ 
++	/* First, we create the header... */
+ 	header = createHeaderForRecordType(allRecords, recordType);
+ 
++	/* Then, we create each of the records... */
+ 	for(i = 0; i < recordsSize; i++)
+ 	{
+ 		record = (ABRecordRef) CFArrayGetValueAtIndex(allRecords, i);
+@@ -164,9 +195,16 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Inserts a MacabRecord at a given location. If there is already a
++ * MacabRecord at that location, return it.
++ */
+ MacabRecord *MacabRecords::insertRecord(MacabRecord *_newRecord, const sal_Int32 _location)
+ {
+ 	MacabRecord *oldRecord;
++
++	/* If the location is greater than the current allocated size of this
++	 * MacabRecords, allocate more space.
++	 */
+ 	if(_location >= recordsSize)
+ 	{
+ 		sal_Int32 i;
+@@ -178,6 +216,10 @@
+ 		records = newRecordsArray;
+ 	}
+ 
++	/* Remember: currentRecord refers to one above the highest existing
++	 * record (i.e., it refers to where to place the next record if a
++	 * location is not given).
++	 */
+ 	if(_location >= currentRecord)
+ 		currentRecord = _location+1;
+ 	
+@@ -187,6 +229,7 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Insert a record at the next available place. */
+ void MacabRecords::insertRecord(MacabRecord *_newRecord)
+ {
+ 	insertRecord(_newRecord, currentRecord);
+@@ -300,25 +343,63 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Create the header for a given record type and a given array of records.
++ * Because the array of records and the record type are given, if you want
++ * to, you can run this method on the members of a group, or on any other
++ * filtered list of people and get a header relevant to them (e.g., if
++ * they only have home addresses, the work address fields won't show up).
++ */
+ MacabHeader *MacabRecords::createHeaderForRecordType(const CFArrayRef _records, const CFStringRef _recordType) const
+ {
++	/* We have two types of properties for a given record type, nonrequired
++	 * and required. Required properties are ones that will show up whether
++	 * or not they are empty. Nonrequired properties will only show up if
++	 * at least one record in the set has that property filled. The reason
++	 * is that some properties, like the kABTitleProperty are required by
++	 * the mail merge wizard (in module sw) but are by default not shown in
++	 * the Mac OS X address book, so they would be weeded out at this stage
++	 * and not shown if they were not required.
++	 *
++	 * Note: with the addition of required properties, I am not sure that
++	 * this method still works for kABGroupRecordType (since the required
++	 * properites are all for kABPersonRecordType).
++	 *
++	 * Note: required properties are constructed in the method
++	 * bootstrap_requiredProperties() (above).
++	 */
+ 	CFArrayRef allProperties = ABCopyArrayOfPropertiesForRecordType(addressBook, _recordType);
+ 	CFStringRef *nonRequiredProperties;
+-	ABRecordRef record;
+ 	sal_Int32 numRecords = (sal_Int32) CFArrayGetCount(_records);
+ 	sal_Int32 numProperties = (sal_Int32) CFArrayGetCount(allProperties); 
+-	sal_Int32 i, j, k;
+-	CFStringRef property;
++	sal_Int32 numNonRequiredProperties = numProperties - numRequiredProperties;
++
++	/* While searching through the properties for required properties, these
++	 * sal_Bools will keep track of what we have found.
++	 */
++	sal_Bool bFoundProperty;
++	sal_Bool bFoundRequiredProperties[numRequiredProperties];
++
++
++	/* We have three MacabHeaders: headerDataForProperty is where we
++	 * store the result of createHeaderForProperty(), which return a
++	 * MacabHeader for a single property. lcl_header is where we store
++	 * the MacabHeader that we are constructing. And, nonRequiredHeader
++	 * is where we construct the MacabHeader for non-required properties,
++	 * so that we can sort them before adding them to lcl_header.
++	 */
+ 	MacabHeader *headerDataForProperty;
+ 	MacabHeader *lcl_header = new MacabHeader();
+ 	MacabHeader *nonRequiredHeader = new MacabHeader();
+ 
+-	sal_Int32 numNonRequiredProperties = numProperties - numRequiredProperties;
+-	sal_Bool bFoundProperty;
+-	sal_Bool bFoundRequiredProperties[numRequiredProperties];
++	/* Other variables... */
++	sal_Int32 i, j, k;
++	ABRecordRef record;
++	CFStringRef property;
++
++
++	/* Allocate and initialize... */
+ 	nonRequiredProperties = new CFStringRef[numNonRequiredProperties];
+ 	k = 0;
+-
+ 	for(i = 0; i < numRequiredProperties; i++)
+ 		bFoundRequiredProperties[i] = sal_False;
+ 
+@@ -339,6 +420,7 @@
+ 
+ 		if(bFoundProperty == sal_False)
+ 		{
++			/* If we have found too many non-required properties */
+ 			if(k == numNonRequiredProperties)
+ 			{
+ 				k++; // so that the OSL_ENSURE below fails
+@@ -354,7 +436,7 @@
+ 	// we also test later.
+ 	OSL_ENSURE(k == numNonRequiredProperties, "MacabRecords::createHeaderForRecordType: Found an unexpected number of non-required properties");
+ 
+-	/* Fill in required headers first... */
++	/* Fill the header with required properties first... */
+ 	for(i = 0; i < numRequiredProperties; i++)
+ 	{
+ 		if(bFoundRequiredProperties[i] == sal_True)
+@@ -389,13 +471,11 @@
+ 		}
+ 	}
+ 
+-	/* And now, non-required ones... */
++	/* And now, non-required properties... */
+ 	for(i = 0; i < numRecords; i++)
+ 	{
+-		/* This is the record */
+ 		record = (ABRecordRef) CFArrayGetValueAtIndex(_records, i);
+ 
+-		/* Go through the properties array... */
+ 		for(j = 0; j < numNonRequiredProperties; j++)
+ 		{
+ 			property = nonRequiredProperties[j];
+@@ -407,7 +487,7 @@
+ 			}
+ 		}
+ 
+-	} // end of for loop through records
++	}
+ 	nonRequiredHeader->sortRecord();
+ 
+ 	(*lcl_header) += nonRequiredHeader;
+@@ -420,6 +500,10 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Create a header for a single property. Basically, this method gets
++ * the property's value and type and then calls another method of
++ * the same name to do the dirty work.
++ */
+ MacabHeader *MacabRecords::createHeaderForProperty(const ABRecordRef _record, const CFStringRef _propertyName, const CFStringRef _recordType, const sal_Bool _isPropertyRequired) const
+ {
+ 	// local variables
+@@ -443,6 +527,10 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Create a header for a single property. This method is recursive
++ * because a single property might contain several sub-properties that
++ * we also want to treat singly.
++ */
+ MacabHeader *MacabRecords::createHeaderForProperty(const ABPropertyType _propertyType, const CFTypeRef _propertyValue, const CFStringRef _propertyName) const
+ {
+ 	macabfield **headerNames = NULL;
+@@ -450,6 +538,7 @@
+ 
+ 	switch(_propertyType)
+ 	{
++		/* Scalars */
+ 		case kABStringProperty:
+ 		case kABRealProperty:
+ 		case kABIntegerProperty:
+@@ -461,6 +550,7 @@
+ 			headerNames[0]->type = _propertyType;
+ 			break;
+ 
++		/* Multi-scalars */
+ 		case kABMultiIntegerProperty:
+ 		case kABMultiDateProperty:
+ 		case kABMultiStringProperty:
+@@ -484,10 +574,11 @@
+ 			headerNames = new macabfield *[multiLength];
+ 			multiPropertyString = CFStringToOUString(_propertyName);
+ 
+-			/* Go through each entry... */
++			/* Go through each element, and - since each element is a scalar -
++			 * just create a new macabfield for it.
++			 */
+ 			for(i = 0; i < multiLength; i++)
+ 			{
+-				/* label */
+ 				multiLabel = ABMultiValueCopyLabelAtIndex((ABMutableMultiValueRef) _propertyValue, i);
+ 				multiLabelString = CFStringToOUString(multiLabel);
+ 				CFRelease(multiLabel);
+@@ -499,6 +590,7 @@
+ 			}
+ 			break;
+ 
++		/* Multi-array or dictionary */
+ 		case kABMultiArrayProperty:
+ 		case kABMultiDictionaryProperty:
+ 			/* For non-scalars, we can only get more information if the property
+@@ -507,8 +599,17 @@
+ 			if(_propertyValue != NULL)
+ 			{
+ 				sal_Int32 i,j,k;
++
++				// Total number of multi-array or multi-dictionary elements.
+ 				sal_Int32 multiLengthFirstLevel = ABMultiValueCount((ABMutableMultiValueRef) _propertyValue);
++
++				/* Total length, including the length of each element (e.g., if
++				 * this multi-dictionary contains three dictionaries, and each
++				 * dictionary has four elements, this variable will be twelve,
++				 * whereas multiLengthFirstLevel will be three.
++				 */
+ 				sal_Int32 multiLengthSecondLevel = 0;
++
+ 				CFStringRef multiLabel;
+ 				CFTypeRef multiValue;
+ 				::rtl::OUString multiLabelString;
+@@ -518,7 +619,12 @@
+ 
+ 				multiPropertyString = CFStringToOUString(_propertyName);
+ 
+-				/* Go through each entry... */
++				/* Go through each element - since each element can really
++				 * contain anything, we run this method again on each element
++				 * and store the resulting MacabHeader (in the multiHeaders
++				 * array). Then, all we'll have to do is combine the MacabHeaders
++				 * into a single one.
++				 */
+ 				for(i = 0; i < multiLengthFirstLevel; i++)
+ 				{
+ 					/* label */
+@@ -542,6 +648,11 @@
+ 						CFRelease(multiValue);
+ 				}
+ 
++				/* We now have enough information to create our final MacabHeader.
++				 * We go through each field of each header and add it to the
++				 * headerNames array (which is what is used below to construct
++				 * the MacabHeader we return).
++				 */
+ 				length = multiLengthSecondLevel;
+ 				headerNames = new macabfield *[multiLengthSecondLevel];
+ 
+@@ -562,6 +673,7 @@
+ 			}
+ 			break;
+ 			
++		/* Dictionary */
+ 		case kABDictionaryProperty:
+ 			/* For non-scalars, we can only get more information if the property
+ 			 * actually exists.
+@@ -570,23 +682,38 @@
+ 			{
+ 			/* Assume all keys are strings */
+ 			sal_Int32 numRecords = (sal_Int32) CFDictionaryGetCount((CFDictionaryRef) _propertyValue);
++
++			/* The only method for getting info out of a CFDictionary, of both
++			 * keys and values, is to all of them all at once, so these
++			 * variables will hold them.
++			 */
+ 			CFStringRef *dictKeys;
+ 			CFTypeRef *dictValues;
++
++			sal_Int32 i,j,k;
+ 			::rtl::OUString dictKeyString, propertyNameString;
+ 			ABPropertyType dictType;
+-			sal_Int32 i,j,k;
+ 			MacabHeader **dictHeaders = new MacabHeader *[numRecords];
+ 			::rtl::OUString dictLabelString;
+ 			CFStringRef dictLabel;
+ 
++			/* Get the keys and values */
+ 			dictKeys = (CFStringRef *) malloc(sizeof(CFStringRef)*numRecords);
+ 			dictValues = (CFTypeRef *) malloc(sizeof(CFTypeRef)*numRecords);
+-
+ 			CFDictionaryGetKeysAndValues((CFDictionaryRef) _propertyValue, (const void **) dictKeys, (const void **) dictValues);
+ 
+ 			propertyNameString = CFStringToOUString(_propertyName);
+ 
+ 			length = 0;
++			/* Go through each element - assuming that the key is a string but
++			 * that the value could be anything. Since the value could be
++			 * anything, we can't assume that it is scalar (it could even be
++			 * another dictionary), so we attempt to get its type using
++			 * the method getABTypeFromCFType and then run this method
++			 * recursively on that element, storing the MacabHeader that
++			 * results. Then, we just combine all of the MacabHeaders into
++			 * one.
++			 */
+ 			for(i = 0; i < numRecords; i++)
+ 			{
+ 				dictType = (ABPropertyType) getABTypeFromCFType( CFGetTypeID(dictValues[i]) );
+@@ -600,6 +727,10 @@
+ 				CFRelease(dictLabel);
+ 			}
+ 
++			/* Combine all of the macabfields in each MacabHeader into the
++			 * headerNames array, which (at the end of this method) is used
++			 * to create the MacabHeader that is returned.
++			 */
+ 			headerNames = new macabfield *[length];
+ 			for(i = 0, j = 0, k = 0; i < length; i++,k++)
+ 			{
+@@ -621,6 +752,7 @@
+ 			}
+ 			break;
+ 
++		/* Array */
+ 		case kABArrayProperty:
+ 			/* For non-scalars, we can only get more information if the property
+ 			 * actually exists.
+@@ -637,6 +769,15 @@
+ 				CFStringRef arrLabel;
+ 
+ 				length = 0;
++				/* Go through each element - since the elements here do not have
++				 * unique keys like the ones in dictionaries, we create a unique
++				 * key out of the id of the element in the array (the first
++				 * element gets a 0 plopped onto the end of it, the second a 1...
++				 * As with dictionaries, the elements could be anything, including
++				 * another array, so we have to run this method recursively on
++				 * each element, storing the resulting MacabHeader into an array,
++				 * which we then combine into one MacabHeader that is returned.
++				 */
+ 				for(i = 0; i < arrLength; i++)
+ 				{
+ 					arrValue = (CFTypeRef) CFArrayGetValueAtIndex( (CFArrayRef) _propertyValue, i);
+@@ -672,6 +813,13 @@
+ 				break;
+ 
+ 	}
++
++	/* If we succeeded at adding elements to the headerNames array, then
++	 * length will no longer be 0. If it is, create a new MacabHeader
++	 * out of the headerNames (after weeding out duplicate headers), and
++	 * then return the result. If the length is still 0, return NULL: we
++	 * failed to create a MacabHeader out of this property.
++	 */
+ 	if(length != 0)
+ 	{
+ 		manageDuplicateHeaders(headerNames, length);
+@@ -716,16 +864,30 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Create a MacabRecord out of an ABRecord, using a given MacabHeader and
++ * the record's type. We go through each property for this record type
++ * then process it much like we processed the header (above), with two
++ * exceptions: if we come upon something not in the header, we ignore it
++ * (it's something we don't want to add), and once we find a corresponding
++ * location in the header, we store the property and the property type in
++ * a macabfield. (For the header, we stored the property type and the name
++ * of the property as a CFString.)
++ */
+ MacabRecord *MacabRecords::createMacabRecord(const ABRecordRef _abrecord, const MacabHeader *_header, const CFStringRef _recordType) const
+ {
++	/* The new record that we will create... */
+ 	MacabRecord *macabRecord = new MacabRecord(_header->getSize());
+-	sal_Int32 i;
++
+ 	CFArrayRef recordProperties = ABCopyArrayOfPropertiesForRecordType(addressBook, _recordType);
+ 	sal_Int32 numProperties = (sal_Int32) CFArrayGetCount(recordProperties); 
+-	CFStringRef propertyName;
+-	::rtl::OUString propertyNameString;
++
++	sal_Int32 i;
++
+ 	CFTypeRef propertyValue;
+ 	ABPropertyType propertyType;
++
++	CFStringRef propertyName;
++	::rtl::OUString propertyNameString;
+ 	for(i = 0; i < numProperties; i++)
+ 	{
+ 		propertyName = (CFStringRef) CFArrayGetValueAtIndex(recordProperties, i);
+@@ -747,6 +909,11 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Inserts a given property into a MacabRecord. This method calls another
++ * method by the same name after getting the property type (it only
++ * receives the property value). It is called when we aren't given the
++ * property's type already.
++ */
+ void MacabRecords::insertPropertyIntoMacabRecord(MacabRecord *_abrecord, const MacabHeader *_header, const ::rtl::OUString _propertyName, const CFTypeRef _propertyValue) const
+ {
+ 	CFTypeID cf_type = CFGetTypeID(_propertyValue);
+@@ -757,10 +924,11 @@
+ }
+ 
+ // -------------------------------------------------------------------------
++/* Inserts a given property into a MacabRecord. This method is recursive
++ * because properties can contain many sub-properties.
++ */
+ void MacabRecords::insertPropertyIntoMacabRecord(const ABPropertyType _propertyType, MacabRecord *_abrecord, const MacabHeader *_header, const ::rtl::OUString _propertyName, const CFTypeRef _propertyValue) const
+ {
+-	// local variables
+-
+ 	/* If there is no value, return */
+ 	if(_propertyValue == NULL)
+ 		return;
+@@ -768,11 +936,30 @@
+ 	/* The main switch statement */
+ 	switch(_propertyType)
+ 	{
++		/* Scalars */
+ 		case kABStringProperty:
+ 		case kABRealProperty:
+ 		case kABIntegerProperty:
+ 		case kABDateProperty:
+ 		{
++			/* Only scalars actually insert a property into the MacabRecord.
++			 * In all other cases, this method is called recursively until a
++			 * scalar type, an error, or an unknown type are found.
++			 * Because of that, the following checks only occur for this type.
++			 * We store whether we have successfully placed this property
++			 * into the MacabRecord (or whether an unrecoverable error occured).
++			 * Then, we try over and over again to place the property into the
++			 * record. There are three possible results:
++			 * 1) Success!
++			 * 2) There is already a property stored at the column of this name,
++			 * in which case we have a duplicate header (see the method
++			 * manageDuplicateHeaders()). If that is the case, we add an ID
++			 * to the end of the column name in the same format as we do in
++			 * manageDuplicateHeaders() and try again.
++			 * 3) No column of this name exists in the header. In this case,
++			 * there is nothing we can do: we have failed to place this
++			 * property into the record.
++			 */
+ 			sal_Bool bPlaced = sal_False;
+ 			::rtl::OUString columnName = ::rtl::OUString(_propertyName);
+ 			sal_Int32 i = 1;
+@@ -784,13 +971,15 @@
+ 				bPlaced = sal_True;
+ 				if(columnNumber != -1)
+ 				{
+-					// collision!
++					// collision! A property already exists here!
+ 					if(_abrecord->get(columnNumber) != NULL)
+ 					{
+ 						bPlaced = sal_False;
+ 						i++;
+ 						columnName = ::rtl::OUString(_propertyName) + ::rtl::OUString::createFromAscii(" (") + ::rtl::OUString::valueOf(i) + ::rtl::OUString::createFromAscii(")");
+ 					}
++
++					// success!
+ 					else
+ 					{
+ 						_abrecord->insertAtColumn(_propertyValue, _propertyType, columnNumber);
+@@ -804,26 +993,24 @@
+ 		case kABArrayProperty:
+ 			{
+ 				/* An array is basically just a list of anything, so all we do
+-				 * is go through the array, and get the string representation
+-				 * of each element, and list them in a string, separated by
+-				 * commas.
++				 * is go through the array, and rerun this method recursively
++				 * on each element.
+ 				 */
+ 				sal_Int32 arrLength = (sal_Int32) CFArrayGetCount( (CFArrayRef) _propertyValue);
+ 				sal_Int32 i;
+ 				const void *arrValue;
+ 				::rtl::OUString newPropertyName;
+ 
+-				/* Going through the array... */
++				/* Going through each element... */
+ 				for(i = 0; i < arrLength; i++)
+ 				{
+-					/* Get the value */
+ 					arrValue = CFArrayGetValueAtIndex( (CFArrayRef) _propertyValue, i);
+ 					newPropertyName = _propertyName + ::rtl::OUString::valueOf(i);
+ 					insertPropertyIntoMacabRecord(_abrecord, _header, newPropertyName, arrValue);
+ 					CFRelease(arrValue);
+ 				}
+ 
+-			} // end of block for the case of array type
++			}
+ 			break;
+ 
+ 		/* Dictionary */
+@@ -831,30 +1018,32 @@
+ 			{
+ 				/* A dictionary is basically a hashmap. Technically, it can
+ 				 * hold any object as a key and any object as a value.
+-				 * Traditionally, as far as I can tell, the key and value are
+-				 * both strings, but (to be safe) we don't assume that and
+-				 * run the version of getStringRepresentationOfPropertyValue
+-				 * that tries to find the type on its own on each key and
+-				 * each value.
++				 * For our case, we assume that the key is a string (so that
++				 * we can use the key to get the column name and match it against
++				 * the header), but we don't assume anything about the value, so
++				 * we run this method recursively (or, rather, we run the version
++				 * of this method for when we don't know the object's type) until
++				 * we hit a scalar value.
+ 				 */
+ 
+ 				sal_Int32 numRecords = (sal_Int32) CFDictionaryGetCount((CFDictionaryRef) _propertyValue);
+-				CFStringRef *dictKeys;
+-				CFTypeRef *dictValues;
+ 				::rtl::OUString dictKeyString;
+ 				sal_Int32 i;
+ 				::rtl::OUString newPropertyName;
+ 
++				/* Unfortunately, the only way to get both keys and values out
++				 * of a dictionary in Carbon is to get them all at once, so we
++				 * do that.
++				 */
++				CFStringRef *dictKeys;
++				CFTypeRef *dictValues;
+ 				dictKeys = (CFStringRef *) malloc(sizeof(CFStringRef)*numRecords);
+ 				dictValues = (CFTypeRef *) malloc(sizeof(CFTypeRef)*numRecords);
+-
+ 				CFDictionaryGetKeysAndValues((CFDictionaryRef) _propertyValue, (const void **) dictKeys, (const void **) dictValues);
+ 
+-
+-				/* Going through the dictionary... */
++				/* Going through each element... */
+ 				for(i = 0; i < numRecords; i++)
+ 				{
+-					/* Get the value */
+ 					dictKeyString = CFStringToOUString(dictKeys[i]);
+ 					newPropertyName = _propertyName + ::rtl::OUString::createFromAscii(": ") + fixLabel(dictKeyString);
+ 					insertPropertyIntoMacabRecord(_abrecord, _header, newPropertyName, dictValues[i]);
+@@ -862,7 +1051,7 @@
+ 
+ 				free(dictKeys);
+ 				free(dictValues);
+-			} // end of block for the case of dictionary type
++			}
+ 			break;
+ 
+ 		/* Multivalue */
+@@ -873,18 +1062,16 @@
+ 		case kABMultiDataProperty:
+ 		case kABMultiDictionaryProperty:
+ 		case kABMultiArrayProperty:
+-
+ 			{
+-				/* All scalar multivalues are handled in the same way. Each entry is
+-				 * a label and a value. All labels are strings
++				/* All scalar multivalues are handled in the same way. Each element
++				 * is a label and a value. All labels are strings
+ 				 * (kABStringProperty), and all values have the same type
+ 				 * (which is the type of the multivalue minus 255, or as
+-				 * Carbon's list of property types has it, minux 0x100.
+-				 * We just get the correct type, then go through each entry
++				 * Carbon's list of property types has it, minus 0x100.
++				 * We just get the correct type, then go through each element
+ 				 * and get the label and value and print them in a list.
+ 				 */
+ 
+-				/* variables local to this block */
+ 				sal_Int32 i;
+ 				sal_Int32 multiLength = ABMultiValueCount((ABMutableMultiValueRef) _propertyValue);
+ 				CFStringRef multiLabel;
+@@ -892,7 +1079,7 @@
+ 				::rtl::OUString multiLabelString, newPropertyName;
+ 				ABPropertyType multiType = (ABPropertyType) (ABMultiValuePropertyType((ABMutableMultiValueRef) _propertyValue) - 0x100);
+ 
+-				/* Go through each entry... */
++				/* Go through each element... */
+ 				for(i = 0; i < multiLength; i++)
+ 				{
+ 					/* Label and value */
+@@ -906,8 +1093,8 @@
+ 					/* free our variables */
+ 					CFRelease(multiLabel);
+ 					CFRelease(multiValue);
+-				} // end of loop through each entry
+-			} // end of block for the case of multivalue types
++				}
++			}
+ 			break;
+ 
+ 		/* Unhandled types */
+Index: connectivity/source/drivers/macab/MacabRecords.hxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecords.hxx,v
+retrieving revision 1.1.2.3
+diff -u -r1.1.2.3 MacabRecords.hxx
+--- connectivity/source/drivers/macab/MacabRecords.hxx	13 Jul 2007 20:02:33 -0000	1.1.2.3
++++ connectivity/source/drivers/macab/MacabRecords.hxx	13 Jul 2007 23:50:30 -0000
+@@ -57,6 +57,9 @@
+ {
+ 	namespace macab
+ 	{
++		/* This struct is for converting CF types to AB types (Core Foundation
++		 * types to Address Book types).
++		 */
+ 		struct lcl_CFType {
+ 			sal_Int32 cf;
+ 			sal_Int32 ab;
+@@ -64,19 +67,32 @@
+ 
+ 		class MacabRecords{
+ 			protected:
++				/* MacabRecords is, at its core, a table of macabfields, in the
++				 * form of a header and a list of objects of type MacabRecord.
++				 * It also has a unique name that refers to the name of the table.
++				 */
+ 				sal_Int32 recordsSize;
+ 				sal_Int32 currentRecord;
+ 				CFStringRef recordType;
+-				sal_Int32 lcl_CFTypesLength;
+-				lcl_CFType *lcl_CFTypes;
+ 				MacabHeader *header;
+ 				MacabRecord **records;
+ 				ABAddressBookRef addressBook;
+ 				::rtl::OUString m_sName;
+-				// cremlae, fill me
++
++				/* For converting CF types to AB types */
++				sal_Int32 lcl_CFTypesLength;
++				lcl_CFType *lcl_CFTypes;
++
++				/* For required properties */
+ 				CFStringRef *requiredProperties;
+ 				sal_Int32 numRequiredProperties;
++				
+ 			private:
++				/* All of the private methods are for creating a MacabHeader or a
++				 * MacabRecord. They are used by the initialize method that goes
++				 * about filling a MacabRecords using all of the records in the
++				 * Mac OS X Address Book.
++				 */
+ 				void bootstrap_CF_types();
+ 				void bootstrap_requiredProperties();
+ 				MacabHeader *createHeaderForProperty(const ABRecordRef _record, const CFStringRef _propertyName, const CFStringRef _recordType, const sal_Bool _isPropertyRequired) const;
+Index: connectivity/source/drivers/macab/MacabRecords.cxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/MacabRecords.cxx,v
+retrieving revision 1.1.2.4
+diff -u -r1.1.2.4 MacabRecords.cxx
+--- connectivity/source/drivers/macab/MacabRecords.cxx	15 Jul 2007 01:56:55 -0000	1.1.2.4
++++ connectivity/source/drivers/macab/MacabRecords.cxx	15 Jul 2007 03:37:48 -0000
+@@ -507,6 +507,7 @@
+ MacabHeader *MacabRecords::createHeaderForProperty(const ABRecordRef _record, const CFStringRef _propertyName, const CFStringRef _recordType, const sal_Bool _isPropertyRequired) const
+ {
+ 	// local variables
++	CFStringRef localizedPropertyName;
+ 	CFTypeRef propertyValue;
+ 	ABPropertyType propertyType;
+ 	MacabHeader *result;
+@@ -517,8 +518,9 @@
+ 		return NULL;
+ 
+ 	propertyType = ABTypeOfProperty(addressBook, _recordType, _propertyName);
+-	
+-	result = createHeaderForProperty(propertyType, propertyValue, _propertyName);
++	localizedPropertyName = ABCopyLocalizedPropertyOrLabel(_propertyName);
++
++	result = createHeaderForProperty(propertyType, propertyValue, localizedPropertyName);
+ 
+ 	if(propertyValue != NULL)
+ 		CFRelease(propertyValue);
+@@ -564,7 +566,7 @@
+ 			sal_Int32 i;
+ 			
+ 			sal_Int32 multiLength = ABMultiValueCount((ABMutableMultiValueRef) _propertyValue);
+-			CFStringRef multiLabel;
++			CFStringRef multiLabel, localizedMultiLabel;
+ 			::rtl::OUString multiLabelString;
+ 			::rtl::OUString multiPropertyString;
+ 			::rtl::OUString headerNameString;
+@@ -580,8 +582,10 @@
+ 			for(i = 0; i < multiLength; i++)
+ 			{
+ 				multiLabel = ABMultiValueCopyLabelAtIndex((ABMutableMultiValueRef) _propertyValue, i);
+-				multiLabelString = CFStringToOUString(multiLabel);
++				localizedMultiLabel = ABCopyLocalizedPropertyOrLabel(multiLabel);
++				multiLabelString = CFStringToOUString(localizedMultiLabel);
+ 				CFRelease(multiLabel);
++				CFRelease(localizedMultiLabel);
+ 				headerNameString = multiPropertyString + ::rtl::OUString::createFromAscii(": ") + fixLabel(multiLabelString);
+ 				headerNames[i] = new macabfield;
+ 				headerNames[i]->value = OUStringToCFString(headerNameString);
+@@ -610,7 +614,7 @@
+ 				 */
+ 				sal_Int32 multiLengthSecondLevel = 0;
+ 
+-				CFStringRef multiLabel;
++				CFStringRef multiLabel, localizedMultiLabel;
+ 				CFTypeRef multiValue;
+ 				::rtl::OUString multiLabelString;
+ 				::rtl::OUString multiPropertyString;
+@@ -632,8 +636,10 @@
+ 					multiValue = ABMultiValueCopyValueAtIndex((ABMutableMultiValueRef) _propertyValue, i);
+ 					if(multiValue && multiLabel)
+ 					{
+-						multiLabelString = multiPropertyString + ::rtl::OUString::createFromAscii(": ") + fixLabel(CFStringToOUString(multiLabel));
++						localizedMultiLabel = ABCopyLocalizedPropertyOrLabel(multiLabel);
++						multiLabelString = multiPropertyString + ::rtl::OUString::createFromAscii(": ") + fixLabel(CFStringToOUString(localizedMultiLabel));
+ 						CFRelease(multiLabel);
++						CFRelease(localizedMultiLabel);
+ 						multiLabel = OUStringToCFString(multiLabelString);
+ 						multiHeaders[i] = createHeaderForProperty(multiType, multiValue, multiLabel);
+ 						if (!multiHeaders[i])
+@@ -695,7 +701,7 @@
+ 			ABPropertyType dictType;
+ 			MacabHeader **dictHeaders = new MacabHeader *[numRecords];
+ 			::rtl::OUString dictLabelString;
+-			CFStringRef dictLabel;
++			CFStringRef dictLabel, localizedDictKey;
+ 
+ 			/* Get the keys and values */
+ 			dictKeys = (CFStringRef *) malloc(sizeof(CFStringRef)*numRecords);
+@@ -717,7 +723,8 @@
+ 			for(i = 0; i < numRecords; i++)
+ 			{
+ 				dictType = (ABPropertyType) getABTypeFromCFType( CFGetTypeID(dictValues[i]) );
+-				dictKeyString = CFStringToOUString(dictKeys[i]);
++				localizedDictKey = ABCopyLocalizedPropertyOrLabel(dictKeys[i]);
++				dictKeyString = CFStringToOUString(localizedDictKey);
+ 				dictLabelString = propertyNameString + ::rtl::OUString::createFromAscii(": ") + fixLabel(dictKeyString);
+ 				dictLabel = OUStringToCFString(dictLabelString);
+ 				dictHeaders[i] = createHeaderForProperty(dictType, dictValues[i], dictLabel);
+@@ -725,6 +732,7 @@
+ 					dictHeaders[i] = new MacabHeader();
+ 				length += dictHeaders[i]->getSize();
+ 				CFRelease(dictLabel);
++				CFRelease(localizedDictKey);
+ 			}
+ 
+ 			/* Combine all of the macabfields in each MacabHeader into the
+@@ -886,12 +894,14 @@
+ 	CFTypeRef propertyValue;
+ 	ABPropertyType propertyType;
+ 
+-	CFStringRef propertyName;
++	CFStringRef propertyName, localizedPropertyName;
+ 	::rtl::OUString propertyNameString;
+ 	for(i = 0; i < numProperties; i++)
+ 	{
+ 		propertyName = (CFStringRef) CFArrayGetValueAtIndex(recordProperties, i);
+-		propertyNameString = CFStringToOUString(propertyName);
++		localizedPropertyName = ABCopyLocalizedPropertyOrLabel(propertyName);
++		propertyNameString = CFStringToOUString(localizedPropertyName);
++		CFRelease(localizedPropertyName);
+ 
+ 		/* Get the property's value */
+ 		propertyValue = ABRecordCopyValue(_abrecord,propertyName);
+@@ -1036,6 +1046,7 @@
+ 				 * do that.
+ 				 */
+ 				CFStringRef *dictKeys;
++				CFStringRef localizedDictKey;
+ 				CFTypeRef *dictValues;
+ 				dictKeys = (CFStringRef *) malloc(sizeof(CFStringRef)*numRecords);
+ 				dictValues = (CFTypeRef *) malloc(sizeof(CFTypeRef)*numRecords);
+@@ -1044,7 +1055,9 @@
+ 				/* Going through each element... */
+ 				for(i = 0; i < numRecords; i++)
+ 				{
+-					dictKeyString = CFStringToOUString(dictKeys[i]);
++					localizedDictKey = ABCopyLocalizedPropertyOrLabel(dictKeys[i]);
++					dictKeyString = CFStringToOUString(localizedDictKey);
++					CFRelease(localizedDictKey);
+ 					newPropertyName = _propertyName + ::rtl::OUString::createFromAscii(": ") + fixLabel(dictKeyString);
+ 					insertPropertyIntoMacabRecord(_abrecord, _header, newPropertyName, dictValues[i]);
+ 				}
+@@ -1074,7 +1087,7 @@
+ 
+ 				sal_Int32 i;
+ 				sal_Int32 multiLength = ABMultiValueCount((ABMutableMultiValueRef) _propertyValue);
+-				CFStringRef multiLabel;
++				CFStringRef multiLabel, localizedMultiLabel;
+ 				CFTypeRef multiValue;
+ 				::rtl::OUString multiLabelString, newPropertyName;
+ 				ABPropertyType multiType = (ABPropertyType) (ABMultiValuePropertyType((ABMutableMultiValueRef) _propertyValue) - 0x100);
+@@ -1086,12 +1099,14 @@
+ 					multiLabel = ABMultiValueCopyLabelAtIndex((ABMutableMultiValueRef) _propertyValue, i);
+ 					multiValue = ABMultiValueCopyValueAtIndex((ABMutableMultiValueRef) _propertyValue, i);
+ 
+-					multiLabelString = CFStringToOUString(multiLabel);
++					localizedMultiLabel = ABCopyLocalizedPropertyOrLabel(multiLabel);
++					multiLabelString = CFStringToOUString(localizedMultiLabel);
+ 					newPropertyName = _propertyName + ::rtl::OUString::createFromAscii(": ") + fixLabel(multiLabelString);
+ 					insertPropertyIntoMacabRecord(multiType, _abrecord, _header, newPropertyName, multiValue);
+ 
+ 					/* free our variables */
+ 					CFRelease(multiLabel);
++					CFRelease(localizedMultiLabel);
+ 					CFRelease(multiValue);
+ 				}
+ 			}
