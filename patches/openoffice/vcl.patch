@@ -366,3 +366,100 @@ diff -u -r1.82 makefile.mk
  	nNewCode |= pWindow->ImplGetWindowImpl()->mpFrameData->mnMouseCode & ~(KEY_SHIFT | KEY_MOD1 | KEY_MOD2 | KEY_MOD5);
  #else
          nNewCode |= pWindow->ImplGetWindowImpl()->mpFrameData->mnMouseCode & ~(KEY_SHIFT | KEY_MOD1 | KEY_MOD2);
+Index: unx/source/app/saldisp.cxx
+===================================================================
+RCS file: /cvs/gsl/vcl/unx/source/app/saldisp.cxx,v
+retrieving revision 1.87
+diff -u -r1.87 saldisp.cxx
+--- unx/source/app/saldisp.cxx	4 Dec 2006 16:38:45 -0000	1.87
++++ unx/source/app/saldisp.cxx	15 Jul 2007 17:12:35 -0000
+@@ -1206,7 +1206,7 @@
+ XubString SalDisplay::GetKeyName( USHORT nKeyCode ) const
+ {
+     String aStrMap;
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+     if( nKeyCode & KEY_MOD5 )
+     {
+ 	aStrMap += GetKeyNameFromKeySym( nMod2KeySym_ );
+Index: unx/source/window/salframe.cxx
+===================================================================
+RCS file: /cvs/gsl/vcl/unx/source/window/salframe.cxx,v
+retrieving revision 1.214
+diff -u -r1.214 salframe.cxx
+--- unx/source/window/salframe.cxx	4 Dec 2006 16:40:15 -0000	1.214
++++ unx/source/window/salframe.cxx	15 Jul 2007 17:12:37 -0000
+@@ -2974,7 +2974,7 @@
+ 		nModCode |= KEY_SHIFT;
+ 	if( pEvent->state & ControlMask )
+ 		nModCode |= KEY_MOD1;
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 	if( pEvent->state & Mod2Mask )
+ 		nModCode |= KEY_MOD5;
+ #else
+@@ -3018,7 +3018,7 @@
+                 break;
+             case XK_Alt_L:
+                 nExtModMask = MODKEY_LMOD2;
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 		nModMask = KEY_MOD2 | (pEvent->type==KeyRelease ? KEY_MOD5 : 0 );
+ #else
+                 nModMask = KEY_MOD2 | (pEvent->type==KeyRelease ? KEY_CONTROLMOD : 0);
+@@ -3026,7 +3026,7 @@
+                 break;
+             case XK_Alt_R:
+                 nExtModMask = MODKEY_RMOD2;
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 		nModMask = KEY_MOD2 | (pEvent->type==KeyRelease ? KEY_MOD5 : 0 );
+ #else
+                 nModMask = KEY_MOD2 | (pEvent->type==KeyRelease ? KEY_CONTROLMOD : 0);
+@@ -3059,7 +3059,7 @@
+ 
+         // emulate KEY_MENU
+         if ( ( (nKeySym == XK_Alt_L) || (nKeySym == XK_Alt_R) ) &&
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 	     ( (nModCode & ~(KEY_MOD5|KEY_MOD2)) == 0 ) )
+ #else
+              ( (nModCode & ~(KEY_CONTROLMOD|KEY_MOD2)) == 0 ) )
+--- unx/gtk/window/gtkframe.cxx.bak	2007-06-24 10:20:39.000000000 -0700
++++ unx/gtk/window/gtkframe.cxx	2007-07-15 10:13:35.000000000 -0700
+@@ -92,7 +92,7 @@
+ 	{
+         nCode |= KEY_MOD2;
+ 		if( ! (nCode & KEY_MOD1) )
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 			nCode |= KEY_MOD5;
+ #else
+ 			nCode |= KEY_CONTROLMOD;
+@@ -2633,7 +2633,7 @@
+                 break;
+             case GDK_Alt_L:
+                 nExtModMask = MODKEY_LMOD2;
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 		nModMask = KEY_MOD5 | (pEvent->type == GDK_KEY_RELEASE ? KEY_MOD5: 0);
+ #else
+                 nModMask = KEY_MOD2 | (pEvent->type == GDK_KEY_RELEASE ? KEY_CONTROLMOD : 0);
+@@ -2641,7 +2641,7 @@
+                 break;
+             case GDK_Alt_R:
+                 nExtModMask = MODKEY_RMOD2;
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 		nModMask = KEY_MOD2 | (pEvent->type == GDK_KEY_RELEASE ? KEY_MOD5 : 0);
+ #else
+                 nModMask = KEY_MOD2 | (pEvent->type == GDK_KEY_RELEASE ? KEY_CONTROLMOD : 0);
+@@ -2676,7 +2676,7 @@
+ 		{
+ 			// emulate KEY_MENU
+ 			if( ( pEvent->keyval == GDK_Alt_L || pEvent->keyval == GDK_Alt_R ) &&
+-#ifdef MACOSX
++#ifdef USE_REJECTED_MACOSX
+ 				( nModCode & ~(KEY_MOD5|KEY_MOD2)) == 0 )
+ #else
+ 				( nModCode & ~(KEY_CONTROLMOD|KEY_MOD2)) == 0 )
