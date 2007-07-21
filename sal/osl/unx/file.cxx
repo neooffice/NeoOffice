@@ -771,7 +771,11 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                  * because the first call actually created the file.
                  */
                 if ( fd < 0 && flags & O_CREAT )
-                    fd = open( buffer, flags & ~( O_CREAT | O_EXLOCK | O_SHLOCK ), mode );
+                {
+                    struct statfs s;
+                    if ( 0 <= statfs( buffer, &s ) && !strncmp( "webdav", s.f_fstypename, 6 ) )
+                        fd = open( buffer, flags & ~( O_CREAT | O_EXLOCK | O_SHLOCK ), mode );
+                }
             }
 #endif
             if ( fd >= 0 )
