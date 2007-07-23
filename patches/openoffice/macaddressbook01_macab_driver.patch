@@ -2075,3 +2075,23 @@ diff -u -r1.1.2.4 MacabRecords.cxx
  					CFRelease(multiValue);
  				}
  			}
+Index: connectivity/source/drivers/macab/macabutilities.hxx
+===================================================================
+RCS file: /cvs/dba/connectivity/source/drivers/macab/Attic/macabutilities.hxx,v
+retrieving revision 1.1.2.2
+diff -u -r1.1.2.2 macabutilities.hxx
+--- connectivity/source/drivers/macab/macabutilities.hxx	13 Jul 2007 18:17:42 -0000	1.1.2.2
++++ connectivity/source/drivers/macab/macabutilities.hxx	18 Jul 2007 21:02:00 -0000
+@@ -106,9 +106,9 @@
+ 			com::sun::star::util::DateTime nRet;
+ 			double timeSince2001 = CFDateGetAbsoluteTime(_cfDate);
+ 			time_t unixtime = timeSince2001+kCFAbsoluteTimeIntervalSince1970;
+-			struct tm *ptm = gmtime(&unixtime);
+-			nRet.Year = ptm->tm_year;
+-			nRet.Month = ptm->tm_mon;
++			struct tm *ptm = localtime(&unixtime);
++			nRet.Year = ptm->tm_year+1900;
++			nRet.Month = ptm->tm_mon+1;
+ 			nRet.Day = ptm->tm_mday;
+ 			nRet.Hours = ptm->tm_hour;
+ 			nRet.Minutes = ptm->tm_min;
