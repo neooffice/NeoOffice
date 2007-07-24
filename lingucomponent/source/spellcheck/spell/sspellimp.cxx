@@ -384,8 +384,44 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 					::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
 					if ( it == maNativeLocaleMap.end() )
 					{
-						pLocaleArray[ nItemsAdded++ ] = aLocale;
 						maNativeLocaleMap[ aLocaleString ] = aString;
+
+						// Fix bug 2532 by checking for approximate and
+						// duplicate matches in the native locales
+						bool bAddLocale = true;
+						for ( int j = 0; j < nItemsAdded; j++ )
+						{
+							if ( aLocale == pLocaleArray[ j ] )
+							{
+								bAddLocale = false;
+								break;
+							}
+
+							if ( pLocaleArray[ j ].Variant.getLength() )
+							{
+								Locale aTmpLocale( pLocaleArray[ j ].Language, pLocaleArray[ j ].Country, OUString() );
+								if ( aLocale == aTmpLocale )
+								{
+									maNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
+									bAddLocale = false;
+									break;
+								}
+							}
+
+							if ( pLocaleArray[ j ].Country.getLength() )
+							{
+								Locale aTmpLocale( pLocaleArray[ j ].Language, OUString(), OUString() );
+								if ( aLocale == aTmpLocale )
+								{
+									maNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
+									bAddLocale = false;
+									break;
+								}
+							}
+						}
+
+						if ( bAddLocale )
+							pLocaleArray[ nItemsAdded++ ] = aLocale;
 					}
 				}
 			}
