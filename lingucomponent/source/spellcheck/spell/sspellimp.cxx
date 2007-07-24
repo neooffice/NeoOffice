@@ -854,7 +854,7 @@ OUString SAL_CALL
 {
 	MutexGuard	aGuard( GetLinguMutex() );
 #ifdef PRODUCT_NAME
-	return A2OU( PRODUCT_NAME " Mac OS X Native Spellchecker" );
+	return A2OU( PRODUCT_NAME " Mac OS X Spellchecker with Hunspell" );
 #else	// PRODUCT_NAME
 	return A2OU( "OpenOffice.org Hunspell SpellChecker" );
 #endif	// PRODUCT_NAME
