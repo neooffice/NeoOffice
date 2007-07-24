@@ -42,6 +42,8 @@ LIBIDL_CONFIG=$(EXTRA_PATH)/libIDL-config-2
 PKG_CONFIG=$(EXTRA_PATH)/pkg-config
 PRODUCT_NAME=My Untested Office Suite
 PRODUCT_DIR_NAME=My_Untested_Office_Suite
+X11_PRODUCT_NAME=My Untested X11 Office Suite
+X11_PRODUCT_DIR_NAME=My_Untested_X11_Office_Suite
 # Important: Note that there may be escape characters in the PRODUCT_NAME for
 # the UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=$(PRODUCT_NAME)
@@ -102,6 +104,10 @@ PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
+PRODUCT_DONATION_URL=http://www.neooffice.org/neojava/donate.php
+PRODUCT_WELCOME_URL=http://www.neooffice.org/neojava/welcome.php
+X11_PRODUCT_DONATION_URL=http://www.neooffice.org/retro/donate.php
+X11_PRODUCT_WELCOME_URL=http://www.neooffice.org/retro/welcome.php
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
