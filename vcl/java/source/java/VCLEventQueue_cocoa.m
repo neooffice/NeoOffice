@@ -97,7 +97,7 @@ static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
 	if ( bFontManagerLocked )
 	{
-		pRet = [super availableFontFamilies];
+		pRet = [NSMutableArray arrayWithArray:[super availableFontFamilies]];
 	}
 	else
 	{
