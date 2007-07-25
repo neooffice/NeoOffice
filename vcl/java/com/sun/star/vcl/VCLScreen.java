@@ -195,11 +195,14 @@ public final class VCLScreen {
 				Rectangle virtualBounds = null;
 				GraphicsDevice[] gd = ge.getScreenDevices();
 				for (int i = 0; i < gd.length; i++) {
-					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
-					if (virtualBounds != null)
-						virtualBounds = virtualBounds.union(r);
-					else
+					try {
+						Rectangle r = gd[i].getDefaultConfiguration().getBounds();
+						if (virtualBounds != null)
+							virtualBounds = virtualBounds.union(r);
+						else
 						virtualBounds = r;
+					}
+					catch (Throwable t) {}
 				}
 
 				return virtualBounds;
@@ -207,17 +210,20 @@ public final class VCLScreen {
 			else if (useMainScreenOnly) {
 				GraphicsDevice gd = ge.getDefaultScreenDevice();
 				if (gd != null) {
-					Rectangle r = gd.getDefaultConfiguration().getBounds();
-					if (!fullScreenMode) {
-						Insets insets = VCLScreen.getScreenInsets(gd);
-						if (insets != null)
-							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
-					}
+					try {
+						Rectangle r = gd.getDefaultConfiguration().getBounds();
+						if (!fullScreenMode) {
+							Insets insets = VCLScreen.getScreenInsets(gd);
+							if (insets != null)
+								r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+						}
 
-					if (r.isEmpty())
-						return VCLScreen.defaultScreenBounds;
-					else
-						return r;
+						if (r.isEmpty())
+							return VCLScreen.defaultScreenBounds;
+						else
+							return r;
+					}
+					catch (Throwable t) {}
 				}
 			}
 			else {
@@ -225,36 +231,42 @@ public final class VCLScreen {
 				// point is inside of
 				GraphicsDevice[] gd = ge.getScreenDevices();
 				for (int i = 0; i < gd.length; i++) {
-					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
-					if (!fullScreenMode) {
-						Insets insets = VCLScreen.getScreenInsets(gd[i]);
-						if (insets != null)
-							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
-					}
+					try {
+						Rectangle r = gd[i].getDefaultConfiguration().getBounds();
+						if (!fullScreenMode) {
+							Insets insets = VCLScreen.getScreenInsets(gd[i]);
+							if (insets != null)
+								r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+						}
 
-					// Test if the point is inside the screen
-					if (r.contains(x, y))
-						return r;
+						// Test if the point is inside the screen
+						if (r.contains(x, y))
+							return r;
+					}
+					catch (Throwable t) {}
 				}
 
 				// Iterate through the screens and find the closest screen
 				long closestArea = Long.MAX_VALUE;
 				Rectangle closestBounds = null;
 				for (int i = 0; i < gd.length; i++) {
-					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
-					if (!fullScreenMode) {
-						Insets insets = VCLScreen.getScreenInsets(gd[i]);
-						if (insets != null)
-							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
-					}
+					try {
+						Rectangle r = gd[i].getDefaultConfiguration().getBounds();
+						if (!fullScreenMode) {
+							Insets insets = VCLScreen.getScreenInsets(gd[i]);
+							if (insets != null)
+								r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+						}
 
-					// Test the closeness of the point to the center of the
-					// screen
-					long area = Math.abs((r.x + (r.width / 2) - x) * (r.y + (r.height / 2) - y));
-					if (closestArea > area) {
-						closestArea = area;
-						closestBounds = r;
+						// Test the closeness of the point to the center of the
+						// screen
+						long area = Math.abs((r.x + (r.width / 2) - x) * (r.y + (r.height / 2) - y));
+						if (closestArea > area) {
+							closestArea = area;
+							closestBounds = r;
+						}
 					}
+					catch (Throwable t) {}
 				}
 
 				if (closestBounds == null || closestBounds.isEmpty())
@@ -282,7 +294,7 @@ public final class VCLScreen {
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null && n >= 0) {
 			GraphicsDevice[] gd = ge.getScreenDevices();
-			if (gd != null && n < gd.length) {
+			try {
 				Rectangle r = gd[n].getDefaultConfiguration().getBounds();
 				if (!r.isEmpty()) {
 					if (b) {
@@ -294,6 +306,7 @@ public final class VCLScreen {
 					return r;
 				}
 			}
+			catch (Throwable t) {}
 		}
 
 		return null;
