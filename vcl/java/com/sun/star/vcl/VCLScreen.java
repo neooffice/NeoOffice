@@ -98,6 +98,28 @@ public final class VCLScreen {
 
 	}
 
+
+	/**
+	 * Clears the JVM's cached display list.
+	 */
+	public static void clearCachedDisplays() {
+
+		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+		if (ge != null) {
+			synchronized (ge) {
+				clearCachedDisplays0(ge);
+			}
+		}
+
+	}
+
+	/**
+	 * Clears the JVM's cached display list.
+	 *
+	 * @param ge the graphics environment
+	 */
+	public static native void clearCachedDisplays0(GraphicsEnvironment ge);
+
 	/**
 	 * Returns the <code>System.control</code>.
 	 *
@@ -202,7 +224,9 @@ public final class VCLScreen {
 						else
 						virtualBounds = r;
 					}
-					catch (Throwable t) {}
+					catch (Throwable t) {
+						clearCachedDisplays0(ge);
+					}
 				}
 
 				return virtualBounds;
@@ -223,7 +247,9 @@ public final class VCLScreen {
 						else
 							return r;
 					}
-					catch (Throwable t) {}
+					catch (Throwable t) {
+						clearCachedDisplays0(ge);
+					}
 				}
 			}
 			else {
@@ -243,7 +269,9 @@ public final class VCLScreen {
 						if (r.contains(x, y))
 							return r;
 					}
-					catch (Throwable t) {}
+					catch (Throwable t) {
+						clearCachedDisplays0(ge);
+					}
 				}
 
 				// Iterate through the screens and find the closest screen
@@ -266,7 +294,9 @@ public final class VCLScreen {
 							closestBounds = r;
 						}
 					}
-					catch (Throwable t) {}
+					catch (Throwable t) {
+						clearCachedDisplays0(ge);
+					}
 				}
 
 				if (closestBounds == null || closestBounds.isEmpty())
@@ -306,7 +336,9 @@ public final class VCLScreen {
 					return r;
 				}
 			}
-			catch (Throwable t) {}
+			catch (Throwable t) {
+				clearCachedDisplays0(ge);
+			}
 		}
 
 		return null;
