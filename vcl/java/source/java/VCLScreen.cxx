@@ -43,6 +43,28 @@ using namespace vcl;
 
 // ============================================================================
 
+static void JNICALL Java_com_sun_star_vcl_VCLScreen_clearCachedDisplays0( JNIEnv *pEnv, jobject object, jobject _par0 )
+{
+	if ( _par0 )
+	{
+		jclass tempClass = pEnv->FindClass( "sun/java2d/SunGraphicsEnvironment" );
+		if ( tempClass && pEnv->IsInstanceOf( _par0, tempClass ) )
+		{
+			static jfieldID fIDScreens = NULL;
+			if ( !fIDScreens )
+   	        {
+				char *cSignature = "[Ljava/awt/GraphicsDevice;";
+				fIDScreens = pEnv->GetFieldID( tempClass, "screens", cSignature );
+			}
+			OSL_ENSURE( fIDScreens, "Unknown method id!" );
+			if ( fIDScreens )
+				pEnv->SetObjectField( _par0, fIDScreens, NULL );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 static jobject JNICALL Java_com_sun_star_vcl_VCLScreen_getScreenInsets( JNIEnv *pEnv, jobject object, jobject _par0 )
 {
 	jobject out = NULL;
@@ -85,11 +107,14 @@ jclass com_sun_star_vcl_VCLScreen::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod aMethod;
-			aMethod.name = "getScreenInsets";
-			aMethod.signature = "(Ljava/awt/GraphicsDevice;)Ljava/awt/Insets;";
-			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLScreen_getScreenInsets;
-			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+			JNINativeMethod pMethods[2];
+			pMethods[0].name = "clearCachedDisplays0";
+			pMethods[0].signature = "(Ljava/awt/GraphicsEnvironment;)V";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLScreen_clearCachedDisplays0;
+			pMethods[1].name = "getScreenInsets";
+			pMethods[1].signature = "(Ljava/awt/GraphicsDevice;)Ljava/awt/Insets;";
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLScreen_getScreenInsets;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 2 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );

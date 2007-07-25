@@ -647,7 +647,20 @@ public final class VCLEventQueue implements Runnable {
 				}
 			}
 			catch (Throwable t) {
-				t.printStackTrace();
+				// Fix bug 2502 by setting the JVM's cached display list to
+				// null and redispatching the event
+				if (event instanceof sun.awt.PeerEvent) {
+					try {
+						VCLScreen.clearCachedDisplays();
+						super.dispatchEvent(event);
+					}
+					catch (Throwable t2) {
+						t2.printStackTrace();
+					}
+				}
+				else {
+					t.printStackTrace();
+				}
 			}
 
 		}
