@@ -1372,6 +1372,11 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 				aPolygonList.pop_front();
 			}
 
+			// Fix bug 2537 by ignoring unusual bounds
+			Rectangle aRect = aPolyPolygon.GetBoundRect();
+			if ( aRect.GetWidth() <= 0 || aRect.GetHeight() <= 0 )
+				continue;
+
 			aPolyPolygon.Move( aPos.X(), aPos.Y() );
 
 			if ( pCurrentLayoutData->maVerticalFontStyle )
