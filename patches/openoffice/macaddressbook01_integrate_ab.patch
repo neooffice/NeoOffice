@@ -506,3 +506,75 @@ diff -u -r1.28 d.lst
  ..\source\drivers\file\*.xml %_DEST%\xml%_EXT%\*.xml
  ..\source\drivers\flat\*.xml %_DEST%\xml%_EXT%\*.xml
  ..\source\drivers\dbase\*.xml %_DEST%\xml%_EXT%\*.xml
+Index: extensions/source/abpilot/localize.sdf
+===================================================================
+RCS file: /cvs/util/extensions/source/abpilot/localize.sdf,v
+retrieving revision 1.25.32.1
+diff -u -r1.25.32.1 localize.sdf
+--- extensions/source/abpilot/localize.sdf	2 Feb 2007 10:20:35 -0000	1.25.32.1
++++ extensions/source/abpilot/localize.sdf	26 Jul 2007 21:20:57 -0000
+@@ -3585,3 +3585,64 @@
+ extensions	source\abpilot\abspilot.src	0	tabpage	RID_PAGE_TABLESELECTION_AB			!defined( ABP_USE_ROADMAP )	0	vi	Chọn bảng				2002-02-02 02:02:02
+ extensions	source\abpilot\abspilot.src	0	tabpage	RID_PAGE_TABLESELECTION_AB			!defined( ABP_USE_ROADMAP )	0	zh-CN	选择表格				2002-02-02 02:02:02
+ extensions	source\abpilot\abspilot.src	0	tabpage	RID_PAGE_TABLESELECTION_AB			!defined( ABP_USE_ROADMAP )	0	zh-TW	選取表格				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	be-BY	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	bg	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	br	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	bs	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ca	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	cs	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	cy	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	da	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	dz	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	el	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	en-GB	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	en-ZA	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	eo	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	es	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	et	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	fa	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	fi	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	fr	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ga	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	gl	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	gu	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	gu-IN	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	he	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	hi-IN	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	hu	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	it	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ja	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ka	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	km	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ko	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ku	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	lt	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	mk	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	nb	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ne	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	nl	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	nn	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	nr	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ns	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	pa-IN	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	pl	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	pt	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	pt-BR	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ru	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	rw	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	sk	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	sl	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	st	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	sv	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ta	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ta-IN	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	tg	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	th	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	tr	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	ts	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	uk	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	vi	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	xh	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	zh-CN	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	zh-TW	Mac OS X address book				2002-02-02 02:02:02
++extensions	source\abpilot\abspilot.src	0	radiobutton	RID_PAGE_SELECTABTYPE	RB_MACAB			0	zu	Mac OS X address book				2002-02-02 02:02:02
