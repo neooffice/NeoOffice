@@ -93,7 +93,7 @@ CFMutableArrayRef NSSpellChecker_getLocales()
 	// using the native spellchecker
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( !pApp )
-		return;
+		return aRet;
 
 	NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
 	NSMutableSet *pLocales = [NSMutableSet setWithCapacity:64];
