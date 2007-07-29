@@ -2874,10 +2874,6 @@ void Desktop::OpenDefault()
     OUString aUserInstallURL;
     ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
 
-    OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
-    OUString aOpenProgName = aOpenProgDir;
-    aOpenProgName += OUString::createFromAscii( "open" );
-
     OUString aProductKey;
     aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
 #endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
@@ -2916,7 +2912,8 @@ void Desktop::OpenDefault()
         if ( !getdomainname( aBuf, sizeof( aBuf ) ) )
             aHost += OUString::createFromAscii( aBuf );
 
-        aURL += OUString::createFromAscii( "?product=" );
+        aURL += OUString::createFromAscii( "?viewinooo=" );
+        aURL += OUString::createFromAscii( "&product=" );
         aURL += aProductKey;
         aURL += OUString::createFromAscii( "&host=" );
         aURL += aHost;
@@ -2924,14 +2921,10 @@ void Desktop::OpenDefault()
         aURL += OUString( RTL_CONSTASCII_USTRINGPARAM( BUILD_MACHINE ) );
 
         // Open URL
-        OUString aArgListArray[ 1 ];
-        aArgListArray[ 0 ] = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
-
-        ::vos::OSecurity aSecurity;
-        ::vos::OEnvironment aEnv;
-        ::vos::OArgumentList aArgumentList( aArgListArray, 1 );
-        ::vos::OProcess aProcess( aOpenProgName, aOpenProgDir );
-        aProcess.execute( OProcess::TOption_Detached, aSecurity, aArgumentList, aEnv );
+        ProcessDocumentsRequest aRequest;
+        aRequest.pcProcessed = NULL;
+        aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+        OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
     }
 #endif	// PRODUCT_WELCOME_URL || BUILD_MACHINE
 
@@ -3010,7 +3003,8 @@ void Desktop::OpenDefault()
                             {
                                 OUString aProductPatchKey;
                                 aProductPatchKey = ::utl::Bootstrap::getProductPatchLevel( aProductPatchKey );
-                                aURL += OUString::createFromAscii( "?product=" );
+                                aURL += OUString::createFromAscii( "?viewinooo=" );
+                                aURL += OUString::createFromAscii( "&product=" );
                                 aURL += aProductKey;
                                 aURL += OUString::createFromAscii( "&patch=" );
                                 aURL += aProductPatchKey;
@@ -3023,16 +3017,12 @@ void Desktop::OpenDefault()
                             }
 
                             // Open URL
-                            OUString aArgListArray[ 1 ];
-                            aArgListArray[ 0 ] = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+                            ProcessDocumentsRequest aRequest;
+                            aRequest.pcProcessed = NULL;
+                            aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+                            OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
 
-                            ::vos::OSecurity aSecurity;
-                            ::vos::OEnvironment aEnv;
-                            ::vos::OArgumentList aArgumentList( aArgListArray, 1 );
-                            ::vos::OProcess aProcess( aOpenProgName, aOpenProgDir );
-                            ::vos::OProcess::TProcessError aProcessError = aProcess.execute( OProcess::TOption_Detached, aSecurity, aArgumentList, aEnv );
-                            if ( aProcessError == OProcess::E_None )
-                                bUpdateTimeStamp = true;
+                            bUpdateTimeStamp = true;
                         }
                     }
                     else
