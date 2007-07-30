@@ -42,12 +42,12 @@ LIBIDL_CONFIG=$(EXTRA_PATH)/libIDL-config-2
 PKG_CONFIG=$(EXTRA_PATH)/pkg-config
 PRODUCT_NAME=My Untested Office Suite
 PRODUCT_DIR_NAME=My_Untested_Office_Suite
-X11_PRODUCT_NAME=My Untested X11 Office Suite
-X11_PRODUCT_DIR_NAME=My_Untested_X11_Office_Suite
-# Important: Note that there may be escape characters in the PRODUCT_NAME for
-# the UTF-8 trademark symbol. Don't replace these with "\x##" literal strings!
 PRODUCT_TRADEMARKED_NAME=$(PRODUCT_NAME)
 PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
+X11_PRODUCT_NAME=My Untested X11 Office Suite
+X11_PRODUCT_DIR_NAME=My_Untested_X11_Office_Suite
+X11_PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_NAME)
+X11_PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_NAME)
 
 # Custom overrides go in the following file
 -include custom.mk
@@ -71,9 +71,12 @@ COMPILERDIR=$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 # Build location macros
 BUILD_HOME:=build
 INSTALL_HOME:=install
+X11_INSTALL_HOME:=install
 PATCH_INSTALL_HOME:=patch_install
+X11_PATCH_INSTALL_HOME:=patch_install
 SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
+X11_CD_INSTALL_HOME:=cd_install
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
@@ -104,10 +107,7 @@ PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
-PRODUCT_DONATION_URL=http://www.neooffice.org/neojava/donate.php
-PRODUCT_WELCOME_URL=http://www.neooffice.org/neojava/welcome.php
-X11_PRODUCT_DONATION_URL=http://www.neooffice.org/retro/donate.php
-X11_PRODUCT_WELCOME_URL=http://www.neooffice.org/retro/welcome.php
+X11_PRODUCT_SUPPORT_URL_TEXT:=$(X11_PRODUCT_NAME) Support
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
@@ -129,6 +129,7 @@ ODF-CONVERTER_TAG:=
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=-rHEAD
+X11_NEO_TAG:=-rHEAD
 
 all: build.all
 
@@ -332,6 +333,7 @@ build.neo_odk_patches: \
 	touch "$@"
 
 build.package: build.neo_patches build.source_zip
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/install/en-US/staging/OpenOffice.org $(PRODUCT_VERSION_FAMILY).app/Contents/MacOS" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents" ; gnutar xvf - ) )
