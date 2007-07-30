@@ -55,7 +55,7 @@
 #include "boost/scoped_array.hpp"
 #include "boost/shared_ptr.hpp"
 
-#if defined PRODUCT_DIR_NAME && defined X11_PRODUCT_DIR_NAME
+#ifdef X11_PRODUCT_DIR_NAME
 
 #ifndef DLLPOSTFIX
 #error DLLPOSTFIX must be defined in makefile.mk
@@ -86,7 +86,7 @@ static bool IsX11Product()
         return false;
 }
 
-#endif	// PRODUCT_DIR_NAME && X11_PRODUCT_DIR_NAME
+#endif	// X11_PRODUCT_DIR_NAME
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -166,14 +166,16 @@ const OUString OfficePipeId::operator () ()
     // the string size minimal
     ::rtl::OUStringBuffer buf;
 
-#if defined PRODUCT_DIR_NAME && defined X11_PRODUCT_DIR_NAME
+#ifdef PRODUCT_DIR_NAME
+#ifdef X11_PRODUCT_DIR_NAME
     if ( IsX11Product() )
         buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" X11_PRODUCT_DIR_NAME "IPC_") );
     else
+#endif	// X11_PRODUCT_DIR_NAME
         buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" PRODUCT_DIR_NAME "IPC_") );
-#else	// PRODUCT_DIR_NAME && X11_PRODUCT_DIR_NAME
+#else	// PRODUCT_DIR_NAME
     buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("SingleOfficeIPC_") );
-#endif	// PRODUCT_DIR_NAME && X11_PRODUCT_DIR_NAME
+#endif	// PRODUCT_DIR_NAME
     for ( sal_uInt32 i = 0; i < md5_key_len; ++i ) {
         buf.append( static_cast<sal_Int32>(md5_buf[ i ]), 0x10 );
     }
