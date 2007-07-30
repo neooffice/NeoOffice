@@ -75,6 +75,10 @@ ULINGULIB=libulingu.lib
 CDEFS += -DPRODUCT_NAME='"$(PRODUCT_NAME)"'
 .ENDIF
 
+.IF "$(X11_PRODUCT_NAME)" != ""
+CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 .IF "$(SYSTEM_HUNSPELL)" != "YES"

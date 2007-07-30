@@ -88,6 +88,38 @@ using namespace com::sun::star::uno;
 using namespace com::sun::star::linguistic2;
 using namespace linguistic;
 
+#ifdef X11_PRODUCT_NAME
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static ::osl::Module aVCLModule;
+
+static bool IsX11Product()
+{
+	if ( !aVCLModule.is() )
+	{
+		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+		aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+	}
+	if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+		return true;
+	else
+		return false;
+}
+
+#endif	// X11_PRODUCT_NAME
 
 #ifdef USE_JAVA
 
@@ -854,7 +886,12 @@ OUString SAL_CALL
 {
 	MutexGuard	aGuard( GetLinguMutex() );
 #ifdef PRODUCT_NAME
-	return A2OU( PRODUCT_NAME " Mac OS X Spellchecker with Hunspell" );
+#ifdef X11_PRODUCT_NAME
+	if ( IsX11Product() )
+		return A2OU( X11_PRODUCT_NAME " Mac OS X Spellchecker with Hunspell" );
+	else
+#endif	// X11_PRODUCT_NAME
+		return A2OU( PRODUCT_NAME " Mac OS X Spellchecker with Hunspell" );
 #else	// PRODUCT_NAME
 	return A2OU( "OpenOffice.org Hunspell SpellChecker" );
 #endif	// PRODUCT_NAME
