@@ -32,6 +32,9 @@
  *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
  *    GPL only under modification term 3 of the LGPL.
  *
+ *    Modified July 2007 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
+ *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
@@ -63,10 +66,41 @@
 #include "diagnostics.h"
 
 #ifdef USE_JAVA
+
 #include "osl/process.h"
 #include "rtl/strbuf.hxx"
 #include <sys/sysctl.h>
 #include <unistd.h>
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static ::osl::Module aVCLModule;
+
+static bool IsX11Product()
+{
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+    }
+    if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+        return true;
+    else
+        return false;
+}
+
 #endif	// USE_JAVA
 
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
@@ -699,23 +733,27 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+7].optionString = "-Dapple.awt.graphics.UseQuartz=true";
     options[i+7].extraInfo = NULL;
 
-    // Set the Java max memory to the greater of half of physical user
-    // memory or 256 MB.
-    int pMib[2];
-    size_t nMinMem = 256 * 1024 * 1024;
-    size_t nMaxMem = nMinMem * 4;
-    size_t nUserMem = 0;
-    size_t nLen = sizeof( nUserMem );
-    pMib[0] = CTL_HW;
-    pMib[1] = HW_USERMEM;
-    if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
-        nUserMem /= 2;
-    if ( nUserMem > nMaxMem )
-        nUserMem = nMaxMem;
-    else if ( nUserMem < nMinMem )
-        nUserMem = nMinMem;
+    size_t nUserMem = 64;
+    if ( !IsX11Product() )
+    {
+        // Set the Java max memory to the greater of half of physical user
+        // memory or 256 MB.
+        int pMib[2];
+        size_t nMinMem = 256 * 1024 * 1024;
+        size_t nMaxMem = nMinMem * 4;
+        size_t nLen = sizeof( nUserMem );
+        pMib[0] = CTL_HW;
+        pMib[1] = HW_USERMEM;
+        if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
+            nUserMem /= 2;
+        if ( nUserMem > nMaxMem )
+            nUserMem = nMaxMem;
+        else if ( nUserMem < nMinMem )
+            nUserMem = nMinMem;
+        nUserMem /= 1024 * 1024;
+    }
     rtl::OStringBuffer aBuf( "-Xmx" );
-    aBuf.append( (sal_Int32)( nUserMem / ( 1024 * 1024 ) ) );
+    aBuf.append( (sal_Int32)nUserMem );
     aBuf.append( "m" );
     options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
     options[i+8].extraInfo = NULL;
