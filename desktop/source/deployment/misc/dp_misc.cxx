@@ -55,6 +55,38 @@
 #include "boost/scoped_array.hpp"
 #include "boost/shared_ptr.hpp"
 
+#if defined PRODUCT_DIR_NAME && defined X11_PRODUCT_DIR_NAME
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static ::osl::Module aVCLModule;
+
+static bool IsX11Product()
+{
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+    }
+    if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+        return true;
+    else
+        return false;
+}
+
+#endif	// PRODUCT_DIR_NAME && X11_PRODUCT_DIR_NAME
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -134,11 +166,14 @@ const OUString OfficePipeId::operator () ()
     // the string size minimal
     ::rtl::OUStringBuffer buf;
 
-#ifdef PRODUCT_DIR_NAME
-    buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" PRODUCT_DIR_NAME "IPC_") );
-#else
+#if defined PRODUCT_DIR_NAME && defined X11_PRODUCT_DIR_NAME
+    if ( IsX11Product() )
+        buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" X11_PRODUCT_DIR_NAME "IPC_") );
+    else
+        buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" PRODUCT_DIR_NAME "IPC_") );
+#else	// PRODUCT_DIR_NAME && X11_PRODUCT_DIR_NAME
     buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("SingleOfficeIPC_") );
-#endif
+#endif	// PRODUCT_DIR_NAME && X11_PRODUCT_DIR_NAME
     for ( sal_uInt32 i = 0; i < md5_key_len; ++i ) {
         buf.append( static_cast<sal_Int32>(md5_buf[ i ]), 0x10 );
     }
