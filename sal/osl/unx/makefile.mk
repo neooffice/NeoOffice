@@ -50,11 +50,9 @@ PROJECTPCHSOURCE=cont_pch
 
 TARGETTYPE=CUI
 
-.IF "$(OS)"=="MACOSX"
 .IF "$(PRODUCT_FILETYPE)"!=""
 ENVCDEFS += -DPRODUCT_FILETYPE=\'$(PRODUCT_FILETYPE)\'
 .ENDIF      # "$(PRODUCT_FILETYPE)"!=""
-.ENDIF      # "$(OS)"=="MACOSX"
 
 # --- Settings -----------------------------------------------------
 
