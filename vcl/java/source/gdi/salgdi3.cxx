@@ -81,6 +81,10 @@
 
 #include "salgdi3_cocoa.h"
 
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
 
