@@ -69,6 +69,10 @@
 #include <vos/module.hxx>
 #endif
 
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
 
