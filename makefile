@@ -71,12 +71,12 @@ COMPILERDIR=$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 # Build location macros
 BUILD_HOME:=build
 INSTALL_HOME:=install
-X11_INSTALL_HOME:=install
+X11_INSTALL_HOME:=install_x11
 PATCH_INSTALL_HOME:=patch_install
-X11_PATCH_INSTALL_HOME:=patch_install
 SOURCE_HOME:=source
+X11_SOURCE_HOME:=source_x11
 CD_INSTALL_HOME:=cd_install
-X11_CD_INSTALL_HOME:=cd_install
+X11_CD_INSTALL_HOME:=cd_install_x11
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
@@ -104,6 +104,8 @@ PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
+X11_PRODUCT_PATCH_VERSION=Patch 0
+X11_PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
