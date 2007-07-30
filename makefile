@@ -95,8 +95,8 @@ OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
 PRODUCT_VERSION_FAMILY=2.2
-PRODUCT_VERSION=2.2.1 Early Access
-PRODUCT_DIR_VERSION=2.2.1_Early_Access
+PRODUCT_VERSION=2.2.1
+PRODUCT_DIR_VERSION=2.2.1
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
@@ -128,7 +128,7 @@ ODF-CONVERTER_PACKAGE=odf-converter
 ODF-CONVERTER_TAG:=
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=-rNeoOffice-2_2_1_Early_Access
+NEO_TAG:=-rHEAD
 
 all: build.all
 
@@ -332,7 +332,6 @@ build.neo_odk_patches: \
 	touch "$@"
 
 build.package: build.neo_patches build.source_zip
-	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/install/en-US/staging/OpenOffice.org $(PRODUCT_VERSION_FAMILY).app/Contents/MacOS" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents" ; gnutar xvf - ) )
