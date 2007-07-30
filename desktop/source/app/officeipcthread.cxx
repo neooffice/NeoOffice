@@ -82,6 +82,39 @@
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
 
+#ifdef X11_PRODUCT_DIR_NAME
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static ::osl::Module aVCLModule;
+
+static bool IsX11Product()
+{
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+    }
+    if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+        return true;
+    else
+        return false;
+}
+
+#endif	// X11_PRODUCT_DIR_NAME
+
 
 using namespace vos;
 using namespace rtl;
@@ -315,10 +348,15 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	OfficeIPCThread* pThread = new OfficeIPCThread;
 
 #ifdef PRODUCT_DIR_NAME
-	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" PRODUCT_DIR_NAME "IPC_" ) );
-#else
+#ifdef X11_PRODUCT_DIR_NAME
+    if ( IsX11Product() )
+		pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" X11_PRODUCT_DIR_NAME "IPC_" ) );
+	else
+#endif	// X11_PRODUCT_DIR_NAME
+		pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" PRODUCT_DIR_NAME "IPC_" ) );
+#else	// PRODUCT_DIR_NAME
 	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "SingleOfficeIPC_" ) );
-#endif
+#endif	// PRODUCT_DIR_NAME
 
 	// The name of the named pipe is created with the hashcode of the user installation directory (without /user). We have to retrieve
 	// this information from a unotools implementation.

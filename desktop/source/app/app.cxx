@@ -319,8 +319,39 @@
 #include <stdio.h>
 
 #if defined PRODUCT_WELCOME_URL || defined PRODUCT_DONATION_URL
+
 #include <sys/param.h>
 #include <rtl/uri.hxx>
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static ::osl::Module aVCLModule;
+
+static bool IsX11Product()
+{
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+    }
+    if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+        return true;
+    else
+        return false;
+}
+
 #endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
 
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
@@ -2903,7 +2934,13 @@ void Desktop::OpenDefault()
     if ( bShowWelcomePage )
     {
         // Open URL in application in read-only mode
-        OUString aURL( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_WELCOME_URL ) );
+        OUString aURL;
+#ifdef X11_PRODUCT_WELCOME_URL
+        if ( IsX11Product() )
+            aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( X11_PRODUCT_WELCOME_URL ) );
+        else
+#endif	// X11_PRODUCT_WELCOME_URL
+            aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_WELCOME_URL ) );
         OUString aHost;
         char aBuf[ MAXHOSTNAMELEN ];
         if ( !gethostname( aBuf, sizeof( aBuf ) ) )
@@ -2926,7 +2963,7 @@ void Desktop::OpenDefault()
         aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
         OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
     }
-#endif	// PRODUCT_WELCOME_URL || BUILD_MACHINE
+#endif	// PRODUCT_WELCOME_URL && BUILD_MACHINE
 
 #ifdef PRODUCT_DONATION_URL
     if ( !bShowWelcomePage )
@@ -2998,7 +3035,13 @@ void Desktop::OpenDefault()
                         if ( osl_getSystemTime( &aCurrentTime ) && aCurrentTime.Seconds >= aModifyTime.Seconds )
                         {
                             // Open URL in application in read-only mode
-                            OUString aURL( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_DONATION_URL ) );
+       	                    OUString aURL;
+#ifdef X11_PRODUCT_WELCOME_URL
+                            if ( IsX11Product() )
+                                aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( X11_PRODUCT_DONATION_URL ) );
+                            else
+#endif	// X11_PRODUCT_WELCOME_URL
+                                aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_DONATION_URL ) );
                             if ( bCheckForPatches )
                             {
                                 OUString aProductPatchKey;
