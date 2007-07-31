@@ -71,12 +71,12 @@ COMPILERDIR=$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 # Build location macros
 BUILD_HOME:=build
 INSTALL_HOME:=install
-X11_INSTALL_HOME:=install_x11
+X11_INSTALL_HOME:=install_X11
 PATCH_INSTALL_HOME:=patch_install
 SOURCE_HOME:=source
-X11_SOURCE_HOME:=source_x11
+X11_SOURCE_HOME:=source_X11
 CD_INSTALL_HOME:=cd_install
-X11_CD_INSTALL_HOME:=cd_install_x11
+X11_CD_INSTALL_HOME:=cd_install_X11
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
@@ -338,6 +338,15 @@ build.neo_odk_patches: \
 
 build.package: build.neo_patches build.source_zip
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT_X11=" "build.package_shared"
+	touch "$@"
+
+build.package_X11: build.neo_patches build.source_zip_X11
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$X11_PRODUCT_NAME" != "$(X11_PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "INSTALL_HOME=$(X11_INSTALL_HOME)" "NEO_TAG=$(X11_NEO_TAG)" "PRODUCT_BASE_URL=$(X11_PRODUCT_BASE_URL)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_DONATION_URL=$(X11_PRODUCT_DONATION_URL)" "PRODUCT_NAME=$(X11_PRODUCT_NAME)" "PRODUCT_PATCH_VERSION=$(X11_PRODUCT_PATCH_VERSION)" "PRODUCT_SUPPORT_URL_TEXT=$(X11_PRODUCT_SUPPORT_URL_TEXT)" "PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_TRADEMARKED_NAME)" "PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_TRADEMARKED_NAME_RTF)" "PRODUCT_WELCOME_URL=$(X11_PRODUCT_WELCOME_URL)" "SOURCE_HOME=$(X11_SOURCE_HOME)" "build.package_shared"
+	touch "$@"
+
+build.package_shared:
 	sh -e -c 'if [ -d "$(INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(INSTALL_HOME)" ; fi'
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/install/en-US/staging/OpenOffice.org $(PRODUCT_VERSION_FAMILY).app/Contents/MacOS" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents" ; gnutar xvf - ) )
@@ -456,7 +465,6 @@ endif
 	chmod -f u+w "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	mv "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
 	sync ; hdiutil create -srcfolder "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)" -format UDZO -ov -o "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
-	touch "$@"
 
 build.odk_package: build.neo_odk_patches
 	touch "$@"
@@ -559,6 +567,14 @@ build.package_%: $(INSTALL_HOME)/package_%
 	sync ; hdiutil create -srcfolder "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME)" -format UDZO -ov -o "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME).dmg"
 
 build.source_zip:
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=" "build.source_zip_shared"
+	touch "$@"
+
+build.source_zip_X11:
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "NEO_TAG=$(X11_NEO_TAG)" "SOURCE_HOME=$(X11_SOURCE_HOME)" "SOURCE_HOME=$(X11_SOURCE_HOME)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "build.source_zip_shared"
+	touch "$@"
+
+build.source_zip_shared:
 	rm -Rf "$(SOURCE_HOME)"
 	mkdir -p "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	cd "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" ; cvs -d "$(NEO_CVSROOT)" co $(NEO_TAG) "$(NEO_PACKAGE)"
@@ -567,7 +583,6 @@ build.source_zip:
 	cp "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/neojava/etc/gpl.html" "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/LICENSE.html"
 	chmod -Rf u+w,og-w,a+r "$(SOURCE_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	cd "$(SOURCE_HOME)" ; gnutar zcf "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION).src.tar.gz" "$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
-	touch "$@"
 
 build.cd_package: build.package
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
@@ -583,5 +598,5 @@ build.cd_package: build.package
 	mv "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg.cdr" "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg"
 	touch "$@"
 
-build.all: build.package
+build.all: build.package build.package_X11
 	touch "$@"
