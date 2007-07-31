@@ -2,6 +2,10 @@ build
 build.*
 custom.mk
 source
+source_X11
 install
+install_X11
 cd_install
+cd_install_X11
 patch_install
+patch_install_X11
