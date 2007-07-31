@@ -34,7 +34,7 @@
  ************************************************************************/
 
 #ifndef _SFXX11PRODUCTCHECK_HXX
-#include <X11productcheck.hxx>
+#include "X11productcheck.hxx"
 #endif
 #ifndef _OSL_MODULE_HXX_
 #include <osl/module.hxx>
@@ -56,6 +56,8 @@
 
 static ::osl::Module aVCLModule;
 
+namespace sfx2 {
+
 bool IsX11Product()
 {
     if ( !aVCLModule.is() )
@@ -70,4 +72,6 @@ bool IsX11Product()
         return true;
     else
         return false;
+}
+
 }

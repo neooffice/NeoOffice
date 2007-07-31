@@ -94,7 +94,7 @@
 #ifdef USE_JAVA
 
 #ifndef _SFXX11PRODUCTCHECK_HXX
-#include <X11productcheck.hxx>
+#include "X11productcheck.hxx"
 #endif
 
 #include <svtools/printdlg.hxx>
@@ -1097,7 +1097,7 @@ BOOL SfxObjectShell::Print
 				return TRUE;
 
 #ifdef USE_JAVA
-			if ( !IsX11Product() )
+			if ( !::sfx2::IsX11Product() )
 			{
 				// Fix bug 1279 by forcing the print dialog to be shown
 				PrintDialog *pPrintDlg = new PrintDialog( NULL );

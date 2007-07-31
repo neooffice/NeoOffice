@@ -36,6 +36,10 @@
 #ifndef _SFXX11PRODUCTCHECK_HXX
 #define _SFXX11PRODUCTCHECK_HXX
 
+namespace sfx2 {
+
 bool IsX11Product();
+
+}
 
 #endif

@@ -127,7 +127,7 @@
 #include <set>
 
 #ifndef _SFXX11PRODUCTCHECK_HXX
-#include <X11productcheck.hxx>
+#include "X11productcheck.hxx"
 #endif
 
 #include <svtools/dynamicmenuoptions.hxx> 
@@ -800,7 +800,7 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 #ifdef WNT
 				initSystray();
 #elif defined USE_JAVA
-				if ( !IsX11Product() )
+				if ( !::sfx2::IsX11Product() )
 				{
 				    // collect the URLs of the entries in the File/New menu
 					::std::set< ::rtl::OUString > aFileNewAppsAvailable;

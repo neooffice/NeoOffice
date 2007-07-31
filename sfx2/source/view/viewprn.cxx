@@ -96,7 +96,7 @@
 #ifdef USE_JAVA
 
 #ifndef _SFXX11PRODUCTCHECK_HXX
-#include <X11productcheck.hxx>
+#include "X11productcheck.hxx"
 #endif
 
 #endif  // USE_JAVA
@@ -182,7 +182,7 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 
 	// Dialog ausf"uhren
 #ifdef USE_JAVA
-	bool bX11 = IsX11Product();
+	bool bX11 = ::sfx2::IsX11Product();
 	SfxPrintOptionsDialog* pDlg;
 	if ( !bX11 )
 		pDlg = new SfxPrintOptionsDialog( NULL, _pViewSh, _pOptions );
@@ -496,7 +496,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			SfxPrintGuard_Impl aGuard( pDoc );
 
 #ifdef USE_JAVA
-			bool bX11 = IsX11Product();
+			bool bX11 = ::sfx2::IsX11Product();
 #endif	// USE_JAVA
 
 	        // if no arguments are given, retrieve them from a dialog
@@ -773,7 +773,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
 #ifdef USE_JAVA
 				// Redirect slot to make sure that the print dialog is shown
-				if ( !IsX11Product() && !pPrintDlg )
+				if ( !::sfx2::IsX11Product() && !pPrintDlg )
 				{
 					BOOL bPrintOptions = pImp->bHasPrintOptions;
 					pImp->bHasPrintOptions = FALSE;
@@ -826,7 +826,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			GetObjectShell()->Broadcast( SfxPrintingHint( -1, pPrintDlg, pPrinter ) );
 #ifdef USE_JAVA
 			ErrCode nError;
-			if ( IsX11Product() || pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
+			if ( ::sfx2::IsX11Product() || pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
 				nError = DoPrint( pPrinter, pPrintDlg, bSilent, bIsAPI );
 			else
 				nError = DoPrint( pPrinter, NULL, FALSE, bIsAPI );

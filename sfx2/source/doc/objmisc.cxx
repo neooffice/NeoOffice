@@ -186,7 +186,7 @@ using namespace ::com::sun::star::script;
 #ifdef USE_JAVA
 
 #ifndef _SFXX11PRODUCTCHECK_HXX
-#include <X11productcheck.hxx>
+#include "X11productcheck.hxx"
 #endif
 
 // [ed] 4/26/07 Includes for invoking NSWindow setDocumentEdited
@@ -436,7 +436,7 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 	}
 
 #ifdef USE_JAVA
-	if ( !IsX11Product() )
+	if ( !::sfx2::IsX11Product() )
 	{
 		// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
 		SfxViewFrame* pFrame = SfxViewFrame::GetFirst( this );
