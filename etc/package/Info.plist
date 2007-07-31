@@ -702,11 +702,11 @@
 	<key>CFBundleExecutable</key>
 	<string>soffice.bin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>$(PRODUCT_TRADEMARKED_NAME) $(PRODUCT_VERSION)</string>
+	<string>$(PRODUCT_TRADEMARKED_NAME) $(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)</string>
 	<key>CFBundleIconFile</key>
 	<string>ship.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.neooffice.neooffice</string>
+	<string>org.neooffice.$(PRODUCT_DIR_NAME)</string>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
 	<key>CFBundlePackageType</key>

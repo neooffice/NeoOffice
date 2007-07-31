@@ -38,6 +38,7 @@ PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
 commands="awk basename chmod chown dirname echo file find grep id mv open pax ps rm sed sort touch uname"
+installationguide="$(PRODUCT_NAME) Installation Guide.rtf"
 
 # Check that the required BSD command are installed
 for i in $commands ; do
@@ -98,6 +99,25 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 `ps -a -x -w -w -o command | grep '/Contents/MacOS/soffice\.bin' | sed 's#/Contents/MacOS/soffice\.bin.*$##'`
 !
 
+fi
+
+# If this is an X11 installation, check that X11 is intalled
+if [ -d "$scriptdir" -a -f "$scriptdir/X11filelist.txt" -a -s "$scriptdir/X11filelist.txt" ] ; then
+	while read i ; do
+		# Return 96 + 21 if any files are not found
+		if [ ! -f "$i" ] ; then
+			# Open installation guide before exiting
+			if [ -f "$scriptdir/$installationguide" -a -s "$scriptdir/$installationguide" ] ; then
+				sudoargs=
+				if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
+					sudoargs="-u $USER"
+					sudo $sudoargs open -a TextEdit "$scriptdir/$installationguide"
+					sleep 5;
+				fi
+			fi
+			exit 117
+		fi
+	done < "$scriptdir/X11filelist.txt"
 fi
 
 exit 0
