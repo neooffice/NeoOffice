@@ -183,11 +183,17 @@ using namespace ::com::sun::star::script;
 #include "sfxdlg.hxx"
 #include "appbaslib.hxx"
 
-#ifdef MACOSX
+#ifdef USE_JAVA
+
+#ifndef _SFXX11PRODUCTCHECK_HXX
+#include <X11productcheck.hxx>
+#endif
+
 // [ed] 4/26/07 Includes for invoking NSWindow setDocumentEdited
 #include <vcl/sysdata.hxx>
 #include "objmisc_cocoa.h"
-#endif
+
+#endif	// USE_JAVA
 
 using namespace ::com::sun::star;
 
@@ -429,19 +435,22 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 		ModifyChanged();
 	}
 
-#ifdef MACOSX
-	// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
-	SfxViewFrame* pFrame = SfxViewFrame::GetFirst( this );
-	while( pFrame )
+#ifdef USE_JAVA
+	if ( !IsX11Product() )
 	{
-		unsigned long macWin=(unsigned long)pFrame->GetWindow().GetSystemData()->aWindow;
-		if(macWin)
+		// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
+		SfxViewFrame* pFrame = SfxViewFrame::GetFirst( this );
+		while( pFrame )
 		{
-			DoCocoaSetWindowModifiedBit(macWin, IsModified());
+			unsigned long macWin=(unsigned long)pFrame->GetWindow().GetSystemData()->aWindow;
+			if(macWin)
+			{
+				DoCocoaSetWindowModifiedBit(macWin, IsModified());
+			}
+			pFrame = SfxViewFrame::GetNext( *pFrame, this );
 		}
-		pFrame = SfxViewFrame::GetNext( *pFrame, this );
 	}
-#endif
+#endif	// USE_JAVA
 
 //REMOVE		pImp->m_aModifiedTime = Time();
 }

@@ -54,6 +54,10 @@ SOLARLIB:=-L$(PRJ)$/..$/shell$/$(INPATH)$/slb $(SOLARLIB)
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
+.IF "$(GUIBASE)"=="java"
+CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
+.ENDIF		# "$(GUIBASE)"=="java"
+
 # --- Allgemein ----------------------------------------------------
 
 LIB1TARGET= $(SLB)$/$(TARGET).lib
@@ -117,10 +121,9 @@ SHL1STDLIBS+=\
 
 .ENDIF # WNT
 
-.IF "$(OS)"=="MACOSX"
 .IF "$(GUIBASE)"=="java"
+SHL1OBJS = $(SLO)$/X11productcheck.obj
 SHL1STDLIBS += -framework AppKit -framework Carbon
-.ENDIF
 .ENDIF
 
 .IF "$(GUI)"!="MAC"

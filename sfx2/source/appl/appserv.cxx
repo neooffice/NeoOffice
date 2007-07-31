@@ -239,7 +239,7 @@ using namespace ::com::sun::star::lang;
 
 //-------------------------------------------------------------------------
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 // [ed] 1/25/05 handler for About events.  Bug #396
 // Note: this must not be static as the symbol will be loaded by the vcl module
 extern "C" void SAL_DLLPUBLIC_EXPORT NativeAboutMenuHandler()
@@ -247,9 +247,9 @@ extern "C" void SAL_DLLPUBLIC_EXPORT NativeAboutMenuHandler()
 	SfxRequest aReq( SID_ABOUT, SFX_CALLMODE_SLOT, SFX_APP()->GetPool() );
 	SFX_APP()->MiscExec_Impl( aReq );
 }
-#endif
+#endif	// USE_JAVA
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 // [ed] 1/26/05 handler for preferences events.
 // Note: this must not be static as the symbol will be loaded by the vcl module
 extern "C" void SAL_DLLPUBLIC_EXPORT NativePreferencesMenuHandler()
@@ -257,7 +257,7 @@ extern "C" void SAL_DLLPUBLIC_EXPORT NativePreferencesMenuHandler()
 	SfxRequest aReq( SID_OPTIONS_TREEDIALOG, SFX_CALLMODE_SLOT, SFX_APP()->GetPool() );
 	SFX_APP()->OfaExec_Impl( aReq );
 }
-#endif
+#endif	// USE_JAVA
 
 long QuitAgain_Impl( void* pObj, void* pArg )
 {

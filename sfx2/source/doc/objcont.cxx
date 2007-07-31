@@ -92,7 +92,13 @@
 #include <vcl/virdev.hxx>
 
 #ifdef USE_JAVA
+
+#ifndef _SFXX11PRODUCTCHECK_HXX
+#include <X11productcheck.hxx>
+#endif
+
 #include <svtools/printdlg.hxx>
+
 #endif	// USE_JAVA
 
 #include "app.hxx"
@@ -1091,18 +1097,21 @@ BOOL SfxObjectShell::Print
 				return TRUE;
 
 #ifdef USE_JAVA
-			// Fix bug 1279 by forcing the print dialog to be shown
-			PrintDialog *pPrintDlg = new PrintDialog( NULL );
-			if ( !pPrintDlg )
-				return FALSE;
-			pPrintDlg->SetFirstPage( 1 );
-			pPrintDlg->SetLastPage( 9999 );
-			pPrintDlg->EnableCollate();
-			pPrintDlg->SetPrinter( &rPrt );
-			short nRet = pPrintDlg->Execute();
-			delete pPrintDlg;
-			if ( nRet != RET_OK )
-				return FALSE;
+			if ( !IsX11Product() )
+			{
+				// Fix bug 1279 by forcing the print dialog to be shown
+				PrintDialog *pPrintDlg = new PrintDialog( NULL );
+				if ( !pPrintDlg )
+					return FALSE;
+				pPrintDlg->SetFirstPage( 1 );
+				pPrintDlg->SetLastPage( 9999 );
+				pPrintDlg->EnableCollate();
+				pPrintDlg->SetPrinter( &rPrt );
+				short nRet = pPrintDlg->Execute();
+				delete pPrintDlg;
+				if ( nRet != RET_OK )
+					return FALSE;
+			}
 #endif	// USE_JAVA
 
 			if ( !rPrt.StartJob(String(SfxResId(STR_STYLES))) )
