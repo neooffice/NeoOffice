@@ -402,8 +402,8 @@ SHL5STDLIBS+=$(SHL3STDLIBS)
 SHL6TARGET= vcljava1
 SHL6IMPLIB= i$(SHL6TARGET)
 SHL6OBJS=\
-    $(SLO)/AWTFont.obj \
-    $(SLO)/AWTFont1_cocoa.obj
+    $(SLO)$/AWTFont.obj \
+    $(SLO)$/AWTFont1_cocoa.obj
 SHL6STDLIBS= \
     $(SALLIB) \
     -framework AppKit
@@ -411,8 +411,8 @@ SHL6STDLIBS= \
 SHL7TARGET= vcljava2
 SHL7IMPLIB= i$(SHL6TARGET)
 SHL7OBJS=\
-    $(SLO)/AWTFont.obj \
-    $(SLO)/AWTFont2_cocoa.obj
+    $(SLO)$/AWTFont.obj \
+    $(SLO)$/AWTFont2_cocoa.obj
 SHL7STDLIBS= \
     $(SALLIB) \
     -framework AppKit
