@@ -1,9 +1,9 @@
 .PHONY: build.neo_configure_phony
 
-PRODUCT_DONATION_URL=http://www.neooffice.org/neojava/donate.php
-PRODUCT_WELCOME_URL=http://www.neooffice.org/neojava/welcome.php
-X11_PRODUCT_DONATION_URL=http://www.neooffice.org/retro/donate.php
-X11_PRODUCT_WELCOME_URL=http://www.neooffice.org/retro/welcome.php
+PRODUCT_DONATION_URL=$(PRODUCT_BASE_URL)/donate.php
+PRODUCT_WELCOME_URL=$(PRODUCT_BASE_URL)/welcome.php
+X11_PRODUCT_DONATION_URL=$(X11_PRODUCT_BASE_URL)/donate.php
+X11_PRODUCT_WELCOME_URL=$(X11_PRODUCT_BASE_URL)/welcome.php
 PRODUCT_FILETYPE=NO%F
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 
