@@ -128,82 +128,82 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 		putenv( "TMPDIR=" TMPDIR );
 
 	// Get absolute path of command's directory
-	ByteString aCmdPath( pCmdPath );
-	if ( aCmdPath.Len() )
+	OString aCmdPath( pCmdPath );
+	if ( aCmdPath.getLength() )
 	{
 		DirEntry aCmdDirEntry( aCmdPath );
 		aCmdDirEntry.ToAbs();
-		aCmdPath = ByteString( aCmdDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
+		aCmdPath = OUStringToOString( OUString( aCmdDirEntry.GetPath().GetFull().GetBuffer() ), RTL_TEXTENCODING_UTF8 );
 	}
 
 	// Assign command's directory to PATH environment variable
-	ByteString aPath( getenv( "PATH" ) );
-	ByteString aStandardPath( aCmdPath );
-	aStandardPath += ByteString( ":/bin:/sbin:/usr/bin:/usr/sbin:" );
-	if ( aPath.CompareTo( aStandardPath, aStandardPath.Len() ) != COMPARE_EQUAL )
+	OString aPath( getenv( "PATH" ) );
+	OString aStandardPath( aCmdPath );
+	aStandardPath += OString( ":/bin:/sbin:/usr/bin:/usr/sbin:" );
+	if ( aPath.compareTo( aStandardPath, aStandardPath.getLength() ) )
 	{
-		ByteString aTmpPath( "PATH=" );
+		OString aTmpPath( "PATH=" );
 		aTmpPath += aStandardPath;
-		if ( aPath.Len() )
+		if ( aPath.getLength() )
 		{
-			aTmpPath += ByteString( ":" );
+			aTmpPath += OString( ":" );
 			aTmpPath += aPath;
 		}
-		putenv( (char *)aTmpPath.GetBuffer() );
+		putenv( (char *)aTmpPath.getStr() );
 	}
 
 	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
 	// unsetting DYLD_FRAMEWORK_PATH
 	bool bRestart = false;
-	ByteString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
+	OString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
 	// Always unset DYLD_FRAMEWORK_PATH
 	unsetenv( "DYLD_FRAMEWORK_PATH" );
-	if ( aFrameworkPath.Len() )
+	if ( aFrameworkPath.getLength() )
 	{
-		ByteString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" ) );
-		if ( aFallbackFrameworkPath.Len() )
+		OString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" ) );
+		if ( aFallbackFrameworkPath.getLength() )
 		{
-			aFrameworkPath += ByteString( ":" );
+			aFrameworkPath += OString( ":" );
 			aFrameworkPath += aFallbackFrameworkPath;
 		}
-		if ( aFrameworkPath.Len() )
+		if ( aFrameworkPath.getLength() )
 		{
-			ByteString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
+			OString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
 			aTmpPath += aFrameworkPath;
-			putenv( (char *)aTmpPath.GetBuffer() );
+			putenv( (char *)aTmpPath.getStr() );
 		}
 		bRestart = true;
 	}
 
-	ByteString aStandardLibPath( aCmdPath );
-	aStandardLibPath += ByteString( ":/usr/lib:/usr/local/lib:" );
-	ByteString aHomePath( getenv( "HOME" ) );
-	if ( aHomePath.Len() )
+	OString aStandardLibPath( aCmdPath );
+	aStandardLibPath += OString( ":/usr/lib:/usr/local/lib:" );
+	OString aHomePath( getenv( "HOME" ) );
+	if ( aHomePath.getLength() )
 	{
 		aStandardLibPath += aHomePath;
-		aStandardLibPath += ByteString( "/lib:" );
+		aStandardLibPath += OString( "/lib:" );
 	}
-	ByteString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
-	ByteString aDyLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-	ByteString aDyFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+	OString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
+	OString aDyLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+	OString aDyFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
 	// Always unset LD_LIBRARY_PATH and DYLD_LIBRARY_PATH
 	unsetenv( "LD_LIBRARY_PATH" );
 	unsetenv( "DYLD_LIBRARY_PATH" );
-	if ( aDyFallbackLibPath.CompareTo( aStandardLibPath, aStandardLibPath.Len() ) != COMPARE_EQUAL )
+	if ( aDyFallbackLibPath.compareTo( aStandardLibPath, aStandardLibPath.getLength() ) )
 	{
-		ByteString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
+		OString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
 		aTmpPath += aStandardLibPath;
-		if ( aLibPath.Len() )
+		if ( aLibPath.getLength() )
 		{
-			aTmpPath += ByteString( ":" );
+			aTmpPath += OString( ":" );
 			aTmpPath += aLibPath;
 		}
-		if ( aDyLibPath.Len() )
+		if ( aDyLibPath.getLength() )
 		{
-			aTmpPath += ByteString( ":" );
+			aTmpPath += OString( ":" );
 			aTmpPath += aDyLibPath;
 		}
-		putenv( (char *)aTmpPath.GetBuffer() );
+		putenv( (char *)aTmpPath.getStr() );
 		bRestart = true;
 	}
 
@@ -214,17 +214,17 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	// XML export to work but it cannot be used before we invoke execv().
 	if ( bRestart )
 	{
-		ByteString aPageinPath( aCmdPath );
-		aPageinPath += ByteString( "/pagein" );
-		char *pPageinPath = (char *)aPageinPath.GetBuffer();
+		OString aPageinPath( aCmdPath );
+		aPageinPath += OString( "/pagein" );
+		char *pPageinPath = (char *)aPageinPath.getStr();
 		if ( !access( pPageinPath, R_OK | X_OK ) )
 		{
 			int nCurrentArg = 0;
 			char *pPageinArgs[ argc + 3 ];
 			pPageinArgs[ nCurrentArg++ ] = pPageinPath;
-			ByteString aPageinSearchArg( "-L" );
+			OString aPageinSearchArg( "-L" );
 			aPageinSearchArg += aCmdPath;
-			pPageinArgs[ nCurrentArg++ ] = (char *)aPageinSearchArg.GetBuffer();
+			pPageinArgs[ nCurrentArg++ ] = (char *)aPageinSearchArg.getStr();
 			for ( int i = 1; i < argc; i++ )
 			{
 				if ( !strcmp( "-calc", argv[ i ] ) )
@@ -266,24 +266,24 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
 
 	// Set Mozilla environment variables
-	ByteString aTmpPath( "OPENOFFICE_MOZILLA_FIVE_HOME=" );
+	OString aTmpPath( "OPENOFFICE_MOZILLA_FIVE_HOME=" );
 	aTmpPath += aCmdPath;
-	putenv( (char *)aTmpPath.GetBuffer() );
+	putenv( (char *)aTmpPath.getStr() );
 
 	// Set Mono environment variables
-	aTmpPath = ByteString( "MONO_ROOT=" );
+	aTmpPath = OString( "MONO_ROOT=" );
 	aTmpPath += aCmdPath;
-	putenv( (char *)aTmpPath.GetBuffer() );
-	aTmpPath = ByteString( "MONO_CFG_DIR=" );
+	putenv( (char *)aTmpPath.getStr() );
+	aTmpPath = OString( "MONO_CFG_DIR=" );
 	aTmpPath += aCmdPath;
-	putenv( (char *)aTmpPath.GetBuffer() );
-	aTmpPath = ByteString( "MONO_CONFIG=" );
+	putenv( (char *)aTmpPath.getStr() );
+	aTmpPath = OString( "MONO_CONFIG=" );
 	aTmpPath += aCmdPath;
-	aTmpPath += ByteString( "/mono/2.0/machine.config" );
-	putenv( (char *)aTmpPath.GetBuffer() );
+	aTmpPath += OString( "/mono/2.0/machine.config" );
+	putenv( (char *)aTmpPath.getStr() );
 	// Unset MONO_DISABLE_SHM variable as OdfConverter will abort with it set
-	aTmpPath = ByteString( "MONO_DISABLE_SHM=" );
-	putenv( (char *)aTmpPath.GetBuffer() );
+	aTmpPath = OString( "MONO_DISABLE_SHM=" );
+	putenv( (char *)aTmpPath.getStr() );
 #endif	// USE_JAVA
 
 	RTL_LOGFILE_PRODUCT_TRACE( "PERFORMANCE - enter Main()" );
@@ -298,35 +298,38 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	if ( ::desktop::IsX11Product() )
 	{
 		// Make sure the some display is set
-		ByteString aDisplay( getenv( "DISPLAY" ) );
-		if ( !aDisplay.Len() )
+		OString aDisplay( getenv( "DISPLAY" ) );
+		if ( !aDisplay.getLength() )
 		{
 			putenv( "DISPLAY=:0" );
-			aDisplay = ByteString( getenv( "DISPLAY" ) );
+			aDisplay = OString( getenv( "DISPLAY" ) );
 		}
 
 		// If the display is the localhost, make sure X11.app is running
-		if ( aDisplay.Len() )
+		if ( aDisplay.getLength() )
 		{
-			aDisplay.SearchAndReplace( ':', '\0' );
-			aDisplay = ByteString( aDisplay.GetBuffer() );
-			if ( !aDisplay.Len() || aDisplay.CompareIgnoreCaseToAscii( "127.0.0.1" ) == COMPARE_EQUAL || aDisplay.CompareIgnoreCaseToAscii( "localhost" ) == COMPARE_EQUAL )
+			sal_Int32 nIndex = aDisplay.indexOf( ':' );
+			if ( nIndex >= 0 )
 			{
-				OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
-				OUString aOpenProgName = aOpenProgDir;
-				aOpenProgName += OUString::createFromAscii( "open" );
+				OString aHost = aDisplay.copy( 0, nIndex );
+				if ( !aHost.getLength() || aHost.equalsIgnoreAsciiCase( OString( "127.0.0.1" ) ) || aHost.equalsIgnoreAsciiCase( OString( "localhost" ) ) )
+				{
+					OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
+					OUString aOpenProgName = aOpenProgDir;
+					aOpenProgName += OUString::createFromAscii( "open" );
 
-				OUString aArgListArray[ 2 ];
-				OSecurity aSecurity;
-				OEnvironment aEnv;
-				OArgumentList aArgList;
+					OUString aArgListArray[ 2 ];
+					OSecurity aSecurity;
+					OEnvironment aEnv;
+					OArgumentList aArgList;
 
-				aArgListArray[ 0 ] = OUString::createFromAscii( "-a" );
-				aArgListArray[ 1 ] = OUString::createFromAscii( "X11" );
-				OArgumentList aArgumentList( aArgListArray, 2 );
+					aArgListArray[ 0 ] = OUString::createFromAscii( "-a" );
+					aArgListArray[ 1 ] = OUString::createFromAscii( "X11" );
+					OArgumentList aArgumentList( aArgListArray, 2 );
 
-				OProcess aProcess( aOpenProgName, aOpenProgDir );
-				aProcess.execute( OProcess::TOption_Wait, aSecurity, aArgumentList, aEnv );
+					OProcess aProcess( aOpenProgName, aOpenProgDir );
+					aProcess.execute( OProcess::TOption_Wait, aSecurity, aArgumentList, aEnv );
+				}
 			}
 		}
 
