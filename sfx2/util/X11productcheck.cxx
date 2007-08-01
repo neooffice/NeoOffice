@@ -11,7 +11,7 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2007
+ *  Patrick Luby, July 2007
  *
  *  GNU General Public License Version 2.1
  *  =============================================
