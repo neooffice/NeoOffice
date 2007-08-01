@@ -34,7 +34,21 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import "crt_externs.h"
 #import "main_cocoa.h"
+
+@interface DesktopApplicationDelegate : NSObject
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pSender;
+@end
+
+@implementation DesktopApplicationDelegate
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pSender
+{
+	return NSTerminateCancel;
+}
+
+@end
 
 void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 {
@@ -42,7 +56,10 @@ void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
+	{
+		[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
 		[pApp run];
+	}
 
 	[pPool release];
 
