@@ -60,6 +60,40 @@
 #include <com/sun/star/util/XRefreshable.hpp>
 #include <com/sun/star/util/XChangesBatch.hpp>
  
+#ifdef X11_PRODUCT_DIR_NAME
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static bool IsX11Product()
+{
+    static bool bX11 = sal_False;
+    static ::osl::Module aVCLModule;
+
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+            bX11 = true;
+    }
+
+    return bX11;
+}
+
+#endif	// X11_PRODUCT_DIR_NAME
+
 using namespace rtl;
 using namespace osl;
 using namespace std;
@@ -319,16 +353,24 @@ install_info MigrationImpl::findInstallation()
             return aInfo;
     }
 
-#ifdef USE_JAVA
-    // Use old NeoOffice installation if it exists
+#ifdef PRODUCT_DIR_NAME
+    // Use old installation if it exists
     OUString usAltInstall;
     if (rtl::Bootstrap::get(OUString::createFromAscii("SYSUSERCONFIG"), usAltInstall))
     {
-        usAltInstall += OUString::createFromAscii("/Library/Preferences/NeoOffice-2.1");
+#ifdef X11_PRODUCT_DIR_NAME
+        OUString aProductPrefsDirName;
+        if ( IsX11Product() )
+        	aProductPrefsDirName = OUString::createFromAscii( X11_PRODUCT_DIR_NAME "-2.1" );
+    	else
+#endif	// X11_PRODUCT_DIR_NAME
+        	aProductPrefsDirName = OUString::createFromAscii( PRODUCT_DIR_NAME "-2.1" );
+        usAltInstall += OUString::createFromAscii("/Library/Preferences/");
+        usAltInstall += aProductPrefsDirName;
         Directory dir(usAltInstall);
         if (dir.open() == FileBase::E_None)
         {
-            aInfo.productname = OUString::createFromAscii("NeoOffice 2.0");
+            aInfo.productname = aProductPrefsDirName;
             aInfo.userdata = usAltInstall;
             return aInfo;
         }
