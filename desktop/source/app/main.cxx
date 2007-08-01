@@ -55,6 +55,12 @@
 #ifndef _FSYS_HXX
 #include <tools/fsys.hxx>
 #endif
+#ifndef _VOS_SECURITY_HXX_
+#include <vos/security.hxx>
+#endif
+#ifndef _VOS_PROCESS_HXX_
+#include <vos/process.hxx>
+#endif
 #ifndef _DESKTOPX11PRODUCTCHECK_HXX
 #include "X11productcheck.hxx"
 #endif
@@ -62,6 +68,9 @@
 #include "main_cocoa.h"
 
 #define TMPDIR "/tmp"
+
+using namespace rtl;
+using namespace vos;
 
 #endif	// USE_JAVA
 
@@ -288,6 +297,39 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	// secondary thread
 	if ( ::desktop::IsX11Product() )
 	{
+		// Make sure the some display is set
+		ByteString aDisplay( getenv( "DISPLAY" ) );
+		if ( !aDisplay.Len() )
+		{
+			putenv( "DISPLAY=:0" );
+			aDisplay = ByteString( getenv( "DISPLAY" ) );
+		}
+
+		// If the display is the localhost, make sure X11.app is running
+		if ( aDisplay.Len() )
+		{
+			aDisplay.SearchAndReplace( ':', '\0' );
+			aDisplay = ByteString( aDisplay.GetBuffer() );
+			if ( !aDisplay.Len() || aDisplay.CompareIgnoreCaseToAscii( "127.0.0.1" ) == COMPARE_EQUAL || aDisplay.CompareIgnoreCaseToAscii( "localhost" ) == COMPARE_EQUAL )
+			{
+				OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
+				OUString aOpenProgName = aOpenProgDir;
+				aOpenProgName += OUString::createFromAscii( "open" );
+
+				OUString aArgListArray[ 2 ];
+				OSecurity aSecurity;
+				OEnvironment aEnv;
+				OArgumentList aArgList;
+
+				aArgListArray[ 0 ] = OUString::createFromAscii( "-a" );
+				aArgListArray[ 1 ] = OUString::createFromAscii( "X11" );
+				OArgumentList aArgumentList( aArgListArray, 2 );
+
+				OProcess aProcess( aOpenProgName, aOpenProgDir );
+				aProcess.execute( OProcess::TOption_Wait, aSecurity, aArgumentList, aEnv );
+			}
+		}
+
 		CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
 		if ( aTimer )
 			CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
