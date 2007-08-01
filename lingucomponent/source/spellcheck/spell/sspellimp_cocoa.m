@@ -89,12 +89,6 @@ CFMutableArrayRef NSSpellChecker_getLocales()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	// For some reason, Mac OS X requires the NSApp to be initialized before
-	// using the native spellchecker
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( !pApp )
-		return aRet;
-
 	NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
 	NSMutableSet *pLocales = [NSMutableSet setWithCapacity:64];
 

@@ -329,13 +329,15 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 
 					OProcess aProcess( aOpenProgName, aOpenProgDir );
 					aProcess.execute( OProcess::TOption_Wait, aSecurity, aArgumentList, aEnv );
+
+					// Invoke [NSApplication run] in a timer but only if we are
+					// connecting to localhost
+					CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
+					if ( aTimer )
+						CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
 				}
 			}
 		}
-
-		CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
-		if ( aTimer )
-			CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
 	}
 #endif	// USE_JAVA
 
