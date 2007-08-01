@@ -63,6 +63,8 @@
 	} \
 }
 
+using namespace rtl;
+
 // ============================================================================
  
 SAL_IMPLEMENT_MAIN_WITH_ARGS(argc, argv)
@@ -87,82 +89,82 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(argc, argv)
 		putenv( "TMPDIR=" TMPDIR );
 
 	// Get absolute path of command's directory
-	ByteString aCmdPath( pCmdPath );
-	if ( aCmdPath.Len() )
+	OString aCmdPath( pCmdPath );
+	if ( aCmdPath.getLength() )
 	{
 		DirEntry aCmdDirEntry( aCmdPath );
 		aCmdDirEntry.ToAbs();
-		aCmdPath = ByteString( aCmdDirEntry.GetPath().GetFull(), RTL_TEXTENCODING_UTF8 );
+		aCmdPath = OUStringToOString( OUString( aCmdDirEntry.GetPath().GetFull().GetBuffer() ), RTL_TEXTENCODING_UTF8 );
 	}
 
 	// Assign command's directory to PATH environment variable
-	ByteString aPath( getenv( "PATH" ) );
-	ByteString aStandardPath( aCmdPath );
-	aStandardPath += ByteString( ":/bin:/sbin:/usr/bin:/usr/sbin:" );
-	if ( aPath.CompareTo( aStandardPath, aStandardPath.Len() ) != COMPARE_EQUAL )
+	OString aPath( getenv( "PATH" ) );
+	OString aStandardPath( aCmdPath );
+	aStandardPath += OString( ":/bin:/sbin:/usr/bin:/usr/sbin:" );
+	if ( aPath.compareTo( aStandardPath, aStandardPath.getLength() ) )
 	{
-		ByteString aTmpPath( "PATH=" );
+		OString aTmpPath( "PATH=" );
 		aTmpPath += aStandardPath;
-		if ( aPath.Len() )
+		if ( aPath.getLength() )
 		{
-			aTmpPath += ByteString( ":" );
+			aTmpPath += OString( ":" );
 			aTmpPath += aPath;
 		}
-		putenv( (char *)aTmpPath.GetBuffer() );
+		putenv( (char *)aTmpPath.getStr() );
 	}
 
 	// Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
 	// unsetting DYLD_FRAMEWORK_PATH
 	bool bRestart = false;
-	ByteString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
+	OString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
 	// Always unset DYLD_FRAMEWORK_PATH
 	unsetenv( "DYLD_FRAMEWORK_PATH" );
-	if ( aFrameworkPath.Len() )
+	if ( aFrameworkPath.getLength() )
 	{
-		ByteString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" ) );
-		if ( aFallbackFrameworkPath.Len() )
+		OString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" ) );
+		if ( aFallbackFrameworkPath.getLength() )
 		{
-			aFrameworkPath += ByteString( ":" );
+			aFrameworkPath += OString( ":" );
 			aFrameworkPath += aFallbackFrameworkPath;
 		}
-		if ( aFrameworkPath.Len() )
+		if ( aFrameworkPath.getLength() )
 		{
-			ByteString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
+			OString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
 			aTmpPath += aFrameworkPath;
-			putenv( (char *)aTmpPath.GetBuffer() );
+			putenv( (char *)aTmpPath.getStr() );
 		}
 		bRestart = true;
 	}
 
-	ByteString aStandardLibPath( aCmdPath );
-	aStandardLibPath += ByteString( ":/usr/lib:/usr/local/lib:" );
-	ByteString aHomePath( getenv( "HOME" ) );
-	if ( aHomePath.Len() )
+	OString aStandardLibPath( aCmdPath );
+	aStandardLibPath += OString( ":/usr/lib:/usr/local/lib:" );
+	OString aHomePath( getenv( "HOME" ) );
+	if ( aHomePath.getLength() )
 	{
 		aStandardLibPath += aHomePath;
-		aStandardLibPath += ByteString( "/lib:" );
+		aStandardLibPath += OString( "/lib:" );
 	}
-	ByteString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
-	ByteString aDyLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-	ByteString aDyFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+	OString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
+	OString aDyLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+	OString aDyFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
 	// Always unset LD_LIBRARY_PATH and DYLD_LIBRARY_PATH
 	unsetenv( "LD_LIBRARY_PATH" );
 	unsetenv( "DYLD_LIBRARY_PATH" );
-	if ( aDyFallbackLibPath.CompareTo( aStandardLibPath, aStandardLibPath.Len() ) != COMPARE_EQUAL )
+	if ( aDyFallbackLibPath.compareTo( aStandardLibPath, aStandardLibPath.getLength() ) )
 	{
-		ByteString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
+		OString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
 		aTmpPath += aStandardLibPath;
-		if ( aLibPath.Len() )
+		if ( aLibPath.getLength() )
 		{
-			aTmpPath += ByteString( ":" );
+			aTmpPath += OString( ":" );
 			aTmpPath += aLibPath;
 		}
-		if ( aDyLibPath.Len() )
+		if ( aDyLibPath.getLength() )
 		{
-			aTmpPath += ByteString( ":" );
+			aTmpPath += OString( ":" );
 			aTmpPath += aDyLibPath;
 		}
-		putenv( (char *)aTmpPath.GetBuffer() );
+		putenv( (char *)aTmpPath.getStr() );
 		bRestart = true;
 	}
 
