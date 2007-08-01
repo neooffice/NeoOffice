@@ -101,22 +101,23 @@ using namespace linguistic;
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
 
-static ::osl::Module aVCLModule;
-
 static bool IsX11Product()
 {
-	if ( !aVCLModule.is() )
-	{
-		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-		aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
-		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+    static bool bX11 = sal_False;
+    static ::osl::Module aVCLModule;
+
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 		aVCLModule.load( aLibName );
-	}
-	if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
-		return true;
-	else
-		return false;
+        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+            bX11 = true;
+    }
+
+    return bX11;
 }
 
 #endif	// X11_PRODUCT_NAME
