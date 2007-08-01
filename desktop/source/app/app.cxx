@@ -323,36 +323,10 @@
 #include <sys/param.h>
 #include <rtl/uri.hxx>
 
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
+#ifndef _DESKTOPX11PRODUCTCHECK_HXX
+#include "X11productcheck.hxx"
 #endif
-
-#ifndef _OSL_MODULE_HXX_
-#include <osl/module.hxx>
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
-
-static bool IsX11Product()
-{
-    static bool bX11 = sal_False;
-    static ::osl::Module aVCLModule;
-
-    if ( !aVCLModule.is() )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
-		aVCLModule.load( aLibName );
-        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
-            bX11 = true;
-    }
-
-    return bX11;
-}
-
+ 
 #endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
 
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
@@ -2937,7 +2911,7 @@ void Desktop::OpenDefault()
         // Open URL in application in read-only mode
         OUString aURL;
 #ifdef X11_PRODUCT_WELCOME_URL
-        if ( IsX11Product() )
+        if ( ::desktop::IsX11Product() )
             aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( X11_PRODUCT_WELCOME_URL ) );
         else
 #endif	// X11_PRODUCT_WELCOME_URL
@@ -3038,7 +3012,7 @@ void Desktop::OpenDefault()
                             // Open URL in application in read-only mode
        	                    OUString aURL;
 #ifdef X11_PRODUCT_WELCOME_URL
-                            if ( IsX11Product() )
+                            if ( ::desktop::IsX11Product() )
                                 aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( X11_PRODUCT_DONATION_URL ) );
                             else
 #endif	// X11_PRODUCT_WELCOME_URL

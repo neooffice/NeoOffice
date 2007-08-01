@@ -47,14 +47,19 @@
 
 #ifdef USE_JAVA
 
-#ifndef _FSYS_HXX
-#include <tools/fsys.hxx>
-#endif
-
 #include <errno.h>
 #include <stdio.h>
 #include <sys/wait.h>
 #include <unistd.h>
+
+#ifndef _FSYS_HXX
+#include <tools/fsys.hxx>
+#endif
+#ifndef _DESKTOPX11PRODUCTCHECK_HXX
+#include "X11productcheck.hxx"
+#endif
+
+#include "main_cocoa.h"
 
 #define TMPDIR "/tmp"
 
@@ -276,6 +281,19 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	UNLIMIT_DESCRIPTORS();
 
 	desktop::Desktop aDesktop;
+
+#ifdef USE_JAVA
+	// If this is an X11 product, we need to explicitly start the NSApplication
+	// event dispatching before SVMain() creates and runs the OOo code in a
+	// secondary thread
+	if ( ::desktop::IsX11Product() )
+	{
+		CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
+		if ( aTimer )
+			CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
+	}
+#endif	// USE_JAVA
+
     SVMain();
 
 #ifdef USE_JAVA
