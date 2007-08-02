@@ -59,6 +59,12 @@
 #ifndef _FSYS_HXX
 #include <tools/fsys.hxx>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
+#ifndef _VOS_MUTEX_HXX
+#include <vos/mutex.hxx>
+#endif
 #ifndef _VOS_SECURITY_HXX_
 #include <vos/security.hxx>
 #endif
@@ -72,9 +78,6 @@
 #include "main_cocoa.h"
 
 #define TMPDIR "/tmp"
-
-using namespace rtl;
-using namespace vos;
 
 #endif	// USE_JAVA
 
@@ -100,6 +103,25 @@ using namespace vos;
 
 #include <rtl/logfile.hxx>
 
+#ifdef USE_JAVA
+
+static ::desktop::Desktop *pDesktop = NULL;
+
+using namespace rtl;
+using namespace vos;
+
+void Application_queryExit()
+{
+	if ( pDesktop )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		pDesktop->QueryExit();
+		rSolarMutex.release();
+	}
+}
+
+#endif	// USE_JAVA
 
 BOOL SVMain();
 
@@ -296,6 +318,8 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	desktop::Desktop aDesktop;
 
 #ifdef USE_JAVA
+	pDesktop = &aDesktop;
+
 	// If this is an X11 product, we need to explicitly start the NSApplication
 	// event dispatching before SVMain() creates and runs the OOo code in a
 	// secondary thread
@@ -405,6 +429,8 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
     SVMain();
 
 #ifdef USE_JAVA
+	pDesktop = NULL;
+
     // Force exit since some JVMs won't shutdown when only exit() is invoked
     _exit( 0 );
 #else	// USE_JAVA

@@ -47,6 +47,7 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void Application_queryExit();
 void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo );
 #ifdef __cplusplus
 END_C

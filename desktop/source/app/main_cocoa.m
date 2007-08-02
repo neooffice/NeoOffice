@@ -45,6 +45,7 @@
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pSender
 {
+	Application_queryExit();
 	return NSTerminateCancel;
 }
 
