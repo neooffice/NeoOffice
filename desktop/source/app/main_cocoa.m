@@ -38,12 +38,46 @@
 #import "main_cocoa.h"
 
 @interface DesktopApplicationDelegate : NSObject
-- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pSender;
+- (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename;
+- (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames;
+- (BOOL)application:(NSApplication *)pApp printFile:(NSString *)pFilename;
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApp;
 @end
 
 @implementation DesktopApplicationDelegate
 
-- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pSender
+- (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename
+{
+	BOOL bRet = NO;
+
+	if ( pFilename )
+		bRet = Application_openOrPrintFile( (CFStringRef)pFilename, NO );
+
+	return bRet;
+}
+
+- (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames
+{
+	if ( pFilenames )
+	{
+		unsigned count = [pFilenames count];
+		int i = 0;
+		for ( ; i < count; i++ )
+			[self application:pApp openFile:[pFilenames objectAtIndex:i]];
+	}
+}
+
+- (BOOL)application:(NSApplication *)pApp printFile:(NSString *)pFilename
+{
+	BOOL bRet = NO;
+
+	if ( pFilename )
+		bRet = Application_openOrPrintFile( (CFStringRef)pFilename, YES );
+
+	return bRet;
+}
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApp
 {
 	Application_queryExit();
 	return NSTerminateCancel;

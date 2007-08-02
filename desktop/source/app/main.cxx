@@ -110,6 +110,33 @@ static ::desktop::Desktop *pDesktop = NULL;
 using namespace rtl;
 using namespace vos;
 
+BOOL Application_openOrPrintFile( const CFStringRef aFileName, BOOL bPrint )
+{
+	BOOL bRet = FALSE;
+
+	if ( pDesktop && aFileName )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			CFIndex nLen = CFStringGetLength( aFileName );
+			CFRange aRange = CFRangeMake( 0, nLen );
+			sal_Unicode pBuffer[ nLen + 1 ];
+			CFStringGetCharacters( aFileName, aRange, pBuffer );
+			pBuffer[ nLen ] = 0;
+			OUString aName( pBuffer );
+			String aEmptyStr;
+			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, bPrint ? APPEVENT_PRINT_STRING : APPEVENT_OPEN_STRING, aName );
+			pDesktop->AppEvent( aAppEvt );
+			bRet = TRUE;
+		}
+		rSolarMutex.release();
+	}
+
+	return bRet;
+}
+
 void Application_queryExit()
 {
 	if ( pDesktop )
