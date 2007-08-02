@@ -37,6 +37,21 @@
 #import "crt_externs.h"
 #import "main_cocoa.h"
 
+static AEEventHandlerUPP pQuitHandlerUPP = nil;
+
+static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pReply, long nRef )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+		[pApp terminate:pApp];
+
+	[pPool release];
+
+	return noErr;
+}
+
 @interface DesktopApplicationDelegate : NSObject
 - (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename;
 - (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames;
@@ -85,15 +100,50 @@
 
 @end
 
+@interface DesktopApplication : NSApplication
+- (void)sendEvent:(NSEvent *)pEvent;
+@end
+
+@implementation DesktopApplication
+
+- (void)sendEvent:(NSEvent *)pEvent
+{
+	[super sendEvent:pEvent];
+
+	// Handle the Command-Q event
+	if ( pEvent && [pEvent type] == NSKeyDown && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask && [@"q" isEqualToString:[pEvent characters]] )
+		[self terminate:self];
+}
+
+@end
+
 void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	// We need to override our own NSApplication methods to handle some menu
+	// key equivalents in the default application menu
+	[DesktopApplication poseAsClass:[NSApplication class]];
+
+	// Load default application menu
+	if ( NSApplicationLoad() )
 	{
-		[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
-		[pApp run];
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+		{
+			[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
+
+			// Install event handler for the quit menu
+			if ( !pQuitHandlerUPP )
+			{
+				pQuitHandlerUPP = NewAEEventHandlerUPP( CarbonQuitEventHandler );
+				if ( pQuitHandlerUPP )
+					AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, pQuitHandlerUPP, 0, NO );
+			}
+
+			// Run native event loop
+			[pApp run];
+		}
 	}
 
 	[pPool release];
