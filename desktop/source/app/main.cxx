@@ -48,7 +48,11 @@
 #ifdef USE_JAVA
 
 #include <errno.h>
+#include <ifaddrs.h>
+#include <netdb.h>
 #include <stdio.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -308,34 +312,91 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 		// If the display is the localhost, make sure X11.app is running
 		if ( aDisplay.getLength() )
 		{
+			// Get destination host
+			OString aHost;
+			unsigned long nHost = 0;
 			sal_Int32 nIndex = aDisplay.indexOf( ':' );
 			if ( nIndex >= 0 )
 			{
-				OString aHost = aDisplay.copy( 0, nIndex );
-				if ( !aHost.getLength() || aHost.equalsIgnoreAsciiCase( OString( "127.0.0.1" ) ) || aHost.equalsIgnoreAsciiCase( OString( "localhost" ) ) )
+				aHost = aDisplay.copy( 0, nIndex );
+				if ( aHost.getLength() )
 				{
-					OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
-					OUString aOpenProgName = aOpenProgDir;
-					aOpenProgName += OUString::createFromAscii( "open" );
-
-					OUString aArgListArray[ 2 ];
-					OSecurity aSecurity;
-					OEnvironment aEnv;
-					OArgumentList aArgList;
-
-					aArgListArray[ 0 ] = OUString::createFromAscii( "-a" );
-					aArgListArray[ 1 ] = OUString::createFromAscii( "X11" );
-					OArgumentList aArgumentList( aArgListArray, 2 );
-
-					OProcess aProcess( aOpenProgName, aOpenProgDir );
-					aProcess.execute( OProcess::TOption_Wait, aSecurity, aArgumentList, aEnv );
-
-					// Invoke [NSApplication run] in a timer but only if we are
-					// connecting to localhost
-					CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
-					if ( aTimer )
-						CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
+					sethostent( 0 );
+					struct hostent *pEntry = gethostbyname( aHost.getStr() );
+					if ( pEntry && pEntry->h_addrtype == AF_INET && pEntry->h_addr_list && pEntry->h_addr_list[ 0 ] )
+					{
+						unsigned long *pINet = (unsigned long *)( pEntry->h_addr_list[ 0 ] );
+						nHost = ntohl( *pINet );
+					}
+					endhostent();
 				}
+			}
+
+			bool bLocalhost = false;
+
+			if ( !aHost.getLength() )
+			{
+				// No destination host name always implies localhost
+				bLocalhost = true;
+			}
+			else if ( !nHost && aHost.getLength() )
+			{
+				// If there is a destination host name but no IP address, check
+				// if the display is an actual file as it is almost certain to
+				// be starting with Leopard
+				struct stat aFileStat;
+				if ( stat( aHost.getStr(), &aFileStat ) >= 0 )
+					bLocalhost = true;
+			}
+			else if ( nHost )
+			{
+				// Check if the host leads back to the localhost
+				struct ifaddrs *pAddr = NULL;
+				if ( !getifaddrs( &pAddr ) )
+				{
+					struct ifaddrs *pCurrentAddr = pAddr;
+					while ( pCurrentAddr )
+					{
+						if ( pCurrentAddr->ifa_addr && pCurrentAddr->ifa_addr->sa_family == AF_INET )
+						{
+							unsigned long *pINet = (unsigned long *)( pCurrentAddr->ifa_addr->sa_data + 2 );
+							if ( ntohl( *pINet ) == nHost )
+							{
+								bLocalhost = true;
+								break;
+							}
+						}
+
+						pCurrentAddr = pCurrentAddr->ifa_next;
+					}
+
+					freeifaddrs( pAddr );
+				}
+			}
+
+			if ( bLocalhost )
+			{
+				OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
+				OUString aOpenProgName = aOpenProgDir;
+				aOpenProgName += OUString::createFromAscii( "open" );
+
+				OUString aArgListArray[ 2 ];
+				OSecurity aSecurity;
+				OEnvironment aEnv;
+				OArgumentList aArgList;
+
+				aArgListArray[ 0 ] = OUString::createFromAscii( "-a" );
+				aArgListArray[ 1 ] = OUString::createFromAscii( "X11" );
+				OArgumentList aArgumentList( aArgListArray, 2 );
+
+				OProcess aProcess( aOpenProgName, aOpenProgDir );
+				aProcess.execute( OProcess::TOption_Wait, aSecurity, aArgumentList, aEnv );
+
+				// Invoke [NSApplication run] in a timer but only if we are
+				// connecting to localhost
+				CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
+				if ( aTimer )
+					CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
 			}
 		}
 	}
