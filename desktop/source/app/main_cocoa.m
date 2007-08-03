@@ -34,10 +34,50 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import "crt_externs.h"
 #import "main_cocoa.h"
 
+static AEEventHandlerUPP pOpenDocumentsHandlerUPP = nil;
+static AEEventHandlerUPP pPrintDocumentsHandlerUPP = nil;
 static AEEventHandlerUPP pQuitHandlerUPP = nil;
+
+static OSErr CarbonOpenOrPrintDocuments( const AppleEvent *pEvent, AppleEvent *pReply, long nRef, BOOL bPrint )
+{
+	if ( pEvent )
+	{
+		AEDesc aDesc;
+		if ( AEGetParamDesc( pEvent, keyDirectObject, typeAEList, &aDesc ) == noErr )
+		{
+			long nCount;
+			if ( AECountItems( &aDesc, &nCount ) == noErr )
+			{
+				// Lists are one-based
+				long i = 1;
+				for ( ; i <= nCount; i++ )
+				{
+					FSRef aFSRef;
+					AEKeyword aKeyword;
+					DescType aType;
+					long nSize;
+					char aBuffer[ PATH_MAX ];
+					if ( AEGetNthPtr( &aDesc, i, typeFSRef, &aKeyword, &aType, &aFSRef, sizeof( aFSRef ), &nSize ) == noErr && FSRefMakePath( &aFSRef, (UInt8 *)aBuffer, PATH_MAX ) == noErr )
+						Application_openOrPrintFile( aBuffer, bPrint );
+				}
+			}
+		}
+	}
+
+	return noErr;
+}
+
+static OSErr CarbonOpenDocumentsEventHandler( const AppleEvent *pEvent, AppleEvent *pReply, long nRef )
+{
+	return CarbonOpenOrPrintDocuments( pEvent, pReply, nRef, NO );
+}
+
+static OSErr CarbonPrintDocumentsEventHandler( const AppleEvent *pEvent, AppleEvent *pReply, long nRef )
+{
+	return CarbonOpenOrPrintDocuments( pEvent, pReply, nRef, YES );
+}
 
 static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pReply, long nRef )
 {
@@ -46,38 +86,10 @@ static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pRepl
 }
 
 @interface DesktopApplicationDelegate : NSObject
-- (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename;
-- (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames;
-- (BOOL)application:(NSApplication *)pApp printFile:(NSString *)pFilename;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApp;
 @end
 
 @implementation DesktopApplicationDelegate
-
-- (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename
-{
-	if ( pFilename )
-		Application_openOrPrintFile( (CFStringRef)pFilename, NO );
-	return YES;
-}
-
-- (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames
-{
-	if ( pFilenames )
-	{
-		unsigned count = [pFilenames count];
-		int i = 0;
-		for ( ; i < count; i++ )
-			[self application:pApp openFile:[pFilenames objectAtIndex:i]];
-	}
-}
-
-- (BOOL)application:(NSApplication *)pApp printFile:(NSString *)pFilename
-{
-	if ( pFilename )
-		Application_openOrPrintFile( (CFStringRef)pFilename, YES );
-	return YES;
-}
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApp
 {
@@ -132,6 +144,22 @@ void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 		if ( pApp )
 		{
 			[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
+
+			// Install event handler for open document events
+			if ( !pOpenDocumentsHandlerUPP )
+			{
+				pOpenDocumentsHandlerUPP = NewAEEventHandlerUPP( CarbonOpenDocumentsEventHandler );
+				if ( pOpenDocumentsHandlerUPP )
+					AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, pOpenDocumentsHandlerUPP, 0, NO );
+			}
+
+			// Install event handler for print document events
+			if ( !pPrintDocumentsHandlerUPP )
+			{
+				pPrintDocumentsHandlerUPP = NewAEEventHandlerUPP( CarbonPrintDocumentsEventHandler );
+				if ( pPrintDocumentsHandlerUPP )
+					AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, pPrintDocumentsHandlerUPP, 0, NO );
+			}
 
 			// Install event handler for the quit menu
 			if ( !pQuitHandlerUPP )

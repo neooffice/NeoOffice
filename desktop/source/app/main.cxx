@@ -75,10 +75,6 @@
 #include "X11productcheck.hxx"
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 #include "main_cocoa.h"
 
 #define TMPDIR "/tmp"
@@ -125,9 +121,9 @@ IMPL_LINK( DesktopHandleAppEvent, HandleAppEvent, void*, EMPTY_ARG )
 {
 	if ( !mbFinished )
 	{
-		mbFinished = true;
-		if ( mpApp && mpAppEvt && !Application::IsShutDown() )
+		if ( mpApp && mpAppEvt && Application::IsInMain() )
 			mpApp->AppEvent( *mpAppEvt );
+		mbFinished = true;
 	}
 
 	return 0;
@@ -148,9 +144,9 @@ IMPL_LINK( DesktopHandleQueryExit, HandleQueryExit, void*, EMPTY_ARG )
 {
 	if ( !mbFinished )
 	{
-		mbFinished = true;
-		if ( mpApp && !Application::IsShutDown() )
+		if ( mpApp && Application::IsInMain() )
 			mpApp->QueryExit();
+		mbFinished = true;
 	}
 
 	return 0;
@@ -162,30 +158,31 @@ static bool bInNativeEvent = false;
 using namespace rtl;
 using namespace vos;
 
-void Application_openOrPrintFile( const CFStringRef aFileName, BOOL bPrint )
+void Application_openOrPrintFile( const char *pFileName, BOOL bPrint )
 {
-	if ( pApp && aFileName && !bInNativeEvent && !Application::IsShutDown() )
+	if ( pApp && pFileName && strlen( pFileName ) && !Application::IsShutDown() )
 	{
+		while ( bInNativeEvent || !Application::IsInMain() )
+		{
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			usleep( 10 );
+		}
+
 		bInNativeEvent = true;
 
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
-		if ( !Application::IsShutDown() )
+		if ( Application::IsInMain() )
 		{
-			CFIndex nLen = CFStringGetLength( aFileName );
-			CFRange aRange = CFRangeMake( 0, nLen );
-			sal_Unicode pBuffer[ nLen + 1 ];
-			CFStringGetCharacters( aFileName, aRange, pBuffer );
-			pBuffer[ nLen ] = 0;
-			OUString aName( pBuffer );
+			OUString aName( pFileName, strlen( pFileName ), RTL_TEXTENCODING_UTF8 );
 			String aEmptyStr;
 			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, bPrint ? APPEVENT_PRINT_STRING : APPEVENT_OPEN_STRING, aName );
 			DesktopHandleAppEvent aHandleAppEvent( pApp, &aAppEvt );
 			Application::PostUserEvent( LINK( &aHandleAppEvent, DesktopHandleAppEvent, HandleAppEvent ) );
 			rSolarMutex.release();
 
-			while ( !aHandleAppEvent.IsFinished() && !Application::IsShutDown() )
+			while ( !aHandleAppEvent.IsFinished() && Application::IsInMain() )
 			{
 				ReceiveNextEvent( 0, NULL, 0, false, NULL );
 				usleep( 10 );
@@ -202,20 +199,26 @@ void Application_openOrPrintFile( const CFStringRef aFileName, BOOL bPrint )
 
 void Application_queryExit()
 {
-	if ( pApp && !bInNativeEvent && !Application::IsShutDown() )
+	if ( pApp && !Application::IsShutDown() )
 	{
+		while ( bInNativeEvent || !Application::IsInMain() )
+		{
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			usleep( 10 );
+		}
+
 		bInNativeEvent = true;
 
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
-		if ( !Application::IsShutDown() )
+		if ( Application::IsInMain() )
 		{
 			DesktopHandleQueryExit aHandleQueryExit( pApp );
 			Application::PostUserEvent( LINK( &aHandleQueryExit, DesktopHandleQueryExit, HandleQueryExit ) );
 			rSolarMutex.release();
 
-			while ( !aHandleQueryExit.IsFinished() && !Application::IsShutDown() )
+			while ( !aHandleQueryExit.IsFinished() && Application::IsInMain() )
 			{
 				ReceiveNextEvent( 0, NULL, 0, false, NULL );
 				usleep( 10 );
