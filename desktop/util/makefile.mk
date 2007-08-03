@@ -159,7 +159,7 @@ APP1STDLIBS+= -lXext -lSM -lICE
 .ENDIF
 
 .IF "$(GUIBASE)"=="java"
-APP1STDLIBS += -framework AppKit
+APP1STDLIBS += -framework AppKit -framework Carbon
 .ENDIF
 
 APP1DEPN= $(APP1RES) verinfo.rc
@@ -204,7 +204,7 @@ APP5STDLIBS+= -lXext -lSM -lICE
 .ENDIF # LINUX
 
 .IF "$(GUIBASE)"=="java"
-APP5STDLIBS += -framework AppKit
+APP5STDLIBS += -framework AppKit -framework Carbon
 .ENDIF
 
 APP5DEPN= $(APP1TARGETN) $(APP5RES) ooverinfo.rc
