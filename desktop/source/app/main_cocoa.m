@@ -58,7 +58,7 @@ static OSErr CarbonOpenOrPrintDocuments( const AppleEvent *pEvent, AppleEvent *p
 					AEKeyword aKeyword;
 					DescType aType;
 					long nSize;
-					char aBuffer[ PATH_MAX ];
+					char aBuffer[ PATH_MAX + 1 ];
 					if ( AEGetNthPtr( &aDesc, i, typeFSRef, &aKeyword, &aType, &aFSRef, sizeof( aFSRef ), &nSize ) == noErr && FSRefMakePath( &aFSRef, (UInt8 *)aBuffer, PATH_MAX ) == noErr )
 						Application_openOrPrintFile( aBuffer, bPrint );
 				}
@@ -86,10 +86,40 @@ static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pRepl
 }
 
 @interface DesktopApplicationDelegate : NSObject
+- (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename;
+- (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames;
+- (BOOL)application:(NSApplication *)pApp printFile:(NSString *)pFilename;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApp;
 @end
 
 @implementation DesktopApplicationDelegate
+
+- (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename
+{
+	if ( pFilename && [pFilename length] )
+		Application_openOrPrintFile( [pFilename fileSystemRepresentation], NO );
+
+	return YES;
+}
+
+- (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames
+{
+	if ( pFilenames )
+	{
+		unsigned count = [pFilenames count];
+		int i = 0;
+		for ( ; i < count; i++ )
+			[self application:pApp openFile:[pFilenames objectAtIndex:i]];
+	}
+}
+
+- (BOOL)application:(NSApplication *)pApp printFile:(NSString *)pFilename
+{
+	if ( pFilename && [pFilename length] )
+		Application_openOrPrintFile( [pFilename fileSystemRepresentation], YES );
+
+	return YES;
+}
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApp
 {
