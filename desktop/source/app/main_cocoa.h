@@ -39,11 +39,9 @@
 #ifdef __cplusplus
 #include <premac.h>
 #include <Carbon/Carbon.h>
-#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 #else
 #import <Carbon/Carbon.h>
-#import <CoreFoundation/CoreFoundation.h>
 #endif
 
 #ifdef __cplusplus
@@ -51,7 +49,7 @@ BEGIN_C
 #endif
 void Application_openOrPrintFile( const char *pFileName, BOOL bPrint );
 void Application_queryExit();
-void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo );
+void NSApplication_initialize( BOOL bLocalhost );
 #ifdef __cplusplus
 END_C
 #endif

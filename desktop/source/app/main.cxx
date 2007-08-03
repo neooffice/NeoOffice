@@ -510,14 +510,7 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 				}
 			}
 
-			if ( bLocalhost )
-			{
-				// Invoke [NSApplication run] in a timer but only if we are
-				// connecting to localhost
-				CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
-				if ( aTimer )
-					CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
-			}
+			NSApplication_initialize( bLocalhost );
 		}
 	}
 #endif	// USE_JAVA
