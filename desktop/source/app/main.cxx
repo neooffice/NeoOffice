@@ -509,22 +509,6 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 
 			if ( bLocalhost )
 			{
-				OUString aOpenProgDir( RTL_CONSTASCII_USTRINGPARAM( "file:///usr/bin/" ) );
-				OUString aOpenProgName = aOpenProgDir;
-				aOpenProgName += OUString::createFromAscii( "open" );
-
-				OUString aArgListArray[ 2 ];
-				OSecurity aSecurity;
-				OEnvironment aEnv;
-				OArgumentList aArgList;
-
-				aArgListArray[ 0 ] = OUString::createFromAscii( "-a" );
-				aArgListArray[ 1 ] = OUString::createFromAscii( "X11" );
-				OArgumentList aArgumentList( aArgListArray, 2 );
-
-				OProcess aProcess( aOpenProgName, aOpenProgDir );
-				aProcess.execute( OProcess::TOption_Wait, aSecurity, aArgumentList, aEnv );
-
 				// Invoke [NSApplication run] in a timer but only if we are
 				// connecting to localhost
 				CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );

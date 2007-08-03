@@ -112,11 +112,24 @@ void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 	// key equivalents in the default application menu
 	[DesktopApplication poseAsClass:[NSApplication class]];
 
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	// Load default application menu
+	if ( NSApplicationLoad() )
 	{
-		// Load default application menu
-		if ( NSApplicationLoad() )
+		// Make sure that X11.app is running
+		NSTask *pTask = [[NSTask alloc] init];
+		NSMutableArray *pArgs = [NSMutableArray array];
+		if ( pTask && pArgs )
+		{
+			[pArgs addObject:@"-a"];
+			[pArgs addObject:@"X11"];
+			[pTask setArguments:pArgs];
+			[pTask setLaunchPath:@"/usr/bin/open"];
+			[pTask launch];
+			[pTask waitUntilExit];
+		}
+
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
 		{
 			[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
 
@@ -133,11 +146,11 @@ void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 		}
 	}
 
-	[pPool release];
-
 	if ( aTimer )
 	{
 		CFRunLoopRemoveTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
 		CFRelease( aTimer );
 	}
+
+	[pPool release];
 }
