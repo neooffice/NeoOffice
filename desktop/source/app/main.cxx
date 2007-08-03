@@ -75,6 +75,10 @@
 #include "X11productcheck.hxx"
 #endif
 
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
 #include "main_cocoa.h"
 
 #define TMPDIR "/tmp"
@@ -105,19 +109,68 @@
 
 #ifdef USE_JAVA
 
-static ::desktop::Desktop *pDesktop = NULL;
+class DesktopHandleAppEvent
+{
+	::desktop::Desktop*		mpApp;
+	ApplicationEvent*		mpAppEvt;
+	bool					mbFinished;
+
+public:
+							DesktopHandleAppEvent( ::desktop::Desktop *pApp, ApplicationEvent *pAppEvt ) : mpApp( pApp ), mpAppEvt( pAppEvt), mbFinished( false ) {}
+							DECL_LINK( HandleAppEvent, void* );
+	bool					IsFinished() { return mbFinished; }
+};
+
+IMPL_LINK( DesktopHandleAppEvent, HandleAppEvent, void*, EMPTY_ARG )
+{
+	if ( !mbFinished )
+	{
+		mbFinished = true;
+		if ( mpApp && mpAppEvt && !Application::IsShutDown() )
+			mpApp->AppEvent( *mpAppEvt );
+	}
+
+	return 0;
+}
+
+class DesktopHandleQueryExit
+{
+	Application*			mpApp;
+	bool					mbFinished;
+
+public:
+							DesktopHandleQueryExit( Application *pApp ) : mpApp( pApp ), mbFinished( false ) {}
+							DECL_LINK( HandleQueryExit, void* );
+	bool					IsFinished() { return mbFinished; }
+};
+
+IMPL_LINK( DesktopHandleQueryExit, HandleQueryExit, void*, EMPTY_ARG )
+{
+	if ( !mbFinished )
+	{
+		mbFinished = true;
+		if ( mpApp && !Application::IsShutDown() )
+			mpApp->QueryExit();
+	}
+
+	return 0;
+}
+
+static ::desktop::Desktop *pApp = NULL;
+static bool bInNativeEvent = false;
 
 using namespace rtl;
 using namespace vos;
 
-BOOL Application_openOrPrintFile( const CFStringRef aFileName, BOOL bPrint )
+void Application_openOrPrintFile( const CFStringRef aFileName, BOOL bPrint )
 {
-	BOOL bRet = FALSE;
-
-	if ( pDesktop && aFileName )
+	if ( pApp && aFileName && !bInNativeEvent && !Application::IsShutDown() )
 	{
+		bInNativeEvent = true;
+
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
+
 		if ( !Application::IsShutDown() )
 		{
 			CFIndex nLen = CFStringGetLength( aFileName );
@@ -128,23 +181,52 @@ BOOL Application_openOrPrintFile( const CFStringRef aFileName, BOOL bPrint )
 			OUString aName( pBuffer );
 			String aEmptyStr;
 			ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, bPrint ? APPEVENT_PRINT_STRING : APPEVENT_OPEN_STRING, aName );
-			pDesktop->AppEvent( aAppEvt );
-			bRet = TRUE;
-		}
-		rSolarMutex.release();
-	}
+			DesktopHandleAppEvent aHandleAppEvent( pApp, &aAppEvt );
+			Application::PostUserEvent( LINK( &aHandleAppEvent, DesktopHandleAppEvent, HandleAppEvent ) );
+			rSolarMutex.release();
 
-	return bRet;
+			while ( !aHandleAppEvent.IsFinished() && !Application::IsShutDown() )
+			{
+				ReceiveNextEvent( 0, NULL, 0, false, NULL );
+				usleep( 10 );
+			}
+		}
+		else
+		{
+			rSolarMutex.release();
+		}
+
+		bInNativeEvent = false;
+	}
 }
 
 void Application_queryExit()
 {
-	if ( pDesktop )
+	if ( pApp && !bInNativeEvent && !Application::IsShutDown() )
 	{
+		bInNativeEvent = true;
+
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
-		pDesktop->QueryExit();
-		rSolarMutex.release();
+
+		if ( !Application::IsShutDown() )
+		{
+			DesktopHandleQueryExit aHandleQueryExit( pApp );
+			Application::PostUserEvent( LINK( &aHandleQueryExit, DesktopHandleQueryExit, HandleQueryExit ) );
+			rSolarMutex.release();
+
+			while ( !aHandleQueryExit.IsFinished() && !Application::IsShutDown() )
+			{
+				ReceiveNextEvent( 0, NULL, 0, false, NULL );
+				usleep( 10 );
+			}
+		}
+		else
+		{
+			rSolarMutex.release();
+		}
+
+		bInNativeEvent = false;
 	}
 }
 
@@ -345,7 +427,7 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	desktop::Desktop aDesktop;
 
 #ifdef USE_JAVA
-	pDesktop = &aDesktop;
+	pApp = &aDesktop;
 
 	// If this is an X11 product, we need to explicitly start the NSApplication
 	// event dispatching before SVMain() creates and runs the OOo code in a
@@ -456,7 +538,7 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
     SVMain();
 
 #ifdef USE_JAVA
-	pDesktop = NULL;
+	pApp = NULL;
 
     // Force exit since some JVMs won't shutdown when only exit() is invoked
     _exit( 0 );

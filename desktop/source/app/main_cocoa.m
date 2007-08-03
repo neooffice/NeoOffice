@@ -41,14 +41,7 @@ static AEEventHandlerUPP pQuitHandlerUPP = nil;
 
 static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pReply, long nRef )
 {
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-		[pApp terminate:pApp];
-
-	[pPool release];
-
+	Application_queryExit();
 	return noErr;
 }
 
@@ -63,12 +56,9 @@ static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pRepl
 
 - (BOOL)application:(NSApplication *)pApp openFile:(NSString *)pFilename
 {
-	BOOL bRet = NO;
-
 	if ( pFilename )
-		bRet = Application_openOrPrintFile( (CFStringRef)pFilename, NO );
-
-	return bRet;
+		Application_openOrPrintFile( (CFStringRef)pFilename, NO );
+	return YES;
 }
 
 - (void)application:(NSApplication *)pApp openFiles:(NSArray *)pFilenames
@@ -84,12 +74,9 @@ static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pRepl
 
 - (BOOL)application:(NSApplication *)pApp printFile:(NSString *)pFilename
 {
-	BOOL bRet = NO;
-
 	if ( pFilename )
-		bRet = Application_openOrPrintFile( (CFStringRef)pFilename, YES );
-
-	return bRet;
+		Application_openOrPrintFile( (CFStringRef)pFilename, YES );
+	return YES;
 }
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApp
@@ -112,7 +99,7 @@ static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pRepl
 
 	// Handle the Command-Q event
 	if ( pEvent && [pEvent type] == NSKeyDown && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask && [@"q" isEqualToString:[pEvent characters]] )
-		[self terminate:self];
+		Application_queryExit();
 }
 
 @end
