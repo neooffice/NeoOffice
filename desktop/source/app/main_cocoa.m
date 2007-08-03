@@ -112,11 +112,11 @@ void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 	// key equivalents in the default application menu
 	[DesktopApplication poseAsClass:[NSApplication class]];
 
-	// Load default application menu
-	if ( NSApplicationLoad() )
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
 	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		if ( pApp )
+		// Load default application menu
+		if ( NSApplicationLoad() )
 		{
 			[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
 
