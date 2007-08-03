@@ -116,28 +116,7 @@ static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pRepl
 
 @end
 
-static void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
-{
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		// Run native event loop
-		[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
-		[pApp run];
-	}
-
-	if ( aTimer )
-	{
-		CFRunLoopRemoveTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
-		CFRelease( aTimer );
-	}
-
-	[pPool release];
-}
-
-void NSApplication_initialize( BOOL bLocalhost )
+void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -148,50 +127,57 @@ void NSApplication_initialize( BOOL bLocalhost )
 	// Load default application menu
 	if ( NSApplicationLoad() )
 	{
-		if ( bLocalhost )
+		// Make sure that X11.app is running
+		NSTask *pTask = [[NSTask alloc] init];
+		NSMutableArray *pArgs = [NSMutableArray array];
+		if ( pTask && pArgs )
 		{
-			// Make sure that X11.app is running
-			NSTask *pTask = [[NSTask alloc] init];
-			NSMutableArray *pArgs = [NSMutableArray array];
-			if ( pTask && pArgs )
+			[pArgs addObject:@"-a"];
+			[pArgs addObject:@"X11"];
+			[pTask setArguments:pArgs];
+			[pTask setLaunchPath:@"/usr/bin/open"];
+			[pTask launch];
+			[pTask waitUntilExit];
+		}
+
+		NSApplication *pApp = [NSApplication sharedApplication];
+		if ( pApp )
+		{
+			[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
+
+			// Install event handler for open document events
+			if ( !pOpenDocumentsHandlerUPP )
 			{
-				[pArgs addObject:@"-a"];
-				[pArgs addObject:@"X11"];
-				[pTask setArguments:pArgs];
-				[pTask setLaunchPath:@"/usr/bin/open"];
-				[pTask launch];
-				[pTask waitUntilExit];
+				pOpenDocumentsHandlerUPP = NewAEEventHandlerUPP( CarbonOpenDocumentsEventHandler );
+				if ( pOpenDocumentsHandlerUPP )
+					AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, pOpenDocumentsHandlerUPP, 0, NO );
 			}
-		}
 
-		// Install event handler for open document events
-		if ( !pOpenDocumentsHandlerUPP )
-		{
-			pOpenDocumentsHandlerUPP = NewAEEventHandlerUPP( CarbonOpenDocumentsEventHandler );
-			if ( pOpenDocumentsHandlerUPP )
-				AEInstallEventHandler( kCoreEventClass, kAEOpenDocuments, pOpenDocumentsHandlerUPP, 0, NO );
-		}
+			// Install event handler for print document events
+			if ( !pPrintDocumentsHandlerUPP )
+			{
+				pPrintDocumentsHandlerUPP = NewAEEventHandlerUPP( CarbonPrintDocumentsEventHandler );
+				if ( pPrintDocumentsHandlerUPP )
+					AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, pPrintDocumentsHandlerUPP, 0, NO );
+			}
 
-		// Install event handler for print document events
-		if ( !pPrintDocumentsHandlerUPP )
-		{
-			pPrintDocumentsHandlerUPP = NewAEEventHandlerUPP( CarbonPrintDocumentsEventHandler );
-			if ( pPrintDocumentsHandlerUPP )
-				AEInstallEventHandler( kCoreEventClass, kAEPrintDocuments, pPrintDocumentsHandlerUPP, 0, NO );
-		}
-
-		// Install event handler for the quit menu
-		if ( !pQuitHandlerUPP )
-		{
-			pQuitHandlerUPP = NewAEEventHandlerUPP( CarbonQuitEventHandler );
-			if ( pQuitHandlerUPP )
+			// Install event handler for the quit menu
+			if ( !pQuitHandlerUPP )
+			{
+				pQuitHandlerUPP = NewAEEventHandlerUPP( CarbonQuitEventHandler );
+				if ( pQuitHandlerUPP )
 					AEInstallEventHandler( kCoreEventClass, kAEQuitApplication, pQuitHandlerUPP, 0, NO );
-		}
+			}
 
-		// Invoke [NSApplication run] in a timer
-		CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
-		if ( aTimer )
-			CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
+			// Run native event loop
+			[pApp run];
+		}
+	}
+
+	if ( aTimer )
+	{
+		CFRunLoopRemoveTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
+		CFRelease( aTimer );
 	}
 
 	[pPool release];
