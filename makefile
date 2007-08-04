@@ -73,6 +73,7 @@ BUILD_HOME:=build
 INSTALL_HOME:=install
 X11_INSTALL_HOME:=install_X11
 PATCH_INSTALL_HOME:=patch_install
+X11_PATCH_INSTALL_HOME:=patch_install_X11
 SOURCE_HOME:=source
 X11_SOURCE_HOME:=source_X11
 CD_INSTALL_HOME:=cd_install
@@ -500,23 +501,36 @@ build.odk_package: build.neo_odk_patches
 
 build.patch_package: build.package
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=" "build.patch_package_shared"
+	touch "$@"
+
+build.patch_package_X11: build.package_X11
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$X11_PRODUCT_NAME" != "$(X11_PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "INSTALL_HOME=$(X11_INSTALL_HOME)" "PATCH_INSTALL_HOME=$(X11_PATCH_INSTALL_HOME)" "PRODUCT_BASE_URL=$(X11_PRODUCT_BASE_URL)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_NAME=$(X11_PRODUCT_NAME)" "PRODUCT_PATCH_VERSION=$(X11_PRODUCT_PATCH_VERSION)" "PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_TRADEMARKED_NAME)" "PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_TRADEMARKED_NAME_RTF)" "build.patch_package_shared"
+	touch "$@"
+
+build.patch_package_shared:
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program/classes"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/lingucomponent/$(UOUTPUTDIR)/lib/libspell$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$${UPD}$(DLLSUFFIX).dylib" "program"
+ifndef X11_PRODUCT
+	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/connectivity/unxmacxi.pro/lib/libmacab1.dylib" "$(PWD)/$(BUILD_HOME)/connectivity/unxmacxi.pro/lib/libmacabdrv1.dylib" "$(PWD)/$(BUILD_HOME)/lingucomponent/$(UOUTPUTDIR)/lib/libspell$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "$(PWD)/$(BUILD_HOME)/sfx2/$(UOUTPUTDIR)/lib/libsfx$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$${UPD}$(DLLSUFFIX).dylib" "program"
+endif
 # With gcc 4.x, we must fully strip the soffice.bin executable
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin" ; strip "program/soffice.bin"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/config"
+ifndef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
+endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice/Office"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do cp "$(PWD)/$(INSTALL_HOME)/package/Contents/$${i}" "$${i}" ; done'
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share/dict share/registry/modules -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share/dict share/registry/modules -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
 	rm -Rf "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g'  | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
+ifdef X11_PRODUCT
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#<string>Editor</string>#<string>Viewer</string>#g' "Info.plist" | sed 's#<true/>#<false/>#g' > "../../out" ; mv -f "../../out" "Info.plist"
+endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Library/Spotlight"
@@ -553,7 +567,6 @@ build.patch_package: build.package
 	chmod -f u+w "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)"
 	mv "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)"
 	sync ; hdiutil create -srcfolder "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME)" -format UDZO -ov -o "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).dmg"
-	touch "$@"
 
 build.package_%: $(INSTALL_HOME)/package_%
 ifdef X11_PRODUCT
