@@ -354,8 +354,14 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		GDIMetaFile		        aMtf;
         const PrinterOptions&   rPrinterOptions = GetPrinterOptions();
         const ULONG             nOldDrawMode = GetDrawMode();
+#ifdef USE_JAVA
+        // Prevent downscaling of images if reduce bitmaps is turned off
+        long                    nMaxBmpDPIX = 0xffff;
+        long                    nMaxBmpDPIY = 0xffff;
+#else	// USE_JAVA
         long                    nMaxBmpDPIX = mnDPIX;
         long                    nMaxBmpDPIY = mnDPIY;
+#endif	// USE_JAVA
 		USHORT			        nCopyCount = 1;
 
         if( rPrinterOptions.IsReduceBitmaps() )
