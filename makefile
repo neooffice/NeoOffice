@@ -632,6 +632,15 @@ build.source_zip_shared:
 
 build.cd_package: build.package
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "build.cd_package_shared"
+	touch "$@"
+
+build.cd_package_X11: build.package_X11
+	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$X11_PRODUCT_NAME" != "$(X11_PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "CD_INSTALL_HOME=$(X11_CD_INSTALL_HOME)" "INSTALL_HOME=$(X11_INSTALL_HOME)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "PRODUCT_NAME=$(X11_PRODUCT_NAME)" "PRODUCT_VERSION=$(X11_PRODUCT_VERSION)" "PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_TRADEMARKED_NAME)" "PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_TRADEMARKED_NAME_RTF)" "build.cd_package_shared"
+	touch "$@"
+
+build.cd_package_shared:
 	sh -e -c 'if [ -d "$(CD_INSTALL_HOME)" ] ; then chmod -Rf a+rw "$(CD_INSTALL_HOME)" ; fi'
 	rm -Rf "$(CD_INSTALL_HOME)"
 	mkdir -p "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)/Language Packs"
@@ -642,7 +651,6 @@ build.cd_package: build.package
 	mv "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
 	sync ; hdiutil create -srcfolder "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)" -format UDTO -ov -o "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg"
 	mv "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg.cdr" "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg"
-	touch "$@"
 
 build.all: build.package build.package_X11
 	touch "$@"
