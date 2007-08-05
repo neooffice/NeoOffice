@@ -356,8 +356,8 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
         const ULONG             nOldDrawMode = GetDrawMode();
 #ifdef USE_JAVA
         // Prevent downscaling of images if reduce bitmaps is turned off
-        long                    nMaxBmpDPIX = 0xffff;
-        long                    nMaxBmpDPIY = 0xffff;
+        long                    nMaxBmpDPIX = 0x7fffffff;
+        long                    nMaxBmpDPIY = 0x7fffffff;
 #else	// USE_JAVA
         long                    nMaxBmpDPIX = mnDPIX;
         long                    nMaxBmpDPIY = mnDPIY;
