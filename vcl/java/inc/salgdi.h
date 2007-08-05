@@ -93,6 +93,8 @@ public:
 	SalColor				mnFillColor;
 	SalColor				mnLineColor;
 	SalColor				mnTextColor;
+	SalColor				mnFillTransparency;
+	SalColor				mnLineTransparency;
 	JavaSalFrame*			mpFrame;
 	JavaSalPrinter*			mpPrinter;
 	JavaSalVirtualDevice*	mpVirDev;
@@ -165,11 +167,9 @@ public:
     virtual BOOL			getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor );
 	virtual bool			drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap, const SalBitmap& rAlphaBitmap );
 	virtual bool			drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency );
-};
 
-inline SalColor GetTransparentColor( SalColor nColor, sal_Int8 nTransparency )
-{
-	return ( nColor & 0x00ffffff ) | ( ( ( ( nColor >> 24 ) * ( 100 - nTransparency ) ) / 100 ) << 24 );
-}
+	void					setLineTransparency( sal_uInt8 nTransparency );
+	void					setFillTransparency( sal_uInt8 nTransparency );
+};
 
 #endif // _SV_SALGDI_H

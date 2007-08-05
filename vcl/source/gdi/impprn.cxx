@@ -59,6 +59,14 @@
 #include <impprn.hxx>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
+#endif
+
+#endif	// USE_JAVA
+
 // -----------
 // - Defines -
 // -----------
@@ -244,6 +252,15 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
             {
                 Push( PUSH_LINECOLOR|PUSH_FILLCOLOR );
 
+#ifdef USE_JAVA
+                if ( !mpGraphics )
+                    ImplGetGraphics();
+                if ( mpGraphics )
+                {
+                    ((JavaSalGraphics *)mpGraphics)->setLineTransparency( (sal_uInt8)nTransparency );
+                    ((JavaSalGraphics *)mpGraphics)->setFillTransparency( (sal_uInt8)nTransparency );
+                }
+#else	// USE_JAVA
                 // assume white background for alpha blending
                 Color aLineColor( GetLineColor() );
                 aLineColor.SetRed( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aLineColor.GetRed()) / 100L ) );
@@ -256,12 +273,23 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
                 aFillColor.SetGreen( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetGreen()) / 100L ) );
                 aFillColor.SetBlue( static_cast<UINT8>( (255L*nTransparency + (100L - nTransparency)*aFillColor.GetBlue()) / 100L ) );
                 SetFillColor( aFillColor );
+#endif	// USE_JAVA
             }
 
 			DrawPolyPolygon( pTransAct->GetPolyPolygon() );
 
             if( nTransparency )
+#ifdef USE_JAVA
+            {
+                if ( mpGraphics )
+                {
+                    ((JavaSalGraphics *)mpGraphics)->setLineTransparency( 0 );
+                    ((JavaSalGraphics *)mpGraphics)->setFillTransparency( 0 );
+                }
+            }
+#else	// USE_JAVA
                 Pop();
+#endif	// USE_JAVA
 
 			bExecuted = sal_True;
 		}

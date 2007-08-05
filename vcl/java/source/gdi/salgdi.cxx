@@ -65,6 +65,8 @@ JavaSalGraphics::JavaSalGraphics()
 	mnFillColor = MAKE_SALCOLOR( 0xff, 0xff, 0xff ) | 0xff000000;
 	mnLineColor = MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000;
 	mnTextColor = MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000;
+	mnFillTransparency = 0xff000000;
+	mnLineTransparency = 0xff000000;
 	mpFrame = NULL;
 	mpPrinter = NULL;
 	mpVirDev = NULL;
@@ -159,7 +161,7 @@ void JavaSalGraphics::SetLineColor()
 
 void JavaSalGraphics::SetLineColor( SalColor nSalColor )
 {
-	mnLineColor = nSalColor | 0xff000000;
+	mnLineColor = nSalColor | mnLineTransparency;
 }
 
 // -----------------------------------------------------------------------
@@ -173,7 +175,7 @@ void JavaSalGraphics::SetFillColor()
 
 void JavaSalGraphics::SetFillColor( SalColor nSalColor )
 {
-	mnFillColor = nSalColor | 0xff000000;
+	mnFillColor = nSalColor | mnFillTransparency;
 }
 
 // -----------------------------------------------------------------------
@@ -240,16 +242,13 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 
 bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency )
 {
-	SalColor nOldFillColor = mnFillColor;
-	mnFillColor = GetTransparentColor( mnFillColor, nTransparency );
-
-	SalColor nOldLineColor = mnLineColor;
-	mnLineColor = GetTransparentColor( mnLineColor, nTransparency );
+	setLineTransparency( nTransparency );
+	setFillTransparency( nTransparency );
 
 	drawRect( nX, nY, nWidth, nHeight );
 
-	mnFillColor = nOldFillColor;
-	mnLineColor = nOldLineColor;
+	setLineTransparency( 0 );
+	setFillTransparency( 0 );
 
 	return true;
 }
@@ -371,4 +370,29 @@ long JavaSalGraphics::GetGraphicsWidth() const
 		return mpFrame->maGeometry.nWidth;
 	else
 		return 0;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::setLineTransparency( sal_uInt8 nTransparency )
+{
+	if ( nTransparency > 100 )
+		nTransparency = 100;
+	float fTransPercent = (float)( 100 - nTransparency ) / 100;
+	mnLineTransparency = ( ( (SalColor)( 100 - nTransparency ) * 0xff ) / 100 ) << 24;
+
+	// Reset current color
+	SetLineColor( mnLineColor & 0x00ffffff );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::setFillTransparency( sal_uInt8 nTransparency )
+{
+	if ( nTransparency > 100 )
+		nTransparency = 100;
+	mnFillTransparency = ( ( (SalColor)( 100 - nTransparency ) * 0xff ) / 100 ) << 24;
+
+	// Reset current color
+	SetFillColor( mnFillColor & 0x00ffffff );
 }

@@ -81,6 +81,14 @@
 #include <com/sun/star/uno/Sequence.hxx>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _SV_SALGDI_H
+#include <salgdi.h>
+#endif
+
+#endif	// USE_JAVA
+
 // ========================================================================
 
 DBG_NAMEEX( OutputDevice )
@@ -216,6 +224,20 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 		GDIMetaFile* pOldMetaFile = mpMetaFile;
 		mpMetaFile = NULL;
 
+#ifdef USE_JAVA
+		if ( !mpGraphics )
+			ImplGetGraphics();
+		if ( mpGraphics )
+		{
+			((JavaSalGraphics *)mpGraphics)->setLineTransparency( (sal_uInt8)nTransparencePercent );
+			((JavaSalGraphics *)mpGraphics)->setFillTransparency( (sal_uInt8)nTransparencePercent );
+
+			DrawPolyPolygon( rPolyPoly );
+
+			((JavaSalGraphics *)mpGraphics)->setLineTransparency( 0 );
+			((JavaSalGraphics *)mpGraphics)->setFillTransparency( 0 );
+		}
+#else	// USE_JAVA
 		if( OUTDEV_PRINTER == meOutDevType )
 		{
 			Rectangle		aPolyRect( LogicToPixel( rPolyPoly ).GetBoundRect() );
@@ -454,6 +476,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
                 }
             }
         }
+#endif	// USE_JAVA
 
 		mpMetaFile = pOldMetaFile;
 
