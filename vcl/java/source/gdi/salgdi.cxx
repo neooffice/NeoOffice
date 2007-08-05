@@ -240,14 +240,16 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 
 bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency )
 {
-	SalColor nTransColor = ( ( 0xff - nTransparency ) << 24 );
-	if ( nTransColor )
-	{
-		if ( mnFillColor )
-			mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, ( mnFillColor & 0x00ffffff ) | nTransColor, TRUE );
-		if ( mnLineColor )
-			mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, ( mnLineColor & 0x00ffffff ) | nTransColor, FALSE );
-	}
+	SalColor nOldFillColor = mnFillColor;
+	mnFillColor = GetTransparentColor( mnFillColor, nTransparency );
+
+	SalColor nOldLineColor = mnLineColor;
+	mnLineColor = GetTransparentColor( mnLineColor, nTransparency );
+
+	drawRect( nX, nY, nWidth, nHeight );
+
+	mnFillColor = nOldFillColor;
+	mnLineColor = nOldLineColor;
 
 	return true;
 }

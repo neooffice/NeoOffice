@@ -167,4 +167,9 @@ public:
 	virtual bool			drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency );
 };
 
+inline SalColor GetTransparentColor( SalColor nColor, sal_Int8 nTransparency )
+{
+	return ( nColor & 0x00ffffff ) | ( ( ( ( nColor >> 24 ) * ( 100 - nTransparency ) ) / 100 ) << 24 );
+}
+
 #endif // _SV_SALGDI_H
