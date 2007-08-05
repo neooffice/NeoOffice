@@ -81,7 +81,8 @@ public:
 	virtual bool		LayoutText( ImplLayoutArgs& rArgs );
 	virtual void		DrawText( SalGraphics& rGraphics ) const;
 	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const;
-	virtual ImplATSLayoutData*	GetVerticalGlyphTranslation( long nGlyph, int nCharPos, long& nX, long& nY ) const;
+
+	ImplATSLayoutData*	GetVerticalGlyphTranslation( long nGlyph, int nCharPos, long& nX, long& nY ) const;
 
 	void				Destroy();
 };
