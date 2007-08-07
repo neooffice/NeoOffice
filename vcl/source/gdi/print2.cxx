@@ -92,7 +92,6 @@ static bool ImplIsActionSpecial( const MetaAction& rAct )
 {
     switch( rAct.GetType() )
     {
-#ifndef USE_JAVA
         case META_TRANSPARENT_ACTION:
             return true;
 
@@ -107,7 +106,6 @@ static bool ImplIsActionSpecial( const MetaAction& rAct )
 
         case META_BMPEXSCALEPART_ACTION:
             return static_cast<const MetaBmpExScalePartAction&>(rAct).GetBitmapEx().IsAlpha() != 0;
-#endif	// !USE_JAVA
 
         default:
             return false;
@@ -593,6 +591,7 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
 
 	rOutMtf.Clear();
 
+#ifndef USE_JAVA
     if( !rPrinterOptions.IsReduceTransparency() || 
         ( PRINTER_TRANSPARENCY_AUTO == rPrinterOptions.GetReducedTransparencyMode() ) )
     {
@@ -617,6 +616,7 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
             }
         }
     }
+#endif	// !USE_JAVA
 
     // #i10613# Determine set of connected components containing transparent objects. These are 
     // then processed as bitmaps, the original actions are removed from the metafile.

@@ -758,8 +758,168 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 
 bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap, const SalBitmap& rAlphaBitmap )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalGraphics::drawAlphaBitmap not implemented\n" );
-#endif
-	return false;
+	// Don't do anything if the source is not a printer
+	if ( !mpPrinter )
+		return false;
+
+	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSourceBitmap;
+	JavaSalBitmap *pTransJavaSalBitmap = (JavaSalBitmap *)&rAlphaBitmap;
+
+	SalTwoRect aPosAry;
+	memcpy( &aPosAry, &rPosAry, sizeof( SalTwoRect ) );
+
+	// Adjust the source and destination to eliminate unnecessary copying
+	float fScaleX = (float)aPosAry.mnDestWidth / aPosAry.mnSrcWidth;
+	float fScaleY = (float)aPosAry.mnDestHeight / aPosAry.mnSrcHeight;
+	if ( aPosAry.mnSrcX < 0 )
+	{
+		aPosAry.mnSrcWidth += aPosAry.mnSrcX;
+		if ( aPosAry.mnSrcWidth < 1 )
+			return true;
+		aPosAry.mnDestWidth = (long)( ( fScaleX * aPosAry.mnSrcWidth ) + 0.5 );
+		aPosAry.mnDestX -= (long)( ( fScaleX * aPosAry.mnSrcX ) + 0.5 );
+		aPosAry.mnSrcX = 0;
+	}
+	if ( aPosAry.mnSrcY < 0 )
+	{
+		aPosAry.mnSrcHeight += aPosAry.mnSrcY;
+		if ( aPosAry.mnSrcHeight < 1 )
+			return true;
+		aPosAry.mnDestHeight = (long)( ( fScaleY * aPosAry.mnSrcHeight ) + 0.5 );
+		aPosAry.mnDestY -= (long)( ( fScaleY * aPosAry.mnSrcY ) + 0.5 );
+		aPosAry.mnSrcY = 0;
+	}
+
+	Size aSize( pJavaSalBitmap->GetSize() );
+	long nExcessWidth = aPosAry.mnSrcX + aPosAry.mnSrcWidth - aSize.Width();
+	long nExcessHeight = aPosAry.mnSrcY + aPosAry.mnSrcHeight - aSize.Height();
+	if ( nExcessWidth > 0 )
+	{
+		aPosAry.mnSrcWidth -= nExcessWidth;
+		if ( aPosAry.mnSrcWidth < 1 )
+			return true;
+		aPosAry.mnDestWidth = (long)( ( fScaleX * aPosAry.mnSrcWidth ) + 0.5 );
+	}
+	if ( nExcessHeight > 0 )
+	{
+		aPosAry.mnSrcHeight -= nExcessHeight;
+		if ( aPosAry.mnSrcHeight < 1 )
+			return true;
+		aPosAry.mnDestHeight = (long)( ( fScaleY * aPosAry.mnSrcHeight ) + 0.5 );
+	}
+
+	if ( aPosAry.mnDestX < 0 )
+	{
+		aPosAry.mnDestWidth += aPosAry.mnDestX;
+		if ( aPosAry.mnDestWidth < 1 )
+			return true;
+		aPosAry.mnSrcWidth = (long)( ( aPosAry.mnDestWidth / fScaleX ) + 0.5 );
+		aPosAry.mnSrcX -= (long)( ( aPosAry.mnDestX / fScaleX ) + 0.5 );
+		aPosAry.mnDestX = 0;
+	}
+	if ( aPosAry.mnDestY < 0 )
+	{
+		aPosAry.mnDestHeight += aPosAry.mnDestY;
+		if ( aPosAry.mnDestHeight < 1 )
+			return true;
+		aPosAry.mnSrcHeight = (long)( ( aPosAry.mnDestHeight / fScaleY ) + 0.5 );
+		aPosAry.mnSrcY -= (long)( ( aPosAry.mnDestY / fScaleY ) + 0.5 );
+		aPosAry.mnDestY = 0;
+	}
+
+	if ( aPosAry.mnSrcWidth < 1 || aPosAry.mnSrcHeight < 1 || aPosAry.mnDestWidth < 1 || aPosAry.mnDestHeight < 1 )
+		return true;
+
+	// Always make a copy so that we can mask out the appropriate bits
+	BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
+	if ( pTransSrcBuffer )
+	{
+		SalTwoRect aCopyPosAry;
+		memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
+		aCopyPosAry.mnDestX = 0;
+		aCopyPosAry.mnDestY = 0;
+		aCopyPosAry.mnDestWidth = aCopyPosAry.mnSrcWidth;
+		aCopyPosAry.mnDestHeight = aCopyPosAry.mnSrcHeight;
+
+		// Fix bug 2475 by handling the case where the transparent bitmap is
+		// smaller than the main bitmap
+		SalTwoRect aTransPosAry;
+		memcpy( &aTransPosAry, &aCopyPosAry, sizeof( SalTwoRect ) );
+		Size aTransSize( pTransJavaSalBitmap->GetSize() );
+		long nTransExcessWidth = aCopyPosAry.mnSrcX + aCopyPosAry.mnSrcWidth - aTransSize.Width();
+		if ( nTransExcessWidth > 0 )
+		{
+			aTransPosAry.mnSrcWidth -= nTransExcessWidth;
+			aTransPosAry.mnDestWidth = aTransPosAry.mnSrcWidth;
+		}
+		long nTransExcessHeight = aCopyPosAry.mnSrcY + aCopyPosAry.mnSrcHeight - aTransSize.Height();
+		if ( nTransExcessHeight > 0 )
+		{
+			aTransPosAry.mnSrcHeight -= nTransExcessHeight;
+			aTransPosAry.mnDestHeight = aTransPosAry.mnSrcHeight;
+		}
+		BitmapBuffer *pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aTransPosAry, BMP_FORMAT_8BIT_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
+		if ( pTransDestBuffer )
+		{
+			if ( pTransDestBuffer->mpBits )
+			{
+				BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
+				if ( pSrcBuffer )
+				{
+					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+					if ( pCopyBuffer )
+					{
+						if ( pCopyBuffer->mpBits )
+						{
+							// Copy alpha value to the alpha bitmap
+							jint *pBits = (jint *)pCopyBuffer->mpBits;
+							Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
+							FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_8BIT_PAL;
+							for ( int i = 0; i < pCopyBuffer->mnHeight; i++ )
+							{
+								bool bTransPixels = ( i < pTransDestBuffer->mnHeight );
+								for ( int j = 0; j < pCopyBuffer->mnWidth; j++ )
+								{
+									if ( bTransPixels && j < pTransDestBuffer->mnWidth )
+									{
+										// We need to color blend with white
+#ifdef POWERPC
+										int nAlphaPos = 0;
+#else	// POWERPC
+										int nAlphaPos = 3;
+#endif	// POWERPC
+										BYTE nAlpha = ~pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask );
+										float fAlpha = (float)nAlpha / 0xff;
+										BYTE *pBytes = (BYTE *)( pBits + j );
+										for ( int k = 0; k < 4; k++ )
+										{
+											if ( k == nAlphaPos )
+												pBytes[ k ] = (BYTE)( pBytes[ k ] * fAlpha );
+											else
+												pBytes[ k ] += (BYTE)( ( 0xff - pBytes[ k ] ) * fAlpha );
+										}
+									}
+								}
+
+								pBits += pCopyBuffer->mnWidth;
+								pTransBits += pTransDestBuffer->mnScanlineSize;
+							}
+						}
+
+						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+					}
+
+					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+				}
+
+				delete[] pTransDestBuffer->mpBits;
+			}
+
+			delete pTransDestBuffer;
+		}
+
+		pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, TRUE );
+	}
+
+	return true;
 }
