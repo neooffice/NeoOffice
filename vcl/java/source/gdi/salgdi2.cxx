@@ -871,6 +871,11 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 					{
 						if ( pCopyBuffer->mpBits )
 						{
+#ifdef POWERPC
+							int nAlphaPos = 0;
+#else	// POWERPC
+							int nAlphaPos = 3;
+#endif	// POWERPC
 							// Copy alpha value to the alpha bitmap
 							jint *pBits = (jint *)pCopyBuffer->mpBits;
 							Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
@@ -883,11 +888,6 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 									if ( bTransPixels && j < pTransDestBuffer->mnWidth )
 									{
 										// We need to color blend with white
-#ifdef POWERPC
-										int nAlphaPos = 0;
-#else	// POWERPC
-										int nAlphaPos = 3;
-#endif	// POWERPC
 										BYTE nAlpha = ~pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask );
 										float fAlpha = (float)nAlpha / 0xff;
 										BYTE *pBytes = (BYTE *)( pBits + j );
