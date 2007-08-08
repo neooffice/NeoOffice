@@ -434,8 +434,13 @@ ifdef X11_PRODUCT
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 ifeq ("$(PRODUCT_NAME)","RetroOffice")
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/RetroOffice Elements 2.1.1.070804/Contents/MacOS/"*.bmp "program"
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/RetroOffice Elements 2.1.1.070804/Contents/Resources/retro.icns" "Resources/ship.icns"
 endif
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/RetroOffice Elements 2.1.1.070804/Contents/Resources/"*.icns "Resources"
+	cd "$(INSTALL_HOME)/package/Contents" ; mv "Resources/retro.icns" "Resources/ship.icns"
+	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" .
+	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"` svtools svx
+	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
+	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_industrial.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
 else
