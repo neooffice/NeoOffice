@@ -422,6 +422,35 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	// Unset MONO_DISABLE_SHM variable as OdfConverter will abort with it set
 	aTmpPath = OString( "MONO_DISABLE_SHM=" );
 	putenv( (char *)aTmpPath.getStr() );
+
+	// We need to fork and exec javaldx to properly create preferences the
+	// first time or else some preferences won't be imported
+	OString aJavaldxPath( aCmdPath );
+	aJavaldxPath += OString( "/javaldx" );
+	char *pJavaldxPath = (char *)aJavaldxPath.getStr();
+	if ( !access( pJavaldxPath, R_OK | X_OK ) )
+	{
+		char *pJavaldxArgs[ 2 ];
+		pJavaldxArgs[ 0 ] = pJavaldxPath;
+		pJavaldxArgs[ 1 ] = NULL;
+
+		// Execute the javaldx command in child process
+		pid_t pid = fork();
+		if ( !pid )
+		{
+			close( 0 );
+			close( 1 );
+			execvp( pJavaldxPath, pJavaldxArgs );
+			_exit( 1 );
+		}
+		else if ( pid > 0 )
+		{
+			// Invoke waitpid to prevent zombie processes
+			int status;
+			while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+				;
+		}
+	}
 #endif	// USE_JAVA
 
 	RTL_LOGFILE_PRODUCT_TRACE( "PERFORMANCE - enter Main()" );
