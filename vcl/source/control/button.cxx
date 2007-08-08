@@ -422,11 +422,11 @@ USHORT Button::ImplGetTextStyle( XubString& rText, WinBits nWinStyle,
 			// to proper color as well.
 			
 			if ( ! ( IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) && GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, 0, aValue, aColor ) ) )
-#endif // USE_JAVA
+#endif	// USE_JAVA
             nTextStyle |= TEXT_DRAW_DISABLE;
 #ifdef USE_JAVA
 		}
-#endif
+#endif	// USE_JAVA
     }
 
     if ( (nDrawFlags & WINDOW_DRAW_MONO) ||
@@ -709,9 +709,9 @@ void Button::ImplDrawAlignedImage( OutputDevice* pDev, Point& rPos,
          ! IsEnabled() )
 #ifdef USE_JAVA
         nStyle |= IMAGE_DRAW_SEMITRANSPARENT;
-#else
+#else	// USE_JAVA
         nStyle |= IMAGE_DRAW_DISABLE;
-#endif
+#endif	// USE_JAVA
 
     if ( pBitmapEx && ( pDev->GetOutDevType() == OUTDEV_PRINTER ) )
     {
@@ -1180,11 +1180,11 @@ USHORT PushButton::ImplGetTextStyle( ULONG nDrawFlags ) const
 		PushButton *nonConstButton = (PushButton *)this;
 		
 		if ( ! ( nonConstButton->IsNativeControlSupported( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL ) && nonConstButton->GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, 0, aValue, aColor ) ) )
-#endif // USE_JAVA
+#endif	// USE_JAVA
         nTextStyle |= TEXT_DRAW_DISABLE;
 #ifdef USE_JAVA
 	}
-#endif // USE_JAVA
+#endif	// USE_JAVA
 
     return nTextStyle;
 }
@@ -1301,8 +1301,8 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, ULONG nDrawFlags
 
         bNativeOK = GetNativeControlTextColor( CTRL_PUSHBUTTON, PART_ENTIRE_CONTROL, nState, aControlValue, aColor );
 	}
-	
 #endif	// USE_JAVA
+
     if ( nDrawFlags & WINDOW_DRAW_MONO )
         aColor = Color( COL_BLACK );
     else if ( IsControlForeground() )
@@ -1516,11 +1516,11 @@ void PushButton::ImplDrawPushButton( bool bLayout )
                                    (nState&CTRL_STATE_ROLLOVER) ? WINDOW_DRAW_ROLLOVER : 0,
                                    aInRect, bLayout );
 
-#if ! defined( USE_JAVA )
+#ifndef USE_JAVA
 	// [ed] note : focus rect not used for neo native widgets
         if ( HasFocus() )
             ShowFocus( ImplGetFocusRect() );
-#endif
+#endif	// !USE_JAVA
     }
 
     if ( bNativeOK == FALSE )
@@ -1887,10 +1887,10 @@ void PushButton::Resize()
 
 void PushButton::GetFocus()
 {
-#if ! defined( USE_JAVA )
+#ifndef USE_JAVA
   // [ed] Note : ShowFocus() not used for neo NWF
     ShowFocus( ImplGetFocusRect() );
-#endif
+#endif	// !USE_JAVA
     SetInputContext( InputContext( GetFont() ) );
     Button::GetFocus();
 }
@@ -2491,9 +2491,9 @@ if ( bNativeOK == FALSE )
         if ( !bEnabled )
 #ifdef USE_JAVA
             nButtonStyle |= IMAGE_DRAW_SEMITRANSPARENT;
-#else
+#else	// USE_JAVA
             nButtonStyle |= IMAGE_DRAW_DISABLE;
-#endif
+#endif	// USE_JAVA
 
 		// check for HC mode
 		Image *pImage = &maImage;
@@ -2592,7 +2592,7 @@ void RadioButton::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 				if ( bNativeOK )
 					SetTextColor( aColor );
 			}
-#endif
+#endif	// USE_JAVA
 
             Size aSize( rSize );
             Point aPos( rPos );
@@ -4233,7 +4233,7 @@ void CheckBox::Toggle()
     ImplCallEventListenersAndHandler( VCLEVENT_CHECKBOX_TOGGLE, maToggleHdl, this );
 #ifdef USE_JAVA
 	Invalidate();
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
