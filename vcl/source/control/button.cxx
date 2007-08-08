@@ -1303,19 +1303,23 @@ void PushButton::ImplDrawPushButtonContent( OutputDevice* pDev, ULONG nDrawFlags
 	}
 #endif	// USE_JAVA
 
+#ifdef USE_JAVA
+    // Fix bug 2534 without causing bug 2208 by not overriding the native text
+	// color if there is text
+    if ( !bNativeOK || !GetText().Len() )
+    {
+#endif	// USE_JAVA
     if ( nDrawFlags & WINDOW_DRAW_MONO )
         aColor = Color( COL_BLACK );
     else if ( IsControlForeground() )
         aColor = GetControlForeground();
     else if( nDrawFlags & WINDOW_DRAW_ROLLOVER )
         aColor = rStyleSettings.GetButtonRolloverTextColor();
-#ifdef USE_JAVA
-    // Fix bug 2208 by only disabling the default color setting code
-    else if ( ! bNativeOK )
-#else	// USE_JAVA
     else
-#endif	// USE_JAVA
         aColor = rStyleSettings.GetButtonTextColor();
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
 
     pDev->SetTextColor( aColor );
 
