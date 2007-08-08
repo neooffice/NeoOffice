@@ -193,13 +193,13 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 				if ( pCopyBuffer )
 				{
-					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, 1.0f );
 
-					bDrawn = true;
 				}
-			}
 
-			if ( !bDrawn )
+				bDrawn = true;
+			}
+			else
 			{
 				com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
 				if ( aVCLBitmap.getJavaObject() )
@@ -869,15 +869,16 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 					if ( pCopyBuffer )
 					{
+						// Drawing CGImages with partial transparency seems
+						// to have unexpected changes to pixel color when
+						// printing so set alpha to fully opaque or transparent
+						// only and use the average of the rest to set the
+						// global alpha
+						long nAlphaPixels = 0;
+						long nTotalAlpha = 0;
+						jint *pBits = (jint *)pCopyBuffer->mpBits;
 						if ( pCopyBuffer->mpBits )
 						{
-#ifdef POWERPC
-							int nAlphaPos = 0;
-#else	// POWERPC
-							int nAlphaPos = 3;
-#endif	// POWERPC
-							// Copy alpha value to the alpha bitmap
-							jint *pBits = (jint *)pCopyBuffer->mpBits;
 							Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
 							FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_8BIT_PAL;
 							for ( int i = 0; i < pCopyBuffer->mnHeight; i++ )
@@ -887,16 +888,15 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 								{
 									if ( bTransPixels && j < pTransDestBuffer->mnWidth )
 									{
-										// We need to color blend with white
 										BYTE nAlpha = ~pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask );
-										float fAlpha = (float)nAlpha / 0xff;
-										BYTE *pBytes = (BYTE *)( pBits + j );
-										for ( int k = 0; k < 4; k++ )
+										if ( !nAlpha )
 										{
-											if ( k == nAlphaPos )
-												pBytes[ k ] = (BYTE)( pBytes[ k ] * fAlpha );
-											else
-												pBytes[ k ] += (BYTE)( ( 0xff - pBytes[ k ] ) * fAlpha );
+											pBits[ j ] = 0x00000000;
+										}
+										else if ( nAlpha != 0xff )
+										{
+											nAlphaPixels++;
+											nTotalAlpha += nAlpha;
 										}
 									}
 								}
@@ -906,7 +906,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							}
 						}
 
-						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
+						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, nAlphaPixels ? (float)nTotalAlpha / ( nAlphaPixels * 0xff ) : 1.0f );
 					}
 
 					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );

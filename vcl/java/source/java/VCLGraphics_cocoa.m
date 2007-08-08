@@ -168,9 +168,10 @@
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
+	float				mfAlpha;
 }
 - (void)drawImageInRect:(id)pObject;
-- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY alpha:(float)fAlpha;
 @end
 
 @implementation DrawImageInRect
@@ -206,6 +207,7 @@
 						CGContextRotateCTM( aContext, mfRotateAngle );
 						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+						CGContextSetAlpha( aContext, mfAlpha );
 						CGContextDrawImage( aContext, CGRectMake( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 ), maImage );
 						CGContextRestoreGState( aContext );
 					}
@@ -221,7 +223,7 @@
 	}
 }
 
-- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY alpha:(float)fAlpha
 {
 	[super init];
 
@@ -239,6 +241,10 @@
 	mfRotateAngle = fRotateAngle;
 	mfScaleX = fScaleX;
 	mfScaleY = fScaleY;
+	if ( fAlpha < 0.0f || fAlpha > 1.0f )
+		mfAlpha = 1.0f;
+	else
+		mfAlpha = fAlpha;
 
 	return self;
 }
@@ -737,13 +743,13 @@ void CGContext_drawRect( float fX, float fY, float fWidth, float fHeight, int nC
 	[pPool release];
 }
 
-void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY, float fAlpha )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( aImage && fWidth && fHeight )
 	{
-		DrawImageInRect *pDrawImageInRect = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		DrawImageInRect *pDrawImageInRect = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY alpha:fAlpha];
 		if ( bDrawInMainThread )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

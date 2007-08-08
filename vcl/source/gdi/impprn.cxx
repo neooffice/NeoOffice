@@ -293,6 +293,7 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 
 			bExecuted = sal_True;
 		}
+#ifndef USE_JAVA
 		else if( nType == META_FLOATTRANSPARENT_ACTION )
 		{
 			MetaFloatTransparentAction*	pFloatAction = (MetaFloatTransparentAction*) pAct;
@@ -326,6 +327,7 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 
 			bExecuted = sal_True;
 		}
+#endif	// !USE_JAVA
 
 		if( !bExecuted && pAct )
 			pAct->Execute( this );

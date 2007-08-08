@@ -196,13 +196,13 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20 );
+		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20, 1.0f );
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jboolean _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jboolean _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
 {
 	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
 	if ( !pBuffer )
@@ -284,7 +284,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18 );
+		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19 );
 	}
 }
 
@@ -444,7 +444,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[0].signature = "([IIIIIIIFFFFFFFFZFFFFF)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
 			pMethods[1].name = "drawBitmapBuffer0";
-			pMethods[1].signature = "(JIIIIFFFFFFFFZFFFFF)V";
+			pMethods[1].signature = "(JIIIIFFFFFFFFZFFFFFF)V";
 			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0;
 			pMethods[2].name = "drawEPS0";
 			pMethods[2].signature = "(JJFFFFFFFFZFFFFF)V";
@@ -641,7 +641,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
+void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, float _par9 )
 {
 	// Mark the bitmap buffer for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -662,7 +662,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(JIIIIIIII)V";
+			char *cSignature = "(JIIIIIIIIF)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawBitmapBuffer", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -678,6 +678,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
+			args[9].f = jfloat( _par9 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
