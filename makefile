@@ -136,7 +136,7 @@ ODF-CONVERTER_TAG:=
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=-rHEAD
-X11_NEO_TAG:=-rHEAD
+X11_NEO_TAG:=-rRetroOffice-2_2_1_Early_Access
 
 all: build.all
 
