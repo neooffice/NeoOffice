@@ -761,7 +761,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
              * without any locking and detect the ENOTSUP errno when we try
              * to lock the file.
              */
-            if ( fd < 0 )
+            if ( fd < 0 && errno == ENOTSUP )
             {
                 fd = open( buffer, flags & ~( O_EXLOCK | O_SHLOCK ), mode );
 
