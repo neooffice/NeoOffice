@@ -1008,7 +1008,7 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
 			pBorder->GetParent()->Update();
 		}
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -1061,7 +1061,7 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 					pBorder->GetParent()->Update();
 				}
 			}
-#endif
+#endif	// USE_JAVA
 		}
 		else
 			ImplInsertText( rText, pNewSelection );
@@ -1165,7 +1165,7 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 					aClipRgn.Union( aBound.GetBoundRect() );
 				}
 			}
-#endif
+#endif	// USE_JAVA
             if( !aClipRgn.IsNull() )
             {
 #ifdef USE_JAVA
@@ -1185,7 +1185,7 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 						aClipRgn.Intersect( aBound.GetBoundRect() );
 					}
 				}
-#endif
+#endif	// USE_JAVA
                 // transform clipping region to border window's coordinate system
                 if( IsRTLEnabled() != pBorder->IsRTLEnabled() && Application::GetSettings().GetLayoutRTL() )
                 {
@@ -1982,7 +1982,7 @@ void Edit::GetFocus()
 				pWindow->GetParent()->Update();
 			}
 		}
-#endif
+#endif	// USE_JAVA
 		ImplShowCursor();
 
 		if ( maSelection.Len() )
@@ -2032,7 +2032,7 @@ void Edit::LoseFocus()
 			pWindow->GetParent()->Update();
 		}
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
