@@ -520,8 +520,15 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 			if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 			{
-				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-				GetParent()->Update();
+				Window *pWindow = this;
+				Window *pParent = GetParent();
+				if ( pParent->GetParent() )
+				{
+					pWindow = pParent;
+					pParent = pParent->GetParent();
+				}
+				pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+				pParent->Update();
 			}
 			else
 #endif	// USE_JAVA
@@ -534,8 +541,15 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 			if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 			{
-				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-				GetParent()->Update();
+				Window *pWindow = this;
+				Window *pParent = GetParent();
+				if ( pParent->GetParent() )
+				{
+					pWindow = pParent;
+					pParent = pParent->GetParent();
+				}
+				pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+				pParent->Update();
 			}
 			else
 #endif	// USE_JAVA
@@ -584,8 +598,15 @@ void SpinField::MouseButtonUp( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 		{
-			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-			GetParent()->Update();
+			Window *pWindow = this;
+			Window *pParent = GetParent();
+			if ( pParent->GetParent() )
+			{
+				pWindow = pParent;
+				pParent = pParent->GetParent();
+			}
+			pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+			pParent->Update();
 		}
 		else
 		{
@@ -603,8 +624,15 @@ void SpinField::MouseButtonUp( const MouseEvent& rMEvt )
 #ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 		{
-			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-			GetParent()->Update();
+			Window *pWindow = this;
+			Window *pParent = GetParent();
+			if ( pParent->GetParent() )
+			{
+				pWindow = pParent;
+				pParent = pParent->GetParent();
+			}
+			pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+			pParent->Update();
 		}
 		else
 		{
@@ -640,8 +668,27 @@ void SpinField::MouseMove( const MouseEvent& rMEvt )
 					maRepeatTimer.Stop();
 
 				mbUpperIn = bNewUpperIn;
+#ifdef USE_JAVA
+				if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+				{
+					Window *pWindow = this;
+					Window *pParent = GetParent();
+					if ( pParent->GetParent() )
+					{
+						pWindow = pParent;
+						pParent = pParent->GetParent();
+					}
+					pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+					pParent->Update();
+				}
+				else
+				{
+#endif	// USE_JAVA
 				Invalidate( maUpperRect );
 				Update();
+#ifdef USE_JAVA
+				}
+#endif	// USE_JAVA
 			}
 		}
 		else if ( mbInitialDown )
@@ -658,19 +705,30 @@ void SpinField::MouseMove( const MouseEvent& rMEvt )
 					maRepeatTimer.Stop();
 
 				mbLowerIn = bNewLowerIn;
+#ifdef USE_JAVA
+				if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+				{
+					Window *pWindow = this;
+					Window *pParent = GetParent();
+					if ( pParent->GetParent() )
+					{
+						pWindow = pParent;
+						pParent = pParent->GetParent();
+					}
+					pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+					pParent->Update();
+				}
+				else
+				{
+#endif	// USE_JAVA
 				Invalidate( maLowerRect );
 				Update();
+#ifdef USE_JAVA
+				}
+#endif	// USE_JAVA
 			}
 		}
 	}
-
-#ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
-	{
-		GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-		GetParent()->Update();
-	}
-#endif	// USE_JAVA
 
 	Edit::MouseMove( rMEvt );
 }
@@ -962,7 +1020,16 @@ void SpinField::Resize()
 
 #ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
-			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+		{
+			Window *pWindow = this;
+			Window *pParent = GetParent();
+			if ( pParent->GetParent() )
+			{
+				pWindow = pParent;
+				pParent = pParent->GetParent();
+			}
+			pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+		}
 #endif	// USE_JAVA
 	}
 }
@@ -988,7 +1055,16 @@ void SpinField::StateChanged( StateChangedType nType )
 				Invalidate( maDropDownRect );
 #ifdef USE_JAVA
 			if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
-				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+			{
+				Window *pWindow = this;
+				Window *pParent = GetParent();
+				if ( pParent->GetParent() )
+				{
+					pWindow = pParent;
+					pParent = pParent->GetParent();
+				}
+				pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+			}
 #endif	// USE_JAVA
 		}
 	}
@@ -1072,6 +1148,23 @@ long SpinField::PreNotify( NotifyEvent& rNEvt )
                 Rectangle* pLastRect = ImplFindPartRect( GetLastPointerPosPixel() );
                 if( pRect != pLastRect || (pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow()) )
                 {
+#ifdef USE_JAVA
+					if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+					{
+						Window *pWindow = this;
+						Window *pParent = GetParent();
+						if ( pParent->GetParent() )
+						{
+							pWindow = pParent;
+							pParent = pParent->GetParent();
+						}
+						pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+						pParent->Update();
+					}
+					else
+					{
+#endif	// USE_JAVA
+
                     Region aRgn( GetActiveClipRegion() );
                     if( pLastRect )
                     {
@@ -1085,6 +1178,9 @@ long SpinField::PreNotify( NotifyEvent& rNEvt )
                         Paint( *pRect );
                         SetClipRegion( aRgn );
                     }
+#ifdef USE_JAVA
+					}
+#endif	// USE_JAVA
                 }
             }
         }
@@ -1151,10 +1247,19 @@ IMPL_LINK( SpinField, ImplTimeout, Timer*, pTimer )
 			Up();
 		else
 			Down();
-
 #ifdef USE_JAVA
-		GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-		GetParent()->Update();
+		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+		{
+			Window *pWindow = this;
+			Window *pParent = GetParent();
+			if ( pParent->GetParent() )
+			{
+				pWindow = pParent;
+				pParent = pParent->GetParent();
+			}
+			pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+			pParent->Update();
+		}
 #endif	// USE_JAVA
 	}
 	return 0;
