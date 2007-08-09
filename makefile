@@ -106,7 +106,7 @@ PRODUCT_DIR_VERSION=2.2.1_Early_Access
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 1
-PRODUCT_DIR_PATCH_VERSION=Patch-1
+PRODUCT_DIR_PATCH_VERSION=Patch-1-Test-3
 X11_PRODUCT_PATCH_VERSION=Patch 0
 X11_PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
@@ -669,5 +669,5 @@ build.cd_package_shared:
 	sync ; hdiutil create -srcfolder "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)" -format UDTO -ov -o "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg"
 	mv "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg.cdr" "$(CD_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).cdr.dmg"
 
-build.all: build.package build.package_X11
+build.all: build.package
 	touch "$@"
