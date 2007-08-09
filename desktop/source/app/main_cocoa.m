@@ -141,7 +141,7 @@ static OSErr CarbonQuitEventHandler( const AppleEvent *pEvent, AppleEvent *pRepl
 
 	// Handle the Command-Q event
 	if ( pEvent && [pEvent type] == NSKeyDown && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask && [@"q" isEqualToString:[pEvent characters]] )
-		Application_queryExit();
+		[self performSelectorOnMainThread:@selector(terminate:) withObject:self waitUntilDone:NO];
 }
 
 @end
