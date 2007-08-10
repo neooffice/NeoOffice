@@ -386,8 +386,9 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
         const ULONG             nOldDrawMode = GetDrawMode();
 #ifdef USE_JAVA
         // Prevent downscaling of images if reduce bitmaps is turned off
-        long                    nMaxBmpDPIX = 0x7fffffff;
-        long                    nMaxBmpDPIY = 0x7fffffff;
+		// by setting the max resolution to negative
+        long                    nMaxBmpDPIX = -1;
+        long                    nMaxBmpDPIY = -1;
 #else	// USE_JAVA
         long                    nMaxBmpDPIX = mnDPIX;
         long                    nMaxBmpDPIY = mnDPIY;
@@ -399,18 +400,33 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
             // calculate maximum resolution for bitmap graphics
             if( PRINTER_BITMAP_OPTIMAL == rPrinterOptions.GetReducedBitmapMode() )
             {
+#ifdef USE_JAVA
+                nMaxBmpDPIX = Max( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIX );
+                nMaxBmpDPIY = Max( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIY );
+#else	// USE_JAVA
                 nMaxBmpDPIX = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIX );
                 nMaxBmpDPIY = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIY );
+#endif	// USE_JAVA
             }
             else if( PRINTER_BITMAP_NORMAL == rPrinterOptions.GetReducedBitmapMode() )
             {
+#ifdef USE_JAVA
+                nMaxBmpDPIX = Max( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIX );
+                nMaxBmpDPIY = Max( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIY );
+#else	// USE_JAVA
                 nMaxBmpDPIX = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIX );
                 nMaxBmpDPIY = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIY );
+#endif	// USE_JAVA
             }
             else
             {
+#ifdef USE_JAVA
+                nMaxBmpDPIX = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIX );
+                nMaxBmpDPIY = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIY );
+#else	// USE_JAVA
                 nMaxBmpDPIX = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIX );
                 nMaxBmpDPIY = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIY );
+#endif	// USE_JAVA
             }
         }
 

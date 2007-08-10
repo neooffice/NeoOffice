@@ -1123,7 +1123,11 @@ Bitmap Printer::GetPreparedBitmap( const Size& rDstSz,
 {
     Bitmap aBmp( rBmp );
 
+#ifdef USE_JAVA
+    if( !aBmp.IsEmpty() && nMaxBmpDPIX > 0 && nMaxBmpDPIY > 0 )
+#else	// USE_JAVA
     if( !aBmp.IsEmpty() )
+#endif	// USE_JAVA
     {
         Point           aPoint;
         const Rectangle aBmpRect( aPoint, aBmp.GetSizePixel() );
@@ -1192,7 +1196,11 @@ BitmapEx Printer::GetPreparedBitmapEx( const Size& rDstSz,
 {
     BitmapEx aBmpEx( rBmpEx );
 
+#ifdef USE_JAVA
+    if( !aBmpEx.IsEmpty() && nMaxBmpDPIX > 0 && nMaxBmpDPIY > 0 )
+#else	// USE_JAVA
     if( !aBmpEx.IsEmpty() )
+#endif	// USE_JAVA
     {
         Point           aPoint;
         const Rectangle aBmpRect( aPoint, aBmpEx.GetSizePixel() );
