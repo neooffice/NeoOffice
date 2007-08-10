@@ -350,7 +350,12 @@ static int adjustLockFlags(const char * path, int flags)
   
     if( 0 <= statfs( path, &s ) )
     {
+#ifdef USE_JAVA
+        // Fix bug 2443 by apply AFP fix to SAMBA shared volumes
+        if( 0 == strncmp("afpfs", s.f_fstypename, 5) || 0 == strncmp("smbfs", s.f_fstypename, 5) )
+#else	// USE_JAVA
         if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
+#endif	// USE_JAVA
         {
             flags &= ~O_EXLOCK;
             flags |= O_SHLOCK;
