@@ -350,12 +350,7 @@ static int adjustLockFlags(const char * path, int flags)
   
     if( 0 <= statfs( path, &s ) )
     {
-#ifdef USE_JAVA
-        // Fix bug 2443 by apply AFP fix to SAMBA shared volumes
-        if( 0 == strncmp("afpfs", s.f_fstypename, 5) || 0 == strncmp("smbfs", s.f_fstypename, 5) )
-#else	// USE_JAVA
         if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
-#endif	// USE_JAVA
         {
             flags &= ~O_EXLOCK;
             flags |= O_SHLOCK;
@@ -848,9 +843,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             /*
              * Handle case where we cannot open a file for writing because it
              * is locked in the Finder's GetInfo panel. Also, fix bug 1643 by
-             * converting all EPERM errors to EACCESS.
+             * converting all EPERM errors to EACCESS. Also, EINVAL errors
+             * really are EACCES errors.
              */
-            if ( errno == EPERM )
+            if ( errno == EPERM || errno == EINVAL )
                 errno = EACCES;
 #endif	/* MACOSX */
 
