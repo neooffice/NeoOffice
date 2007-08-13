@@ -207,8 +207,21 @@
 						CGContextRotateCTM( aContext, mfRotateAngle );
 						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
-						CGContextSetAlpha( aContext, mfAlpha );
-						CGContextDrawImage( aContext, CGRectMake( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 ), maImage );
+						if ( mfAlpha == 1.0f )
+						{
+							CGContextBeginTransparencyLayer( aContext, nil );
+							// While in transparency layer, we need to flip the
+							// image via translating and scaling the context
+							CGContextTranslateCTM( aContext, mfX, mfY );
+							CGContextScaleCTM( aContext, 1.0f, -1.0f );
+							CGContextDrawImage( aContext, CGRectMake( 0, 0, mfWidth, mfHeight * -1 ), maImage );
+							CGContextEndTransparencyLayer( aContext );
+						}
+						else
+						{
+							CGContextSetAlpha( aContext, mfAlpha );
+							CGContextDrawImage( aContext, CGRectMake( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 ), maImage );
+						}
 						CGContextRestoreGState( aContext );
 					}
 				}

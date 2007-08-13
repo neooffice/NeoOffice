@@ -874,13 +874,39 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 						// printing so set alpha to fully opaque or transparent
 						// only and use the average of the rest to set the
 						// global alpha
-						long nAlphaPixels = 0;
-						long nTotalAlpha = 0;
+						bool bAlphaVaries = false;
+						BYTE nLastAlpha = 0x00;
 						jint *pBits = (jint *)pCopyBuffer->mpBits;
 						if ( pCopyBuffer->mpBits )
 						{
 							Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
 							FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_8BIT_PAL;
+
+							// Fix bug 2549 by first going through the alpha
+							// pixels and determining if they vary
+							for ( int i = 0; i < pTransDestBuffer->mnHeight; i++ )
+							{
+								for ( int j = 0; j < pTransDestBuffer->mnWidth; j++ )
+								{
+									BYTE nAlpha = ~pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask );
+									if ( nAlpha && nAlpha != 0xff )
+									{
+										if ( nLastAlpha && nAlpha != nLastAlpha )
+										{
+											bAlphaVaries = true;
+											break;
+										}
+
+										nLastAlpha = nAlpha;
+									}
+								}
+
+								pTransBits += pTransDestBuffer->mnScanlineSize;
+							}
+
+							// Fix bug 2549 by passing varied alpha directly
+							// to the native image printing code
+							pTransBits = (Scanline)pTransDestBuffer->mpBits;
 							for ( int i = 0; i < pCopyBuffer->mnHeight; i++ )
 							{
 								bool bTransPixels = ( i < pTransDestBuffer->mnHeight );
@@ -893,11 +919,15 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 										{
 											pBits[ j ] = 0x00000000;
 										}
-										else if ( nAlpha != 0xff )
+										else if ( nAlpha != 0xff && bAlphaVaries)
 										{
-											nAlphaPixels++;
-											nTotalAlpha += nAlpha;
+											float fTransPercent = (float)nAlpha / 0xff;
+											pBits[ j ] = ( pBits[ j ] & 0x00ffffff ) | ( ( (SalColor)( (BYTE)( pBits[ j ] >> 24 ) * fTransPercent ) << 24 ) & 0xff000000 );
 										}
+									}
+									else
+									{
+										pBits[ j ] = 0x00000000;
 									}
 								}
 
@@ -906,7 +936,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							}
 						}
 
-						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, nAlphaPixels ? (float)nTotalAlpha / ( nAlphaPixels * 0xff ) : 1.0f );
+						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, ( !bAlphaVaries && nLastAlpha ) ? (float)nLastAlpha / 0xff : 1.0f );
 					}
 
 					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
