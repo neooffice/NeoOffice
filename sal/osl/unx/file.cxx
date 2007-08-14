@@ -771,7 +771,11 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                  * because the first call actually created the file.
                  */
                 if ( fd < 0 && flags & O_CREAT )
-                    fd = open( buffer, flags & ~( O_CREAT | O_EXLOCK | O_SHLOCK ), mode );
+                {
+                    struct statfs s;
+                    if ( 0 <= statfs( buffer, &s ) && !strncmp( "webdav", s.f_fstypename, 6 ) )
+                        fd = open( buffer, flags & ~( O_CREAT | O_EXLOCK | O_SHLOCK ), mode );
+                }
             }
 #endif
             if ( fd >= 0 )
@@ -839,9 +843,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             /*
              * Handle case where we cannot open a file for writing because it
              * is locked in the Finder's GetInfo panel. Also, fix bug 1643 by
-             * converting all EPERM errors to EACCESS.
+             * converting all EPERM errors to EACCESS. Also, EINVAL errors
+             * really are EACCES errors.
              */
-            if ( errno == EPERM )
+            if ( errno == EPERM || errno == EINVAL )
                 errno = EACCES;
 #endif	/* MACOSX */
 
