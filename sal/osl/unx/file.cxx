@@ -147,7 +147,15 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <sys/param.h>
 #include <sys/mount.h>
 #define HAVE_STATFS_H
+#ifndef USE_JAVA
+/*
+ * Fix bug 2504 and other file locking bugs by not trying lock files open
+ * opening and performing the lock after opening like on Linux and Solaris.
+ * Some filesystems do not support any locking so open the file without any
+ * locking and detect the ENOTSUP errno when we try to lock the file.
+ */
 #define HAVE_O_EXLOCK
+#endif	/* USE_JAVA */
 
 // add MACOSX Time Value
 
@@ -331,7 +339,7 @@ static sal_Bool       osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolume
 static void           osl_printFloppyHandle(oslVolumeDeviceHandleImpl* hFloppy);
 #endif
 
-#ifdef MACOSX
+#if defined MACOSX && !defined USE_JAVA
 
 /*******************************************************************
  *	adjustLockFlags
@@ -360,7 +368,7 @@ static int adjustLockFlags(const char * path, int flags)
     return flags;
 }
 
-#endif
+#endif	/* MACOSX && !USE_JAVA */
 
 
 /*******************************************************************
@@ -738,9 +746,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = OPEN_WRITE_FLAGS;
-#ifdef MACOSX
+#if defined MACOSX && !defined USE_JAVA
                 flags = adjustLockFlags(buffer, flags);
-#endif
+#endif	/* MACOSX && !USE_JAVA */
                 aflock.l_type = F_WRLCK;
             }
 
@@ -748,36 +756,13 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = OPEN_CREATE_FLAGS;
-#ifdef MACOSX
+#if defined MACOSX && !defined USE_JAVA
                 flags = adjustLockFlags(buffer, flags);
-#endif
+#endif	/* MACOSX && !USE_JAVA */
             }
 
             /* open the file */
             fd = open( buffer, flags, mode );
-#ifdef MACOSX
-            /*
-             * Some filesystems do not support any locking so open the file
-             * without any locking and detect the ENOTSUP errno when we try
-             * to lock the file.
-             */
-            if ( fd < 0 && errno == ENOTSUP )
-            {
-                fd = open( buffer, flags & ~( O_EXLOCK | O_SHLOCK ), mode );
-
-                /*
-                 * Fix bug 2504 by trying without create flags if the previous
-                 * attempt was a create request and the last request failed
-                 * because the first call actually created the file.
-                 */
-                if ( fd < 0 && flags & O_CREAT )
-                {
-                    struct statfs s;
-                    if ( 0 <= statfs( buffer, &s ) && !strncmp( "webdav", s.f_fstypename, 6 ) )
-                        fd = open( buffer, flags & ~( O_CREAT | O_EXLOCK | O_SHLOCK ), mode );
-                }
-            }
-#endif
             if ( fd >= 0 )
             {
 #ifndef HAVE_O_EXLOCK
