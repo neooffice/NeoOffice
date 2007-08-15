@@ -40,14 +40,18 @@
 #include "osl/thread.h"
 #include "otherjre.hxx"
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 
 #include "sunversion.hxx"
 #include "diagnostics.h"
 
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
 
-#endif	// MACOSX
+#endif	// USE_JAVA
 
 using namespace rtl;
 using namespace std;
@@ -139,19 +143,34 @@ char const* const* OtherInfo::getLibraryPaths(int* size)
 #endif
 }
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 int OtherInfo::compareVersions(const rtl::OUString& sSecond) const
-#else	// MACOSX
+#else	// USE_JAVA
 int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
-#endif	// MACOSX
+#endif	// USE_JAVA
 {
-#ifdef MACOSX
+#ifdef USE_JAVA
     OUString sFirst = getVersion();
       
     SunVersion version1(sFirst);
     JFW_ENSURE(version1, OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION
                                " does not know the version: ")
                + sFirst + OUSTR(" as valid for a SUN JRE."));
+    // If we are running Leopard, don't allow loading of any JVM earlier than
+    // Java 1.5.0
+    static bool initializedOnce = false;
+    static bool isLeopard = false;
+    if ( ! initializedOnce )
+    {
+        long res = 0;
+        Gestalt( gestaltSystemVersion, &res );
+        isLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x5 ) );
+        initializedOnce = true;
+    }
+
+    if ( isLeopard && version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.5.0" ) ) )
+        return -1;
+
     SunVersion version2(sSecond);
     if ( ! version2)
         throw MalformedVersionException(); 
@@ -162,13 +181,13 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
         return 1;
     else
         return -1;
-#else	// MACOSX
+#else	// USE_JAVA
     //Need to provide an own algorithm for comparing version. 
     //Because this function returns always 0, which means the version of
     //this JRE and the provided version "sSecond" are equal, one cannot put
     //any excludeVersion entries in the javavendors.xml file.
     return 0;
-#endif	// MACOSX
+#endif	// USE_JAVA
 }
 
 }

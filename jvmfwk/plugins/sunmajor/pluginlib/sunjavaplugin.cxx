@@ -511,6 +511,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     //Check if the Vendor (pInfo->sVendor) is supported by this plugin
     if ( ! isVendorSupported(pInfo->sVendor))
         return JFW_PLUGIN_E_WRONG_VENDOR;
+
+#ifdef USE_JAVA
+    rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( ::rtl::OUString( pInfo->sLocation ) );
+    if ( !aVendorInfo.is() || aVendorInfo->compareVersions( ::rtl::OUString( pInfo->sVersion ) ) < 0 )
+        return JFW_PLUGIN_E_VM_CREATION_FAILED;
+#endif	// USE_JAVA
+
     rtl::OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
     JFW_TRACE2(OUSTR("[Java framework] Using Java runtime library: ")
               + sRuntimeLib + OUSTR(".\n"));
@@ -792,7 +799,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         //  cannot load all classes built by OOo.
         if (err == 0)
         {
-            jclass aClass = (*ppEnv)->FindClass( "JREProperties" );
+            (*ppEnv)->FindClass( "JREProperties" );
             if ((*ppEnv)->ExceptionCheck())
             {
                 (*ppEnv)->ExceptionDescribe();

@@ -87,6 +87,9 @@ SHL1STDLIBS= \
 		$(SALLIB) \
 		$(SALHELPERLIB)
 		
+.IF "$(GUIBASE)" == "java"
+SHL1STDLIBS+= -framework Carbon
+.ENDIF		# "$(GUIBASE)" == "java"
 
 .IF "$(GUI)" == "WNT"
 .IF "$(COM)"!="GCC"
