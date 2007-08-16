@@ -1953,7 +1953,11 @@ void OutputDevice::ImplDrawAlpha( const Bitmap& rBmp, const AlphaMask& rAlpha,
 	{
         bool bNativeAlpha = false;
         static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
+#ifdef USE_JAVA
+        {
+#else	// USE_JAVA
         if( !pDisableNative && !bHMirr && !bVMirr ) {
+#endif	// USE_JAVA
 	    Point aRelPt = aOutPt + Point( mnOutOffX, mnOutOffY );
             SalTwoRect aTR = {
                 rSrcPtPixel.X(), rSrcPtPixel.Y(),
