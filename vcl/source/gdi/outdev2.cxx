@@ -1952,10 +1952,10 @@ void OutputDevice::ImplDrawAlpha( const Bitmap& rBmp, const AlphaMask& rAlpha,
 	if( !aDstRect.Intersection( Rectangle( aOutPt, aOutSz ) ).IsEmpty() )
 	{
         bool bNativeAlpha = false;
-        static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
 #ifdef USE_JAVA
         {
 #else	// USE_JAVA
+        static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
         if( !pDisableNative && !bHMirr && !bVMirr ) {
 #endif	// USE_JAVA
 	    Point aRelPt = aOutPt + Point( mnOutOffX, mnOutOffY );
