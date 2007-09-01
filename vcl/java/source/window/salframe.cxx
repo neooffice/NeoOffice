@@ -851,6 +851,10 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	if ( mpParent )
 		mbUseMainScreenOnly = FALSE;
 
+	bool bReshow = mbVisible;
+	if ( bReshow )
+		Show( FALSE );
+
 	// Fix bug 1310 by creating a new native window with the new parent
 	if ( mpGraphics->mpVCLGraphics )
 		delete mpGraphics->mpVCLGraphics;
@@ -862,7 +866,10 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
 	mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	maSysData.aWindow = 0;
-	SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+	if ( mpParent )
+		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration - mpParent->maGeometry.nX - mpParent->maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration - mpParent->maGeometry.nY - mpParent->maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+	else
+		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
 	if ( mpParent )
 	{
@@ -870,11 +877,8 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		mpParent->maChildren.push_back( this );
 	}
 
-	if ( mbVisible )
-	{
-		Show( FALSE );
+	if ( bReshow )
 		Show( TRUE, FALSE );
-	}
 
 	// Reattach floating children
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )
