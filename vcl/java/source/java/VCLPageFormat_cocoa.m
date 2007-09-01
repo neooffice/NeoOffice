@@ -231,13 +231,12 @@ id NSPrintInfo_create()
 		NSDictionary *pDict = [pSharedInfo dictionary];
 		if ( pDict )
 		{
-			pDict = [[NSMutableDictionary alloc] initWithDictionary:pDict];
-			if ( pDict )
-			{
-				pRet = [[VCLPrintInfo alloc] initWithDictionary:pDict];
-				if ( pRet )
-					pRet = [pRet retain];
-			}
+			// Fix bug 2573 by not cloning the dictionary as that will cause
+			// querying of the printer which, in turn, will cause hanging if
+			// the printer is an unavailable network printer
+			pRet = [[VCLPrintInfo alloc] initWithDictionary:pDict];
+			if ( pRet )
+				pRet = [pRet retain];
 		}
 	}
 
