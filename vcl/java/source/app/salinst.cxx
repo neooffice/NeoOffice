@@ -447,6 +447,10 @@ void JavaSalInstance::AcquireYieldMutex( ULONG nCount )
 
 void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 {
+	// Fix bug 2575 by manually dispatching native events
+	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+		NSApplication_dispatchPendingEvents();
+
 	SalData *pSalData = GetSalData();
 
 	com_sun_star_vcl_VCLEvent *pEvent;

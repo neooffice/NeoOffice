@@ -70,6 +70,21 @@
 
 @end
 
+void NSApplication_dispatchPendingEvents()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSEvent *pEvent;
+		while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+			[pApp sendEvent:pEvent];
+	}
+
+	[pPool release];
+}
+
 id NSApplication_getModalWindow()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];

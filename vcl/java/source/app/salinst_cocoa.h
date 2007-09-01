@@ -43,6 +43,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void NSApplication_dispatchPendingEvents();
 id NSApplication_getModalWindow();
 #ifdef __cplusplus
 END_C
