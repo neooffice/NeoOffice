@@ -193,7 +193,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 				if ( pCopyBuffer )
 				{
-					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, 1.0f );
+					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
 
 				}
 
@@ -869,43 +869,12 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 					if ( pCopyBuffer )
 					{
-						// Drawing CGImages with partial transparency seems
-						// to have unexpected changes to pixel color when
-						// printing so set alpha to fully opaque or transparent
-						// only and use the average of the rest to set the
-						// global alpha
-						bool bAlphaVaries = false;
-						BYTE nLastAlpha = 0x00;
 						jint *pBits = (jint *)pCopyBuffer->mpBits;
 						if ( pCopyBuffer->mpBits )
 						{
 							Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
 							FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_8BIT_PAL;
 
-							// Fix bug 2549 by first going through the alpha
-							// pixels and determining if they vary
-							for ( int i = 0; i < pTransDestBuffer->mnHeight; i++ )
-							{
-								for ( int j = 0; j < pTransDestBuffer->mnWidth; j++ )
-								{
-									BYTE nAlpha = ~pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask );
-									if ( nAlpha && nAlpha != 0xff )
-									{
-										if ( nLastAlpha && nAlpha != nLastAlpha )
-										{
-											bAlphaVaries = true;
-											break;
-										}
-
-										nLastAlpha = nAlpha;
-									}
-								}
-
-								pTransBits += pTransDestBuffer->mnScanlineSize;
-							}
-
-							// Fix bug 2549 by passing varied alpha directly
-							// to the native image printing code
 							pTransBits = (Scanline)pTransDestBuffer->mpBits;
 							for ( int i = 0; i < pCopyBuffer->mnHeight; i++ )
 							{
@@ -919,10 +888,12 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 										{
 											pBits[ j ] = 0x00000000;
 										}
-										else if ( nAlpha != 0xff && bAlphaVaries)
+										else if ( nAlpha != 0xff )
 										{
+											// Fix bugs 2549 and 2576 by
+											// premultiplying the colors
 											float fTransPercent = (float)nAlpha / 0xff;
-											pBits[ j ] = ( pBits[ j ] & 0x00ffffff ) | ( ( (SalColor)( (BYTE)( pBits[ j ] >> 24 ) * fTransPercent ) << 24 ) & 0xff000000 );
+											pBits[ j ] =  ( ( (SalColor)( (BYTE)( pBits[ j ] >> 24 ) * fTransPercent ) << 24 ) & 0xff000000 ) | ( ( (SalColor)( (BYTE)( pBits[ j ] >> 16 ) * fTransPercent ) << 16 ) & 0x00ff0000 )  | ( ( (SalColor)( (BYTE)( pBits[ j ] >> 8 ) * fTransPercent ) << 8 ) & 0x0000ff00 )  | ( (SalColor)( (BYTE)( pBits[ j ] ) * fTransPercent ) & 0x000000ff );
 										}
 									}
 									else
@@ -936,7 +907,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							}
 						}
 
-						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, ( !bAlphaVaries && nLastAlpha ) ? (float)nLastAlpha / 0xff : 1.0f );
+						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight );
 					}
 
 					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
