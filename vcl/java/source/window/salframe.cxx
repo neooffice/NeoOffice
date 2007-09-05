@@ -908,10 +908,23 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 		mpMenuBar = pJavaSalMenu;
 
 		// If the menu is being set while the window is showing, we need
-		// to update the new menus
-		if ( mbVisible )
+		// to update the new menus. Fix bug 2577 by only updating the menubar
+		// and not its submenus.
+		if ( mbVisible && mpMenuBar->mpParentVCLMenu )
 		{
-			UpdateMenusForFrame( this, NULL );
+			// Post the SALEVENT_MENUACTIVATE event
+			SalMenuEvent *pActivateEvent = new SalMenuEvent();
+			pActivateEvent->mnId = 0;
+			pActivateEvent->mpMenu = mpMenuBar->mpParentVCLMenu;
+			com_sun_star_vcl_VCLEvent aActivateEvent( SALEVENT_MENUACTIVATE, this, pActivateEvent );
+			aActivateEvent.dispatch();
+
+			// Post the SALEVENT_MENUDEACTIVATE event
+			SalMenuEvent *pDeactivateEvent = new SalMenuEvent();
+			pDeactivateEvent->mnId = 0;
+			pDeactivateEvent->mpMenu = mpMenuBar->mpParentVCLMenu;
+			com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pDeactivateEvent );
+			aDeactivateEvent.dispatch();
  
 			// Explicitly set the focus so that Java will repaint the menubar
 			if ( this == GetSalData()->mpFocusFrame )
