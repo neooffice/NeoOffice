@@ -534,7 +534,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
 	// the bHandleAllCurrentEvents parameter is true
-	while ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
+	bool bContinue = true;
+	while ( bContinue && !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
 
@@ -555,6 +556,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		{
 			case SALEVENT_CLOSE:
 				// Fix bug 1971 by breaking after closing a window
+				bContinue = false;
 				break;
 			case SALEVENT_KEYINPUT:
 			case SALEVENT_MOUSEBUTTONDOWN:
