@@ -511,11 +511,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				aTimeout = pSalData->maTimeout - aTimeout;
 				nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
 			}
-		}
 
-		// Wait a little bit to prevent excessive CPU usage
-		if ( nTimeout < 10 )
-			nTimeout = 10;
+			// Wait a little bit to prevent excessive CPU usage. Fix bug 2588
+			// by only doing so when the timeout is already set to a non-zero
+			// value.
+			if ( nTimeout < 10 )
+				nTimeout = 10;
+		}
 	}
 
 	// Dispatch any newly posted events
