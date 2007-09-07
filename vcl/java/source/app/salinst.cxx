@@ -539,7 +539,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	}
 	else
 	{
-fprintf( stderr, "Here\n" );
 		nCount = 0;
 	}
 
