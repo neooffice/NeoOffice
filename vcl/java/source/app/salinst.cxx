@@ -250,7 +250,15 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				{
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 					{
-						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+						// Fix update problem in bug 1577 when the menubar is
+						// selected and the focus frame is a child of another
+						// frame
+						JavaSalFrame *pFrame = pSalData->mpFocusFrame;
+						while ( pFrame && pFrame->mbVisible )
+						{
+							UpdateMenusForFrame( pFrame, NULL );
+							pFrame = pFrame->mpParent;
+						}
 					}
 					else
 					{
