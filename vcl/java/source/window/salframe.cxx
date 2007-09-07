@@ -937,17 +937,19 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 				JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
 				if ( pSalMenuItem && pSalMenuItem->mpSalSubmenu )
 				{
+					Menu *pVCLSubMenu = pSalMenuItem->mpSalSubmenu->mpParentVCLMenu;
+
 					// Post the SALEVENT_MENUACTIVATE event
 					SalMenuEvent *pSubActivateEvent = new SalMenuEvent();
 					pSubActivateEvent->mnId = 0;
-					pSubActivateEvent->mpMenu = pVCLMenu;
+					pSubActivateEvent->mpMenu = pVCLSubMenu;
 					com_sun_star_vcl_VCLEvent aSubActivateEvent( SALEVENT_MENUACTIVATE, this, pSubActivateEvent );
 					pSalData->mpEventQueue->postCachedEvent( &aSubActivateEvent );
 
 					// Post the SALEVENT_MENUDEACTIVATE event
 					SalMenuEvent *pSubDeactivateEvent = new SalMenuEvent();
 					pSubDeactivateEvent->mnId = 0;
-					pSubDeactivateEvent->mpMenu = pVCLMenu;
+					pSubDeactivateEvent->mpMenu = pVCLSubMenu;
 					com_sun_star_vcl_VCLEvent aSubDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pSubDeactivateEvent );
 					pSalData->mpEventQueue->postCachedEvent( &aSubDeactivateEvent );
 				}
