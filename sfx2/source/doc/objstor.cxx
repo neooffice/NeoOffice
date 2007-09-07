@@ -239,6 +239,9 @@
 
 #ifdef USE_JAVA
 
+#ifndef _UTL_BOOTSTRAP_HXX
+#include <unotools/bootstrap.hxx>
+#endif
 #ifndef _COM_SUN_STAR_VIEW_XVIEWSETTINGSSUPPLIER_HPP_
 #include <com/sun/star/view/XViewSettingsSupplier.hpp>
 #endif
@@ -1664,6 +1667,121 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 				// TODO: error handling
 				OSL_ENSURE( sal_False, "Couldn't store thumbnail representation!" );
 			}
+
+#ifdef USE_JAVA
+			::rtl::OUString aUserInstallURL;
+			if ( ::utl::Bootstrap::locateUserInstallation( aUserInstallURL ) == ::utl::Bootstrap::PATH_EXISTS && !rMedium.GetName().EqualsIgnoreCaseAscii( aUserInstallURL.getStr(), 0, aUserInstallURL.getLength() ) )
+			{
+				try
+				{
+					uno::Reference< embed::XStorage > xThumbnailStor = xMedStorage->openStorageElement( ::rtl::OUString::createFromAscii( "Thumbnails" ), embed::ElementModes::READWRITE );
+					if ( xThumbnailStor.is() )
+					{
+						// Save the first page as PDF for Leopard Finder support
+						uno::Reference< io::XStream > xPDFStream = xThumbnailStor->openStreamElement( ::rtl::OUString::createFromAscii( "thumbnail.pdf" ), embed::ElementModes::READWRITE );
+						if ( xPDFStream.is() )
+						{
+							uno::Reference< document::XExporter > xExporter;
+							uno::Reference< lang::XMultiServiceFactory > xMan = ::comphelper::getProcessServiceFactory();
+							uno::Reference < lang::XMultiServiceFactory > xFilterFact( xMan->createInstance( DEFINE_CONST_UNICODE( "com.sun.star.document.FilterFactory" ) ), uno::UNO_QUERY );
+
+							uno::Sequence< beans::PropertyValue > aProps;
+							uno::Reference< container::XNameAccess > xFilters( xFilterFact, uno::UNO_QUERY );
+
+							::rtl::OUString aFilterName;
+							uno::Sequence< ::rtl::OUString > xFilterNames( xFilters->getElementNames() );
+							sal_Int32 nFilterNames = xFilterNames.getLength();
+							for ( sal_Int32 nFilterName = 0; nFilterName < nFilterNames && !aFilterName.getLength(); nFilterName++ )
+							{
+								xFilters->getByName( xFilterNames[nFilterName] ) >>= aProps;
+
+								sal_Int32 nFilterProps = aProps.getLength();
+								for ( sal_Int32 nFilterProp = 0; nFilterProp<nFilterProps; nFilterProp++ )
+								{
+									const beans::PropertyValue& rFilterProp = aProps[nFilterProp];
+									if ( rFilterProp.Name.compareToAscii("FilterService") == COMPARE_EQUAL )
+									{
+										::rtl::OUString aValue;
+										rFilterProp.Value >>= aValue;
+										if ( aValue.compareToAscii("com.sun.star.comp.PDF.PDFFilter") == COMPARE_EQUAL )
+										{
+											aFilterName = xFilterNames[nFilterName];
+											break;
+										}
+									}
+								}
+							}
+
+							if ( aFilterName.getLength() )
+							{
+								try
+								{
+									xExporter = uno::Reference< document::XExporter >( xFilterFact->createInstanceWithArguments( aFilterName, uno::Sequence< uno::Any >() ), uno::UNO_QUERY );
+								}
+								catch(const uno::Exception&)
+								{
+									xExporter.clear();
+								}
+							}
+
+							if ( xExporter.is() )
+							{
+								uno::Reference< io::XTruncate > xTruncate( xPDFStream->getOutputStream(), uno::UNO_QUERY_THROW );
+								xTruncate->truncate();
+
+								uno::Reference< lang::XComponent > xComp( GetModel(), uno::UNO_QUERY_THROW );
+								uno::Reference< document::XFilter > xFilter( xExporter, uno::UNO_QUERY_THROW );
+								xExporter->setSourceDocument( xComp );
+
+								// Only save the first page. Note that the PDF filter
+								// library requires that the page range must be before the
+								// output stream in the property value sequence or else the
+								// the page range will be ignored
+								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 1 );
+								aFilterData[0].Name = ::rtl::OUString::createFromAscii( "PageRange" );
+								aFilterData[0].Value <<= ::rtl::OUString::createFromAscii( "1-1" );
+								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aArgs( 2 );
+								aArgs[0].Name = ::rtl::OUString::createFromAscii( "FilterData" );
+								aArgs[0].Value <<= aFilterData;
+								aArgs[1].Name = ::rtl::OUString::createFromAscii( "OutputStream" );
+								aArgs[1].Value <<= com::sun::star::uno::Reference< com::sun::star::io::XOutputStream >( xPDFStream->getOutputStream() );
+
+								uno::Reference< frame::XController > xController = GetModel()->getCurrentController();
+								if ( xController.is() )
+								{
+									// Fix bug 2462 by setting the ShowOnlineLayout
+									// property to what it was before exporting to PDF
+									OUString aShowOnlineLayoutKey = OUString::createFromAscii( "ShowOnlineLayout" );
+									Reference < css::view::XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
+									Any aShowOnlineLayout;
+									if ( xSettings.is() )
+									{
+										Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
+										aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+									}
+
+									if ( xFilter->filter( aArgs ) )
+									{
+										uno::Reference< embed::XTransactedObject > xTransact( xThumbnailStor, uno::UNO_QUERY_THROW );
+										xTransact->commit();
+									}
+
+									if ( aShowOnlineLayout.hasValue() && xSettings.is() )
+									{
+										Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
+                			xViewProps->setPropertyValue( aShowOnlineLayoutKey, aShowOnlineLayout );
+										xController->restoreViewData( xController->getViewData() );
+									}
+								}
+							}
+						}
+					}
+				}
+				catch ( ... )
+				{
+				}
+			}
+#endif	// USE_JAVA
 		}
 
 		if ( bOk )
@@ -3992,108 +4110,6 @@ sal_Bool SfxObjectShell::GenerateAndStoreThumbnail( sal_Bool bEncrypted,
 				xTransact->commit();
 				bResult = sal_True;
 			}
-
-#ifdef USE_JAVA
-			// Save the first page as PDF for Leopard Finder support
-			uno::Reference< io::XStream > xPDFStream = xThumbnailStor->openStreamElement( ::rtl::OUString::createFromAscii( "thumbnail.pdf" ), embed::ElementModes::READWRITE );
-			if ( xPDFStream.is() )
-			{
-				uno::Reference< document::XExporter > xExporter;
-				uno::Reference< lang::XMultiServiceFactory > xMan = ::comphelper::getProcessServiceFactory();
-				uno::Reference < lang::XMultiServiceFactory > xFilterFact( xMan->createInstance( DEFINE_CONST_UNICODE( "com.sun.star.document.FilterFactory" ) ), uno::UNO_QUERY );
-
-				uno::Sequence< beans::PropertyValue > aProps;
-				uno::Reference< container::XNameAccess > xFilters( xFilterFact, uno::UNO_QUERY );
-
-				::rtl::OUString aFilterName;
-				uno::Sequence< ::rtl::OUString > xFilterNames( xFilters->getElementNames() );
-				sal_Int32 nFilterNames = xFilterNames.getLength();
-				for ( sal_Int32 nFilterName = 0; nFilterName < nFilterNames && !aFilterName.getLength(); nFilterName++ )
-				{
-					xFilters->getByName( xFilterNames[nFilterName] ) >>= aProps;
-
-					sal_Int32 nFilterProps = aProps.getLength();
-					for ( sal_Int32 nFilterProp = 0; nFilterProp<nFilterProps; nFilterProp++ )
-					{
-						const beans::PropertyValue& rFilterProp = aProps[nFilterProp];
-						if ( rFilterProp.Name.compareToAscii("FilterService") == COMPARE_EQUAL )
-						{
-							::rtl::OUString aValue;
-							rFilterProp.Value >>= aValue;
-							if ( aValue.compareToAscii("com.sun.star.comp.PDF.PDFFilter") == COMPARE_EQUAL )
-							{
-								aFilterName = xFilterNames[nFilterName];
-								break;
-							}
-						}
-					}
-				}
-
-				if ( aFilterName.getLength() )
-				{
-					try
-					{
-						xExporter = uno::Reference< document::XExporter >( xFilterFact->createInstanceWithArguments( aFilterName, uno::Sequence< uno::Any >() ), uno::UNO_QUERY );
-					}
-					catch(const uno::Exception&)
-					{
-						xExporter.clear();
-					}
-				}
-
-				if ( xExporter.is() )
-				{
-					uno::Reference< io::XTruncate > xTruncate( xPDFStream->getOutputStream(), uno::UNO_QUERY_THROW );
-					xTruncate->truncate();
-
-					uno::Reference< lang::XComponent > xComp( GetModel(), uno::UNO_QUERY_THROW );
-					uno::Reference< document::XFilter > xFilter( xExporter, uno::UNO_QUERY_THROW );
-					xExporter->setSourceDocument( xComp );
-
-					// Only save the first page. Note that the PDF filter
-					// library requires that the page range must be before the
-					// output stream in the property value sequence or else the
-					// the page range will be ignored
-					com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 1 );
-					aFilterData[0].Name = ::rtl::OUString::createFromAscii( "PageRange" );
-					aFilterData[0].Value <<= ::rtl::OUString::createFromAscii( "1-1" );
-					com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aArgs( 2 );
-					aArgs[0].Name = ::rtl::OUString::createFromAscii( "FilterData" );
-					aArgs[0].Value <<= aFilterData;
-					aArgs[1].Name = ::rtl::OUString::createFromAscii( "OutputStream" );
-					aArgs[1].Value <<= com::sun::star::uno::Reference< com::sun::star::io::XOutputStream >( xPDFStream->getOutputStream() );
-
-					uno::Reference< frame::XController > xController = GetModel()->getCurrentController();
-					if ( xController.is() )
-					{
-						// Fix bug 2462 by setting the ShowOnlineLayout
-						// property to what it was before exporting to PDF
-						OUString aShowOnlineLayoutKey = OUString::createFromAscii( "ShowOnlineLayout" );
-						Reference < css::view::XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
-						Any aShowOnlineLayout;
-						if ( xSettings.is() )
-						{
-							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
-							aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
-						}
-
-						if ( xFilter->filter( aArgs ) )
-						{
-							uno::Reference< embed::XTransactedObject > xTransact( xThumbnailStor, uno::UNO_QUERY_THROW );
-							xTransact->commit();
-							bResult = sal_True;
-						}
-
-						if ( aShowOnlineLayout.hasValue() && xSettings.is() )
-						{
-							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
-                			xViewProps->setPropertyValue( aShowOnlineLayoutKey, aShowOnlineLayout );
-							xController->restoreViewData( xController->getViewData() );
-						}
-					}
-				}
-			}
-#endif	// USE_JAVA
 		}
 	}
 	catch( uno::Exception& )
