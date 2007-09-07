@@ -250,14 +250,14 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				{
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 					{
-						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL, false );
 					}
 					else
 					{
 						for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 						{
 							if ( (*it)->mbVisible )
-								UpdateMenusForFrame( *it, NULL );
+								UpdateMenusForFrame( *it, NULL, false );
 						}
 					}
 
@@ -499,9 +499,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
+	if ( bWait && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
-		if ( bWait && pSalData->mnTimerInterval )
+		if ( pSalData->mnTimerInterval )
 		{
 			timeval aTimeout;
 
@@ -511,13 +511,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				aTimeout = pSalData->maTimeout - aTimeout;
 				nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
 			}
-
-			// Wait a little bit to prevent excessive CPU usage. Fix bug 2588
-			// by only doing so when the timeout is already set to a non-zero
-			// value.
-			if ( nTimeout < 10 )
-				nTimeout = 10;
 		}
+
+		// Wait a little bit to prevent excessive CPU usage. Fix bug 2588
+		// by only doing so when the timeout is already set to a non-zero
+		// value.
+		if ( nTimeout < 10 )
+			nTimeout = 10;
 	}
 
 	// Dispatch any newly posted events
@@ -531,6 +531,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	}
 	else
 	{
+fprintf( stderr, "Here\n" );
 		nCount = 0;
 	}
 
