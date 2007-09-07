@@ -250,14 +250,14 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				{
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 					{
-						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL, false );
+						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
 					}
 					else
 					{
 						for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 						{
 							if ( (*it)->mbVisible )
-								UpdateMenusForFrame( *it, NULL, false );
+								UpdateMenusForFrame( *it, NULL );
 						}
 					}
 
