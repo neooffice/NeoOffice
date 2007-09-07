@@ -226,10 +226,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 
-	// Do some of the updating before the window is shown
-	if ( mbVisible )
-		UpdateMenusForFrame( this, NULL );
-
 	mpVCLFrame->setVisible( mbVisible, bNoActivate );
 
 	// Reset graphics
@@ -912,23 +908,50 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 		// and not its submenus.
 		if ( mbVisible && mpMenuBar->mpParentVCLMenu )
 		{
+			Menu *pVCLMenu = mpMenuBar->mpParentVCLMenu;
+
 			// Post the SALEVENT_MENUACTIVATE event
 			SalMenuEvent *pActivateEvent = new SalMenuEvent();
 			pActivateEvent->mnId = 0;
-			pActivateEvent->mpMenu = mpMenuBar->mpParentVCLMenu;
+			pActivateEvent->mpMenu = pVCLMenu;
 			com_sun_star_vcl_VCLEvent aActivateEvent( SALEVENT_MENUACTIVATE, this, pActivateEvent );
 			aActivateEvent.dispatch();
 
 			// Post the SALEVENT_MENUDEACTIVATE event
 			SalMenuEvent *pDeactivateEvent = new SalMenuEvent();
 			pDeactivateEvent->mnId = 0;
-			pDeactivateEvent->mpMenu = mpMenuBar->mpParentVCLMenu;
+			pDeactivateEvent->mpMenu = pVCLMenu;
 			com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pDeactivateEvent );
 			aDeactivateEvent.dispatch();
  
 			// Explicitly set the focus so that Java will repaint the menubar
 			if ( this == GetSalData()->mpFocusFrame )
 				mpVCLFrame->requestFocus();
+
+			SalData *pSalData = GetSalData();
+
+			// Post events to update menus asynchronously
+			USHORT nCount = pVCLMenu->GetItemCount();
+			for( USHORT i = 0; i < nCount; i++ )
+			{
+				JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
+				if ( pSalMenuItem && pSalMenuItem->mpSalSubmenu )
+				{
+					// Post the SALEVENT_MENUACTIVATE event
+					SalMenuEvent *pSubActivateEvent = new SalMenuEvent();
+					pSubActivateEvent->mnId = 0;
+					pSubActivateEvent->mpMenu = pVCLMenu;
+					com_sun_star_vcl_VCLEvent aSubActivateEvent( SALEVENT_MENUACTIVATE, this, pSubActivateEvent );
+					pSalData->mpEventQueue->postCachedEvent( &aSubActivateEvent );
+
+					// Post the SALEVENT_MENUDEACTIVATE event
+					SalMenuEvent *pSubDeactivateEvent = new SalMenuEvent();
+					pSubDeactivateEvent->mnId = 0;
+					pSubDeactivateEvent->mpMenu = pVCLMenu;
+					com_sun_star_vcl_VCLEvent aSubDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pSubDeactivateEvent );
+					pSalData->mpEventQueue->postCachedEvent( &aSubDeactivateEvent );
+				}
+			}
 		}
 	}
 	else
