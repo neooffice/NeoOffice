@@ -849,30 +849,34 @@ void OutputDevice::ImplDrawBitmapEx( const Point& rDestPt, const Size& rDestSize
 
 	OUTDEV_INIT();
 
-#ifdef USE_JAVA
-	if( aBmpEx.IsAlpha() )
-#else	// USE_JAVA
 	if( OUTDEV_PRINTER == meOutDevType )
 	{
         if( aBmpEx.IsAlpha() )
         {
+#ifdef USE_JAVA
+            ImplDrawAlpha( aBmpEx.GetBitmap(), aBmpEx.GetAlpha(), rDestPt, rDestSize, rSrcPtPixel, rSrcSizePixel );
+#else	// USE_JAVA
             // #107169# For true alpha bitmaps, no longer masking the
             // bitmap, but perform a full alpha blend against a white
             // background here.
             Bitmap aBmp( aBmpEx.GetBitmap() );
             aBmp.Blend( aBmpEx.GetAlpha(), Color( COL_WHITE) );
             DrawBitmap( rDestPt, rDestSize, rSrcPtPixel, rSrcSizePixel, aBmp );
+#endif	// USE_JAVA
         }
         else
         {
+#ifdef USE_JAVA
+            ImplDrawAlpha( aBmpEx.GetBitmap(), aBmpEx.GetMask(), rDestPt, rDestSize, rSrcPtPixel, rSrcSizePixel );
+#else	// USE_JAVA
             Bitmap aBmp( aBmpEx.GetBitmap() ), aMask( aBmpEx.GetMask() );
             aBmp.Replace( aMask, Color( COL_WHITE ) );
             ImplPrintTransparent( aBmp, aMask, rDestPt, rDestSize, rSrcPtPixel, rSrcSizePixel );
+#endif	// USE_JAVA
         }
 	    return;
 	}
 	else if( aBmpEx.IsAlpha() )
-#endif	// USE_JAVA
 	{
 		ImplDrawAlpha( aBmpEx.GetBitmap(), aBmpEx.GetAlpha(), rDestPt, rDestSize, rSrcPtPixel, rSrcSizePixel );
 		return;
