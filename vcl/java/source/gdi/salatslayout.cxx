@@ -1158,15 +1158,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 		}
 
-		if ( nCharPos >= 0 )
-		{
-			mnOrigWidth = GetTextWidth();
+		if ( !bRet && nCharPos >= 0 )
 			bRet = true;
-		}
 
 		maLayoutData.push_back( pLayoutData );
 		maLayoutMinCharPos.push_back( aFallbackArgs.mnMinCharPos );
 	}
+
+	mnOrigWidth = aPos.X();
 
 	return bRet;
 }
