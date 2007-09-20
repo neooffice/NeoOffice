@@ -80,18 +80,18 @@ struct ImplATSLayoutDataHash {
 	sal_Int32			mnStrHash;
 };
 
-struct ImplHash
+struct ImplATSLayoutDataHashHash
 {
 	size_t				operator()( const ImplATSLayoutDataHash *x ) const { return (size_t)x->mnStrHash; }
 };
 
-struct ImplHashEquality
+struct ImplATSLayoutDataHashEquality
 {
 	bool				operator()( const ImplATSLayoutDataHash *p1, const ImplATSLayoutDataHash *p2 ) const;
 };
 
 struct ImplATSLayoutData {
-	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >	maLayoutCache;
+	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 	static int			mnLayoutCacheSize;
 
@@ -135,7 +135,7 @@ using namespace vcl;
 
 // ============================================================================
 
-bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplATSLayoutDataHash *p2 ) const
+bool ImplATSLayoutDataHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplATSLayoutDataHash *p2 ) const
 {
 	return ( p1->mnLen == p2->mnLen &&
 		p1->mnFontID == p2->mnFontID &&
@@ -150,7 +150,7 @@ bool ImplHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplAT
 
 // ============================================================================
 
-::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality > ImplATSLayoutData::maLayoutCache;
+::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality > ImplATSLayoutData::maLayoutCache;
 
 // ----------------------------------------------------------------------------
 
@@ -193,7 +193,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
 
 	// Search cache for matching layout
-	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
+	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
 	if ( it != maLayoutCache.end() )
 	{
 		pLayoutData = it->second;
@@ -252,7 +252,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 		}
 
 		mnLayoutCacheSize += pLayoutData->mpHash->mnLen;
-		maLayoutCache.insert( ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplHash, ImplHashEquality >::value_type( pLayoutData->mpHash, pLayoutData ) );
+		maLayoutCache.insert( ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::value_type( pLayoutData->mpHash, pLayoutData ) );
 		maLayoutCacheList.push_front( pLayoutData );
 	}
 
