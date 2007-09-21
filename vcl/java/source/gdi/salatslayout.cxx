@@ -112,9 +112,9 @@ struct ImplATSLayoutData {
 	bool				mbValid;
 
 	static void					ClearLayoutDataCache();
-	static ImplATSLayoutData*	GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
 
-						ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
 						~ImplATSLayoutData();
 
 	void				Destroy();
@@ -176,20 +176,20 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont )
+ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont )
 {
 	ImplATSLayoutData *pLayoutData = NULL;
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
-	pLayoutHash->mnLen = rArgs.mnEndCharPos - rArgs.mnMinCharPos;
+	pLayoutHash->mnLen = nEndCharPos - nMinCharPos;
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
 	pLayoutHash->mnFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
 	pLayoutHash->mbAntialiased = pVCLFont->isAntialiased();
-	pLayoutHash->mbRTL = ( rArgs.mnFlags & SAL_LAYOUT_BIDI_RTL );
-	pLayoutHash->mbVertical = ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL );
+	pLayoutHash->mbRTL = ( nFlags & SAL_LAYOUT_BIDI_RTL );
+	pLayoutHash->mbVertical = ( nFlags & SAL_LAYOUT_VERTICAL );
 
-	pLayoutHash->mpStr = (sal_Unicode *)( rArgs.mpStr + rArgs.mnMinCharPos );
+	pLayoutHash->mpStr = (sal_Unicode *)( pStr + nMinCharPos );
 	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
 
 	// Search cache for matching layout
@@ -205,8 +205,8 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 	{
 		// Copy the string so that we can cache it
 		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-		memcpy( pLayoutHash->mpStr, rArgs.mpStr + rArgs.mnMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-		pLayoutData = new ImplATSLayoutData( rArgs, pLayoutHash, nFallbackLevel, pVCLFont );
+		memcpy( pLayoutHash->mpStr, pStr + nMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
+		pLayoutData = new ImplATSLayoutData( pLayoutHash, nFallbackLevel, pVCLFont );
 
 		if ( !pLayoutData )
 			return NULL;
@@ -229,10 +229,10 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 				size_t nMinMem = 256 * 1024 * 1024;
 				size_t nMaxMem = nMinMem * 2;
 				size_t nUserMem = 0;
-				size_t nLen = sizeof( nUserMem );
+				size_t nUserMemLen = sizeof( nUserMem );
 				pMib[0] = CTL_HW;
 				pMib[1] = HW_USERMEM;
-				if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
+				if ( !sysctl( pMib, 2, &nUserMem, &nUserMemLen, NULL, 0 ) )
 					nUserMem /= 2;
 				if ( nUserMem > nMaxMem )
 					nUserMem = nMaxMem;
@@ -264,7 +264,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( ImplLayoutArgs& rArgs, int 
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData::ImplATSLayoutData( ImplLayoutArgs& rArgs, ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont ) :
+ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont ) :
 	mnRefCount( 1 ),
 	mpHash( pLayoutHash ),
 	mpVCLFont( NULL ),
@@ -995,9 +995,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			{
 				sal_Unicode aKashida[ 1 ];
 				aKashida[ 0 ] = 0x0640;
-				ImplLayoutArgs aKashidaArgs( aKashida, 1, 0, 1, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL );
-
-				mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashidaArgs, mnFallbackLevel, mpVCLFont );
+				mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashida, 1, 0, 1, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont );
 				if ( mpKashidaLayoutData )
 				{
 					if ( mpKashidaLayoutData->mpNeedFallback || mpKashidaLayoutData->mnGlyphCount != 1 )
@@ -1013,18 +1011,26 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 		}
 
-		if ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
-		{
-			mpGraphics->maFallbackRuns.ResetPos();
-			while ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
-				mpGraphics->maFallbackRuns.NextRun();
-		}
-
 		bool bFallbackRunRTL;
 		int nMinFallbackCharPos;
 		int nEndFallbackCharPos;
-		if ( !mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
-			return false;
+		if ( !mnFallbackLevel)
+		{
+			nMinFallbackCharPos = nMinCharPos;
+			nEndFallbackCharPos = nEndCharPos;
+		}
+		else
+		{
+			if ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
+			{
+				mpGraphics->maFallbackRuns.ResetPos();
+				while ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
+					mpGraphics->maFallbackRuns.NextRun();
+			}
+
+			if ( !mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+				return false;
+		}
 
 		// Turn off direction analysis
 		int nRunFlags = rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG;
@@ -1033,23 +1039,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		else
 			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
 
-		ImplLayoutArgs aArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, nRunFlags );
-		ImplLayoutArgs aFallbackArgs( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags );
-
-		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( aFallbackArgs, mnFallbackLevel, mpVCLFont );
+		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont );
 		if ( !pLayoutData )
 			return false;
 
 		// Create fallback runs
 		if ( pLayoutData->mpNeedFallback && pLayoutData->mpFallbackFont )
 		{
-			bool bPosRTL;
-			int nCharPos = -1;
-			aArgs.ResetPos();
-			while ( aArgs.GetNextPos( &nCharPos, &bPosRTL ) )
+			for ( int i = nMinCharPos; i < nEndCharPos; i++ )
 			{
-				if ( pLayoutData->mpNeedFallback[ nCharPos - aFallbackArgs.mnMinCharPos ] )
-					rArgs.NeedFallback( nCharPos, bPosRTL );
+				if ( pLayoutData->mpNeedFallback[ i - nMinFallbackCharPos ] )
+					rArgs.NeedFallback( i, bRunRTL );
 			}
 
 			int nNextLevel = mnFallbackLevel + 1;
@@ -1061,21 +1061,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		// Calculate and cache glyph advances
-		bool bPosRTL;
-		int nCharPos = -1;
-		aArgs.ResetPos();
-		while ( aArgs.GetNextPos( &nCharPos, &bPosRTL ) )
+		int nCharPos = ( bRunRTL ? nEndCharPos - 1 : nMinCharPos );
+		for ( ; bRunRTL ? nCharPos >= nMinCharPos : nCharPos < nEndCharPos; bRunRTL ? nCharPos-- : nCharPos++ )
 		{
 			bool bFirstGlyph = true;
 			long nCharWidth = 1;
-			int nIndex = pLayoutData->mpCharsToChars[ nCharPos - aFallbackArgs.mnMinCharPos ];
+			int nIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinFallbackCharPos ];
 			if ( nIndex >= 0 )
 			{
 				ImplATSLayoutData *pCurrentLayoutData = pLayoutData;
 
 				sal_Unicode nChar = pCurrentLayoutData->mpHash->mpStr[ nIndex ];
 
-				if ( bPosRTL )
+				if ( bRunRTL )
 				{
 					// Fix bugs 1637 and 1797 by laying out mirrored characters
 					// separately
@@ -1087,15 +1085,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							sal_Unicode aMirrored[ 1 ];
 							aMirrored[ 0 ] = nMirroredChar;
-							ImplLayoutArgs aMirroredArgs( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG );
-							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirroredArgs, mnFallbackLevel, mpVCLFont );
+							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont );
 							if ( pCurrentLayoutData )
 							{
 								if ( pCurrentLayoutData->mpNeedFallback )
 								{
 									pCurrentLayoutData->Release();
 									pCurrentLayoutData = pLayoutData;
-									rArgs.NeedFallback( nCharPos, bPosRTL );
+									rArgs.NeedFallback( nCharPos, bRunRTL );
 								}
 								else
 								{
@@ -1137,7 +1134,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
-					if ( bPosRTL )
+					if ( bRunRTL )
 						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 
 					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
@@ -1147,22 +1144,21 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						aPos.X() += nCharWidth;
 						nCharWidth = 0;
 						bFirstGlyph = false;
+						bRet = true;
 					}
 				}
 			}
 
 			if ( bFirstGlyph )
 			{
-				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bPosRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
+				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
 				aPos.X() += nCharWidth;
+				bRet = true;
 			}
 		}
 
-		if ( !bRet && nCharPos >= 0 )
-			bRet = true;
-
 		maLayoutData.push_back( pLayoutData );
-		maLayoutMinCharPos.push_back( aFallbackArgs.mnMinCharPos );
+		maLayoutMinCharPos.push_back( nMinFallbackCharPos );
 	}
 
 	mnOrigWidth = aPos.X();
