@@ -524,72 +524,142 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 	*minorMinorVersion = 0;
 }
 
-int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
+static int macxp_resolveAliasImpl(FSRef *pFSRef, int buflen )
 {
-    FSRef aFSRef;
-    OSStatus nErr;
+    int nRet = 0;
     Boolean bFolder;
     Boolean bAliased;
-    char *unprocessedPath = path;
 
-    // If the path exists and is not an alias, return without changing anything
-    if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && FSIsAliasFile( &aFSRef, &bAliased, &bFolder ) == noErr && !bAliased )
-        return 0;
-
-    if ( *unprocessedPath == '/' )
-        unprocessedPath++;
-
-    int nRet = 0;
-    while ( !nRet && unprocessedPath && *unprocessedPath )
+    if ( pFSRef && FSIsAliasFile( pFSRef, &bAliased, &bFolder ) == noErr )
     {
-        unprocessedPath = strchr( unprocessedPath, '/' );
-        if ( unprocessedPath )
-            *unprocessedPath = '\0';
+        if ( bAliased && FSResolveAliasFileWithMountFlags( pFSRef, true, &bFolder, &bAliased, kResolveAliasFileNoUI ) != noErr )
+            nRet = -1;
+    }
+    else
+    {
+        nRet = -1;
+    }
 
-        nErr = noErr;
-        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr )
+    return nRet;
+}
+
+int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
+{
+    int nRet = 0;
+
+    if ( noResolveLastElement )
+    {
+        char *basePath = strrchr( path, '/' );
+        if ( !basePath )
+            return nRet;
+        basePath = strdup( basePath );
+        if ( !basePath )
+            return nRet;
+        path[ strlen( path ) - strlen( basePath ) ] = '\0';
+
+        Boolean bModified = false;
+        FSRef aFSRef;
+        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef, buflen ) )
         {
-            nErr = FSResolveAliasFileWithMountFlags( &aFSRef, TRUE, &bFolder, &bAliased, kResolveAliasFileNoUI );
-            if ( nErr == nsvErr )
+            char tmpPath[ PATH_MAX ];
+            if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+            {
+                int nLen = strlen( tmpPath ) + strlen( basePath );
+                if ( nLen < buflen )
+                {
+                    strcpy( path, tmpPath );
+                    strcat( path, basePath );
+                    bModified = true;
+                }
+                else
+                {
+                    errno = ENAMETOOLONG;
+                    nRet = -1;
+                }
+            }
+            else
             {
                 errno = ENOENT;
                 nRet = -1;
             }
-            else if ( nErr == noErr && bAliased )
+        }
+
+        if ( !bModified )
+            strcat( path, basePath );
+        free( basePath );
+
+        return nRet;
+    }
+    else
+    {
+        // If the path exists and is not an alias, return without changing
+        // anything
+        FSRef aFSRef;
+        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef, buflen ) )
+        {
+            char tmpPath[ PATH_MAX ];
+            if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
             {
-                if ( !noResolveLastElement || ( unprocessedPath && *unprocessedPath ) )
+                int nLen = strlen( tmpPath );
+                if ( nLen < buflen )
                 {
-                    char tmpPath[ PATH_MAX ];
-                    if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
-                    {
-                        int nLen = strlen( tmpPath ) + ( unprocessedPath ? strlen( unprocessedPath + 1 ) + 1 : 0 );
-                        if ( nLen < buflen && nLen < PATH_MAX )
-                        {
-                            if ( unprocessedPath )
-                            {
-                                int nTmpPathLen = strlen( tmpPath );
-                                strcat( tmpPath, "/" );
-                                strcat( tmpPath, unprocessedPath + 1 );
-                                strcpy( path, tmpPath);
-                                unprocessedPath = path + nTmpPathLen;
-                            }
-                            else if ( !unprocessedPath )
-                            {
-                                strcpy( path, tmpPath);
-                            }
-                        }
-                        else
-                        {
-                            errno = ENAMETOOLONG;
-                            nRet = -1;
-                        }
-                    }
+                    strcpy( path, tmpPath );
+                    return nRet;
                 }
             }
         }
+    }
 
-        if ( unprocessedPath )
-            *unprocessedPath++ = '/';
+    // Iterate through the directories from the top down and resolve any
+    // aliases that might be encountered
+    char *unprocessedPath = path;
+    if ( *unprocessedPath == '/' )
+        unprocessedPath++;
+
+    while ( !nRet && unprocessedPath && *unprocessedPath )
+    {
+        unprocessedPath = strchr( unprocessedPath, '/' );
+        if ( !unprocessedPath )
+            unprocessedPath = "";
+
+        char *basePath = strdup( unprocessedPath );
+        if ( !basePath )
+            return nRet;
+        path[ strlen( path ) - strlen( basePath ) ] = '\0';
+
+        Boolean bModified = false;
+        FSRef aFSRef;
+        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef, buflen ) )
+        {
+            char tmpPath[ PATH_MAX ];
+            if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+            {
+                int nLen = strlen( tmpPath ) + strlen( basePath );
+                if ( nLen < buflen )
+                {
+                    strcpy( path, tmpPath );
+                    strcat( path, basePath );
+                    bModified = true;
+                }
+                else
+                {
+                    errno = ENAMETOOLONG;
+                    nRet = -1;
+                }
+            }
+            else
+            {
+                errno = ENOENT;
+                nRet = -1;
+            }
+        }
+
+        if ( !bModified )
+            strcat( path, basePath );
+        unprocessedPath = path + strlen( path ) - strlen( basePath );
+        if ( *unprocessedPath == '/' )
+            unprocessedPath++;
+        free( basePath );
     }
 
     return nRet;
