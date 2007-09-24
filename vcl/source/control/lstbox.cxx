@@ -358,7 +358,8 @@ IMPL_LINK( ListBox, ImplClickBtnHdl, void*, EMPTYARG )
 	if ( GetNativeControlRegion( CTRL_LISTBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
 	{
 		GetParent()->Invalidate( aContentRgn.GetBoundRect() );
-		GetParent()->Update();
+		if ( !GetParent()->HasPaintEvent() )
+			GetParent()->Update();
 	}
 #endif	// USE_JAVA
 
@@ -405,7 +406,8 @@ IMPL_LINK( ListBox, ImplPopupModeEndHdl, void*, EMPTYARG )
 	if ( GetNativeControlRegion( CTRL_LISTBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
 	{
 		GetParent()->Invalidate( aContentRgn.GetBoundRect() );
-		GetParent()->Update();
+		if ( !GetParent()->HasPaintEvent() )
+			GetParent()->Update();
 	}
 #endif	// USE_JAVA
 	return 0;

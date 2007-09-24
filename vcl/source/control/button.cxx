@@ -1705,7 +1705,8 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
 
 #ifdef USE_JAVA
             GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-            GetParent()->Update();
+            if ( !GetParent()->HasPaintEvent() )
+                GetParent()->Update();
 #else	// USE_JAVA
             ImplDrawPushButton();
 #endif	// USE_JAVA
@@ -1734,7 +1735,8 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
 #ifdef USE_JAVA
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
 #else	// USE_JAVA
                 ImplDrawPushButton();
 #endif	// USE_JAVA
@@ -1747,7 +1749,8 @@ void PushButton::Tracking( const TrackingEvent& rTEvt )
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
 #ifdef USE_JAVA
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
 #else	// USE_JAVA
                 ImplDrawPushButton();
 #endif	// USE_JAVA
@@ -2898,7 +2901,8 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
 #ifdef USE_JAVA
             {
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
             }
 #else	// USE_JAVA
                 ImplDrawRadioButtonState();
@@ -2914,7 +2918,8 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
 #ifdef USE_JAVA
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
 #else	// USE_JAVA
                 ImplDrawRadioButtonState();
 #endif	// USE_JAVA
@@ -2927,7 +2932,8 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
 #ifdef USE_JAVA
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
 #else	// USE_JAVA
                 ImplDrawRadioButtonState();
 #endif	// USE_JAVA
@@ -3885,7 +3891,8 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
 #ifdef USE_JAVA
             {
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
             }
 #else	// USE_JAVA
                 ImplDrawCheckBoxState();
@@ -3901,7 +3908,8 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
 #ifdef USE_JAVA
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
 #else	// USE_JAVA
                 ImplDrawCheckBoxState();
 #endif	// USE_JAVA
@@ -3914,7 +3922,8 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
 #ifdef USE_JAVA
                 GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                GetParent()->Update();
+                if ( !GetParent()->HasPaintEvent() )
+                    GetParent()->Update();
 #else	// USE_JAVA
                 ImplDrawCheckBoxState();
 #endif	// USE_JAVA

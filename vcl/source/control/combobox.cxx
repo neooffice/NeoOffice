@@ -346,7 +346,8 @@ IMPL_LINK( ComboBox, ImplClickBtnHdl, void*, EMPTYARG )
     if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
     {
 	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
-	    GetParent()->Update();
+        if ( !GetParent()->HasPaintEvent() )
+	        GetParent()->Update();
     }
 #endif	// USE_JAVA
 
@@ -384,7 +385,8 @@ IMPL_LINK( ComboBox, ImplPopupModeEndHdl, void*, EMPTYARG )
     if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
     {
 	    GetParent()->Invalidate( aContentRgn.GetBoundRect() );
-	    GetParent()->Update();
+        if ( !GetParent()->HasPaintEvent() )
+	        GetParent()->Update();
     }
 #endif	// USE_JAVA
 	return 0;

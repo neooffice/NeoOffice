@@ -1005,7 +1005,8 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
 		if( pBorder )
 		{
 			pBorder->GetParent()->Invalidate( Rectangle( pBorder->GetPosPixel(), pBorder->GetSizePixel() ) );
-			pBorder->GetParent()->Update();
+			if ( !pBorder->GetParent()->HasPaintEvent() )
+				pBorder->GetParent()->Update();
 		}
 	}
 #endif	// USE_JAVA
@@ -1058,7 +1059,8 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 				if( pBorder )
 				{
 					pBorder->GetParent()->Invalidate( Rectangle( pBorder->GetPosPixel(), pBorder->GetSizePixel() ) );
-					pBorder->GetParent()->Update();
+					if ( !pBorder->GetParent()->HasPaintEvent() )
+						pBorder->GetParent()->Update();
 				}
 			}
 #endif	// USE_JAVA
@@ -2030,7 +2032,8 @@ void Edit::LoseFocus()
 		if ( pWindow )
 		{
 			pWindow->GetParent()->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-			pWindow->GetParent()->Update();
+			if ( !pWindow->GetParent()->HasPaintEvent() )
+				pWindow->GetParent()->Update();
 		}
 	}
 #endif	// USE_JAVA
