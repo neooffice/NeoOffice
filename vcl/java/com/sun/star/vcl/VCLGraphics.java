@@ -1627,10 +1627,7 @@ public final class VCLGraphics {
 				area = a;
 				continue;
 			}
-			if (fill)
-				area.exclusiveOr(a);
-			else
-				area.add(a);
+			area.exclusiveOr(a);
 		}
 		if (area == null)
 			return;
