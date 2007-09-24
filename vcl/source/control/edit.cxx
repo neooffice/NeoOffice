@@ -1972,14 +1972,15 @@ void Edit::GetFocus()
 				ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
 		}
 
-#ifdef USE_JAVA		
+#ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
 		{
 			Window* pWindow = GetWindow( WINDOW_BORDER );
 			if ( pWindow )
 			{
-				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-				pWindow->GetParent()->Update();
+				pWindow->GetParent()->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
+				if ( !pWindow->GetParent()->HasPaintEvent() )
+					pWindow->GetParent()->Update();
 			}
 		}
 #endif	// USE_JAVA
@@ -2028,7 +2029,7 @@ void Edit::LoseFocus()
 		Window* pWindow = GetWindow( WINDOW_BORDER );
 		if ( pWindow )
 		{
-			GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+			pWindow->GetParent()->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
 			pWindow->GetParent()->Update();
 		}
 	}
