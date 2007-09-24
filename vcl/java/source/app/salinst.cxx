@@ -562,25 +562,19 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 		com_sun_star_vcl_VCLFrame::flushAllFrames();
 
-		// Fix bug 2606 by respecting this method's bHandleAllCurrentEvents
-		// paramter
-		bContinue = bHandleAllCurrentEvents;
-		if ( bContinue )
+		switch ( nID )
 		{
-			switch ( nID )
-			{
-				case SALEVENT_CLOSE:
-					// Fix bug 1971 by breaking after closing a window
-					bContinue = false;
-					break;
-				case SALEVENT_KEYINPUT:
-				case SALEVENT_MOUSEBUTTONDOWN:
-					// Fix bugs 437 and 2264 by ensuring that if the next
-					// event is a matching event, it will be dispatched before
-					// the painting timer runs
-					OThread::yield();
-					break;
-			}
+			case SALEVENT_CLOSE:
+				// Fix bug 1971 by breaking after closing a window
+				bContinue = false;
+				break;
+			case SALEVENT_KEYINPUT:
+			case SALEVENT_MOUSEBUTTONDOWN:
+				// Fix bugs 437 and 2264 by ensuring that if the next
+				// event is a matching event, it will be dispatched before
+				// the painting timer runs
+				OThread::yield();
+				break;
 		}
 	}
 
