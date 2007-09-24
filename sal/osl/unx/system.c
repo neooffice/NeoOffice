@@ -527,8 +527,8 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 static int macxp_resolveAliasImpl(FSRef *pFSRef, int buflen )
 {
     int nRet = 0;
-    Boolean bFolder;
-    Boolean bAliased;
+    Boolean bFolder = false;
+    Boolean bAliased = false;
 
     if ( pFSRef && FSIsAliasFile( pFSRef, &bAliased, &bFolder ) == noErr )
     {
