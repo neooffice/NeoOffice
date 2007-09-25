@@ -524,7 +524,9 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 	*minorMinorVersion = 0;
 }
 
-static int macxp_resolveAliasImpl(FSRef *pFSRef, int buflen )
+#ifdef USE_JAVA
+
+static int macxp_resolveAliasImpl(FSRef *pFSRef)
 {
     int nRet = 0;
     Boolean bFolder = false;
@@ -558,28 +560,17 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
         path[ strlen( path ) - strlen( basePath ) ] = '\0';
 
         Boolean bModified = false;
-        FSRef aFSRef;
-        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef, buflen ) )
+        if ( !macxp_resolveAlias( path, buflen, sal_False ) )
         {
-            char tmpPath[ PATH_MAX ];
-            if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+            int nLen = strlen( path ) + strlen( basePath );
+            if ( nLen < buflen )
             {
-                int nLen = strlen( tmpPath ) + strlen( basePath );
-                if ( nLen < buflen )
-                {
-                    strcpy( path, tmpPath );
-                    strcat( path, basePath );
-                    bModified = true;
-                }
-                else
-                {
-                    errno = ENAMETOOLONG;
-                    nRet = -1;
-                }
+                strcat( path, basePath );
+                bModified = true;
             }
             else
             {
-                errno = ENOENT;
+                errno = ENAMETOOLONG;
                 nRet = -1;
             }
         }
@@ -590,24 +581,28 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
 
         return nRet;
     }
-    else
+
+    // If the path exists and is not an alias, return without changing
+    // anything
+    struct stat aFileStat;
+    if ( !stat( path, &aFileStat ) )
     {
-        // If the path exists and is not an alias, return without changing
-        // anything
-        FSRef aFSRef;
-        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef, buflen ) )
+        if ( aFileStat.st_mode & S_IFREG )
         {
-            char tmpPath[ PATH_MAX ];
-            if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+            FSRef aFSRef;
+            if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef ) )
             {
-                int nLen = strlen( tmpPath );
-                if ( nLen < buflen )
+                char tmpPath[ PATH_MAX ];
+                if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
                 {
-                    strcpy( path, tmpPath );
-                    return nRet;
+                    int nLen = strlen( tmpPath );
+                    if ( nLen < buflen )
+                        strcpy( path, tmpPath );
                 }
             }
         }
+
+        return nRet;
     }
 
     // Iterate through the directories from the top down and resolve any
@@ -616,7 +611,8 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
     if ( *unprocessedPath == '/' )
         unprocessedPath++;
 
-    while ( !nRet && unprocessedPath && *unprocessedPath )
+	Boolean bContinue = true;
+    while ( bContinue && unprocessedPath && *unprocessedPath )
     {
         unprocessedPath = strchr( unprocessedPath, '/' );
         if ( !unprocessedPath )
@@ -628,30 +624,44 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
         path[ strlen( path ) - strlen( basePath ) ] = '\0';
 
         Boolean bModified = false;
-        FSRef aFSRef;
-        if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef, buflen ) )
+        if ( !stat( path, &aFileStat ) )
         {
-            char tmpPath[ PATH_MAX ];
-            if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+            if ( aFileStat.st_mode & S_IFREG )
             {
-                int nLen = strlen( tmpPath ) + strlen( basePath );
-                if ( nLen < buflen )
+                FSRef aFSRef;
+                if ( FSPathMakeRef( (const UInt8 *)path, &aFSRef, 0 ) == noErr && !macxp_resolveAliasImpl( &aFSRef ) )
                 {
-                    strcpy( path, tmpPath );
-                    strcat( path, basePath );
-                    bModified = true;
+                    char tmpPath[ PATH_MAX ];
+                    if ( FSRefMakePath( &aFSRef, (UInt8 *)tmpPath, PATH_MAX ) == noErr )
+                    {
+                        int nLen = strlen( tmpPath ) + strlen( basePath );
+                        if ( nLen < buflen )
+                        {
+                            strcpy( path, tmpPath );
+                            strcat( path, basePath );
+                            bModified = true;
+                        }
+                        else
+                        {
+                            errno = ENAMETOOLONG;
+                            nRet = -1;
+                            bContinue = false;
+                        }
+                    }
+                    else
+                    {
+                         bContinue = false;
+                    }
                 }
                 else
                 {
-                    errno = ENAMETOOLONG;
-                    nRet = -1;
+                    bContinue = false;
                 }
             }
-            else
-            {
-                errno = ENOENT;
-                nRet = -1;
-            }
+        }
+        else
+        {
+            bContinue = false;
         }
 
         if ( !bModified )
@@ -664,8 +674,6 @@ int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement)
 
     return nRet;
 }
-
-#ifdef USE_JAVA
 
 void macxp_decomposeString(char *pszStr, int buflen)
 {

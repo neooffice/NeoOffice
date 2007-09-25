@@ -378,8 +378,8 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 #ifdef __cplusplus
 extern "C" {
 #endif
-int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
 #ifdef USE_JAVA
+int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
 void macxp_decomposeString(char *pszStr, int buflen);
 sal_Bool macxp_checkCreateDirectory(const char *pszStr);
 #endif	/* USE_JAVA */
