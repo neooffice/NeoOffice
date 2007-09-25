@@ -1501,9 +1501,10 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
         {
 #ifdef USE_JAVA
             // Fix bug 2183 by allowing a tiny amount of unexpected x-position
-            // in a glyph run. Decrease allowable amount to fix bug 2432.
-            nUnexpectedOffset += pG->mnOrigWidth - nGlyphAdvance;
-            if( abs( nUnexpectedOffset ) > ( pG->mnOrigWidth >> 3 ) )
+            // in a glyph run. Decrease allowable amount to fix bug 2432. Fix
+			// bug 2629 by not breaking if the unexpected offset is negative.
+            nUnexpectedOffset += nGlyphAdvance - pG->mnOrigWidth;
+            if( nUnexpectedOffset > pG->mnOrigWidth >> 3 )
 #else	// USE_JAVA
             // stop when next x-position is unexpected
             if( pG->mnOrigWidth != nGlyphAdvance )
