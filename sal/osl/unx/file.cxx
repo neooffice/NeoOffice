@@ -293,9 +293,9 @@ static int           oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_
 static int           oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode);
 static oslFileError  oslDoMoveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
 static rtl_uString*  oslMakeUStrFromPsz(const sal_Char* pszStr,rtl_uString** uStr);
-#if defined MACOSX && defined PRODUCT_FILETYPE
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
 static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
-#endif	/* MACOSX && PRODUCT_FILETYPE */
+#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
 /******************************************************************************
  *
@@ -399,7 +399,11 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
     /* convert unicode path to text */
     if ( UnicodeToText( path, PATH_MAX, ustrSystemPath->buffer, ustrSystemPath->length ) 
 #ifdef MACOSX 
+#ifdef USE_JAVA
 	 && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 
+#else	/* USE_JAVA */
+	 && macxp_resolveAlias( path, PATH_MAX ) == 0 
+#endif	/* USE_JAVA */
 #endif /* MACOSX */
 	 )
     {
@@ -508,14 +512,30 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     if (NULL == pEntry)
         return osl_File_E_NOENT;
 
+#if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2) && !defined USE_JAVA
+
+    // convert decomposed filename to precomposed unicode 
+    char composed_name[BUFSIZ];  
+    CFMutableStringRef strRef = CFStringCreateMutable (NULL, 0 );
+    CFStringAppendCString( strRef, pEntry->d_name, kCFStringEncodingUTF8 );  //UTF8 is default on Mac OSX
+    CFStringNormalize( strRef, kCFStringNormalizationFormC );
+    CFStringGetCString( strRef, composed_name, BUFSIZ, kCFStringEncodingUTF8 );
+    CFRelease( strRef );
+    rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name),
+	osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
+
+#else  /* !MACOSX && !USE_JAVA */
+
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
     OSL_ASSERT(ustrFileName != 0);
 
+#endif	/* !MACOSX && !USE_JAVA */
+
 	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
 
-#if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2)
+#ifdef USE_JAVA
     /*
      * Fix bug 1246 by ensuring that the normalized directory name exists,
      * otherwise use the unnormalized name.
@@ -535,7 +555,7 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 
     	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
     }
-#endif
+#endif	/* USE_JAVA */
 
     rtl_uString_release( ustrFileName );
 
@@ -721,7 +741,11 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
     /* convert unicode path to text */
     if( UnicodeToText( buffer, PATH_MAX, ustrFilePath->buffer, ustrFilePath->length ) 
 #ifdef MACOSX 
+#ifdef USE_JAVA
 	 && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 
+#else	/* USE_JAVA */
+	 && macxp_resolveAlias( buffer, PATH_MAX ) == 0 
+#endif	/* USE_JAVA */
 #endif /* MACOSX */
 	 )
     {
@@ -795,15 +819,15 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                     aflock.l_type = 0;
 
                 /* lock the file if flock.l_type is set */
-#ifdef MACOSX
+#ifdef USE_JAVA
                 /*
                  * Mac OS X will return ENOTSUP for mounted file systems so
                  * ignore the error for write locks
                  */
                 if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
-#else	/* MACOSX */
+#else	/* USE_JAVA */
                 if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) )
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
                 {
                     /* allocate memory for impl structure */
                     pHandleImpl = (oslFileHandleImpl*) rtl_allocateMemory( sizeof(oslFileHandleImpl) );
@@ -814,10 +838,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
                         *pHandle = (oslFileHandle) pHandleImpl;
 
-#if defined MACOSX && defined PRODUCT_FILETYPE
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
                         if ( uFlags & osl_File_OpenFlag_Create ) 
                             oslSetFileTypeFromPsz( buffer );
-#endif	/* MACOSX && PRODUCT_FILETYPE */
+#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
                         return osl_File_E_None;
                     }
@@ -830,7 +854,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 close( fd );
             }
 
-#ifdef MACOSX
+#ifdef USE_JAVA
             /*
              * Handle case where we cannot open a file for writing because it
              * is locked in the Finder's GetInfo panel. Also, fix bug 1643 by
@@ -839,7 +863,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
              */
             if ( errno == EPERM || errno == EINVAL )
                 errno = EACCES;
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
 
             PERROR( "osl_openFile", buffer );
             eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
@@ -880,15 +904,15 @@ oslFileError osl_closeFile( oslFileHandle Handle )
             /* FIXME: check if file is really locked ?  */
 
             /* release the file share lock on this file */
-#ifdef MACOSX
+#ifdef USE_JAVA
             /*
              * Mac OS X will return ENOTSUP for mounted file systems so ignore
              * the error for write locks
              */
             if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) && errno != ENOTSUP )
-#else	/* MACOSX */
+#else	/* USE_JAVA */
             if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
                 PERROR( "osl_closeFile", "unlock failed" );
         }
 
@@ -967,7 +991,11 @@ oslFileError osl_moveFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_True ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+#endif	/* USE_JAVA */
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -998,7 +1026,11 @@ oslFileError osl_copyFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_False ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
+#endif	/* USE_JAVA */
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1022,7 +1054,11 @@ oslFileError osl_removeFile( rtl_uString* ustrFileURL )
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) != 0 )
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+#endif	/* USE_JAVA */
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1047,7 +1083,11 @@ oslFileError osl_getVolumeInformation( rtl_uString* ustrDirectoryURL, oslVolumeI
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+#endif	/* USE_JAVA */
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1071,7 +1111,11 @@ oslFileError osl_createDirectory( rtl_uString* ustrDirectoryURL )
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+#endif	/* USE_JAVA */
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1095,6 +1139,7 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) == 0 )
     {
         struct stat aStat;
@@ -1105,7 +1150,11 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
     {
         return oslTranslateFileError( OSL_FET_ERROR, errno );
     }
-#endif	/* MACOSX */
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+      return oslTranslateFileError( OSL_FET_ERROR, errno );
+#endif	/* USE_JAVA */
+#endif/* MACOSX */
 
     return osl_psz_removeDirectory( path );
 }
@@ -1198,7 +1247,7 @@ oslFileError SAL_CALL osl_createDirectoryPath(
                                                                 
     osl::systemPathRemoveSeparator(sys_path);
     
-#ifdef MACOSX
+#ifdef USE_JAVA
     rtl::OString p = rtl::OUStringToOString( sys_path, osl_getThreadTextEncoding() );
     sal_Char path[ PATH_MAX ];
     if ( p.getLength() < PATH_MAX )
@@ -1208,7 +1257,7 @@ oslFileError SAL_CALL osl_createDirectoryPath(
         p = rtl::OString( path );
     }
     sys_path = ::rtl::OStringToOUString( p, osl_getThreadTextEncoding() );
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
 
     // const_cast because sys_path is a local copy which we want to modify inplace instead of 
     // coyp it into another buffer on the heap again
@@ -1245,7 +1294,11 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+#endif	/* USE_JAVA */
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1270,7 +1323,11 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
         return eRet;
 
 #ifdef MACOSX
+#ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
+#else	/* USE_JAVA */
+    if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
+#endif	/* USE_JAVA */
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -2271,9 +2328,9 @@ static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszD
         return nRet;
     }
 
-#if defined MACOSX && defined PRODUCT_FILETYPE
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
     oslSetFileTypeFromPsz( pszDestFileName );
-#endif	/* MACOSX && PRODUCT_FILETYPE */
+#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
 	/* HACK: because memory mapping fails on various 
 	   platforms if the size of the source file is  0 byte */
@@ -2359,7 +2416,7 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
  * oslSetFileTypeFromPsz
  ****************************************/
 
-#if defined MACOSX && defined PRODUCT_FILETYPE
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
 static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
 {
     FSRef aFSRef;
@@ -2373,7 +2430,7 @@ static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
         }
     }
 }
-#endif	/* MACOSX && PRODUCT_FILETYPE */
+#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
 /*****************************************************************************
  * UnicodeToText
@@ -2406,9 +2463,9 @@ int UnicodeToText( char * buffer, size_t bufLen, const sal_Unicode * uniText, sa
     /* ensure trailing '\0' */
     buffer[nDestBytes] = '\0';
 
-#ifdef MACOSX
+#ifdef USE_JAVA
     macxp_decomposeString( buffer, bufLen );
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
 
     return nDestBytes;
 }

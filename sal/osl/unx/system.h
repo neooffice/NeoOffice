@@ -382,6 +382,8 @@ extern "C" {
 int macxp_resolveAlias(char *path, int buflen, sal_Bool noResolveLastElement);
 void macxp_decomposeString(char *pszStr, int buflen);
 sal_Bool macxp_checkCreateDirectory(const char *pszStr);
+#else	/* USE_JAVA */
+int macxp_resolveAlias(char *path, int buflen);
 #endif	/* USE_JAVA */
 #ifdef __cplusplus
 }
