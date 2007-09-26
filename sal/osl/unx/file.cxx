@@ -147,15 +147,7 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <sys/param.h>
 #include <sys/mount.h>
 #define HAVE_STATFS_H
-#ifndef USE_JAVA
-/*
- * Fix bug 2504 and other file locking bugs by not trying lock files while
- * opening and performing the lock after opening like on Linux and Solaris.
- * Some filesystems do not support any locking so open the file without any
- * locking and detect the ENOTSUP errno when we try to lock the file.
- */
 #define HAVE_O_EXLOCK
-#endif	/* USE_JAVA */
 
 // add MACOSX Time Value
 
@@ -339,7 +331,7 @@ static sal_Bool       osl_getFloppyMountEntry(const sal_Char* pszPath, oslVolume
 static void           osl_printFloppyHandle(oslVolumeDeviceHandleImpl* hFloppy);
 #endif
 
-#if defined MACOSX && !defined USE_JAVA
+#ifdef MACOSX
 
 /*******************************************************************
  *	adjustLockFlags
@@ -363,12 +355,21 @@ static int adjustLockFlags(const char * path, int flags)
             flags &= ~O_EXLOCK;
             flags |= O_SHLOCK;
         }    
+#ifdef USE_JAVA
+        /*
+         * Fix bug 2504 and not trying lock webdav files
+         */
+        else if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
+        {
+            flags &= ~( O_EXLOCK | O_SHLOCK );
+        }
+#endif	/* USE_JAVA */
     }
 
     return flags;
 }
 
-#endif	/* MACOSX && !USE_JAVA */
+#endif	/* MACOSX */
 
 
 /*******************************************************************
@@ -695,14 +696,8 @@ oslFileHandle osl_createFileHandleFromFD( int fd )
 #define OPEN_WRITE_FLAGS ( O_RDWR | O_EXLOCK | O_NONBLOCK )
 #define OPEN_CREATE_FLAGS ( O_CREAT | O_EXCL | O_RDWR | O_EXLOCK | O_NONBLOCK )
 #else
-#ifdef USE_JAVA
-// Fix bugs 2620 and 2627 by using non-blocking I/O
-#define OPEN_WRITE_FLAGS ( O_RDWR | O_NONBLOCK )
-#define OPEN_CREATE_FLAGS ( O_CREAT | O_EXCL | O_RDWR | O_NONBLOCK )
-#else	// USE_JAVA
 #define OPEN_WRITE_FLAGS ( O_RDWR )
 #define OPEN_CREATE_FLAGS ( O_CREAT | O_EXCL | O_RDWR )
-#endif	// USE_JAVA
 #endif
 
 oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal_uInt32 uFlags )
@@ -776,9 +771,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = OPEN_WRITE_FLAGS;
-#if defined MACOSX && !defined USE_JAVA
+#ifdef MACOSX
                 flags = adjustLockFlags(buffer, flags);
-#endif	/* MACOSX && !USE_JAVA */
+#endif	/* MACOSX */
                 aflock.l_type = F_WRLCK;
             }
 
@@ -786,9 +781,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             {
                 mode |= S_IWUSR | S_IWGRP | S_IWOTH;
                 flags = OPEN_CREATE_FLAGS;
-#if defined MACOSX && !defined USE_JAVA
+#ifdef MACOSX
                 flags = adjustLockFlags(buffer, flags);
-#endif	/* MACOSX && !USE_JAVA */
+#endif	/* MACOSX */
             }
 
             /* open the file */
