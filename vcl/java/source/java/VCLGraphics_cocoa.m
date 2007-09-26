@@ -232,6 +232,139 @@
 
 @end
 
+@interface DrawGlyphs : NSObject
+{
+	float				mfX;
+	float				mfY;
+	size_t				mnCount;
+	CGGlyph*			mpGlyphs;
+	CGSize*				mpSizes;
+	ATSUFontID			mnFont;
+	int					mnFontSize;
+	float				mfFontScaleX;
+	int					mnColor;
+	float				mfGlyphTranslateX;
+	float				mfGlyphTranslateY;
+	float				mfGlyphRotateAngle;
+	float				mfGlyphScaleX;
+	float				mfGlyphScaleY;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
+- (void)drawGlyphs:(id)pObject;
+- (id)init:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(ATSUFontID)nFont fontSize:(int)nFontSize fontScaleX:(float)fFontScaleX color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawGlyphs
+
+- (void)drawGlyphs:(id)pObject
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+	{
+		NSView *pPrintView = [pOperation view];
+		if ( pPrintView )
+		{
+			NSRect aBounds = [pPrintView bounds];
+			NSView *pFocusView = [NSView focusView];
+			if ( pFocusView )
+				[pFocusView unlockFocus];
+
+			[pPrintView lockFocus];
+
+			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+			if ( pContext )
+			{
+				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+				if ( aContext )
+				{
+					// Fix bug 1218 by setting the clip here and not in Java
+					CGContextSaveGState( aContext );
+					if ( ![pPrintView isFlipped] )
+					{
+						CGContextTranslateCTM( aContext, 0, aBounds.size.height );
+						CGContextScaleCTM( aContext, 1.0f, -1.0f );
+					}
+
+					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+					CGContextRotateCTM( aContext, mfRotateAngle );
+					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
+					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					CGContextTranslateCTM( aContext, mfX, mfY);
+					CGContextRotateCTM( aContext, mfGlyphRotateAngle );
+
+					CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+					CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+
+					CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&mnFont );
+					if ( aFont )
+					{
+						// Apply glyph rotation, scaling, and translation
+						CGAffineTransform aTransform = CGAffineTransformMake( 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
+						// aTransform = CGAffineTransformTranslate( aTransform, mfX, mfY );
+						// aTransform = CGAffineTransformRotate( aTransform, mfGlyphRotateAngle );
+						aTransform = CGAffineTransformScale( aTransform, mfGlyphScaleX, mfGlyphScaleY * -1 );
+						aTransform = CGAffineTransformTranslate( aTransform, mfGlyphTranslateX, mfGlyphTranslateY );
+
+						CGContextSetFont( aContext, aFont );
+						CGContextSetFontSize( aContext, mnFontSize );
+						CGContextSetTextMatrix( aContext, aTransform );
+						CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpSizes, mnCount );
+						CGFontRelease( aFont );
+					}
+
+					CGContextRestoreGState( aContext );
+				}
+
+				[pPrintView unlockFocus];
+
+				if ( pFocusView )
+					[pFocusView lockFocus];
+			}
+		}
+	}
+}
+
+- (id)init:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(ATSUFontID)nFont fontSize:(int)nFontSize fontScaleX:(float)fFontScaleX color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+{
+	[super init];
+
+	mfX = fX;
+	mfY = fY;
+	mnCount = nCount;
+	mpGlyphs = pGlyphs;
+	mpSizes = pSizes;
+	mnFont = nFont;
+	mnFontSize = nFontSize;
+	mfFontScaleX = fFontScaleX;
+	mnColor = nColor;
+	mfGlyphTranslateX = fGlyphTranslateX;
+	mfGlyphTranslateY = fGlyphTranslateY;
+	mfGlyphRotateAngle = fGlyphRotateAngle;
+	mfGlyphScaleX = fGlyphScaleX;
+	mfGlyphScaleY = fGlyphScaleY;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
 @interface DrawLine : NSObject
 {
 	float				mfX1;
@@ -645,6 +778,27 @@
 }
 
 @end
+
+void CGContect_drawGlyphs( float fX, float fY, size_t nCount, CGGlyph *pGlyphs, CGSize *pSizes, ATSUFontID nFont, int nFontSize, float fFontScaleX, int nColor, float fGlyphTranslateX, float fGlyphTranslateY, float fGlyphRotateAngle, float fGlyphScaleX, float fGlyphScaleY, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( nCount && pGlyphs && pSizes && nFont != kATSUInvalidFontID && nFontSize )
+	{
+		DrawGlyphs *pDrawGlyphs = [[DrawGlyphs alloc] init:fX y:fY count:nCount glyphs:pGlyphs sizes:pSizes font:nFont fontSize:nFontSize fontScaleX:fFontScaleX color:nColor glyphTranslateX:fGlyphTranslateX glyphTranslateY:fGlyphTranslateY glyphRotateAngle:fGlyphRotateAngle glyphScaleX:fGlyphScaleX glyphScaleY:fGlyphScaleY clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDrawGlyphs performSelectorOnMainThread:@selector(drawGlyphs:) withObject:pDrawGlyphs waitUntilDone:YES modes:pModes];
+		}
+		else
+		{
+			[pDrawGlyphs drawGlyphs:pDrawGlyphs];
+		}
+	}
+
+	[pPool release];
+}
 
 void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {

@@ -1263,7 +1263,35 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			aGlyphArray[ i ] &= GF_IDXMASK;
 
 		JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-		rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
+		if ( rJavaGraphics.mpPrinter )
+		{
+			// Don't delete the CGGlyph buffer and let the Java native
+			// method print the buffer directly
+			CGGlyph *pGlyphs = (CGGlyph *)rtl_allocateMemory( nGlyphCount * sizeof( CGGlyph ) );
+			if ( pGlyphs )
+			{
+				for ( i = 0; i < nGlyphCount; i++ )
+					pGlyphs[ i ] = (CGGlyph)aGlyphArray[ i ];
+			}
+
+			// Don't delete the CGSize buffer and let the Java native
+			// method print the buffer directly
+			CGSize *pSizes = (CGSize *)rtl_allocateMemory( nGlyphCount * sizeof( CGSize ) );
+			if ( pSizes )
+			{
+				for ( i = 0; i < nGlyphCount; i++ )
+				{
+					pSizes[ i ].width = (float)aDXArray[ i ];
+					pSizes[ i ].height = 0.0f;
+				}
+			}
+
+			rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aPos.X(), aPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
+		}
+		else
+		{
+			rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
+		}
 	}
 }
 

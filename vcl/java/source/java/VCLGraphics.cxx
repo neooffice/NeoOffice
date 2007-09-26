@@ -65,6 +65,7 @@
 static ::std::list< CGImageRef > aCGImageList;
 static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
+static ::std::list< jlong > aGlyphDataList;
 static ::std::list< jlong > aEPSDataList;
 
 using namespace osl;
@@ -329,6 +330,12 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 		rtl_freeMemory( (void *)aEPSDataList.front() );
 		aEPSDataList.pop_front();
 	}
+
+	while ( aGlyphDataList.size() )
+	{
+		rtl_freeMemory( (void *)aGlyphDataList.front() );
+		aGlyphDataList.pop_front();
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -352,6 +359,48 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 		NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jfloat _par7, jint _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17, jboolean _par18, jfloat _par19, jfloat _par20, jfloat _par21, jfloat _par22, jfloat _par23 )
+{
+	if ( _par3 )
+	{
+		bool bFound = false;
+		for ( ::std::list< jlong >::const_iterator it = aGlyphDataList.begin(); it != aGlyphDataList.end(); ++it )
+		{
+			if ( *it == _par3 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aGlyphDataList.push_back( _par3 );
+
+	}
+
+	if ( _par4 )
+	{
+		bool bFound = false;
+		for ( ::std::list< jlong >::const_iterator it = aGlyphDataList.begin(); it != aGlyphDataList.end(); ++it )
+		{
+			if ( *it == _par4 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aGlyphDataList.push_back( _par4 );
+
+	}
+
+	if ( _par3 && _par4 )
+		CGContect_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, (ATSUFontID)_par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20, _par21, _par22, _par23 );
 }
 
 // ----------------------------------------------------------------------------
@@ -439,7 +488,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[9]; 
+			JNINativeMethod pMethods[10]; 
 			pMethods[0].name = "drawBitmap0";
 			pMethods[0].signature = "([IIIIIIIFFFFFFFFZFFFFF)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
@@ -449,25 +498,28 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].name = "drawEPS0";
 			pMethods[2].signature = "(JJFFFFFFFFZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
-			pMethods[3].name = "drawLine0";
-			pMethods[3].signature = "(FFFFIFFFFZFFFFF)V";
-			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawLine0;
-			pMethods[4].name = "drawPolygon0";
-			pMethods[4].signature = "(I[I[IIZFFFFZFFFFF)V";
-			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolygon0;
-			pMethods[5].name = "drawPolyline0";
-			pMethods[5].signature = "(I[I[IIFFFFZFFFFF)V";
-			pMethods[5].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolyline0;
-			pMethods[6].name = "drawRect0";
-			pMethods[6].signature = "(FFFFIZFFFFZFFFFF)V";
-			pMethods[6].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawRect0;
-			pMethods[7].name = "notifyGraphicsChanged";
-			pMethods[7].signature = "(JZ)V";
-			pMethods[7].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
-			pMethods[8].name = "releaseNativeBitmaps";
-			pMethods[8].signature = "()V";
-			pMethods[8].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 9 );
+			pMethods[3].name = "drawGlyphBuffer0";
+			pMethods[3].signature = "(IIIJJIIFIFFFFFFFFFZFFFFF)V";
+			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0;
+			pMethods[4].name = "drawLine0";
+			pMethods[4].signature = "(FFFFIFFFFZFFFFF)V";
+			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawLine0;
+			pMethods[5].name = "drawPolygon0";
+			pMethods[5].signature = "(I[I[IIZFFFFZFFFFF)V";
+			pMethods[5].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolygon0;
+			pMethods[6].name = "drawPolyline0";
+			pMethods[6].signature = "(I[I[IIFFFFZFFFFF)V";
+			pMethods[6].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolyline0;
+			pMethods[7].name = "drawRect0";
+			pMethods[7].signature = "(FFFFIZFFFFZFFFFF)V";
+			pMethods[7].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawRect0;
+			pMethods[8].name = "notifyGraphicsChanged";
+			pMethods[8].signature = "(JZ)V";
+			pMethods[8].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
+			pMethods[9].name = "releaseNativeBitmaps";
+			pMethods[9].signature = "()V";
+			pMethods[9].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 10 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -678,6 +730,78 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _par2, CGGlyph *_par3, CGSize *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
+{
+	// Mark the glyph array for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par3 )
+	{
+		bool bFound = false;
+		for ( ::std::list< jlong >::const_iterator it = aGlyphDataList.begin(); it != aGlyphDataList.end(); ++it )
+		{
+			if ( *it == (jlong)_par3 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aGlyphDataList.push_back( (jlong)_par3 );
+	}
+
+	// Mark the advances array for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par4 )
+	{
+		bool bFound = false;
+		for ( ::std::list< jlong >::const_iterator it = aGlyphDataList.begin(); it != aGlyphDataList.end(); ++it )
+		{
+			if ( *it == (jlong)_par4 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aGlyphDataList.push_back( (jlong)_par4 );
+	}
+
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(IIIJJIIDIIIIIF)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphBuffer", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[14];
+			args[0].i = jint( _par0 );
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].j = jlong( _par3 );
+			args[4].j = jlong( _par4 );
+			args[5].i = jint( _par5->getNativeFont() );
+			args[6].i = jint( _par5->getSize() );
+			args[7].d = jdouble( _par5->getScaleX() );
+			args[8].i = jint( _par6 );
+			args[9].i = jint( _par7 );
+			args[10].i = jint( _par8 );
+			args[11].i = jint( _par9 );
+			args[12].i = jint( _par10 );
+			args[13].f = jfloat( _par11 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
