@@ -75,7 +75,11 @@
   if (p.getLength() < PATH_MAX)
     {
       strcpy(path, p.getStr());
+#ifdef USE_JAVA
       macxp_resolveAlias(path, PATH_MAX, sal_False);
+#else	// USE_JAVA
+      macxp_resolveAlias(path, PATH_MAX);
+#endif	// USE_JAVA
       p = rtl::OString(path);
     }
   return p;
@@ -131,17 +135,15 @@
  // @see mkdir
  int mkdir_u(const rtl_uString* path, mode_t mode)
  {    
-#ifndef MACOSX  // not MACOSX  
-    return mkdir(OUStringToOString(path).getStr(), mode);     
-#else
 #ifdef USE_JAVA
     if ( !macxp_checkCreateDirectory( OUStringToOString( path ).getStr() ) )
     { 
         errno = EACCES;
         return -1;
     } 
-#endif  /* USE_JAVA */
 	return mkdir(macxp_resolveAliasAndConvert(path).getStr(), mode);
-#endif
+#else	/* USE_JAVA */
+    return mkdir(OUStringToOString(path).getStr(), mode);     
+#endif  /* USE_JAVA */
  }
  
