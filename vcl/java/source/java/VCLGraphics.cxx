@@ -65,8 +65,9 @@
 static ::std::list< CGImageRef > aCGImageList;
 static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
-static ::std::list< jlong > aGlyphDataList;
 static ::std::list< jlong > aEPSDataList;
+static ::std::list< jlong > aGlyphDataList;
+static ::std::map< ATSUFontID, CGFontRef > aATSFontMap;
 
 using namespace osl;
 using namespace rtl;
@@ -311,7 +312,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( JNIEnv *pEnv, jobject object )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( JNIEnv *pEnv, jobject object, jboolean _par0 )
 {
 	// Release the initial retain
 	ClearableMutexGuard aGuard( aBitmapBufferMutex );
@@ -335,6 +336,13 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 	{
 		rtl_freeMemory( (void *)aGlyphDataList.front() );
 		aGlyphDataList.pop_front();
+	}
+
+	if ( _par0 )
+	{
+		for ( ::std::map< ATSUFontID, CGFontRef >::const_iterator it = aATSFontMap.begin(); it != aATSFontMap.end(); ++it )
+			CGFontRelease( it->second );
+		aATSFontMap.clear();
 	}
 }
 
@@ -365,6 +373,8 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jfloat _par7, jint _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17, jboolean _par18, jfloat _par19, jfloat _par20, jfloat _par21, jfloat _par22, jfloat _par23 )
 {
+	// Mark the glyph data for deletion in case the Java drawing method
+	// never calls any of the native methods
 	if ( _par3 )
 	{
 		bool bFound = false;
@@ -382,6 +392,8 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 
 	}
 
+	// Mark the advance data for deletion in case the Java drawing method
+	// never calls any of the native methods
 	if ( _par4 )
 	{
 		bool bFound = false;
@@ -396,11 +408,29 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 
 		if ( !bFound )
 			aGlyphDataList.push_back( _par4 );
-
 	}
 
-	if ( _par3 && _par4 )
-		CGContect_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, (ATSUFontID)_par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20, _par21, _par22, _par23 );
+	// Convert and cache font as a CGFontRef to reduce the number of font
+	// subsets in the PDF
+	if ( _par5 )
+	{
+		ATSUFontID nFont = (ATSUFontID)_par5;
+		CGFontRef aFont;
+		::std::map< ATSUFontID, CGFontRef >::const_iterator it = aATSFontMap.find( nFont );
+		if ( it == aATSFontMap.end() )
+		{
+			aFont = CGFontCreateWithPlatformFont( (void *)&nFont );
+			if ( aFont )
+				aATSFontMap[ nFont ] = aFont;
+		}
+		else
+		{
+			aFont = it->second;
+		}
+
+		if ( _par3 && _par4 && aFont )
+			CGContect_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20, _par21, _par22, _par23 );
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -517,7 +547,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[8].signature = "(JZ)V";
 			pMethods[8].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
 			pMethods[9].name = "releaseNativeBitmaps";
-			pMethods[9].signature = "()V";
+			pMethods[9].signature = "(Z)V";
 			pMethods[9].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps;
 			t.pEnv->RegisterNatives( tempClass, pMethods, 10 );
 		}

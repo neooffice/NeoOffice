@@ -282,8 +282,11 @@ public final class VCLGraphics {
 
 	/**
 	 * Releases any native bitmaps that were created while printing.
+	 *
+	 * @param b <code>true</code> if the print job is complete otherwise
+	 *  <code>false</code>
 	 */
-	public static native void releaseNativeBitmaps();
+	public static native void releaseNativeBitmaps(boolean b);
 
 	/**
 	 * Set the use default font flag.
@@ -3169,7 +3172,7 @@ public final class VCLGraphics {
 		void dispose() {
 
 			// Release any native bitmaps
-			VCLGraphics.releaseNativeBitmaps();
+			VCLGraphics.releaseNativeBitmaps(false);
 
 			drawingHead = null;
 			drawingTail = null;

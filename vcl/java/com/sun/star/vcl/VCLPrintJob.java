@@ -171,6 +171,8 @@ public final class VCLPrintJob implements Pageable, Printable, Runnable {
 		printPageFormat = null;
 		printThread = null;
 
+		VCLGraphics.releaseNativeBitmaps(true);
+
 		disposed = true;
 
 	}
