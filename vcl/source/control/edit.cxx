@@ -993,20 +993,21 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
 	
 	if( ImplGetNativeControlType() == CTRL_SPINBOX )
 	{
-		Window *pControl = this;
 		Window *pBorder = GetWindow( WINDOW_BORDER );
 		if( pBorder == this )
 		{
 			// we have no border, use parent
-			pControl = mbIsSubEdit ? GetParent() : this;
-			pBorder = pControl->GetWindow( WINDOW_BORDER );
+			pBorder = mbIsSubEdit ? GetParent() : this;
 		}
-		
+
 		if( pBorder )
 		{
-			pBorder->GetParent()->Invalidate( Rectangle( pBorder->GetPosPixel(), pBorder->GetSizePixel() ) );
-			if ( !pBorder->GetParent()->HasPaintEvent() )
-				pBorder->GetParent()->Update();
+			if ( pBorder != this )
+				pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+			else
+				pBorder->Invalidate();
+			if ( !pBorder->HasPaintEvent() )
+				pBorder->Update();
 		}
 	}
 #endif	// USE_JAVA
@@ -1047,20 +1048,21 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 			
 			if( ImplGetNativeControlType() == CTRL_SPINBOX )
 			{
-				Window *pControl = this;
 				Window *pBorder = GetWindow( WINDOW_BORDER );
 				if( pBorder == this )
 				{
 					// we have no border, use parent
-					pControl = mbIsSubEdit ? GetParent() : this;
-					pBorder = pControl->GetWindow( WINDOW_BORDER );
+					pBorder = mbIsSubEdit ? GetParent() : this;
 				}
-				
+
 				if( pBorder )
 				{
-					pBorder->GetParent()->Invalidate( Rectangle( pBorder->GetPosPixel(), pBorder->GetSizePixel() ) );
-					if ( !pBorder->GetParent()->HasPaintEvent() )
-						pBorder->GetParent()->Update();
+					if ( pBorder != this )
+						pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+					else
+						pBorder->Invalidate();
+					if ( !pBorder->HasPaintEvent() )
+						pBorder->Update();
 				}
 			}
 #endif	// USE_JAVA
@@ -1977,12 +1979,15 @@ void Edit::GetFocus()
 #ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
 		{
-			Window* pWindow = GetWindow( WINDOW_BORDER );
-			if ( pWindow )
+			Window* pBorder = GetWindow( WINDOW_BORDER );
+			if ( pBorder )
 			{
-				pWindow->GetParent()->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-				if ( !pWindow->GetParent()->HasPaintEvent() )
-					pWindow->GetParent()->Update();
+				if ( pBorder != this )
+					pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+				else
+					pBorder->Invalidate();
+				if ( !pBorder->HasPaintEvent() )
+					pBorder->Update();
 			}
 		}
 #endif	// USE_JAVA
@@ -2028,12 +2033,15 @@ void Edit::LoseFocus()
 #ifdef USE_JAVA
 	if ( IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
 	{
-		Window* pWindow = GetWindow( WINDOW_BORDER );
-		if ( pWindow )
+		Window* pBorder = GetWindow( WINDOW_BORDER );
+		if ( pBorder )
 		{
-			pWindow->GetParent()->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-			if ( !pWindow->GetParent()->HasPaintEvent() )
-				pWindow->GetParent()->Update();
+			if ( pBorder != this )
+				pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+			else
+				pBorder->Invalidate();
+			if ( !pBorder->HasPaintEvent() )
+				pBorder->Update();
 		}
 	}
 #endif	// USE_JAVA
