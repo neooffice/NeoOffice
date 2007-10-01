@@ -750,7 +750,9 @@ void SvImpLBox::ShowCursor( BOOL bShow )
 		if ( it == aInShowCursorMap.end() )
 		{
 			aInShowCursorMap[ this ] = this;
-			pView->Invalidate();
+			// Fix bug 2642 by only invalidating the cursor
+			if ( pCursor )
+				InvalidateEntry( GetEntryLine( pCursor ) );
 			// Fix bug 1660 by only updating if we are in a paint event
 			if ( pView->IsInPaint() )
 				pView->Update();
