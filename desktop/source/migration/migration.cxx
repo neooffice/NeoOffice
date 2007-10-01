@@ -333,26 +333,6 @@ install_info MigrationImpl::findInstallation()
 {
     OUString usVersion;
     install_info aInfo;
-    utl::Bootstrap::PathStatus aStatus;
-    aStatus = utl::Bootstrap::locateVersionFile(usVersion);
-    if (aStatus != utl::Bootstrap::PATH_EXISTS)
-    {
-        // aStatus = utl::Bootstrap::locateUserInstallation(usVersion);
-        // if (aStatus == utl::Bootstrap::PATH_EXISTS)
-        if (rtl::Bootstrap::get(
-            OUString::createFromAscii("SYSUSERCONFIG"), usVersion))
-        {
-            aStatus = utl::Bootstrap::PATH_EXISTS;
-#ifdef UNX
-            usVersion += OUString::createFromAscii("/.sversionrc");
-#else
-            usVersion += OUString::createFromAscii("/sversion.ini");
-#endif
-        }
-        else
-            return aInfo;
-    }
-
 #ifdef PRODUCT_DIR_NAME
     // Use old installation if it exists
     OUString usAltInstall;
@@ -375,7 +355,26 @@ install_info MigrationImpl::findInstallation()
             return aInfo;
         }
     }
-#endif	// USE_JAVA
+#else	// PRODUCT_DIR_NAME
+    utl::Bootstrap::PathStatus aStatus;
+    aStatus = utl::Bootstrap::locateVersionFile(usVersion);
+    if (aStatus != utl::Bootstrap::PATH_EXISTS)
+    {
+        // aStatus = utl::Bootstrap::locateUserInstallation(usVersion);
+        // if (aStatus == utl::Bootstrap::PATH_EXISTS)
+        if (rtl::Bootstrap::get(
+            OUString::createFromAscii("SYSUSERCONFIG"), usVersion))
+        {
+            aStatus = utl::Bootstrap::PATH_EXISTS;
+#ifdef UNX
+            usVersion += OUString::createFromAscii("/.sversionrc");
+#else
+            usVersion += OUString::createFromAscii("/sversion.ini");
+#endif
+        }
+        else
+            return aInfo;
+    }
 
     Config aVersion(usVersion);
     aVersion.SetGroup("Versions");
@@ -404,6 +403,7 @@ install_info MigrationImpl::findInstallation()
         }
         i_ins++;
     }
+#endif	// PRODUCT_DIR_NAME
     return aInfo;
 }
 
