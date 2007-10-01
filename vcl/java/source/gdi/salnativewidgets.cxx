@@ -766,11 +766,11 @@ static BOOL InitListViewHeaderButtonDrawInfo( HIThemeButtonDrawInfo *pButtonInfo
 		case LISTVIEWHEADER_SORT_ASCENDING:
 			pButtonInfo->adornment = kThemeAdornmentHeaderButtonSortUp;
 			break;
-		
+
 		case LISTVIEWHEADER_SORT_DESCENDING:
 			// default is to have downward pointing arrow
 			break;
-			
+
 		default:
 			// for unknown sort orders
 			pButtonInfo->adornment = kThemeAdornmentHeaderButtonNoSortArrow;
@@ -979,10 +979,10 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	BOOL bRet = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
 	if ( ! bRet )
 		return FALSE;
-	
+
 	SInt32 spinnerThemeWidth;
 	bRet = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
-	
+
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
@@ -997,7 +997,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 
 			HIThemeButtonDrawInfo aButtonDrawInfo;
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
-	
+
 			HIRect arrowRect;
 			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
 			if( arrowRect.origin.x < 0 )
@@ -1015,18 +1015,18 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 				editRect.origin.y = 0;
 				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width;
 				editRect.size.height = offscreenHeight;
-				
+
 				// erase out our background first
-				
+
 				float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
 				CGContextSetFillColor( pBuffer->maContext, whiteColor );
 				CGContextFillRect( pBuffer->maContext, editRect );
-				
+
 				// draw our edit frame
-				
+
 				HIThemeFrameDrawInfo aFrameInfo;
 				memset( &aFrameInfo, 0, sizeof( HIThemeFrameDrawInfo ) );
-	
+
 				aFrameInfo.kind = kHIThemeFrameTextFieldSquare;
 				if( ! nState )
 					aFrameInfo.state = kThemeStateInactive;
@@ -1036,11 +1036,11 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 					aFrameInfo.isFocused = TRUE;
 				else
 					aFrameInfo.isFocused = FALSE;
-	
+
 				bRet = ( HIThemeDrawFrame( &editRect, &aFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 			}
 		}
-	
+
 		pBuffer->ReleaseContext();
 
 		if ( bRet )
@@ -1070,10 +1070,10 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 	BOOL bRet = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
 	if ( ! bRet )
 		return FALSE;
-	
+
 	SInt32 spinnerThemeWidth;
 	bRet = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
-	
+
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
@@ -1088,7 +1088,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 
 			HIThemeButtonDrawInfo aButtonDrawInfo;
 			InitSpinbuttonDrawInfo( &aButtonDrawInfo, nState, pValue );
-	
+
 			HIRect arrowRect;
 			arrowRect.origin.x = rDestBounds.GetWidth() - spinnerThemeWidth - SPINNER_TRIMWIDTH;
 			if( arrowRect.origin.x < 0 )
@@ -1469,13 +1469,13 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 
 		HIThemeSeparatorDrawInfo pSepInfo;
 		InitSeparatorDrawInfo( &pSepInfo, nState );
-		
+
 		HIRect destRect;
 		destRect.origin.x = 0;
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
-				
+
 		bRet = ( HIThemeDrawSeparator( &destRect, &pSepInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
@@ -1505,7 +1505,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 {
 	SInt32 themeListViewHeaderHeight;
 	BOOL bRet = ( GetThemeMetric( kThemeMetricListHeaderHeight, &themeListViewHeaderHeight ) == noErr );
-	
+
 	if ( bRet )
 	{
 		VCLBitmapBuffer *pBuffer = &aSharedListViewHeaderBuffer;
@@ -1517,13 +1517,13 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 
 			HIThemeButtonDrawInfo pButtonInfo;
 			InitListViewHeaderButtonDrawInfo( &pButtonInfo, nState, pValue );
-			
+
 			HIRect destRect;
 			destRect.origin.x = 0;
 			destRect.origin.y = 0;
 			destRect.size.width = rDestBounds.GetWidth();
 			destRect.size.height = themeListViewHeaderHeight;
-					
+
 			bRet = ( HIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 		}
 
@@ -1559,11 +1559,11 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
-		
+
 		aButtonDrawInfo.kind = kThemeBevelButton;
 		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
 			aButtonDrawInfo.value = kThemeButtonOn;
-			
+
 		HIRect destRect;
 		destRect.origin.x = 0;
 		destRect.origin.y = 0;
@@ -1684,7 +1684,7 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( nPart == PART_ENTIRE_CONTROL || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_SPINBUTTONS:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
@@ -1720,32 +1720,32 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == HAS_BACKGROUND_TEXTURE ) )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_DISCLOSUREBTN:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_LISTVIEWHEADER:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_LISTVIEWHEADER_SORT_MARK ) )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_FIXEDLINE:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_LISTVIEWBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
-		
+
 		case CTRL_TOOLBAR:
 			if( nPart == PART_BUTTON )
 				isSupported = TRUE;
 			break;
-			
+
 		default:
 			isSupported = FALSE;
 			break;
@@ -1887,7 +1887,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeSpinbox( this, buttonRect, nState, pValue );
 			}
 			break;
-		
+
 		case CTRL_SPINBUTTONS:
 			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_ALL_BUTTONS ) )
 			{
@@ -1952,7 +1952,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeEditBox( this, ctrlRect, nState );
 			}
 			break;
-		
+
 		case CTRL_DISCLOSUREBTN:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1961,7 +1961,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeDisclosureBtn( this, ctrlRect, nState, pValue );
 			}
 			break;
-		
+
 		case CTRL_LISTVIEWHEADER:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1970,7 +1970,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeListViewHeader( this, ctrlRect, nState, pValue );
 			}
 			break;
-		
+
 		case CTRL_FIXEDLINE:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1978,7 +1978,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeSeparatorLine( this, ctrlRect, nState );
 			}
 			break;
-		
+
 		case CTRL_LISTVIEWBOX:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -1986,7 +1986,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				bOK = DrawNativeListBoxFrame( this, ctrlRect, nState );
 			}
 			break;
-		
+
 		case CTRL_TOOLBAR:
 			if( nPart == PART_BUTTON )
 			{
@@ -2089,7 +2089,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_LISTBOX:
 			{
 				Rectangle comboBoxRect = rRealControlRegion.GetBoundRect();
-				ScrollbarValue *pValue = static_cast<ScrollbarValue *> ( aValue.getOptionalVal() );
 
 				HIThemeButtonDrawInfo aButtonDrawInfo;
 				InitButtonDrawInfo( &aButtonDrawInfo, nState );
@@ -2117,7 +2116,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								bReturn = TRUE;
 							}
 							break;
-							
+
 						case PART_BUTTON_DOWN:
 							{
 								Point topLeft( (long)preferredRect.origin.x + (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH, (long)preferredRect.origin.y );
@@ -2342,14 +2341,14 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							bReturn = TRUE;
 						}
 						break;
-					
+
 					case PART_SUB_EDIT:
 						{
 							SInt32 editFramePadding;
 							bReturn = ( GetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding ) == noErr );
 							if ( ! bReturn )
 								return bReturn;
-								
+
 							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left() + editFramePadding, spinboxRect.Top() + editFramePadding ), Size( (long)(spinboxRect.GetWidth() - spinnerThemeWidth - 4 - (editFramePadding*2) ), spinboxRect.GetHeight() - (editFramePadding*2) ) ) );
 							rNativeContentRegion = Region( rNativeBoundingRegion );
 							bReturn = TRUE;
@@ -2358,7 +2357,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				}
 			}
 			break;
-		
+
 		case CTRL_SPINBUTTONS:
 			{
 				Rectangle spinboxRect = rRealControlRegion.GetBoundRect();
@@ -2447,9 +2446,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				HIRect preferredRect;
 				HIShapeGetBounds( tabShape, &preferredRect );
 				CFRelease( tabShape );
-				
+
 				preferredRect.size.height += TABITEM_HEIGHT_SLOP;
-				
+
 				Point topLeft( controlRect.Left(), controlRect.Top() );
 				Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
@@ -2511,7 +2510,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_DISCLOSUREBTN:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -2522,7 +2521,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_LISTVIEWHEADER:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -2533,7 +2532,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_LISTVIEWBOX:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
@@ -2544,7 +2543,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				bReturn = TRUE;
 			}
 			break;
-		
+
 		case CTRL_TOOLBAR:
 			if ( nPart == PART_BUTTON )
 			{
@@ -2588,7 +2587,7 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 {
 	BOOL bReturn = FALSE;
 	RGBColor nativeColor;
-	
+
 	switch( nType )
 	{
 		case CTRL_PUSHBUTTON:
@@ -2609,7 +2608,7 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				}
 			}
 			break;
-		
+
 		case CTRL_LISTBOX:
 			{
 				if( nState & CTRL_STATE_PRESSED )
@@ -2626,7 +2625,7 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				}
 			}
 			break;
-		
+
 		case CTRL_TAB_ITEM:
 			{
 				if( nState & CTRL_STATE_SELECTED )
@@ -2647,7 +2646,7 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 				}
 			}
 			break;
-		
+
 		case CTRL_MENU_POPUP:
 			{
 				if( nState & CTRL_STATE_SELECTED )
@@ -2665,9 +2664,9 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 			}
 			break;
 	}
-	
+
 	if( bReturn )
 		textColor = ConvertRGBColorToSalColor( nativeColor );
-	
+
 	return bReturn;
 }
