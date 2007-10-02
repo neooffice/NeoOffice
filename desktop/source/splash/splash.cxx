@@ -63,6 +63,40 @@
 #include <rtl/ustrbuf.hxx>
 #include <rtl/math.hxx>
 
+#ifdef USE_JAVA
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static bool IsX11Product()
+{
+    static bool bX11 = sal_False;
+    static ::osl::Module aVCLModule;
+
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+            bX11 = true;
+    }
+
+    return bX11;
+}
+
+#endif	// USE_JAVA
+
 #define NOT_LOADED  ((long)-1)
 
 using namespace ::rtl;
@@ -100,9 +134,16 @@ SplashScreen::SplashScreen(const Reference< XMultiServiceFactory >& rSMgr)
     loadConfig();
 
 #ifdef USE_JAVA
-    _pProgressBar = new ProgressBar( this );
-    _pProgressBar->SetPaintTransparent( TRUE );
-    _barheight = _pProgressBar->GetOutputSizePixel().Height();
+    if ( IsX11Product() )
+    {
+        _pProgressBar = NULL;
+    }
+    else
+    {
+        _pProgressBar = new ProgressBar( this );
+        _pProgressBar->SetPaintTransparent( TRUE );
+        _barheight = _pProgressBar->GetOutputSizePixel().Height();
+    }
 #endif	// USE_JAVA
 }
 
@@ -113,7 +154,8 @@ SplashScreen::~SplashScreen()
 	Hide();
 
 #ifdef USE_JAVA
-    delete _pProgressBar;
+    if ( _pProgressBar )
+        delete _pProgressBar;
 #endif	// USE_JAVA
 }
 
@@ -128,7 +170,8 @@ void SAL_CALL SplashScreen::start(const OUString&, sal_Int32 nRange)
             ShowFullScreenMode( TRUE );
         Show();
 #ifdef USE_JAVA
-        _pProgressBar->Show();
+        if ( _pProgressBar )
+            _pProgressBar->Show();
 #endif	// USE_JAVA
         Paint(Rectangle());
     }
@@ -144,7 +187,8 @@ void SAL_CALL SplashScreen::end()
             EndFullScreenMode();
         Hide();
 #ifdef USE_JAVA
-        _pProgressBar->Hide();
+        if ( _pProgressBar )
+            _pProgressBar->Hide();
 #endif	// USE_JAVA
     }
     _bProgressEnd = sal_True;
@@ -160,7 +204,8 @@ void SAL_CALL SplashScreen::reset()
             ShowFullScreenMode( TRUE );
         Show();
 #ifdef USE_JAVA
-        _pProgressBar->Show();
+        if ( _pProgressBar )
+            _pProgressBar->Show();
 #endif	// USE_JAVA
         updateStatus();
     }
@@ -174,7 +219,8 @@ void SAL_CALL SplashScreen::setText(const OUString&)
             ShowFullScreenMode( TRUE );
         Show();
 #ifdef USE_JAVA
-        _pProgressBar->Show();
+        if ( _pProgressBar )
+            _pProgressBar->Show();
 #endif	// USE_JAVA
     }
 }
@@ -191,7 +237,8 @@ void SAL_CALL SplashScreen::setValue(sal_Int32 nValue)
             ShowFullScreenMode( TRUE );
         Show();
 #ifdef USE_JAVA
-        _pProgressBar->Show();
+        if ( _pProgressBar )
+            _pProgressBar->Show();
 #endif	// USE_JAVA
         if (nValue >= _iMax) _iProgress = _iMax;
 	else _iProgress = nValue;
@@ -245,7 +292,7 @@ SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::sta
             }   
 
 #ifdef USE_JAVA
-            if ( _barheight > 8 )
+            if ( _pProgressBar && _barheight > 8 )
                 _tly -= _barheight - 8;
 #endif	// USE_JAVA
         }
@@ -262,7 +309,7 @@ SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::sta
             }
 
 #ifdef USE_JAVA
-            if ( _barheight > 6 )
+            if ( _pProgressBar && _barheight > 6 )
                 _tly -= _barheight - 6;
 #endif	// USE_JAVA
         }
@@ -282,7 +329,8 @@ SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::sta
         }
 
 #ifdef USE_JAVA
-        _pProgressBar->SetPosSizePixel( Point( _tlx, _tly ), Size( _barwidth, _barheight ) );
+        if ( _pProgressBar )
+            _pProgressBar->SetPosSizePixel( Point( _tlx, _tly ), Size( _barwidth, _barheight ) );
 #endif	// USE_JAVA
 
         Application::AddEventListener(
@@ -713,8 +761,11 @@ void SplashScreen::Paint( const Rectangle&)
 	if (_bPaintBitmap)
 		_vdev.DrawBitmap( Point(), _aIntroBmp );
 
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+    if (!_pProgressBar && _bPaintProgress) {
+#else	// USE_JAVA
 	if (_bPaintProgress) {
+#endif	// USE_JAVA
 		// draw progress...
 		long length = (_iProgress * _barwidth / _iMax) - (2 * _barspace);
 		if (length < 0) length = 0;
@@ -729,46 +780,47 @@ void SplashScreen::Paint( const Rectangle&)
 		_vdev.DrawRect(Rectangle(_tlx+_barspace, _tly+_barspace,
 			_tlx+_barspace+length, _tly+_barheight-_barspace));
 	}
-#endif	// !USE_JAVA
     Size aSize =  GetOutputSizePixel();
     Size bSize =  _vdev.GetOutputSizePixel();
     //_vdev.Flush();
     //_vdev.DrawOutDev(Point(), GetOutputSize(), Point(), GetOutputSize(), *((IntroWindow*)this) );
 
 #ifdef USE_JAVA
-    // HACK: clip out the top pixel as it will be merely background color
-    Rectangle aClipRect( Point( _pProgressBar->GetPosPixel().X(), _pProgressBar->GetPosPixel().Y() + 1 ), Size( _pProgressBar->GetSizePixel().Width(), _pProgressBar->GetSizePixel().Height() - 1 ) );
-    if ( _bPaintProgress )
+    if ( _pProgressBar )
     {
-        SetClipRegion( Region( aClipRect ) );
-        _pProgressBar->SetValue( _iProgress );
+        // HACK: clip out the top pixel as it will be merely background color
+        Rectangle aClipRect( Point( _pProgressBar->GetPosPixel().X(), _pProgressBar->GetPosPixel().Y() + 1 ), Size( _pProgressBar->GetSizePixel().Width(), _pProgressBar->GetSizePixel().Height() - 1 ) );
+        if ( _bPaintProgress )
+        {
+            SetClipRegion( Region( aClipRect ) );
+            _pProgressBar->SetValue( _iProgress );
+            SetClipRegion();
+        }
+
+        // Copy top to screen
+        Rectangle aCurrentClip( Point( 0, 0 ), Size( GetSizePixel().Width(), aClipRect.Top() + 2 ) );
+        SetClipRegion( aCurrentClip );
+        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+
+        // Copy bottom to screen
+        aCurrentClip = Rectangle( Point( 0, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( GetSizePixel().Width(), GetSizePixel().Height() - aClipRect.Top() - aClipRect.GetHeight() + 2 ) );
+        SetClipRegion( aCurrentClip );
+        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+        // Copy left to screen
+        aCurrentClip = Rectangle( Point( 0, aClipRect.Top() ), Size( aClipRect.Left() + 3, aClipRect.GetHeight() ) );
+        SetClipRegion( aCurrentClip );
+        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+
+        // Copy right to screen
+        aCurrentClip = Rectangle( Point( aClipRect.Left() + aClipRect.GetWidth() - 2, aClipRect.Top() ), Size( GetSizePixel().Width() - aClipRect.Left() - aClipRect.GetWidth() + 2, aClipRect.GetHeight() ) );
+        SetClipRegion( aCurrentClip );
+        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+
         SetClipRegion();
     }
-
-    // Copy top to screen
-    Rectangle aCurrentClip( Point( 0, 0 ), Size( GetSizePixel().Width(), aClipRect.Top() + 2 ) );
-    SetClipRegion( aCurrentClip );
-    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-
-    // Copy bottom to screen
-    aCurrentClip = Rectangle( Point( 0, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( GetSizePixel().Width(), GetSizePixel().Height() - aClipRect.Top() - aClipRect.GetHeight() + 2 ) );
-    SetClipRegion( aCurrentClip );
-    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-    // Copy left to screen
-    aCurrentClip = Rectangle( Point( 0, aClipRect.Top() ), Size( aClipRect.Left() + 3, aClipRect.GetHeight() ) );
-    SetClipRegion( aCurrentClip );
-    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-
-    // Copy right to screen
-    aCurrentClip = Rectangle( Point( aClipRect.Left() + aClipRect.GetWidth() - 2, aClipRect.Top() ), Size( GetSizePixel().Width() - aClipRect.Left() - aClipRect.GetWidth() + 2, aClipRect.GetHeight() ) );
-    SetClipRegion( aCurrentClip );
-    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-
-    SetClipRegion();
-
-#else	// USE_JAVA
-    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
+    else
 #endif	// USE_JAVA
+    DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
 	//Flush();
 }
 
