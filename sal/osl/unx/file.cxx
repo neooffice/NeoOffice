@@ -351,18 +351,8 @@ static int adjustLockFlags(const char * path, int flags)
     if( 0 <= statfs( path, &s ) )
     {
 #ifdef USE_JAVA
-        /*
-         * Fix bugs 2504 and 2639 and other file locking bugs by not making an
-         * exlusive lock until after the file is open like on Linux and Solaris.
-         * Some filesystems do not support any locking so open the file without
-         * any locking.
-         */
-        if ( 0 == strncmp( "webdav", s.f_fstypename, 6 ) )
-        {
-            flags &= ~( O_EXLOCK | O_SHLOCK );
-            flags |= O_SHLOCK;
-        }
-        else
+        // Fix bug 2443 by applying the OOo code's AFP fix to SAMBA volumes
+        if( 0 == strncmp("afpfs", s.f_fstypename, 5) || 0 == strncmp("smbfs", s.f_fstypename, 5) )
 #else	// USE_JAVA
         if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
 #endif	// USE_JAVA
@@ -370,6 +360,18 @@ static int adjustLockFlags(const char * path, int flags)
             flags &= ~O_EXLOCK;
             flags |= O_SHLOCK;
         }    
+#ifdef USE_JAVA
+        /*
+         * Fix bugs 2504 and 2639 and other file locking bugs by not making an
+         * exlusive lock until after the file is open like on Linux and Solaris.
+         * Some filesystems do not support any locking so open the file without
+         * any locking.
+         */
+        else if ( 0 == strncmp( "webdav", s.f_fstypename, 6 ) )
+        {
+            flags &= ~( O_EXLOCK | O_SHLOCK );
+        }
+#endif	// USE_JAVA
     }
 
     return flags;
