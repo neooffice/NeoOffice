@@ -1247,17 +1247,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 					nTranslateY = nY;
 			}
 		}
-		else if ( mfGlyphScaleX != 1.0 )
-		{
-			nStart -= nGlyphCount - 1;
-			int nOldGlyphCount = nGlyphCount;
-			nGlyphCount = 1;
-			for ( i = 1; i < nOldGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ]; i++ )
-			{
-				nStart++;
-				nGlyphCount++;
-			}
-		}
 
 		for ( i = 0; i < nGlyphCount; i++ )
 			aGlyphArray[ i ] &= GF_IDXMASK;
