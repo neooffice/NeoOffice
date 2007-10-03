@@ -309,7 +309,7 @@
 					// Apply glyph rotation, scaling, and translation
 					CGAffineTransform aTransform = CGAffineTransformMake( 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
 					aTransform = CGAffineTransformScale( aTransform, mfGlyphScaleX, mfGlyphScaleY * -1 );
-					aTransform = CGAffineTransformTranslate( aTransform, mfGlyphTranslateX, mfGlyphTranslateY );
+					aTransform = CGAffineTransformTranslate( aTransform, mfGlyphTranslateX, mfGlyphTranslateY * -1);
 
 					CGContextSetFont( aContext, maFont );
 					CGContextSetFontSize( aContext, mnFontSize );
