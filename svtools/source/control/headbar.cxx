@@ -440,14 +440,14 @@ void HeaderBar::ImplDrawItem( OutputDevice* pDev,
     // avoid 3D borders
 #ifndef USE_JAVA
     Color aSelectionTextColor( COL_TRANSPARENT );
-#endif // !USE_JAVA
+#endif	// USE_JAVA
     if( bHigh )
         DrawSelectionBackground( aRect, 1, TRUE, FALSE, FALSE, &aSelectionTextColor );
 	else if ( !mbButtonStyle || (nBits & HIB_FLAT) )
         DrawSelectionBackground( aRect, 0, TRUE, FALSE, FALSE, &aSelectionTextColor );
 #ifdef USE_JAVA
 	}
-#endif // USE_JAVA
+#endif	// USE_JAVA
 
 	// Wenn kein Platz, dann brauchen wir auch nichts ausgeben
 	if ( aRect.GetWidth() < 1 )

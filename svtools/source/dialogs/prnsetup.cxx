@@ -51,6 +51,14 @@
 #include "prnsetup.hrc"
 #include <prnsetup.hxx>
 
+#ifdef USE_JAVA
+
+#ifndef _SVTOOLSX11PRODUCTCHECK_HXX
+#include "X11productcheck.hxx"
+#endif
+
+#endif	// USE_JAVA
+
 // =======================================================================
 
 void ImplFillPrnDlgListBox( const Printer* pPrinter,
@@ -386,10 +394,17 @@ short PrinterSetupDialog::Execute()
 
 #ifdef USE_JAVA
 	short nRet;
-	if ( mpTempPrinter )
-		nRet = mpTempPrinter->Setup();
+	if ( !::svt::IsX11Product() )
+	{
+		if ( mpTempPrinter )
+			nRet = mpTempPrinter->Setup();
+		else
+			nRet = mpPrinter->Setup();
+	}
 	else
-		nRet = mpPrinter->Setup();
+	{
+		nRet = ModalDialog::Execute();
+	}
 #else	// USE_JAVA
 	// Dialog starten
 	short nRet = ModalDialog::Execute();

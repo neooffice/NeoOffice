@@ -71,7 +71,7 @@ class TabBar;
 #ifndef _SV_NATIVEWIDGETS_HXX
 #include <vcl/salnativewidgets.hxx>
 #endif
-#endif
+#endif	// USE_JAVA
 
 
 using namespace ::com::sun::star::accessibility;
@@ -1855,7 +1855,7 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
 				}
 				else
 				{
-#endif
+#endif	// USE_JAVA
 				if( IsExpanded(pEntry) )
 					pImg = &pImp->GetExpandedNodeBmp( eBitmapMode );
 				else
@@ -1875,7 +1875,7 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
 				DrawImage( aPos, *pImg ,nStyle);
 #ifdef USE_JAVA
 				}
-#endif
+#endif	// USE_JAVA
 			}
 		}
 	}

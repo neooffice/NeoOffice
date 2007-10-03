@@ -68,6 +68,14 @@
 #include <rtl/logfile.hxx>
 #include "itemholder1.hxx"
 
+#ifdef USE_JAVA
+
+#ifndef _SVTOOLSX11PRODUCTCHECK_HXX
+#include "X11productcheck.hxx"
+#endif
+
+#endif	// USE_JAVA
+
 //_________________________________________________________________________________________________________________
 //	namespaces
 //_________________________________________________________________________________________________________________
@@ -287,7 +295,8 @@ SvtFontOptions_Impl::SvtFontOptions_Impl()
 	if ( !m_bFontWYSIWYGInited )
 	{
 		m_bFontWYSIWYGInited = sal_True;
-		EnableFontWYSIWYG( sal_False );
+		if ( !::svt::IsX11Product() )
+			EnableFontWYSIWYG( sal_False );
 	}
 #endif	// USE_JAVA
 

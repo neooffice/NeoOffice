@@ -86,6 +86,14 @@
 #include <comphelper/processfactory.hxx>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _SVTOOLSX11PRODUCTCHECK_HXX
+#include "X11productcheck.hxx"
+#endif
+
+#endif	// USE_JAVA
+
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::ui::dialogs;
@@ -627,22 +635,30 @@ short PrintDialog::Execute()
 	ImplModifyControlHdl( NULL );
 
 #ifdef USE_JAVA
-	short nRet = mpPrinter->StartJob( String() );
-	if ( nRet )
-		nRet = ClickOptionsHdl();
-	if ( nRet )
+	short nRet;
+	if ( !::svt::IsX11Product() )
 	{
-		// Get and store the page range
-		XubString aRange( mpPrinter->GetJobValue( XubString::CreateFromAscii( "PAGERANGE" ) ) );
-		if ( aRange.Len() > 0 )
+		nRet = mpPrinter->StartJob( String() );
+		if ( nRet )
+			nRet = ClickOptionsHdl();
+		if ( nRet )
 		{
-			maRbtPages.Check( TRUE );
-			maEdtPages.SetText( aRange );
+			// Get and store the page range
+			XubString aRange( mpPrinter->GetJobValue( XubString::CreateFromAscii( "PAGERANGE" ) ) );
+			if ( aRange.Len() > 0 )
+			{
+				maRbtPages.Check( TRUE );
+				maEdtPages.SetText( aRange );
+			}
+		}
+		else
+		{
+			mpPrinter->EndJob();
 		}
 	}
 	else
 	{
-        mpPrinter->EndJob();
+		nRet = ModalDialog::Execute();
 	}
 #else	// USE_JAVA
 	// Dialog starten

@@ -52,7 +52,7 @@
 #ifndef _SV_NATIVEWIDGETS_HXX
 #include <vcl/salnativewidgets.hxx>
 #endif
-#endif
+#endif	// USE_JAVA
 
 // =======================================================================
 
@@ -167,7 +167,7 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 		if ( bOK )
 			return;
 	}
-#endif
+#endif	// USE_JAVA
 
 	if ( mbCalcNew )
 	{
