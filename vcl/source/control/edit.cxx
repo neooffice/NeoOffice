@@ -1006,7 +1006,7 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
 				pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			else
 				pBorder->Invalidate();
-			if ( !pBorder->HasPaintEvent() )
+			if ( pBorder->IsInPaint() )
 				pBorder->Update();
 		}
 	}
@@ -1061,7 +1061,7 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 						pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 					else
 						pBorder->Invalidate();
-					if ( !pBorder->HasPaintEvent() )
+					if ( pBorder->IsInPaint() )
 						pBorder->Update();
 				}
 			}
@@ -1986,7 +1986,7 @@ void Edit::GetFocus()
 					pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 				else
 					pBorder->Invalidate();
-				if ( !pBorder->HasPaintEvent() )
+				if ( pBorder->IsInPaint() )
 					pBorder->Update();
 			}
 		}
@@ -2040,7 +2040,7 @@ void Edit::LoseFocus()
 				pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
 			else
 				pBorder->Invalidate();
-			if ( !pBorder->HasPaintEvent() )
+			if ( pBorder->IsInPaint() )
 				pBorder->Update();
 		}
 	}

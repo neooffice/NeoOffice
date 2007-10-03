@@ -489,7 +489,7 @@ void SpinField::Up()
 			pParent = pParent->GetParent();
 		}
 		pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-		if ( !pParent->HasPaintEvent() )
+		if ( pParent->IsInPaint() )
 			pParent->Update();
 	}
 #endif	// USE_JAVA
@@ -511,7 +511,7 @@ void SpinField::Down()
 			pParent = pParent->GetParent();
 		}
 		pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-		if ( !pParent->HasPaintEvent() )
+		if ( pParent->IsInPaint() )
 			pParent->Update();
 	}
 #endif	// USE_JAVA
@@ -533,7 +533,7 @@ void SpinField::First()
 			pParent = pParent->GetParent();
 		}
 		pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-		if ( !pParent->HasPaintEvent() )
+		if ( pParent->IsInPaint() )
 			pParent->Update();
 	}
 #endif	// USE_JAVA
@@ -555,7 +555,7 @@ void SpinField::Last()
 			pParent = pParent->GetParent();
 		}
 		pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-		if ( !pParent->HasPaintEvent() )
+		if ( pParent->IsInPaint() )
 			pParent->Update();
 	}
 #endif	// USE_JAVA
@@ -588,7 +588,7 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 					pParent = pParent->GetParent();
 				}
 				pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-				if ( !pParent->HasPaintEvent() )
+				if ( pParent->IsInPaint() )
 					pParent->Update();
 			}
 			else
@@ -610,7 +610,7 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 					pParent = pParent->GetParent();
 				}
 				pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-				if ( !pParent->HasPaintEvent() )
+				if ( pParent->IsInPaint() )
 					pParent->Update();
 			}
 			else
@@ -625,7 +625,7 @@ void SpinField::MouseButtonDown( const MouseEvent& rMEvt )
 			if ( IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
 			{
 				GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-				if ( !GetParent()->HasPaintEvent() )
+				if ( GetParent()->IsInPaint() )
 					GetParent()->Update();
 			}
 			else
@@ -669,7 +669,7 @@ void SpinField::MouseButtonUp( const MouseEvent& rMEvt )
 				pParent = pParent->GetParent();
 			}
 			pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-			if ( !pParent->HasPaintEvent() )
+			if ( pParent->IsInPaint() )
 				pParent->Update();
 		}
 		else
@@ -696,7 +696,7 @@ void SpinField::MouseButtonUp( const MouseEvent& rMEvt )
 				pParent = pParent->GetParent();
 			}
 			pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-			if ( !pParent->HasPaintEvent() )
+			if ( pParent->IsInPaint() )
 				pParent->Update();
 		}
 		else
@@ -744,7 +744,7 @@ void SpinField::MouseMove( const MouseEvent& rMEvt )
 						pParent = pParent->GetParent();
 					}
 					pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-					if ( !pParent->HasPaintEvent() )
+					if ( pParent->IsInPaint() )
 						pParent->Update();
 				}
 				else
@@ -782,7 +782,7 @@ void SpinField::MouseMove( const MouseEvent& rMEvt )
 						pParent = pParent->GetParent();
 					}
 					pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-					if ( !pParent->HasPaintEvent() )
+					if ( pParent->IsInPaint() )
 						pParent->Update();
 				}
 				else
@@ -843,7 +843,7 @@ long SpinField::Notify( NotifyEvent& rNEvt )
 								pParent = pParent->GetParent();
 							}
 							pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-							if ( !pParent->HasPaintEvent() )
+							if ( pParent->IsInPaint() )
 								pParent->Update();
 						}
 #else	// USE_JAVA
@@ -1242,7 +1242,7 @@ long SpinField::PreNotify( NotifyEvent& rNEvt )
 							pParent = pParent->GetParent();
 						}
 						pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-						if ( !pParent->HasPaintEvent() )
+						if ( pParent->IsInPaint() )
 							pParent->Update();
 					}
 					else
@@ -1342,7 +1342,7 @@ IMPL_LINK( SpinField, ImplTimeout, Timer*, pTimer )
 				pParent = pParent->GetParent();
 			}
 			pParent->Invalidate( Rectangle( pWindow->GetPosPixel(), pWindow->GetSizePixel() ) );
-			if ( !pParent->HasPaintEvent() )
+			if ( pParent->IsInPaint() )
 				pParent->Update();
 		}
 #endif	// USE_JAVA
