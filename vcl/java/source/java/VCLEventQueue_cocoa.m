@@ -310,11 +310,25 @@ const static NSString *pCancelInputMethodText = @" ";
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
+	BOOL bCommandKeyPressed = ( pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask );
+
+	// Implement the standard window minimization behavior with the Command-m
+	// event
+	if ( bCommandKeyPressed && [self styleMask] & NSMiniaturizableWindowMask && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	{
+		NSString *pChars = [pEvent charactersIgnoringModifiers];
+		if ( pChars && [pChars isEqualToString:@"m"] )
+		{
+			[self miniaturize:self];
+			return YES;
+		}
+	}
+
 	BOOL bRet = [super performKeyEquivalent:pEvent];
 
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows
-	if ( !bRet && pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask && [self isVisible] && ![[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
 		NSResponder *pResponder = [self firstResponder];
