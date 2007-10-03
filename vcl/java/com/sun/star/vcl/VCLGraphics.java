@@ -904,6 +904,9 @@ public final class VCLGraphics {
 					clipList.add(clip);
 			}
 		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
+		}
 		else {
 			clipList.add(destBounds);
 		}
@@ -1027,6 +1030,9 @@ public final class VCLGraphics {
 					clipList.add(clip);
 			}
 		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
+		}
 		else {
 			clipList.add(clipBounds);
 		}
@@ -1111,6 +1117,9 @@ public final class VCLGraphics {
 					clipList.add(clip);
 			}
 		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
+		}
 		else {
 			clipList.add(destBounds);
 		}
@@ -1191,6 +1200,9 @@ public final class VCLGraphics {
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
+		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
 		}
 		else {
 			clipList.add(graphicsBounds);
@@ -1417,6 +1429,9 @@ public final class VCLGraphics {
 					clipList.add(clip);
 			}
 		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
+		}
 		else {
 			clipList.add(destBounds);
 		}
@@ -1533,6 +1548,9 @@ public final class VCLGraphics {
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
+		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
 		}
 		else {
 			clipList.add(destBounds);
@@ -1656,6 +1674,9 @@ public final class VCLGraphics {
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
+		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
 		}
 		else {
 			clipList.add(destBounds);
@@ -1867,6 +1888,9 @@ public final class VCLGraphics {
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
+		}
+		else if (graphics != null) {
+			clipList.add(new Rectangle());
 		}
 		else {
 			clipList.add(destBounds);
@@ -2879,7 +2903,7 @@ public final class VCLGraphics {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, x, y, 1, 1, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, 0, 0, 0, 0, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
 					if (xor)

@@ -92,7 +92,8 @@
 					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					if ( mfClipWidth && mfClipHeight )
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 
 					NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
 					if ( pData )
@@ -194,7 +195,8 @@
 					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					if ( mfClipWidth && mfClipHeight )
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 					CGContextDrawImage( aContext, CGRectMake( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 ), maImage );
 					CGContextRestoreGState( aContext );
 				}
@@ -296,7 +298,8 @@
 					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					if ( mfClipWidth && mfClipHeight )
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 					CGContextTranslateCTM( aContext, mfX, mfY);
 					CGContextRotateCTM( aContext, mfGlyphRotateAngle );
 
@@ -413,7 +416,8 @@
 					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					if ( mfClipWidth && mfClipHeight )
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 
 					CGContextBeginPath( aContext );
 					CGContextMoveToPoint( aContext, mfX1, mfY1 );
@@ -512,7 +516,8 @@
 					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					if ( mfClipWidth && mfClipHeight )
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 
 					CGContextBeginPath( aContext );
 					CGContextMoveToPoint( aContext, mpXPoints[ 0 ], mpYPoints[ 0 ] );
@@ -621,7 +626,8 @@
 					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					if ( mfClipWidth && mfClipHeight )
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 
 					CGContextBeginPath( aContext );
 					CGContextMoveToPoint( aContext, mpXPoints[ 0 ], mpYPoints[ 0 ] );
@@ -722,7 +728,8 @@
 					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 					CGContextRotateCTM( aContext, mfRotateAngle );
 					CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
-					CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+					if ( mfClipWidth && mfClipHeight )
+						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 
 					if ( mbFill )
 					{
