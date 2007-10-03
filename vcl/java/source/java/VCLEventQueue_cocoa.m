@@ -157,6 +157,7 @@ const static NSString *pCancelInputMethodText = @" ";
 }
 - (void)clearLastText;
 - (void)dealloc;
+- (void)doCommandBySelector:(SEL)aSelector;
 - (id)init;
 - (void)insertText:(NSString *)pString;
 - (void)interpretKeyEvents:(NSArray *)pEvents view:(NSView *)pView;
