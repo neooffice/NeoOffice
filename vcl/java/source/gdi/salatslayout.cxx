@@ -869,20 +869,23 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 {
 	GenericSalLayout::AdjustLayout( rArgs );
 
-	long nWidth;
-	if ( rArgs.mpDXArray )
-		nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ];
-	else if ( rArgs.mnLayoutWidth )
-		nWidth = rArgs.mnLayoutWidth;
-	else
-		nWidth = mnOrigWidth;
-
 	// Fix bug 2133 by scaling width of characters if the new width is narrower
-	// than the original width
-	if ( nWidth + 1 < mnOrigWidth )
-		mfGlyphScaleX = (float)nWidth / mnOrigWidth;
-	else
-		mfGlyphScaleX = 1.0;
+	// than the original width. Fix bug 2652 by only applying this fix when
+	// there is only a single character in the layout.
+	mfGlyphScaleX = 1.0;
+	if ( rArgs.mnEndCharPos - rArgs.mnMinCharPos == 1 )
+	{
+		long nWidth;
+		if ( rArgs.mpDXArray )
+			nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ];
+		else if ( rArgs.mnLayoutWidth )
+			nWidth = rArgs.mnLayoutWidth;
+		else
+			nWidth = mnOrigWidth;
+
+		if ( nWidth < mnOrigWidth )
+			mfGlyphScaleX = (float)nWidth / mnOrigWidth;
+	}
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
