@@ -49,8 +49,8 @@ check_installation() {
 	fi
 
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
-		# Only allow an exact product version match
-		productnameversion="$(PRODUCT_NAME) $(PRODUCT_VERSION)\$"
+		# Allow a product family match
+		productnameversion="$(PRODUCT_NAME) $(PRODUCT_VERSION_FAMILY)"
 		productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
 		if [ ! -z "$productkey" ] ; then
 			return 0;
