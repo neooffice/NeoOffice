@@ -149,7 +149,6 @@ if [ -d "$2" ]; then
 	chmod -Rf u+w "$2/Contents/share" || exit 1
 
 	# Touch shared libraries to fix bug 280
-	DYLD_LIBRARY_PATH="$2/Contents/MacOS"; export DYLD_LIBRARY_PATH
 	for i in `cd "$2/Contents/MacOS" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin"`; do
 		touch -f "$2/Contents/MacOS/$i"
 	done
@@ -157,12 +156,10 @@ if [ -d "$2" ]; then
 	sudoargs=
 	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
 		sudoargs="-u $USER"
-		unset DYLD_LIBRARY_PATH
 		sudo $sudoargs "$2/Contents/MacOS/soffice.bin" &
 		sleep 15
 	fi
 
-	unset DYLD_LIBRARY_PATH
 	sudo $sudoargs /System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$2"
 
 	# Touch installation directory to force activation of any bundled Spotlight
