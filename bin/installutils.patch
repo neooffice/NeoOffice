@@ -111,7 +111,7 @@ update_installation() {
 	chmod -Rf u+w "$1/Contents/presets" || exit 1
 	chmod -Rf u+w "$1/Contents/share" || exit 1
 
-    # Touch shared libraries to fix bug 280
+	# Touch shared libraries to fix bug 280
 	for i in `cd "$1/Contents/MacOS" ; find . -type f -name "*.dylib*"`; do
 		touch -f "$1/Contents/MacOS/$i"   
 	done
@@ -119,12 +119,26 @@ update_installation() {
 		touch -f "$1/Contents/MacOS/$i"   
 	done
 
-	# Open welcome page
-	sudoargs=
-	if [ ! -z "$USER" ] ; then
-		sudoargs="-u $USER"
+	sudo_user=
+	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
+		sudouser="$USER"
 	fi
-	sudo $sudoargs /System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$1"
+
+	lsregister="/System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
+	if [ ! -x "$lsregister" ] ; then
+		lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
+		if [ ! -x "$lsregister" ] ; then
+			lsregister=
+		fi
+	fi
+
+	if [ ! -z "$lsregister" ] ; then
+		"$lsregister" -f "$1"
+		if [ ! -z "$sudouser" ] ; then
+			sudo -u "$sudouser" -i -- -c "$lsregister -f \"$1\""
+		fi
+	fi
+
 
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins

@@ -90,7 +90,6 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 	. "$scriptdir/installutils"
 
 	# Check that no instances of the application are running
-	id=`id -un`
 	while read i ; do
 		# Return 96 + 25 if any instances are running
 		check_running "$i" && exit 121
@@ -107,10 +106,8 @@ if [ -d "$scriptdir" -a -f "$scriptdir/$(X11_FILE_LIST_FILE)" -a -s "$scriptdir/
 		if [ ! -f "$i" ] ; then
 			# Open installation guide before exiting
 			if [ -f "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)" -a -s "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)" ] ; then
-				sudoargs=
-				if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
-					sudoargs="-u $USER"
-					sudo $sudoargs open -a TextEdit "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)"
+				if [ `id -u` != "0" ] ; then
+					open -a TextEdit "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)"
 				fi
 			fi
 			exit 117

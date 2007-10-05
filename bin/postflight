@@ -153,14 +153,30 @@ if [ -d "$2" ]; then
 		touch -f "$2/Contents/MacOS/$i"
 	done
 
-	sudoargs=
+	sudo_user=
 	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
-		sudoargs="-u $USER"
-		sudo $sudoargs "$2/Contents/MacOS/soffice.bin" &
+		sudouser="$USER"
+	fi
+
+	if [ ! -z "$sudouser" ] ; then
+		sudo -u "$sudouser" -b -i -- -c "$2/Contents/MacOS/soffice.bin"
 		sleep 15
 	fi
 
-	sudo $sudoargs /System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister -f "$2"
+	lsregister="/System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
+	if [ ! -x "$lsregister" ] ; then
+		lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
+		if [ ! -x "$lsregister" ] ; then
+			lsregister=
+		fi
+	fi
+
+	if [ ! -z "$lsregister" ] ; then
+		"$lsregister" -f "$2"
+		if [ ! -z "$sudouser" ] ; then
+			sudo -u "$sudouser" -i -- -c "$lsregister -f \"$2\""
+		fi
+	fi
 
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins
@@ -168,7 +184,10 @@ if [ -d "$2" ]; then
 
 	# Do a full reindexing of OOo file types
 	if [ -x "/usr/bin/mdimport" ] ; then
-		/usr/bin/mdimport -r "$2/Library/Spotlight/neolight.mdimporter"
+		/usr/bin/mdimport -r "$2/Contents/Library/Spotlight/neolight.mdimporter"
+		if [ ! -z "$sudouser" ] ; then
+			sudo -u "$sudouser" -i -- -c "/usr/bin/mdimport -r \"$2\"/Contents/Library/Spotlight/neolight.mdimporter"
+		fi
 	fi
 
 	# Register the QuickLook plugin
