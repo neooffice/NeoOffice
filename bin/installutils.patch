@@ -76,9 +76,9 @@ check_installation() {
 				return 0
 			fi
 		else
-			# Allow a product family match
+			# Allow a product family match but not an Early Access match
 			productnameversion="$(PRODUCT_NAME) $(PRODUCT_VERSION_FAMILY)"
-			productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc"`
+			productkey=`grep "^ProductKey=$productnameversion" "$1/Contents/MacOS/bootstraprc" | grep -v "Early Access"`
 			if [ ! -z "$productkey" ] ; then
 				return 0;
 			fi
