@@ -562,7 +562,7 @@ ifdef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#<string>Editor</string>#<string>Viewer</string>#g' "Info.plist" | sed 's#<true/>#<false/>#g' > "../../out" ; mv -f "../../out" "Info.plist"
 endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTALL_HOME)/package/Contents/program/services.rdb" "program/services.rdb" ; chmod a+rw "program/services.rdb"
-ifdef X11_PRODUCT
+ifndef X11_PRODUCT
 	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libmozab2.dylib"
 endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
