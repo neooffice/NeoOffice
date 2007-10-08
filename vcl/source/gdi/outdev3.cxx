@@ -4497,7 +4497,7 @@ void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
 #ifdef USE_JAVA
 	if( ! vcl::IsFullKeyboardAccessEnabled() )
 		return;
-#endif
+#endif	// USE_JAVA
     long nBaseX = nX;
     if( ImplHasMirroredGraphics() && IsRTLEnabled() )
     {
