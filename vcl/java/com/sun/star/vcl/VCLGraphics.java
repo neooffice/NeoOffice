@@ -1905,7 +1905,7 @@ public final class VCLGraphics {
 					while (clipRects.hasNext()) {
 						Rectangle clip = (Rectangle)clipRects.next();
 						if (fill)
-							drawRect0(clip.x, clip.y, clip.width, clip.height, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+							drawRect0(x, y, width, height, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 						else
 							drawRect0(x, y, width - 1, height - 1, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 					}
