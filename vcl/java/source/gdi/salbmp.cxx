@@ -171,6 +171,21 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 								pBitsOut += nWidth;
 							}
 						}
+						else if ( pBuffer->mnFormat & BMP_FORMAT_24BIT_TC_RGB )
+						{
+							FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_24BIT_TC_RGB;
+							for ( long i = 0; i < nHeight; i++ )
+							{
+								for ( long j = 0; j < nWidth; j++ )
+								{
+									BitmapColor aColor( pFncGetPixel( pBitsIn, j, pBuffer->maColorMask ) );
+									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
+								}
+			
+								pBitsIn += pBuffer->mnScanlineSize;
+								pBitsOut += nWidth;
+							}
+						}
 #ifdef POWERPC
 						else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_ARGB )
 #else	// POWERPC
@@ -328,6 +343,8 @@ bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPal
 		mnBitCount = 8;
 	else if ( nBitCount <= 16 )
 		mnBitCount = 16;
+	else if ( nBitCount <= 24 )
+		mnBitCount = 24;
 	else
 		mnBitCount = 32;
 
@@ -450,6 +467,10 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	{
 		pBuffer->mnFormat |= BMP_FORMAT_16BIT_TC_MSB_MASK;
 		pBuffer->maColorMask = ColorMask( 0x7c00, 0x03e0, 0x001f );
+	}
+	else if ( mnBitCount <= 24 )
+	{
+		pBuffer->mnFormat |= BMP_FORMAT_24BIT_TC_RGB;
 	}
 	else
 	{
