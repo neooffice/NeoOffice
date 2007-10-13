@@ -292,21 +292,37 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( JNIEnv *pEnv, jobject object, jlong _par0, jboolean _par1 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( JNIEnv *pEnv, jobject object, jlongArray _par0, jboolean _par1 )
 {
-	JavaSalBitmap *pBitmap = (JavaSalBitmap *)_par0;
-	if ( pBitmap )
+	if ( _par0 )
 	{
-		SalData *pSalData = GetSalData();
-		for ( ::std::list< JavaSalBitmap* >::const_iterator it = pSalData->maBitmapList.begin(); it != pSalData->maBitmapList.end(); ++it )
-        {
-            if ( *it == pBitmap )
+		jboolean bCopy = sal_False;
+		jsize elements = pEnv->GetArrayLength( _par0 );
+		if ( elements )
+		{
+			jlong *pBitmaps = (jlong *)pEnv->GetPrimitiveArrayCritical( _par0, &bCopy );
+			if ( pBitmaps )
 			{
-				pBitmap->NotifyGraphicsChanged( _par1 );
-				return;
-			}
-        }
+				SalData *pSalData = GetSalData();
+				for ( jsize i = 0; i < elements; i++ )
+				{
+					JavaSalBitmap *pBitmap = (JavaSalBitmap *)pBitmaps[ i ];
+					if ( !pBitmap )
+						continue;
 
+					for ( ::std::list< JavaSalBitmap* >::const_iterator it = pSalData->maBitmapList.begin(); it != pSalData->maBitmapList.end(); ++it )
+        			{
+            			if ( *it == pBitmap )
+						{
+							pBitmap->NotifyGraphicsChanged( _par1 );
+							break;
+						}
+        			}
+				}
+
+				pEnv->ReleasePrimitiveArrayCritical( _par0, pBitmaps, JNI_ABORT );
+			}
+		}
 	}
 }
 
@@ -544,7 +560,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[7].signature = "(FFFFIZFFFFZFFFFF)V";
 			pMethods[7].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawRect0;
 			pMethods[8].name = "notifyGraphicsChanged";
-			pMethods[8].signature = "(JZ)V";
+			pMethods[8].signature = "([JZ)V";
 			pMethods[8].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged;
 			pMethods[9].name = "releaseNativeBitmaps";
 			pMethods[9].signature = "(Z)V";
