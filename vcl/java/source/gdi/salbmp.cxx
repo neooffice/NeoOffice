@@ -221,17 +221,18 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 	{
 		mpVCLGraphics->removeGraphicsChangeListener( this );
 
-		if ( !bDisposed && mnBitCount == 32 )
+		if ( !bDisposed )
 		{
 			long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
 			if ( !mpBits )
-				mpBits = new BYTE[ nCapacity ];
-
-			// Force copying of the buffer
-			if ( mpBits )
 			{
-				memset( mpBits, 0, nCapacity );
-				mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
+				// Force copying of the buffer
+				mpBits = new BYTE[ nCapacity ];
+				if ( mpBits )
+				{
+					memset( mpBits, 0, nCapacity );
+					mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
+				}
 			}
 		}
 
@@ -295,12 +296,6 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 		return false;
 
 	mnBitCount = mpVCLGraphics->getBitCount();
-	if ( mnBitCount != 32 )
-	{
-		delete mpVCLGraphics;
-		mpVCLGraphics = NULL;
-		return false;
-	}
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
