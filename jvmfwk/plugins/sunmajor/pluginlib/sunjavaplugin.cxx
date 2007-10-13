@@ -739,23 +739,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     size_t nUserMem = 64;
     if ( !IsX11Product() )
-    {
-        // Set the Java max memory to the greater of half of physical user
-        // memory or 256 MB.
-        int pMib[2];
-        size_t nMinMem = 256 * 1024 * 1024;
-        size_t nMaxMem = nMinMem * 4;
-        size_t nLen = sizeof( nUserMem );
-        pMib[0] = CTL_HW;
-        pMib[1] = HW_USERMEM;
-        if ( !sysctl( pMib, 2, &nUserMem, &nLen, NULL, 0 ) )
-            nUserMem /= 2;
-        if ( nUserMem > nMaxMem )
-            nUserMem = nMaxMem;
-        else if ( nUserMem < nMinMem )
-            nUserMem = nMinMem;
-        nUserMem /= 1024 * 1024;
-    }
+    	nUserMem = 256;
     rtl::OStringBuffer aBuf( "-Xmx" );
     aBuf.append( (sal_Int32)nUserMem );
     aBuf.append( "m" );
