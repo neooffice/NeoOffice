@@ -241,24 +241,6 @@ static void	ImplTCToTC( const BitmapBuffer& rSrcBuffer, BitmapBuffer& rDstBuffer
 			DOUBLE_SCANLINES()
 		}
 	}
-#ifdef USE_JAVA
-	else if( rSrcBuffer.mnBitCount == 32 && rDstBuffer.mnBitCount == 32 && BMP_SCANLINE_FORMAT( rSrcBuffer.mnFormat ) == BMP_SCANLINE_FORMAT( rDstBuffer.mnFormat ) )
-    {
-		for( long nActY = 0, nMapY; nActY < nHeight; nActY++ )
-		{
-			Scanline pSrcScan( pSrcScanMap[ nMapY = pMapY[ nActY ] ] ), pDstScan( pDstScanMap[ nActY ] );
-
-			for( long nX = 0L; nX < nWidth; nX++ )
-			{
-				int *pSrcBits = (int *)pSrcScan;
-				int *pDstBits = (int *)pDstScan;
-				pDstBits[ nX ] = pSrcBits[ pMapX[ nX ] ];
-			}
-
-			DOUBLE_SCANLINES();
-		}
-    }
-#endif	// USE_JAVA
 	else
 	{
 		for( long nActY = 0, nMapY; nActY < nHeight; nActY++ )

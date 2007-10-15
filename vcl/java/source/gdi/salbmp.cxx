@@ -288,8 +288,6 @@ bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 	bRet = Create( aSize, pBuffer->mnBitCount, pBuffer->maPalette );
 	if ( bRet )
 	{
-		// Override calculated bit count with the bitmap buffer's bit count
-		mnBitCount = pBuffer->mnBitCount;
 		mpBits = pBuffer->mpBits;
 		pBuffer->mpBits = NULL;
 	}
@@ -312,7 +310,6 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 	if ( !mpVCLGraphics )
 		return false;
 
-	// Override calculated bit count with the graphics' bit count
 	mnBitCount = mpVCLGraphics->getBitCount();
 
 	// Save the palette
@@ -338,8 +335,6 @@ bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPal
 	if ( maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
-	// Note: we can only support either 24 or 32 bit count but not both as
-	// toolbar icons and dialog warning images will not be rendered correctly
 	if ( nBitCount <= 1 )
 		mnBitCount = 1;
 	else if ( nBitCount <= 4 )
@@ -348,8 +343,10 @@ bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPal
 		mnBitCount = 8;
 	else if ( nBitCount <= 16 )
 		mnBitCount = 16;
-	else
+	else if ( nBitCount <= 24 )
 		mnBitCount = 24;
+	else
+		mnBitCount = 32;
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
