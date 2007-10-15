@@ -288,6 +288,8 @@ bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 	bRet = Create( aSize, pBuffer->mnBitCount, pBuffer->maPalette );
 	if ( bRet )
 	{
+		// Override calculated bit count with the bitmap buffer's bit count
+		mnBitCount = pBuffer->mnBitCount;
 		mpBits = pBuffer->mpBits;
 		pBuffer->mpBits = NULL;
 	}
@@ -310,6 +312,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 	if ( !mpVCLGraphics )
 		return false;
 
+	// Override calculated bit count with the graphics' bit count
 	mnBitCount = mpVCLGraphics->getBitCount();
 
 	// Save the palette
@@ -376,9 +379,25 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 			BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
 			if ( pDestBuffer )
 			{
-				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
-				pDestBuffer->maColorMask = pSrcBuffer->maColorMask;
-				pDestBuffer->maPalette = pSrcBuffer->maPalette;
+				if ( pDestBuffer->mpBits )
+				{
+					pDestBuffer->maColorMask = pSrcBuffer->maColorMask;
+					pDestBuffer->maPalette = pSrcBuffer->maPalette;
+
+					SalTwoRect aCopyPosAry;
+					aCopyPosAry.mnSrcX = 0;
+					aCopyPosAry.mnSrcY = 0;
+					aCopyPosAry.mnSrcWidth = pSrcBuffer->mnWidth;
+					aCopyPosAry.mnSrcHeight = pSrcBuffer->mnHeight;
+					aCopyPosAry.mnDestX = 0;
+					aCopyPosAry.mnDestY = 0;
+					aCopyPosAry.mnDestWidth = pDestBuffer->mnWidth;
+					aCopyPosAry.mnDestHeight = pDestBuffer->mnHeight;
+					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, pDestBuffer->mnFormat, &pDestBuffer->maPalette, &pDestBuffer->maColorMask, pDestBuffer->mpBits );
+					if ( pCopyBuffer )
+						delete pCopyBuffer;
+				}
+
 				ReleaseBuffer( pDestBuffer, FALSE );
 			}
 			else
