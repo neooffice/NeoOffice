@@ -303,7 +303,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 
 	maPoint = Point( rPoint );
 	maSize = Size( rSize );
-	if ( maSize.Width() <= 0 && maSize.Height() <= 0 )
+	if ( !pVCLGraphics || maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
 	mpVCLGraphics = new com_sun_star_vcl_VCLGraphics( pVCLGraphics->getJavaObject() );
@@ -332,9 +332,11 @@ bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPal
 	Destroy();
 
 	maSize = Size( rSize );
-	if ( maSize.Width() <= 0 && maSize.Height() <= 0 )
+	if ( maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
+	// Note: we can only support either 24 or 32 bit count but not both as
+	// toolbar icons and dialog warning images will not be rendered correctly
 	if ( nBitCount <= 1 )
 		mnBitCount = 1;
 	else if ( nBitCount <= 4 )
@@ -343,10 +345,8 @@ bool JavaSalBitmap::Create( const Size& rSize, USHORT nBitCount, const BitmapPal
 		mnBitCount = 8;
 	else if ( nBitCount <= 16 )
 		mnBitCount = 16;
-	else if ( nBitCount <= 24 )
-		mnBitCount = 24;
 	else
-		mnBitCount = 32;
+		mnBitCount = 24;
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
