@@ -1223,24 +1223,27 @@ public final class VCLGraphics {
 				if (orientation != 0)
 					rotateAngle += (float)Math.toRadians((double)orientation / 10) * -1;
 
+				// Fix bug 2673 by applying font scale here instead of in the
+				// native method
 				glyphOrientation &= VCLGraphics.GF_ROTMASK;
 				if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0) {
-					if (glyphOrientation == VCLGraphics.GF_ROTL) {
+					if (glyphOrientation == VCLGraphics.GF_ROTL)
 						rotateAngle += (float)Math.toRadians(-90);
-						scaleX *= (float)fontScaleX;
-						scaleY *= glyphScaleX;
-					}
-					else {
+					else
 						rotateAngle += (float)Math.toRadians(90);
-						scaleX *= (float)fontScaleX * glyphScaleX;
-					}
+
+					scaleX *= (float)fontScaleX;
+					scaleY *= glyphScaleX;
+				}
+				else {
+					scaleX *= (float)fontScaleX * glyphScaleX;
 				}
 
 				AffineTransform transform = g.getTransform();
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					Rectangle clip = (Rectangle)clipRects.next();
-					drawGlyphBuffer0(x, y, count, glyphs, advances, font, fontSize, (float)fontScaleX, color, glyphTranslateX, glyphTranslateY, rotateAngle, scaleX, scaleY, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					drawGlyphBuffer0(x, y, count, glyphs, advances, font, fontSize, color, glyphTranslateX, glyphTranslateY, rotateAngle, scaleX, scaleY, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				if (userPolygonClip)
 					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
@@ -1264,7 +1267,6 @@ public final class VCLGraphics {
 	 * @param advances the advances for each character
 	 * @param font the font of the text
 	 * @param fontSize the size of the font
-	 * @param fontScaleX the scale factor of the font
 	 * @param color the color of the text
 	 * @param glyphTranslateX the x coordinate to translate after rotation
 	 * @param glyphTranslateY the y coordinate to translate after rotation
@@ -1282,7 +1284,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawGlyphBuffer0(int x, int y, int count, long glyphs, long advances, int font, int fontSize, float fontScaleX, int color, float glyphTranslateX, float glyphTranslateY, float glyphRotateAngle, float glyphScaleX, float glyphScaleY, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawGlyphBuffer0(int x, int y, int count, long glyphs, long advances, int font, int fontSize, int color, float glyphTranslateX, float glyphTranslateY, float glyphRotateAngle, float glyphScaleX, float glyphScaleY, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified glyph codes using the specified font and color. Note
