@@ -3189,7 +3189,13 @@ long RadioButton::PreNotify( NotifyEvent& rNEvt )
                      !maMouseRect.IsInside( GetPointerPosPixel()) ) ||
                      pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow() )
                 {
+#ifdef USE_JAVA
+                    GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                    if ( GetParent()->IsInPaint() )
+                        GetParent()->Update();
+#else	// USE_JAVA
                     Invalidate( maStateRect );
+#endif	// USE_JAVA
                 }
             }
         }
@@ -4230,7 +4236,13 @@ long CheckBox::PreNotify( NotifyEvent& rNEvt )
                      !maMouseRect.IsInside( GetPointerPosPixel()) ) ||
                     pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow() )
                 {
+#ifdef USE_JAVA
+                    GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
+                    if ( GetParent()->IsInPaint() )
+                        GetParent()->Update();
+#else	// USE_JAVA
                     Invalidate( maStateRect );
+#endif	// USE_JAVA
                 }
             }
         }
