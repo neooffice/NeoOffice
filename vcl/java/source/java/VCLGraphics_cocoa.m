@@ -301,18 +301,19 @@
 						CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
 					CGContextTranslateCTM( aContext, mfX, mfY);
 					CGContextRotateCTM( aContext, mfGlyphRotateAngle );
+					CGContextScaleCTM( aContext, mfGlyphScaleX, mfGlyphScaleY * -1 );
+					CGContextTranslateCTM( aContext, mfGlyphTranslateX, mfGlyphTranslateY * -1 );
 
 					CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
 					CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
 
-					// Apply glyph rotation, scaling, and translation
+					// Fix bug 2674 by setting all translation, rotation, and
+					// scale in the CGContext and not in the text matrix
 					CGAffineTransform aTransform = CGAffineTransformMake( 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
-					aTransform = CGAffineTransformScale( aTransform, mfGlyphScaleX, mfGlyphScaleY * -1 );
-					aTransform = CGAffineTransformTranslate( aTransform, mfGlyphTranslateX, mfGlyphTranslateY * -1);
+					CGContextSetTextMatrix( aContext, aTransform );
 
 					CGContextSetFont( aContext, maFont );
 					CGContextSetFontSize( aContext, mnFontSize );
-					CGContextSetTextMatrix( aContext, aTransform );
 					CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpSizes, mnCount );
 
 					CGContextRestoreGState( aContext );
@@ -777,7 +778,7 @@
 
 @end
 
-void CGContect_drawGlyphs( float fX, float fY, size_t nCount, CGGlyph *pGlyphs, CGSize *pSizes, CGFontRef aFont, int nFontSize, int nColor, float fGlyphTranslateX, float fGlyphTranslateY, float fGlyphRotateAngle, float fGlyphScaleX, float fGlyphScaleY, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGContext_drawGlyphs( float fX, float fY, size_t nCount, CGGlyph *pGlyphs, CGSize *pSizes, CGFontRef aFont, int nFontSize, int nColor, float fGlyphTranslateX, float fGlyphTranslateY, float fGlyphRotateAngle, float fGlyphScaleX, float fGlyphScaleY, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
