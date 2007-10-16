@@ -387,8 +387,9 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jint _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jboolean _par17, jfloat _par18, jfloat _par19, jfloat _par20, jfloat _par21, jfloat _par22 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jint _par7, jint _par8, jint _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jboolean _par17, jfloat _par18, jfloat _par19, jfloat _par20, jfloat _par21, jfloat _par22 )
 {
+	fprintf( stderr, "Here: %f %f\n", _par21, _par22 );
 	// Mark the glyph data for deletion in case the Java drawing method
 	// never calls any of the native methods
 	if ( _par3 )
@@ -445,7 +446,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 		}
 
 		if ( _par3 && _par4 && aFont )
-			CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20, _par21, _par22 );
+			CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, (float)_par8, (float)_par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20, _par21, _par22 );
 	}
 }
 
@@ -545,7 +546,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].signature = "(JJFFFFFFFFZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
 			pMethods[3].name = "drawGlyphBuffer0";
-			pMethods[3].signature = "(IIIJJIIIFFFFFFFFFZFFFFF)V";
+			pMethods[3].signature = "(IIIJJIIIIIFFFFFFFZFFFFF)V";
 			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0;
 			pMethods[4].name = "drawLine0";
 			pMethods[4].signature = "(FFFFIFFFFZFFFFF)V";

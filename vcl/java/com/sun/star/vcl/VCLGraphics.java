@@ -1284,7 +1284,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawGlyphBuffer0(int x, int y, int count, long glyphs, long advances, int font, int fontSize, int color, float glyphTranslateX, float glyphTranslateY, float glyphRotateAngle, float glyphScaleX, float glyphScaleY, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawGlyphBuffer0(int x, int y, int count, long glyphs, long advances, int font, int fontSize, int color, int glyphTranslateX, int glyphTranslateY, float glyphRotateAngle, float glyphScaleX, float glyphScaleY, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified glyph codes using the specified font and color. Note
