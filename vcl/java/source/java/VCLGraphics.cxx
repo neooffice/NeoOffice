@@ -389,7 +389,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jint _par7, jint _par8, jint _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jboolean _par17, jfloat _par18, jfloat _par19, jfloat _par20, jfloat _par21, jfloat _par22 )
 {
-	fprintf( stderr, "Here: %f %f\n", _par21, _par22 );
 	// Mark the glyph data for deletion in case the Java drawing method
 	// never calls any of the native methods
 	if ( _par3 )
