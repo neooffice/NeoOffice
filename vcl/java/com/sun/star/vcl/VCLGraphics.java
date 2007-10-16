@@ -1186,6 +1186,10 @@ public final class VCLGraphics {
 	 */
 	public void drawGlyphBuffer(int x, int y, int count, long glyphs, long advances, int font, int fontSize, double fontScaleX, int color, int orientation, int glyphOrientation, int glyphTranslateX, int glyphTranslateY, float glyphScaleX) {
 
+		// Only allow drawing of glyph buffer to printer
+		if (graphics == null)
+			return;
+
 		if (pageQueue != null) {
 			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphBufferMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(count), new Long(glyphs), new Long(advances), new Integer(font), new Integer(fontSize), new Double(fontScaleX), new Integer(color), new Integer(orientation), new Integer(glyphOrientation), new Integer(glyphTranslateX), new Integer(glyphTranslateY), new Float(glyphScaleX) });
 			pageQueue.postDrawingOperation(pqi);
@@ -1335,19 +1339,21 @@ public final class VCLGraphics {
 
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
 
+				// Fix bug 2497 by reverse scaling the advance using the font
+				// scale
+				double fScaleX = font.getScaleX();
 				double advance = 0;
 				for (int i = 0; i < glyphs.length; i++) {
 					Point2D p = gv.getGlyphPosition(i);
 					p.setLocation(advance, p.getY());
 					gv.setGlyphPosition(i, p);
-					advance += advances[i];
+					advance += advances[i] / fScaleX;
 				}
 
 				glyphOrientation &= VCLGraphics.GF_ROTMASK;
 
 				// Fix bug 2618 by scaling the individual glyphs instead of
 				// scaling the graphics
-				double fScaleX = font.getScaleX();
 				if (fScaleX != 1.0f || glyphScaleX != 1.0f) {
 					AffineTransform glyphTransform = new AffineTransform();
 					if ((glyphOrientation & VCLGraphics.GF_ROTMASK) != 0)
