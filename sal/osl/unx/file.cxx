@@ -155,6 +155,9 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #include <CoreFoundation/CoreFoundation.h>
 #undef TimeValue
 
+#ifdef USE_JAVA
+#include <libgen.h>
+#endif	// USE_JAVA
 #endif
 
 #ifdef _DIRENT_HAVE_D_TYPE
@@ -370,6 +373,16 @@ static int adjustLockFlags(const char * path, int flags)
         }
 #endif	// USE_JAVA
     }
+#ifdef USE_JAVA
+    // Fix bug 2504 by handling cases where we are trying to create a file
+    // that does not exist yet by stating the path's parent directory
+    else if ( flags & O_CREAT )
+    {
+        const char *dirpath = dirname( path );
+        if ( dirpath )
+            flags = adjustLockFlags( dirpath, flags & ~O_CREAT ) | O_CREAT;
+    }
+#endif	// USE_JAVA
 
     return flags;
 }
