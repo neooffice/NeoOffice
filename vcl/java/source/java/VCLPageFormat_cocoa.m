@@ -221,12 +221,24 @@ BOOL NSPageLayout_result( id pDialog )
 
 id NSPrintInfo_create()
 {
+	VCLPrintInfo *pRet = nil;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	// Fix bugs 2573 and 2669 by never creating a new NSPrintInfo object
-	NSPrintInfo *pRet = [NSPrintInfo sharedPrintInfo];
-	if ( pRet )
-		[pRet retain];
+	NSPrintInfo *pSharedInfo = [NSPrintInfo sharedPrintInfo];
+	if ( pSharedInfo )
+	{
+		NSDictionary *pDict = [pSharedInfo dictionary];
+		if ( pDict )
+		{
+			// Fix bug 2573 by not cloning the dictionary as that will cause
+			// querying of the printer which, in turn, will cause hanging if
+			// the printer is an unavailable network printer
+			pRet = [[VCLPrintInfo alloc] initWithDictionary:pDict];
+			if ( pRet )
+				pRet = [pRet retain];
+		}
+	}
 
 	[pPool release];
 
