@@ -160,11 +160,12 @@ public final class VCLPageFormat {
 	public VCLPageFormat() {
 
 		job = PrinterJob.getPrinterJob();
-		pageFormat = job.defaultPage();
-		try {
-			pageFormat = job.validatePage(pageFormat);
-		}
-		catch (Throwable t) {}
+
+		// Avoid a costly call if this is a network printer by setting a
+		// generic page size and then setting the desired size using the
+		// updatePageFormat() method
+		pageFormat = new PageFormat();
+
 		// We always set the page format to portrait as all of the fixes for
 		// for bugs 2202 depend on this
 		pageFormat.setOrientation(PageFormat.PORTRAIT);
@@ -358,17 +359,22 @@ public final class VCLPageFormat {
 	 * Update the page format.
 	 *
 	 * @param o the page orientation
+	 * @param w the width to set the paper to
+	 * @param h the height to set the paper to
+	 * @param ix the x coordinate to set the paper's imageable area to
+	 * @param iy the y coordinate to set the paper's imageable area to
+	 * @param iw the height to set the paper's imageable area to
+	 * @param ih the width to set the paper's imageable area to
 	 */
-	public void updatePageFormat(int o) {
+	public void updatePageFormat(int o, float w, float h, float ix, float iy, float iw, float ih) {
 
 		if (!editable)
 			return;
 
-		pageFormat = job.defaultPage();
-		try {
-			pageFormat = job.validatePage(pageFormat);
-		}
-		catch (Throwable t) {}
+		Paper p = new Paper();
+		p.setSize(w, h);
+		p.setImageableArea(ix, iy, iw, ih);
+		pageFormat.setPaper(p);
 
 		setOrientation(o);
 

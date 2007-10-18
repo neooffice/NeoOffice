@@ -351,6 +351,8 @@ com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat() : java_lang_Obj
 	jobject tempObj;
 	tempObj = t.pEnv->NewObject( getMyClass(), mID );
 	saveRef( tempObj );
+
+	updatePageFormat( ORIENTATION_PORTRAIT );
 }
 
 // ----------------------------------------------------------------------------
@@ -779,15 +781,32 @@ void com_sun_star_vcl_VCLPageFormat::updatePageFormat( Orientation _par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I)V";
+			char *cSignature = "(IFFFFFF)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "updatePageFormat", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
-			args[0].i = jint( _par0 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			void *pNSPrintInfo = getNativePrinterJob();
+			float fWidth = 0;
+			float fHeight = 0;
+			float fImageableX = 0;
+			float fImageableY = 0;
+			float fImageableWidth = 0;
+			float fImageableHeight = 0;
+			NSPrintInfo_getPrintInfoDimensions( pNSPrintInfo, &fWidth, &fHeight, &fImageableX, &fImageableY, &fImageableWidth, &fImageableHeight );
+			if ( fWidth && fHeight && fImageableWidth && fImageableHeight )
+			{
+				jvalue args[7];
+				args[0].i = jint( _par0 );
+				args[1].f = jfloat( fWidth );
+				args[2].f = jfloat( fHeight);
+				args[3].f = jfloat( fImageableX );
+				args[4].f = jfloat( fImageableY );
+				args[5].f = jfloat( fImageableWidth );
+				args[6].f = jfloat( fImageableHeight );
+				t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+			}
 		}
 	}
 }
