@@ -245,13 +245,21 @@ void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *
 		// and clipping in the OOo code. The downside of this fix is that the
 		// user will never get a warning about too small margins in the
 		// Format :: Page dialog, but this seems to be a necessary tradeoff.
-		NSSize aSize = [pInfo paperSize];
-		*pWidth = aSize.width;
-		*pHeight = aSize.height;
-		*pImageableX = 0;
-		*pImageableY = 0;
-		*pImageableWidth = aSize.width;
-		*pImageableHeight = aSize.height;
+		NSDictionary *pDictionary = [pInfo dictionary];
+		if ( pDictionary )
+		{
+			NSValue *pValue = [pDictionary objectForKey:NSPrintPaperSize];
+			if ( pValue )
+			{
+				NSSize aSize = [pValue sizeValue];
+				*pWidth = aSize.width;
+				*pHeight = aSize.height;
+				*pImageableX = 0;
+				*pImageableY = 0;
+				*pImageableWidth = aSize.width;
+				*pImageableHeight = aSize.height;
+			}
+		}
 	}
 
 	[pPool release];
@@ -271,25 +279,23 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 	NSPrintInfo *pInfo = (NSPrintInfo *)pNSPrintInfo;
 	if ( pNSPrintInfo && nWidth > 0 && nHeight > 0 )
 	{
-		NSSize aOldSize = [pInfo paperSize];
-
-		[pInfo setOrientation:NSPortraitOrientation];
-		[pInfo setPaperSize:NSMakeSize((float)nWidth, (float)nHeight)];
-
-		// Fix bug 2202 by setting the orientation back to the original state
-		NSSize aSize = [pInfo paperSize];
-		if ( aSize.width < 1.0 || aSize.height < 1.0 )
+		NSMutableDictionary *pDictionary = [pInfo dictionary];
+		if ( pDictionary )
 		{
-			[pInfo setPaperSize:aOldSize];
-		}
-		else
-		{
-			// Fix bugs 543, 1678, and 2202 by detecting when the paper should
-			// be rotated determining the minimum unmatched area
-			double fDiff = pow( (double)aSize.width - nWidth, 2 ) + pow( (double)aSize.height - nHeight, 2 );
-			double fRotatedDiff = pow( (double)aSize.width - nHeight, 2 ) + pow( (double)aSize.height - nWidth, 2 );
-			if ( fDiff > fRotatedDiff )
-				bRet = YES;
+			NSSize aSize = NSMakeSize( (float)nWidth, (float)nHeight );
+			[pInfo setOrientation:NSPortraitOrientation];
+			NSValue *pValue = [NSValue valueWithSize:aSize];
+			if ( pValue )
+			{
+				[pDictionary setObject:pValue forKey:NSPrintPaperSize];
+
+				// Fix bugs 543, 1678, and 2202 by detecting when the paper
+				// should be rotated determining the minimum unmatched area
+				double fDiff = pow( (double)aSize.width - nWidth, 2 ) + pow( (double)aSize.height - nHeight, 2 );
+				double fRotatedDiff = pow( (double)aSize.width - nHeight, 2 ) + pow( (double)aSize.height - nWidth, 2 );
+				if ( fDiff > fRotatedDiff )
+					bRet = YES;
+			}
 		}
 	}
 
