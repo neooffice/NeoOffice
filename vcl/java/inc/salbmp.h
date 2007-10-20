@@ -72,6 +72,7 @@ class JavaSalBitmap : public SalBitmap
 	USHORT					mnBitCount;
 	BYTE*					mpBits;
 	BitmapPalette			maPalette;
+	BitmapBuffer*			mpBuffer;
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
 
 public:

@@ -70,6 +70,7 @@ JavaSalBitmap::JavaSalBitmap() :
 	maSize( 0, 0 ),
 	mnBitCount( 0 ),
 	mpBits( NULL ),
+	mpBuffer( NULL ),
 	mpVCLGraphics( NULL )
 {
 	GetSalData()->maBitmapList.push_back( this );
@@ -442,6 +443,12 @@ void JavaSalBitmap::Destroy()
 		mpBits = NULL;
 	}
 
+	if ( mpBuffer )
+	{
+		delete mpBuffer;
+		mpBuffer = NULL;
+	}
+
 	maPalette.SetEntryCount( 0 );
 
 	if ( mpVCLGraphics )
@@ -543,8 +550,16 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 
 bool JavaSalBitmap::GetSystemData( BitmapSystemData& rData )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalBitmap::GetSystemData not implemented\n" );
-#endif
-	return false;
+	if ( !mpBuffer )
+		mpBuffer = AcquireBuffer( false );
+
+	if ( mpBuffer )
+	{
+		rData.aPixmap = (void *)mpBuffer;
+		return true;
+	}
+	else
+	{
+		return false;
+	}
 }
