@@ -109,7 +109,11 @@
 						NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
 						if ( pData )
 						{
-							NSEPSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
+							// Try converting the data to PDF first as we
+							// support PDF as well as EPS data
+							NSImageRep *pImage = [NSPDFImageRep imageRepWithData:pData];
+							if ( !pImage )
+								pImage = [NSEPSImageRep imageRepWithData:pData];
 							if ( pImage )
 								[pImage drawInRect:NSMakeRect( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 )];
 						}

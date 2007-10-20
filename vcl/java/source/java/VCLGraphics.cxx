@@ -342,12 +342,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 		aCGImageList.pop_front();
 	}
 
-	while ( aEPSDataList.size() )
-	{
-		rtl_freeMemory( (void *)aEPSDataList.front() );
-		aEPSDataList.pop_front();
-	}
-
 	while ( aGlyphDataList.size() )
 	{
 		rtl_freeMemory( (void *)aGlyphDataList.front() );
@@ -356,6 +350,15 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 
 	if ( _par0 )
 	{
+		// If any of the EPS images are really PDF, we need to keep it around
+		// until the end of the print job
+		while ( aEPSDataList.size() )
+		{
+			rtl_freeMemory( (void *)aEPSDataList.front() );
+			aEPSDataList.pop_front();
+		}
+
+		// Reuse CGFonts throughout the entire document
 		for ( ::std::map< ATSUFontID, CGFontRef >::const_iterator it = aATSFontMap.begin(); it != aATSFontMap.end(); ++it )
 			CGFontRelease( it->second );
 		aATSFontMap.clear();

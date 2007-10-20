@@ -60,6 +60,21 @@ enum BrushStyle { BRUSH_NULL, BRUSH_SOLID, BRUSH_HORZ, BRUSH_VERT,
 
 //============================ PictReader ==================================
 
+#ifdef USE_JAVA
+
+static size_t PICTDataConsumerPutBytesCallback( void *pInfo, const void *pBuffer, size_t nCount )
+{
+	size_t nRet = 0;
+
+	SvMemoryStream *pStream = (SvMemoryStream *)pInfo;
+	if ( pStream )
+		nRet = pStream->Write( pBuffer, nCount );
+
+	return nRet;
+}
+
+#endif	// USE_JAVA
+
 enum PictDrawingMethod {
 	PDM_FRAME, PDM_PAINT, PDM_ERASE, PDM_INVERT, PDM_FILL,
 	PDM_TEXT, PDM_UNDEFINED
@@ -1867,41 +1882,41 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 
 		if (aPict)
 		{
-			CGRect aPictBounds = QDPictGetBounds(aPict);
-			aBoundingRect = Rectangle(Point(0, 0), Size((long)aPictBounds.size.width, (long)aPictBounds.size.height));
-			Bitmap aBitmap(aBoundingRect.GetSize(), 32);
-			BitmapSystemData aSystemData;
-			memset(&aSystemData, 0, sizeof(BitmapSystemData));
-			if (aBitmap.GetBitCount() == 32 && aBitmap.GetSystemData(aSystemData) && aSystemData.aPixmap)
+			// Render PICT into a PDF context
+			SvMemoryStream aPDFStream(nBitsLen * 2, nBitsLen);
+			CGDataConsumerCallbacks aConsumerCallbacks;
+			aConsumerCallbacks.putBytes = PICTDataConsumerPutBytesCallback;
+			aConsumerCallbacks.releaseConsumer = NULL;
+			CGDataConsumerRef aConsumer = CGDataConsumerCreate(&aPDFStream, &aConsumerCallbacks);
+			if (aConsumer)
 			{
-				const BitmapBuffer *pBuffer = (const BitmapBuffer*)aSystemData.aPixmap;
-				if (pBuffer->mpBits)
+				CGRect aPictBounds = QDPictGetBounds(aPict);
+				CGContextRef aContext = CGPDFContextCreate(aConsumer, &aPictBounds, NULL);
+				if (aContext)
 				{
-					CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-					if (aColorSpace)
+					aPictBounds.origin.x = 0;
+					aPictBounds.origin.y = 0;
+					CGPDFContextBeginPage(aContext, NULL);
+					QDPictDrawToCGContext(aContext, aPictBounds, aPict);
+					CGPDFContextEndPage(aContext);
+					CGContextRelease(aContext);
+
+					// Take ownership of PDF bits so that we can use OOo's
+					// DrawEPS method
+					aPDFStream.Seek(STREAM_SEEK_TO_BEGIN);
+					const void *pPDFBuffer = aPDFStream.GetData();
+					sal_Size nPDFBufferSize = aPDFStream.GetSize();
+					if (pPDFBuffer && nPDFBufferSize > 0)
 					{
-#ifdef POWERPC
-						CGContextRef aContext = CGBitmapContextCreate(pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst);
-#else	// POWERPC
-						CGContextRef aContext = CGBitmapContextCreate(pBuffer->mpBits, pBuffer->mnWidth, pBuffer->mnHeight, 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little);
-#endif	// POWERPC
-						if (aContext)
-						{
-							UINT32 nColor = aActBackColor.GetRGBColor();
-							CGContextSetRGBFillColor(aContext, (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( nColor & 0x000000ff ) / (float)0xff, 1.0f);
-							aPictBounds.origin.x = 0;
-							aPictBounds.origin.y = 0;
-							CGContextFillRect(aContext, aPictBounds);
-							QDPictDrawToCGContext(aContext, aPictBounds, aPict);
-							pVirDev->DrawBitmap(aBoundingRect.TopLeft(), aBoundingRect.GetSize(), aBitmap);
-							bRendered = true;
-
-							CGContextRelease(aContext);
-						}
-
-						CGColorSpaceRelease(aColorSpace);
+						aPDFStream.ObjectOwnsMemory(sal_False);
+						aBoundingRect = Rectangle(Point((long)aPictBounds.origin.x, (long)aPictBounds.origin.y), Size((long)aPictBounds.size.width, (long)aPictBounds.size.height));
+						GfxLink aGfxLink((BYTE *)pPDFBuffer, nPDFBufferSize, GFX_LINK_TYPE_EPS_BUFFER, TRUE);
+						pVirDev->DrawEPS(aBoundingRect.TopLeft(), aBoundingRect.GetSize(), aGfxLink);
+						bRendered = true;
 					}
 				}
+
+				CGDataConsumerRelease(aConsumer);
 			}
 
 			QDPictRelease(aPict);
