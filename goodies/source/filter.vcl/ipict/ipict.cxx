@@ -46,9 +46,20 @@
 #include <svtools/fltcall.hxx>
 
 #ifdef USE_JAVA
+
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
+
+struct PICTDataConsumerCallbackInfo
+{
+	SvStream*			mpStream;
+	sal_Size			mnOrigPos;
+
+						PICTDataConsumerCallbackInfo( SvStream *pStream ) : mpStream( pStream ), mnOrigPos( 0 ) { if ( mpStream ) mnOrigPos = mpStream->Tell(); };
+						~PICTDataConsumerCallbackInfo() {};
+};
+
 #endif	// USE_JAVA
 
 // MT: NOOLDSV, someone should change the code...
@@ -62,12 +73,37 @@ enum BrushStyle { BRUSH_NULL, BRUSH_SOLID, BRUSH_HORZ, BRUSH_VERT,
 
 #ifdef USE_JAVA
 
+static size_t PICTDataProviderGetBytesCallback( void *pInfo, void *pBuffer, size_t nCount )
+{
+	size_t nRet = 0;
+
+	PICTDataConsumerCallbackInfo *pCallbackInfo = (PICTDataConsumerCallbackInfo *)pInfo;
+	if ( pCallbackInfo && pCallbackInfo->mpStream && nCount > 0 )
+		nRet = pCallbackInfo->mpStream->Read( pBuffer, nCount );
+
+	return nRet;
+}
+
+static void PICTDataProviderSkipBytesCallback( void *pInfo, size_t nCount )
+{
+	PICTDataConsumerCallbackInfo *pCallbackInfo = (PICTDataConsumerCallbackInfo *)pInfo;
+	if ( pCallbackInfo && pCallbackInfo->mpStream && nCount > 0 )
+		pCallbackInfo->mpStream->SeekRel( nCount );
+}
+
+static void PICTDataProviderRewindCallback( void *pInfo )
+{
+	PICTDataConsumerCallbackInfo *pCallbackInfo = (PICTDataConsumerCallbackInfo *)pInfo;
+	if ( pCallbackInfo && pCallbackInfo->mpStream )
+		pCallbackInfo->mpStream->Seek( pCallbackInfo->mnOrigPos );
+}
+
 static size_t PICTDataConsumerPutBytesCallback( void *pInfo, const void *pBuffer, size_t nCount )
 {
 	size_t nRet = 0;
 
 	SvMemoryStream *pStream = (SvMemoryStream *)pInfo;
-	if ( pStream )
+	if ( pStream && nCount > 0 )
 		nRet = pStream->Write( pBuffer, nCount );
 
 	return nRet;
@@ -1865,24 +1901,23 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 	pPict->Seek(nOrigPos);
 
 	bool bRendered = false;
-	ULONG nBitsLen = nEndPos - nOrigPos;
-	BYTE *pBits = (BYTE *)rtl_allocateMemory(nBitsLen);
-	if ( pBits )
+
+	PICTDataConsumerCallbackInfo aProviderCallbackInfo(pPict);
+	CGDataProviderCallbacks aProviderCallbacks;
+	aProviderCallbacks.getBytes = PICTDataProviderGetBytesCallback;
+	aProviderCallbacks.skipBytes = PICTDataProviderSkipBytesCallback;
+	aProviderCallbacks.rewind = PICTDataProviderRewindCallback;
+	aProviderCallbacks.releaseProvider = NULL;
+	CGDataProviderRef aProvider = CGDataProviderCreate(&aProviderCallbackInfo, &aProviderCallbacks);
+	if (aProvider)
 	{
-		QDPictRef aPict = NULL;
-		if (pPict->Read(pBits, nBitsLen) == nBitsLen)
-		{
-			CGDataProviderRef aProvider = CGDataProviderCreateWithData(NULL, pBits, nBitsLen, NULL);
-			if (aProvider)
-			{
-				aPict = QDPictCreateWithProvider(aProvider);
-				CGDataProviderRelease(aProvider);
-			}
-		}
+		QDPictRef aPict = QDPictCreateWithProvider(aProvider);
+		CGDataProviderRelease(aProvider);
 
 		if (aPict)
 		{
 			// Render PICT into a PDF context
+			ULONG nBitsLen = nEndPos - nOrigPos;
 			SvMemoryStream aPDFStream(nBitsLen * 2, nBitsLen);
 			CGDataConsumerCallbacks aConsumerCallbacks;
 			aConsumerCallbacks.putBytes = PICTDataConsumerPutBytesCallback;
@@ -1912,7 +1947,10 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 						aBoundingRect = Rectangle(Point((long)aPictBounds.origin.x, (long)aPictBounds.origin.y), Size((long)aPictBounds.size.width, (long)aPictBounds.size.height));
 						GfxLink aGfxLink((BYTE *)pPDFBuffer, nPDFBufferSize, GFX_LINK_TYPE_EPS_BUFFER, TRUE);
 						pVirDev->DrawEPS(aBoundingRect.TopLeft(), aBoundingRect.GetSize(), aGfxLink);
+
+						// Mark as rendered and seek to end
 						bRendered = true;
+						pPict->Seek(STREAM_SEEK_TO_END);
 					}
 				}
 
@@ -1921,8 +1959,6 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 
 			QDPictRelease(aPict);
 		}
-
-		rtl_freeMemory(pBits);
 	}
 
 	if ( !bRendered )
