@@ -982,6 +982,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 	SetGlyphCapacity( (int)( nEstimatedGlyphs * 1.1 ) );
 
+	com_sun_star_vcl_VCLFont *pFallbackFont = NULL;
 	Point aPos;
 	maRuns.ResetPos();
 	mpGraphics->maFallbackRuns.ResetPos();
@@ -1055,11 +1056,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					rArgs.NeedFallback( i, bRunRTL );
 			}
 
-			int nNextLevel = mnFallbackLevel + 1;
-			::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
-			if ( it != mpGraphics->maFallbackFonts.end() )
-				delete it->second;
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pLayoutData->mpFallbackFont );
+			if ( !pFallbackFont )
+				pFallbackFont = pLayoutData->mpFallbackFont;
 			rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 
@@ -1091,11 +1089,15 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont );
 							if ( pCurrentLayoutData )
 							{
-								if ( pCurrentLayoutData->mpNeedFallback )
+								if ( pCurrentLayoutData->mpNeedFallback && pCurrentLayoutData->mpFallbackFont )
 								{
 									pCurrentLayoutData->Release();
 									pCurrentLayoutData = pLayoutData;
 									rArgs.NeedFallback( nCharPos, bRunRTL );
+
+									if ( !pFallbackFont )
+										pFallbackFont = pCurrentLayoutData->mpFallbackFont;
+									rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 								}
 								else
 								{
@@ -1165,6 +1167,16 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	}
 
 	mnOrigWidth = aPos.X();
+
+	// Set fallback font
+	if ( pFallbackFont )
+	{
+		int nNextLevel = mnFallbackLevel + 1;
+		::std::map< int, com_sun_star_vcl_VCLFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
+		if ( it != mpGraphics->maFallbackFonts.end() )
+			delete it->second;
+		mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
+	}
 
 	return bRet;
 }
