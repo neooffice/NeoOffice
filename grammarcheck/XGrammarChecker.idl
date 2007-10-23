@@ -32,6 +32,7 @@
  *************************************************************************/
 
 #include <com/sun/star/uno/XInterface.idl>
+#include <com/sun/star/lang/Locale.idl>
 
 module org {
 module neooffice
@@ -54,6 +55,7 @@ module neooffice
 	interface XGrammarChecker : com::sun::star::uno::XInterface
 	{
 		sequence< GrammarReplacement > checkString( [in] string sToCheck );
+		boolean setLocale( [in] com::sun::star::lang::Locale aLocale );
 	};
 	
 	service GrammarChecker

@@ -88,6 +88,7 @@
 #ifndef _CPPUHELPER_IMPLBASE_HXX_
 #include <cppuhelper/implbase2.hxx>
 #endif
+#include <com/sun/star/lang/Locale.hpp>
 
 #include "premac.h"
 #import <AppKit/NSSpellChecker.h>
@@ -134,6 +135,7 @@ class MacOSXGrammarCheckerImpl
 	
 	sal_Int32 m_nRefCount;
 	sal_Int32 m_nCount;
+	Locale m_aLocale;
 	
 public:
 	MacOSXGrammarCheckerImpl( const Reference< XComponentContext > & xServiceManager )
@@ -152,6 +154,9 @@ public:
 	virtual com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement> 
 		SAL_CALL checkString(const rtl::OUString&)
    		throw (com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool 
+		SAL_CALL setLocale( const ::com::sun::star::lang::Locale& aLocale ) 
+		throw (::com::sun::star::uno::RuntimeException);
 };
 
 //*************************************************************************
@@ -312,6 +317,7 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 	NSArray *detailArray = nil;
 	
 	unsigned long tempDocTag=[NSSpellChecker uniqueSpellDocumentTag];
+	// +++ map m_aLocale into apprporiate locale code for grammar checking of string
 	[spelling checkGrammarOfString: stringToCheck startingAt: 0 language: @"en" wrap: 0L inSpellDocumentWithTag: tempDocTag details: &detailArray];
 	[spelling closeSpellDocumentWithTag: tempDocTag];
 	
@@ -354,4 +360,18 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 	[localPool release];
 	
 	return(toReturn);
+}
+
+/**
+ * Set the locale used for performing the grammar checking.  Returns true if the locale has
+ * a supported Mac OS X grammar checker, false if not.
+ */
+::sal_Bool 
+		SAL_CALL MacOSXGrammarCheckerImpl::setLocale( const ::com::sun::star::lang::Locale& aLocale ) 
+		throw (::com::sun::star::uno::RuntimeException)
+{
+	m_aLocale=aLocale;
+	// +++ check if locale is supported;  presently interface only returns if spellchecking is supported,
+	// not grammar check
+	return(true);
 }
