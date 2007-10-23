@@ -2643,6 +2643,12 @@ bool ImplFontCache::IFSD_Equal::operator()(const ImplFontSelectData& rA, const I
     if( rA.maStyleName != rB.maStyleName)
         return false;
 
+#ifdef USE_JAVA
+    // check symbol flag
+    if( rA.IsSymbolFont() != rB.IsSymbolFont() )
+        return false;
+#endif	// USE_JAVA
+
     return true;
 }
 
@@ -2683,6 +2689,10 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             if( !(*it_name).second.EqualsAscii( "hg", 0, 2) )
                 aSearchName = (*it_name).second;
     }
+
+#ifdef USE_JAVA
+    bool bIsSymbolFont = ( rFont.GetCharSet() == RTL_TEXTENCODING_SYMBOL );
+#endif	// USE_JAVA
 
     // initialize internal font request object
     ImplFontSelectData aFontSelData( rFont, aSearchName, rSize );
@@ -2728,6 +2738,12 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
         }
     }
 
+#ifdef USE_JAVA
+    // Don't use the entry if the symbol flag doesn't match
+    if ( pEntry && pEntry->maFontSelData.IsSymbolFont() != bIsSymbolFont )
+	    pEntry = NULL;
+#endif	// USE_JAVA
+
     if( pEntry ) // cache hit => use existing font instance
     {
         // increase the font instance's reference count
@@ -2744,9 +2760,21 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
         pEntry = pFontData->CreateFontInstance( aFontSelData );
 
         // if we found a different symbol font we need a symbol conversion table
+#ifdef USE_JAVA
+        if( bIsSymbolFont )
+        {
+#else	// USE_JAVA
         if( pFontData->IsSymbolFont() )
+#endif	// USE_JAVA
             if( aFontSelData.maTargetName != aFontSelData.maSearchName )
                 pEntry->mpConversion = ImplGetRecodeData( aFontSelData.maTargetName, aFontSelData.maSearchName );
+#ifdef USE_JAVA
+            // Fix bug 2661 by handling cases where some fonts require the
+            // symbol recoding
+            if( !pEntry->mpConversion )
+                pEntry->mpConversion = ImplGetRecodeData( String::CreateFromAscii( "symbol" ), String::CreateFromAscii( "opensymbol" ) );
+        }
+#endif	// USE_JAVA
 
         // add the new entry to the cache
         maFontInstanceList[ aFontSelData ] = pEntry;
