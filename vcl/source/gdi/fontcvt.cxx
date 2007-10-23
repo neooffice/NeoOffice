@@ -1388,7 +1388,7 @@ sal_Unicode ImplRecodeChar( const ImplCvtChar* pConversion, sal_Unicode cChar )
             // more as it makes it more likely that a fallback font will
             // be found
             if ( cRetVal >= 0xE000 )
-                cRetVal = 0;
+                cRetVal = cIndex;
         }
         else if ( cChar >= 0xE000 )
         {
@@ -1432,6 +1432,7 @@ sal_Unicode ImplRecodeChar( const ImplCvtChar* pConversion, sal_Unicode cChar )
 #endif	// USE_JAVA
     }
 
+fprintf( stderr, "Here: %p %p\n", cRetVal, cChar );
     return cRetVal ? cRetVal : cChar;
 }
 
