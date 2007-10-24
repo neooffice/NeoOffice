@@ -1171,11 +1171,49 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	// Set fallback font
 	if ( pFallbackFont )
 	{
+		// If this is the first fallback, first try using a font that most
+		// closely matches the currently requested font
+		JavaImplFontData *pHighScoreFontData = NULL;
+		if ( !mnFallbackLevel )
+		{
+			SalData *pSalData = GetSalData();
+
+			int nNativeFont = mpVCLFont->getNativeFont();
+			::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( nNativeFont );
+			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || it->second->GetPitch() != mpGraphics->mnFontPitch )
+			{
+				USHORT nHighScore = 0;
+				for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
+				{
+					if ( (int)it->first == nNativeFont )
+						continue;
+
+					USHORT nScore = ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? 8 : 0 );
+					nScore += ( it->second->GetFamilyType() == mpGraphics->mnFontFamily ? 4 : 0 );
+					nScore += ( it->second->GetWeight() == mpGraphics->mnFontWeight ? 2 : 0 );
+					nScore += ( it->second->GetPitch() == mpGraphics->mnFontPitch ? 1 : 0 );
+					if ( nScore == 15 )
+					{
+						pHighScoreFontData = it->second;
+						break;
+					}
+					else if ( nHighScore < nScore )
+					{
+						pHighScoreFontData = it->second;
+						nHighScore = nScore;
+					}
+				}
+			}
+		}
+
 		int nNextLevel = mnFallbackLevel + 1;
 		::std::map< int, com_sun_star_vcl_VCLFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
 			delete it->second;
-		mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
+		if ( pHighScoreFontData )
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
+		else
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
 	}
 
 	return bRet;

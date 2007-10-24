@@ -579,6 +579,11 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		if ( mpVCLFont )
 			delete mpVCLFont;
 		mpVCLFont = new com_sun_star_vcl_VCLFont( maFallbackFonts[ nFallbackLevel ] );
+
+		mnFontFamily = pFont->GetFamilyType();
+		mnFontWeight = pFont->GetWeight();    
+		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
+		mnFontPitch = pFont->GetPitch();
 	}
 
 	return 0;

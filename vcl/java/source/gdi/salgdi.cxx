@@ -72,6 +72,10 @@ JavaSalGraphics::JavaSalGraphics()
 	mpVirDev = NULL;
 	mpVCLGraphics = NULL;
 	mpVCLFont = NULL;
+	mnFontFamily = FAMILY_DONTKNOW;
+	mnFontWeight = WEIGHT_DONTKNOW;
+	mbFontItalic = false;
+	mnFontPitch = PITCH_DONTKNOW;
 
 	GetSalData()->maGraphicsList.push_back( this );
 }
@@ -378,7 +382,6 @@ void JavaSalGraphics::setLineTransparency( sal_uInt8 nTransparency )
 {
 	if ( nTransparency > 100 )
 		nTransparency = 100;
-	float fTransPercent = (float)( 100 - nTransparency ) / 100;
 	mnLineTransparency = ( ( (SalColor)( 100 - nTransparency ) * 0xff ) / 100 ) << 24;
 
 	// Reset current color

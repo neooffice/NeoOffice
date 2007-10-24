@@ -102,6 +102,10 @@ public:
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	::std::map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
 	ImplLayoutRuns			maFallbackRuns;
+	FontFamily				mnFontFamily;
+	FontWeight				mnFontWeight;
+	bool					mbFontItalic;
+	FontPitch				mnFontPitch;
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();
