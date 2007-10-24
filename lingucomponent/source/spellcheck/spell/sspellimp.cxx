@@ -77,6 +77,10 @@
 #include <osl/file.hxx>
 #include <rtl/ustrbuf.hxx>
 
+#ifdef USE_JAVA
+#include <unistd.h>
+#endif	// USE_JAVA
+
 
 using namespace utl;
 using namespace osl;
@@ -314,7 +318,22 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                     aDicts[k] = NULL;
                     aDEncs[k] = 0;
                     aDNames[k] = aPathOpt.GetUserDictionaryPath() + A2OU("/") + A2OU(postupdict[i]->filename);
+#ifdef USE_JAVA
+                    // Don't add dictionaries that don't exist
+                    OUString dicpath = aDNames[i] + A2OU(".dic");
+                    OUString affpath = aDNames[i] + A2OU(".aff");
+                    OUString dict;
+                    OUString aff;
+                    osl::FileBase::getSystemPathFromFileURL(dicpath,dict);
+                    osl::FileBase::getSystemPathFromFileURL(affpath,aff);
+                    OString aTmpaff(OU2ENC(aff,osl_getThreadTextEncoding()));
+                    OString aTmpdict(OU2ENC(dict,osl_getThreadTextEncoding()));
+
+                    if (!access(aTmpaff.getStr(), R_OK) && !access(aTmpdict.getStr(), R_OK))
+                        k++;
+#else	// USE_JAVA
                     k++;
+#endif	// USE_JAVA
                 }
 
                 // now add the shared dictionaries
@@ -332,7 +351,21 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                     aDicts[k] = NULL;
                     aDEncs[k] = 0;
                     aDNames[k] = aPathOpt.GetLinguisticPath() + A2OU("/ooo/") + A2OU(postspdict[i]->filename);
+#ifdef USE_JAVA
+                    // Don't add dictionaries that don't exist
+                    OUString dicpath = aDNames[i] + A2OU(".dic");
+                    OUString affpath = aDNames[i] + A2OU(".aff");
+                    OUString dict;
+                    OUString aff;
+                    osl::FileBase::getSystemPathFromFileURL(dicpath,dict);
+                    osl::FileBase::getSystemPathFromFileURL(affpath,aff);
+                    OString aTmpaff(OU2ENC(aff,osl_getThreadTextEncoding()));
+                    OString aTmpdict(OU2ENC(dict,osl_getThreadTextEncoding()));
+                    if (!access(aTmpaff.getStr(), R_OK) && !access(aTmpdict.getStr(), R_OK))
+                        k++;
+#else	// USE_JAVA
                     k++;
+#endif	// USE_JAVA
                 }
 
                 aSuppLocales.realloc(numlocs);
@@ -414,10 +447,10 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 					// never need to worry about this case.
 					Locale aLocale( aLang, aCountry, aVariant );
 					OUString aLocaleString( ImplGetLocaleString( aLocale ) );
-					::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
-					if ( it == maNativeLocaleMap.end() )
+					::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
+					if ( it == maPrimaryNativeLocaleMap.end() )
 					{
-						maNativeLocaleMap[ aLocaleString ] = aString;
+						maPrimaryNativeLocaleMap[ aLocaleString ] = aString;
 
 						// Fix bug 2532 by checking for approximate and
 						// duplicate matches in the native locales
@@ -435,7 +468,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 								Locale aTmpLocale( pLocaleArray[ j ].Language, pLocaleArray[ j ].Country, OUString() );
 								if ( aLocale == aTmpLocale )
 								{
-									maNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
+									maSecondaryNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
 									bAddLocale = false;
 									break;
 								}
@@ -446,7 +479,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 								Locale aTmpLocale( pLocaleArray[ j ].Language, OUString(), OUString() );
 								if ( aLocale == aTmpLocale )
 								{
-									maNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
+									maSecondaryNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
 									bAddLocale = false;
 									break;
 								}
@@ -481,37 +514,65 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 #ifdef USE_JAVA
 	// Check native locales first 
 	OUString aLocaleString( ImplGetLocaleString( rLocale ) );
-	::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
-	if ( it != maNativeLocaleMap.end() )
+	::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
+	if ( it != maPrimaryNativeLocaleMap.end() )
+		return TRUE;
+
+	it = maSecondaryNativeLocaleMap.find( aLocaleString );
+	if ( it != maSecondaryNativeLocaleMap.end() )
 		return TRUE;
 
 	// Fix bug 2513 by checking for approximate matches in the native locales
 	if ( rLocale.Variant.getLength() )
 	{
+		bool bFound = false;
 		Locale aLocale( rLocale.Language, rLocale.Country, OUString() );
 		aLocaleString = ImplGetLocaleString( aLocale );
-		it = maNativeLocaleMap.find( aLocaleString );
-		if ( it != maNativeLocaleMap.end() )
+		it = maPrimaryNativeLocaleMap.find( aLocaleString );
+		if ( it != maPrimaryNativeLocaleMap.end() )
+		{
+			bFound = true;
+		}
+		else
+		{
+			it = maSecondaryNativeLocaleMap.find( aLocaleString );
+			if ( it != maSecondaryNativeLocaleMap.end() )
+				bFound = true;
+		}
+
+		if ( bFound )
 		{
 			aSuppLocales.realloc( ++nLen );
 			Locale *pLocaleArray = aSuppLocales.getArray();
 			pLocaleArray[ nLen - 1 ] = aLocale;
-			maNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
+			maSecondaryNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
 			return TRUE;
 		}
 	}
 
 	if ( rLocale.Country.getLength() )
 	{
+		bool bFound = false;
 		Locale aLocale( rLocale.Language, OUString(), OUString() );
 		aLocaleString = ImplGetLocaleString( aLocale );
-		it = maNativeLocaleMap.find( aLocaleString );
-		if ( it != maNativeLocaleMap.end() )
+		it = maPrimaryNativeLocaleMap.find( aLocaleString );
+		if ( it != maPrimaryNativeLocaleMap.end() )
+		{
+			bFound = true;
+		}
+		else
+		{
+			it = maSecondaryNativeLocaleMap.find( aLocaleString );
+			if ( it != maSecondaryNativeLocaleMap.end() )
+				bFound = true;
+		}
+
+		if ( bFound )
 		{
 			aSuppLocales.realloc( ++nLen );
 			Locale *pLocaleArray = aSuppLocales.getArray();
 			pLocaleArray[ nLen - 1 ] = aLocale;
-			maNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
+			maSecondaryNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
 			return TRUE;
 		}
 	}
@@ -555,19 +616,16 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 	if (n)
 	{
 #ifdef USE_JAVA
+		bool bHandled = false;
+		bool bFound = false;
 		OUString aLocaleString( ImplGetLocaleString( rLocale ) );
-		::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
-		if ( it != maNativeLocaleMap.end() )
+		::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
+		if ( it != maPrimaryNativeLocaleMap.end() )
 		{
-			CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
-			if ( aString )
-			{
-				if ( !NSSpellChecker_checkSpellingOfString( aString, it->second ) )
-					nRes = SpellFailure::SPELLING_ERROR;
-				CFRelease( aString );
-				return nRes;
-			}
+			bFound = true;
 		}
+		else
+		{
 #endif	// USE_JAVA
 
             for (int i =0; i < numdict; i++) {
@@ -605,6 +663,9 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 		}
 	        if (pMS)
                 {
+#ifdef USE_JAVA
+				bHandled = true;
+#endif	// USE_JAVA
 		    OString aWrd(OU2ENC(nWord,aEnc));
 	            int rVal = pMS->spell((char*)aWrd.getStr());
  	            if (rVal != 1)
@@ -616,6 +677,31 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
                     pMS = NULL;
 	        }
 	    }
+
+#ifdef USE_JAVA
+		}
+
+		if ( !bHandled )
+		{
+			if ( !bFound )
+			{
+				it = maSecondaryNativeLocaleMap.find( aLocaleString );
+				if ( it != maSecondaryNativeLocaleMap.end() )
+					bFound = true;
+			}
+
+			if ( bFound )
+			{
+				CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
+				if ( aString )
+				{
+					if ( !NSSpellChecker_checkSpellingOfString( aString, it->second ) )
+						nRes = SpellFailure::SPELLING_ERROR;
+					CFRelease( aString );
+				}
+			}
+		}
+#endif	// USE_JAVA
 	}
 
 	return nRes;
@@ -700,62 +786,20 @@ Reference< XSpellAlternatives >
 	{
 	    INT16 nLang = LocaleToLanguage( rLocale );
 
-#ifdef USE_JAVA
-		OUString aLocaleString( ImplGetLocaleString( rLocale ) );
-		::std::map< OUString, CFStringRef >::const_iterator it = maNativeLocaleMap.find( aLocaleString );
-		if ( it != maNativeLocaleMap.end() )
-		{
-			Sequence< OUString > aAlternatives;
-
-			CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
-			if ( aString )
-			{
-				CFMutableArrayRef aGuesses = NSSpellChecker_getGuesses( aString, it->second );
-				if ( aGuesses )
-				{
-					CFIndex nItems = CFArrayGetCount( aGuesses );
-					aAlternatives.realloc( nItems );
-					OUString *pAlternativesArray = aAlternatives.getArray();
-
-					CFIndex nItemsAdded = 0;
-					for ( CFIndex i = 0; i < nItems; i++ )
-					{
-						CFStringRef aGuessString = (CFStringRef)CFArrayGetValueAtIndex( aGuesses, i );
-						if ( aGuessString )
-						{
-							CFIndex nLen = CFStringGetLength( aGuessString );
-							CFRange aRange = CFRangeMake( 0, nLen );
-							sal_Unicode pBuffer[ nLen + 1 ];
-							CFStringGetCharacters( aGuessString, aRange, pBuffer );
-							pBuffer[ nLen ] = 0;
-							OUString aItem( pBuffer );
-
-							if ( !aItem.getLength() )
-								continue;
-
-							pAlternativesArray[ nItemsAdded++ ] = aItem;
-						}
-					}
-
-					aAlternatives.realloc( nItemsAdded );
-
-					CFRelease( aGuesses );
-				}
-
-				CFRelease( aString );
-			}
-
-			SpellAlternatives *pAlt = new SpellAlternatives();
-			String aWord( rWord );
-			pAlt->SetWordLanguage( aWord, nLang );
-			pAlt->SetFailureType( SpellFailure::SPELLING_ERROR );
-			pAlt->SetAlternatives( aAlternatives );
-			xRes = pAlt;
-			return xRes;
-		}
-#endif	// USE_JAVA
-
 	    Sequence< OUString > aStr( 0 );
+
+#ifdef USE_JAVA
+		bool bHandled = false;
+		bool bFound = false;
+		OUString aLocaleString( ImplGetLocaleString( rLocale ) );
+		::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
+		if ( it != maPrimaryNativeLocaleMap.end() )
+		{
+			bFound = true;
+		}
+		else
+		{
+#endif	// USE_JAVA
 
             for (int i =0; i < numdict; i++) {
 	        pMS = NULL;
@@ -770,6 +814,9 @@ Reference< XSpellAlternatives >
 
 	        if (pMS)
 	        {
+#ifdef USE_JAVA
+				bHandled = true;
+#endif	// USE_JAVA
 	            char ** suglst = NULL;
 		    OString aWrd(OU2ENC(nWord,aEnc));
                     count = pMS->suggest(&suglst, (const char *) aWrd.getStr());
@@ -790,6 +837,61 @@ Reference< XSpellAlternatives >
                     }
 		}
 	    }
+
+#ifdef USE_JAVA
+		}
+
+		if ( !bHandled )
+		{
+			if ( !bFound )
+			{
+				it = maSecondaryNativeLocaleMap.find( aLocaleString );
+				if ( it != maSecondaryNativeLocaleMap.end() )
+					bFound = true;
+			}
+
+			if ( bFound )
+			{
+				CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
+				if ( aString )
+				{
+					CFMutableArrayRef aGuesses = NSSpellChecker_getGuesses( aString, it->second );
+					if ( aGuesses )
+					{
+						CFIndex nItems = CFArrayGetCount( aGuesses );
+						aStr.realloc( nItems );
+						OUString *pAlternativesArray = aStr.getArray();
+
+						CFIndex nItemsAdded = 0;
+						for ( CFIndex i = 0; i < nItems; i++ )
+						{
+							CFStringRef aGuessString = (CFStringRef)CFArrayGetValueAtIndex( aGuesses, i );
+							if ( aGuessString )
+							{
+								CFIndex nLen = CFStringGetLength( aGuessString );
+								CFRange aRange = CFRangeMake( 0, nLen );
+								sal_Unicode pBuffer[ nLen + 1 ];
+								CFStringGetCharacters( aGuessString, aRange, pBuffer );
+								pBuffer[ nLen ] = 0;
+								OUString aItem( pBuffer );
+
+								if ( !aItem.getLength() )
+									continue;
+
+								pAlternativesArray[ nItemsAdded++ ] = aItem;
+							}
+						}
+
+						aStr.realloc( nItemsAdded );
+
+						CFRelease( aGuesses );
+					}
+
+					CFRelease( aString );
+				}
+			}
+		}
+#endif	// USE_JAVA
 			
             // now return an empty alternative for no suggestions or the list of alternatives if some found
 	    SpellAlternatives *pAlt = new SpellAlternatives;
