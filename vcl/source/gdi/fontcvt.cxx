@@ -593,6 +593,85 @@ static const sal_Unicode aAdobeSymbolTab[224] =
         0xe167,    0xe168,    0xe169,         0,
 };
 
+#ifdef USE_JAVA
+
+static const sal_Unicode aLimitedAdobeSymbolTab[224] =
+{
+//TODO:
+    // F020
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F030
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F040
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F050
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F060
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F070
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F080
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F090
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F0a0
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F0b0
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F0c0
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F0d0
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F0e0
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+    // F0f0
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+             0,         0,         0,         0,
+};
+
+#endif	// USE_JAVA
+
 // -----------------------------------------------------------------------
 
 static const sal_Unicode aMonotypeSortsTab[224] =
@@ -1400,6 +1479,22 @@ sal_Unicode ImplRecodeChar( const ImplCvtChar* pConversion, sal_Unicode cChar )
                 case 0xFFB3:
                     cRetVal = 0x2265;
                     break;
+                case 0xFFEC:
+                    cRetVal = 0x23A7;
+                    break;
+                case 0xFFED:
+                    cRetVal = 0x23A8;
+                    break;
+                case 0xFFEE:
+                    cRetVal = 0x23A9;
+                    break;
+                case 0xFFEF:
+                    cRetVal = 0x23AA;
+                    break;
+                case 0xFFD7:
+                case 0xFFFD:
+                    cRetVal = 0x22C5;
+                    break;
                 case 0xFFE5:
                     cRetVal = 0x2211;
                     break;
@@ -1475,6 +1570,9 @@ static RecodeTable aRecodeTable[] =
     {"starmath",        {aStarMathTab,  "StarSymbol", NULL}},
 
     {"symbol",          {aAdobeSymbolTab, "StarSymbol", NULL}},
+#ifdef USE_JAVA
+    {"limitedsymbol",   {aLimitedAdobeSymbolTab, "StarSymbol", NULL}},
+#endif	// USE_JAVA
     {"standardsymbols", {aAdobeSymbolTab, "StarSymbol", NULL}},
     {"standardsymbolsl",{aAdobeSymbolTab, "StarSymbol", NULL}},
 
