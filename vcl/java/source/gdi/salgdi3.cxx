@@ -191,6 +191,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
 						const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
 						const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
+						const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
 						const OUString aTimes( OUString::createFromAscii( "Times" ) );
 						const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 						for ( int i = 0; pFonts[ i ]; i++ )
@@ -257,7 +258,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
 								continue;
 
-							if ( aDisplayName == aNeoSymbol )
+							if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol )
+							{
+								// Don't allow Sun's symbol fonts to override
+								// our symbol font
+								continue;
+							}
+							else if ( aDisplayName == aNeoSymbol )
 							{
 								aDisplayName = OUString( aOpenSymbol );
 								aMapName = aSymbol + OUString::createFromAscii( ";" ) + aNeoSymbol;
