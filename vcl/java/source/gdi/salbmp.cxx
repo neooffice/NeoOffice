@@ -375,27 +375,11 @@ bool JavaSalBitmap::Create( const SalBitmap& rSalBmp )
 		if ( pSrcBuffer )
 		{
 			BitmapBuffer *pDestBuffer = AcquireBuffer( FALSE );
-			if ( pDestBuffer )
+			if ( pDestBuffer && pDestBuffer->mpBits && pDestBuffer->mnScanlineSize == pSrcBuffer->mnScanlineSize && pDestBuffer->mnHeight == pSrcBuffer->mnHeight )
 			{
-				if ( pDestBuffer->mpBits )
-				{
-					pDestBuffer->maColorMask = pSrcBuffer->maColorMask;
-					pDestBuffer->maPalette = pSrcBuffer->maPalette;
-
-					SalTwoRect aCopyPosAry;
-					aCopyPosAry.mnSrcX = 0;
-					aCopyPosAry.mnSrcY = 0;
-					aCopyPosAry.mnSrcWidth = pSrcBuffer->mnWidth;
-					aCopyPosAry.mnSrcHeight = pSrcBuffer->mnHeight;
-					aCopyPosAry.mnDestX = 0;
-					aCopyPosAry.mnDestY = 0;
-					aCopyPosAry.mnDestWidth = pDestBuffer->mnWidth;
-					aCopyPosAry.mnDestHeight = pDestBuffer->mnHeight;
-					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, pDestBuffer->mnFormat, &pDestBuffer->maPalette, &pDestBuffer->maColorMask, pDestBuffer->mpBits );
-					if ( pCopyBuffer )
-						delete pCopyBuffer;
-				}
-
+				memcpy( pDestBuffer->mpBits, pSrcBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight );
+				pDestBuffer->maColorMask = pSrcBuffer->maColorMask;
+				pDestBuffer->maPalette = pSrcBuffer->maPalette;
 				ReleaseBuffer( pDestBuffer, FALSE );
 			}
 			else
