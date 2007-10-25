@@ -203,35 +203,20 @@ public final class VCLScreen {
 	 *  otherwise include screen insets in the screen bounds
 	 * @param useMainScreen if <code>true</code> return the main screen's
 	 *  bounds otherwise return the closest matching screen's bounds
-	 * @return if the specified width and height are both greater than zero,
-	 *  the screen bounds that is the closest match for the specified
-	 *  coordinates is returned otherwise the entire virtual bounds is returned
+	 * @return the screen bounds that is the closest match for the specified
+	 *  coordinates
 	 */
 	public static Rectangle getScreenBounds(int x, int y, int width, int height, boolean fullScreenMode, boolean useMainScreenOnly) {
 
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null) {
-			if (width <= 0 || height <= 0) {
-				// Iterate through the screens and return the total virtual
-				// screen bounds
-				Rectangle virtualBounds = null;
-				GraphicsDevice[] gd = ge.getScreenDevices();
-				for (int i = 0; i < gd.length; i++) {
-					try {
-						Rectangle r = gd[i].getDefaultConfiguration().getBounds();
-						if (virtualBounds != null)
-							virtualBounds = virtualBounds.union(r);
-						else
-						virtualBounds = r;
-					}
-					catch (Throwable t) {
-						clearCachedDisplays0(ge);
-					}
-				}
+			// Fix bug 2671 by setting width and height greater than 0
+			if (width <= 0)
+				width = 1;
+			if (height <= 0)
+				height = 1;
 
-				return virtualBounds;
-			}
-			else if (useMainScreenOnly) {
+			if (useMainScreenOnly) {
 				GraphicsDevice gd = ge.getDefaultScreenDevice();
 				if (gd != null) {
 					try {
