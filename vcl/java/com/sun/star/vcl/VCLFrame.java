@@ -2993,7 +2993,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		void setMinimumSize(int width, int height) {
 
-			Dimension minimumFrameSize = VCLScreen.getMinimumFrameSize();
+			Dimension minimumFrameSize;
 			if (isUndecorated())
  				minimumFrameSize = new Dimension(0, 0);
 			else
