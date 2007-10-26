@@ -1180,7 +1180,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			int nNativeFont = mpVCLFont->getNativeFont();
 			::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( nNativeFont );
-			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || it->second->GetPitch() != mpGraphics->mnFontPitch )
+			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
 				USHORT nHighScore = 0;
 				for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
@@ -1188,7 +1188,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					if ( (int)it->first == nNativeFont )
 						continue;
 
-					USHORT nScore = ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? 8 : 0 );
+					USHORT nScore = ( ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic ? 8 : 0 );
 					nScore += ( it->second->GetFamilyType() == mpGraphics->mnFontFamily ? 4 : 0 );
 					nScore += ( it->second->GetWeight() == mpGraphics->mnFontWeight ? 2 : 0 );
 					nScore += ( it->second->GetPitch() == mpGraphics->mnFontPitch ? 1 : 0 );
