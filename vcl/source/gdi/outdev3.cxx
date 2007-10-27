@@ -163,8 +163,8 @@
 #include <java/tools.hxx>
 #endif
 
-static const ImplCvtChar* pDefaultFullConversion = ImplGetRecodeData( String::CreateFromAscii( "symbol" ), String::CreateFromAscii( "opensymbol" ) );
-static const ImplCvtChar* pDefaultLimitedConversion = ImplGetRecodeData( String::CreateFromAscii( "limitedsymbol" ), String::CreateFromAscii( "opensymbol" ) );
+static const ImplCvtChar* pDefaultSymbolConversion = ImplGetRecodeData( String::CreateFromAscii( "symbol" ), String::CreateFromAscii( "opensymbol" ) );
+
 #endif
 
 #if defined UNX
@@ -2776,12 +2776,7 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             // Fix bug 2661 by handling cases where some fonts require the
             // symbol recoding
             if( !pEntry->mpConversion )
-                pEntry->mpConversion = pDefaultFullConversion;
-        }
-        else if( pFontData->IsSymbolFont() )
-        {
-             // Fix bug 2497 by setting a more limited symbol recoding table
-             pEntry->mpConversion = pDefaultLimitedConversion;
+                pEntry->mpConversion = pDefaultSymbolConversion;
         }
 #endif	// USE_JAVA
 

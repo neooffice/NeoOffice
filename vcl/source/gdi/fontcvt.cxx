@@ -585,92 +585,17 @@ static const sal_Unicode aAdobeSymbolTab[224] =
         0x25ca,    0xe14d,    0xe14e,    0xe14f,
         0xe150,    0xe151,    0xe152,    0xe153,
         0xe154,    0xe155,    0xe156,    0xe157,
+#ifdef USE_JAVA
+        0x23a7,    0x23a8,    0x23a9,    0x23aa,
+#else	// USE_JAVA
         0xe158,    0xe159,    0xe15a,    0xe15b,
+#endif	// USE_JAVA
     // F0f0
              0,    0xe15c,    0xe15d,    0xe15e,
         0xe15f,    0xe160,    0xe161,    0xe162,
         0xe163,    0xe164,    0xe165,    0xe166,
         0xe167,    0xe168,    0xe169,         0,
 };
-
-#ifdef USE_JAVA
-
-static const sal_Unicode aLimitedAdobeSymbolTab[224] =
-{
-//TODO:
-    // F020
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F030
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F040
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F050
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F060
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F070
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F080
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F090
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0a0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0b0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0c0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0d0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0e0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-    // F0f0
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-             0,         0,         0,         0,
-};
-
-#endif	// USE_JAVA
 
 // -----------------------------------------------------------------------
 
@@ -1458,17 +1383,8 @@ sal_Unicode ImplRecodeChar( const ImplCvtChar* pConversion, sal_Unicode cChar )
             cIndex -= 0xF000;
         // recode the symbol
         if( cIndex>=0x0020 && cIndex<=0x00FF )
-#ifdef USE_JAVA
-        {
-#endif	// USE_JAVA
             cRetVal = pConversion->mpCvtTab[ cIndex - 0x0020 ];
 #ifdef USE_JAVA
-            // Mapping to Private Use Area characters is not necessary any
-            // more as it makes it more likely that a fallback font will
-            // be found
-            if ( cRetVal >= 0xE000 )
-                cRetVal = cIndex;
-        }
         else if ( cChar >= 0xE000 )
         {
             switch ( cChar )
@@ -1478,22 +1394,6 @@ sal_Unicode ImplRecodeChar( const ImplCvtChar* pConversion, sal_Unicode cChar )
                     break;
                 case 0xFFB3:
                     cRetVal = 0x2265;
-                    break;
-                case 0xFFEC:
-                    cRetVal = 0x23A7;
-                    break;
-                case 0xFFED:
-                    cRetVal = 0x23A8;
-                    break;
-                case 0xFFEE:
-                    cRetVal = 0x23A9;
-                    break;
-                case 0xFFEF:
-                    cRetVal = 0x23AA;
-                    break;
-                case 0xFFD7:
-                case 0xFFFD:
-                    cRetVal = 0x22C5;
                     break;
                 case 0xFFE5:
                     cRetVal = 0x2211;
@@ -1570,9 +1470,6 @@ static RecodeTable aRecodeTable[] =
     {"starmath",        {aStarMathTab,  "StarSymbol", NULL}},
 
     {"symbol",          {aAdobeSymbolTab, "StarSymbol", NULL}},
-#ifdef USE_JAVA
-    {"limitedsymbol",   {aLimitedAdobeSymbolTab, "StarSymbol", NULL}},
-#endif	// USE_JAVA
     {"standardsymbols", {aAdobeSymbolTab, "StarSymbol", NULL}},
     {"standardsymbolsl",{aAdobeSymbolTab, "StarSymbol", NULL}},
 
