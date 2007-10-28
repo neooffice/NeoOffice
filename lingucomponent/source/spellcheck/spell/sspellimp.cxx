@@ -544,7 +544,7 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 		{
 			aSuppLocales.realloc( ++nLen );
 			Locale *pLocaleArray = aSuppLocales.getArray();
-			pLocaleArray[ nLen - 1 ] = aLocale;
+			pLocaleArray[ nLen - 1 ] = Locale( rLocale.Language, rLocale.Country, rLocale.Variant );
 			maSecondaryNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
 			return TRUE;
 		}
@@ -571,7 +571,7 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 		{
 			aSuppLocales.realloc( ++nLen );
 			Locale *pLocaleArray = aSuppLocales.getArray();
-			pLocaleArray[ nLen - 1 ] = aLocale;
+			pLocaleArray[ nLen - 1 ] = Locale( rLocale.Language, rLocale.Country, rLocale.Variant );
 			maSecondaryNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
 			return TRUE;
 		}
