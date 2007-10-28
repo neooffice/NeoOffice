@@ -1179,7 +1179,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			SalData *pSalData = GetSalData();
 
 			int nNativeFont = mpVCLFont->getNativeFont();
-			::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( nNativeFont );
+			::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont->getNativeFont() );
 			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
 				USHORT nHighScore = 0;
