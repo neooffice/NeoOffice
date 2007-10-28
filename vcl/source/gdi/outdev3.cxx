@@ -163,7 +163,7 @@
 #include <java/tools.hxx>
 #endif
 
-static const ImplCvtChar* pDefaultSymbolConversion = ImplGetRecodeData( String::CreateFromAscii( "symbol" ), String::CreateFromAscii( "opensymbol" ) );
+static const ImplCvtChar* pDefaultSymbolConversion = ImplGetRecodeData( String( RTL_CONSTASCII_USTRINGPARAM( "symbol" ) ), String( RTL_CONSTASCII_USTRINGPARAM( "opensymbol" ) ) );
 
 #endif
 

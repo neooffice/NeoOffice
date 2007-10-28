@@ -583,17 +583,24 @@ static const sal_Unicode aAdobeSymbolTab[224] =
         0xe14b,    0x21d1,    0xe14c,    0x21d3,
     // F0e0
         0x25ca,    0xe14d,    0xe14e,    0xe14f,
-        0xe150,    0xe151,    0xe152,    0xe153,
-        0xe154,    0xe155,    0xe156,    0xe157,
 #ifdef USE_JAVA
+        0xe150,    0xe151,    0x239b,    0x239c,
+        0x239d,    0xe155,    0xe156,    0xe157,
         0x23a7,    0x23a8,    0x23a9,    0x23aa,
 #else	// USE_JAVA
+        0xe150,    0xe151,    0xe152,    0xe153,
+        0xe154,    0xe155,    0xe156,    0xe157,
         0xe158,    0xe159,    0xe15a,    0xe15b,
 #endif	// USE_JAVA
     // F0f0
              0,    0xe15c,    0xe15d,    0xe15e,
+#ifdef USE_JAVA
+        0xe15f,    0xe160,    0x239e,    0x239f,
+        0x23a0,    0xe164,    0xe165,    0xe166,
+#else	// USE_JAVA
         0xe15f,    0xe160,    0xe161,    0xe162,
         0xe163,    0xe164,    0xe165,    0xe166,
+#endif	// USE_JAVA
         0xe167,    0xe168,    0xe169,         0,
 };
 
@@ -1384,47 +1391,6 @@ sal_Unicode ImplRecodeChar( const ImplCvtChar* pConversion, sal_Unicode cChar )
         // recode the symbol
         if( cIndex>=0x0020 && cIndex<=0x00FF )
             cRetVal = pConversion->mpCvtTab[ cIndex - 0x0020 ];
-#ifdef USE_JAVA
-        else if ( cChar >= 0xE000 )
-        {
-            switch ( cChar )
-            {
-                case 0xFFA5:
-                    cRetVal = 0x221E;
-                    break;
-                case 0xFFB3:
-                    cRetVal = 0x2265;
-                    break;
-                case 0xFFE5:
-                    cRetVal = 0x2211;
-                    break;
-                case 0xFFE6:
-                    cRetVal = 0x239B;
-                    break;
-                case 0xFFE7:
-                    cRetVal = 0x239C;
-                    break;
-                case 0xFFE8:
-                    cRetVal = 0x239D;
-                    break;
-                case 0xFFF2:
-                    cRetVal = 0x222B;
-                    break;
-                case 0xFFF6:
-                    cRetVal = 0x239E;
-                    break;
-                case 0xFFF7:
-                    cRetVal = 0x239F;
-                    break;
-                case 0xFFF8:
-                    cRetVal = 0x23A0;
-                    break;
-                default:
-                    cRetVal = 0;
-                    break;
-            }
-        }
-#endif	// USE_JAVA
     }
 
     return cRetVal ? cRetVal : cChar;
