@@ -625,11 +625,36 @@ ULONG PictReader::ReadAndDrawText()
 			nLen--;
 	sText[ nLen ] = 0;
 #ifdef USE_JAVA
-	String aString( (const sal_Char*)&sText, aActFont.GetCharSet() );
+	// Fix bug 2661 by using the font encoding to encode the text. Note that
+	// if any characters are in the 0xff00 to 0xffff range, then we should
+	// use the symbol encoding as well.
+	CharSet eOldCharSet = aActFont.GetCharSet();
+	String aString( (const sal_Char*)&sText, eOldCharSet );
+	if ( aActFont.GetCharSet() != RTL_TEXTENCODING_SYMBOL )
+	{
+		xub_StrLen nStrLen = aString.Len();
+		for ( xub_StrLen i = 0; i < nStrLen; i++ )
+		{
+			if ( ( aString.GetChar( i ) & 0xff00 ) == 0xff00 )
+			{
+				aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
+				pVirDev->SetFont( aActFont );
+				aString = String( (const sal_Char*)&sText, aActFont.GetCharSet() );
+				break;
+			}
+		}
+	}
 #else	// USE_JAVA
 	String aString( (const sal_Char*)&sText, gsl_getSystemTextEncoding() );
 #endif	// USE_JAVA
 	pVirDev->DrawText( Point( aTextPosition.X(), aTextPosition.Y() ), aString );
+#ifdef USE_JAVA
+	if ( aActFont.GetCharSet() != eOldCharSet )
+	{
+		aActFont.SetCharSet( eOldCharSet );
+		pVirDev->SetFont( aActFont );
+	}
+#endif	// USE_JAVA
 	return nDataLen;
 }
 
