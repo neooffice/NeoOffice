@@ -384,8 +384,10 @@ void JavaSalGraphics::setLineTransparency( sal_uInt8 nTransparency )
 		nTransparency = 100;
 	mnLineTransparency = ( ( (SalColor)( 100 - nTransparency ) * 0xff ) / 100 ) << 24;
 
-	// Reset current color
-	SetLineColor( mnLineColor & 0x00ffffff );
+	// Reset current color. Fix bug 2692 by not resetting when the color is
+	// already transparent.
+	if ( mnLineColor )
+		SetLineColor( mnLineColor & 0x00ffffff );
 }
 
 // -----------------------------------------------------------------------
@@ -396,6 +398,8 @@ void JavaSalGraphics::setFillTransparency( sal_uInt8 nTransparency )
 		nTransparency = 100;
 	mnFillTransparency = ( ( (SalColor)( 100 - nTransparency ) * 0xff ) / 100 ) << 24;
 
-	// Reset current color
-	SetFillColor( mnFillColor & 0x00ffffff );
+	// Reset current color. Fix bug 2692 by not resetting when the color is
+	// already transparent.
+	if ( mnFillColor )
+		SetFillColor( mnFillColor & 0x00ffffff );
 }
