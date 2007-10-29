@@ -94,7 +94,7 @@ fi
 if [ `uname -s` = Darwin ]; then
 	MAILER=`echo "$MAILER" | sed 's/\.app\/.*$/\.app/' 2>/dev/null`
 	if [ -z "$MAILER" ]; then
-		MAILER=Mail;
+		MAILER=/Applications/Mail.app
 	fi
 
 	# We can only use the attachment so ignore the other arguments
@@ -113,7 +113,7 @@ if [ `uname -s` = Darwin ]; then
 	if [ "$ATTACH" != "" ]; then
 		/usr/bin/open -a "$MAILER" "$ATTACH"
 		if [ "$?" != "0" ]; then
-			/usr/bin/open -a Mail "$ATTACH"
+			/usr/bin/open -a Mail.app "$ATTACH"
 		fi
 		exit "$?"
 	else
