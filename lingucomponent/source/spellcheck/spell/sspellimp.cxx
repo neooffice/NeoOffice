@@ -133,7 +133,7 @@ static OUString aDelimiter = OUString::createFromAscii( "_" );
 static OUString ImplGetLocaleString( Locale aLocale )
 {
 	OUString aLocaleString( aLocale.Language );
-	if ( aLocale.Country.getLength() )
+	if ( aLocaleString.getLength() && aLocale.Country.getLength() )
 	{
 		aLocaleString += aDelimiter;
 		aLocaleString += aLocale.Country;
@@ -397,7 +397,52 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 #ifdef USE_JAVA
 	if ( !maLocales )
 	{
-		maLocales = NSSpellChecker_getLocales();
+		::std::list< Locale > aAppLocalesList;
+		CFMutableArrayRef aAppLocales = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
+		if ( aAppLocales )
+		{
+			for ( USHORT nLang = 0x0; nLang < 0xffff; nLang++ )
+			{
+				Locale aLocale;
+				LanguageToLocale( aLocale, nLang );
+				OUString aLocaleString( ImplGetLocaleString( aLocale ) );
+				if ( aLocaleString.getLength() )
+				{
+					CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aLocaleString.getStr(), aLocaleString.getLength(), kCFAllocatorNull );
+					if ( aString )
+					{
+						CFArrayAppendValue( aAppLocales, aString );
+						aAppLocalesList.push_back( aLocale );
+					}
+
+					if ( aLocale.Variant.getLength() )
+					{
+						Locale aTmpLocale( aLocale.Language, aLocale.Country, OUString() );
+						OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
+						if ( aTmpLocaleString.getLength() )
+						{
+							CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
+							if ( aTmpString )
+								CFArrayAppendValue( aAppLocales, aTmpString );
+						}
+					}
+
+					if ( aLocale.Country.getLength() )
+					{
+						Locale aTmpLocale( aLocale.Language, OUString(), OUString() );
+						OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
+						if ( aTmpLocaleString.getLength() )
+						{
+							CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
+							if ( aTmpString )
+								CFArrayAppendValue( aAppLocales, aTmpString );
+						}
+					}
+				}
+			}
+		}
+
+		maLocales = NSSpellChecker_getLocales( aAppLocales );
 		if ( maLocales )
 		{
 			int nStart = aSuppLocales.getLength();
@@ -447,6 +492,9 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 					// never need to worry about this case.
 					Locale aLocale( aLang, aCountry, aVariant );
 					OUString aLocaleString( ImplGetLocaleString( aLocale ) );
+					if ( !aLocaleString.getLength() )
+						continue;
+
 					::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
 					if ( it == maPrimaryNativeLocaleMap.end() )
 					{
@@ -468,9 +516,9 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 								Locale aTmpLocale( pLocaleArray[ j ].Language, pLocaleArray[ j ].Country, OUString() );
 								if ( aLocale == aTmpLocale )
 								{
-									maSecondaryNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
-									bAddLocale = false;
-									break;
+									OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
+									if ( aTmpLocaleString.getLength() )
+										maSecondaryNativeLocaleMap[ aTmpLocaleString ] = aString;
 								}
 							}
 
@@ -479,9 +527,9 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 								Locale aTmpLocale( pLocaleArray[ j ].Language, OUString(), OUString() );
 								if ( aLocale == aTmpLocale )
 								{
-									maSecondaryNativeLocaleMap[ ImplGetLocaleString( aTmpLocale ) ] = aString;
-									bAddLocale = false;
-									break;
+									OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
+									if ( aTmpLocaleString.getLength() )
+										maSecondaryNativeLocaleMap[ aTmpLocaleString ] = aString;
 								}
 							}
 						}
@@ -494,6 +542,89 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
 			aSuppLocales.realloc( nItemsAdded );
 		}
+
+		// Fix 2686 by finding partial matches to application locales
+		int nStart = aSuppLocales.getLength();
+		aSuppLocales.realloc( nStart + aAppLocalesList.size() );
+		CFIndex nItemsAdded = nStart;
+		Locale *pLocaleArray = aSuppLocales.getArray();
+		for ( ::std::list< Locale >::const_iterator it = aAppLocalesList.begin(); it != aAppLocalesList.end(); ++it )
+		{
+			OUString aLocaleString( ImplGetLocaleString( *it ) );
+			if ( !aLocaleString.getLength() )
+				continue;
+
+			bool bAddLocale = false;
+			for ( int j = 0; j < nItemsAdded; j++ )
+			{
+				if ( pLocaleArray[ j ] == *it )
+					break;
+
+				if ( (*it).Variant.getLength() )
+				{
+					Locale aTmpLocale( (*it).Language, (*it).Variant, OUString() );
+					if ( pLocaleArray[ j ] == aTmpLocale )
+					{
+						bool bFound = false;
+						OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
+						::std::map< OUString, CFStringRef >::const_iterator nlit = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
+						if ( nlit != maPrimaryNativeLocaleMap.end() )
+						{
+							bFound = true;
+						}
+						else
+						{
+							nlit = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
+							if ( nlit != maSecondaryNativeLocaleMap.end() )
+								bFound = true;
+						}
+
+						if ( bFound )
+						{
+							maSecondaryNativeLocaleMap[ aLocaleString ] = nlit->second;
+							bAddLocale = true;
+							break;
+						}
+					}
+				}
+
+				if ( (*it).Country.getLength() )
+				{
+					Locale aTmpLocale( (*it).Language, OUString(), OUString() );
+					if ( pLocaleArray[ j ] == aTmpLocale )
+					{
+						bool bFound = false;
+						OUString aTmpLocaleString( ImplGetLocaleString( aTmpLocale ) );
+						::std::map< OUString, CFStringRef >::const_iterator nlit = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
+						if ( nlit != maPrimaryNativeLocaleMap.end() )
+						{
+							bFound = true;
+						}
+						else
+						{
+							nlit = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
+							if ( nlit != maSecondaryNativeLocaleMap.end() )
+								bFound = true;
+						}
+
+						if ( bFound )
+						{
+							maSecondaryNativeLocaleMap[ aLocaleString ] = nlit->second;
+							bAddLocale = true;
+							break;
+						}
+					}
+				}
+			}
+
+			if ( bAddLocale )
+				pLocaleArray[ nItemsAdded++ ] = *it;
+		}
+
+		aSuppLocales.realloc( nItemsAdded );
+
+		if ( aAppLocales )
+			CFRelease( aAppLocales );
 	}
 #endif	// USE_JAVA
 
@@ -514,66 +645,69 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 #ifdef USE_JAVA
 	// Check native locales first 
 	OUString aLocaleString( ImplGetLocaleString( rLocale ) );
-	::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
-	if ( it != maPrimaryNativeLocaleMap.end() )
-		return TRUE;
-
-	it = maSecondaryNativeLocaleMap.find( aLocaleString );
-	if ( it != maSecondaryNativeLocaleMap.end() )
-		return TRUE;
-
-	// Fix bug 2513 by checking for approximate matches in the native locales
-	if ( rLocale.Variant.getLength() )
+	if ( aLocaleString.getLength() )
 	{
-		bool bFound = false;
-		Locale aLocale( rLocale.Language, rLocale.Country, OUString() );
-		aLocaleString = ImplGetLocaleString( aLocale );
-		it = maPrimaryNativeLocaleMap.find( aLocaleString );
+		::std::map< OUString, CFStringRef >::const_iterator it = maPrimaryNativeLocaleMap.find( aLocaleString );
 		if ( it != maPrimaryNativeLocaleMap.end() )
-		{
-			bFound = true;
-		}
-		else
-		{
-			it = maSecondaryNativeLocaleMap.find( aLocaleString );
-			if ( it != maSecondaryNativeLocaleMap.end() )
-				bFound = true;
-		}
-
-		if ( bFound )
-		{
-			aSuppLocales.realloc( ++nLen );
-			Locale *pLocaleArray = aSuppLocales.getArray();
-			pLocaleArray[ nLen - 1 ] = Locale( rLocale.Language, rLocale.Country, rLocale.Variant );
-			maSecondaryNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
 			return TRUE;
-		}
-	}
 
-	if ( rLocale.Country.getLength() )
-	{
-		bool bFound = false;
-		Locale aLocale( rLocale.Language, OUString(), OUString() );
-		aLocaleString = ImplGetLocaleString( aLocale );
-		it = maPrimaryNativeLocaleMap.find( aLocaleString );
-		if ( it != maPrimaryNativeLocaleMap.end() )
-		{
-			bFound = true;
-		}
-		else
-		{
-			it = maSecondaryNativeLocaleMap.find( aLocaleString );
-			if ( it != maSecondaryNativeLocaleMap.end() )
-				bFound = true;
-		}
-
-		if ( bFound )
-		{
-			aSuppLocales.realloc( ++nLen );
-			Locale *pLocaleArray = aSuppLocales.getArray();
-			pLocaleArray[ nLen - 1 ] = Locale( rLocale.Language, rLocale.Country, rLocale.Variant );
-			maSecondaryNativeLocaleMap[ ImplGetLocaleString( rLocale ) ] = it->second;
+		it = maSecondaryNativeLocaleMap.find( aLocaleString );
+		if ( it != maSecondaryNativeLocaleMap.end() )
 			return TRUE;
+
+		// Fix bug 2513 by checking for approximate matches in the native locales
+		if ( rLocale.Variant.getLength() )
+		{
+			bool bFound = false;
+			Locale aTmpLocale( rLocale.Language, rLocale.Country, OUString() );
+			OUString aTmpLocaleString = ImplGetLocaleString( aTmpLocale );
+			it = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
+			if ( it != maPrimaryNativeLocaleMap.end() )
+			{
+				bFound = true;
+			}
+			else
+			{
+				it = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
+				if ( it != maSecondaryNativeLocaleMap.end() )
+					bFound = true;
+			}
+
+			if ( bFound )
+			{
+				aSuppLocales.realloc( ++nLen );
+				Locale *pLocaleArray = aSuppLocales.getArray();
+				pLocaleArray[ nLen - 1 ] = rLocale;
+				maSecondaryNativeLocaleMap[ aLocaleString ] = it->second;
+				return TRUE;
+			}
+		}
+
+		if ( rLocale.Country.getLength() )
+		{
+			bool bFound = false;
+			Locale aTmpLocale( rLocale.Language, OUString(), OUString() );
+			OUString aTmpLocaleString = ImplGetLocaleString( aTmpLocale );
+			it = maPrimaryNativeLocaleMap.find( aTmpLocaleString );
+			if ( it != maPrimaryNativeLocaleMap.end() )
+			{
+				bFound = true;
+			}
+			else
+			{
+				it = maSecondaryNativeLocaleMap.find( aTmpLocaleString );
+				if ( it != maSecondaryNativeLocaleMap.end() )
+					bFound = true;
+			}
+
+			if ( bFound )
+			{
+				aSuppLocales.realloc( ++nLen );
+				Locale *pLocaleArray = aSuppLocales.getArray();
+				pLocaleArray[ nLen - 1 ] = rLocale;
+				maSecondaryNativeLocaleMap[ aLocaleString ] = it->second;
+				return TRUE;
+			}
 		}
 	}
 #endif	// USE_JAVA

@@ -83,14 +83,14 @@ CFMutableArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aL
 	return aRet;
 }
 
-CFMutableArrayRef NSSpellChecker_getLocales()
+CFMutableArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales )
 {
 	CFMutableArrayRef aRet = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
-	NSMutableSet *pLocales = [NSMutableSet setWithCapacity:64];
+	NSMutableSet *pLocales = ( aAppLocales ? [NSMutableSet setWithArray:(NSArray *)aAppLocales] : [NSMutableSet setWithCapacity:64] );
 
 	if ( aRet && pChecker && pLocales )
 	{
