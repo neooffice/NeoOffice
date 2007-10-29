@@ -1122,19 +1122,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					long nGlyph = pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
 					if ( !nGlyph )
 					{
-						if ( pCurrentLayoutData->mpFallbackFont )
-						{
-							// Fix bug 2091 by suppressing zero glyphs if there
-							// is a fallback font
-							continue;
-						}
-						else if ( !mnFallbackLevel && !bNeedSymbolFallback && nChar >= 0xe000 && nChar < 0xf900 )
+						if ( nChar >= 0xe000 && nChar < 0xf900 )
 						{
 							// If there is no fallback font and it is a Private
 							// Use Area character, use the symbol font
 							bNeedSymbolFallback = true;
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
+						else if ( pCurrentLayoutData->mpFallbackFont )
+						{
+							// Fix bug 2091 by suppressing zero glyphs if there
+							// is a fallback font
+							continue;
 						}
 					}
 
@@ -1188,7 +1188,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
 		JavaImplFontData *pHighScoreFontData = NULL;
-		if ( !mnFallbackLevel )
+		if ( !mnFallbackLevel || bNeedSymbolFallback )
 		{
 			SalData *pSalData = GetSalData();
 
