@@ -330,6 +330,7 @@ build.neo_patches: build.oo_all build.odf-converter_patches \
 	build.neo_jvmfwk_patch \
 	build.neo_lingucomponent_patch \
 	build.neo_sal_patch \
+	build.neo_sc_patch \
 	build.neo_sfx2_patch \
 	build.neo_shell_patch \
 	build.neo_store_patch \
