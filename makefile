@@ -117,6 +117,8 @@ PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Acco
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
 X11_PRODUCT_SUPPORT_URL_TEXT:=$(X11_PRODUCT_NAME) Support
+PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
+X11_PRODUCT_UPDATE_CHECK_URL=$(X11_PRODUCT_BASE_URL)/patchcheck.php
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
@@ -354,7 +356,7 @@ build.package: build.neo_patches
 
 build.package_X11: build.neo_patches
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$X11_PRODUCT_NAME" != "$(X11_PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
-	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "ALT_PRODUCT_BASE_URL=$(PRODUCT_BASE_URL)" "INSTALL_HOME=$(X11_INSTALL_HOME)" "NEO_TAG=$(X11_NEO_TAG)" "PRODUCT_BASE_URL=$(X11_PRODUCT_BASE_URL)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_DONATION_URL=$(X11_PRODUCT_DONATION_URL)" "PRODUCT_DIR_VERSION=$(X11_PRODUCT_DIR_VERSION)" "PRODUCT_NAME=$(X11_PRODUCT_NAME)" "PRODUCT_PATCH_VERSION=$(X11_PRODUCT_PATCH_VERSION)" "PRODUCT_SUPPORT_URL_TEXT=$(X11_PRODUCT_SUPPORT_URL_TEXT)" "PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_TRADEMARKED_NAME)" "PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_TRADEMARKED_NAME_RTF)" "PRODUCT_VERSION=$(X11_PRODUCT_VERSION)" "PRODUCT_WELCOME_URL=$(X11_PRODUCT_WELCOME_URL)" "SOURCE_HOME=$(X11_SOURCE_HOME)" "build.package_shared"
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "ALT_PRODUCT_BASE_URL=$(PRODUCT_BASE_URL)" "INSTALL_HOME=$(X11_INSTALL_HOME)" "NEO_TAG=$(X11_NEO_TAG)" "PRODUCT_BASE_URL=$(X11_PRODUCT_BASE_URL)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_DONATION_URL=$(X11_PRODUCT_DONATION_URL)" "PRODUCT_DIR_VERSION=$(X11_PRODUCT_DIR_VERSION)" "PRODUCT_NAME=$(X11_PRODUCT_NAME)" "PRODUCT_PATCH_VERSION=$(X11_PRODUCT_PATCH_VERSION)" "PRODUCT_SUPPORT_URL_TEXT=$(X11_PRODUCT_SUPPORT_URL_TEXT)" "PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_TRADEMARKED_NAME)" "PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_TRADEMARKED_NAME_RTF)" "PRODUCT_UPDATE_CHECK_URL=$(X11_PRODUCT_UPDATE_CHECK_URL)" "PRODUCT_VERSION=$(X11_PRODUCT_VERSION)" "PRODUCT_WELCOME_URL=$(X11_PRODUCT_WELCOME_URL)" "SOURCE_HOME=$(X11_SOURCE_HOME)" "build.package_shared"
 	touch "$@"
 
 build.package_shared:
@@ -475,6 +477,7 @@ else
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find program share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
+	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' > "program/versionrc"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do sed "s#>$(OO_PRODUCT_NAME)<#>$(PRODUCT_NAME)<#g" "$${i}" | sed "s#>$(OO_PRODUCT_VERSION)<#>$(PRODUCT_VERSION)<#g" | sed "s#>$(OO_REGISTRATION_URL)<#>$(PRODUCT_REGISTRATION_URL)<#g" > "../../out" ; mv -f "../../out" "$${i}" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(OO_PRODUCT_NAME)#$(OO_PRODUCT_NAME)#g' "$(PWD)/etc/help/main_transform.xsl" | sed 's#$$(OO_SUPPORT_URL)#$(OO_SUPPORT_URL)#g' | sed 's#$$(OO_SUPPORT_URL_TEXT)#$(OO_SUPPORT_URL_TEXT)#g' | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' > "help/main_transform.xsl"
 	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
@@ -534,7 +537,7 @@ build.patch_package: build.package
 
 build.patch_package_X11: build.package_X11
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$X11_PRODUCT_NAME" != "$(X11_PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
-	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "INSTALL_HOME=$(X11_INSTALL_HOME)" "PATCH_INSTALL_HOME=$(X11_PATCH_INSTALL_HOME)" "PRODUCT_BASE_URL=$(X11_PRODUCT_BASE_URL)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_DIR_VERSION=$(X11_PRODUCT_DIR_VERSION)" "PRODUCT_NAME=$(X11_PRODUCT_NAME)" "PRODUCT_PATCH_VERSION=$(X11_PRODUCT_PATCH_VERSION)" "PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_TRADEMARKED_NAME)" "PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_TRADEMARKED_NAME_RTF)" "PRODUCT_VERSION=$(X11_PRODUCT_VERSION)" "build.patch_package_shared"
+	"$(MAKE)" $(MFLAGS) "X11_PRODUCT=true" "INSTALL_HOME=$(X11_INSTALL_HOME)" "PATCH_INSTALL_HOME=$(X11_PATCH_INSTALL_HOME)" "PRODUCT_BASE_URL=$(X11_PRODUCT_BASE_URL)" "PRODUCT_DIR_NAME=$(X11_PRODUCT_DIR_NAME)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_DIR_PATCH_VERSION=$(X11_PRODUCT_DIR_PATCH_VERSION)" "PRODUCT_DIR_VERSION=$(X11_PRODUCT_DIR_VERSION)" "PRODUCT_NAME=$(X11_PRODUCT_NAME)" "PRODUCT_PATCH_VERSION=$(X11_PRODUCT_PATCH_VERSION)" "PRODUCT_TRADEMARKED_NAME=$(X11_PRODUCT_TRADEMARKED_NAME)" "PRODUCT_TRADEMARKED_NAME_RTF=$(X11_PRODUCT_TRADEMARKED_NAME_RTF)" "PRODUCT_UPDATE_CHECK_URL=$(X11_PRODUCT_UPDATE_CHECK_URL)" "PRODUCT_VERSION=$(X11_PRODUCT_VERSION)" "build.patch_package_shared"
 	touch "$@"
 
 build.patch_package_shared:
@@ -557,6 +560,13 @@ ifndef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -p "$(PWD)/etc/share/dict/ooo/DicOOo.sxw" "share/dict/ooo/DicOOo.sxw"
 endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' > "program/versionrc"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
+ifdef X11_PRODUCT
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS | grep -v /dict | grep -v /fonts | grep -v /Common-unx.xcu` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+else
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+endif
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice/Office"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do cp "$(PWD)/$(INSTALL_HOME)/package/Contents/$${i}" "$${i}" ; done'
 	rm -Rf "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
