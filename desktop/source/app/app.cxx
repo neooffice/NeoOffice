@@ -318,7 +318,7 @@
 
 #include <stdio.h>
 
-#if defined PRODUCT_WELCOME_URL || defined PRODUCT_DONATION_URL
+#if defined PRODUCT_WELCOME_URL
 
 #include <sys/param.h>
 #include <rtl/uri.hxx>
@@ -327,7 +327,7 @@
 #include "X11productcheck.hxx"
 #endif
  
-#endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
+#endif	// PRODUCT_WELCOME_URL
 
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
 #define U2S(STRING)                                ::rtl::OUStringToOString(STRING, RTL_TEXTENCODING_UTF8)
@@ -2874,18 +2874,14 @@ void Desktop::OpenDefault()
     _bSuppressOpenDefault = true;
 #endif	// USE_JAVA
 
-#if defined PRODUCT_WELCOME_URL || defined PRODUCT_DONATION_URL
+#if defined PRODUCT_WELCOME_URL && defined BUILD_MACHINE
     bool bShowWelcomePage = true;
+   	OUString aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
+    if ( !aProductKey.getLength() )
+    	bShowWelcomePage = false;
 
     OUString aUserInstallURL;
-    ::utl::Bootstrap::PathStatus aUserInstallStatus = ::utl::Bootstrap::locateUserInstallation( aUserInstallURL );
-
-    OUString aProductKey;
-    aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
-#endif	// PRODUCT_WELCOME_URL || PRODUCT_DONATION_URL
-
-#if defined PRODUCT_WELCOME_URL && defined BUILD_MACHINE
-    if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
+    if ( bShowWelcomePage && ::utl::Bootstrap::locateUserInstallation( aUserInstallURL ) == ::utl::Bootstrap::PATH_EXISTS )
     {
         OUString aWelcomeName = aUserInstallURL;
         aWelcomeName += OUString::createFromAscii( "/.welcomepage." );
@@ -2939,131 +2935,6 @@ void Desktop::OpenDefault()
         OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
     }
 #endif	// PRODUCT_WELCOME_URL && BUILD_MACHINE
-
-#ifdef PRODUCT_DONATION_URL
-    if ( !bShowWelcomePage )
-    {
-        bool bShowDonationPage = true;
-        bool bCheckForPatches = true;
-
-        OUString aProgName;
-        ::vos::OStartupInfo aInfo;
-        aInfo.getExecutableFile( aProgName );
-        sal_uInt32 lastIndex = aProgName.lastIndexOf('/');
-        if ( lastIndex > 0 )
-        {
-            OUString aNoShowDonationPage = OUString::createFromAscii( ".noshowdonationpage" );
-            aProgName = aProgName.copy( 0, lastIndex+1 );
-            OUString aNoShowDonationName( aProgName );
-            aNoShowDonationName += aNoShowDonationPage;
-            ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
-            ::osl::DirectoryItem aItem;
-            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-                bShowDonationPage = false;
-
-            if ( bShowDonationPage && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
-            {
-                aNoShowDonationName = aUserInstallURL;
-                aNoShowDonationName += OUString::createFromAscii( "/" );
-                aNoShowDonationName += aNoShowDonationPage;
-                if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowDonationName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-                    bShowDonationPage = false;
-            }
-
-            OUString aNoShowPatchesName( aProgName );
-            OUString aNoShowPatchesPage = OUString::createFromAscii( ".nocheckforpatches" );
-            aNoShowPatchesName += aNoShowPatchesPage;
-            if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-                bCheckForPatches = false;
-
-            if ( bCheckForPatches && aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
-            {
-                aNoShowPatchesName = aUserInstallURL;
-                aNoShowPatchesName += OUString::createFromAscii( "/" );
-                aNoShowPatchesName += aNoShowPatchesPage;
-                if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aNoShowPatchesName, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) && aStatus.getAttributes() )
-                    bCheckForPatches = false;
-            }
-        }
-
-        if ( aUserInstallStatus == ::utl::Bootstrap::PATH_EXISTS )
-        {
-            if ( bShowDonationPage )
-            {
-                aUserInstallURL += OUString::createFromAscii( "/.nextshowdonationpage" );
-
-                // Create the file if it does not exist
-                ::osl::File aFile( aUserInstallURL );
-                ::osl::FileBase::RC eError = aFile.open( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
-                aFile.close();
-
-                ::osl::FileStatus aStatus( FileStatusMask_CreationTime | FileStatusMask_ModifyTime );
-                ::osl::DirectoryItem aItem;
-                if ( ::osl::FileBase::E_None == ::osl::DirectoryItem::get( aUserInstallURL, aItem ) && ::osl::FileBase::E_None == aItem.getFileStatus( aStatus ) )
-                {
-                    bool bUpdateTimeStamp = false;
-                    if ( eError != ::osl::FileBase::E_None )
-                    {
-                        // Check the last modified data of the file
-                        TimeValue aModifyTime = aStatus.getModifyTime();
-                        TimeValue aCurrentTime;
-                        if ( osl_getSystemTime( &aCurrentTime ) && aCurrentTime.Seconds >= aModifyTime.Seconds )
-                        {
-                            // Open URL in application in read-only mode
-       	                    OUString aURL;
-#ifdef X11_PRODUCT_WELCOME_URL
-                            if ( ::desktop::IsX11Product() )
-                                aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( X11_PRODUCT_DONATION_URL ) );
-                            else
-#endif	// X11_PRODUCT_WELCOME_URL
-                                aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_DONATION_URL ) );
-                            if ( bCheckForPatches )
-                            {
-                                OUString aProductPatchKey;
-                                aProductPatchKey = ::utl::Bootstrap::getProductPatchLevel( aProductPatchKey );
-                                aURL += OUString::createFromAscii( "?viewinooo=" );
-                                aURL += OUString::createFromAscii( "&product=" );
-                                aURL += aProductKey;
-                                aURL += OUString::createFromAscii( "&patch=" );
-                                aURL += aProductPatchKey;
-                                aURL += OUString::createFromAscii( "&platform=" );
-#ifdef POWERPC
-                                aURL += OUString::createFromAscii( "PowerPC" );
-#else	// POWERPC
-                                aURL += OUString::createFromAscii( "Intel" );
-#endif	// POWERPC
-                            }
-
-                            // Open URL
-                            ProcessDocumentsRequest aRequest;
-                            aRequest.pcProcessed = NULL;
-                            aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
-                            OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
-
-                            bUpdateTimeStamp = true;
-                        }
-                    }
-                    else
-                    {
-                        bUpdateTimeStamp = true;
-                    }
-
-                    if ( bUpdateTimeStamp )
-                    {
-                        // Touch file
-                        TimeValue aCurrentTime;
-                        if ( osl_getSystemTime( &aCurrentTime ) )
-                        {
-                            TimeValue aUpdateTime( aCurrentTime );
-                            aUpdateTime.Seconds += 15 * 24 * 60 * 60; // 15 days
-                            ::osl::File::setTime( aUserInstallURL, aCurrentTime, aCurrentTime, aUpdateTime );
-                        }
-                    }
-                }
-            }
-        }
-    }
-#endif	// PRODUCT_DONATION_URL
 }
 
 
