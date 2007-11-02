@@ -551,11 +551,9 @@ endif
 # With gcc 4.x, we must fully strip the soffice.bin executable
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin" ; strip "program/soffice.bin"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/shell/$(UOUTPUTDIR)/bin/senddoc" "program/senddoc" ; chmod a+x "program/senddoc"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/config"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/hsqldb/$(UOUTPUTDIR)/misc/build/hsqldb/lib/hsqldb.jar" "program/classes"
 ifndef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
-endif
-ifndef X11_PRODUCT
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/dict/ooo"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -p "$(PWD)/etc/share/dict/ooo/DicOOo.sxw" "share/dict/ooo/DicOOo.sxw"
 endif
