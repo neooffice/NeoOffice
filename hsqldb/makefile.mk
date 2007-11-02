@@ -72,6 +72,10 @@ BUILD_ACTION=dmake $(MFLAGS) $(CALLMACROS)
 .INCLUDE : target.mk
 .INCLUDE : tg_ext.mk
 
+.IF "$(GUIBASE)" == "java"
+BACK_PATH:=$(BACK_PATH)..$/..$/$(PRJNAME)$/
+.ENDIF		# "$(GUIBASE)" == "java"
+
 .ELSE
 all:
         @echo java disabled
