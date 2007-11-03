@@ -1526,6 +1526,7 @@ public final class VCLEvent extends AWTEvent {
 					case KeyEvent.VK_ADD:
 						keyCode = VCLEvent.KEY_ADD;
 						break;
+					case KeyEvent.VK_MINUS:
 					case KeyEvent.VK_SUBTRACT:
 						keyCode = VCLEvent.KEY_SUBTRACT;
 						break;
@@ -2264,7 +2265,7 @@ public final class VCLEvent extends AWTEvent {
 				outCode = KeyEvent.VK_ADD;
 				break;
 			case VCLEvent.KEY_SUBTRACT:
-				outCode = KeyEvent.VK_SUBTRACT;
+				outCode = KeyEvent.VK_MINUS;
 				break;
 			case VCLEvent.KEY_MULTIPLY:
 				outCode = KeyEvent.VK_MULTIPLY;
