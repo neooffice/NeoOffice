@@ -225,12 +225,12 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;JLcom/sun/star/vcl/VCLFrame;)V";
+		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;JLcom/sun/star/vcl/VCLFrame;Z)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 
-	jvalue args[4];
+	jvalue args[5];
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
 	args[2].j = jlong( pFrame );
@@ -238,6 +238,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		args[3].l = pParent->mpVCLFrame->getJavaObject();
 	else
 		args[3].l = NULL;
+	args[4].z = jboolean( IsRunningPanther() || IsRunningTiger() );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );

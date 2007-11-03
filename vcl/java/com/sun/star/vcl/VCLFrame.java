@@ -1373,6 +1373,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private long style = 0;
 
 	/**
+	 * The use input method fix flag.
+	 */
+	private boolean useInputMethodFix = false;
+
+	/**
 	 * The native window.
 	 */
 	private Window window = null;
@@ -1389,12 +1394,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param q the event queue to post events to
 	 * @param f the frame pointer
 	 * @param p the parent frame
+	 * @param b <code>true</code> if the input method fix is needed otherwise
+	 *  <code>false</code>
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b) {
 
 		queue = q;
 		frame = f;
 		style = s;
+		useInputMethodFix = b;
 
 		// Create the native window
 		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0)
@@ -2001,19 +2009,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// input method events with the text set to null to indicate that
 			// the uncommitted text should be cancelled.
 			if (lastUncommittedInputMethodEvent != null) {
-				AttributedCharacterIterator lastText = lastUncommittedInputMethodEvent.getText();
-				boolean commitLast = false;
-				int lastCount = 0;
-				for (char c = lastText.first(); c != CharacterIterator.DONE; c = lastText.next()) {
-					// Fix bug 2492 by only commiting if there are uncommitted
-					// characters in or below the Indic range
-					if (!commitLast && c < 0x0E00)
-						commitLast = true;
-					lastCount++;
-				}
+				if (useInputMethodFix) {
+					AttributedCharacterIterator lastText = lastUncommittedInputMethodEvent.getText();
+					boolean commitLast = false;
+					int lastCount = 0;
+					for (char c = lastText.first(); c != CharacterIterator.DONE; c = lastText.next()) {
+						// Fix bug 2492 by only committing if there are
+						// uncommitted characters in or below the Indic range
+						if (!commitLast && c < 0x0E00)
+							commitLast = true;
+						lastCount++;
+					}
 
-				if (commitLast)
-					e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), lastText, lastCount, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
+					if (commitLast)
+						e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), lastText, lastCount, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
+				}
 				lastUncommittedInputMethodEvent = null;
 			}
 		}
@@ -2024,7 +2034,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (count > e.getCommittedCharacterCount()) {
 			lastUncommittedInputMethodEvent = e;
 		}
-		else {
+		else if (useInputMethodFix) {
 			// Fix bug 2492 by handling when Java duplicates committed input
 			// in a key typed event
 			if (count == 1)
