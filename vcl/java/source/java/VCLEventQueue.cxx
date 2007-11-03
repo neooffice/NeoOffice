@@ -94,40 +94,43 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// Determine if fixes for Java 1.4.x and early versions of Java 1.5
 		// are needed
 		BOOL bUseKeyEntryFix = FALSE;
-		jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
-		if ( systemClass )
+		if ( IsRunningPanther() || IsRunningTiger() )
 		{
-			jmethodID mID = NULL;
-			OUString aJavaHomePath;
-			if ( !mID )
+			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
+			if ( systemClass )
 			{
-				char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
-				mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
-			}
-			OSL_ENSURE( mID, "Unknown method id!" );
-			if ( mID )
-			{
-				jvalue args[1];
-				args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.specification.version" ) );
-				jstring tempJavaSpecVersion = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
-				if ( tempJavaSpecVersion )
+				jmethodID mID = NULL;
+				OUString aJavaHomePath;
+				if ( !mID )
 				{
-					OUString aJavaSpecVersion = JavaString2String( t.pEnv, tempJavaSpecVersion );
-					if ( aJavaSpecVersion.getLength() )
+					char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
+					mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
+				}
+				OSL_ENSURE( mID, "Unknown method id!" );
+				if ( mID )
+				{
+					jvalue args[1];
+					args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.specification.version" ) );
+					jstring tempJavaSpecVersion = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+					if ( tempJavaSpecVersion )
 					{
-						if ( aJavaSpecVersion == OUString::createFromAscii( "1.4" ) )
+						OUString aJavaSpecVersion = JavaString2String( t.pEnv, tempJavaSpecVersion );
+						if ( aJavaSpecVersion.getLength() )
 						{
-							bUseKeyEntryFix = TRUE;
-						}
-						else if ( aJavaSpecVersion == OUString::createFromAscii( "1.5" ) )
-						{
-							args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.version" ) );
-							jstring tempJavaVersion = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
-							if ( tempJavaVersion )
+							if ( aJavaSpecVersion == OUString::createFromAscii( "1.4" ) )
 							{
-								OUString aJavaVersion = JavaString2String( t.pEnv, tempJavaVersion );
-								if ( aJavaVersion.compareTo( OUString::createFromAscii( "1.5.0_06" ) ) < 0 )
-									bUseKeyEntryFix = TRUE;
+								bUseKeyEntryFix = TRUE;
+							}
+							else if ( aJavaSpecVersion == OUString::createFromAscii( "1.5" ) )
+							{
+								args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.version" ) );
+								jstring tempJavaVersion = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+								if ( tempJavaVersion )
+								{
+									OUString aJavaVersion = JavaString2String( t.pEnv, tempJavaVersion );
+									if ( aJavaVersion.compareTo( OUString::createFromAscii( "1.5.0_06" ) ) < 0 )
+										bUseKeyEntryFix = TRUE;
+								}
 							}
 						}
 					}
