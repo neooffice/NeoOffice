@@ -85,6 +85,7 @@ import java.text.AttributedString;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.Locale;
 
 /**
  * The Java class that implements the SalFrame C++ class methods.
@@ -2722,6 +2723,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			
 			panel.setVisible(true);
 			window.show();
+
+			// Fix bug 2702 by ensuring that the input context's
+			// locale is never null
+			InputContext ic = window.getInputContext();
+			if (ic != null && ic.getLocale() == null)
+				ic.selectInputMethod(Locale.getDefault());
+
 			if (focusable) {
 				window.setFocusable(true);
 				window.setFocusableWindowState(true);
