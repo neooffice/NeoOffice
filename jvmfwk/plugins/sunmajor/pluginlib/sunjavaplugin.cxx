@@ -72,6 +72,10 @@
 #include <sys/sysctl.h>
 #include <unistd.h>
 
+#include <premac.h> 
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
 #ifndef DLLPOSTFIX
 #error DLLPOSTFIX must be defined in makefile.mk
 #endif
@@ -780,7 +784,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #ifdef USE_JAVA
         // We cannot trust that the OOo build has honored the -source flag so
         // don't use it here. This will will prevent loading of JVM's that
-        //  cannot load all classes built by OOo.
+        // cannot load all classes built by OOo.
         if (err == 0)
         {
             (*ppEnv)->FindClass( "JREProperties" );
@@ -796,7 +800,9 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         // filter out the messages
         int fd[2];
 		const char *pGrepCmd = "/usr/bin/grep";
-        if (err == 0 && !access( pGrepCmd, R_OK | X_OK ) && !pipe(fd))
+        long res = 0;
+        Gestalt( gestaltSystemVersion, &res );
+        if ( err == 0 && ( ( res >> 8 ) & 0x00FF ) == 0x10 && ( ( res >> 4 ) & 0x000F ) == 0x4 && !access( pGrepCmd, R_OK | X_OK ) && !pipe(fd) )
         {
             pid_t pid = fork();
             if (!pid)
