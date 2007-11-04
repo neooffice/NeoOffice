@@ -46,7 +46,7 @@ BEGIN_C
 BOOL NSApplication_isActive();
 void NSFontManager_acquire();
 void NSFontManager_release();
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix );
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix );
 #ifdef __cplusplus
 END_C
 #endif

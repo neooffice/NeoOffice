@@ -358,6 +358,7 @@ const static NSString *pCancelInputMethodText = @" ";
 @end
 
 static BOOL bUseKeyEntryFix = NO;
+static BOOL bUsePartialKeyEntryFix = NO;
 static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
@@ -383,8 +384,8 @@ static VCLResponder *pSharedResponder = nil;
 
 				// We still need the key entry fix if there is marked text
 				// otherwise bug 1429 reoccurs
-				BOOL bNeedKeyEntryFix = bUseKeyEntryFix;
-				if ( !bNeedKeyEntryFix && [self respondsToSelector:@selector(hasMarkedText)] )
+				BOOL bNeedKeyEntryFix = ( bUseKeyEntryFix || bUsePartialKeyEntryFix );
+				if ( bNeedKeyEntryFix && [self respondsToSelector:@selector(hasMarkedText)] )
 					bNeedKeyEntryFix = [self hasMarkedText];
 
 				if ( bNeedKeyEntryFix )
@@ -424,18 +425,20 @@ static VCLResponder *pSharedResponder = nil;
 @interface InstallVCLEventQueueClasses : NSObject
 {
 	BOOL					mbUseKeyEntryFix;
+	BOOL					mbUsePartialKeyEntryFix;
 }
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix;
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
 {
 	[super init];
 
 	mbUseKeyEntryFix = bUseKeyEntryFix;
+	mbUsePartialKeyEntryFix = bUsePartialKeyEntryFix;
 
 	return self;
 }
@@ -446,6 +449,7 @@ static VCLResponder *pSharedResponder = nil;
 
 	// Initialize statics
 	bUseKeyEntryFix = mbUseKeyEntryFix;
+	bUsePartialKeyEntryFix = mbUsePartialKeyEntryFix;
 	pSharedResponder = [[VCLResponder alloc] init];
 	if ( pSharedResponder )
 		[pSharedResponder retain];
@@ -491,11 +495,11 @@ void NSFontManager_release()
 	}
 }
 
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix )
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 

@@ -94,8 +94,11 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// Determine if fixes for Java 1.4.x and early versions of Java 1.5
 		// are needed
 		BOOL bUseKeyEntryFix = FALSE;
+		BOOL bUsePartialKeyEntryFix = FALSE;
 		if ( IsRunningPanther() || IsRunningTiger() )
 		{
+			bUsePartialKeyEntryFix = TRUE;
+
 			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
 			if ( systemClass )
 			{
@@ -142,7 +145,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-        VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix );
+        VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUsePartialKeyEntryFix );
 
 		// Load our AWTFont replacement class
 		OUString aVCLJavaLibName;
