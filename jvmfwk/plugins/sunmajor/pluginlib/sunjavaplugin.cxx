@@ -796,13 +796,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         }
 
         // The JVM's native drawing methods print many spurious error messages
-        // on Mac OS X 10.4 which will flood the system log so we need to
-        // filter out the messages
+        // on Mac OS X 10.4 and higher which will flood the system log so we
+        // need to filter out the messages
         int fd[2];
 		const char *pGrepCmd = "/usr/bin/grep";
-        long res = 0;
-        Gestalt( gestaltSystemVersion, &res );
-        if ( err == 0 && ( ( res >> 8 ) & 0x00FF ) == 0x10 && ( ( res >> 4 ) & 0x000F ) == 0x4 && !access( pGrepCmd, R_OK | X_OK ) && !pipe(fd) )
+        if ( err == 0 && !access( pGrepCmd, R_OK | X_OK ) && !pipe(fd) )
         {
             pid_t pid = fork();
             if (!pid)
@@ -812,7 +810,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
                 dup2(fd[0], 0);
                 close(fd[0]);
                 close(fd[1]);
-                execlp( pGrepCmd, pGrepCmd, "-v", "^ERROR: ", NULL );
+
+                long res = 0;
+                Gestalt( gestaltSystemVersion, &res );
+                if ( ( ( res >> 8 ) & 0x00FF ) == 0x10 && ( ( res >> 4 ) & 0x000F ) <= 0x4 )
+                    execlp( pGrepCmd, pGrepCmd, "-v", "^ERROR: ", NULL );
+                else
+                    execlp( pGrepCmd, pGrepCmd, "-v", "^<ERROR>: ", NULL );
                 exit(0);
             }
             else if (pid > 0)
