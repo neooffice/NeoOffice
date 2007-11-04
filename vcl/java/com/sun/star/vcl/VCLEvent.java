@@ -1256,12 +1256,10 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	public int getCursorPosition() {
 
-		if (caret != null) {
-			return (caret != null ? caret.getInsertionIndex() : 0);
-		}
-		else {
+		if (caret != null)
+			return caret.getInsertionIndex();
+		else
 			return 0;
-		}
 
 	}
 
