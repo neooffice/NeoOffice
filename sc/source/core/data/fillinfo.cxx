@@ -403,16 +403,20 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
                 {
                     if ( !RowHidden( nThisRow,nTab ) )
                     {
+#ifdef USE_JAVA
+                        // Fix bug 2670 by not allowing reading to go past
+                        // the last row info array element
+                        while ( nArrY < ROWINFO_MAX && pRowInfo[nArrY].nRowNo < nThisRow )
+                            ++nArrY;
+                        if ( nArrY >= ROWINFO_MAX )
+                            break;
+#else	// USE_JAVA
                         while ( pRowInfo[nArrY].nRowNo < nThisRow )
                             ++nArrY;
+#endif	// USE_JAVA
                         DBG_ASSERT( pRowInfo[nArrY].nRowNo == nThisRow, "Zeile nicht gefunden in FillInfo" );
 
                         RowInfo* pThisRowInfo = &pRowInfo[nArrY];
-#ifdef USE_JAVA
-                        // Fix bug 2670 by not allowing reading a null array
-                        if (!pThisRowInfo->pCellInfo)
-                            break;
-#endif	// USE_JAVA
                         CellInfo* pInfo = &pThisRowInfo->pCellInfo[nArrX];
                         pInfo->pCell = pThisCol->pItems[nUIndex].pCell;
                         if (pInfo->pCell->GetCellType() != CELLTYPE_NOTE)
