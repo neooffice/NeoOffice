@@ -2099,7 +2099,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD && e.getModifiersEx() == InputEvent.META_DOWN_MASK && keyCode == KeyEvent.VK_MULTIPLY)) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getModifiersEx() & InputEvent.META_DOWN_MASK) != 0) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
 		}
 
@@ -2122,7 +2122,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
-		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD && e.getModifiersEx() == InputEvent.META_DOWN_MASK && keyCode == KeyEvent.VK_MULTIPLY)) {
+		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getModifiersEx() & InputEvent.META_DOWN_MASK) != 0) {
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
 		}
 
@@ -2153,7 +2153,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// These are handled in the key pressed and released events.
 		int modifiers = e.getModifiersEx();
-		if (keyChar == (char)0x03 || keyChar == (char)0x08 || keyChar == (char)0x0a || keyChar == (char)0x0d || keyChar == (char)0x7f)
+		if (keyChar == (char)0x03 || keyChar == (char)0x08 || keyChar == (char)0x0a || keyChar == (char)0x0d || keyChar == (char)0x7f || (modifiers & InputEvent.META_DOWN_MASK) != 0)
 			return;
 
 		// Fix bug 710 by stripping out the Alt modifier. Note that we do it
