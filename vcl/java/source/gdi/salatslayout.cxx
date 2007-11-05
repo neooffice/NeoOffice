@@ -1234,11 +1234,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		int nNextLevel = mnFallbackLevel + 1;
 		::std::map< int, com_sun_star_vcl_VCLFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
+		{
 			delete it->second;
+			mpGraphics->maFallbackFonts.erase( it );
+		}
+
 		if ( pHighScoreFontData )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
 		else if ( pFallbackFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
+		else
+			rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 	}
 
 	return bRet;

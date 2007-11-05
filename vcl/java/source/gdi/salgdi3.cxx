@@ -576,8 +576,13 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 	pFont->maSearchName = pFont->mpFontData->maName;
 
-	if ( maFallbackFonts[ nFallbackLevel ] )
-		delete maFallbackFonts[ nFallbackLevel ];
+	::std::map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = maFallbackFonts.find( nFallbackLevel );
+	if ( ffit != maFallbackFonts.end() )
+	{
+		delete ffit->second;
+		maFallbackFonts.erase( ffit );
+	}
+
 	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( ((JavaImplFontData *)pFont->mpFontData)->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
 
 	if ( !nFallbackLevel )
