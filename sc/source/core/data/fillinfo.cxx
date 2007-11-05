@@ -410,8 +410,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
                         RowInfo* pThisRowInfo = &pRowInfo[nArrY];
 #ifdef USE_JAVA
                         // Fix bug 2670 by not allowing reading a null array
-                        if (pThisRowInfo->pCellInfo)
-                        {
+                        if (!pThisRowInfo->pCellInfo)
+                            break;
 #endif	// USE_JAVA
                         CellInfo* pInfo = &pThisRowInfo->pCellInfo[nArrX];
                         pInfo->pCell = pThisCol->pItems[nUIndex].pCell;
@@ -420,9 +420,6 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
                             pThisRowInfo->bEmptyText = FALSE;                   // Zeile nicht leer
                             pInfo->bEmptyCellText = FALSE;                      // Zelle nicht leer
                         }
-#ifdef USE_JAVA
-                        }
-#endif	// USE_JAVA
                         ++nArrY;
                     }
                     ++nUIndex;
