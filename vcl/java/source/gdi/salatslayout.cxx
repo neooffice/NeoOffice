@@ -1170,8 +1170,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( bFirstGlyph )
 			{
-				// Don't append a fake spacing glyph as it can cause extraneous
-				// whitespace when using Indic characters with a fallback font
+				// Don't append a fake spacing glyph in fallback levels as it
+				// can cause extraneous whitespace when using Indic characters
+				// with a fallback font
+				if ( !mnFallbackLevel )
+					AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
 				aPos.X() += nCharWidth;
 				bRet = true;
 			}
