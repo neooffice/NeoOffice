@@ -122,8 +122,8 @@
 					}
 				}
 
+				[pFlippedView removeFromSuperview];
 				[pFlippedView unlockFocus];
-				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
 
 				if ( pFocusView )
 					[pFocusView lockFocus];
@@ -217,8 +217,8 @@
 					}
 				}
 
+				[pFlippedView removeFromSuperview];
 				[pFlippedView unlockFocus];
-				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
 
 				if ( pFocusView )
 					[pFocusView lockFocus];
@@ -335,8 +335,8 @@
 					}
 				}
 
+				[pFlippedView removeFromSuperview];
 				[pFlippedView unlockFocus];
-				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
 
 				if ( pFocusView )
 					[pFocusView lockFocus];
@@ -443,8 +443,8 @@
 					}
 				}
 
+				[pFlippedView removeFromSuperview];
 				[pFlippedView unlockFocus];
-				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
 
 				if ( pFocusView )
 					[pFocusView lockFocus];
@@ -554,8 +554,8 @@
 					}
 				}
 
+				[pFlippedView removeFromSuperview];
 				[pFlippedView unlockFocus];
-				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
 
 				if ( pFocusView )
 					[pFocusView lockFocus];
@@ -655,8 +655,8 @@
 					}
 				}
 
+				[pFlippedView removeFromSuperview];
 				[pFlippedView unlockFocus];
-				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
 
 				if ( pFocusView )
 					[pFocusView lockFocus];
@@ -760,8 +760,8 @@
 					}
 				}
 
+				[pFlippedView removeFromSuperview];
 				[pFlippedView unlockFocus];
-				[pFlippedView removeFromSuperviewWithoutNeedingDisplay];
 
 				if ( pFocusView )
 					[pFocusView lockFocus];
