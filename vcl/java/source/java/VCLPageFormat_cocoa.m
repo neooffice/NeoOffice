@@ -99,9 +99,7 @@ static BOOL bInDialog = NO;
 		}
 	}
 
-	NSPrintOperation *pOperation = [[VCLPrintOperation superclass] printOperationWithView:aView printInfo:aPrintInfo];
-
-	return pOperation;
+	return [[VCLPrintOperation superclass] printOperationWithView:aView printInfo:aPrintInfo];
 }
 
 @end
