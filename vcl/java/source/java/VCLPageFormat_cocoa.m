@@ -72,38 +72,56 @@ static BOOL bInDialog = NO;
 @end
 
 @interface VCLPrintOperation : NSPrintOperation
-+ (NSPrintOperation *)printOperationWithView:(NSView *)aView printInfo:(NSPrintInfo *)aPrintInfo;
++ (NSPrintOperation *)printOperationWithView:(NSView *)pView;
++ (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
++ (void)setCurrentOperation:(NSPrintOperation *)pOperation;
 @end
 
 @implementation VCLPrintOperation
 
-+ (NSPrintOperation *)printOperationWithView:(NSView *)aView printInfo:(NSPrintInfo *)aPrintInfo
++ (NSPrintOperation *)printOperationWithView:(NSView *)pView
+{
+	return [VCLPrintOperation printOperationWithView:pView printInfo:[NSPrintInfo sharedPrintInfo]];
+}
+
++ (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo
 {
 	// Fix bugs 1688 and 2517 by restoring the print info's dictionary values
 	// set by the native print dialog
-	NSMutableDictionary *pDictionary = [(NSPrintInfo *)aPrintInfo dictionary];
-	if ( pDictionary )
+	if ( pPrintInfo )
 	{
-		NSDictionary *pDictClone = [pDictionary objectForKey:VCLPrintDictionary];
-		if ( pDictClone )
+		NSMutableDictionary *pDictionary = [(NSPrintInfo *)pPrintInfo dictionary];
+		if ( pDictionary )
 		{
-			NSNumber *pNumber = [pDictClone objectForKey:NSPrintMustCollate];
-			if ( pNumber )
-				[pDictionary setObject:pNumber forKey:NSPrintMustCollate];
+			NSDictionary *pDictClone = [pDictionary objectForKey:VCLPrintDictionary];
+			if ( pDictClone )
+			{
+				NSNumber *pNumber = [pDictClone objectForKey:NSPrintMustCollate];
+				if ( pNumber )
+					[pDictionary setObject:pNumber forKey:NSPrintMustCollate];
 
-			pNumber = [pDictClone objectForKey:NSPrintCopies];
-			if ( pNumber )
-				[pDictionary setObject:pNumber forKey:NSPrintCopies];
+				pNumber = [pDictClone objectForKey:NSPrintCopies];
+				if ( pNumber )
+					[pDictionary setObject:pNumber forKey:NSPrintCopies];
 
-			[pDictionary removeObjectForKey:VCLPrintDictionary];
+				[pDictionary removeObjectForKey:VCLPrintDictionary];
+			}
 		}
 	}
 
-	NSPrintOperation *pOperation = [[VCLPrintOperation superclass] printOperationWithView:aView printInfo:aPrintInfo];
+	NSPrintOperation *pOperation = [[VCLPrintOperation superclass] printOperationWithView:pView printInfo:pPrintInfo];
 
-	[NSPrintOperation setCurrentOperation:pOperation];
+	[VCLPrintOperation setCurrentOperation:pOperation];
 
 	return pOperation;
+}
+
++ (void)setCurrentOperation:(NSPrintOperation *)pOperation
+{
+	// Attempt to fix blank page printing in bug 2674 by never allowing the
+	// print operation to be set to nil
+	if ( pOperation )
+		[[VCLPrintOperation superclass] setCurrentOperation:pOperation];
 }
 
 @end
