@@ -216,6 +216,10 @@ public:
 	return 0xffffffff;									\
 }
 
+#ifdef USE_JAVA
+static String aMTExtraFontName( RTL_CONSTASCII_USTRINGPARAM( "MT Extra" ) );
+#endif	// USE_JAVA
+
 //=================== Methoden von PictReader ==============================
 
 void PictReader::SetLineColor( const Color& rColor )
@@ -1169,6 +1173,10 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		else                      aActFont.SetFamily(FAMILY_ROMAN);
 		if		( nUSHORT == 23 ) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
 		else	aActFont.SetCharSet( gsl_getSystemTextEncoding() );
+#ifdef USE_JAVA
+		if (nUSHORT==2515)
+			aActFont.SetName( aMTExtraFontName );
+#endif	// USE_JAVA
 		eActMethod=PDM_UNDEFINED;
 		nDataSize=2;
 		break;
@@ -1405,6 +1413,10 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		pPict->Read( &sFName, nLen );
 		sFName[ nLen ] = 0;
 		String aString( (const sal_Char*)&sFName, gsl_getSystemTextEncoding() );
+#ifdef USE_JAVA
+		if (nUSHORT==2515)
+			aString = aMTExtraFontName;
+#endif	// USE_JAVA
 		aActFont.SetName( aString );
 		eActMethod=PDM_UNDEFINED;
 		break;
