@@ -1,0 +1,2797 @@
+*** misc/rhino1_5R4/build.xml	Tue Mar 22 13:23:46 2005
+--- misc/build/rhino1_5R4/build.xml	Tue Jul  4 14:59:43 2006
+***************
+*** 4,10 ****
+  Build file for Rhino using Ant (see http://jakarta.apache.org/ant/index.html)
+  Requires Ant version 1.2 or later
+  -->
+! <project name="Rhino" default="default" basedir=".">
+  
+    <target name="properties">
+      <property name="name" value="rhino"/>
+--- 4,10 ----
+  Build file for Rhino using Ant (see http://jakarta.apache.org/ant/index.html)
+  Requires Ant version 1.2 or later
+  -->
+! <project name="Rhino" default="jar" basedir=".">
+  
+    <target name="properties">
+      <property name="name" value="rhino"/>
+*** misc/rhino1_5R4/makefile.mk	Tue Jul  4 15:14:27 2006
+--- misc/build/rhino1_5R4/makefile.mk	Tue Jul  4 14:59:43 2006
+***************
+*** 1 ****
+! dummy
+--- 1,41 ----
+! #*************************************************************************
+! #
+! #   $RCSfile$
+! #
+! #   $Revision$
+! #
+! #   last change: $Author$ $Date$
+! #
+! #   The Contents of this file are made available subject to
+! #   the terms of GNU Lesser General Public License Version 2.1.
+! #
+! #
+! #     GNU Lesser General Public License Version 2.1
+! #     =============================================
+! #     Copyright 2005 by Sun Microsystems, Inc.
+! #     901 San Antonio Road, Palo Alto, CA 94303, USA
+! #
+! #     This library is free software; you can redistribute it and/or
+! #     modify it under the terms of the GNU Lesser General Public
+! #     License version 2.1, as published by the Free Software Foundation.
+! #
+! #     This library is distributed in the hope that it will be useful,
+! #     but WITHOUT ANY WARRANTY; without even the implied warranty of
+! #     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+! #     Lesser General Public License for more details.
+! #
+! #     You should have received a copy of the GNU Lesser General Public
+! #     License along with this library; if not, write to the Free Software
+! #     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+! #     MA  02111-1307  USA
+! #
+! #*************************************************************************
+! 
+! PRJ=..$/..$/..$/..
+! PRJNAME=ooo_rhino
+! TARGET=jar
+! 
+! .INCLUDE : ant.mk
+! 
+! ALLTAR : ANTBUILD
+! 
+*** misc/rhino1_5R4/src/org/mozilla/javascript/Context.java	Tue Mar 22 13:20:48 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/Context.java	Tue Jul  4 14:59:43 2006
+***************
+*** 386,392 ****
+       *         number, and date.
+       */
+       public String getImplementationVersion() {
+!         return "Rhino 1.5 release 4 2003 02 10";
+       }
+  
+      /**
+--- 386,392 ----
+       *         number, and date.
+       */
+       public String getImplementationVersion() {
+!         return "Rhino 1.5 release 4.1 2003 04 21";
+       }
+  
+      /**
+***************
+*** 1835,1841 ****
+--- 1835,1899 ----
+  
+      public GeneratedClassLoader createClassLoader(ClassLoader parent) {
+          return new DefiningClassLoader(parent);
++     }
+  
++     public final ClassLoader getApplicationClassLoader()
++     {
++         if (applicationClassLoader != null) {
++             return applicationClassLoader;
++         }
++         ClassLoader loader = null;
++         if (method_getContextClassLoader != null) {
++             Thread thread = Thread.currentThread();
++             try {
++                 loader = (ClassLoader)method_getContextClassLoader.invoke(
++                              thread, ScriptRuntime.emptyArgs);
++             } catch (Exception ex) { }
++         }
++         if (loader != null && !testIfCanUseLoader(loader)) {
++             loader = null;
++         }
++         if (loader == null) {
++             // If Context was subclassed, the following gets the loader
++             // for the subclass which can be different from Rhino loader,
++             // but then proper Rhino classes should be accessible through it
++             // in any case or JVM class loading is severely broken
++             loader = this.getClass().getClassLoader();
++         }
++         // The result is not cached since caching
++         // Thread.getContextClassLoader prevents it from GC which
++         // may lead to a memory leak.
++         return loader;
++     }
++ 
++     public void setApplicationClassLoader(ClassLoader loader)
++     {
++         if (loader == null) {
++             // restore default behaviour
++             applicationClassLoader = null;
++             return;
++         }
++         if (!testIfCanUseLoader(loader)) {
++             throw new IllegalArgumentException(
++                 "Loader can not resolve Rhino classes");
++         }
++         applicationClassLoader = loader;
++     }
++ 
++     private boolean testIfCanUseLoader(ClassLoader loader)
++     {
++         // If Context was subclussed, cxClass != Context.class
++         Class cxClass = this.getClass();
++         // Check that Context or its suclass is accesible from this loader
++         Class x = ScriptRuntime.getClassOrNull(loader, cxClass.getName());
++         if (x != cxClass) {
++             // The check covers the case when x == null =>
++             // threadLoader does not know about Rhino or the case
++             // when x != null && x != cxClass =>
++             // threadLoader loads unrelated Rhino instance
++             return false;
++         }
++         return true;
+      }
+  
+      /********** end of API **********/
+***************
+*** 2169,2174 ****
+--- 2227,2250 ----
+          } catch (Exception ex) { }
+      }
+  
++     // We'd like to use "Thread.getContextClassLoader", but
++     // that's only available on Java2.
++     private static Method method_getContextClassLoader;
++ 
++     static {
++         // Don't use "Thread.class": that performs the lookup
++         // in the class initializer, which doesn't allow us to
++         // catch possible security exceptions.
++         Class threadClass = ScriptRuntime.getClassOrNull("java.lang.Thread");
++         if (threadClass != null) {
++             try {
++                 method_getContextClassLoader =
++                     threadClass.getDeclaredMethod("getContextClassLoader",
++                                                    new Class[0]);
++             } catch (Exception ex) { }
++         }
++     }
++ 
+      private static final Object contextListenersLock = new Object();
+      private static Object[] contextListeners;
+  
+***************
+*** 2203,2208 ****
+--- 2279,2285 ----
+      private int enterCount;
+      private Object[] listeners;
+      private Hashtable hashtable;
++     private ClassLoader applicationClassLoader;
+  
+      /**
+       * This is the list of names of objects forcing the creation of
+*** misc/rhino1_5R4/src/org/mozilla/javascript/DefiningClassLoader.java	Tue Mar 22 13:20:47 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/DefiningClassLoader.java	Tue Jul  4 14:59:43 2006
+***************
+*** 49,59 ****
+      implements GeneratedClassLoader
+  {
+      public DefiningClassLoader() {
+!         this.parentLoader = getClass().getClassLoader();
+      }
+  
+      public DefiningClassLoader(ClassLoader parentLoader) {
+          this.parentLoader = parentLoader;
+      }
+  
+      public Class defineClass(String name, byte[] data) {
+--- 49,82 ----
+      implements GeneratedClassLoader
+  {
+      public DefiningClassLoader() {
+!         init(getClass().getClassLoader());
+      }
+  
+      public DefiningClassLoader(ClassLoader parentLoader) {
++ 
++         init(parentLoader);
++     }
++ 
++     private void init(ClassLoader parentLoader) {
++ 
+          this.parentLoader = parentLoader;
++ 
++         this.contextLoader = null;
++         if (method_getContextClassLoader != null) {
++             try {
++                 this.contextLoader = (ClassLoader)
++                     method_getContextClassLoader.invoke(
++                         Thread.currentThread(),
++                         ScriptRuntime.emptyArgs);
++             } catch (IllegalAccessException ex) {
++             } catch (InvocationTargetException ex) {
++             } catch (SecurityException ex) {
++             }
++             if (this.contextLoader == this.parentLoader) {
++                 this.contextLoader = null;
++             }
++         }
++ 
+      }
+  
+      public Class defineClass(String name, byte[] data) {
+***************
+*** 67,84 ****
+      public Class loadClass(String name, boolean resolve)
+          throws ClassNotFoundException
+      {
+!         Class clazz = findLoadedClass(name);
+!         if (clazz == null) {
+!             if (parentLoader != null) {
+!                 clazz = parentLoader.loadClass(name);
+              } else {
+!                 clazz = findSystemClass(name);
+              }
+          }
+!         if (resolve)
+!             resolveClass(clazz);
+!         return clazz;
+      }
+  
+      private ClassLoader parentLoader;
+  }
+--- 90,155 ----
+      public Class loadClass(String name, boolean resolve)
+          throws ClassNotFoundException
+      {
+! 
+!         Class cl = findLoadedClass(name);
+!         if (cl == null) {
+!             // First try parent class loader and if that does not work, try
+!             // contextLoader, but that will be null if
+!             // Thread.getContextClassLoader() == parentLoader
+!             // or on JDK 1.1 due to lack Thread.getContextClassLoader().
+!             // To avoid catching and rethrowing ClassNotFoundException
+!             // in this cases, use try/catch check only if contextLoader != null.
+!             if (contextLoader == null) {
+!                 cl = loadFromParent(name);
+! 
+              } else {
+! 
+!                 try {
+!                     cl = loadFromParent(name);
+!                 } catch (ClassNotFoundException ex) {
+!                     cl = contextLoader.loadClass(name);
+!                 }
+! 
+              }
+          }
+! 
+!         if (resolve) {
+!             resolveClass(cl);
+!         }
+!         return cl;
+!     }
+! 
+!     private Class loadFromParent(String name)
+!         throws ClassNotFoundException
+!     {
+!         if (parentLoader != null) {
+!             return parentLoader.loadClass(name);
+!         } else {
+!             return findSystemClass(name);
+!         }
+! 
+      }
+  
+      private ClassLoader parentLoader;
++ 
++     private ClassLoader contextLoader;
++ 
++     // We'd like to use "Thread.getContextClassLoader", but
++     // that's only available on Java2.
++     private static Method method_getContextClassLoader;
++ 
++     static {
++         try {
++             // Don't use "Thread.class": that performs the lookup
++             // in the class initializer, which doesn't allow us to
++             // catch possible security exceptions.
++             Class threadClass = Class.forName("java.lang.Thread");
++             method_getContextClassLoader =
++                 threadClass.getDeclaredMethod("getContextClassLoader",
++                                                new Class[0]);
++         } catch (ClassNotFoundException e) {
++         } catch (NoSuchMethodException e) {
++         } catch (SecurityException e) {
++         }
++     }
+  }
+*** misc/rhino1_5R4/src/org/mozilla/javascript/ImporterTopLevel.java	Tue Mar 22 13:20:48 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/ImporterTopLevel.java	Tue Jul  4 14:59:43 2006
+***************
+*** 97,106 ****
+--- 97,117 ----
+          return "global";
+      }
+  
++     public boolean has(String name, Scriptable start) {
++         return super.has(name, start)
++                || getPackageProperty(name, start) != NOT_FOUND;
++     }
++ 
+      public Object get(String name, Scriptable start) {
+          Object result = super.get(name, start);
+          if (result != NOT_FOUND)
+              return result;
++         result = getPackageProperty(name, start);
++         return result;
++     }
++ 
++     private Object getPackageProperty(String name, Scriptable start) {
++         Object result= NOT_FOUND;
+          if (name.equals("_packages_"))
+              return result;
+          Object plist = ScriptableObject.getProperty(start,"_packages_");
+*** misc/rhino1_5R4/src/org/mozilla/javascript/JavaAdapter.java	Tue Mar 22 13:20:47 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/JavaAdapter.java	Tue Jul  4 14:59:43 2006
+***************
+*** 331,337 ****
+              }
+          }
+  
+!         ClassLoader parentLoader = cx.getClass().getClassLoader();
+          GeneratedClassLoader loader;
+          SecurityController sc = cx.getSecurityController();
+          if (sc == null) {
+--- 331,337 ----
+              }
+          }
+  
+!         ClassLoader parentLoader = cx.getApplicationClassLoader();
+          GeneratedClassLoader loader;
+          SecurityController sc = cx.getSecurityController();
+          if (sc == null) {
+*** misc/rhino1_5R4/src/org/mozilla/javascript/NativeJavaPackage.java	Tue Mar 22 13:20:48 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/NativeJavaPackage.java	Tue Jul  4 14:59:43 2006
+***************
+*** 166,185 ****
+      }
+  
+      public NativeJavaPackage(String packageName) {
+!         this.packageName = packageName;
+      }
+  
+      public NativeJavaPackage(String packageName, ClassLoader classLoader) {
+          this.packageName = packageName;
+          this.classLoader = classLoader;
+      }
+  
+      public String getClassName() {
+          return "JavaPackage";
+      }
+  
+!     public boolean has(String id, int index, Scriptable start) {
+          return true;
+      }
+  
+      public void put(String id, Scriptable start, Object value) {
+--- 166,193 ----
+      }
+  
+      public NativeJavaPackage(String packageName) {
+!         this(packageName, null);
+      }
+  
+      public NativeJavaPackage(String packageName, ClassLoader classLoader) {
+          this.packageName = packageName;
++         if (classLoader != null) {
+          this.classLoader = classLoader;
++         } else {
++             this.classLoader = Context.getContext().getApplicationClassLoader();
++         }
+      }
+  
+      public String getClassName() {
+          return "JavaPackage";
+      }
+  
+!     public boolean has(String id, Scriptable start) {
+          return true;
++     }
++ 
++     public boolean has(int index, Scriptable start) {
++         return false;
+      }
+  
+      public void put(String id, Scriptable start, Object value) {
+*** misc/rhino1_5R4/src/org/mozilla/javascript/ScriptRuntime.java	Tue Mar 22 13:20:47 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/ScriptRuntime.java	Tue Jul  4 14:59:43 2006
+***************
+*** 1155,1162 ****
+  
+      public static Object nextEnum(Object enumObj) {
+          // OPT this could be more efficient
+!         IdEnumeration enum = (IdEnumeration)enumObj;
+!         return enum.nextId();
+      }
+  
+      // Form used by class files generated by 1.4R3 and earlier.
+--- 1155,1162 ----
+  
+      public static Object nextEnum(Object enumObj) {
+          // OPT this could be more efficient
+!         IdEnumeration myEnum = (IdEnumeration)enumObj;
+!         return myEnum.nextId();
+      }
+  
+      // Form used by class files generated by 1.4R3 and earlier.
+***************
+*** 2001,2011 ****
+          cx.currentActivation = activation;
+      }
+  
+!     private static Class getClassOrNull(String className) {
+          try {
+              return Class.forName(className);
+          } catch  (ClassNotFoundException ex) {
+          } catch  (SecurityException ex) {
+          }
+          return null;
+      }
+--- 2001,2027 ----
+          cx.currentActivation = activation;
+      }
+  
+!     static Class getClassOrNull(String className) {
+          try {
+              return Class.forName(className);
+          } catch  (ClassNotFoundException ex) {
+          } catch  (SecurityException ex) {
++         } catch (IllegalArgumentException e) {
++             // Can be thrown if name has characters that a class name
++             // can not contain
++         }
++         return null;
++     }
++ 
++     static Class getClassOrNull(ClassLoader loader, String className)
++     {
++         try {
++             return loader.loadClass(className);
++         } catch (ClassNotFoundException ex) {
++         } catch (SecurityException ex) {
++         } catch (IllegalArgumentException e) {
++             // Can be thrown if name has characters that a class name
++             // can not contain
+          }
+          return null;
+      }
+*** misc/rhino1_5R4/src/org/mozilla/javascript/optimizer/Codegen.java	Tue Mar 22 13:20:48 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/optimizer/Codegen.java	Tue Jul  4 14:59:43 2006
+***************
+*** 80,86 ****
+  
+          Exception e = null;
+          Class result = null;
+!         ClassLoader parentLoader = cx.getClass().getClassLoader();
+          GeneratedClassLoader loader;
+          if (securityController == null) {
+              loader = cx.createClassLoader(parentLoader);
+--- 80,86 ----
+  
+          Exception e = null;
+          Class result = null;
+!         ClassLoader parentLoader = cx.getApplicationClassLoader();
+          GeneratedClassLoader loader;
+          if (securityController == null) {
+              loader = cx.createClassLoader(parentLoader);
+*** misc/rhino1_5R4/src/org/mozilla/javascript/optimizer/InvokerImpl.java	Tue Mar 22 13:20:48 2005
+--- misc/build/rhino1_5R4/src/org/mozilla/javascript/optimizer/InvokerImpl.java	Tue Jul  4 14:59:43 2006
+***************
+*** 58,64 ****
+          synchronized (this) {
+              if (invokersCache == null) {
+                  invokersCache = new Hashtable();
+!                 ClassLoader parentLoader = cx.getClass().getClassLoader();
+                  classLoader = cx.createClassLoader(parentLoader);
+              } else {
+                  result = (Invoker)invokersCache.get(method);
+--- 58,64 ----
+          synchronized (this) {
+              if (invokersCache == null) {
+                  invokersCache = new Hashtable();
+!                 ClassLoader parentLoader = cx.getApplicationClassLoader();
+                  classLoader = cx.createClassLoader(parentLoader);
+              } else {
+                  result = (Invoker)invokersCache.get(method);
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/AbstractCellEditor.java	Tue Jul  4 15:14:27 2006
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/AbstractCellEditor.java	Tue Jul  4 14:59:43 2006
+***************
+*** 1 ****
+! dummy
+--- 1,62 ----
+! package org.mozilla.javascript.tools.debugger;
+! 
+! import java.awt.Component;
+! import java.awt.event.*;
+! import java.awt.AWTEvent;
+! import javax.swing.*;
+! import javax.swing.event.*;
+! import java.util.EventObject;
+! import java.io.Serializable;
+! 
+! public class AbstractCellEditor implements CellEditor {
+! 
+!     protected EventListenerList listenerList = new EventListenerList();
+! 
+!     public Object getCellEditorValue() { return null; }
+!     public boolean isCellEditable(EventObject e) { return true; }
+!     public boolean shouldSelectCell(EventObject anEvent) { return false; }
+!     public boolean stopCellEditing() { return true; }
+!     public void cancelCellEditing() {}
+! 
+!     public void addCellEditorListener(CellEditorListener l) {
+! 	listenerList.add(CellEditorListener.class, l);
+!     }
+! 
+!     public void removeCellEditorListener(CellEditorListener l) {
+! 	listenerList.remove(CellEditorListener.class, l);
+!     }
+! 
+!     /*
+!      * Notify all listeners that have registered interest for
+!      * notification on this event type.  
+!      * @see EventListenerList
+!      */
+!     protected void fireEditingStopped() {
+! 	// Guaranteed to return a non-null array
+! 	Object[] listeners = listenerList.getListenerList();
+! 	// Process the listeners last to first, notifying
+! 	// those that are interested in this event
+! 	for (int i = listeners.length-2; i>=0; i-=2) {
+! 	    if (listeners[i]==CellEditorListener.class) {
+! 		((CellEditorListener)listeners[i+1]).editingStopped(new ChangeEvent(this));
+! 	    }	       
+! 	}
+!     }
+! 
+!     /*
+!      * Notify all listeners that have registered interest for
+!      * notification on this event type.  
+!      * @see EventListenerList
+!      */
+!     protected void fireEditingCanceled() {
+! 	// Guaranteed to return a non-null array
+! 	Object[] listeners = listenerList.getListenerList();
+! 	// Process the listeners last to first, notifying
+! 	// those that are interested in this event
+! 	for (int i = listeners.length-2; i>=0; i-=2) {
+! 	    if (listeners[i]==CellEditorListener.class) {
+! 		((CellEditorListener)listeners[i+1]).editingCanceled(new ChangeEvent(this));
+! 	    }	       
+! 	}
+!     }
+! }
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/AbstractTreeTableModel.java	Tue Jul  4 15:14:27 2006
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/AbstractTreeTableModel.java	Tue Jul  4 15:10:45 2006
+***************
+*** 1 ****
+! dummy
+--- 1,218 ----
+! /*************************************************************************
+!  *
+!  *  OpenOffice.org - a multi-platform office productivity suite
+!  *
+!  *  $RCSfile$
+!  *
+!  *  $Revision$
+!  *
+!  *  last change: $Author$ $Date$
+!  *
+!  *  The Contents of this file are made available subject to
+!  *  the terms of GNU Lesser General Public License Version 2.1.
+!  *
+!  *
+!  *    GNU Lesser General Public License Version 2.1
+!  *    =============================================
+!  *    Copyright 2005 by Sun Microsystems, Inc.
+!  *    901 San Antonio Road, Palo Alto, CA 94303, USA
+!  *
+!  *    This library is free software; you can redistribute it and/or
+!  *    modify it under the terms of the GNU Lesser General Public
+!  *    License version 2.1, as published by the Free Software Foundation.
+!  *
+!  *    This library is distributed in the hope that it will be useful,
+!  *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+!  *    Lesser General Public License for more details.
+!  *
+!  *    You should have received a copy of the GNU Lesser General Public
+!  *    License along with this library; if not, write to the Free Software
+!  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+!  *    MA  02111-1307  USA
+!  *
+!  ************************************************************************/
+! 
+! package org.mozilla.javascript.tools.debugger;
+! 
+! import javax.swing.tree.*;
+! import javax.swing.event.*;
+!  
+! /**
+!  * @version 1.2 10/27/98
+!  * An abstract implementation of the TreeTableModel interface, handling the list 
+!  * of listeners. 
+!  * @author Philip Milne
+!  */
+! 
+! public abstract class AbstractTreeTableModel implements TreeTableModel {
+!     protected Object root;     
+!     protected EventListenerList listenerList = new EventListenerList();
+!   
+!     public AbstractTreeTableModel(Object root) {
+!         this.root = root; 
+!     }
+! 
+!     //
+!     // Default implmentations for methods in the TreeModel interface. 
+!     //
+! 
+!     public Object getRoot() {
+!         return root;
+!     }
+! 
+!     public boolean isLeaf(Object node) {
+!         return getChildCount(node) == 0; 
+!     }
+! 
+!     public void valueForPathChanged(TreePath path, Object newValue) {}
+! 
+!     // This is not called in the JTree's default mode: use a naive implementation. 
+!     public int getIndexOfChild(Object parent, Object child) {
+!         for (int i = 0; i < getChildCount(parent); i++) {
+! 	    if (getChild(parent, i).equals(child)) { 
+! 	        return i; 
+! 	    }
+!         }
+! 	return -1; 
+!     }
+! 
+!     public void addTreeModelListener(TreeModelListener l) {
+!         listenerList.add(TreeModelListener.class, l);
+!     }
+! 
+!     public void removeTreeModelListener(TreeModelListener l) {
+!         listenerList.remove(TreeModelListener.class, l);
+!     }
+! 
+!     /*
+!      * Notify all listeners that have registered interest for
+!      * notification on this event type.  The event instance 
+!      * is lazily created using the parameters passed into 
+!      * the fire method.
+!      * @see EventListenerList
+!      */
+!     protected void fireTreeNodesChanged(Object source, Object[] path, 
+!                                         int[] childIndices, 
+!                                         Object[] children) {
+!         // Guaranteed to return a non-null array
+!         Object[] listeners = listenerList.getListenerList();
+!         TreeModelEvent e = null;
+!         // Process the listeners last to first, notifying
+!         // those that are interested in this event
+!         for (int i = listeners.length-2; i>=0; i-=2) {
+!             if (listeners[i]==TreeModelListener.class) {
+!                 // Lazily create the event:
+!                 if (e == null)
+!                     e = new TreeModelEvent(source, path, 
+!                                            childIndices, children);
+!                 ((TreeModelListener)listeners[i+1]).treeNodesChanged(e);
+!             }          
+!         }
+!     }
+! 
+!     /*
+!      * Notify all listeners that have registered interest for
+!      * notification on this event type.  The event instance 
+!      * is lazily created using the parameters passed into 
+!      * the fire method.
+!      * @see EventListenerList
+!      */
+!     protected void fireTreeNodesInserted(Object source, Object[] path, 
+!                                         int[] childIndices, 
+!                                         Object[] children) {
+!         // Guaranteed to return a non-null array
+!         Object[] listeners = listenerList.getListenerList();
+!         TreeModelEvent e = null;
+!         // Process the listeners last to first, notifying
+!         // those that are interested in this event
+!         for (int i = listeners.length-2; i>=0; i-=2) {
+!             if (listeners[i]==TreeModelListener.class) {
+!                 // Lazily create the event:
+!                 if (e == null)
+!                     e = new TreeModelEvent(source, path, 
+!                                            childIndices, children);
+!                 ((TreeModelListener)listeners[i+1]).treeNodesInserted(e);
+!             }          
+!         }
+!     }
+! 
+!     /*
+!      * Notify all listeners that have registered interest for
+!      * notification on this event type.  The event instance 
+!      * is lazily created using the parameters passed into 
+!      * the fire method.
+!      * @see EventListenerList
+!      */
+!     protected void fireTreeNodesRemoved(Object source, Object[] path, 
+!                                         int[] childIndices, 
+!                                         Object[] children) {
+!         // Guaranteed to return a non-null array
+!         Object[] listeners = listenerList.getListenerList();
+!         TreeModelEvent e = null;
+!         // Process the listeners last to first, notifying
+!         // those that are interested in this event
+!         for (int i = listeners.length-2; i>=0; i-=2) {
+!             if (listeners[i]==TreeModelListener.class) {
+!                 // Lazily create the event:
+!                 if (e == null)
+!                     e = new TreeModelEvent(source, path, 
+!                                            childIndices, children);
+!                 ((TreeModelListener)listeners[i+1]).treeNodesRemoved(e);
+!             }          
+!         }
+!     }
+! 
+!     /*
+!      * Notify all listeners that have registered interest for
+!      * notification on this event type.  The event instance 
+!      * is lazily created using the parameters passed into 
+!      * the fire method.
+!      * @see EventListenerList
+!      */
+!     protected void fireTreeStructureChanged(Object source, Object[] path, 
+!                                         int[] childIndices, 
+!                                         Object[] children) {
+!         // Guaranteed to return a non-null array
+!         Object[] listeners = listenerList.getListenerList();
+!         TreeModelEvent e = null;
+!         // Process the listeners last to first, notifying
+!         // those that are interested in this event
+!         for (int i = listeners.length-2; i>=0; i-=2) {
+!             if (listeners[i]==TreeModelListener.class) {
+!                 // Lazily create the event:
+!                 if (e == null)
+!                     e = new TreeModelEvent(source, path, 
+!                                            childIndices, children);
+!                 ((TreeModelListener)listeners[i+1]).treeStructureChanged(e);
+!             }          
+!         }
+!     }
+! 
+!     //
+!     // Default impelmentations for methods in the TreeTableModel interface. 
+!     //
+! 
+!     public Class getColumnClass(int column) { return Object.class; }
+! 
+!    /** By default, make the column with the Tree in it the only editable one. 
+!     *  Making this column editable causes the JTable to forward mouse 
+!     *  and keyboard events in the Tree column to the underlying JTree. 
+!     */ 
+!     public boolean isCellEditable(Object node, int column) { 
+!          return getColumnClass(column) == TreeTableModel.class; 
+!     }
+! 
+!     public void setValueAt(Object aValue, Object node, int column) {}
+! 
+! 
+!     // Left to be implemented in the subclass:
+! 
+!     /* 
+!      *   public Object getChild(Object parent, int index)
+!      *   public int getChildCount(Object parent) 
+!      *   public int getColumnCount() 
+!      *   public String getColumnName(Object node, int column)  
+!      *   public Object getValueAt(Object node, int column) 
+!      */
+! }
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/JTreeTable.java	Tue Jul  4 15:14:27 2006
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/JTreeTable.java	Tue Jul  4 15:11:38 2006
+***************
+*** 1 ****
+! dummy
+--- 1,376 ----
+! /*************************************************************************
+!  *
+!  *  OpenOffice.org - a multi-platform office productivity suite
+!  *
+!  *  $RCSfile$
+!  *
+!  *  $Revision$
+!  *
+!  *  last change: $Author$ $Date$
+!  *
+!  *  The Contents of this file are made available subject to
+!  *  the terms of GNU Lesser General Public License Version 2.1.
+!  *
+!  *
+!  *    GNU Lesser General Public License Version 2.1
+!  *    =============================================
+!  *    Copyright 2005 by Sun Microsystems, Inc.
+!  *    901 San Antonio Road, Palo Alto, CA 94303, USA
+!  *
+!  *    This library is free software; you can redistribute it and/or
+!  *    modify it under the terms of the GNU Lesser General Public
+!  *    License version 2.1, as published by the Free Software Foundation.
+!  *
+!  *    This library is distributed in the hope that it will be useful,
+!  *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+!  *    Lesser General Public License for more details.
+!  *
+!  *    You should have received a copy of the GNU Lesser General Public
+!  *    License along with this library; if not, write to the Free Software
+!  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+!  *    MA  02111-1307  USA
+!  *
+!  ************************************************************************/
+! 
+! package org.mozilla.javascript.tools.debugger;
+! 
+! import javax.swing.*;
+! import javax.swing.event.*;
+! import javax.swing.tree.*;
+! import javax.swing.table.*;
+! 
+! import java.awt.Dimension;
+! import java.awt.Component;
+! import java.awt.Graphics;
+! import java.awt.Rectangle;
+! 
+! import java.awt.event.MouseEvent;
+! 
+! import java.util.EventObject;
+! 
+! /**
+!  * This example shows how to create a simple JTreeTable component, 
+!  * by using a JTree as a renderer (and editor) for the cells in a 
+!  * particular column in the JTable.  
+!  *
+!  * @version 1.2 10/27/98
+!  *
+!  * @author Philip Milne
+!  * @author Scott Violet
+!  */
+! public class JTreeTable extends JTable {
+!     /** A subclass of JTree. */
+!     protected TreeTableCellRenderer tree;
+! 
+!     public JTreeTable(TreeTableModel treeTableModel) {
+! 	super();
+! 
+! 	// Create the tree. It will be used as a renderer and editor. 
+! 	tree = new TreeTableCellRenderer(treeTableModel);
+! 
+! 	// Install a tableModel representing the visible rows in the tree. 
+! 	super.setModel(new TreeTableModelAdapter(treeTableModel, tree));
+! 
+! 	// Force the JTable and JTree to share their row selection models. 
+! 	ListToTreeSelectionModelWrapper selectionWrapper = new 
+! 	                        ListToTreeSelectionModelWrapper();
+! 	tree.setSelectionModel(selectionWrapper);
+! 	setSelectionModel(selectionWrapper.getListSelectionModel()); 
+! 
+! 	// Install the tree editor renderer and editor. 
+! 	setDefaultRenderer(TreeTableModel.class, tree); 
+! 	setDefaultEditor(TreeTableModel.class, new TreeTableCellEditor());
+! 
+! 	// No grid.
+! 	setShowGrid(false);
+! 
+! 	// No intercell spacing
+! 	setIntercellSpacing(new Dimension(0, 0));	
+! 
+! 	// And update the height of the trees row to match that of
+! 	// the table.
+! 	if (tree.getRowHeight() < 1) {
+! 	    // Metal looks better like this.
+! 	    setRowHeight(18);
+! 	}
+!     }
+! 
+!     /**
+!      * Overridden to message super and forward the method to the tree.
+!      * Since the tree is not actually in the component hieachy it will
+!      * never receive this unless we forward it in this manner.
+!      */
+!     public void updateUI() {
+! 	super.updateUI();
+! 	if(tree != null) {
+! 	    tree.updateUI();
+! 	}
+! 	// Use the tree's default foreground and background colors in the
+! 	// table. 
+!         LookAndFeel.installColorsAndFont(this, "Tree.background",
+!                                          "Tree.foreground", "Tree.font");
+!     }
+! 
+!     /* Workaround for BasicTableUI anomaly. Make sure the UI never tries to 
+!      * paint the editor. The UI currently uses different techniques to 
+!      * paint the renderers and editors and overriding setBounds() below 
+!      * is not the right thing to do for an editor. Returning -1 for the 
+!      * editing row in this case, ensures the editor is never painted. 
+!      */
+!     public int getEditingRow() {
+!         return (getColumnClass(editingColumn) == TreeTableModel.class) ? -1 :
+! 	        editingRow;  
+!     }
+! 
+!     /**
+!      * Overridden to pass the new rowHeight to the tree.
+!      */
+!     public void setRowHeight(int rowHeight) { 
+!         super.setRowHeight(rowHeight); 
+! 	if (tree != null && tree.getRowHeight() != rowHeight) {
+!             tree.setRowHeight(getRowHeight()); 
+! 	}
+!     }
+! 
+!     /**
+!      * Returns the tree that is being shared between the model.
+!      */
+!     public JTree getTree() {
+! 	return tree;
+!     }
+! 
+!     /**
+!      * A TreeCellRenderer that displays a JTree.
+!      */
+!     public class TreeTableCellRenderer extends JTree implements
+! 	         TableCellRenderer {
+! 	/** Last table/tree row asked to renderer. */
+! 	protected int visibleRow;
+! 
+! 	public TreeTableCellRenderer(TreeModel model) {
+! 	    super(model); 
+! 	}
+! 
+! 	/**
+! 	 * updateUI is overridden to set the colors of the Tree's renderer
+! 	 * to match that of the table.
+! 	 */
+! 	public void updateUI() {
+! 	    super.updateUI();
+! 	    // Make the tree's cell renderer use the table's cell selection
+! 	    // colors. 
+! 	    TreeCellRenderer tcr = getCellRenderer();
+! 	    if (tcr instanceof DefaultTreeCellRenderer) {
+! 		DefaultTreeCellRenderer dtcr = ((DefaultTreeCellRenderer)tcr); 
+! 		// For 1.1 uncomment this, 1.2 has a bug that will cause an
+! 		// exception to be thrown if the border selection color is
+! 		// null.
+! 		// dtcr.setBorderSelectionColor(null);
+! 		dtcr.setTextSelectionColor(UIManager.getColor
+! 					   ("Table.selectionForeground"));
+! 		dtcr.setBackgroundSelectionColor(UIManager.getColor
+! 						("Table.selectionBackground"));
+! 	    }
+! 	}
+! 
+! 	/**
+! 	 * Sets the row height of the tree, and forwards the row height to
+! 	 * the table.
+! 	 */
+! 	public void setRowHeight(int rowHeight) { 
+! 	    if (rowHeight > 0) {
+! 		super.setRowHeight(rowHeight); 
+! 		if (JTreeTable.this != null &&
+! 		    JTreeTable.this.getRowHeight() != rowHeight) {
+! 		    JTreeTable.this.setRowHeight(getRowHeight()); 
+! 		}
+! 	    }
+! 	}
+! 
+! 	/**
+! 	 * This is overridden to set the height to match that of the JTable.
+! 	 */
+! 	public void setBounds(int x, int y, int w, int h) {
+! 	    super.setBounds(x, 0, w, JTreeTable.this.getHeight());
+! 	}
+! 
+! 	/**
+! 	 * Sublcassed to translate the graphics such that the last visible
+! 	 * row will be drawn at 0,0.
+! 	 */
+! 	public void paint(Graphics g) {
+! 	    g.translate(0, -visibleRow * getRowHeight());
+! 	    super.paint(g);
+! 	}
+! 
+! 	/**
+! 	 * TreeCellRenderer method. Overridden to update the visible row.
+! 	 */
+! 	public Component getTableCellRendererComponent(JTable table,
+! 						       Object value,
+! 						       boolean isSelected,
+! 						       boolean hasFocus,
+! 						       int row, int column) {
+! 	    if(isSelected)
+! 		setBackground(table.getSelectionBackground());
+! 	    else
+! 		setBackground(table.getBackground());
+! 
+! 	    visibleRow = row;
+! 	    return this;
+! 	}
+!     }
+! 
+! 
+!     /**
+!      * TreeTableCellEditor implementation. Component returned is the
+!      * JTree.
+!      */
+!     public class TreeTableCellEditor extends AbstractCellEditor implements
+! 	         TableCellEditor {
+! 	public Component getTableCellEditorComponent(JTable table,
+! 						     Object value,
+! 						     boolean isSelected,
+! 						     int r, int c) {
+! 	    return tree;
+! 	}
+! 
+! 	/**
+! 	 * Overridden to return false, and if the event is a mouse event
+! 	 * it is forwarded to the tree.<p>
+! 	 * The behavior for this is debatable, and should really be offered
+! 	 * as a property. By returning false, all keyboard actions are
+! 	 * implemented in terms of the table. By returning true, the
+! 	 * tree would get a chance to do something with the keyboard
+! 	 * events. For the most part this is ok. But for certain keys,
+! 	 * such as left/right, the tree will expand/collapse where as
+! 	 * the table focus should really move to a different column. Page
+! 	 * up/down should also be implemented in terms of the table.
+! 	 * By returning false this also has the added benefit that clicking
+! 	 * outside of the bounds of the tree node, but still in the tree
+! 	 * column will select the row, whereas if this returned true
+! 	 * that wouldn't be the case.
+! 	 * <p>By returning false we are also enforcing the policy that
+! 	 * the tree will never be editable (at least by a key sequence).
+! 	 */
+! 	public boolean isCellEditable(EventObject e) {
+! 	    if (e instanceof MouseEvent) {
+! 		for (int counter = getColumnCount() - 1; counter >= 0;
+! 		     counter--) {
+! 		    if (getColumnClass(counter) == TreeTableModel.class) {
+! 			MouseEvent me = (MouseEvent)e;
+! 			MouseEvent newME = new MouseEvent(tree, me.getID(),
+! 				   me.getWhen(), me.getModifiers(),
+! 				   me.getX() - getCellRect(0, counter, true).x,
+! 				   me.getY(), me.getClickCount(),
+!                                    me.isPopupTrigger());
+! 			tree.dispatchEvent(newME);
+! 			break;
+! 		    }
+! 		}
+! 	    }
+! 	    return false;
+! 	}
+!     }
+! 
+! 
+!     /**
+!      * ListToTreeSelectionModelWrapper extends DefaultTreeSelectionModel
+!      * to listen for changes in the ListSelectionModel it maintains. Once
+!      * a change in the ListSelectionModel happens, the paths are updated
+!      * in the DefaultTreeSelectionModel.
+!      */
+!     class ListToTreeSelectionModelWrapper extends DefaultTreeSelectionModel { 
+! 	/** Set to true when we are updating the ListSelectionModel. */
+! 	protected boolean         updatingListSelectionModel;
+! 
+! 	public ListToTreeSelectionModelWrapper() {
+! 	    super();
+! 	    getListSelectionModel().addListSelectionListener
+! 	                            (createListSelectionListener());
+! 	}
+! 
+! 	/**
+! 	 * Returns the list selection model. ListToTreeSelectionModelWrapper
+! 	 * listens for changes to this model and updates the selected paths
+! 	 * accordingly.
+! 	 */
+! 	ListSelectionModel getListSelectionModel() {
+! 	    return listSelectionModel; 
+! 	}
+! 
+! 	/**
+! 	 * This is overridden to set <code>updatingListSelectionModel</code>
+! 	 * and message super. This is the only place DefaultTreeSelectionModel
+! 	 * alters the ListSelectionModel.
+! 	 */
+! 	public void resetRowSelection() {
+! 	    if(!updatingListSelectionModel) {
+! 		updatingListSelectionModel = true;
+! 		try {
+! 		    super.resetRowSelection();
+! 		}
+! 		finally {
+! 		    updatingListSelectionModel = false;
+! 		}
+! 	    }
+! 	    // Notice how we don't message super if
+! 	    // updatingListSelectionModel is true. If
+! 	    // updatingListSelectionModel is true, it implies the
+! 	    // ListSelectionModel has already been updated and the
+! 	    // paths are the only thing that needs to be updated.
+! 	}
+! 
+! 	/**
+! 	 * Creates and returns an instance of ListSelectionHandler.
+! 	 */
+! 	protected ListSelectionListener createListSelectionListener() {
+! 	    return new ListSelectionHandler();
+! 	}
+! 
+! 	/**
+! 	 * If <code>updatingListSelectionModel</code> is false, this will
+! 	 * reset the selected paths from the selected rows in the list
+! 	 * selection model.
+! 	 */
+! 	protected void updateSelectedPathsFromSelectedRows() {
+! 	    if(!updatingListSelectionModel) {
+! 		updatingListSelectionModel = true;
+! 		try {
+! 		    // This is way expensive, ListSelectionModel needs an
+! 		    // enumerator for iterating.
+! 		    int        min = listSelectionModel.getMinSelectionIndex();
+! 		    int        max = listSelectionModel.getMaxSelectionIndex();
+! 
+! 		    clearSelection();
+! 		    if(min != -1 && max != -1) {
+! 			for(int counter = min; counter <= max; counter++) {
+! 			    if(listSelectionModel.isSelectedIndex(counter)) {
+! 				TreePath     selPath = tree.getPathForRow
+! 				                            (counter);
+! 
+! 				if(selPath != null) {
+! 				    addSelectionPath(selPath);
+! 				}
+! 			    }
+! 			}
+! 		    }
+! 		}
+! 		finally {
+! 		    updatingListSelectionModel = false;
+! 		}
+! 	    }
+! 	}
+! 
+! 	/**
+! 	 * Class responsible for calling updateSelectedPathsFromSelectedRows
+! 	 * when the selection of the list changse.
+! 	 */
+! 	class ListSelectionHandler implements ListSelectionListener {
+! 	    public void valueChanged(ListSelectionEvent e) {
+! 		updateSelectedPathsFromSelectedRows();
+! 	    }
+! 	}
+!     }
+! }
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/Main.java	Tue Mar 22 13:20:49 2005
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/Main.java	Tue Jul  4 14:59:43 2006
+***************
+*** 469,485 ****
+--- 469,491 ----
+          case KeyEvent.VK_BACK_SPACE:
+          case KeyEvent.VK_ENTER:
+          case KeyEvent.VK_DELETE:
++             if (w.isEditable() == false) {
+              e.consume();
++             }
+              break;
+          }
+      }
+      public void keyTyped(KeyEvent e) {
++         if (w.isEditable() == false) {
+          e.consume();
+      }
++     }
+      public void keyReleased(KeyEvent e) {
++         if (w.isEditable() == false) {
+          e.consume();
+      }
+  }
++ }
+  
+  class MoreWindows extends JDialog implements ActionListener {
+  
+***************
+*** 818,823 ****
+--- 824,830 ----
+          if (dummy.length() < 2) {
+              dummy = "99";
+          }
++ 
+          int maxWidth = metrics.stringWidth(dummy);
+          int startLine = clip.y / h;
+          int endLine = (clip.y + clip.height) / h + 1;
+***************
+*** 868,874 ****
+      }
+  };
+  
+! class FileWindow extends JInternalFrame implements ActionListener {
+  
+      Main db;
+      SourceInfo sourceInfo;
+--- 875,882 ----
+      }
+  };
+  
+! class FileWindow extends JInternalFrame
+!     implements ActionListener, DocumentListener {
+  
+      Main db;
+      SourceInfo sourceInfo;
+***************
+*** 877,891 ****
+      JScrollPane p;
+      int currentPos;
+      JLabel statusBar;
+  
+      public void actionPerformed(ActionEvent e) {
+          String cmd = e.getActionCommand();
+          if (cmd.equals("Cut")) {
+!             // textArea.cut();
+          } else if (cmd.equals("Copy")) {
+              textArea.copy();
+          } else if (cmd.equals("Paste")) {
+!             // textArea.paste();
+          }
+      }
+  
+--- 885,900 ----
+      JScrollPane p;
+      int currentPos;
+      JLabel statusBar;
++     boolean isModified = false;
+  
+      public void actionPerformed(ActionEvent e) {
+          String cmd = e.getActionCommand();
+          if (cmd.equals("Cut")) {
+!             textArea.cut();
+          } else if (cmd.equals("Copy")) {
+              textArea.copy();
+          } else if (cmd.equals("Paste")) {
+!             textArea.paste();
+          }
+      }
+  
+***************
+*** 899,915 ****
+      }
+  
+      void load() {
+!         Scriptable scope = db.getScope();
+          if (scope == null) {
+              MessageDialogWrapper.showMessageDialog(db, "Can't load scripts: no scope available", "Run", JOptionPane.ERROR_MESSAGE);
+          } else {
+              String url = getUrl();
+              if (url != null) {
+!                 new Thread(new LoadFile(db,scope,url)).start();
+              }
+          }
+      }
+  
+     public int getPosition(int line) {
+          int result = -1;
+          try {
+--- 908,980 ----
+      }
+  
+      void load() {
+!         //Scriptable scope = db.getScope();
+!         Scriptable scope = db.officeScripts.getScriptScope( getUrl() );
+!         if ( scope == null )
+!         {
+!             scope = db.getScope();
+!         }
+!         
+          if (scope == null) {
+              MessageDialogWrapper.showMessageDialog(db, "Can't load scripts: no scope available", "Run", JOptionPane.ERROR_MESSAGE);
+          } else {
+              String url = getUrl();
+              if (url != null) {
+!                 new Thread(new LoadFile(db,scope, url, new StringReader(textArea.getText()))).start(); 
+!             }
+!         }
+!             }
+! 
+!     void save() {
+!         if (getUrl() != null) {
+!             OutputStream os = null;
+!             try {
+!                 if ( getUrl().startsWith("vnd.sun.star")  )
+!                 {
+!                     URL scriptUrl = db.officeScripts.getScriptUrl( getUrl() );
+!                     if ( scriptUrl == null )
+!                     {
+!                         throw new IOException("Can't optain stream for " + getUrl() );
+!         }
+!                     os = scriptUrl.openConnection().getOutputStream();
+!                 }
+!                 else
+!                 {
+!                    os = new FileOutputStream( getUrl() );
+!                 }
+!                 String s = textArea.getText();
+!                 os.write(s.getBytes(), 0, s.length());
+! 
+!                 this.isModified = false;
+!             }
+!             catch (IOException ioe) {
+!                 JOptionPane.showMessageDialog(this,
+!                     "Error saving file: " + ioe.getMessage(),
+!                     "Error", JOptionPane.ERROR_MESSAGE);
+!             }
+!             finally
+!             {
+!                 if ( os != null )
+!                 {
+!                     try
+!                     {
+!                         os.close();
+!                         os = null;
+!                     }
+!                     catch( IOException ioe )
+!                     {
+!                         System.err.println("Error closing stream: " + ioe.getMessage() );
+!                         ioe.printStackTrace();
+!                     }
+!                 }
+              }
+          }
+      }
+  
++     public boolean isEditable() {
++         return db.isSourceEditingEnabled();
++     }
++ 
+     public int getPosition(int line) {
+          int result = -1;
+          try {
+***************
+*** 942,948 ****
+              fileHeader.repaint();
+          }
+      }
+! 
+      FileWindow(Main db, SourceInfo sourceInfo) {
+          super(SourceInfo.getShortName(sourceInfo.getUrl()),
+                true, true, true, true);
+--- 1007,1013 ----
+              fileHeader.repaint();
+          }
+      }
+!     public Main getDB() { return db; }
+      FileWindow(Main db, SourceInfo sourceInfo) {
+          super(SourceInfo.getShortName(sourceInfo.getUrl()),
+                true, true, true, true);
+***************
+*** 961,966 ****
+--- 1026,1041 ----
+          pack();
+          updateText();
+          textArea.select(0);
++         addInternalFrameListener( new InternalFrameAdapter() {
++             public void internalFrameClosed(InternalFrameEvent e) {
++                     // clean up scriptItems and sourceNames hashes
++                     getDB().removeScript( getUrl() );
++                     // remove scripts for officeScripts
++                     getDB().officeScripts.deleteScript( getUrl() );
++                 }
++             } );
++                 
++ 
+      }
+  
+      private void updateToolTip() {
+***************
+*** 979,985 ****
+--- 1054,1063 ----
+      void updateText() {
+          String newText = sourceInfo.getSource();
+          if (!textArea.getText().equals(newText)) {
++             textArea.getDocument().removeDocumentListener(this);
+              textArea.setText(newText);
++             this.isModified = false;
++             textArea.getDocument().addDocumentListener(this);
+              int pos = 0;
+              if (currentPos != -1) {
+                  pos = currentPos;
+***************
+*** 990,995 ****
+--- 1068,1098 ----
+          fileHeader.repaint();
+      }
+  
++     /* Implementation of DocumentListener interface */
++     public void insertUpdate(DocumentEvent e) {
++         doChanged(e);
++     }
++ 
++     public void removeUpdate(DocumentEvent e) {
++         doChanged(e);
++     }
++ 
++     public void changedUpdate(DocumentEvent e) {
++         doChanged(e);
++     }
++ 
++     public void doChanged(DocumentEvent e) {
++         this.isModified = true;
++     }
++ 
++     public boolean isModified() {
++         return this.isModified;
++     }
++ 
++     public String getText() {
++         return textArea.getText();
++     }
++ 
+      void setPosition(int pos) {
+          textArea.select(pos);
+          currentPos = pos;
+***************
+*** 1601,1607 ****
+          if (line != -1) {
+              db.currentWindow = w;
+          }
+!         db.menubar.addFile(url);
+          w.setVisible(true);
+          if (activate) {
+              try {
+--- 1704,1710 ----
+          if (line != -1) {
+              db.currentWindow = w;
+          }
+!         // db.menubar.addFile(url);
+          w.setVisible(true);
+          if (activate) {
+              try {
+***************
+*** 1735,1742 ****
+      Menubar(Main db) {
+          super();
+          this.db = db;
+!         String[] fileItems  = {"Open...", "Run...", "", "Exit"};
+!         String[] fileCmds  = {"Open", "Load", "", "Exit"};
+          char[] fileShortCuts = {'0', 'N', '\0', 'X'};
+          int[] fileAccelerators = {KeyEvent.VK_O,
+                                    KeyEvent.VK_N,
+--- 1838,1847 ----
+      Menubar(Main db) {
+          super();
+          this.db = db;
+!         // String[] fileItems  = {"Open...", "Run...", "", "Exit"};
+!         // String[] fileCmds  = {"Open", "Load", "", "Exit"};
+!         String[] fileItems  = {"Run", "Save", "", "Exit"};
+!         String[] fileCmds  = {"Run", "Save", "", "Exit"};
+          char[] fileShortCuts = {'0', 'N', '\0', 'X'};
+          int[] fileAccelerators = {KeyEvent.VK_O,
+                                    KeyEvent.VK_N,
+***************
+*** 1778,1783 ****
+--- 1883,1891 ----
+                      KeyStroke k = KeyStroke.getKeyStroke(fileAccelerators[i], Event.CTRL_MASK);
+                      item.setAccelerator(k);
+                  }
++                 if (fileItems[i].equals("Save")) {
++                     saveItem = item;
++                 }
+              }
+          }
+          for (int i = 0; i < editItems.length; ++i) {
+***************
+*** 1832,1840 ****
+          item.addActionListener(this);
+          windowMenu.add(item = new JMenuItem("Tile", 'T'));
+          item.addActionListener(this);
+!         windowMenu.addSeparator();
+!         windowMenu.add(item = new JMenuItem("Console", 'C'));
+!         item.addActionListener(this);
+          add(windowMenu);
+  
+      }
+--- 1940,1948 ----
+          item.addActionListener(this);
+          windowMenu.add(item = new JMenuItem("Tile", 'T'));
+          item.addActionListener(this);
+!         // windowMenu.addSeparator();
+!         // windowMenu.add(item = new JMenuItem("Console", 'C'));
+!         // item.addActionListener(this);
+          add(windowMenu);
+  
+      }
+***************
+*** 1908,1918 ****
+--- 2016,2031 ----
+          item.addActionListener(this);
+      }
+  
++     public void setSaveEnabled(boolean state) {
++         saveItem.setEnabled(state);
++     }
++ 
+      Main db;
+      JMenu windowMenu;
+      JCheckBoxMenuItem breakOnExceptions;
+      JCheckBoxMenuItem breakOnEnter;
+      JCheckBoxMenuItem breakOnReturn;
++     JMenuItem saveItem;
+  };
+  
+  class EnterInterrupt implements Runnable {
+***************
+*** 1925,1930 ****
+--- 2038,2050 ----
+      public void run() {
+          JMenu menu = db.getJMenuBar().getMenu(0);
+          //menu.getItem(0).setEnabled(false); // File->Load
++ 
++         // disable Edit menu Cut, Copy, Paste items
++         menu = db.getJMenuBar().getMenu(1);
++         for (int i = 0; i < 3; i++) {
++             menu.getItem(i).setEnabled(false);
++         }
++ 
+          menu = db.getJMenuBar().getMenu(2);
+          menu.getItem(0).setEnabled(false); // Debug->Break
+          int count = menu.getItemCount();
+***************
+*** 1937,1942 ****
+--- 2057,2066 ----
+              b = true;
+          }
+          db.toolBar.setEnabled(true);
++ 
++         // set flag to disable source editing
++         db.setSourceEditingEnabled(false);
++ 
+          // raise the debugger window
+          db.toFront();
+      }
+***************
+*** 1950,1955 ****
+--- 2074,2086 ----
+      public void run() {
+          JMenu menu = db.getJMenuBar().getMenu(0);
+          menu.getItem(0).setEnabled(true); // File->Load
++ 
++         // enable Edit menu items
++         menu = db.getJMenuBar().getMenu(1);
++         for (int i = 0; i < 3; i++) {
++             menu.getItem(i).setEnabled(true);
++         }
++ 
+          menu = db.getJMenuBar().getMenu(2);
+          menu.getItem(0).setEnabled(true); // Debug->Break
+          int count = menu.getItemCount() - 1;
+***************
+*** 1963,1968 ****
+--- 2094,2102 ----
+              db.toolBar.getComponent(ci).setEnabled(b);
+              b = false;
+          }
++         // set flag to enable source editing
++         db.setSourceEditingEnabled(true);
++ 
+          //db.console.consoleTextArea.requestFocus();
+      }
+  };
+***************
+*** 1971,1987 ****
+      Scriptable scope;
+      String fileName;
+      Main db;
+      OpenFile(Main db, Scriptable scope, String fileName) {
+          this.scope = scope;
+          this.fileName = fileName;
+          this.db = db;
+      }
+      public void run() {
+          Context cx = Context.enter();
+          ContextData contextData = ContextData.get(cx);
+          contextData.breakNextLine = true;
+          try {
+!             cx.compileReader(scope, new FileReader(fileName),
+                               fileName, 1, null);
+          } catch (Exception exc) {
+              String msg = exc.getMessage();
+--- 2105,2128 ----
+      Scriptable scope;
+      String fileName;
+      Main db;
++     Reader reader = null;
++ 
+      OpenFile(Main db, Scriptable scope, String fileName) {
+          this.scope = scope;
+          this.fileName = fileName;
+          this.db = db;
+      }
++     OpenFile(Main db, Scriptable scope, String fileName, Reader reader) {
++         this(db, scope, fileName);
++         this.reader = reader;
++     }
+      public void run() {
+          Context cx = Context.enter();
+          ContextData contextData = ContextData.get(cx);
+          contextData.breakNextLine = true;
+          try {
+!             cx.compileReader(scope,
+!                 reader == null ? new FileReader(fileName) : reader,
+                               fileName, 1, null);
+          } catch (Exception exc) {
+              String msg = exc.getMessage();
+***************
+*** 2003,2031 ****
+      Scriptable scope;
+      String fileName;
+      Main db;
+      LoadFile(Main db, Scriptable scope, String fileName) {
+          this.scope = scope;
+          this.fileName = fileName;
+          this.db = db;
+      }
+      public void run() {
+          Context cx = Context.enter();
+          ContextData contextData = ContextData.get(cx);
+          contextData.breakNextLine = true;
+          try {
+!             cx.evaluateReader(scope, new FileReader(fileName),
+                                fileName, 1, null);
+          } catch (Exception exc) {
+              String msg = exc.getMessage();
+              if (exc instanceof EcmaError) {
+                  EcmaError err = (EcmaError)exc;
+                  msg = err.getSourceName() + ", line " + err.getLineNumber() + ": " + msg;
+!             }
+              MessageDialogWrapper.showMessageDialog(db,
+                                                     msg,
+                                                     "Run",
+                                                     JOptionPane.ERROR_MESSAGE);
+          } finally {
+              cx.exit();
+          }
+      }
+--- 2144,2223 ----
+      Scriptable scope;
+      String fileName;
+      Main db;
++     Reader reader = null;
++     Object result = null;
++     Exception exception = null;
++     int lineNum = -1;
++     boolean sfExecute = false;
++     
+      LoadFile(Main db, Scriptable scope, String fileName) {
+          this.scope = scope;
+          this.fileName = fileName;
+          this.db = db;
+      }
++ 
++     LoadFile(Main db, Scriptable scope, String fileName, Reader reader) {
++         this(db, scope, fileName);
++         this.reader = reader;
++     }
++     LoadFile(Main db, Scriptable scope, String fileName, Reader reader, boolean sfExecute ) {
++         this(db, scope, fileName);
++         this.reader = reader;
++         this.sfExecute = sfExecute;
++     }
++ 
+      public void run() {
++         if ( db.officeScripts.isScriptRunning( fileName ) )
++         { 
++             exception = new Exception("The script is already executing");
++             if ( !sfExecute ) {
++                 MessageDialogWrapper.showMessageDialog(db,
++                                                    "Script already executing",
++                                                    "Run",
++                                                    JOptionPane.ERROR_MESSAGE);
++             }
++             return;
++         } 
++         db.officeScripts.setScriptRunning( fileName, true );
+          Context cx = Context.enter();
+          ContextData contextData = ContextData.get(cx);
++         if ( sfExecute )
++         {
++             contextData.breakNextLine = false;
++         }
++         else
++         {
+          contextData.breakNextLine = true;
++         }
++         /*
++         FileWindow w = (FileWindow)db.getSelectedFrame();
++         if ( sfExecute )        
++         {
++             db.swingInvoke(new SetFilePosition(db, w, -1 ) );                
++         }*/
+          try {
+!             result = cx.evaluateReader(scope,
+!                 reader == null ? new FileReader(fileName) : reader,
+                                fileName, 1, null);
+          } catch (Exception exc) {
++             exception = exc;
+              String msg = exc.getMessage();
+              if (exc instanceof EcmaError) {
+                  EcmaError err = (EcmaError)exc;
+                  msg = err.getSourceName() + ", line " + err.getLineNumber() + ": " + msg;
+!     
+!                 int lineNum =  err.getLineNumber() ;
+!                 //db.swingInvoke(new SetFilePosition(db, w, lineNum ) );
+!                 if ( !sfExecute ) {
+              MessageDialogWrapper.showMessageDialog(db,
+                                                     msg,
+                                                     "Run",
+                                                     JOptionPane.ERROR_MESSAGE);
++                 }
++             }
++          
+          } finally {
++             db.officeScripts.setScriptRunning( fileName, false );
+              cx.exit();
+          }
+      }
+***************
+*** 2400,2412 ****
+          super.setVisible(b);
+          if (b) {
+              // this needs to be done after the window is visible
+!             console.consoleTextArea.requestFocus();
+              context.split.setDividerLocation(0.5);
+              try {
+!                 console.setMaximum(true);
+!                 console.setSelected(true);
+!                 console.show();
+!                 console.consoleTextArea.requestFocus();
+              } catch (Exception exc) {
+              }
+          }
+--- 2592,2604 ----
+          super.setVisible(b);
+          if (b) {
+              // this needs to be done after the window is visible
+!             // console.consoleTextArea.requestFocus();
+              context.split.setDividerLocation(0.5);
+              try {
+!                 // console.setMaximum(true);
+!                 // console.setSelected(true);
+!                 // console.show();
+!                 // console.consoleTextArea.requestFocus();
+              } catch (Exception exc) {
+              }
+          }
+***************
+*** 2431,2466 ****
+      private Hashtable scriptItems = new Hashtable();
+      private Hashtable sourceNames = new Hashtable();
+  
+      Hashtable functionNames = new Hashtable();
+  
+-     ScriptItem getScriptItem(DebuggableScript fnOrScript) {
+-         ScriptItem item = (ScriptItem)scriptItems.get(fnOrScript);
+-         if (item == null) {
+-             String url = getNormilizedUrl(fnOrScript);
+-             SourceInfo si = (SourceInfo)sourceNames.get(url);
+-             if (si == null) {
+-                 if (!fnOrScript.isGeneratedScript()) {
+-                     // Not eval or Function, try to load it from URL
+-                     String source = null;
+-                     try {
+-                         InputStream is = openSource(url);
+-                         try { source = readSource(is); }
+-                         finally { is.close(); }
+-                     } catch (IOException ex) {
+-                         System.err.println
+-                             ("Failed to load source from "+url+": "+ ex);
+-                     }
+-                     if (source != null) {
+-                         si = registerSource(url, source);
+-                     }
+-                 }
+-             }
+-             if (si != null) {
+-                 item = registerScript(si, fnOrScript);
+-             }
+-         }
+-         return item;
+-     }
+  
+      /* Debugger Interface */
+  
+--- 2623,2631 ----
+      private Hashtable scriptItems = new Hashtable();
+      private Hashtable sourceNames = new Hashtable();
+  
++   
+      Hashtable functionNames = new Hashtable();
+  
+  
+      /* Debugger Interface */
+  
+***************
+*** 2474,2480 ****
+  
+      String getNormilizedUrl(DebuggableScript fnOrScript) {
+          String url = fnOrScript.getSourceName();
+!         if (url == null) { url = "<stdin>"; }
+          else {
+              // Not to produce window for eval from different lines,
+              // strip line numbers, i.e. replace all #[0-9]+\(eval\) by (eval)
+--- 2639,2645 ----
+  
+      String getNormilizedUrl(DebuggableScript fnOrScript) {
+          String url = fnOrScript.getSourceName();
+!         if (url == null) { url = "document"; }
+          else {
+              // Not to produce window for eval from different lines,
+              // strip line numbers, i.e. replace all #[0-9]+\(eval\) by (eval)
+***************
+*** 2586,2591 ****
+--- 2751,2758 ----
+                  si = new SourceInfo(sourceUrl, source);
+                  sourceNames.put(sourceUrl, si);
+              }
++             else if (!source.equals(si.getSource()))
++                 si.setSource(source);
+          }
+          return si;
+      }
+***************
+*** 2681,2687 ****
+      EvalWindow evalWindow;
+      JSplitPane split1;
+      JLabel statusBar;
+- 
+      void init() {
+          setJMenuBar(menubar = new Menubar(this));
+          toolBar = new JToolBar();
+--- 2848,2853 ----
+***************
+*** 2760,2766 ****
+          desk = new JDesktopPane();
+          desk.setPreferredSize(new Dimension(600, 300));
+          desk.setMinimumSize(new Dimension(150, 50));
+!         desk.add(console = new JSInternalConsole("JavaScript Console"));
+          context = new ContextWindow(this);
+          context.setPreferredSize(new Dimension(600, 120));
+          context.setMinimumSize(new Dimension(50, 50));
+--- 2926,2932 ----
+          desk = new JDesktopPane();
+          desk.setPreferredSize(new Dimension(600, 300));
+          desk.setMinimumSize(new Dimension(150, 50));
+!         // desk.add(console = new JSInternalConsole("JavaScript Console"));
+          context = new ContextWindow(this);
+          context.setPreferredSize(new Dimension(600, 120));
+          context.setMinimumSize(new Dimension(50, 50));
+***************
+*** 2828,2833 ****
+--- 2994,3000 ----
+              swingInvoke(UpdateFileText.action(w));
+              w.show();
+          } else if (!fileName.equals("<stdin>")) {
++             
+              swingInvoke(CreateFileWindow.action(this, si, -1));
+          }
+      }
+***************
+*** 2869,2875 ****
+              FrameHelper frame = contextData.getFrame(frameIndex);
+              String sourceName = frame.getUrl();
+              if (sourceName == null || sourceName.equals("<stdin>")) {
+!                 console.show();
+                  helper.reset();
+                  return;
+              }
+--- 3036,3042 ----
+              FrameHelper frame = contextData.getFrame(frameIndex);
+              String sourceName = frame.getUrl();
+              if (sourceName == null || sourceName.equals("<stdin>")) {
+!                 // console.show();
+                  helper.reset();
+                  return;
+              }
+***************
+*** 2893,2898 ****
+--- 3060,3078 ----
+      int dispatcherIsWaiting = 0;
+      Context currentContext = null;
+  
++     // Flag used to establish whether source code editing is allowed in
++     // the debugger, switched on and off depending on whether a debug session
++     // is active
++     boolean sourceEditingEnabled = true;
++ 
++     public boolean isSourceEditingEnabled() {
++         return sourceEditingEnabled;
++     }
++ 
++     void setSourceEditingEnabled(boolean b) {
++         sourceEditingEnabled = b;
++     }
++ 
+      Context getCurrentContext() {
+          return currentContext;
+      }
+***************
+*** 3026,3039 ****
+                      swingInvoke(CreateFileWindow.action(this, si, line));
+                  }
+              } else {
+!                 if (console.isVisible()) {
+                      final JSInternalConsole finalConsole = console;
+                      swingInvoke(new Runnable() {
+                              public void run() {
+                                  finalConsole.show();
+                              }
+                          });
+!                 }
+              }
+              swingInvoke(new EnterInterrupt(this, cx));
+              swingInvoke(new UpdateContext(this, cx));
+--- 3206,3219 ----
+                      swingInvoke(CreateFileWindow.action(this, si, line));
+                  }
+              } else {
+!                 /* if (console.isVisible()) {
+                      final JSInternalConsole finalConsole = console;
+                      swingInvoke(new Runnable() {
+                              public void run() {
+                                  finalConsole.show();
+                              }
+                          });
+!                 } */
+              }
+              swingInvoke(new EnterInterrupt(this, cx));
+              swingInvoke(new UpdateContext(this, cx));
+***************
+*** 3221,3226 ****
+--- 3401,3414 ----
+                                              fileName)).start();
+                  }
+              }
++         } else if (cmd.equals("Run")) {
++             FileWindow w = (FileWindow)getSelectedFrame();
++             if (w != null)
++                 w.load();
++         } else if (cmd.equals("Save")) {
++             FileWindow w = (FileWindow)getSelectedFrame();
++             if (w != null)
++                 w.save();
+          } else if (cmd.equals("More Windows...")) {
+              MoreWindows dlg = new MoreWindows(this, fileWindows,
+                                                "Window", "Files");
+***************
+*** 3505,3510 ****
+--- 3693,3752 ----
+          }
+      }
+  
++     JInternalFrame getFrameForUrl( URL url )
++     { 
++         JInternalFrame[] frames = desk.getAllFrames();
++         for (int i = 0; i < frames.length; i++) {
++            FileWindow w = (FileWindow)frames[i];
++            if ( url.toString().equals( w.getUrl() ) ) {
++                return w;
++                }
++            }
++         return null; 
++     } 
++     public void highlighLineInSelectedWindow(URL url, int lineNum ){
++         //FileWindow w = (FileWindow)getFrameForUrl( url );
++         FileWindow w = (FileWindow)getSelectedFrame();
++         if (w != null)
++         {
++             if ( lineNum > -1 )
++                 swingInvoke(new SetFilePosition(this, w, lineNum ) );
++         }
++     }
++     public Object  runSelectedWindow( URL scriptUrl ) throws Exception
++     {
++         Object result = null;
++         FileWindow w = (FileWindow)getSelectedFrame();
++         //FileWindow w = (FileWindow)getFrameForUrl( scriptUrl );
++         w.toFront();
++         if (w != null)
++         {
++             Scriptable scope = w.db.getScope();
++             if (scope == null) 
++             {
++                 MessageDialogWrapper.showMessageDialog(w.db, "Can't load scripts: no scope available", "Run", JOptionPane.ERROR_MESSAGE);
++                 result =  null;
++             } 
++             else 
++             {
++                 String url = w.getUrl();
++                 Thread executorThread = null;
++                 if (url != null) 
++                 {
++                     LoadFile executor = new  LoadFile(w.db,scope, url, new StringReader(w.textArea.getText()), true );
++                     executor.run(); 
++                     result = executor.result;  
++                     if ( executor.exception != null )
++                     {
++                         throw executor.exception;
++                     }
++                 }
++             }
++         }
++         return result;
++ 
++     }
++ 
+      //
+      // public interface
+      //
+***************
+*** 3600,3605 ****
+--- 3842,3911 ----
+          return console.getErr();
+      }
+  
++     public void openFile(URL scriptUrl, Scriptable scope, Runnable closeCallback ) {
++         if (scope == null) {
++             MessageDialogWrapper.showMessageDialog(this,
++                 "Can't compile scripts: no scope available",
++                 "Open", JOptionPane.ERROR_MESSAGE);
++         } else {
++             if (scriptUrl != null) {
++                 try
++                 {
++                     InputStreamReader reader = new InputStreamReader(scriptUrl.openStream()); 
++                     String fileName = null;
++                     if ( scriptUrl.getProtocol().startsWith("vnd.sun.star.") )
++                     {
++                         fileName = scriptUrl.toString();
++                     }
++                     else
++                     {
++                         fileName = scriptUrl.getPath();
++                     }
++                     officeScripts.addScript( fileName, scriptUrl, scope, closeCallback  );
++                     //new Thread(new OpenFile(this, scope, fileName, reader )).start();
++                     swingInvoke( new OpenFile(this, scope, fileName, reader ));
++                 }
++                 catch ( IOException e )
++                 {
++                     MessageDialogWrapper.showMessageDialog(this,
++                         "Can't open stream for script: " + e.toString(),
++                         "Open", JOptionPane.ERROR_MESSAGE);
++                 }
++             }
++         }
++         split1.setDividerLocation(1.0);
++     }
++ 
++ 
++     public void openFile(String fileName) {
++         Scriptable scope = getScope();
++         if (scope == null) {
++             MessageDialogWrapper.showMessageDialog(this,
++                 "Can't compile scripts: no scope available",
++                 "Open", JOptionPane.ERROR_MESSAGE);
++         } else {
++             if (fileName != null) {
++                 new Thread(new OpenFile(this, scope, fileName)).start();
++             }
++         }
++         split1.setDividerLocation(1.0);
++     }
++ 
++     public void openStream(InputStream in) {
++         Scriptable scope = getScope();
++         if (scope == null) {
++             MessageDialogWrapper.showMessageDialog(this,
++                 "Can't compile scripts: no scope available",
++                 "Open", JOptionPane.ERROR_MESSAGE);
++         } else {
++             if (in != null) {
++                 new Thread(new OpenFile(this, scope, null, new InputStreamReader(in))).start();
++             }
++         }
++         split1.setDividerLocation(1.0);
++         menubar.setSaveEnabled(false);
++     }
++ 
+      public static void main(String[] args) {
+          try {
+              mainThread = Thread.currentThread();
+***************
+*** 3630,3635 ****
+--- 3936,4099 ----
+              exc.printStackTrace();
+          }
+      }
++ 
++ // patched Office specific interface
++ 
++     OfficeScriptInfo officeScripts = new OfficeScriptInfo();
++ 
++     void removeScript( String url )
++     {
++         // Remove the FileWindow from list of open sources
++         fileWindows.remove( url );
++ 
++         // Remove sourceInfo from sourceNames, ensures that
++         // breakpoints etc are deleted
++         synchronized (sourceNames) {
++             sourceNames.remove( url );
++         }
++         // Removes scriptItems for the script, ensures that a new open ( from openFile )
++         // will succeed, openFile should open file but fails due to fact that 
++         synchronized ( scriptItems ) 
++         {   
++             Iterator iter = scriptItems.entrySet().iterator();
++             while ( iter.hasNext() )
++             {
++                 Map.Entry me = ( Map.Entry )iter.next();
++                 ScriptItem item = (ScriptItem)me.getValue();
++                 SourceInfo si =   item.getSourceInfo();
++                 if ( si.getUrl().equals( url ) )
++                 {
++                     //match
++                     scriptItems.remove( me.getKey() );
++                     break;
++                 }
++             }
++         }
++         officeScripts.deleteScript( url );
++     }
++ 
++ 
++     ScriptItem getScriptItem(DebuggableScript fnOrScript) {
++         ScriptItem item = (ScriptItem)scriptItems.get(fnOrScript);
++         if (item == null) {
++             String url = getNormilizedUrl(fnOrScript);
++             SourceInfo si = (SourceInfo)sourceNames.get(url);
++             if (si == null) {
++                 if (!fnOrScript.isGeneratedScript()) {
++                     // Not eval or Function, try to load it from URL
++                     String source = null;
++                     try {
++                         InputStream is = openSource(url);
++                         try { source = readSource(is); }
++                         finally { is.close(); }
++                     } catch (IOException ex) {
++                         System.err.println
++                             ("Failed to load source from "+url+": "+ ex);
++                     }
++                     if (source != null) {
++                         si = registerSource(url, source);
++                     }
++                 }
++             }
++             if (si != null) {
++                 item = registerScript(si, fnOrScript);
++             }
++         }
++         
++         return item;
++     }
++ 
++     public void showScriptWindow(URL url ){
++         String key = url.getPath();
++         if ( url.getProtocol().startsWith("vnd.sun.star") )
++         {
++             key = url.toString();
++         }
++         FileWindow w = (FileWindow)getFileWindow( key );
++         if ( w != null )
++         {
++             //w.maximize();
++             desk.getDesktopManager().deiconifyFrame(w);
++             desk.getDesktopManager().activateFrame(w);
++             w.show();
++             w.toFront();
++         }
++     }
++ 
++     public void highlighLineInScriptWindow(URL url, int lineNum ){
++         String key = url.getPath();
++         if ( url.getProtocol().startsWith("vnd.sun.star") )
++         {
++             key = url.getPath();
++         }
++         FileWindow w = (FileWindow)getFileWindow( key );
++         if (w != null)
++         {
++             if ( lineNum > -1 )
++                 swingInvoke(new SetFilePosition(this, w, lineNum ) );
++         }
++     }
++     public Object runScriptWindow( URL scriptUrl ) throws Exception
++     {
++         String key = scriptUrl.getPath();
++         if ( scriptUrl.getProtocol().startsWith("vnd.sun.star") )
++         {
++             key = scriptUrl.toString();
++         }
++         FileWindow w = (FileWindow)getFileWindow( key );
++         Object result = null;
++         w.toFront();
++         if (w != null)
++         {
++             //Scriptable scope = w.db.getScope();
++             Scriptable scope = w.db.officeScripts.getScriptScope( key );
++             if (scope == null) 
++             {
++                 MessageDialogWrapper.showMessageDialog(w.db, "Can't load scripts: no scope available", "Run", JOptionPane.ERROR_MESSAGE);
++                 result =  null;
++             } 
++             else 
++             {
++                 String url = w.getUrl();
++                 Thread executorThread = null;
++                 if (url != null) 
++                 {
++                     LoadFile executor = new  LoadFile(w.db,scope, url, new StringReader(w.textArea.getText()), true );
++                     executor.run(); 
++                     result = executor.result;  
++                     if ( executor.exception != null )
++                     {
++                         throw executor.exception;
++                     }
++                 }
++             }
++         }
++         return result;
++ 
++     }
++ 
++     public boolean isModified( URL url ) 
++     {
++         String key = url.getPath();
++         if ( url.getProtocol().startsWith("vnd.sun.star") )
++         {
++             key = url.toString();
++         }
++         FileWindow w = (FileWindow)getFileWindow( key );
++         return w.isModified();
++     }
++ 
++     public String getText( URL url )
++     {
++         String key = url.toString();
++         if ( url.getProtocol().startsWith("vnd.sun.star") )
++         {
++             key = url.toString();
++         }
++         FileWindow w = (FileWindow)getFileWindow( key );
++         return w.getText();
++     }
++ 
+  
+  }
+  
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/OfficeScriptInfo.java	Tue Jul  4 15:14:27 2006
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/OfficeScriptInfo.java	Tue Jul  4 14:59:43 2006
+***************
+*** 1 ****
+! dummy
+--- 1,136 ----
+! /*************************************************************************
+!  *
+!  *  $RCSfile$
+!  *
+!  *  $Revision$
+!  *
+!  *  last change: $Author$ $Date$
+!  *
+!  *  The Contents of this file are made available subject to
+!  *  the terms of GNU Lesser General Public License Version 2.1.
+!  *
+!  *
+!  *    GNU Lesser General Public License Version 2.1
+!  *    =============================================
+!  *    Copyright 2005 by Sun Microsystems, Inc.
+!  *    901 San Antonio Road, Palo Alto, CA 94303, USA
+!  *
+!  *    This library is free software; you can redistribute it and/or
+!  *    modify it under the terms of the GNU Lesser General Public
+!  *    License version 2.1, as published by the Free Software Foundation.
+!  *
+!  *    This library is distributed in the hope that it will be useful,
+!  *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+!  *    Lesser General Public License for more details.
+!  *
+!  *    You should have received a copy of the GNU Lesser General Public
+!  *    License along with this library; if not, write to the Free Software
+!  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+!  *    MA  02111-1307  USA
+!  *
+!  ************************************************************************/
+! 
+! 
+! package org.mozilla.javascript.tools.debugger;
+! import java.net.URL;
+! import java.util.Hashtable;
+! import org.mozilla.javascript.Scriptable;
+! 
+! public class OfficeScriptInfo
+! {
+!     private Hashtable loadedSFScripts = new Hashtable();
+!    
+!     public void addScript( URL url, Scriptable scope, Runnable closeCallback )
+!     {
+!         addScript( url.toString(), url, scope, closeCallback );
+!     }
+! 
+!     public void addScript( String key, URL url, Scriptable scope, Runnable closeCallback )
+!     {
+!         SFScriptInfo si = (SFScriptInfo)loadedSFScripts.get( key );
+!         if ( si == null )
+!         {
+!             si = new SFScriptInfo();
+!             si.url = url;
+!             si.scope = scope; 
+!             si.closeCallback = closeCallback; 
+!             loadedSFScripts.put( key, si );
+!         }  
+!     }   
+! 
+!     public void deleteScript( String key )
+!     {
+!         SFScriptInfo info = (SFScriptInfo)loadedSFScripts.remove( key );
+!         if ( info != null )
+!         {
+!             if ( info.closeCallback != null )
+!             {
+!                 System.out.println("** In removeSFScriptInfo  have callback for " + key );
+!                 info.closeCallback.run(); // really need to do this in seperate thread????
+!             }
+!         }
+!     }
+! 
+!     public Scriptable getScriptScope( String key )
+!     {
+!         Scriptable result = null;
+!         SFScriptInfo info = (SFScriptInfo)loadedSFScripts.get( key );
+!         if ( info != null )
+!         {
+!             result = info.scope;
+!         }
+!         return result;
+!     } 
+!   
+!     public URL getScriptUrl( String key )
+!     {
+!         URL result = null;
+!         SFScriptInfo info = (SFScriptInfo)loadedSFScripts.get( key );
+!         if ( info != null )
+!         {
+!             result = info.url;
+!         }
+!         return result;
+!     } 
+!     public boolean hasScript( String key )
+!     {
+!         boolean result = true;
+!         SFScriptInfo info = (SFScriptInfo)loadedSFScripts.get( key );
+!         if ( info == null )
+!         {
+!             result = false;
+!         }      
+!         return result;
+!     } 
+! 
+!     public void setScriptRunning( String key, boolean running )
+!     {
+!         SFScriptInfo info = (SFScriptInfo)loadedSFScripts.get( key );
+!         if ( info != null )
+!         {
+!             info.isExecuting = running;
+!         }
+!     }
+! 
+!     public boolean isScriptRunning( String key )
+!     {
+!         boolean result = false;
+!         SFScriptInfo info = (SFScriptInfo)loadedSFScripts.get( key );
+!         if ( info != null )
+!         {
+!             result = info.isExecuting;
+!         }
+!         return result;
+!     }
+! 
+!     
+!   
+!     class SFScriptInfo
+!     {
+!         Scriptable scope;
+!         boolean isExecuting;
+!         URL url;
+!         Runnable closeCallback;
+!     }
+! }
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/TreeTableModel.java	Tue Jul  4 15:14:27 2006
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/TreeTableModel.java	Tue Jul  4 15:12:58 2006
+***************
+*** 1 ****
+! dummy
+--- 1,85 ----
+! /*************************************************************************
+!  *
+!  *  OpenOffice.org - a multi-platform office productivity suite
+!  *
+!  *  $RCSfile$
+!  *
+!  *  $Revision$
+!  *
+!  *  last change: $Author$ $Date$
+!  *
+!  *  The Contents of this file are made available subject to
+!  *  the terms of GNU Lesser General Public License Version 2.1.
+!  *
+!  *
+!  *    GNU Lesser General Public License Version 2.1
+!  *    =============================================
+!  *    Copyright 2005 by Sun Microsystems, Inc.
+!  *    901 San Antonio Road, Palo Alto, CA 94303, USA
+!  *
+!  *    This library is free software; you can redistribute it and/or
+!  *    modify it under the terms of the GNU Lesser General Public
+!  *    License version 2.1, as published by the Free Software Foundation.
+!  *
+!  *    This library is distributed in the hope that it will be useful,
+!  *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+!  *    Lesser General Public License for more details.
+!  *
+!  *    You should have received a copy of the GNU Lesser General Public
+!  *    License along with this library; if not, write to the Free Software
+!  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+!  *    MA  02111-1307  USA
+!  *
+!  ************************************************************************/
+! 
+! package org.mozilla.javascript.tools.debugger;
+! 
+! import javax.swing.tree.TreeModel;
+! 
+! /**
+!  * TreeTableModel is the model used by a JTreeTable. It extends TreeModel
+!  * to add methods for getting inforamtion about the set of columns each 
+!  * node in the TreeTableModel may have. Each column, like a column in 
+!  * a TableModel, has a name and a type associated with it. Each node in 
+!  * the TreeTableModel can return a value for each of the columns and 
+!  * set that value if isCellEditable() returns true. 
+!  *
+!  * @author Philip Milne 
+!  * @author Scott Violet
+!  */
+! public interface TreeTableModel extends TreeModel
+! {
+!     /**
+!      * Returns the number ofs availible column.
+!      */
+!     public int getColumnCount();
+! 
+!     /**
+!      * Returns the name for column number <code>column</code>.
+!      */
+!     public String getColumnName(int column);
+! 
+!     /**
+!      * Returns the type for column number <code>column</code>.
+!      */
+!     public Class getColumnClass(int column);
+! 
+!     /**
+!      * Returns the value to be displayed for node <code>node</code>, 
+!      * at column number <code>column</code>.
+!      */
+!     public Object getValueAt(Object node, int column);
+! 
+!     /**
+!      * Indicates whether the the value for node <code>node</code>, 
+!      * at column number <code>column</code> is editable.
+!      */
+!     public boolean isCellEditable(Object node, int column);
+! 
+!     /**
+!      * Sets the value for node <code>node</code>, 
+!      * at column number <code>column</code>.
+!      */
+!     public void setValueAt(Object aValue, Object node, int column);
+! }
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/TreeTableModelAdapter.java	Tue Jul  4 15:14:27 2006
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/TreeTableModelAdapter.java	Tue Jul  4 15:12:58 2006
+***************
+*** 1 ****
+! dummy
+--- 1,148 ----
+! /*************************************************************************
+!  *
+!  *  OpenOffice.org - a multi-platform office productivity suite
+!  *
+!  *  $RCSfile$
+!  *
+!  *  $Revision$
+!  *
+!  *  last change: $Author$ $Date$
+!  *
+!  *  The Contents of this file are made available subject to
+!  *  the terms of GNU Lesser General Public License Version 2.1.
+!  *
+!  *
+!  *    GNU Lesser General Public License Version 2.1
+!  *    =============================================
+!  *    Copyright 2005 by Sun Microsystems, Inc.
+!  *    901 San Antonio Road, Palo Alto, CA 94303, USA
+!  *
+!  *    This library is free software; you can redistribute it and/or
+!  *    modify it under the terms of the GNU Lesser General Public
+!  *    License version 2.1, as published by the Free Software Foundation.
+!  *
+!  *    This library is distributed in the hope that it will be useful,
+!  *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+!  *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+!  *    Lesser General Public License for more details.
+!  *
+!  *    You should have received a copy of the GNU Lesser General Public
+!  *    License along with this library; if not, write to the Free Software
+!  *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+!  *    MA  02111-1307  USA
+!  *
+!  ************************************************************************/
+! 
+! package org.mozilla.javascript.tools.debugger;
+! 
+! import javax.swing.JTree;
+! import javax.swing.SwingUtilities;
+! import javax.swing.table.AbstractTableModel;
+! import javax.swing.tree.TreePath;
+! import javax.swing.event.TreeExpansionEvent;
+! import javax.swing.event.TreeExpansionListener;
+! import javax.swing.event.TreeModelEvent;
+! import javax.swing.event.TreeModelListener;
+! 
+! /**
+!  * This is a wrapper class takes a TreeTableModel and implements 
+!  * the table model interface. The implementation is trivial, with 
+!  * all of the event dispatching support provided by the superclass: 
+!  * the AbstractTableModel. 
+!  *
+!  * @version 1.2 10/27/98
+!  *
+!  * @author Philip Milne
+!  * @author Scott Violet
+!  */
+! public class TreeTableModelAdapter extends AbstractTableModel
+! {
+!     JTree tree;
+!     TreeTableModel treeTableModel;
+! 
+!     public TreeTableModelAdapter(TreeTableModel treeTableModel, JTree tree) {
+!         this.tree = tree;
+!         this.treeTableModel = treeTableModel;
+! 
+! 	tree.addTreeExpansionListener(new TreeExpansionListener() {
+! 	    // Don't use fireTableRowsInserted() here; the selection model
+! 	    // would get updated twice. 
+! 	    public void treeExpanded(TreeExpansionEvent event) {  
+! 	      fireTableDataChanged(); 
+! 	    }
+!             public void treeCollapsed(TreeExpansionEvent event) {  
+! 	      fireTableDataChanged(); 
+! 	    }
+! 	});
+! 
+! 	// Install a TreeModelListener that can update the table when
+! 	// tree changes. We use delayedFireTableDataChanged as we can
+! 	// not be guaranteed the tree will have finished processing
+! 	// the event before us.
+! 	treeTableModel.addTreeModelListener(new TreeModelListener() {
+! 	    public void treeNodesChanged(TreeModelEvent e) {
+! 		delayedFireTableDataChanged();
+! 	    }
+! 
+! 	    public void treeNodesInserted(TreeModelEvent e) {
+! 		delayedFireTableDataChanged();
+! 	    }
+! 
+! 	    public void treeNodesRemoved(TreeModelEvent e) {
+! 		delayedFireTableDataChanged();
+! 	    }
+! 
+! 	    public void treeStructureChanged(TreeModelEvent e) {
+! 		delayedFireTableDataChanged();
+! 	    }
+! 	});
+!     }
+! 
+!     // Wrappers, implementing TableModel interface. 
+! 
+!     public int getColumnCount() {
+! 	return treeTableModel.getColumnCount();
+!     }
+! 
+!     public String getColumnName(int column) {
+! 	return treeTableModel.getColumnName(column);
+!     }
+! 
+!     public Class getColumnClass(int column) {
+! 	return treeTableModel.getColumnClass(column);
+!     }
+! 
+!     public int getRowCount() {
+! 	return tree.getRowCount();
+!     }
+! 
+!     protected Object nodeForRow(int row) {
+! 	TreePath treePath = tree.getPathForRow(row);
+! 	return treePath.getLastPathComponent();         
+!     }
+! 
+!     public Object getValueAt(int row, int column) {
+! 	return treeTableModel.getValueAt(nodeForRow(row), column);
+!     }
+! 
+!     public boolean isCellEditable(int row, int column) {
+!          return treeTableModel.isCellEditable(nodeForRow(row), column); 
+!     }
+! 
+!     public void setValueAt(Object value, int row, int column) {
+! 	treeTableModel.setValueAt(value, nodeForRow(row), column);
+!     }
+! 
+!     /**
+!      * Invokes fireTableDataChanged after all the pending events have been
+!      * processed. SwingUtilities.invokeLater is used to handle this.
+!      */
+!     protected void delayedFireTableDataChanged() {
+! 	SwingUtilities.invokeLater(new Runnable() {
+! 	    public void run() {
+! 		fireTableDataChanged();
+! 	    }
+! 	});
+!     }
+! }
+! 
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/shell/JavaPolicySecurity.java	Tue Mar 22 13:20:49 2005
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/shell/JavaPolicySecurity.java	Tue Jul  4 14:59:43 2006
+***************
+*** 36,41 ****
+--- 36,42 ----
+  package org.mozilla.javascript.tools.shell;
+  
+  import java.security.*;
++ import java.security.cert.Certificate;
+  import java.net.MalformedURLException;
+  import java.net.URL;
+  import java.util.Hashtable;
+***************
+*** 124,130 ****
+  
+      public JavaPolicySecurity() {
+          // To trigger error on jdk-1.1 with lazy load
+!         new CodeSource(null, null);
+      }
+  
+      protected void callProcessFileSecure(final Context cx,
+--- 125,131 ----
+  
+      public JavaPolicySecurity() {
+          // To trigger error on jdk-1.1 with lazy load
+!         new CodeSource(null, (Certificate [])null);
+      }
+  
+      protected void callProcessFileSecure(final Context cx,
+***************
+*** 167,173 ****
+      }
+  
+      private ProtectionDomain getUrlDomain(URL url) {
+!         CodeSource cs = new CodeSource(url, null);
+          PermissionCollection pc = Policy.getPolicy().getPermissions(cs);
+          return new ProtectionDomain(cs, pc);
+      }
+--- 168,174 ----
+      }
+  
+      private ProtectionDomain getUrlDomain(URL url) {
+!         CodeSource cs = new CodeSource(url, (Certificate [])null);
+          PermissionCollection pc = Policy.getPolicy().getPermissions(cs);
+          return new ProtectionDomain(cs, pc);
+      }
+*** misc/rhino1_5R4/src/build.xml	2005-03-22 13:23:46.000000000 +0100
+--- misc/build/rhino1_5R4/src/build.xml	2006-10-11 18:45:53.000000000 +0200
+***************
+*** 15,21 ****
+             destdir="${nest}/${build.dest}"
+             includes="org/**/*.java"
+             deprecation="on"
+!            debug="${debug}">
+      </javac>
+    </target>
+  
+--- 15,23 ----
+             destdir="${nest}/${build.dest}"
+             includes="org/**/*.java"
+             deprecation="on"
+!            debug="${debug}"
+!            source="${java.source.ver}"
+!            target="${java.target.ver}">
+      </javac>
+    </target>
+  
+*** misc/rhino1_5R4/toolsrc/build.xml	2005-03-22 13:23:46.000000000 +0100
+--- misc/build/rhino1_5R4/toolsrc/build.xml	2006-10-11 18:44:33.000000000 +0200
+***************
+*** 65,71 ****
+             destdir="${nest}/${build.dest}"
+             includes="org/**/*.java"
+             deprecation="on"
+!            debug="${debug}">
+      </javac>
+    </target>
+  
+--- 65,73 ----
+             destdir="${nest}/${build.dest}"
+             includes="org/**/*.java"
+             deprecation="on"
+!            debug="${debug}"
+!            source="${java.source.ver}"
+!            target="${java.target.ver}">
+      </javac>
+    </target>
+  
+*** misc/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/Main.java	Tue Mar 22 13:20:49 2005
+--- misc/build/rhino1_5R4/toolsrc/org/mozilla/javascript/tools/debugger/Main.java	Tue Jul  4 14:59:43 2006
+***************
++++ Main.java	2007-11-10 14:29:16.000000000 -0800
+@@ -1039,8 +1039,16 @@
+     }
+ 
+     private void updateToolTip() {
++        // On Mac OS X 10.5, the number of components is different
++        int n = getComponentCount() - 1;
++        if (n > 1) {
++            n = 1;
++        } else if (n < 0) {
++            return;
++        }
++
+         // in case fileName is very long, try to set tool tip on frame
+-        Component c = getComponent(1);
++        Component c = getComponent(n);
+         // this will work at least for Metal L&F
+         if (c != null && c instanceof JComponent) {
+             ((JComponent)c).setToolTipText(getUrl());
