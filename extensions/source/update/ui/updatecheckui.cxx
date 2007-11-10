@@ -749,10 +749,13 @@ IMPL_LINK( UpdateCheckUI, UserEventHdl, UpdateCheckUI*, EMPTYARG )
         xTransformer->parseStrict( aURL );
         uno::Reference< frame::XDesktop > xDesktop( xFactory->createInstance( UNISTRING( "com.sun.star.frame.Desktop" ) ), uno::UNO_QUERY_THROW );
         uno::Reference< frame::XDispatchProvider > xDispatchProvider( xDesktop->getCurrentFrame(), uno::UNO_QUERY );
-        uno::Reference< frame::XDispatch > xDispatch = xDispatchProvider->queryDispatch( aURL, rtl::OUString(), 0 );
+        if( xDispatchProvider.is() )
+        {
+            uno::Reference< frame::XDispatch > xDispatch = xDispatchProvider->queryDispatch( aURL, rtl::OUString(), 0 );
 
-        if( xDispatch.is() )
-            xDispatch->dispatch( aURL, uno::Sequence< beans::PropertyValue >() );
+            if( xDispatch.is() )
+                xDispatch->dispatch( aURL, uno::Sequence< beans::PropertyValue >() );
+        }
     }
     catch( ... )
     {
