@@ -332,6 +332,7 @@ build.neo_patches: build.oo_all build.odf-converter_patches \
 	build.neo_hsqldb_patch \
 	build.neo_jvmfwk_patch \
 	build.neo_lingucomponent_patch \
+	build.neo_rhino_patch \
 	build.neo_sal_patch \
 	build.neo_sc_patch \
 	build.neo_sfx2_patch \
@@ -391,6 +392,7 @@ ifdef X11_PRODUCT
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; printf '%s' 'APPL$(PRODUCT_FILETYPE)' > "PkgInfo"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/hsqldb/$(UOUTPUTDIR)/misc/build/hsqldb/lib/hsqldb.jar" "program/classes"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/rhino/$(UOUTPUTDIR)/misc/build/rhino1_5R4/build/rhino1_5R4/js.jar" "program/classes"
 ifndef X11_PRODUCT
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
 endif
@@ -552,6 +554,7 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin" ; strip "program/soffice.bin"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/shell/$(UOUTPUTDIR)/bin/senddoc" "program/senddoc" ; chmod a+x "program/senddoc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/hsqldb/$(UOUTPUTDIR)/misc/build/hsqldb/lib/hsqldb.jar" "program/classes"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/rhino/$(UOUTPUTDIR)/misc/build/rhino1_5R4/build/rhino1_5R4/js.jar" "program/classes"
 ifndef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/dict/ooo"
