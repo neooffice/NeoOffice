@@ -799,7 +799,7 @@ bool JavaSalGraphics::AddTempDevFont( ImplDevFontList* pList, const String& rFil
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::AddTempDevFont not implemented\n" );
 #endif
-	return NULL;
+	return false;
 }
 
 // -----------------------------------------------------------------------
