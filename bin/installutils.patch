@@ -37,6 +37,8 @@
 product_patch_version=`echo $(PRODUCT_PATCH_VERSION) | sed 's#^Patch ##'`
 userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)"
 target_file_type="$(TARGET_FILE_TYPE)"
+mdimporter_id="$(NEOLIGHT_MDIMPORTER_ID)"
+qlplugin_id="$(NEOPEEK_QLPLUGIN_ID)"
 
 check_installation() {
 
@@ -99,6 +101,29 @@ update_installation() {
 
 	# Unzip new files
 	( cd "$1" || exit 1 ; pax -r -z -f "$2/Contents/Archive.pax.gz" ) || return 1
+
+	# Fix bug 2711 by updating plugin bundle IDs
+	mdimporter_file="$1/Contents/Library/Spotlight/neolight.mdimporter/Contents/Info.plist"
+	rm -f "$mdimporter_file.tmp"
+	if [ ! -z "$mdimporter_id" -a -f "$mdimporter_file" ] ; then
+		sed "s#$mdimporter_id#$mdimporter_id.`date '+%Y%m%d%H%M%S'`#g" "$mdimporter_file" > "$mdimporter_file.tmp"
+		if [ -s "$mdimporter_file.tmp" ] ; then
+			mv -f "$mdimporter_file.tmp" "$mdimporter_file"
+			chmod -f 444 "$mdimporter_file"
+		fi
+		rm -f "$mdimporter_file.tmp"
+	fi
+
+	qlplugin_file="$1/Contents/Library/QuickLook/neopeek.qlgenerator/Contents/Info.plist"
+	rm -f "$qlplugin_file.tmp"
+	if [ ! -z "$qlplugin_id" -a -f "$qlplugin_file" ] ; then
+		sed "s#$qlplugin_id#$qlplugin_id.`date '+%Y%m%d%H%M%S'`#g" "$qlplugin_file" > "$qlplugin_file.tmp"
+		if [ -s "$qlplugin_file.tmp" ] ; then
+			mv -f "$qlplugin_file.tmp" "$qlplugin_file"
+			chmod -f 444 "$qlplugin_file"
+		fi
+		rm -f "$qlplugin_file.tmp"
+	fi
 
 	sync
 

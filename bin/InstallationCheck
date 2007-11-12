@@ -37,7 +37,7 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
-commands="awk basename chmod chown dirname echo file find grep id mv open pax ps rm sed sort touch uname"
+commands="awk basename chmod chown date dirname echo file find grep id mv open pax ps rm sed sort touch uname"
 
 # Check that the required BSD command are installed
 for i in $commands ; do

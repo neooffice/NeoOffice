@@ -37,11 +37,37 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
+mdimporter_id="$(NEOLIGHT_MDIMPORTER_ID)"
+qlplugin_id="$(NEOPEEK_QLPLUGIN_ID)"
+
 if [ -d "$2" ]; then
 
 	# Fix Apple installer bug described in bug 1373
 	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" ]; then
 		exit 1;
+	fi
+
+	# Fix bug 2711 by updating plugin bundle IDs
+	mdimporter_file="$2/Contents/Library/Spotlight/neolight.mdimporter/Contents/Info.plist"
+	rm -f "$mdimporter_file.tmp"
+	if [ ! -z "$mdimporter_id" -a -f "$mdimporter_file" ] ; then
+		sed "s#$mdimporter_id#$mdimporter_id.`date '+%Y%m%d%H%M%S'`#g" "$mdimporter_file" > "$mdimporter_file.tmp"
+		if [ -s "$mdimporter_file.tmp" ] ; then
+			mv -f "$mdimporter_file.tmp" "$mdimporter_file"
+			chmod -f 444 "$mdimporter_file"
+		fi
+		rm -f "$mdimporter_file.tmp"
+	fi
+
+	qlplugin_file="$2/Contents/Library/QuickLook/neopeek.qlgenerator/Contents/Info.plist"
+	rm -f "$qlplugin_file.tmp"
+	if [ ! -z "$qlplugin_id" -a -f "$qlplugin_file" ] ; then
+		sed "s#$qlplugin_id#$qlplugin_id.`date '+%Y%m%d%H%M%S'`#g" "$qlplugin_file" > "$qlplugin_file.tmp"
+		if [ -s "$qlplugin_file.tmp" ] ; then
+			mv -f "$qlplugin_file.tmp" "$qlplugin_file"
+			chmod -f 444 "$qlplugin_file"
+		fi
+		rm -f "$qlplugin_file.tmp"
 	fi
 
 	tempfile="$INSTALLER_TEMP/out"
