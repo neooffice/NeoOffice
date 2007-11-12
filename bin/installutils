@@ -61,26 +61,6 @@ check_installation() {
 
 }
 
-update_installation() {
-
-	if [ ! -f "$2/Contents/Archive.pax.gz" ] ; then
-		return 0;
-	fi
-
-	check_installation "$1" || return 0
-
-	# Unzip new files
-	( cd "$1" || exit 1 ; pax -r -z -f "$2/Contents/Archive.pax.gz" ) || return 1
-
-	# Mark certain directories writable for admin group
-	chmod -f ug+w "$1/Contents" || return 1
-	chmod -Rf ug+w "$1/Contents/Resources" || return 1
-	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
-
-	return 0
-
-}
-
 check_running() {
 
 	productname=`echo "$1" | grep "/$(PRODUCT_DIR_NAME)\.app\$"`
