@@ -218,7 +218,7 @@ static void ImplLoadNativeFont( OUString aPath )
 			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
 			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr )
 			{
-				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
+				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault | kATSOptionFlagsDoNotNotify, NULL );
 				ReceiveNextEvent( 0, NULL, 0, false, NULL );
 			}
 		}
@@ -375,6 +375,8 @@ BOOL SVMain()
             ImplLoadNativeFont( aBasePath );
         }
     }
+
+	ATSFontNotify( kATSFontNotifyActionFontsChanged, NULL );
 #endif	// USE_JAVA
 
     BOOL bInit;
