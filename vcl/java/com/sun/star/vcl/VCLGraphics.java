@@ -2155,7 +2155,7 @@ public final class VCLGraphics {
 					m.setSelected(false);
 
 				Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
-				Rectangle bounds = new Rectangle(x - 4, y - 4, VCLGraphics.radioButtonPreferredSize.width, VCLGraphics.radioButtonPreferredSize.height);
+				Rectangle bounds = new Rectangle(x, y - 4, VCLGraphics.radioButtonPreferredSize.width, VCLGraphics.radioButtonPreferredSize.height);
 				if (width > d.width)
 					bounds.x += (width - d.width) / 2;
 				if (height > d.height)
@@ -2207,7 +2207,7 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredRadioButtonBounds(int x, int y, int width, int height, String title) {
 
-		return new Rectangle(x, y, VCLGraphics.radioButtonPreferredSize.width, VCLGraphics.radioButtonPreferredSize.height);
+		return new Rectangle(x, y, VCLGraphics.radioButtonPreferredSize.width + 4, VCLGraphics.radioButtonPreferredSize.height);
 
 	}
 	
@@ -2266,7 +2266,7 @@ public final class VCLGraphics {
 
 
 				Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
-				Rectangle bounds = new Rectangle(x - 4, y - 4, VCLGraphics.checkBoxButtonPreferredSize.width, VCLGraphics.checkBoxButtonPreferredSize.height);
+				Rectangle bounds = new Rectangle(x, y - 4, VCLGraphics.checkBoxButtonPreferredSize.width, VCLGraphics.checkBoxButtonPreferredSize.height);
 				if (width > d.width)
 					bounds.x += (width - d.width) / 2;
 				if (height > d.height)
@@ -2318,7 +2318,7 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredCheckBoxBounds(int x, int y, int width, int height, String title) {
 
-		return new Rectangle(x, y, VCLGraphics.checkBoxButtonPreferredSize.width, VCLGraphics.checkBoxButtonPreferredSize.height);
+		return new Rectangle(x, y, VCLGraphics.checkBoxButtonPreferredSize.width + 4, VCLGraphics.checkBoxButtonPreferredSize.height);
 
 	}
 
