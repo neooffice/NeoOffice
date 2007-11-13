@@ -666,8 +666,9 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 		pSalData->mpEventQueue->setShutdownDisabled( sal_False );
 	}
 
-	// Iterate through fonts and add each to the font list
-	String aSymbol( RTL_CONSTASCII_USTRINGPARAM( "Symbol" ) );
+	// Iterate through fonts and add each to the font list. Fix bug 2740 by
+	// filtering out the OpenSymbol font from the font list.
+	String aSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
 	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.begin(); it != pSalData->maFontNameMapping.end(); ++it )
 	{
 		// Fix bugs 747 and 1040 by only allowing the Mac OS X Symbol font to
