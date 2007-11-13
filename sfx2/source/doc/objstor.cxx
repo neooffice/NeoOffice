@@ -1733,13 +1733,23 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 								uno::Reference< document::XFilter > xFilter( xExporter, uno::UNO_QUERY_THROW );
 								xExporter->setSourceDocument( xComp );
 
-								// Only save the first page. Note that the PDF filter
-								// library requires that the page range must be before the
-								// output stream in the property value sequence or else the
-								// the page range will be ignored
-								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 1 );
+								// Only save the first page. Note that the PDF
+								// filter library requires that the page range
+								// must be set before the output stream in the
+								// property value sequence or else the the page
+								// range will be ignored. Also, turn off
+								// extraneous features that are on by default.
+								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 5 );
 								aFilterData[0].Name = ::rtl::OUString::createFromAscii( "PageRange" );
 								aFilterData[0].Value <<= ::rtl::OUString::createFromAscii( "1-1" );
+								aFilterData[1].Name = ::rtl::OUString::createFromAscii( "ExportNotes" );
+								aFilterData[1].Value <<= sal_False;
+								aFilterData[2].Name = ::rtl::OUString::createFromAscii( "UseTransitionEffects" );
+								aFilterData[2].Value <<= sal_False;
+								aFilterData[3].Name = ::rtl::OUString::createFromAscii( "ExportBookmarks" );
+								aFilterData[3].Value <<= sal_False;
+								aFilterData[4].Name = ::rtl::OUString::createFromAscii( "ExportFormFields" );
+								aFilterData[4].Value <<= sal_False;
 								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aArgs( 2 );
 								aArgs[0].Name = ::rtl::OUString::createFromAscii( "FilterData" );
 								aArgs[0].Value <<= aFilterData;
