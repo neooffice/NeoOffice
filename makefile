@@ -572,7 +572,7 @@ endif
 ifdef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS | grep -v /dict | grep -v /fonts | grep -v /Common-unx.xcu` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 else
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS | grep -v /fonts` ; do cp "$(PWD)/etc/$${i}" "$${i}" ; done'
 endif
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/registry/data/org/openoffice/Office"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in "share/registry/data/org/openoffice/Setup.xcu" "share/registry/data/org/openoffice/Office/Common.xcu" ; do cp "$(PWD)/$(INSTALL_HOME)/package/Contents/$${i}" "$${i}" ; done'
