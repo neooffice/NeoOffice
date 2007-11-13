@@ -353,6 +353,11 @@ static int adjustLockFlags(const char * path, int flags)
   
     if( 0 <= statfs( path, &s ) )
     {
+        if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
+        {
+            flags &= ~O_EXLOCK;
+            flags |= O_SHLOCK;
+        }    
 #ifdef USE_JAVA
         /*
          * Fix bugs 2504 and 2639 and other file locking bugs by not making an
@@ -364,18 +369,11 @@ static int adjustLockFlags(const char * path, int flags)
          * exclusive lock with a shared lock for all other filesytems and not
          * just for AFP.
          */
-        if ( 0 == strncmp("smbfs", s.f_fstypename, 5) || 0 == strncmp( "webdav", s.f_fstypename, 6 ) )
+        else
         {
             flags &= ~( O_EXLOCK | O_SHLOCK );
         }
-        else
-#else	// USE_JAVA
-        if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
 #endif	// USE_JAVA
-        {
-            flags &= ~O_EXLOCK;
-            flags |= O_SHLOCK;
-        }    
     }
 #ifdef USE_JAVA
     // Fix bug 2504 by handling cases where we are trying to create a file
