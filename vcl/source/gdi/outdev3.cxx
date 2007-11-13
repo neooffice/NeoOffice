@@ -2767,17 +2767,17 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
 #ifdef USE_JAVA
         if( bIsSymbolFont )
         {
-#else	// USE_JAVA
-        if( pFontData->IsSymbolFont() )
-#endif	// USE_JAVA
-            if( aFontSelData.maTargetName != aFontSelData.maSearchName )
-                pEntry->mpConversion = ImplGetRecodeData( aFontSelData.maTargetName, aFontSelData.maSearchName );
-#ifdef USE_JAVA
+            pEntry->mpConversion = ImplGetRecodeData( aFontSelData.maTargetName, aFontSelData.maSearchName );
+
             // Fix bug 2661 by handling cases where some fonts require the
             // symbol recoding
             if( !pEntry->mpConversion )
                 pEntry->mpConversion = pDefaultSymbolConversion;
         }
+#else	// USE_JAVA
+        if( pFontData->IsSymbolFont() )
+            if( aFontSelData.maTargetName != aFontSelData.maSearchName )
+                pEntry->mpConversion = ImplGetRecodeData( aFontSelData.maTargetName, aFontSelData.maSearchName );
 #endif	// USE_JAVA
 
         // add the new entry to the cache
