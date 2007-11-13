@@ -1410,12 +1410,10 @@ void ImplRecodeString( const ImplCvtChar* pConversion, String& rStr,
     for(; nIndex < nLastIndex; ++nIndex )
     {
         sal_Unicode cOrig = rStr.GetChar( nIndex );
-#ifndef USE_JAVA
         // only recode symbols and their U+00xx aliases
         if( ((cOrig < 0x0020) || (cOrig > 0x00FF))
         &&  ((cOrig < 0xF020) || (cOrig > 0xF0FF)) )
             continue;
-#endif	// !USE_JAVA
 
         // recode a symbol
         sal_Unicode cNew = ImplRecodeChar( pConversion, cOrig );
