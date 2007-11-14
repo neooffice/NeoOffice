@@ -369,7 +369,7 @@ static int adjustLockFlags(const char * path, int flags)
          * exclusive lock with a shared lock for all other filesytems and not
          * just for AFP.
          *
-         * Important note: as described in bug 2740, we cannot apply this same
+         * Important note: as described in bug 2696 we cannot apply this same
          * fix to AFP file systems as all locking after the file is open will
          * always fail.
          */
