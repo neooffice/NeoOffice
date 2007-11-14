@@ -68,9 +68,6 @@
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
-#ifndef _UTL_BOOTSTRAP_HXX
-#include <unotools/bootstrap.hxx>
-#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
@@ -97,49 +94,10 @@ static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
 using namespace basegfx;
 using namespace rtl;
-using namespace utl;
 using namespace vcl;
 using namespace vos;
 
 // ============================================================================
-
-static void ImplLoadNativeFont( OUString aPath )
-{
-	if ( !aPath.getLength() )
-		return;
-
-	oslDirectory aDir = NULL;
-	if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
-	{
-		oslDirectoryItem aDirItem = NULL;
-		while ( osl_getNextDirectoryItem( aDir, &aDirItem, 16 ) == osl_File_E_None )
-		{
-			oslFileStatus aStatus;
-			memset( &aStatus, 0, sizeof( oslFileStatus ) );
-			if ( osl_getFileStatus( aDirItem, &aStatus, osl_FileStatus_Mask_FileURL ) == osl_File_E_None )
-				ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) );
-		}
-		if ( aDirItem )
-			osl_releaseDirectoryItem( aDirItem );
-	}
-	else
-	{
-		OUString aSysPath;
-		if ( osl_getSystemPathFromFileURL( aPath.pData, &aSysPath.pData ) == osl_File_E_None )
-		{
-			FSRef aFontPath;
-			FSSpec aFontSpec;
-			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
-			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr )
-			{
-				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDefault, NULL );
-				ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			}
-		}
-	}
-}
-
-// -----------------------------------------------------------------------
 
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData )
 {
@@ -372,28 +330,6 @@ static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData 
 		return;
 
 	bInLoad = true;
-
-	// Activate the fonts in the "user/fonts" directory
-	OUString aUserPath;
-	if ( Bootstrap::locateUserInstallation( aUserPath ) == Bootstrap::PATH_EXISTS )
-	{
-		if ( aUserPath.getLength() )
-		{
-			aUserPath += OUString::createFromAscii( "/user/fonts" );
-			ImplLoadNativeFont( aUserPath );
-		}
-	}
-
-	// Activate the fonts in the "share/fonts/truetype" directory
-	OUString aBasePath;
-	if ( Bootstrap::locateBaseInstallation( aBasePath ) == Bootstrap::PATH_EXISTS )
-	{
-		if ( aBasePath.getLength() )
-		{
-			aBasePath += OUString::createFromAscii( "/share/fonts/truetype" );
-			ImplLoadNativeFont( aBasePath );
-		}
-	}
 
 	ImplFontListChangedCallback( NULL, NULL );
 
