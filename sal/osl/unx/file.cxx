@@ -368,6 +368,10 @@ static int adjustLockFlags(const char * path, int flags)
          * this bug. Also, attempt to fix bug 2696 by always replacing the
          * exclusive lock with a shared lock for all other filesytems and not
          * just for AFP.
+         *
+         * Important note: as described in bug 2740, we cannot apply this same
+         * fix to AFP file systems as all locking after the file is open will
+         * always fail.
          */
         else
         {
@@ -810,7 +814,6 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             fd = open( buffer, flags, mode );
             if ( fd >= 0 )
             {
-#ifndef HAVE_O_EXLOCK
                 /* check if file lock is enabled and clear l_type member of flock otherwise */
                 if( (char *) -1 == pFileLockEnvVar )
                 {
@@ -820,9 +823,11 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                     if( NULL == pFileLockEnvVar)
                         pFileLockEnvVar = getenv("STAR_ENABLE_FILE_LOCKING");
                 }
-#else
+#ifdef HAVE_O_EXLOCK
+#ifndef USE_JAVA
                 /* disable range based locking */
                 pFileLockEnvVar = NULL;
+#endif	/* !USE_JAVA */
                 
                 /* remove the NONBLOCK flag again */
                 flags = fcntl(fd, F_GETFL, NULL);
@@ -839,7 +844,28 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                  * Mac OS X will return ENOTSUP for mounted file systems so
                  * ignore the error for write locks
                  */
-                if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
+                bool bOK = false;
+                if( F_WRLCK != aflock.l_type )
+                {
+                    bOK = true;
+                }
+                else if( -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
+                {
+                    if( errno == ENOTSUP )
+                    {
+                        /* Try to get at least a read lock */
+                        aflock.l_type = F_RDLCK;
+                        if ( -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
+                            bOK = true;
+                        aflock.l_type = F_WRLCK;
+                    }
+                    else
+                    {
+                        bOK = true;
+                    }
+                }
+
+                if( bOK )
 #else	/* USE_JAVA */
                 if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) )
 #endif	/* USE_JAVA */
