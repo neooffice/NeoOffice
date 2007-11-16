@@ -102,7 +102,7 @@ public:
 							JavaSalPrinter();
 	virtual					~JavaSalPrinter();
 
-	virtual BOOL			StartJob( const XubString* pFileName, const XubString& rJobName, const XubString& rAppName, ULONG nCopies, BOOL bCollate, ImplJobSetup* pSetupData );
+	virtual BOOL			StartJob( const XubString* pFileName, const XubString& rJobName, const XubString& rAppName, ULONG nCopies, BOOL bCollate, ImplJobSetup* pSetupData, BOOL bFirstPass );
 	virtual BOOL			EndJob();
 	virtual BOOL			AbortJob();
 	virtual SalGraphics*	StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData );

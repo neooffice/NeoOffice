@@ -638,13 +638,17 @@ short PrintDialog::Execute()
 	short nRet;
 	if ( !::svt::IsX11Product() )
 	{
+		// Fix bug 2753 by using a job value to indicate that the native dialog
+		// should be shown
+		mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "true" ) );
 		nRet = mpPrinter->StartJob( String() );
+		mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "" ) );
 		if ( nRet )
 			nRet = ClickOptionsHdl();
 		if ( nRet )
 		{
 			// Get and store the page range
-			XubString aRange( mpPrinter->GetJobValue( XubString::CreateFromAscii( "PAGERANGE" ) ) );
+			String aRange( mpPrinter->GetJobValue( String::CreateFromAscii( "PAGERANGE" ) ) );
 			if ( aRange.Len() > 0 )
 			{
 				maRbtPages.Check( TRUE );

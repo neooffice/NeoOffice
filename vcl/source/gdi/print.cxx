@@ -1427,17 +1427,16 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	{
 		ImplSVData* pSVData = ImplGetSVData();
 #ifdef USE_JAVA
-		bool bFirstPass = ( rJobName.Len() ? false : true );
+		BOOL bFirstPass = ( GetJobValue( XubString::CreateFromAscii( "SHOWPRINTDIALOG" ) ).Len() ? TRUE : FALSE );
 		if ( bFirstPass )
 		{
 			if ( mpPrinter )
 				pSVData->mpDefInst->DestroyPrinter( mpPrinter );
 			mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
 		}
-		else
+		else if ( !mpPrinter )
 		{
-			if ( !mpPrinter )
-				mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
+			mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
 		}
 #else	// USE_JAVA
 		mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
@@ -1466,7 +1465,11 @@ BOOL Printer::StartJob( const XubString& rJobName )
 
 		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
 								   nCopies, bCollateCopy,
+#ifdef USE_JAVA
+								   maJobSetup.ImplGetConstData(), bFirstPass ) )
+#else	// USE_JAVA
 								   maJobSetup.ImplGetConstData() ) )
+#endif	// !USE_JAVA
 		{
 			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
 			if ( !mnError )
@@ -1500,7 +1503,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	else
 	{
 #ifdef USE_JAVA
-		bool bFirstPass = ( rJobName.Len() ? false : true );
+		BOOL bFirstPass = ( GetJobValue( XubString::CreateFromAscii( "SHOWPRINTDIALOG" ) ).Len() ? TRUE : FALSE );
 		if ( bFirstPass )
 		{
 			if ( mpQPrinter )

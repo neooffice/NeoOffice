@@ -134,7 +134,11 @@ public: 					// public for Sal Implementation
                                               const XubString& rJobName,
                                               const XubString& rAppName,
                                               ULONG nCopies, BOOL bCollate,
+#ifdef USE_JAVA
+                                              ImplJobSetup* pSetupData, BOOL bFirstPass ) = 0;
+#else	// USE_JAVA
                                               ImplJobSetup* pSetupData ) = 0;
+#endif	// USE_JAVA
 	virtual BOOL					EndJob() = 0;
 	virtual BOOL					AbortJob() = 0;
 	virtual SalGraphics*			StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData ) = 0;
@@ -142,7 +146,7 @@ public: 					// public for Sal Implementation
 	virtual ULONG					GetErrorCode() = 0;
 #ifdef USE_JAVA
 	virtual XubString				GetPageRange() = 0;
-#endif// USE_JAVA
+#endif	// USE_JAVA
 };
 
 #endif // _SV_SALPRN_HXX

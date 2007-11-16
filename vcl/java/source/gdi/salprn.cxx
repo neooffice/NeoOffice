@@ -302,10 +302,8 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 							   const XubString& rJobName,
 							   const XubString& rAppName,
 							   ULONG nCopies, BOOL bCollate,
-							   ImplJobSetup* pSetupData )
+							   ImplJobSetup* pSetupData, BOOL bFirstPass )
 {
-	sal_Bool bFirstPass = ( rJobName.Len() ? sal_False : sal_True );
-
 	// Set paper type
 	if ( !bFirstPass )
 	{
@@ -364,7 +362,7 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 			EndJob();
 			delete mpVCLPrintJob;
 			mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
-			if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData ) )
+			if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData, FALSE ) )
 				return NULL;
 		}
 	}
