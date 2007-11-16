@@ -43,8 +43,8 @@
  */
 @interface ShutdownIconDelegate : NSObject
 {
-	NSMenu*				mpDockMenu;
 	id					mpDelegate;
+	NSMenu*				mpDockMenu;
 	BOOL				mbInTermination;
 }
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
@@ -55,7 +55,8 @@
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
-- (id)cancelTermination;
+- (void)cancelTermination;
+- (id)dealloc;
 - (id)init;
 - (void)handleCalcCommand:(id)pObject;
 - (void)handleDrawCommand:(id)pObject;
@@ -130,15 +131,27 @@
 		[mpDelegate applicationWillFinishLaunching:pNotification];
 }
 
-- (id)cancelTermination
+- (void)cancelTermination
 {
 	mbInTermination = NO;
+}
+
+- (id)dealloc
+{
+	if ( mpDelegate )
+		[mpDelegate release];
+
+	if ( mpDockMenu )
+		[mpDockMenu release];
+
+	[super dealloc];
 }
 
 - (id)init
 {
 	[super init];
 
+	mpDelegate = nil;
 	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
 	mbInTermination = NO;
 
@@ -188,8 +201,17 @@
 
 - (void)setDelegate:(id)pDelegate
 {
+	if ( mpDelegate )
+	{
+    	[mpDelegate release];
+    	mpDelegate = nil;
+	}
+
 	if ( pDelegate )
+	{
     	mpDelegate = pDelegate;
+    	[mpDelegate retain];
+	}
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
