@@ -1393,6 +1393,11 @@ ImplFontData::ImplFontData( const ImplDevFontAttributes& rDFA, int nMagic )
     // StarSymbol is a unicode font, but it still deserves the symbol flag
     if( !mbSymbolFlag )
         if( 0 == GetFamilyName().CompareIgnoreCaseToAscii( "starsymbol", 10)
+#ifdef USE_JAVA
+        ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "euclid", 6)
+        ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "mt extra", 8)
+        ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "symbol", 6)
+#endif	// USE_JAVA
         ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "opensymbol", 10) )
             mbSymbolFlag = true;
 }
@@ -2770,8 +2775,9 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
             pEntry->mpConversion = ImplGetRecodeData( aFontSelData.maTargetName, aFontSelData.maSearchName );
 
             // Fix bug 2661 by handling cases where some fonts require the
-            // symbol recoding
-            if( !pEntry->mpConversion )
+            // symbol recoding. Fix bug 2740 and maybe bug 2746 by only doing
+			// this handling for symbol fonts.
+            if( !pEntry->mpConversion && pFontData->IsSymbolFont() )
                 pEntry->mpConversion = pDefaultSymbolConversion;
         }
 #else	// USE_JAVA

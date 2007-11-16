@@ -217,7 +217,11 @@ public:
 }
 
 #ifdef USE_JAVA
+// Note: thiis the list of symbol fonts that we know of and each of the fonts in
+// this list must be in the hardcoded list in vcl/source/gdi/outdev3.cxx
+static String aEuclidFontName( RTL_CONSTASCII_USTRINGPARAM( "Euclid" ) );
 static String aMTExtraFontName( RTL_CONSTASCII_USTRINGPARAM( "MT Extra" ) );
+static String aSymbolFontName( RTL_CONSTASCII_USTRINGPARAM( "Symbol" ) );
 #endif	// USE_JAVA
 
 //=================== Methoden von PictReader ==============================
@@ -633,6 +637,7 @@ ULONG PictReader::ReadAndDrawText()
 	// if any characters are in the 0xff00 to 0xffff range, then we should
 	// use the symbol encoding as well.
 	CharSet eOldCharSet = aActFont.GetCharSet();
+	String aOldFontName = aActFont.GetName();
 	String aString( (const sal_Char*)&sText, eOldCharSet );
 	if ( aActFont.GetCharSet() != RTL_TEXTENCODING_SYMBOL )
 	{
@@ -648,14 +653,22 @@ ULONG PictReader::ReadAndDrawText()
 			}
 		}
 	}
+
+	// Use the Symbol font for non-symbol fonts when the symbol encoding is set
+	if ( aActFont.GetCharSet() == RTL_TEXTENCODING_SYMBOL && !aActFont.GetName().EqualsIgnoreCaseAscii( aEuclidFontName, 0, aEuclidFontName.Len() ) && !aActFont.GetName().EqualsIgnoreCaseAscii( aMTExtraFontName, 0, aMTExtraFontName.Len() ) && !aActFont.GetName().EqualsIgnoreCaseAscii( aSymbolFontName, 0, aSymbolFontName.Len() ) )
+	{
+		aActFont.SetName( aSymbolFontName );
+		pVirDev->SetFont( aActFont );
+	}
 #else	// USE_JAVA
 	String aString( (const sal_Char*)&sText, gsl_getSystemTextEncoding() );
 #endif	// USE_JAVA
 	pVirDev->DrawText( Point( aTextPosition.X(), aTextPosition.Y() ), aString );
 #ifdef USE_JAVA
-	if ( aActFont.GetCharSet() != eOldCharSet )
+	if ( aActFont.GetCharSet() != eOldCharSet || aActFont.GetName() != aOldFontName )
 	{
 		aActFont.SetCharSet( eOldCharSet );
+		aActFont.SetName( aOldFontName );
 		pVirDev->SetFont( aActFont );
 	}
 #endif	// USE_JAVA
