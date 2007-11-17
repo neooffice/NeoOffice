@@ -2776,8 +2776,10 @@ ImplFontEntry* ImplFontCache::Get( ImplDevFontList* pFontList,
 
             // Fix bug 2661 by handling cases where some fonts require the
             // symbol recoding. Fix bug 2740 and maybe bug 2746 by only doing
-			// this handling for symbol fonts.
-            if( !pEntry->mpConversion && pFontData->IsSymbolFont() )
+            // this handling for symbol fonts. Fix nonprinting characters issue
+            // in bug 2740 by not using the default recode table if the
+            // requested font is StarSymbol or OpenSymbol.
+            if( !pEntry->mpConversion && pFontData->IsSymbolFont() && aFontSelData.maTargetName.CompareIgnoreCaseToAscii( "starsymbol", 10 ) && aFontSelData.maTargetName.CompareIgnoreCaseToAscii( "opensymbol", 10 ) )
                 pEntry->mpConversion = pDefaultSymbolConversion;
         }
 #else	// USE_JAVA
