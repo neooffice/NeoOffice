@@ -74,7 +74,6 @@ static BOOL bInDialog = NO;
 @interface VCLPrintOperation : NSPrintOperation
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView;
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
-+ (void)setCurrentOperation:(NSPrintOperation *)pOperation;
 @end
 
 @implementation VCLPrintOperation
@@ -111,17 +110,9 @@ static BOOL bInDialog = NO;
 
 	NSPrintOperation *pOperation = [[VCLPrintOperation superclass] printOperationWithView:pView printInfo:pPrintInfo];
 
-	[VCLPrintOperation setCurrentOperation:pOperation];
+	[NSPrintOperation setCurrentOperation:pOperation];
 
 	return pOperation;
-}
-
-+ (void)setCurrentOperation:(NSPrintOperation *)pOperation
-{
-	// Attempt to fix blank page printing in bug 2674 by never allowing the
-	// print operation to be set to nil
-	if ( pOperation )
-		[[VCLPrintOperation superclass] setCurrentOperation:pOperation];
 }
 
 @end
