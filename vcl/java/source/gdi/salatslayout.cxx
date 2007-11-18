@@ -102,8 +102,8 @@ struct ImplATSLayoutData {
 	bool*				mpNeedFallback;
 	::vcl::com_sun_star_vcl_VCLFont*	mpFallbackFont;
 	ATSUTextLayout		maLayout;
-	int					mnGlyphCount;
-	ATSUGlyphInfoArray*	mpGlyphInfoArray;
+	ItemCount			mnGlyphCount;
+	ATSLayoutRecord*	mpGlyphDataArray;
 	int*				mpCharsToChars;
 	int*				mpCharsToGlyphs;
 	long*				mpCharAdvances;
@@ -273,7 +273,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mpFallbackFont( NULL ),
 	maLayout( NULL ),
 	mnGlyphCount( 0 ),
-	mpGlyphInfoArray( NULL ),
+	mpGlyphDataArray( NULL ),
 	mpCharsToChars( NULL ),
 	mpCharsToGlyphs( NULL ),
 	mpCharAdvances( NULL ),
@@ -450,29 +450,33 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	ByteCount nBufSize;
-	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nBufSize, NULL ) != noErr )
+	ATSLayoutRecord *pGlyphDataArray;
+	if ( ATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &mnGlyphCount ) != noErr || !pGlyphDataArray )
 	{
 		Destroy();
 		return;
 	}
-
-	mpGlyphInfoArray = (ATSUGlyphInfoArray *)rtl_allocateMemory( nBufSize );
-
-	ByteCount nRetSize = nBufSize;
-	if ( ATSUGetGlyphInfo( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, &nRetSize, mpGlyphInfoArray ) != noErr || nRetSize != nBufSize )
+	else if ( !mnGlyphCount )
 	{
+		ATSUDirectReleaseLayoutDataArrayPtr( NULL, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray );
 		Destroy();
 		return;
 	}
 
-	mnGlyphCount = mpGlyphInfoArray->numGlyphs;
+	ByteCount nBufSize = mnGlyphCount * sizeof( ATSLayoutRecord );
+	mpGlyphDataArray = (ATSLayoutRecord *)rtl_allocateMemory( nBufSize );
+	memcpy( mpGlyphDataArray, pGlyphDataArray, nBufSize );
+	ATSUDirectReleaseLayoutDataArrayPtr( NULL, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray );
+
+	// The original offset is in bytes so convert to character offset
+	int i;
+	for ( int i = 0; i < mnGlyphCount; i++ )
+		 mpGlyphDataArray[ i ].originalOffset /= 2;
 
 	// Cache mapping of characters to glyph character indices
 	nBufSize = mpHash->mnLen * sizeof( int );
 	mpCharsToChars = (int *)rtl_allocateMemory( nBufSize );
 
-	int i;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToChars[ i ] = -1;
 	if ( mpHash->mbRTL )
@@ -480,9 +484,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		i = 0;
 		for ( int j = mpHash->mnLen - 1; j >= 0 && i < mnGlyphCount; j-- )
 		{
-			int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+			int nIndex = mpGlyphDataArray[ i ].originalOffset;
 			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+			for ( ; i < mnGlyphCount && mpGlyphDataArray[ i ].originalOffset == nIndex; i++ )
 				;
 		}
 	}
@@ -491,9 +495,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		i = 0;
 		for ( int j = 0; j < mpHash->mnLen && i < mnGlyphCount; j++ )
 		{
-			int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+			int nIndex = mpGlyphDataArray[ i ].originalOffset;
 			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < mnGlyphCount && mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+			for ( ; i < mnGlyphCount && mpGlyphDataArray[ i ].originalOffset == nIndex; i++ )
 				;
 		}
 	}
@@ -506,7 +510,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		mpCharsToGlyphs[ i ] = -1;
 	for ( i = 0; i < mnGlyphCount; i++ )
 	{
-		int nIndex = mpGlyphInfoArray->glyphs[ i ].charIndex;
+		int nIndex = mpGlyphDataArray[ i ].originalOffset;
 		if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
 			mpCharsToGlyphs[ nIndex ] = i;
 	}
@@ -691,16 +695,16 @@ void ImplATSLayoutData::Destroy()
 
 	mnGlyphCount = 0;
 
-	if ( mpGlyphInfoArray )
-	{
-		rtl_freeMemory( mpGlyphInfoArray );
-		mpGlyphInfoArray = NULL;
-	}
-
 	if ( mpCharsToChars )
 	{
 		rtl_freeMemory( mpCharsToChars );
 		mpCharsToChars = NULL;
+	}
+
+	if ( mpGlyphDataArray )
+	{
+		rtl_freeMemory( mpGlyphDataArray );
+		mpGlyphDataArray = NULL;
 	}
 
 	if ( mpCharsToGlyphs )
@@ -891,7 +895,7 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData )
-		KashidaJustify( mpKashidaLayoutData->mpGlyphInfoArray->glyphs[ 0 ].glyphID, mpKashidaLayoutData->mpCharAdvances[ 0 ] );
+		KashidaJustify( mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID, mpKashidaLayoutData->mpCharAdvances[ 0 ] );
 }
 
 // ----------------------------------------------------------------------------
@@ -1117,9 +1121,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				}
 
 				nCharWidth = pCurrentLayoutData->mpCharAdvances[ nIndex ];
-				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset == nIndex; i++ )
 				{
-					long nGlyph = pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+					long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 					if ( !nGlyph )
 					{
 						if ( nChar >= 0xe000 && nChar < 0xf900 )
@@ -1452,16 +1456,16 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			nIndex = 0;
 		}
 
-		for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].charIndex == nIndex; i++ )
+		for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset == nIndex; i++ )
 		{
-			long nGlyph = pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID;
+			long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
 				continue;
 
 			// Fix bug 2390 by ignoring the value of nErr passed by reference
 			::std::list< Polygon > aPolygonList;
 			OSStatus nErr;
-			if ( ATSUGlyphGetCubicPaths( pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].style, pCurrentLayoutData->mpGlyphInfoArray->glyphs[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
+			if ( ATSUGlyphGetCubicPaths( pCurrentLayoutData->maFontStyle, pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
 				continue;
 
 			PolyPolygon aPolyPolygon;
