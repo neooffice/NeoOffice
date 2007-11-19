@@ -239,7 +239,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 				else if ( nUserMem < nMinMem )
 					nUserMem = nMinMem;
 				nLayoutCacheSize = nUserMem / ( 1024 * 8 );
-				nTargetCacheSize = nLayoutCacheSize * 0.8;
+				nTargetCacheSize = (int)( nLayoutCacheSize * 0.8 );
 			}
 
 			while ( mnLayoutCacheSize > nTargetCacheSize )
@@ -841,7 +841,7 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData )
-		KashidaJustify( mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID, mpKashidaLayoutData->mpCharAdvances[ 0 ] );
+		KashidaJustify( mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID, mpKashidaLayoutData->mpCharAdvances[ mpKashidaLayoutData->mpHash->mnLen - 1 ] );
 }
 
 // ----------------------------------------------------------------------------
@@ -944,26 +944,87 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// Check if this run will need Kashida justification
 		if ( bRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) )
 		{
-			UErrorCode nErrorCode = U_ZERO_ERROR;
-			UScriptCode eScriptCode = uscript_getScript( rArgs.mpStr[ nMinCharPos ], &nErrorCode );
-			if ( eScriptCode == USCRIPT_ARABIC || eScriptCode == USCRIPT_SYRIAC )
+			bool bNeedArabicFontSupport = false;
+			for ( int i = nMinCharPos; i < nEndCharPos; i++ )
+			{
+				UErrorCode nErrorCode = U_ZERO_ERROR;
+				UScriptCode eScriptCode = uscript_getScript( rArgs.mpStr[ i ], &nErrorCode );
+				if ( eScriptCode == USCRIPT_ARABIC || eScriptCode == USCRIPT_SYRIAC )
+				{
+					bNeedArabicFontSupport = true;
+					break;
+				}
+			}
+
+			if ( bNeedArabicFontSupport )
 			{
 				if ( !mpKashidaLayoutData )
 				{
-					sal_Unicode aKashida[ 1 ];
-					aKashida[ 0 ] = 0x0640;
-					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashida, 1, 0, 1, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont );
+					sal_Unicode aArabicTest[ 3 ];
+					aArabicTest[ 0 ] = 0x0634;
+					aArabicTest[ 1 ] = 0x0634;
+					aArabicTest[ 2 ] = 0x0640;
+					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont );
 				}
 
 				if ( mpKashidaLayoutData )
 				{
+					bool bHasArabicFontSupport = true;
 					if ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont )
+					{
+						bHasArabicFontSupport = false;
+					}
+					else
+					{
+						// Fix bug 2757 by detecting when a font cannot support
+						// Arabic text layout. The characters in our layout
+						// should always product different glyphs for each
+						// character so if any are the same, the font does not
+						// support Arabic properly.
+						for ( int i = 0; i < mpKashidaLayoutData->mnGlyphCount; i++ )
+						{
+							if ( !mpKashidaLayoutData->mpGlyphDataArray[ i ].glyphID )
+							{
+								bHasArabicFontSupport = false;
+								break;
+							}
+							else if ( i && mpKashidaLayoutData->mpGlyphDataArray[ i ].glyphID == mpKashidaLayoutData->mpGlyphDataArray[ i - 1 ].glyphID )
+							{
+								bHasArabicFontSupport = false;
+								break;
+							}
+							else if ( mpKashidaLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
+							{
+								break;
+							}
+						}
+					}
+
+					if ( !bHasArabicFontSupport )
 					{
 						for ( int i = nMinCharPos; i < nEndCharPos; i++ )
 							rArgs.NeedFallback( i, bRunRTL );
 
 						if ( !pFallbackFont )
-							pFallbackFont = mpKashidaLayoutData->mpFallbackFont;
+						{
+							// If there is no fallback font but the font really
+							// does not support Arabic (e.g. non-AAT fonts like
+							// STIXihei), assign Geeza Pro as this layout's
+							// fallback font
+							if ( !mpKashidaLayoutData->mpFallbackFont )
+							{
+								SalData *pSalData = GetSalData();
+
+								int nNativeFont = mpVCLFont->getNativeFont();
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) ) );
+								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != nNativeFont )
+									mpKashidaLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
+							}
+
+							if ( mpKashidaLayoutData->mpFallbackFont )
+								pFallbackFont = mpKashidaLayoutData->mpFallbackFont;
+						}
+
 						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 					}
 					else
@@ -1154,7 +1215,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
 		JavaImplFontData *pHighScoreFontData = NULL;
-		if ( !mnFallbackLevel || bNeedSymbolFallback )
+		if ( ( !mnFallbackLevel || bNeedSymbolFallback ) && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
