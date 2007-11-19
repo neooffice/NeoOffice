@@ -510,61 +510,18 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	memset( mpCharAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
-	float nScaleY = fSize / fAdjustedSize;
-	UniCharArrayOffset nNextCaretPos = 0;
-	for ( i = 0; i < mpHash->mnLen; i = nNextCaretPos )
+	float fScaleY = fSize / fAdjustedSize;
+	for ( i = 0; i < mnGlyphCount; i++ )
 	{
-		if ( ATSUNextCursorPosition( maLayout, i, kATSUByCharacterCluster, &nNextCaretPos ) != noErr )
-			nNextCaretPos = i + 1;
-
-		// Make sure that all characters have a width greater than zero as
-		// OOo can get confused by zero width characters
-		if ( mpHash->mbRTL )
+		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
+		if ( i == mnGlyphCount - 1 )
 		{
-			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, nNextCaretPos - i, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				mpCharAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * nScaleY );
-
-			if ( mpCharAdvances[ i ] < 1 )
-			{
-				if ( nNextCaretPos < mpHash->mnLen )
-					mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ i ] - 1;
-				mpCharAdvances[ i ] = 1;
-			}
-
-			for ( int j = i + 1; j < nNextCaretPos; j++ )
-			{
-				if ( nNextCaretPos < mpHash->mnLen )
-					mpCharAdvances[ nNextCaretPos ] += mpCharAdvances[ j ] - 1;
-				mpCharAdvances[ j ] = 1;
-			}
+			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+				mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * fScaleY );
 		}
 		else
 		{
-			long nClusterWidth = 0;
-			for ( int j = nNextCaretPos - 1; j >= i; j-- )
-			{
-				long nWidth = 0;
-				if ( j != mpCharsToChars[ j ] )
-				{
-					if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * nScaleY ) + nClusterWidth;
-				}
-				else
-				{
-					if ( ATSUGetGlyphBounds( maLayout, 0, 0, j, nNextCaretPos - j, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-						nWidth = Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * nScaleY );
-				}
-
-				if ( nWidth > nClusterWidth )
-				{
-					mpCharAdvances[ j ] = nWidth - nClusterWidth;
-					nClusterWidth = nWidth;
-				}
-				else
-				{
-					mpCharAdvances[ j ] = 1;
-				}
-			}
+			mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * fScaleY );
 		}
 	}
 
@@ -985,21 +942,29 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		maRuns.NextRun();
 
 		// Check if this run will need Kashida justification
-		if ( bRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) && !mpKashidaLayoutData )
+		if ( bRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) )
 		{
 			UErrorCode nErrorCode = U_ZERO_ERROR;
 			UScriptCode eScriptCode = uscript_getScript( rArgs.mpStr[ nMinCharPos ], &nErrorCode );
 			if ( eScriptCode == USCRIPT_ARABIC || eScriptCode == USCRIPT_SYRIAC )
 			{
-				sal_Unicode aKashida[ 1 ];
-				aKashida[ 0 ] = 0x0640;
-				mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashida, 1, 0, 1, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont );
+				if ( !mpKashidaLayoutData )
+				{
+					sal_Unicode aKashida[ 1 ];
+					aKashida[ 0 ] = 0x0640;
+					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aKashida, 1, 0, 1, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont );
+				}
+
 				if ( mpKashidaLayoutData )
 				{
-					if ( mpKashidaLayoutData->mpNeedFallback || mpKashidaLayoutData->mnGlyphCount != 1 )
+					if ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont )
 					{
-						mpKashidaLayoutData->Release();
-						mpKashidaLayoutData = NULL;
+						for ( int i = nMinCharPos; i < nEndCharPos; i++ )
+							rArgs.NeedFallback( i, bRunRTL );
+
+						if ( !pFallbackFont )
+							pFallbackFont = mpKashidaLayoutData->mpFallbackFont;
+						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 					}
 					else
 					{
@@ -1060,7 +1025,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		for ( ; bRunRTL ? nCharPos >= nMinCharPos : nCharPos < nEndCharPos; bRunRTL ? nCharPos-- : nCharPos++ )
 		{
 			bool bFirstGlyph = true;
-			long nCharWidth = 1;
+			long nCharWidth = 0;
 			int nIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinFallbackCharPos ];
 			if ( nIndex >= 0 )
 			{
@@ -1127,14 +1092,22 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							// Fix bug 2091 by suppressing zero glyphs if there
 							// is a fallback font
-							continue;
+							if ( !pFallbackFont )
+								pFallbackFont = pCurrentLayoutData->mpFallbackFont;
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
 					}
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
 					// 0x0000ffff glyphs as spaces
 					if ( nGlyph >= 0x0000ffff )
-						nGlyph = 0x0020 | GF_ISCHAR;
+					{
+						if ( bFirstGlyph )
+							nGlyph = 0x0020 | GF_ISCHAR;
+						else
+							continue;
+					}
 
 					// Fix bug 2512 without breaking fix for bug 2453 by
 					// allowing spacing glyphs to go through but marking when
@@ -1163,11 +1136,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( bFirstGlyph )
 			{
-				// Don't append a fake spacing glyph in fallback levels as it
-				// can cause extraneous whitespace when using Indic characters
-				// with a fallback font
-				if ( !mnFallbackLevel )
-					AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
+				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
 				aPos.X() += nCharWidth;
 				bRet = true;
 			}
@@ -1235,7 +1204,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			mpGraphics->maFallbackFonts.erase( it );
 		}
 
-		if ( pHighScoreFontData )
+		// Always try the kashida fallback first so that we are assured of
+		// rendering a kashida if needed
+		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpKashidaLayoutData->mpFallbackFont );
+		else if ( pHighScoreFontData )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
 		else if ( pFallbackFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
