@@ -72,54 +72,74 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 	if ( !pFrame )
 		return out;
 
+	// We need to let any pending timers run so that we don't deadlock
+	TimeValue aDelay;
+	aDelay.Seconds = 0;
+	aDelay.Nanosec = 10;
 	IMutex& rSolarMutex = Application::GetSolarMutex();
-	rSolarMutex.acquire();
-
-	static jmethodID mID = NULL;
-
-	jclass pointClass = pEnv->FindClass( "java/awt/Rectangle" );
-	if ( pointClass )
+	bool bAcquired = false;
+	while ( !Application::IsShutDown() )
 	{
-		if ( !mID )
+		if ( rSolarMutex.tryToAcquire() )
 		{
-			char *cSignature = "(IIII)V";
-			mID = pEnv->GetMethodID( pointClass, "<init>", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			SalExtTextInputPosEvent aInputPosEvent;
-			memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
-
-			// Fix bug 2426 by checking the frame pointer before any use
-			for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
-			{
-				if ( *it == pFrame )
-				{
-					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
-					aEvent.dispatch();
-					break;
-				}
-			}
-
-			jvalue args[4];
-			if ( aInputPosEvent.mbVertical )
-			{
-				args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth + 25 );
-				args[1].i = jint( aInputPosEvent.mnY - aInputPosEvent.mnHeight + 15 );
-			}
+			if ( !Application::IsShutDown() )
+				bAcquired = true; 
 			else
-			{
-				args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth );
-				args[1].i = jint( aInputPosEvent.mnY + 20 );
-			}
-			args[2].i = jint( aInputPosEvent.mnWidth );
-			args[3].i = jint( aInputPosEvent.mnHeight );
-			out = pEnv->NewObjectA( pointClass, mID, args );
+				rSolarMutex.release();
+			break;
 		}
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		OThread::wait( aDelay );
 	}
 
-	rSolarMutex.release();
+	if ( bAcquired )
+	{
+		static jmethodID mID = NULL;
+
+		jclass pointClass = pEnv->FindClass( "java/awt/Rectangle" );
+		if ( pointClass )
+		{
+			if ( !mID )
+			{
+				char *cSignature = "(IIII)V";
+				mID = pEnv->GetMethodID( pointClass, "<init>", cSignature );
+			}
+			OSL_ENSURE( mID, "Unknown method id!" );
+			if ( mID )
+			{
+				SalExtTextInputPosEvent aInputPosEvent;
+				memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
+
+				// Fix bug 2426 by checking the frame pointer before any use
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+				{
+					if ( *it == pFrame )
+					{
+						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
+						aEvent.dispatch();
+						break;
+					}
+				}
+
+				jvalue args[4];
+				if ( aInputPosEvent.mbVertical )
+				{
+					args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth + 25 );
+					args[1].i = jint( aInputPosEvent.mnY - aInputPosEvent.mnHeight + 15 );
+				}
+				else
+				{
+					args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth );
+					args[1].i = jint( aInputPosEvent.mnY + 20 );
+				}
+				args[2].i = jint( aInputPosEvent.mnWidth );
+				args[3].i = jint( aInputPosEvent.mnHeight );
+				out = pEnv->NewObjectA( pointClass, mID, args );
+			}
+		}
+
+		rSolarMutex.release();
+	}
 
 	return out;
 }
