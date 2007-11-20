@@ -357,8 +357,6 @@ const static NSString *pCancelInputMethodText = @" ";
 
 @end
 
-static BOOL bUseKeyEntryFix = NO;
-static BOOL bUsePartialKeyEntryFix = NO;
 static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
@@ -380,16 +378,12 @@ static VCLResponder *pSharedResponder = nil;
 			NSApplication *pApp = [NSApplication sharedApplication];
 			if ( pApp && pSharedResponder )
 			{
-				[pSharedResponder interpretKeyEvents:pEvents view:self];
-
 				// We still need the key entry fix if there is marked text
 				// otherwise bug 1429 reoccurs
-				BOOL bNeedKeyEntryFix = ( bUseKeyEntryFix || bUsePartialKeyEntryFix );
-				if ( bNeedKeyEntryFix && [self respondsToSelector:@selector(hasMarkedText)] )
-					bNeedKeyEntryFix = [self hasMarkedText];
-
-				if ( bNeedKeyEntryFix )
+				if ( [self respondsToSelector:@selector(hasMarkedText)] && [self hasMarkedText] )
 				{
+					[pSharedResponder interpretKeyEvents:pEvents view:self];
+
 					NSString *pText = [(VCLResponder *)pSharedResponder lastText];
 					if ( pText )
 					{
@@ -425,20 +419,18 @@ static VCLResponder *pSharedResponder = nil;
 @interface InstallVCLEventQueueClasses : NSObject
 {
 	BOOL					mbUseKeyEntryFix;
-	BOOL					mbUsePartialKeyEntryFix;
 }
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix;
 {
 	[super init];
 
 	mbUseKeyEntryFix = bUseKeyEntryFix;
-	mbUsePartialKeyEntryFix = bUsePartialKeyEntryFix;
 
 	return self;
 }
@@ -448,11 +440,12 @@ static VCLResponder *pSharedResponder = nil;
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
 	// Initialize statics
-	bUseKeyEntryFix = mbUseKeyEntryFix;
-	bUsePartialKeyEntryFix = mbUsePartialKeyEntryFix;
-	pSharedResponder = [[VCLResponder alloc] init];
-	if ( pSharedResponder )
-		[pSharedResponder retain];
+	if ( mbUseKeyEntryFix )
+	{
+		pSharedResponder = [[VCLResponder alloc] init];
+		if ( pSharedResponder )
+			[pSharedResponder retain];
+	}
 
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
@@ -495,11 +488,11 @@ void NSFontManager_release()
 	}
 }
 
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix )
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 
