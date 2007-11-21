@@ -111,7 +111,8 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 				memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
 
 				// Fix bug 2426 by checking the frame pointer before any use
-				for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
+				SalData *pSalData = GetSalData();
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 				{
 					if ( *it == pFrame )
 					{

@@ -449,6 +449,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			SalExtTextInputPosEvent *pInputPosEvent = (SalExtTextInputPosEvent *)pData;
 			if ( pInputPosEvent && !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 				pFrame->CallCallback( SALEVENT_EXTTEXTINPUTPOS, (void *)pInputPosEvent );
+			break;
 		}
 		case SALEVENT_GETFOCUS:
 		{
