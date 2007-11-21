@@ -310,6 +310,18 @@ const static NSString *pCancelInputMethodText = @" ";
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
+	// Fix bug 1819 by forcing cancellation of the input method
+	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	{
+		NSResponder *pResponder = [self firstResponder];
+		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pResponder hasMarkedText] )
+				[pResponder insertText:pCancelInputMethodText];
+			[pResponder abandonInput];
+		}
+	}
+
 	BOOL bCommandKeyPressed = ( pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask );
 
 	// Implement the standard window minimization behavior with the Command-m
