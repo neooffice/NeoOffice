@@ -79,6 +79,10 @@ CDEFS += -DPRODUCT_NAME='"$(PRODUCT_NAME)"'
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 .ENDIF
 
+.IF "$(GUIBASE)" == "java"
+CDEFS+=-fobjc-exceptions
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 .IF "$(SYSTEM_HUNSPELL)" != "YES"

@@ -42,11 +42,18 @@ BOOL NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLoc
 
 	NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
 
-	if ( aString && aLocale && pChecker && [pChecker setLanguage:(NSString *)aLocale] )
+	@try
 	{
-		NSRange aRange = [pChecker checkSpellingOfString:(NSString *)aString startingAt:0];
-		if ( aRange.location != NSNotFound && aRange.length > 0 )
-			bRet = NO;
+		if ( aString && aLocale && pChecker && [pChecker setLanguage:(NSString *)aLocale] )
+		{
+			NSRange aRange = [pChecker checkSpellingOfString:(NSString *)aString startingAt:0];
+			if ( aRange.location != NSNotFound && aRange.length > 0 )
+				bRet = NO;
+		}
+	}
+	@catch ( NSException *pExc )
+	{
+		NSLog( @"%@", [pExc reason] );
 	}
 
 	[pPool release];
@@ -62,20 +69,27 @@ CFMutableArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aL
 
 	NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
 
-	if ( aRet && aString && aLocale && pChecker && [pChecker setLanguage:(NSString *)aLocale] )
+	@try
 	{
-		NSArray *pArray = [pChecker guessesForWord:(NSString *)aString];
-		if ( pArray )
+		if ( aRet && aString && aLocale && pChecker && [pChecker setLanguage:(NSString *)aLocale] )
 		{
-			unsigned nCount = [pArray count];
-			unsigned i = 0;
-			for ( ; i < nCount; i++ )
+			NSArray *pArray = [pChecker guessesForWord:(NSString *)aString];
+			if ( pArray )
 			{
-				NSString *pGuess = (NSString *)[pArray objectAtIndex:i];
-				if ( pGuess )
-					CFArrayAppendValue( aRet, (CFStringRef)pGuess );
+				unsigned nCount = [pArray count];
+				unsigned i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSString *pGuess = (NSString *)[pArray objectAtIndex:i];
+					if ( pGuess )
+						CFArrayAppendValue( aRet, (CFStringRef)pGuess );
+				}
 			}
 		}
+	}
+	@catch ( NSException *pExc )
+	{
+		NSLog( @"%@", [pExc reason] );
 	}
 
 	[pPool release];
@@ -108,15 +122,22 @@ CFMutableArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales )
 			unsigned i = 0;
 			for ( ; i < nCount; i++ )
 			{
-				NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
-				if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
+				@try
 				{
-					CFStringRef aLocale = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault, (CFStringRef)pLocale );
-					if ( aLocale )
+					NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
+					if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
 					{
-						CFArrayAppendValue( aRet, aLocale );
-						CFRelease( aLocale );
+						CFStringRef aLocale = CFLocaleCreateCanonicalLocaleIdentifierFromString( kCFAllocatorDefault, (CFStringRef)pLocale );
+						if ( aLocale )
+						{
+							CFArrayAppendValue( aRet, aLocale );
+							CFRelease( aLocale );
+						}
 					}
+				}
+				@catch ( NSException *pExc )
+				{
+					NSLog( @"%@", [pExc reason] );
 				}
 			}
 		}
