@@ -43,9 +43,11 @@ import java.awt.EventQueue;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.Panel;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
 import java.awt.Window;
+import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.InputMethodEvent;
@@ -162,6 +164,16 @@ public final class VCLEventQueue implements Runnable {
 	private static long nextGCUseMemory3 = 0;
 
 	/**
+	 * The cached getLocation() method.
+	 */
+	private static Method pointerInfoGetLocationMethod = null;
+
+	/**
+	 * The cached getPointerInfo() method.
+	 */
+	private static Method toolkitGetPointerInfoMethod = null;
+
+	/**
 	 * Run the garbage collector if necessary.
 	 */
 	static void runGCIfNeeded(long pixels) {
@@ -231,6 +243,17 @@ public final class VCLEventQueue implements Runnable {
 
 		// Swap in our own event queue
 		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
+
+		// Load mouse info peer instance
+		try {
+			Class c = Class.forName("java.awt.MouseInfo");
+			toolkitGetPointerInfoMethod = c.getMethod("getPointerInfo", new Class[]{});
+			Object o = toolkitGetPointerInfoMethod.invoke(null, new Object[]{});
+			pointerInfoGetLocationMethod = o.getClass().getMethod("getLocation", new Class[]{});
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
 
 		// Load platform specific event handlers
 		try {
@@ -627,10 +650,31 @@ public final class VCLEventQueue implements Runnable {
 			try {
 				super.dispatchEvent(event);
 
-				// The modifiers for mouse released events contain the
-				// modifiers after the event has occurred so we need to
-				// replace the modifiers with the modifiers that were released
-				if (event instanceof KeyEvent) {
+				if (event instanceof ComponentEvent && event.getID() == ComponentEvent.COMPONENT_MOVED && VCLEventQueue.toolkitGetPointerInfoMethod != null && VCLEventQueue.pointerInfoGetLocationMethod != null) {
+					// Fix bug 2769 by creating synthetic mouse dragged events
+					// when moving a window by dragging its title bar
+					Component c = ((ComponentEvent)event).getComponent();
+					if (c instanceof Window && c.isShowing()) {
+						Window w = (Window)c;
+						Point screenLocation = w.getLocationOnScreen();
+						Rectangle bounds = new Rectangle(screenLocation.x, screenLocation.y, w.getSize().width, w.getInsets().top);
+						if (!bounds.isEmpty()) {
+							Object o = VCLEventQueue.toolkitGetPointerInfoMethod.invoke(Toolkit.getDefaultToolkit(), new Object[]{});
+							if (o != null) {
+								Point mouseLocation = (Point)VCLEventQueue.pointerInfoGetLocationMethod.invoke(o, new Object[]{});
+								if (mouseLocation != null && bounds.contains(mouseLocation)) {
+									MouseEvent mouseDraggedEvent = new MouseEvent(w, MouseEvent.MOUSE_DRAGGED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK | MouseEvent.BUTTON1_DOWN_MASK, mouseLocation.x - screenLocation.x, mouseLocation.y - screenLocation.y, 1, false);
+									postEvent(mouseDraggedEvent);
+								}
+							}
+						}
+					}
+				}
+				else if (event instanceof KeyEvent) {
+					// The modifiers for mouse released events contain the
+					// modifiers after the event has occurred so we need to
+					// replace the modifiers with the modifiers that were
+					// released
 					int id = event.getID();
 					if (id == KeyEvent.KEY_PRESSED || id == KeyEvent.KEY_RELEASED) {
 						int modifiers = queue.getLastAdjustedMouseModifiers();
@@ -641,6 +685,10 @@ public final class VCLEventQueue implements Runnable {
 					}
 				}
 				else if (event instanceof MouseEvent) {
+					// The modifiers for mouse released events contain the
+					// modifiers after the event has occurred so we need to
+					// replace the modifiers with the modifiers that were
+					// released
 					int id = event.getID();
 					if (id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_RELEASED)
 						queue.setLastAdjustedMouseModifiers(((MouseEvent)event).getModifiersEx());
