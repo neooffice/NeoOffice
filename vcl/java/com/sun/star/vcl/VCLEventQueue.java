@@ -164,16 +164,6 @@ public final class VCLEventQueue implements Runnable {
 	private static long nextGCUseMemory3 = 0;
 
 	/**
-	 * The cached getLocation() method.
-	 */
-	private static Method pointerInfoGetLocationMethod = null;
-
-	/**
-	 * The cached getPointerInfo() method.
-	 */
-	private static Method toolkitGetPointerInfoMethod = null;
-
-	/**
 	 * Run the garbage collector if necessary.
 	 */
 	static void runGCIfNeeded(long pixels) {
@@ -243,17 +233,6 @@ public final class VCLEventQueue implements Runnable {
 
 		// Swap in our own event queue
 		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
-
-		// Load mouse info peer instance
-		try {
-			Class c = Class.forName("java.awt.MouseInfo");
-			toolkitGetPointerInfoMethod = c.getMethod("getPointerInfo", new Class[]{});
-			Object o = toolkitGetPointerInfoMethod.invoke(null, new Object[]{});
-			pointerInfoGetLocationMethod = o.getClass().getMethod("getLocation", new Class[]{});
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
 
 		// Load platform specific event handlers
 		try {
@@ -625,9 +604,19 @@ public final class VCLEventQueue implements Runnable {
 	final class NoExceptionsEventQueue extends EventQueue {
 
 		/**
+		 * The cached getLocation() method.
+		 */
+		private Method pointerInfoGetLocationMethod = null;
+
+		/**
 		 * The <code>VCLEventQueue</code>.
 		 */
 		private VCLEventQueue queue = null;
+
+		/**
+		 * The cached getPointerInfo() method.
+		 */
+		private Method toolkitGetPointerInfoMethod = null;
 
 		/**
 		 * Construct a <code>NoExceptionsEventQueue</code> instance.
@@ -637,6 +626,17 @@ public final class VCLEventQueue implements Runnable {
 		NoExceptionsEventQueue(VCLEventQueue q) {
 
 			queue = q;
+
+			// Load mouse info peer instance
+			try {
+				Class c = Class.forName("java.awt.MouseInfo");
+				toolkitGetPointerInfoMethod = c.getMethod("getPointerInfo", new Class[]{});
+				Object o = toolkitGetPointerInfoMethod.invoke(null, new Object[]{});
+				pointerInfoGetLocationMethod = o.getClass().getMethod("getLocation", new Class[]{});
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
 
 		}
 
@@ -650,7 +650,7 @@ public final class VCLEventQueue implements Runnable {
 			try {
 				super.dispatchEvent(event);
 
-				if (event instanceof ComponentEvent && event.getID() == ComponentEvent.COMPONENT_MOVED && VCLEventQueue.toolkitGetPointerInfoMethod != null && VCLEventQueue.pointerInfoGetLocationMethod != null) {
+				if (event instanceof ComponentEvent && event.getID() == ComponentEvent.COMPONENT_MOVED && toolkitGetPointerInfoMethod != null && pointerInfoGetLocationMethod != null) {
 					// Fix bug 2769 by creating synthetic mouse dragged events
 					// when moving a window by dragging its title bar
 					Component c = ((ComponentEvent)event).getComponent();
@@ -659,12 +659,12 @@ public final class VCLEventQueue implements Runnable {
 						Point screenLocation = w.getLocationOnScreen();
 						Rectangle bounds = new Rectangle(screenLocation.x, screenLocation.y, w.getSize().width, w.getInsets().top);
 						if (!bounds.isEmpty()) {
-							Object o = VCLEventQueue.toolkitGetPointerInfoMethod.invoke(Toolkit.getDefaultToolkit(), new Object[]{});
+							Object o = toolkitGetPointerInfoMethod.invoke(Toolkit.getDefaultToolkit(), new Object[]{});
 							if (o != null) {
-								Point mouseLocation = (Point)VCLEventQueue.pointerInfoGetLocationMethod.invoke(o, new Object[]{});
+								Point mouseLocation = (Point)pointerInfoGetLocationMethod.invoke(o, new Object[]{});
 								if (mouseLocation != null && bounds.contains(mouseLocation)) {
 									MouseEvent mouseDraggedEvent = new MouseEvent(w, MouseEvent.MOUSE_DRAGGED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK | MouseEvent.BUTTON1_DOWN_MASK, mouseLocation.x - screenLocation.x, mouseLocation.y - screenLocation.y, 1, false);
-									postEvent(mouseDraggedEvent);
+									dispatchEvent(mouseDraggedEvent);
 								}
 							}
 						}
