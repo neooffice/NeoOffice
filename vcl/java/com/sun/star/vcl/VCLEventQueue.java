@@ -39,6 +39,7 @@ import java.awt.AWTEvent;
 import java.awt.Component;
 import java.awt.Container;
 import java.awt.DefaultKeyboardFocusManager;
+import java.awt.Dialog;
 import java.awt.EventQueue;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
@@ -46,7 +47,6 @@ import java.awt.Panel;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Toolkit;
-import java.awt.Window;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.InputEvent;
@@ -654,17 +654,27 @@ public final class VCLEventQueue implements Runnable {
 					// Fix bug 2769 by creating synthetic mouse dragged events
 					// when moving a window by dragging its title bar
 					Component c = ((ComponentEvent)event).getComponent();
-					if (c instanceof Window && c.isShowing()) {
-						Window w = (Window)c;
-						Point screenLocation = w.getLocationOnScreen();
-						Rectangle bounds = new Rectangle(screenLocation.x, screenLocation.y, w.getSize().width, w.getInsets().top);
+					if (c instanceof Dialog && c.isShowing()) {
+						Dialog d = (Dialog)c;
+						Point screenLocation = d.getLocationOnScreen();
+						Rectangle bounds = new Rectangle(screenLocation.x, screenLocation.y, d.getSize().width, d.getInsets().top);
 						if (!bounds.isEmpty()) {
 							Object o = toolkitGetPointerInfoMethod.invoke(Toolkit.getDefaultToolkit(), new Object[]{});
 							if (o != null) {
 								Point mouseLocation = (Point)pointerInfoGetLocationMethod.invoke(o, new Object[]{});
-								if (mouseLocation != null && bounds.contains(mouseLocation)) {
-									MouseEvent mouseDraggedEvent = new MouseEvent(w, MouseEvent.MOUSE_DRAGGED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK | MouseEvent.BUTTON1_DOWN_MASK, mouseLocation.x - screenLocation.x, mouseLocation.y - screenLocation.y, 1, false);
-									dispatchEvent(mouseDraggedEvent);
+								if (mouseLocation != null) {
+									if (mouseLocation.x < bounds.x)
+										mouseLocation.x = bounds.x;
+									else if (mouseLocation.x >= bounds.x + bounds.width)
+										mouseLocation.x = bounds.x + bounds.width;
+
+									if (mouseLocation.y < bounds.y)
+										mouseLocation.y = bounds.y;
+									else if (mouseLocation.y >= bounds.y + bounds.height)
+										mouseLocation.y = bounds.y + bounds.height;
+
+									MouseEvent mouseDraggedEvent = new MouseEvent(d, MouseEvent.MOUSE_DRAGGED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK | MouseEvent.BUTTON1_DOWN_MASK, mouseLocation.x - screenLocation.x, mouseLocation.y - screenLocation.y, 1, false);
+									super.dispatchEvent(mouseDraggedEvent);
 								}
 							}
 						}
