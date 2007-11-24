@@ -602,7 +602,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     boost::scoped_array<JavaVMOption> sarOptions(
 #ifdef USE_JAVA
-        new JavaVMOption[cOptions + 10]);
+        new JavaVMOption[cOptions + 9]);
 #else	// USE_JAVA
         new JavaVMOption[cOptions + 1]);
 #endif	// USE_JAVA
@@ -737,13 +737,9 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+6].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
     options[i+6].extraInfo = NULL;
 
-    // Enable live window resizing
-    options[i+7].optionString = "-Dcom.apple.mrj.application.live-resize=true";
-    options[i+7].extraInfo = NULL;
-
     // Java 1.5 and higher on Leopard needs Quartz to be explicitly turned on
-    options[i+8].optionString = "-Dapple.awt.graphics.UseQuartz=true";
-    options[i+8].extraInfo = NULL;
+    options[i+7].optionString = "-Dapple.awt.graphics.UseQuartz=true";
+    options[i+7].extraInfo = NULL;
 
     size_t nUserMem = 64;
     if ( !IsX11Product() )
@@ -751,8 +747,8 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OStringBuffer aBuf( "-Xmx" );
     aBuf.append( (sal_Int32)nUserMem );
     aBuf.append( "m" );
-    options[i+9].optionString = (char *)aBuf.makeStringAndClear().getStr();
-    options[i+9].extraInfo = NULL;
+    options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
+    options[i+8].extraInfo = NULL;
    
     vm_args.version= JNI_VERSION_1_4;
 #else	// USE_JAVA
@@ -760,7 +756,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif	// USE_JAVA
     vm_args.options= options;
 #ifdef USE_JAVA
-    vm_args.nOptions= cOptions + 10;
+    vm_args.nOptions= cOptions + 9;
 #else	// USE_JAVA
     vm_args.nOptions= cOptions + 1;
 #endif	// USE_JAVA
