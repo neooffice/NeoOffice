@@ -83,7 +83,6 @@ public:
 	BOOL					mbFullScreen;
 	BOOL					mbPresentation;
 	JavaSalMenu*			mpMenuBar;
-	BOOL					mbUseMainScreenOnly;
 	BOOL					mbInSetPosSize;
 	BOOL					mbInShow;
 

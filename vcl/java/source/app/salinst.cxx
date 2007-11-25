@@ -659,8 +659,8 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 	pFrame->maGeometry.nRightDecoration = aRect.nRight;
 	pFrame->maGeometry.nBottomDecoration = aRect.nBottom;
 
-	// Get work area of main screen
-	Rectangle aWorkArea( Point( 0, 0 ), Size( 1, 1 ) );
+	// Get work area of the parent window or, if no parent, the main screen
+	Rectangle aWorkArea( Point( 0, 0 ), Size( 0, 0 ) );
 	pFrame->GetWorkArea( aWorkArea );
 
 	// Set default window size based on style

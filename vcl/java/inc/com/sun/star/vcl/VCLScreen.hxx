@@ -57,7 +57,7 @@ public:
 	static jclass		getMyClass();
 	static SalColor		getControlColor();
 	static unsigned int	getDefaultScreenNumber();
-	static const Rectangle	getScreenBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4, sal_Bool _par5 );
+	static const Rectangle	getScreenBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 );
 	static const Rectangle	getScreenBounds( unsigned int _par0, sal_Bool _par1 );
 	static unsigned int	getScreenCount();
 	static SalColor		getTextHighlightColor();

@@ -117,7 +117,6 @@ JavaSalFrame::JavaSalFrame()
 	mbFullScreen = FALSE;
 	mbPresentation = FALSE;
 	mpMenuBar = NULL;
-	mbUseMainScreenOnly = TRUE;
 	mbInSetPosSize = FALSE;
 	mbInShow = FALSE;
 }
@@ -410,14 +409,23 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 {
 	SalData *pSalData = GetSalData();
 	sal_Bool bFullScreenMode = ( pSalData->mpPresentationFrame || ( this == pSalData->mpLastDragFrame ) );
-
-	// If the input rectangle is empty, we are being called by the platform
-	// independent VCL code and so the entire virtual bounds will be returned
 	long nX = rRect.nLeft;
 	long nY = rRect.nTop;
 	long nWidth = rRect.GetWidth();
 	long nHeight = rRect.GetHeight();
-	Rectangle aRect( com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode, mbUseMainScreenOnly ) );
+    
+	// If the input rectangle is empty, we are being called by the platform
+	// independent VCL code and so we need to use the parent window's bounds
+	// if there is one 
+	if ( mpParent && ( !nWidth || !nHeight ) )
+	{
+		nX = mpParent->maGeometry.nX - maGeometry.nLeftDecoration;
+		nY = mpParent->maGeometry.nY - maGeometry.nTopDecoration;
+		nWidth  = mpParent->maGeometry.nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
+		nHeight  = mpParent->maGeometry.nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
+	}
+
+	Rectangle aRect( com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode ) );
 	if ( aRect.GetWidth() > 0 && aRect.GetHeight() > 0 )
 		rRect = aRect;
 }
@@ -445,8 +453,6 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 		nFlags |= SAL_FRAME_POSSIZE_HEIGHT;
 	if ( nFlags )
 	{
-		mbUseMainScreenOnly = FALSE;
-
 		JavaSalFrame *pParent = mpParent;
 		mpParent = NULL;
 		SetPosSize( pState->mnX, pState->mnY, pState->mnWidth, pState->mnHeight, nFlags );
@@ -482,8 +488,6 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 {
 	if ( bFullScreen == mbFullScreen )
 		return;
-
-	mbUseMainScreenOnly = FALSE;
 
 	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 	if ( bFullScreen )
@@ -843,9 +847,6 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	}
 
 	mpParent = (JavaSalFrame *)pNewParent;
-
-	if ( mpParent )
-		mbUseMainScreenOnly = FALSE;
 
 	bool bReshow = mbVisible;
 	if ( bReshow )

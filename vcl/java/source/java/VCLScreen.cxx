@@ -166,7 +166,7 @@ unsigned int com_sun_star_vcl_VCLScreen::getDefaultScreenNumber()
 
 // ----------------------------------------------------------------------------
 
-const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4, sal_Bool _par5 )
+const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 )
 {
 	static jmethodID mID = NULL;
 	static jfieldID fIDX = NULL;
@@ -185,13 +185,12 @@ const Rectangle com_sun_star_vcl_VCLScreen::getScreenBounds( long _par0, long _p
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[6];
+			jvalue args[5];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			args[4].z = jboolean( _par4 );
-			args[5].z = jboolean( _par5 );
 			jobject tempObj = t.pEnv->CallStaticObjectMethodA( getMyClass(), mID, args );
 			if ( tempObj )
 			{
