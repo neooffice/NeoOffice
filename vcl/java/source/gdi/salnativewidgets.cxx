@@ -1616,15 +1616,15 @@ static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, Con
 				if ( nType == CTRL_SCROLLBAR && boundingRect.GetHeight() > boundingRect.GetWidth() )
 				{
 					if ( boundingRect.GetHeight() - bounds.size.height > 0 )
-						boundingRect.setHeight( boundingRect.GetHeight() - bounds.size.height );
+						boundingRect.setHeight( (long)( boundingRect.GetHeight() - bounds.size.height ) );
 				}
 				else if ( boundingRect.GetWidth() - bounds.size.width > 0 )
 				{
-					boundingRect.setWidth( boundingRect.GetWidth() - bounds.size.width );
+					boundingRect.setWidth( (long)( boundingRect.GetWidth() - bounds.size.width ) );
 				}
 				else if ( boundingRect.GetHeight() - bounds.size.height > 0 )
 				{
-					boundingRect.setHeight( boundingRect.GetHeight() - bounds.size.height );
+					boundingRect.setHeight( (long)( boundingRect.GetHeight() - bounds.size.height ) );
 				}
 				aRegion = Region( boundingRect );
 			}
