@@ -857,6 +857,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		return bRet;
 
 	bool bNeedSymbolFallback = false;
+	bool bUseNativeFallback = false;
 	int nEstimatedGlyphs = 0;
 
 	// Aggregate runs
@@ -1149,6 +1150,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
+						else if ( GetVerticalFlags( nChar ) != GF_NONE )
+						{
+							// Fix bug 2772 by always using the fallback font
+							// picked by the native APIs when rotatable
+							// characters are used
+							bUseNativeFallback = true;
+							if ( !pFallbackFont )
+								pFallbackFont = pCurrentLayoutData->mpFallbackFont;
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
 						else if ( pCurrentLayoutData->mpFallbackFont )
 						{
 							// Fix bug 2091 by suppressing zero glyphs if there
@@ -1227,7 +1239,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					pHighScoreFontData = it->second;
 			}
 
-			if ( !pHighScoreFontData && pFallbackFont )
+			if ( !pHighScoreFontData && !bUseNativeFallback && pFallbackFont )
 			{
 				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont->getNativeFont() );
 				if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
