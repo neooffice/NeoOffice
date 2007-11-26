@@ -2271,9 +2271,32 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		int x = e.getX();
+		int y = e.getY();
+
+		// For mouse drag events with a window component, limit location to the
+		// window's titlebar
+		Component c = e.getComponent();
+		if (c instanceof Window) {
+			Window w = (Dialog)c;
+			Rectangle b = new Rectangle(0, 0, w.getSize().width, w.getInsets().top);
+			if (b.isEmpty())
+				return;
+
+			if (x < b.x)
+				x = b.x;
+			else if (x >= b.x + b.width)
+				x = b.x + b.width;
+
+			if (y < b.y)
+				y = b.y;
+			else if (y >= b.y + b.height)
+				y = b.y + b.height;
+		}
+
 		// Use adjusted modifiers
 		int modifiers = queue.getLastAdjustedMouseModifiers();
-		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, x, y, e.getClickCount(), e.isPopupTrigger());
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
