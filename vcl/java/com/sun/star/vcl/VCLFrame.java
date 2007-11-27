@@ -2278,7 +2278,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// window's titlebar
 		Component c = e.getComponent();
 		if (c instanceof Window) {
-			Window w = (Dialog)c;
+			Window w = (Window)c;
 			Rectangle b = new Rectangle(0, 0, w.getSize().width, w.getInsets().top);
 			if (b.isEmpty())
 				return;
