@@ -102,16 +102,15 @@
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 						CGContextRotateCTM( aContext, mfRotateAngle );
-						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						if ( mfClipWidth && mfClipHeight )
-							CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+							CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
 						NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
 						if ( pData )
 						{
 							NSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
 							if ( pImage )
-								[pImage drawInRect:NSMakeRect( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 )];
+								[pImage drawInRect:NSMakeRect( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 )];
 						}
 
 						CGContextRestoreGState( aContext );
@@ -205,10 +204,9 @@
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 						CGContextRotateCTM( aContext, mfRotateAngle );
-						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						if ( mfClipWidth && mfClipHeight )
-							CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
-						CGContextDrawImage( aContext, CGRectMake( mfX, mfY + mfHeight, mfWidth, mfHeight * -1 ), maImage );
+							CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+						CGContextDrawImage( aContext, CGRectMake( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 ), maImage );
 						CGContextRestoreGState( aContext );
 					}
 				}
@@ -307,25 +305,36 @@
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 						CGContextRotateCTM( aContext, mfRotateAngle );
-						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						if ( mfClipWidth && mfClipHeight )
-							CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
-						CGContextTranslateCTM( aContext, mfX, mfY);
+							CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+
+						CGContextTranslateCTM( aContext, mfX * mfScaleX, mfY * mfScaleY );
 						CGContextRotateCTM( aContext, mfGlyphRotateAngle );
+						CGContextTranslateCTM( aContext, mfGlyphTranslateX * mfGlyphScaleX * mfScaleX, mfGlyphTranslateY * mfGlyphScaleY * mfScaleY );
 						CGContextScaleCTM( aContext, mfGlyphScaleX, mfGlyphScaleY * -1 );
-						CGContextTranslateCTM( aContext, mfGlyphTranslateX, mfGlyphTranslateY * -1 );
 
 						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
 						CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
 
-						// Fix bug 2674 by setting all translation, rotation, and
-						// scale in the CGContext and not in the text matrix
+						// Fix bug 2674 by setting all translation, rotation,
+						// and scale in the CGContext and not in the text matrix
 						CGAffineTransform aTransform = CGAffineTransformMake( 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
 						CGContextSetTextMatrix( aContext, aTransform );
 
 						CGContextSetFont( aContext, maFont );
-						CGContextSetFontSize( aContext, mnFontSize );
-						CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpSizes, mnCount );
+						CGContextSetFontSize( aContext, (float)mnFontSize * mfScaleY );
+						CGSize *pAdjustedSizes = (CGSize *)malloc( mnCount * sizeof( CGSize ) );
+						if ( pAdjustedSizes )
+						{
+							size_t i;
+							for ( i = 0; i < mnCount; i++ )
+							{
+								pAdjustedSizes[ i ].width = mpSizes[ i ].width * mfScaleX;
+								pAdjustedSizes[ i ].height = mpSizes[ i ].height * mfScaleY;
+							}
+							CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, pAdjustedSizes, mnCount );
+							free( pAdjustedSizes );
+						}
 
 						CGContextRestoreGState( aContext );
 					}
@@ -425,14 +434,14 @@
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 						CGContextRotateCTM( aContext, mfRotateAngle );
-						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						if ( mfClipWidth && mfClipHeight )
-							CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+							CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
 						CGContextBeginPath( aContext );
-						CGContextMoveToPoint( aContext, mfX1, mfY1 );
-						CGContextAddLineToPoint( aContext, mfX2, mfY2 );
+						CGContextMoveToPoint( aContext, mfX1 * mfScaleX, mfY1 * mfScaleY );
+						CGContextAddLineToPoint( aContext, mfX2 * mfScaleX, mfY2 * mfScaleY );
 						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+						CGContextSetLineWidth( aContext, mfScaleX );
 						CGContextStrokePath( aContext );
 
 						CGContextRestoreGState( aContext );
@@ -525,15 +534,14 @@
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 						CGContextRotateCTM( aContext, mfRotateAngle );
-						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						if ( mfClipWidth && mfClipHeight )
-							CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+							CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
 						CGContextBeginPath( aContext );
-						CGContextMoveToPoint( aContext, mpXPoints[ 0 ], mpYPoints[ 0 ] );
+						CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
 						int i = 1;
 						for ( ; i < mnPoints; i++ )
-							CGContextAddLineToPoint( aContext, mpXPoints[ i ], mpYPoints[ i ] );
+							CGContextAddLineToPoint( aContext, mpXPoints[ i ] * mfScaleX, mpYPoints[ i ] * mfScaleY );
 						CGContextClosePath( aContext );
 						if ( mbFill )
 						{
@@ -543,6 +551,7 @@
 						else
 						{
 							CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+							CGContextSetLineWidth( aContext, mfScaleX );
 							CGContextStrokePath( aContext );
 						}
 
@@ -635,16 +644,16 @@
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 						CGContextRotateCTM( aContext, mfRotateAngle );
-						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						if ( mfClipWidth && mfClipHeight )
-							CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+							CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
 						CGContextBeginPath( aContext );
-						CGContextMoveToPoint( aContext, mpXPoints[ 0 ], mpYPoints[ 0 ] );
+						CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
 						int i = 1;
 						for ( ; i < mnPoints; i++ )
-							CGContextAddLineToPoint( aContext, mpXPoints[ i ], mpYPoints[ i ] );
+							CGContextAddLineToPoint( aContext, mpXPoints[ i ] * mfScaleX, mpYPoints[ i ] * mfScaleY );
 						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+						CGContextSetLineWidth( aContext, mfScaleX );
 						CGContextStrokePath( aContext );
 
 						CGContextRestoreGState( aContext );
@@ -737,19 +746,18 @@
 						CGContextSaveGState( aContext );
 						CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 						CGContextRotateCTM( aContext, mfRotateAngle );
-						CGContextScaleCTM( aContext, mfScaleX, mfScaleY );
 						if ( mfClipWidth && mfClipHeight )
-							CGContextClipToRect( aContext, CGRectMake( mfClipX, mfClipY, mfClipWidth, mfClipHeight ) );
+							CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
 						if ( mbFill )
 						{
 							CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-							CGContextFillRect( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ) );
+							CGContextFillRect( aContext, CGRectMake( mfX * mfScaleX, mfY * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY ) );
 						}
 						else
 						{
 							CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-							CGContextStrokeRect( aContext, CGRectMake( mfX, mfY, mfWidth, mfHeight ) );
+							CGContextStrokeRect( aContext, CGRectMake( mfX * mfScaleX, mfY * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY ) );
 						}
 
 						CGContextRestoreGState( aContext );
