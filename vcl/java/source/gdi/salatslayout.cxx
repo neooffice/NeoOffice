@@ -99,6 +99,7 @@ struct ImplATSLayoutData {
 	ImplATSLayoutDataHash*	mpHash;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	ATSUStyle			maFontStyle;
+	float				mfFontScaleY;
 	bool*				mpNeedFallback;
 	::vcl::com_sun_star_vcl_VCLFont*	mpFallbackFont;
 	ATSUTextLayout		maLayout;
@@ -269,6 +270,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mpHash( pLayoutHash ),
 	mpVCLFont( NULL ),
 	maFontStyle( NULL ),
+	mfFontScaleY( 1.0f ),
 	mpNeedFallback( NULL ),
 	mpFallbackFont( NULL ),
 	maLayout( NULL ),
@@ -312,9 +314,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-	ATSUAttributeTag nTags[3];
-	ByteCount nBytes[3];
-	ATSUAttributeValuePtr nVals[3];
+	ATSUAttributeTag nTags[4];
+	ByteCount nBytes[4];
+	ATSUAttributeValuePtr nVals[4];
 
 	// Set font
 	nTags[0] = kATSUFontTag;
@@ -324,11 +326,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// The OOo code will often layout fonts at unrealistically large sizes so
 	// we need to use a more reasonably sized font or else we will exceed the
 	// 32K Fixed data type limit that the ATSTrapezoid struct uses so we
-	// preemptively limit font size to 100 like in the OOo 1.1.x code.
+	// preemptively limit font size to a size that is most likely to fit the
+	// within the 32K limit
 	float fSize = (float)mpHash->mnFontSize;
 	float fAdjustedSize;
-	if ( fSize > 100 )
-		fAdjustedSize = 100;
+	if ( mpHash->mnFontSize * mpHash->mnLen * 2 > 0x00007fff )
+		fAdjustedSize = (float)( 0x00007fff / ( mpHash->mnLen * 2 ) );
 	else
 		fAdjustedSize = fSize;
 	Fixed fCurrentSize = X2Fix( fAdjustedSize );
@@ -346,7 +349,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	nBytes[2] = sizeof( ATSStyleRenderingOptions );
 	nVals[2] = &nOptions;
 
-	if ( ATSUSetAttributes( maFontStyle, 3, nTags, nBytes, nVals ) != noErr )
+	ATSUVerticalCharacterType nVertical = kATSUStronglyHorizontal;
+	nTags[3] = kATSUVerticalCharacterTag;
+	nBytes[3] = sizeof( ATSUVerticalCharacterType );
+	nVals[3] = &nVertical;
+
+	if ( ATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
 	{
 		Destroy();
 		return;
@@ -354,13 +362,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	if ( mpHash->mbVertical )
 	{
-		if ( ATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr )
+		if ( ATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr && maVerticalFontStyle )
 		{
-			ATSUVerticalCharacterType nVertical;
-			if ( maVerticalFontStyle )
-				nVertical = kATSUStronglyVertical;
-			else
-				nVertical = kATSUStronglyHorizontal;
+			ATSUVerticalCharacterType nVertical = kATSUStronglyVertical;
 			nTags[0] = kATSUVerticalCharacterTag;
 			nBytes[0] = sizeof( ATSUVerticalCharacterType );
 			nVals[0] = &nVertical;
@@ -369,18 +373,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			{
 				Destroy();
 				return ;
-			}
-
-			BslnBaselineRecord aBaseline;
-			memset( aBaseline, 0, sizeof( BslnBaselineRecord ) );
-			if ( ATSUCalculateBaselineDeltas( maVerticalFontStyle, kBSLNRomanBaseline, aBaseline ) == noErr )
-				mnBaselineDelta = Fix2Long( aBaseline[ kBSLNIdeographicCenterBaseline ] );
-			if ( !mnBaselineDelta )
-			{
-				ATSFontMetrics aFontMetrics;
-				ATSFontRef aFont = FMGetATSFontRefFromFont( mpHash->mnFontID );
-				if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
-					mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * mpVCLFont->getSize() );
 			}
 		}
 	}
@@ -437,13 +429,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	while ( Fix2X( aTrapezoid.upperRight.x ) < 0 )
 	{
 		// Reset font size
-		fAdjustedSize /= 10;
+		fAdjustedSize /= 2;
 		fCurrentSize = X2Fix( fAdjustedSize );
 		nTags[0] = kATSUSizeTag;
 		nBytes[0] = sizeof( Fixed );
 		nVals[0] = &fCurrentSize;
 
-		if ( fAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
+		if ( fAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ( maVerticalFontStyle && ATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr ) || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
 		{
 			Destroy();
 			return;
@@ -510,33 +502,33 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	memset( mpCharAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
-	float fScaleY = fSize / fAdjustedSize;
+	mfFontScaleY = fSize / fAdjustedSize;
 	for ( i = 0; i < mnGlyphCount; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 		if ( i == mnGlyphCount - 1 )
 		{
 			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * fScaleY );
+				mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY );
 		}
 		else
 		{
-			mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * fScaleY );
+			mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY );
 		}
 	}
 
-	if ( fAdjustedSize != fSize )
+	if ( maVerticalFontStyle )
 	{
-		// Reset font size
-		fCurrentSize = X2Fix( fSize );
-		nTags[0] = kATSUSizeTag;
-		nBytes[0] = sizeof( Fixed );
-		nVals[0] = &fCurrentSize;
-
-		if ( ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr )
+		BslnBaselineRecord aBaseline;
+		memset( aBaseline, 0, sizeof( BslnBaselineRecord ) );
+		if ( ATSUCalculateBaselineDeltas( maVerticalFontStyle, kBSLNRomanBaseline, aBaseline ) == noErr )
+			mnBaselineDelta = Float32ToLong( Fix2X( aBaseline[ kBSLNIdeographicCenterBaseline ] ) * mfFontScaleY );
+		if ( !mnBaselineDelta )
 		{
-			Destroy();
-			return;
+			ATSFontMetrics aFontMetrics;
+			ATSFontRef aFont = FMGetATSFontRefFromFont( mpHash->mnFontID );
+			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
+				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize * mfFontScaleY );
 		}
 	}
 
@@ -1499,13 +1491,17 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 
 			// Fix bug 2390 by ignoring the value of nErr passed by reference
 			::std::list< Polygon > aPolygonList;
+			ATSUStyle aCurrentStyle = NULL;
+			UniCharArrayOffset nRunStart;
+			UniCharCount nRunLen;
 			OSStatus nErr;
-			if ( ATSUGlyphGetCubicPaths( pCurrentLayoutData->maFontStyle, pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
+			if ( ATSUGetRunStyle( pCurrentLayoutData->maLayout, nIndex, &aCurrentStyle, &nRunStart, &nRunLen ) != noErr || !aCurrentStyle || ATSUGlyphGetCubicPaths( aCurrentStyle, pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
 				continue;
 
 			PolyPolygon aPolyPolygon;
 			while ( aPolygonList.size() )
 			{
+				aPolygonList.front().Scale( pCurrentLayoutData->mfFontScaleY, pCurrentLayoutData->mfFontScaleY );
 				aPolyPolygon.Insert( aPolygonList.front() );
 				aPolygonList.pop_front();
 			}
@@ -1515,25 +1511,37 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			if ( aRect.GetWidth() <= 0 || aRect.GetHeight() <= 0 )
 				continue;
 
+			long nTranslateX = 0;
+			long nTranslateY = 0;
+
 			aPolyPolygon.Move( aPos.X(), aPos.Y() );
 
+			long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 			if ( pCurrentLayoutData->maVerticalFontStyle )
 			{
-				long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
-				if ( nGlyphOrientation )
+				long nX;
+				long nY;
+				ImplATSLayoutData *pFoundLayout = GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
+				if ( nGlyphOrientation == GF_ROTL )
 				{
-					if ( nGlyphOrientation == GF_ROTL )
-					{
-						aPolyPolygon.Rotate( Point( 0, 0 ), 900 );
-						aPolyPolygon.Move( aPolyPolygon.GetBoundRect().nLeft * -1, pCurrentLayoutData->mnBaselineDelta * -1 );
-					}
-					else
-					{
-						aPolyPolygon.Rotate( Point( 0, 0 ), 2700 );
-						aPolyPolygon.Move( aDXArray[ 0 ] - aPolyPolygon.GetBoundRect().nRight, pCurrentLayoutData->mnBaselineDelta * -1 );
-					}
+					nTranslateX = nX * -1;
+					nTranslateY = nY;
+				}
+				else if ( nGlyphOrientation == GF_ROTR )
+				{
+					aPolyPolygon.Rotate( aPos, 1800 );
+					nTranslateX = nX;
+					nTranslateY = nY;
+				}
+				else
+				{
+					aPolyPolygon.Rotate( aPos, 2700 );
+					nTranslateX = nX;
+					nTranslateY = nY;
 				}
 			}
+
+			aPolyPolygon.Move( nTranslateX, nTranslateY );
 
 			rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
 			bRet = true;
@@ -1632,12 +1640,12 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int n
 		ATSGlyphScreenMetrics aHorizontalMetrics;
 		if ( ATSUGlyphGetScreenMetrics( pRet->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( pRet->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
 		{
-			nX = Float32ToLong( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x );
+			nX = Float32ToLong( ( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x ) * pRet->mfFontScaleY );
 			if ( nGlyphOrientation == GF_ROTL )
 				nX += pRet->mnBaselineDelta;
 			else
 				nX -= pRet->mnBaselineDelta;
-			nY = Float32ToLong( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y );
+			nY = Float32ToLong( ( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y ) * pRet->mfFontScaleY );
 		}
 	}
 
