@@ -528,7 +528,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			ATSFontMetrics aFontMetrics;
 			ATSFontRef aFont = FMGetATSFontRefFromFont( mpHash->mnFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
-				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize * mfFontScaleY );
+				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize );
 		}
 	}
 
@@ -1524,7 +1524,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 				ImplATSLayoutData *pFoundLayout = GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
 				if ( nGlyphOrientation == GF_ROTL )
 				{
-					nTranslateX = nX * -1;
+					nTranslateX = nX;
 					nTranslateY = nY;
 				}
 				else if ( nGlyphOrientation == GF_ROTR )
