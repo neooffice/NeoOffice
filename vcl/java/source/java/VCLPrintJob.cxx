@@ -234,12 +234,12 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1, sal_Bool _par2 ) 
+sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1, float _par2, sal_Bool _par3 ) 
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
 
-	if ( _par2 )
+	if ( _par3 )
 	{
 		VCLThreadAttach t;
 		if ( t.pEnv )
@@ -255,7 +255,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 				jvalue args[3];
 				args[0].l = _par0->getJavaObject();
 				args[1].l = StringToJavaString( t.pEnv, _par1 );
-				args[2].f = jfloat( NSPrintInfo_scale( _par0->getNativePrinterJob() ) );
+				args[2].f = jfloat( _par2 );
 				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 			}
 		}

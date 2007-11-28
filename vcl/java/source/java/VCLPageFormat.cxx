@@ -61,6 +61,7 @@
 #endif
 
 #include "VCLPageFormat_cocoa.h"
+#include "VCLPrintJob_cocoa.h"
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -588,6 +589,13 @@ Paper com_sun_star_vcl_VCLPageFormat::getPaperType()
 			out = (Paper)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+float com_sun_star_vcl_VCLPageFormat::getScaleFactor()
+{
+	return NSPrintInfo_scale( getNativePrinterJob() );
 }
 
 // ----------------------------------------------------------------------------

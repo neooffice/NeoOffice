@@ -70,6 +70,7 @@ public:
 	const Size			getPageSize();
 	java_lang_Object*	getPrinterJob();
 	Paper				getPaperType();
+	float				getScaleFactor();
 	const Size			getTextResolution();
 	sal_Bool			isEditable();
 	void				setOrientation( Orientation _par0 );

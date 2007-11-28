@@ -54,6 +54,8 @@
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
 #endif
 
+static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
+
 using namespace rtl;
 using namespace vcl;
 
@@ -111,6 +113,9 @@ BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 
 	// Update values
 	SetData( 0, pSetupData );
+
+	// Fix bug 2777 by caching the scaling factor
+	pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( mpVCLPageFormat->getScaleFactor() );
 
 	return TRUE;
 }
@@ -314,10 +319,19 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 		mpVCLPageFormat->setPaperType( pSetupData->mePaperFormat, pSetupData->mnPaperWidth * 72 / 2540, pSetupData->mnPaperHeight * 72 / 2540 );
 	}
 
+	float fScaleFactor = 1.0f;
+	::std::hash_map< OUString, OUString, OUStringHash >::const_iterator it = pSetupData->maValueMap.find( aPageScalingFactorKey );
+	if ( it != pSetupData->maValueMap.end() )
+	{
+		fScaleFactor = it->second.toFloat();
+		if ( fScaleFactor <= 0.0f )
+			fScaleFactor = 1.0f;
+	}
+
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
 	maJobName = XubString( rJobName );
-	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), !bFirstPass ? sal_True : mbStarted );
+	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), fScaleFactor, !bFirstPass ? sal_True : mbStarted );
 
 	return mbStarted;
 }
