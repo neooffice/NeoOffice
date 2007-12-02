@@ -310,29 +310,32 @@ const static NSString *pCancelInputMethodText = @" ";
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
-	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	BOOL bCommandKeyPressed = ( pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask );
+
+	if ( bCommandKeyPressed && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
+		// Fix crashing when using a menu shortcut by forcing cancellation of
+		// the input method
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
 		{
+			// Fix bug 2783 by not cancelling the input method if the command
+			// key is pressed, but instead, returning YES to cancel the menu
+			// matching process
 			if ( [pResponder hasMarkedText] )
-				[pResponder insertText:pCancelInputMethodText];
-			[pResponder abandonInput];
+				return YES;
 		}
-	}
 
-	BOOL bCommandKeyPressed = ( pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask );
-
-	// Implement the standard window minimization behavior with the Command-m
-	// event
-	if ( bCommandKeyPressed && [self styleMask] & NSMiniaturizableWindowMask && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-	{
-		NSString *pChars = [pEvent charactersIgnoringModifiers];
-		if ( pChars && [pChars isEqualToString:@"m"] )
+		// Implement the standard window minimization behavior with the
+		// Command-m event
+		if ( [self styleMask] & NSMiniaturizableWindowMask )
 		{
-			[self miniaturize:self];
-			return YES;
+			NSString *pChars = [pEvent charactersIgnoringModifiers];
+			if ( pChars && [pChars isEqualToString:@"m"] )
+			{
+				[self miniaturize:self];
+				return YES;
+			}
 		}
 	}
 
