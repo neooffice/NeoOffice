@@ -52,8 +52,14 @@
 #include <com/sun/star/sdbc/DataType.hpp>
 #endif
 
+#ifndef _DBHELPER_DBCONVERSION_HXX_
+#include <connectivity/dbconversion.hxx>
+#endif
+
 using namespace connectivity::macab;
 using namespace com::sun::star::sdbc;
+using namespace com::sun::star::util;
+using namespace ::dbtools;
 
 // -------------------------------------------------------------------------
 MacabHeader::MacabHeader(const sal_Int32 _size, macabfield **_fields)
@@ -166,21 +172,49 @@ void MacabHeader::operator+= (const MacabHeader *r)
 // -------------------------------------------------------------------------
 ::rtl::OUString MacabHeader::getString(const sal_Int32 i) const
 {
-	::rtl::OUString nRet;
+	::rtl::OUString fieldString;
 
 	if(i < size)
 	{
-		if(fields[i] == NULL)
+		if(fields[i] == NULL || fields[i]->value == NULL)
 			return ::rtl::OUString();
-		try
+		switch (fields[i]->type)
 		{
-			nRet = CFStringToOUString( (CFStringRef) fields[i]->value);
+			case kABStringProperty:
+				fieldString = CFStringToOUString((CFStringRef) fields[i]->value);
+				break;
+			case kABDateProperty:
+				{
+					DateTime aTime = CFDateToDateTime((CFDateRef) fields[i]->value);
+					fieldString = DBTypeConversion::toDateTimeString(aTime);
+				}
+				break;
+			case kABIntegerProperty:
+				{
+					CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
+					sal_Int64 nVal;
+					// Should we check for the wrong type here, e.g., a float?
+					sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
+					if(m_bSuccess != sal_False)
+						fieldString = ::rtl::OUString::valueOf(nVal);
+				}
+				break;
+			case kABRealProperty:
+				{
+					CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
+					double nVal;
+					// Should we check for the wrong type here, e.g., an int?
+					sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
+					if(m_bSuccess != sal_False)
+						fieldString = ::rtl::OUString::valueOf(nVal);
+				}
+				break;
+			default:
+				;
 		}
-		catch(...){ }
-
 	}
 
-	return nRet;
+	return fieldString;
 }
 
 // -------------------------------------------------------------------------
