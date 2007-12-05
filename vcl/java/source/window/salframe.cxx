@@ -363,6 +363,18 @@ void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 	{
 		aWorkArea = Rectangle( Point( nX, nY ), Size( nWidth, nHeight ) );
 		GetWorkArea( aWorkArea );
+
+		// Make sure that the work area intersects with the parent frame
+		// so that dialogs don't show on a different monitor than the parent
+		if ( mpParent )
+		{
+			Rectangle aParentBounds( mpParent->mpVCLFrame->getBounds() );
+			if ( aWorkArea.GetIntersection( aParentBounds ).IsEmpty() )
+			{
+				aWorkArea = aParentBounds;
+				GetWorkArea( aWorkArea );
+			}
+		}
 	}
 
 	// Make sure window does not spill off of the screen
