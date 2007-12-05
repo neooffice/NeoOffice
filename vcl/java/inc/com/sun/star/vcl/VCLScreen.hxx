@@ -63,7 +63,6 @@ public:
 	static SalColor		getTextHighlightColor();
 	static SalColor		getTextHighlightTextColor();
 	static SalColor		getTextTextColor();
-	static const Rectangle	getVirtualScreenBounds();
 
 						com_sun_star_vcl_VCLScreen( jobject myObj ) : java_lang_Object( myObj ) {};
 	virtual				~com_sun_star_vcl_VCLScreen() {};
