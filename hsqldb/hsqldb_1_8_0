@@ -22,6 +22,19 @@
  
                  Constraint newconstraint =
                      new Constraint(primaryConst.constName, t,
+--- misc/build/hsqldb/src/org/hsqldb/persist/HsqlDatabaseProperties.java	2007-12-06 11:42:15.000000000 -0800
++++ misc/build/hsqldb/src/org/hsqldb/persist/HsqlDatabaseProperties.java	2007-12-06 11:43:22.000000000 -0800
+@@ -61,7 +61,9 @@
+ 
+     static {
+         try {
+-            String prop = System.getProperty(hsqldb_method_class_names);
++            // Return an empty string to make sure that security is as tight
++            // as possible by default
++            String prop = System.getProperty(hsqldb_method_class_names, "");
+ 
+             if (prop != null) {
+                 accessibleJavaMethodNames = new HashSet();
 --- misc/build/hsqldb/src/org/hsqldb/persist/LockFile.java	2007-12-06 10:14:07.000000000 -0800
 +++ misc/build/hsqldb/src/org/hsqldb/persist/LockFile.java	2007-12-06 10:15:07.000000000 -0800
 @@ -568,6 +568,17 @@
