@@ -39,24 +39,31 @@ PRJ=.
 PRJNAME=hsqldb
 TARGET=so_hsqldb
 
-.IF "$(SOLAR_JAVA)" != ""
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :	settings.mk
+
+# override buildfile
+ANT_BUILDFILE=build$/build.xml
+
+.INCLUDE : antsettings.mk
+
 .INCLUDE :  version.mk
 
+.IF "$(SOLAR_JAVA)" != ""
 # --- Files --------------------------------------------------------
 
 TARFILE_NAME=hsqldb_$(HSQLDB_VERSION)
 
 TARFILE_ROOTDIR=hsqldb
 
-CONVERTFILES=build$/build.xml\
-		doc/changelist_1_8_0.txt\
-		src/org/hsqldb/resources/sql-error-messages.properties
-PATCH_FILE_NAME=hsqldb_1_8_0
+#CONVERTFILES=build$/build.xml
 
-ADDITIONAL_FILES=makefile.mk
+.IF "$(GUIBASE)" == "java"
+PATCH_FILE_NAME=hsqldb_1_8_0
+.ELSE		# "$(GUIBASE)" == "java"
+#PATCH_FILE_NAME=hsqldb_1_8_0
+.ENDIF		# "$(GUIBASE)" == "java"
 
 # ADDITIONAL_FILES=   src$/org$/hsqldb$/Collation.java \
 #                     src$/org$/hsqldb$/TxManager.java \
@@ -64,19 +71,25 @@ ADDITIONAL_FILES=makefile.mk
 #                     src$/org$/hsqldb$/persist$/ScaledRAFileInJar.java \
 #                     src$/org$/hsqldb$/test$/TestCollation.java
 
-BUILD_ACTION=dmake $(MFLAGS) $(CALLMACROS)
+.IF "$(JAVACISGCJ)"=="yes"
+JAVA_HOME=
+.EXPORT : JAVA_HOME
+BUILD_ACTION=$(ANT) -Dbuild.label="build-$(RSCREVISION)" -Dbuild.compiler=gcj -f $(ANT_BUILDFILE) jar
+.ELSE
+BUILD_ACTION=$(ANT) -Dbuild.label="build-$(RSCREVISION)" -f $(ANT_BUILDFILE) jar
+.ENDIF
+
+.ENDIF # $(SOLAR_JAVA)!= ""
 
 # --- Targets ------------------------------------------------------
 
 .INCLUDE : set_ext.mk
 .INCLUDE : target.mk
+
+.IF "$(SOLAR_JAVA)" != ""
 .INCLUDE : tg_ext.mk
+.ENDIF
 
 .IF "$(GUIBASE)" == "java"
 BACK_PATH:=$(BACK_PATH)..$/..$/$(PRJNAME)$/
 .ENDIF		# "$(GUIBASE)" == "java"
-
-.ELSE
-all:
-        @echo java disabled
-.ENDIF

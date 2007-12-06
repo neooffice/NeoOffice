@@ -1,0 +1,15 @@
+====================================================================================
+File name
+---------
+  patch_file.patch
+
+Description
+-----------
+  patches HSQL so that ....
+
+Issue
+-----
+  http://www.openoffice.org/issues/show_bug.cgi?id=?????
+  <summary>
+
+
