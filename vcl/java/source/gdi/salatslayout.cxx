@@ -45,7 +45,6 @@
 
 #include <sys/sysctl.h>
 #include <hash_map>
-#include <unicode/uscript.h>
 
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
@@ -940,9 +939,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			bool bNeedArabicFontSupport = false;
 			for ( int i = nMinCharPos; i < nEndCharPos; i++ )
 			{
-				UErrorCode nErrorCode = U_ZERO_ERROR;
-				UScriptCode eScriptCode = uscript_getScript( rArgs.mpStr[ i ], &nErrorCode );
-				if ( eScriptCode == USCRIPT_ARABIC || eScriptCode == USCRIPT_SYRIAC )
+				if ( ( rArgs.mpStr[ i ] >= 0x0600 && rArgs.mpStr[ i ] < 0x0900 ) || ( rArgs.mpStr[ i ] >= 0xfb50 && rArgs.mpStr[ i ] < 0xfe00 ) || ( rArgs.mpStr[ i ] >= 0xfe70 && rArgs.mpStr[ i ] < 0xff00 ) )
 				{
 					bNeedArabicFontSupport = true;
 					break;
