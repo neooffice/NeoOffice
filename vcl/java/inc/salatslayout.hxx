@@ -68,6 +68,7 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
 	::std::map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
+	::std::map< sal_Unicode, ImplATSLayoutData* >	maIdeographicSpaceLayoutData;
 	long				mnOrigWidth;
 	float				mfGlyphScaleX;
 
