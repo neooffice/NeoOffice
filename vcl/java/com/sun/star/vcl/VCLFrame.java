@@ -2162,14 +2162,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if ((modifiers & InputEvent.ALT_DOWN_MASK) != 0)
 			e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | modifiers) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), e.getKeyCode(), keyChar);
 
-		// Fix bug 1143 by converting any capital alpha characters to lowercase
-		// when the meta key is pressed. Fix bug 2698 by handling the '_' key.
 		if ((modifiers & InputEvent.META_DOWN_MASK) != 0) {
+			// Fix bug 1143 by converting any capital alpha characters to
+			// lowercase when the meta key is pressed. Fix bug 2698 by handling
+			// the '_' key.
 			keyChar = e.getKeyChar();
 			if (keyChar >= 'A' && keyChar <= 'Z')
 				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getKeyCode(), (char)(keyChar + 32));
 			else if (keyChar == '_')
 				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getKeyCode(), '-');
+		}
+		else if ((modifiers & InputEvent.CTRL_DOWN_MASK) != 0) {
+			// Fix bug 2795 by ignoring any Control key events
+			return;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
