@@ -428,8 +428,8 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
     
 	// If the input rectangle is empty, we are being called by the platform
 	// independent VCL code and so we need to use the parent window's bounds
-	// if there is one 
-	if ( mpParent && ( !nWidth || !nHeight ) )
+	// if there is one
+	if ( mpParent )
 	{
 		nX = mpParent->maGeometry.nX - maGeometry.nLeftDecoration;
 		nY = mpParent->maGeometry.nY - maGeometry.nTopDecoration;
