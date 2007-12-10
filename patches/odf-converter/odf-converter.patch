@@ -32,6 +32,19 @@ Index: source/Common/OdfZipUtils/Makefile
  	     -out:OdfZipUtilsStatic.dll $(SOURCE)
  
  clean-local:
+Index: source/Spreadsheet/Converter/OOXStyleCellPostProcessor.cs
+===================================================================
+--- source/Spreadsheet/Converter/OOXStyleCellPostProcessor.cs	(revision 4259)
++++ source/Spreadsheet/Converter/OOXStyleCellPostProcessor.cs	(working copy)
+@@ -128,6 +128,8 @@
+             else if (this.changeCellName)
+             {
+                 this.changeCellName = false;
++				// Fix bug described at http://bugzilla.neooffice.org/bug.php?op=show&bugid=2794&pos=5 using the fix described at https://bugzilla.novell.com/show_bug.cgi?id=332246
++				this.nextWriter.WriteEndAttribute();
+             }
+             else
+             {
 Index: source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl
 ===================================================================
 --- source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl	(revision 4259)
