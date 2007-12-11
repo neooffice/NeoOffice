@@ -1177,6 +1177,9 @@ void ScColumn::MixData( SCROW nRow1, SCROW nRow2,
 ScAttrIterator* ScColumn::CreateAttrIterator( SCROW nStartRow, SCROW nEndRow ) const
 {
 	// Attempt to fix bug 2677 by returning NULL if pAttrArray is NULL
+	if ( !pAttrArray )
+		return NULL;
+
 	return new ScAttrIterator( pAttrArray, nStartRow, nEndRow );
 }
 
