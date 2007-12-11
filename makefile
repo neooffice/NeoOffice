@@ -402,6 +402,8 @@ endif
 ifndef X11_PRODUCT
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
 endif
+	mkdir -p "$(INSTALL_HOME)/package/Contents/share/config/soffice.cfg/modules/scalc/accelerator/en-US"
+	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sc/uiconfig/scalc/accelerator/en-US/default.xml" "share/config/soffice.cfg/modules/scalc/accelerator/en-US/default.xml"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources"
 ifndef X11_PRODUCT
@@ -570,6 +572,8 @@ ifndef X11_PRODUCT
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/dict/ooo"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp -p "$(PWD)/etc/share/dict/ooo/DicOOo.sxw" "share/dict/ooo/DicOOo.sxw"
 endif
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/share/config/soffice.cfg/modules/scalc/accelerator/en-US"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/sc/uiconfig/scalc/accelerator/en-US/default.xml" "share/config/soffice.cfg/modules/scalc/accelerator/en-US/default.xml"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#' | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "program/bootstraprc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' | sed 's# #%20#g' > "program/versionrc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cd "$(PWD)/etc" ; find share -type f | grep -v /CVS | xargs -n1 dirname` ; do mkdir -p $${i} ; done'
