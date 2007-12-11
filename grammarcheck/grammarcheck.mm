@@ -95,6 +95,7 @@
 #import <AppKit/NSAlert.h>
 #import <Foundation/Foundation.h>
 #import <AppKit/NSApplication.h>
+#import <Carbon/Carbon.h>
 #include "postmac.h"
 
 #include <string>
@@ -156,6 +157,9 @@ public:
    		throw (com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
 		SAL_CALL setLocale( const ::com::sun::star::lang::Locale& aLocale ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool 
+		SAL_CALL hasGrammarChecker( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 };
 
@@ -373,5 +377,26 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 	m_aLocale=aLocale;
 	// +++ check if locale is supported;  presently interface only returns if spellchecking is supported,
 	// not grammar check
+	return(true);
+}
+
+/**
+ * Check if the underlying operating system is 10.5 or higher
+ */
+::sal_Bool 
+		SAL_CALL MacOSXGrammarCheckerImpl::hasGrammarChecker( ) 
+		throw (::com::sun::star::uno::RuntimeException)
+{
+	// we currently need to be running on 10.5 in order to have a grammar
+	// checker.  Check using our gestalt
+	
+	long res=0;
+	if(Gestalt(gestaltSystemVersion, &res)==noErr)
+	{
+		bool isLeopardOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x5 ) );
+		if(!isLeopardOrHigher)
+			return(false);
+	}
+	
 	return(true);
 }

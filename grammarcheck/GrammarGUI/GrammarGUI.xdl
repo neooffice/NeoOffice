@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE dlg:window PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "dialog.dtd">
+<dlg:window xmlns:dlg="http://openoffice.org/2000/dialog" xmlns:script="http://openoffice.org/2000/script" dlg:id="GrammarGUI" dlg:left="130" dlg:top="50" dlg:width="231" dlg:height="174" dlg:closeable="true" dlg:moveable="true" dlg:title="Check Grammar">
+ <dlg:styles>
+  <dlg:style dlg:style-id="0" dlg:border="none"/>
+ </dlg:styles>
+ <dlg:bulletinboard>
+  <dlg:menulist dlg:id="correctionListBox" dlg:tab-index="0" dlg:left="9" dlg:top="123" dlg:width="164" dlg:height="45"/>
+  <dlg:button dlg:id="changeButton" dlg:tab-index="1" dlg:left="179" dlg:top="123" dlg:width="46" dlg:height="14" dlg:value="Change">
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.changeButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
+  </dlg:button>
+  <dlg:button dlg:id="closeButton" dlg:tab-index="2" dlg:left="179" dlg:top="154" dlg:width="46" dlg:height="14" dlg:value="Close">
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.closeButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
+  </dlg:button>
+  <dlg:button dlg:id="ignoreButton" dlg:tab-index="3" dlg:left="179" dlg:top="11" dlg:width="46" dlg:height="14" dlg:value="Ignore">
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.ignoreButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
+  </dlg:button>
+  <dlg:button dlg:id="ignoreAllButton" dlg:tab-index="4" dlg:left="179" dlg:top="29" dlg:width="46" dlg:height="14" dlg:value="Ignore All">
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.ignoreAllButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
+  </dlg:button>
+  <dlg:textfield dlg:style-id="0" dlg:id="sourceTextLabel" dlg:tab-index="5" dlg:left="9" dlg:top="14" dlg:width="164" dlg:height="43" dlg:multiline="true" dlg:readonly="true"/>
+  <dlg:textfield dlg:style-id="0" dlg:id="explainLabel" dlg:tab-index="6" dlg:left="9" dlg:top="73" dlg:width="164" dlg:height="35" dlg:multiline="true" dlg:readonly="true"/>
+  <dlg:textfield dlg:id="TextField1" dlg:tab-index="7" dlg:left="196" dlg:top="70" dlg:width="2" dlg:height="0"/>
+  <dlg:text dlg:id="Label1" dlg:tab-index="8" dlg:left="8" dlg:top="3" dlg:width="96" dlg:height="10" dlg:value="Error:"/>
+  <dlg:text dlg:id="Label2" dlg:tab-index="9" dlg:left="10" dlg:top="60" dlg:width="84" dlg:height="10" dlg:value="Description:"/>
+  <dlg:text dlg:id="Label3" dlg:tab-index="10" dlg:left="9" dlg:top="111" dlg:width="94" dlg:height="9" dlg:value="Suggested corrections:"/>
+ </dlg:bulletinboard>
+</dlg:window>

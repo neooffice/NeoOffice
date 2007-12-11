@@ -56,6 +56,7 @@ module neooffice
 	{
 		sequence< GrammarReplacement > checkString( [in] string sToCheck );
 		boolean setLocale( [in] com::sun::star::lang::Locale aLocale );
+		boolean hasGrammarChecker( );
 	};
 	
 	service GrammarChecker
