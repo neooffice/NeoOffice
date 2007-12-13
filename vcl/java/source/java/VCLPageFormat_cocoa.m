@@ -240,6 +240,12 @@ id NSPrintInfo_create()
 		NSDictionary *pDict = [pSharedInfo dictionary];
 		if ( pDict )
 		{
+			// Some users seem to get scaling values other than 100% so
+			// force the scaling factor here
+			NSNumber *pValue = [NSNumber numberWithFloat:1.0f];
+			if ( pValue )
+				[pDict setValue:pValue forKey:NSPrintScalingFactor];
+
 			// Fix bug 2573 by not cloning the dictionary as that will cause
 			// querying of the printer which, in turn, will cause hanging if
 			// the printer is an unavailable network printer
