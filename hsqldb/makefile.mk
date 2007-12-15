@@ -76,6 +76,11 @@ JAVA_HOME=
 .EXPORT : JAVA_HOME
 BUILD_ACTION=$(ANT) -Dbuild.label="build-$(RSCREVISION)" -Dbuild.compiler=gcj -f $(ANT_BUILDFILE) jar
 .ELSE
+.IF "$(GUIBASE)"=="java"
+# Build using Java 1.4.2 to allow Panther support
+JAVA_HOME=/System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/Home
+.EXPORT : JAVA_HOME
+.ENDIF		# "$(GUIBASE)"=="java"
 BUILD_ACTION=$(ANT) -Dbuild.label="build-$(RSCREVISION)" -f $(ANT_BUILDFILE) jar
 .ENDIF
 
