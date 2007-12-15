@@ -74,7 +74,7 @@ inline sal_Unicode GetIdeographicPunctuationChar( sal_Unicode nChar )
 		case 0x0020:
 			return 0x3000;
 		case 0x002c:
-			return 0x3001;
+			return 0xff0c;
 		case 0x002e:
 			return 0x3002;
 		default:
