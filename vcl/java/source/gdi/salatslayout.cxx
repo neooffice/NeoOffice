@@ -67,6 +67,21 @@
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
+inline sal_Unicode GetIdeographicPunctuationChar( sal_Unicode nChar )
+{
+	switch ( nChar )
+	{
+		case 0x0020:
+			return 0x3000;
+		case 0x002c:
+			return 0x3001;
+		case 0x002e:
+			return 0x3002;
+		default:
+			return nChar;
+	}
+}
+
 struct ImplATSLayoutDataHash {
 	int					mnLen;
 	ATSUFontID			mnFontID;
@@ -1126,31 +1141,33 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				}
 				else
 				{
-					// Fix bug 2196 by replacing regular spaces with
-					// ideographic spaces if the preceding character is
+					// Fix bug 2196 by replacing regular punctuation with
+					// ideographic punctuation if the preceding character is
 					// Chinese, Japanese, or Korean
-					if ( nChar == 0x0020 )
+					if ( GetIdeographicPunctuationChar( nChar ) != nChar )
 					{
-						bool bUseIdeographicSpace = false;
-						for ( int nPriorIndex = nIndex - 1; nPriorIndex >= 0; nPriorIndex-- )
+						// Search backwards until we find a non-punctuation
+						// character even if it is not in the current layout
+						bool bUseIdeographicChar = false;
+						for ( int nPriorIndex = nCharPos - 1; nPriorIndex >= 0; nPriorIndex-- )
 						{
-							sal_Unicode nPriorChar = pCurrentLayoutData->mpHash->mpStr[ nPriorIndex ];
-							if ( nPriorChar != 0x0020 )
+							sal_Unicode nPriorChar = rArgs.mpStr[ nPriorIndex ];
+							if ( GetIdeographicPunctuationChar( nPriorChar ) == nPriorChar )
 							{
 								if ( ( nPriorChar >= 0x2e80 && nPriorChar < 0xe000 ) || ( nPriorChar >= 0xf900 && nPriorChar < 0xfb00 ) || ( nPriorChar >= 0xfe20 && nPriorChar < 0xfe50 ) || ( nPriorChar >= 0xff00 && nPriorChar < 0xfff0 ) )
-									bUseIdeographicSpace = true;
+									bUseIdeographicChar = true;
 								break;
 							}
 						}
 
-						if ( bUseIdeographicSpace )
+						if ( bUseIdeographicChar )
 						{
-							::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicSpaceLayoutData.find( nChar );
-							if ( mit == maIdeographicSpaceLayoutData.end() )
+							::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.find( nChar );
+							if ( mit == maIdeographicLayoutData.end() )
 							{
-								sal_Unicode aIdeographicSpace[ 1 ];
-								aIdeographicSpace[ 0 ] = 0x3000;
-								pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aIdeographicSpace, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont );
+								sal_Unicode aIdeographicChar[ 1 ];
+								aIdeographicChar[ 0 ] = GetIdeographicPunctuationChar( nChar );
+								pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aIdeographicChar, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont );
 								if ( pCurrentLayoutData )
 								{
 									if ( pCurrentLayoutData->mpNeedFallback && pCurrentLayoutData->mpFallbackFont )
@@ -1165,7 +1182,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 									}
 									else
 									{
-										maIdeographicSpaceLayoutData[ nChar ] = pCurrentLayoutData;
+										maIdeographicLayoutData[ nChar ] = pCurrentLayoutData;
 									}
 								}
 							}
@@ -1539,8 +1556,8 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		}
 		else
 		{
-			::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicSpaceLayoutData.find( nChar );
-			if ( mit != maIdeographicSpaceLayoutData.end() )
+			::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.find( nChar );
+			if ( mit != maIdeographicLayoutData.end() )
 			{
 				pCurrentLayoutData = mit->second;
 				nIndex = 0;
@@ -1643,11 +1660,11 @@ void SalATSLayout::Destroy()
 		maMirroredLayoutData.clear();
 	}
 
-	if ( maIdeographicSpaceLayoutData.size() )
+	if ( maIdeographicLayoutData.size() )
 	{
-		for ( ::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicSpaceLayoutData.begin(); mit != maIdeographicSpaceLayoutData.end(); ++mit )
+		for ( ::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.begin(); mit != maIdeographicLayoutData.end(); ++mit )
 			mit->second->Release();
-		maIdeographicSpaceLayoutData.clear();
+		maIdeographicLayoutData.clear();
 	}
 
 	mnOrigWidth = 0;
@@ -1705,8 +1722,8 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int n
 	}
 	else
 	{
-		::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicSpaceLayoutData.find( nChar );
-		if ( mit != maIdeographicSpaceLayoutData.end() )
+		::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.find( nChar );
+		if ( mit != maIdeographicLayoutData.end() )
 		{
 			pRet = mit->second;
 			nIndex = 0;
