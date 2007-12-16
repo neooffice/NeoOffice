@@ -1130,7 +1130,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
 #ifdef USE_JAVA
             // Fix bugs 2183, 2432, 2629, and 2813 by not allowing the OOo
             // code to squeeze characters more than a small amount
-            if( nDiff < 0 )
+            if( nDiff < 0 && !IsSpacingGlyph( pG->mnGlyphIndex ) )
             {
                 int nAdjustedDiff = nDiff + nOldClusterWidth >> 3;
                 if( nAdjustedDiff > 0 )
