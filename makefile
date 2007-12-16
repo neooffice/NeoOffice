@@ -238,7 +238,7 @@ build.oo_macab_patch: build.ooo-build_patches \
 	touch "$@"
 
 build.oo_moz_patch: build.ooo-build_patches
-	cd "$(BUILD_HOME)/moz/download" ; curl -O "$(MOZ_SOURCE_URL)"
+	cd "$(BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
@@ -257,11 +257,11 @@ build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_chec
 	"$(BUILD_HOME)/ooo-build/patches/apply.pl" --tag="$(OOO-BUILD_APPLY_TAG)" --distro=MacOSX "$(PWD)/$(BUILD_HOME)/ooo-build/patches/src680" "$(PWD)/$(BUILD_HOME)"
 	cp "$(BUILD_HOME)/ooo-build/src/go-oo-team.png" "$(BUILD_HOME)/default_images/sw/res"
 	cp "$(BUILD_HOME)/ooo-build/src/evolocal.odb" "$(BUILD_HOME)/extras/source/database"
-	mkdir -p "$(BUILD_HOME)/lpsolve/download" ; cd "$(BUILD_HOME)/lpsolve/download" ; curl -O "$(LPSOLVE_SOURCE_URL)"
-	mkdir -p "$(BUILD_HOME)/libwpd/download" ; cd "$(BUILD_HOME)/libwpd/download" ; curl -O "$(LIBWPD_SOURCE_URL)"
-	mkdir -p "$(BUILD_HOME)/libwpg/download" ; cd "$(BUILD_HOME)/libwpg/download" ; curl -O "$(LIBWPG_SOURCE_URL)"
-	mkdir -p "$(BUILD_HOME)/libwps/download" ; cd "$(BUILD_HOME)/libwps/download" ; curl -O "$(LIBWPS_SOURCE_URL)"
-	cd "$(BUILD_HOME)/xt/download" ; curl -O "$(XT_SOURCE_URL)"
+	mkdir -p "$(BUILD_HOME)/lpsolve/download" ; cd "$(BUILD_HOME)/lpsolve/download" ; curl -L -O "$(LPSOLVE_SOURCE_URL)"
+	mkdir -p "$(BUILD_HOME)/libwpd/download" ; cd "$(BUILD_HOME)/libwpd/download" ; curl -L -O "$(LIBWPD_SOURCE_URL)"
+	mkdir -p "$(BUILD_HOME)/libwpg/download" ; cd "$(BUILD_HOME)/libwpg/download" ; curl -L -O "$(LIBWPG_SOURCE_URL)"
+	mkdir -p "$(BUILD_HOME)/libwps/download" ; cd "$(BUILD_HOME)/libwps/download" ; curl -L -O "$(LIBWPS_SOURCE_URL)"
+	cd "$(BUILD_HOME)/xt/download" ; curl -L -O "$(XT_SOURCE_URL)"
 	touch "$@"
 
 build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.oo_checkout build.ooo-build_checkout
