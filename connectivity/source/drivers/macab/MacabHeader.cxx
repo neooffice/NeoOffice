@@ -52,14 +52,8 @@
 #include <com/sun/star/sdbc/DataType.hpp>
 #endif
 
-#ifndef _DBHELPER_DBCONVERSION_HXX_
-#include <connectivity/dbconversion.hxx>
-#endif
-
 using namespace connectivity::macab;
 using namespace com::sun::star::sdbc;
-using namespace com::sun::star::util;
-using namespace ::dbtools;
 
 // -------------------------------------------------------------------------
 MacabHeader::MacabHeader(const sal_Int32 _size, macabfield **_fields)
