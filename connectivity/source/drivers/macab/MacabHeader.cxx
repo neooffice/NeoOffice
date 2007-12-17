@@ -170,7 +170,7 @@ void MacabHeader::operator+= (const MacabHeader *r)
 
 	if(i < size)
 	{
-		if(fields[i] == NULL || fields[i]->value == NULL || CFGetTypeID(fields[i]->value) != CFArrayGetTypeID())
+		if(fields[i] == NULL || fields[i]->value == NULL || CFGetTypeID(fields[i]->value) != CFStringGetTypeID())
 			return ::rtl::OUString();
 		try
 		{
