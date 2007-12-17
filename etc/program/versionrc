@@ -1,3 +1,0 @@
-[Version]
-ProductBuildid=0
-UpdateURL=$(PRODUCT_UPDATE_CHECK_URL)?product=$(PRODUCT_NAME) $(PRODUCT_VERSION)&patch=$(PRODUCT_PATCH_VERSION)&os=${_OS}&arch=${_ARCH}
