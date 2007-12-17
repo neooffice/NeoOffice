@@ -172,53 +172,21 @@ void MacabHeader::operator+= (const MacabHeader *r)
 // -------------------------------------------------------------------------
 ::rtl::OUString MacabHeader::getString(const sal_Int32 i) const
 {
-	::rtl::OUString fieldString;
+	::rtl::OUString nRet;
 
 	if(i < size)
 	{
-		if(fields[i] == NULL || fields[i]->value == NULL)
+		if(fields[i] == NULL || fields[i]->value == NULL || CFGetTypeID(fields[i]->value) != CFArrayGetTypeID())
 			return ::rtl::OUString();
 		try
 		{
-			switch (fields[i]->type)
-			{
-				case kABStringProperty:
-					fieldString = CFStringToOUString((CFStringRef) fields[i]->value);
-					break;
-				case kABDateProperty:
-					{
-						DateTime aTime = CFDateToDateTime((CFDateRef) fields[i]->value);
-						fieldString = DBTypeConversion::toDateTimeString(aTime);
-					}
-					break;
-				case kABIntegerProperty:
-					{
-						CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
-						sal_Int64 nVal;
-						// Should we check for the wrong type here, e.g., a float?
-						sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
-						if(m_bSuccess != sal_False)
-							fieldString = ::rtl::OUString::valueOf(nVal);
-					}
-					break;
-				case kABRealProperty:
-					{
-						CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
-						double nVal;
-						// Should we check for the wrong type here, e.g., an int?
-						sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
-						if(m_bSuccess != sal_False)
-							fieldString = ::rtl::OUString::valueOf(nVal);
-					}
-					break;
-				default:
-					;
-			}
+			nRet = CFStringToOUString( (CFStringRef) fields[i]->value);
 		}
 		catch(...){ }
+
 	}
 
-	return fieldString;
+	return nRet;
 }
 
 // -------------------------------------------------------------------------
