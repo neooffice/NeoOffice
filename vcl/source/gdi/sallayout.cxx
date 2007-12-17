@@ -1127,21 +1127,6 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             }
             int nDiff = nNewClusterWidth - nOldClusterWidth;
 
-#ifdef USE_JAVA
-            // Fix bugs 2183, 2432, 2629, and 2813 by not allowing the OOo
-            // code to squeeze characters more than a small amount
-            if( nDiff < 0 && !IsSpacingGlyph( pG->mnGlyphIndex ) )
-            {
-                int nAdjustedDiff = nDiff + nOldClusterWidth >> 3;
-                if( nAdjustedDiff > 0 )
-                    nAdjustedDiff = 0;
-                if( pClusterG < mpGlyphItems + mnGlyphCount )
-                    pNewGlyphWidths[ pClusterG - mpGlyphItems ] += nAdjustedDiff;
-                nNewClusterWidth -= nAdjustedDiff;
-                nDiff = nNewClusterWidth - nOldClusterWidth;
-            }
-#endif	// USE_JAVA
-
             // adjust cluster glyph widths and positions
             nDelta = nBasePointX + (nNewPos - pG->maLinearPos.X());
 #ifdef USE_JAVA
@@ -1486,6 +1471,9 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
     int nCount = 0;
     long nYPos = pG->maLinearPos.Y();
     long nOldFlags = pG->mnGlyphIndex;
+#ifdef USE_JAVA
+    long nUnexpectedOffset = 0;
+#endif	// USE_JAVA
     for(;;)
     {
         // update return data with glyph info
@@ -1513,7 +1501,20 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
         {
             // stop when next x-position is unexpected
             if( pG->mnOrigWidth != nGlyphAdvance )
+#ifdef USE_JAVA
+            {
+                // Fix bug 2183 by allowing a tiny amount of unexpected
+                // x-position in a glyph run. Decrease allowable amount to fix
+                // bug 2432. Fix bug 2629 by not breaking if the unexpected
+                // offset is negative. Fix bug 2682 by breaking if it is a
+                // spacing glyph.
+                nUnexpectedOffset += nGlyphAdvance - pG->mnOrigWidth;
+                if( nUnexpectedOffset > pG->mnOrigWidth >> 3 || IsSpacingGlyph( pG->mnGlyphIndex ) )
+                    break;
+            }
+#else	// USE_JAVA
                 break;
+#endif	// USE_JAVA
         }
 
         // advance to next glyph
