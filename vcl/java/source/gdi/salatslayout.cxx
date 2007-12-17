@@ -67,21 +67,6 @@
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
-inline sal_Unicode GetIdeographicPunctuationChar( sal_Unicode nChar )
-{
-	switch ( nChar )
-	{
-		case 0x0020:
-			return 0x3000;
-		case 0x002c:
-			return 0xff0c;
-		case 0x002e:
-			return 0x3002;
-		default:
-			return nChar;
-	}
-}
-
 struct ImplATSLayoutDataHash {
 	int					mnLen;
 	ATSUFontID			mnFontID;
@@ -363,10 +348,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	nBytes[2] = sizeof( ATSStyleRenderingOptions );
 	nVals[2] = &nOptions;
 
-	ATSUVerticalCharacterType nVertical = kATSUStronglyHorizontal;
+	ATSUVerticalCharacterType nHorizontal = kATSUStronglyHorizontal;
 	nTags[3] = kATSUVerticalCharacterTag;
 	nBytes[3] = sizeof( ATSUVerticalCharacterType );
-	nVals[3] = &nVertical;
+	nVals[3] = &nHorizontal;
 
 	if ( ATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
 	{
@@ -923,16 +908,28 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			while ( mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
 			{
 				mpGraphics->maFallbackRuns.NextRun();
-				if ( nMinCharPos >= nMinFallbackCharPos && nEndCharPos <= nEndFallbackCharPos )
+
+				int nMaxMinCharPos = nMinCharPos;
+				int nMinEndCharPos = nEndCharPos;
+				bool bExactMatch = true;
+				if ( nMaxMinCharPos < nMinFallbackCharPos )
 				{
-					maRuns.AddRun( nMinCharPos, nEndCharPos, bRunRTL );
-					nEstimatedGlyphs += nEndCharPos - nMinCharPos;
-					break;
+					nMaxMinCharPos = nMinFallbackCharPos;
+					bExactMatch = false;
 				}
-				else if ( nMinCharPos <= nMinFallbackCharPos && nEndCharPos >= nEndFallbackCharPos )
+				if ( nMinEndCharPos > nEndFallbackCharPos )
 				{
-					maRuns.AddRun( nMinFallbackCharPos, nEndFallbackCharPos, bRunRTL );
-					nEstimatedGlyphs += nEndFallbackCharPos - nMinFallbackCharPos;
+					nMinEndCharPos = nEndFallbackCharPos;
+					bExactMatch = false;
+				}
+
+				if ( nMaxMinCharPos < nMinEndCharPos )
+				{
+					maRuns.AddRun( nMaxMinCharPos, nMinEndCharPos, bRunRTL );
+					nEstimatedGlyphs += nMinEndCharPos - nMaxMinCharPos;
+
+					if ( bExactMatch )
+						break;
 				}
 			}
 		}
@@ -1133,63 +1130,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						else
 						{
 							pCurrentLayoutData = mit->second;
-						}
-
-						if ( pCurrentLayoutData != pLayoutData )
-							nIndex = 0;
-					}
-				}
-				else
-				{
-					// Fix bug 2196 by replacing regular punctuation with
-					// ideographic punctuation if the preceding character is
-					// Chinese, Japanese, or Korean
-					if ( GetIdeographicPunctuationChar( nChar ) != nChar )
-					{
-						// Search backwards until we find a non-punctuation
-						// character even if it is not in the current layout
-						bool bUseIdeographicChar = false;
-						for ( int nPriorIndex = nCharPos - 1; nPriorIndex >= 0; nPriorIndex-- )
-						{
-							sal_Unicode nPriorChar = rArgs.mpStr[ nPriorIndex ];
-							if ( GetIdeographicPunctuationChar( nPriorChar ) == nPriorChar )
-							{
-								if ( ( nPriorChar >= 0x2e80 && nPriorChar < 0xe000 ) || ( nPriorChar >= 0xf900 && nPriorChar < 0xfb00 ) || ( nPriorChar >= 0xfe20 && nPriorChar < 0xfe50 ) || ( nPriorChar >= 0xff00 && nPriorChar < 0xfff0 ) )
-									bUseIdeographicChar = true;
-								break;
-							}
-						}
-
-						if ( bUseIdeographicChar )
-						{
-							::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.find( nChar );
-							if ( mit == maIdeographicLayoutData.end() )
-							{
-								sal_Unicode aIdeographicChar[ 1 ];
-								aIdeographicChar[ 0 ] = GetIdeographicPunctuationChar( nChar );
-								pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aIdeographicChar, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont );
-								if ( pCurrentLayoutData )
-								{
-									if ( pCurrentLayoutData->mpNeedFallback && pCurrentLayoutData->mpFallbackFont )
-									{
-										pCurrentLayoutData->Release();
-										pCurrentLayoutData = pLayoutData;
-										rArgs.NeedFallback( nCharPos, bRunRTL );
-
-										if ( !pFallbackFont )
-											pFallbackFont = pCurrentLayoutData->mpFallbackFont;
-										rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
-									}
-									else
-									{
-										maIdeographicLayoutData[ nChar ] = pCurrentLayoutData;
-									}
-								}
-							}
-							else
-							{
-								pCurrentLayoutData = mit->second;
-							}
 						}
 
 						if ( pCurrentLayoutData != pLayoutData )
@@ -1554,15 +1494,6 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 				nIndex = 0;
 			}
 		}
-		else
-		{
-			::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.find( nChar );
-			if ( mit != maIdeographicLayoutData.end() )
-			{
-				pCurrentLayoutData = mit->second;
-				nIndex = 0;
-			}
-		}
 
 		for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 		{
@@ -1660,13 +1591,6 @@ void SalATSLayout::Destroy()
 		maMirroredLayoutData.clear();
 	}
 
-	if ( maIdeographicLayoutData.size() )
-	{
-		for ( ::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.begin(); mit != maIdeographicLayoutData.end(); ++mit )
-			mit->second->Release();
-		maIdeographicLayoutData.clear();
-	}
-
 	mnOrigWidth = 0;
 	mfGlyphScaleX = 1.0;
 }
@@ -1715,15 +1639,6 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int n
 	{
 		::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 		if ( mit != maMirroredLayoutData.end() )
-		{
-			pRet = mit->second;
-			nIndex = 0;
-		}
-	}
-	else
-	{
-		::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maIdeographicLayoutData.find( nChar );
-		if ( mit != maIdeographicLayoutData.end() )
 		{
 			pRet = mit->second;
 			nIndex = 0;

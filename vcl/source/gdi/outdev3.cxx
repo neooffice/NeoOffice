@@ -202,6 +202,31 @@ using namespace ::vcl;
 
 // =======================================================================
 
+#ifdef USE_JAVA
+
+inline sal_Unicode GetIdeographicPunctuationChar( sal_Unicode cChar )
+{
+    if ( cChar >= 0x0020 && cChar < 0x0040 || cChar >= 0x005b && cChar < 0x0061 || ( cChar >= 0x007b && cChar < 0x007f ) || cChar == 0x2014 )
+    {
+        switch ( cChar )
+        {
+            case 0x0020:
+                return 0x3000;
+            case 0x002e: 
+                return 0x3002;
+            case 0x005f:
+            case 0x2014: 
+                return 0x2014;
+            default:
+                return cChar + 0xff00 - 0x0020;
+        }
+    }
+
+    return 0x0;
+}
+
+#endif	// USE_JAVA
+
 //#ifdef USE_NEW_RTL_IMPLEMENTATION
 
 
@@ -6085,6 +6110,37 @@ SalLayout* OutputDevice::ImplLayout( const String& rOrigStr,
             nLen = aStr.Len() - nMinIndex;
         else
             return NULL;
+
+#ifdef USE_JAVA
+    // Fix bug 2196 by finding and converting CJK punctuation as Java does not
+    // always handle this correctly. Note that we change the original string so
+    // that the OOo upper layers might also be updated.
+    const sal_Unicode *pBase = rOrigStr.GetBuffer();
+    const sal_Unicode *pMin = pBase + nMinIndex;
+    const sal_Unicode *pStr = pMin + nLen - 1;
+    for( ; pStr >= pMin; --pStr )
+    {
+        sal_Unicode cChar = GetIdeographicPunctuationChar( *pStr );
+        if( cChar )
+        {
+            // Search backwards until we find a non-punctuation character even
+            // if it is not in the current layout
+            for( const sal_Unicode *pPriorStr = pStr - 1; pPriorStr >= pBase; --pPriorStr )
+            {
+                if( !GetIdeographicPunctuationChar( *pPriorStr ) )
+                {
+                    if( ( *pPriorStr >= 0x2e80 && *pPriorStr < 0xe000 ) || ( *pPriorStr >= 0xf900 && *pPriorStr < 0xfb00 ) || ( *pPriorStr >= 0xfe20 && *pPriorStr < 0xfe50 ) || ( *pPriorStr >= 0xff00 && *pPriorStr < 0xfff0 ) )
+                    {
+                        ((String&)rOrigStr).SetChar( pStr - pBase, cChar );
+                        aStr.SetChar( pStr - pBase, cChar );
+                    }
+
+                    break;
+                }
+            }
+        }
+    }
+#endif	// USE_JAVA
 
     // filter out special markers
     if( bFilter )
