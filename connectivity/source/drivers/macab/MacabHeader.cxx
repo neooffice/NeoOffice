@@ -178,40 +178,44 @@ void MacabHeader::operator+= (const MacabHeader *r)
 	{
 		if(fields[i] == NULL || fields[i]->value == NULL)
 			return ::rtl::OUString();
-		switch (fields[i]->type)
+		try
 		{
-			case kABStringProperty:
-				fieldString = CFStringToOUString((CFStringRef) fields[i]->value);
-				break;
-			case kABDateProperty:
-				{
-					DateTime aTime = CFDateToDateTime((CFDateRef) fields[i]->value);
-					fieldString = DBTypeConversion::toDateTimeString(aTime);
-				}
-				break;
-			case kABIntegerProperty:
-				{
-					CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
-					sal_Int64 nVal;
-					// Should we check for the wrong type here, e.g., a float?
-					sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
-					if(m_bSuccess != sal_False)
-						fieldString = ::rtl::OUString::valueOf(nVal);
-				}
-				break;
-			case kABRealProperty:
-				{
-					CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
-					double nVal;
-					// Should we check for the wrong type here, e.g., an int?
-					sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
-					if(m_bSuccess != sal_False)
-						fieldString = ::rtl::OUString::valueOf(nVal);
-				}
-				break;
-			default:
-				;
+			switch (fields[i]->type)
+			{
+				case kABStringProperty:
+					fieldString = CFStringToOUString((CFStringRef) fields[i]->value);
+					break;
+				case kABDateProperty:
+					{
+						DateTime aTime = CFDateToDateTime((CFDateRef) fields[i]->value);
+						fieldString = DBTypeConversion::toDateTimeString(aTime);
+					}
+					break;
+				case kABIntegerProperty:
+					{
+						CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
+						sal_Int64 nVal;
+						// Should we check for the wrong type here, e.g., a float?
+						sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
+						if(m_bSuccess != sal_False)
+							fieldString = ::rtl::OUString::valueOf(nVal);
+					}
+					break;
+				case kABRealProperty:
+					{
+						CFNumberType numberType = CFNumberGetType( (CFNumberRef) fields[i]->value );
+						double nVal;
+						// Should we check for the wrong type here, e.g., an int?
+						sal_Bool m_bSuccess = !CFNumberGetValue((CFNumberRef) fields[i]->value, numberType, &nVal);
+						if(m_bSuccess != sal_False)
+							fieldString = ::rtl::OUString::valueOf(nVal);
+					}
+					break;
+				default:
+					;
+			}
 		}
+		catch(...){ }
 	}
 
 	return fieldString;
