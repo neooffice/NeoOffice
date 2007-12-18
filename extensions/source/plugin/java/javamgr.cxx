@@ -38,6 +38,7 @@
 
 #include <plugin/impl.hxx>
 
+using namespace rtl;
 using namespace com::sun::star::uno;
 using namespace com::sun::star::plugin;
 
@@ -45,8 +46,18 @@ using namespace com::sun::star::plugin;
 
 Sequence< PluginDescription > XPluginManager_Impl::getPluginDescriptions() throw()
 {
-#ifdef DEBUG
-	fprintf( stderr, "XPluginManager_Impl::getPluginDescriptions not implemented\n" );
-#endif
-	return Sequence< PluginDescription >( 0 );
+	static Sequence< PluginDescription > aDescs;
+
+	if ( !aDescs.getLength() )
+	{
+		// Since we don't need mime types to load WebKit plugins, add a generic
+		// mime type that includes the list of mime type substrings in the
+		// SvxPluginFileDlg::IsAvailable method in the
+		// svx/source/dialog/pfiledlg.cxx file
+		aDescs.realloc( 1 );
+		aDescs[ 0 ].PluginName = OUString( RTL_CONSTASCII_USTRINGPARAM( "Webkit" ) );
+		aDescs[ 0 ].Mimetype = OUString( RTL_CONSTASCII_USTRINGPARAM( "application/x-webkit-audio-video" ) );
+	}
+
+	return aDescs;
 }

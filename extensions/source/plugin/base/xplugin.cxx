@@ -911,6 +911,12 @@ PluginDescription XPlugin_Impl::fitDescription( const OUString& rURL )
     }
 
     Sequence< PluginDescription > aDescrs = xPMgr->getPluginDescriptions();
+#ifdef USE_JAVA
+    // With WebKit, there is only one plugin type so return the first plugin
+    // description
+    if ( aDescrs.getLength() )
+        return aDescrs[ 0 ];
+#else	// USE_JAVA
     const PluginDescription* pDescrs = aDescrs.getConstArray();
 
     for( int nArg = 0; nArg < m_nArgs; nArg++ )
@@ -941,6 +947,7 @@ PluginDescription XPlugin_Impl::fitDescription( const OUString& rURL )
             }
         }
     }
+#endif	// USE_JAVA
     return PluginDescription();
 }
 
