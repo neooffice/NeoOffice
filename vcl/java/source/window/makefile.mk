@@ -56,6 +56,7 @@ dummy:
 SLOFILES= \
 	$(SLO)/salframe.obj \
 	$(SLO)/salobj.obj \
+	$(SLO)/salobj_cocoa.obj \
 	$(SLO)/salmenu.obj
 
 .ENDIF		# "$(GUIBASE)"!="java"
