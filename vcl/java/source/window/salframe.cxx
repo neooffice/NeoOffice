@@ -140,9 +140,25 @@ JavaSalFrame::~JavaSalFrame()
 
 // -----------------------------------------------------------------------
 
+void JavaSalFrame::AddObject( JavaSalObject *pObject )
+{
+	if ( pObject )
+		maObjects.push_back( pObject );
+}
+
+// -----------------------------------------------------------------------
+
 bool JavaSalFrame::IsFloatingFrame()
 {
 	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) && this != GetSalData()->mpPresentationFrame );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::RemoveObject( JavaSalObject *pObject )
+{
+	if ( pObject )
+		maObjects.remove( pObject );
 }
 
 // -----------------------------------------------------------------------

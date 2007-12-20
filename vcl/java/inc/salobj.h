@@ -42,6 +42,9 @@
 #ifndef _SV_SV_H
 #include <sv.h>
 #endif
+#ifndef _SV_GEN_HXX
+#include <tools/gen.hxx>
+#endif
 #ifndef _SV_SYSDATA_HXX
 #include <sysdata.hxx>
 #endif
@@ -55,8 +58,11 @@ class SalFrame;
 
 class JavaSalObject : public SalObject
 {
+	Rectangle				maBounds;
 	JavaSalFrame*			mpParent;
 	SystemEnvData			maSysData;
+	void*					mpVCLChildFrame;
+	BOOL					mbVisible;
 
 public:
 							JavaSalObject( SalFrame *pParent );

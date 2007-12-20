@@ -46,6 +46,10 @@
 
 JavaSalObject::JavaSalObject( SalFrame *pParent )
 {
+	mpParent = (JavaSalFrame *)pParent;
+	mpVCLChildFrame = NULL;
+	mbVisible = FALSE;
+
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
 }

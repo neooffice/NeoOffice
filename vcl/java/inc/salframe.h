@@ -60,8 +60,9 @@ class com_sun_star_vcl_VCLMenuBar;
 }
 
 class JavaSalGraphics;
-class SalBitmap;
 class JavaSalMenu;
+class JavaSalObject;
+class SalBitmap;
 
 // ----------------
 // - JavaSalFrame -
@@ -85,11 +86,14 @@ public:
 	JavaSalMenu*			mpMenuBar;
 	BOOL					mbInSetPosSize;
 	BOOL					mbInShow;
+	::std::list< JavaSalObject* >	maObjects;
 
 							JavaSalFrame();
 	virtual					~JavaSalFrame();
 
+	void					AddObject( JavaSalObject *pObject );
 	bool					IsFloatingFrame();
+	void					RemoveObject( JavaSalObject *pObject );
 
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
