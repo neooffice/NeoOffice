@@ -129,6 +129,9 @@
 #define META_BEGINPATTERN_PDF_ACTION			(10029)
 #define META_ENDPATTERN_PDF_ACTION				(10030)
 #define META_POLYPOLYGON_PDF_ACTION				(10031)
+#define META_BEGINTRANSPARENCYGROUP_PDF_ACTION	(10032)
+#define META_ENDTRANSPARENCYGROUP_PDF_ACTION	(10033)
+#define META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION	(10034)
 
 class MetaAntiAliasPDFAction : public MetaAction
 {
@@ -1873,18 +1876,55 @@ public:
     const SvtGraphicFill::Transform&	GetTransform() const { return maTransform; }
 };
 
-class MetaPolyPolygonPDFAction : public MetaPolyPolygonAction
+class MetaPolyPolygonPDFAction : public MetaAction
 {
 private:
+    PolyPolygon			maPolyPoly;
     sal_Int32			mnPattern;
     bool				mbEOFill;
 
 public:
-						MetaPolyPolygonPDFAction( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill ) : MetaPolyPolygonAction( rPolyPoly ), mnPattern( nPattern ), mbEOFill( bEOFill ) {}
+						MetaPolyPolygonPDFAction( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill ) : MetaAction( META_POLYPOLYGON_PDF_ACTION ), maPolyPoly( rPolyPoly ), mnPattern( nPattern ), mbEOFill( bEOFill ) {}
     virtual				~MetaPolyPolygonPDFAction() {}
 
+    const PolyPolygon&	GetPolyPolygon() const { return maPolyPoly; }
     sal_Int32			GetPattern() const { return mnPattern; }
     bool				IsEOFill() const { return mbEOFill; }
+};
+
+class MetaBeginTransparencyGroupPDFAction : public MetaAction
+{
+public:
+    					MetaBeginTransparencyGroupPDFAction() : MetaAction( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ) {}
+    virtual				~MetaBeginTransparencyGroupPDFAction() {}
+};
+
+class MetaEndTransparencyGroupPDFAction : public MetaAction
+{
+private:
+    Rectangle			maBoundingRect;
+    sal_uInt32			mnTransparentPercent;
+
+public:
+    					MetaEndTransparencyGroupPDFAction( const Rectangle& rBoundingRect, sal_uInt32 nTransparentPercent ) : MetaAction( META_ENDTRANSPARENCYGROUP_PDF_ACTION ), maBoundingRect( rBoundingRect ), mnTransparentPercent( nTransparentPercent ) {}
+    virtual				~MetaEndTransparencyGroupPDFAction() {}
+
+    const Rectangle&	GetBoundingRect() const { return maBoundingRect; }
+    sal_uInt32			GetTransparentPercent() const { return mnTransparentPercent; }
+};
+
+class MetaEndTransparencyGroupMaskPDFAction : public MetaAction
+{
+private:
+    Rectangle			maBoundingRect;
+    Bitmap				maAlphaMask;
+
+public:
+    					MetaEndTransparencyGroupMaskPDFAction( const Rectangle& rBoundingRect, const Bitmap& rAlphaMask ) : MetaAction( META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION ), maBoundingRect( rBoundingRect ), maAlphaMask( rAlphaMask ) {}
+    virtual				~MetaEndTransparencyGroupMaskPDFAction() {}
+
+    const Rectangle&	GetBoundingRect() const { return maBoundingRect; }
+    const Bitmap&		GetAlphaMask() const { return maAlphaMask; }
 };
 
 #endif	// USE_JAVA && MACOSX

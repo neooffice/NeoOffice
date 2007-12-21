@@ -5785,6 +5785,26 @@ bool PDFWriterImpl::emit()
                 }
                 break;
 
+                case( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ):
+                {
+                    aWriter.beginTransparencyGroup();
+                }
+                break;
+
+                case( META_ENDTRANSPARENCYGROUP_PDF_ACTION ):
+                {
+                    const MetaEndTransparencyGroupPDFAction* pA = (const MetaEndTransparencyGroupPDFAction*) pAction;
+                    aWriter.endTransparencyGroup( pA->GetBoundingRect(), pA->GetTransparentPercent() );
+                }
+                break;
+
+                case( META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION ):
+                {
+                    const MetaEndTransparencyGroupMaskPDFAction* pA = (const MetaEndTransparencyGroupMaskPDFAction*) pAction;
+                    aWriter.endTransparencyGroup( pA->GetBoundingRect(), pA->GetAlphaMask() );
+                }
+                break;
+
                 default:
                     DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
                 break;
@@ -7587,6 +7607,11 @@ SvStream* PDFWriterImpl::endRedirect()
 
 void PDFWriterImpl::beginTransparencyGroup()
 {
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaBeginTransparencyGroupPDFAction() );
+#endif	// USE_JAVA
+
     updateGraphicsState();
     if( m_aContext.Version >= PDFWriter::PDF_1_4 )
         beginRedirect( new SvMemoryStream( 1024, 1024 ), Rectangle() );
@@ -7594,6 +7619,11 @@ void PDFWriterImpl::beginTransparencyGroup()
 
 void PDFWriterImpl::endTransparencyGroup( const Rectangle& rBoundingBox, sal_uInt32 nTransparentPercent )
 {
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaEndTransparencyGroupPDFAction( rBoundingBox, nTransparentPercent ) );
+#endif	// USE_JAVA
+
     DBG_ASSERT( nTransparentPercent <= 100, "invalid alpha value" );
     nTransparentPercent = nTransparentPercent % 100;
 
@@ -7634,6 +7664,11 @@ void PDFWriterImpl::endTransparencyGroup( const Rectangle& rBoundingBox, sal_uIn
 
 void PDFWriterImpl::endTransparencyGroup( const Rectangle& rBoundingBox, const Bitmap& rAlphaMask )
 {
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        m_aMtf.AddAction( new MetaEndTransparencyGroupMaskPDFAction( rBoundingBox, rAlphaMask ) );
+#endif	// USE_JAVA
+
     if( m_aContext.Version >= PDFWriter::PDF_1_4 )
     {
         // create XObject
