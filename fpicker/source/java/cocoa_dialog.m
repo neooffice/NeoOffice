@@ -175,7 +175,7 @@ static NSString *pBlankItem = @" ";
 	if ( !pItem )
 		return;
 
-	NSString *pFilter = (NSString *)[pArgArray objectAtIndex:0];
+	NSString *pFilter = (NSString *)[pArgArray objectAtIndex:1];
 	if ( !pFilter )
 		return;
 
