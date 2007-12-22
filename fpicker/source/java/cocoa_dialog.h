@@ -88,7 +88,6 @@ CFStringRef NSFileDialog_label( id pDialog, int nID );
 void NSFileDialog_release( id pDialog );
 void NSFileManager_releaseFileNames( CFStringRef *pURLs );
 void NSFileManager_releaseItems( CFStringRef *pItems );
-int NSFileDialog_result( id pDialog );
 CFStringRef NSFileDialog_selectedFilter( id pDialog );
 CFStringRef NSFileDialog_selectedItem( id pDialog, int nID );
 int NSFileDialog_selectedItemIndex( id pDialog, int nID );

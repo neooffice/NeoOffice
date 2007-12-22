@@ -109,7 +109,6 @@ static NSString *pBlankItem = @" ";
 	NSSavePanel*			mpFilePanel;
 	NSMutableDictionary*	mpFilters;
 	void*					mpPicker;
-	int						mnResult;
 	BOOL					mbShowAutoExtension;
 	BOOL					mbShowFilterOptions;
 	BOOL					mbShowImageTemplate;
@@ -127,9 +126,9 @@ static NSString *pBlankItem = @" ";
 - (void)cancel:(id)pObject;
 - (void)dealloc;
 - (void)deleteItem:(ShowFileDialogArgs *)pArgs;
-- (NSString *)directory;
-- (NSArray *)filenames;
-- (NSArray *)items:(int)nID;
+- (NSString *)directory:(ShowFileDialogArgs *)pArgs;
+- (NSArray *)filenames:(ShowFileDialogArgs *)pArgs;
+- (NSArray *)items:(ShowFileDialogArgs *)pArgs;
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (void)initialize:(id)pObject;
 - (BOOL)isChecked:(int)nID;
@@ -138,7 +137,6 @@ static NSString *pBlankItem = @" ";
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
 - (void *)picker;
 - (void)release:(id)pObject;
-- (int)result;
 - (NSString *)selectedItem:(int)nID;
 - (int)selectedItemIndex:(int)nID;
 - (NSString *)selectedFilter;
@@ -151,7 +149,7 @@ static NSString *pBlankItem = @" ";
 - (void)setSelectedFilter:(ShowFileDialogArgs *)pArgs;
 - (void)setSelectedItem:(ShowFileDialogArgs *)pArgs;
 - (void)setTitle:(ShowFileDialogArgs *)pArgs;
-- (void)showFileDialog:(id)pObject;
+- (int)showFileDialog:(ShowFileDialogArgs *)pArgs;
 @end
 
 @interface ShowDialogPopUpButtonCell : NSPopUpButtonCell
@@ -305,12 +303,17 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
-- (NSString *)directory
+- (NSString *)directory:(ShowFileDialogArgs *)pArgs
 {
-	return [mpFilePanel directory];
+	NSString *pRet = [mpFilePanel directory];
+
+	if ( pArgs )
+		[pArgs setResult:pRet];
+
+	return pRet;
 }
 
-- (NSArray *)filenames
+- (NSArray *)filenames:(ShowFileDialogArgs *)pArgs
 {
 	NSArray *pRet = nil;
 
@@ -327,12 +330,25 @@ static NSString *pBlankItem = @" ";
 			pRet = [NSArray arrayWithObject:pFileName];
 	}
 
+	if ( pArgs )
+		[pArgs setResult:pRet];
+
 	return pRet;
 }
 
-- (NSArray *)items:(int)nID
+- (NSArray *)items:(ShowFileDialogArgs *)pArgs
 {
 	NSMutableArray *pRet = nil;
+
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return pRet;
+
+	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pID )
+		return pRet;
+
+	int nID = [pID intValue];
 
 	if ( NSFileDialog_controlType( nID ) == COCOA_CONTROL_TYPE_CHECKBOX )
 	{
@@ -367,7 +383,6 @@ static NSString *pBlankItem = @" ";
 	mbChooseFiles = bChooseFiles;
 	mpDefaultName = nil;
 	mpPicker = pPicker;
-	mnResult = NSCancelButton;
 	mbShowAutoExtension = bShowAutoExtension;
 	mbShowFilterOptions = bShowFilterOptions;
 	mbShowImageTemplate = bShowImageTemplate;
@@ -708,11 +723,6 @@ static NSString *pBlankItem = @" ";
 	[self release];
 }
 
-- (int)result;
-{
-	return mnResult;
-}
-
 - (NSString *)selectedItem:(int)nID
 {
 	NSString *pRet = nil;
@@ -965,12 +975,14 @@ static NSString *pBlankItem = @" ";
 {
 }
 
-- (void)showFileDialog:(id)pObject;
+- (int)showFileDialog:(ShowFileDialogArgs *)pArgs
 {
-	if ( [mpFilePanel isVisible] )
-		return;
+	int nRet = NSCancelButton;
+	if ( pArgs )
+		[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
-	mnResult = NSCancelButton;
+	if ( [mpFilePanel isVisible] )
+		return nRet;
 
 	// Create accessory view
 	NSView *pAccessoryView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 0, 0)];
@@ -1068,18 +1080,21 @@ static NSString *pBlankItem = @" ";
 		}
 
 		// Fix bug 2302 by updating filtering
-		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObject:[self selectedFilter]]];
-		[self setSelectedFilter:pArgs];
+		ShowFileDialogArgs *pSelectedFilterArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObject:[self selectedFilter]]];
+		[self setSelectedFilter:pSelectedFilterArgs];
 
 		if ( mbUseFileOpenDialog )
 		{
 			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-			mnResult = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:nil];
+			nRet = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:nil];
 		}
 		else
 		{
-			mnResult = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
+			nRet = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
 		}
+
+		if ( pArgs )
+			[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
 		[mpFilePanel setAccessoryView:pOldAccessoryView];
 
@@ -1090,6 +1105,8 @@ static NSString *pBlankItem = @" ";
 				[pControl removeFromSuperview];
 		}
 	}
+
+	return nRet;
 }
 
 @end
@@ -1107,8 +1124,8 @@ static NSString *pBlankItem = @" ";
 			JavaFilePicker_controlStateChanged( mnID, pPicker );
 
 		// Update filtering
-		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObject:[mpDialog selectedFilter]]];
-		[mpDialog setSelectedFilter:pArgs];
+		ShowFileDialogArgs *pSelectedFilterArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObject:[mpDialog selectedFilter]]];
+		[mpDialog setSelectedFilter:pSelectedFilterArgs];
 	}
 }
 
@@ -1236,7 +1253,10 @@ CFStringRef NSFileDialog_directory( id pDialog )
 
 	if ( pDialog )
 	{
-		NSString *pDirectory = [(ShowFileDialog *)pDialog directory];
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(directory:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSString *pDirectory = (NSString *)[pArgs result];
 		if ( pDirectory )
 		{
 			[pDirectory retain];
@@ -1257,7 +1277,10 @@ CFStringRef *NSFileDialog_fileNames( id pDialog )
 
 	if ( pDialog )
 	{
-		NSArray *pFileNames = [(ShowFileDialog *)pDialog filenames];
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(filenames:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSArray *pFileNames = (NSArray *)[pArgs result];
 		if ( pFileNames )
 		{
 			unsigned nCount = [pFileNames count];
@@ -1297,7 +1320,10 @@ CFStringRef *NSFileDialog_items( id pDialog, int nID )
 
 	if ( pDialog )
 	{
-		NSArray *pItems = [(ShowFileDialog *)pDialog items:nID];
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:nID]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(items:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSArray *pItems = (NSArray *)[pArgs result];
 		if ( pItems )
 		{
 			unsigned nCount = [pItems count];
@@ -1405,23 +1431,6 @@ void NSFileManager_releaseItems( CFStringRef *pItems )
 	}
 
 	[pPool release];
-}
-
-int NSFileDialog_result( id pDialog )
-{
-	int nRet = NO;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pDialog )
-	{
-		nRet = [(ShowFileDialog *)pDialog result];
-		[(ShowFileDialog *)pDialog release];
-	}
-
-	[pPool release];
-
-	return nRet;
 }
 
 CFStringRef NSFileDialog_selectedFilter( id pDialog )
@@ -1614,9 +1623,12 @@ int NSFileDialog_showFileDialog( id pDialog )
 
 	if ( pDialog )
 	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pDialog waitUntilDone:YES modes:pModes];
-		nRet = [(ShowFileDialog *)pDialog result];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(showFileDialog:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSNumber *pRet = (NSNumber *)[pArgs result];
+		if ( pRet )
+			nRet = [pRet intValue];
 	}
 
 	[pPool release];
