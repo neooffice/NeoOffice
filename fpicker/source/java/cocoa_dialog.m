@@ -122,11 +122,11 @@ static NSString *pBlankItem = @" ";
 	NSMutableDictionary*	mpTextFields;
 	BOOL					mbUseFileOpenDialog;
 }
-- (void)addFilter:(NSString *)pItem filter:(NSString *)pFilter;
-- (void)addItem:(int)nID item:(NSString *)pItem;
+- (void)addFilter:(ShowFileDialogArgs *)pArgs;
+- (void)addItem:(ShowFileDialogArgs *)pArgs;
 - (void)cancel:(id)pObject;
 - (void)dealloc;
-- (void)deleteItem:(int)nID item:(NSString *)pItem;
+- (void)deleteItem:(ShowFileDialogArgs *)pArgs;
 - (NSString *)directory;
 - (NSArray *)filenames;
 - (NSArray *)items:(int)nID;
@@ -142,14 +142,14 @@ static NSString *pBlankItem = @" ";
 - (NSString *)selectedItem:(int)nID;
 - (int)selectedItemIndex:(int)nID;
 - (NSString *)selectedFilter;
-- (void)setChecked:(int)nID checked:(BOOL)bChecked;
+- (void)setChecked:(ShowFileDialogArgs *)pArgs;
 - (void)setDefaultName:(ShowFileDialogArgs *)pArgs;
 - (void)setDirectory:(ShowFileDialogArgs *)pArgs;
-- (void)setEnabled:(int)nID enabled:(BOOL)bEnabled;
-- (void)setLabel:(int)nID label:(NSString *)pLabel;
+- (void)setEnabled:(ShowFileDialogArgs *)pArgs;
+- (void)setLabel:(ShowFileDialogArgs *)pArgs;
 - (void)setMultiSelectionMode:(ShowFileDialogArgs *)pArgs;
 - (void)setSelectedFilter:(ShowFileDialogArgs *)pArgs;
-- (void)setSelectedItem:(int)nID item:(int)nItem;
+- (void)setSelectedItem:(ShowFileDialogArgs *)pArgs;
 - (void)setTitle:(ShowFileDialogArgs *)pArgs;
 - (void)showFileDialog:(id)pObject;
 @end
@@ -165,9 +165,18 @@ static NSString *pBlankItem = @" ";
 
 @implementation ShowFileDialog
 
-- (void)addFilter:(NSString *)pItem filter:(NSString *)pFilter
+- (void)addFilter:(ShowFileDialogArgs *)pArgs
 {
-	if ( !pItem || !pFilter )
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSString *pItem = (NSString *)[pArgArray objectAtIndex:0];
+	if ( !pItem )
+		return;
+
+	NSString *pFilter = (NSString *)[pArgArray objectAtIndex:0];
+	if ( !pFilter )
 		return;
 
 	NSArray *pFilters = [pFilter componentsSeparatedByString:@";"];
@@ -205,8 +214,23 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
-- (void)addItem:(int)nID item:(NSString *)pItem
+- (void)addItem:(ShowFileDialogArgs *)pArgs
 {
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pID )
+		return;
+
+	NSString *pItem = (NSString *)[pArgArray objectAtIndex:1];
+	if ( !pItem )
+		return;
+
+	int nID = [pID intValue];
+
+	if ( !pItem || nID == COCOA_CONTROL_ID_FILETYPE )
 	if ( !pItem || nID == COCOA_CONTROL_ID_FILETYPE )
 		return;
 
@@ -250,8 +274,22 @@ static NSString *pBlankItem = @" ";
 	[super dealloc];
 }
 
-- (void)deleteItem:(int)nID item:(NSString *)pItem
+- (void)deleteItem:(ShowFileDialogArgs *)pArgs
 {
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pID )
+		return;
+
+	NSString *pItem = (NSString *)[pArgArray objectAtIndex:1];
+	if ( !pItem )
+		return;
+
+	int nID = [pID intValue];
+
 	if ( !pItem || nID == COCOA_CONTROL_ID_FILETYPE )
 		return;
 
@@ -714,8 +752,23 @@ static NSString *pBlankItem = @" ";
 	return pRet;
 }
 
-- (void)setChecked:(int)nID checked:(BOOL)bChecked
+- (void)setChecked:(ShowFileDialogArgs *)pArgs
 {
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pID )
+		return;
+
+	NSNumber *pChecked = (NSNumber *)[pArgArray objectAtIndex:1];
+	if ( !pChecked )
+		return;
+
+	int nID = [pID intValue];
+	int bChecked = [pChecked boolValue];
+
 	int nCocoaControlType = NSFileDialog_controlType( nID );
 	if ( nID == COCOA_CONTROL_ID_AUTOEXTENSION )
 	{
@@ -769,17 +822,43 @@ static NSString *pBlankItem = @" ";
 	[mpFilePanel setDirectory:pDirectory];
 }
 
-- (void)setEnabled:(int)nID enabled:(BOOL)bEnabled
+- (void)setEnabled:(ShowFileDialogArgs *)pArgs
 {
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pID )
+		return;
+
+	NSNumber *pEnabled = (NSNumber *)[pArgArray objectAtIndex:1];
+	if ( !pEnabled )
+		return;
+
+	int nID = [pID intValue];
+	int bEnabled = [pEnabled boolValue];
+
 	NSControl *pControl = (NSControl *)[mpControls objectForKey:[[NSNumber numberWithInt:nID] stringValue]];
 	if ( pControl )
 		[pControl setEnabled:bEnabled];
 }
 
-- (void)setLabel:(int)nID label:(NSString *)pLabel
+- (void)setLabel:(ShowFileDialogArgs *)pArgs
 {
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pID )
+		return;
+
+	NSString *pLabel = (NSString *)[pArgArray objectAtIndex:1];
 	if ( !pLabel )
-		pLabel = @"";
+		return;
+
+	int nID = [pID intValue];
 
 	int nCocoaControlType = NSFileDialog_controlType( nID );
 	if ( nCocoaControlType == COCOA_CONTROL_TYPE_CHECKBOX )
@@ -854,8 +933,23 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
-- (void)setSelectedItem:(int)nID item:(int)nItem
+- (void)setSelectedItem:(ShowFileDialogArgs *)pArgs
 {
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSNumber *pID = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pID )
+		return;
+
+	NSNumber *pItem = (NSNumber *)[pArgArray objectAtIndex:1];
+	if ( !pItem )
+		return;
+
+	int nID = [pID intValue];
+	int nItem = [pItem intValue];
+
 	if ( nID == COCOA_CONTROL_ID_FILETYPE )
 		return;
 
@@ -1063,8 +1157,12 @@ void NSFileDialog_addFilter( id pDialog, CFStringRef aItem, CFStringRef aFilter 
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pDialog )
-		[(ShowFileDialog *)pDialog addFilter:(NSString *)aItem filter:(NSString *)aFilter];
+	if ( pDialog && aItem && aFilter )
+	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObjects:(NSString *)aItem, (NSString *)aFilter, nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(addFilter:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1073,8 +1171,12 @@ void NSFileDialog_addItem( id pDialog, int nID, CFStringRef aItem )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pDialog )
-		[(ShowFileDialog *)pDialog addItem:nID item:(NSString *)aItem];
+	if ( pDialog && aItem )
+	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], (NSString *)aItem, nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(addItem:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1116,8 +1218,12 @@ void NSFileDialog_deleteItem( id pDialog, int nID, CFStringRef aItem )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pDialog )
-		[(ShowFileDialog *)pDialog deleteItem:nID item:(NSString *)aItem];
+	if ( pDialog && aItem )
+	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], (NSString *)aItem, nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(deleteItem:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1379,7 +1485,11 @@ void NSFileDialog_setChecked( id pDialog, int nID, BOOL bChecked )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		[(ShowFileDialog *)pDialog setChecked:nID checked:bChecked];
+	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], [NSNumber numberWithBool:bChecked], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setChecked:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1409,7 +1519,6 @@ void NSFileDialog_setDirectory( id pDialog, CFStringRef aDirectory )
 		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setDirectory:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
 
-
 	[pPool release];
 }
 
@@ -1418,7 +1527,11 @@ void NSFileDialog_setEnabled( id pDialog, int nID, BOOL bEnabled )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		[(ShowFileDialog *)pDialog setEnabled:nID enabled:bEnabled ];
+	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], [NSNumber numberWithBool:bEnabled], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setEnabled:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1427,8 +1540,12 @@ void NSFileDialog_setLabel( id pDialog, int nID, CFStringRef aLabel )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pDialog )
-		[(ShowFileDialog *)pDialog setLabel:nID label:(NSString *)aLabel];
+	if ( pDialog && aLabel )
+	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], (NSString *)aLabel, nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setLabel:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1443,7 +1560,6 @@ void NSFileDialog_setMultiSelectionMode( id pDialog, BOOL bMultiSelectionMode )
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setMultiSelectionMode:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
-
 
 	[pPool release];
 }
@@ -1467,7 +1583,11 @@ void NSFileDialog_setSelectedItem( id pDialog, int nID, int nItem )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		[(ShowFileDialog *)pDialog setSelectedItem:nID item:nItem];
+	{
+		ShowFileDialogArgs *pArgs = [[ShowFileDialogArgs alloc] initWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithInt:nID], [NSNumber numberWithInt:nItem], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setSelectedItem:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
 
 	[pPool release];
 }
@@ -1482,7 +1602,6 @@ void NSFileDialog_setTitle( id pDialog, CFStringRef aTitle )
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(setTitle:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
-
 
 	[pPool release];
 }
