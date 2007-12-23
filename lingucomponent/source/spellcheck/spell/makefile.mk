@@ -80,7 +80,7 @@ CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 .ENDIF
 
 .IF "$(GUIBASE)" == "java"
-CDEFS+=-fobjc-exceptions
+OBJCFLAGS+=-fobjc-exceptions
 .ENDIF
 
 # --- Files --------------------------------------------------------
