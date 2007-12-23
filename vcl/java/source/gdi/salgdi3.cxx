@@ -561,18 +561,19 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->mnOrientation = 0;
 	}
 
-	if ( pData )
+	if ( pData && pMetric->mnWidth )
 	{
 		ATSFontMetrics aFontMetrics;
 		ATSFontRef aFont = FMGetATSFontRefFromFont( pData->mnATSUFontID );
-		if ( mpVCLFont && ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
+		if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 		{
-			pMetric->mnAscent = (long)( ( fabs( aFontMetrics.ascent ) * mpVCLFont->getSize() ) + 0.5 );
-			pMetric->mnDescent = (long)( ( fabs( aFontMetrics.descent ) * mpVCLFont->getSize() ) + 0.5 );
-			pMetric->mnIntLeading = (long)( ( fabs( aFontMetrics.leading ) * mpVCLFont->getSize() ) + 0.5 );
-
-			// Mac OS X seems to understate the actual ascent
-			pMetric->mnAscent++;
+			// Mac OS X seems to understate the actual ascent. Fix bug 2827
+			// by replacing our fixed amount to add and, insted, add 1/12 of
+			// the height. Note that we use the font width as it is already set
+			// to the font size.
+			pMetric->mnAscent = (long)( ( fabs( aFontMetrics.ascent * 13 / 12 ) * pMetric->mnWidth ) + 0.5 );
+			pMetric->mnDescent = (long)( ( fabs( aFontMetrics.descent ) * pMetric->mnWidth ) + 0.5 );
+			pMetric->mnIntLeading = (long)( ( fabs( aFontMetrics.leading ) * pMetric->mnWidth ) + 0.5 );
 		}
 		else
 		{
