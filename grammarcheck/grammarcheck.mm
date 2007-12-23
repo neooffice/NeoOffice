@@ -101,7 +101,7 @@
 #include <string>
 #include <strstream>
 
-#if BUILD_OS_MAJOR < 5
+#if BUILD_OS_MINOR < 5
 // building on 10.4.  Define required constants for the grammar check system
 // manually.
 

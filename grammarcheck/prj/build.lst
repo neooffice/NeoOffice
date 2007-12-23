@@ -1,0 +1,2 @@
+gc	grammarcheck	:	NULL
+gc	grammarcheck	nmake	-	all	gc_lib	NULL
