@@ -39,84 +39,82 @@
 @interface VCLChildWindow : NSWindow
 {
 }
-- (id)initWithContentRect:(NSRect)aContentRect backgroundColor:(NSColor *)pColor;
+- (id)init:(id)pObject;
+- (void)release:(id)pObject;
 @end
 
 @implementation VCLChildWindow
 
-- (id)initWithContentRect:(NSRect)aContentRect backgroundColor:(NSColor *)pColor;
+- (id)init:(id)pObject
 {
 	// Create a borderless window and set the background to be transparent
-	[super initWithContentRect:aContentRect styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
+	[super initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
+
 	[self setOpaque:NO];
-	[self setBackgroundColor:pColor];
+	[self setBackgroundColor:[NSColor colorWithDeviceRed:0 green:0 blue:0 alpha:0]];
 
 	return self;
 }
 
-@end
-
-@interface ReleaseChildWindow : NSObject
+- (void)release:(id)pObject
 {
-	VCLChildWindow*			mpWindow;
-}
-- (id)initWithChildWindow:(VCLChildWindow *)pWindow;
-- (void)releaseWindow:(id)pObject;
-@end
-
-@implementation ReleaseChildWindow
-
-- (id)initWithChildWindow:(VCLChildWindow *)pWindow
-{
-	[super init];
- 
-	mpWindow = pWindow;
- 
-	return self;
-}
-
-- (void)releaseWindow:(id)pObject
-{
-	[mpWindow release];
+	[self orderOut:self];
+	[self release];
 }
 
 @end
 
-id VCLChildWindow_create( long nX, long nY, long nWidth, long nHeight, int nColor )
+id VCLChildWindow_create()
 {
-	if ( nWidth <= 0 )
-		nWidth = 1;
-	if ( nHeight <= 0 )
-		nHeight = 1;
-	return [[VCLChildWindow alloc] initWithContentRect:NSMakeRect( nX, nY, nWidth, nHeight ) backgroundColor:[NSColor colorWithDeviceRed:( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( (float)( nColor & 0x000000ff ) / (float)0xff ) alpha:( (float)( ( nColor & 0xff000000 ) >> 24 ) / (float)0xff )]];
+	VCLChildWindow *pRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	pRet = [VCLChildWindow alloc];
+	if ( pRet )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pRet performSelectorOnMainThread:@selector(init:) withObject:pRet waitUntilDone:YES modes:pModes];
+		[pRet retain];
+	}
+
+	[pPool release];
+
+	return pRet;
 }
 
-void VCLChildWindow_release( id *pVCLChildWindow )
+void VCLChildWindow_release( id pVCLChildWindow )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pVCLChildWindow )
 	{
-		ReleaseChildWindow *pReleaseChildWindow = [[ReleaseChildWindow alloc] initWithChildWindow:(VCLChildWindow *)pVCLChildWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pReleaseChildWindow performSelectorOnMainThread:@selector(releaseWindow:) withObject:pReleaseChildWindow waitUntilDone:NO modes:pModes];
+		[(VCLChildWindow *)pVCLChildWindow performSelectorOnMainThread:@selector(release:) withObject:pVCLChildWindow waitUntilDone:NO modes:pModes];
 	}
 
 	[pPool release];
 }
 
-void VCLChildWindow_setBackgroundColor( id *pVCLChildWindow, int nColor )
+void VCLChildWindow_setBackgroundColor( id pVCLChildWindow, int nColor )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pVCLChildWindow )
+	{
+		NSColor *pColor = [NSColor colorWithDeviceRed:( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( (float)( nColor & 0x000000ff ) / (float)0xff ) alpha:( (float)( ( nColor & 0xff000000 ) >> 24 ) / (float)0xff )];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(VCLChildWindow *)pVCLChildWindow performSelectorOnMainThread:@selector(setBackgroundColor:) withObject:pColor waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
+}
+
+void VCLChildWindow_setBounds( id pVCLChildWindow, long nX, long nY, long nWidth, long nHeight )
 {
 }
 
-void VCLChildWindow_setBounds( id *pVCLChildWindow, long nX, long nY, long nWidth, long nHeight )
+WindowRef VCLChildWindow_show( id pVCLChildWindow, id pParentNSWindow, BOOL bShow )
 {
-}
-
-void VCLChildWindow_setParent( id *pParentNSWindow )
-{
-}
-
-void VCLChildWindow_show( id *pVCLChildWindow, id *pNSParentWindow, BOOL bShow )
-{
+	return nil;
 }

@@ -58,11 +58,9 @@ class SalFrame;
 
 class JavaSalObject : public SalObject
 {
-	Rectangle				maBounds;
 	JavaSalFrame*			mpParent;
 	SystemEnvData			maSysData;
-	void*					mpVCLChildFrame;
-	BOOL					mbVisible;
+	void*					mpChildWindow;
 
 public:
 							JavaSalObject( SalFrame *pParent );

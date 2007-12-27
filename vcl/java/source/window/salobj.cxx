@@ -35,20 +35,24 @@
 
 #define _SV_SALOBJ_CXX
 
-#include <stdio.h>
-#include <string.h>
-
 #ifndef _SV_SALOBJ_H
 #include <salobj.h>
 #endif
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
+#endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
+#include <com/sun/star/vcl/VCLFrame.hxx>
+#endif
+
+#include "salobj_cocoa.h"
 
 // =======================================================================
 
 JavaSalObject::JavaSalObject( SalFrame *pParent )
 {
 	mpParent = (JavaSalFrame *)pParent;
-	mpVCLChildFrame = NULL;
-	mbVisible = FALSE;
+	mpChildWindow = VCLChildWindow_create();
 
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
@@ -58,6 +62,7 @@ JavaSalObject::JavaSalObject( SalFrame *pParent )
 
 JavaSalObject::~JavaSalObject()
 {
+	VCLChildWindow_release( mpChildWindow );
 }
 
 // -----------------------------------------------------------------------
@@ -110,18 +115,26 @@ void JavaSalObject::EndSetClipRegion()
 
 void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::SetPosSize not implemented\n" );
-#endif
+	VCLChildWindow_setBounds( mpChildWindow, nX, nY, nWidth, nHeight );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::Show( BOOL bVisible )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::Show not implemented\n" );
-#endif
+	if ( bVisible )
+	{
+		void *pParentNSWindow;
+		if ( mpParent && mpParent->mpVCLFrame )
+			pParentNSWindow = mpParent->mpVCLFrame->getNativeWindow();
+		else
+			pParentNSWindow = NULL;
+		maSysData.aWindow = (long)VCLChildWindow_show( mpChildWindow, pParentNSWindow, bVisible );
+	}
+	else
+	{
+		maSysData.aWindow = (long)VCLChildWindow_show( mpChildWindow, NULL, bVisible );
+	}
 }
 
 // -----------------------------------------------------------------------

@@ -37,18 +37,22 @@
 #define __SALOBJ_COCOA_H__
 
 #ifdef __cplusplus
+#include <premac.h>
+#endif
+#include <Carbon/Carbon.h>
+#ifdef __cplusplus
+#include <postmac.h>
 typedef void* id;
 #endif
 
 #ifdef __cplusplus
 BEGIN_C
 #endif
-id VCLChildWindow_create( long nX, long nY, long nWidth, long nHeight, int nColor );
-void VCLChildWindow_release( id *pVCLChildWindow );
-void VCLChildWindow_setBackgroundColor( id *pVCLChildWindow, int nColor );
-void VCLChildWindow_setBounds( id *pVCLChildWindow, long nX, long nY, long nWidth, long nHeight );
-void VCLChildWindow_setParent( id *pParentNSWindow );
-void VCLChildWindow_show( id *pVCLChildWindow, id *pNSParentWindow, BOOL bShow );
+id VCLChildWindow_create();
+void VCLChildWindow_release( id pChildNSWindow );
+void VCLChildWindow_setBackgroundColor( id pChildNSWindow, int nColor );
+void VCLChildWindow_setBounds( id pChildNSWindow, long nX, long nY, long nWidth, long nHeight );
+WindowRef VCLChildWindow_show( id pChildNSWindow, id pParentNSWindow, BOOL bShow );
 #ifdef __cplusplus
 END_C
 #endif
