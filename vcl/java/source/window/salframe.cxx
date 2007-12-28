@@ -41,6 +41,9 @@
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
+#ifndef _SV_SALOBJ_H
+#include <salobj.h>
+#endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
@@ -230,6 +233,11 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		if ( pWindow )
 			Dialog::EndAllDialogs( pWindow );
+
+		// Close any attached child windows
+		::std::list< JavaSalObject* > aObjects( maObjects );
+		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
+			(*it)->Show( FALSE );
 	}
 
 	SalData *pSalData = GetSalData();
@@ -877,8 +885,13 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	mpParent = (JavaSalFrame *)pNewParent;
 
 	bool bReshow = mbVisible;
+	::std::list< JavaSalObject* > aReshowObjects;
 	if ( bReshow )
+	{
+		for ( ::std::list< JavaSalObject* >::const_iterator it = maObjects.begin(); it != maObjects.end(); ++it )
+			aReshowObjects.push_back( *it );
 		Show( FALSE );
+	}
 
 	// Fix bug 1310 by creating a new native window with the new parent
 	if ( mpGraphics->mpVCLGraphics )
@@ -903,7 +916,11 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	}
 
 	if ( bReshow )
+	{
 		Show( TRUE, FALSE );
+		for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
+			(*it)->Show( TRUE );
+	}
 
 	// Reattach floating children
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )

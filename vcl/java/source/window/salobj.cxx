@@ -122,19 +122,17 @@ void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 
 void JavaSalObject::Show( BOOL bVisible )
 {
-	if ( bVisible )
-	{
-		void *pParentNSWindow;
-		if ( mpParent && mpParent->mpVCLFrame )
-			pParentNSWindow = mpParent->mpVCLFrame->getNativeWindow();
-		else
-			pParentNSWindow = NULL;
-		maSysData.aWindow = (long)VCLChildWindow_show( mpChildWindow, pParentNSWindow, bVisible );
-	}
+	void *pParentNSWindow;
+	if ( bVisible && mpParent && mpParent->mpVCLFrame )
+		pParentNSWindow = mpParent->mpVCLFrame->getNativeWindow();
 	else
-	{
-		maSysData.aWindow = (long)VCLChildWindow_show( mpChildWindow, NULL, bVisible );
-	}
+		pParentNSWindow = NULL;
+
+	if ( mpParent )
+		mpParent->RemoveObject( this );
+	maSysData.aWindow = (long)VCLChildWindow_show( mpChildWindow, pParentNSWindow, bVisible );
+	if ( mpParent && maSysData.aWindow )
+		mpParent->AddObject( this );
 }
 
 // -----------------------------------------------------------------------
@@ -159,12 +157,14 @@ void JavaSalObject::GrabFocus()
 
 void JavaSalObject::SetBackground()
 {
+	VCLChildWindow_setBackgroundColor( mpChildWindow, 0x00000000 );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::SetBackground( SalColor nSalColor )
 {
+	VCLChildWindow_setBackgroundColor( mpChildWindow, nSalColor | 0xff000000 );
 }
 
 // -----------------------------------------------------------------------

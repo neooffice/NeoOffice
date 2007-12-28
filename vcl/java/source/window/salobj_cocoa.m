@@ -38,18 +38,27 @@
 
 @interface VCLChildWindow : NSWindow
 {
+	NSRect					maFlippedBounds;
 }
+- (NSRect)flippedBounds;
 - (id)init:(id)pObject;
 - (void)release:(id)pObject;
+- (void)setBounds:(NSValue *)pValue;
 @end
 
 @implementation VCLChildWindow
+
+- (NSRect)flippedBounds
+{
+	return maFlippedBounds;
+}
 
 - (id)init:(id)pObject
 {
 	// Create a borderless window and set the background to be transparent
 	[super initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSBorderlessWindowMask backing:NSBackingStoreBuffered defer:YES];
 
+	maFlippedBounds = [self frame];
 	[self setOpaque:NO];
 	[self setBackgroundColor:[NSColor colorWithDeviceRed:0 green:0 blue:0 alpha:0]];
 
@@ -60,6 +69,72 @@
 {
 	[self orderOut:self];
 	[self release];
+}
+
+- (void)setBounds:(NSValue *)pValue
+{
+	if ( pValue )
+	{
+		maFlippedBounds = [pValue rectValue];
+
+		NSWindow *pParentWindow = [self parentWindow];
+		if ( pParentWindow && [pParentWindow isVisible] )
+		{
+			NSRect aParentFrame = [pParentWindow contentRectForFrameRect:[pParentWindow frame]];
+			[self setFrame:NSMakeRect( aParentFrame.origin.x + maFlippedBounds.origin.x, aParentFrame.origin.y + aParentFrame.size.height - maFlippedBounds.origin.y - maFlippedBounds.size.height, maFlippedBounds.size.width, maFlippedBounds.size.height ) display:NO];
+		}
+	}
+}
+
+@end
+
+@interface ShowChildWindow : NSObject
+{
+	VCLChildWindow*			mpWindow;
+	NSWindow*				mpParentWindow;
+	WindowRef				maWindowRef;
+}
+- (WindowRef)getWindowRef;
+- (id)initWithWindow:(VCLChildWindow *)pWindow parentWindow:(NSWindow *)pParentWindow;
+- (void)show:(id)pObject;
+@end
+
+@implementation ShowChildWindow
+
+- (WindowRef)getWindowRef
+{
+	return maWindowRef;
+}
+
+- (id)initWithWindow:(VCLChildWindow *)pWindow parentWindow:(NSWindow *)pParentWindow
+{
+	[super init];
+
+	mpWindow = pWindow;
+	mpParentWindow = pParentWindow;
+	maWindowRef = nil;
+
+	return self;
+}
+
+- (void)show:(id)pObject
+{
+	if ( mpWindow )
+	{
+		// Detach from current parent window
+		NSWindow *pOldParentWindow = [mpWindow parentWindow];
+		if ( pOldParentWindow )
+			[pOldParentWindow removeChildWindow:mpWindow];
+
+		if ( mpParentWindow && [mpParentWindow isVisible] )
+		{
+			NSRect aFlippedBounds = [mpWindow flippedBounds];
+			NSRect aParentFrame = [mpParentWindow contentRectForFrameRect:[mpParentWindow frame]];
+			[mpParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
+			[mpWindow setFrame:NSMakeRect( aParentFrame.origin.x + aFlippedBounds.origin.x, aParentFrame.origin.y + aParentFrame.size.height - aFlippedBounds.origin.y - aFlippedBounds.size.height, aFlippedBounds.size.width, aFlippedBounds.size.height ) display:NO];
+			maWindowRef = (WindowRef)[mpWindow windowRef];
+		}
+	}
 }
 
 @end
@@ -112,9 +187,37 @@ void VCLChildWindow_setBackgroundColor( id pVCLChildWindow, int nColor )
 
 void VCLChildWindow_setBounds( id pVCLChildWindow, long nX, long nY, long nWidth, long nHeight )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pVCLChildWindow )
+	{
+		if ( nWidth < 1 )
+			nWidth = 1;
+		if ( nHeight < 1 )
+			nHeight = 1;
+		NSValue *pValue = [NSValue valueWithRect:NSMakeRect( nX, nY, nWidth, nHeight )];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(VCLChildWindow *)pVCLChildWindow performSelectorOnMainThread:@selector(setBounds:) withObject:pValue waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
 }
 
 WindowRef VCLChildWindow_show( id pVCLChildWindow, id pParentNSWindow, BOOL bShow )
 {
-	return nil;
+	WindowRef aRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pVCLChildWindow )
+	{
+		ShowChildWindow *pShowChildWindow = [[ShowChildWindow alloc] initWithWindow:pVCLChildWindow parentWindow:pParentNSWindow];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pShowChildWindow performSelectorOnMainThread:@selector(show:) withObject:pShowChildWindow waitUntilDone:YES modes:pModes];
+		aRet = [pShowChildWindow getWindowRef];
+	}
+
+	[pPool release];
+
+	return aRet;
 }
