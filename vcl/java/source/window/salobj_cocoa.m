@@ -130,8 +130,9 @@
 		{
 			NSRect aFlippedBounds = [mpWindow flippedBounds];
 			NSRect aParentFrame = [mpParentWindow contentRectForFrameRect:[mpParentWindow frame]];
-			[mpParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
 			[mpWindow setFrame:NSMakeRect( aParentFrame.origin.x + aFlippedBounds.origin.x, aParentFrame.origin.y + aParentFrame.size.height - aFlippedBounds.origin.y - aFlippedBounds.size.height, aFlippedBounds.size.width, aFlippedBounds.size.height ) display:NO];
+			[mpParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
+			[mpWindow orderFront:self];
 			maWindowRef = (WindowRef)[mpWindow windowRef];
 		}
 	}
