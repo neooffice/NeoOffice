@@ -855,12 +855,33 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	bool bRunRTL;
 	int nMinCharPos;
 	int nEndCharPos;
-	rArgs.ResetPos();
 	if ( !mnFallbackLevel )
 	{
-		mpGraphics->maFallbackRuns.Clear();
-		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
+		// Fix bug 2841 by ensuring that we process only full runs
+		nMinCharPos = rArgs.mnMinCharPos;
+		nEndCharPos = rArgs.mnEndCharPos;
+		while ( nMinCharPos > 0 && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos - 1 ] | GF_ISCHAR ) )
+			nMinCharPos--;
+		while ( nEndCharPos < rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos ] | GF_ISCHAR ) )
+			nEndCharPos++;
+		ImplLayoutArgs *pArgs = &rArgs;
+		bool bDeleteArgs = false;
+		if ( nMinCharPos != rArgs.mnMinCharPos || nEndCharPos != rArgs.mnEndCharPos )
 		{
+			pArgs = new ImplLayoutArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, rArgs.mnFlags & ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING );
+			if ( pArgs )
+				bDeleteArgs = true;
+			else
+				pArgs = &rArgs;
+		}
+
+		mpGraphics->maFallbackRuns.Clear();
+		pArgs->ResetPos();
+		while ( pArgs->GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
+		{
+			if ( nEndCharPos <= rArgs.mnMinCharPos || nMinCharPos >= rArgs.mnEndCharPos )
+				continue;
+
 			// Significantly improve cache hit rate by splitting runs into
 			// their component words
 			if ( bRunRTL )
@@ -869,12 +890,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				while ( nStart > nMinCharPos )
 				{
 					int i = nStart;
-					for ( ; i > nMinCharPos && !IsSpacingGlyph( rArgs.mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
+					for ( ; i > nMinCharPos && !IsSpacingGlyph( pArgs->mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
 						;
-					for ( ; i > nMinCharPos && IsSpacingGlyph( rArgs.mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
+					for ( ; i > nMinCharPos && IsSpacingGlyph( pArgs->mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
 						;
 					mpGraphics->maFallbackRuns.AddRun( i, nStart, bRunRTL );
-					maRuns.AddRun( i, nStart, bRunRTL );
 					nEstimatedGlyphs += nStart - i;
 					nStart = i;
 				}
@@ -885,52 +905,53 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				while ( nStart < nEndCharPos )
 				{
 					int i = nStart;
-					for ( ; i < nEndCharPos && !IsSpacingGlyph( rArgs.mpStr[ i ] | GF_ISCHAR ); i++ )
+					for ( ; i < nEndCharPos && !IsSpacingGlyph( pArgs->mpStr[ i ] | GF_ISCHAR ); i++ )
 						;
-					for ( ; i < nEndCharPos && IsSpacingGlyph( rArgs.mpStr[ i ] | GF_ISCHAR ); i++ )
+					for ( ; i < nEndCharPos && IsSpacingGlyph( pArgs->mpStr[ i ] | GF_ISCHAR ); i++ )
 						;
 					mpGraphics->maFallbackRuns.AddRun( nStart, i, bRunRTL );
-					maRuns.AddRun( nStart, i, bRunRTL );
 					nEstimatedGlyphs += i - nStart;
 					nStart = i;
 				}
 			}
+
+			if ( bDeleteArgs )
+				delete pArgs;
 		}
 	}
-	else
+
+	bool bFallbackRunRTL;
+	int nMinFallbackCharPos;
+	int nEndFallbackCharPos;
+	rArgs.ResetPos();
+	while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
 	{
-		bool bFallbackRunRTL;
-		int nMinFallbackCharPos;
-		int nEndFallbackCharPos;
-		while ( rArgs.GetNextRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
+		mpGraphics->maFallbackRuns.ResetPos();
+		while ( mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
 		{
-			mpGraphics->maFallbackRuns.ResetPos();
-			while ( mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+			mpGraphics->maFallbackRuns.NextRun();
+
+			int nMaxMinCharPos = nMinCharPos;
+			int nMinEndCharPos = nEndCharPos;
+			bool bExactMatch = true;
+			if ( nMaxMinCharPos < nMinFallbackCharPos )
 			{
-				mpGraphics->maFallbackRuns.NextRun();
+				nMaxMinCharPos = nMinFallbackCharPos;
+				bExactMatch = false;
+			}
+			if ( nMinEndCharPos > nEndFallbackCharPos )
+			{
+				nMinEndCharPos = nEndFallbackCharPos;
+				bExactMatch = false;
+			}
 
-				int nMaxMinCharPos = nMinCharPos;
-				int nMinEndCharPos = nEndCharPos;
-				bool bExactMatch = true;
-				if ( nMaxMinCharPos < nMinFallbackCharPos )
-				{
-					nMaxMinCharPos = nMinFallbackCharPos;
-					bExactMatch = false;
-				}
-				if ( nMinEndCharPos > nEndFallbackCharPos )
-				{
-					nMinEndCharPos = nEndFallbackCharPos;
-					bExactMatch = false;
-				}
+			if ( nMaxMinCharPos < nMinEndCharPos )
+			{
+				maRuns.AddRun( nMaxMinCharPos, nMinEndCharPos, bRunRTL );
+				nEstimatedGlyphs += nMinEndCharPos - nMaxMinCharPos;
 
-				if ( nMaxMinCharPos < nMinEndCharPos )
-				{
-					maRuns.AddRun( nMaxMinCharPos, nMinEndCharPos, bRunRTL );
-					nEstimatedGlyphs += nMinEndCharPos - nMaxMinCharPos;
-
-					if ( bExactMatch )
-						break;
-				}
+				if ( bExactMatch )
+					break;
 			}
 		}
 	}
@@ -1037,9 +1058,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 		}
 
-		bool bFallbackRunRTL;
-		int nMinFallbackCharPos;
-		int nEndFallbackCharPos;
 		if ( !mnFallbackLevel)
 		{
 			nMinFallbackCharPos = nMinCharPos;
@@ -1533,7 +1551,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			{
 				long nX;
 				long nY;
-				ImplATSLayoutData *pFoundLayout = GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
+				GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
 				if ( nGlyphOrientation == GF_ROTL )
 				{
 					nTranslateX = nX;
