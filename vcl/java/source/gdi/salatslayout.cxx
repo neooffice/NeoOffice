@@ -858,21 +858,29 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mnFallbackLevel )
 	{
 		// Fix bug 2841 by ensuring that we process only full runs
+		bool bDeleteArgs = false;
 		nMinCharPos = rArgs.mnMinCharPos;
 		nEndCharPos = rArgs.mnEndCharPos;
-		while ( nMinCharPos > 0 && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos ] | GF_ISCHAR ) )
+		while ( nMinCharPos && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos - 1 ] | GF_ISCHAR ) )
+		{
 			nMinCharPos--;
-		while ( nEndCharPos <= rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos - 1 ] | GF_ISCHAR ) )
+			bDeleteArgs = true;
+		}
+		while ( nEndCharPos < rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos ] | GF_ISCHAR ) )
+		{
 			nEndCharPos++;
+			bDeleteArgs = true;
+		}
+
 		ImplLayoutArgs *pArgs = &rArgs;
-		bool bDeleteArgs = false;
-		if ( nMinCharPos != rArgs.mnMinCharPos || nEndCharPos != rArgs.mnEndCharPos )
+		if ( bDeleteArgs )
 		{
 			pArgs = new ImplLayoutArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, rArgs.mnFlags & ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING );
-			if ( pArgs )
-				bDeleteArgs = true;
-			else
+			if ( !pArgs )
+			{
 				pArgs = &rArgs;
+				bDeleteArgs = false;
+			}
 		}
 
 		mpGraphics->maFallbackRuns.Clear();
@@ -915,9 +923,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				}
 			}
 
-			if ( bDeleteArgs )
-				delete pArgs;
 		}
+
+		if ( bDeleteArgs )
+			delete pArgs;
 	}
 
 	bool bFallbackRunRTL;
