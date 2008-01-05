@@ -1150,6 +1150,13 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                         if ( ( nTypeLeft == U_JT_RIGHT_JOINING || nTypeLeft == U_JT_DUAL_JOINING ) && ( nTypeRight == U_JT_LEFT_JOINING || nTypeRight == U_JT_DUAL_JOINING || nTypeRight == U_JT_TRANSPARENT ) )
                             bHandled = true;
                     }
+                    else if( pG->mnCharPos == rArgs.mnMinCharPos && rArgs.mnMinCharPos && i == mnGlyphCount - 1 )
+                    {
+                        UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ rArgs.mnMinCharPos ], UCHAR_JOINING_TYPE );
+                        UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ], UCHAR_JOINING_TYPE );
+                        if ( ( nTypeLeft == U_JT_RIGHT_JOINING || nTypeLeft == U_JT_DUAL_JOINING ) && ( nTypeRight == U_JT_LEFT_JOINING || nTypeRight == U_JT_DUAL_JOINING || nTypeRight == U_JT_TRANSPARENT ) )
+                            bHandled = true;
+                    }
                 }
                 else if ( pG > mpGlyphItems )
                 {
@@ -1355,6 +1362,15 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
         // fill gap with kashidas
         nKashidaCount = 0;
         Point aPos = pG1->maLinearPos;
+#ifdef USE_JAVA
+        bool bTrailingKashidas = ( i == mnGlyphCount - 1 );
+        if( bTrailingKashidas )
+        {
+            aPos.X() += pG2->mnOrigWidth;
+            pG2->mnNewWidth = pG2->mnOrigWidth;
+            pG2++;
+        }
+#endif	// USE_JAVA
         for(; nDelta > 0; nDelta -= nKashidaWidth, ++nKashidaCount )
         {
             *(pG2++) = GlyphItem( pG1->mnCharPos, nKashidaIndex, aPos,
@@ -1379,9 +1395,20 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
 
         // when kashidas were used move the original glyph
         // to the right and shrink it to it's original width
+#ifdef USE_JAVA
+        if( bTrailingKashidas )
+        {
+            pG2--;
+        }
+        else
+        {
+#endif	// USE_JAVA
         *pG2 = *pG1;
         pG2->maLinearPos.X() = aPos.X();
         pG2->mnNewWidth = pG2->mnOrigWidth;
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
     }
 
     // use the new glyph array
