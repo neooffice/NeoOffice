@@ -860,9 +860,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// Fix bug 2841 by ensuring that we process only full runs
 		nMinCharPos = rArgs.mnMinCharPos;
 		nEndCharPos = rArgs.mnEndCharPos;
-		while ( nMinCharPos > 0 && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos - 1 ] | GF_ISCHAR ) )
+		while ( nMinCharPos > 0 && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos ] | GF_ISCHAR ) )
 			nMinCharPos--;
-		while ( nEndCharPos < rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos ] | GF_ISCHAR ) )
+		while ( nEndCharPos <= rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos - 1 ] | GF_ISCHAR ) )
 			nEndCharPos++;
 		ImplLayoutArgs *pArgs = &rArgs;
 		bool bDeleteArgs = false;
