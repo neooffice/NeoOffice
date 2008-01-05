@@ -1058,23 +1058,15 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			}
 		}
 
-		if ( !mnFallbackLevel)
+		if ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
 		{
-			nMinFallbackCharPos = nMinCharPos;
-			nEndFallbackCharPos = nEndCharPos;
+			mpGraphics->maFallbackRuns.ResetPos();
+			while ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
+				mpGraphics->maFallbackRuns.NextRun();
 		}
-		else
-		{
-			if ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
-			{
-				mpGraphics->maFallbackRuns.ResetPos();
-				while ( !mpGraphics->maFallbackRuns.PosIsInRun( nMinCharPos ) )
-					mpGraphics->maFallbackRuns.NextRun();
-			}
 
-			if ( !mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
-				return false;
-		}
+		if ( !mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
+			return false;
 
 		// Turn off direction analysis
 		int nRunFlags = rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG;
@@ -1086,6 +1078,62 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont );
 		if ( !pLayoutData )
 			return false;
+
+		// Check for typographical ligatures at the requested run boundaries
+		// in fallback runs as we should not allow ligatures because it is 
+		// highly unlikely that the first layout had ligatures at these
+		// character positions
+		if ( mnFallbackLevel )
+		{
+			bool bRelayout = false;
+			if ( nMinCharPos > nMinFallbackCharPos )
+			{
+				bool bGlyphFound = false;
+				int nIndex = pLayoutData->mpCharsToChars[ nMinCharPos - nMinFallbackCharPos ];
+				for ( int i = pLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pLayoutData->mnGlyphCount && ( pLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				{
+					if ( pLayoutData->mpGlyphDataArray[ i ].glyphID < 0x0000ffff )
+					{
+						bGlyphFound = true;
+						break;
+					}
+				}
+
+				if ( !bGlyphFound )
+				{
+					nMinFallbackCharPos = nMinCharPos;
+					bRelayout = true;
+				}
+			}
+
+			if ( nEndCharPos < nEndFallbackCharPos )
+			{
+				bool bGlyphFound = false;
+				int nIndex = pLayoutData->mpCharsToChars[ nEndCharPos - nMinFallbackCharPos ];
+				for ( int i = pLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pLayoutData->mnGlyphCount && ( pLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				{
+					if ( pLayoutData->mpGlyphDataArray[ i ].glyphID < 0x0000ffff )
+					{
+						bGlyphFound = true;
+						break;
+					}
+				}
+
+				if ( !bGlyphFound )
+				{
+					nEndFallbackCharPos = nEndCharPos;
+					bRelayout = true;
+				}
+			}
+
+			if ( bRelayout )
+			{
+				pLayoutData->Release();
+				pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont );
+				if ( !pLayoutData )
+					return false;
+			}
+		}
 
 		// Create fallback runs
 		if ( pLayoutData->mpNeedFallback && pLayoutData->mpFallbackFont )
