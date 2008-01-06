@@ -46,7 +46,6 @@ BEGIN_C
 BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
 float NSPrintInfo_scale( id pNSPrintInfo );
 id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow );
-int NSPrintPanel_copies( id pDialog );
 BOOL NSPrintPanel_finished( id pDialog );
 BOOL NSPrintPanel_result( id pDialog );
 #ifdef __cplusplus

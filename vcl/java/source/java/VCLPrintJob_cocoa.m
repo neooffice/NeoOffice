@@ -39,13 +39,11 @@
 
 @interface ShowPrintDialog : NSObject
 {
-	int						mnCopies;
 	BOOL					mbFinished;
 	NSPrintInfo*			mpInfo;
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
-- (int)copies;
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo;
@@ -54,11 +52,6 @@
 @end
 
 @implementation ShowPrintDialog
-
-- (int)copies
-{
-	return mnCopies;
-}
 
 - (BOOL)finished
 {
@@ -69,7 +62,6 @@
 {
 	[super init];
 
-	mnCopies = 1;
 	mbFinished = YES;
 	mpInfo = pInfo;
 	mbResult = NO;
@@ -229,20 +221,6 @@ id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 	[pPool release];
 
 	return pRet;
-}
-
-int NSPrintPanel_copies( id pDialog )
-{
-	int nRet = 1;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pDialog )
-		nRet = [(ShowPrintDialog *)pDialog copies];
-
-	[pPool release];
-
-	return nRet;
 }
 
 BOOL NSPrintPanel_finished( id pDialog )
