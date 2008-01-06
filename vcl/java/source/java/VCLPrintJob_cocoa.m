@@ -80,7 +80,6 @@
 
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
-	NSPrintInfo_setInDialog( NO );
 	mbFinished = YES;
 	if ( nCode == NSOKButton )
 	{
@@ -149,7 +148,6 @@
 		}
 
 		mbFinished = NO;
-		NSPrintInfo_setInDialog( YES );
 		[mpInfo setPrinter:[NSPrintInfo defaultPrinter]];
 		[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
