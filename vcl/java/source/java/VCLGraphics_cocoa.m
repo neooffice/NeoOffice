@@ -62,47 +62,28 @@
 
 - (void)drawEPSInRect:(id)pObject
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
 	{
-		NSView *pPrintView = [pOperation view];
-		if ( pPrintView )
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
-			[pPrintView lockFocus];
-
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
+			NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
+			if ( pData )
 			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
-				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
-					CGContextRotateCTM( aContext, mfRotateAngle );
-					if ( mfClipWidth && mfClipHeight )
-						CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
-
-					NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
-					if ( pData )
-					{
-						NSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
-						if ( pImage )
-							[pImage drawInRect:NSMakeRect( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 )];
-					}
-
-					CGContextRestoreGState( aContext );
-				}
+				NSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
+				if ( pImage )
+					[pImage drawInRect:NSMakeRect( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 )];
 			}
 
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
+			CGContextRestoreGState( aContext );
 		}
 	}
 }
@@ -157,39 +138,20 @@
 
 - (void)drawImageInRect:(id)pObject
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
 	{
-		NSView *pPrintView = [pOperation view];
-		if ( pPrintView )
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
-
-			[pPrintView lockFocus];
-
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
-			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
-				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
-					CGContextRotateCTM( aContext, mfRotateAngle );
-					if ( mfClipWidth && mfClipHeight )
-						CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
-					CGContextDrawImage( aContext, CGRectMake( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 ), maImage );
-					CGContextRestoreGState( aContext );
-				}
-			}
-
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+			CGContextDrawImage( aContext, CGRectMake( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 ), maImage );
+			CGContextRestoreGState( aContext );
 		}
 	}
 }
@@ -251,67 +213,48 @@
 
 - (void)drawGlyphs:(id)pObject
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
 	{
-		NSView *pPrintView = [pOperation view];
-		if ( pPrintView )
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
-			[pPrintView lockFocus];
+			CGContextTranslateCTM( aContext, mfX * mfScaleX, mfY * mfScaleY );
+			CGContextRotateCTM( aContext, mfGlyphRotateAngle );
+			CGContextTranslateCTM( aContext, mfGlyphTranslateX * mfGlyphScaleX * mfScaleX, mfGlyphTranslateY * mfGlyphScaleY * mfScaleY );
+			CGContextScaleCTM( aContext, mfGlyphScaleX, mfGlyphScaleY * -1 );
 
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
+			CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+			CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+
+			// Fix bug 2674 by setting all translation, rotation,
+			// and scale in the CGContext and not in the text matrix
+			CGAffineTransform aTransform = CGAffineTransformMake( 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
+			CGContextSetTextMatrix( aContext, aTransform );
+
+			CGContextSetFont( aContext, maFont );
+			CGContextSetFontSize( aContext, (float)mnFontSize * mfScaleY );
+			CGSize *pAdjustedSizes = (CGSize *)malloc( mnCount * sizeof( CGSize ) );
+			if ( pAdjustedSizes )
 			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
+				size_t i;
+				for ( i = 0; i < mnCount; i++ )
 				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
-					CGContextRotateCTM( aContext, mfRotateAngle );
-					if ( mfClipWidth && mfClipHeight )
-						CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
-
-					CGContextTranslateCTM( aContext, mfX * mfScaleX, mfY * mfScaleY );
-					CGContextRotateCTM( aContext, mfGlyphRotateAngle );
-					CGContextTranslateCTM( aContext, mfGlyphTranslateX * mfGlyphScaleX * mfScaleX, mfGlyphTranslateY * mfGlyphScaleY * mfScaleY );
-					CGContextScaleCTM( aContext, mfGlyphScaleX, mfGlyphScaleY * -1 );
-
-					CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-					CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-
-					// Fix bug 2674 by setting all translation, rotation,
-					// and scale in the CGContext and not in the text matrix
-					CGAffineTransform aTransform = CGAffineTransformMake( 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
-					CGContextSetTextMatrix( aContext, aTransform );
-
-					CGContextSetFont( aContext, maFont );
-					CGContextSetFontSize( aContext, (float)mnFontSize * mfScaleY );
-					CGSize *pAdjustedSizes = (CGSize *)malloc( mnCount * sizeof( CGSize ) );
-					if ( pAdjustedSizes )
-					{
-						size_t i;
-						for ( i = 0; i < mnCount; i++ )
-						{
-							pAdjustedSizes[ i ].width = mpSizes[ i ].width * mfScaleX;
-							pAdjustedSizes[ i ].height = mpSizes[ i ].height * mfScaleY;
-						}
-						CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, pAdjustedSizes, mnCount );
-						free( pAdjustedSizes );
-					}
-
-					CGContextRestoreGState( aContext );
+					pAdjustedSizes[ i ].width = mpSizes[ i ].width * mfScaleX;
+					pAdjustedSizes[ i ].height = mpSizes[ i ].height * mfScaleY;
 				}
+				CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, pAdjustedSizes, mnCount );
+				free( pAdjustedSizes );
 			}
 
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
+			CGContextRestoreGState( aContext );
 		}
 	}
 }
@@ -373,46 +316,27 @@
 
 - (void)drawLine:(id)pObject
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
 	{
-		NSView *pPrintView = [pOperation view];
-		if ( pPrintView )
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
-			[pPrintView lockFocus];
+			CGContextBeginPath( aContext );
+			CGContextMoveToPoint( aContext, mfX1 * mfScaleX, mfY1 * mfScaleY );
+			CGContextAddLineToPoint( aContext, mfX2 * mfScaleX, mfY2 * mfScaleY );
+			CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+			CGContextSetLineWidth( aContext, mfScaleX );
+			CGContextStrokePath( aContext );
 
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
-			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
-				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
-					CGContextRotateCTM( aContext, mfRotateAngle );
-					if ( mfClipWidth && mfClipHeight )
-						CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
-
-					CGContextBeginPath( aContext );
-					CGContextMoveToPoint( aContext, mfX1 * mfScaleX, mfY1 * mfScaleY );
-					CGContextAddLineToPoint( aContext, mfX2 * mfScaleX, mfY2 * mfScaleY );
-					CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-					CGContextSetLineWidth( aContext, mfScaleX );
-					CGContextStrokePath( aContext );
-
-					CGContextRestoreGState( aContext );
-				}
-			}
-
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
+			CGContextRestoreGState( aContext );
 		}
 	}
 }
@@ -466,57 +390,38 @@
 
 - (void)drawPolygon:(id)pObject
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
 	{
-		NSView *pPrintView = [pOperation view];
-		if ( pPrintView )
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
-			[pPrintView lockFocus];
-
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
+			CGContextBeginPath( aContext );
+			CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
+			int i = 1;
+			for ( ; i < mnPoints; i++ )
+				CGContextAddLineToPoint( aContext, mpXPoints[ i ] * mfScaleX, mpYPoints[ i ] * mfScaleY );
+			CGContextClosePath( aContext );
+			if ( mbFill )
 			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
-				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
-					CGContextRotateCTM( aContext, mfRotateAngle );
-					if ( mfClipWidth && mfClipHeight )
-						CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
-
-					CGContextBeginPath( aContext );
-					CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
-					int i = 1;
-					for ( ; i < mnPoints; i++ )
-						CGContextAddLineToPoint( aContext, mpXPoints[ i ] * mfScaleX, mpYPoints[ i ] * mfScaleY );
-					CGContextClosePath( aContext );
-					if ( mbFill )
-					{
-						CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-						CGContextFillPath( aContext );
-					}
-					else
-					{
-						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-						CGContextSetLineWidth( aContext, mfScaleX );
-						CGContextStrokePath( aContext );
-					}
-
-					CGContextRestoreGState( aContext );
-				}
+				CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextFillPath( aContext );
+			}
+			else
+			{
+				CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextSetLineWidth( aContext, mfScaleX );
+				CGContextStrokePath( aContext );
 			}
 
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
+			CGContextRestoreGState( aContext );
 		}
 	}
 }
@@ -569,48 +474,29 @@
 
 - (void)drawPolyline:(id)pObject
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
 	{
-		NSView *pPrintView = [pOperation view];
-		if ( pPrintView )
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
-			[pPrintView lockFocus];
+			CGContextBeginPath( aContext );
+			CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
+			int i = 1;
+			for ( ; i < mnPoints; i++ )
+				CGContextAddLineToPoint( aContext, mpXPoints[ i ] * mfScaleX, mpYPoints[ i ] * mfScaleY );
+			CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+			CGContextSetLineWidth( aContext, mfScaleX );
+			CGContextStrokePath( aContext );
 
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
-			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
-				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
-					CGContextRotateCTM( aContext, mfRotateAngle );
-					if ( mfClipWidth && mfClipHeight )
-						CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
-
-					CGContextBeginPath( aContext );
-					CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
-					int i = 1;
-					for ( ; i < mnPoints; i++ )
-						CGContextAddLineToPoint( aContext, mpXPoints[ i ] * mfScaleX, mpYPoints[ i ] * mfScaleY );
-					CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-					CGContextSetLineWidth( aContext, mfScaleX );
-					CGContextStrokePath( aContext );
-
-					CGContextRestoreGState( aContext );
-				}
-			}
-
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
+			CGContextRestoreGState( aContext );
 		}
 	}
 }
@@ -664,50 +550,31 @@
 
 - (void)drawRect:(id)pObject
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
 	{
-		NSView *pPrintView = [pOperation view];
-		if ( pPrintView )
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
 		{
-			NSView *pFocusView = [NSView focusView];
-			if ( pFocusView )
-				[pFocusView unlockFocus];
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
-			[pPrintView lockFocus];
-
-			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-			if ( pContext )
+			if ( mbFill )
 			{
-				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-				if ( aContext )
-				{
-					// Fix bug 1218 by setting the clip here and not in Java
-					CGContextSaveGState( aContext );
-					CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
-					CGContextRotateCTM( aContext, mfRotateAngle );
-					if ( mfClipWidth && mfClipHeight )
-						CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
-
-					if ( mbFill )
-					{
-						CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-						CGContextFillRect( aContext, CGRectMake( mfX * mfScaleX, mfY * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY ) );
-					}
-					else
-					{
-						CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-						CGContextStrokeRect( aContext, CGRectMake( mfX * mfScaleX, mfY * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY ) );
-					}
-
-					CGContextRestoreGState( aContext );
-				}
+				CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextFillRect( aContext, CGRectMake( mfX * mfScaleX, mfY * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY ) );
+			}
+			else
+			{
+				CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextStrokeRect( aContext, CGRectMake( mfX * mfScaleX, mfY * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY ) );
 			}
 
-			[pPrintView unlockFocus];
-
-			if ( pFocusView )
-				[pFocusView lockFocus];
+			CGContextRestoreGState( aContext );
 		}
 	}
 }
