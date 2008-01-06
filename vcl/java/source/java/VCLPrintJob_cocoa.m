@@ -37,8 +37,6 @@
 #import "VCLPageFormat_cocoa.h"
 #import "VCLPrintJob_cocoa.h"
 
-extern NSString *VCLPrintDictionary;
-
 @interface ShowPrintDialog : NSObject
 {
 	int						mnCopies;
@@ -88,33 +86,15 @@ extern NSString *VCLPrintDictionary;
 	{
 		mbResult = YES;
 
+		// Create a new dictionary and insert as the VCLPrintInfoDictionaryKey
+		// key. Note that we only put the keys actually accessed in the
+		// VCLPrintOperation class in this new dictionary to avoid bug 2669.
 		NSMutableDictionary *pDictionary = [(NSPrintInfo *)mpInfo dictionary];
 		if ( pDictionary )
 		{
-			NSNumber *pNumber = [pDictionary objectForKey:NSPrintCopies];
-			if ( pNumber )
-			{
-				mnCopies = [pNumber intValue];
-				if ( mnCopies < 1 )
-					mnCopies = 1;
-			}
-
-			// Create a new dictionary and insert as the VCLPrintDictionary
-			// key. Note that we only put the keys actually accessed in the
-			// VCLPrintOperation class in this new dictionary to avoid bug 2669.
-			NSMutableDictionary *pDictClone = [NSMutableDictionary dictionaryWithCapacity:2];
-			if ( pDictClone )
-			{
-				NSNumber *pNumber = [pDictionary objectForKey:NSPrintMustCollate];
-				if ( pNumber )
-					[pDictClone setObject:pNumber forKey:NSPrintMustCollate];
-
-				pNumber = [pDictionary objectForKey:NSPrintCopies];
-				if ( pNumber )
-					[pDictClone setObject:pNumber forKey:NSPrintCopies];
-
-				[pDictionary setObject:pDictClone forKey:VCLPrintDictionary];
-			}
+			NSPrintInfo *pPrintInfo = [[NSPrintInfo alloc] initWithDictionary:pDictionary];
+			if ( pPrintInfo )
+				[pDictionary setObject:pPrintInfo forKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
 		}
 	}
 	else

@@ -36,9 +36,6 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 
-// Must not be static as this is used 
-NSString *VCLPrintDictionary = @"VCLPrintDictionary";
-
 static BOOL bInDialog = NO;
 
 @interface VCLPrintInfo : NSPrintInfo
@@ -92,27 +89,13 @@ static BOOL bInDialog = NO;
 		NSMutableDictionary *pDictionary = [(NSPrintInfo *)pPrintInfo dictionary];
 		if ( pDictionary )
 		{
-			NSDictionary *pDictClone = [pDictionary objectForKey:VCLPrintDictionary];
-			if ( pDictClone )
-			{
-				NSNumber *pNumber = [pDictClone objectForKey:NSPrintMustCollate];
-				if ( pNumber )
-					[pDictionary setObject:pNumber forKey:NSPrintMustCollate];
-
-				pNumber = [pDictClone objectForKey:NSPrintCopies];
-				if ( pNumber )
-					[pDictionary setObject:pNumber forKey:NSPrintCopies];
-
-				[pDictionary removeObjectForKey:VCLPrintDictionary];
-			}
+			NSPrintInfo *pRealPrintInfo = [pDictionary objectForKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
+			if ( pRealPrintInfo )
+				pPrintInfo = pRealPrintInfo;
 		}
 	}
 
-	NSPrintOperation *pOperation = [[VCLPrintOperation superclass] printOperationWithView:pView printInfo:pPrintInfo];
-
-	[NSPrintOperation setCurrentOperation:pOperation];
-
-	return pOperation;
+	return [[VCLPrintOperation superclass] printOperationWithView:pView printInfo:pPrintInfo];
 }
 
 @end
@@ -361,6 +344,11 @@ id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandsc
 	[pPool release];
 
 	return pRet;
+}
+
+CFStringRef VCLPrintInfo_getVCLPrintInfoDictionaryKey()
+{
+	return CFSTR( "VCLPrintInfoDictionaryKey" );
 }
 
 void VCLPrintInfo_installVCLPrintClasses()
