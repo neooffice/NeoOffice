@@ -39,6 +39,38 @@
 // Must not be static as this is used 
 NSString *VCLPrintDictionary = @"VCLPrintDictionary";
 
+static BOOL bInDialog = NO;
+
+@interface VCLPrintInfo : NSPrintInfo
++ (void)setInDialog:(BOOL)bIn;
+- (id)copyWithZone:(NSZone *)pZone;
+- (void)setPrinter:(NSPrinter *)pPrinter;
+@end
+
+@implementation VCLPrintInfo
+
++ (void)setInDialog:(BOOL)bIn
+{
+	bInDialog = bIn;
+}
+
+- (id)copyWithZone:(NSZone *)pZone
+{
+	// Don't actually make a copy as the JVM keeps making copies of the shared
+	// print info and we need all copies to stay in sync whenever the selected
+	// printer changes
+	return [self retain];
+}
+
+- (void)setPrinter:(NSPrinter *)pPrinter
+{
+	// Only allow the native Cocoa dialogs to change the printer
+	if ( bInDialog && pPrinter )
+		[super setPrinter:pPrinter];
+}
+
+@end
+
 @interface VCLPrintOperation : NSPrintOperation
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView;
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
@@ -93,6 +125,7 @@ NSString *VCLPrintDictionary = @"VCLPrintDictionary";
 
 - (void)installVCLPrintClasses:(id)pObject
 {
+	[VCLPrintInfo poseAsClass:[NSPrintInfo class]];
 	[VCLPrintOperation poseAsClass:[NSPrintOperation class]];
 }
 
@@ -135,6 +168,7 @@ NSString *VCLPrintDictionary = @"VCLPrintDictionary";
 
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
+	[VCLPrintInfo setInDialog:NO];
 	mbFinished = YES;
 	if ( nCode == NSOKButton )
 		mbResult = YES;
@@ -156,6 +190,7 @@ NSString *VCLPrintDictionary = @"VCLPrintDictionary";
 			[mpInfo setOrientation:mnOrientation ];
 
 		mbFinished = NO;
+		[VCLPrintInfo setInDialog:YES];
 		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
 	}
 }
@@ -195,7 +230,7 @@ BOOL NSPageLayout_result( id pDialog )
 
 id NSPrintInfo_create()
 {
-	NSPrintInfo *pRet = nil;
+	VCLPrintInfo *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -214,7 +249,7 @@ id NSPrintInfo_create()
 			// Fix bug 2573 by not cloning the dictionary as that will cause
 			// querying of the printer which, in turn, will cause hanging if
 			// the printer is an unavailable network printer
-			pRet = [[NSPrintInfo alloc] initWithDictionary:pDict];
+			pRet = [[VCLPrintInfo alloc] initWithDictionary:pDict];
 			if ( pRet )
 				pRet = [pRet retain];
 		}
@@ -257,6 +292,11 @@ void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *
 	[pPool release];
 }
 
+void NSPrintInfo_setInDialog( BOOL bIn )
+{
+	[VCLPrintInfo setInDialog:bIn];
+}
+
 BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 {
 	BOOL bRet = NO;
@@ -296,7 +336,7 @@ void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pNSPrintInfo )
-		[NSPrintInfo setSharedPrintInfo:(NSPrintInfo *)pNSPrintInfo];
+		[VCLPrintInfo setSharedPrintInfo:(NSPrintInfo *)pNSPrintInfo];
 
 	[pPool release];
 }
