@@ -52,7 +52,7 @@
 JavaSalObject::JavaSalObject( SalFrame *pParent )
 {
 	mpParent = (JavaSalFrame *)pParent;
-	mpChildWindow = VCLChildWindow_create();
+	mpChildView = VCLChildView_create();
 
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
@@ -62,25 +62,21 @@ JavaSalObject::JavaSalObject( SalFrame *pParent )
 
 JavaSalObject::~JavaSalObject()
 {
-	VCLChildWindow_release( mpChildWindow );
+	VCLChildView_release( mpChildView );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::ResetClipRegion()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::ResetClipRegion not implemented\n" );
-#endif
+	maClipRect = Rectangle();
+	VCLChildView_setClip( mpChildView, maClipRect.nLeft, maClipRect.nTop, maClipRect.GetWidth(), maClipRect.GetHeight() );
 }
 
 // -----------------------------------------------------------------------
 
 USHORT JavaSalObject::GetClipRegionType()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::GetClipRegionType not implemented\n" );
-#endif
 	return SAL_OBJECT_CLIP_INCLUDERECTS;
 }
 
@@ -88,34 +84,35 @@ USHORT JavaSalObject::GetClipRegionType()
 
 void JavaSalObject::BeginSetClipRegion( ULONG nRects )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::BeginSetClipRegion not implemented\n" );
-#endif
+	maClipRect = Rectangle();
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::UnionClipRegion not implemented\n" );
-#endif
+	Rectangle aRect( Point( nX, nY ), Size( nWidth, nHeight ) );
+	if ( !aRect.IsEmpty() )
+	{
+		if ( maClipRect.IsEmpty() )
+			maClipRect = aRect;
+		else
+			maClipRect = aRect.Union( maClipRect );
+	}
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::EndSetClipRegion()
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalObject::EndSetClipRegion not implemented\n" );
-#endif
+	VCLChildView_setClip( mpChildView, maClipRect.nLeft, maClipRect.nTop, maClipRect.GetWidth(), maClipRect.GetHeight() );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 {
-	VCLChildWindow_setBounds( mpChildWindow, nX, nY, nWidth, nHeight );
+	VCLChildView_setBounds( mpChildView, nX, nY, nWidth, nHeight );
 }
 
 // -----------------------------------------------------------------------
@@ -130,9 +127,17 @@ void JavaSalObject::Show( BOOL bVisible )
 
 	if ( mpParent )
 		mpParent->RemoveObject( this );
-	maSysData.aWindow = (long)VCLChildWindow_show( mpChildWindow, pParentNSWindow, bVisible );
-	if ( mpParent && maSysData.aWindow )
-		mpParent->AddObject( this );
+
+	if ( VCLChildView_show( mpChildView, pParentNSWindow, bVisible ) )
+	{
+		maSysData.aWindow = (long)mpChildView;
+		if ( mpParent )
+			mpParent->AddObject( this );
+	}
+	else
+	{
+		maSysData.aWindow = 0;
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -157,14 +162,14 @@ void JavaSalObject::GrabFocus()
 
 void JavaSalObject::SetBackground()
 {
-	VCLChildWindow_setBackgroundColor( mpChildWindow, 0x00000000 );
+	VCLChildView_setBackgroundColor( mpChildView, 0x00000000 );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalObject::SetBackground( SalColor nSalColor )
 {
-	VCLChildWindow_setBackgroundColor( mpChildWindow, nSalColor | 0xff000000 );
+	VCLChildView_setBackgroundColor( mpChildView, nSalColor | 0xff000000 );
 }
 
 // -----------------------------------------------------------------------

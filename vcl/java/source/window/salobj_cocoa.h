@@ -48,11 +48,12 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-id VCLChildWindow_create();
-void VCLChildWindow_release( id pChildNSWindow );
-void VCLChildWindow_setBackgroundColor( id pChildNSWindow, int nColor );
-void VCLChildWindow_setBounds( id pChildNSWindow, long nX, long nY, long nWidth, long nHeight );
-WindowRef VCLChildWindow_show( id pChildNSWindow, id pParentNSWindow, BOOL bShow );
+id VCLChildView_create();
+void VCLChildView_release( id pVCLChildView );
+void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor );
+void VCLChildView_setBounds( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
+void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
+BOOL VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow );
 #ifdef __cplusplus
 END_C
 #endif
