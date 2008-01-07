@@ -140,12 +140,18 @@
 		if ( !NSIsEmptyRect( aNewFrame ) && pSuperview )
 		{
 			// Set superview to intersection of new frame and clip
+			NSRect aParentFrame = [pSuperview frame];
 			NSRect aNewParentFrame = NSMakeRect( 0, 0, aNewFrame.size.width, aNewFrame.size.height );
 			if ( !NSIsEmptyRect( maClipRect ) )
 				aNewParentFrame = NSIntersectionRect( aNewParentFrame, maClipRect );
 			aNewParentFrame.origin.x += aNewFrame.origin.x;
 			aNewParentFrame.origin.y += aNewFrame.origin.y;
 			[pSuperview setFrame:aNewParentFrame];
+
+			// Force a repaint of the superview's superview in the old frame
+			NSView *pSuperSuperview = [pSuperview superview];
+			if ( pSuperSuperview )
+				[pSuperSuperview setNeedsDisplayInRect:aParentFrame];
 
 			// Move child view's origin to account for origin of superview
 			if ( !NSIsEmptyRect( maClipRect ) )
