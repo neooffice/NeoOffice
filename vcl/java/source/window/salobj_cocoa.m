@@ -81,7 +81,8 @@
 		if ( pParentWindow && [pParentWindow isVisible] )
 		{
 			NSRect aParentFrame = [pParentWindow contentRectForFrameRect:[pParentWindow frame]];
-			[self setFrame:NSMakeRect( aParentFrame.origin.x + maFlippedBounds.origin.x, aParentFrame.origin.y + aParentFrame.size.height - maFlippedBounds.origin.y - maFlippedBounds.size.height, maFlippedBounds.size.width, maFlippedBounds.size.height ) display:NO];
+			NSRect aBounds = NSIntersectionRect( aParentFrame, NSMakeRect( aParentFrame.origin.x + maFlippedBounds.origin.x, aParentFrame.origin.y + aParentFrame.size.height - maFlippedBounds.origin.y - maFlippedBounds.size.height, maFlippedBounds.size.width, maFlippedBounds.size.height ) );
+			[self setFrame:aBounds display:NO];
 		}
 	}
 }
@@ -130,7 +131,8 @@
 		{
 			NSRect aFlippedBounds = [mpWindow flippedBounds];
 			NSRect aParentFrame = [mpParentWindow contentRectForFrameRect:[mpParentWindow frame]];
-			[mpWindow setFrame:NSMakeRect( aParentFrame.origin.x + aFlippedBounds.origin.x, aParentFrame.origin.y + aParentFrame.size.height - aFlippedBounds.origin.y - aFlippedBounds.size.height, aFlippedBounds.size.width, aFlippedBounds.size.height ) display:NO];
+			NSRect aBounds = NSIntersectionRect( aParentFrame, NSMakeRect( aParentFrame.origin.x + aFlippedBounds.origin.x, aParentFrame.origin.y + aParentFrame.size.height - aFlippedBounds.origin.y - aFlippedBounds.size.height, aFlippedBounds.size.width, aFlippedBounds.size.height ) );
+			[mpWindow setFrame:aBounds display:NO];
 			[mpParentWindow addChildWindow:mpWindow ordered:NSWindowAbove];
 			[mpWindow orderFront:self];
 			maWindowRef = (WindowRef)[mpWindow windowRef];
