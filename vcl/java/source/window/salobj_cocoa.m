@@ -38,6 +38,7 @@
 
 @interface VCLChildSuperview : NSView
 - (BOOL)isFlipped;
+- (BOOL)isOpaque;
 @end
 
 @implementation VCLChildSuperview
@@ -47,9 +48,14 @@
 	return YES;
 }
 
+- (BOOL)isOpaque
+{
+	return YES;
+}
+
 @end
 
-@interface VCLChildView : NSView
+@interface VCLChildView : VCLChildSuperview
 {
 	NSColor*				mpBackgroundColor;
 	NSRect					maClipRect;
@@ -57,7 +63,6 @@
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (id)initWithFrame:(NSRect)aFrame;
-- (BOOL)isFlipped;
 - (void)release:(id)pObject;
 - (void)setBackgroundColor:(NSColor *)pColor;
 - (void)setBounds:(NSValue *)pValue;
@@ -84,10 +89,10 @@
 	[super drawRect:aRect];
 
 	if ( mpBackgroundColor )
-	{
 		[mpBackgroundColor set];
-		[NSBezierPath fillRect:aRect];
-	}
+	else
+		[[NSColor whiteColor] set];
+	[NSBezierPath fillRect:aRect];
 }
 
 - (id)initWithFrame:(NSRect)aFrame
@@ -104,11 +109,6 @@
 		[pSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
 
 	return self;
-}
-
-- (BOOL)isFlipped
-{
-	return YES;
 }
 
 - (void)release:(id)pObject
@@ -148,20 +148,27 @@
 			aNewParentFrame.origin.y += aNewFrame.origin.y;
 			[pSuperview setFrame:aNewParentFrame];
 
-			// Force a repaint of the superview's superview in the old frame
-			NSView *pSuperSuperview = [pSuperview superview];
-			if ( pSuperSuperview )
-				[pSuperSuperview displayRect:aParentFrame];
-
 			// Move child view's origin to account for origin of superview
 			if ( !NSIsEmptyRect( maClipRect ) )
 			{
-				aNewFrame.origin.x -= maClipRect.origin.x;
-				aNewFrame.origin.y -= maClipRect.origin.y;
+				aNewFrame.origin.x = maClipRect.origin.x * -1;
+				aNewFrame.origin.y = maClipRect.origin.y * -1;
 			}
-		}
+			else
+			{
+				aNewFrame.origin.x = 0;
+				aNewFrame.origin.y = 0;
+			}
 
-		[self setFrame:aNewFrame];
+			[self setFrame:aNewFrame];
+			[self setNeedsDisplay:YES];
+
+			// Force a repaint of the superview's superview in the old and new
+			// frames
+			NSView *pSuperSuperview = [pSuperview superview];
+			if ( pSuperSuperview )
+				[pSuperSuperview setNeedsDisplayInRect:aParentFrame];
+		}
 	}
 }
 
@@ -169,18 +176,25 @@
 {
 	if ( pValue )
 	{
-		NSRect aFrame = [self frame];
-		if ( !NSIsEmptyRect( maClipRect ) )
+		NSView *pSuperview = [self superview];
+		if ( pSuperview )
 		{
-			aFrame.origin.x += maClipRect.origin.x;
-			aFrame.origin.y += maClipRect.origin.y;
+			NSRect aFrame = [self frame];
+			NSRect aParentFrame = [pSuperview frame];
+			if ( !NSIsEmptyRect( maClipRect ) )
+			{
+				aParentFrame.origin.x -= maClipRect.origin.x;
+				aParentFrame.origin.y -= maClipRect.origin.y;
+				aParentFrame.size.width = aFrame.size.width;
+				aParentFrame.size.height = aFrame.size.height;
+			}
+
+			maClipRect = [pValue rectValue];
+			if ( NSIsEmptyRect( maClipRect ) )
+				maClipRect = NSZeroRect;
+
+			[self setBounds:[NSValue valueWithRect:aParentFrame]];
 		}
-
-		maClipRect = [pValue rectValue];
-		if ( NSIsEmptyRect( maClipRect ) )
-			maClipRect = NSZeroRect;
-
-		[self setBounds:[NSValue valueWithRect:aFrame]];
 	}
 }
 
@@ -315,7 +329,8 @@ void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor )
 
 	if ( pVCLChildView )
 	{
-		NSColor *pColor = [NSColor colorWithDeviceRed:( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( (float)( nColor & 0x000000ff ) / (float)0xff ) alpha:( (float)( ( nColor & 0xff000000 ) >> 24 ) / (float)0xff )];
+		// Always force the background to be opaque
+		NSColor *pColor = [NSColor colorWithDeviceRed:( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff ) green:( (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff ) blue:( (float)( nColor & 0x000000ff ) / (float)0xff ) alpha:1.0f];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(VCLChildView *)pVCLChildView performSelectorOnMainThread:@selector(setBackgroundColor:) withObject:pColor waitUntilDone:NO modes:pModes];
 	}
