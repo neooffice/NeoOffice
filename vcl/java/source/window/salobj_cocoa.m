@@ -151,7 +151,7 @@
 			// Force a repaint of the superview's superview in the old frame
 			NSView *pSuperSuperview = [pSuperview superview];
 			if ( pSuperSuperview )
-				[pSuperSuperview setNeedsDisplayInRect:aParentFrame];
+				[pSuperSuperview displayRect:aParentFrame];
 
 			// Move child view's origin to account for origin of superview
 			if ( !NSIsEmptyRect( maClipRect ) )
