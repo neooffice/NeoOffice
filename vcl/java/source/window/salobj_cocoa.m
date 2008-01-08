@@ -36,6 +36,8 @@
 #import <Cocoa/Cocoa.h>
 #import "salobj_cocoa.h"
 
+#define DISABLE_VCLCHILDVIEWS
+
 @interface VCLChildSuperview : NSView
 - (BOOL)isFlipped;
 - (BOOL)isOpaque;
@@ -280,7 +282,9 @@
 
 				if ( pContentView )
 				{
+#ifndef DISABLE_VCLCHILDVIEWS
 					[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
+#endif	// DISABLE_VCLCHILDVIEWS
 					mbResult = YES;
 				}
 			}
