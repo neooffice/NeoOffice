@@ -51,8 +51,8 @@
 
 JavaSalObject::JavaSalObject( SalFrame *pParent )
 {
-	mpParent = (JavaSalFrame *)pParent;
 	mpChildView = VCLChildView_create();
+	mpParent = (JavaSalFrame *)pParent;
 
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
@@ -62,6 +62,9 @@ JavaSalObject::JavaSalObject( SalFrame *pParent )
 
 JavaSalObject::~JavaSalObject()
 {
+	// Fix bug 2854 by calling the Show() method to remove to remove this
+	// object from its parent frame
+	Show( FALSE );
 	VCLChildView_release( mpChildView );
 }
 

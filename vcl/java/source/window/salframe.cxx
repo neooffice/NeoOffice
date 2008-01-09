@@ -234,7 +234,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pWindow )
 			Dialog::EndAllDialogs( pWindow );
 
-		// Close any attached child windows
+		// Close any attached objects
 		::std::list< JavaSalObject* > aObjects( maObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
 			(*it)->Show( FALSE );
