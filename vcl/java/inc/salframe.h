@@ -87,6 +87,7 @@ public:
 	BOOL					mbInSetPosSize;
 	BOOL					mbInShow;
 	::std::list< JavaSalObject* >	maObjects;
+	XubString				maTitle;
 
 							JavaSalFrame();
 	virtual					~JavaSalFrame();

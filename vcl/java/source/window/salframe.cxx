@@ -214,6 +214,7 @@ BOOL JavaSalFrame::PostEvent( void *pData )
 
 void JavaSalFrame::SetTitle( const XubString& rTitle )
 {
+	maTitle = rTitle;
 	mpVCLFrame->setTitle( rTitle );
 }
 
@@ -912,7 +913,11 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		delete mpVCLFrame;
 	}
 	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
-	mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	if ( mpVCLFrame )
+	{
+		mpVCLFrame->setTitle( maTitle );
+		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+	}
 	maSysData.aWindow = 0;
 	if ( mpParent )
 		SetPosSize( maGeometry.nX - mpParent->maGeometry.nX - mpParent->maGeometry.nLeftDecoration, maGeometry.nY - mpParent->maGeometry.nY - mpParent->maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
