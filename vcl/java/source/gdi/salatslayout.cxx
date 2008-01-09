@@ -112,9 +112,9 @@ struct ImplATSLayoutData {
 	bool				mbValid;
 
 	static void					ClearLayoutDataCache();
-	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
 
-						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
 						~ImplATSLayoutData();
 
 	void				Destroy();
@@ -176,7 +176,7 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont )
+ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout )
 {
 	ImplATSLayoutData *pLayoutData = NULL;
 
@@ -206,7 +206,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 		// Copy the string so that we can cache it
 		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 		memcpy( pLayoutHash->mpStr, pStr + nMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
-		pLayoutData = new ImplATSLayoutData( pLayoutHash, nFallbackLevel, pVCLFont );
+		pLayoutData = new ImplATSLayoutData( pLayoutHash, nFallbackLevel, pVCLFont, pCurrentLayout );
 
 		if ( !pLayoutData )
 			return NULL;
@@ -264,7 +264,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont ) :
+ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout ) :
 	mnRefCount( 1 ),
 	mpHash( pLayoutHash ),
 	mpVCLFont( NULL ),
@@ -502,6 +502,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = fSize / fAdjustedSize;
+	int nLastNonSpacingGlyph = -1;
 	for ( i = 0; i < mnGlyphCount; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
@@ -513,6 +514,26 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		else
 		{
 			mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY );
+		}
+
+		// Make sure that ligature glyphs get all of the width and that their
+		// attached spacing glyphs have zero width so that the OOo code will
+		// force the cursor to the end of the ligature instead of the beginning
+		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+		{
+			if ( nLastNonSpacingGlyph >= 0 && nLastNonSpacingGlyph != nIndex )
+			{
+				mpCharAdvances[ nLastNonSpacingGlyph ] += mpCharAdvances[ nIndex ];
+				mpCharAdvances[ nIndex ] = 0;
+			}
+		}
+		else if ( pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+		{
+			nLastNonSpacingGlyph = -1;
+		}
+		else
+		{
+			nLastNonSpacingGlyph = nIndex;
 		}
 	}
 
@@ -996,7 +1017,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					aArabicTest[ 0 ] = 0x0634;
 					aArabicTest[ 1 ] = 0x0634;
 					aArabicTest[ 2 ] = 0x0640;
-					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont );
+					mpKashidaLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont, this );
 				}
 
 				if ( mpKashidaLayoutData )
@@ -1084,7 +1105,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		else
 			nRunFlags &= ~SAL_LAYOUT_BIDI_RTL;
 
-		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont );
+		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont, this );
 		if ( !pLayoutData )
 			return false;
 
@@ -1092,56 +1113,44 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// in fallback runs as we should not allow ligatures because it is 
 		// highly unlikely that the first layout had ligatures at these
 		// character positions
+		bool bRelayout = false;
 		if ( mnFallbackLevel )
 		{
-			bool bRelayout = false;
 			if ( nMinCharPos > nMinFallbackCharPos )
 			{
-				bool bGlyphFound = false;
-				int nIndex = pLayoutData->mpCharsToChars[ nMinCharPos - nMinFallbackCharPos ];
-				for ( int i = pLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pLayoutData->mnGlyphCount && ( pLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				int nIndex = pLayoutData->mpCharsToChars[ nMinCharPos - nMinFallbackCharPos - ( bRunRTL ? 1 : 0 ) ];
+				if ( nIndex >= 0 && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
-					if ( pLayoutData->mpGlyphDataArray[ i ].glyphID < 0x0000ffff )
+					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
+					if ( i >= 0 && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
 					{
-						bGlyphFound = true;
-						break;
+						nMinFallbackCharPos = nMinCharPos;
+						bRelayout = true;
 					}
-				}
-
-				if ( !bGlyphFound )
-				{
-					nMinFallbackCharPos = nMinCharPos;
-					bRelayout = true;
 				}
 			}
 
 			if ( nEndCharPos < nEndFallbackCharPos )
 			{
-				bool bGlyphFound = false;
-				int nIndex = pLayoutData->mpCharsToChars[ nEndCharPos - nMinFallbackCharPos ];
-				for ( int i = pLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pLayoutData->mnGlyphCount && ( pLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				int nIndex = pLayoutData->mpCharsToChars[ nEndCharPos - nMinFallbackCharPos - ( bRunRTL ? 1 : 0 ) ];
+				if ( nIndex >= 0 && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
-					if ( pLayoutData->mpGlyphDataArray[ i ].glyphID < 0x0000ffff )
+					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
+					if ( i >= 0 && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
 					{
-						bGlyphFound = true;
-						break;
+						nEndFallbackCharPos = nEndCharPos;
+						bRelayout = true;
 					}
 				}
-
-				if ( !bGlyphFound )
-				{
-					nEndFallbackCharPos = nEndCharPos;
-					bRelayout = true;
-				}
 			}
+		}
 
-			if ( bRelayout )
-			{
-				pLayoutData->Release();
-				pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont );
-				if ( !pLayoutData )
-					return false;
-			}
+		if ( bRelayout )
+		{
+			pLayoutData->Release();
+			pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont, this );
+			if ( !pLayoutData )
+				return false;
 		}
 
 		// Create fallback runs
@@ -1183,7 +1192,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							sal_Unicode aMirrored[ 1 ];
 							aMirrored[ 0 ] = nMirroredChar;
-							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont );
+							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont, this );
 							if ( pCurrentLayoutData )
 							{
 								if ( pCurrentLayoutData->mpNeedFallback && pCurrentLayoutData->mpFallbackFont )
