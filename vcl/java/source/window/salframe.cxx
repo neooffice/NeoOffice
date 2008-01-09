@@ -132,6 +132,19 @@ JavaSalFrame::~JavaSalFrame()
 	StartPresentation( FALSE );
 	CaptureMouse( FALSE );
 
+	// Detach child objects
+	::std::list< JavaSalObject* > aObjects( maObjects );
+	for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
+		(*it)->Destroy();
+
+	// Detach child windows
+	::std::list< JavaSalFrame* > aChildren( maChildren );
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
+		(*it)->SetParent( NULL );
+
+	// Detach from parent
+	SetParent( NULL );
+
 	if ( mpVCLFrame )
 	{
 		mpVCLFrame->dispose();
@@ -268,7 +281,8 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		UpdateMenusForFrame( this, NULL );
 
 		// Reattach floating children
-		for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )
+		::std::list< JavaSalFrame* > aChildren( maChildren );
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
 		{
 			if ( (*it)->mbVisible )
 				(*it)->SetParent( this );
@@ -884,14 +898,10 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 	mpParent = (JavaSalFrame *)pNewParent;
 
+	::std::list< JavaSalObject* > aReshowObjects( maObjects );
 	bool bReshow = mbVisible;
-	::std::list< JavaSalObject* > aReshowObjects;
 	if ( bReshow )
-	{
-		for ( ::std::list< JavaSalObject* >::const_iterator it = maObjects.begin(); it != maObjects.end(); ++it )
-			aReshowObjects.push_back( *it );
 		Show( FALSE );
-	}
 
 	// Fix bug 1310 by creating a new native window with the new parent
 	if ( mpGraphics->mpVCLGraphics )
@@ -923,11 +933,9 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	}
 
 	// Reattach floating children
-	for ( ::std::list< JavaSalFrame* >::const_iterator it = maChildren.begin(); it != maChildren.end(); ++it )
-	{
-		if ( (*it)->IsFloatingFrame() )
-			(*it)->SetParent( this );
-	}
+	::std::list< JavaSalFrame* >aChildren( maChildren );
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
+		(*it)->SetParent( this );
 }
 
 // -----------------------------------------------------------------------

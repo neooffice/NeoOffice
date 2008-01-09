@@ -67,6 +67,8 @@ public:
 							JavaSalObject( SalFrame *pParent );
 	virtual					~JavaSalObject();
 
+	void					Destroy();
+
 	virtual void			ResetClipRegion();
 	virtual USHORT			GetClipRegionType();
 	virtual void			BeginSetClipRegion( ULONG nRects );

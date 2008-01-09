@@ -728,11 +728,6 @@ void JavaSalInstance::DestroyFrame( SalFrame* pFrame )
 	{
 		JavaSalFrame *pJavaFrame = (JavaSalFrame *)pFrame;
 
-		pJavaFrame->SetParent( NULL );
-
-		if ( pJavaFrame->mbVisible )
-			pJavaFrame->Show( FALSE );
-
 		SalData *pSalData = GetSalData();
 		pSalData->maFrameList.remove( pJavaFrame );
 

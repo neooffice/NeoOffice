@@ -62,10 +62,21 @@ JavaSalObject::JavaSalObject( SalFrame *pParent )
 
 JavaSalObject::~JavaSalObject()
 {
-	// Fix bug 2854 by calling the Show() method to remove to remove this
-	// object from its parent frame
-	Show( FALSE );
+	Destroy();
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalObject::Destroy()
+{
+	if ( mpParent )
+	{
+		mpParent->RemoveObject( this );
+		mpParent = NULL;
+	}
+
 	VCLChildView_release( mpChildView );
+	mpChildView = NULL;
 }
 
 // -----------------------------------------------------------------------
