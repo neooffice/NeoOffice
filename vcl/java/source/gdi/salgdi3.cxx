@@ -565,24 +565,21 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	{
 		ATSFontMetrics aFontMetrics;
 		ATSFontRef aFont = FMGetATSFontRefFromFont( pData->mnATSUFontID );
-		if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
-		{
-			// Mac OS X seems to understate the actual descent and leading for
-			// some fonts. Fix bugs 2827 and 2847 by setting the descent to
-			// a minimum of 1/12 of the ascent. Note that we use the font width
-			// as it is already set to the font size.
-			pMetric->mnAscent = (long)( ( fabs( aFontMetrics.ascent ) * pMetric->mnWidth ) + 0.5 );
-			pMetric->mnDescent = (long)( ( fabs( aFontMetrics.descent ) * pMetric->mnWidth ) + 0.5 );
-			pMetric->mnIntLeading = (long)( ( fabs( aFontMetrics.leading ) * pMetric->mnWidth ) + 0.5 );
-			long nMinDescent = (long)( ( fabs( aFontMetrics.ascent / 12 ) * pMetric->mnWidth ) + 0.5 );
-			if ( pMetric->mnDescent < nMinDescent )
-				pMetric->mnIntLeading += nMinDescent - pMetric->mnDescent;
+		if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr ) {
+			// Mac OS X seems to overstate the leading for some fonts (usually
+			// CJK fonts like Hiragino) so fix fix bugs 2827 and 2847 by
+			// adding combining the leading with descent
+			pMetric->mnAscent = (long)( ( aFontMetrics.ascent * pMetric->mnWidth ) + 0.5 );
+			if ( pMetric->mnAscent < 1 )
+				pMetric->mnAscent = 1;
+			pMetric->mnDescent = (long)( ( ( aFontMetrics.leading - aFontMetrics.descent ) * pMetric->mnWidth ) + 0.5 );
+			if ( pMetric->mnDescent < 0 )
+				pMetric->mnDescent = 0;
 		}
 		else
 		{
 			pMetric->mnAscent = 0;
 			pMetric->mnDescent = 0;
-			pMetric->mnIntLeading = 0;
 		}
 
 		pMetric->mbDevice = pData->mbDevice;
@@ -599,7 +596,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	{
 		pMetric->mnAscent = 0;
 		pMetric->mnDescent = 0;
-		pMetric->mnIntLeading = 0;
 		pMetric->mnSlant = 0;
 
 		pMetric->mbDevice = false;
@@ -613,8 +609,9 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->mbSymbolFlag = false;
 	}
 
-	pMetric->mbKernableFont = false;
+	pMetric->mnIntLeading = 0;
 	pMetric->mnExtLeading = 0;
+	pMetric->mbKernableFont = false;
 	pMetric->mnSlant = 0;
 }
 
