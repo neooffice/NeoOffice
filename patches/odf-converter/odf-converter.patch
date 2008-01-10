@@ -74,7 +74,7 @@ Index: source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl
        <!-- caution with 'Enters' because they can result with additional space in output text -->
 -      <t xml:space="preserve"><xsl:choose>
 +      <xsl:choose>
-         <xsl:when test="not(contains($value, '_x'))"><t xml:space="preserve"><xsl:value-of select="$value"/></t></xsl:when>
+         <xsl:when test="not(contains($value, '_x'))"><xsl:value-of select="$value"/></xsl:when>
          <xsl:otherwise>
            <xsl:call-template name="HexaDecimalValue">
              <xsl:with-param name="value">
