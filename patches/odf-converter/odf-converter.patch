@@ -119,3 +119,38 @@ Index: source/Spreadsheet/Converter/resources/oox2odf/insert_text.xsl
  
        </xsl:when>
  
+--- source/Word/Converter/OoxChangeTrackingPostProcessor.cs	2008-01-10 18:34:37.000000000 -0800
++++ source/Word/Converter/OoxChangeTrackingPostProcessor.cs	2008-01-10 18:48:40.000000000 -0800
+@@ -757,18 +757,22 @@
+             Stack tmp = new Stack();
+             Element element = (Element)this.currentNode.Peek();
+             string id = element.GetAttributeValue("id", PCT_NAMESPACE);
+-            Element region = (Element)this.currentInsertionRegion.Pop();
+-            while (!id.Equals(region.GetAttributeValue("id", PCT_NAMESPACE)))
+-            {
+-                tmp.Push(region);
+-                region = (Element)this.currentInsertionRegion.Pop();
+-            }
+-            while (tmp.Count > 0)
++            // Fix bug 1863275 by detecting if the stack is empty
++            if (this.currentInsertionRegion.Count > 0)
+             {
+-                this.currentInsertionRegion.Push(tmp.Pop());
++                Element region = (Element)this.currentInsertionRegion.Pop();
++                while (!id.Equals(region.GetAttributeValue("id", PCT_NAMESPACE)))
++                {
++                    tmp.Push(region);
++                    region = (Element)this.currentInsertionRegion.Pop();
++                }
++                while (tmp.Count > 0)
++                {
++                    this.currentInsertionRegion.Push(tmp.Pop());
++                }
++                // save the last region in case we need it before closing a paragraph
++                this.lastInsertionRegion = region;
+             }
+-            // save the last region in case we need it before closing a paragraph
+-            this.lastInsertionRegion = region;
+         }
+ 
+ 
