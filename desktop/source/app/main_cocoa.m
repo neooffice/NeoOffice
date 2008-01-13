@@ -159,8 +159,12 @@ void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 	{
 		// Make sure that X11.app is running
 		NSTask *pTask = [[NSTask alloc] init];
+
+		// Add to autorelease pool as invoking alloc disables autorelease
+		[pTask autorelease];
+
 		NSMutableArray *pArgs = [NSMutableArray array];
-		if ( pTask && pArgs )
+		if ( pArgs )
 		{
 			[pArgs addObject:@"-a"];
 			[pArgs addObject:@"X11"];
@@ -173,6 +177,8 @@ void NSApplication_run( CFRunLoopTimerRef aTimer, void *pInfo )
 		NSApplication *pApp = [NSApplication sharedApplication];
 		if ( pApp )
 		{
+			// Do not retain as invoking alloc disables autorelease and do
+			// not release as NSApplication does not retain the delegate
 			[pApp setDelegate:[[DesktopApplicationDelegate alloc] init]];
 
 			// Install event handler for open document events
