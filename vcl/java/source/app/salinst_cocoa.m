@@ -40,12 +40,20 @@
 {
 	NSWindow*			mpModalWindow;
 }
++ (id)create;
 - (void)getModalWindow:(id)pObject;
 - (id)init;
 - (NSWindow *)modalWindow;
 @end
 
 @implementation GetModalWindow
+
++ (id)create
+{
+	GetModalWindow *pRet = [[GetModalWindow alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (void)getModalWindow:(id)pObject
 {
@@ -91,7 +99,7 @@ id NSApplication_getModalWindow()
 
 	NSWindow *pModalWindow = nil;
 
-	GetModalWindow *pGetModalWindow = [[GetModalWindow alloc] init];
+	GetModalWindow *pGetModalWindow = [GetModalWindow create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pGetModalWindow performSelectorOnMainThread:@selector(getModalWindow:) withObject:pGetModalWindow waitUntilDone:YES modes:pModes];
 	pModalWindow = [pGetModalWindow modalWindow];

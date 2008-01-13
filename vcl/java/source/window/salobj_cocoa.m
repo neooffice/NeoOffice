@@ -77,7 +77,11 @@
 {
 	NSView *pSuperview = [self superview];
 	if ( pSuperview )
+	{
 		[pSuperview removeFromSuperview];
+		[pSuperview release];
+	}
+
 	[self removeFromSuperview];
 
 	if ( mpBackgroundColor )
@@ -108,7 +112,12 @@
 	// Create a superview that we use to control clipping
 	VCLChildSuperview *pSuperview = [[VCLChildSuperview alloc] initWithFrame:aFrame];
 	if ( pSuperview )
+	{
+		// Add to autorelease pool as invoking alloc disables autorelease
+		[pSuperview autorelease];
+
 		[pSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
+	}
 
 	return self;
 }
@@ -206,13 +215,21 @@
 {
 	NSView*					mpView;
 }
++ (id)childWithView:(VCLChildView *)pView;
 - (id)initWithView:(VCLChildView *)pView;
 - (void)initialize:(id)pObject;
 @end
 
 @implementation InitVCLChildView
 
-- (id)initWithView:(VCLChildView *)pView;
++ (id)childWithView:(VCLChildView *)pView
+{
+	InitVCLChildView *pRet = [[InitVCLChildView alloc] initWithView:pView];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithView:(VCLChildView *)pView
 {
 	[super init];
 
@@ -234,14 +251,22 @@
 	BOOL					mbResult;
 	VCLChildView*			mpView;
 }
-- (id)initWithWindow:(VCLChildView *)pWindow parentWindow:(NSWindow *)pParentWindow;
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow;
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow;
 - (BOOL)result;
 - (void)show:(id)pObject;
 @end
 
 @implementation ShowVCLChildView
 
-- (id)initWithWindow:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow
+{
+	ShowVCLChildView *pRet = [[ShowVCLChildView alloc] initWithView:pView parentWindow:pParentWindow];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow
 {
 	[super init];
 
@@ -300,13 +325,13 @@ id VCLChildView_create()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+	// Do not retain as invoking alloc disables autorelease
 	pRet = [VCLChildView alloc];
 	if ( pRet )
 	{
-		InitVCLChildView *pInitVCLChildView = [[InitVCLChildView alloc] initWithView:pRet];
+		InitVCLChildView *pInitVCLChildView = [InitVCLChildView childWithView:pRet];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pInitVCLChildView performSelectorOnMainThread:@selector(initialize:) withObject:pInitVCLChildView waitUntilDone:YES modes:pModes];
-		[pRet retain];
 	}
 
 	[pPool release];
@@ -386,7 +411,7 @@ BOOL VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow )
 
 	if ( pVCLChildView )
 	{
-		ShowVCLChildView *pShowVCLChildView = [[ShowVCLChildView alloc] initWithWindow:pVCLChildView parentWindow:pParentNSWindow];
+		ShowVCLChildView *pShowVCLChildView = [ShowVCLChildView childWithView:pVCLChildView parentWindow:pParentNSWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pShowVCLChildView performSelectorOnMainThread:@selector(show:) withObject:pShowVCLChildView waitUntilDone:YES modes:pModes];
 		bRet = [pShowVCLChildView result];

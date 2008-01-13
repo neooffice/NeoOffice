@@ -45,12 +45,20 @@ static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 {
 	BOOL					mbActive;
 }
++ (id)create;
 - (id)init;
 - (BOOL)isActive;
 - (void)isApplicationActive:(id)pObject;
 @end
 
 @implementation IsApplicationActive
+
++ (id)create
+{
+	IsApplicationActive *pRet = [[IsApplicationActive alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (id)init
 {
@@ -162,7 +170,6 @@ const static NSString *pCancelInputMethodText = @" ";
 - (void)insertText:(NSString *)pString;
 - (void)interpretKeyEvents:(NSArray *)pEvents view:(NSView *)pView;
 - (NSString *)lastText;
-- (unsigned)retainCount;
 @end
 
 @implementation VCLResponder
@@ -220,11 +227,6 @@ const static NSString *pCancelInputMethodText = @" ";
 - (NSString *)lastText
 {
 	return mpLastText;
-}
-
-- (unsigned)retainCount
-{
-	return UINT_MAX;
 }
 
 @end
@@ -440,11 +442,19 @@ static VCLResponder *pSharedResponder = nil;
 	BOOL					mbUseKeyEntryFix;
 	BOOL					mbUsePartialKeyEntryFix;
 }
++ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
 - (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
+
++ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
+{
+	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
 {
@@ -458,6 +468,7 @@ static VCLResponder *pSharedResponder = nil;
 
 - (void)installVCLEventQueueClasses:(id)pObject
 {
+	// Do not retain as invoking alloc disables autorelease
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
 	// Initialize statics
@@ -465,9 +476,8 @@ static VCLResponder *pSharedResponder = nil;
 	bUsePartialKeyEntryFix = mbUsePartialKeyEntryFix;
 	if ( bUseKeyEntryFix || bUsePartialKeyEntryFix )
 	{
+		// Do not retain as invoking alloc disables autorelease
 		pSharedResponder = [[VCLResponder alloc] init];
-		if ( pSharedResponder )
-			[pSharedResponder retain];
 	}
 
 	[VCLFontManager poseAsClass:[NSFontManager class]];
@@ -483,7 +493,7 @@ BOOL NSApplication_isActive()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	IsApplicationActive *pIsApplicationActive = [[IsApplicationActive alloc] init];
+	IsApplicationActive *pIsApplicationActive = [IsApplicationActive create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pIsApplicationActive performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActive waitUntilDone:YES modes:pModes];
 	bRet = [pIsApplicationActive isActive];
@@ -515,7 +525,7 @@ void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUseP
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses installWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 

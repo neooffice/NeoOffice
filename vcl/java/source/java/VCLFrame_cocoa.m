@@ -41,12 +41,20 @@
 	id					mpCWindow;
 	NSWindow*			mpWindow;
 }
++ (id)createWithCWindow:(id)pCWindow;
 - (void)getNSWindow:(id)pObject;
 - (id)initWithCWindow:(id)pCWindow;
 - (NSWindow *)window;
 @end
 
 @implementation GetNSWindow
+
++ (id)createWithCWindow:(id)pCWindow
+{
+	GetNSWindow *pRet = [[GetNSWindow alloc] initWithCWindow:pCWindow];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (void)getNSWindow:(id)pObject
 {
@@ -76,12 +84,20 @@
 	id					mpCWindow;
 	WindowRef			maWindow;
 }
++ (id)createWithCWindow:(id)pCWindow;
 - (void)getWindowRef:(id)pObject;
 - (id)initWithCWindow:(id)pCWindow;
 - (WindowRef)windowRef;
 @end
 
 @implementation GetWindowRef
+
++ (id)createWithCWindow:(id)pCWindow
+{
+	GetWindowRef *pRet = [[GetWindowRef alloc] initWithCWindow:pCWindow];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (void)getWindowRef:(id)pObject
 {
@@ -114,11 +130,28 @@
 {
 	id					mpCWindow;
 }
-- (void)updateLocation:(id)pObject;
++ (id)createWithCWindow:(id)pCWindow;
 - (id)initWithCWindow:(id)pCWindow;
+- (void)updateLocation:(id)pObject;
 @end
 
 @implementation UpdateLocation
+
++ (id)createWithCWindow:(id)pCWindow
+{
+	UpdateLocation *pRet = [[UpdateLocation alloc] initWithCWindow:pCWindow];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+
+	return self;
+}
 
 - (void)updateLocation:(id)pObject
 {
@@ -135,15 +168,6 @@
 	}
 }
 
-- (id)initWithCWindow:(id)pCWindow
-{
-	[super init];
-
-	mpCWindow = pCWindow;
-
-	return self;
-}
-
 @end
 
 id CWindow_getNSWindow( id pCWindow )
@@ -154,7 +178,7 @@ id CWindow_getNSWindow( id pCWindow )
 
 	if ( pCWindow )
 	{
-		GetNSWindow *pGetNSWindow = [[GetNSWindow alloc] initWithCWindow:pCWindow];
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
 		pNSWindow = [pGetNSWindow window];
@@ -173,7 +197,7 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 
 	if ( pCWindow )
 	{
-		GetWindowRef *pGetWindowRef = [[GetWindowRef alloc] initWithCWindow:pCWindow];
+		GetWindowRef *pGetWindowRef = [GetWindowRef createWithCWindow:pCWindow];
 		[pGetWindowRef performSelectorOnMainThread:@selector(getWindowRef:) withObject:pGetWindowRef waitUntilDone:YES];
 		aWindow = [pGetWindowRef windowRef];
 	}
@@ -189,7 +213,7 @@ void CWindow_updateLocation( id pCWindow )
 
 	if ( pCWindow )
 	{
-		UpdateLocation *pUpdateLocation = [[UpdateLocation alloc] initWithCWindow:pCWindow];
+		UpdateLocation *pUpdateLocation = [UpdateLocation createWithCWindow:pCWindow];
 		[pUpdateLocation performSelectorOnMainThread:@selector(updateLocation:) withObject:pUpdateLocation waitUntilDone:NO];
 	}
 

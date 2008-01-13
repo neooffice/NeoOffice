@@ -85,7 +85,13 @@
 		{
 			NSPrintInfo *pPrintInfo = [[NSPrintInfo alloc] initWithDictionary:pDictionary];
 			if ( pPrintInfo )
+			{
+				// Add to autorelease pool as invoking alloc disables
+				// autorelease
+				[pPrintInfo autorelease];
+
 				[pDictionary setObject:pPrintInfo forKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
+			}
 		}
 	}
 	else
@@ -209,13 +215,10 @@ id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 
 	if ( pNSPrintInfo && pNSWindow )
 	{
+		// Do not retain as invoking alloc disables autorelease
 		pRet = [[ShowPrintDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow];
-		if ( pRet )
-		{
-			[pRet retain];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES modes:pModes];
-		}
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];

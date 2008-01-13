@@ -69,10 +69,18 @@
 @end
 
 @interface InstallVCLPrintClasses : NSObject
++ (id)create;
 - (void)installVCLPrintClasses:(id)pObject;
 @end
 
 @implementation InstallVCLPrintClasses
+
++ (id)create
+{
+	InstallVCLPrintClasses *pRet = [[InstallVCLPrintClasses alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (void)installVCLPrintClasses:(id)pObject
 {
@@ -197,9 +205,8 @@ id NSPrintInfo_create()
 			// Fix bug 2573 by not cloning the dictionary as that will cause
 			// querying of the printer which, in turn, will cause hanging if
 			// the printer is an unavailable network printer
+			// Do not retain as invoking alloc disables autorelease
 			pRet = [[NSPrintInfo alloc] initWithDictionary:pDict];
-			if ( pRet )
-				pRet = [pRet retain];
 		}
 	}
 
@@ -292,13 +299,10 @@ id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandsc
 
 	if ( pNSPrintInfo && pNSWindow )
 	{
+		// Do not retain as invoking alloc disables autorelease
 		pRet = [[ShowPageLayoutDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow orientation:( bLandscape ? NSLandscapeOrientation : NSPortraitOrientation )];
-		if ( pRet )
-		{
-			[pRet retain];
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES modes:pModes];
-		}
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pRet performSelectorOnMainThread:@selector(showPageLayoutDialog:) withObject:pRet waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -315,7 +319,7 @@ void VCLPrintInfo_installVCLPrintClasses()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLPrintClasses *pInstallVCLPrintClasses = [[InstallVCLPrintClasses alloc] init];
+	InstallVCLPrintClasses *pInstallVCLPrintClasses = [InstallVCLPrintClasses create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLPrintClasses performSelectorOnMainThread:@selector(installVCLPrintClasses:) withObject:pInstallVCLPrintClasses waitUntilDone:YES modes:pModes];
 

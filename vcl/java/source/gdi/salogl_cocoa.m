@@ -64,9 +64,11 @@ id NSOpenGLContext_create()
 	NSOpenGLPixelFormat *pFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pAttributes];
 	if ( pFormat )
 	{
+		// Add to autorelease pool as invoking alloc disables autorelease
+		[pFormat autorelease];
+
+		// Do not retain as invoking alloc disables autorelease
 		pContext = [[NSOpenGLContext alloc] initWithFormat:pFormat shareContext:nil];
-		if ( pContext )
-			pContext = [pContext retain];
 	}
 
 	[pPool release];

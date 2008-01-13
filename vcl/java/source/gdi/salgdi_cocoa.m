@@ -44,11 +44,19 @@
 	void*				mpEPSPtr;
 	unsigned			mnEPSSize;
 }
++ (id)epsWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight;
 - (BOOL)drawEPSInBitmap;
 - (id)initWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight;
 @end
 
 @implementation DrawEPSInBitmap
+
++ (id)epsWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight
+{
+	DrawEPSInBitmap *pRet = [[DrawEPSInBitmap alloc] initWithPtr:pEPSPtr size:nEPSSize destPtr:pDestPtr destWidth:nDestWidth destHeight:nDestHeight];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (BOOL)drawEPSInBitmap
 {
@@ -60,6 +68,9 @@
 		NSImage *pEPSImage = [[NSImage alloc] initWithData:pEPSData];
 		if ( pEPSImage )
 		{
+			// Add to autorelease pool as invoking alloc disables autorelease
+			[pEPSImage autorelease];
+
 			[pEPSImage setScalesWhenResized:YES];
 			[pEPSImage setSize:NSMakeSize( mnDestWidth, mnDestHeight )];
 
@@ -72,6 +83,9 @@
 			NSBitmapImageRep *pBitmapImageRep = [[NSBitmapImageRep alloc] initWithFocusedViewRect:NSMakeRect(0, 0, mnDestWidth, mnDestHeight )];
 			if ( pBitmapImageRep )
 			{
+				// Add to autorelease pool as invoking alloc disables autorelease
+				[pBitmapImageRep autorelease];
+
 				int nBitsPerPixel = [pBitmapImageRep bitsPerPixel];
 				if ( nBitsPerPixel == 24 )
 				{
@@ -143,7 +157,7 @@ BOOL NSEPSImageRep_drawInBitmap( void *pEPSPtr, unsigned nEPSSize, int *pDestPtr
 
 	if ( pEPSPtr && nEPSSize && pDestPtr && nDestWidth && nDestHeight )
 	{
-		DrawEPSInBitmap *pDrawEPSInBitmap = [[DrawEPSInBitmap alloc] initWithPtr:pEPSPtr size:nEPSSize destPtr:pDestPtr destWidth:nDestWidth destHeight:nDestHeight];
+		DrawEPSInBitmap *pDrawEPSInBitmap = [DrawEPSInBitmap epsWithPtr:pEPSPtr size:nEPSSize destPtr:pDestPtr destWidth:nDestWidth destHeight:nDestHeight];
 		bRet = [pDrawEPSInBitmap drawEPSInBitmap];
 	}
 
