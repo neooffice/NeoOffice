@@ -59,9 +59,7 @@
 + (id)fontWithFont:(NSFont *)pFont matrix:(float *)pTransform
 {
 	AWTFont *pRet = [[AWTFont alloc] initWithFont:pFont matrix:pTransform];
-	if ( pRet )
-		[pRet autorelease];
-
+	[pRet autorelease];
 	return pRet;
 }
 

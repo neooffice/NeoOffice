@@ -70,9 +70,10 @@ static jmethodID mGetPSNameID = nil;
 		{
 			NSFont *pFont = [NSFont fontWithName:pName size:(float)12];
 			if ( pFont )
+			{
 				pRet = [[AWTFont alloc] initWithFont:pFont isFakeItalic:bFakeItalic];
-				if ( pRet )
-					[pRet autorelease];
+				[pRet autorelease];
+			}
 		}
 	}
 

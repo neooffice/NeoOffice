@@ -59,9 +59,7 @@ static NSString *pBlankItem = @" ";
 + (id)argsWithArgs:(NSArray *)pArgs
 {
 	ShowFileDialogArgs *pRet = [[ShowFileDialogArgs alloc] initWithArgs:(NSArray *)pArgs];
-	if ( pRet )
-		[pRet autorelease];
-
+	[pRet autorelease];
 	return pRet;
 }
 
