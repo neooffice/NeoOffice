@@ -40,17 +40,36 @@
 {
 	NSURL*				mpURL;
 }
++ (id)createWithURL:(NSURL *)pURL;
+- (void)dealloc;
 - (id)initWithURL:(NSURL *)pURL;
 - (void)noteNewRecentDocumentURL:(id)pObject;
 @end
 
 @implementation NoteNewRecentDocumentURL
 
++ (id)createWithURL:(NSURL *)pURL
+{
+	NoteNewRecentDocumentURL *pRet = [[NoteNewRecentDocumentURL alloc] initWithURL:pURL];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)dealloc
+{
+	if ( mpURL )
+		[mpURL release];
+
+	[super dealloc];
+}
+
 - (id)initWithURL:(NSURL *)pURL
 {
 	[super init];
 
 	mpURL = pURL;
+	if ( mpURL )
+		[mpURL retain];
  
 	return self;
 }
@@ -73,9 +92,9 @@ void NSDocumentController_noteNewRecentDocumentURL( CFStringRef aString )
 
 	if ( aString )
 	{
-		NoteNewRecentDocumentURL *pNoteNewRecentDocumentURL = [[NoteNewRecentDocumentURL alloc] initWithURL:[NSURL URLWithString:(NSString *)aString]];
+		NoteNewRecentDocumentURL *pNoteNewRecentDocumentURL = [NoteNewRecentDocumentURL createWithURL:[NSURL URLWithString:(NSString *)aString]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pNoteNewRecentDocumentURL performSelectorOnMainThread:@selector(noteNewRecentDocumentURL:) withObject:pNoteNewRecentDocumentURL waitUntilDone:YES modes:pModes];
+		[pNoteNewRecentDocumentURL performSelectorOnMainThread:@selector(noteNewRecentDocumentURL:) withObject:pNoteNewRecentDocumentURL waitUntilDone:NO modes:pModes];
 	}
 
 	[pPool release];
