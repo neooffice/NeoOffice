@@ -44,6 +44,7 @@
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
+- (void)dealloc;
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo;
@@ -52,6 +53,17 @@
 @end
 
 @implementation ShowPrintDialog
+
+- (void)dealloc
+{
+	if ( mpInfo )
+		[mpInfo release];
+
+	if ( mpWindow )
+		[mpWindow release];
+
+	[super dealloc];
+}
 
 - (BOOL)finished
 {
@@ -64,8 +76,12 @@
 
 	mbFinished = YES;
 	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
 	mbResult = NO;
 	mpWindow = pWindow;
+	if ( mpWindow )
+		[mpWindow retain];
 
 	return self;
 }
@@ -77,21 +93,16 @@
 	{
 		mbResult = YES;
 
-		// Create a new dictionary and insert as the VCLPrintInfoDictionaryKey
-		// key. Note that we only put the keys actually accessed in the
-		// VCLPrintOperation class in this new dictionary to avoid bug 2669.
+		// Cache the dialog's print info in its own dictionary as Java seems
+		// to copy the dictionary into a different print info instance when
+		// actually printing so we will retrieve the cached print info when
+		// creating the print operation
 		NSMutableDictionary *pDictionary = [(NSPrintInfo *)mpInfo dictionary];
 		if ( pDictionary )
 		{
 			NSPrintInfo *pPrintInfo = [[NSPrintInfo alloc] initWithDictionary:pDictionary];
 			if ( pPrintInfo )
-			{
-				// Add to autorelease pool as invoking alloc disables
-				// autorelease
-				[pPrintInfo autorelease];
-
-				[pDictionary setObject:pPrintInfo forKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
-			}
+				[pDictionary setObject:mpInfo forKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
 		}
 	}
 	else
