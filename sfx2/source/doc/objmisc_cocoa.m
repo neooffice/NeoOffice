@@ -41,11 +41,19 @@
 	WindowRef theRef;
 	BOOL theState;
 }
++ (id)createWithState:(BOOL)state winRef:(WindowRef)r;
 - (id)initWithState:(BOOL)state winRef:(WindowRef)r;
 - (void)setModified:(id)pObject;
 @end
 
 @implementation DoSetModified
++ (id)createWithState:(BOOL)state winRef:(WindowRef)r
+{
+	DoSetModified *pRet = [[DoSetModified alloc] initWithState:state winRef:r];
+	[pRet autorelease];
+	return pRet;
+}
+
 - (id)initWithState:(BOOL)state winRef:(WindowRef)r
 {
 	[super init];
@@ -81,7 +89,7 @@ void DoCocoaSetWindowModifiedBit( unsigned long winRef, bool isModified )
 
 	if ( winRef )
 	{
-		DoSetModified *pDoSetModified = [[DoSetModified alloc] initWithState:((isModified) ? YES : NO) winRef:(WindowRef)winRef];
+		DoSetModified *pDoSetModified = [DoSetModified createWithState:((isModified) ? YES : NO) winRef:(WindowRef)winRef];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pDoSetModified performSelectorOnMainThread:@selector(setModified:) withObject:pDoSetModified waitUntilDone:YES modes:pModes];
 	}

@@ -56,7 +56,7 @@
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
 - (void)cancelTermination;
-- (id)dealloc;
+- (void)dealloc;
 - (id)init;
 - (void)handleCalcCommand:(id)pObject;
 - (void)handleDrawCommand:(id)pObject;
@@ -136,7 +136,7 @@
 	mbInTermination = NO;
 }
 
-- (id)dealloc
+- (void)dealloc
 {
 	if ( mpDelegate )
 		[mpDelegate release];
@@ -222,10 +222,18 @@
 @end
 
 @interface CancelTermination : NSObject
++ (id)create;
 - (void)cancelTermination:(id)pObject;
 @end
 
 @implementation CancelTermination
+
++ (id)create
+{
+	CancelTermination *pRet = [[CancelTermination alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (void)cancelTermination:(id)pObject;
 {
@@ -245,11 +253,19 @@
 	MenuCommand*		mpIDs;
 	CFStringRef*		mpStrings;
 }
++ (id)createWithCount:(int)nCount menuCommands:(MenuCommand *)pIDs strings:(CFStringRef *)pStrings;
 - (void)addMenuItems:(id)pObject;
 - (id)initWithCount:(int)nCount menuCommands:(MenuCommand *)pIDs strings:(CFStringRef *)pStrings;
 @end
 
 @implementation QuickstartMenuItems
+
++ (id)createWithCount:(int)nCount menuCommands:(MenuCommand *)pIDs strings:(CFStringRef *)pStrings
+{
+	QuickstartMenuItems *pRet = [[QuickstartMenuItems alloc] initWithCount:nCount menuCommands:pIDs strings:pStrings];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (void)addMenuItems:(id)pObject
 {
@@ -273,10 +289,12 @@
 
 		if ( !pDockMenu )
 		{
+			// Do not retain as invoking alloc disables autorelease
 			ShutdownIconDelegate *pNewDelegate = [[ShutdownIconDelegate alloc] init];
 			if ( pDelegate )
 				[pNewDelegate setDelegate:pDelegate];
-			[pApp setDelegate: pNewDelegate];
+			// NSApplication does not retain delegates so don't release it
+			[pApp setDelegate:pNewDelegate];
 			pDelegate = pNewDelegate;
 			pDockMenu = [pNewDelegate applicationDockMenu:pApp];
 		}
@@ -357,7 +375,7 @@ void AddQuickstartMenuItems( int nCount, MenuCommand *pIDs, CFStringRef *pString
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	QuickstartMenuItems *pItems = [[QuickstartMenuItems alloc] initWithCount:nCount menuCommands:pIDs strings:pStrings];
+	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithCount:nCount menuCommands:pIDs strings:pStrings];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES modes:pModes];
 
@@ -373,7 +391,7 @@ __attribute__((visibility("default"))) void NativeShutdownCancelledHandler()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	CancelTermination *pCancelTermination = [[CancelTermination alloc] init];
+	CancelTermination *pCancelTermination = [CancelTermination create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pCancelTermination performSelectorOnMainThread:@selector(cancelTermination:) withObject:pCancelTermination waitUntilDone:YES modes:pModes];
 
