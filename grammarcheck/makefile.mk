@@ -43,7 +43,22 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
+# Don't put lib prefix on shared library
+DLLPRE=
+
+# Add locally built types registry to cppumaker search path
+UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
+
 # --- Files --------------------------------------------------------
+
+IDLFILES= \
+	XGrammarChecker.idl
+
+UNOTYPES= \
+	org.neooffice.XGrammarChecker
+
+# Force creation of the IDL header files before the compiling source files
+UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
 
 SLOFILES= \
 	$(SLO)$/grammarcheck.obj
@@ -60,17 +75,18 @@ SHL1STDLIBS += -framework AppKit -framework Carbon -framework Foundation
 
 # --- Targets ------------------------------------------------------
 
+# Force zipping recipe to execute at the end
+makeoxt : ALLTAR
+
 .INCLUDE :  target.mk
 
-grammarcheck.mm: makeidl
+makeoxt :
+	$(RM) $(BIN)$/$(PRJNAME).oxt
+	zip -r $(BIN)$/$(PRJNAME).oxt META-INF GrammarGUI uiIntegration.xcu -x "*CVS*"
+#	cd $(LB) && zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(TARGET)$(DLLPOST) -x "*CVS*"
+	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
+	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(LB)$/$(TARGET)$(DLLPOST) -x "*CVS*"
 
-ALLTAR : makeidl makeoxt
+#grammarcheck.uno.rdb uiIntegration.xcu GrammarGUI/*
 
-makeidl: XGrammarChecker.idl
-	+idlc -C -I ../build/udkapi XGrammarChecker.idl
-	+regmerge grammarcheck.uno.rdb /UCR XGrammarChecker.urd
-	+cppumaker -BUCR -Torg.neooffice.XGrammarChecker ../build/offapi/type_reference/types.rdb grammarcheck.uno.rdb
 
-makeoxt : $(SHL1TARGETN) META-INF/manifest.xml uiIntegration.xcu GrammarGUI/GrammarGUI.xdl GrammarGUI/XGrammarGUI.xba GrammarGUI/dialog.xlb GrammarGUI/script.xlb
-	cp -f $(SHL1TARGETN)$ grammarcheck.uno.dylib
-	zip grammarcheck.oxt META-INF/manifest.xml grammarcheck.uno.dylib grammarcheck.uno.rdb uiIntegration.xcu GrammarGUI/*
