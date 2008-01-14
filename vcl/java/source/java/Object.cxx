@@ -73,6 +73,14 @@ static Reference< XJavaVM > xVM;
 
 // ----------------------------------------------------------------------------
 
+extern "C" void SAL_DLLPUBLIC_EXPORT DetachCurrentThreadFromJVM()
+{
+	if ( xVM.is() && pJVM )
+		pJVM->DetachCurrentThread();
+}
+
+// ----------------------------------------------------------------------------
+
 VCLThreadAttach::VCLThreadAttach()
 {
 	pEnv = NULL;
@@ -104,16 +112,8 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( xVM.is() && pJVM )
-	{
-		jint err = pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_4 );
-		if ( err != JNI_OK || ( err == JNI_EDETACHED && pJVM->AttachCurrentThread( (void**)&pEnv, NULL ) != JNI_OK ) )
-			pEnv = NULL;
-	}
-	else
-	{
+	if ( !xVM.is() || !pJVM || pJVM->AttachCurrentThread( (void**)&pEnv, NULL ) != JNI_OK )
 		pEnv = NULL;
-	}
 }
 
 // ----------------------------------------------------------------------------

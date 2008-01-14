@@ -51,6 +51,10 @@
 #include <rtl/textenc.h>
 #endif
 
+#ifdef USE_JAVA
+typedef void DetachCurrentThreadFromJVMFunc();
+#endif	/* USE_JAVA */
+
 /****************************************************************************
  * @@@ TODO @@@
  *
@@ -278,6 +282,15 @@ static void* osl_thread_start_Impl (void* pData)
 	{
 		/* call worker function */
 		pImpl->m_WorkerFunction(pImpl->m_pData);
+#ifdef USE_JAVA
+		/*
+		 * Fix bug 2865 by calling the detach JVM function in libvcl before the
+		 * thread terminates
+		 */
+		DetachCurrentThreadFromJVMFunc *pFunc = dlsym(RTLD_DEFAULT, "DetachCurrentThreadFromJVM");
+		if (pFunc)
+			pFunc();
+#endif	/* USE_JAVA */
 	}
 
 	/* call cleanup handler and leave */
