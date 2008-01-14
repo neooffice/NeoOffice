@@ -50,9 +50,6 @@
 #ifndef _SV_JAVA_LANG_THROWABLE_HXX
 #include <java/lang/Throwable.hxx>
 #endif
-#ifndef _COM_SUN_STAR_JAVA_XJAVATHREADREGISTER_11_HPP_
-#include <com/sun/star/java/XJavaThreadRegister_11.hpp>
-#endif
 #ifndef _COM_SUN_STAR_JAVA_XJAVAVM_HPP_
 #include <com/sun/star/java/XJavaVM.hpp>
 #endif
@@ -73,7 +70,6 @@ using namespace com::sun::star::lang;
 
 static JavaVM *pJVM = NULL;
 static Reference< XJavaVM > xVM;
-static Reference< XJavaThreadRegister_11 > xRG11Ref;
 
 // ----------------------------------------------------------------------------
 
@@ -108,11 +104,11 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( xVM.is() && xRG11Ref.is() && pJVM )
+	if ( xVM.is() && pJVM )
 	{
-		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
-		if ( pEnv )
-			xRG11Ref->registerThread();
+		jint err = pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_4 );
+		if ( err != JNI_OK || ( err == JNI_EDETACHED && pJVM->AttachCurrentThread( (void**)&pEnv, NULL ) != JNI_OK ) )
+			pEnv = NULL;
 	}
 	else
 	{
@@ -167,17 +163,10 @@ sal_Bool VCLThreadAttach::StartJava()
 				return sal_False;
 			}
 
-			xRG11Ref = Reference< XJavaThreadRegister_11 >( xVM, UNO_QUERY );
-			if ( xRG11Ref.is() )
-			{
-		  		pJVM->AttachCurrentThread( (void **)&pTmpEnv, NULL );
+		  	pJVM->AttachCurrentThread( (void **)&pTmpEnv, NULL );
 
-				if ( pTmpEnv )
-				{
-					xRG11Ref->registerThread();
-					InitJavaAWT();
-				}
-			}
+			if ( pTmpEnv )
+				InitJavaAWT();
 
 			return sal_True;
 		}
