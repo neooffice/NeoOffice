@@ -49,10 +49,6 @@
 #include <com/sun/star/media/XPlayer.hpp>
 #endif
 
-#include <premac.h>
-#include <QuickTime/QuickTime.h>
-#include <postmac.h>
-
 namespace avmedia
 {
 namespace quicktime
@@ -64,12 +60,9 @@ namespace quicktime
 
 class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer, ::com::sun::star::lang::XServiceInfo >
 {
-	static int			mnQuickTimeState;
-
 	sal_Bool			mbLooping;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
-	Movie				maMovie;
-	bool				mbQuickTimeLoaded;
+	void*				mpMoviePlayer;
 	sal_Bool			mbRunning;
 
 public:
