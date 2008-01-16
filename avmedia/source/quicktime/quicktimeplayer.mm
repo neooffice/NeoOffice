@@ -136,20 +136,22 @@ using namespace ::com::sun::star::uno;
 @interface QTMoviePlayer : NSObject
 {
 	QTMovie*				mpMovie;
+	MacOSBOOL				mbPlaying;
 }
 - (double)currentTime:(QTMoviePlayerArgs *)pArgs;
 - (void)dealloc;
 - (double)duration:(QTMoviePlayerArgs *)pArgs;
 - (id)init;
 - (void)initialize:(NSURL *)pURL;
+- (MacOSBOOL)isPlaying:(QTMoviePlayerArgs *)pArgs;
 - (QTMovie *)movie;
 - (MacOSBOOL)mute:(QTMoviePlayerArgs *)pArgs;
 - (void)play:(id)pObject;
 - (double)rate:(QTMoviePlayerArgs *)pArgs;
 - (void)release:(id)pObject;
-- (void)restartIfFinished:(id)pObject;
 - (double)selectionEnd:(QTMoviePlayerArgs *)pArgs;
 - (void)setCurrentTime:(QTMoviePlayerArgs *)pArgs;
+- (void)setLooping:(QTMoviePlayerArgs *)pArgs;
 - (void)setMute:(QTMoviePlayerArgs *)pArgs;
 - (void)setRate:(QTMoviePlayerArgs *)pArgs;
 - (void)setSelection:(QTMoviePlayerArgs *)pArgs;
@@ -201,6 +203,7 @@ using namespace ::com::sun::star::uno;
 	[super init];
 
 	mpMovie = nil;
+	mbPlaying = NO;
 
 	return self;
 }
@@ -210,22 +213,36 @@ using namespace ::com::sun::star::uno;
 	mpMovie = [QTMovie movieWithURL:pURL error:nil];
 	if ( mpMovie )
 	{
+		[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:QTMovieLoopsAttribute];
 		[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
 		[mpMovie retain];
 	}
 }
 
-- (void)restartIfFinished:(id)pObject
-{
-	NSTimeInterval aCurrentInterval;
-	NSTimeInterval aDurationInterval;
-	if ( QTGetTimeInterval( [mpMovie currentTime], &aCurrentInterval ) && QTGetTimeInterval( [mpMovie duration], &aDurationInterval ) && aCurrentInterval >= aDurationInterval )
-		[mpMovie gotoBeginning];
-}
-
 - (QTMovie *)movie
 {
 	return mpMovie;
+}
+
+- (MacOSBOOL)isPlaying:(QTMoviePlayerArgs *)pArgs
+{
+	// Check if we are at the end of the movie
+	if ( mbPlaying )
+	{
+		NSTimeInterval aCurrentInterval;
+		NSTimeInterval aDurationInterval;
+		if ( QTGetTimeInterval( [mpMovie currentTime], &aCurrentInterval ) && QTGetTimeInterval( [mpMovie duration], &aDurationInterval ) && aCurrentInterval >= aDurationInterval )
+		{
+			NSNumber *pLooping = [mpMovie attributeForKey:QTMovieLoopsAttribute];
+			if ( pLooping || ![pLooping boolValue] )
+				mbPlaying = NO;
+		}
+	}
+
+	if ( pArgs )
+		[pArgs setResult:[NSNumber numberWithBool:mbPlaying]];
+
+	return mbPlaying;
 }
 
 - (double)rate:(QTMoviePlayerArgs *)pArgs
@@ -241,6 +258,8 @@ using namespace ::com::sun::star::uno;
 - (void)release:(id)pObject
 {
 	[mpMovie stop];
+	mbPlaying = NO;
+
 	[self release];
 }
 
@@ -257,6 +276,7 @@ using namespace ::com::sun::star::uno;
 - (void)play:(id)pObject
 {
 	[mpMovie play];
+	mbPlaying = YES;
 }
 
 - (double)selectionEnd:(QTMoviePlayerArgs *)pArgs
@@ -290,6 +310,19 @@ using namespace ::com::sun::star::uno;
 		return;
 
 	[mpMovie setCurrentTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
+}
+
+- (void)setLooping:(QTMoviePlayerArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+	NSNumber *pLooping = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pLooping )
+		return;
+
+	[mpMovie setAttribute:pLooping forKey:QTMovieLoopsAttribute];
 }
 
 - (void)setMute:(QTMoviePlayerArgs *)pArgs
@@ -347,6 +380,7 @@ using namespace ::com::sun::star::uno;
 - (void)stop:(id)pObject
 {
 	[mpMovie stop];
+	mbPlaying = NO;
 }
 
 - (short)volumeDB:(QTMoviePlayerArgs *)pArgs
@@ -371,8 +405,7 @@ namespace quicktime
 Player::Player( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mbLooping( false ),
 	mxMgr( rxMgr ),
-	mpMoviePlayer( NULL ),
-	mbRunning( false )
+	mpMoviePlayer( NULL )
 {
 }
 
@@ -409,7 +442,6 @@ bool Player::create( const ::rtl::OUString& rURL )
 		}
 
 		mbLooping = sal_False;
-		mbRunning = sal_False;
 
 		NSString *pString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
 		if ( pString )
@@ -445,11 +477,10 @@ void SAL_CALL Player::start() throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( mpMoviePlayer && !mbRunning )
+	if ( mpMoviePlayer )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(QTMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(play:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
-		mbRunning = sal_True;
 	}
 
 	[pPool release];
@@ -467,8 +498,6 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 		[(QTMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(stop:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
 	}
 
-	mbRunning = sal_False;
-
 	[pPool release];
 }
 
@@ -476,17 +505,23 @@ void SAL_CALL Player::stop() throw( RuntimeException )
 
 sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 {
+	sal_Bool bRet = sal_False;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( mbRunning && mbLooping && mpMoviePlayer )
+	if ( mpMoviePlayer )
 	{
+		QTMoviePlayerArgs *pArgs = [QTMoviePlayerArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(QTMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(restartIfFinished:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
+		[(QTMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(isPlaying:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSNumber *pRet = (NSNumber *)[pArgs result];
+		if ( pRet )
+			bRet = (sal_Bool)[pRet boolValue];
 	}
 
 	[pPool release];
 
-	return mbRunning;
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
@@ -633,7 +668,19 @@ double SAL_CALL Player::getRate() throw( RuntimeException )
 
 void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	mbLooping = bSet;
+
+	if ( mpMoviePlayer )
+	{
+		QTMoviePlayerArgs *pArgs = [QTMoviePlayerArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:(MacOSBOOL)bSet], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(QTMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setLooping:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
+
 }
 
 // ----------------------------------------------------------------------------
