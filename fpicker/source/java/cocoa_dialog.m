@@ -1183,8 +1183,12 @@ static NSString *pBlankItem = @" ";
 		}
 
 		// Fix bug 2302 by updating filtering
-		ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:[self selectedFilter:nil]]];
-		[self setSelectedFilter:pSelectedFilterArgs];
+		NSString *pFilter = [self selectedFilter:nil];
+		if ( pFilter )
+		{
+			ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
+			[self setSelectedFilter:pSelectedFilterArgs];
+		}
 
 		if ( mbUseFileOpenDialog )
 		{
@@ -1227,8 +1231,12 @@ static NSString *pBlankItem = @" ";
 			JavaFilePicker_controlStateChanged( mnID, pPicker );
 
 		// Update filtering
-		ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:[mpDialog selectedFilter:nil]]];
-		[mpDialog setSelectedFilter:pSelectedFilterArgs];
+		NSString *pFilter = [mpDialog selectedFilter:nil];
+		if ( pFilter )
+		{
+			ShowFileDialogArgs *pSelectedFilterArgs = [ShowFileDialogArgs argsWithArgs:[NSArray arrayWithObject:pFilter]];
+			[mpDialog setSelectedFilter:pSelectedFilterArgs];
+		}
 	}
 }
 
