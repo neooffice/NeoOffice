@@ -26,10 +26,13 @@ extension using the following steps:
    in the My Extensions group are removed.
 
 2. Quit NeoOffice, open a new Terminal window with a clean environment, and
-   execute the following command in the new Terminal window:
+   execute the following command in the new Terminal window. Note that you
+   must cd within the NeoOffice installation otherwise unopkg.bin will abort:
 
-   sudo /path/to/NeoOffice/installtion/Contents/MacOS/unopkg.bin add \
-   --shared --force /path/to/this/module/unxmacx[ip].pro/bin/grammarcheck.oxt
+   sudo rm -Rf ~root/Library/Preferences/NeoOffice-[version]
+   cd /path/to/NeoOffice/installation/Contents/MacOS
+   sudo -H ./unopkg.bin add --shared --force \
+      /path/to/this/module/unxmacx[ip].pro/bin/grammarcheck.oxt
 
 3. Launch NeoOffice and the extension should be active. A new menu item
    called Tools :: Add-ons :: Check Document Grammar should be present in
