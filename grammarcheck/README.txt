@@ -11,12 +11,32 @@ to make this modification from within the odt file as the user interface
 of OOo prevents manual editing of this parameter.
 
 The eventual output of the makefile is an extension package named
-grammarcheck.oxt that bundles up the UNO type library, component, StarBasic
-code, and supporting xcu and manifest files for deployment.  To deploy as
-an extension, use Tools > Extension Manager and add the .oxt.  A new
-menu item "Check Document Grammar" will be present under the Add-ons menu
-for Writer documents.  Note that any existing documents will need to be
-reopened in order for the menu item to appear.
+unxmacx[ip].pro/bin/grammarcheck.oxt that bundles up the UNO type library,
+component, StarBasic code, and supporting xcu and manifest files for
+deployment.
+
+To deplay this extension file, you must *not* use the
+Tools :: Extensions Manager menu in NeoOffice as that will run the extension
+in a separate process instead of within the NeoOffice process itself.
+
+Instead, to properly deplay the extension, you must install it as a shared
+extension using the following steps:
+
+1. Launch NeoOfice and ensure that all previous installations of the extension
+   in the My Extensions group are removed.
+
+2. Quit NeoOffice, open a new Terminal window with a clean environment, and
+   execute the following command in the new Terminal window:
+
+   sudo /path/to/NeoOffice/installtion/Contents/MacOS/unopkg.bin add \
+   --shared --force /path/to/this/module/unxmacx[ip].pro/bin/grammarcheck.oxt
+
+3. Launch NeoOffice and the extension should be active. A new menu item
+   called Tools :: Add-ons :: Check Document Grammar should be present in
+   in NeoOffice Writer.
 
 Edward Peterlin
-12/10/07
+12/10/2007
+
+Patrick Luby
+01/14/2008
