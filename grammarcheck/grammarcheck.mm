@@ -94,7 +94,6 @@
 #import <AppKit/NSSpellChecker.h>
 #import <AppKit/NSAlert.h>
 #import <Foundation/Foundation.h>
-#import <AppKit/NSApplication.h>
 #import <Carbon/Carbon.h>
 #include "postmac.h"
 
@@ -307,11 +306,13 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 	NSAutoreleasePool *localPool=[[NSAutoreleasePool alloc] init];
 	
 	NSString *stringToCheck=[NSString stringWithCharacters: toCheck.getStr() length: toCheck.getLength()];
-	
-	NSApplication *pApp = [NSApplication sharedApplication];
-	NSSpellChecker *spelling=nil;
-	if ( pApp )
-		spelling=[NSSpellChecker sharedSpellChecker];
+
+	// Do not ever invoke [NSApplication sharedApplication] because ifNSApp is
+	// not already initialized, we are either running in a separate subprocess
+	// of the application (which means this was not installed as a shared
+	// extension) or we are running in an X11 application and we are not
+	// xhosting to the localhost (which will cause the application to abort)
+	NSSpellChecker *spelling=[NSSpellChecker sharedSpellChecker];
 	
 	Sequence< org::neooffice::GrammarReplacement > toReturn;
 	
