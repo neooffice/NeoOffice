@@ -32,6 +32,21 @@ Index: source/Common/OdfZipUtils/Makefile
  	     -out:OdfZipUtilsStatic.dll $(SOURCE)
  
  clean-local:
+--- source/Spreadsheet/Converter/OoxMaximumCellTextPostProcessor.cs	2008-01-11 16:27:26.000000000 -0800
++++ source/Spreadsheet/Converter/OoxMaximumCellTextPostProcessor.cs	2008-01-16 12:38:04.000000000 -0800
+@@ -170,10 +170,8 @@
+             else if (isInMaxLength)
+             {
+                     this.isAtribute = false;
+-                    if (this.totalStringLength < MAX_CELL_TEXT_LENGTH)
+-                    {
+-                        this.nextWriter.WriteEndAttribute();
+-                    }
++                    // Fix bug described at http://bugzilla.neooffice.org/bug.php?op=show&bugid=2794&pos=5 using the fix described at https://bugzilla.novell.com/show_bug.cgi?id=332246
++                    this.nextWriter.WriteEndAttribute();
+             }
+             else
+             {
 Index: source/Spreadsheet/Converter/OOXStyleCellPostProcessor.cs
 ===================================================================
 --- source/Spreadsheet/Converter/OOXStyleCellPostProcessor.cs	(revision 4259)
@@ -49,26 +64,7 @@ Index: source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl
 ===================================================================
 --- source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl	(revision 4259)
 +++ source/Spreadsheet/Converter/resources/odf2oox/sharedStrings.xsl	(working copy)
-@@ -68,7 +68,8 @@
-       select="document('content.xml')/office:document-content/office:body/office:spreadsheet/descendant::table:table-cell[text:p and not(@office:value-type='float') and (@office:value-type='string' or @office:value-type='boolean' or not((number(text:p) or text:p = 0 or contains(text:p,',') or contains(text:p,'%') or @office:value-type='currency' or @office:value-type='date' or @office:value-type='time')))]
-       ">
-       <si>
--        <pxsi:maxlength xmlns:pxsi="urn:cleverage:xmlns:post-processings:cellText">        
-+        <!--Disable maxlength as it makes round trip ODF to XLSX to ODF break-->
-+        <!--<pxsi:maxlength xmlns:pxsi="urn:cleverage:xmlns:post-processings:cellText">-->
-           <xsl:choose>
-             <xsl:when test="text:span|text:p/text:span">
-               <xsl:apply-templates mode="run" select="text:p"/>
-@@ -77,7 +78,7 @@
-               <t xml:space="preserve"><xsl:apply-templates mode="text" select="text:p"/></t>
-             </xsl:otherwise>
-           </xsl:choose>
--        </pxsi:maxlength>
-+        <!--</pxsi:maxlength>-->
-       </si>
-     </xsl:for-each>
-   </xsl:template>
-@@ -133,16 +134,16 @@
+@@ -133,16 +133,16 @@
          <xsl:value-of select="."/>
        </xsl:variable>
        <!-- caution with 'Enters' because they can result with additional space in output text -->
