@@ -83,10 +83,14 @@ makeoxt : ALLTAR
 makeoxt :
 	$(RM) $(BIN)$/$(PRJNAME).oxt
 	zip -r $(BIN)$/$(PRJNAME).oxt META-INF GrammarGUI uiIntegration.xcu -x "*CVS*"
-#	cd $(LB) && zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(TARGET)$(DLLPOST) -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
+.IF "$(debug)" == ""
+# Use stripped library if not in debug mode
+	$(RM) $(BIN)$/stripped
+	$(MKDIRHIER) $(LB)$/stripped
+	$(COPY) $(LB)$/$(TARGET)$(DLLPOST) $(LB)$/stripped$/$(TARGET)$(DLLPOST)
+	strip -S -x $(LB)$/stripped$/$(TARGET)$(DLLPOST)
+	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(LB)$/stripped/$(TARGET)$(DLLPOST) -x "*CVS*"
+.ELSE		# "$(debug)" == ""
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(LB)$/$(TARGET)$(DLLPOST) -x "*CVS*"
-
-#grammarcheck.uno.rdb uiIntegration.xcu GrammarGUI/*
-
-
+.ENDIF		# "$(debug)" == ""
