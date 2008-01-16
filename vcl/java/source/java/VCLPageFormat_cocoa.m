@@ -193,20 +193,20 @@ id NSPrintInfo_create()
 	NSPrintInfo *pSharedInfo = [NSPrintInfo sharedPrintInfo];
 	if ( pSharedInfo )
 	{
-		NSMutableDictionary *pDict = [pSharedInfo dictionary];
-		if ( pDict )
+		NSMutableDictionary *pDictionary = [pSharedInfo dictionary];
+		if ( pDictionary )
 		{
 			// Some users seem to get scaling values other than 100% so
 			// force the scaling factor here
 			NSNumber *pValue = [NSNumber numberWithFloat:1.0f];
 			if ( pValue )
-				[pDict setObject:pValue forKey:NSPrintScalingFactor];
+				[pDictionary setObject:pValue forKey:NSPrintScalingFactor];
 
 			// Fix bug 2573 by not cloning the dictionary as that will cause
 			// querying of the printer which, in turn, will cause hanging if
 			// the printer is an unavailable network printer
 			// Do not retain as invoking alloc disables autorelease
-			pRet = [[NSPrintInfo alloc] initWithDictionary:pDict];
+			pRet = [[NSPrintInfo alloc] initWithDictionary:pDictionary];
 		}
 	}
 
@@ -273,6 +273,10 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 				if ( fDiff > fRotatedDiff )
 					bRet = YES;
 			}
+
+			NSPrintInfo *pRealInfo = [pDictionary objectForKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
+			if ( pRealInfo )
+				NSPrintInfo_setPaperSize( pRealInfo, nWidth, nHeight );
 		}
 	}
 

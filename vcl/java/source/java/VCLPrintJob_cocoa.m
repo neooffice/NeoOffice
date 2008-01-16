@@ -96,13 +96,23 @@
 		// Cache the dialog's print info in its own dictionary as Java seems
 		// to copy the dictionary into a different print info instance when
 		// actually printing so we will retrieve the cached print info when
-		// creating the print operation
-		NSMutableDictionary *pDictionary = [(NSPrintInfo *)mpInfo dictionary];
+		// creating the print operation. Fix bug 2873 by making a full copy
+		// of the print info and its dictionary so that Java cannot tweak
+		// the settings in either object.
+		NSMutableDictionary *pDictionary = [mpInfo dictionary];
 		if ( pDictionary )
 		{
-			NSPrintInfo *pPrintInfo = [[NSPrintInfo alloc] initWithDictionary:pDictionary];
-			if ( pPrintInfo )
-				[pDictionary setObject:mpInfo forKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
+			[pDictionary removeObjectForKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
+
+			NSPrintInfo *pInfoCopy = [mpInfo copy];
+			if ( pInfoCopy )
+			{
+				// Add to autorelease pool as invoking alloc disables
+				// autorelease
+				[pInfoCopy autorelease];
+
+				[pDictionary setObject:pInfoCopy forKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
+			}
 		}
 	}
 	else
@@ -154,6 +164,8 @@
 			// Fix bug 2030 by resetting the layout
 			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesAcross"];
 			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesDown"];
+
+			[pDictionary removeObjectForKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
 		}
 
 		mbFinished = NO;
