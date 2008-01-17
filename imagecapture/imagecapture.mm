@@ -85,6 +85,9 @@
 #ifndef _CPPUHELPER_IMPLBASE_HXX_
 #include <cppuhelper/implbase2.hxx>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
 
 #include "premac.h"
 #import <Foundation/Foundation.h>
@@ -303,8 +306,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	ImageCaptureImpl *imp=[[ImageCaptureImpl alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(doImageCapture:) withObject:imp waitUntilDone: 1 modes: pModes];
-			
+	Application::AcquireSolarMutex( nCount );
+	
 	bool toReturn=[imp capturedImage];
 	
 	[imp release];

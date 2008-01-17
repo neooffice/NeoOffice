@@ -54,7 +54,8 @@ SHL1STDLIBS= \
 	$(SALLIB) \
 	$(CPPULIB) \
 	$(CPPUHELPERLIB) \
-	$(COMPHELPERLIB)
+	$(COMPHELPERLIB) \
+	$(VCLLIB)
 
 SHL1STDLIBS += -framework Carbon -framework Foundation -framework Cocoa
 
