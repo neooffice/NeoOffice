@@ -56,6 +56,10 @@ JavaSalObject::JavaSalObject( SalFrame *pParent )
 
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
+
+	// Set window value now as the avmedia module needs access to it before
+	// it is actually shown
+	maSysData.aWindow = (long)mpChildView;
 }
 
 // -----------------------------------------------------------------------
@@ -144,13 +148,8 @@ void JavaSalObject::Show( BOOL bVisible )
 
 	if ( VCLChildView_show( mpChildView, pParentNSWindow, bVisible ) )
 	{
-		maSysData.aWindow = (long)mpChildView;
 		if ( mpParent )
 			mpParent->AddObject( this );
-	}
-	else
-	{
-		maSysData.aWindow = 0;
 	}
 }
 
