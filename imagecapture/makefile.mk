@@ -43,7 +43,22 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
+# Don't put lib prefix on shared library
+DLLPRE=
+
+# Add locally built types registry to cppumaker search path
+UNOUCRRDB+=$(OUT)$/ucr$/$(TARGET).db
+
 # --- Files --------------------------------------------------------
+
+IDLFILES= \
+	XImageCapture.idl
+
+UNOTYPES= \
+	org.neooffice.XImageCapture
+
+# Force creation of the IDL header files before the compiling source files
+UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
 
 SLOFILES= \
 	$(SLO)$/imagecapture.obj
@@ -61,17 +76,22 @@ SHL1STDLIBS += -framework Carbon -framework Foundation -framework Cocoa
 
 # --- Targets ------------------------------------------------------
 
+# Force zipping recipe to execute at the end
+makeoxt : ALLTAR
+
 .INCLUDE :  target.mk
 
-imagecapture.mm: makeidl
-
-ALLTAR : makeidl
-
-makeidl: XImageCapture.idl
-	+idlc -C -I ../build/udkapi XImageCapture.idl
-	+regmerge imagecapture.uno.rdb /UCR XImageCapture.urd
-	+cppumaker -BUCR -Torg.neooffice.XImageCapture ../build/offapi/type_reference/types.rdb imagecapture.uno.rdb
-
-#makeoxt : $(SHL1TARGETN) META-INF/manifest.xml uiIntegration.xcu GrammarGUI/GrammarGUI.xdl GrammarGUI/XGrammarGUI.xba GrammarGUI/dialog.xlb GrammarGUI/script.xlb
-#	cp -f $(SHL1TARGETN)$ grammarcheck.uno.dylib
-#	zip grammarcheck.oxt META-INF/manifest.xml grammarcheck.uno.dylib grammarcheck.uno.rdb uiIntegration.xcu GrammarGUI/*
+makeoxt :
+	$(RM) $(BIN)$/$(PRJNAME).oxt
+	zip -r $(BIN)$/$(PRJNAME).oxt META-INF ImageCapture uiIntegration.xcu -x "*CVS*"
+	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
+.IF "$(debug)" == ""
+# Use stripped library if not in debug mode
+	$(RM) $(BIN)$/stripped
+	$(MKDIRHIER) $(LB)$/stripped
+	$(COPY) $(LB)$/$(TARGET)$(DLLPOST) $(LB)$/stripped$/$(TARGET)$(DLLPOST)
+	strip -S -x $(LB)$/stripped$/$(TARGET)$(DLLPOST)
+	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(LB)$/stripped/$(TARGET)$(DLLPOST) -x "*CVS*"
+.ELSE		# "$(debug)" == ""
+	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(LB)$/$(TARGET)$(DLLPOST) -x "*CVS*"
+.ENDIF		# "$(debug)" == ""

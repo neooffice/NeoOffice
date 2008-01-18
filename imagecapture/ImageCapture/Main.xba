@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="Main" script:language="StarBasic">REM  *****  BASIC  *****
+
+REM  GNU General Public License Version 2.1
+REM  =============================================
+REM  Copyright 2007 by Planamesa Inc. - http://www.planamesa.com
+REM
+REM  This library is free software; you can redistribute it and/or
+REM  modify it under the terms of the GNU General Public
+REM  License version 2.1, as published by the Free Software Foundation.
+REM
+REM  This library is distributed in the hope that it will be useful,
+REM  but WITHOUT ANY WARRANTY; without even the implied warranty of
+REM  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+REM  General Public License for more details.
+REM
+REM  You should have received a copy of the GNU General Public
+REM  License along with this library; if not, write to the Free Software
+REM  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+REM  MA  02111-1307  USA
+
+REM  StarBasic driver code for ImageCapture library.
+
+Sub Main
+	Dim t as Object
+	
+	t = CreateUnoService(&quot;org.neooffice.ImageCapture&quot;)
+	
+	If IsNull(t) Then
+		MsgBox &quot;Unable to create Image Capture service!&quot;
+		Exit Sub
+	End If
+	
+	If t.hasImageCapture() Then
+		If t.captureImageToClipboard() Then
+			&apos; we have an image on the clipboard.  Issue a Paste
+			&apos; to put it into the present document
+			
+			If Not( IsNull(StarDesktop.CurrentComponent) ) Then
+				dim document   as object
+				dim dispatcher as object
+
+				document   = StarDesktop.CurrentComponent.CurrentController.Frame
+				dispatcher = createUnoService(&quot;com.sun.star.frame.DispatchHelper&quot;)
+				
+				dispatcher.executeDispatch(document, &quot;.uno:Paste&quot;, &quot;&quot;, 0, Array())
+			End If
+		End If
+	End If
+End Sub
+</script:module>
