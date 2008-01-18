@@ -335,10 +335,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
     OSErr error;
     CFStringRef strings[] = 
 	{
-		CFSTR("tif"), CFSTR("tiff"), CFSTR("jpg"), CFSTR("jpeg")
+		CFSTR("tif"), CFSTR("tiff"), CFSTR("jpg"), CFSTR("jpeg"), CFSTR("gif")
 	};
 	
-	CFIndex theCount = 4;
+	CFIndex theCount = 5;
 	CFArrayRef theTypes = CFArrayCreate( NULL, (const void**)strings, theCount, &kCFTypeArrayCallBacks );
 	ICAImportImagePB thePB;
 	memset(&thePB, '\0', sizeof(thePB));
@@ -367,17 +367,23 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 					{
 						// convert the data using coreimage
 						
-						CGImageDestinationRef pictConverterDest=CGImageDestinationCreateWithData(pictData, kUTTypePICT, 1, NULL);
+						CGImageDestinationRef pictConverterDest=CGImageDestinationCreateWithData(pictData, kUTTypeTIFF, 1, NULL);
 						if(pictConverterDest)
 						{
 							CGImageDestinationAddImage(pictConverterDest, theCGImage, NULL);
 							if(CGImageDestinationFinalize(pictConverterDest))
 							{
-								ScrapRef myScrap=NULL;
-								GetCurrentScrap(&myScrap);
-								if(myScrap)
+								PasteboardRef theClipboard;
+								
+								if(PasteboardCreate(kPasteboardClipboard, &theClipboard)==noErr)
 								{
-									PutScrapFlavor(myScrap, kScrapFlavorTypePicture, kScrapFlavorMaskNone, CFDataGetLength(pictData), CFDataGetBytePtr(pictData));
+									PasteboardClear(theClipboard);
+									PasteboardSynchronize(theClipboard);
+									PasteboardPutItemFlavor(theClipboard, (PasteboardItemID)1, kUTTypeTIFF, pictData, 0);
+									
+									// mark that we've successfully imported the image and placed it onto the clipboard
+									
+									gotImage=true;
 								}
 							}
 							
