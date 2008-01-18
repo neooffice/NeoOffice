@@ -54,6 +54,9 @@
 #ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
 #endif
+#ifndef _VOS_MUTEX_HXX
+#include <vos/mutex.hxx>
+#endif
 
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
@@ -118,6 +121,7 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
+using namespace ::vos;
 
 //========================================================================
 class MacOSXImageCaptureImpl
@@ -377,10 +381,15 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 								
 								if(PasteboardCreate(kPasteboardClipboard, &theClipboard)==noErr)
 								{
+									IMutex &rSolarMutex = Application::GetSolarMutex();
+									rSolarMutex.acquire();
+
 									PasteboardClear(theClipboard);
 									PasteboardSynchronize(theClipboard);
 									PasteboardPutItemFlavor(theClipboard, (PasteboardItemID)1, kUTTypeTIFF, pictData, 0);
 									
+									rSolarMutex.release();
+
 									// mark that we've successfully imported the image and placed it onto the clipboard
 									
 									gotImage=true;
