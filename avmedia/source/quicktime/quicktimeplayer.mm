@@ -132,6 +132,7 @@ using namespace ::com::sun::star::uno;
 @interface AvmediaMoviePlayer : NSObject
 {
 	QTMovie*				mpMovie;
+	QTMovieView*			mpMovieView;
 	MacOSBOOL				mbPlaying;
 }
 - (double)currentTime:(AvmediaMoviePlayerArgs *)pArgs;
@@ -141,6 +142,7 @@ using namespace ::com::sun::star::uno;
 - (void)initialize:(NSURL *)pURL;
 - (MacOSBOOL)isPlaying:(AvmediaMoviePlayerArgs *)pArgs;
 - (QTMovie *)movie;
+- (QTMovieView *)movieView;
 - (MacOSBOOL)mute:(AvmediaMoviePlayerArgs *)pArgs;
 - (void)play:(id)pObject;
 - (double)rate:(AvmediaMoviePlayerArgs *)pArgs;
@@ -152,6 +154,7 @@ using namespace ::com::sun::star::uno;
 - (void)setRate:(AvmediaMoviePlayerArgs *)pArgs;
 - (void)setSelection:(AvmediaMoviePlayerArgs *)pArgs;
 - (void)setVolumeDB:(AvmediaMoviePlayerArgs *)pArgs;
+- (NSSize)size:(AvmediaMoviePlayerArgs *)pArgs;
 - (void)stop:(id)pObject;
 - (short)volumeDB:(AvmediaMoviePlayerArgs *)pArgs;
 @end
@@ -174,6 +177,12 @@ using namespace ::com::sun::star::uno;
 
 - (void)dealloc
 {
+	if ( mpMovieView )
+	{
+		[mpMovieView setMovie:nil];
+		[mpMovieView release];
+	}
+
 	if ( mpMovie )
 		[mpMovie release];
 
@@ -199,6 +208,7 @@ using namespace ::com::sun::star::uno;
 	[super init];
 
 	mpMovie = nil;
+	mpMovieView = nil;
 	mbPlaying = NO;
 
 	return self;
@@ -212,12 +222,35 @@ using namespace ::com::sun::star::uno;
 		[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:QTMovieLoopsAttribute];
 		[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
 		[mpMovie retain];
+
+		NSRect aFrame;
+		NSImage *pImage = [mpMovie currentFrameImage];
+		if ( pImage )
+		{
+			NSSize aSize = [pImage size];
+			aFrame = NSMakeRect( 0, 0, aSize.width, aSize.height );
+		}
+		else
+		{
+			aFrame = NSMakeRect( 0, 0, 1, 1 );
+		}
+
+		mpMovieView = [[QTMovieView alloc] initWithFrame:aFrame];
+		[mpMovieView setControllerVisible:NO];
+		[mpMovieView setPreservesAspectRatio:YES];
+		[mpMovieView setShowsResizeIndicator:NO];
+		[mpMovieView setMovie:mpMovie];
 	}
 }
 
 - (QTMovie *)movie
 {
 	return mpMovie;
+}
+
+- (QTMovieView *)movieView
+{
+	return mpMovieView;
 }
 
 - (MacOSBOOL)isPlaying:(AvmediaMoviePlayerArgs *)pArgs
@@ -373,6 +406,16 @@ using namespace ::com::sun::star::uno;
 	[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
 }
 
+- (NSSize)size:(AvmediaMoviePlayerArgs *)pArgs
+{
+	NSSize aRet = [mpMovieView frame].size;
+
+	if ( pArgs )
+		[pArgs setResult:[NSValue valueWithSize:aRet]];
+
+	return aRet;
+}
+
 - (void)stop:(id)pObject
 {
 	[mpMovie stop];
@@ -452,10 +495,14 @@ bool Player::create( const ::rtl::OUString& rURL )
 					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 					[pMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
 
-					if ( [pMoviePlayer movie ] )
+					if ( [pMoviePlayer movie] && [pMoviePlayer movieView] )
 					{
 						mpMoviePlayer = pMoviePlayer;
 						bRet = true;
+					}
+					else
+					{
+						[pMoviePlayer autorelease];
 					}
 				}
 			}
@@ -768,11 +815,26 @@ sal_Int16 SAL_CALL Player::getVolumeDB() throw( RuntimeException )
 
 Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::getPreferredPlayerWindowSize not implemented\n" );
-#endif
-	Size aSize( 0, 0 );
-	return aSize;
+	Size aRet( 0, 0 );
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpMoviePlayer )
+	{
+		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(size:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSValue *pRet = (NSValue *)[pArgs result];
+		if ( pRet )
+		{
+			NSSize aSize = [pRet sizeValue];
+			aRet = Size( fabs( aSize.width ), fabs( aSize.height ) );
+		}
+	}
+
+	[pPool release];
+
+	return aRet;
 }
 
 // ----------------------------------------------------------------------------
