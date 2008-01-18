@@ -48,6 +48,7 @@ TARGET=avmediaquicktime
 SLOFILES= \
 	$(SLO)$/quicktimemanager.obj \
 	$(SLO)$/quicktimeplayer.obj \
+	$(SLO)$/quicktimeplayerwindow.obj \
 	$(SLO)$/quicktimeuno.obj
 
 EXCEPTIONSFILES= \

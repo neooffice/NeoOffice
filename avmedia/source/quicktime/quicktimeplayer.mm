@@ -38,10 +38,6 @@
 #import <postmac.h>
 #import "quicktimeplayer.hxx"
 
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
-
 // Redefine Cocoa YES and NO defines types for convenience
 #ifdef YES
 #undef YES
