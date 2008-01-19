@@ -28,7 +28,7 @@ Sub Main
 	t = CreateUnoService(&quot;org.neooffice.ImageCapture&quot;)
 	
 	If IsNull(t) Then
-		MsgBox &quot;Unable to create Image Capture service!&quot;
+		MsgBox &quot;Unable to create Image Capture service!&quot;, 0, &quot;NeoOffice&quot;
 		Exit Sub
 	End If
 	
