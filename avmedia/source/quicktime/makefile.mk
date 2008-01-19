@@ -46,6 +46,7 @@ TARGET=avmediaquicktime
 .IF "$(OS)" == "MACOSX"
 
 SLOFILES= \
+	$(SLO)$/quicktimecommon.obj \
 	$(SLO)$/quicktimemanager.obj \
 	$(SLO)$/quicktimeplayer.obj \
 	$(SLO)$/quicktimeplayerwindow.obj \

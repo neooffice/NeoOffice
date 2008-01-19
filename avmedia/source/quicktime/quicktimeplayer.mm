@@ -33,406 +33,16 @@
  *
  ************************************************************************/
 
-#import <premac.h>
-#import <QTKit/QTKit.h>
-#import <postmac.h>
+#import "quicktimecommon.h"
 #import "quicktimeplayer.hxx"
-
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
 
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
-
-static const short nAVMediaMinDB = -40;
-static const short nAVMediaMaxDB = 0;
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
 using namespace ::com::sun::star::uno;
-
-@interface AvmediaMoviePlayerArgs : NSObject
-{
-	NSArray*				mpArgs;
-	NSObject*				mpResult;
-}
-+ (id)argsWithArgs:(NSArray *)pArgs;
-- (NSArray *)args;
-- (void)dealloc;
-- (id)initWithArgs:(NSArray *)pArgs;
-- (NSObject *)result;
-- (void)setResult:(NSObject *)pResult;
-@end
-
-@implementation AvmediaMoviePlayerArgs
-
-+ (id)argsWithArgs:(NSArray *)pArgs
-{
-	AvmediaMoviePlayerArgs *pRet = [[AvmediaMoviePlayerArgs alloc] initWithArgs:pArgs];
-	if ( pRet )
-		[pRet autorelease];
-
-	return pRet;
-}
-
-- (NSArray *)args
-{
-	return mpArgs;
-}
-
-- (void)dealloc
-{
-	if ( mpArgs )
-		[mpArgs release];
-
-	if ( mpResult )
-		[mpResult release];
-
-	[super dealloc];
-}
-
-- (id)initWithArgs:(NSArray *)pArgs
-{
-	[super init];
-
-	mpResult = nil;
-	mpArgs = pArgs;
-	if ( mpArgs )
-		[mpArgs retain];
-
-	return self;
-}
-
-- (NSObject *)result
-{
-	return mpResult;
-}
-
-- (void)setResult:(NSObject *)pResult
-{
-	if ( mpResult )
-		[mpResult release];
-
-	mpResult = pResult;
-
-	if ( mpResult )
-		[mpResult retain];
-}
-
-@end
-
-@interface AvmediaMoviePlayer : NSObject
-{
-	QTMovie*				mpMovie;
-	QTMovieView*			mpMovieView;
-	MacOSBOOL				mbPlaying;
-}
-- (double)currentTime:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)dealloc;
-- (double)duration:(AvmediaMoviePlayerArgs *)pArgs;
-- (id)init;
-- (void)initialize:(NSURL *)pURL;
-- (MacOSBOOL)isPlaying:(AvmediaMoviePlayerArgs *)pArgs;
-- (QTMovie *)movie;
-- (QTMovieView *)movieView;
-- (MacOSBOOL)mute:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)play:(id)pObject;
-- (double)rate:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)release:(id)pObject;
-- (double)selectionEnd:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)setCurrentTime:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)setLooping:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)setMute:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)setRate:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)setSelection:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)setVolumeDB:(AvmediaMoviePlayerArgs *)pArgs;
-- (NSSize)size:(AvmediaMoviePlayerArgs *)pArgs;
-- (void)stop:(id)pObject;
-- (short)volumeDB:(AvmediaMoviePlayerArgs *)pArgs;
-@end
-
-@implementation AvmediaMoviePlayer
-
-- (double)currentTime:(AvmediaMoviePlayerArgs *)pArgs
-{
-	double fRet = 0;
-
-	NSTimeInterval aInterval;
-	if ( QTGetTimeInterval( [mpMovie currentTime], &aInterval ) )
-		fRet = aInterval;
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
-
-	return fRet;
-}
-
-- (void)dealloc
-{
-	if ( mpMovieView )
-	{
-		[mpMovieView setMovie:nil];
-		[mpMovieView release];
-	}
-
-	if ( mpMovie )
-		[mpMovie release];
-
-	[super dealloc];
-}
-
-- (double)duration:(AvmediaMoviePlayerArgs *)pArgs
-{
-	double fRet = 0;
-
-	NSTimeInterval aInterval;
-	if ( QTGetTimeInterval( [mpMovie duration], &aInterval ) )
-		fRet = aInterval;
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
-
-	return fRet;
-}
-
-- (id)init
-{
-	[super init];
-
-	mpMovie = nil;
-	mpMovieView = nil;
-	mbPlaying = NO;
-
-	return self;
-}
-
-- (void)initialize:(NSURL *)pURL
-{
-	mpMovie = [QTMovie movieWithURL:pURL error:nil];
-	if ( mpMovie )
-	{
-		[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:QTMovieLoopsAttribute];
-		[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
-		[mpMovie retain];
-
-		NSRect aFrame;
-		NSImage *pImage = [mpMovie currentFrameImage];
-		if ( pImage )
-		{
-			NSSize aSize = [pImage size];
-			aFrame = NSMakeRect( 0, 0, aSize.width, aSize.height );
-		}
-		else
-		{
-			aFrame = NSMakeRect( 0, 0, 1, 1 );
-		}
-
-		mpMovieView = [[QTMovieView alloc] initWithFrame:aFrame];
-		[mpMovieView setControllerVisible:NO];
-		[mpMovieView setPreservesAspectRatio:YES];
-		[mpMovieView setShowsResizeIndicator:NO];
-		[mpMovieView setMovie:mpMovie];
-	}
-}
-
-- (QTMovie *)movie
-{
-	return mpMovie;
-}
-
-- (QTMovieView *)movieView
-{
-	return mpMovieView;
-}
-
-- (MacOSBOOL)isPlaying:(AvmediaMoviePlayerArgs *)pArgs
-{
-	// Check if we are at the end of the movie
-	if ( mbPlaying )
-	{
-		NSTimeInterval aCurrentInterval;
-		NSTimeInterval aDurationInterval;
-		if ( QTGetTimeInterval( [mpMovie currentTime], &aCurrentInterval ) && QTGetTimeInterval( [mpMovie duration], &aDurationInterval ) && aCurrentInterval >= aDurationInterval )
-		{
-			NSNumber *pLooping = [mpMovie attributeForKey:QTMovieLoopsAttribute];
-			if ( pLooping || ![pLooping boolValue] )
-				mbPlaying = NO;
-		}
-	}
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithBool:mbPlaying]];
-
-	return mbPlaying;
-}
-
-- (double)rate:(AvmediaMoviePlayerArgs *)pArgs
-{
-	double fRet = (double)[mpMovie rate];
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
-
-	return fRet;
-}
-
-- (void)release:(id)pObject
-{
-	[mpMovie stop];
-	mbPlaying = NO;
-
-	[self release];
-}
-
-- (MacOSBOOL)mute:(AvmediaMoviePlayerArgs *)pArgs
-{
-	MacOSBOOL bRet = [mpMovie muted];
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithBool:bRet]];
-
-	return bRet;
-}
-
-- (void)play:(id)pObject
-{
-	[mpMovie play];
-	mbPlaying = YES;
-}
-
-- (double)selectionEnd:(AvmediaMoviePlayerArgs *)pArgs
-{
-	double fRet = 0;
-
-	NSTimeInterval aInterval;
-	if ( QTGetTimeInterval( [mpMovie selectionEnd], &aInterval ) )
-	{
-		fRet = aInterval;
-	}
-	else if ( QTGetTimeInterval( [mpMovie duration], &aInterval ) )
-	{
-		fRet = aInterval;
-	}
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithDouble:fRet]];
-
-	return fRet;
-}
-
-- (void)setCurrentTime:(AvmediaMoviePlayerArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
-	if ( !pTime )
-		return;
-
-	[mpMovie setCurrentTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
-}
-
-- (void)setLooping:(AvmediaMoviePlayerArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-	NSNumber *pLooping = (NSNumber *)[pArgArray objectAtIndex:0];
-	if ( !pLooping )
-		return;
-
-	[mpMovie setAttribute:pLooping forKey:QTMovieLoopsAttribute];
-}
-
-- (void)setMute:(AvmediaMoviePlayerArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-	NSNumber *pMute = (NSNumber *)[pArgArray objectAtIndex:0];
-	if ( !pMute )
-		return;
-
-	[mpMovie setMuted:[pMute boolValue]];
-}
-
-- (void)setRate:(AvmediaMoviePlayerArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
-	if ( !pTime )
-		return;
-
-	[mpMovie setRate:[pTime floatValue]];
-}
-
-- (void)setSelection:(AvmediaMoviePlayerArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
-	if ( !pTime )
-		return;
-
-	[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), QTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
-}
-
-- (void)setVolumeDB:(AvmediaMoviePlayerArgs *)pArgs
-{
-	NSArray *pArgArray = [pArgs args];
-	if ( !pArgArray || [pArgArray count] < 1 )
-		return;
-
-	NSNumber *pDB = (NSNumber *)[pArgArray objectAtIndex:0];
-	if ( !pDB )
-		return;
-
-	[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
-}
-
-- (NSSize)size:(AvmediaMoviePlayerArgs *)pArgs
-{
-	NSSize aRet = [mpMovieView frame].size;
-
-	if ( pArgs )
-		[pArgs setResult:[NSValue valueWithSize:aRet]];
-
-	return aRet;
-}
-
-- (void)stop:(id)pObject
-{
-	[mpMovie stop];
-	mbPlaying = NO;
-}
-
-- (short)volumeDB:(AvmediaMoviePlayerArgs *)pArgs
-{
-	short nRet = (short)( [mpMovie volume] * ( nAVMediaMaxDB - nAVMediaMinDB ) ) + nAVMediaMinDB;
-
-	if ( pArgs )
-		[pArgs setResult:[NSNumber numberWithShort:nRet]];
-
-	return nRet;
-}
-
-@end
 
 namespace avmedia
 {
@@ -554,7 +164,7 @@ sal_Bool SAL_CALL Player::isPlaying() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(isPlaying:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
@@ -577,7 +187,7 @@ double SAL_CALL Player::getDuration() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(duration:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
@@ -598,7 +208,7 @@ void SAL_CALL Player::setMediaTime( double fTime ) throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fTime]]];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fTime]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setCurrentTime:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
@@ -616,7 +226,7 @@ double SAL_CALL Player::getMediaTime() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(currentTime:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
@@ -637,7 +247,7 @@ void SAL_CALL Player::setStopTime( double fTime ) throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fTime]]];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fTime]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setSelection:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
@@ -655,7 +265,7 @@ double SAL_CALL Player::getStopTime() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(selectionEnd:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
@@ -676,7 +286,7 @@ void SAL_CALL Player::setRate( double fRate ) throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fRate]]];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithDouble:fRate]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setRate:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
@@ -694,7 +304,7 @@ double SAL_CALL Player::getRate() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(rate:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
@@ -717,7 +327,7 @@ void SAL_CALL Player::setPlaybackLoop( sal_Bool bSet ) throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:(MacOSBOOL)bSet], nil]];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:[NSNumber numberWithBool:(MacOSBOOL)bSet], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setLooping:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
@@ -741,7 +351,7 @@ void SAL_CALL Player::setMute( sal_Bool bSet ) throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:( bSet ? YES : NO )]]];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithBool:( bSet ? YES : NO )]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setMute:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
@@ -759,7 +369,7 @@ sal_Bool SAL_CALL Player::isMute() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(mute:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
@@ -780,7 +390,7 @@ void SAL_CALL Player::setVolumeDB( sal_Int16 nVolumeDB ) throw( RuntimeException
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithShort:nVolumeDB]]];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithShort:nVolumeDB]]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setVolumeDB:) withObject:pArgs waitUntilDone:NO modes:pModes];
 	}
@@ -798,7 +408,7 @@ sal_Int16 SAL_CALL Player::getVolumeDB() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(volumeDB:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
@@ -821,7 +431,7 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 
 	if ( mpMoviePlayer )
 	{
-		AvmediaMoviePlayerArgs *pArgs = [AvmediaMoviePlayerArgs argsWithArgs:nil];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(size:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSValue *pRet = (NSValue *)[pArgs result];
