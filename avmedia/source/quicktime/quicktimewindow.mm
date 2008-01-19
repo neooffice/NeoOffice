@@ -33,20 +33,11 @@
  *
  ************************************************************************/
 
-#import <premac.h>
-#import <QTKit/QTKit.h>
-#import <postmac.h>
-#import "quicktimeplayerwindow.hxx"
+#import "quicktimecommon.h"
+#import "quicktimewindow.hxx"
 
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
+#define AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Window_QuickTime"
+#define AVMEDIA_QUICKTIME_WINDOW_SERVICENAME "com.sun.star.media.Window_QuickTime"
 
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
@@ -294,33 +285,28 @@ void Window::removeEventListener( const Reference< XEventListener >& aListener )
 
 // ----------------------------------------------------------------------------
 
-::rtl::OUString Window::getImplementationName() throw( RuntimeException )
+::rtl::OUString SAL_CALL Window::getImplementationName() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::getImplementationName not implemented\n" );
-#endif
-	return ::rtl::OUString();
+	return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME ) );
 }
 
 // ----------------------------------------------------------------------------
 
-sal_Bool Window::supportsService( const ::rtl::OUString& ServiceName ) throw( RuntimeException )
+sal_Bool SAL_CALL Window::supportsService( const ::rtl::OUString& ServiceName ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::supportsService not implemented\n" );
-#endif
-	return false;
+	return ServiceName.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM ( AVMEDIA_QUICKTIME_WINDOW_SERVICENAME ) );
 }
 
 // ----------------------------------------------------------------------------
 
-Sequence< ::rtl::OUString > Window::getSupportedServiceNames() throw( RuntimeException )
+Sequence< ::rtl::OUString > SAL_CALL Window::getSupportedServiceNames() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::getSupportedServiceNames not implemented\n" );
-#endif
-	return Sequence< ::rtl::OUString >();
+	Sequence< ::rtl::OUString > aRet(1);
+	aRet[0] = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( AVMEDIA_QUICKTIME_WINDOW_SERVICENAME ) );
+
+	return aRet;
 }
+
 
 } // namespace quicktime
 } // namespace avmedia
