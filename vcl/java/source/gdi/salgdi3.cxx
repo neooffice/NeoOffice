@@ -572,7 +572,9 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 			pMetric->mnAscent = (long)( ( aFontMetrics.ascent * pMetric->mnWidth ) + 0.5 );
 			if ( pMetric->mnAscent < 1 )
 				pMetric->mnAscent = 1;
-			pMetric->mnDescent = (long)( ( ( aFontMetrics.leading - aFontMetrics.descent ) * pMetric->mnWidth ) + 0.5 );
+			// Fix bug 2881 by handling cases where font does not have negative
+			// descent
+			pMetric->mnDescent = (long)( ( ( aFontMetrics.leading + fabs( aFontMetrics.descent ) ) * pMetric->mnWidth ) + 0.5 );
 			if ( pMetric->mnDescent < 0 )
 				pMetric->mnDescent = 0;
 		}
