@@ -49,8 +49,8 @@ SLOFILES= \
 	$(SLO)$/quicktimecommon.obj \
 	$(SLO)$/quicktimemanager.obj \
 	$(SLO)$/quicktimeplayer.obj \
-	$(SLO)$/quicktimeplayerwindow.obj \
-	$(SLO)$/quicktimeuno.obj
+	$(SLO)$/quicktimeuno.obj \
+	$(SLO)$/quicktimewindow.obj
 
 EXCEPTIONSFILES= \
 	$(SLO)$/quicktimeuno.obj
