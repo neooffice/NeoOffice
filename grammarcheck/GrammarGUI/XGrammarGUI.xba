@@ -38,18 +38,18 @@ Dim grammarCheckerService as Object
 
 Sub Main
 	if IsNull(StarDesktop.CurrentComponent) Then
-		MsgBox &quot;No document available to check!&quot;, 0, &quot;NeoOffice&quot;
+		MsgBox &quot;No document available to check!&quot;, 0, &quot;Grammar Checker&quot;
 		Exit Sub
 	End If
 	
 	grammarCheckerService = CreateUnoService(&quot;org.neooffice.GrammarChecker&quot;)
 	if IsNull(grammarCheckerService) Then
-		MsgBox &quot;Grammar checker is not available for this operating system.&quot;, 0, &quot;NeoOffice&quot;
+		MsgBox &quot;Grammar checker is not available for this operating system.&quot;, 0, &quot;Grammar Checker&quot;
 		Exit Sub
 	End If
 	
 	If grammarCheckerService.hasGrammarChecker() = False Then
-		MsgBox &quot;Mac OS X 10.5 is required for grammar checking.&quot;, 0, &quot;NeoOffice&quot;
+		MsgBox &quot;Mac OS X 10.5 is required for grammar checking.&quot;, 0, &quot;Grammar Checker&quot;
 		Exit Sub
 	End If
 	
@@ -82,7 +82,7 @@ Sub StartGrammarCheck
 	
 	FindNextGrammarError
 	If checkComplete Then
-		MsgBox &quot;No grammar errors found.&quot;, 0, &quot;NeoOffice&quot;
+		MsgBox &quot;No grammar errors found.&quot;, 0, &quot;Grammar Checker&quot;
 		Exit Sub
 	End If
 	
@@ -235,7 +235,7 @@ Sub ignoreButton_Initiated
 	
 	FindNextGrammarError
 	If checkComplete Then
-		MsgBox &quot;Grammar check complete.&quot;, 0, &quot;NeoOffice&quot;
+		MsgBox &quot;Grammar check complete.&quot;, 0, &quot;Grammar Checker&quot;
 		Dlg.endExecute()
 		Exit Sub
 	End If
@@ -259,7 +259,7 @@ Sub ignoreAllButton_Initiated
 	
 	FindNextGrammarError
 	If checkComplete Then
-		MsgBox &quot;Grammar check complete.&quot;, 0, &quot;NeoOffice&quot;
+		MsgBox &quot;Grammar check complete.&quot;, 0, &quot;Grammar Checker&quot;
 		Dlg.endExecute()
 		Exit Sub
 	End If
@@ -277,7 +277,7 @@ Sub changeButton_Initiated
 		&apos; check for a selection.
 		
 		If correctionListBox.SelectedItemPos &lt; 0 Then
-			MsgBox &quot;Please select a suggested correction from the list, or click &apos;Ignore&apos;.&quot;, 0, &quot;NeoOffice&quot;
+			MsgBox &quot;Please select a suggested correction from the list, or click &apos;Ignore&apos;.&quot;, 0, &quot;Grammar Checker&quot;
 			Exit Sub
 		Else
 			SentenceIter.String = correctionListBox.SelectedItem
@@ -288,7 +288,7 @@ Sub changeButton_Initiated
 	
 	FindNextGrammarError
 	If checkComplete Then
-		MsgBox &quot;Grammar check complete.&quot;, 0, &quot;NeoOffice&quot;
+		MsgBox &quot;Grammar check complete.&quot;, 0, &quot;Grammar Checker&quot;
 		Dlg.endExecute()
 		Exit Sub
 	End If
