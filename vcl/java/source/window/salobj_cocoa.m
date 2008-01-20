@@ -61,6 +61,7 @@
 {
 	NSColor*				mpBackgroundColor;
 	NSRect					maClipRect;
+	NSView*					mpSuperview;
 }
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
@@ -75,14 +76,13 @@
 
 - (void)dealloc
 {
-	NSView *pSuperview = [self superview];
-	if ( pSuperview )
-	{
-		[pSuperview removeFromSuperview];
-		[pSuperview release];
-	}
-
 	[self removeFromSuperview];
+
+	if ( mpSuperview )
+	{
+		[mpSuperview removeFromSuperview];
+		[mpSuperview release];
+	}
 
 	if ( mpBackgroundColor )
 		[mpBackgroundColor release];
@@ -110,14 +110,9 @@
 	maClipRect = NSZeroRect;
 
 	// Create a superview that we use to control clipping
-	VCLChildSuperview *pSuperview = [[VCLChildSuperview alloc] initWithFrame:aFrame];
-	if ( pSuperview )
-	{
-		// Add to autorelease pool as invoking alloc disables autorelease
-		[pSuperview autorelease];
-
-		[pSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
-	}
+	mpSuperview = [[VCLChildSuperview alloc] initWithFrame:aFrame];
+	if ( mpSuperview )
+		[mpSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
 
 	return self;
 }
@@ -144,20 +139,19 @@
 
 - (void)setBounds:(NSValue *)pValue
 {
-	if ( pValue )
+	if ( pValue && mpSuperview )
 	{
 		NSRect aNewFrame = [pValue rectValue];
-		NSView *pSuperview = [self superview];
-		if ( !NSIsEmptyRect( aNewFrame ) && pSuperview )
+		if ( !NSIsEmptyRect( aNewFrame ) )
 		{
 			// Set superview to intersection of new frame and clip
-			NSRect aParentFrame = [pSuperview frame];
+			NSRect aParentFrame = [mpSuperview frame];
 			NSRect aNewParentFrame = NSMakeRect( 0, 0, aNewFrame.size.width, aNewFrame.size.height );
 			if ( !NSIsEmptyRect( maClipRect ) )
 				aNewParentFrame = NSIntersectionRect( aNewParentFrame, maClipRect );
 			aNewParentFrame.origin.x += aNewFrame.origin.x;
 			aNewParentFrame.origin.y += aNewFrame.origin.y;
-			[pSuperview setFrame:aNewParentFrame];
+			[mpSuperview setFrame:aNewParentFrame];
 
 			// Move child view's origin to account for origin of superview
 			if ( !NSIsEmptyRect( maClipRect ) )
@@ -176,7 +170,7 @@
 
 			// Force a repaint of the superview's superview in the old and new
 			// frames
-			NSView *pSuperSuperview = [pSuperview superview];
+			NSView *pSuperSuperview = [mpSuperview superview];
 			if ( pSuperSuperview )
 				[pSuperSuperview setNeedsDisplayInRect:aParentFrame];
 		}
@@ -185,27 +179,23 @@
 
 - (void)setClip:(NSValue *)pValue
 {
-	if ( pValue )
+	if ( pValue && mpSuperview )
 	{
-		NSView *pSuperview = [self superview];
-		if ( pSuperview )
+		NSRect aFrame = [self frame];
+		NSRect aParentFrame = [mpSuperview frame];
+		if ( !NSIsEmptyRect( maClipRect ) )
 		{
-			NSRect aFrame = [self frame];
-			NSRect aParentFrame = [pSuperview frame];
-			if ( !NSIsEmptyRect( maClipRect ) )
-			{
-				aParentFrame.origin.x -= maClipRect.origin.x;
-				aParentFrame.origin.y -= maClipRect.origin.y;
-				aParentFrame.size.width = aFrame.size.width;
-				aParentFrame.size.height = aFrame.size.height;
-			}
-
-			maClipRect = [pValue rectValue];
-			if ( NSIsEmptyRect( maClipRect ) )
-				maClipRect = NSZeroRect;
-
-			[self setBounds:[NSValue valueWithRect:aParentFrame]];
+			aParentFrame.origin.x -= maClipRect.origin.x;
+			aParentFrame.origin.y -= maClipRect.origin.y;
+			aParentFrame.size.width = aFrame.size.width;
+			aParentFrame.size.height = aFrame.size.height;
 		}
+
+		maClipRect = [pValue rectValue];
+		if ( NSIsEmptyRect( maClipRect ) )
+			maClipRect = NSZeroRect;
+
+		[self setBounds:[NSValue valueWithRect:aParentFrame]];
 	}
 }
 
