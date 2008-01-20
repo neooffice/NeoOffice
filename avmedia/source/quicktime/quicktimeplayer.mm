@@ -35,6 +35,7 @@
 
 #import "quicktimecommon.h"
 #import "quicktimeplayer.hxx"
+#import "quicktimewindow.hxx"
 
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
@@ -99,20 +100,20 @@ bool Player::create( const ::rtl::OUString& rURL )
 			if ( pURL )
 			{
 				// Do not retain as invoking alloc disables autorelease
-				AvmediaMoviePlayer *pMoviePlayer = [[AvmediaMoviePlayer alloc] init];
-				if ( pMoviePlayer )
+				mpMoviePlayer = [[AvmediaMoviePlayer alloc] init];
+				if ( mpMoviePlayer )
 				{
 					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-					[pMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
+					[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
 
-					if ( [pMoviePlayer movie] && [pMoviePlayer movieView] )
+					if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
 					{
-						mpMoviePlayer = pMoviePlayer;
-						bRet = true;
+						[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
+						mpMoviePlayer = NULL;
 					}
 					else
 					{
-						[pMoviePlayer autorelease];
+						bRet = true;
 					}
 				}
 			}
@@ -438,7 +439,8 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 		if ( pRet )
 		{
 			NSSize aSize = [pRet sizeValue];
-			aRet = Size( fabs( aSize.width ), fabs( aSize.height ) );
+			if ( aSize.width > 0 && aSize.height > 0 )
+				aRet = Size( aSize.width, aSize.height );
 		}
 	}
 
@@ -449,12 +451,14 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< Any >& aArguments ) throw( RuntimeException )
+Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< Any >& rArguments ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::createPlayerWindow not implemented\n" );
-#endif
 	Reference< XPlayerWindow > xRet;
+
+	Window *pWindow = new Window( mxMgr );
+	if ( pWindow && pWindow->create( mpMoviePlayer, rArguments ) )
+		xRet = Reference< XPlayerWindow >( pWindow );
+
 	return xRet;
 }
 

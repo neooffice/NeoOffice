@@ -88,7 +88,7 @@ public:
 	virtual void SAL_CALL	setVolumeDB( sal_Int16 nVolumeDB ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual sal_Int16 SAL_CALL	getVolumeDB() throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::awt::Size SAL_CALL	getPreferredPlayerWindowSize() throw( ::com::sun::star::uno::RuntimeException );
-	virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XPlayerWindow > SAL_CALL	createPlayerWindow( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& aArguments ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XPlayerWindow > SAL_CALL	createPlayerWindow( const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& rArguments ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Reference< ::com::sun::star::media::XFrameGrabber > SAL_CALL	createFrameGrabber() throw( ::com::sun::star::uno::RuntimeException );
 
 	// XServiceInfo

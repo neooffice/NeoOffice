@@ -115,6 +115,7 @@ static const short nAVMediaMaxDB = 0;
 {
 	if ( mpMovieView )
 	{
+		[mpMovieView removeFromSuperview];
 		[mpMovieView setMovie:nil];
 		[mpMovieView release];
 	}
@@ -160,7 +161,7 @@ static const short nAVMediaMaxDB = 0;
 		[mpMovie retain];
 
 		NSRect aFrame;
-		NSImage *pImage = [mpMovie currentFrameImage];
+		NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( 0 )];
 		if ( pImage )
 		{
 			NSSize aSize = [pImage size];
@@ -264,6 +265,28 @@ static const short nAVMediaMaxDB = 0;
 	return fRet;
 }
 
+- (void)setBounds:(AvmediaArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSView *pParentView = (NSView *)[pArgArray objectAtIndex:0];
+	if ( !pParentView )
+		return;
+
+	NSValue *pRect = (NSValue *)[pArgArray objectAtIndex:1];
+	if ( !pRect )
+		return;
+
+	NSRect aNewFrame = [pRect rectValue];
+	NSRect aParentFrame = [pParentView frame];
+
+	// Flip frame and attach to parent view
+	aNewFrame.origin.y = aParentFrame.size.height - aNewFrame.origin.y - aNewFrame.size.height;
+	[mpMovieView setFrame:aNewFrame];
+}
+
 - (void)setCurrentTime:(AvmediaArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
@@ -327,6 +350,44 @@ static const short nAVMediaMaxDB = 0;
 		return;
 
 	[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), QTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
+}
+
+- (void)setSuperview:(AvmediaArgs *)pArgs
+{
+	[mpMovieView removeFromSuperview];
+
+	NSRect aFrame;
+	NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( 0 )];
+	if ( pImage )
+	{
+		NSSize aSize = [pImage size];
+		aFrame = NSMakeRect( 0, 0, aSize.width, aSize.height );
+	}
+	else
+	{
+		aFrame = NSMakeRect( 0, 0, 1, 1 );
+	}
+	[mpMovieView setFrame:aFrame];
+
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 2 )
+		return;
+
+	NSView *pParentView = (NSView *)[pArgArray objectAtIndex:0];
+	if ( !pParentView )
+		return;
+
+	NSValue *pRect = (NSValue *)[pArgArray objectAtIndex:1];
+	if ( !pRect )
+		return;
+
+	NSRect aNewFrame = [pRect rectValue];
+	NSRect aParentFrame = [pParentView frame];
+
+	// Flip frame and attach to parent view
+	aNewFrame.origin.y = aParentFrame.size.height - aNewFrame.origin.y - aNewFrame.size.height;
+	[mpMovieView setFrame:aNewFrame];
+	[pParentView addSubview:mpMovieView positioned:NSWindowAbove relativeTo:nil];
 }
 
 - (void)setVolumeDB:(AvmediaArgs *)pArgs

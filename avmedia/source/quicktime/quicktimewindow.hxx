@@ -41,8 +41,8 @@
 #ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #endif
-#ifndef _COM_SUN_STAR_MEDIA_XPLAYER_HPP_
-#include <com/sun/star/media/XPlayer.hpp>
+#ifndef _COM_SUN_STAR_MEDIA_XPLAYERWindow_HPP_
+#include <com/sun/star/media/XPlayerWindow.hpp>
 #endif
 
 namespace avmedia
@@ -57,11 +57,12 @@ namespace quicktime
 class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayerWindow, ::com::sun::star::lang::XServiceInfo >
 {
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
-	void*				mpMoviePlayerView;
-	Player				maPlayer;
+	void*				mpMoviePlayer;
+	void*				mpParentView;
+	::com::sun::star::awt::Rectangle	maRect;
 
 public:
-						Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr, Player& rPlayer );
+						Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
 						~Window();
 
 	// XPlayerWindow
@@ -71,10 +72,10 @@ public:
 	virtual void SAL_CALL	setPointerType( sal_Int32 nPointerType ) throw( ::com::sun::star::uno::RuntimeException );
 
 	// XWindow
-	virtual void SAL_CALL	setPosSize( sal_Int32 X, sal_Int32 Y, sal_Int32 Width, sal_Int32 Height, sal_Int16 Flags ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void SAL_CALL	setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 nFlags ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::awt::Rectangle SAL_CALL getPosSize() throw( ::com::sun::star::uno::RuntimeException );
-	virtual void SAL_CALL	setVisible( sal_Bool Visible ) throw( ::com::sun::star::uno::RuntimeException );
-	virtual void SAL_CALL	setEnable( sal_Bool Enable ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void SAL_CALL	setVisible( sal_Bool bVisible ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void SAL_CALL	setEnable( sal_Bool bEnable ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual void SAL_CALL	setFocus() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void SAL_CALL	addWindowListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual void SAL_CALL	removeWindowListener( const ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException );
@@ -98,6 +99,8 @@ public:
 	virtual ::rtl::OUString SAL_CALL	getImplementationName() throw( ::com::sun::star::uno::RuntimeException );
 	virtual sal_Bool SAL_CALL	supportsService( const ::rtl::OUString& ServiceName ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL	getSupportedServiceNames() throw( ::com::sun::star::uno::RuntimeException );
+
+	bool					create( void *pMoviePlayerView, const ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Any >& rArguments );
 };
 
 } // namespace quicktime

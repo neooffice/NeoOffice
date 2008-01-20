@@ -82,11 +82,13 @@
 - (double)rate:(AvmediaArgs *)pArgs;
 - (void)release:(id)pObject;
 - (double)selectionEnd:(AvmediaArgs *)pArgs;
+- (void)setBounds:(AvmediaArgs *)pArgs;
 - (void)setCurrentTime:(AvmediaArgs *)pArgs;
 - (void)setLooping:(AvmediaArgs *)pArgs;
 - (void)setMute:(AvmediaArgs *)pArgs;
 - (void)setRate:(AvmediaArgs *)pArgs;
 - (void)setSelection:(AvmediaArgs *)pArgs;
+- (void)setSuperview:(AvmediaArgs *)pArgs;
 - (void)setVolumeDB:(AvmediaArgs *)pArgs;
 - (NSSize)size:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;

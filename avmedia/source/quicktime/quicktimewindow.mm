@@ -51,10 +51,10 @@ namespace quicktime
 
 // ============================================================================
 
-Window::Window( const Reference< XMultiServiceFactory >& rxMgr, Player& rPlayer ) :
+Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mxMgr( rxMgr ),
-	mpMoviePlayerView( NULL ),
-	maPlayer( rPlayer )
+	mpMoviePlayer( NULL ),
+	mpParentView( NULL )
 {
 }
 
@@ -62,6 +62,7 @@ Window::Window( const Reference< XMultiServiceFactory >& rxMgr, Player& rPlayer 
 
 Window::~Window()
 {
+	dispose();
 }
 
 // ----------------------------------------------------------------------------
@@ -104,11 +105,20 @@ void Window::setPointerType( sal_Int32 nPointerType ) throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::setPosSize( sal_Int32 X, sal_Int32 Y, sal_Int32 Width, sal_Int32 Height, sal_Int16 Flags ) throw( RuntimeException )
+void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32 nHeight, sal_Int16 nFlags ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::setPosSize not implemented\n" );
-#endif
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	maRect = Rectangle( nX, nY, nWidth, nHeight );
+
+	if ( mpMoviePlayer && mpParentView )
+	{
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(AvmediaMoviePlayer *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setSuperview:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
 }
 
 // ----------------------------------------------------------------------------
@@ -123,16 +133,27 @@ Rectangle Window::getPosSize() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-void Window::setVisible( sal_Bool Visible ) throw( RuntimeException )
+void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::setVisible not implemented\n" );
-#endif
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpMoviePlayer )
+	{
+		AvmediaArgs *pArgs;
+		if ( bVisible && mpParentView )
+			pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(AvmediaMoviePlayer *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
+		else
+			pArgs = [AvmediaArgs argsWithArgs:nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setSuperview:) withObject:pArgs waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::setEnable( sal_Bool Enable ) throw( RuntimeException )
+void Window::setEnable( sal_Bool bEnable ) throw( RuntimeException )
 {
 #ifdef DEBUG
 	fprintf( stderr, "Window::setEnable not implemented\n" );
@@ -260,9 +281,16 @@ void Window::removePaintListener( const Reference< XPaintListener >& xListener )
 
 void Window::dispose() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::dispose not implemented\n" );
-#endif
+	if ( mpMoviePlayer )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
+		mpMoviePlayer = NULL;
+	}
+
+	// Don't release parent view as it is controlled by the vcl code
+	if ( mpParentView )
+		mpParentView = NULL;
 }
 
 // ----------------------------------------------------------------------------
@@ -307,6 +335,36 @@ Sequence< ::rtl::OUString > SAL_CALL Window::getSupportedServiceNames() throw( R
 	return aRet;
 }
 
+// ----------------------------------------------------------------------------
+
+bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
+{
+	bool bRet = false;
+
+	dispose();
+
+	if ( pMoviePlayer && rArguments.getLength() > 1 )
+	{
+		sal_Int32 nPtr;
+		rArguments.getConstArray()[0] >>= nPtr;
+		if ( nPtr )
+		{
+			mpMoviePlayer = pMoviePlayer;
+			[(AvmediaMoviePlayer *)mpMoviePlayer retain];
+
+			// Don't retain parent view as it is controlled by the vcl code
+			mpParentView = (void *)nPtr;
+
+			Rectangle aRect;
+			rArguments.getConstArray()[1] >>= maRect;
+
+			setVisible( sal_True );
+			bRet = true;
+		}
+	}
+
+	return bRet;
+}
 
 } // namespace quicktime
 } // namespace avmedia
