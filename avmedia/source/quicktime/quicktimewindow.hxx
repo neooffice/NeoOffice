@@ -60,6 +60,7 @@ class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayer
 	void*				mpMoviePlayer;
 	void*				mpParentView;
 	::com::sun::star::awt::Rectangle	maRect;
+	sal_Bool			mbVisible;
 
 public:
 						Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );

@@ -113,6 +113,9 @@ static const short nAVMediaMaxDB = 0;
 
 - (void)dealloc
 {
+	if ( mpMovie )
+		[mpMovie stop];
+
 	if ( mpMovieView )
 	{
 		[mpMovieView removeFromSuperview];
@@ -122,6 +125,9 @@ static const short nAVMediaMaxDB = 0;
 
 	if ( mpMovie )
 		[mpMovie release];
+
+	if ( mpSuperview )
+		[mpSuperview release];
 
 	[super dealloc];
 }
@@ -153,12 +159,13 @@ static const short nAVMediaMaxDB = 0;
 
 - (void)initialize:(NSURL *)pURL
 {
-	mpMovie = [QTMovie movieWithURL:pURL error:nil];
-	if ( mpMovie )
+	NSError *pError = nil;
+	mpMovie = [QTMovie movieWithURL:pURL error:&pError];
+	if ( mpMovie && !pError )
 	{
+		[mpMovie retain];
 		[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:QTMovieLoopsAttribute];
 		[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
-		[mpMovie retain];
 
 		NSRect aFrame;
 		NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( 0 )];
@@ -200,10 +207,15 @@ static const short nAVMediaMaxDB = 0;
 		if ( QTGetTimeInterval( [mpMovie currentTime], &aCurrentInterval ) && QTGetTimeInterval( [mpMovie duration], &aDurationInterval ) && aCurrentInterval >= aDurationInterval )
 		{
 			NSNumber *pLooping = [mpMovie attributeForKey:QTMovieLoopsAttribute];
-			if ( pLooping || ![pLooping boolValue] )
+			if ( pLooping && ![pLooping boolValue] )
 				mbPlaying = NO;
 		}
 	}
+
+	if ( mbPlaying )
+		[mpMovie play];
+	else
+		[mpMovie stop];
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithBool:mbPlaying]];
@@ -271,8 +283,8 @@ static const short nAVMediaMaxDB = 0;
 	if ( !pArgArray || [pArgArray count] < 2 )
 		return;
 
-	NSView *pParentView = (NSView *)[pArgArray objectAtIndex:0];
-	if ( !pParentView )
+	NSView *pSuperview = (NSView *)[pArgArray objectAtIndex:0];
+	if ( !pSuperview )
 		return;
 
 	NSValue *pRect = (NSValue *)[pArgArray objectAtIndex:1];
@@ -280,11 +292,24 @@ static const short nAVMediaMaxDB = 0;
 		return;
 
 	NSRect aNewFrame = [pRect rectValue];
-	NSRect aParentFrame = [pParentView frame];
+	if ( aNewFrame.size.width < 1 )
+		aNewFrame.size.width = 1;
+	if ( aNewFrame.size.height < 1 )
+		aNewFrame.size.height = 1;
+
+	if ( NSEqualRects( aNewFrame, [mpMovieView frame] ) )
+		return;
+
+	if ( mbPlaying )
+		[mpMovie stop];
 
 	// Flip frame and attach to parent view
+	NSRect aParentFrame = [pSuperview frame];
 	aNewFrame.origin.y = aParentFrame.size.height - aNewFrame.origin.y - aNewFrame.size.height;
 	[mpMovieView setFrame:aNewFrame];
+
+	if ( mbPlaying )
+		[mpMovie play];
 }
 
 - (void)setCurrentTime:(AvmediaArgs *)pArgs
@@ -297,7 +322,13 @@ static const short nAVMediaMaxDB = 0;
 	if ( !pTime )
 		return;
 
+	if ( mbPlaying )
+		[mpMovie stop];
+
 	[mpMovie setCurrentTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
+
+	if ( mbPlaying )
+		[mpMovie play];
 }
 
 - (void)setLooping:(AvmediaArgs *)pArgs
@@ -336,7 +367,13 @@ static const short nAVMediaMaxDB = 0;
 	if ( !pTime )
 		return;
 
+	if ( mbPlaying )
+		[mpMovie stop];
+
 	[mpMovie setRate:[pTime floatValue]];
+
+	if ( mbPlaying )
+		[mpMovie play];
 }
 
 - (void)setSelection:(AvmediaArgs *)pArgs
@@ -349,45 +386,87 @@ static const short nAVMediaMaxDB = 0;
 	if ( !pTime )
 		return;
 
+	if ( mbPlaying )
+		[mpMovie stop];
+
 	[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), QTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
+
+	if ( mbPlaying )
+		[mpMovie play];
 }
 
 - (void)setSuperview:(AvmediaArgs *)pArgs
 {
-	[mpMovieView removeFromSuperview];
-
-	NSRect aFrame;
-	NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( 0 )];
-	if ( pImage )
-	{
-		NSSize aSize = [pImage size];
-		aFrame = NSMakeRect( 0, 0, aSize.width, aSize.height );
-	}
-	else
-	{
-		aFrame = NSMakeRect( 0, 0, 1, 1 );
-	}
-	[mpMovieView setFrame:aFrame];
-
 	NSArray *pArgArray = [pArgs args];
 	if ( !pArgArray || [pArgArray count] < 2 )
-		return;
+	{
+		if ( mbPlaying )
+			[mpMovie stop];
 
-	NSView *pParentView = (NSView *)[pArgArray objectAtIndex:0];
-	if ( !pParentView )
+		[mpMovieView removeFromSuperview];
+		if ( mpSuperview )
+		{
+			[mpSuperview release];
+			mpSuperview = nil;
+		}
+
+		if ( mbPlaying )
+			[mpMovie play];
+
 		return;
+	}
+
+	NSView *pSuperview = (NSView *)[pArgArray objectAtIndex:0];
+	if ( !pSuperview )
+	{
+		if ( mbPlaying )
+			[mpMovie stop];
+
+		[mpMovieView removeFromSuperview];
+		if ( mpSuperview )
+		{
+			[mpSuperview release];
+			mpSuperview = nil;
+		}
+
+		if ( mbPlaying )
+			[mpMovie play];
+
+		return;
+	}
 
 	NSValue *pRect = (NSValue *)[pArgArray objectAtIndex:1];
 	if ( !pRect )
 		return;
 
 	NSRect aNewFrame = [pRect rectValue];
-	NSRect aParentFrame = [pParentView frame];
+	if ( aNewFrame.size.width < 1 )
+		aNewFrame.size.width = 1;
+	if ( aNewFrame.size.height < 1 )
+		aNewFrame.size.height = 1;
+
+	if ( mbPlaying )
+		[mpMovie stop];
 
 	// Flip frame and attach to parent view
+	NSRect aParentFrame = [pSuperview frame];
 	aNewFrame.origin.y = aParentFrame.size.height - aNewFrame.origin.y - aNewFrame.size.height;
+	aNewFrame.size.height = aParentFrame.size.height;
 	[mpMovieView setFrame:aNewFrame];
-	[pParentView addSubview:mpMovieView positioned:NSWindowAbove relativeTo:nil];
+
+	[mpMovieView removeFromSuperview];
+	if ( mpSuperview )
+	{
+		[mpSuperview release];
+		mpSuperview = nil;
+	}
+
+	mpSuperview = pSuperview;
+	[mpSuperview retain];
+	[mpSuperview addSubview:mpMovieView positioned:NSWindowAbove relativeTo:nil];
+
+	if ( mbPlaying )
+		[mpMovie play];
 }
 
 - (void)setVolumeDB:(AvmediaArgs *)pArgs

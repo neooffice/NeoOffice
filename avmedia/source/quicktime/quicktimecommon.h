@@ -68,6 +68,7 @@
 	QTMovie*				mpMovie;
 	QTMovieView*			mpMovieView;
 	MacOSBOOL				mbPlaying;
+	NSView*					mpSuperview;
 }
 - (double)currentTime:(AvmediaArgs *)pArgs;
 - (void)dealloc;

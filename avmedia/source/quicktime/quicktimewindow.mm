@@ -54,7 +54,8 @@ namespace quicktime
 Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mxMgr( rxMgr ),
 	mpMoviePlayer( NULL ),
-	mpParentView( NULL )
+	mpParentView( NULL ),
+	mbVisible( sal_False )
 {
 }
 
@@ -69,9 +70,7 @@ Window::~Window()
 
 void Window::update() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::update not implemented\n" );
-#endif
+	setVisible( mbVisible );
 }
 
 // ----------------------------------------------------------------------------
@@ -115,7 +114,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(AvmediaMoviePlayer *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setSuperview:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setBounds:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -137,6 +136,8 @@ void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+	mbVisible = bVisible;
+
 	if ( mpMoviePlayer )
 	{
 		AvmediaArgs *pArgs;
@@ -145,7 +146,7 @@ void Window::setVisible( sal_Bool bVisible ) throw( RuntimeException )
 		else
 			pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setSuperview:) withObject:pArgs waitUntilDone:NO modes:pModes];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setSuperview:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
@@ -281,16 +282,22 @@ void Window::removePaintListener( const Reference< XPaintListener >& xListener )
 
 void Window::dispose() throw( RuntimeException )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	if ( mpMoviePlayer )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
 		mpMoviePlayer = NULL;
 	}
 
-	// Don't release parent view as it is controlled by the vcl code
 	if ( mpParentView )
+	{
+		[(NSView *)mpParentView performSelectorOnMainThread:@selector(release) withObject:nil waitUntilDone:YES modes:pModes];
 		mpParentView = NULL;
+	}
+
+	[pPool release];
 }
 
 // ----------------------------------------------------------------------------
@@ -352,8 +359,8 @@ bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
 			mpMoviePlayer = pMoviePlayer;
 			[(AvmediaMoviePlayer *)mpMoviePlayer retain];
 
-			// Don't retain parent view as it is controlled by the vcl code
 			mpParentView = (void *)nPtr;
+			[(NSView *)mpParentView retain];
 
 			Rectangle aRect;
 			rArguments.getConstArray()[1] >>= maRect;
