@@ -86,34 +86,48 @@ bool Player::create( const ::rtl::OUString& rURL )
 	{
 		if ( mpMoviePlayer )
 		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
-			mpMoviePlayer = NULL;
+			if ( rURL.getLength() && rURL == maURL )
+			{
+				stop();
+				setPlaybackLoop( sal_False );
+				setMediaTime( 0 );
+				bRet = true;
+			}
+			else
+			{
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
+				mpMoviePlayer = NULL;
+			}
 		}
 
-		mbLooping = sal_False;
-
-		NSString *pString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
-		if ( pString )
+		if ( !bRet )
 		{
-			NSURL *pURL = [NSURL URLWithString:pString];
-			if ( pURL )
-			{
-				// Do not retain as invoking alloc disables autorelease
-				mpMoviePlayer = [[AvmediaMoviePlayer alloc] init];
-				if ( mpMoviePlayer )
-				{
-					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-					[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
+			mbLooping = sal_False;
+			maURL = ::rtl::OUString();
 
-					if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
+			NSString *pString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
+			if ( pString )
+			{
+				NSURL *pURL = [NSURL URLWithString:pString];
+				if ( pURL )
+				{
+					// Do not retain as invoking alloc disables autorelease
+					mpMoviePlayer = [[AvmediaMoviePlayer alloc] init];
+					if ( mpMoviePlayer )
 					{
-						[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
-						mpMoviePlayer = NULL;
-					}
-					else
-					{
-						bRet = true;
+						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+						[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
+
+						if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
+						{
+							[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:NO modes:pModes];
+							mpMoviePlayer = NULL;
+						}
+						else
+						{
+							bRet = true;
+						}
 					}
 				}
 			}

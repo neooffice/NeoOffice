@@ -63,6 +63,7 @@ class Player : public ::cppu::WeakImplHelper2< ::com::sun::star::media::XPlayer,
 	sal_Bool			mbLooping;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
 	void*				mpMoviePlayer;
+	::rtl::OUString		maURL;
 
 public:
 						Player( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
