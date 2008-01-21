@@ -53,7 +53,7 @@ void VCLChildView_release( id pVCLChildView );
 void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor );
 void VCLChildView_setBounds( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
 void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
-BOOL VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow );
+void VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow );
 #ifdef __cplusplus
 END_C
 #endif

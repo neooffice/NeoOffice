@@ -76,6 +76,19 @@
 
 - (void)dealloc
 {
+	NSArray *pSubviews = [self subviews];
+	if ( pSubviews )
+	{
+		unsigned int nCount = [pSubviews count];
+		unsigned int i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+			if ( pSubview )
+				[pSubview removeFromSuperview];
+		}
+	}
+
 	[self removeFromSuperview];
 
 	if ( mpSuperview )
@@ -238,12 +251,10 @@
 @interface ShowVCLChildView : NSObject
 {
 	NSWindow*				mpParentWindow;
-	BOOL					mbResult;
 	VCLChildView*			mpView;
 }
 + (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow;
 - (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow;
-- (BOOL)result;
 - (void)show:(id)pObject;
 @end
 
@@ -261,21 +272,28 @@
 	[super init];
 
 	mpParentWindow = pParentWindow;
-	mbResult = NO;
 	mpView = pView;
 
 	return self;
-}
-
-- (BOOL)result
-{
-	return mbResult;
 }
 
 - (void)show:(id)pObject
 {
 	if ( mpView )
 	{
+		NSArray *pSubviews = [mpView subviews];
+		if ( pSubviews )
+		{
+			unsigned int nCount = [pSubviews count];
+			unsigned int i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+				if ( pSubview )
+					[pSubview removeFromSuperview];
+			}
+		}
+
 		NSView *pSuperview = [mpView superview];
 		if ( pSuperview )
 		{
@@ -295,13 +313,10 @@
 						pContentView = nil;
 				}
 
-				if ( pContentView )
-				{
 #ifndef DISABLE_VCLCHILDVIEWS
+				if ( pContentView )
 					[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
 #endif	// DISABLE_VCLCHILDVIEWS
-					mbResult = YES;
-				}
 			}
 		}
 	}
@@ -393,10 +408,8 @@ void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long
 	[pPool release];
 }
 
-BOOL VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow )
+void VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow )
 {
-	BOOL bRet = NO;
-
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pVCLChildView )
@@ -404,10 +417,7 @@ BOOL VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow )
 		ShowVCLChildView *pShowVCLChildView = [ShowVCLChildView childWithView:pVCLChildView parentWindow:pParentNSWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pShowVCLChildView performSelectorOnMainThread:@selector(show:) withObject:pShowVCLChildView waitUntilDone:YES modes:pModes];
-		bRet = [pShowVCLChildView result];
 	}
 
 	[pPool release];
-
-	return bRet;
 }

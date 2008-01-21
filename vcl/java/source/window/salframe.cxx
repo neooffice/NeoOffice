@@ -241,17 +241,17 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	// the OOo code in an irrecoverable state.
 	if ( !bVisible )
 	{
+		// Close any attached objects
+		::std::list< JavaSalObject* > aObjects( maObjects );
+		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
+			(*it)->Show( FALSE );
+
 		Window *pWindow = Application::GetFirstTopLevelWindow();
 		while ( pWindow && pWindow->ImplGetFrame() != this )
 			pWindow = Application::GetNextTopLevelWindow( pWindow );
 
 		if ( pWindow )
 			Dialog::EndAllDialogs( pWindow );
-
-		// Close any attached objects
-		::std::list< JavaSalObject* > aObjects( maObjects );
-		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
-			(*it)->Show( FALSE );
 	}
 
 	SalData *pSalData = GetSalData();
@@ -288,6 +288,11 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			if ( (*it)->mbVisible )
 				(*it)->SetParent( this );
 		}
+
+		// Reattach visible objects
+		::std::list< JavaSalObject* > aReshowObjects( maObjects );
+		for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
+			(*it)->Show( TRUE );
 
 		// Explicitly set focus to this frame since Java may set the focus
 		// to the child frame

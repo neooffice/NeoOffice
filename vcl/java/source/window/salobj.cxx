@@ -146,11 +146,10 @@ void JavaSalObject::Show( BOOL bVisible )
 	if ( mpParent )
 		mpParent->RemoveObject( this );
 
-	if ( VCLChildView_show( mpChildView, pParentNSWindow, bVisible ) )
-	{
-		if ( mpParent )
-			mpParent->AddObject( this );
-	}
+	VCLChildView_show( mpChildView, pParentNSWindow, bVisible );
+
+	if ( bVisible && mpParent )
+		mpParent->AddObject( this );
 }
 
 // -----------------------------------------------------------------------
