@@ -214,7 +214,7 @@ static const short nAVMediaMaxDB = 0;
 		}
 	}
 
-	if ( mbPlaying )
+	if ( mbPlaying && ![mpMovieView inLiveResize] )
 		[mpMovie play];
 	else
 		[mpMovie stop];
@@ -255,7 +255,9 @@ static const short nAVMediaMaxDB = 0;
 
 - (void)play:(id)pObject
 {
-	[mpMovie play];
+	if ( ![mpMovieView inLiveResize] )
+		[mpMovie play];
+
 	mbPlaying = YES;
 }
 
@@ -310,7 +312,7 @@ static const short nAVMediaMaxDB = 0;
 	aNewFrame.origin.y = aParentFrame.size.height - aNewFrame.origin.y - aNewFrame.size.height;
 	[mpMovieView setFrame:aNewFrame];
 
-	if ( mbPlaying )
+	if ( mbPlaying && ![mpMovieView inLiveResize] )
 		[mpMovie play];
 }
 
@@ -329,7 +331,7 @@ static const short nAVMediaMaxDB = 0;
 
 	[mpMovie setCurrentTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
 
-	if ( mbPlaying )
+	if ( mbPlaying && ![mpMovieView inLiveResize] )
 		[mpMovie play];
 }
 
@@ -374,7 +376,7 @@ static const short nAVMediaMaxDB = 0;
 
 	[mpMovie setRate:[pTime floatValue]];
 
-	if ( mbPlaying )
+	if ( mbPlaying && ![mpMovieView inLiveResize] )
 		[mpMovie play];
 }
 
@@ -393,7 +395,7 @@ static const short nAVMediaMaxDB = 0;
 
 	[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), QTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
 
-	if ( mbPlaying )
+	if ( mbPlaying && ![mpMovieView inLiveResize] )
 		[mpMovie play];
 }
 
@@ -412,7 +414,7 @@ static const short nAVMediaMaxDB = 0;
 			mpSuperview = nil;
 		}
 
-		if ( mbPlaying )
+		if ( mbPlaying && ![mpMovieView inLiveResize] )
 			[mpMovie play];
 
 		return;
@@ -431,7 +433,7 @@ static const short nAVMediaMaxDB = 0;
 			mpSuperview = nil;
 		}
 
-		if ( mbPlaying )
+		if ( mbPlaying && ![mpMovieView inLiveResize] )
 			[mpMovie play];
 
 		return;
@@ -467,7 +469,7 @@ static const short nAVMediaMaxDB = 0;
 	[mpSuperview retain];
 	[mpSuperview addSubview:mpMovieView positioned:NSWindowAbove relativeTo:nil];
 
-	if ( mbPlaying )
+	if ( mbPlaying && ![mpMovieView inLiveResize] )
 		[mpMovie play];
 }
 
