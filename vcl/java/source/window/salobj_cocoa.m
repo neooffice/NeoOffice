@@ -36,8 +36,6 @@
 #import <Cocoa/Cocoa.h>
 #import "salobj_cocoa.h"
 
-#define DISABLE_VCLCHILDVIEWS
-
 @interface VCLChildSuperview : NSView
 - (BOOL)isFlipped;
 - (BOOL)isOpaque;
@@ -79,13 +77,18 @@
 	NSArray *pSubviews = [self subviews];
 	if ( pSubviews )
 	{
-		unsigned int nCount = [pSubviews count];
-		unsigned int i = 0;
-		for ( ; i < nCount; i++ )
+		// Make a copy as the array will change when we remove subviews
+		pSubviews = [NSArray arrayWithArray:pSubviews];
+		if ( pSubviews )
 		{
-			NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-			if ( pSubview )
-				[pSubview removeFromSuperview];
+			unsigned int nCount = [pSubviews count];
+			unsigned int i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+				if ( pSubview )
+					[pSubview removeFromSuperview];
+			}
 		}
 	}
 
@@ -281,22 +284,27 @@
 {
 	if ( mpView )
 	{
-		NSArray *pSubviews = [mpView subviews];
-		if ( pSubviews )
-		{
-			unsigned int nCount = [pSubviews count];
-			unsigned int i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-				if ( pSubview )
-					[pSubview removeFromSuperview];
-			}
-		}
-
 		NSView *pSuperview = [mpView superview];
 		if ( pSuperview )
 		{
+			NSArray *pSubviews = [mpView subviews];
+			if ( pSubviews )
+			{
+				// Make a copy of the subviews so that we can reattach them
+				pSubviews = [NSArray arrayWithArray:pSubviews];
+				if ( pSubviews )
+				{
+					unsigned int nCount = [pSubviews count];
+					unsigned int i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+						if ( pSubview )
+							[pSubview removeFromSuperview];
+					}
+				}
+			}
+
 			// Detach from current parent view
 			[pSuperview removeFromSuperview];
 
@@ -317,6 +325,18 @@
 				if ( pContentView )
 					[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
 #endif	// DISABLE_VCLCHILDVIEWS
+			}
+
+			if ( pSubviews )
+			{
+				unsigned int nCount = [pSubviews count];
+				unsigned int i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+					if ( pSubview )
+						[mpView addSubview:pSubview positioned:NSWindowAbove relativeTo:nil];
+				}
 			}
 		}
 	}
