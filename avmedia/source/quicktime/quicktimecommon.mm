@@ -487,14 +487,10 @@ static const short nAVMediaMaxDB = 0;
 	[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
 }
 
-- (NSSize)size:(AvmediaArgs *)pArgs
+- (void)size:(AvmediaArgs *)pArgs
 {
-	NSSize aRet = [mpMovieView frame].size;
-
 	if ( pArgs )
-		[pArgs setResult:[NSValue valueWithSize:aRet]];
-
-	return aRet;
+		[pArgs setResult:[NSValue valueWithSize:[mpMovieView frame].size]];
 }
 
 - (void)stop:(id)pObject

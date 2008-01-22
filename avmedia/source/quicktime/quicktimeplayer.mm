@@ -106,27 +106,31 @@ bool Player::create( const ::rtl::OUString& rURL )
 			mbLooping = sal_False;
 			maURL = ::rtl::OUString();
 
-			NSString *pString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
-			if ( pString )
+			if ( rURL.getLength() )
 			{
-				NSURL *pURL = [NSURL URLWithString:pString];
-				if ( pURL )
+				NSString *pString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
+				if ( pString )
 				{
-					// Do not retain as invoking alloc disables autorelease
-					mpMoviePlayer = [[AvmediaMoviePlayer alloc] init];
-					if ( mpMoviePlayer )
+					NSURL *pURL = [NSURL URLWithString:pString];
+					if ( pURL )
 					{
-						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-						[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
+						// Do not retain as invoking alloc disables autorelease
+						mpMoviePlayer = [[AvmediaMoviePlayer alloc] init];
+						if ( mpMoviePlayer )
+						{
+							NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+							[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(initialize:) withObject:pURL waitUntilDone:YES modes:pModes];
 
-						if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
-						{
-							[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
-							mpMoviePlayer = NULL;
-						}
-						else
-						{
-							bRet = true;
+							if ( ![(AvmediaMoviePlayer *)mpMoviePlayer movie] || ![(AvmediaMoviePlayer *)mpMoviePlayer movieView] )
+							{
+								[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(release:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+								mpMoviePlayer = NULL;
+							}
+							else
+							{
+								maURL = rURL;
+								bRet = true;
+							}
 						}
 					}
 				}
@@ -454,7 +458,7 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 		{
 			NSSize aSize = [pRet sizeValue];
 			if ( aSize.width > 0 && aSize.height > 0 )
-				aRet = Size( aSize.width, aSize.height );
+				aRet = Size( (long)aSize.width, (long)aSize.height );
 		}
 	}
 
