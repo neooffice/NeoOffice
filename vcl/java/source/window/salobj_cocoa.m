@@ -38,17 +38,11 @@
 
 @interface VCLChildSuperview : NSView
 - (BOOL)isFlipped;
-- (BOOL)isOpaque;
 @end
 
 @implementation VCLChildSuperview
 
 - (BOOL)isFlipped
-{
-	return YES;
-}
-
-- (BOOL)isOpaque
 {
 	return YES;
 }
@@ -64,6 +58,7 @@
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (id)initWithFrame:(NSRect)aFrame;
+- (BOOL)isOpaque;
 - (void)release:(id)pObject;
 - (void)setBackgroundColor:(NSColor *)pColor;
 - (void)setBounds:(NSValue *)pValue;
@@ -131,6 +126,11 @@
 		[mpSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
 
 	return self;
+}
+
+- (BOOL)isOpaque
+{
+	return YES;
 }
 
 - (void)release:(id)pObject
