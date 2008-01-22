@@ -23,6 +23,25 @@ REM  MA  02111-1307  USA
 REM  StarBasic driver code for ImageCapture library.
 
 Sub Main
+	&apos; check the operating system version using the OSXVersion component as
+	&apos; our IC code uses CGImage conversion routines that are only supported
+	&apos; on 10.4 and higher.
+	
+	Dim versionObj as Object
+	
+	versionObj = CreateUnoService(&quot;org.neooffice.OSXVersion&quot;)
+	If IsNull(versionObj) Then
+		MsgBox &quot;Unable to locate OSXVersion service.  Please check to make sure your NeoOffice installation is not damaged.&quot;, 0, &quot;Image Capture&quot;
+		Exit Sub
+	End If
+	
+	If versionObj.osMinor() &lt; 4 Then
+		MsgBox &quot;Image Capture is not supported on Mac OS X 10.3.&quot;, 0, &quot;Image Capture&quot;
+		Exit Sub
+	End If
+	
+	&apos; load the ImageCapture component
+	
 	Dim t as Object
 	
 	t = CreateUnoService(&quot;org.neooffice.ImageCapture&quot;)
