@@ -182,6 +182,7 @@ static const short nAVMediaMaxDB = 0;
 
 		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:aFrame];
 		[mpMovieView setMoviePlayer:self];
+		[mpMovieView setFillColor:[NSColor clearColor]];
 		[mpMovieView setControllerVisible:NO];
 		[mpMovieView setPreservesAspectRatio:YES];
 		[mpMovieView setShowsResizeIndicator:NO];
