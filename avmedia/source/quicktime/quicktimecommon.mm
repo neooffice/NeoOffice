@@ -540,13 +540,27 @@ static const short nAVMediaMaxDB = 0;
 		[mpMoviePlayer retain];
 }
 
+- (void)viewDidEndLiveResize
+{
+	// Start playing movie after resizing has ended
+	if ( mpMoviePlayer && [mpMoviePlayer isPlaying:nil] )
+	{
+		QTMovie *pMovie = [self movie];
+		if ( pMovie )
+			[pMovie play];
+	}
+}
+
 - (void)viewWillStartLiveResize
 {
 	// Prevent deadlocking in Java drawing calls on Mac OS X 10.3.9 by
-	// disconnecting the view from its superview. The C++ component will
-	// then reattach the movie in the next update.
+	// stopping the moive
 	if ( mpMoviePlayer )
-		[mpMoviePlayer setSuperview:nil];
+	{
+		QTMovie *pMovie = [self movie];
+		if ( pMovie )
+			[pMovie stop];
+	}
 }
 
 @end

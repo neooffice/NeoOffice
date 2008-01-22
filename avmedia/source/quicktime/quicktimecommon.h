@@ -72,6 +72,7 @@
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
+- (void)viewDidEndLiveResize;
 - (void)viewWillStartLiveResize;
 @end
 
