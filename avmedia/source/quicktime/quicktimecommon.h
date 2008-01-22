@@ -63,10 +63,22 @@
 - (void)setResult:(NSObject *)pResult;
 @end
 
+@class AvmediaMoviePlayer;
+
+@interface AvmediaMovieView : QTMovieView
+{
+	AvmediaMoviePlayer*		mpMoviePlayer;
+}
+- (void)dealloc;
+- (id)initWithFrame:(NSRect)aFrame;
+- (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
+- (void)viewWillStartLiveResize;
+@end
+
 @interface AvmediaMoviePlayer : NSObject
 {
 	QTMovie*				mpMovie;
-	QTMovieView*			mpMovieView;
+	AvmediaMovieView*		mpMovieView;
 	MacOSBOOL				mbPlaying;
 	NSView*					mpSuperview;
 }

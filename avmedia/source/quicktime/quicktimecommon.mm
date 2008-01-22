@@ -119,6 +119,7 @@ static const short nAVMediaMaxDB = 0;
 	if ( mpMovieView )
 	{
 		[mpMovieView removeFromSuperview];
+		[mpMovieView setMoviePlayer:nil];
 		[mpMovieView setMovie:nil];
 		[mpMovieView release];
 	}
@@ -179,7 +180,8 @@ static const short nAVMediaMaxDB = 0;
 			aFrame = NSMakeRect( 0, 0, 1, 1 );
 		}
 
-		mpMovieView = [[QTMovieView alloc] initWithFrame:aFrame];
+		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:aFrame];
+		[mpMovieView setMoviePlayer:self];
 		[mpMovieView setControllerVisible:NO];
 		[mpMovieView setPreservesAspectRatio:YES];
 		[mpMovieView setShowsResizeIndicator:NO];
@@ -509,3 +511,43 @@ static const short nAVMediaMaxDB = 0;
 }
 
 @end
+
+@implementation AvmediaMovieView
+
+- (void)dealloc
+{
+	[self setMoviePlayer:nil];
+
+	[super dealloc];
+}
+
+- (id)initWithFrame:(NSRect)aFrame
+{
+	[super initWithFrame:aFrame];
+
+	mpMoviePlayer = nil;
+
+	return self;
+}
+- (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
+{
+	if ( mpMoviePlayer )
+		[mpMoviePlayer release];
+
+	mpMoviePlayer = pPlayer;
+
+	if ( mpMoviePlayer )
+		[mpMoviePlayer retain];
+}
+
+- (void)viewWillStartLiveResize
+{
+	// Prevent deadlocking in Java drawing calls on Mac OS X 10.3.9 by
+	// disconnecting the view from its superview. The C++ component will
+	// then reattach the movie in the next update.
+	if ( mpMoviePlayer )
+		[mpMoviePlayer setSuperview:nil];
+}
+
+@end
+
