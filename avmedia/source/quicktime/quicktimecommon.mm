@@ -568,10 +568,14 @@ static const short nAVMediaMaxDB = 0;
 				[pMovie play];
 		}
 	}
+
+	[super viewDidEndLiveResize];
 }
 
 - (void)viewWillStartLiveResize
 {
+	[super viewWillStartLiveResize];
+
 	// Prevent deadlocking in Java drawing calls on Mac OS X 10.3.9 by
 	// stopping the movie and detaching it from its superview
 	if ( mpMoviePlayer )
