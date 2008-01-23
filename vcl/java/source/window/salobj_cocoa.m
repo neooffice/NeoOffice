@@ -166,8 +166,11 @@
 		NSRect aNewFrame = [pValue rectValue];
 		if ( !NSIsEmptyRect( aNewFrame ) )
 		{
+			NSView *pSuperSuperview = [mpSuperview superview];
+			[self viewWillStartLiveResize];
+			[mpSuperview removeFromSuperview];
+
 			// Set superview to intersection of new frame and clip
-			NSRect aParentFrame = [mpSuperview frame];
 			NSRect aNewParentFrame = NSMakeRect( 0, 0, aNewFrame.size.width, aNewFrame.size.height );
 			if ( !NSIsEmptyRect( maClipRect ) )
 				aNewParentFrame = NSIntersectionRect( aNewParentFrame, maClipRect );
@@ -188,13 +191,10 @@
 			}
 
 			[self setFrame:aNewFrame];
-			[self setNeedsDisplay:YES];
 
-			// Force a repaint of the superview's superview in the old and new
-			// frames
-			NSView *pSuperSuperview = [mpSuperview superview];
 			if ( pSuperSuperview )
-				[pSuperSuperview setNeedsDisplayInRect:aParentFrame];
+				[pSuperSuperview addSubview:mpSuperview positioned:NSWindowAbove relativeTo:nil];
+			[self viewDidEndLiveResize];
 		}
 	}
 }
