@@ -232,8 +232,10 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 		// will always add a command key to any shortcut. Also, ignore any
 		// shortcuts that use modifiers other than the shift key as Java only
 		// allows adding of the shift key. Also, exclude standard shortcuts
-		// in the application menu.
-		if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsControlMod() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA )
+		// in the application menu. Also, fix bug 2886 by not allowing any
+		// shortcuts with a space as Java will disable a tab and the shortcut
+		// be unusable.
+		if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsControlMod() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
 			pJavaSalMenuItem->mpVCLMenuItemData->setKeyboardShortcut( rKeyCode.GetCode(), rKeyCode.IsShift() );
 	}
 }
