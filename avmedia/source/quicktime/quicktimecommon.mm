@@ -316,9 +316,8 @@ static const short nAVMediaMaxDB = 0;
 	if ( mbPlaying )
 		[mpMovie stop];
 
-	// Flip frame and attach to parent view
-	NSRect aParentFrame = [pSuperview frame];
-	aNewFrame.origin.y = aParentFrame.size.height - aNewFrame.origin.y - aNewFrame.size.height;
+	// No need to flip coordinates as the JavaSalObject view is already flipped
+	// like our view
 	[mpMovieView setFrame:aNewFrame];
 
 	if ( mbPlaying && ![mpMovieView inLiveResize] )
@@ -461,10 +460,8 @@ static const short nAVMediaMaxDB = 0;
 	if ( mbPlaying )
 		[mpMovie stop];
 
-	// Flip frame and attach to parent view
-	NSRect aParentFrame = [pSuperview frame];
-	aNewFrame.origin.y = aParentFrame.size.height - aNewFrame.origin.y - aNewFrame.size.height;
-	aNewFrame.size.height = aParentFrame.size.height;
+	// No need to flip coordinates as the JavaSalObject view is already flipped
+	// like our view
 	[mpMovieView setFrame:aNewFrame];
 
 	[mpMovieView removeFromSuperview];
@@ -538,6 +535,12 @@ static const short nAVMediaMaxDB = 0;
 
 	return self;
 }
+
+- (MacOSBOOL)isFlipped
+{
+	return YES;
+}
+
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
 {
 	if ( mpMoviePlayer )

@@ -71,6 +71,7 @@
 }
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame;
+- (MacOSBOOL)isFlipped;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
 - (void)viewDidEndLiveResize;
 - (void)viewWillStartLiveResize;
