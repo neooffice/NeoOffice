@@ -97,6 +97,12 @@ static const short nAVMediaMaxDB = 0;
 
 @implementation AvmediaMoviePlayer
 
+- (void)bounds:(AvmediaArgs *)pArgs
+{
+	if ( pArgs )
+		[pArgs setResult:[NSValue valueWithRect:[mpMovieView frame]]];
+}
+
 - (double)currentTime:(AvmediaArgs *)pArgs
 {
 	double fRet = 0;
@@ -154,6 +160,7 @@ static const short nAVMediaMaxDB = 0;
 	mpMovie = nil;
 	mpMovieView = nil;
 	mbPlaying = NO;
+	maPreferredSize = NSMakeSize( 0, 0 );
 
 	return self;
 }
@@ -168,18 +175,13 @@ static const short nAVMediaMaxDB = 0;
 		[mpMovie setAttribute:[NSNumber numberWithBool:NO] forKey:QTMovieLoopsAttribute];
 		[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), [mpMovie duration] )];
 
-		NSRect aFrame;
 		NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( 0 )];
 		if ( pImage )
-		{
-			NSSize aSize = [pImage size];
-			aFrame = NSMakeRect( 0, 0, aSize.width, aSize.height );
-		}
+			maPreferredSize = [pImage size];
 		else
-		{
-			aFrame = NSMakeRect( 0, 0, 1, 1 );
-		}
+			maPreferredSize = NSMakeSize( 1, 1 );
 
+		NSRect aFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
 		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:aFrame];
 		[mpMovieView setMoviePlayer:self];
 		[mpMovieView setFillColor:[NSColor clearColor]];
@@ -260,6 +262,12 @@ static const short nAVMediaMaxDB = 0;
 		[mpMovie play];
 
 	mbPlaying = YES;
+}
+
+- (void)preferredSize:(AvmediaArgs *)pArgs
+{
+	if ( pArgs )
+		[pArgs setResult:[NSValue valueWithSize:maPreferredSize]];
 }
 
 - (double)selectionEnd:(AvmediaArgs *)pArgs
@@ -488,12 +496,6 @@ static const short nAVMediaMaxDB = 0;
 		return;
 
 	[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
-}
-
-- (void)size:(AvmediaArgs *)pArgs
-{
-	if ( pArgs )
-		[pArgs setResult:[NSValue valueWithSize:[mpMovieView frame].size]];
 }
 
 - (void)stop:(id)pObject

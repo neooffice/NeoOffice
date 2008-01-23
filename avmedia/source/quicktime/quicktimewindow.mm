@@ -124,10 +124,29 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 Rectangle Window::getPosSize() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::getPosSize not implemented\n" );
-#endif
-	return Rectangle();
+	Rectangle aRet( 0, 0, 0, 0 );
+
+/*
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpMoviePlayer )
+	{
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(bounds:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSValue *pRet = (NSValue *)[pArgs result];
+		if ( pRet )
+		{
+			NSRect aRect = [pRet rectValue];
+			if ( aRect.size.width > 0 && aRect.size.height > 0 )
+				aRet = Rectangle( (long)aRect.origin.x, (long)aRect.origin.y, (long)aRect.size.width, (long)aRect.size.height );
+		}
+	}
+
+	[pPool release];
+*/
+
+	return aRet;
 }
 
 // ----------------------------------------------------------------------------

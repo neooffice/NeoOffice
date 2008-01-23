@@ -452,7 +452,7 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 	{
 		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(size:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(preferredSize:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSValue *pRet = (NSValue *)[pArgs result];
 		if ( pRet )
 		{

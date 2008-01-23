@@ -82,7 +82,9 @@
 	AvmediaMovieView*		mpMovieView;
 	MacOSBOOL				mbPlaying;
 	NSView*					mpSuperview;
+	NSSize					maPreferredSize;
 }
+- (void)bounds:(AvmediaArgs *)pArgs;
 - (double)currentTime:(AvmediaArgs *)pArgs;
 - (void)dealloc;
 - (double)duration:(AvmediaArgs *)pArgs;
@@ -93,6 +95,7 @@
 - (QTMovieView *)movieView;
 - (MacOSBOOL)mute:(AvmediaArgs *)pArgs;
 - (void)play:(id)pObject;
+- (void)preferredSize:(AvmediaArgs *)pArgs;
 - (double)rate:(AvmediaArgs *)pArgs;
 - (void)release:(id)pObject;
 - (double)selectionEnd:(AvmediaArgs *)pArgs;
@@ -104,7 +107,6 @@
 - (void)setSelection:(AvmediaArgs *)pArgs;
 - (void)setSuperview:(AvmediaArgs *)pArgs;
 - (void)setVolumeDB:(AvmediaArgs *)pArgs;
-- (void)size:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;
 - (NSView *)superview;
 - (short)volumeDB:(AvmediaArgs *)pArgs;
