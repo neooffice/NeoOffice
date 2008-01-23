@@ -106,6 +106,7 @@
 - (void)setVolumeDB:(AvmediaArgs *)pArgs;
 - (void)size:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;
+- (NSView *)superview;
 - (short)volumeDB:(AvmediaArgs *)pArgs;
 @end
 
