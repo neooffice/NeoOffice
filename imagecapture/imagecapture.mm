@@ -344,6 +344,9 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	
 	CFIndex theCount = 5;
 	CFArrayRef theTypes = CFArrayCreate( NULL, (const void**)strings, theCount, &kCFTypeArrayCallBacks );
+	if(!theTypes)
+		return;
+
 	ICAImportImagePB thePB;
 	memset(&thePB, '\0', sizeof(thePB));
 	
@@ -354,64 +357,31 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
 		if(theImage)
 		{
-			// convert image into PICT so we can put it on the clipboard
+			// convert image into TIFF so we can put it on the clipboard
 			// using the scrap manager
-			
-			CGImageSourceRef cgImage=CGImageSourceCreateWithData(theImage, NULL);
-			
-			if(cgImage)
+			NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
+			if(theNSImage)
 			{
-				CGImageRef theCGImage=CGImageSourceCreateImageAtIndex(cgImage, 0, NULL);
-				if(theCGImage)
+				NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
+				if(theNSTIFFData)
 				{
-					// create a new CFData object to hold the output
-					
-					CFMutableDataRef pictData=CFDataCreateMutable(kCFAllocatorDefault, 0);
-					if(pictData)
+					IMutex &rSolarMutex = Application::GetSolarMutex();
+					rSolarMutex.acquire();
+
+					NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
+					if(thePasteboard)
 					{
-						// convert the data using coreimage
-						
-						CGImageDestinationRef pictConverterDest=CGImageDestinationCreateWithData(pictData, kUTTypeTIFF, 1, NULL);
-						if(pictConverterDest)
-						{
-							CGImageDestinationAddImage(pictConverterDest, theCGImage, NULL);
-							if(CGImageDestinationFinalize(pictConverterDest))
-							{
-								PasteboardRef theClipboard;
-								
-								if(PasteboardCreate(kPasteboardClipboard, &theClipboard)==noErr)
-								{
-									IMutex &rSolarMutex = Application::GetSolarMutex();
-									rSolarMutex.acquire();
-
-									PasteboardClear(theClipboard);
-									PasteboardSynchronize(theClipboard);
-									PasteboardPutItemFlavor(theClipboard, (PasteboardItemID)1, kUTTypeTIFF, pictData, 0);
-									
-									rSolarMutex.release();
-
-									// mark that we've successfully imported the image and placed it onto the clipboard
-									
-									gotImage=true;
-								}
-							}
-							
-							// free converter object
-							
-							CFRelease(pictConverterDest);
-						}
-						
-						// free up pict data
-						
-						CFRelease(pictData);
+						[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
+						[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
+						// mark that we've successfully imported the image and
+						// placed it onto the clipboard
+						gotImage=true;
 					}
-					
-					CFRelease(theCGImage);
+
+					rSolarMutex.release();
 				}
-				
-				// free up data
-				
-				CFRelease(cgImage);
+
+				[theNSImage release];
 			}
 		}
 	}
