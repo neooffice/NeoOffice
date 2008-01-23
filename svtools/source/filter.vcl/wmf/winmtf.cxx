@@ -1692,7 +1692,12 @@ void WinMtfOutput::ImplDrawBitmap( const Point& rPos, const Size& rSize, const B
 
 		if ( aBmpEx.IsTransparent() )
 		{
+#ifdef USE_JAVA
+			// Fix bug 2882 by or'ing when the transparent color is black
+			if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) || rBitmap.GetTransparentColor() == Color( COL_BLACK ) )
+#else	// USE_JAVA
 			if ( rBitmap.GetTransparentColor() == Color( COL_WHITE ) )
+#endif	// USE_JAVA
 				aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_OR );
 			else
 				aMask.CombineSimple( rBitmap.GetMask(), BMP_COMBINE_AND );
