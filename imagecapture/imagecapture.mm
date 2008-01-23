@@ -339,10 +339,10 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
     OSErr error;
     CFStringRef strings[] = 
 	{
-		CFSTR("tif"), CFSTR("tiff"), CFSTR("jpg"), CFSTR("jpeg"), CFSTR("gif")
+		CFSTR("tif"), CFSTR("tiff"), CFSTR("jpg"), CFSTR("jpeg"), CFSTR("gif"), CFSTR("png")
 	};
 	
-	CFIndex theCount = 5;
+	CFIndex theCount = 6;
 	CFArrayRef theTypes = CFArrayCreate( NULL, (const void**)strings, theCount, &kCFTypeArrayCallBacks );
 	if(!theTypes)
 		return;
