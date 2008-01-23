@@ -107,25 +107,10 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 - (void)dealloc
 {
-	NSArray *pSubviews = [self subviews];
-	if ( pSubviews )
-	{
-		// Make a copy as the array will change when we remove subviews
-		pSubviews = [NSArray arrayWithArray:pSubviews];
-		if ( pSubviews )
-		{
-			unsigned int nCount = [pSubviews count];
-			unsigned int i = 0;
-			for ( ; i < nCount; i++ )
-			{
-				NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-				if ( pSubview )
-					[pSubview removeFromSuperview];
-			}
-		}
-	}
-
+	// Detach any children and release mpSubviewsInResize
+	[self viewWillStartLiveResize];
 	[self removeFromSuperview];
+	[self viewDidEndLiveResize];
 
 	if ( mpSuperview )
 	{
@@ -135,9 +120,6 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 	if ( mpBackgroundColor )
 		[mpBackgroundColor release];
-
-	if ( mpSubviewsInResize )
-		[mpSubviewsInResize release];
 
 	[super dealloc];
 }
@@ -327,27 +309,29 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 @interface ShowVCLChildView : NSObject
 {
 	NSWindow*				mpParentWindow;
+	BOOL					mbShow;
 	VCLChildView*			mpView;
 }
-+ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow;
-- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow;
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow;
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow;
 - (void)show:(id)pObject;
 @end
 
 @implementation ShowVCLChildView
 
-+ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow
++ (id)childWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow
 {
-	ShowVCLChildView *pRet = [[ShowVCLChildView alloc] initWithView:pView parentWindow:pParentWindow];
+	ShowVCLChildView *pRet = [[ShowVCLChildView alloc] initWithView:pView parentWindow:pParentWindow show:bShow];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow
+- (id)initWithView:(VCLChildView *)pView parentWindow:(NSWindow *)pParentWindow show:(BOOL)bShow
 {
 	[super init];
 
 	mpParentWindow = pParentWindow;
+	mbShow = bShow;
 	mpView = pView;
 
 	return self;
@@ -360,45 +344,16 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 		NSView *pSuperview = [mpView superview];
 		if ( pSuperview )
 		{
-			NSArray *pSubviews = [mpView subviews];
-			if ( pSubviews )
-			{
-				// Make a copy of the subviews so that we can reattach them
-				pSubviews = [NSArray arrayWithArray:pSubviews];
-				if ( pSubviews )
-				{
-					unsigned int nCount = [pSubviews count];
-					unsigned int i = 0;
-					for ( ; i < nCount; i++ )
-					{
-						NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-						if ( pSubview )
-							[pSubview removeFromSuperview];
-					}
-				}
-			}
-
-			// Detach from current parent view
+			[mpView viewWillStartLiveResize];
 			[pSuperview removeFromSuperview];
 
-			if ( mpParentWindow && [mpParentWindow isVisible] )
+			if ( mbShow && mpParentWindow && [mpParentWindow isVisible] )
 			{
 				// Always attach to Java's first NSViewAWT view
 				NSView *pContentView = FindNSViewAWTSubviewForView( [mpParentWindow contentView] );
 				if ( pContentView )
 					[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
-			}
-
-			if ( pSubviews )
-			{
-				unsigned int nCount = [pSubviews count];
-				unsigned int i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-					if ( pSubview )
-						[mpView addSubview:pSubview positioned:NSWindowAbove relativeTo:nil];
-				}
+				[mpView viewDidEndLiveResize];
 			}
 		}
 	}
@@ -496,7 +451,7 @@ void VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow )
 
 	if ( pVCLChildView )
 	{
-		ShowVCLChildView *pShowVCLChildView = [ShowVCLChildView childWithView:pVCLChildView parentWindow:pParentNSWindow];
+		ShowVCLChildView *pShowVCLChildView = [ShowVCLChildView childWithView:pVCLChildView parentWindow:pParentNSWindow show:bShow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pShowVCLChildView performSelectorOnMainThread:@selector(show:) withObject:pShowVCLChildView waitUntilDone:YES modes:pModes];
 	}
