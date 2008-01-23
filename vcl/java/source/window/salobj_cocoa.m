@@ -181,32 +181,47 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 	if ( pValue && mpSuperview )
 	{
 		NSRect aNewFrame = [pValue rectValue];
-		if ( !NSIsEmptyRect( aNewFrame ) )
+		if ( NSIsEmptyRect( aNewFrame ) )
+		{
+			if ( aNewFrame.size.width < 0 )
+				aNewFrame.size.width = 0;
+			if ( aNewFrame.size.height < 0 )
+				aNewFrame.size.height = 0;
+		}
+
+		// Set superview to intersection of new frame and clip
+		NSRect aNewParentFrame = NSMakeRect( 0, 0, aNewFrame.size.width, aNewFrame.size.height );
+		if ( !NSIsEmptyRect( maClipRect ) )
+			aNewParentFrame = NSIntersectionRect( aNewParentFrame, maClipRect );
+		aNewParentFrame.origin.x += aNewFrame.origin.x;
+		aNewParentFrame.origin.y += aNewFrame.origin.y;
+		if ( NSIsEmptyRect( aNewParentFrame ) )
+		{
+			if ( aNewParentFrame.size.width < 0 )
+				aNewParentFrame.size.width = 0;
+			if ( aNewParentFrame.size.height < 0 )
+				aNewParentFrame.size.height = 0;
+		}
+
+		// Move child view's origin to account for origin of superview
+		if ( !NSIsEmptyRect( maClipRect ) )
+		{
+			aNewFrame.origin.x = maClipRect.origin.x * -1;
+			aNewFrame.origin.y = maClipRect.origin.y * -1;
+		}
+		else
+		{
+			aNewFrame.origin.x = 0;
+			aNewFrame.origin.y = 0;
+		}
+
+		if ( !NSEqualRects( aNewParentFrame, [mpSuperview frame] ) || !NSEqualRects( aNewFrame, [self frame] ) )
 		{
 			NSView *pSuperSuperview = [mpSuperview superview];
 			[self viewWillStartLiveResize];
 			[mpSuperview removeFromSuperview];
 
-			// Set superview to intersection of new frame and clip
-			NSRect aNewParentFrame = NSMakeRect( 0, 0, aNewFrame.size.width, aNewFrame.size.height );
-			if ( !NSIsEmptyRect( maClipRect ) )
-				aNewParentFrame = NSIntersectionRect( aNewParentFrame, maClipRect );
-			aNewParentFrame.origin.x += aNewFrame.origin.x;
-			aNewParentFrame.origin.y += aNewFrame.origin.y;
 			[mpSuperview setFrame:aNewParentFrame];
-
-			// Move child view's origin to account for origin of superview
-			if ( !NSIsEmptyRect( maClipRect ) )
-			{
-				aNewFrame.origin.x = maClipRect.origin.x * -1;
-				aNewFrame.origin.y = maClipRect.origin.y * -1;
-			}
-			else
-			{
-				aNewFrame.origin.x = 0;
-				aNewFrame.origin.y = 0;
-			}
-
 			[self setFrame:aNewFrame];
 
 			if ( pSuperSuperview )
@@ -344,16 +359,26 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 		NSView *pSuperview = [mpView superview];
 		if ( pSuperview )
 		{
-			[mpView viewWillStartLiveResize];
-			[pSuperview removeFromSuperview];
+			NSView *pSuperSuperview = [pSuperview superview];
 
 			if ( mbShow && mpParentWindow && [mpParentWindow isVisible] )
 			{
 				// Always attach to Java's first NSViewAWT view
 				NSView *pContentView = FindNSViewAWTSubviewForView( [mpParentWindow contentView] );
-				if ( pContentView )
+				if ( pContentView && pContentView != pSuperSuperview )
+				{
+					[mpView viewWillStartLiveResize];
+					[pSuperview removeFromSuperview];
+
 					[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
-				[mpView viewDidEndLiveResize];
+
+					[mpView viewDidEndLiveResize];
+				}
+			}
+			else
+			{
+				[mpView viewWillStartLiveResize];
+				[pSuperview removeFromSuperview];
 			}
 		}
 	}
