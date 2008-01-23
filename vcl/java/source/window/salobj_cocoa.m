@@ -36,6 +36,41 @@
 #import <Cocoa/Cocoa.h>
 #import "salobj_cocoa.h"
 
+static NSString *pNSViewAWTClassName = @"NSViewAWT";
+
+static NSView *FindNSViewAWTSubviewForView( NSView *pView )
+{
+	NSView *pRet = nil;
+
+	if ( pView )
+	{
+		if ( [pView isFlipped] && [[pView className] isEqualToString:pNSViewAWTClassName] )
+		{
+			pRet = pView;
+		}
+		else
+		{
+			NSArray *pSubviews = [pView subviews];
+			if ( pSubviews )
+			{
+				unsigned int nCount = [pSubviews count];
+				unsigned int i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSView *pSubview = FindNSViewAWTSubviewForView( (NSView *)[pSubviews objectAtIndex:i] );
+					if ( pSubview )
+					{
+						pRet = pSubview;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
+
 @interface VCLChildSuperview : NSView
 - (BOOL)isFlipped;
 @end
@@ -348,21 +383,10 @@
 
 			if ( mpParentWindow && [mpParentWindow isVisible] )
 			{
-				NSView *pContentView = [mpParentWindow contentView];
-				if ( pContentView )
-				{
-					// Always attach to the Java panel's view
-					NSArray *pSubviews = [pContentView subviews];
-					if ( pSubviews && [pSubviews count] )
-						pContentView = (NSView *)[pSubviews objectAtIndex:0];
-					else
-						pContentView = nil;
-				}
-
-#ifndef DISABLE_VCLCHILDVIEWS
+				// Always attach to Java's first NSViewAWT view
+				NSView *pContentView = FindNSViewAWTSubviewForView( [mpParentWindow contentView] );
 				if ( pContentView )
 					[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
-#endif	// DISABLE_VCLCHILDVIEWS
 			}
 
 			if ( pSubviews )
