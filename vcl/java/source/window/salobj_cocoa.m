@@ -54,6 +54,7 @@
 	NSColor*				mpBackgroundColor;
 	NSRect					maClipRect;
 	NSView*					mpSuperview;
+	NSArray*				mpSubviewsInResize;
 }
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
@@ -63,6 +64,8 @@
 - (void)setBackgroundColor:(NSColor *)pColor;
 - (void)setBounds:(NSValue *)pValue;
 - (void)setClip:(NSValue *)pValue;
+- (void)viewDidEndLiveResize;
+- (void)viewWillStartLiveResize;
 @end
 
 @implementation VCLChildView
@@ -97,6 +100,9 @@
 
 	if ( mpBackgroundColor )
 		[mpBackgroundColor release];
+
+	if ( mpSubviewsInResize )
+		[mpSubviewsInResize release];
 
 	[super dealloc];
 }
@@ -212,6 +218,38 @@
 			maClipRect = NSZeroRect;
 
 		[self setBounds:[NSValue valueWithRect:aParentFrame]];
+	}
+}
+
+- (void)viewDidEndLiveResize
+{
+	if ( mpSubviewsInResize )
+	{
+		unsigned int nCount = [mpSubviewsInResize count];
+		unsigned int i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSView *pSubview = (NSView *)[mpSubviewsInResize objectAtIndex:i];
+			if ( pSubview )
+				[pSubview viewDidEndLiveResize];
+		}
+
+		[mpSubviewsInResize release];
+		mpSubviewsInResize = NULL;
+	}
+
+	[super viewDidEndLiveResize];
+}
+
+- (void)viewWillStartLiveResize
+{
+	[super viewWillStartLiveResize];
+
+	if ( !mpSubviewsInResize )
+	{
+		mpSubviewsInResize = [self subviews];
+		if ( mpSubviewsInResize )
+			mpSubviewsInResize = [[NSArray alloc] initWithArray:mpSubviewsInResize];
 	}
 }
 
