@@ -34,9 +34,13 @@
  ************************************************************************/
 
 #import "quicktimecommon.h"
+#import "quicktimewindow.hxx"
 
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
+
+using namespace ::avmedia::quicktime;
+using namespace ::com::sun::star::awt;
 
 @implementation AvmediaArgs
 
@@ -341,6 +345,13 @@ static const short nAVMediaMaxDB = 0;
 		[mpMovie play];
 }
 
+- (void)setFocus:(id)pObject
+{
+	NSWindow *pWindow = [mpMovieView window];
+	if ( pWindow )
+		[pWindow makeFirstResponder:mpMovieView];
+}
+
 - (void)setLooping:(AvmediaArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
@@ -510,6 +521,19 @@ static const short nAVMediaMaxDB = 0;
 @end
 
 @implementation AvmediaMovieView
+
+- (MacOSBOOL)becomeFirstResponder
+{
+	MacOSBOOL bRet = [super becomeFirstResponder];
+
+	if ( bRet && mpMoviePlayer )
+	{
+		FocusEvent aEvt;
+		Window::fireFocusGainedEvent( mpMoviePlayer, aEvt );
+	}
+
+	return bRet;
+}
 
 - (void)dealloc
 {

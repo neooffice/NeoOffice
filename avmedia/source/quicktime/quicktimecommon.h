@@ -69,6 +69,7 @@
 {
 	AvmediaMoviePlayer*		mpMoviePlayer;
 }
+- (MacOSBOOL)becomeFirstResponder;
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame;
 - (MacOSBOOL)isFlipped;
@@ -100,6 +101,7 @@
 - (double)selectionEnd:(AvmediaArgs *)pArgs;
 - (void)setBounds:(AvmediaArgs *)pArgs;
 - (void)setCurrentTime:(AvmediaArgs *)pArgs;
+- (void)setFocus:(id)pObject;
 - (void)setLooping:(AvmediaArgs *)pArgs;
 - (void)setMute:(AvmediaArgs *)pArgs;
 - (void)setRate:(AvmediaArgs *)pArgs;

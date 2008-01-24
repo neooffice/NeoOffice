@@ -43,8 +43,11 @@
 #ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #endif
-#ifndef _COM_SUN_STAR_MEDIA_XPLAYERWindow_HPP_
+#ifndef _COM_SUN_STAR_MEDIA_XPLAYERWINDOW_HDL_
 #include <com/sun/star/media/XPlayerWindow.hpp>
+#endif
+#ifndef _CPPUHELPER_INTERFACECONTAINER_H_
+#include <cppuhelper/interfacecontainer.h>
 #endif
 
 namespace avmedia
@@ -69,16 +72,19 @@ class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayer
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener > >	maWindowListeners;
 	sal_Bool			mbVisible;
 
+	static Window*		findWindowAndLockSolarMutex( void* pMoviePlayer );
+	static void			releaseSolarMutex();
+
 public:
 						Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
 						~Window();
 
-	static void			fireFocusGainedEvent( Window* pWindow, const ::com::sun::star::awt::FocusEvent& rEvt );
-	static void			fireKeyPressedEvent( Window* pWindow, const ::com::sun::star::awt::KeyEvent& rEvt );
-	static void			fireKeyReleasedEvent( Window* pWindow, const ::com::sun::star::awt::KeyEvent& rEvt );
-	static void			fireMouseMovedEvent( Window* pWindow, const ::com::sun::star::awt::MouseEvent& rEvt );
-	static void			fireMousePressedEvent( Window* pWindow, const ::com::sun::star::awt::MouseEvent& rEvt );
-	static void			fireMouseReleasedEvent( Window* pWindow, const ::com::sun::star::awt::MouseEvent& rEvt );
+	static void			fireFocusGainedEvent( void *pMoviePlayer, const ::com::sun::star::awt::FocusEvent& rEvt );
+	static void			fireKeyPressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt );
+	static void			fireKeyReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt );
+	static void			fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
+	static void			fireMousePressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
+	static void			fireMouseReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
 
 	// XPlayerWindow
 	virtual void SAL_CALL	update() throw( ::com::sun::star::uno::RuntimeException );

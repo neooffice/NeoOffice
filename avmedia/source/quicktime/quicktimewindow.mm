@@ -36,6 +36,13 @@
 #import "quicktimecommon.h"
 #import "quicktimewindow.hxx"
 
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
+#endif
+
 #define AVMEDIA_QUICKTIME_WINDOW_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Window_QuickTime"
 #define AVMEDIA_QUICKTIME_WINDOW_SERVICENAME "com.sun.star.media.Window_QuickTime"
 
@@ -43,6 +50,8 @@ using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
 using namespace ::com::sun::star::uno;
+using namespace ::cppu;
+using namespace ::vos;
 
 namespace avmedia
 {
@@ -55,37 +64,106 @@ namespace quicktime
 
 // ----------------------------------------------------------------------------
 
-void Window::fireFocusGainedEvent( Window* pWindow, const FocusEvent& rEvt )
+Window* Window::findWindowAndLockSolarMutex( void* pMoviePlayer )
+{
+	Window *pRet = NULL;
+
+	if ( !Application::IsShutDown() )
+	{
+		// We need to let any pending timers run so that we don't deadlock
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		bool bAcquired = false;
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 10;
+		while ( !Application::IsShutDown() )
+		{
+			if ( rSolarMutex.tryToAcquire() )
+			{
+				if ( !Application::IsShutDown() )
+					bAcquired = true;
+				else
+					rSolarMutex.release();
+				break;
+			}
+
+			ReceiveNextEvent( 0, NULL, 0, false, NULL );
+			OThread::wait( aDelay );
+		}
+
+		if ( bAcquired )
+		{
+			for ( ::std::list< Window* >::const_iterator it = Window::maWindows.begin(); it != Window::maWindows.end(); ++it )
+			{
+				if ( (*it)->mpMoviePlayer == pMoviePlayer )
+				{
+					pRet = *it;
+					break;
+				}
+			}
+
+			if ( !pRet )
+				rSolarMutex.release();
+		}
+	}
+
+	return pRet;
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::releaseSolarMutex()
+{
+	IMutex &rMutex = Application::GetSolarMutex();
+	rMutex.release();
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::fireFocusGainedEvent( void* pMoviePlayer, const ::com::sun::star::awt::FocusEvent& rEvt )
+{
+	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	if ( pWindow )
+	{
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XFocusListener >*)0 ) );
+		if ( pContainer )
+		{
+			OInterfaceIteratorHelper aIterator( *pContainer );
+			while ( aIterator.hasMoreElements() )
+				Reference< XFocusListener >( aIterator.next(), UNO_QUERY )->focusGained( rEvt );
+		}
+
+		Window::releaseSolarMutex();
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::fireKeyPressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt )
 {
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::fireKeyPressedEvent( Window* pWindow, const KeyEvent& rEvt )
+void Window::fireKeyReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt )
 {
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::fireKeyReleasedEvent( Window* pWindow, const KeyEvent& rEvt )
+void Window::fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
 {
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::fireMouseMovedEvent( Window* pWindow, const MouseEvent& rEvt )
+void Window::fireMousePressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
 {
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::fireMousePressedEvent( Window* pWindow, const MouseEvent& rEvt )
-{
-}
-
-// ----------------------------------------------------------------------------
-
-void Window::fireMouseReleasedEvent( Window* pWindow, const MouseEvent& rEvt )
+void Window::fireMouseReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
 {
 }
 
@@ -98,6 +176,7 @@ Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mpParentView( NULL ),
 	mbVisible( sal_False )
 {
+	Window::maWindows.push_back( this );
 }
 
 // ----------------------------------------------------------------------------
@@ -105,6 +184,8 @@ Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
 Window::~Window()
 {
 	dispose();
+
+	Window::maWindows.remove( this );
 }
 
 // ----------------------------------------------------------------------------
@@ -149,7 +230,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	maRect = Rectangle( nX, nY, nWidth, nHeight );
+	maRect = ::com::sun::star::awt::Rectangle( nX, nY, nWidth, nHeight );
 
 	if ( mpMoviePlayer && mpParentView )
 	{
@@ -163,9 +244,9 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 // ----------------------------------------------------------------------------
 
-Rectangle Window::getPosSize() throw( RuntimeException )
+::com::sun::star::awt::Rectangle Window::getPosSize() throw( RuntimeException )
 {
-	Rectangle aRet( 0, 0, 0, 0 );
+	::com::sun::star::awt::Rectangle aRet( 0, 0, 0, 0 );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -179,7 +260,7 @@ Rectangle Window::getPosSize() throw( RuntimeException )
 		{
 			NSRect aRect = [pRet rectValue];
 			if ( aRect.size.width > 0 && aRect.size.height > 0 )
-				aRet = Rectangle( (long)aRect.origin.x, (long)aRect.origin.y, (long)aRect.size.width, (long)aRect.size.height );
+				aRet = ::com::sun::star::awt::Rectangle( (long)aRect.origin.x, (long)aRect.origin.y, (long)aRect.size.width, (long)aRect.size.height );
 		}
 	}
 
@@ -223,9 +304,12 @@ void Window::setEnable( sal_Bool bEnable ) throw( RuntimeException )
 
 void Window::setFocus() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::setFocus not implemented\n" );
-#endif
+	if ( mpMoviePlayer )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setFocus:) withObject:(id)mpMoviePlayer waitUntilDone:YES modes:pModes];
+		mpMoviePlayer = NULL;
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -392,7 +476,7 @@ bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
 			mpParentView = (void *)nPtr;
 			[(NSView *)mpParentView retain];
 
-			Rectangle aRect;
+			::com::sun::star::awt::Rectangle aRect;
 			rArguments.getConstArray()[1] >>= maRect;
 
 			setVisible( sal_True );
