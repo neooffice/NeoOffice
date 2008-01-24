@@ -217,7 +217,7 @@ static const short nAVMediaMaxDB = 0;
 		}
 	}
 
-	if ( mbPlaying && ![mpMovieView inLiveResize] )
+	if ( mbPlaying )
 		[mpMovie play];
 	else
 		[mpMovie stop];
@@ -258,9 +258,7 @@ static const short nAVMediaMaxDB = 0;
 
 - (void)play:(id)pObject
 {
-	if ( ![mpMovieView inLiveResize] )
-		[mpMovie play];
-
+	[mpMovie play];
 	mbPlaying = YES;
 }
 
@@ -320,7 +318,7 @@ static const short nAVMediaMaxDB = 0;
 	// like our view
 	[mpMovieView setFrame:aNewFrame];
 
-	if ( mbPlaying && ![mpMovieView inLiveResize] )
+	if ( mbPlaying )
 		[mpMovie play];
 }
 
@@ -339,7 +337,7 @@ static const short nAVMediaMaxDB = 0;
 
 	[mpMovie setCurrentTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
 
-	if ( mbPlaying && ![mpMovieView inLiveResize] )
+	if ( mbPlaying )
 		[mpMovie play];
 }
 
@@ -384,7 +382,7 @@ static const short nAVMediaMaxDB = 0;
 
 	[mpMovie setRate:[pTime floatValue]];
 
-	if ( mbPlaying && ![mpMovieView inLiveResize] )
+	if ( mbPlaying )
 		[mpMovie play];
 }
 
@@ -403,7 +401,7 @@ static const short nAVMediaMaxDB = 0;
 
 	[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), QTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
 
-	if ( mbPlaying && ![mpMovieView inLiveResize] )
+	if ( mbPlaying )
 		[mpMovie play];
 }
 
@@ -422,7 +420,7 @@ static const short nAVMediaMaxDB = 0;
 			mpSuperview = nil;
 		}
 
-		if ( mbPlaying && ![mpMovieView inLiveResize] )
+		if ( mbPlaying )
 			[mpMovie play];
 
 		return;
@@ -441,7 +439,7 @@ static const short nAVMediaMaxDB = 0;
 			mpSuperview = nil;
 		}
 
-		if ( mbPlaying && ![mpMovieView inLiveResize] )
+		if ( mbPlaying )
 			[mpMovie play];
 
 		return;
@@ -474,11 +472,9 @@ static const short nAVMediaMaxDB = 0;
 	mpSuperview = pSuperview;
 	[mpSuperview retain];
 
-	// Only attach to superview if we are not live resizing
-	if ( ![mpMovieView inLiveResize] )
-		[mpSuperview addSubview:mpMovieView positioned:NSWindowAbove relativeTo:nil];
+	[mpSuperview addSubview:mpMovieView positioned:NSWindowAbove relativeTo:nil];
 
-	if ( mbPlaying && ![mpMovieView inLiveResize] )
+	if ( mbPlaying )
 		[mpMovie play];
 }
 
@@ -499,11 +495,6 @@ static const short nAVMediaMaxDB = 0;
 {
 	[mpMovie stop];
 	mbPlaying = NO;
-}
-
-- (NSView *)superview
-{
-	return mpSuperview;
 }
 
 - (short)volumeDB:(AvmediaArgs *)pArgs
@@ -550,42 +541,6 @@ static const short nAVMediaMaxDB = 0;
 
 	if ( mpMoviePlayer )
 		[mpMoviePlayer retain];
-}
-
-- (void)viewDidEndLiveResize
-{
-	// Start playing movie after resizing has ended
-	if ( mpMoviePlayer )
-	{
-		NSView *pSuperview = [mpMoviePlayer superview];
-		if ( pSuperview && ![self superview] )
-			[pSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
-
-		if ( [mpMoviePlayer isPlaying:nil] )
-		{
-			QTMovie *pMovie = [self movie];
-			if ( pMovie )
-				[pMovie play];
-		}
-	}
-
-	[super viewDidEndLiveResize];
-}
-
-- (void)viewWillStartLiveResize
-{
-	[super viewWillStartLiveResize];
-
-	// Prevent deadlocking in Java drawing calls on Mac OS X 10.3.9 by
-	// stopping the movie and detaching it from its superview
-	if ( mpMoviePlayer )
-	{
-		QTMovie *pMovie = [self movie];
-		if ( pMovie )
-			[pMovie stop];
-	}
-
-	[self removeFromSuperview];
 }
 
 @end

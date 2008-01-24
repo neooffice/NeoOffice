@@ -89,7 +89,6 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 	NSColor*				mpBackgroundColor;
 	NSRect					maClipRect;
 	NSView*					mpSuperview;
-	NSArray*				mpSubviewsInResize;
 }
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
@@ -99,7 +98,6 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 - (void)setBackgroundColor:(NSColor *)pColor;
 - (void)setBounds:(NSValue *)pValue;
 - (void)setClip:(NSValue *)pValue;
-- (void)viewDidEndLiveResize;
 - (void)viewWillStartLiveResize;
 @end
 
@@ -107,10 +105,26 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 - (void)dealloc
 {
-	// Detach any children and release mpSubviewsInResize
-	[self viewWillStartLiveResize];
+	// Detach any children
+	NSArray *pSubviews = [self subviews];
+	if ( pSubviews )
+	{
+		// Make a temporary copy for iteration
+		pSubviews = [NSArray arrayWithArray:pSubviews];
+		if ( pSubviews )
+		{
+			unsigned int nCount = [pSubviews count];
+			unsigned int i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+				if ( pSubview )
+					[pSubview removeFromSuperview];
+			}
+		}
+	}
+
 	[self removeFromSuperview];
-	[self viewDidEndLiveResize];
 
 	if ( mpSuperview )
 	{
@@ -218,7 +232,6 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 		if ( !NSEqualRects( aNewParentFrame, [mpSuperview frame] ) || !NSEqualRects( aNewFrame, [self frame] ) )
 		{
 			NSView *pSuperSuperview = [mpSuperview superview];
-			[self viewWillStartLiveResize];
 			[mpSuperview removeFromSuperview];
 
 			[mpSuperview setFrame:aNewParentFrame];
@@ -226,7 +239,6 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 			if ( pSuperSuperview )
 				[pSuperSuperview addSubview:mpSuperview positioned:NSWindowAbove relativeTo:nil];
-			[self viewDidEndLiveResize];
 		}
 	}
 }
@@ -253,36 +265,9 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 	}
 }
 
-- (void)viewDidEndLiveResize
-{
-	if ( mpSubviewsInResize )
-	{
-		unsigned int nCount = [mpSubviewsInResize count];
-		unsigned int i = 0;
-		for ( ; i < nCount; i++ )
-		{
-			NSView *pSubview = (NSView *)[mpSubviewsInResize objectAtIndex:i];
-			if ( pSubview )
-				[pSubview viewDidEndLiveResize];
-		}
-
-		[mpSubviewsInResize release];
-		mpSubviewsInResize = NULL;
-	}
-
-	[super viewDidEndLiveResize];
-}
-
 - (void)viewWillStartLiveResize
 {
-	[super viewWillStartLiveResize];
-
-	if ( !mpSubviewsInResize )
-	{
-		mpSubviewsInResize = [self subviews];
-		if ( mpSubviewsInResize )
-			mpSubviewsInResize = [[NSArray alloc] initWithArray:mpSubviewsInResize];
-	}
+	[mpSuperview removeFromSuperview];
 }
 
 @end
@@ -367,17 +352,14 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 				NSView *pContentView = FindNSViewAWTSubviewForView( [mpParentWindow contentView] );
 				if ( pContentView && pContentView != pSuperSuperview )
 				{
-					[mpView viewWillStartLiveResize];
 					[pSuperview removeFromSuperview];
 
-					[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
-
-					[mpView viewDidEndLiveResize];
+					if ( ![pContentView inLiveResize] )
+						[pContentView addSubview:pSuperview positioned:NSWindowAbove relativeTo:nil];
 				}
 			}
 			else
 			{
-				[mpView viewWillStartLiveResize];
 				[pSuperview removeFromSuperview];
 			}
 		}

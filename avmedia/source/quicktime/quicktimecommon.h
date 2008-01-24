@@ -73,8 +73,6 @@
 - (id)initWithFrame:(NSRect)aFrame;
 - (MacOSBOOL)isFlipped;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
-- (void)viewDidEndLiveResize;
-- (void)viewWillStartLiveResize;
 @end
 
 @interface AvmediaMoviePlayer : NSObject
@@ -109,7 +107,6 @@
 - (void)setSuperview:(AvmediaArgs *)pArgs;
 - (void)setVolumeDB:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;
-- (NSView *)superview;
 - (short)volumeDB:(AvmediaArgs *)pArgs;
 @end
 

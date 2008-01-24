@@ -95,6 +95,7 @@ public:
 	void					AddObject( JavaSalObject *pObject );
 	bool					IsFloatingFrame();
 	void					RemoveObject( JavaSalObject *pObject );
+	void					FlushAllObjects();
 
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );

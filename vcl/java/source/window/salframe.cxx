@@ -179,6 +179,18 @@ void JavaSalFrame::RemoveObject( JavaSalObject *pObject )
 
 // -----------------------------------------------------------------------
 
+void JavaSalFrame::FlushAllObjects()
+{
+	if ( mbVisible )
+	{
+		::std::list< JavaSalObject* > aObjects( maObjects );
+		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
+			(*it)->Flush();
+	}
+}
+
+// -----------------------------------------------------------------------
+
 SalGraphics* JavaSalFrame::GetGraphics()
 {
 	if ( mbGraphics )

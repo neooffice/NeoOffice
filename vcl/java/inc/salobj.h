@@ -60,14 +60,17 @@ class JavaSalObject : public SalObject
 {
 	void*					mpChildView;
 	Rectangle				maClipRect;
+	BOOL					mbInFlush;
 	JavaSalFrame*			mpParent;
 	SystemEnvData			maSysData;
+	BOOL					mbVisible;
 
 public:
 							JavaSalObject( SalFrame *pParent );
 	virtual					~JavaSalObject();
 
 	void					Destroy();
+	void					Flush();
 
 	virtual void			ResetClipRegion();
 	virtual USHORT			GetClipRegionType();

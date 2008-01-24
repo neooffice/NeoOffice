@@ -585,6 +585,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		aEventQueueMutex.release();
 	}
 
+	// Update all objects
+	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		(*it)->FlushAllObjects();
+
 	// Allow Carbon event loop to proceed
 	if ( !pEvent && !pSalData->maNativeEventCondition.check() )
 		pSalData->maNativeEventCondition.set();

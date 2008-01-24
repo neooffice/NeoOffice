@@ -52,7 +52,9 @@
 JavaSalObject::JavaSalObject( SalFrame *pParent )
 {
 	mpChildView = VCLChildView_create();
+	mbInFlush = FALSE;
 	mpParent = (JavaSalFrame *)pParent;
+	mbVisible = FALSE;
 
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
@@ -73,6 +75,8 @@ JavaSalObject::~JavaSalObject()
 
 void JavaSalObject::Destroy()
 {
+	Show( FALSE );
+
 	if ( mpParent )
 	{
 		mpParent->RemoveObject( this );
@@ -81,6 +85,18 @@ void JavaSalObject::Destroy()
 
 	VCLChildView_release( mpChildView );
 	mpChildView = NULL;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalObject::Flush()
+{
+	if ( mbVisible )
+	{
+		mbInFlush = TRUE;
+		Show( TRUE );
+		mbInFlush = FALSE;
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -137,8 +153,10 @@ void JavaSalObject::SetPosSize( long nX, long nY, long nWidth, long nHeight )
 
 void JavaSalObject::Show( BOOL bVisible )
 {
+	mbVisible = bVisible;
+
 	void *pParentNSWindow;
-	if ( bVisible && mpParent && mpParent->mpVCLFrame )
+	if ( mbVisible && mbInFlush && mpParent && mpParent->mpVCLFrame )
 		pParentNSWindow = mpParent->mpVCLFrame->getNativeWindow();
 	else
 		pParentNSWindow = NULL;
@@ -146,9 +164,10 @@ void JavaSalObject::Show( BOOL bVisible )
 	if ( mpParent )
 		mpParent->RemoveObject( this );
 
-	VCLChildView_show( mpChildView, pParentNSWindow, bVisible );
+	// Don't attach subview unless we are in the Flush() method
+	VCLChildView_show( mpChildView, pParentNSWindow, mbVisible && pParentNSWindow ? TRUE : FALSE );
 
-	if ( bVisible && mpParent )
+	if ( mbVisible && mpParent )
 		mpParent->AddObject( this );
 }
 
