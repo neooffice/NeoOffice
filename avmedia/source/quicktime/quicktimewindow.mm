@@ -126,7 +126,6 @@ Rectangle Window::getPosSize() throw( RuntimeException )
 {
 	Rectangle aRet( 0, 0, 0, 0 );
 
-/*
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
@@ -144,7 +143,6 @@ Rectangle Window::getPosSize() throw( RuntimeException )
 	}
 
 	[pPool release];
-*/
 
 	return aRet;
 }
