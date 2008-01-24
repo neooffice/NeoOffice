@@ -36,6 +36,8 @@
 #ifndef _WINDOW_HXX
 #define _WINDOW_HXX
 
+#include <list>
+
 #include "quicktimeplayer.hxx"
 
 #ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
@@ -56,15 +58,27 @@ namespace quicktime
 
 class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayerWindow, ::com::sun::star::lang::XServiceInfo >
 {
+	static ::std::list< Window* >	maWindows;
+
+	::cppu::OMultiTypeInterfaceContainerHelper	maListeners;
 	::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >	mxMgr;
 	void*				mpMoviePlayer;
+	::osl::Mutex		maMutex;
 	void*				mpParentView;
 	::com::sun::star::awt::Rectangle	maRect;
+	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener > >	maWindowListeners;
 	sal_Bool			mbVisible;
 
 public:
 						Window( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& rxMgr );
 						~Window();
+
+	static void			fireFocusGainedEvent( Window* pWindow, const ::com::sun::star::awt::FocusEvent& rEvt );
+	static void			fireKeyPressedEvent( Window* pWindow, const ::com::sun::star::awt::KeyEvent& rEvt );
+	static void			fireKeyReleasedEvent( Window* pWindow, const ::com::sun::star::awt::KeyEvent& rEvt );
+	static void			fireMouseMovedEvent( Window* pWindow, const ::com::sun::star::awt::MouseEvent& rEvt );
+	static void			fireMousePressedEvent( Window* pWindow, const ::com::sun::star::awt::MouseEvent& rEvt );
+	static void			fireMouseReleasedEvent( Window* pWindow, const ::com::sun::star::awt::MouseEvent& rEvt );
 
 	// XPlayerWindow
 	virtual void SAL_CALL	update() throw( ::com::sun::star::uno::RuntimeException );
@@ -94,7 +108,7 @@ public:
 	// XComponent
 	virtual void SAL_CALL	dispose() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void SAL_CALL	addEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException );
-	virtual void SAL_CALL	removeEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& aListener ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual void SAL_CALL	removeEventListener( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XEventListener >& xListener ) throw( ::com::sun::star::uno::RuntimeException );
 
 	// XServiceInfo
 	virtual ::rtl::OUString SAL_CALL	getImplementationName() throw( ::com::sun::star::uno::RuntimeException );

@@ -51,7 +51,48 @@ namespace quicktime
 
 // ============================================================================
 
+::std::list< Window *> Window::maWindows;
+
+// ----------------------------------------------------------------------------
+
+void Window::fireFocusGainedEvent( Window* pWindow, const FocusEvent& rEvt )
+{
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::fireKeyPressedEvent( Window* pWindow, const KeyEvent& rEvt )
+{
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::fireKeyReleasedEvent( Window* pWindow, const KeyEvent& rEvt )
+{
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::fireMouseMovedEvent( Window* pWindow, const MouseEvent& rEvt )
+{
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::fireMousePressedEvent( Window* pWindow, const MouseEvent& rEvt )
+{
+}
+
+// ----------------------------------------------------------------------------
+
+void Window::fireMouseReleasedEvent( Window* pWindow, const MouseEvent& rEvt )
+{
+}
+
+// ----------------------------------------------------------------------------
+
 Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
+	maListeners( maMutex ),
 	mxMgr( rxMgr ),
 	mpMoviePlayer( NULL ),
 	mpParentView( NULL ),
@@ -191,108 +232,84 @@ void Window::setFocus() throw( RuntimeException )
 
 void Window::addWindowListener( const Reference< XWindowListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::addWindowListener not implemented\n" );
-#endif
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::removeWindowListener( const Reference< XWindowListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::removeWindowListener not implemented\n" );
-#endif
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::addFocusListener( const Reference< XFocusListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::addFocusListener not implemented\n" );
-#endif
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::removeFocusListener( const Reference< XFocusListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::removeFocusListener not implemented\n" );
-#endif
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::addKeyListener( const Reference< XKeyListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::addKeyListener not implemented\n" );
-#endif
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::removeKeyListener( const Reference< XKeyListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::removeKeyListener not implemented\n" );
-#endif
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::addMouseListener( const Reference< XMouseListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::addMouseListener not implemented\n" );
-#endif
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::removeMouseListener( const Reference< XMouseListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::removeMouseListener not implemented\n" );
-#endif
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::addMouseMotionListener( const Reference< XMouseMotionListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::addMouseMotionListener not implemented\n" );
-#endif
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::removeMouseMotionListener( const Reference< XMouseMotionListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::removeMouseMotionListener not implemented\n" );
-#endif
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::addPaintListener( const Reference< XPaintListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::addPaintListener not implemented\n" );
-#endif
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::removePaintListener( const Reference< XPaintListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::removePaintListener not implemented\n" );
-#endif
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
@@ -321,18 +338,14 @@ void Window::dispose() throw( RuntimeException )
 
 void Window::addEventListener( const Reference< XEventListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::addEventListener not implemented\n" );
-#endif
+	maListeners.addInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
 
-void Window::removeEventListener( const Reference< XEventListener >& aListener ) throw( RuntimeException )
+void Window::removeEventListener( const Reference< XEventListener >& xListener ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::removeEventListener not implemented\n" );
-#endif
+	maListeners.removeInterface( getCppuType( &xListener ), xListener );
 }
 
 // ----------------------------------------------------------------------------
