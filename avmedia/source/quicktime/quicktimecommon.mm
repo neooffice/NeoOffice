@@ -570,6 +570,8 @@ static const short nAVMediaMaxDB = 0;
 	}
 
 	[super viewDidEndLiveResize];
+
+	[self display];
 }
 
 - (void)viewWillStartLiveResize
