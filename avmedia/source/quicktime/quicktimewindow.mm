@@ -139,18 +139,6 @@ void Window::fireFocusGainedEvent( void* pMoviePlayer, const ::com::sun::star::a
 
 // ----------------------------------------------------------------------------
 
-void Window::fireKeyPressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt )
-{
-}
-
-// ----------------------------------------------------------------------------
-
-void Window::fireKeyReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt )
-{
-}
-
-// ----------------------------------------------------------------------------
-
 void Window::fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
 {
 }

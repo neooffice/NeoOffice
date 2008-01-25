@@ -80,8 +80,6 @@ public:
 						~Window();
 
 	static void			fireFocusGainedEvent( void *pMoviePlayer, const ::com::sun::star::awt::FocusEvent& rEvt );
-	static void			fireKeyPressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt );
-	static void			fireKeyReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::KeyEvent& rEvt );
 	static void			fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
 	static void			fireMousePressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
 	static void			fireMouseReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt );
