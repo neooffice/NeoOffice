@@ -141,18 +141,57 @@ void Window::fireFocusGainedEvent( void* pMoviePlayer, const ::com::sun::star::a
 
 void Window::fireMouseMovedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
 {
+	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	if ( pWindow )
+	{
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseMotionListener >*)0 ) );
+		if ( pContainer )
+		{
+			OInterfaceIteratorHelper aIterator( *pContainer );
+			while ( aIterator.hasMoreElements() )
+				Reference< XMouseMotionListener >( aIterator.next(), UNO_QUERY )->mouseMoved( rEvt );
+		}
+
+		Window::releaseSolarMutex();
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::fireMousePressedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
 {
+	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	if ( pWindow )
+	{
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseListener >*)0 ) );
+		if ( pContainer )
+		{
+			OInterfaceIteratorHelper aIterator( *pContainer );
+			while ( aIterator.hasMoreElements() )
+				Reference< XMouseListener >( aIterator.next(), UNO_QUERY )->mousePressed( rEvt );
+		}
+
+		Window::releaseSolarMutex();
+	}
 }
 
 // ----------------------------------------------------------------------------
 
 void Window::fireMouseReleasedEvent( void *pMoviePlayer, const ::com::sun::star::awt::MouseEvent& rEvt )
 {
+	Window *pWindow = Window::findWindowAndLockSolarMutex( pMoviePlayer );
+	if ( pWindow )
+	{
+		OInterfaceContainerHelper* pContainer = pWindow->maListeners.getContainer( getCppuType( (Reference< XMouseListener >*)0 ) );
+		if ( pContainer )
+		{
+			OInterfaceIteratorHelper aIterator( *pContainer );
+			while ( aIterator.hasMoreElements() )
+				Reference< XMouseListener >( aIterator.next(), UNO_QUERY )->mouseReleased( rEvt );
+		}
+
+		Window::releaseSolarMutex();
+	}
 }
 
 // ----------------------------------------------------------------------------

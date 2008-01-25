@@ -63,18 +63,7 @@
 - (void)setResult:(NSObject *)pResult;
 @end
 
-@class AvmediaMoviePlayer;
-
-@interface AvmediaMovieView : QTMovieView
-{
-	AvmediaMoviePlayer*		mpMoviePlayer;
-}
-- (MacOSBOOL)becomeFirstResponder;
-- (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame;
-- (MacOSBOOL)isFlipped;
-- (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
-@end
+@class AvmediaMovieView;
 
 @interface AvmediaMoviePlayer : NSObject
 {
@@ -94,6 +83,7 @@
 - (QTMovie *)movie;
 - (QTMovieView *)movieView;
 - (MacOSBOOL)mute:(AvmediaArgs *)pArgs;
+- (void)pause:(id)pObject;
 - (void)play:(id)pObject;
 - (void)preferredSize:(AvmediaArgs *)pArgs;
 - (double)rate:(AvmediaArgs *)pArgs;
@@ -110,6 +100,31 @@
 - (void)setVolumeDB:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;
 - (short)volumeDB:(AvmediaArgs *)pArgs;
+@end
+
+@interface AvmediaMovieView : QTMovieView
+{
+	AvmediaMoviePlayer*		mpMoviePlayer;
+}
+- (MacOSBOOL)becomeFirstResponder;
+- (void)dealloc;
+- (void)doCommandBySelector:(SEL)aSelector;
+- (id)initWithFrame:(NSRect)aFrame;
+- (MacOSBOOL)isFlipped;
+- (void)mouseDown:(NSEvent *)pEvent;
+- (void)mouseDragged:(NSEvent *)pEvent;
+- (void)mouseEntered:(NSEvent *)pEvent;
+- (void)mouseExited:(NSEvent *)pEvent;
+- (void)mouseMoved:(NSEvent *)pEvent;
+- (void)mouseUp:(NSEvent *)pEvent;
+- (IBAction)play:(id)pSender;
+- (void)rightMouseDown:(NSEvent *)pEvent;
+- (void)rightMouseDragged:(NSEvent *)pEvent;
+- (void)rightMouseUp:(NSEvent *)pEvent;
+- (void)otherMouseDown:(NSEvent *)pEvent;
+- (void)otherMouseDragged:(NSEvent *)pEvent;
+- (void)otherMouseUp:(NSEvent *)pEvent;
+- (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
 @end
 
 #endif	// _COMMON_H

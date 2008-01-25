@@ -36,11 +36,88 @@
 #import "quicktimecommon.h"
 #import "quicktimewindow.hxx"
 
+#ifndef _COM_SUN_STAR_AWT_KEYMODIFIER_HDL_
+#include <com/sun/star/awt/KeyModifier.hpp>
+#endif
+#ifndef _COM_SUN_STAR_AWT_MOUSEBUTTON_HDL_
+#include <com/sun/star/awt/MouseButton.hpp>
+#endif
+
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
 
 using namespace ::avmedia::quicktime;
 using namespace ::com::sun::star::awt;
+
+static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, AvmediaMoviePlayer *pMoviePlayer )
+{
+	// Only process the event if both the event and the view are visible
+	if ( pEvent && pView && pMoviePlayer && [pEvent window] && [pView window] && [[pView window] isVisible] )
+	{
+		MouseEvent aEvt;
+
+		NSPoint aPoint = [pView convertPoint:[pEvent locationInWindow] fromView:nil];
+		aEvt.Modifiers = 0;
+		aEvt.Buttons = 0;
+		aEvt.X = (sal_Int32)aPoint.x;
+		aEvt.Y = (sal_Int32)aPoint.y;
+		aEvt.ClickCount = 1;
+		aEvt.PopupTrigger = sal_False;
+
+		// Set modifiers. Note that we only care about the Shift and Command
+		// modifiers like the Windows code.
+		unsigned int nKeyModifiers = [pEvent modifierFlags];
+		if ( nKeyModifiers & NSShiftKeyMask )
+			aEvt.Modifiers |= KeyModifier::SHIFT;
+		if ( nKeyModifiers & NSCommandKeyMask )
+			aEvt.Modifiers |= KeyModifier::MOD1;
+
+		// Set buttons
+		switch ( [pEvent type] )
+		{
+			case NSLeftMouseDown:
+				aEvt.Buttons = MouseButton::LEFT;
+				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSRightMouseDown:
+				aEvt.Buttons = MouseButton::RIGHT;
+				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSOtherMouseDown:
+				aEvt.Buttons = MouseButton::MIDDLE;
+				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSLeftMouseDragged:
+				aEvt.Buttons = MouseButton::LEFT;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSRightMouseDragged:
+				aEvt.Buttons = MouseButton::RIGHT;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSOtherMouseDragged:
+				aEvt.Buttons = MouseButton::MIDDLE;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSLeftMouseUp:
+				aEvt.Buttons = MouseButton::LEFT;
+				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSRightMouseUp:
+				aEvt.Buttons = MouseButton::RIGHT;
+				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
+				break;
+			case NSOtherMouseUp:
+				aEvt.Buttons = MouseButton::MIDDLE;
+				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
+				break;
+			default:
+				aEvt.ClickCount = 0;
+				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
+				break;
+		}
+	}
+}
 
 @implementation AvmediaArgs
 
@@ -526,7 +603,8 @@ using namespace ::com::sun::star::awt;
 {
 	MacOSBOOL bRet = [super becomeFirstResponder];
 
-	if ( bRet && mpMoviePlayer )
+	// Only process the event if both the event and the view are visible
+	if ( bRet && mpMoviePlayer && [self window] && [[self window] isVisible] )
 	{
 		FocusEvent aEvt;
 		Window::fireFocusGainedEvent( mpMoviePlayer, aEvt );
@@ -554,6 +632,78 @@ using namespace ::com::sun::star::awt;
 - (MacOSBOOL)isFlipped
 {
 	return YES;
+}
+
+- (void)mouseDown:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)mouseDragged:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)mouseEntered:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)mouseExited:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)mouseMoved:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)mouseUp:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)pause:(id)pObject
+{
+	if ( mpMoviePlayer )
+		[mpMoviePlayer stop:nil];
+}
+
+- (IBAction)play:(id)pSender
+{
+	if ( mpMoviePlayer )
+		[mpMoviePlayer play:nil];
+}
+
+- (void)rightMouseDown:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)rightMouseDragged:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)rightMouseUp:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)otherMouseDown:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)otherMouseDragged:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)otherMouseUp:(NSEvent *)pEvent
+{
+	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
