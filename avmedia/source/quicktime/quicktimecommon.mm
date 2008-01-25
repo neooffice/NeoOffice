@@ -699,85 +699,61 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)mouseDown:(NSEvent *)pEvent
 {
-	[super mouseDown:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)mouseDragged:(NSEvent *)pEvent
 {
-	[super mouseDragged:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)mouseEntered:(NSEvent *)pEvent
 {
-	[super mouseEntered:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)mouseExited:(NSEvent *)pEvent
 {
-	[super mouseExited:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)mouseMoved:(NSEvent *)pEvent
 {
-	[super mouseMoved:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)mouseUp:(NSEvent *)pEvent
 {
-	[super mouseUp:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)rightMouseDown:(NSEvent *)pEvent
 {
-	[super rightMouseDown:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)rightMouseDragged:(NSEvent *)pEvent
 {
-	[super rightMouseDragged:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)rightMouseUp:(NSEvent *)pEvent
 {
-	[super rightMouseUp:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)otherMouseDown:(NSEvent *)pEvent
 {
-	[super otherMouseDown:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)otherMouseDragged:(NSEvent *)pEvent
 {
-	[super otherMouseDragged:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
 - (void)otherMouseUp:(NSEvent *)pEvent
 {
-	[super otherMouseUp:pEvent];
-
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
