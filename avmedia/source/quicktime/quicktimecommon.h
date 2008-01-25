@@ -106,26 +106,22 @@
 	AvmediaMoviePlayer*		mpMoviePlayer;
 }
 - (MacOSBOOL)becomeFirstResponder;
-- (IBAction)copy:(id)pSender;
-- (IBAction)cut:(id)pSender;
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame;
 - (MacOSBOOL)isFlipped;
+- (NSMenu *)menuForEvent:(NSEvent *)pEvent;
 - (void)mouseDown:(NSEvent *)pEvent;
 - (void)mouseDragged:(NSEvent *)pEvent;
 - (void)mouseEntered:(NSEvent *)pEvent;
 - (void)mouseExited:(NSEvent *)pEvent;
 - (void)mouseMoved:(NSEvent *)pEvent;
 - (void)mouseUp:(NSEvent *)pEvent;
-- (IBAction)pause:(id)pSender;
-- (IBAction)play:(id)pSender;
 - (void)rightMouseDown:(NSEvent *)pEvent;
 - (void)rightMouseDragged:(NSEvent *)pEvent;
 - (void)rightMouseUp:(NSEvent *)pEvent;
 - (void)otherMouseDown:(NSEvent *)pEvent;
 - (void)otherMouseDragged:(NSEvent *)pEvent;
 - (void)otherMouseUp:(NSEvent *)pEvent;
-- (IBAction)paste:(id)pSender;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
 @end
 

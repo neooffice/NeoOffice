@@ -76,7 +76,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		switch ( [pEvent type] )
 		{
 			case NSLeftMouseDown:
-				aEvt.Buttons = MouseButton::LEFT;
+				if ( nKeyModifiers & NSControlKeyMask )
+					aEvt.Buttons = MouseButton::RIGHT;
+				else
+					aEvt.Buttons = MouseButton::LEFT;
 				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
 				break;
 			case NSRightMouseDown:
@@ -88,7 +91,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 				Window::fireMousePressedEvent( pMoviePlayer, aEvt );
 				break;
 			case NSLeftMouseDragged:
-				aEvt.Buttons = MouseButton::LEFT;
+				if ( nKeyModifiers & NSControlKeyMask )
+					aEvt.Buttons = MouseButton::RIGHT;
+				else
+					aEvt.Buttons = MouseButton::LEFT;
 				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
 				break;
 			case NSRightMouseDragged:
@@ -100,7 +106,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 				Window::fireMouseMovedEvent( pMoviePlayer, aEvt );
 				break;
 			case NSLeftMouseUp:
-				aEvt.Buttons = MouseButton::LEFT;
+				if ( nKeyModifiers & NSControlKeyMask )
+					aEvt.Buttons = MouseButton::RIGHT;
+				else
+					aEvt.Buttons = MouseButton::LEFT;
 				Window::fireMouseReleasedEvent( pMoviePlayer, aEvt );
 				break;
 			case NSRightMouseUp:
@@ -270,7 +279,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMovieView setPreservesAspectRatio:YES];
 		[mpMovieView setShowsResizeIndicator:NO];
 		[mpMovieView setMovie:mpMovie];
-		[mpMovieView setEditable:YES];
+		[mpMovieView setEditable:NO];
 	}
 }
 
@@ -600,6 +609,11 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 @implementation AvmediaMovieView
 
++ (NSMenu *)defaultMenu
+{
+	return nil;
+}
+
 - (MacOSBOOL)becomeFirstResponder
 {
 	MacOSBOOL bRet = [super becomeFirstResponder];
@@ -612,22 +626,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	}
 
 	return bRet;
-}
-
-- (IBAction)copy:(id)pSender
-{
-	if ( mpMoviePlayer )
-		[mpMoviePlayer stop:nil];
-
-	[super copy:pSender];
-}
-
-- (IBAction)cut:(id)pSender
-{
-	if ( mpMoviePlayer )
-		[mpMoviePlayer stop:nil];
-
-	[super cut:pSender];
 }
 
 - (void)dealloc
@@ -649,6 +647,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (MacOSBOOL)isFlipped
 {
 	return YES;
+}
+
+- (NSMenu *)menuForEvent:(NSEvent *)pEvent
+{
+	// Suppress display of native popup menu
+	return nil;
 }
 
 - (void)mouseDown:(NSEvent *)pEvent
@@ -681,18 +685,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
-- (IBAction)pause:(id)pSender
-{
-	if ( mpMoviePlayer )
-		[mpMoviePlayer stop:nil];
-}
-
-- (IBAction)play:(id)pSender
-{
-	if ( mpMoviePlayer )
-		[mpMoviePlayer play:nil];
-}
-
 - (void)rightMouseDown:(NSEvent *)pEvent
 {
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
@@ -721,14 +713,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (void)otherMouseUp:(NSEvent *)pEvent
 {
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
-}
-
-- (IBAction)paste:(id)pSender
-{
-	if ( mpMoviePlayer )
-		[mpMoviePlayer stop:nil];
-
-	[super paste:pSender];
 }
 
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
