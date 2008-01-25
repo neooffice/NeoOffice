@@ -42,6 +42,9 @@
 #ifndef _COM_SUN_STAR_AWT_MOUSEBUTTON_HDL_
 #include <com/sun/star/awt/MouseButton.hpp>
 #endif
+#ifndef _COM_SUN_STAR_AWT_SYSTEMPOINTER_HDL_
+#include <com/sun/star/awt/SystemPointer.hpp>
+#endif
 
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
@@ -507,6 +510,42 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[mpMovie setMuted:[pMute boolValue]];
 }
 
+- (void)setPointer:(AvmediaArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+	NSNumber *pPointer = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pPointer )
+		return;
+
+	// Make sure cursor is visible
+	[NSCursor unhide];
+
+	NSCursor *pCursor;
+
+	switch ( [pPointer intValue] )
+	{
+		case SystemPointer::CROSS:
+		case SystemPointer::MOVE:
+			pCursor = [NSCursor crosshairCursor];
+			break;
+		case SystemPointer::INVISIBLE:
+			pCursor = [NSCursor arrowCursor];
+			[NSCursor hide];
+			break;
+		case SystemPointer::HAND:
+			pCursor = [NSCursor openHandCursor];
+			break;
+		default:
+			pCursor = [NSCursor arrowCursor];
+			break;
+	}
+
+	[mpMovieView setCursor:pCursor];
+}
+
 - (void)setRate:(AvmediaArgs *)pArgs
 {
 	NSArray *pArgArray = [pArgs args];
@@ -672,6 +711,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)dealloc
 {
+	[self setCursor:nil];
 	[self setMoviePlayer:nil];
 
 	[super dealloc];
@@ -681,6 +721,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 {
 	[super initWithFrame:aFrame];
 
+	mpCursor = nil;
 	mpMoviePlayer = nil;
 
 	return self;
@@ -755,6 +796,34 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (void)otherMouseUp:(NSEvent *)pEvent
 {
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (void)resetCursorRects
+{
+	[super resetCursorRects];
+
+	if ( mpCursor )
+	{
+		[self addCursorRect:[self visibleRect] cursor:mpCursor];
+		[mpCursor setOnMouseEntered:YES];
+	}
+}
+
+- (void)setCursor:(NSCursor *)pCursor
+{
+	if ( mpCursor )
+		[mpCursor release];
+
+	mpCursor = pCursor;
+
+	if ( mpCursor )
+	{
+		[mpCursor retain];
+
+		NSWindow *pWindow = [self window];
+		if ( pWindow )
+			[pWindow invalidateCursorRectsForView:self];
+	}
 }
 
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer

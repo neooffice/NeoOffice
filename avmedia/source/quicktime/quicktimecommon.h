@@ -94,6 +94,7 @@
 - (void)setFocus:(id)pObject;
 - (void)setLooping:(AvmediaArgs *)pArgs;
 - (void)setMute:(AvmediaArgs *)pArgs;
+- (void)setPointer:(AvmediaArgs *)pArgs;
 - (void)setRate:(AvmediaArgs *)pArgs;
 - (void)setSelection:(AvmediaArgs *)pArgs;
 - (void)setSuperview:(AvmediaArgs *)pArgs;
@@ -104,6 +105,7 @@
 
 @interface AvmediaMovieView : QTMovieView
 {
+	NSCursor*				mpCursor;
 	AvmediaMoviePlayer*		mpMoviePlayer;
 }
 - (MacOSBOOL)becomeFirstResponder;
@@ -123,6 +125,8 @@
 - (void)otherMouseDown:(NSEvent *)pEvent;
 - (void)otherMouseDragged:(NSEvent *)pEvent;
 - (void)otherMouseUp:(NSEvent *)pEvent;
+- (void)resetCursorRects;
+- (void)setCursor:(NSCursor *)pCursor;
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer;
 @end
 

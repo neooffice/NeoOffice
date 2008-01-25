@@ -246,9 +246,16 @@ ZoomLevel Window::getZoomLevel() throw( RuntimeException )
 
 void Window::setPointerType( sal_Int32 nPointerType ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::setPointerType not implemented\n" );
-#endif
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpMoviePlayer )
+	{
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:nPointerType]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setPointer:) withObject:pArgs waitUntilDone:YES modes:pModes];
+	}
+
+	[pPool release];
 }
 
 // ----------------------------------------------------------------------------
@@ -261,7 +268,7 @@ void Window::setPosSize( sal_Int32 nX, sal_Int32 nY, sal_Int32 nWidth, sal_Int32
 
 	if ( mpMoviePlayer && mpParentView )
 	{
-		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(AvmediaMoviePlayer *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObjects:(NSView *)mpParentView, [NSValue valueWithRect:NSMakeRect( maRect.X, maRect.Y, maRect.Width, maRect.Height )], nil]];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setBounds:) withObject:pArgs waitUntilDone:YES modes:pModes];
 	}
