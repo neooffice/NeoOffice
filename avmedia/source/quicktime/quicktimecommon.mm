@@ -243,6 +243,51 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return fRet;
 }
 
+- (NSBitmapImageRep *)frameImageAtTime:(AvmediaArgs *)pArgs
+{
+	NSBitmapImageRep *pRet = nil;
+
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return pRet;
+
+	NSNumber *pTime = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pTime )
+		return pRet;
+
+	NSImage *pImage = [mpMovie frameImageAtTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
+	if ( pImage )
+	{
+		NSSize aSize = [pImage size];
+		if ( aSize.width > 0 && aSize.height > 0 )
+		{
+			NSView *pFocusView = [NSView focusView];
+			if ( pFocusView )
+				[pFocusView unlockFocus];
+
+			[pImage lockFocus];
+
+			NSBitmapImageRep *pBitmapImageRep = [[NSBitmapImageRep alloc] initWithFocusedViewRect:NSMakeRect( 0, 0, aSize.width, aSize.height )];
+			if ( pBitmapImageRep )
+			{
+				// Add to autorelease pool as invoking alloc disables autorelease
+				[pBitmapImageRep autorelease];
+				pRet = pBitmapImageRep;
+			}
+
+			[pImage unlockFocus];
+
+			if ( pFocusView )
+				[pFocusView lockFocus];
+		}
+	}
+
+	if ( pRet )
+		[pArgs setResult:pRet];
+
+	return pRet;
+}
+
 - (id)init
 {
 	[super init];
@@ -331,9 +376,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 - (void)release:(id)pObject
 {
-	[mpMovie stop];
-	mbPlaying = NO;
-
 	[self release];
 }
 

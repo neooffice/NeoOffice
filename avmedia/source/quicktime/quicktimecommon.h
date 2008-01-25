@@ -77,6 +77,7 @@
 - (double)currentTime:(AvmediaArgs *)pArgs;
 - (void)dealloc;
 - (double)duration:(AvmediaArgs *)pArgs;
+- (NSBitmapImageRep *)frameImageAtTime:(AvmediaArgs *)pArgs;
 - (id)init;
 - (void)initialize:(NSURL *)pURL;
 - (MacOSBOOL)isPlaying:(AvmediaArgs *)pArgs;

@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import "quicktimecommon.h"
+#import "quicktimeframegrabber.hxx"
 #import "quicktimeplayer.hxx"
 #import "quicktimewindow.hxx"
 
@@ -474,8 +475,12 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 	Reference< XPlayerWindow > xRet;
 
 	Window *pWindow = new Window( mxMgr );
-	if ( pWindow && pWindow->create( mpMoviePlayer, rArguments ) )
-		xRet = Reference< XPlayerWindow >( pWindow );
+	if ( pWindow )
+	{
+		xRet = pWindow;
+		if ( !pWindow->create( mpMoviePlayer, rArguments ) )
+			xRet.clear();
+	}
 
 	return xRet;
 }
@@ -484,10 +489,16 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 
 Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Player::createFrameGrabber not implemented\n" );
-#endif
 	Reference< XFrameGrabber > xRet;
+
+	FrameGrabber *pFrameGrabber = new FrameGrabber( mxMgr );
+	if ( pFrameGrabber )
+	{
+		xRet = pFrameGrabber;
+		if ( !pFrameGrabber->create( mpMoviePlayer ) )
+			xRet.clear();
+	}
+
 	return xRet;
 }
 

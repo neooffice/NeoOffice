@@ -491,6 +491,8 @@ bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
 
 	dispose();
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pMoviePlayer && rArguments.getLength() > 1 )
 	{
 		sal_Int32 nPtr;
@@ -510,6 +512,8 @@ bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
 			bRet = true;
 		}
 	}
+
+	[pPool release];
 
 	return bRet;
 }

@@ -47,6 +47,7 @@ TARGET=avmediaquicktime
 
 SLOFILES= \
 	$(SLO)$/quicktimecommon.obj \
+	$(SLO)$/quicktimeframegrabber.obj \
 	$(SLO)$/quicktimemanager.obj \
 	$(SLO)$/quicktimeplayer.obj \
 	$(SLO)$/quicktimeuno.obj \
