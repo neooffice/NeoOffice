@@ -270,6 +270,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMovieView setPreservesAspectRatio:YES];
 		[mpMovieView setShowsResizeIndicator:NO];
 		[mpMovieView setMovie:mpMovie];
+		[mpMovieView setEditable:YES];
 	}
 }
 
@@ -613,6 +614,22 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	return bRet;
 }
 
+- (IBAction)copy:(id)pSender
+{
+	if ( mpMoviePlayer )
+		[mpMoviePlayer stop:nil];
+
+	[super copy:pSender];
+}
+
+- (IBAction)cut:(id)pSender
+{
+	if ( mpMoviePlayer )
+		[mpMoviePlayer stop:nil];
+
+	[super cut:pSender];
+}
+
 - (void)dealloc
 {
 	[self setMoviePlayer:nil];
@@ -664,7 +681,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
 }
 
-- (void)pause:(id)pObject
+- (IBAction)pause:(id)pSender
 {
 	if ( mpMoviePlayer )
 		[mpMoviePlayer stop:nil];
@@ -704,6 +721,14 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (void)otherMouseUp:(NSEvent *)pEvent
 {
 	HandleAndFireMouseEvent( pEvent, self, mpMoviePlayer );
+}
+
+- (IBAction)paste:(id)pSender
+{
+	if ( mpMoviePlayer )
+		[mpMoviePlayer stop:nil];
+
+	[super paste:pSender];
 }
 
 - (void)setMoviePlayer:(AvmediaMoviePlayer *)pPlayer
