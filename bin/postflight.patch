@@ -37,6 +37,8 @@
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
 
+umask 022
+
 if [ -d "$2" ]; then
 
 	# Fix Apple installer bug described in bug 1373

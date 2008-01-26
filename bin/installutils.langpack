@@ -73,8 +73,9 @@ update_installation() {
 	( cd "$1" || exit 1 ; pax -r -z -f "$2/Contents/Archive.pax.gz" ) || return 1
 
 	# Mark certain directories writable for admin group
-	chmod -f ug+w "$1" || exit 1
-	chmod -f ug+w "$1/Contents" || return 1
+	chmod -f 775 "$1" || return 1
+	chmod -Rf a+r,a-w "$1/Contents" || return 1
+	chmod -f 775 "$1/Contents" || return 1
 	chmod -Rf ug+w "$1/Contents/Resources" || return 1
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
 

@@ -125,11 +125,19 @@ update_installation() {
 		rm -f "$qlplugin_file.tmp"
 	fi
 
+	# Install shared .oxt files
+	if [ -d "$INSTALLER_TEMP" -a "$INSTALLER_TEMP" != "$HOME" ] ; then
+		for i in `find "$2/Contents/Resources" -name "*.oxt"` ; do
+			( cd "$1/Contents/MacOS" || exit 1 ; HOME="$INSTALLER_TEMP" ; export HOME ; rm -Rf "$INSTALLER_TEMP/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)" ; "./unopkg.bin" add --shared --force "$i" )
+		done
+	fi
+
 	sync
 
 	# Mark certain directories writable for admin group
-	chmod -f ug+w "$1" || exit 1
-	chmod -f ug+w "$1/Contents" || return 1
+	chmod -f 775 "$1" || return 1
+	chmod -Rf a+r,a-w "$1/Contents" || return 1
+	chmod -f 775 "$1/Contents" || return 1
 	chmod -Rf ug+w "$1/Contents/Resources" || return 1
 	chmod -Rf ug+w "$1/Contents/share/dict/ooo" || return 1
 
@@ -163,7 +171,6 @@ update_installation() {
 			sudo -u "$sudouser" -i -- -c "$lsregister -f \"$1\""
 		fi
 	fi
-
 
 	# Touch installation directory to force activation of any bundled Spotlight
 	# plugins
