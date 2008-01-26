@@ -143,6 +143,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					long *pFonts = NSFontManager_getAllFonts();
 					if ( pFonts )
 					{
+						const OUString aGothic( OUString::createFromAscii( "Gothic" ) );
 						const OUString aRoman( OUString::createFromAscii( "Roman" ) );
 						const OUString aSans( OUString::createFromAscii( "Sans" ) );
 						const OUString aSerif( OUString::createFromAscii( "Serif" ) );
@@ -248,7 +249,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								nFamily = FAMILY_MODERN;
 							else if ( aPSName.indexOf( aSans ) >= 0 )
 								nFamily = FAMILY_SWISS;
-							else if ( aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 )
+							else if ( aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 || aPSName.indexOf( aGothic ) >= 0 )
 								nFamily = FAMILY_ROMAN;
 							else
 								nFamily = FAMILY_SWISS;
