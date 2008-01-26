@@ -8,7 +8,7 @@
 					<value>macro:///ImageCapture.Main.Main</value>
 				</prop>
 				<prop oor:name="Title" oor:type="xs:string" oor:localized="true">
-					<value>Paste Image from Camera or Scanner</value>
+					<value>Copy Image from Camera or Scanner to Clipboard</value>
 				</prop>
 				<prop oor:name="ImageIdentifier" oor:type="xs:string">
 					<value/>
