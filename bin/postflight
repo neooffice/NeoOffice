@@ -45,7 +45,7 @@ qlplugin_id="$(NEOPEEK_QLPLUGIN_ID)"
 if [ -d "$2" ]; then
 
 	# Fix Apple installer bug described in bug 1373
-	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" ]; then
+	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" -o "$INSTALLER_TEMP" = "/" -o "$INSTALLER_TEMP" = "$3" -o `cd "$INSTALLER_TEMP" ; pwd` = "/" -o `cd "$INSTALLER_TEMP" ; pwd` = "$3" ]; then
 		exit 1;
 	fi
 
@@ -165,7 +165,7 @@ if [ -d "$2" ]; then
 	fi
 
 	# Install shared .oxt files
-	if [ -d "$INSTALLER_TEMP" -a "$INSTALLER_TEMP" != "$HOME" ] ; then
+	if [ "$INSTALLER_TEMP" != "$HOME" && `cd "$INSTALLER_TEMP" ; pwd` != "$HOME" ] ; then
 		for i in `find "$1/Contents/Resources" -name "*.oxt"` ; do
 			( cd "$2/Contents/MacOS" || exit 1 ; HOME="$INSTALLER_TEMP" ; export HOME ; rm -Rf "$INSTALLER_TEMP/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)" ; "./unopkg.bin" add --shared --force "$i" )
 		done
@@ -195,7 +195,7 @@ if [ -d "$2" ]; then
 	fi
 
 	if [ ! -z "$sudouser" ] ; then
-		sudo -u "$sudouser" -b -i -- -c "$2/Contents/MacOS/soffice.bin"
+		sudo -H -u "$sudouser" -b -i -- -c "$2/Contents/MacOS/soffice.bin"
 		sleep 15
 	fi
 
@@ -210,7 +210,7 @@ if [ -d "$2" ]; then
 	if [ ! -z "$lsregister" ] ; then
 		"$lsregister" -f "$2"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -u "$sudouser" -i -- -c "$lsregister -f \"$2\""
+			sudo -H -u "$sudouser" -i -- -c "$lsregister -f \"$2\""
 		fi
 	fi
 
@@ -222,7 +222,7 @@ if [ -d "$2" ]; then
 	if [ -x "/usr/bin/mdimport" ] ; then
 		/usr/bin/mdimport -r "$2/Contents/Library/Spotlight/neolight.mdimporter"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -u "$sudouser" -i -- -c "/usr/bin/mdimport -r \"$2\"/Contents/Library/Spotlight/neolight.mdimporter"
+			sudo -H -u "$sudouser" -i -- -c "/usr/bin/mdimport -r \"$2\"/Contents/Library/Spotlight/neolight.mdimporter"
 		fi
 	fi
 

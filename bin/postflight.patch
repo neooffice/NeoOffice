@@ -42,7 +42,7 @@ umask 022
 if [ -d "$2" ]; then
 
 	# Fix Apple installer bug described in bug 1373
-	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" ]; then
+	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" -o "$INSTALLER_TEMP" = "/" -o "$INSTALLER_TEMP" = "$3" -o `cd "$INSTALLER_TEMP" ; pwd` = "/" -o `cd "$INSTALLER_TEMP" ; pwd` = "$3" ]; then
 		exit 1;
 	fi
 
@@ -79,7 +79,7 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 	fi
 
 	while read i ; do
-		update_installation "$i" "$1" || exit 1
+		update_installation "$1" "$i" || exit 1
 	done << !
 `( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -name "*.app" -prune 2>/dev/null ) | sort -u`
 !
