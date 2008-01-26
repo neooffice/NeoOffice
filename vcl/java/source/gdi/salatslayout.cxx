@@ -502,7 +502,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = fSize / fAdjustedSize;
-	int nLastNonSpacingGlyph = -1;
+	int nLastNonSpacingIndex = -1;
 	for ( i = 0; i < mnGlyphCount; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
@@ -521,19 +521,19 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		// force the cursor to the end of the ligature instead of the beginning
 		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
-			if ( nLastNonSpacingGlyph >= 0 && nLastNonSpacingGlyph != nIndex )
+			if ( nLastNonSpacingIndex >= 0 && nLastNonSpacingIndex != nIndex )
 			{
-				mpCharAdvances[ nLastNonSpacingGlyph ] += mpCharAdvances[ nIndex ];
+				mpCharAdvances[ nLastNonSpacingIndex ] += mpCharAdvances[ nIndex ];
 				mpCharAdvances[ nIndex ] = 0;
 			}
 		}
 		else if ( pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
-			nLastNonSpacingGlyph = -1;
+			nLastNonSpacingIndex = -1;
 		}
 		else
 		{
-			nLastNonSpacingGlyph = nIndex;
+			nLastNonSpacingIndex = nIndex;
 		}
 	}
 
