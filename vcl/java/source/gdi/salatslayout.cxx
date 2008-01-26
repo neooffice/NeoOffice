@@ -894,6 +894,53 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		ImplLayoutArgs *pArgs = &rArgs;
+
+		// If SAL_LAYOUT_BIDI_STRONG is set, we need to verify that the extra
+		// characters are of the same direction otherwise typing LTR characters
+		// in RTL text will be misrendered
+		if ( bDeleteArgs && rArgs.mnFlags & SAL_LAYOUT_BIDI_STRONG )
+		{
+			// The ImplLayoutArgs class does not do BIDI analysis in this case
+			// so we can be assured that the entire string is a single run
+			bool bIsStrongRTL = ( rArgs.mnFlags & SAL_LAYOUT_BIDI_RTL );
+
+			bool bStrongRunRTL;
+			int nStrongMinCharPos;
+			int nStrongEndCharPos;
+
+			if ( nMinCharPos < rArgs.mnMinCharPos )
+			{
+				ImplLayoutArgs aMinArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, rArgs.mnMinCharPos, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
+				aMinArgs.ResetPos();
+				while ( aMinArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
+				{
+					if ( nStrongEndCharPos == rArgs.mnMinCharPos )
+					{
+						if ( bStrongRunRTL == bIsStrongRTL && nStrongMinCharPos < rArgs.mnMinCharPos )
+							nMinCharPos = nStrongMinCharPos;
+						else
+							bDeleteArgs = false;
+					}
+				}
+			}
+
+			if ( nEndCharPos > rArgs.mnEndCharPos )
+			{
+				ImplLayoutArgs aEndArgs( rArgs.mpStr, rArgs.mnLength, rArgs.mnEndCharPos, nEndCharPos, rArgs.mnFlags & ~( SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) );
+				aEndArgs.ResetPos();
+				while ( aEndArgs.GetNextRun( &nStrongMinCharPos, &nStrongEndCharPos, &bStrongRunRTL ) )
+				{
+					if ( nStrongMinCharPos == rArgs.mnEndCharPos )
+					{
+						if ( bStrongRunRTL == bIsStrongRTL && nEndCharPos > rArgs.mnEndCharPos )
+							nEndCharPos = nStrongEndCharPos;
+						else
+							bDeleteArgs = false;
+					}
+				}
+			}
+		}
+
 		if ( bDeleteArgs )
 		{
 			pArgs = new ImplLayoutArgs( rArgs.mpStr, rArgs.mnLength, nMinCharPos, nEndCharPos, rArgs.mnFlags & ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING );
