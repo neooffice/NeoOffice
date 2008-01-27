@@ -94,11 +94,19 @@ static inline Color RGBColorToColor( RGBColor *theColor )
 		(unsigned char)( ( (double)theColor->blue / (double)USHRT_MAX ) * (double)0xFF ) );
 }
 
-// =======================================================================
+// -----------------------------------------------------------------------
 
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
 	return 0;
+}
+
+// -----------------------------------------------------------------------
+
+// Note: this must not be static as the symbol will be loaded by the framework
+// module
+extern "C" void SAL_DLLPUBLIC_EXPORT ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bMenusOnly )
+{
 }
 
 // =======================================================================
