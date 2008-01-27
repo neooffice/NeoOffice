@@ -36,6 +36,7 @@
 PRJ=..$/..
 PRJNAME=avmediaquicktime
 TARGET=avmediaquicktime
+ENABLE_EXCEPTIONS=TRUE
 
 # --- Settings ----------------------------------
 

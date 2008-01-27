@@ -38,6 +38,10 @@
 #import "quicktimeplayer.hxx"
 #import "quicktimewindow.hxx"
 
+#ifndef _RTL_URI_HXX_
+#include <rtl/uri.hxx>
+#endif
+
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
@@ -85,9 +89,12 @@ bool Player::create( const ::rtl::OUString& rURL )
 
 	if ( isValid() )
 	{
+		// The NSURL class requires URLs to be encoded
+		::rtl::OUString aURL = ::rtl::Uri::encode( rURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
+
 		if ( mpMoviePlayer )
 		{
-			if ( rURL.getLength() && rURL == maURL )
+			if ( aURL.getLength() && aURL == maURL )
 			{
 				stop();
 				setPlaybackLoop( sal_False );
@@ -107,9 +114,9 @@ bool Player::create( const ::rtl::OUString& rURL )
 			mbLooping = sal_False;
 			maURL = ::rtl::OUString();
 
-			if ( rURL.getLength() )
+			if ( aURL.getLength() )
 			{
-				NSString *pString = [NSString stringWithCharacters:rURL.getStr() length:rURL.getLength()];
+				NSString *pString = [NSString stringWithCharacters:aURL.getStr() length:aURL.getLength()];
 				if ( pString )
 				{
 					NSURL *pURL = [NSURL URLWithString:pString];
@@ -129,7 +136,7 @@ bool Player::create( const ::rtl::OUString& rURL )
 							}
 							else
 							{
-								maURL = rURL;
+								maURL = aURL;
 								bRet = true;
 							}
 						}
