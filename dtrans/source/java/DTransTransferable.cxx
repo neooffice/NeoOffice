@@ -123,28 +123,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 
 	if ( !Application::IsShutDown() )
 	{
-		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
-		bool bAcquired = false;
-		TimeValue aDelay;
-		aDelay.Seconds = 0;
-		aDelay.Nanosec = 10;
-		while ( !Application::IsShutDown() )
-		{
-			if ( rSolarMutex.tryToAcquire() )
-			{
-				if ( !Application::IsShutDown() )
-					bAcquired = true;
-				else
-					rSolarMutex.release(); 
-				break;
-			}
-
-			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::wait( aDelay );
-		}
-
-		if ( bAcquired )
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
 		{
 			DTransTransferable *pTransferable = (DTransTransferable *)pData;
 

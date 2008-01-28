@@ -227,28 +227,9 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 	if ( !Application::IsShutDown() )
 	{
-		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
-		bool bAcquired = false;
-		TimeValue aDelay;
-		aDelay.Seconds = 0;
-		aDelay.Nanosec = 10;
-		while ( !Application::IsShutDown() )
-		{
-			if ( rSolarMutex.tryToAcquire() )
-			{
-				if ( IsValidWindowPtr( aWindow ) && !Application::IsShutDown() )
-					bAcquired = true;
-				else
-					rSolarMutex.release();
-				break;
-			}
-
-			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::wait( aDelay );
-		}
-
-		if ( bAcquired )
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
 		{
 			if ( pTrackDragOwner )
 			{
@@ -291,28 +272,9 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 	if ( !Application::IsShutDown() )
 	{
-		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
-		bool bAcquired = false;
-		TimeValue aDelay;
-		aDelay.Seconds = 0;
-		aDelay.Nanosec = 10;
-		while ( !Application::IsShutDown() )
-		{
-			if ( rSolarMutex.tryToAcquire() )
-			{
-				if ( IsValidWindowPtr( aWindow ) && !Application::IsShutDown() )
-					bAcquired = true;
-				else
-					rSolarMutex.release();
-				break;
-			}
-
-			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::wait( aDelay );
-		}
-
-		if ( bAcquired )
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
 		{
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
@@ -372,28 +334,9 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 
 	if ( !Application::IsShutDown() )
 	{
-		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
-		bool bAcquired = false;
-		TimeValue aDelay;
-		aDelay.Seconds = 0;
-		aDelay.Nanosec = 10;
-		while ( !Application::IsShutDown() )
-		{
-			if ( rSolarMutex.tryToAcquire() )
-			{
-				if ( IsValidWindowPtr( aWindow ) && !Application::IsShutDown() )
-					bAcquired = true;
-				else
-					rSolarMutex.release();
-				break;
-			}
-
-			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::wait( aDelay );
-		}
-
-		if ( bAcquired )
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
 		{
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
@@ -435,14 +378,7 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 	JavaDragSource *pSource = (JavaDragSource *)pData;
 
 	IMutex& rSolarMutex = Application::GetSolarMutex();
-	TimeValue aDelay;
-	aDelay.Seconds = 0;
-	aDelay.Nanosec = 10;
-	while ( !rSolarMutex.tryToAcquire() )
-	{
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::wait( aDelay );
-	}
+	rSolarMutex.acquire();
 
 	if ( pSource && pTrackDragOwner == pSource )
 	{
@@ -475,13 +411,9 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 				bool bTrackDrag = ( bContentsSet && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr );
 
 				// Relock application mutex. Note that we don't check for
-				// application shutdown as we are noew on the hook to clean up
+				// application shutdown as we are now on the hook to clean up
 				// this thread
-				while ( !rSolarMutex.tryToAcquire() )
-				{
-					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-					OThread::wait( aDelay );
-				}
+				rSolarMutex.acquire();
 
 				if ( pSource && pTrackDragOwner == pSource )
 				{
