@@ -70,28 +70,9 @@ Window* Window::findWindowAndLockSolarMutex( void* pMoviePlayer )
 
 	if ( !Application::IsShutDown() )
 	{
-		// We need to let any pending timers run so that we don't deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
-		bool bAcquired = false;
-		TimeValue aDelay;
-		aDelay.Seconds = 0;
-		aDelay.Nanosec = 10;
-		while ( !Application::IsShutDown() )
-		{
-			if ( rSolarMutex.tryToAcquire() )
-			{
-				if ( !Application::IsShutDown() )
-					bAcquired = true;
-				else
-					rSolarMutex.release();
-				break;
-			}
-
-			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::wait( aDelay );
-		}
-
-		if ( bAcquired )
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
 		{
 			for ( ::std::list< Window* >::const_iterator it = Window::maWindows.begin(); it != Window::maWindows.end(); ++it )
 			{
@@ -114,8 +95,8 @@ Window* Window::findWindowAndLockSolarMutex( void* pMoviePlayer )
 
 void Window::releaseSolarMutex()
 {
-	IMutex &rMutex = Application::GetSolarMutex();
-	rMutex.release();
+	IMutex &rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.release();
 }
 
 // ----------------------------------------------------------------------------
