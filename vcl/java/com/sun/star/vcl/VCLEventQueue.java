@@ -389,7 +389,7 @@ public final class VCLEventQueue implements Runnable {
 	 * @return <code>true</code> if the application has a delegate and it is
 	 *  not the default Java delegate
 	 */
-	native boolean hasApplicationDelegate();
+	public native boolean hasApplicationDelegate();
 
 	/**
 	 * Returns <code>true</code> if the application is active and a native
