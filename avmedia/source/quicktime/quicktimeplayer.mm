@@ -481,14 +481,18 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 {
 	Reference< XPlayerWindow > xRet;
 
-	Window *pWindow = new Window( mxMgr );
-	if ( pWindow )
+	Size aSize = getPreferredPlayerWindowSize();
+	if ( aSize.Width > 0 && aSize.Height > 0 )
 	{
-		xRet = pWindow;
-		if ( !pWindow->create( mpMoviePlayer, rArguments ) )
-			xRet.clear();
+		Window *pWindow = new Window( mxMgr );
+		if ( pWindow )
+		{
+			xRet = pWindow;
+			if ( !pWindow->create( mpMoviePlayer, rArguments ) )
+				xRet.clear();
+		}
 	}
-
+	
 	return xRet;
 }
 
@@ -498,12 +502,16 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeE
 {
 	Reference< XFrameGrabber > xRet;
 
-	FrameGrabber *pFrameGrabber = new FrameGrabber( mxMgr );
-	if ( pFrameGrabber )
+	Size aSize = getPreferredPlayerWindowSize();
+	if ( aSize.Width > 0 && aSize.Height > 0 )
 	{
-		xRet = pFrameGrabber;
-		if ( !pFrameGrabber->create( mpMoviePlayer ) )
-			xRet.clear();
+		FrameGrabber *pFrameGrabber = new FrameGrabber( mxMgr );
+		if ( pFrameGrabber )
+		{
+			xRet = pFrameGrabber;
+			if ( !pFrameGrabber->create( mpMoviePlayer ) )
+				xRet.clear();
+		}
 	}
 
 	return xRet;
