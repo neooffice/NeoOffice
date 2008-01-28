@@ -317,7 +317,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		if ( pImage )
 			maPreferredSize = [pImage size];
 		else
-			maPreferredSize = NSMakeSize( 1, 1 );
+			maPreferredSize = NSMakeSize( 0, 0 );
 
 		NSRect aFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
 		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:aFrame];
