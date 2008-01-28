@@ -313,8 +313,10 @@ public final class VCLEventQueue implements Runnable {
 				// Don't post or dispatch, just wait until there are no pending
 				// events
 				AWTEvent nextEvent;
-				while ((nextEvent = eventQueue.peekEvent()) != null)
+				while ((nextEvent = eventQueue.peekEvent()) != null) {
+					runApplicationMainThreadTimers();
 					Thread.yield();
+				}
 			}
 		}
 		catch (Throwable t) {
@@ -387,7 +389,7 @@ public final class VCLEventQueue implements Runnable {
 	 * @return <code>true</code> if the application has a delegate and it is
 	 *  not the default Java delegate
 	 */
-	public native boolean hasApplicationDelegate();
+	native boolean hasApplicationDelegate();
 
 	/**
 	 * Returns <code>true</code> if the application is active and a native
@@ -396,7 +398,7 @@ public final class VCLEventQueue implements Runnable {
 	 * @return <code>true</code> if the application is active and a native
 	 *  modal window is not showing.
 	 */
-	public native boolean isApplicationActive();
+	native boolean isApplicationActive();
 
 	/**
 	 * Returns <code>true</code> if the current thread is the application's
@@ -574,6 +576,11 @@ public final class VCLEventQueue implements Runnable {
 	 * we can prevent blocking in the {@link #dispatchNextEvent()} method.
 	 */
 	public void run() {}
+
+	/**
+	 * Runs any pending native timers.
+	 */
+	native void runApplicationMainThreadTimers();
 
 	/**
 	 * Sets the last adjusted mouse modifiers.

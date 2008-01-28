@@ -206,25 +206,9 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					OThread::wait( aDelay );
 				}
 
-				// We need to let any pending timers run so that we don't
-				// deadlock
 				IMutex& rSolarMutex = Application::GetSolarMutex();
-				bool bAcquired = false;
-				while ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet )
-				{
-					if ( rSolarMutex.tryToAcquire() )
-					{
-						if ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet )
-							bAcquired = true; 
-						else
-							rSolarMutex.release();
-						break;
-					}
-					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-					OThread::wait( aDelay );
-				}
-
-				if ( !bAcquired )
+				rSolarMutex.acquire();
+				if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
 				{
 					aEventQueueMutex.release();
 					return userCanceledErr;
@@ -419,11 +403,6 @@ ULONG JavaSalInstance::ReleaseYieldMutex()
 	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
 	if ( pYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() )
 	{
-		// Fix bug 1496 by not allowing releasing of the mutex when we are in
-		// the native event dispatch thread
-		if ( GetCurrentEventLoop() == GetMainEventLoop() )
-			return 0;
-
 		ULONG nCount = pYieldMutex->GetAcquireCount();
 		ULONG n = nCount;
 		while ( n )
@@ -455,11 +434,14 @@ void JavaSalInstance::AcquireYieldMutex( ULONG nCount )
 
 void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 {
+	ULONG nCount;
 	SalData *pSalData = GetSalData();
 
 	// Fix bug 2575 by manually dispatching native events.
 	if ( GetCurrentEventLoop() == GetMainEventLoop() )
 	{
+		nCount = ReleaseYieldMutex();
+
 		// Fix bug 2731 by not doing this when we are in the begin menubar
 		// tracking handler.
 		if ( pSalData->maNativeEventCondition.check() )
@@ -469,8 +451,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// the performSelectorOnMainThread selector by waiting for any
 		// undispatched Java events to get dispatched and then allowing
 		// any pending native timers to run
-		pSalData->mpEventQueue->dispatchNextEvent();
 		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		pSalData->mpEventQueue->dispatchNextEvent();
+
+		AcquireYieldMutex( nCount );
 	}
 
 	com_sun_star_vcl_VCLEvent *pEvent;
@@ -494,7 +478,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		return;
 	}
 
-	ULONG nCount;
 	if ( pSalData->maNativeEventCondition.check() )
 	{
 		nCount = ReleaseYieldMutex();
@@ -978,12 +961,39 @@ SalYieldMutex::SalYieldMutex()
 
 void SalYieldMutex::acquire()
 {
-	// If we are in a signal handler and we don't have the mutex, don't block
-	// waiting for the mutex as most likely the thread with the mutex is
-	// blocked in an [NSObject performSelectorOnMainThread] message and we
-	// will deadlock.
-	if ( GetSalData()->mbInSignalHandler && !tryToAcquire() )
-		return;
+	if ( mnThreadId != OThread::getCurrentIdentifier() )
+	{
+		// If we are in a signal handler and we don't have the mutex, don't
+		// block waiting for the mutex as most likely the thread with the mutex
+		// is blocked in an [NSObject performSelectorOnMainThread] message and
+		// we will deadlock. Also, fix bug 1496 by not allowing native timers
+		// to run before trying to acquire the mutex when in the main thread.
+		SalData *pSalData = GetSalData();
+		if ( !pSalData || pSalData->mbInSignalHandler && !tryToAcquire() )
+		{
+			return;
+		}
+		else if ( pSalData->mpEventQueue && GetCurrentEventLoop() == GetMainEventLoop() )
+		{
+			// We need to let any pending timers run so that we don't deadlock
+			TimeValue aDelay;
+			aDelay.Seconds = 0;
+			aDelay.Nanosec = 10;
+			while ( !Application::IsShutDown() )
+			{
+				if ( tryToAcquire() )
+				{
+					if ( Application::IsShutDown() )
+						release();
+					break;
+				}
+				ReceiveNextEvent( 0, NULL, 0, false, NULL );
+				OThread::wait( aDelay );
+			}
+
+			return;
+		}
+	}
 
 	OMutex::acquire();
 	mnThreadId = OThread::getCurrentIdentifier();
@@ -996,9 +1006,12 @@ void SalYieldMutex::release()
 	{
 		if ( mnCount == 1 )
 			mnThreadId = 0;
-		mnCount--;
+		if ( mnCount )
+		{
+			mnCount--;
+			OMutex::release();
+		}
 	}
-	OMutex::release();
 }
 
 sal_Bool SalYieldMutex::tryToAcquire()

@@ -92,6 +92,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMain
 	return ( GetCurrentEventLoop() == GetMainEventLoop() ? JNI_TRUE : JNI_FALSE );
 }
 
+// ----------------------------------------------------------------------------
+
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers( JNIEnv *pEnv, jobject object )
+{
+	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+}
+
 // ============================================================================
 
 jclass com_sun_star_vcl_VCLEventQueue::theClass = NULL;
@@ -175,7 +183,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[3]; 
+			JNINativeMethod pMethods[4]; 
 			pMethods[0].name = "hasApplicationDelegate";
 			pMethods[0].signature = "()Z";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_hasApplicationDelegate;
@@ -185,7 +193,10 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 			pMethods[2].name = "isApplicationMainThread";
 			pMethods[2].signature = "()Z";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
+			pMethods[3].name = "runApplicationMainThreadTimers";
+			pMethods[3].signature = "()V";
+			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );

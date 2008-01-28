@@ -72,27 +72,8 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 	if ( !pFrame )
 		return out;
 
-	// We need to let any pending timers run so that we don't deadlock
-	TimeValue aDelay;
-	aDelay.Seconds = 0;
-	aDelay.Nanosec = 10;
 	IMutex& rSolarMutex = Application::GetSolarMutex();
-	bool bAcquired = false;
-	while ( !Application::IsShutDown() )
-	{
-		if ( rSolarMutex.tryToAcquire() )
-		{
-			if ( !Application::IsShutDown() )
-				bAcquired = true; 
-			else
-				rSolarMutex.release();
-			break;
-		}
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		OThread::wait( aDelay );
-	}
-
-	if ( bAcquired )
+	if ( !Application::IsShutDown() )
 	{
 		static jmethodID mID = NULL;
 
