@@ -147,28 +147,8 @@ void JavaFilePicker_controlStateChanged( int nID, void *pPicker )
 {
 	if ( pPicker && nID == COCOA_CONTROL_ID_FILETYPE )
 	{
-		// We need to let any pending timers run so that we don't
-		// deadlock
 		IMutex& rSolarMutex = Application::GetSolarMutex();
-		bool bAcquired = false;
-		TimeValue aDelay;
-		aDelay.Seconds = 0;
-		aDelay.Nanosec = 10;
-		while ( !Application::IsShutDown() )
-		{
-			if ( rSolarMutex.tryToAcquire() )
-			{ 
-				if ( !Application::IsShutDown() )
-					bAcquired = true; 
-				else
-					rSolarMutex.release();
-				break;
-			}
-			ReceiveNextEvent( 0, NULL, 0, false, NULL );
-			OThread::wait( aDelay );
-		}
-
-		if ( bAcquired )
+		if ( !Application::IsShutDown() )
 		{
 			JavaFilePicker *pJavaFilePicker = NULL;
 			for ( ::std::list< JavaFilePicker* >::const_iterator it = aFilePickers.begin(); it != aFilePickers.end(); ++it )
