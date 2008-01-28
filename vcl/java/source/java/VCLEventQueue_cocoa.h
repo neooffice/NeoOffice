@@ -43,6 +43,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();
 void NSFontManager_acquire();
 void NSFontManager_release();

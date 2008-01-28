@@ -41,6 +41,49 @@ static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
+@interface ApplicationHasDelegate : NSObject
+{
+	BOOL					mbDelegate;
+}
++ (id)create;
+- (void)applicationHasDelegate:(id)pObject;
+- (BOOL)hasDelegate;
+- (id)init;
+@end
+
+@implementation ApplicationHasDelegate
+
++ (id)create
+{
+	ApplicationHasDelegate *pRet = [[ApplicationHasDelegate alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)applicationHasDelegate:(id)pObject
+{
+	// Check that our custom delegate is the delegate
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+		mbDelegate = ( [pApp delegate] && [[pApp delegate] respondsToSelector:@selector(cancelTermination)] );
+}
+
+- (BOOL)hasDelegate
+{
+	return mbDelegate;
+}
+
+- (id)init
+{
+	[super init];
+
+	mbDelegate = NO;
+
+	return self;
+}
+
+@end
+
 @interface IsApplicationActive : NSObject
 {
 	BOOL					mbActive;
@@ -486,6 +529,22 @@ static VCLResponder *pSharedResponder = nil;
 }
 
 @end
+
+BOOL NSApplication_hasDelegate()
+{
+	BOOL bRet = NO;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	ApplicationHasDelegate *pApplicationHasDelegate = [ApplicationHasDelegate create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pApplicationHasDelegate performSelectorOnMainThread:@selector(applicationHasDelegate:) withObject:pApplicationHasDelegate waitUntilDone:YES modes:pModes];
+	bRet = [pApplicationHasDelegate hasDelegate];
+
+	[pPool release];
+
+	return bRet;
+}
 
 BOOL NSApplication_isActive()
 {

@@ -73,6 +73,13 @@ using namespace vos;
 
 // ============================================================================
 
+JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_hasApplicationDelegate( JNIEnv *pEnv, jobject object )
+{
+	return ( NSApplication_hasDelegate() ? JNI_TRUE : JNI_FALSE );
+}
+
+// ----------------------------------------------------------------------------
+
 JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive( JNIEnv *pEnv, jobject object )
 {
 	return ( NSApplication_isActive() ? JNI_TRUE : JNI_FALSE );
@@ -168,14 +175,17 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[2]; 
-			pMethods[0].name = "isApplicationActive";
+			JNINativeMethod pMethods[3]; 
+			pMethods[0].name = "hasApplicationDelegate";
 			pMethods[0].signature = "()Z";
-			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
-			pMethods[1].name = "isApplicationMainThread";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_hasApplicationDelegate;
+			pMethods[1].name = "isApplicationActive";
 			pMethods[1].signature = "()Z";
-			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 2 );
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
+			pMethods[2].name = "isApplicationMainThread";
+			pMethods[2].signature = "()Z";
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );

@@ -145,15 +145,19 @@ public class VCLApplicationListener implements ApplicationListener {
 		application.setEnabledAboutMenu(false);
 		application.setEnabledPreferencesMenu(false);
 
-		VCLEvent shutdownEvent = new VCLEvent(VCLEvent.SALEVENT_SHUTDOWN, null, 0);
-		queue.postCachedEvent(shutdownEvent);
+		// Only allow shutdown after we have registered our custom
+		//  NSApplication delegate in the sfx2 module
+		if (queue.hasApplicationDelegate()) {
+			VCLEvent shutdownEvent = new VCLEvent(VCLEvent.SALEVENT_SHUTDOWN, null, 0);
+			queue.postCachedEvent(shutdownEvent);
 
-		// Wait for event to be dispatched in the C++ code. Note that if the
-		// event is successfully processed, this loop will never finish and
-		// the process will exit.
-		while (!shutdownEvent.isShutdownCancelled()) {
-			queue.dispatchNextEvent();
-			Thread.yield();
+			// Wait for event to be dispatched in the C++ code. Note that if
+			// the event is successfully processed, this loop will never finish
+			// and the process will exit.
+			while (!shutdownEvent.isShutdownCancelled()) {
+				queue.dispatchNextEvent();
+				Thread.yield();
+			}
 		}
 
 		event.setHandled(false);

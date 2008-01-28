@@ -381,6 +381,15 @@ public final class VCLEventQueue implements Runnable {
 	}
 
 	/**
+	 * Returns <code>true</code> if the application has a delegate and it is
+	 * not the default Java delegate.
+	 *
+	 * @return <code>true</code> if the application has a delegate and it is
+	 *  not the default Java delegate
+	 */
+	public native boolean hasApplicationDelegate();
+
+	/**
 	 * Returns <code>true</code> if the application is active and a native
 	 * modal window is not showing.
 	 *
