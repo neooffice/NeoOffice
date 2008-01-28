@@ -59,6 +59,7 @@ public:
 	virtual				~com_sun_star_vcl_VCLEventQueue() {};
 
 	sal_Bool			anyCachedEvent( USHORT _par0 );
+	void				dispatchNextEvent();
 	com_sun_star_vcl_VCLEvent*	getNextCachedEvent( ULONG _par0, sal_Bool _par1 );
 	void				postCachedEvent( const com_sun_star_vcl_VCLEvent *_par0 );
 	void				setShutdownDisabled( sal_Bool _par0 );

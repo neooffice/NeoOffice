@@ -78,6 +78,13 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationActi
 	return ( NSApplication_isActive() ? JNI_TRUE : JNI_FALSE );
 }
 
+// ----------------------------------------------------------------------------
+
+JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread( JNIEnv *pEnv, jobject object )
+{
+	return ( GetCurrentEventLoop() == GetMainEventLoop() ? JNI_TRUE : JNI_FALSE );
+}
+
 // ============================================================================
 
 jclass com_sun_star_vcl_VCLEventQueue::theClass = NULL;
@@ -161,11 +168,14 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod aMethod; 
-			aMethod.name = "isApplicationActive";
-			aMethod.signature = "()Z";
-			aMethod.fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
-			t.pEnv->RegisterNatives( tempClass, &aMethod, 1 );
+			JNINativeMethod pMethods[2]; 
+			pMethods[0].name = "isApplicationActive";
+			pMethods[0].signature = "()Z";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
+			pMethods[1].name = "isApplicationMainThread";
+			pMethods[1].signature = "()Z";
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 2 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -217,6 +227,25 @@ sal_Bool com_sun_star_vcl_VCLEventQueue::anyCachedEvent( USHORT _par0 )
 		}
 	}
 	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLEventQueue::dispatchNextEvent()
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "dispatchNextEvent", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			t.pEnv->CallNonvirtualVoidMethod( object, getMyClass(), mID );
+	}
 }
 
 // ----------------------------------------------------------------------------

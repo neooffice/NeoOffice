@@ -457,10 +457,21 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 {
 	SalData *pSalData = GetSalData();
 
-	// Fix bug 2575 by manually dispatching native events. Fix bug 2731 by
-	// not doing this when we are in the begin menubar tracking handler.
-	if ( GetCurrentEventLoop() == GetMainEventLoop() && pSalData->maNativeEventCondition.check() )
-		NSApplication_dispatchPendingEvents();
+	// Fix bug 2575 by manually dispatching native events.
+	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	{
+		// Fix bug 2731 by not doing this when we are in the begin menubar
+		// tracking handler.
+		if ( pSalData->maNativeEventCondition.check() )
+			NSApplication_dispatchPendingEvents();
+
+		// Prevent deadlocking when the Java event dispatch thread calls
+		// the performSelectorOnMainThread selector by waiting for any
+		// undispatched Java events to get dispatched and then allowing
+		// any pending native timers to run
+		pSalData->mpEventQueue->dispatchNextEvent();
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+	}
 
 	com_sun_star_vcl_VCLEvent *pEvent;
 

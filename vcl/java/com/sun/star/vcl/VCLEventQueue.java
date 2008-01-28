@@ -293,14 +293,14 @@ public final class VCLEventQueue implements Runnable {
 	/**
 	 * Dispatches the next event in the Java event queue. Note that this
 	 * method will do nothing if the current thread is not the Java dispatch
-	 * thread.
+	 * thread or the application's main thread.
 	 */
 	public void dispatchNextEvent() {
 
-		if (EventQueue.isDispatchThread()) {
-			try {
-				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
+		try {
+			VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
 
+			if (EventQueue.isDispatchThread()) {
 				// Post a dummy, low priority event to ensure that we don't
 				// block if there are no pending events
 				PaintEvent e = new PaintEvent(new Container(), PaintEvent.PAINT, new Rectangle());
@@ -309,9 +309,16 @@ public final class VCLEventQueue implements Runnable {
 				while ((nextEvent = eventQueue.getNextEvent()) != e)
 					eventQueue.dispatchEvent(nextEvent);
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
+			else if (isApplicationMainThread()) {
+				// Don't post or dispatch, just wait until there are no pending
+				// events
+				AWTEvent nextEvent;
+				while ((nextEvent = eventQueue.peekEvent()) != null)
+					Thread.yield();
 			}
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
 		}
 
 	}
@@ -381,6 +388,15 @@ public final class VCLEventQueue implements Runnable {
 	 *  modal window is not showing.
 	 */
 	public native boolean isApplicationActive();
+
+	/**
+	 * Returns <code>true</code> if the current thread is the application's
+	 * main thread.
+	 *
+	 * @return <code>true</code> if the  current thread is the application's
+	 *  main thread
+	 */
+	public native boolean isApplicationMainThread();
 
 	/**
 	 * Add an event to the cache.
