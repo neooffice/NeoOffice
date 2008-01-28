@@ -440,8 +440,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	// Fix bug 2575 by manually dispatching native events.
 	if ( GetCurrentEventLoop() == GetMainEventLoop() )
 	{
-		nCount = ReleaseYieldMutex();
-
 		// Fix bug 2731 by not doing this when we are in the begin menubar
 		// tracking handler.
 		if ( pSalData->maNativeEventCondition.check() )
@@ -451,9 +449,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// the performSelectorOnMainThread selector by waiting for any
 		// undispatched Java events to get dispatched and then allowing
 		// any pending native timers to run
+		nCount = ReleaseYieldMutex();
 		ReceiveNextEvent( 0, NULL, 0, false, NULL );
 		pSalData->mpEventQueue->dispatchNextEvent();
-
 		AcquireYieldMutex( nCount );
 	}
 
