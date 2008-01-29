@@ -625,19 +625,11 @@
 			{
 				if ( mpPoints[ i ] )
 				{
-					CGMutablePathRef aPath = CGPathCreateMutable();
-					if ( aPath )
-					{
-						CGPathMoveToPoint( aPath, NULL, mppXPoints[ i ][ 0 ] * mfScaleX, mppYPoints[ i ][ 0 ] * mfScaleY );
-						int j = 1;
-						for ( ; j < mpPoints[ i ]; j++ )
-							CGPathAddLineToPoint( aPath, NULL, mppXPoints[ i ][ j ] * mfScaleX, mppYPoints[ i ][ j ] * mfScaleY );
-						CGPathCloseSubpath( aPath );
-						for ( j = 0; j < mpPoints[ i ]; j++ )
-
-						CGContextAddPath( aContext, aPath );
-						CGPathRelease( aPath );
-					}
+					CGContextMoveToPoint( aContext, mppXPoints[ i ][ 0 ] * mfScaleX, mppYPoints[ i ][ 0 ] * mfScaleY );
+					int j = 1;
+					for ( ; j < mpPoints[ i ]; j++ )
+						CGContextAddLineToPoint( aContext, mppXPoints[ i ][ j ] * mfScaleX, mppYPoints[ i ][ j ] * mfScaleY );
+					CGContextClosePath( aContext );
 				}
 			}
 			CGContextClosePath( aContext );
