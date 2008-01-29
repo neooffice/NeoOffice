@@ -845,7 +845,8 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 		else
 			nWidth = mnOrigWidth;
 
-		if ( nWidth < mnOrigWidth )
+		// Fix bug 2882 by ensuring that the glyph scale is never zero
+		if ( nWidth > 0 && nWidth < mnOrigWidth )
 			mfGlyphScaleX = (float)nWidth / mnOrigWidth;
 	}
 
