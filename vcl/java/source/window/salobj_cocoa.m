@@ -229,13 +229,20 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 			aNewFrame.origin.y = 0;
 		}
 
-		if ( !NSEqualRects( aNewParentFrame, [mpSuperview frame] ) || !NSEqualRects( aNewFrame, [self frame] ) )
+		NSRect aParentFrame = [mpSuperview frame];
+		NSRect aFrame = [self frame];
+		if ( !NSEqualRects( aNewParentFrame, aParentFrame ) || !NSEqualRects( aNewFrame, aFrame ) )
 		{
 			NSView *pSuperSuperview = [mpSuperview superview];
-			[mpSuperview removeFromSuperview];
+			if ( !NSEqualSizes( aNewParentFrame.size, aParentFrame.size ) )
+				[mpSuperview removeFromSuperview];
+			else
+				pSuperSuperview = nil;
 
-			[mpSuperview setFrame:aNewParentFrame];
-			[self setFrame:aNewFrame];
+			if ( !NSEqualRects( aNewParentFrame, aParentFrame ) )
+				[mpSuperview setFrame:aNewParentFrame];
+			if ( !NSEqualRects( aNewFrame, aFrame ) )
+				[self setFrame:aNewFrame];
 
 			if ( pSuperSuperview )
 				[pSuperSuperview addSubview:mpSuperview positioned:NSWindowAbove relativeTo:nil];

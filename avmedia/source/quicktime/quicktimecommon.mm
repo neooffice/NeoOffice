@@ -634,6 +634,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( aNewFrame.size.height < 1 )
 		aNewFrame.size.height = 1;
 
+	if ( NSEqualRects( aNewFrame, [mpMovieView frame] ) && pSuperview == mpSuperview )
+		return;
+
 	if ( mbPlaying )
 		[mpMovie stop];
 
