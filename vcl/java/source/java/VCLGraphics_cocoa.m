@@ -572,6 +572,118 @@
 
 @end
 
+@interface DrawPolyPolygon : NSObject
+{
+	int					mnPoly;
+	int*				mpPoints;
+	float**				mppXPoints;
+	float**				mppYPoints;
+	int					mnColor;
+	BOOL				mbFill;
+	float				mfClipX;
+	float				mfClipY;
+	float				mfClipWidth;
+	float				mfClipHeight;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
++ (id)createWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (void)drawPolyPolygon:(id)pObject;
+- (id)initWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawPolyPolygon
+
++ (id)createWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	DrawPolygon *pRet = [[DrawPolyPolygon alloc] initWithPolygons:nPoly points:pPoints xPoints:ppXPoints yPoints:ppYPoints color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)drawPolyPolygon:(id)pObject
+{
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
+	{
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
+		{
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( mfClipWidth && mfClipHeight )
+				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+
+			CGContextBeginPath( aContext );
+			int i = 0;
+			for ( ; i < mnPoly; i++ )
+			{
+				if ( mpPoints[ i ] )
+				{
+					CGMutablePathRef aPath = CGPathCreateMutable();
+					if ( aPath )
+					{
+						CGPathMoveToPoint( aPath, NULL, mppXPoints[ i ][ 0 ] * mfScaleX, mppYPoints[ i ][ 0 ] * mfScaleY );
+						int j = 1;
+						for ( ; j < mpPoints[ i ]; j++ )
+							CGPathAddLineToPoint( aPath, NULL, mppXPoints[ i ][ j ] * mfScaleX, mppYPoints[ i ][ j ] * mfScaleY );
+						CGPathCloseSubpath( aPath );
+						for ( j = 0; j < mpPoints[ i ]; j++ )
+
+						CGContextAddPath( aContext, aPath );
+						CGPathRelease( aPath );
+					}
+				}
+			}
+			CGContextClosePath( aContext );
+
+			if ( mbFill )
+			{
+				CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextEOFillPath( aContext );
+			}
+			else
+			{
+				CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextSetLineWidth( aContext, mfScaleX );
+				CGContextStrokePath( aContext );
+			}
+
+			CGContextRestoreGState( aContext );
+		}
+	}
+}
+
+- (id)initWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	mnPoly = nPoly;
+	mpPoints = pPoints;
+	mppXPoints = ppXPoints;
+	mppYPoints = ppYPoints;
+	mnColor = nColor;
+	mbFill = bFill;
+	mfClipX = fClipX;
+	mfClipY = fClipY;
+	mfClipWidth = fClipWidth;
+	mfClipHeight = fClipHeight;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
 @interface DrawRect : NSObject
 {
 	float				mfX;
@@ -735,6 +847,27 @@ void CGContext_drawPolyline( int nPoints, float *pXPoints, float *pYPoints, int 
 		else
 		{
 			[pDrawPolyline drawPolyline:pDrawPolyline];
+		}
+	}
+
+	[pPool release];
+}
+
+void CGContext_drawPolyPolygon( int nPoly, int *pNPoints, float **ppXPoints, float **ppYPoints, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( nPoly && pNPoints && ppXPoints && ppYPoints && *ppXPoints && *ppYPoints )
+	{
+		DrawPolyPolygon *pDrawPolyPolygon = [DrawPolyPolygon createWithPolygons:nPoly points:pNPoints xPoints:ppXPoints yPoints:ppYPoints color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDrawPolyPolygon performSelectorOnMainThread:@selector(drawPolyPolygon:) withObject:pDrawPolyPolygon waitUntilDone:YES modes:pModes];
+		}
+		else
+		{
+			[pDrawPolyPolygon drawPolyPolygon:pDrawPolyPolygon];
 		}
 	}
 

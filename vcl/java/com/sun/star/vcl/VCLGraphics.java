@@ -1825,23 +1825,35 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
-				g.setColor(new Color(color, true));
-				if (!userPolygonClip) {
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+						Rectangle clip = (Rectangle)clipRects.next();
+						drawPolyPolygon0(npoly, npoints, xpoints, ypoints, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					}
+					if (userPolygonClip)
+						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+				}
+				else {
+					g.setColor(new Color(color, true));
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							if (fill)
+								g.fill(area);
+							else
+								g.draw(area);
+						}
+					}
+					else {
+						g.setClip(userClip);
 						if (fill)
 							g.fill(area);
 						else
 							g.draw(area);
 					}
-				}
-				else {
-					g.setClip(userClip);
-					if (fill)
-						g.fill(area);
-					else
-						g.draw(area);
 				}
 			}
 			catch (Throwable t) {
@@ -1851,6 +1863,30 @@ public final class VCLGraphics {
 		}
 
 	}
+
+	/**
+	 * Draws or fills the specified polygon with the specified color to the
+	 * underlying graphics.
+	 *
+	 * @param npoly the total number of polygons
+	 * @param npoints the total number of points in each polygon
+	 * @param xpoints the array of x coordinates in each polygon
+	 * @param ypoints the array of y coordinates in each polygon
+	 * @param color the color of the polygons
+	 * @param fill <code>true</code> to fill the polygons and <code>false</code>
+	 *  to draw just the outline
+	 * @param clipX the x coordinate of the graphics to clip to
+	 * @param clipY the y coordinate of the graphics to clip to
+	 * @param clipWidth the width of the graphics to clip to
+	 * @param clipHeight the height of the graphics to clip to
+	 * @param drawOnMainThread do drawing on main event dispatch thread
+	 * @param translateX the horizontal translation
+	 * @param translateY the vertical translation
+	 * @param rotateAngle the rotation angle
+	 * @param scaleX the horizontal scale factor
+	 * @param scaleY the vertical scale factor
+	 */
+	native void drawPolyPolygon0(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, int color, boolean fill, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws or fills the specified rectangle with the specified color.
