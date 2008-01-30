@@ -503,6 +503,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = fSize / fAdjustedSize;
 	int nLastNonSpacingIndex = -1;
+	int nLastNonMinWidthGlyph = -1;
 	for ( i = 0; i < mnGlyphCount; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
@@ -518,13 +519,21 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 		// Make sure that ligature glyphs get all of the width and that their
 		// attached spacing glyphs have zero width so that the OOo code will
-		// force the cursor to the end of the ligature instead of the beginning
+		// force the cursor to the end of the ligature instead of the beginning.
+		// Fix bug 2893 by not allowing zero character widths
+		long nWidthAdjust = 0;
 		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
 			if ( nLastNonSpacingIndex >= 0 && nLastNonSpacingIndex != nIndex )
 			{
-				mpCharAdvances[ nLastNonSpacingIndex ] += mpCharAdvances[ nIndex ];
-				mpCharAdvances[ nIndex ] = 0;
+				mpCharAdvances[ nLastNonSpacingIndex ] += mpCharAdvances[ nIndex ] - 1;
+				if ( mpCharAdvances[ nLastNonSpacingIndex ] < 1 )
+				{
+					nWidthAdjust = mpCharAdvances[ nLastNonSpacingIndex ] - 1;
+					mpCharAdvances[ nLastNonSpacingIndex ] = 1;
+				}
+
+				mpCharAdvances[ nIndex ] = 1;
 			}
 		}
 		else if ( pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
@@ -534,6 +543,35 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		else
 		{
 			nLastNonSpacingIndex = nIndex;
+		}
+
+		if ( mpCharAdvances[ nIndex ] < 1 )
+		{
+			nWidthAdjust += mpCharAdvances[ nIndex ] - 1;
+			mpCharAdvances[ nIndex ] = 1;
+		}
+		else if ( mpCharAdvances[ nIndex ] > 1 )
+		{
+			nLastNonMinWidthGlyph = i;
+		}
+
+		for ( ; nWidthAdjust && nLastNonMinWidthGlyph >= 0; nLastNonMinWidthGlyph-- )
+		{
+			int nPreviousIndex = mpGlyphDataArray[ nLastNonMinWidthGlyph ].originalOffset / 2;
+			if ( mpCharAdvances[ nPreviousIndex ] > 1 )
+			{
+				long nOldAdvance = mpCharAdvances[ nPreviousIndex ];
+				mpCharAdvances[ nPreviousIndex ] += nWidthAdjust;
+				if ( mpCharAdvances[ nPreviousIndex ] < 1 )
+				{
+					nWidthAdjust += mpCharAdvances[ nPreviousIndex ] - 1;
+					mpCharAdvances[ nPreviousIndex ] = 1;
+				}
+				else
+				{
+					break;
+				}
+			}
 		}
 	}
 
@@ -1215,12 +1253,13 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 		}
 
-		// Calculate and cache glyph advances
+		// Calculate and cache glyph advances. Fix bug 2893 by not allowing
+		// zero character widths
 		int nCharPos = ( bRunRTL ? nEndCharPos - 1 : nMinCharPos );
 		for ( ; bRunRTL ? nCharPos >= nMinCharPos : nCharPos < nEndCharPos; bRunRTL ? nCharPos-- : nCharPos++ )
 		{
 			bool bFirstGlyph = true;
-			long nCharWidth = 0;
+			long nCharWidth = 1;
 			int nIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinFallbackCharPos ];
 			if ( nIndex >= 0 )
 			{
@@ -1268,8 +1307,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							nIndex = 0;
 					}
 				}
-
+ 
+				// Fix bug 2893 by not allowing zero character widths
 				nCharWidth = pCurrentLayoutData->mpCharAdvances[ nIndex ];
+				if ( nCharWidth < 1 )
+					nCharWidth < 1;
+
 				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
 					long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
