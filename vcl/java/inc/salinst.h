@@ -45,6 +45,9 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _OSL_CONDITN_HXX
+#include <osl/conditn.hxx>
+#endif
 #ifndef _VOS_MUTEX_HXX
 #include <vos/mutex.hxx>
 #endif
@@ -59,6 +62,7 @@
 class SalYieldMutex : public ::vos::OMutex
 {
 	ULONG					mnCount;
+	::osl::Condition		maMainThreadCondition;
 	::vos::OThread::TThreadIdentifier	mnThreadId;
 
 public:

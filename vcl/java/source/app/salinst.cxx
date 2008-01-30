@@ -182,7 +182,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				// we try to lock the mutex
 				TimeValue aDelay;
 				aDelay.Seconds = 0;
-				aDelay.Nanosec = 10;
+				aDelay.Nanosec = 100;
 				while ( !Application::IsShutDown() )
 				{
 					// Wakeup the event queue by sending it a dummy event
@@ -953,6 +953,8 @@ SalYieldMutex::SalYieldMutex()
 {
 	mnCount	 = 0;
 	mnThreadId  = 0;
+
+	maMainThreadCondition.set();
 }
 
 // -------------------------------------------------------------------------
@@ -976,7 +978,7 @@ void SalYieldMutex::acquire()
 			// We need to let any pending timers run so that we don't deadlock
 			TimeValue aDelay;
 			aDelay.Seconds = 0;
-			aDelay.Nanosec = 10;
+			aDelay.Nanosec = 100;
 			while ( !Application::IsShutDown() )
 			{
 				if ( tryToAcquire() )
@@ -986,7 +988,10 @@ void SalYieldMutex::acquire()
 					break;
 				}
 				ReceiveNextEvent( 0, NULL, 0, false, NULL );
-				OThread::wait( aDelay );
+
+				// Wait for other thread to release mutex
+				maMainThreadCondition.reset();
+				maMainThreadCondition.wait( &aDelay );
 			}
 
 			return;
@@ -1008,6 +1013,13 @@ void SalYieldMutex::release()
 		{
 			mnCount--;
 			OMutex::release();
+
+			// Notify main thread that it can grab the mutex
+			if ( !mnCount )
+			{
+				maMainThreadCondition.set();
+				OThread::yield();
+			}
 		}
 	}
 }
