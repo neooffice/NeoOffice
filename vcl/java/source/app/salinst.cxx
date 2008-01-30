@@ -148,6 +148,7 @@ public:
 };
 
 static ::osl::Mutex aEventQueueMutex;
+static ::osl::Condition aEventQueueCondition;
 
 using namespace rtl;
 using namespace vcl;
@@ -185,15 +186,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				aDelay.Nanosec = 100;
 				while ( !Application::IsShutDown() )
 				{
-					// Wakeup the event queue by sending it a dummy event
-					com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
-
 					if ( aEventQueueMutex.tryToAcquire() )
 					{
 						if ( Application::IsShutDown() )
 						{
 							aEventQueueMutex.release();
+							aEventQueueCondition.set();
 							return userCanceledErr;
 						}
 						else
@@ -203,7 +201,13 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					}
 
 					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-					OThread::wait( aDelay );
+
+					// Wakeup the event queue by sending it a dummy event
+					aEventQueueCondition.reset();
+					com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
+					aEventQueueCondition.wait( &aDelay );
+					aEventQueueCondition.set();
 				}
 
 				IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -211,6 +215,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
 				{
 					aEventQueueMutex.release();
+					aEventQueueCondition.set();
 					return userCanceledErr;
 				}
 
@@ -261,6 +266,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				rSolarMutex.release();
 				aEventQueueMutex.release();
+				aEventQueueCondition.set();
 
 				if ( !bSucceeded )
 					return userCanceledErr;
@@ -546,6 +552,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		{
 			AcquireYieldMutex( nCount );
 			aEventQueueMutex.release();
+			aEventQueueCondition.set();
 			nCount = 0;
 		}
 
@@ -575,6 +582,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	{
 		AcquireYieldMutex( nCount );
 		aEventQueueMutex.release();
+		aEventQueueCondition.set();
 	}
 
 	// Update all objects
@@ -992,6 +1000,7 @@ void SalYieldMutex::acquire()
 				// Wait for other thread to release mutex
 				maMainThreadCondition.reset();
 				maMainThreadCondition.wait( &aDelay );
+				maMainThreadCondition.set();
 			}
 
 			return;
