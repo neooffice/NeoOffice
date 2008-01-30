@@ -274,6 +274,8 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 - (void)viewWillStartLiveResize
 {
+	[super viewWillStartLiveResize];
+
 	[mpSuperview removeFromSuperview];
 }
 
