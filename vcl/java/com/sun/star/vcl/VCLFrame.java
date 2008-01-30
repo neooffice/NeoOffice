@@ -1824,6 +1824,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public String getKeyName(int keyCode) {
 
 		StringBuffer buf = new StringBuffer();
+
 		if ((keyCode & VCLEvent.KEY_SHIFT) == VCLEvent.KEY_SHIFT)
 			buf.append("\u21e7");
 		if ((keyCode & VCLEvent.KEY_CONTROLMOD) == VCLEvent.KEY_CONTROLMOD)
@@ -1834,10 +1835,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			buf.append("\u2325");
 
 		int outCode = VCLEvent.convertVCLKeyCode(keyCode);
-		if (outCode != 0)
+		if (outCode != 0 && outCode != KeyEvent.VK_AGAIN)
 			buf.append(KeyEvent.getKeyText(outCode));
-		else
-			buf.append("???");
+
 		return buf.toString();
 
 	}

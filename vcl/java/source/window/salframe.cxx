@@ -770,7 +770,8 @@ void JavaSalFrame::EndExtTextInput( USHORT nFlags )
 
 XubString JavaSalFrame::GetKeyName( USHORT nKeyCode )
 {
-	return mpVCLFrame->getKeyName( nKeyCode );
+	OUString aKeyName( mpVCLFrame->getKeyName( nKeyCode ) );
+	return XubString( aKeyName );
 }
 
 // -----------------------------------------------------------------------
