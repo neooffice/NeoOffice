@@ -45,6 +45,9 @@
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
+// Undefine this to disable playing of video
+#define ALLOW_QUICKTIME_VIDEO
+
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
@@ -481,6 +484,7 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 {
 	Reference< XPlayerWindow > xRet;
 
+#ifdef ALLOW_QUICKTIME_VIDEO
 	Size aSize = getPreferredPlayerWindowSize();
 	if ( aSize.Width > 0 && aSize.Height > 0 )
 	{
@@ -492,6 +496,7 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 				xRet.clear();
 		}
 	}
+#endif	// ALLOW_QUICKTIME_VIDEO
 	
 	return xRet;
 }
@@ -502,6 +507,7 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeE
 {
 	Reference< XFrameGrabber > xRet;
 
+#ifdef ALLOW_QUICKTIME_VIDEO
 	if ( maURL.getLength() )
 	{
 		FrameGrabber *pFrameGrabber = new FrameGrabber( mxMgr );
@@ -512,6 +518,7 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeE
 				xRet.clear();
 		}
 	}
+#endif	// ALLOW_QUICKTIME_VIDEO
 
 	return xRet;
 }
