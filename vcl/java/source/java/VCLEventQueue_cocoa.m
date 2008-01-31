@@ -296,6 +296,8 @@ static VCLResponder *pSharedResponder = nil;
 }
 - (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView;
 - (NSPoint)convertPoint:(NSPoint)aPoint toView:(NSView *)pView;
+- (void)forwardInvocation:(NSInvocation *)pInvocation;
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector;
 @end
 
 @implementation VCLWindowView
@@ -326,6 +328,50 @@ static VCLResponder *pSharedResponder = nil;
 	}
 
 	return aRet;
+}
+
+- (void)forwardInvocation:(NSInvocation *)pInvocation
+{
+	BOOL bHandled = NO;
+
+	SEL aSelector = [pInvocation selector];
+
+	NSArray *pSubviews = [self subviews];
+	if ( pSubviews && [pSubviews count] )
+	{
+		// There should only be one subview and it should be an instance
+		// of NSWindowViewAWT
+		NSView *pSubview = [pSubviews objectAtIndex:0];
+		if ( pSubview )
+		{
+			if ( [pSubview respondsToSelector:aSelector] )
+			{
+				[pInvocation invokeWithTarget:pSubview];
+				bHandled = YES;
+			}
+		}
+	}
+
+	if ( !bHandled )
+		[self doesNotRecognizeSelector:aSelector];
+}
+
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
+{
+	NSArray *pSubviews = [self subviews];
+	if ( pSubviews && [pSubviews count] )
+	{
+		// There should only be one subview and it should be an instance
+		// of NSWindowViewAWT
+		NSView *pSubview = [pSubviews objectAtIndex:0];
+		if ( pSubview )
+		{
+			if ( [pSubview respondsToSelector:aSelector] )
+				return [pSubview methodSignatureForSelector:aSelector];
+		}
+	}
+
+	return nil;
 }
 
 @end
@@ -491,11 +537,16 @@ static VCLResponder *pSharedResponder = nil;
 		VCLWindowView *pNewContentView = [[VCLWindowView alloc] initWithFrame:aFrame];
 		if ( pNewContentView )
 		{
+			// Retain current content view just to be safe
+			[pNewContentView retain];
+
 			[super setContentView:pNewContentView];
 			aFrame.origin.x = 0;
 			aFrame.origin.y = 0;
 			[pContentView setFrame:aFrame];
 			[pNewContentView addSubview:pContentView positioned:NSWindowAbove relativeTo:nil];
+
+			[pNewContentView release];
 		}
 	}
 #endif	// USE_QUICKTIME_CONTENT_VIEW_HACK
