@@ -37,9 +37,13 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 
+// Define this only if QuickTime is enabled in the avmedia module
+#define USE_QUICKTIME_CONTENT_VIEW_HACK
+
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
+static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 @interface ApplicationHasDelegate : NSObject
 {
@@ -199,7 +203,7 @@ static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 
 @end
 
-const static NSString *pCancelInputMethodText = @" ";
+static NSString *pCancelInputMethodText = @" ";
 
 @interface VCLResponder : NSResponder
 {
@@ -274,12 +278,67 @@ const static NSString *pCancelInputMethodText = @" ";
 
 @end
 
+static BOOL bUseKeyEntryFix = NO;
+static BOOL bUsePartialKeyEntryFix = NO;
+static VCLResponder *pSharedResponder = nil;
+
+@interface VCLView : NSView
+- (void)interpretKeyEvents:(NSArray *)pEvents;
+@end
+
+#ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
+
+// The QuickTime content view hack implemented in [VCLWindow setContentView:]
+// break Java's Window.getLocationOnScreen() method so we need to flip the
+// points returned by NSView's convertPoint selectors
+@interface VCLWindowView : VCLView
+{
+}
+- (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView;
+- (NSPoint)convertPoint:(NSPoint)aPoint toView:(NSView *)pView;
+@end
+
+@implementation VCLWindowView
+
+- (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView
+{
+	NSPoint aRet = [super convertPoint:aPoint fromView:pView];
+
+	if ( !pView )
+	{
+		NSWindow *pWindow = [self window];
+		if ( pWindow )
+			aRet.y += [pWindow frame].size.height;
+	}
+
+	return aRet;
+}
+
+- (NSPoint)convertPoint:(NSPoint)aPoint toView:(NSView *)pView
+{
+	NSPoint aRet = [super convertPoint:aPoint toView:pView];
+
+	if ( !pView )
+	{
+		NSWindow *pWindow = [self window];
+		if ( pWindow )
+			aRet.y += [pWindow frame].size.height;
+	}
+
+	return aRet;
+}
+
+@end
+
+#endif	// USE_QUICKTIME_CONTENT_VIEW_HACK
+
 @interface VCLWindow : NSWindow
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
+- (void)setContentView:(NSView *)pView;
 @end
 
 @implementation VCLWindow
@@ -415,14 +474,33 @@ const static NSString *pCancelInputMethodText = @" ";
 	return bRet;
 }
 
-@end
+- (void)setContentView:(NSView *)pView
+{
+	[super setContentView:pView];
 
-static BOOL bUseKeyEntryFix = NO;
-static BOOL bUsePartialKeyEntryFix = NO;
-static VCLResponder *pSharedResponder = nil;
+#ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
+	// It was found that with QuickTime 7.4 on G4 systems running ATI RAGE 128
+	// graphics cards, QTMovieView will misplace the movie if the window's
+	// content view is flipped. Since Java replaces the default content view
+	// with a flipped view, we need to push their content view down a level
+	// and make the content view unflipped.
+	NSView *pContentView = [self contentView];
+	if ( pContentView && [pContentView isFlipped] && [[pContentView className] isEqualToString:pNSWindowViewAWTString] )
+	{
+		NSRect aFrame = [pContentView frame];
+		VCLWindowView *pNewContentView = [[VCLWindowView alloc] initWithFrame:aFrame];
+		if ( pNewContentView )
+		{
+			[super setContentView:pNewContentView];
+			aFrame.origin.x = 0;
+			aFrame.origin.y = 0;
+			[pContentView setFrame:aFrame];
+			[pNewContentView addSubview:pContentView positioned:NSWindowAbove relativeTo:nil];
+		}
+	}
+#endif	// USE_QUICKTIME_CONTENT_VIEW_HACK
+}
 
-@interface VCLView : NSView
-- (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
 
 @implementation VCLView
