@@ -220,7 +220,7 @@ ZoomLevel Window::getZoomLevel() throw( RuntimeException )
 #ifdef DEBUG
 	fprintf( stderr, "Window::getZoomLevel not implemented\n" );
 #endif
-	return ZoomLevel_NOT_AVAILABLE;
+	return ZoomLevel_FIT_TO_WINDOW;
 }
 
 // ----------------------------------------------------------------------------
