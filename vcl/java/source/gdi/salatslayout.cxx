@@ -1271,7 +1271,22 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							aMirrored[ 0 ] = nMirroredChar;
 							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont, this );
 							if ( pCurrentLayoutData )
-								maMirroredLayoutData[ nChar ] = pCurrentLayoutData;
+							{
+								if ( pCurrentLayoutData->mpNeedFallback && pCurrentLayoutData->mpFallbackFont )
+								{
+									pCurrentLayoutData->Release();
+									pCurrentLayoutData = pLayoutData;
+									rArgs.NeedFallback( nCharPos, bRunRTL );
+
+									if ( !pFallbackFont )
+										pFallbackFont = pCurrentLayoutData->mpFallbackFont;
+									rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+								}
+								else
+								{
+									maMirroredLayoutData[ nChar ] = pCurrentLayoutData;
+								}
+							}
 						}
 						else
 						{
