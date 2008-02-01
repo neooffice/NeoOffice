@@ -503,7 +503,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = fSize / fAdjustedSize;
 	int nLastNonSpacingIndex = -1;
-	int nLastNonMinWidthGlyph = -1;
 	for ( i = 0; i < mnGlyphCount; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
@@ -550,27 +549,18 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			nWidthAdjust += mpCharAdvances[ nIndex ] - 1;
 			mpCharAdvances[ nIndex ] = 1;
 		}
-		else if ( mpCharAdvances[ nIndex ] > 1 )
+		else if ( nWidthAdjust && mpCharAdvances[ nIndex ] > 1 )
 		{
-			nLastNonMinWidthGlyph = i;
-		}
-
-		for ( ; nWidthAdjust && nLastNonMinWidthGlyph >= 0; nLastNonMinWidthGlyph-- )
-		{
-			int nPreviousIndex = mpGlyphDataArray[ nLastNonMinWidthGlyph ].originalOffset / 2;
-			if ( mpCharAdvances[ nPreviousIndex ] > 1 )
+			long nOldAdvance = mpCharAdvances[ nIndex ];
+			mpCharAdvances[ nIndex ] += nWidthAdjust;
+			if ( mpCharAdvances[ nIndex ] < 1 )
 			{
-				long nOldAdvance = mpCharAdvances[ nPreviousIndex ];
-				mpCharAdvances[ nPreviousIndex ] += nWidthAdjust;
-				if ( mpCharAdvances[ nPreviousIndex ] < 1 )
-				{
-					nWidthAdjust += mpCharAdvances[ nPreviousIndex ] - 1;
-					mpCharAdvances[ nPreviousIndex ] = 1;
-				}
-				else
-				{
-					break;
-				}
+				nWidthAdjust = mpCharAdvances[ nIndex ] - 1;
+				mpCharAdvances[ nIndex ] = 1;
+			}
+			else
+			{
+				nWidthAdjust = 0;
 			}
 		}
 	}
