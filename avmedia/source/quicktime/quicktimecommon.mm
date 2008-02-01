@@ -45,12 +45,16 @@
 #ifndef _COM_SUN_STAR_AWT_SYSTEMPOINTER_HDL_
 #include <com/sun/star/awt/SystemPointer.hpp>
 #endif
+#ifndef _COM_SUN_STAR_MEDIA_ZOOMLEVEL_HDL_
+#include <com/sun/star/media/ZoomLevel.hpp>
+#endif
 
 static const short nAVMediaMinDB = -40;
 static const short nAVMediaMaxDB = 0;
 
 using namespace ::avmedia::quicktime;
 using namespace ::com::sun::star::awt;
+using namespace ::com::sun::star::media;
 
 static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, AvmediaMoviePlayer *pMoviePlayer )
 {
@@ -193,7 +197,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (void)bounds:(AvmediaArgs *)pArgs
 {
 	if ( pArgs )
-		[pArgs setResult:[NSValue valueWithRect:[mpMovieView frame]]];
+		[pArgs setResult:[NSValue valueWithRect:maRealFrame]];
 }
 
 - (double)currentTime:(AvmediaArgs *)pArgs
@@ -299,6 +303,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	mpMovieView = nil;
 	mbPlaying = NO;
 	maPreferredSize = NSMakeSize( 0, 0 );
+	maRealFrame = NSMakeRect( 0, 0, 0, 0 );
+	mnZoomLevel = ZoomLevel_FIT_TO_WINDOW;
 
 	return self;
 }
@@ -318,9 +324,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			maPreferredSize = [pImage size];
 		else
 			maPreferredSize = NSMakeSize( 0, 0 );
+		maRealFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
 
-		NSRect aFrame = NSMakeRect( 0, 0, maPreferredSize.width, maPreferredSize.height );
-		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:aFrame];
+		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:maRealFrame];
 		[mpMovieView setMoviePlayer:self];
 		[mpMovieView setFillColor:[NSColor clearColor]];
 		[mpMovieView setControllerVisible:NO];
@@ -444,7 +450,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( aNewFrame.size.height < 1 )
 		aNewFrame.size.height = 1;
 
-	if ( NSEqualRects( aNewFrame, [mpMovieView frame] ) )
+	if ( NSEqualRects( aNewFrame, maRealFrame ) )
 		return;
 
 	if ( mbPlaying )
@@ -452,7 +458,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	// No need to flip coordinates as the JavaSalObject view is already flipped
 	// like our view
-	[mpMovieView setFrame:aNewFrame];
+	[self setFrame:aNewFrame];
 
 	if ( mbPlaying )
 		[mpMovie play];
@@ -482,6 +488,48 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	NSWindow *pWindow = [mpMovieView window];
 	if ( pWindow )
 		[pWindow makeFirstResponder:mpMovieView];
+}
+
+- (void)setFrame:(NSRect)aRect
+{
+	NSRect aOldRealFrame = maRealFrame;
+	maRealFrame = aRect;
+
+	NSRect aZoomFrame = NSMakeRect( aRect.origin.x, aRect.origin.y, aRect.size.width, aRect.size.height );
+
+	switch ( mnZoomLevel )
+	{
+		case ZoomLevel_ZOOM_1_TO_4:
+			aZoomFrame.size.width /= 4;
+			aZoomFrame.size.height /= 4;
+			break;
+		case ZoomLevel_ZOOM_1_TO_2:
+			aZoomFrame.size.width /= 2;
+			aZoomFrame.size.height /= 2;
+			break;
+		case ZoomLevel_ZOOM_2_TO_1:
+			aZoomFrame.size.width *= 2;
+			aZoomFrame.size.height *= 2;
+			break;
+		case ZoomLevel_ZOOM_4_TO_1:
+			aZoomFrame.size.width *= 4;
+			aZoomFrame.size.height *= 4;
+			break;
+		case ZoomLevel_FIT_TO_WINDOW:
+		case ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT:
+		default:
+			break;
+	}
+
+	// Center zoom bounds with real bounds
+	aZoomFrame.origin.x += ( maRealFrame.size.width - aZoomFrame.size.width ) / 2;
+	aZoomFrame.origin.y += ( maRealFrame.size.height - aZoomFrame.size.height ) / 2;
+
+	if ( NSEqualRects( maRealFrame, aOldRealFrame ) && NSEqualRects( aZoomFrame, [mpMovieView frame] ) )
+		return;
+
+	[mpMovieView setFrame:aZoomFrame];
+	[mpMovieView setNeedsDisplay:YES];
 }
 
 - (void)setLooping:(AvmediaArgs *)pArgs
@@ -634,7 +682,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( aNewFrame.size.height < 1 )
 		aNewFrame.size.height = 1;
 
-	if ( NSEqualRects( aNewFrame, [mpMovieView frame] ) && pSuperview == mpSuperview )
+	if ( NSEqualRects( aNewFrame, maRealFrame ) && pSuperview == mpSuperview )
 		return;
 
 	if ( mbPlaying )
@@ -642,7 +690,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	// No need to flip coordinates as the JavaSalObject view is already flipped
 	// like our view
-	[mpMovieView setFrame:aNewFrame];
+	[self setFrame:aNewFrame];
 
 	[mpMovieView removeFromSuperview];
 	if ( mpSuperview )
@@ -671,6 +719,46 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		return;
 
 	[mpMovie setVolume:( (float)( [pDB shortValue] - nAVMediaMinDB ) / (float)( nAVMediaMaxDB - nAVMediaMinDB ) )];
+}
+
+- (void)setZoomLevel:(AvmediaArgs *)pArgs
+{
+	NSArray *pArgArray = [pArgs args];
+	if ( !pArgArray || [pArgArray count] < 1 )
+		return;
+
+	NSNumber *pZoomLevel = (NSNumber *)[pArgArray objectAtIndex:0];
+	if ( !pZoomLevel )
+		return;
+
+	int nOldZoomLevel = mnZoomLevel;
+
+	switch ( [pZoomLevel intValue] )
+	{
+		case ZoomLevel_FIT_TO_WINDOW:
+		case ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT:
+		case ZoomLevel_ZOOM_1_TO_4:
+		case ZoomLevel_ZOOM_1_TO_2:
+		case ZoomLevel_ZOOM_2_TO_1:
+		case ZoomLevel_ZOOM_4_TO_1:
+			mnZoomLevel = [pZoomLevel intValue];
+			break;
+		default:
+			break;
+	}
+
+	if ( mnZoomLevel == nOldZoomLevel )
+		return;
+
+	if ( mbPlaying )
+		[mpMovie stop];
+
+	// No need to flip coordinates as the JavaSalObject view is already flipped
+	// like our view
+	[self setFrame:maRealFrame];
+
+	if ( mbPlaying )
+		[mpMovie play];
 }
 
 - (void)stop:(id)pObject

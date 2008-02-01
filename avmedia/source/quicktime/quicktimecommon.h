@@ -72,6 +72,8 @@
 	MacOSBOOL				mbPlaying;
 	NSView*					mpSuperview;
 	NSSize					maPreferredSize;
+	NSRect					maRealFrame;
+	int						mnZoomLevel;
 }
 - (void)bounds:(AvmediaArgs *)pArgs;
 - (double)currentTime:(AvmediaArgs *)pArgs;
@@ -92,6 +94,7 @@
 - (void)setBounds:(AvmediaArgs *)pArgs;
 - (void)setCurrentTime:(AvmediaArgs *)pArgs;
 - (void)setFocus:(id)pObject;
+- (void)setFrame:(NSRect)aRect;
 - (void)setLooping:(AvmediaArgs *)pArgs;
 - (void)setMute:(AvmediaArgs *)pArgs;
 - (void)setPointer:(AvmediaArgs *)pArgs;
@@ -99,6 +102,7 @@
 - (void)setSelection:(AvmediaArgs *)pArgs;
 - (void)setSuperview:(AvmediaArgs *)pArgs;
 - (void)setVolumeDB:(AvmediaArgs *)pArgs;
+- (void)setZoomLevel:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;
 - (short)volumeDB:(AvmediaArgs *)pArgs;
 @end

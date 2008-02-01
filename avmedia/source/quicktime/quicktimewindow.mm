@@ -182,7 +182,8 @@ Window::Window( const Reference< XMultiServiceFactory >& rxMgr ) :
 	mxMgr( rxMgr ),
 	mpMoviePlayer( NULL ),
 	mpParentView( NULL ),
-	mbVisible( sal_False )
+	mbVisible( sal_False ),
+	mnZoomLevel( ZoomLevel_FIT_TO_WINDOW )
 {
 	Window::maWindows.push_back( this );
 }
@@ -205,22 +206,30 @@ void Window::update() throw( RuntimeException )
 
 // ----------------------------------------------------------------------------
 
-sal_Bool Window::setZoomLevel( ZoomLevel ZoomLevel ) throw( RuntimeException )
+sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::setZoomLevel not implemented\n" );
-#endif
-	return sal_False;
+	sal_Bool bRet = sal_False;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpMoviePlayer )
+	{
+		AvmediaArgs *pArgs = [AvmediaArgs argsWithArgs:[NSArray arrayWithObject:[NSNumber numberWithInt:nZoomLevel]]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(setZoomLevel:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		bRet = sal_True;
+	}
+
+	[pPool release];
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
 
 ZoomLevel Window::getZoomLevel() throw( RuntimeException )
 {
-#ifdef DEBUG
-	fprintf( stderr, "Window::getZoomLevel not implemented\n" );
-#endif
-	return ZoomLevel_FIT_TO_WINDOW;
+	return mnZoomLevel;
 }
 
 // ----------------------------------------------------------------------------
@@ -496,6 +505,7 @@ bool Window::create( void *pMoviePlayer, const Sequence< Any >& rArguments )
 			::com::sun::star::awt::Rectangle aRect;
 			rArguments.getConstArray()[1] >>= maRect;
 
+			setZoomLevel( ZoomLevel_FIT_TO_WINDOW );
 			setVisible( sal_True );
 			bRet = true;
 		}

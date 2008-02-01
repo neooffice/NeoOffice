@@ -71,6 +71,7 @@ class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayer
 	::com::sun::star::awt::Rectangle	maRect;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener > >	maWindowListeners;
 	sal_Bool			mbVisible;
+	::com::sun::star::media::ZoomLevel	mnZoomLevel;
 
 	static Window*		findWindowAndLockSolarMutex( void* pMoviePlayer );
 	static void			releaseSolarMutex();
@@ -86,7 +87,7 @@ public:
 
 	// XPlayerWindow
 	virtual void SAL_CALL	update() throw( ::com::sun::star::uno::RuntimeException );
-	virtual sal_Bool SAL_CALL	setZoomLevel( ::com::sun::star::media::ZoomLevel ZoomLevel ) throw( ::com::sun::star::uno::RuntimeException );
+	virtual sal_Bool SAL_CALL	setZoomLevel( ::com::sun::star::media::ZoomLevel nZoomLevel ) throw( ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::media::ZoomLevel SAL_CALL getZoomLevel() throw( ::com::sun::star::uno::RuntimeException );
 	virtual void SAL_CALL	setPointerType( sal_Int32 nPointerType ) throw( ::com::sun::star::uno::RuntimeException );
 
