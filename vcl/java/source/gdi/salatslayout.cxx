@@ -45,6 +45,7 @@
 
 #include <sys/sysctl.h>
 #include <hash_map>
+#include <unicode/ubidi.h>
 
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
@@ -518,21 +519,20 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 		// Make sure that ligature glyphs get all of the width and that their
 		// attached spacing glyphs have zero width so that the OOo code will
-		// force the cursor to the end of the ligature instead of the beginning.
-		// Fix bug 2893 by not allowing zero character widths
+		// force the cursor to the end of the ligature instead of the beginning
 		long nWidthAdjust = 0;
 		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
 			if ( nLastNonSpacingIndex >= 0 && nLastNonSpacingIndex != nIndex )
 			{
 				mpCharAdvances[ nLastNonSpacingIndex ] += mpCharAdvances[ nIndex ] - 1;
-				if ( mpCharAdvances[ nLastNonSpacingIndex ] < 1 )
+				if ( mpCharAdvances[ nLastNonSpacingIndex ] < 0 )
 				{
-					nWidthAdjust = mpCharAdvances[ nLastNonSpacingIndex ] - 1;
-					mpCharAdvances[ nLastNonSpacingIndex ] = 1;
+					nWidthAdjust = mpCharAdvances[ nLastNonSpacingIndex ];
+					mpCharAdvances[ nLastNonSpacingIndex ] = 0;
 				}
 
-				mpCharAdvances[ nIndex ] = 1;
+				mpCharAdvances[ nIndex ] = 0;
 			}
 		}
 		else if ( pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
@@ -544,19 +544,19 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			nLastNonSpacingIndex = nIndex;
 		}
 
-		if ( mpCharAdvances[ nIndex ] < 1 )
+		if ( mpCharAdvances[ nIndex ] < 0 )
 		{
-			nWidthAdjust += mpCharAdvances[ nIndex ] - 1;
-			mpCharAdvances[ nIndex ] = 1;
+			nWidthAdjust += mpCharAdvances[ nIndex ];
+			mpCharAdvances[ nIndex ] = 0;
 		}
-		else if ( nWidthAdjust && mpCharAdvances[ nIndex ] > 1 )
+		else if ( nWidthAdjust && mpCharAdvances[ nIndex ] > 0 )
 		{
 			long nOldAdvance = mpCharAdvances[ nIndex ];
 			mpCharAdvances[ nIndex ] += nWidthAdjust;
-			if ( mpCharAdvances[ nIndex ] < 1 )
+			if ( mpCharAdvances[ nIndex ] < 0 )
 			{
-				nWidthAdjust = mpCharAdvances[ nIndex ] - 1;
-				mpCharAdvances[ nIndex ] = 1;
+				nWidthAdjust = mpCharAdvances[ nIndex ];
+				mpCharAdvances[ nIndex ] = 0;
 			}
 			else
 			{
@@ -1249,7 +1249,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		for ( ; bRunRTL ? nCharPos >= nMinCharPos : nCharPos < nEndCharPos; bRunRTL ? nCharPos-- : nCharPos++ )
 		{
 			bool bFirstGlyph = true;
-			long nCharWidth = 1;
+			long nCharWidth = 0;
 			int nIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinFallbackCharPos ];
 			if ( nIndex >= 0 )
 			{
@@ -1271,22 +1271,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							aMirrored[ 0 ] = nMirroredChar;
 							pCurrentLayoutData = ImplATSLayoutData::GetLayoutData( aMirrored, 1, 0, 1, ( rArgs.mnFlags & ~SAL_LAYOUT_BIDI_RTL ) | SAL_LAYOUT_BIDI_STRONG, mnFallbackLevel, mpVCLFont, this );
 							if ( pCurrentLayoutData )
-							{
-								if ( pCurrentLayoutData->mpNeedFallback && pCurrentLayoutData->mpFallbackFont )
-								{
-									pCurrentLayoutData->Release();
-									pCurrentLayoutData = pLayoutData;
-									rArgs.NeedFallback( nCharPos, bRunRTL );
-
-									if ( !pFallbackFont )
-										pFallbackFont = pCurrentLayoutData->mpFallbackFont;
-									rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
-								}
-								else
-								{
-									maMirroredLayoutData[ nChar ] = pCurrentLayoutData;
-								}
-							}
+								maMirroredLayoutData[ nChar ] = pCurrentLayoutData;
 						}
 						else
 						{
@@ -1298,10 +1283,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					}
 				}
  
-				// Fix bug 2893 by not allowing zero character widths
 				nCharWidth = pCurrentLayoutData->mpCharAdvances[ nIndex ];
-				if ( nCharWidth < 1 )
-					nCharWidth < 1;
 
 				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
@@ -1359,7 +1341,22 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
 					if ( bRunRTL )
+					{
 						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
+
+						// Note characters that we can append kashidas onto
+						if ( bFirstGlyph && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && nCharPos > nMinFallbackCharPos )
+						{
+							int nPreviousIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinFallbackCharPos - 1 ];
+							if ( nPreviousIndex >= 0 )
+							{
+								UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( nChar, UCHAR_JOINING_TYPE );
+								UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( pCurrentLayoutData->mpHash->mpStr[ nPreviousIndex ], UCHAR_JOINING_TYPE );
+								if ( ( nTypeLeft == U_JT_RIGHT_JOINING || nTypeLeft == U_JT_DUAL_JOINING ) && ( nTypeRight == U_JT_LEFT_JOINING || nTypeRight == U_JT_DUAL_JOINING || nTypeRight == U_JT_TRANSPARENT ) )
+									nGlyphFlags |= GlyphItem::IS_KASHIDA_ALLOWED_AFTER_GLYPH;
+							}
+						}
+					}
 
 					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
 

@@ -1130,45 +1130,32 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             // adjust cluster glyph widths and positions
             nDelta = nBasePointX + (nNewPos - pG->maLinearPos.X());
 #ifdef USE_JAVA
-            if ( !pG->IsRTLGlyph() )
+            if( !pG->IsRTLGlyph() )
             {
                 // for LTR case extend rightmost glyph in cluster
                 pClusterG[-1].mnNewWidth += nDiff;
             }
-            else if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON )
+            else if( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON )
             {
                 bool bHandled = false;
 
-                if ( nDiff > 0 )
+                if( nDiff > 0 )
                 {
                     // Fix bug 823 by handling inappropriate placement of
                     // kashidas by upper layers
-                    if ( pG > mpGlyphItems && !IsSpacingGlyph( pG[-1].mnGlyphIndex ) && pG[-1].IsRTLGlyph() && ( pG[-1].mnGlyphIndex & GF_IDXMASK ) < 0x0000FFFF && pG[-1].mnCharPos - pG->mnCharPos == 1 )
-                    {
-                        UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG[-1].mnCharPos ], UCHAR_JOINING_TYPE );
-                        UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ pG->mnCharPos ], UCHAR_JOINING_TYPE );
-                        if ( ( nTypeLeft == U_JT_RIGHT_JOINING || nTypeLeft == U_JT_DUAL_JOINING ) && ( nTypeRight == U_JT_LEFT_JOINING || nTypeRight == U_JT_DUAL_JOINING || nTypeRight == U_JT_TRANSPARENT ) )
-                            bHandled = true;
-                    }
-                    else if( pG->mnCharPos == rArgs.mnMinCharPos && rArgs.mnMinCharPos && i == mnGlyphCount - 1 )
-                    {
-                        UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ rArgs.mnMinCharPos ], UCHAR_JOINING_TYPE );
-                        UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( rArgs.mpStr[ rArgs.mnMinCharPos - 1 ], UCHAR_JOINING_TYPE );
-                        if ( ( nTypeLeft == U_JT_RIGHT_JOINING || nTypeLeft == U_JT_DUAL_JOINING ) && ( nTypeRight == U_JT_LEFT_JOINING || nTypeRight == U_JT_DUAL_JOINING || nTypeRight == U_JT_TRANSPARENT ) )
-                            bHandled = true;
-                    }
+                    if( pG->IsKashidaAllowedAfterGlyph() || IsSpacingGlyph( pG->mnGlyphIndex ) )
+                        bHandled = true;
                 }
-                else if ( pG > mpGlyphItems )
+                else if( pG > mpGlyphItems )
                 {
                     // We don't want characters to be piled on top of each other
                     bHandled = true;
                 }
 
-                if ( !bHandled )
+                if( !bHandled && i < mnGlyphCount - 1 )
                 {
                     nNewClusterWidth -= nDiff;
-                    if ( i < mnGlyphCount - 1 )
-                        pNewGlyphWidths[i + 1] += nDiff;
+                    pNewGlyphWidths[i + 1] += nDiff;
                 }
                 else
                 {
@@ -1354,6 +1341,11 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
         if( !pG1->IsRTLGlyph() )
             continue;
 
+#ifdef USE_JAVA
+        if( !pG1->IsKashidaAllowedAfterGlyph() || IsSpacingGlyph( pG1->mnGlyphIndex ) )
+            continue;
+#endif	// USE_JAVA
+
         // calculate gap, skip if too small
         int nDelta = pG1->mnNewWidth - pG1->mnOrigWidth;
         if( 3*nDelta < nKashidaWidth )
@@ -1363,13 +1355,9 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
         nKashidaCount = 0;
         Point aPos = pG1->maLinearPos;
 #ifdef USE_JAVA
-        bool bTrailingKashidas = ( i == mnGlyphCount - 1 );
-        if( bTrailingKashidas )
-        {
-            aPos.X() += pG2->mnOrigWidth;
-            pG2->mnNewWidth = pG2->mnOrigWidth;
-            pG2++;
-        }
+        aPos.X() += pG2->mnOrigWidth;
+        pG2->mnNewWidth = pG2->mnOrigWidth;
+        pG2++;
 #endif	// USE_JAVA
         for(; nDelta > 0; nDelta -= nKashidaWidth, ++nKashidaCount )
         {
@@ -1396,18 +1384,11 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
         // when kashidas were used move the original glyph
         // to the right and shrink it to it's original width
 #ifdef USE_JAVA
-        if( bTrailingKashidas )
-        {
-            pG2--;
-        }
-        else
-        {
-#endif	// USE_JAVA
+        pG2--;
+#else	// USE_JAVA
         *pG2 = *pG1;
         pG2->maLinearPos.X() = aPos.X();
         pG2->mnNewWidth = pG2->mnOrigWidth;
-#ifdef USE_JAVA
-        }
 #endif	// USE_JAVA
     }
 
@@ -1792,9 +1773,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     int nCharPos[ MAX_FALLBACK ];
     sal_Int32 nGlyphAdv[ MAX_FALLBACK ];
     int nValid[ MAX_FALLBACK ];
-#ifdef USE_JAVA
-    const ImplLayoutRuns& rLastLevelRuns = maFallbackRuns[ mnLevel-1 ];
-#endif	// USE_JAVA
     
     sal_Int32 nDummy;
     Point aPos;
@@ -1836,84 +1814,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
     }
     mnLevel = nLevel;
 
-#ifdef USE_JAVA
-    // merge the fallback levels
-    long nXPos = 0;
-    for( n = 0; n < nLevel; ++n )
-        maFallbackRuns[n].ResetPos();
-    while( nValid[0] )
-    {
-        // find best fallback level
-        for( n = 0; n < nLevel; ++n )
-            if( nValid[n] && !maFallbackRuns[n].PosIsInRun( nCharPos[0] ) )
-                // fallback level n wins when it requested no further fallback
-                break;
-
-        if( n < nLevel )
-        {
-            // use base(n==0) or fallback(n>=1) level
-            long nNewPos = nXPos;
-            if( mpLayouts[n]->GetUnitsPerPixel() != mnUnitsPerPixel )
-            {
-                nNewPos *= mpLayouts[n]->GetUnitsPerPixel();
-                nNewPos /= mnUnitsPerPixel;
-            }
-            mpLayouts[n]->MoveGlyph( nStartOld[n], nNewPos );
-        }
-        else
-        {
-            // if no fallback level has been found and the charpos in question
-            // has been resolved/unresolved then drop/keep the NotDef glyph
-            if( rLastLevelRuns.PosIsInRun( nCharPos[0] ) )
-                n = 0;  // keep NotDef in base level
-            else
-                n = -1; // drop NotDef in base level
-        }
-
-        if( n >= 0 )
-        {
-            // use glyph from best matching layout
-            nXPos += nGlyphAdv[n] * mnUnitsPerPixel / mpLayouts[n]->GetUnitsPerPixel();
-
-            // complete this glyph cluster, then advance to next
-            for( int nActivePos = nCharPos[0];; )
-            {
-                nStartOld[n] = nStartNew[n];
-                nValid[n] = mpLayouts[n]->GetNextGlyphs( 1, &nDummy, aPos,
-                    nStartNew[n], &nGlyphAdv[n], &nCharPos[n] );
-                if( !nValid[n] || (nCharPos[n] != nActivePos) )
-                    break;
-                nXPos += nGlyphAdv[n] * mnUnitsPerPixel / mpLayouts[n]->GetUnitsPerPixel();
-            }
-
-            // performance optimization (fallback level is completed)
-            if( !nValid[n] && (n >= nLevel-1) )
-                --nLevel;
-        }
-
-        if( n != 0 ) // glyph fallback was successful
-        {
-            // drop NotDef glyph from base layout
-            mpLayouts[0]->DropGlyph( nStartOld[0] );
-            mpLayouts[0]->MoveGlyph( nStartNew[0], nXPos*mpLayouts[0]->GetUnitsPerPixel()/mnUnitsPerPixel );
-
-            // get next glyph in base layout
-            nStartOld[0] = nStartNew[0];
-            nValid[0] = mpLayouts[0]->GetNextGlyphs( 1, &nDummy, aPos,
-                nStartNew[0], &nGlyphAdv[0], &nCharPos[0] );
-
-            // advance runs if necessary
-            if( n < 0 )
-                n = nLevel;
-            while( --n >= 0 )
-            {
-                // if no more overlap with base level get next run
-                if( !maFallbackRuns[n].PosIsInRun( nCharPos[0] ) )
-                    maFallbackRuns[n].NextRun();
-            }
-        }
-    }
-#else	// USE_JAVA
     // merge the fallback levels
     long nXPos = 0;
     double fUnitMul = 1.0;
@@ -2037,7 +1937,6 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
             if( !maFallbackRuns[i].PosIsInRun( nActiveCharPos ) )
                 maFallbackRuns[i].NextRun();
     }
-#endif	// USE_JAVA
 
     mpLayouts[0]->Simplify( true );
 }

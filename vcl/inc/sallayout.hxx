@@ -330,10 +330,17 @@ public:
                 mnGlyphIndex(nGlyphIndex), maLinearPos(rLinearPos)
             {}
 
+#ifdef USE_JAVA
+    enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200, IS_KASHIDA_ALLOWED_AFTER_GLYPH=0x400 };
+#else	// USE_JAVA
     enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200 };
+#endif	// USE_JAVA
 
     bool    IsClusterStart() const { return !(mnFlags & IS_IN_CLUSTER); }
     bool    IsRTLGlyph() const { return ((mnFlags & IS_RTL_GLYPH) != 0); }
+#ifdef USE_JAVA
+    bool    IsKashidaAllowedAfterGlyph() const { return ((mnFlags & IS_KASHIDA_ALLOWED_AFTER_GLYPH) != 0); }
+#endif	// USE_JAVA
 };
 
 // ---------------
