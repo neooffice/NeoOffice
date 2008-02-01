@@ -183,7 +183,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				// we try to lock the mutex
 				TimeValue aDelay;
 				aDelay.Seconds = 0;
-				aDelay.Nanosec = 100;
+				aDelay.Nanosec = 50;
 				while ( !Application::IsShutDown() )
 				{
 					if ( aEventQueueMutex.tryToAcquire() )
@@ -986,7 +986,7 @@ void SalYieldMutex::acquire()
 			// We need to let any pending timers run so that we don't deadlock
 			TimeValue aDelay;
 			aDelay.Seconds = 0;
-			aDelay.Nanosec = 100;
+			aDelay.Nanosec = 50;
 			while ( !Application::IsShutDown() )
 			{
 				if ( tryToAcquire() )
