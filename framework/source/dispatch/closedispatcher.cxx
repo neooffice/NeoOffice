@@ -333,8 +333,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
 #ifdef USE_JAVA
     // Do not close the backing window under any circumstances
     if (aCheck1.m_bReferenceIsBacking)
-         bEstablishBackingMode = sal_True;
-    else
+        return 0;
 #endif	// USE_JAVA
 
     // a) If the curent frame (where the close dispatch was requested for) does not have
