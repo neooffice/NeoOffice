@@ -467,9 +467,11 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 		NSValue *pRet = (NSValue *)[pArgs result];
 		if ( pRet )
 		{
+			// Since OOo expects windows to be 72 DPI but we use 96 DPI in the
+			// vcl module, inflate the values
 			NSSize aSize = [pRet sizeValue];
 			if ( aSize.width > 0 && aSize.height > 0 )
-				aRet = Size( (long)aSize.width, (long)aSize.height );
+				aRet = Size( (long)( aSize.width * 96 / 72 ), (long)( aSize.height * 96 / 72 ) );
 		}
 	}
 

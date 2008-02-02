@@ -197,7 +197,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 - (void)bounds:(AvmediaArgs *)pArgs
 {
 	if ( pArgs )
-		[pArgs setResult:[NSValue valueWithRect:maRealFrame]];
+		[pArgs setResult:[NSValue valueWithRect:[mpMovieView frame]]];
 }
 
 - (double)currentTime:(AvmediaArgs *)pArgs
@@ -304,7 +304,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	mbPlaying = NO;
 	maPreferredSize = NSMakeSize( 0, 0 );
 	maRealFrame = NSMakeRect( 0, 0, 0, 0 );
-	mnZoomLevel = ZoomLevel_FIT_TO_WINDOW;
+	mnZoomLevel = ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT;
 
 	return self;
 }
@@ -330,7 +330,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		[mpMovieView setMoviePlayer:self];
 		[mpMovieView setFillColor:[NSColor clearColor]];
 		[mpMovieView setControllerVisible:NO];
-		[mpMovieView setPreservesAspectRatio:YES];
+		if ( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW )
+			[mpMovieView setPreservesAspectRatio:NO];
+		else
+			[mpMovieView setPreservesAspectRatio:YES];
 		[mpMovieView setShowsResizeIndicator:NO];
 		[mpMovieView setMovie:mpMovie];
 		[mpMovieView setEditable:NO];
@@ -495,7 +498,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	NSRect aOldRealFrame = maRealFrame;
 	maRealFrame = aRect;
 
-	NSRect aZoomFrame = NSMakeRect( aRect.origin.x, aRect.origin.y, aRect.size.width, aRect.size.height );
+	// Use the preferred size minus 2 pixels on all sides as the OOo svx module
+	// likes to remove a few pixels from the preferred size
+	NSRect aZoomFrame = NSMakeRect( aRect.origin.x + 2, aRect.origin.y + 2, maPreferredSize.width - 4, maPreferredSize.height - 4 );
 
 	switch ( mnZoomLevel )
 	{
@@ -517,9 +522,18 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			break;
 		case ZoomLevel_FIT_TO_WINDOW:
 		case ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT:
+			// Use the unadjusted preferred size to fit in window
+			NSRect aZoomFrame = NSMakeRect( aRect.origin.x, aRect.origin.y, maPreferredSize.width, maPreferredSize.height );
+			break;
+		case ZoomLevel_ORIGINAL:
 		default:
 			break;
 	}
+
+	if ( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW )
+		[mpMovieView setPreservesAspectRatio:NO];
+	else
+		[mpMovieView setPreservesAspectRatio:YES];
 
 	// Center zoom bounds with real bounds
 	aZoomFrame.origin.x += ( maRealFrame.size.width - aZoomFrame.size.width ) / 2;
@@ -529,7 +543,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		return;
 
 	[mpMovieView setFrame:aZoomFrame];
-	[mpMovieView setNeedsDisplay:YES];
+
+	NSView *pSuperview = [mpMovieView superview];
+	if ( pSuperview )
+		[pSuperview setNeedsDisplay:YES];
 }
 
 - (void)setLooping:(AvmediaArgs *)pArgs
@@ -735,6 +752,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	switch ( [pZoomLevel intValue] )
 	{
+		case ZoomLevel_ORIGINAL:
 		case ZoomLevel_FIT_TO_WINDOW:
 		case ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT:
 		case ZoomLevel_ZOOM_1_TO_4:
@@ -773,6 +791,16 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 	if ( pArgs )
 		[pArgs setResult:[NSNumber numberWithShort:nRet]];
+
+	return nRet;
+}
+
+- (int)zoomLevel:(AvmediaArgs *)pArgs
+{
+	int nRet = mnZoomLevel;
+
+	if ( pArgs )
+		[pArgs setResult:[NSNumber numberWithInt:nRet]];
 
 	return nRet;
 }

@@ -71,7 +71,6 @@ class Window : public ::cppu::WeakImplHelper2 < ::com::sun::star::media::XPlayer
 	::com::sun::star::awt::Rectangle	maRect;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowListener > >	maWindowListeners;
 	sal_Bool			mbVisible;
-	::com::sun::star::media::ZoomLevel	mnZoomLevel;
 
 	static Window*		findWindowAndLockSolarMutex( void* pMoviePlayer );
 	static void			releaseSolarMutex();

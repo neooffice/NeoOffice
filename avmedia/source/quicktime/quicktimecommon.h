@@ -105,6 +105,7 @@
 - (void)setZoomLevel:(AvmediaArgs *)pArgs;
 - (void)stop:(id)pObject;
 - (short)volumeDB:(AvmediaArgs *)pArgs;
+- (int)zoomLevel:(AvmediaArgs *)pArgs;
 @end
 
 @interface AvmediaMovieView : QTMovieView
