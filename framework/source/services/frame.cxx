@@ -1601,7 +1601,7 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
     if ( pShowOnlyMenusForWindow )
     {
         // Notify vcl internals whether or not this window is a backing window
-        sal_Bool bBackingWindow = ( m_xController.is() && dynamic_cast< BackingComp* >( (css::frame::XController *)m_xController.get() ) );
+        sal_Bool bBackingWindow = ( !m_xController.is() || dynamic_cast< BackingComp* >( (css::frame::XController *)m_xController.get() ) );
         pShowOnlyMenusForWindow( pOwnWindow, bBackingWindow );
     }
 #endif	// USE_JAVA
