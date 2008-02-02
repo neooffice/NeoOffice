@@ -1368,6 +1368,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private boolean resizable = false;
 
 	/**
+	 * The show only menus flag.
+	 */
+	private boolean showOnlyMenus = false;
+
+	/**
 	 * The style flags.
 	 */
 	private long style = 0;
@@ -1396,16 +1401,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param p the parent frame
 	 * @param b <code>true</code> if the input method fix is needed otherwise
 	 *  <code>false</code>
+	 * @param m <code>true</code> if only menus are to shown and the frame is
+	 *  to always be hidden behind the native menubar otherwise
+	 *  <code>false</code> for normal frame behavior
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m) {
 
 		queue = q;
 		frame = f;
+		showOnlyMenus = m;
 		style = s;
 		useInputMethodFix = b;
 
 		// Create the native window
-		if ((style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0)
+		if (showOnlyMenus || (style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0)
 			undecorated = true;
 
 		Window w = null;
@@ -1419,7 +1428,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window = new VCLFrame.NoPaintFrame(this);
 
 		// Process remaining style flags
-		if ((style & SAL_FRAME_STYLE_SIZEABLE) != 0)
+		if (!showOnlyMenus && (style & SAL_FRAME_STYLE_SIZEABLE) != 0)
 			resizable = true;
 
 		// Add a panel as the only component
@@ -2066,7 +2075,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public boolean isFloatingWindow() {
 
-		return (undecorated && !fullScreenMode);
+		return (undecorated && !fullScreenMode && !showOnlyMenus);
 
 	}
 
@@ -2996,8 +3005,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			if (frame.undecorated) {
 				setUndecorated(true);
-				setFocusable(false);
-				setFocusableWindowState(false);
+				if (!frame.showOnlyMenus) {
+					setFocusable(false);
+					setFocusableWindowState(false);
+				}
 			}
 
 			setMinimumSize(0, 0);
@@ -3129,8 +3140,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			if (frame.undecorated) {
 				setUndecorated(true);
-				setFocusable(false);
-				setFocusableWindowState(false);
+				if (!frame.showOnlyMenus) {
+					setFocusable(false);
+					setFocusableWindowState(false);
+				}
 			}
 
 			setMinimumSize(0, 0);

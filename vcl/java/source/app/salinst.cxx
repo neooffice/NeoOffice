@@ -637,7 +637,7 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 	JavaSalFrame *pFrame = new JavaSalFrame();
 
 	pFrame->mnStyle = nSalFrameStyle;
-	com_sun_star_vcl_VCLFrame *pVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->mnStyle, pFrame, (JavaSalFrame *)pParent );
+	com_sun_star_vcl_VCLFrame *pVCLFrame = new com_sun_star_vcl_VCLFrame( pFrame->mnStyle, pFrame, (JavaSalFrame *)pParent, sal_False );
 	if ( !pVCLFrame || !pVCLFrame->getJavaObject() )
 	{
 		if ( pVCLFrame )

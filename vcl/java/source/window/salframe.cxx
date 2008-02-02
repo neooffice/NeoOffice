@@ -105,8 +105,22 @@ long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 
 // Note: this must not be static as the symbol will be loaded by the framework
 // module
-extern "C" void SAL_DLLPUBLIC_EXPORT ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bMenusOnly )
+extern "C" void SAL_DLLPUBLIC_EXPORT ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 {
+	if ( !pWindow )
+		return;
+
+	JavaSalFrame *pFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+	if ( !pFrame || bShowOnlyMenus == pFrame->mbShowOnlyMenus )
+		return;
+
+	pFrame->mbInShowOnlyMenus = TRUE;
+
+	// Refresh Java frame
+	pFrame->mbShowOnlyMenus = bShowOnlyMenus;
+	pFrame->SetParent( pFrame->mpParent );
+
+	pFrame->mbInShowOnlyMenus = FALSE;
 }
 
 // =======================================================================
@@ -130,6 +144,8 @@ JavaSalFrame::JavaSalFrame()
 	mpMenuBar = NULL;
 	mbInSetPosSize = FALSE;
 	mbInShow = FALSE;
+	mbShowOnlyMenus = FALSE;
+	mbInShowOnlyMenus = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -234,8 +250,8 @@ BOOL JavaSalFrame::PostEvent( void *pData )
 
 void JavaSalFrame::SetTitle( const XubString& rTitle )
 {
-	maTitle = rTitle;
-	mpVCLFrame->setTitle( rTitle );
+	maTitle = OUString( rTitle );
+	mpVCLFrame->setTitle( maTitle );
 }
 
 // -----------------------------------------------------------------------
@@ -299,7 +315,8 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 		aEvent.dispatch();
 
-		UpdateMenusForFrame( this, NULL );
+		if ( !mbInShowOnlyMenus )
+			UpdateMenusForFrame( this, NULL );
 
 		// Reattach floating children
 		::std::list< JavaSalFrame* > aChildren( maChildren );
@@ -938,7 +955,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		mpVCLFrame->dispose();
 		delete mpVCLFrame;
 	}
-	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent );
+	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus );
 	if ( mpVCLFrame )
 	{
 		mpVCLFrame->setTitle( maTitle );
