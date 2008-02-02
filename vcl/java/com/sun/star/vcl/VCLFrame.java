@@ -1373,6 +1373,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private boolean showOnlyMenus = false;
 
 	/**
+	 * The show only menus bounds.
+	 */
+	private Rectangle showOnlyMenusBounds = null;
+
+	/**
 	 * The style flags.
 	 */
 	private long style = 0;
@@ -1428,7 +1433,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window = new VCLFrame.NoPaintFrame(this);
 
 		// Process remaining style flags
-		if (!showOnlyMenus && (style & SAL_FRAME_STYLE_SIZEABLE) != 0)
+		if (showOnlyMenus)
+			setBounds(0, 0, 1, 1);
+		else if ((style & SAL_FRAME_STYLE_SIZEABLE) != 0)
 			resizable = true;
 
 		// Add a panel as the only component
@@ -1454,23 +1461,25 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Register listeners
 		panel.addFocusListener(this);
-		panel.addInputMethodListener(this);
-		panel.addKeyListener(this);
-		panel.addMouseListener(this);
-		panel.addMouseMotionListener(this);
-		panel.addMouseWheelListener(this);
 		window.addComponentListener(this);
 		window.addFocusListener(this);
-		window.addInputMethodListener(this);
-		window.addKeyListener(this);
-		window.addMouseListener(this);
-		// Fix bug 2370 by listening for mouse events in the window frame
-		if (!undecorated) {
-			window.addMouseMotionListener(this);
-			window.addMouseWheelListener(this);
-			window.addWindowListener(this);
-		}
 		window.addWindowStateListener(this);
+		if (!showOnlyMenus) {
+			panel.addInputMethodListener(this);
+			panel.addKeyListener(this);
+			panel.addMouseListener(this);
+			panel.addMouseMotionListener(this);
+			panel.addMouseWheelListener(this);
+			window.addInputMethodListener(this);
+			window.addKeyListener(this);
+			window.addMouseListener(this);
+			// Fix bug 2370 by listening for mouse events in the window frame
+			if (!undecorated) {
+				window.addMouseMotionListener(this);
+				window.addMouseWheelListener(this);
+				window.addWindowListener(this);
+			}
+		}
 
 	}
 
@@ -1606,22 +1615,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
-		panel.removeInputMethodListener(this);
-		panel.removeKeyListener(this);
-		panel.removeMouseListener(this);
-		panel.removeMouseMotionListener(this);
-		panel.removeMouseWheelListener(this);
 		window.removeComponentListener(this);
 		window.removeFocusListener(this);
-		window.removeInputMethodListener(this);
-		window.removeKeyListener(this);
-		if (!undecorated) {
-			window.removeMouseListener(this);
-			window.removeMouseMotionListener(this);
-			window.removeMouseWheelListener(this);
-		}
-		window.removeWindowListener(this);
 		window.removeWindowStateListener(this);
+		if (!showOnlyMenus) {
+			panel.removeInputMethodListener(this);
+			panel.removeKeyListener(this);
+			panel.removeMouseListener(this);
+			panel.removeMouseMotionListener(this);
+			panel.removeMouseWheelListener(this);
+			window.removeInputMethodListener(this);
+			window.removeKeyListener(this);
+			window.removeMouseListener(this);
+			if (!undecorated) {
+				window.removeMouseMotionListener(this);
+				window.removeMouseWheelListener(this);
+				window.removeWindowListener(this);
+			}
+		}
 		queue.removeCachedEvents(frame);
 
 		panel = null;
@@ -1734,6 +1745,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @return the bounds of the native window
 	 */
 	public Rectangle getBounds() {
+
+		if (showOnlyMenus && showOnlyMenusBounds != null)
+			return showOnlyMenusBounds;
 
 		Rectangle bounds = window.getBounds();
 
@@ -2441,6 +2455,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (height < size.height)
 			height = size.height;
 
+		// Always put showOnlyMenus windows under the main menubar
+		if (showOnlyMenus) {
+			showOnlyMenusBounds = new Rectangle(x, y, width, height);
+			x = 0;
+			y = 0;
+			width = 1;
+			height = 1;
+		}
+
 		window.setBounds(x, y, width, height);
 
 	}
@@ -2693,7 +2716,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void setState(long state) {
 
-		if (window instanceof Frame && window.isShowing()) {
+		if (!showOnlyMenus && window instanceof Frame && window.isShowing()) {
 			// Only invoke Frame.setState() if the state needs to be changed
 			// as this method can cause a deadlock with the native menu handler
 			// on Mac OS X
