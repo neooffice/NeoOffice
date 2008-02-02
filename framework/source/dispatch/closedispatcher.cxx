@@ -330,6 +330,13 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
     css::uno::Reference< css::frame::XFramesSupplier > xDesktop(xSMGR->createInstance(SERVICENAME_DESKTOP), css::uno::UNO_QUERY_THROW);
     FrameListAnalyzer aCheck1(xDesktop, xCloseFrame, FrameListAnalyzer::E_HELP | FrameListAnalyzer::E_BACKINGCOMPONENT);
 
+#ifdef USE_JAVA
+    // Do not close the backing window under any circumstances
+    if (aCheck1.m_bReferenceIsBacking)
+         bEstablishBackingMode = sal_True;
+    else
+#endif	// USE_JAVA
+
     // a) If the curent frame (where the close dispatch was requested for) does not have
     //    any parent frame ... it will close this frame only. Such frame isnt part of the
     //    global desktop tree ... and such frames are used as "implementation details" only.
