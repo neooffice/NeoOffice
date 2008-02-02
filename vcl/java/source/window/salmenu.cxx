@@ -216,7 +216,8 @@ void JavaSalMenu::SetItemText( unsigned nPos, SalMenuItem* pSalMenuItem, const X
 		// remove accelerator character
 		XubString theText(rText);
 		theText.EraseAllChars('~');
-		pJavaSalMenuItem->mpVCLMenuItemData->setTitle( theText );
+		OUString aText( theText );
+		pJavaSalMenuItem->mpVCLMenuItemData->setTitle( aText );
 	}
 }
 
@@ -313,7 +314,8 @@ SalMenuItem* JavaSalInstance::CreateMenuItem( const SalItemParams* pItemData )
 	JavaSalMenuItem *pSalMenuItem = new JavaSalMenuItem();
 	XubString title(pItemData->aText);
 	title.EraseAllChars('~');
-	pSalMenuItem->mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( title, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
+	OUString aTitle( title );
+	pSalMenuItem->mpVCLMenuItemData=new ::vcl::com_sun_star_vcl_VCLMenuItemData( aTitle, ( pItemData->eType == MENUITEM_SEPARATOR ), pItemData->nId, pItemData->pMenu );
 	return( pSalMenuItem );
 #else	// !NO_NATIVE_MENUS
 	return NULL;
