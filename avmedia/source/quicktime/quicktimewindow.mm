@@ -228,7 +228,7 @@ sal_Bool Window::setZoomLevel( ZoomLevel nZoomLevel ) throw( RuntimeException )
 
 ZoomLevel Window::getZoomLevel() throw( RuntimeException )
 {
-	ZoomLevel nRet;
+	ZoomLevel nRet = ZoomLevel_NOT_AVAILABLE;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -239,7 +239,7 @@ ZoomLevel Window::getZoomLevel() throw( RuntimeException )
 		[(AvmediaMoviePlayer *)mpMoviePlayer performSelectorOnMainThread:@selector(zoomLevel:) withObject:pArgs waitUntilDone:YES modes:pModes];
 		NSNumber *pRet = (NSNumber *)[pArgs result];
 		if ( pRet )
-			nRet = [pRet intValue];
+			nRet = (ZoomLevel)[pRet intValue];
 	}
 
 	[pPool release];
