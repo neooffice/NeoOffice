@@ -1587,6 +1587,8 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
     /* } SAFE */
 
 #ifdef USE_JAVA
+    aReadLock.lock();
+
     // Local libvcl and invoke the ShowOnlyMenusForWindow function
     if ( !pShowOnlyMenusForWindow )
     {
@@ -1598,12 +1600,25 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
             pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
     }
 
-    if ( pShowOnlyMenusForWindow )
+    if ( pOwnWindow && pShowOnlyMenusForWindow )
     {
         // Notify vcl internals whether or not this window is a backing window
         sal_Bool bBackingWindow = ( !m_xController.is() || dynamic_cast< BackingComp* >( (css::frame::XController *)m_xController.get() ) );
+        if ( bBackingWindow )
+        {
+            css::uno::Reference< css::frame::XFramesSupplier > xTasksSupplier( getCreator(), css::uno::UNO_QUERY );
+            if ( xTasksSupplier.is() )
+            {
+                css::uno::Reference< css::container::XIndexAccess > xList( xTasksSupplier->getFrames(), css::uno::UNO_QUERY );
+                if ( xList.is() && xList->getCount() > 1 )
+                    bBackingWindow = sal_False;
+            }
+        }
+
         pShowOnlyMenusForWindow( pOwnWindow, bBackingWindow );
     }
+
+    aReadLock.unlock();
 #endif	// USE_JAVA
 
     //_____________________________________________________________________________________________________
