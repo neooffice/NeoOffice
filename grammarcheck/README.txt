@@ -34,8 +34,9 @@ extension using the following steps:
    sudo -H ./unopkg.bin add --shared --force \
       /path/to/this/module/unxmacx[ip].pro/bin/grammarcheck.oxt
 
-3. Launch NeoOffice and the extension should be active. A new menu item
-   called Tools :: Add-ons :: Check Document Grammar should be present in
+3. Launch NeoOffice and the extension should be active. 2 new menu items
+   called Tools :: Add-ons :: Check Grammar of Entire Document and
+   Tools :: Add-ons :: Check Grammar of Selected Text should be present in
    in NeoOffice Writer.
 
 Edward Peterlin

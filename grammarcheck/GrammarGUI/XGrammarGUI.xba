@@ -29,12 +29,16 @@ REM  MA  02111-1307  USA
 
 Dim Dlg as Object
 Dim Doc as Object
+Dim DocCtrl as Object
 Dim SentenceIter as Object
 Dim checkComplete as Boolean
 Dim lastSentenceProcessed as Boolean
 Dim ignoredStrings(1)
 Dim haveIgnoredStrings as Boolean
 Dim grammarCheckerService as Object
+Dim checkSelectionOnly as Boolean
+Dim selectionToCheck as Object			&apos; an XTextRange
+Dim textRangeCompare as Object			&apos; an XTextRangeCompare interface
 
 Sub Main
 	if IsNull(StarDesktop.CurrentComponent) Then
@@ -54,7 +58,29 @@ Sub Main
 	End If
 	
 	Doc = StarDesktop.CurrentComponent
+	DocCtrl = Doc.getCurrentController()
 	StartGrammarCheck
+End Sub
+
+Sub CheckDocument
+	&apos; perform grammar check with entire document
+	
+	checkSelectionOnly = False
+	Main
+End Sub
+
+Sub CheckSelection	
+	&apos; perform grammar check with selected portion of document only
+	checkSelectionOnly = True
+	
+	Main
+End Sub
+
+Sub CreateTextRangeCompare
+	&apos; construct an instance of the XTextRangeCompare for checking boundaries
+	&apos; of different text ranges
+	
+	textRangeCompare
 End Sub
 
 Rem Displays the grammar check GUI dialog
@@ -66,11 +92,43 @@ Sub StartGrammarCheck
 	haveIgnoredStrings = False
 	ReDim ignoredStrings()
 	
+	&apos; if we&apos;re performing a selection only check, extract our user&apos;s
+	&apos; current text selection for processing
+	
+	If checkSelectionOnly Then
+		&apos; verify we have a selection
+		
+		If Doc.getCurrentSelection.getCount() = 0 Then
+			MsgBox &quot;No selection exists to check!&quot;, 0, &quot;Grammar Checker&quot;
+			checkComplete = True
+			Exit Sub
+		End If
+		
+		&apos; get the current selection
+		
+		selectionToCheck = Doc.getCurrentSelection.getByIndex(0)
+		
+		&apos; check for empty selections
+		
+		If Doc.Text.compareRegionStarts(selectionToCheck.getStart(), selectionToCheck.getEnd()) = 0 Then
+			MsgBox &quot;No text is selected!&quot;, 0, &quot;Grammar Checker&quot;
+			checkComplete = True
+			Exit Sub
+		End If
+	End If
+	
 	&apos; construct our text cursor for iterating through the sentences of the
 	&apos; document
 	
 	SentenceIter = Doc.Text.createTextCursor()
-	SentenceIter.gotoStart(False)		&apos; takes us to the beginning of the entire document
+	
+	If checkSelectionOnly Then
+		&apos; take us to the beginning of the selected area
+		SentenceIter.gotoRange(selectionToCheck.getStart(), False)
+	Else
+		&apos; take us to the beginning of the entire document
+		SentenceIter.gotoStart(False)
+	End If
 	
 	&apos; construct our dialog
 	
@@ -114,6 +172,19 @@ Sub FindNextGrammarError
 			
 			SentenceIter.gotoEnd(True)
 			lastSentenceProcessed = True
+		End If
+		
+		&apos; if we&apos;re doing selected area checking only, determine if we&apos;re past the
+		&apos; end of the user&apos;s selection
+		
+		If checkSelectionOnly Then
+			If Doc.Text.compareRegionStarts(selectionToCheck.getEnd(), SentenceIter.Start) &gt;= 0 Then
+				&apos; the end of the user&apos;s initial selection occurs after the
+				&apos; start of the current sentence, so end the grammar check
+				
+				checkComplete = True
+				Exit Do
+			End If
 		End If
 		
 		&apos; check that we have a non-empty sentence (e.g. skip over carriage returns
