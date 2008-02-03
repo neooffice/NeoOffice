@@ -948,20 +948,31 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		Show( FALSE );
 
 	// Fix bug 1310 by creating a new native window with the new parent
-	if ( mpGraphics->mpVCLGraphics )
-		delete mpGraphics->mpVCLGraphics;
-	if ( mpVCLFrame )
-	{
-		mpVCLFrame->dispose();
-		delete mpVCLFrame;
-	}
+	maSysData.aWindow = 0;
+	com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
+	com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
+
 	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus );
 	if ( mpVCLFrame )
 	{
-		mpVCLFrame->setTitle( maTitle );
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+		mpVCLFrame->setTitle( maTitle );
+
+		if ( pOldVCLGraphics )
+			delete pOldVCLGraphics;
+
+		if ( pOldVCLFrame )
+		{
+			pOldVCLFrame->dispose();
+			delete pOldVCLFrame;
+		}
 	}
-	maSysData.aWindow = 0;
+	else
+	{
+		mpVCLFrame = pOldVCLFrame;
+		mpGraphics->mpVCLGraphics = pOldVCLGraphics;
+	}
+
 	if ( mpParent )
 		SetPosSize( maGeometry.nX - mpParent->maGeometry.nX - mpParent->maGeometry.nLeftDecoration, maGeometry.nY - mpParent->maGeometry.nY - mpParent->maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 	else
