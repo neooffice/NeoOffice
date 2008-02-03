@@ -267,6 +267,10 @@ void JavaSalFrame::SetIcon( USHORT nIcon )
 
 void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 {
+	// Don't allow floating children of a show only menus frame to ever show
+	if ( mpParent && mpParent->mbShowOnlyMenus && IsFloatingFrame() )
+		bVisible = FALSE;
+
 	if ( bVisible == mbVisible )
 		return;
 
