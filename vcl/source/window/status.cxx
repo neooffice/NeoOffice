@@ -69,6 +69,14 @@
 #include <virdev.hxx>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _SV_SALFRAME_H
+#include <salframe.h>
+#endif
+
+#endif	// USE_JAVA
+
 
 // =======================================================================
 
@@ -580,6 +588,14 @@ void DrawProgress( Window* pWindow, const Point& rPos,
 void StatusBar::ImplDrawProgress( BOOL bPaint,
 								  USHORT nPercent1, USHORT nPercent2 )
 {
+#ifdef USE_JAVA
+	// Always force the window out of backing window mode if we are displaying
+	// a progress bar
+	SystemWindow *pSysWindow = GetSystemWindow();
+	if ( pSysWindow )
+		ShowOnlyMenusForWindow( (Window *)pSysWindow, sal_False );
+#endif	// USE_JAVA
+
 	// Wenn Paint, dann muss auch Text und Frame gemalt werden
 	if ( bPaint )
 	{

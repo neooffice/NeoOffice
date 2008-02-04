@@ -146,4 +146,8 @@ public:
 	virtual void			EndSetClipRegion();
 };
 
+// Note: this must not be static as the symbol will be loaded by the framework
+// module
+extern "C" void SAL_DLLPUBLIC_EXPORT ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus );
+
 #endif // _SV_SALFRAME_H
