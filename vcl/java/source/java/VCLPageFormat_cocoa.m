@@ -59,7 +59,12 @@
 		{
 			NSPrintInfo *pRealPrintInfo = [pDictionary objectForKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
 			if ( pRealPrintInfo )
+			{
+				// Fix bug 2900 by synching the printers between print info
+				// instances
+				[pRealPrintInfo setPrinter:[pPrintInfo printer]];
 				pPrintInfo = pRealPrintInfo;
+			}
 		}
 	}
 
