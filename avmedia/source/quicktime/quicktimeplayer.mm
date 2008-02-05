@@ -473,6 +473,7 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 {
 	Size aRet( 0, 0 );
 
+#ifdef ALLOW_QUICKTIME_VIDEO
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
@@ -490,6 +491,7 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 	}
 
 	[pPool release];
+#endif	// ALLOW_QUICKTIME_VIDEO
 
 	return aRet;
 }
