@@ -45,6 +45,10 @@ static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
+@interface NSObject (ApplicationHasDelegat)
+- (void)cancelTermination;
+@end
+
 @interface ApplicationHasDelegate : NSObject
 {
 	BOOL					mbDelegate;
@@ -204,6 +208,14 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 @end
 
 static NSString *pCancelInputMethodText = @" ";
+
+@interface NSResponder (VCLResponder)
+- (void)abandonInput;
+- (void)copy:(id)pSender;
+- (void)cut:(id)pSender;
+- (BOOL)hasMarkedText;
+- (void)paste:(id)pSender;
+@end
 
 @interface VCLResponder : NSResponder
 {
