@@ -522,11 +522,10 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			break;
 		case ZoomLevel_FIT_TO_WINDOW:
 		case ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT:
-			// Use the unadjusted preferred size to fit in window
-			NSRect aZoomFrame = NSMakeRect( aRect.origin.x, aRect.origin.y, maPreferredSize.width, maPreferredSize.height );
-			break;
 		case ZoomLevel_ORIGINAL:
 		default:
+			// Use the unadjusted preferred size to fit in window
+			aZoomFrame = aRect;
 			break;
 	}
 
@@ -762,6 +761,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 			mnZoomLevel = [pZoomLevel intValue];
 			break;
 		default:
+			mnZoomLevel = ZoomLevel_FIT_TO_WINDOW_FIXED_ASPECT;
 			break;
 	}
 
