@@ -84,24 +84,43 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 
 @end
 
+@interface NSView (VCLChildView)
+- (void)setFillColor:(NSColor *)pColor;
+@end
+
 @interface VCLChildView : VCLChildSuperview
 {
 	NSColor*				mpBackgroundColor;
 	NSRect					maClipRect;
 	NSView*					mpSuperview;
 }
+- (void)addSubview:(NSView *)pView;
+- (void)addSubview:(NSView *)pView positioned:(NSWindowOrderingMode)nPlace relativeTo:(NSView *)pOtherView;
 - (void)dealloc;
-- (void)drawRect:(NSRect)aRect;
 - (id)initWithFrame:(NSRect)aFrame;
-- (BOOL)isOpaque;
 - (void)release:(id)pObject;
 - (void)setBackgroundColor:(NSColor *)pColor;
 - (void)setBounds:(NSValue *)pValue;
 - (void)setClip:(NSValue *)pValue;
+- (void)setFillColorInSubviews;
 - (void)viewWillStartLiveResize;
 @end
 
 @implementation VCLChildView
+
+- (void)addSubview:(NSView *)pView
+{
+	[super addSubview:pView];
+
+	[self setFillColorInSubviews];
+}
+
+- (void)addSubview:(NSView *)pView positioned:(NSWindowOrderingMode)nPlace relativeTo:(NSView *)pOtherView
+{
+	[super addSubview:pView positioned:nPlace relativeTo:pOtherView];
+
+	[self setFillColorInSubviews];
+}
 
 - (void)dealloc
 {
@@ -138,23 +157,14 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 	[super dealloc];
 }
 
-- (void)drawRect:(NSRect)aRect
-{
-	[super drawRect:aRect];
-
-	if ( mpBackgroundColor )
-		[mpBackgroundColor set];
-	else
-		[[NSColor whiteColor] set];
-	[NSBezierPath fillRect:aRect];
-}
-
 - (id)initWithFrame:(NSRect)aFrame
 {
 	NSRect aChildFrame = NSMakeRect( 0, 0, aFrame.size.width, aFrame.size.height );
 	[super initWithFrame:aChildFrame];
 
-	mpBackgroundColor = nil;
+	mpBackgroundColor = [NSColor clearColor];
+	if ( mpBackgroundColor )
+		[mpBackgroundColor retain];
 	maClipRect = NSZeroRect;
 
 	// Create a superview that we use to control clipping
@@ -163,11 +173,6 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 		[mpSuperview addSubview:self positioned:NSWindowAbove relativeTo:nil];
 
 	return self;
-}
-
-- (BOOL)isOpaque
-{
-	return YES;
 }
 
 - (void)release:(id)pObject
@@ -183,10 +188,14 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 		mpBackgroundColor = nil;
 	}
 
+	if ( !pColor )
+		pColor = [NSColor clearColor];
+
 	if ( pColor )
 	{
 		mpBackgroundColor = pColor;
 		[mpBackgroundColor retain];
+		[self setFillColorInSubviews];
 	}
 }
 
@@ -269,6 +278,26 @@ static NSView *FindNSViewAWTSubviewForView( NSView *pView )
 			maClipRect = NSZeroRect;
 
 		[self setBounds:[NSValue valueWithRect:aParentFrame]];
+	}
+}
+
+- (void)setFillColorInSubviews
+{
+	// Set the fill color for any QTMovieView subviews
+	NSArray *pSubviews = [self subviews];
+	if ( pSubviews )
+	{
+		unsigned int nCount = [pSubviews count];
+		unsigned int i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSView *pSubview = [pSubviews objectAtIndex:i];
+			if ( pSubview )
+			{
+				if ( [pSubview respondsToSelector:@selector(setFillColor:)] )
+					[pSubview setFillColor:mpBackgroundColor];
+			}
+		}
 	}
 }
 
