@@ -328,7 +328,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 
 		mpMovieView = [[AvmediaMovieView alloc] initWithFrame:maRealFrame];
 		[mpMovieView setMoviePlayer:self];
-		[mpMovieView setFillColor:[NSColor clearColor]];
 		[mpMovieView setControllerVisible:NO];
 		if ( mnZoomLevel == ZoomLevel_FIT_TO_WINDOW )
 			[mpMovieView setPreservesAspectRatio:NO];
@@ -456,15 +455,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( NSEqualRects( aNewFrame, maRealFrame ) )
 		return;
 
-	if ( mbPlaying )
-		[mpMovie stop];
-
 	// No need to flip coordinates as the JavaSalObject view is already flipped
 	// like our view
 	[self setFrame:aNewFrame];
-
-	if ( mbPlaying )
-		[mpMovie play];
 }
 
 - (void)setCurrentTime:(AvmediaArgs *)pArgs
@@ -477,13 +470,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
-	if ( mbPlaying )
-		[mpMovie stop];
-
 	[mpMovie setCurrentTime:QTMakeTimeWithTimeInterval( [pTime doubleValue] )];
-
-	if ( mbPlaying )
-		[mpMovie play];
 }
 
 - (void)setFocus:(id)pObject
@@ -498,9 +485,8 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	NSRect aOldRealFrame = maRealFrame;
 	maRealFrame = aRect;
 
-	// Use the preferred size minus 2 pixels on all sides as the OOo svx module
-	// likes to remove a few pixels from the preferred size
-	NSRect aZoomFrame = NSMakeRect( aRect.origin.x + 2, aRect.origin.y + 2, maPreferredSize.width - 4, maPreferredSize.height - 4 );
+	// Copy rectangle so that we can edit it
+	NSRect aZoomFrame = NSMakeRect( aRect.origin.x, aRect.origin.y, maPreferredSize.width, maPreferredSize.height );
 
 	switch ( mnZoomLevel )
 	{
@@ -542,10 +528,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 		return;
 
 	[mpMovieView setFrame:aZoomFrame];
-
-	NSView *pSuperview = [mpMovieView superview];
-	if ( pSuperview )
-		[pSuperview setNeedsDisplay:YES];
 }
 
 - (void)setLooping:(AvmediaArgs *)pArgs
@@ -620,13 +602,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
-	if ( mbPlaying )
-		[mpMovie stop];
-
 	[mpMovie setRate:[pTime floatValue]];
-
-	if ( mbPlaying )
-		[mpMovie play];
 }
 
 - (void)setSelection:(AvmediaArgs *)pArgs
@@ -639,13 +615,7 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( !pTime )
 		return;
 
-	if ( mbPlaying )
-		[mpMovie stop];
-
 	[mpMovie setSelection:QTMakeTimeRange( QTMakeTimeWithTimeInterval( 0 ), QTMakeTimeWithTimeInterval( [pTime doubleValue] ) )];
-
-	if ( mbPlaying )
-		[mpMovie play];
 }
 
 - (void)setSuperview:(AvmediaArgs *)pArgs
@@ -653,18 +623,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	NSArray *pArgArray = [pArgs args];
 	if ( !pArgArray || [pArgArray count] < 2 )
 	{
-		if ( mbPlaying )
-			[mpMovie stop];
-
 		[mpMovieView removeFromSuperview];
 		if ( mpSuperview )
 		{
 			[mpSuperview release];
 			mpSuperview = nil;
 		}
-
-		if ( mbPlaying )
-			[mpMovie play];
 
 		return;
 	}
@@ -672,18 +636,12 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	NSView *pSuperview = (NSView *)[pArgArray objectAtIndex:0];
 	if ( !pSuperview )
 	{
-		if ( mbPlaying )
-			[mpMovie stop];
-
 		[mpMovieView removeFromSuperview];
 		if ( mpSuperview )
 		{
 			[mpSuperview release];
 			mpSuperview = nil;
 		}
-
-		if ( mbPlaying )
-			[mpMovie play];
 
 		return;
 	}
@@ -701,9 +659,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( NSEqualRects( aNewFrame, maRealFrame ) && pSuperview == mpSuperview )
 		return;
 
-	if ( mbPlaying )
-		[mpMovie stop];
-
 	// No need to flip coordinates as the JavaSalObject view is already flipped
 	// like our view
 	[self setFrame:aNewFrame];
@@ -719,9 +674,6 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	[mpSuperview retain];
 
 	[mpSuperview addSubview:mpMovieView positioned:NSWindowAbove relativeTo:nil];
-
-	if ( mbPlaying )
-		[mpMovie play];
 }
 
 - (void)setVolumeDB:(AvmediaArgs *)pArgs
@@ -768,15 +720,9 @@ static void HandleAndFireMouseEvent( NSEvent *pEvent, AvmediaMovieView *pView, A
 	if ( mnZoomLevel == nOldZoomLevel )
 		return;
 
-	if ( mbPlaying )
-		[mpMovie stop];
-
 	// No need to flip coordinates as the JavaSalObject view is already flipped
 	// like our view
 	[self setFrame:maRealFrame];
-
-	if ( mbPlaying )
-		[mpMovie play];
 }
 
 - (void)stop:(id)pObject
