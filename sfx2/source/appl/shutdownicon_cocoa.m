@@ -36,6 +36,16 @@
 #import <Cocoa/Cocoa.h>
 #import "shutdownicon_cocoa.h"
 
+@interface NSObject (ShutdownIconDelegate)
+- (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
+- (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
+- (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
+- (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
+- (void)cancelTermination;
+@end
+
 /*
  * Create a class that is a facade for the application delegate set by the JVM.
  * Note that this class only implement the delegate methods in the JVM's

@@ -36,6 +36,10 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLFrame_cocoa.h"
 
+@interface NSObject (CWindow)
+- (NSWindow *)getNSWindow;
+@end
+
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;

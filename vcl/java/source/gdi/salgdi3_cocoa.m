@@ -37,6 +37,10 @@
 #import "salgdi3_cocoa.h"
 #import "../java/VCLEventQueue_cocoa.h"
 
+@interface NSFont (ATSFontRef)
+- (ATSFontRef)_atsFontID;
+@end
+
 ATSFontRef NSFont_getATSFontRef( id pNSFont )
 {
 	ATSFontRef aRet = nil;
@@ -47,7 +51,7 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 	{
 		if ( [pNSFont respondsToSelector:@selector(_atsFontID)] )
 		{
-			aRet = (ATSFontRef)[pNSFont _atsFontID];
+			aRet = [pNSFont _atsFontID];
 			if ( aRet )
 			{
 				FSSpec aFile;

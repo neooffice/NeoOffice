@@ -37,6 +37,11 @@
 #import "VCLPageFormat_cocoa.h"
 #import "VCLPrintJob_cocoa.h"
 
+@interface NSPrintInfo (PMPrintSettings)
+- (PMPrintSettings)PMPrintSettings;
+- (PMPrintSettings)pmPrintSettings;
+@end
+
 @interface ShowPrintDialog : NSObject
 {
 	BOOL					mbFinished;

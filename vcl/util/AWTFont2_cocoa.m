@@ -44,6 +44,10 @@
 
 static jmethodID mGetPSNameID = nil;
 
+@interface NSFont (AWTFontRef)
+- (ATSFontRef)_atsFontID;
+@end
+
 @interface AWTFont : NSObject
 {
 	NSFont*				fFont;
@@ -131,7 +135,7 @@ static jmethodID mGetPSNameID = nil;
 
 		// Fix bug 1990 by caching and reusing CGFontRefs
 		if ( [fFont respondsToSelector:@selector(_atsFontID)] )
-            fNativeCGFont = CreateCachedCGFont( (ATSFontRef)[fFont _atsFontID] );
+            fNativeCGFont = CreateCachedCGFont( [fFont _atsFontID] );
 	}
 
 	fIsFakeItalic = NO;

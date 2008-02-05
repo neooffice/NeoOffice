@@ -41,6 +41,10 @@
 // AWTFont class to ignore the custom transform that Java passes in.
 // Note: this class should only be loaded on Mac OS X 10.3 or 10.4.
 
+@interface NSFont (AWTFontRef)
+- (ATSFontRef)_atsFontID;
+@end
+
 @interface AWTFont : NSObject
 {
 	NSFont*				fFont;
@@ -78,7 +82,7 @@
 
 		// Fix bug 1990 by caching and reusing CGFontRefs
 		if ( [fFont respondsToSelector:@selector(_atsFontID)] )
-            fNativeCGFont = CreateCachedCGFont( (ATSFontRef)[fFont _atsFontID] );
+            fNativeCGFont = CreateCachedCGFont( [fFont _atsFontID] );
 	}
 
 	fTransform = nil;
