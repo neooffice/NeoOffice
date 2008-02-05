@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#import <objc/objc-class.h>
 #import <Cocoa/Cocoa.h>
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
@@ -279,20 +278,30 @@ static NSString *pCancelInputMethodText = @" ";
 
 @end
 
+static BOOL bUseKeyEntryFix = NO;
+static BOOL bUsePartialKeyEntryFix = NO;
+static BOOL bUseQuickTimeContentViewHack = NO;
+static VCLResponder *pSharedResponder = nil;
+
+@interface VCLView : NSView
+- (void)interpretKeyEvents:(NSArray *)pEvents;
+@end
+
 #ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
 
 // The QuickTime content view hack implemented in [VCLWindow setContentView:]
 // break Java's Window.getLocationOnScreen() method so we need to flip the
 // points returned by NSView's convertPoint selectors
-@interface VCLWindowViewAWT : NSView
+@interface VCLWindowView : VCLView
 {
 }
 - (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView;
 - (NSPoint)convertPoint:(NSPoint)aPoint toView:(NSView *)pView;
-- (BOOL)isFlipped;
+- (void)forwardInvocation:(NSInvocation *)pInvocation;
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector;
 @end
 
-@implementation VCLWindowViewAWT
+@implementation VCLWindowView
 
 - (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView
 {
@@ -302,10 +311,7 @@ static NSString *pCancelInputMethodText = @" ";
 	{
 		NSWindow *pWindow = [self window];
 		if ( pWindow )
-		{
-			NSRect aFrame = [pWindow frame];
-			aRet.y += ( [pWindow frame].size.height * 2 ) - [pWindow contentRectForFrameRect:aFrame].size.height;
-		}
+			aRet.y += [pWindow frame].size.height;
 	}
 
 	return aRet;
@@ -319,10 +325,7 @@ static NSString *pCancelInputMethodText = @" ";
 	{
 		NSWindow *pWindow = [self window];
 		if ( pWindow )
-		{
-			NSRect aFrame = [pWindow frame];
-			aRet.y += ( [pWindow frame].size.height * 2 ) - [pWindow contentRectForFrameRect:aFrame].size.height;
-		}
+			aRet.y += [pWindow frame].size.height;
 	}
 
 	return aRet;
@@ -352,11 +355,6 @@ static NSString *pCancelInputMethodText = @" ";
 
 	if ( !bHandled )
 		[self doesNotRecognizeSelector:aSelector];
-}
-
-- (BOOL)isFlipped
-{
-	return NO;
 }
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
@@ -525,32 +523,41 @@ static NSString *pCancelInputMethodText = @" ";
 
 - (void)setContentView:(NSView *)pView
 {
+	[super setContentView:pView];
+
 #ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
 	// It was found that with QuickTime 7.4 on G4 systems running ATI RAGE 128
 	// graphics cards, QTMovieView will misplace the movie if the window's
 	// content view is flipped. Since Java replaces the default content view
-	// with a flipped view, we need to insert our own VCLWindowAWT class
-	// into the NSWindowViewAWT class hierarchy.
-	if ( pView && [pView isFlipped] && [[pView className] isEqualToString:pNSWindowViewAWTString] )
+	// with a flipped view, we need to push their content view down a level
+	// and make the content view unflipped. Note that this approach causes
+	// Java to lose window events on 10.3.9 JVMs so don't allow use of this
+	// approach on Mac OS X 10.3.x.
+	if ( bUseQuickTimeContentViewHack )
 	{
-		Class aClass = [pView class];
-		Class aSuperclass = aClass->super_class;
-		[VCLWindowViewAWT class]->super_class = aSuperclass;
-		aClass->super_class = [VCLWindowViewAWT class];
+		NSView *pContentView = [self contentView];
+		if ( pContentView && [pContentView isFlipped] && [[pContentView className] isEqualToString:pNSWindowViewAWTString] )
+		{
+			NSRect aFrame = [pContentView frame];
+			VCLWindowView *pNewContentView = [[VCLWindowView alloc] initWithFrame:aFrame];
+			if ( pNewContentView )
+			{
+				// Retain current content view just to be safe
+				[pNewContentView retain];
+
+				[super setContentView:pNewContentView];
+				aFrame.origin.x = 0;
+				aFrame.origin.y = 0;
+				[pContentView setFrame:aFrame];
+				[pNewContentView addSubview:pContentView positioned:NSWindowAbove relativeTo:nil];
+
+				[pNewContentView release];
+			}
+		}
 	}
 #endif	// USE_QUICKTIME_CONTENT_VIEW_HACK
-
-	[super setContentView:pView];
 }
 
-@end
-
-static BOOL bUseKeyEntryFix = NO;
-static BOOL bUsePartialKeyEntryFix = NO;
-static VCLResponder *pSharedResponder = nil;
-
-@interface VCLView : NSView
-- (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
 
 @implementation VCLView
@@ -612,27 +619,29 @@ static VCLResponder *pSharedResponder = nil;
 {
 	BOOL					mbUseKeyEntryFix;
 	BOOL					mbUsePartialKeyEntryFix;
+	BOOL					mbUseQuickTimeContentViewHack;
 }
-+ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
++ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack;
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-+ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
++ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack
 {
-	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
+	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix useQuickTimeContentViewHack:bUseQuickTimeContentViewHack];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack
 {
 	[super init];
 
 	mbUseKeyEntryFix = bUseKeyEntryFix;
 	mbUsePartialKeyEntryFix = bUsePartialKeyEntryFix;
+	mbUseQuickTimeContentViewHack = bUseQuickTimeContentViewHack;
 
 	return self;
 }
@@ -645,6 +654,7 @@ static VCLResponder *pSharedResponder = nil;
 	// Initialize statics
 	bUseKeyEntryFix = mbUseKeyEntryFix;
 	bUsePartialKeyEntryFix = mbUsePartialKeyEntryFix;
+	bUseQuickTimeContentViewHack = mbUseQuickTimeContentViewHack;
 	if ( bUseKeyEntryFix || bUsePartialKeyEntryFix )
 	{
 		// Do not retain as invoking alloc disables autorelease
@@ -708,11 +718,11 @@ void NSFontManager_release()
 	}
 }
 
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix )
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix, BOOL bUseQuickTimeContentViewHack )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses installWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses installWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix useQuickTimeContentViewHack:bUseQuickTimeContentViewHack];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 
