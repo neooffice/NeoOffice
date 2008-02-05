@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#import <objc/objc-class.h>
 #import <Cocoa/Cocoa.h>
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
@@ -278,29 +279,20 @@ static NSString *pCancelInputMethodText = @" ";
 
 @end
 
-static BOOL bUseKeyEntryFix = NO;
-static BOOL bUsePartialKeyEntryFix = NO;
-static VCLResponder *pSharedResponder = nil;
-
-@interface VCLView : NSView
-- (void)interpretKeyEvents:(NSArray *)pEvents;
-@end
-
 #ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
 
 // The QuickTime content view hack implemented in [VCLWindow setContentView:]
 // break Java's Window.getLocationOnScreen() method so we need to flip the
 // points returned by NSView's convertPoint selectors
-@interface VCLWindowView : VCLView
+@interface VCLWindowViewAWT : NSView
 {
 }
 - (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView;
 - (NSPoint)convertPoint:(NSPoint)aPoint toView:(NSView *)pView;
-- (void)forwardInvocation:(NSInvocation *)pInvocation;
-- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector;
+- (BOOL)isFlipped;
 @end
 
-@implementation VCLWindowView
+@implementation VCLWindowViewAWT
 
 - (NSPoint)convertPoint:(NSPoint)aPoint fromView:(NSView *)pView
 {
@@ -310,7 +302,10 @@ static VCLResponder *pSharedResponder = nil;
 	{
 		NSWindow *pWindow = [self window];
 		if ( pWindow )
-			aRet.y += [pWindow frame].size.height;
+		{
+			NSRect aFrame = [pWindow frame];
+			aRet.y += ( [pWindow frame].size.height * 2 ) - [pWindow contentRectForFrameRect:aFrame].size.height;
+		}
 	}
 
 	return aRet;
@@ -324,7 +319,10 @@ static VCLResponder *pSharedResponder = nil;
 	{
 		NSWindow *pWindow = [self window];
 		if ( pWindow )
-			aRet.y += [pWindow frame].size.height;
+		{
+			NSRect aFrame = [pWindow frame];
+			aRet.y += ( [pWindow frame].size.height * 2 ) - [pWindow contentRectForFrameRect:aFrame].size.height;
+		}
 	}
 
 	return aRet;
@@ -354,6 +352,11 @@ static VCLResponder *pSharedResponder = nil;
 
 	if ( !bHandled )
 		[self doesNotRecognizeSelector:aSelector];
+}
+
+- (BOOL)isFlipped
+{
+	return NO;
 }
 
 - (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
@@ -522,36 +525,32 @@ static VCLResponder *pSharedResponder = nil;
 
 - (void)setContentView:(NSView *)pView
 {
-	[super setContentView:pView];
-
 #ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
 	// It was found that with QuickTime 7.4 on G4 systems running ATI RAGE 128
 	// graphics cards, QTMovieView will misplace the movie if the window's
 	// content view is flipped. Since Java replaces the default content view
-	// with a flipped view, we need to push their content view down a level
-	// and make the content view unflipped.
-	NSView *pContentView = [self contentView];
-	if ( pContentView && [pContentView isFlipped] && [[pContentView className] isEqualToString:pNSWindowViewAWTString] )
+	// with a flipped view, we need to insert our own VCLWindowAWT class
+	// into the NSWindowViewAWT class hierarchy.
+	if ( pView && [pView isFlipped] && [[pView className] isEqualToString:pNSWindowViewAWTString] )
 	{
-		NSRect aFrame = [pContentView frame];
-		VCLWindowView *pNewContentView = [[VCLWindowView alloc] initWithFrame:aFrame];
-		if ( pNewContentView )
-		{
-			// Retain current content view just to be safe
-			[pNewContentView retain];
-
-			[super setContentView:pNewContentView];
-			aFrame.origin.x = 0;
-			aFrame.origin.y = 0;
-			[pContentView setFrame:aFrame];
-			[pNewContentView addSubview:pContentView positioned:NSWindowAbove relativeTo:nil];
-
-			[pNewContentView release];
-		}
+		Class aClass = [pView class];
+		Class aSuperclass = aClass->super_class;
+		[VCLWindowViewAWT class]->super_class = aSuperclass;
+		aClass->super_class = [VCLWindowViewAWT class];
 	}
 #endif	// USE_QUICKTIME_CONTENT_VIEW_HACK
+
+	[super setContentView:pView];
 }
 
+@end
+
+static BOOL bUseKeyEntryFix = NO;
+static BOOL bUsePartialKeyEntryFix = NO;
+static VCLResponder *pSharedResponder = nil;
+
+@interface VCLView : NSView
+- (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
 
 @implementation VCLView
