@@ -217,7 +217,7 @@ Reference< XInterface > SAL_CALL MacOSXImageCaptureImpl_create(
 		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 		if ( aModule.load( aLibName ) )
-			; // pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
+			pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
 	}
 
 	if ( pShowOnlyMenusForWindow )
