@@ -1602,8 +1602,10 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
 
     if ( pOwnWindow && pShowOnlyMenusForWindow )
     {
-        // Notify vcl internals whether or not this window is a backing window
-        sal_Bool bBackingWindow = ( !m_xController.is() || dynamic_cast< BackingComp* >( (css::frame::XController *)m_xController.get() ) );
+        // Notify vcl internals whether or not this window is a backing window.
+        // Fix bug 2903 by only hiding the window when shutting down or if the
+        // component window is available there is no component.
+        sal_Bool bBackingWindow = ( Application::IsShutDown() || ( m_xComponentWindow.is() && !m_xController.is() ) || dynamic_cast< BackingComp* >( (css::frame::XController *)m_xController.get() ) );
         if ( bBackingWindow )
         {
             css::uno::Reference< css::frame::XFramesSupplier > xTasksSupplier( getCreator(), css::uno::UNO_QUERY );
