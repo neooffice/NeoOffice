@@ -57,7 +57,10 @@
 #ifndef _VOS_MUTEX_HXX
 #include <vos/mutex.hxx>
 #endif
-
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+ 
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
 #endif
@@ -105,6 +108,18 @@
 #define SERVICENAME "org.neooffice.ImageCapture"
 #define IMPLNAME	"org.neooffice.XImageCapture"
 
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+ 
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+ 
+typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
+ 
+static ::vos::OModule aModule;
+static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
+
 @interface ImageCaptureImpl : NSObject
 {
 	bool gotImage;
@@ -135,10 +150,8 @@ class MacOSXImageCaptureImpl
 	
 public:
 	MacOSXImageCaptureImpl( const Reference< XComponentContext > & xServiceManager )
-		: m_xServiceManager( xServiceManager ), m_nRefCount( 0 )
-		{ printf( "< MacOSXImageCaptureImpl ctor called >\n" ); }
-	~MacOSXImageCaptureImpl()
-		{ printf( "< MacOSXImageCaptureImpl dtor called >\n" ); }
+		: m_xServiceManager( xServiceManager ), m_nRefCount( 0 ) {}
+	virtual ~MacOSXImageCaptureImpl() {}
 
     // XServiceInfo	implementation
     virtual OUString SAL_CALL getImplementationName(  ) throw(RuntimeException);
@@ -194,7 +207,23 @@ Sequence<OUString> SAL_CALL MacOSXImageCaptureImpl::getSupportedServiceNames_Sta
 Reference< XInterface > SAL_CALL MacOSXImageCaptureImpl_create(
 	const Reference< XComponentContext > & xContext )
 {
-	return static_cast<XTypeProvider *>(new MacOSXImageCaptureImpl(xContext));
+	Reference< XTypeProvider > xRet;
+
+	// Locate libvcl and invoke the ShowOnlyMenusForWindow function
+	if ( !pShowOnlyMenusForWindow )
+	{
+		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+		aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		if ( aModule.load( aLibName ) )
+			; // pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
+	}
+
+	if ( pShowOnlyMenusForWindow )
+		xRet = static_cast<XTypeProvider *>(new MacOSXImageCaptureImpl(xContext));
+
+	return xRet;
 }
 
 

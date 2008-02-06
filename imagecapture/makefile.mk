@@ -43,6 +43,8 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
+CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
+
 # Don't put lib prefix on shared library
 DLLPRE=
 
@@ -70,7 +72,8 @@ SHL1STDLIBS= \
 	$(CPPULIB) \
 	$(CPPUHELPERLIB) \
 	$(COMPHELPERLIB) \
-	$(VCLLIB)
+	$(VCLLIB) \
+	$(VOSLIB)
 
 SHL1STDLIBS += -framework Carbon -framework Foundation -framework Cocoa
 
