@@ -54,6 +54,9 @@
 #ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
 #endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
@@ -118,6 +121,18 @@
 #define SERVICENAME "org.neooffice.GrammarChecker"
 #define IMPLNAME	"org.neooffice.XGrammarChecker"
 
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+ 
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+ 
+typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
+ 
+static ::vos::OModule aModule;
+static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
+
 using namespace ::rtl;
 using namespace ::osl;
 using namespace ::cppu;
@@ -139,10 +154,8 @@ class MacOSXGrammarCheckerImpl
 	
 public:
 	MacOSXGrammarCheckerImpl( const Reference< XComponentContext > & xServiceManager )
-		: m_xServiceManager( xServiceManager ), m_nRefCount( 0 )
-		{ printf( "< MacOSXGrammarCheckerImpl ctor called >\n" ); }
-	~MacOSXGrammarCheckerImpl()
-		{ printf( "< MacOSXGrammarCheckerImpl dtor called >\n" ); }
+		: m_xServiceManager( xServiceManager ), m_nRefCount( 0 ) {}
+	virtual ~MacOSXGrammarCheckerImpl() {}
 
     // XServiceInfo	implementation
     virtual OUString SAL_CALL getImplementationName(  ) throw(RuntimeException);
@@ -205,7 +218,23 @@ Sequence<OUString> SAL_CALL MacOSXGrammarCheckerImpl::getSupportedServiceNames_S
 Reference< XInterface > SAL_CALL MacOSXGrammarCheckerImpl_create(
 	const Reference< XComponentContext > & xContext )
 {
-	return static_cast<XTypeProvider *>(new MacOSXGrammarCheckerImpl(xContext));
+	Reference< XTypeProvider > xRet;
+
+	// Locate libvcl and invoke the ShowOnlyMenusForWindow function
+	if ( !pShowOnlyMenusForWindow )
+	{
+		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+		aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		if ( aModule.load( aLibName ) )
+			pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
+	}
+
+	if ( pShowOnlyMenusForWindow )
+		xRet = static_cast<XTypeProvider *>(new MacOSXGrammarCheckerImpl(xContext));
+
+	return xRet;
 }
 
 
