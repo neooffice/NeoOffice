@@ -139,6 +139,8 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 						mnNativeFont = (int)FMGetFontFromATSFontRef( aFont );
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 					}
+
+					CFRelease( aString );
 				}
 			}
 		}
