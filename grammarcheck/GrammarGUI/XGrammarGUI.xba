@@ -164,6 +164,9 @@ Sub FindNextGrammarError
 		&apos; iterate to the next sentence of the document and check its grammar
 		
 		SentenceIter.collapseToEnd()
+		If Not IsNull(SentenceIter.CharLocale) And Not IsEmpty(SentenceIter.CharLocale) Then
+			grammarCheckerService.setLocale(SentenceIter.CharLocale)
+		End If
 		
 		hasMoreData = SentenceIter.gotoNextSentence(True)
 		If hasMoreData = False Then
