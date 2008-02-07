@@ -7,16 +7,16 @@
  <dlg:bulletinboard>
   <dlg:menulist dlg:id="correctionListBox" dlg:tab-index="0" dlg:left="9" dlg:top="123" dlg:width="164" dlg:height="45"/>
   <dlg:button dlg:id="changeButton" dlg:tab-index="1" dlg:left="179" dlg:top="123" dlg:width="46" dlg:height="14" dlg:value="Change">
-   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.changeButton_Initiated?language=Basic&amp;location=document" script:language="Script"/>
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.changeButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
   </dlg:button>
   <dlg:button dlg:id="closeButton" dlg:tab-index="2" dlg:left="179" dlg:top="154" dlg:width="46" dlg:height="14" dlg:value="Close">
-   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.closeButton_Initiated?language=Basic&amp;location=document" script:language="Script"/>
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.closeButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
   </dlg:button>
   <dlg:button dlg:id="ignoreButton" dlg:tab-index="3" dlg:left="179" dlg:top="11" dlg:width="46" dlg:height="14" dlg:value="Ignore">
-   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.ignoreButton_Initiated?language=Basic&amp;location=document" script:language="Script"/>
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.ignoreButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
   </dlg:button>
   <dlg:button dlg:id="ignoreAllButton" dlg:tab-index="4" dlg:left="179" dlg:top="29" dlg:width="46" dlg:height="14" dlg:value="Ignore All">
-   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.ignoreAllButton_Initiated?language=Basic&amp;location=document" script:language="Script"/>
+   <script:event script:event-name="on-performaction" script:macro-name="vnd.sun.star.script:GrammarGUI.XGrammarGUI.ignoreAllButton_Initiated?language=Basic&amp;location=application" script:language="Script"/>
   </dlg:button>
   <dlg:textfield dlg:style-id="0" dlg:id="sourceTextLabel" dlg:tab-index="5" dlg:left="9" dlg:top="14" dlg:width="164" dlg:height="43" dlg:multiline="true" dlg:readonly="true"/>
   <dlg:textfield dlg:style-id="0" dlg:id="explainLabel" dlg:tab-index="6" dlg:left="9" dlg:top="73" dlg:width="164" dlg:height="35" dlg:multiline="true" dlg:readonly="true"/>
