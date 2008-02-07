@@ -588,14 +588,6 @@ void DrawProgress( Window* pWindow, const Point& rPos,
 void StatusBar::ImplDrawProgress( BOOL bPaint,
 								  USHORT nPercent1, USHORT nPercent2 )
 {
-#ifdef USE_JAVA
-	// Always force the window out of backing window mode if we are displaying
-	// a progress bar
-	SystemWindow *pSysWindow = GetSystemWindow();
-	if ( pSysWindow )
-		ShowOnlyMenusForWindow( (Window *)pSysWindow, sal_False );
-#endif	// USE_JAVA
-
 	// Wenn Paint, dann muss auch Text und Frame gemalt werden
 	if ( bPaint )
 	{
@@ -1510,6 +1502,15 @@ void StatusBar::StartProgressMode( const XubString& rText )
 {
 	DBG_ASSERT( !mbProgressMode, "StatusBar::StartProgressMode(): progress mode is active" );
 
+#ifdef USE_JAVA
+	if ( IsReallyVisible() )
+	{
+		// Always force the window out of backing window mode if we are
+		// displaying a progress bar
+		ShowOnlyMenusForWindow( this, sal_False );
+	}
+#endif	// USE_JAVA
+
 	mbProgressMode	= TRUE;
 	mnPercent		= 0;
 	maPrgsTxt		= rText;
@@ -1541,6 +1542,12 @@ void StatusBar::SetProgressValue( USHORT nNewPercent )
 
 	if ( mbProgressMode && IsReallyVisible() )
 	{
+#ifdef USE_JAVA
+		// Always force the window out of backing window mode if we are
+		// displaying a progress bar
+		ShowOnlyMenusForWindow( this, sal_False );
+#endif	// USE_JAVA
+
 		Update();
 		SetLineColor();
 		ImplDrawProgress( FALSE, mnPercent, nNewPercent );
@@ -1562,6 +1569,13 @@ void StatusBar::EndProgressMode()
 	SetFillColor( GetSettings().GetStyleSettings().GetFaceColor() );
 	if ( IsReallyVisible() )
 	{
+#ifdef USE_JAVA
+		// Always force the window into backing window mode if we are
+		// displaying a progress bar. Note that this will not override
+		// any setting set by the OOo upper application layers.
+		ShowOnlyMenusForWindow( this, sal_True );
+#endif	// USE_JAVA
+
 		Invalidate();
 		Update();
 		Flush();

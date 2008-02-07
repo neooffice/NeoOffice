@@ -56,6 +56,9 @@
 #ifndef _SV_SETTINGS_HXX
 #include <settings.hxx>
 #endif
+#ifndef _SV_STATUS_HXX
+#include <status.hxx>
+#endif
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
@@ -114,15 +117,33 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 	if ( !pWindow )
 		return;
 
-	JavaSalFrame *pFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-	if ( !pFrame || bShowOnlyMenus == pFrame->mbShowOnlyMenus )
+	SystemWindow *pSystemWindow = pWindow->GetSystemWindow();
+	if ( !pSystemWindow )
+		return;
+
+	JavaSalFrame *pFrame = (JavaSalFrame *)pSystemWindow->ImplGetFrame();
+	if ( !pFrame )
 		return;
 
 	pFrame->mbInShowOnlyMenus = TRUE;
 
+	// Don't let the progress bar hiding override display set for top-level
+	// windows
+	BOOL bOldShowOnlyMenus = pFrame->mbShowOnlyMenus;
+	StatusBar *pProgressBarWindow = dynamic_cast< StatusBar* >( pWindow );
+	if ( pProgressBarWindow )
+	{
+		if ( pFrame->mbShowOnlyMenus )
+			pFrame->mbShowOnlyMenus = bShowOnlyMenus;
+	}
+	else
+	{
+		pFrame->mbShowOnlyMenus = bShowOnlyMenus;
+	}
+
 	// Refresh Java frame
-	pFrame->mbShowOnlyMenus = bShowOnlyMenus;
-	pFrame->SetParent( pFrame->mpParent );
+	if ( bOldShowOnlyMenus != pFrame->mbShowOnlyMenus )
+		pFrame->SetParent( pFrame->mpParent );
 
 	pFrame->mbInShowOnlyMenus = FALSE;
 #endif	// USE_SHOW_BACKING_WINDOW_MENUS_HACK
