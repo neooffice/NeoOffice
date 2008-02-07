@@ -141,6 +141,24 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 
+static OUString aDelimiter = OUString::createFromAscii( "_" );
+ 
+static OUString ImplGetLocaleString( Locale aLocale )
+{
+	OUString aLocaleString( aLocale.Language );
+	if ( aLocaleString.getLength() && aLocale.Country.getLength() )
+	{
+		aLocaleString += aDelimiter;
+		aLocaleString += aLocale.Country;
+		if ( aLocale.Variant.getLength() )
+		{
+			aLocaleString += aDelimiter; 
+			aLocaleString += aLocale.Variant; 
+		}
+	}
+	return aLocaleString;
+}
+
 //========================================================================
 class MacOSXGrammarCheckerImpl
 	: public ::cppu::WeakImplHelper2<XServiceInfo, XGrammarChecker>
@@ -150,7 +168,7 @@ class MacOSXGrammarCheckerImpl
 	
 	sal_Int32 m_nRefCount;
 	sal_Int32 m_nCount;
-	Locale m_aLocale;
+	OUString m_aLocale;
 	
 public:
 	MacOSXGrammarCheckerImpl( const Reference< XComponentContext > & xServiceManager )
@@ -332,9 +350,15 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
    SAL_CALL MacOSXGrammarCheckerImpl::checkString(const rtl::OUString& toCheck)
    throw (com::sun::star::uno::RuntimeException)
 {
+	Sequence< org::neooffice::GrammarReplacement > toReturn;
+	
+	if ( !m_aLocale.getLength() )
+		return(toReturn);
+
 	NSAutoreleasePool *localPool=[[NSAutoreleasePool alloc] init];
 	
 	NSString *stringToCheck=[NSString stringWithCharacters: toCheck.getStr() length: toCheck.getLength()];
+	NSString *localeToCheck=[NSString stringWithCharacters: m_aLocale.getStr() length: m_aLocale.getLength()];
 
 	// Do not ever invoke [NSApplication sharedApplication] because ifNSApp is
 	// not already initialized, we are either running in a separate subprocess
@@ -343,50 +367,47 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 	// xhosting to the localhost (which will cause the application to abort)
 	NSSpellChecker *spelling=[NSSpellChecker sharedSpellChecker];
 	
-	Sequence< org::neooffice::GrammarReplacement > toReturn;
-	
-	if(!spelling)
-		return(toReturn);
-	
-	NSArray *detailArray = nil;
-	
-	unsigned long tempDocTag=[NSSpellChecker uniqueSpellDocumentTag];
-	// +++ map m_aLocale into apprporiate locale code for grammar checking of string
-	[spelling checkGrammarOfString: stringToCheck startingAt: 0 language: @"en" wrap: 0L inSpellDocumentWithTag: tempDocTag details: &detailArray];
-	[spelling closeSpellDocumentWithTag: tempDocTag];
-	
-	if(detailArray && [detailArray count])
+	if(spelling)
 	{
-		toReturn=Sequence< org::neooffice::GrammarReplacement >([detailArray count]);
+		NSArray *detailArray = nil;
 		
-		for(int i=0; i<[detailArray count]; i++)
+		unsigned long tempDocTag=[NSSpellChecker uniqueSpellDocumentTag];
+		[spelling checkGrammarOfString: stringToCheck startingAt: 0 language: localeToCheck wrap: 0L inSpellDocumentWithTag: tempDocTag details: &detailArray];
+		[spelling closeSpellDocumentWithTag: tempDocTag];
+		
+		if(detailArray && [detailArray count])
 		{
-			NSDictionary *dic=(NSDictionary *)[detailArray objectAtIndex: i];
-			
+			toReturn=Sequence< org::neooffice::GrammarReplacement >([detailArray count]);
+		
+			for(int i=0; i<[detailArray count]; i++)
 			{
-				NSString *userDescription=(NSString *)[dic valueForKey: NSGrammarUserDescription];
-				
-				sal_Unicode pBuffer[ [userDescription length] ];
-				[userDescription getCharacters: pBuffer];
-				
-				toReturn[i].aDescription=OUString(pBuffer, [userDescription length]);
-			}
+				NSDictionary *dic=(NSDictionary *)[detailArray objectAtIndex: i];
 			
-			NSValue *rangeToCorrect=(NSValue *)[dic valueForKey: NSGrammarRange];
-			toReturn[i].lStartIndex=[rangeToCorrect rangeValue].location;
-			toReturn[i].lLength=[rangeToCorrect rangeValue].length;
+				{
+					NSString *userDescription=(NSString *)[dic valueForKey: NSGrammarUserDescription];
+					
+					sal_Unicode pBuffer[ [userDescription length] ];
+					[userDescription getCharacters: pBuffer];
+					
+					toReturn[i].aDescription=OUString(pBuffer, [userDescription length]);
+				}
 			
-			NSArray *corrections=(NSArray *)[dic valueForKey: NSGrammarCorrections];
-			
-			toReturn[i].aSuggestedReplacements=Sequence< OUString >([corrections count]);
-			for(int j=0; j<[corrections count]; j++)
-			{
-				NSString *corrString=(NSString *)[corrections objectAtIndex: j];
+				NSValue *rangeToCorrect=(NSValue *)[dic valueForKey: NSGrammarRange];
+				toReturn[i].lStartIndex=[rangeToCorrect rangeValue].location;
+				toReturn[i].lLength=[rangeToCorrect rangeValue].length;
 				
-				sal_Unicode pBuffer[ [corrString length] ];
-				[corrString getCharacters: pBuffer];
+				NSArray *corrections=(NSArray *)[dic valueForKey: NSGrammarCorrections];
 				
-				toReturn[i].aSuggestedReplacements[j]=OUString(pBuffer, [corrString length]);
+				toReturn[i].aSuggestedReplacements=Sequence< OUString >([corrections count]);
+				for(int j=0; j<[corrections count]; j++)
+				{
+					NSString *corrString=(NSString *)[corrections objectAtIndex: j];
+					
+					sal_Unicode pBuffer[ [corrString length] ];
+					[corrString getCharacters: pBuffer];
+				
+					toReturn[i].aSuggestedReplacements[j]=OUString(pBuffer, [corrString length]);
+				}
 			}
 		}
 	}
@@ -404,9 +425,11 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 		SAL_CALL MacOSXGrammarCheckerImpl::setLocale( const ::com::sun::star::lang::Locale& aLocale ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
-	m_aLocale=aLocale;
-	// +++ check if locale is supported;  presently interface only returns if spellchecking is supported,
-	// not grammar check
+	m_aLocale=ImplGetLocaleString(aLocale);
+	
+	// Alwasy return true as there is no way to check the validity of a locale
+	// in the Mac OS X grammar checker as we can only check the validity of
+	// a spellchecking locale
 	return(true);
 }
 
