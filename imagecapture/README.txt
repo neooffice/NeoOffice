@@ -35,6 +35,7 @@ extension using the following steps:
 
    sudo rm -Rf ~root/Library/Preferences/NeoOffice-[version]
    cd /path/to/NeoOffice/installation/Contents/MacOS
+   sudo -H ./unopkg.bin remove --shared --force imagecapture.oxt
    sudo -H ./unopkg.bin add --shared --force \
       /path/to/this/module/unxmacx[ip].pro/bin/imagecapture.oxt
 
