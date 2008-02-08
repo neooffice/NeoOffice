@@ -1461,17 +1461,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Register listeners
 		panel.addFocusListener(this);
+		panel.addKeyListener(this);
 		window.addComponentListener(this);
 		window.addFocusListener(this);
+		window.addKeyListener(this);
 		window.addWindowStateListener(this);
 		if (!showOnlyMenus) {
 			panel.addInputMethodListener(this);
-			panel.addKeyListener(this);
 			panel.addMouseListener(this);
 			panel.addMouseMotionListener(this);
 			panel.addMouseWheelListener(this);
 			window.addInputMethodListener(this);
-			window.addKeyListener(this);
 			window.addMouseListener(this);
 			// Fix bug 2370 by listening for mouse events in the window frame
 			if (!undecorated) {
@@ -1615,17 +1615,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
+		panel.removeKeyListener(this);
 		window.removeComponentListener(this);
 		window.removeFocusListener(this);
+		window.removeKeyListener(this);
 		window.removeWindowStateListener(this);
 		if (!showOnlyMenus) {
 			panel.removeInputMethodListener(this);
-			panel.removeKeyListener(this);
 			panel.removeMouseListener(this);
 			panel.removeMouseMotionListener(this);
 			panel.removeMouseWheelListener(this);
 			window.removeInputMethodListener(this);
-			window.removeKeyListener(this);
 			window.removeMouseListener(this);
 			if (!undecorated) {
 				window.removeMouseMotionListener(this);
@@ -3258,7 +3258,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			frame = f;
 			setBackground(Color.white);
-			enableInputMethods(true);
+			enableInputMethods(frame.showOnlyMenus ? false : true);
 
 		}
 
