@@ -3310,10 +3310,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		void showMenuBar(boolean b) {
 
+			MenuBar mb = getMenuBar();
+
+			// On Mac OS X 10.3.x, we need to remove the menubar before
+			// resetting the state
+			if (b != showMenuBar)
+				setMenuBar(null);
 			showMenuBar = b;
 
 			// Reset enabled state of menus
-			setMenuBar(getMenuBar());
+			setMenuBar(mb);
 
 		}
 
