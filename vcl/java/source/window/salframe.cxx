@@ -329,7 +329,13 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 
-	mpVCLFrame->setVisible( mbVisible, bNoActivate );
+	// Determine if this is a modal dialog
+	sal_Bool bIsModal = sal_False;
+	ImplSVData *pSVData = ImplGetSVData();
+	if ( mbVisible && pSVData->maWinData.mpLastExecuteDlg && pSVData->maWinData.mpLastExecuteDlg->ImplGetFrame() == this )
+		bIsModal = sal_True;
+
+	mpVCLFrame->setVisible( mbVisible, bNoActivate, bIsModal );
 
 	// Reset graphics
 	mpGraphics->mpVCLGraphics->resetGraphics();

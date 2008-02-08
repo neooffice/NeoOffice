@@ -47,6 +47,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.Insets;
+import java.awt.Menu;
 import java.awt.MenuBar;
 import java.awt.Panel;
 import java.awt.Point;
@@ -1353,6 +1354,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private InputMethodEvent lastUncommittedInputMethodEvent = null;
 
 	/**
+	 * The modal flag.
+	 */
+	private boolean modal = false;
+
+	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -1604,7 +1610,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
-		setVisible(false, false);
+		setVisible(false, false, false);
 		setMenuBar(null);
 		children = null;
 		graphics.dispose();
@@ -2513,7 +2519,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						if (!f.isDisposed()) {
 							Window w = f.getWindow();
 							if (w.isShowing()) {
-								f.setVisible(false, false);
+								f.setVisible(false, false, false);
 								detachedChildren.add(f);
 							}
 						}
@@ -2529,7 +2535,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				VCLFrame f = (VCLFrame)frames.next();
 				synchronized (f) {
 					if (!f.isDisposed())
-						f.setVisible(true, true);
+						f.setVisible(true, true, f.modal);
 				}
 			}
 		}
@@ -2753,8 +2759,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *  hides this component
 	 * @param noActivate <code>true</code> displays the window without giving
 	 *  it focus
+	 * @param isModal <code>true</code> indicates that the window as a modal
+	 *  window in the OOo C++ code
 	 */
-	public synchronized void setVisible(boolean b, boolean noActivate) {
+	public synchronized void setVisible(boolean b, boolean noActivate, boolean isModal) {
 
 		if (b == window.isShowing())
 			return;
@@ -2792,7 +2800,28 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				window.setFocusable(false);
 				window.setFocusableWindowState(false);
 			}
-			
+
+			// Only set modal flag when showing so we can remember its last
+			// state
+			if (!(window instanceof Frame))
+				modal = isModal;
+
+			// Hide any parent frames if this frame is modal
+			if (modal) {
+				w = window.getOwner();
+				if (w != null) {
+					f = VCLFrame.findFrame(w);
+					while (w != null && f != null) {
+						synchronized (f) {
+							if (w instanceof VCLFrame.NoPaintFrame)
+								((VCLFrame.NoPaintFrame)w).showMenuBar(false);
+							w = w.getOwner();
+							f = VCLFrame.findFrame(w);
+						}
+					}
+				}
+			}
+
 			panel.setVisible(true);
 			window.show();
 
@@ -2814,6 +2843,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.setVisible(false);
 			window.hide();
 			window.removeNotify();
+
+			// Unhide menus in non-modal parent frames
+			if (modal) {
+				Window w = window.getOwner();
+				if (w != null) {
+					VCLFrame f = VCLFrame.findFrame(w);
+					while (w != null && f != null) {
+						synchronized (f) {
+							if (f.modal)
+								break;
+							else if (w instanceof VCLFrame.NoPaintFrame)
+								((VCLFrame.NoPaintFrame)w).showMenuBar(true);
+							w = w.getOwner();
+							f = VCLFrame.findFrame(w);
+						}
+					}
+				}
+			}
 		}
 
 	}
@@ -3120,6 +3167,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private Dimension minSize = null;
 
 		/**
+		 * The show menubar flag.
+		 */
+		private boolean showMenuBar = true;
+
+		/**
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
@@ -3203,6 +3255,27 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Sets the menubar for this frame to the specified menubar.
+		 *
+		 * @param mb the menubar or <code>null</code>
+		 */
+		public void setMenuBar(MenuBar mb) {
+
+			// Set enabled state of menus
+			if (mb != null) {
+				int count = mb.getMenuCount();
+				for (int i = 0; i < count; i++) {
+					Menu m = mb.getMenu(i);
+					if (m != null)
+						m.setEnabled(showMenuBar);
+				}
+			}
+
+			super.setMenuBar(mb);
+
+		}
+
+		/**
 		 * Set the minimum size for the frame.
 		 *
 		 * @param width the minimum width
@@ -3227,6 +3300,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			minSize = new Dimension(width, height);
 			
+		}
+
+		/**
+		 * Shows or hides the menubar for this frame.
+		 *
+		 * @param b <code>true> to show the menubar otherwise hide the
+		 *  menubar
+		 */
+		void showMenuBar(boolean b) {
+
+			showMenuBar = b;
+
+			// Reset enabled state of menus
+			setMenuBar(getMenuBar());
+
 		}
 
 		/**
