@@ -219,16 +219,16 @@ public final class VCLScreen {
 			GraphicsDevice[] gd = ge.getScreenDevices();
 			for (int i = 0; i < gd.length; i++) {
 				try {
-					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
-					if (!fullScreenMode) {
-						Insets insets = VCLScreen.getScreenInsets(gd[i]);
-						if (insets != null)
-							r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
-					}
-
 					// Test if the point is inside the screen
-					if (r.contains(x, y))
+					Rectangle r = gd[i].getDefaultConfiguration().getBounds();
+					if (r.contains(x, y)) {
+						if (!fullScreenMode) {
+							Insets insets = VCLScreen.getScreenInsets(gd[i]);
+							if (insets != null)
+								r = new Rectangle(r.x + insets.left, r.y + insets.top, r.width - insets.left - insets.right, r.height - insets.top - insets.bottom);
+						}
 						return r;
+					}
 				}
 				catch (Throwable t) {
 					clearCachedDisplays0(ge);
