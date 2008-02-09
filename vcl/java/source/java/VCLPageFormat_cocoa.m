@@ -36,6 +36,8 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 
+static BOOL bIsRunningPanther = NO;
+
 @interface VCLPrintOperation : NSPrintOperation
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView;
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
@@ -62,8 +64,12 @@
 			{
 				// Fix bug 2900 by synching the printers between print info
 				// instances. Fix bug 2908 by setting the Java print info's
-				// printer to the native print dialog's printer.
-				[pPrintInfo setPrinter:[pRealPrintInfo printer]];
+				// printer to the native print dialog's printer but do the
+				// opposite for Mac OS X 10.3.x.
+				if ( bIsRunningPanther )
+					[pRealPrintInfo setPrinter:[pPrintInfo printer]];
+				else
+					[pPrintInfo setPrinter:[pRealPrintInfo printer]];
 				pPrintInfo = pRealPrintInfo;
 			}
 		}
@@ -75,21 +81,36 @@
 @end
 
 @interface InstallVCLPrintClasses : NSObject
-+ (id)create;
+{
+	BOOL					mbIsRunningPanther;
+}
++ (id)create:(BOOL)bIsRunningPanther;
+- (id)init:(BOOL)bIsRunningPanther;
 - (void)installVCLPrintClasses:(id)pObject;
 @end
 
 @implementation InstallVCLPrintClasses
 
-+ (id)create
++ (id)create:(BOOL)bIsRunningPanther
 {
-	InstallVCLPrintClasses *pRet = [[InstallVCLPrintClasses alloc] init];
+	InstallVCLPrintClasses *pRet = [[InstallVCLPrintClasses alloc] init:(BOOL)bIsRunningPanther];
 	[pRet autorelease];
 	return pRet;
 }
 
+- (id)init:(BOOL)bIsRunningPanther
+{
+	[super init];
+
+	mbIsRunningPanther = bIsRunningPanther;
+
+	return self;
+}
+
 - (void)installVCLPrintClasses:(id)pObject
 {
+	bIsRunningPanther = mbIsRunningPanther;
+
 	[VCLPrintOperation poseAsClass:[NSPrintOperation class]];
 }
 
@@ -325,11 +346,11 @@ CFStringRef VCLPrintInfo_getVCLPrintInfoDictionaryKey()
 	return CFSTR( "VCLPrintInfoDictionaryKey" );
 }
 
-void VCLPrintInfo_installVCLPrintClasses()
+void VCLPrintInfo_installVCLPrintClasses( BOOL bIsRunningPanther )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLPrintClasses *pInstallVCLPrintClasses = [InstallVCLPrintClasses create];
+	InstallVCLPrintClasses *pInstallVCLPrintClasses = [InstallVCLPrintClasses create:bIsRunningPanther];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLPrintClasses performSelectorOnMainThread:@selector(installVCLPrintClasses:) withObject:pInstallVCLPrintClasses waitUntilDone:YES modes:pModes];
 
