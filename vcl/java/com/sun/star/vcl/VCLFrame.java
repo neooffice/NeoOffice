@@ -2506,39 +2506,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		if (window instanceof Frame) {
-			// The menubar doesn't refresh when a child window until the focus
-			// is restored so hide any children while changing the menubar
-			LinkedList detachedChildren = new LinkedList();
-			if (menubar != null) {
-				// Detach any visible children
-				Iterator frames = children.iterator();
-				while (frames.hasNext()) {
-					VCLFrame f = (VCLFrame)frames.next();
-					synchronized (f) {
-						if (!f.isDisposed()) {
-							Window w = f.getWindow();
-							if (w.isShowing()) {
-								f.setVisible(false, false, false);
-								detachedChildren.add(f);
-							}
-						}
-					}
-				}
-			}
-
+		if (window instanceof Frame)
 			((Frame)window).setMenuBar(menubar);
-
-			// Reattach any visible children
-			Iterator frames = detachedChildren.iterator();
-			while (frames.hasNext()) {
-				VCLFrame f = (VCLFrame)frames.next();
-				synchronized (f) {
-					if (!f.isDisposed())
-						f.setVisible(true, true, f.modal);
-				}
-			}
-		}
 
 	}
 
@@ -3271,7 +3240,36 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				}
 			}
 
-			super.setMenuBar(mb);
+			MenuBar oldMenuBar = getMenuBar();
+			if (oldMenuBar != mb) {
+				// If we are changing menubars, we need to remove all of the
+				// menus from the current menubar in reverse order and readd
+				// them after the menubar has been detached from the frame to
+				// prevent doubling of menus when a child dialog has focus
+				LinkedList oldMenus = new LinkedList();
+				if (oldMenuBar != null) {
+					int count = oldMenuBar.getMenuCount();
+					for (int i = count - 1; i >= 0; i--) {
+						Menu m = oldMenuBar.getMenu(i);
+						if (m != null) {
+							oldMenuBar.remove(i);
+							oldMenus.add(m);
+						}
+					}
+
+					super.setMenuBar(null);
+				}
+
+				super.setMenuBar(mb);
+
+				if (oldMenuBar != null) {
+					while (oldMenus.size() > 0) {
+						Menu m = (Menu)oldMenus.removeLast();
+						if (m != null)
+							oldMenuBar.add(m);
+					}
+				}
+			}
 
 		}
 
