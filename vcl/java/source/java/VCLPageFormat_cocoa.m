@@ -61,8 +61,9 @@
 			if ( pRealPrintInfo )
 			{
 				// Fix bug 2900 by synching the printers between print info
-				// instances
-				[pRealPrintInfo setPrinter:[pPrintInfo printer]];
+				// instances. Fix bug 2908 by setting the Java print info's
+				// printer to the native print dialog's printer.
+				[pPrintInfo setPrinter:[pRealPrintInfo printer]];
 				pPrintInfo = pRealPrintInfo;
 			}
 		}
