@@ -350,26 +350,32 @@ BOOL SVMain()
     extern BOOL ImplSVMainHook( BOOL* );
 
 #ifdef USE_JAVA
-    // Activate the fonts in the "user/fonts" directory. Fix bug 2733 on
-    // Leopard by loading the fonts before Java is ever loaded.
-    OUString aUserPath;
-    if ( Bootstrap::locateUserInstallation( aUserPath ) == Bootstrap::PATH_EXISTS )
+    // Attempt to fix haxie bugs that cause bug 2912 by calling
+    // GetMainEventLoop() in the main thread before we have created a
+    // secondary thread
+    if ( GetCurrentEventLoop() == GetMainEventLoop() )
     {
-        if ( aUserPath.getLength() )
+        // Activate the fonts in the "user/fonts" directory. Fix bug 2733 on
+        // Leopard by loading the fonts before Java is ever loaded.
+        OUString aUserPath;
+        if ( Bootstrap::locateUserInstallation( aUserPath ) == Bootstrap::PATH_EXISTS )
         {
-            aUserPath += OUString::createFromAscii( "/user/fonts" );
-            ImplLoadNativeFont( aUserPath );
+            if ( aUserPath.getLength() )
+            {
+                aUserPath += OUString::createFromAscii( "/user/fonts" );
+                ImplLoadNativeFont( aUserPath );
+            }
         }
-    }
 
-    // Activate the fonts in the "share/fonts/truetype" directory
-    OUString aBasePath;
-    if ( Bootstrap::locateBaseInstallation( aBasePath ) == Bootstrap::PATH_EXISTS )
-    {
-        if ( aBasePath.getLength() )
+        // Activate the fonts in the "share/fonts/truetype" directory
+        OUString aBasePath;
+        if ( Bootstrap::locateBaseInstallation( aBasePath ) == Bootstrap::PATH_EXISTS )
         {
-            aBasePath += OUString::createFromAscii( "/share/fonts/truetype" );
-            ImplLoadNativeFont( aBasePath );
+            if ( aBasePath.getLength() )
+            {
+                aBasePath += OUString::createFromAscii( "/share/fonts/truetype" );
+                ImplLoadNativeFont( aBasePath );
+            }
         }
     }
 #endif	// USE_JAVA
