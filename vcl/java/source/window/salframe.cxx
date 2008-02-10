@@ -351,8 +351,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
 		aEvent.dispatch();
 
-		if ( !mbInShowOnlyMenus )
-			UpdateMenusForFrame( this, NULL );
+		UpdateMenusForFrame( this, NULL );
 
 		// Reattach floating children
 		::std::list< JavaSalFrame* > aChildren( maChildren );

@@ -341,6 +341,11 @@ void JavaSalInstance::DestroyMenuItem( SalMenuItem* pItem )
 void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 {
 #ifndef NO_NATIVE_MENUS
+	// Don't allow updating of menus while we are resetting the show only menus
+	// state
+	if ( pFrame->mbInShowOnlyMenus )
+		return;
+
 	if(!pMenu) {
 		// locate the menubar for the frame
 		pMenu = pFrame->mpMenuBar;
