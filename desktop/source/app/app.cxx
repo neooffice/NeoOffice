@@ -318,17 +318,6 @@
 
 #include <stdio.h>
 
-#if defined PRODUCT_WELCOME_URL
-
-#include <sys/param.h>
-#include <rtl/uri.hxx>
-
-#ifndef _DESKTOPX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
- 
-#endif	// PRODUCT_WELCOME_URL
-
 #define DEFINE_CONST_UNICODE(CONSTASCII)        UniString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
 #define U2S(STRING)                                ::rtl::OUStringToOString(STRING, RTL_TEXTENCODING_UTF8)
 
@@ -2019,11 +2008,11 @@ sal_Bool Desktop::InitializeQuickstartMode( Reference< XMultiServiceFactory >& r
         // this will only be activated if -quickstart was specified on cmdline
         RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) createInstance com.sun.star.office.Quickstart" );
 
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_JAVA
         sal_Bool bQuickstart = sal_True;
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
         sal_Bool bQuickstart = GetCommandLineArgs()->IsQuickstart();
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         Sequence< Any > aSeq( 1 );
         aSeq[0] <<= bQuickstart;
 
@@ -2873,68 +2862,6 @@ void Desktop::OpenDefault()
     }
     _bSuppressOpenDefault = true;
 #endif	// USE_JAVA
-
-#if defined PRODUCT_WELCOME_URL && defined BUILD_MACHINE
-    bool bShowWelcomePage = true;
-   	OUString aProductKey = ::utl::Bootstrap::getProductKey( aProductKey );
-    if ( !aProductKey.getLength() )
-    	bShowWelcomePage = false;
-
-    OUString aUserInstallURL;
-    if ( bShowWelcomePage && ::utl::Bootstrap::locateUserInstallation( aUserInstallURL ) == ::utl::Bootstrap::PATH_EXISTS )
-    {
-        OUString aWelcomeName = aUserInstallURL;
-        aWelcomeName += OUString::createFromAscii( "/.welcomepage." );
-        aWelcomeName += aProductKey;
-        ::osl::File aFile( aWelcomeName );
-        ::osl::FileBase::RC nError = aFile.open( osl_File_OpenFlag_Read );
-        if ( nError == ::osl::FileBase::E_None )
-        {
-            bShowWelcomePage = false;
-            aFile.close();
-        }
-        else
-        {
-            // Create the file so that the welcome page will not show next time
-            nError = aFile.open( osl_File_OpenFlag_Read | osl_File_OpenFlag_Create );
-            if ( nError == ::osl::FileBase::E_None )
-                aFile.close();
-        }
-    }
-
-    if ( bShowWelcomePage )
-    {
-        // Open URL in application in read-only mode
-        OUString aURL;
-#ifdef X11_PRODUCT_WELCOME_URL
-        if ( ::desktop::IsX11Product() )
-            aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( X11_PRODUCT_WELCOME_URL ) );
-        else
-#endif	// X11_PRODUCT_WELCOME_URL
-            aURL = OUString( RTL_CONSTASCII_USTRINGPARAM( PRODUCT_WELCOME_URL ) );
-        OUString aHost;
-        char aBuf[ MAXHOSTNAMELEN ];
-        if ( !gethostname( aBuf, sizeof( aBuf ) ) )
-            aHost += OUString::createFromAscii( aBuf );
-        aHost += OUString::createFromAscii( "." );
-        if ( !getdomainname( aBuf, sizeof( aBuf ) ) )
-            aHost += OUString::createFromAscii( aBuf );
-
-        aURL += OUString::createFromAscii( "?viewinooo=" );
-        aURL += OUString::createFromAscii( "&product=" );
-        aURL += aProductKey;
-        aURL += OUString::createFromAscii( "&host=" );
-        aURL += aHost;
-        aURL += OUString::createFromAscii( "&buildmachine=" );
-        aURL += OUString( RTL_CONSTASCII_USTRINGPARAM( BUILD_MACHINE ) );
-
-        // Open URL
-        ProcessDocumentsRequest aRequest;
-        aRequest.pcProcessed = NULL;
-        aRequest.aViewList = ::rtl::Uri::encode( aURL, rtl_UriCharClassUric, rtl_UriEncodeStrict, RTL_TEXTENCODING_UTF8 );
-        OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
-    }
-#endif	// PRODUCT_WELCOME_URL && BUILD_MACHINE
 }
 
 
