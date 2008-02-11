@@ -699,6 +699,22 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 	SalData *pSalData = GetSalData();
 
 	JavaSalFrame *pFocusFrame = pSalData->mpFocusFrame;
+
+	// Fix bug 1106 If the focus frame is not set or is not visible, find
+	// the first visible non-floating frame
+	if ( !pFocusFrame || !pFocusFrame->mbVisible || pFocusFrame->IsFloatingFrame() )
+	{
+		pFocusFrame = NULL;
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() )
+			{
+				pFocusFrame = *it;
+				break;
+			}
+		}
+	}
+
 	if ( pFocusFrame )
 	{
 		updatePageFormat( ORIENTATION_PORTRAIT );

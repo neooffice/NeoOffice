@@ -216,7 +216,7 @@ void JavaSalFrame::AddObject( JavaSalObject *pObject )
 
 bool JavaSalFrame::IsFloatingFrame()
 {
-	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) && this != GetSalData()->mpPresentationFrame );
+	return ( ! ( mnStyle & ( SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE ) ) && this != GetSalData()->mpPresentationFrame && !mbShowOnlyMenus );
 }
 
 // -----------------------------------------------------------------------
@@ -382,15 +382,13 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		// Remove the native window since it is destroyed when hidden
 		maSysData.aWindow = 0;
 
-		// Fix bug 1106 by ensuring that some frame has focus if we close
-		// the focus frame
+		// Unset focus but don't set focus to another frame as it will cause
+		// menu shortcuts to be disabled if we go into show only menus mode
+		// after closing a window whose child window had focus
 		if ( pSalData->mpFocusFrame == this )
 		{
-			pSalData->mpFocusFrame = NULL;
-
-			// Set focus to parent frame
-			if ( mpParent && mpParent->mbVisible )
-				mpParent->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+			com_sun_star_vcl_VCLEvent aFocusEvent( SALEVENT_LOSEFOCUS, this, NULL );
+			aFocusEvent.dispatch();
 		}
 
 		if ( pSalData->mpLastDragFrame == this )
