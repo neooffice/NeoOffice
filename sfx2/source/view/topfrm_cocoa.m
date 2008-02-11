@@ -36,6 +36,9 @@
 #import <Cocoa/Cocoa.h>
 #import "topfrm_cocoa.h"
 
+// Undefine this to disable the Command-click feature in the window titlebar
+#define ALLOW_SET_REPRESENTED_FILENAME
+
 @interface DoSetRepresentedFilename : NSObject
 {
 	NSString *thePath;
@@ -87,6 +90,7 @@
  */
 void DoCocoaSetRepresentedFilename( unsigned long winRef, CFStringRef path )
 {
+#ifdef ALLOW_SET_REPRESENTED_FILENAME
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( winRef )
@@ -97,4 +101,5 @@ void DoCocoaSetRepresentedFilename( unsigned long winRef, CFStringRef path )
 	}
 
 	[pPool release];
+#endif	// ALLOW_SET_REPRESENTED_FILENAME
 }
