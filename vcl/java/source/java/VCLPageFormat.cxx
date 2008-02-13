@@ -717,8 +717,6 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 
 	if ( pFocusFrame )
 	{
-		updatePageFormat( ORIENTATION_PORTRAIT );
-
 		// Ignore any AWT events while the page layout dialog is showing to
 		// emulate a modal dialog
 		void *pNSPrintInfo = getNativePrinterJob();
@@ -731,10 +729,10 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		pSalData->mbInNativeModalSheet = false;
 		pSalData->mpNativeModalSheetFrame = NULL;
 
-		out = (sal_Bool)NSPageLayout_result( pDialog );
-
+		BOOL bLandscape = FALSE;
+		out = (sal_Bool)NSPageLayout_result( pDialog, &bLandscape );
 		if ( out )
-			updatePageFormat( ORIENTATION_PORTRAIT );
+			updatePageFormat( bLandscape ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT );
 	}
 
 	return out;

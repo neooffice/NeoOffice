@@ -564,6 +564,14 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	                PrinterSetupDialog* pPrintSetupDlg = new PrinterSetupDialog( GetWindow() );
 					pPrintSetupDlg->SetPrinter( pDlgPrinter );
 					nDialogRet = pPrintSetupDlg->Execute();
+#ifdef USE_JAVA
+	                // Force view to update the orientation and paper size set
+                    // in the setup dialog. Note that these flags should only
+                    // change the attributes of the current printer, not the
+                    // printer itself.
+				    if ( nDialogRet == RET_OK )
+                        SetPrinter( pDlgPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
+#endif	// USE_JAVA
 	                DELETEZ( pPrintSetupDlg );
 
 	                // no recording of PrinterSetup except printer name (is printer dependent)

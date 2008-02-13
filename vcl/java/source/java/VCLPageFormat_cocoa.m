@@ -121,11 +121,13 @@ static BOOL bIsRunningPanther = NO;
 	BOOL					mbFinished;
 	NSPrintInfo*			mpInfo;
 	NSPrintingOrientation	mnOrientation;
+	NSSize					maPaperSize;
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow orientation:(NSPrintingOrientation)nOrientation;
+- (NSPrintingOrientation)orientation;
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo;
 - (BOOL)result;
 - (void)showPageLayoutDialog:(id)pObject;
@@ -145,19 +147,40 @@ static BOOL bIsRunningPanther = NO;
 	mbFinished = YES;
 	mpInfo = pInfo;
 	mnOrientation = nOrientation;
+	maPaperSize = NSMakeSize( 0, 0 );
 	mbResult = NO;
 	mpWindow = pWindow;
 
 	return self;
 }
 
+- (NSPrintingOrientation)orientation
+{
+	return mnOrientation;
+}
+
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
 {
 	mbFinished = YES;
 	if ( nCode == NSOKButton )
+	{
 		mbResult = YES;
+		mnOrientation = [mpInfo orientation];
+		maPaperSize = [mpInfo paperSize];
+	}
 	else
+	{
 		mbResult = NO;
+		[mpInfo setOrientation:mnOrientation];
+
+		NSMutableDictionary *pDictionary = [mpInfo dictionary];
+		if ( pDictionary )
+		{
+			NSValue *pValue = [NSValue valueWithSize:maPaperSize];
+			if ( pValue )
+				[pDictionary setObject:pValue forKey:NSPrintPaperSize];
+		}
+	}
 }
 
 - (BOOL)result
@@ -172,6 +195,7 @@ static BOOL bIsRunningPanther = NO;
 	{
 		if ( [mpInfo orientation] != mnOrientation )
 			[mpInfo setOrientation:mnOrientation ];
+		maPaperSize = [mpInfo paperSize];
 
 		mbFinished = NO;
 		[pLayout beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(pageLayoutDidEnd:returnCode:contextInfo:) contextInfo:nil];
@@ -194,7 +218,7 @@ BOOL NSPageLayout_finished( id pDialog )
 	return bRet;
 }
 
-BOOL NSPageLayout_result( id pDialog )
+BOOL NSPageLayout_result( id pDialog, BOOL *bLandscape )
 {
 	BOOL bRet = NO;
 
@@ -203,6 +227,8 @@ BOOL NSPageLayout_result( id pDialog )
 	if ( pDialog )
 	{
 		bRet = [(ShowPageLayoutDialog *)pDialog result];
+		if ( bLandscape )
+			*bLandscape = [(ShowPageLayoutDialog *)pDialog orientation];
 		[(ShowPageLayoutDialog *)pDialog release];
 	}
 

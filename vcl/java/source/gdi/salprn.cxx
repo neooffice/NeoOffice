@@ -109,15 +109,17 @@ void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 BOOL JavaSalInfoPrinter::Setup( SalFrame* pFrame, ImplJobSetup* pSetupData )
 {
 	// Display a native page setup dialog
-	mpVCLPageFormat->setup();
+	BOOL bRet = mpVCLPageFormat->setup();
+	if ( bRet )
+	{
+		// Update values
+		SetData( 0, pSetupData );
 
-	// Update values
-	SetData( 0, pSetupData );
+		// Fix bug 2777 by caching the scaling factor
+		pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( mpVCLPageFormat->getScaleFactor() );
+	}
 
-	// Fix bug 2777 by caching the scaling factor
-	pSetupData->maValueMap[ aPageScalingFactorKey ] = OUString::valueOf( mpVCLPageFormat->getScaleFactor() );
-
-	return TRUE;
+	return bRet;
 }
 
 // -----------------------------------------------------------------------

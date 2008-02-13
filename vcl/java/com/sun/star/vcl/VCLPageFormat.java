@@ -272,24 +272,32 @@ public final class VCLPageFormat {
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
 		Paper paper = pageFormat.getPaper();
-		long width = Math.round(paper.getWidth());
-		long height = Math.round(paper.getHeight());
+		long width;
+		long height;
+		if (paperOrientation == PageFormat.PORTRAIT) {
+			width = Math.round(paper.getWidth());
+			height = Math.round(paper.getHeight());
+		}
+		else {
+			width = Math.round(paper.getHeight());
+			height = Math.round(paper.getWidth());
+		}
 
-		if (width == 842 && height == 1191)
+		if (Math.abs(width - 842) < 2 && Math.abs(height - 1191) < 2)
 			return VCLPageFormat.PAPER_A3;
-		else if (width == 595 && height == 842)
+		else if (Math.abs(width - 595) < 2 && Math.abs(height - 842) < 2)
 			return VCLPageFormat.PAPER_A4;
-		else if (width == 420 && height == 595)
+		else if (Math.abs(width - 420) < 2 && Math.abs(height - 595) < 2)
 			return VCLPageFormat.PAPER_A5;
-		else if (width == 709 && height == 1001)
+		else if (Math.abs(width - 709) < 2 && Math.abs(height - 1001) < 2)
 			return VCLPageFormat.PAPER_B4;
-		else if (width == 499 && height == 709)
+		else if (Math.abs(width - 499) < 2 && Math.abs(height - 709) < 2)
 			return VCLPageFormat.PAPER_B5;
-		else if (width == 612 && height == 792)
+		else if (Math.abs(width - 612) < 2 && Math.abs(height - 792) < 2)
 			return VCLPageFormat.PAPER_LETTER;
-		else if (width == 612 && height == 1008)
+		else if (Math.abs(width - 612) < 2 && Math.abs(height - 1008) < 2)
 			return VCLPageFormat.PAPER_LEGAL;
-		else if (width == 792 && height == 1224)
+		else if (Math.abs(width - 792) < 2 && Math.abs(height - 1224) < 2)
 			return VCLPageFormat.PAPER_TABLOID;
 		else
 			return VCLPageFormat.PAPER_USER;
