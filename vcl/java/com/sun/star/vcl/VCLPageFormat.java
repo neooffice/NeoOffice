@@ -155,6 +155,11 @@ public final class VCLPageFormat {
 	private int paperOrientation = PageFormat.PORTRAIT;
 
 	/**
+	 * The paper rotated flag.
+	 */
+	private boolean paperRotated = false;
+
+	/**
 	 * Constructs a new <code>VCLPageFormat</code> instance.
 	 */
 	public VCLPageFormat() {
@@ -211,7 +216,10 @@ public final class VCLPageFormat {
 		int y = (int)((pageFormat.getHeight() - pageFormat.getImageableY() - pageFormat.getImageableHeight()) * printerTextResolution / 72);
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
-		return new Rectangle(x, y, width, height);
+		if (paperRotated)
+			return new Rectangle(y, x, height, width);
+		else
+			return new Rectangle(x, y, width, height);
 
 	}
 
@@ -222,7 +230,7 @@ public final class VCLPageFormat {
 	 */
 	public int getOrientation() {
 
-		if (paperOrientation == PageFormat.PORTRAIT)
+		if ((!paperRotated && paperOrientation == PageFormat.PORTRAIT) || (paperRotated && paperOrientation != PageFormat.PORTRAIT))
 			return ORIENTATION_PORTRAIT;
 		else
 			return ORIENTATION_LANDSCAPE;
@@ -259,7 +267,10 @@ public final class VCLPageFormat {
 	public Dimension getPageSize() {
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
-		return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
+		if (paperRotated)
+			return new Dimension((int)(pageFormat.getHeight() * printerTextResolution / 72), (int)(pageFormat.getWidth() * printerTextResolution / 72));
+		else
+			return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
 
 	}
 
@@ -274,7 +285,7 @@ public final class VCLPageFormat {
 		Paper paper = pageFormat.getPaper();
 		long width;
 		long height;
-		if (paperOrientation == PageFormat.PORTRAIT) {
+		if ((!paperRotated && paperOrientation == PageFormat.PORTRAIT) || (paperRotated && paperOrientation != PageFormat.PORTRAIT)) {
 			width = Math.round(paper.getWidth());
 			height = Math.round(paper.getHeight());
 		}
@@ -338,6 +349,17 @@ public final class VCLPageFormat {
 	}
 
 	/**
+	 * Returns the paper rotated state
+	 *
+	 * @return the paper rotated state
+	 */
+	public boolean isPaperRotated() {
+
+		return paperRotated;
+
+	}
+
+	/**
 	 * Set the editability of this component.
 	 *
 	 * @param b <code>true</code> to make this component editable or else
@@ -384,7 +406,10 @@ public final class VCLPageFormat {
 		p.setImageableArea(ix, iy, iw, ih);
 		pageFormat.setPaper(p);
 
-		setOrientation(o);
+		if (o == ORIENTATION_PORTRAIT)
+			paperRotated = false;
+		else
+			paperRotated = true;
 
 	}
 

@@ -418,7 +418,7 @@ public final class VCLPrintJob implements Pageable, Printable, Runnable {
 
 		// Get the current page's printGraphics context
 		if (printStarted && printThread != null) {
-			if (printPageFormat.getOrientation() != PageFormat.PORTRAIT) {
+			if (printPageFormat.getOrientation() != PageFormat.PORTRAIT || pageFormat.isPaperRotated()) {
 				if (o == VCLPageFormat.ORIENTATION_PORTRAIT)
 					o = VCLPageFormat.ORIENTATION_LANDSCAPE;
 				else

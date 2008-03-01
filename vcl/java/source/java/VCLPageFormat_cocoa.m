@@ -194,7 +194,7 @@ static BOOL bIsRunningPanther = NO;
 	if ( pLayout )
 	{
 		if ( [mpInfo orientation] != mnOrientation )
-			[mpInfo setOrientation:mnOrientation ];
+			[mpInfo setOrientation:mnOrientation];
 		maPaperSize = [mpInfo paperSize];
 
 		mbFinished = NO;
@@ -319,12 +319,18 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 			{
 				[pDictionary setObject:pValue forKey:NSPrintPaperSize];
 
-				// Fix bugs 543, 1678, and 2202 by detecting when the paper
-				// should be rotated determining the minimum unmatched area
-				double fDiff = pow( (double)aSize.width - nWidth, 2 ) + pow( (double)aSize.height - nHeight, 2 );
-				double fRotatedDiff = pow( (double)aSize.width - nHeight, 2 ) + pow( (double)aSize.height - nWidth, 2 );
-				if ( fDiff > fRotatedDiff )
-					bRet = YES;
+				// Fix bugs 543, 1678, 2202, and 2913 by detecting when the
+				// paper should be rotated determining the minimum unmatched
+				// area
+				pValue = (NSValue *)[pDictionary objectForKey:NSPrintPaperSize];
+				if ( pValue )
+				{
+					aSize = [pValue sizeValue];
+					double fDiff = pow( (double)aSize.width - nWidth, 2 ) + pow( (double)aSize.height - nHeight, 2 );
+					double fRotatedDiff = pow( (double)aSize.width - nHeight, 2 ) + pow( (double)aSize.height - nWidth, 2 );
+					if ( fDiff > fRotatedDiff )
+						bRet = YES;
+				}
 			}
 
 			NSPrintInfo *pRealInfo = [pDictionary objectForKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
