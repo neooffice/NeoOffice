@@ -572,8 +572,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			case SALEVENT_MOUSEBUTTONDOWN:
 				// Fix bugs 437 and 2264 by ensuring that if the next
 				// event is a matching event, it will be dispatched before
-				// the painting timer runs
-				OThread::yield();
+				// the painting timer runs. Fix bug 2941 by only apply the
+				// fix for bugs 437 and 2264 when the bHandleAllCurrentEvents
+				// flag is true.
+				if ( bHandleAllCurrentEvents )
+					OThread::yield();
+				else
+					bContinue = false;
 				break;
 		}
 	}
