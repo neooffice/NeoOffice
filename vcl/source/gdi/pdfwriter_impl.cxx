@@ -5853,9 +5853,7 @@ void PDFWriterImpl::registerGlyphs(
         {
 
 #ifdef USE_JAVA
-            ATSUFontID nFontID = (ATSUFontID)( pCurrentFont->GetFontId() );
-            ATSFontRef aATSFont = FMGetATSFontRefFromFont( nFontID );
-            FontSubset& rSubset = m_aSubsets[ (void *)aATSFont ];
+            FontSubset& rSubset = m_aSubsets[ (void *)pCurrentFont->GetFontId() ];
 #else	// USE_JAVA
             FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
 #endif	// USE_JAVA
@@ -11848,7 +11846,10 @@ void PDFWriterImpl::encodeGlyphs()
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
-        ATSFontRef aATSFont = (ATSFontRef)it->first;
+        ATSFontRef aATSFont = FMGetATSFontRefFromFont( it->first );
+        if ( !aATSFont )
+            continue;
+
         CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
         if ( !aFont )
             continue;
