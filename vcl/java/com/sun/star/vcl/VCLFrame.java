@@ -3139,6 +3139,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private Dimension minSize = null;
 
 		/**
+		 * The Panther flag.
+		 */
+		private boolean panther = false;
+
+		/**
 		 * The show menubar flag.
 		 */
 		private boolean showMenuBar = true;
@@ -3192,6 +3197,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					setFocusableWindowState(false);
 				}
 			}
+
+			panther = frame.queue.isPanther();
 
 			setMinimumSize(0, 0);
 
@@ -3314,8 +3321,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			MenuBar mb = getMenuBar();
 
 			// On Mac OS X 10.3.x, we need to remove the menubar before
-			// resetting the state
-			if (b != showMenuBar)
+			// resetting the state. Fix bug 2922 by not removing the menubar
+			// if we are not running on Mac OS X 10.3.x.
+			if (panther && b != showMenuBar)
 				setMenuBar(null);
 			showMenuBar = b;
 
