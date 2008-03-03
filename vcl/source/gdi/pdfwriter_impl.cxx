@@ -5853,7 +5853,7 @@ void PDFWriterImpl::registerGlyphs(
         {
 
 #ifdef USE_JAVA
-            FontSubset& rSubset = m_aSubsets[ (void *)pCurrentFont->GetFontId() ];
+            FontSubset& rSubset = m_aSubsets[ pCurrentFont->GetFontId() ];
 #else	// USE_JAVA
             FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
 #endif	// USE_JAVA
@@ -6074,7 +6074,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
     OStringBuffer aLine( 512 );
 
-    const int nMaxGlyphs = 256;
+    // const int nMaxGlyphs = 256;
+    const int nMaxGlyphs = 1;
 
     sal_Int32 pGlyphs[nMaxGlyphs];
 #ifdef USE_JAVA

@@ -438,7 +438,7 @@ public:
         FontMapping			m_aMapping;
     };
 #ifdef USE_JAVA
-    typedef std::map< void*, FontSubset > FontSubsetData;
+    typedef std::map< long, FontSubset > FontSubsetData;
 #else	// USE_JAVA
     typedef std::map< ImplFontData*, FontSubset > FontSubsetData;
 #endif	// USE_JAVA
