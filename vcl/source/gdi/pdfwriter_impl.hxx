@@ -83,7 +83,7 @@
 #include <com/sun/star/util/XURLTransformer.hpp>
 #endif
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
 
 #ifndef _SV_GDIMTF_HXX
 #include <gdimtf.hxx>
@@ -157,7 +157,7 @@ public:
     LanguageType		GetLanguage() const { return meLang; }
 };
 
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
 #include <vector>
 #include <map>
@@ -381,7 +381,7 @@ public:
     // font subsets
     struct GlyphEmit
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         sal_uInt16		m_nSubsetGlyphID;
 #else	// USE_JAVA
         sal_uInt8		m_nSubsetGlyphID;
@@ -389,7 +389,7 @@ public:
         sal_Unicode		m_aUnicode;
     };
     typedef std::map< long, GlyphEmit > FontEmitMapping;
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
     struct PDFEmitObject
     {
         sal_Int32			m_nID;
@@ -401,34 +401,34 @@ public:
         PDFEmitObject() : m_nID( 0 ), m_bStream( false ), m_nStreamPos( 0 ), m_nStreamLen( 0 ) {}
     };
     typedef std::map< sal_Int32, PDFEmitObject > PDFObjectMapping;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     struct FontEmit
     {
         sal_Int32			m_nFontID;
         FontEmitMapping		m_aMapping;
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         rtl::OUString		m_aFontFileName;
         std::map< long, sal_uInt16 >	m_aGlyphEncoding;
         PDFObjectMapping	m_aObjectMapping;
         std::map< rtl::OString, sal_Int32 > m_aFontSubIDMapping;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
         FontEmit( sal_Int32 nID ) : m_nFontID( nID ) {}
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         ~FontEmit() { osl_removeFile( m_aFontFileName.pData ); }
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     };
     typedef std::list< FontEmit > FontEmitList;
     struct Glyph
     {
         sal_Int32	m_nFontID;
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         sal_Int32	m_nFontSubID;
         bool		m_bIdentityGlyph;
         sal_uInt16	m_nSubsetGlyphID;
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
         sal_uInt8	m_nSubsetGlyphID;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     };
     typedef std::map< long, Glyph > FontMapping;
 
@@ -437,11 +437,11 @@ public:
         FontEmitList		m_aSubsets;
         FontMapping			m_aMapping;
     };
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
     typedef std::map< void*, FontSubset > FontSubsetData;
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
     typedef std::map< ImplFontData*, FontSubset > FontSubsetData;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
     struct EmbedCode
     {
@@ -808,10 +808,10 @@ private:
     std::list< GraphicsState >				m_aGraphicsStack;
     GraphicsState							m_aCurrentPDFState;
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
     GDIMetaFile								m_aMtf;
     bool									m_bUsingMtf;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
     ZCodec*									m_pCodec;
     SvMemoryStream*							m_pMemStream;
@@ -940,11 +940,11 @@ i12626
 	void appendLiteralStringEncrypt( rtl::OStringBuffer& rInString, const sal_Int32 nInObjectNumber, rtl::OStringBuffer& rOutBuffer );
 
     /* creates fonts and subsets that will be emitted later */
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
     void registerGlyphs( int nGlyphs, sal_Int32* pGlyphs, sal_Unicode* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, ImplFontData* pFallbackFonts[] );
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
     void registerGlyphs( int nGlyphs, sal_Int32* pGlyphs, sal_Unicode* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, ImplFontData* pFallbackFonts[] );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
     /*  emits a text object according to the passed layout */
     /* TODO: remove rText as soon as SalLayout will change so that rText is not necessary anymore */
@@ -1114,11 +1114,11 @@ i12626
      */
     bool checkEmitStructure();
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
     sal_Int32 getNextPDFObject( oslFileHandle aFile, PDFObjectMapping& rObjectMapping );
     sal_Int32 writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle aFile, PDFObjectMapping& rObjMapping, sal_Int32 nFontID, std::map< sal_Int32, sal_Int32 >& rIDMapping );
     void encodeGlyphs();
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
     /* draws an emphasis mark */
     void drawEmphasisMark(  long nX, long nY, const PolyPolygon& rPolyPoly, BOOL bPolyLine, const Rectangle& rRect1, const Rectangle& rRect2 );
@@ -1137,11 +1137,11 @@ methods for PDF security
 	void computeUDictionaryValue();
 
 public:
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, FontSubsetData *pSubsets = NULL );
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     ~PDFWriterImpl();
 
     /*	for OutputDevice so the reference device can have a list
@@ -1183,80 +1183,80 @@ public:
 
     void setLineColor( const Color& rColor )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaLineColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aLineColor = ImplIsColorTransparent(rColor) ? Color( COL_TRANSPARENT ) : rColor;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateLineColor;
     }
 
     void setFillColor( const Color& rColor )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaFillColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFillColor = ImplIsColorTransparent(rColor) ? Color( COL_TRANSPARENT ) : rColor;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFillColor;        
     }
 
     void setTextLineColor()
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aTextLineColor = Color( COL_TRANSPARENT );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateTextLineColor;        
     }
 
     void setTextLineColor( const Color& rColor )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaTextLineColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aTextLineColor = rColor;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateTextLineColor;        
     }
 
     void setTextFillColor( const Color& rColor )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaTextFillColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFont.SetFillColor( rColor );
         m_aGraphicsStack.front().m_aFont.SetTransparent( ImplIsColorTransparent( rColor ) ? TRUE : FALSE );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
     void setTextFillColor()
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), FALSE ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFont.SetFillColor( Color( COL_TRANSPARENT ) );
         m_aGraphicsStack.front().m_aFont.SetTransparent( TRUE );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
     void setTextColor( const Color& rColor )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaTextColorAction( rColor ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFont.SetColor( rColor );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
 
     void clearClipRegion()
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaClipRegionAction( Region(), FALSE ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aClipRegion.SetNull();
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateClipRegion;
     }
@@ -1271,20 +1271,20 @@ public:
 
     void setLayoutMode( sal_Int32 nLayoutMode )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaLayoutModeAction( nLayoutMode ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_nLayoutMode = nLayoutMode;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateLayoutMode;
     }
     
     void setDigitLanguage( LanguageType eLang )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaDigitLanguagePDFAction( eLang ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
         m_aGraphicsStack.front().m_aDigitLanguage = eLang;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateDigitLanguage;
@@ -1292,10 +1292,10 @@ public:
 
     void setTextAlign( TextAlign eAlign )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaTextAlignAction( eAlign ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
         m_aGraphicsStack.front().m_aFont.SetAlign( eAlign );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
@@ -1303,10 +1303,10 @@ public:
 
     void setAntiAlias( sal_Int32 nAntiAlias )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         if ( !m_bUsingMtf )
             m_aMtf.AddAction( new MetaAntiAliasPDFAction( nAntiAlias ) );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
         m_aGraphicsStack.front().m_nAntiAlias = nAntiAlias;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateAntiAlias;
     }
@@ -1406,7 +1406,7 @@ public:
     }
 };
 
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
 
 class MetaTextPDFAction : public MetaTextAction
 {
@@ -1927,7 +1927,7 @@ public:
     const Bitmap&		GetAlphaMask() const { return maAlphaMask; }
 };
 
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
 }
 
