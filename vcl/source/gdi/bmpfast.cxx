@@ -131,10 +131,11 @@ public:
     PIXBYTE GetRed() const      { return mpPixel[1]; }
     PIXBYTE GetGreen() const    { return mpPixel[2]; }
     PIXBYTE GetBlue() const     { return mpPixel[3]; }
-    PIXBYTE GetAlpha() const    { return mpPixel[0]; }
 #ifdef USE_JAVA
+    PIXBYTE GetAlpha() const    { return 0xFF - mpPixel[0]; }
     void SetAlpha( PIXBYTE a ) const { mpPixel[0] = 0xFF - a; }
 #else	// USE_JAVA
+    PIXBYTE GetAlpha() const    { return mpPixel[0]; }
     void SetAlpha( PIXBYTE a ) const { mpPixel[0] = a; }
 #endif	// USE_JAVA
 
@@ -195,10 +196,11 @@ public:
     PIXBYTE GetRed() const          { return mpPixel[2]; }
     PIXBYTE GetGreen() const        { return mpPixel[1]; }
     PIXBYTE GetBlue() const         { return mpPixel[0]; }
-    PIXBYTE GetAlpha() const        { return mpPixel[3]; }
 #ifdef USE_JAVA
+    PIXBYTE GetAlpha() const        { return 0xFF - mpPixel[3]; }
     void SetAlpha( PIXBYTE a ) const{ mpPixel[3] = 0xFF - a; }
 #else	// USE_JAVA
+    PIXBYTE GetAlpha() const        { return mpPixel[3]; }
     void SetAlpha( PIXBYTE a ) const{ mpPixel[3] = a; }
 #endif	// USE_JAVA
 
