@@ -2745,17 +2745,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		graphics.notifyGraphicsChanged();
 
 		if (b) {
-			// Fix bug 1012 by deiconifying the parent window
-			Window w = window;
-			VCLFrame f = this;
-			while (f != null) {
-				w = w.getOwner();
- 				if (w == null || !w.isShowing())
-					break;
-				f = VCLFrame.findFrame(w);
-				if (f != null) {
- 					if (f.getState() == SAL_FRAMESTATE_MINIMIZED)
-						f.setState(SAL_FRAMESTATE_NORMAL);
+			// Fix bug 1012 by deiconifying the parent window. Fix bug 1388 by
+			// skipping this step if the current window is a floating window.
+			if (!isFloatingWindow()) {
+				Window w = window;
+				VCLFrame f = this;
+				while (f != null) {
+					w = w.getOwner();
+ 					if (w == null || !w.isShowing())
+						break;
+					f = VCLFrame.findFrame(w);
+					if (f != null) {
+ 						if (f.getState() == SAL_FRAMESTATE_MINIMIZED)
+							f.setState(SAL_FRAMESTATE_NORMAL);
+					}
 				}
 			}
 
@@ -2777,9 +2780,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Hide any parent frames if this frame is modal
 			if (modal) {
-				w = window.getOwner();
+				Window w = window.getOwner();
 				if (w != null) {
-					f = VCLFrame.findFrame(w);
+					VCLFrame f = VCLFrame.findFrame(w);
 					while (w != null && f != null) {
 						synchronized (f) {
 							if (w instanceof VCLFrame.NoPaintFrame)
