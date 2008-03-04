@@ -1354,11 +1354,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private InputMethodEvent lastUncommittedInputMethodEvent = null;
 
 	/**
-	 * The modal flag.
-	 */
-	private boolean modal = false;
-
-	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -1610,7 +1605,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed)
 			return;
 
-		setVisible(false, false, false);
+		setVisible(false, false);
 		setMenuBar(null);
 		children = null;
 		graphics.dispose();
@@ -1702,6 +1697,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (disposed || isFloatingWindow() || !window.isShowing())
 			return;
+
+		// Update menubar state
+		Frame[] frames = Frame.getFrames();
+		for (int i = 0; i < frames.length; i++) {
+			if (frames[i] instanceof VCLFrame.NoPaintFrame)
+				((VCLFrame.NoPaintFrame)frames[i]).updateMenuBar();
+		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
 
@@ -2728,10 +2730,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *  hides this component
 	 * @param noActivate <code>true</code> displays the window without giving
 	 *  it focus
-	 * @param isModal <code>true</code> indicates that the window as a modal
-	 *  window in the OOo C++ code
 	 */
-	public synchronized void setVisible(boolean b, boolean noActivate, boolean isModal) {
+	public synchronized void setVisible(boolean b, boolean noActivate) {
 
 		if (b == window.isShowing())
 			return;
@@ -2773,27 +2773,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				window.setFocusableWindowState(false);
 			}
 
-			// Only set modal flag when showing so we can remember its last
-			// state
-			if (!(window instanceof Frame))
-				modal = isModal;
-
-			// Hide any parent frames if this frame is modal
-			if (modal) {
-				Window w = window.getOwner();
-				if (w != null) {
-					VCLFrame f = VCLFrame.findFrame(w);
-					while (w != null && f != null) {
-						synchronized (f) {
-							if (w instanceof VCLFrame.NoPaintFrame)
-								((VCLFrame.NoPaintFrame)w).showMenuBar(false);
-							w = w.getOwner();
-							f = VCLFrame.findFrame(w);
-						}
-					}
-				}
-			}
-
 			panel.setVisible(true);
 			window.show();
 
@@ -2815,24 +2794,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.setVisible(false);
 			window.hide();
 			window.removeNotify();
-
-			// Unhide menus in non-modal parent frames
-			if (modal) {
-				Window w = window.getOwner();
-				if (w != null) {
-					VCLFrame f = VCLFrame.findFrame(w);
-					while (w != null && f != null) {
-						synchronized (f) {
-							if (f.modal)
-								break;
-							else if (w instanceof VCLFrame.NoPaintFrame)
-								((VCLFrame.NoPaintFrame)w).showMenuBar(true);
-							w = w.getOwner();
-							f = VCLFrame.findFrame(w);
-						}
-					}
-				}
-			}
 		}
 
 	}
@@ -3134,19 +3095,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLFrame frame = null;
 
 		/**
+		 * The hidden menubar.
+		 */
+		private MenuBar hiddenMenuBar = null;
+
+		/**
 		 * The minimum size.
 		 */
 		private Dimension minSize = null;
-
-		/**
-		 * The Panther flag.
-		 */
-		private boolean panther = false;
-
-		/**
-		 * The show menubar flag.
-		 */
-		private boolean showMenuBar = true;
 
 		/**
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
@@ -3175,6 +3131,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Returns the menubar for this frame.
+		 *
+		 * @return the menubar or <code>null</code>
+		 */
+		public synchronized MenuBar getMenuBar() {
+
+			MenuBar mb = super.getMenuBar();
+			if (mb == null)
+				mb = hiddenMenuBar;
+			return mb;
+
+		}
+
+		/**
 		 * Returns the minimum size for the frame.
 		 *
 		 * @return the minimum size for the frame
@@ -3197,8 +3167,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					setFocusableWindowState(false);
 				}
 			}
-
-			panther = frame.queue.isPanther();
 
 			setMinimumSize(0, 0);
 
@@ -3238,19 +3206,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param mb the menubar or <code>null</code>
 		 */
-		public void setMenuBar(MenuBar mb) {
+		public synchronized void setMenuBar(MenuBar mb) {
 
-			// Set enabled state of menus
-			if (mb != null) {
-				int count = mb.getMenuCount();
-				for (int i = 0; i < count; i++) {
-					Menu m = mb.getMenu(i);
-					if (m != null)
-						m.setEnabled(showMenuBar);
-				}
+			MenuBar oldMenuBar = super.getMenuBar();
+
+			if (isActive()) {
+				hiddenMenuBar = null;
+			}
+			else {
+				hiddenMenuBar = mb;
+				mb = null;
 			}
 
-			MenuBar oldMenuBar = getMenuBar();
 			if (oldMenuBar != mb) {
 				// If we are changing menubars, we need to remove all of the
 				// menus from the current menubar in reverse order and readd
@@ -3262,14 +3229,17 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					for (int i = count - 1; i >= 0; i--) {
 						Menu m = oldMenuBar.getMenu(i);
 						if (m != null) {
+							m.setEnabled(true);
 							oldMenuBar.remove(i);
 							oldMenus.add(m);
 						}
 					}
-
-					super.setMenuBar(null);
 				}
 
+				// On Mac OS X 10.3.x, we need to remove the menubar before
+				// replacing it
+				if (mb != null)
+					super.setMenuBar(null);
 				super.setMenuBar(mb);
 
 				if (oldMenuBar != null) {
@@ -3311,34 +3281,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
-		 * Shows or hides the menubar for this frame.
-		 *
-		 * @param b <code>true> to show the menubar otherwise hide the
-		 *  menubar
-		 */
-		void showMenuBar(boolean b) {
-
-			MenuBar mb = getMenuBar();
-
-			// On Mac OS X 10.3.x, we need to remove the menubar before
-			// resetting the state. Fix bug 2922 by not removing the menubar
-			// if we are not running on Mac OS X 10.3.x.
-			if (panther && b != showMenuBar)
-				setMenuBar(null);
-			showMenuBar = b;
-
-			// Reset enabled state of menus
-			setMenuBar(mb);
-
-		}
-
-		/**
 		 * This method performs no painting of the frame. This method is used
 		 * to prevent Java from painting over what VCL has painted.
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
 		public void update(Graphics g) {}
+
+		/**
+		 * Update the menubar state.
+		 */
+		synchronized void updateMenuBar() {
+
+			setMenuBar(getMenuBar());
+
+		}
 
 	}
 

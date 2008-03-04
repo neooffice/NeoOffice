@@ -216,11 +216,6 @@ public final class VCLEventQueue implements Runnable {
 	private VCLEventQueue.Queue[] queueList = new VCLEventQueue.Queue[2];
 
 	/**
-	 * The Panther flag.
-	 */
-	private boolean panther = false;
-
-	/**
 	 * The printing flag.
 	 */
 	private boolean printing = false;
@@ -231,8 +226,6 @@ public final class VCLEventQueue implements Runnable {
 	 * @param isPanther <code>true</code> if we are running on Mac OS X 10.3.x
 	 */
 	public VCLEventQueue(boolean isPanther) {
-
-		panther = isPanther;
 
 		// Create the list of queues
 		queueList[0] = new VCLEventQueue.Queue();
@@ -254,7 +247,7 @@ public final class VCLEventQueue implements Runnable {
 		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 
 		// Set keyboard focus manager
-		if (!panther) {
+		if (!isPanther) {
 			kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager(this));
 			kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 		}
@@ -415,17 +408,6 @@ public final class VCLEventQueue implements Runnable {
 	 *  main thread
 	 */
 	public native boolean isApplicationMainThread();
-
-	/**
-	 * Returns <code>true</code> if we are running on Mac OS X 10.3.x.
-	 *
-	 * @return <code>true</code> if we are running on Mac OS X 10.3.x
-	 */
-	boolean isPanther() {
-
-		return panther;
-
-	}
 
 	/**
 	 * Add an event to the cache.
