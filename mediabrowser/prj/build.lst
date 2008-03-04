@@ -1,0 +1,2 @@
+mb	mediabrowser	:	NULL
+mb	mediabrowser	nmake	-	all	mb_lib	NULL
