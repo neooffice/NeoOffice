@@ -442,16 +442,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	if ( ATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&mpGlyphDataArray, &mnGlyphCount ) != noErr || !mpGlyphDataArray )
-	{
-		Destroy();
-		return;
-	}
-	else if ( !mnGlyphCount )
-	{
-		Destroy();
-		return;
-	}
+	// Fix bug 2919 by still producing a valid text layout even if no glyphs
+	// can be retrieved
+	ATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&mpGlyphDataArray, &mnGlyphCount );
 
 	// Cache mapping of characters to glyph character indices
 	ByteCount nBufSize = mpHash->mnLen * sizeof( int );
@@ -463,7 +456,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	if ( mpHash->mbRTL )
 	{
 		i = 0;
-		for ( int j = mpHash->mnLen - 1; j >= 0 && i < mnGlyphCount; j-- )
+		for ( int j = mpHash->mnLen - 1; j >= 0 && i < mnGlyphCount && mpGlyphDataArray; j-- )
 		{
 			int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 			mpCharsToChars[ j ] = nIndex;
@@ -474,7 +467,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	else
 	{
 		i = 0;
-		for ( int j = 0; j < mpHash->mnLen && i < mnGlyphCount; j++ )
+		for ( int j = 0; j < mpHash->mnLen && i < mnGlyphCount && mpGlyphDataArray; j++ )
 		{
 			int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 			mpCharsToChars[ j ] = nIndex;
@@ -489,7 +482,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
-	for ( i = 0; i < mnGlyphCount; i++ )
+	for ( i = 0; i < mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 		if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
@@ -504,7 +497,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = fSize / fAdjustedSize;
 	int nLastNonSpacingIndex = -1;
-	for ( i = 0; i < mnGlyphCount; i++ )
+	for ( i = 0; i < mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 		if ( i == mnGlyphCount - 1 )
@@ -881,7 +874,7 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
 
-	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData )
+	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData && mpKashidaLayoutData->mpGlyphDataArray )
 		KashidaJustify( mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID, mpKashidaLayoutData->mpCharAdvances[ mpKashidaLayoutData->mpHash->mnLen - 1 ] );
 }
 
@@ -1099,7 +1092,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( mpKashidaLayoutData )
 				{
 					bool bHasArabicFontSupport = true;
-					if ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont )
+					if ( !mpKashidaLayoutData->mpGlyphDataArray || ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont ) )
 					{
 						bHasArabicFontSupport = false;
 					}
@@ -1198,7 +1191,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( nIndex >= 0 && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
 					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
-					if ( i >= 0 && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
+					if ( i >= 0 && pLayoutData->mpGlyphDataArray && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
 					{
 						nMinFallbackCharPos = nMinCharPos;
 						bRelayout = true;
@@ -1212,7 +1205,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( nIndex >= 0 && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
 					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
-					if ( i >= 0 && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
+					if ( i >= 0 && pLayoutData->mpGlyphDataArray && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
 					{
 						nEndFallbackCharPos = nEndCharPos;
 						bRelayout = true;
@@ -1300,7 +1293,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
  
 				nCharWidth = pCurrentLayoutData->mpCharAdvances[ nIndex ];
 
-				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
 					long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 					if ( !nGlyph )
@@ -1400,7 +1393,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	mnOrigWidth = aPos.X();
 
 	// Set fallback font
-	if ( pFallbackFont || bNeedSymbolFallback )
+	if ( pFallbackFont || bNeedSymbolFallback || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
@@ -1417,9 +1410,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					pHighScoreFontData = it->second;
 			}
 
-			if ( !pHighScoreFontData && !bUseNativeFallback && pFallbackFont )
+			if ( !pHighScoreFontData && !bUseNativeFallback )
 			{
-				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont->getNativeFont() );
+				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
 				if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 				{
 					USHORT nHighScore = 0;
@@ -1672,7 +1665,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			}
 		}
 
-		for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+		for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 		{
 			long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
