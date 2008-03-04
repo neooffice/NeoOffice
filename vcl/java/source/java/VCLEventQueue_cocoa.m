@@ -37,9 +37,6 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 
-// Define this only if QuickTime is enabled in the avmedia module
-#define USE_QUICKTIME_CONTENT_VIEW_HACK
-
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
@@ -299,8 +296,6 @@ static VCLResponder *pSharedResponder = nil;
 - (void)interpretKeyEvents:(NSArray *)pEvents;
 @end
 
-#ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
-
 // The QuickTime content view hack implemented in [VCLWindow setContentView:]
 // break Java's Window.getLocationOnScreen() method so we need to flip the
 // points returned by NSView's convertPoint selectors
@@ -388,8 +383,6 @@ static VCLResponder *pSharedResponder = nil;
 }
 
 @end
-
-#endif	// USE_QUICKTIME_CONTENT_VIEW_HACK
 
 @interface VCLWindow : NSWindow
 - (void)becomeKeyWindow;
@@ -537,7 +530,6 @@ static VCLResponder *pSharedResponder = nil;
 {
 	[super setContentView:pView];
 
-#ifdef USE_QUICKTIME_CONTENT_VIEW_HACK
 	// It was found that with QuickTime 7.4 on G4 systems running ATI RAGE 128
 	// graphics cards, QTMovieView will misplace the movie if the window's
 	// content view is flipped. Since Java replaces the default content view
@@ -567,7 +559,6 @@ static VCLResponder *pSharedResponder = nil;
 			}
 		}
 	}
-#endif	// USE_QUICKTIME_CONTENT_VIEW_HACK
 }
 
 @end
