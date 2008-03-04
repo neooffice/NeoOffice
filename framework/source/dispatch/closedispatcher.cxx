@@ -90,9 +90,6 @@
 #include <vcl/svapp.hxx>
 #endif
 
-// Undefine this have the backing window never show
-#define USE_SHOW_BACKING_WINDOW_MENUS_HACK
-
 //_______________________________________________
 // namespace
 
@@ -333,7 +330,8 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
 #ifdef USE_JAVA
     // Do not close the backing window under any circumstances
     if (aCheck1.m_bReferenceIsBacking)
-        return 0;
+        bEstablishBackingMode = sal_True;
+    else
 #endif	// USE_JAVA
 
     // a) If the curent frame (where the close dispatch was requested for) does not have
@@ -396,16 +394,14 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
             //     application or establish the backing mode now.
             //     And that depends from the dispatched URL ...
             {
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+                bEstablishBackingMode = sal_True;
+#else	// USE_JAVA
                 if (eOperation == E_CLOSE_FRAME)
                     bTerminateApp = sal_True;
                 else
-#endif	// !USE_JAVA
-#ifdef USE_SHOW_BACKING_WINDOW_MENUS_HACK
-                    bEstablishBackingMode = sal_True;
-#else	// USE_SHOW_BACKING_WINDOW_MENUS_HACK
                     bCloseFrame = sal_True;
-#endif	// USE_SHOW_BACKING_WINDOW_MENUS_HACK
+#endif	// USE_JAVA
             }
         }
     }
