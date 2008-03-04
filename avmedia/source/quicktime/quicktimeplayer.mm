@@ -45,9 +45,6 @@
 #define AVMEDIA_QUICKTIME_PLAYER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Player_QuickTime"
 #define AVMEDIA_QUICKTIME_PLAYER_SERVICENAME "com.sun.star.media.Player_QuickTime"
 
-// Undefine this to disable playing of video
-#define ALLOW_QUICKTIME_VIDEO
-
 using namespace ::com::sun::star::awt;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
@@ -473,7 +470,6 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 {
 	Size aRet( 0, 0 );
 
-#ifdef ALLOW_QUICKTIME_VIDEO
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpMoviePlayer )
@@ -491,7 +487,6 @@ Size SAL_CALL Player::getPreferredPlayerWindowSize() throw( RuntimeException )
 	}
 
 	[pPool release];
-#endif	// ALLOW_QUICKTIME_VIDEO
 
 	return aRet;
 }
@@ -502,7 +497,6 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 {
 	Reference< XPlayerWindow > xRet;
 
-#ifdef ALLOW_QUICKTIME_VIDEO
 	// Don't allow running with Panther as our RAGE 128 graphics card hack in
 	// the vcl module is incompatible with the JVMs on Mac OS X 10.3.9
 	if ( !isRunningPanther() )
@@ -519,8 +513,7 @@ Reference< XPlayerWindow > SAL_CALL Player::createPlayerWindow( const Sequence< 
 			}
 		}
 	}
-#endif	// ALLOW_QUICKTIME_VIDEO
-	
+
 	return xRet;
 }
 
@@ -530,7 +523,6 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeE
 {
 	Reference< XFrameGrabber > xRet;
 
-#ifdef ALLOW_QUICKTIME_VIDEO
 	if ( maURL.getLength() )
 	{
 		FrameGrabber *pFrameGrabber = new FrameGrabber( mxMgr );
@@ -541,7 +533,6 @@ Reference< XFrameGrabber > SAL_CALL Player::createFrameGrabber() throw( RuntimeE
 				xRet.clear();
 		}
 	}
-#endif	// ALLOW_QUICKTIME_VIDEO
 
 	return xRet;
 }
