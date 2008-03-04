@@ -1172,7 +1172,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		if ( !mpGraphics->maFallbackRuns.GetRun( &nMinFallbackCharPos, &nEndFallbackCharPos, &bFallbackRunRTL ) )
-			return false;
+			continue;
 
 		// Turn off direction analysis
 		int nRunFlags = rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG;
@@ -1183,7 +1183,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 		ImplATSLayoutData *pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont, this );
 		if ( !pLayoutData )
-			return false;
+			continue;
 
 		// Check for typographical ligatures at the requested run boundaries
 		// in fallback runs as we should not allow ligatures because it is 
@@ -1226,7 +1226,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			pLayoutData->Release();
 			pLayoutData = ImplATSLayoutData::GetLayoutData( rArgs.mpStr, rArgs.mnLength, nMinFallbackCharPos, nEndFallbackCharPos, nRunFlags, mnFallbackLevel, mpVCLFont, this );
 			if ( !pLayoutData )
-				return false;
+				continue;
 		}
 
 		// Create fallback runs
