@@ -83,9 +83,6 @@
 #include <postmac.h>
 #undef check
 
-// Undefine this have the backing window never show
-#define USE_SHOW_BACKING_WINDOW_MENUS_HACK
-
 static EventLoopTimerUPP pSetSystemUIModeTimerUPP = NULL;
 
 using namespace rtl;
@@ -113,7 +110,6 @@ long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 // module
 void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 {
-#ifdef USE_SHOW_BACKING_WINDOW_MENUS_HACK
 	if ( !pWindow )
 		return;
 
@@ -146,7 +142,6 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 		pFrame->SetParent( pFrame->mpParent );
 
 	pFrame->mbInShowOnlyMenus = FALSE;
-#endif	// USE_SHOW_BACKING_WINDOW_MENUS_HACK
 }
 
 // =======================================================================
