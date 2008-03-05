@@ -104,16 +104,16 @@ OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
 PRODUCT_VERSION_FAMILY=2.2
-PRODUCT_VERSION=2.2.2
-PRODUCT_DIR_VERSION=2.2.2
-X11_PRODUCT_VERSION=2.2.2
-X11_PRODUCT_DIR_VERSION=2.2.2
+PRODUCT_VERSION=2.2.3
+PRODUCT_DIR_VERSION=2.2.3
+X11_PRODUCT_VERSION=2.2.3
+X11_PRODUCT_DIR_VERSION=2.2.3
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 11
-PRODUCT_DIR_PATCH_VERSION=Patch-11
-X11_PRODUCT_PATCH_VERSION=Patch 6
-X11_PRODUCT_DIR_PATCH_VERSION=Patch-6
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
+X11_PRODUCT_PATCH_VERSION=Patch 0
+X11_PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 X11_PRODUCT_BASE_URL=http://www.neooffice.org/retro
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
@@ -146,8 +146,8 @@ IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
 IMEDIA_PACKAGE=imedia-read-only
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=-rNeoOffice-2_2_2
-X11_NEO_TAG:=-rRetroOffice-2_2_2
+NEO_TAG:=-rNeoOffice-2_2_3
+X11_NEO_TAG:=-rRetroOffice-2_2_3
 
 all: build.all
 
