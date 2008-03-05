@@ -81,6 +81,7 @@ X11_CD_INSTALL_HOME:=cd_install_X11
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
+IMEDIA_PATCHES_HOME:=patches/imedia
 ifeq ("$(UNAME)","powerpc")
 OO_ENV_X11:=$(BUILD_HOME)/MacOSXPPCEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
@@ -141,6 +142,8 @@ MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7
 ODF-CONVERTER_SVNROOT=https://odf-converter.svn.sourceforge.net/svnroot/odf-converter/tags/Release-1.1
 ODF-CONVERTER_PACKAGE=odf-converter
 ODF-CONVERTER_TAG:=
+IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
+IMEDIA_PACKAGE=imedia-read-only
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=-rNeoOffice-2_2_2
@@ -183,6 +186,13 @@ build.odf-converter_checkout:
 # odf-converter engineers seem to not know that creating a file on Windows and
 # then checking it into cvs or svn from a Unix machine foobar's the newlines
 	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/source" ; sh -e -c 'for i in `find . -name "*.cs" -o -name "*.xsl"` ; do cat "$${i}" | tr -d "\015" > "../out" ; mv -f "../out" "$${i}" ; done'
+	touch "$@"
+
+build.imedia_checkout:
+	rm -Rf "$(BUILD_HOME)/$(IMEDIA_PACKAGE)"
+	mkdir -p "$(BUILD_HOME)"
+	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
+	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(IMEDIA_PACKAGE)"
 	touch "$@"
 
 build.oo_patches: build.ooo-build_patches \
@@ -292,6 +302,15 @@ build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch b
 	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; rm "library.list"
 	touch "$@"
 
+build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_checkout
+	-( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	touch "$@"
+
+build.imedia: build.imedia_patches
+	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug
+	touch "$@"
+	
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
 	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --without-system-mdbtools --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )

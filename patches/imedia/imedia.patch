@@ -1,0 +1,57 @@
+Index: iMBSafariBookmarkParser.m
+===================================================================
+--- iMBSafariBookmarkParser.m	(revision 522)
++++ iMBSafariBookmarkParser.m	(working copy)
+@@ -50,25 +50,46 @@
+ #import "iMedia.h"
+ #import "WebIconDatabase.h"
+ 
++static int gInited=0;
++
+ @implementation iMBSafariBookmarkParser
+ 
+ + (void)load
+ {
++/*
++	// [ed] 2/27/08 Can't perform this in the ObjC load method as we can't execute
++	// this code without properly handling the SolarMutex!!!
++	//
++	// Comment out and disabled the Safari loading in the delegate
++	
+ 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+ 	
+ 	// Force the shared instance to be build on main thread - some webkit versions
+ 	// seem to complain when it's not the case
+-	[WebIconDatabase performSelectorOnMainThread:@selector(sharedIconDatabase)
+-									  withObject:nil
+-								   waitUntilDone:YES];
+-	
++	[WebIconDatabase sharedIconDatabase];
++		
++	[pool release];
++*/
+ 	[iMediaBrowser registerParser:[self class] forMediaType:@"links"];
+-	
+-	[pool release];
+ }
+ 
+ - (id)init
+ {
++	// [ed] 2/29/08 Add initialization here as when we create our first
++	// instance we'll be doing that on the main thread and have released
++	// all required locks to avoid deadlock with performSelector
++	
++	if(!gInited)
++	{
++		// Force the shared instance to be build on main thread - some webkit versions
++		// seem to complain when it's not the case
++	 
++		[WebIconDatabase performSelectorOnMainThread:@selector(sharedIconDatabase)
++										  withObject:nil
++									   waitUntilDone:YES];
++		gInited=1;
++	}
++	
+ 	if (self = [super initWithContentsOfFile:[NSString stringWithFormat:@"%@/Library/Safari/Bookmarks.plist", NSHomeDirectory()]])
+ 	{
+ 		mySafariFaviconCache = [[NSMutableDictionary dictionary] retain];
