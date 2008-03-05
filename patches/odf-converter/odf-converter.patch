@@ -150,3 +150,161 @@ Index: source/Spreadsheet/Converter/resources/oox2odf/insert_text.xsl
          }
  
  
+--- source/Common/OdfConverterLib/OdfCharactersPostProcessor.cs	2008-03-04 17:07:13.000000000 -0800
++++ source/Common/OdfConverterLib/OdfCharactersPostProcessor.cs	2008-03-05 11:23:02.000000000 -0800
+@@ -773,15 +773,22 @@
+             zipobj.Close();
+ 
+ 
+-            string[] arrValues = new string[3];
+-            arrValues = widht_height_res.Split(':');
+-            double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-            double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-            double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++            double cx = 2.54 / 72;
++            double cy = 2.54 / 72;
++            try
++            {
++                string[] arrValues = new string[3];
++                arrValues = widht_height_res.Split(':');
++                double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+ 
+-
+-            double cx = width * 2.54 / res;
+-            double cy = height * 2.54 / res;
++                cx = width * 2.54 / res;
++                cy = height * 2.54 / res;
++            }
++            catch (Exception ex)
++            {
++            }
+ 
+             double odpLeft = left * cx / 100000;
+             double odpRight = right * cx / 100000;
+--- source/Common/OdfConverterLib/OoxCharactersPostProcessor.cs	2008-03-05 00:56:23.000000000 -0800
++++ source/Common/OdfConverterLib/OoxCharactersPostProcessor.cs	2008-03-05 11:19:38.000000000 -0800
+@@ -686,14 +686,22 @@
+             zipobj.Close();
+ 
+ 
+-            string[] arrValues = new string[3];
+-            arrValues = widht_height_res.Split(':');
+-            double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-            double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-            double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++            double cx = 2.54 / 72;
++            double cy = 2.54 / 72;
++            try
++            {
++                string[] arrValues = new string[3];
++                arrValues = widht_height_res.Split(':');
++                double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+ 
+-            double cx = width * 2.54 / res;
+-            double cy = height * 2.54 / res;
++                cx = width * 2.54 / res;
++                cy = height * 2.54 / res;
++            }
++            catch (Exception ex)
++            {
++            }
+ 
+             int pptLeft = (int)(left * 100000 / cx);
+             int pptRight = (int)(right * 100000 / cx);
+--- source/Common/OdfZipUtils/ZipArchiveWriter.cs	2008-03-04 17:07:13.000000000 -0800
++++ source/Common/OdfZipUtils/ZipArchiveWriter.cs	2008-03-05 10:57:13.000000000 -0800
+@@ -1134,13 +1134,19 @@
+         /// <param name="source">Relative path inside the source archive</param>
+         public string ImageCopyBinary(String source)
+         {
+-            Stream sourceStream = GetStream(source);
++            try
++            {
++                Stream sourceStream = GetStream(source);
+ 
+-            System.Drawing.Image img;
+-            img = System.Drawing.Image.FromStream(sourceStream);
+-
+-            return img.Width.ToString() + ":" + img.Height.ToString() + ":" + img.VerticalResolution.ToString();
++                System.Drawing.Image img;
++                img = System.Drawing.Image.FromStream(sourceStream);
+ 
++                return img.Width.ToString() + ":" + img.Height.ToString() + ":" + img.VerticalResolution.ToString();
++            }
++            catch (Exception ex)
++            {
++                return "";
++            }
+         }
+     }
+ 
+--- source/Spreadsheet/Converter/OdfSharedStringsPostProcessor.cs	2008-03-04 17:07:15.000000000 -0800
++++ source/Spreadsheet/Converter/OdfSharedStringsPostProcessor.cs	2008-03-05 11:25:19.000000000 -0800
+@@ -200,15 +200,22 @@
+                 zipObj.Close();
+                 resolverObj.Dispose();
+ 
+-                string[] arrValues = new string[3];
+-                arrValues = imgaeValues.Split(':');
+-                double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-                double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-                double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-
+-
+-                double cx = width * 2.54 / res;
+-                double cy = height * 2.54 / res;
++                double cx = 2.54 / 72;
++                double cy = 2.54 / 72;
++                try
++                {
++                    string[] arrValues = new string[3];
++                    arrValues = imgaeValues.Split(':');
++                    double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                    double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                    double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++
++                    cx = width * 2.54 / res;
++                    cy = height * 2.54 / res;
++                }
++                catch (Exception ex)
++                {
++                }
+ 
+                 double odpLeft = (left * cx / 100000)/2.54;
+                 double odpRight = (right * cx / 100000)/2.54;
+--- source/Spreadsheet/Converter/OoxCommentsPostProcessor.cs	2008-03-04 17:07:15.000000000 -0800
++++ source/Spreadsheet/Converter/OoxCommentsPostProcessor.cs	2008-03-05 11:25:36.000000000 -0800
+@@ -156,14 +156,22 @@
+                 zipobj.Close();
+ 
+ 
+-                string[] arrValues = new string[3];
+-                arrValues = widht_height_res.Split(':');
+-                double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-                double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+-                double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                double cx = 2.54 / 72;
++                double cy = 2.54 / 72;
++                try
++                {
++                    string[] arrValues = new string[3];
++                    arrValues = widht_height_res.Split(':');
++                    double width = double.Parse(arrValues[0].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                    double height = double.Parse(arrValues[1].ToString(),System.Globalization.CultureInfo.InvariantCulture);
++                    double res = double.Parse(arrValues[2].ToString(),System.Globalization.CultureInfo.InvariantCulture);
+ 
+-                double cx = width * 2.54 / res;
+-                double cy = height * 2.54 / res;
++                    cx = width * 2.54 / res;
++                    cy = height * 2.54 / res;
++                }
++                catch (Exception ex)
++                {
++                }
+ 
+                 int pptLeft=0; 
+                 int pptRight=0;
