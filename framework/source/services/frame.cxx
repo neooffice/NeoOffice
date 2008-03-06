@@ -1607,19 +1607,16 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
         // Notify vcl internals whether or not this window is a backing window.
         // Fix bug 2903 by only hiding the window when shutting down or if the
         // component window is available there is no component.
-        sal_Bool bBackingWindow = ( Application::IsShutDown() || dynamic_cast< BackingComp* >( (css::frame::XController *)m_xController.get() ) );
-        if ( bBackingWindow )
+        sal_Bool bIsBackingWindow = sal_False;
+        css::uno::Reference< css::frame::XFrame > xThis( static_cast< ::cppu::OWeakObject* >( this ), css::uno::UNO_QUERY );
+        css::uno::Reference< css::frame::XFramesSupplier > xDesktop( m_xFactory->createInstance( SERVICENAME_DESKTOP ), css::uno::UNO_QUERY );
+        if ( xThis.is() && xDesktop.is() )
         {
-            css::uno::Reference< css::frame::XFramesSupplier > xTasksSupplier( getCreator(), css::uno::UNO_QUERY );
-            if ( xTasksSupplier.is() )
-            {
-                css::uno::Reference< css::container::XIndexAccess > xList( xTasksSupplier->getFrames(), css::uno::UNO_QUERY );
-                if ( xList.is() && xList->getCount() > 1 )
-                    bBackingWindow = sal_False;
-            }
+            FrameListAnalyzer aCheck( xDesktop, xThis, FrameListAnalyzer::E_BACKINGCOMPONENT );
+            bIsBackingWindow = aCheck.m_bReferenceIsBacking;
         }
 
-        pShowOnlyMenusForWindow( pOwnWindow, bBackingWindow );
+        pShowOnlyMenusForWindow( pOwnWindow, bIsBackingWindow );
     }
 
     aReadLock.unlock();
