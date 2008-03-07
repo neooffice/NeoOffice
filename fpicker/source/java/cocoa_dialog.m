@@ -896,10 +896,16 @@ static NSString *pBlankItem = @" ";
 
 - (void)setDefaultName:(ShowFileDialogArgs *)pArgs
 {
+	NSString *pOldDefaultName;
 	if ( mpDefaultName )
 	{
+		pOldDefaultName = [NSString stringWithString:mpDefaultName];
 		[mpDefaultName release];
 		mpDefaultName = nil;
+	}
+	else
+	{
+		pOldDefaultName = nil;
 	}
 
 	NSArray *pArgArray = [pArgs args];
@@ -910,8 +916,11 @@ static NSString *pBlankItem = @" ";
 	if ( !pName )
 		return;
 
-	if ( !mbUseFileOpenDialog )
+	// Fix bug 2954 by only applying the fix for bug 1607 only if the path
+	// extension has not been already stripped off by the OOo code
+	if ( !mbUseFileOpenDialog && ( !pOldDefaultName || ![pName isEqualToString:pOldDefaultName] ) )
 	{
+		// Fix bug 1607 by stripping of any path extension
 		NSString *pExt = [pName pathExtension];
 		if ( pExt && [pExt length] )
 			pName = [pName substringToIndex:[pName length] - [pExt length] - 1];
