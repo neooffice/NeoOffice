@@ -217,6 +217,15 @@ Index: source/Spreadsheet/Converter/resources/oox2odf/insert_text.xsl
              int pptRight = (int)(right * 100000 / cx);
 --- source/Common/OdfZipUtils/ZipArchiveWriter.cs	2008-03-04 17:07:13.000000000 -0800
 +++ source/Common/OdfZipUtils/ZipArchiveWriter.cs	2008-03-05 10:57:13.000000000 -0800
+@@ -1050,7 +1050,7 @@
+                 int pos2 = source.IndexOf("#", 5, len - 5) + 1;
+ 
+                 Assembly exeAssem = Assembly.GetExecutingAssembly();
+-                string targetAssemPath = Path.GetDirectoryName(exeAssem.GetModules()[0].FullyQualifiedName) + "\\" + source.Substring(pos1, pos2 - pos1 -1);
++                string targetAssemPath = Path.GetDirectoryName(exeAssem.GetModules()[0].FullyQualifiedName) + Path.DirectorySeparatorChar + source.Substring(pos1, pos2 - pos1 -1);
+                 Assembly targetAssem = System.Reflection.Assembly.LoadFile(targetAssemPath);
+                 string res = source.Substring(pos2, len - pos2 - 1);
+ 
 @@ -1134,13 +1134,19 @@
          /// <param name="source">Relative path inside the source archive</param>
          public string ImageCopyBinary(String source)
@@ -308,3 +317,105 @@ Index: source/Spreadsheet/Converter/resources/oox2odf/insert_text.xsl
  
                  int pptLeft=0; 
                  int pptRight=0;
+--- source/Presentation/Converter/Makefile	2008-03-05 11:51:20.000000000 -0800
++++ source/Presentation/Converter/Makefile	2008-03-06 16:35:43.000000000 -0800
+@@ -25,18 +25,18 @@
+ SOURCE=${wildcard *.cs}
+ DISTFILES=$(SOURCE) $(ODF2OOX_RES) $(OOX2ODF_RES)
+ 
+-all-local: Presentation.dll PresentationStatic.dll 
++all-local: Presentation.dll PresentationConverter.dll 
+ Presentation.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
+ 	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
+ 		-out:Presentation.dll $(SOURCE)
+ 
+-PresentationStatic.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++PresentationConverter.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
+ 	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
+-		-out:PresentationStatic.dll $(SOURCE)
++		-out:PresentationConverter.dll $(SOURCE)
+ 
+ clean-local:
+ 
+--- source/Shell/OdfConverterTest/Makefile	2008-03-05 11:49:03.000000000 -0800
++++ source/Shell/OdfConverterTest/Makefile	2008-03-06 16:37:03.000000000 -0800
+@@ -44,13 +44,13 @@
+ 		-reference:../../Spreadsheet/Converter/Spreadsheet.dll \
+ 		$(SOURCE)
+ 
+-OdfConverterTestStatic.exe : $(SOURCE) ../../Common/OdfZipUtils/OdfZipUtilsStatic.dll ../../Common/OdfConverterLib/OdfConverterLibStatic.dll ../../Word/Converter/WordStatic.dll ../../Presentation/Converter/PresentationStatic.dll ../../Spreadsheet/Converter/SpreadsheetStatic.dll
++OdfConverterTestStatic.exe : $(SOURCE) ../../Common/OdfZipUtils/OdfZipUtilsStatic.dll ../../Common/OdfConverterLib/OdfConverterLibStatic.dll ../../Word/Converter/WordConverter.dll ../../Presentation/Converter/PresentationConverter.dll ../../Spreadsheet/Converter/SpreadsheetConverter.dll
+ 	$(CSC) $(CSC_DEBUG) -d:MONO -target:exe -out:OdfConverterTestStatic.exe \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
+-		-reference:../../Word/Converter/WordStatic.dll \
+-		-reference:../../Presentation/Converter/PresentationStatic.dll \
+-		-reference:../../Spreadsheet/Converter/SpreadsheetStatic.dll \
++		-reference:../../Word/Converter/WordConverter.dll \
++		-reference:../../Presentation/Converter/PresentationConverter.dll \
++		-reference:../../Spreadsheet/Converter/SpreadsheetConverter.dll \
+ 		$(SOURCE)
+ 
+ main.c bundle.o : OdfConverterTestStatic.exe Makefile
+--- source/Spreadsheet/Converter/Makefile	2008-03-05 11:49:30.000000000 -0800
++++ source/Spreadsheet/Converter/Makefile	2008-03-06 16:34:51.000000000 -0800
+@@ -25,18 +25,18 @@
+ SOURCE=${wildcard *.cs}
+ DISTFILES=$(SOURCE) $(ODF2OOX_RES) $(OOX2ODF_RES)
+ 
+-all-local: Spreadsheet.dll SpreadsheetStatic.dll 
++all-local: Spreadsheet.dll SpreadsheetConverter.dll 
+ Spreadsheet.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
+ 	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
+ 		-out:Spreadsheet.dll $(SOURCE)
+ 
+-SpreadsheetStatic.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++SpreadsheetConverter.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
+ 	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
+-		-out:SpreadsheetStatic.dll $(SOURCE)
++		-out:SpreadsheetConverter.dll $(SOURCE)
+ 
+ clean-local:
+ 
+--- source/Word/Converter/Makefile	2008-03-05 11:52:35.000000000 -0800
++++ source/Word/Converter/Makefile	2008-03-06 16:04:01.000000000 -0800
+@@ -22,21 +22,28 @@
+ ID_SUFFIX2=$(ID_SUFFIX).odf2oox
+ RESOURCE_FLAGS+=${foreach file, $(ODF2OOX_XML), $(PREFIX2)/$(file),$(ID_SUFFIX2).$(file)}
+ 
++SHARED_RES= \
++    $(wildcard resources/*.png)
++SHARED_XML= $(foreach file, $(SHARED_RES), $(subst resources/,,$(file)))
++PREFIX3=-resource:resources
++ID_SUFFIX3=$(ID_SUFFIX)
++RESOURCE_FLAGS+=${foreach file, $(SHARED_XML), $(PREFIX3)/$(file),$(ID_SUFFIX3).$(file)}
++
+ SOURCE=${wildcard *.cs}
+ DISTFILES=$(SOURCE) $(ODF2OOX_RES) $(OOX2ODF_RES)
+ 
+-all-local: Word.dll WordStatic.dll 
++all-local: Word.dll WordConverter.dll 
+ Word.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
+ 	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
+ 		-out:Word.dll $(SOURCE)
+ 
+-WordStatic.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
++WordConverter.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
+ 	gmcs $(CSC_DEBUG) $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
+-		-out:WordStatic.dll $(SOURCE)
++		-out:WordConverter.dll $(SOURCE)
+ 
+ clean-local:
+ 
