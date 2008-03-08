@@ -110,7 +110,7 @@ class SpellChecker :
         OUString *                         aDNames;
         sal_Int32                          numdict;
 #ifdef USE_JAVA
-	CFMutableArrayRef						maLocales;
+	CFArrayRef								maLocales;
 	::std::map< ::rtl::OUString, CFStringRef >	maPrimaryNativeLocaleMap;
 	::std::map< ::rtl::OUString, CFStringRef >	maSecondaryNativeLocaleMap;
 #endif	// USE_JAVA

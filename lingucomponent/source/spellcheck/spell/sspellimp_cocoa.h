@@ -46,8 +46,8 @@
 BEGIN_C
 #endif
 BOOL NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLocale );
-CFMutableArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale );
-CFMutableArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales );
+CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale );
+CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales );
 #ifdef __cplusplus
 END_C
 #endif

@@ -989,7 +989,7 @@ Reference< XSpellAlternatives >
 				CFStringRef aString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, rWord.getStr(), rWord.getLength(), kCFAllocatorNull );
 				if ( aString )
 				{
-					CFMutableArrayRef aGuesses = NSSpellChecker_getGuesses( aString, it->second );
+					CFArrayRef aGuesses = NSSpellChecker_getGuesses( aString, it->second );
 					if ( aGuesses )
 					{
 						CFIndex nItems = CFArrayGetCount( aGuesses );
