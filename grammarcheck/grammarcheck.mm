@@ -94,14 +94,23 @@
 #include <com/sun/star/lang/Locale.hpp>
 
 #include "premac.h"
-#import <AppKit/NSSpellChecker.h>
-#import <AppKit/NSAlert.h>
+#import <AppKit/AppKit.h>
 #import <Foundation/Foundation.h>
 #import <Carbon/Carbon.h>
 #include "postmac.h"
 
 #include <string>
 #include <strstream>
+
+// Redefine Cocoa YES and NO defines types for convenience
+#ifdef YES
+#undef YES
+#define YES (MacOSBOOL)1
+#endif
+#ifdef NO
+#undef NO
+#define NO (MacOSBOOL)0
+#endif
 
 #if BUILD_OS_MINOR < 5
 // building on 10.4.  Define required constants for the grammar check system
@@ -141,6 +150,132 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 
+@interface RunGrammarCheckerArgs : NSObject
+{
+	NSArray*				mpArgs;
+	NSObject*				mpResult;
+}
++ (id)argsWithArgs:(NSArray *)pArgs;
+- (NSArray *)args;
+- (void)dealloc;
+- (id)initWithArgs:(NSArray *)pArgs;
+- (NSObject *)result;
+- (void)setResult:(NSObject *)pResult;
+@end
+
+@implementation RunGrammarCheckerArgs
+
++ (id)argsWithArgs:(NSArray *)pArgs
+{
+	RunGrammarCheckerArgs *pRet = [[RunGrammarCheckerArgs alloc] initWithArgs:(NSArray *)pArgs];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (NSArray *)args
+{
+	return mpArgs;
+}
+
+- (void)dealloc
+{
+	if ( mpArgs )
+		[mpArgs release];
+
+	if ( mpResult )
+		[mpResult release];
+
+	[super dealloc];
+}
+
+- (id)initWithArgs:(NSArray *)pArgs
+{
+	[super init];
+
+	mpResult = nil;
+	mpArgs = pArgs;
+	if ( mpArgs )
+		[mpArgs retain];
+
+	return self;
+}
+
+- (NSObject *)result
+{
+	return mpResult;
+}
+
+- (void)setResult:(NSObject *)pResult
+{
+	if ( mpResult )
+		[mpResult release];
+
+	mpResult = pResult;
+
+	if ( mpResult )
+		[mpResult retain];
+}
+
+@end
+
+@interface RunGrammarChecker : NSObject
++ (id)create;
+- (void)checkGrammarOfString:(RunGrammarCheckerArgs *)pArgs;
+@end
+
+@implementation RunGrammarChecker
+
++ (id)create
+{
+	RunGrammarChecker *pRet = [[RunGrammarChecker alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)checkGrammarOfString:(RunGrammarCheckerArgs *)pArgs
+{
+    NSArray *pArgArray = [pArgs args];
+    if ( !pArgArray || [pArgArray count] < 2 )
+        return;
+
+    NSString *stringToCheck = (NSString *)[pArgArray objectAtIndex:0];
+	if ( !stringToCheck )
+		return;
+
+    NSString *localeToCheck = (NSString *)[pArgArray objectAtIndex:1];
+	if ( !localeToCheck )
+		return;
+
+	@try
+	{
+		// Do not ever invoke [NSApplication sharedApplication] because if
+		// NSApp is not already initialized, we are either running in a
+		// separate subprocess of the application (which means this was not
+		// installed as a shared extension) or we are running in an X11
+		// application and we are not xhosting to the localhost (which will
+		// cause the application to abort)
+		NSSpellChecker *spelling=[NSSpellChecker sharedSpellChecker];
+
+		if(spelling)
+		{
+			NSArray *detailArray = nil;
+
+			unsigned long tempDocTag=[NSSpellChecker uniqueSpellDocumentTag];
+			[spelling checkGrammarOfString: stringToCheck startingAt: 0 language: localeToCheck wrap: 0L inSpellDocumentWithTag: tempDocTag details: &detailArray];
+			[spelling closeSpellDocumentWithTag: tempDocTag];
+
+			if(detailArray && [detailArray count])
+				[pArgs setResult:detailArray];
+		}
+	}
+	@catch ( NSException *pExc )
+	{
+		NSLog( @"%@", [pExc reason] );
+	}
+}
+
+@end
+
 static OUString aDelimiter = OUString::createFromAscii( "_" );
  
 static OUString ImplGetLocaleString( Locale aLocale )
@@ -165,11 +300,11 @@ class MacOSXGrammarCheckerImpl
 {
 	// to obtain other services if needed
 	Reference< XComponentContext > m_xServiceManager;
-	
+
 	sal_Int32 m_nRefCount;
 	sal_Int32 m_nCount;
 	OUString m_aLocale;
-	
+
 public:
 	MacOSXGrammarCheckerImpl( const Reference< XComponentContext > & xServiceManager )
 		: m_xServiceManager( xServiceManager ), m_nRefCount( 0 ) {}
@@ -198,7 +333,7 @@ OUString SAL_CALL MacOSXGrammarCheckerImpl::getImplementationName(  )
 	throw(RuntimeException)
 {
 	return OUString( RTL_CONSTASCII_USTRINGPARAM(IMPLNAME) );
-}	
+}
 
 //*************************************************************************
 sal_Bool SAL_CALL MacOSXGrammarCheckerImpl::supportsService( const OUString& ServiceName ) 
@@ -210,21 +345,21 @@ sal_Bool SAL_CALL MacOSXGrammarCheckerImpl::supportsService( const OUString& Ser
 		if( pArray[i] == ServiceName )
 			return sal_True;
 	return sal_False;
-}	
+}
 
 //*************************************************************************
 Sequence<OUString> SAL_CALL MacOSXGrammarCheckerImpl::getSupportedServiceNames(  ) 
 	throw(RuntimeException)
 {
 	return getSupportedServiceNames_Static();
-}	
+}
 
 //*************************************************************************
 Sequence<OUString> SAL_CALL MacOSXGrammarCheckerImpl::getSupportedServiceNames_Static(  ) 
 {
 	OUString aName( RTL_CONSTASCII_USTRINGPARAM(SERVICENAME) );
 	return Sequence< OUString >( &aName, 1 );
-}	
+}
 
 
 
@@ -263,7 +398,7 @@ Reference< XInterface > SAL_CALL MacOSXGrammarCheckerImpl_create(
 		/* shared lib exports implemented without helpers in service_impl1.cxx */
 		namespace neo_macosxgrammarchecker_impl
 		{
-		
+
 	static Sequence< OUString > getSupportedServiceNames_MacOSXGrammarCheckerImpl()
 		{
 			static Sequence < OUString > *pNames = 0;
@@ -294,7 +429,7 @@ Reference< XInterface > SAL_CALL MacOSXGrammarCheckerImpl_create(
 			}
 			return *pImplName;
 	}
-	
+
 		static struct ::cppu::ImplementationEntry s_component_entries [] =
 		{
 		    //{
@@ -351,69 +486,65 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
    throw (com::sun::star::uno::RuntimeException)
 {
 	Sequence< org::neooffice::GrammarReplacement > toReturn;
-	
+
 	if ( !m_aLocale.getLength() )
 		return(toReturn);
 
 	NSAutoreleasePool *localPool=[[NSAutoreleasePool alloc] init];
-	
+
 	NSString *stringToCheck=[NSString stringWithCharacters: toCheck.getStr() length: toCheck.getLength()];
 	NSString *localeToCheck=[NSString stringWithCharacters: m_aLocale.getStr() length: m_aLocale.getLength()];
 
-	// Do not ever invoke [NSApplication sharedApplication] because ifNSApp is
-	// not already initialized, we are either running in a separate subprocess
-	// of the application (which means this was not installed as a shared
-	// extension) or we are running in an X11 application and we are not
-	// xhosting to the localhost (which will cause the application to abort)
-	NSSpellChecker *spelling=[NSSpellChecker sharedSpellChecker];
-	
-	if(spelling)
+	if ( stringToCheck && localeToCheck )
 	{
-		NSArray *detailArray = nil;
-		
-		unsigned long tempDocTag=[NSSpellChecker uniqueSpellDocumentTag];
-		[spelling checkGrammarOfString: stringToCheck startingAt: 0 language: localeToCheck wrap: 0L inSpellDocumentWithTag: tempDocTag details: &detailArray];
-		[spelling closeSpellDocumentWithTag: tempDocTag];
-		
+		RunGrammarCheckerArgs *pArgs = [RunGrammarCheckerArgs argsWithArgs:[NSArray arrayWithObjects:stringToCheck, localeToCheck, nil]];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunGrammarChecker *pRunGrammarChecker = [RunGrammarChecker create];
+		[pRunGrammarChecker performSelectorOnMainThread:@selector(checkGrammarOfString:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSArray *detailArray = (NSArray *)[pArgs result];
 		if(detailArray && [detailArray count])
 		{
 			toReturn=Sequence< org::neooffice::GrammarReplacement >([detailArray count]);
-		
-			for(int i=0; i<[detailArray count]; i++)
+
+			for(unsigned int i=0; i<[detailArray count]; i++)
 			{
 				NSDictionary *dic=(NSDictionary *)[detailArray objectAtIndex: i];
-			
+
+				if(dic)
 				{
 					NSString *userDescription=(NSString *)[dic valueForKey: NSGrammarUserDescription];
-					
+
 					sal_Unicode pBuffer[ [userDescription length] ];
 					[userDescription getCharacters: pBuffer];
-					
+
 					toReturn[i].aDescription=OUString(pBuffer, [userDescription length]);
 				}
-			
+
 				NSValue *rangeToCorrect=(NSValue *)[dic valueForKey: NSGrammarRange];
 				toReturn[i].lStartIndex=[rangeToCorrect rangeValue].location;
 				toReturn[i].lLength=[rangeToCorrect rangeValue].length;
-				
+
 				NSArray *corrections=(NSArray *)[dic valueForKey: NSGrammarCorrections];
-				
-				toReturn[i].aSuggestedReplacements=Sequence< OUString >([corrections count]);
-				for(int j=0; j<[corrections count]; j++)
+
+				if(corrections)
 				{
-					NSString *corrString=(NSString *)[corrections objectAtIndex: j];
-					
-					sal_Unicode pBuffer[ [corrString length] ];
-					[corrString getCharacters: pBuffer];
-				
-					toReturn[i].aSuggestedReplacements[j]=OUString(pBuffer, [corrString length]);
+					toReturn[i].aSuggestedReplacements=Sequence< OUString >([corrections count]);
+					for(unsigned int j=0; j<[corrections count]; j++)
+					{
+						NSString *corrString=(NSString *)[corrections objectAtIndex: j];
+
+						sal_Unicode pBuffer[ [corrString length] ];
+						[corrString getCharacters: pBuffer];
+
+						toReturn[i].aSuggestedReplacements[j]=OUString(pBuffer, [corrString length]);
+					}
 				}
 			}
 		}
 	}
 
 	[localPool release];
-	
+
 	return(toReturn);
 }
 
@@ -426,7 +557,7 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 		throw (::com::sun::star::uno::RuntimeException)
 {
 	m_aLocale=ImplGetLocaleString(aLocale);
-	
+
 	// Alwasy return true as there is no way to check the validity of a locale
 	// in the Mac OS X grammar checker as we can only check the validity of
 	// a spellchecking locale
@@ -442,7 +573,7 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 {
 	// we currently need to be running on 10.5 in order to have a grammar
 	// checker.  Check using our gestalt
-	
+
 	long res=0;
 	if(Gestalt(gestaltSystemVersion, &res)==noErr)
 	{
@@ -450,6 +581,6 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 		if(!isLeopardOrHigher)
 			return(false);
 	}
-	
+
 	return(true);
 }

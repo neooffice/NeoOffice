@@ -44,6 +44,7 @@ ENABLE_EXCEPTIONS=TRUE
 .INCLUDE :  settings.mk
 
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
+OBJCFLAGS+=-fobjc-exceptions
 
 # Don't put lib prefix on shared library
 DLLPRE=
