@@ -36,7 +36,7 @@
 						</prop>
 			            <prop oor:name="Title" oor:type="xs:string" oor:localized="true">
 							<value xml:lang="en-US">Selected Text</value>
-							<value xml:lang="fr">SÃ©lection</value
+							<value xml:lang="fr">SÃ©lection</valu>
 						</prop>
 			            <prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
