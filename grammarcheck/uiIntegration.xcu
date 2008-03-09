@@ -17,7 +17,8 @@
 							<value>macro:///GrammarGUI.XGrammarGUI.CheckDocument</value>
 						</prop>
 			            <prop oor:name="Title" oor:type="xs:string" oor:localized="true">
-							<value>Entire Document</value>
+							<value xml:lang="en-US">Entire Document</value>
+							<value xml:lang="fr">Document entier</value
 						</prop>
 			            <prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
@@ -34,7 +35,8 @@
 							<value>macro:///GrammarGUI.XGrammarGUI.CheckSelection</value>
 						</prop>
 			            <prop oor:name="Title" oor:type="xs:string" oor:localized="true">
-							<value>Selected Text</value>
+							<value xml:lang="en-US">Selected Text</value>
+							<value xml:lang="fr">SÃ©lection</value
 						</prop>
 			            <prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
