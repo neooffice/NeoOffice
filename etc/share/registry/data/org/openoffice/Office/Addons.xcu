@@ -13,7 +13,7 @@
 				<prop oor:name="Title" oor:type="xs:string">
 					<value xml:lang="de">Suche nach ~Updates...</value>
 					<value xml:lang="en-US">Check for ~Updates...</value>
-					<value xml:lang="fr">~Rechercher les mises à jour"</value>
+					<value xml:lang="fr">~Rechercher les mises à jour</value>
 				</prop>
 				<prop oor:name="Target" oor:type="xs:string">
 					<value>_self</value>
