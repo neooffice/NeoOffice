@@ -6,7 +6,7 @@
 			<node oor:name="org.neooffice.grammarchecker.grammarchecker" oor:op="replace">
 				<prop oor:name="Title" oor:localized="true" oor:type="xs:string">
 					<value xml:lang="en-US">Check Grammar</value>
-					<value xml:lang="fr">VÃ©rifier la grammaire</value
+					<value xml:lang="fr">VÃ©rifier la grammaire</value>
 				</prop>
 				<prop oor:name="Context" oor:type="xs:string">
 					<value>com.sun.star.text.TextDocument</value>
@@ -18,7 +18,7 @@
 						</prop>
 			            <prop oor:name="Title" oor:type="xs:string" oor:localized="true">
 							<value xml:lang="en-US">Entire Document</value>
-							<value xml:lang="fr">Document entier</value
+							<value xml:lang="fr">Document entier</value>
 						</prop>
 			            <prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
@@ -36,7 +36,7 @@
 						</prop>
 			            <prop oor:name="Title" oor:type="xs:string" oor:localized="true">
 							<value xml:lang="en-US">Selected Text</value>
-							<value xml:lang="fr">SÃ©lection</valu>
+							<value xml:lang="fr">SÃ©lection</value>
 						</prop>
 			            <prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
