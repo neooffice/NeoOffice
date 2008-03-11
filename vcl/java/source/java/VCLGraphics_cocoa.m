@@ -253,14 +253,15 @@
 			CGContextTranslateCTM( aContext, mfX * mfScaleX, mfY * mfScaleY );
 			CGContextRotateCTM( aContext, mfGlyphRotateAngle );
 			CGContextTranslateCTM( aContext, mfGlyphTranslateX * mfGlyphScaleX * mfScaleX, mfGlyphTranslateY * mfGlyphScaleY * mfScaleY );
-			CGContextScaleCTM( aContext, mfGlyphScaleX, mfGlyphScaleY * -1 );
+			CGContextScaleCTM( aContext, 1.0f, -1.0f );
 
 			CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
 			CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
 
-			// Fix bug 2674 by setting all translation, rotation,
-			// and scale in the CGContext and not in the text matrix
-			CGAffineTransform aTransform = CGAffineTransformMake( 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f );
+			// Fix bug 2674 by setting all translation, rotation, and scaling
+			// in the CGContext and not in the text matrix. Fix bug 2957 by
+			// moving the glyph scale back into the font transform.
+			CGAffineTransform aTransform = CGAffineTransformMakeScale( mfGlyphScaleX, mfGlyphScaleY );
 			CGContextSetTextMatrix( aContext, aTransform );
 
 			CGContextSetFont( aContext, maFont );
