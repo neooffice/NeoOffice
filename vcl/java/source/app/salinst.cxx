@@ -557,6 +557,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		}
 
 		USHORT nID = pEvent->getID();
+		size_t nFrames = pSalData->maFrameList.size();
 		pEvent->dispatch();
 		delete pEvent;
 
@@ -572,15 +573,15 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			case SALEVENT_MOUSEBUTTONDOWN:
 				// Fix bugs 437 and 2264 by ensuring that if the next
 				// event is a matching event, it will be dispatched before
-				// the painting timer runs. Fix bug 2941 by only apply the
-				// fix for bugs 437 and 2264 when the bHandleAllCurrentEvents
-				// flag is true.
-				if ( bHandleAllCurrentEvents )
-					OThread::yield();
-				else
-					bContinue = false;
+				// the painting timer runs.
+				OThread::yield();
 				break;
 		}
+
+		// Fix bug 2941 without triggering bugs 2962 and 2963 by
+		// breaking if any frames have been created or destroyed
+		if ( bContinue && pSalData->maFrameList.size() != nFrames )
+			bContinue = false;
 	}
 
 	if ( nCount )
