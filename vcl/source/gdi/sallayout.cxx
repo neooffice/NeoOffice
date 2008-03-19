@@ -1514,10 +1514,11 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
                 // Fix bug 2183 by allowing a tiny amount of unexpected
                 // x-position in a glyph run. Decrease allowable amount to fix
                 // bug 2432. Fix bug 2629 by not breaking if the unexpected
-                // offset is negative. Fix bug 2682 by breaking if it is a
-                // spacing glyph.
-                nUnexpectedOffset += nGlyphAdvance - pG->mnOrigWidth;
-                if( nUnexpectedOffset > pG->mnOrigWidth >> 3 || IsSpacingGlyph( pG->mnGlyphIndex ) )
+                // offset is negative. Fix bug 2964 by removing fix bug 2682's
+				// fix (i.e. breaking if it is a spacing glyph) as bug 2682 no
+				// longer occurs without that fix.
+                // if( nUnexpectedOffset > pG->mnOrigWidth >> 3 || IsSpacingGlyph( pG->mnGlyphIndex ) )
+                if( nUnexpectedOffset > pG->mnOrigWidth >> 3 )
                     break;
             }
 #else	// USE_JAVA
