@@ -1517,7 +1517,6 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
                 // offset is negative. Fix bug 2964 by removing fix bug 2682's
 				// fix (i.e. breaking if it is a spacing glyph) as bug 2682 no
 				// longer occurs without that fix.
-                // if( nUnexpectedOffset > pG->mnOrigWidth >> 3 || IsSpacingGlyph( pG->mnGlyphIndex ) )
                 if( nUnexpectedOffset > pG->mnOrigWidth >> 3 )
                     break;
             }
