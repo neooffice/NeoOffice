@@ -10,6 +10,7 @@
 				<prop oor:name="Title" oor:type="xs:string" oor:localized="true">
 					<value xml:lang="en-US">Paste Image from Camera or Scanner</value>
 					<value xml:lang="fr">Coller une image depuis un appareil photo ou un scanneur</value>
+					<value xml:lang="nl">Voeg afbeelding in van Camera of Scanner</value>
 				</prop>
 				<prop oor:name="ImageIdentifier" oor:type="xs:string">
 					<value/>
