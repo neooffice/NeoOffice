@@ -1,8 +1,76 @@
+Index: iMBPhotosView.m
+===================================================================
+--- iMBPhotosView.m	(revision 536)
++++ iMBPhotosView.m	(working copy)
+@@ -275,11 +275,18 @@
+ 	[album setObject:imageCount forKey:@"KeyList"];
+ 	
+ 	NSMutableArray *types = [NSMutableArray array]; // OLD BEHAVIOR: arrayWithArray:[pboard types]];
+-	[types addObjectsFromArray:[NSPasteboard fileAndURLTypes]];
++	if([items count]==1)
++	{
++		[types addObject: NSTIFFPboardType];
++	}
++   else
++   {
++   	[types addObjectsFromArray:[NSPasteboard fileAndURLTypes]];
+ 	[types addObject:@"AlbumDataListPboardType"];
+ 	[types addObject:@"ImageDataListPboardType"];
+-   [types addObject:iMBNativePasteboardFlavor]; // Native iMB Data
+-
++	[types addObject:iMBNativePasteboardFlavor]; // Native iMB Data
++	}
++	
+ 	[pboard declareTypes:types owner:nil];
+ 	
+ 	NSEnumerator *e = [items objectEnumerator];
+@@ -297,12 +304,35 @@
+                                              [self className], iMBControllerClassName,
+                                              items, iMBNativeDataArray,
+                                              nil];
+-   [pboard setData:[NSArchiver archivedDataWithRootObject:nativeData] forType:iMBNativePasteboardFlavor]; // Native iMB Data
+-	[pboard writeURLs:nil files:files names:captions];
+-	
+-	NSDictionary *plist = [NSDictionary dictionaryWithObjectsAndKeys:[NSArray arrayWithObject:album], @"List of Albums", images, @"Master Image List", nil];
+-	[pboard setString:[plist description] forType:@"AlbumDataListPboardType"];
+-	[pboard setString:[images description] forType:@"ImageDataListPboardType"];
++											 
++// [ed] 3/24/08 Neo interprets URLs as raw URLs.  Place the actual file content
++// onto the pasteboard.
++	if([files count]==1)
++	{
++		// convert image into TIFF so we can put it on the clipboard
++		// using the scrap manager
++		NSImage *theNSImage=[[NSImage alloc] initWithContentsOfFile:(NSString *)[files objectAtIndex:0]];
++		if(theNSImage)
++		{
++			NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
++			if(theNSTIFFData)
++			{
++				[pboard setData:theNSTIFFData forType:NSTIFFPboardType];
++
++				[theNSImage release];
++			}
++		}
++	}
++	else
++	{
++		[pboard setData:[NSArchiver archivedDataWithRootObject:nativeData] forType:iMBNativePasteboardFlavor]; // Native iMB Data
++
++		[pboard writeURLs:nil files:files names:captions];
++
++		NSDictionary *plist = [NSDictionary dictionaryWithObjectsAndKeys:[NSArray arrayWithObject:album], @"List of Albums", images, @"Master Image List", nil];
++		[pboard setString:[plist description] forType:@"AlbumDataListPboardType"];
++		[pboard setString:[images description] forType:@"ImageDataListPboardType"];
++	}
+ }
+ 
+ - (void)writePlaylist:(iMBLibraryNode *)playlist toPasteboard:(NSPasteboard *)pboard
 Index: iMBSafariBookmarkParser.m
 ===================================================================
---- iMBSafariBookmarkParser.m	(revision 522)
+--- iMBSafariBookmarkParser.m	(revision 536)
 +++ iMBSafariBookmarkParser.m	(working copy)
-@@ -50,25 +50,46 @@
+@@ -50,10 +50,19 @@
  #import "iMedia.h"
  #import "WebIconDatabase.h"
  
@@ -18,21 +86,22 @@ Index: iMBSafariBookmarkParser.m
 +	//
 +	// Comment out and disabled the Safari loading in the delegate
 +	
++
  	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
  	
  	// Force the shared instance to be build on main thread - some webkit versions
- 	// seem to complain when it's not the case
--	[WebIconDatabase performSelectorOnMainThread:@selector(sharedIconDatabase)
--									  withObject:nil
--								   waitUntilDone:YES];
+@@ -61,14 +70,32 @@
+ 	[WebIconDatabase performSelectorOnMainThread:@selector(sharedIconDatabase)
+ 									  withObject:nil
+ 								   waitUntilDone:YES];
 -	
-+	[WebIconDatabase sharedIconDatabase];
-+		
-+	[pool release];
 +*/
- 	[iMediaBrowser registerParser:[self class] forMediaType:@"links"];
--	
--	[pool release];
++
+ 	[iMediaConfiguration registerParser:[self class] forMediaType:@"links"];
+ 
++/*
+ 	[pool release];
++*/
  }
  
  - (id)init
@@ -51,7 +120,45 @@ Index: iMBSafariBookmarkParser.m
 +									   waitUntilDone:YES];
 +		gInited=1;
 +	}
-+	
++
  	if (self = [super initWithContentsOfFile:[NSString stringWithFormat:@"%@/Library/Safari/Bookmarks.plist", NSHomeDirectory()]])
  	{
  		mySafariFaviconCache = [[NSMutableDictionary dictionary] retain];
+Index: iMBLinksView.m
+===================================================================
+--- iMBLinksView.m	(revision 536)
++++ iMBLinksView.m	(working copy)
+@@ -94,9 +94,16 @@
+ 	 toPasteboard:(NSPasteboard*)pboard
+ {
+ 	NSMutableArray *types = [NSMutableArray array]; // OLD BEHAVIOR: arrayWithArray:[pboard types]];
++	if([rows count]==1)
++	{
++		[types addObject:NSStringPboardType];
++	}
++	else
++	{
+ 	[types addObjectsFromArray:[NSPasteboard URLTypes]];
+    [types addObject:iMBNativePasteboardFlavor]; // Native iMB Data
+-
++	}
++	
+ 	[pboard declareTypes:types owner:nil];
+ 	
+ 	NSArray *content = [oLinkController arrangedObjects];
+@@ -123,8 +130,15 @@
+                                              [self className], iMBControllerClassName,
+                                              nativeDataArray, iMBNativeDataArray,
+                                              nil];
++	if([rows count]==1)
++	{
++		[pboard setString:[((NSURL *)[urls objectAtIndex:0]) absoluteString] forType:NSStringPboardType];
++	}
++	else
++	{
+    [pboard setData:[NSArchiver archivedDataWithRootObject:nativeData] forType:iMBNativePasteboardFlavor]; // Native iMB Data
+  	[pboard writeURLs:urls files:nil names:titles];
++   }
+    
+ 	return YES;
+ }
