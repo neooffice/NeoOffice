@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import <Carbon/Carbon.h>
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 
@@ -127,6 +128,14 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 		mbActive = ( [pApp isActive] && ![pApp modalWindow] );
+
+	// Fix bug 2992 by checking if we are tracking the menubar
+	if ( !mbActive )
+	{
+		MenuTrackingData aTrackingData;
+		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
+			mbActive = YES;
+	}
 }
 
 @end
