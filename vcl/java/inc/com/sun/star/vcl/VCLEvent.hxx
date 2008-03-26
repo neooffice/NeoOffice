@@ -93,6 +93,7 @@ public:
 	long				getScrollAmount();
 	ULONG				getVisiblePosition();
 	long				getWheelRotation();
+	sal_Bool			isHorizontal();
 };
 
 } // namespace vcl

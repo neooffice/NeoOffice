@@ -43,7 +43,9 @@ static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
-@interface NSObject (ApplicationHasDelegat)
+inline long Float32ToLong( Float32 f ) { return (long)( f < 0 ? f - 1.0 : f + 0.5 ); }
+
+@interface NSObject (ApplicationHasDelegate)
 - (void)cancelTermination;
 @end
 
@@ -408,7 +410,12 @@ static VCLResponder *pSharedResponder = nil;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
+- (void)sendEvent:(NSEvent *)pEvent;
 - (void)setContentView:(NSView *)pView;
+@end
+
+@interface VCLWindow (CocoaAppWindow)
+- (jobject)peer;
 @end
 
 @implementation VCLWindow
@@ -542,6 +549,19 @@ static VCLResponder *pSharedResponder = nil;
 	}
 
 	return bRet;
+}
+
+- (void)sendEvent:(NSEvent *)pEvent
+{
+	[super sendEvent:pEvent];
+
+	if ( pEvent && [pEvent type] == NSScrollWheel && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	{
+		// Post flipped coordinates 
+		NSRect aFrame = [self frame];
+		NSPoint aLocation = [pEvent locationInWindow];
+		VCLEventQueue_postMouseWheelEvent( [self peer], (long)aLocation.x, (long)( aFrame.size.height - aLocation.y ), Float32ToLong( [pEvent deltaX] ), Float32ToLong( [pEvent deltaY] ) * -1 );
+	}
 }
 
 - (void)setContentView:(NSView *)pView

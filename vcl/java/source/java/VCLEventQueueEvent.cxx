@@ -740,7 +740,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pWheelMouseEvent->mnNotchDelta = nWheelRotation;
 					pWheelMouseEvent->mnScrollLines = getScrollAmount();
 					pWheelMouseEvent->mnCode = getModifiers();
-					pWheelMouseEvent->mbHorz = FALSE;
+					pWheelMouseEvent->mbHorz = isHorizontal();
 				}
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
@@ -1281,7 +1281,31 @@ long com_sun_star_vcl_VCLEvent::getWheelRotation()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+		{
+			// The OOo code expects the opposite in signedness of Java
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID ) * -1;
+		}
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool com_sun_star_vcl_VCLEvent::isHorizontal()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isHorizontal", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
 	}
 	return out;
 }

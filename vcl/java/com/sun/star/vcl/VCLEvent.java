@@ -1784,7 +1784,7 @@ public final class VCLEvent extends AWTEvent {
 	public int getWheelRotation() {
 
 		if (source instanceof MouseWheelEvent)
-			return ((MouseWheelEvent)source).getWheelRotation() * -1;
+			return ((MouseWheelEvent)source).getWheelRotation();
 		else
 			return 0;
 
@@ -1844,6 +1844,21 @@ public final class VCLEvent extends AWTEvent {
 	boolean isAWTEvent() {
 
 		return awtEvent;
+
+	}
+
+	/**
+	 * Return whether or not this event is a horizontal scrolling event.
+	 *
+	 * @return <code>true</code> if the the event is a horizontal scrolling
+	 *  event
+	 */
+	public boolean isHorizontal() {
+
+		if (source instanceof VCLEventQueue.MultidirectionalMouseWheelEvent)
+			return ((VCLEventQueue.MultidirectionalMouseWheelEvent)source).isHorizontal();
+		else
+			return false;
 
 	}
 

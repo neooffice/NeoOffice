@@ -109,6 +109,14 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 
 // ============================================================================
 
+void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long rotationX, long rotationY )
+{
+	if ( aPeer )
+		com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( aPeer, nX, nY, rotationX, rotationY );
+}
+
+// ============================================================================
+
 jclass com_sun_star_vcl_VCLEventQueue::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -212,6 +220,33 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( jobject _par0, long _par1, long _par2, long _par3, long _par4 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Ljava/lang/Object;IIII)V";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "postMouseWheelEvent", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[5];
+			args[0].l = _par0;
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].i = jint( _par3 );
+			args[4].i = jint( _par4 );
+			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------

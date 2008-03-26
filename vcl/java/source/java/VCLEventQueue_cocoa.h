@@ -36,6 +36,8 @@
 #ifndef __VCLEVENTQUEUE_COCOA_H__
 #define __VCLEVENTQUEUE_COCOA_H__
 
+#include <jni.h>
+
 #ifdef __cplusplus
 typedef void* id;
 #endif
@@ -43,6 +45,8 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long rotationX, long rotationY );
+BOOL NSApplication_hasDelegate();
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();
 BOOL NSApplication_isInMenuTracking();

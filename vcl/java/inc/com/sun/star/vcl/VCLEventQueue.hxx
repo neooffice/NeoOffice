@@ -54,6 +54,7 @@ protected:
 
 public:
 	static jclass		getMyClass();
+	static void			postMouseWheelEvent( jobject _par0, long _par1, long _par2, long _par3, long _par4 );
 
 						com_sun_star_vcl_VCLEventQueue( jobject myObj );
 	virtual				~com_sun_star_vcl_VCLEventQueue() {};

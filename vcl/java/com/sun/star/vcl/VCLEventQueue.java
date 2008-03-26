@@ -40,6 +40,7 @@ import java.awt.Component;
 import java.awt.Container;
 import java.awt.DefaultKeyboardFocusManager;
 import java.awt.EventQueue;
+import java.awt.Frame;
 import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.Panel;
@@ -53,6 +54,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.InputMethodEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.MouseWheelEvent;
 import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
 import java.lang.reflect.Constructor;
@@ -162,6 +164,57 @@ public final class VCLEventQueue implements Runnable {
 	 * The next GC_MEMORY_2 garbage collection.
 	 */
 	private static long nextGCUseMemory3 = 0;
+
+	/**
+	 * Post a custom mouse wheel event.
+	 *
+	 * @param o the <code>Window</code> peer
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param rotationX the horizontal wheel rotation
+	 * @param rotationY the vertical wheel rotation
+	 */
+	public static void postMouseWheelEvent(Object o, int x, int y, int rotationX, int rotationY) {
+
+		if (o == null || (rotationX == 0 && rotationY == 0))
+			return;
+
+		Window w = null;
+
+		Frame[] frames = Frame.getFrames();
+		for (int i = 0; i < frames.length; i++) {
+			Window[] windows = frames[i].getOwnedWindows();
+			for (int j = 0; j < windows.length; j++) {
+				if (windows[j].getPeer() == o) {
+					w = windows[j];
+					break;
+				}
+			}
+
+			if (w != null) {
+				break;
+			}
+			else if (frames[i].getPeer() == o) {
+				w = frames[i];
+				break;
+			}
+		}
+
+		if (w == null || !w.isVisible())
+			return;
+
+		// Note: no matter what buttons we press, the MouseWheelEvents in
+		// Apple's JVMs always seem to have the following constant values:
+		//   Modifiers == 0
+		//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
+		//   ScrollUnits == 1
+		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
+		if (rotationX != 0)
+			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), 0, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationX, true));
+		if (rotationY != 0)
+			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), 0, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationY, false));
+
+	}
 
 	/**
 	 * Run the garbage collector if necessary.
@@ -476,7 +529,7 @@ public final class VCLEventQueue implements Runnable {
 					break;
 				case VCLEvent.SALEVENT_WHEELMOUSE:
 					{
-						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_WHEELMOUSE && queue.tail.event.getFrame() == newItem.event.getFrame()) {
+						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_WHEELMOUSE && queue.tail.event.isHorizontal() == newItem.event.isHorizontal() && queue.tail.event.getFrame() == newItem.event.getFrame()) {
 							queue.tail.remove = true;
 							newItem.event.addWheelRotation(queue.tail.event.getWheelRotation());
 						}
@@ -687,6 +740,14 @@ public final class VCLEventQueue implements Runnable {
 		protected void dispatchEvent(AWTEvent event) {
 
 			try {
+				// Avoid duplicate mouse wheel events by only allowing our
+				// custom MultidirectionalMouseWheelEvent events to be
+				// dispatched
+				if (event instanceof MouseWheelEvent && !(event instanceof VCLEventQueue.MultidirectionalMouseWheelEvent)) {
+					((MouseWheelEvent)event).consume();
+					return;
+				}
+
 				super.dispatchEvent(event);
 
 				if (event instanceof ComponentEvent && event.getID() == ComponentEvent.COMPONENT_MOVED && toolkitGetPointerInfoMethod != null && pointerInfoGetLocationMethod != null) {
@@ -739,8 +800,9 @@ public final class VCLEventQueue implements Runnable {
 					// replace the modifiers with the modifiers that were
 					// released
 					int id = event.getID();
-					if (id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_RELEASED)
+					if (id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_RELEASED) {
 						queue.setLastAdjustedMouseModifiers(((MouseEvent)event).getModifiersEx());
+					}
 				}
 			}
 			catch (Throwable t) {
@@ -856,6 +918,55 @@ public final class VCLEventQueue implements Runnable {
 		 *  event before any pending key events
 		 */
 		protected void enqueueKeyEvents(long after, Component untilFocused) {}
+
+	}
+
+	/**
+	 * The <code>NoEnqueueKeyboardFocusManager</code> is a subclass of
+	 * the <code>DefaultKeyboardFocusManager</code> class that does not enqueue
+	 * any key events.
+	 */
+	static final class MultidirectionalMouseWheelEvent extends MouseWheelEvent {
+
+		/**
+		 * The horizontal flag.
+		 */
+		private boolean horizontal = false;
+
+		/**
+		 * Construct a VCLEventQueue.MultidirectionalMouseWheelEvent instance.
+		 *
+		 * @param source the <code>Component</code> that originated the event
+		 * @param id the integer that identifies the event
+		 * @param when a long that gives the time the event occurred
+		 * @param modifiers the modifier keys
+		 * @param x the horizontal x coordinate
+		 * @param y the vertical y coordinate
+		 * @param clickCount the number of mouse clicks
+		 * @param popupTrigger <code>true</code> if this event is a trigger
+		 *  for a popup-menu
+		 * @param scrollType the type of scrolling which should take place
+		 * @param scrollAmount the number of units to be scrolled
+		 * @param wheelRotation the amount of rotation
+		 * @param h <code>true</code> if the scrolling is horizontal
+		 */
+		MultidirectionalMouseWheelEvent(Component source, int id, long when, int modifiers, int x, int y, int clickCount, boolean popupTrigger, int scrollType, int scrollAmount, int wheelRotation, boolean h) {
+
+			super(source, id, when, modifiers, x, y, clickCount, popupTrigger, scrollType, scrollAmount, wheelRotation);
+			horizontal = h;
+
+		}
+
+		/**
+		 * Returns <code>true</code> if scrolling is horizontal.
+		 *
+		 * @return <code>true</code> if scrolling is horizontal
+		 */
+		public boolean isHorizontal() {
+
+			return horizontal;
+
+		}
 
 	}
 
