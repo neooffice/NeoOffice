@@ -1361,7 +1361,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * The event queue.
 	 */
-	private VCLEventQueue queue = null;
+	protected VCLEventQueue queue = null;
 
 	/**
 	 * The resizable flag.
@@ -1431,7 +1431,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (w instanceof Frame)
 			window = new VCLFrame.NoPaintDialog(this, (Frame)w);
 		else
-			window = new VCLFrame.NoPaintFrame(this);
+			window = new VCLFrame.NoPaintFrame(this, queue);
 
 		// Process remaining style flags
 		if (showOnlyMenus)
@@ -3105,13 +3105,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private Dimension minSize = null;
 
 		/**
+		 * The <code>VCLEventQueue</code>.
+		 */
+		private VCLEventQueue queue = null;
+
+		/**
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
 		 */
-		NoPaintFrame(VCLFrame f) {
+		NoPaintFrame(VCLFrame f, VCLEventQueue q) {
 
 			frame = f;
+			queue = q;
 			initialize();
 
 		}
@@ -3216,6 +3222,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			else {
 				hiddenMenuBar = mb;
 				mb = null;
+				if (queue.isApplicationInMenuTracking())
+					return;
 			}
 
 			if (oldMenuBar != mb) {

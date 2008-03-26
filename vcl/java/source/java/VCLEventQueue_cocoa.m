@@ -90,21 +90,24 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 @end
 
-@interface IsApplicationActive : NSObject
+@interface IsApplicationActiveOrInMenuTracking : NSObject
 {
 	BOOL					mbActive;
+	BOOL					mbInMenuTracking;
 }
 + (id)create;
 - (id)init;
 - (BOOL)isActive;
+- (BOOL)isInMenuTracking;
 - (void)isApplicationActive:(id)pObject;
+- (void)isApplicationInMenuTracking:(id)pObject;
 @end
 
-@implementation IsApplicationActive
+@implementation IsApplicationActiveOrInMenuTracking
 
 + (id)create
 {
-	IsApplicationActive *pRet = [[IsApplicationActive alloc] init];
+	IsApplicationActiveOrInMenuTracking *pRet = [[IsApplicationActiveOrInMenuTracking alloc] init];
 	[pRet autorelease];
 	return pRet;
 }
@@ -114,6 +117,7 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 	[super init];
 
 	mbActive = YES;
+	mbInMenuTracking = NO;
 
 	return self;
 }
@@ -123,19 +127,24 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 	return mbActive;
 }
 
+- (BOOL)isInMenuTracking
+{
+	return mbInMenuTracking;
+}
+
 - (void)isApplicationActive:(id)pObject
 {
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 		mbActive = ( [pApp isActive] && ![pApp modalWindow] );
+}
 
+- (void)isApplicationInMenuTracking:(id)pObject
+{
 	// Fix bug 2992 by checking if we are tracking the menubar
-	if ( !mbActive )
-	{
-		MenuTrackingData aTrackingData;
-		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
-			mbActive = YES;
-	}
+	MenuTrackingData aTrackingData;
+	if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
+		mbInMenuTracking = YES;
 }
 
 @end
@@ -702,10 +711,26 @@ BOOL NSApplication_isActive()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	IsApplicationActive *pIsApplicationActive = [IsApplicationActive create];
+	IsApplicationActiveOrInMenuTracking *pIsApplicationActiveOrInMenuTracking = [IsApplicationActiveOrInMenuTracking create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pIsApplicationActive performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActive waitUntilDone:YES modes:pModes];
-	bRet = [pIsApplicationActive isActive];
+	[pIsApplicationActiveOrInMenuTracking performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActiveOrInMenuTracking waitUntilDone:YES modes:pModes];
+	bRet = [pIsApplicationActiveOrInMenuTracking isActive];
+
+	[pPool release];
+
+	return bRet;
+}
+
+BOOL NSApplication_isInMenuTracking()
+{
+	BOOL bRet = YES;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	IsApplicationActiveOrInMenuTracking *pIsApplicationActiveOrInMenuTracking = [IsApplicationActiveOrInMenuTracking create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pIsApplicationActiveOrInMenuTracking performSelectorOnMainThread:@selector(isApplicationInMenuTracking:) withObject:pIsApplicationActiveOrInMenuTracking waitUntilDone:YES modes:pModes];
+	bRet = [pIsApplicationActiveOrInMenuTracking isInMenuTracking];
 
 	[pPool release];
 

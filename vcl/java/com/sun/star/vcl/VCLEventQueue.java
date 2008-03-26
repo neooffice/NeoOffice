@@ -401,6 +401,13 @@ public final class VCLEventQueue implements Runnable {
 	native boolean isApplicationActive();
 
 	/**
+	 * Returns <code>true</code> if the application is tracking the menbar.
+	 *
+	 * @return <code>true</code> if the application is tracking the menubar
+	 */
+	native boolean isApplicationInMenuTracking();
+
+	/**
 	 * Returns <code>true</code> if the current thread is the application's
 	 * main thread.
 	 *

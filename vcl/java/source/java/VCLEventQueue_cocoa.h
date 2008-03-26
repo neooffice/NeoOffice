@@ -45,6 +45,7 @@ BEGIN_C
 #endif
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();
+BOOL NSApplication_isInMenuTracking();
 void NSFontManager_acquire();
 void NSFontManager_release();
 void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix, BOOL bUseQuickTimeContentViewHack );
