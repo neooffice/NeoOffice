@@ -3222,8 +3222,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			else {
 				hiddenMenuBar = mb;
 				mb = null;
-				if (queue.isApplicationInMenuTracking())
-					return;
 			}
 
 			if (oldMenuBar != mb) {

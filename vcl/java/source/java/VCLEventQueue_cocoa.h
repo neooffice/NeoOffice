@@ -49,7 +49,6 @@ void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long ro
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();
-BOOL NSApplication_isInMenuTracking();
 void NSFontManager_acquire();
 void NSFontManager_release();
 void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix, BOOL bUseQuickTimeContentViewHack );

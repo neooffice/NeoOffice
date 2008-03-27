@@ -92,24 +92,21 @@ inline long Float32ToLong( Float32 f ) { return (long)( f < 0 ? f - 1.0 : f + 0.
 
 @end
 
-@interface IsApplicationActiveOrInMenuTracking : NSObject
+@interface IsApplicationActive : NSObject
 {
 	BOOL					mbActive;
-	BOOL					mbInMenuTracking;
 }
 + (id)create;
 - (id)init;
 - (BOOL)isActive;
-- (BOOL)isInMenuTracking;
 - (void)isApplicationActive:(id)pObject;
-- (void)isApplicationInMenuTracking:(id)pObject;
 @end
 
-@implementation IsApplicationActiveOrInMenuTracking
+@implementation IsApplicationActive
 
 + (id)create
 {
-	IsApplicationActiveOrInMenuTracking *pRet = [[IsApplicationActiveOrInMenuTracking alloc] init];
+	IsApplicationActive *pRet = [[IsApplicationActive alloc] init];
 	[pRet autorelease];
 	return pRet;
 }
@@ -119,7 +116,6 @@ inline long Float32ToLong( Float32 f ) { return (long)( f < 0 ? f - 1.0 : f + 0.
 	[super init];
 
 	mbActive = YES;
-	mbInMenuTracking = NO;
 
 	return self;
 }
@@ -129,24 +125,11 @@ inline long Float32ToLong( Float32 f ) { return (long)( f < 0 ? f - 1.0 : f + 0.
 	return mbActive;
 }
 
-- (BOOL)isInMenuTracking
-{
-	return mbInMenuTracking;
-}
-
 - (void)isApplicationActive:(id)pObject
 {
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 		mbActive = ( [pApp isActive] && ![pApp modalWindow] );
-}
-
-- (void)isApplicationInMenuTracking:(id)pObject
-{
-	// Fix bug 2992 by checking if we are tracking the menubar
-	MenuTrackingData aTrackingData;
-	if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
-		mbInMenuTracking = YES;
 }
 
 @end
@@ -408,6 +391,8 @@ static VCLResponder *pSharedResponder = nil;
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (void)makeKeyAndOrderFront:(id)pSender;
+- (void)makeKeyWindow;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
@@ -470,6 +455,34 @@ static VCLResponder *pSharedResponder = nil;
 	}
 
 	return bRet;
+}
+
+- (void)makeKeyAndOrderFront:(id)pSender
+{
+	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	{
+		// Fix bug 2992 by not allowing the key window to change when we are
+		// tracking the menubar
+		MenuTrackingData aTrackingData;
+		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
+			return;
+	}
+
+	[super makeKeyAndOrderFront:pSender];
+}
+
+- (void)makeKeyWindow
+{
+	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	{
+		// Fix bug 2992 by not allowing the key window to change when we are
+		// tracking the menubar
+		MenuTrackingData aTrackingData;
+		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
+			return;
+	}
+
+	[super makeKeyWindow];
 }
 
 - (void)resignKeyWindow
@@ -734,26 +747,10 @@ BOOL NSApplication_isActive()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	IsApplicationActiveOrInMenuTracking *pIsApplicationActiveOrInMenuTracking = [IsApplicationActiveOrInMenuTracking create];
+	IsApplicationActive *pIsApplicationActive = [IsApplicationActive create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pIsApplicationActiveOrInMenuTracking performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActiveOrInMenuTracking waitUntilDone:YES modes:pModes];
-	bRet = [pIsApplicationActiveOrInMenuTracking isActive];
-
-	[pPool release];
-
-	return bRet;
-}
-
-BOOL NSApplication_isInMenuTracking()
-{
-	BOOL bRet = YES;
-
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	IsApplicationActiveOrInMenuTracking *pIsApplicationActiveOrInMenuTracking = [IsApplicationActiveOrInMenuTracking create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pIsApplicationActiveOrInMenuTracking performSelectorOnMainThread:@selector(isApplicationInMenuTracking:) withObject:pIsApplicationActiveOrInMenuTracking waitUntilDone:YES modes:pModes];
-	bRet = [pIsApplicationActiveOrInMenuTracking isInMenuTracking];
+	[pIsApplicationActive performSelectorOnMainThread:@selector(isApplicationActive:) withObject:pIsApplicationActive waitUntilDone:YES modes:pModes];
+	bRet = [pIsApplicationActive isActive];
 
 	[pPool release];
 

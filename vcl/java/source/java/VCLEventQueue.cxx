@@ -87,13 +87,6 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationActi
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationInMenuTracking( JNIEnv *pEnv, jobject object )
-{
-	return ( NSApplication_isInMenuTracking() ? JNI_TRUE : JNI_FALSE );
-}
-
-// ----------------------------------------------------------------------------
-
 JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread( JNIEnv *pEnv, jobject object )
 {
 	return ( GetCurrentEventLoop() == GetMainEventLoop() ? JNI_TRUE : JNI_FALSE );
@@ -198,23 +191,20 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[5]; 
+			JNINativeMethod pMethods[4]; 
 			pMethods[0].name = "hasApplicationDelegate";
 			pMethods[0].signature = "()Z";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_hasApplicationDelegate;
 			pMethods[1].name = "isApplicationActive";
 			pMethods[1].signature = "()Z";
 			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
-			pMethods[2].name = "isApplicationInMenuTracking";
+			pMethods[2].name = "isApplicationMainThread";
 			pMethods[2].signature = "()Z";
-			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationInMenuTracking;
-			pMethods[3].name = "isApplicationMainThread";
-			pMethods[3].signature = "()Z";
-			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
-			pMethods[4].name = "runApplicationMainThreadTimers";
-			pMethods[4].signature = "()V";
-			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 5 );
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
+			pMethods[3].name = "runApplicationMainThreadTimers";
+			pMethods[3].signature = "()V";
+			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
