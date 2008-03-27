@@ -465,7 +465,10 @@ static VCLResponder *pSharedResponder = nil;
 		// tracking the menubar
 		MenuTrackingData aTrackingData;
 		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
+		{
+			[self orderFront:pSender];
 			return;
+		}
 	}
 
 	[super makeKeyAndOrderFront:pSender];
