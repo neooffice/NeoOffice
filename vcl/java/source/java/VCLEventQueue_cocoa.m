@@ -559,8 +559,11 @@ static VCLResponder *pSharedResponder = nil;
 	{
 		// Post flipped coordinates 
 		NSRect aFrame = [self frame];
+		NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+		float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
 		NSPoint aLocation = [pEvent locationInWindow];
-		VCLEventQueue_postMouseWheelEvent( [self peer], (long)aLocation.x, (long)( aFrame.size.height - aLocation.y ), Float32ToLong( [pEvent deltaX] ), Float32ToLong( [pEvent deltaY] ) * -1 );
+		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( [pEvent deltaX] ), Float32ToLong( [pEvent deltaY] ) * -1 );
 	}
 }
 
