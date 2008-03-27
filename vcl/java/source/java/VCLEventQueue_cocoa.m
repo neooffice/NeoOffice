@@ -43,7 +43,7 @@ static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
-inline long Float32ToLong( Float32 f ) { return (long)( f < 0 ? f - 1.0 : f + 0.5 ); }
+inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
 @interface NSObject (ApplicationHasDelegate)
 - (void)cancelTermination;

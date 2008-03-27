@@ -1216,7 +1216,11 @@ public final class VCLEvent extends AWTEvent {
 	 */
 	void addWheelRotation(int r) {
 
-		if (source instanceof MouseWheelEvent) {
+		if (source instanceof VCLEventQueue.MultidirectionalMouseWheelEvent) {
+			VCLEventQueue.MultidirectionalMouseWheelEvent e = (VCLEventQueue.MultidirectionalMouseWheelEvent)source;
+			source = new VCLEventQueue.MultidirectionalMouseWheelEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger(), e.getScrollType(), e.getScrollAmount(), e.getWheelRotation() + r, e.isHorizontal());
+		}
+		else if (source instanceof MouseWheelEvent) {
 			MouseWheelEvent e = (MouseWheelEvent)source;
 			source = new MouseWheelEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | e.getModifiersEx(), e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger(), e.getScrollType(), e.getScrollAmount(), e.getWheelRotation() + r);
 		}

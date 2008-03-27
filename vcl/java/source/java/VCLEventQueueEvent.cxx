@@ -745,7 +745,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pWheelMouseEvent->mnNotchDelta = nWheelRotation;
 					pWheelMouseEvent->mnScrollLines = getScrollAmount();
 					pWheelMouseEvent->mnCode = getModifiers();
-					pWheelMouseEvent->mbHorz = isHorizontal();
+					pWheelMouseEvent->mbHorz = bHorz;
 				}
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
