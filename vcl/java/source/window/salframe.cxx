@@ -118,7 +118,7 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 		return;
 
 	JavaSalFrame *pFrame = (JavaSalFrame *)pSystemWindow->ImplGetFrame();
-	if ( !pFrame )
+	if ( !pFrame || ( bShowOnlyMenus && ( pFrame->mpParent || !pFrame->mpMenuBar ) ) )
 		return;
 
 	pFrame->mbInShowOnlyMenus = TRUE;
