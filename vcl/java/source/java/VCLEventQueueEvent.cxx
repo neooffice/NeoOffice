@@ -731,11 +731,16 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				if ( !pWheelMouseEvent )
 				{
+					// The OOo code expects the opposite in signedness of Java
+					// for vertical scrolling
+					long nWheelRotation = getWheelRotation();
+					BOOL bHorz = isHorizontal();
+					if ( !bHorz )
+						nWheelRotation *= -1;
 					pWheelMouseEvent = new SalWheelMouseEvent();
 					pWheelMouseEvent->mnTime = getWhen();
 					pWheelMouseEvent->mnX = getX();
 					pWheelMouseEvent->mnY = getY();
-					long nWheelRotation = getWheelRotation();
 					pWheelMouseEvent->mnDelta = nWheelRotation * 120;
 					pWheelMouseEvent->mnNotchDelta = nWheelRotation;
 					pWheelMouseEvent->mnScrollLines = getScrollAmount();
@@ -1281,10 +1286,7 @@ long com_sun_star_vcl_VCLEvent::getWheelRotation()
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
-		{
-			// The OOo code expects the opposite in signedness of Java
-			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID ) * -1;
-		}
+			out = (long)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
 	}
 	return out;
 }
