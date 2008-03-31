@@ -73,7 +73,6 @@
 
 			[pEPSImage setScalesWhenResized:YES];
 			[pEPSImage setSize:NSMakeSize( mnDestWidth, mnDestHeight )];
-			[pEPSImage addRepresentation:pImage];
 
 			NSView *pFocusView = [NSView focusView];
 			if ( pFocusView )
