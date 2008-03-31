@@ -43,10 +43,12 @@
 	int*				mpDestPtr;
 	void*				mpEPSPtr;
 	unsigned			mnEPSSize;
+	BOOL				mbResult;
 }
 + (id)epsWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight;
-- (BOOL)drawEPSInBitmap;
+- (void)drawEPSInBitmap:(id)pObject;
 - (id)initWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight;
+- (BOOL)result;
 @end
 
 @implementation DrawEPSInBitmap
@@ -58,10 +60,8 @@
 	return pRet;
 }
 
-- (BOOL)drawEPSInBitmap
+- (void)drawEPSInBitmap:(id)pObject
 {
-	BOOL bRet = NO;
-
 	NSData *pEPSData = [NSData dataWithBytesNoCopy:mpEPSPtr length:mnEPSSize freeWhenDone:NO];
 	if ( pEPSData )
 	{
@@ -73,6 +73,7 @@
 
 			[pEPSImage setScalesWhenResized:YES];
 			[pEPSImage setSize:NSMakeSize( mnDestWidth, mnDestHeight )];
+			[pEPSImage addRepresentation:pImage];
 
 			NSView *pFocusView = [NSView focusView];
 			if ( pFocusView )
@@ -83,7 +84,8 @@
 			NSBitmapImageRep *pBitmapImageRep = [[NSBitmapImageRep alloc] initWithFocusedViewRect:NSMakeRect(0, 0, mnDestWidth, mnDestHeight )];
 			if ( pBitmapImageRep )
 			{
-				// Add to autorelease pool as invoking alloc disables autorelease
+				// Add to autorelease pool as invoking alloc disables
+				// autorelease
 				[pBitmapImageRep autorelease];
 
 				int nBitsPerPixel = [pBitmapImageRep bitsPerPixel];
@@ -101,7 +103,7 @@
 							mpDestPtr[ i ] = ( ( (int)pBitmapBuffer[ j ] & 0x000000ff ) << 16 ) | ( ( (int)pBitmapBuffer[ j + 1 ] & 0x000000ff ) << 8 ) | ( (int)pBitmapBuffer[ j + 2 ] & 0x000000ff ) | 0xff000000;
 					}
 
-					bRet = YES;
+					mbResult = YES;
 				}
 				else if ( nBitsPerPixel == 32 )
 				{
@@ -120,7 +122,7 @@
 #endif	// POWERPC
 					}
 
-					bRet = YES;
+					mbResult = YES;
 				}	
 			}
 
@@ -130,8 +132,6 @@
 				[pFocusView lockFocus];
 		}
 	}
-
-	return bRet;
 }
 
 - (id)initWithPtr:(void *)pEPSPtr size:(unsigned)nEPSSize destPtr:(int *)pDestPtr destWidth:(int)nDestWidth destHeight:(int)nDestHeight
@@ -143,8 +143,14 @@
 	mnDestHeight = nDestHeight;
 	mpEPSPtr = pEPSPtr;
 	mnEPSSize = nEPSSize;
+	mbResult = NO;
 
 	return self;
+}
+
+- (BOOL)result
+{
+	return mbResult;
 }
 
 @end
@@ -158,7 +164,9 @@ BOOL NSEPSImageRep_drawInBitmap( void *pEPSPtr, unsigned nEPSSize, int *pDestPtr
 	if ( pEPSPtr && nEPSSize && pDestPtr && nDestWidth && nDestHeight )
 	{
 		DrawEPSInBitmap *pDrawEPSInBitmap = [DrawEPSInBitmap epsWithPtr:pEPSPtr size:nEPSSize destPtr:pDestPtr destWidth:nDestWidth destHeight:nDestHeight];
-		bRet = [pDrawEPSInBitmap drawEPSInBitmap];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pDrawEPSInBitmap performSelectorOnMainThread:@selector(drawEPSInBitmap:) withObject:pDrawEPSInBitmap waitUntilDone:YES modes:pModes];
+		bRet = [pDrawEPSInBitmap result];
 	}
 
 	[pPool release];
