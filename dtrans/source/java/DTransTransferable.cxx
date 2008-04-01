@@ -273,7 +273,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 													if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
 													{
 														ComponentInstance aExporter;
-														if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+														if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr )
 														{
 															if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
 															{
@@ -491,7 +491,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 									if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
 									{
 										ComponentInstance aExporter;
-										if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr );
+										if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr )
 										{
 											if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
 											{
