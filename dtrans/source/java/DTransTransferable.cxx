@@ -256,7 +256,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 								{
 									// Convert from our BMP data
 									ComponentInstance aImporter;
-									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
+									if ( OpenADefaultComponent( GraphicsImporterComponentType, kQTFileTypeBMP, &aImporter ) == noErr )
 									{
 										Handle hData;
 										if ( PtrToHand( pArray, &hData, nLen ) == noErr && GetHandleSize( hData ) == nLen )
@@ -491,7 +491,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 									if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
 									{
 										ComponentInstance aExporter;
-										if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+										if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr );
 										{
 											if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
 											{
