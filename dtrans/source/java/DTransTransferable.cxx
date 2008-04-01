@@ -63,16 +63,18 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 6;
+static UInt32 nSupportedTypes = 8;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
 	'RTF ',
 	'utxt',
-	'TEXT',
-	'PDF ',
-	'TIFF',
-	'PICT'
+	kQTFileTypeText,
+	kQTFileTypePDF,
+	kQTFileTypeTIFF,
+	kQTFileTypeBMP,
+	kQTFileTypePNG,
+	kQTFileTypeJPEG
 };
 
 // List of supported types that are text
@@ -80,6 +82,8 @@ static bool aSupportedTextTypes[] = {
 	true,
 	true,
 	true,
+	false,
+	false,
 	false,
 	false,
 	false
@@ -92,6 +96,8 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" ),
+	OUString::createFromAscii( "image/bmp" ),
+	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" )
 };
 
@@ -100,6 +106,8 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( OUString* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
@@ -145,6 +153,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 			if ( bTransferableFound )
 			{
 				bool bFlavorFound = false;
+				bool bFlavorIsText = false;
 				DataFlavor aFlavor;
 				for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
 					if ( nType == aSupportedNativeTypes[ i ] )
@@ -154,6 +163,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 						if ( pTransferable->isDataFlavorSupported( aFlavor ) )
 						{
 							bFlavorFound = true;
+							bFlavorIsText = aSupportedTextTypes[ i ];
 							break;
 						}
 					}
@@ -198,7 +208,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 									else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 										nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
 								}
-								else if ( nType == 'TEXT' )
+								else if ( nType == kQTFileTypeText )
 								{
 									CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen, kCFAllocatorNull );
 									if ( aCFString )
@@ -242,9 +252,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 							sal_Int32 nLen = aData.getLength();
 							if ( pArray && nLen )
 							{
-								if ( nType == 'PICT' || nType == 'TIFF' )
+								if ( !bFlavorIsText )
 								{
-									// Convert to PICT or TIFF from our BMP data
+									// Convert from our BMP data
 									ComponentInstance aImporter;
 									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
 									{
@@ -355,15 +365,21 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 	Any out;
 
 	FourCharCode nRequestedType = NULL;
+	bool bRequestedTypeIsText = false;
 	OSStatus nErr = noErr;
 
 	// Run a loop so that if data type fails, we can try another
 	for ( USHORT i = 0; i < nSupportedTypes; i++ )
 	{
 		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
+		{
 			nRequestedType = aSupportedNativeTypes[ i ];
+			bRequestedTypeIsText = aSupportedTextTypes[ i ];
+		}
 		else
+		{
 			continue;
+		}
 
 		MacOSSize nSize;
 		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
@@ -384,38 +400,44 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 		if ( nErr == noErr && nSize > 0 )
 		{
-			Sequence< sal_Int8 > aData( nSize );
 			bool bDataFound = false;
+			Handle hData = NewHandle( nSize );
+
+			HLock( hData );
 			if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 			{
-				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, aData.getArray() ) == noErr );
+				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, *hData ) == noErr );
 			}
 			else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 			{
 				DragItemRef aItem;
 				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
-					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, aData.getArray(), &nSize, 0 ) == noErr );
+					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, *hData, &nSize, 0 ) == noErr );
 			}
+			HUnlock( hData );
 
 			if ( bDataFound )
 			{
 				if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 				{
 					OUString aString;
-					sal_Int32 nLen;
+					sal_Int32 nLen = nSize;
 					if ( nRequestedType == 'RTF ' )
 					{
-						nLen = aData.getLength();
-						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
+						HLock( hData );
+						if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
 							nLen--;
-						aString = OUString( (sal_Char *)aData.getArray(), nLen, RTL_TEXTENCODING_ASCII_US );
+						aString = OUString( (sal_Char *)*hData, nLen, RTL_TEXTENCODING_ASCII_US );
+						HUnlock( hData );
 					}
-					else if ( nRequestedType == 'TEXT' )
+					else if ( nRequestedType == kQTFileTypeText )
 					{
-						nLen = aData.getLength();
-						if ( ( (sal_Char *)aData.getArray() )[ nLen - 1 ] == 0 )
+						HLock( hData );
+						if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
 							nLen--;
-						CFStringRef aCFString = CFStringCreateWithBytes( kCFAllocatorDefault, (const UInt8 *)aData.getArray(), nLen, CFStringGetSystemEncoding(), false );
+						CFStringRef aCFString = CFStringCreateWithBytes( kCFAllocatorDefault, (const UInt8 *)*hData, nLen, CFStringGetSystemEncoding(), false );
+						HUnlock( hData );
+
 						if ( aCFString )
 						{
 							
@@ -432,10 +454,12 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					}
 					else
 					{
-						nLen = aData.getLength() / 2;
-						if ( ( (sal_Unicode *)aData.getArray() )[ nLen - 1 ] == 0 )
+						HLock( hData );
+						nLen = nSize / 2;
+						if ( ( (sal_Unicode *)*hData )[ nLen - 1 ] == 0 )
 							nLen--;
-						aString = OUString( (sal_Unicode *)aData.getArray(), nLen );
+						aString = OUString( (sal_Unicode *)*hData, nLen );
+						HUnlock( hData );
 					}
 
 					// Replace carriage returns with line feeds
@@ -452,57 +476,48 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				}
 				else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 				{
-					if ( nRequestedType == 'PDF ' || nRequestedType == 'PICT' || nRequestedType == 'TIFF' )
+					if ( !bRequestedTypeIsText )
 					{
 						// Convert to BMP format
 						ComponentInstance aImporter;
 						if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
 						{
-							Handle hData;
-							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
+							Rect aBounds;
+							if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
 							{
-								// Free the source data
-								aData = Sequence< sal_Int8 >();
-
-								Rect aBounds;
-								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
+								GWorldPtr aGWorld;
+								if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
 								{
-									GWorldPtr aGWorld;
-									if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
+									if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
 									{
-										if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
+										ComponentInstance aExporter;
+										if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
 										{
-											ComponentInstance aExporter;
-											if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+											if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
 											{
-												if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
+												Handle hExportData = NewHandle( 0 );
+												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
 												{
-													Handle hExportData = NewHandle( 0 );
-													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+													unsigned long nDataLen;
+													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 													{
-														unsigned long nDataLen;
-														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-														{
-															Sequence< sal_Int8 > aExportData( nDataLen );
-															HLock( hExportData );
-															memcpy( aExportData.getArray(), *hExportData, nDataLen );
-															HUnlock( hExportData );
-															out <<= aExportData;
-														}
+														Sequence< sal_Int8 > aExportData( nDataLen );
+														HLock( hExportData );
+														memcpy( aExportData.getArray(), *hExportData, nDataLen );
+														HUnlock( hExportData );
+														out <<= aExportData;
 													}
-
-													DisposeHandle( hExportData );
 												}
 
-												CloseComponent( aExporter );
+												DisposeHandle( hExportData );
 											}
+
+											CloseComponent( aExporter );
 										}
-
-										DisposeGWorld( aGWorld );
 									}
-								}
 
-								DisposeHandle( hData );
+									DisposeGWorld( aGWorld );
+								}
 							}
 
 							CloseComponent( aImporter );
@@ -510,13 +525,19 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					}
 					else
 					{
-						out <<= aData;
+						Sequence< sal_Int8 > aExportData( nSize );
+						HLock( hData );
+						memcpy( aExportData.getArray(), *hData, nSize );
+						HUnlock( hData );
+						out <<= aExportData;
 					}
 				}
 
 				// Force a break from the loop
 				i = nSupportedTypes;
 			}
+
+			DisposeHandle( hData );
 		}
 	}
 
@@ -725,7 +746,6 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				{
 					for ( USHORT j = 0; j < nSupportedTypes; j++ )
 					{
-fprintf( stderr, "Here: %s\n", OUStringToOString( xFlavors[ i ].MimeType, RTL_TEXTENCODING_UTF8 ).getStr() );
 						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
 						{
 							bTextOnly = true;
@@ -753,7 +773,7 @@ fprintf( stderr, "Here: %s\n", OUStringToOString( xFlavors[ i ].MimeType, RTL_TE
 
 							// Converting to PDF doesn't work (only converting
 							// from PDF works) so don't add the PDF flavor
-							if ( aSupportedNativeTypes[ j ] == 'PDF ' )
+							if ( aSupportedNativeTypes[ j ] == kQTFileTypePDF )
 								continue;
 
 							if ( bRenderImmediately )
