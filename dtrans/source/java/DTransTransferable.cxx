@@ -242,9 +242,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 							sal_Int32 nLen = aData.getLength();
 							if ( pArray && nLen )
 							{
-								if ( nType == 'PICT' )
+								if ( nType == 'PICT' || nType == 'TIFF' )
 								{
-									// Convert to PICT from our BMP data
+									// Convert to PICT or TIFF from our BMP data
 									ComponentInstance aImporter;
 									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
 									{
@@ -254,72 +254,50 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 											// Free the source data
 											aData = Sequence< sal_Int8 >();
 
-											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+											Rect aBounds;
+											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
 											{
-												PicHandle hPict;
-												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+												GWorldPtr aGWorld;
+												if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
 												{
-													HLock( (Handle)hPict );
-													if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-														nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
-													else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-														nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
-													HUnlock( (Handle)hPict );
-													KillPicture( hPict );
-												}
-												HUnlock( hData );
-												DisposeHandle( hData );
-											}
-											CloseComponent( aImporter );
-										}
-									}
-								}
-								else if ( nType == 'TIFF' )
-								{
-									// Convert to TIFF from our BMP data
-									ComponentInstance aImporter;
-									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
-									{
-										Handle hData;
-										if ( PtrToHand( pArray, &hData, nLen ) == noErr )
-										{
-											// Free the source data
-											aData = Sequence< sal_Int8 >();
-
-											if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
-											{
-												PicHandle hPict;
-												if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
-												{
-													ComponentInstance aExporter;
-													if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
+													if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
 													{
-														if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+														ComponentInstance aExporter;
+														if ( OpenADefaultComponent( GraphicsExporterComponentType, nType, &aExporter ) == noErr );
 														{
-															Handle hExportData = NewHandle( 0 );
-															if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+															if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
 															{
-																unsigned long nDataLen;
-																if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+																Handle hExportData = NewHandle( 0 );
+																if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
 																{
-																	HLock( hExportData );
-																	if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-																		nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
-																	else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-																		nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
-																	HUnlock( hExportData );
+																	unsigned long nDataLen;
+																	if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+																	{
+																		Sequence< sal_Int8 > aExportData( nDataLen );
+																		HLock( hExportData );
+																		if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+																			nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
+																		else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+																			nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
+																		HUnlock( hExportData );
+																	}
 																}
+
 																DisposeHandle( hExportData );
 															}
+
+															CloseComponent( aExporter );
 														}
-														CloseComponent( aExporter );
 													}
-													KillPicture( hPict );
+
+													DisposeGWorld( aGWorld );
 												}
-												DisposeHandle( hData );
 											}
-											CloseComponent( aImporter );
+
+											DisposeHandle( hData );
 										}
+
+										CloseComponent( aImporter );
 									}
 								}
 								else
@@ -474,38 +452,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				}
 				else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
 				{
-					if ( nRequestedType == 'PICT' )
-					{
-						// Convert to BMP format
-						ComponentInstance aExporter;
-						if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
-						{
-							Handle hData;
-							if ( PtrToHand( aData.getArray(), &hData, aData.getLength() ) == noErr )
-							{
-								if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
-								{
-									Handle hExportData = NewHandle( 0 );
-									if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-									{
-										unsigned long nDataLen;
-										if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-										{
-											Sequence< sal_Int8 > aExportData( nDataLen );
-											HLock( hExportData );
-											memcpy( aExportData.getArray(), *hExportData, nDataLen );
-											HUnlock( hExportData );
-											out <<= aExportData;
-										}
-										DisposeHandle( hExportData );
-									}
-								}
-								DisposeHandle( hData );
-							}
-							CloseComponent( aExporter );
-						}
-					}
-					else if ( nRequestedType == 'PDF ' || nRequestedType == 'TIFF' )
+					if ( nRequestedType == 'PDF ' || nRequestedType == 'PICT' || nRequestedType == 'TIFF' )
 					{
 						// Convert to BMP format
 						ComponentInstance aImporter;
@@ -517,38 +464,47 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 								// Free the source data
 								aData = Sequence< sal_Int8 >();
 
-								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr )
+								Rect aBounds;
+								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
 								{
-									PicHandle hPict;
-									if ( GraphicsImportGetAsPicture( aImporter, &hPict ) == noErr )
+									GWorldPtr aGWorld;
+									if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
 									{
-										ComponentInstance aExporter;
-										if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
+										if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
 										{
-											if ( GraphicsExportSetInputPicture( aExporter, hPict ) == noErr )
+											ComponentInstance aExporter;
+											if ( OpenADefaultComponent( GraphicsExporterComponentType, 'BMPf', &aExporter ) == noErr );
 											{
-												Handle hExportData = NewHandle( 0 );
-												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+												if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
 												{
-													unsigned long nDataLen;
-													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+													Handle hExportData = NewHandle( 0 );
+													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
 													{
-														Sequence< sal_Int8 > aExportData( nDataLen );
-														HLock( hExportData );
-														memcpy( aExportData.getArray(), *hExportData, nDataLen );
-														HUnlock( hExportData );
-														out <<= aExportData;
+														unsigned long nDataLen;
+														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+														{
+															Sequence< sal_Int8 > aExportData( nDataLen );
+															HLock( hExportData );
+															memcpy( aExportData.getArray(), *hExportData, nDataLen );
+															HUnlock( hExportData );
+															out <<= aExportData;
+														}
 													}
+
 													DisposeHandle( hExportData );
 												}
+
+												CloseComponent( aExporter );
 											}
-											CloseComponent( aExporter );
 										}
-										KillPicture( hPict );
+
+										DisposeGWorld( aGWorld );
 									}
 								}
+
 								DisposeHandle( hData );
 							}
+
 							CloseComponent( aImporter );
 						}
 					}
@@ -769,6 +725,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				{
 					for ( USHORT j = 0; j < nSupportedTypes; j++ )
 					{
+fprintf( stderr, "Here: %s\n", OUStringToOString( xFlavors[ i ].MimeType, RTL_TEXTENCODING_UTF8 ).getStr() );
 						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
 						{
 							bTextOnly = true;
