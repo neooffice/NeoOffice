@@ -259,7 +259,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 									if ( OpenADefaultComponent( GraphicsImporterComponentType, 'BMPf', &aImporter ) == noErr )
 									{
 										Handle hData;
-										if ( PtrToHand( pArray, &hData, nLen ) == noErr )
+										if ( PtrToHand( pArray, &hData, nLen ) == noErr && GetHandleSize( hData ) == nLen )
 										{
 											// Free the source data
 											aData = Sequence< sal_Int8 >();
