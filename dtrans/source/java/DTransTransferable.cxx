@@ -63,7 +63,7 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 8;
+static UInt32 nSupportedTypes = 7;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
@@ -73,7 +73,6 @@ static FourCharCode aSupportedNativeTypes[] = {
 	kQTFileTypePDF,
 	kQTFileTypeTIFF,
 	kQTFileTypeBMP,
-	kQTFileTypePNG,
 	kQTFileTypeJPEG
 };
 
@@ -82,7 +81,6 @@ static bool aSupportedTextTypes[] = {
 	true,
 	true,
 	true,
-	false,
 	false,
 	false,
 	false,
@@ -97,7 +95,6 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" ),
-	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" )
 };
 
@@ -106,7 +103,6 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( OUString* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
