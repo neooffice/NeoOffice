@@ -280,7 +280,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 																Handle hExportData = NewHandle( 0 );
 																if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
 																{
-																	unsigned long nDataLen;
+																	ULONG nDataLen;
 																	if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 																	{
 																		Sequence< sal_Int8 > aExportData( nDataLen );
@@ -498,7 +498,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 												Handle hExportData = NewHandle( 0 );
 												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
 												{
-													unsigned long nDataLen;
+													ULONG nDataLen;
 													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 													{
 														Sequence< sal_Int8 > aExportData( nDataLen );
