@@ -250,19 +250,19 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 								if ( !bFlavorIsText )
 								{
 									// Convert from our BMP data
-									if ( nType == kQTFileTypePicture )
+									ComponentInstance aImporter;
+									if ( OpenADefaultComponent( GraphicsImporterComponentType, kQTFileTypeBMP, &aImporter ) == noErr )
 									{
-										ComponentInstance aImporter;
-										if ( OpenADefaultComponent( GraphicsImporterComponentType, kQTFileTypeBMP, &aImporter ) == noErr )
+										Handle hData;
+										if ( PtrToHand( pArray, &hData, nLen ) == noErr )
 										{
-											Handle hData;
-											if ( PtrToHand( pArray, &hData, nLen ) == noErr && GetHandleSize( hData ) == nLen )
+											// Free the source data
+											aData = Sequence< sal_Int8 >();
+
+											Rect aBounds;
+											if ( GetHandleSize( hData ) == nLen && GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
 											{
-												// Free the source data
-												aData = Sequence< sal_Int8 >();
-	
-												Rect aBounds;
-												if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
+												if ( nType == kQTFileTypePicture )
 												{
 													Handle hPict;
 													if ( GraphicsImportGetAsPicture( aImporter, (PicHandle *)&hPict ) == noErr )
@@ -277,26 +277,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 														DisposeHandle( hPict );
 													}
 												}
-	
-												DisposeHandle( hData );
-											}
-	
-											CloseComponent( aImporter );
-										}
-									}
-									else
-									{
-										ComponentInstance aImporter;
-										if ( OpenADefaultComponent( GraphicsImporterComponentType, kQTFileTypeBMP, &aImporter ) == noErr )
-										{
-											Handle hData;
-											if ( PtrToHand( pArray, &hData, nLen ) == noErr && GetHandleSize( hData ) == nLen )
-											{
-												// Free the source data
-												aData = Sequence< sal_Int8 >();
-	
-												Rect aBounds;
-												if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
+												else
 												{
 													GWorldPtr aGWorld;
 													if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
@@ -334,12 +315,12 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 														DisposeGWorld( aGWorld );
 													}
 												}
-	
-												DisposeHandle( hData );
 											}
-	
-											CloseComponent( aImporter );
+
+											DisposeHandle( hData );
 										}
+
+										CloseComponent( aImporter );
 									}
 								}
 								else
