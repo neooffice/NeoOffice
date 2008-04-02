@@ -193,7 +193,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 									if ( pArray[ j ] == (sal_Unicode)'\n' )
 										pArray[ j ] = (sal_Unicode)'\r';
 								}
-		
+
 								if ( nType == 'RTF ' )
 								{
 									OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
@@ -304,14 +304,14 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 																			HUnlock( hExportData );
 																		}
 																	}
-	
+
 																	DisposeHandle( hExportData );
 																}
-	
+
 																CloseComponent( aExporter );
 															}
 														}
-	
+
 														DisposeGWorld( aGWorld );
 													}
 												}
@@ -453,7 +453,6 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 						if ( aCFString )
 						{
-							
 							CFRange aRange;
 							aRange.location = 0;
 							aRange.length = CFStringGetLength( aCFString );
@@ -492,48 +491,78 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					if ( !bRequestedTypeIsText )
 					{
 						// Convert to BMP format
-						ComponentInstance aImporter;
-						if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
+						if ( nRequestedType == kQTFileTypePicture )
 						{
-							Rect aBounds;
-							if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
+							ComponentInstance aExporter;
+							if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr )
 							{
-								GWorldPtr aGWorld;
-								if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
+								if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
 								{
-									if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
+									Handle hExportData = NewHandle( 0 );
+									if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
 									{
-										ComponentInstance aExporter;
-										if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr )
+										ULONG nDataLen;
+										if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 										{
-											if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
-											{
-												Handle hExportData = NewHandle( 0 );
-												if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-												{
-													ULONG nDataLen;
-													if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-													{
-														Sequence< sal_Int8 > aExportData( nDataLen );
-														HLock( hExportData );
-														memcpy( aExportData.getArray(), *hExportData, nDataLen );
-														HUnlock( hExportData );
-														out <<= aExportData;
-													}
-												}
-
-												DisposeHandle( hExportData );
-											}
-
-											CloseComponent( aExporter );
+											Sequence< sal_Int8 > aExportData( nDataLen );
+											HLock( hExportData );
+											memcpy( aExportData.getArray(), *hExportData, nDataLen );
+											HUnlock( hExportData );
+											out <<= aExportData;
 										}
 									}
 
-									DisposeGWorld( aGWorld );
+									DisposeHandle( hExportData );
 								}
-							}
 
-							CloseComponent( aImporter );
+								CloseComponent( aExporter );
+							}
+						}
+						else
+						{
+							ComponentInstance aImporter;
+							if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
+							{
+								Rect aBounds;
+								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
+								{
+									GWorldPtr aGWorld;
+									if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
+									{
+										if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
+										{
+											ComponentInstance aExporter;
+											if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr )
+											{
+												if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
+												{
+													Handle hExportData = NewHandle( 0 );
+													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+													{
+														ULONG nDataLen;
+														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+														{
+															Sequence< sal_Int8 > aExportData( nDataLen );
+															HLock( hExportData );
+															memcpy( aExportData.getArray(), *hExportData, nDataLen );
+															HUnlock( hExportData );
+															out <<= aExportData;
+														}
+													}
+
+													DisposeHandle( hExportData );
+												}
+
+												CloseComponent( aExporter );
+											}
+										}
+
+										DisposeGWorld( aGWorld );
+									}
+								}
+
+								CloseComponent( aImporter );
+							}
 						}
 					}
 					else
