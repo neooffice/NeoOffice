@@ -87,6 +87,9 @@
 			if ( pData )
 			{
 				NSImageRep *pImage = [NSEPSImageRep imageRepWithData:pData];
+				if ( !pImage )
+					pImage = [NSBitmapImageRep imageRepWithData:pData];
+
 				if ( pImage )
 					[pImage drawInRect:NSMakeRect( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 )];
 			}
