@@ -63,10 +63,12 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 6;
+static UInt32 nSupportedTypes = 7;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
+	// Mark 'furl' as text to ensure that it is the preferred flavor
+	'furl',
 	'RTF ',
 	'utxt',
 	kQTFileTypeText,
@@ -77,6 +79,8 @@ static FourCharCode aSupportedNativeTypes[] = {
 
 // List of supported types that are text
 static bool aSupportedTextTypes[] = {
+	// Mark 'furl' as text to ensure that it is the preferred flavor
+	true,
 	true,
 	true,
 	true,
@@ -88,6 +92,7 @@ static bool aSupportedTextTypes[] = {
 
 // List of supported mime types in priority order
 static OUString aSupportedMimeTypes[] = {
+	OUString::createFromAscii( "application/x-openoffice-file;windows_formatname=\"FileName\"" ),
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
@@ -99,6 +104,7 @@ static OUString aSupportedMimeTypes[] = {
 
 // List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( OUString* )0 ),
