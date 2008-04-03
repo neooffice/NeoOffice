@@ -661,25 +661,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Thread.yield();
 			return;
 		}
-		else {
-			LinkedList windowList = new LinkedList();
 
-			Frame[] frames = Frame.getFrames();
-			for (int i = 0; i < frames.length; i++) {
-				Window[] windows = frames[i].getOwnedWindows();
-				for (int j = 0; j < windows.length; j++)
-					windowList.add(windows[j]);
-				windowList.add(frames[i]);
-			}
+		LinkedList windowList = new LinkedList();
 
-			Iterator iterator = windowList.iterator();
-			while (iterator.hasNext()) {
-				VCLFrame f = findFrame((Component)iterator.next());
-				if (f != null) {
-					synchronized (f) {
-						f.enableFlushing(true);
-						f.enableFlushing(false);
-					}
+		Frame[] frames = Frame.getFrames();
+		for (int i = 0; i < frames.length; i++) {
+			Window[] windows = frames[i].getOwnedWindows();
+			for (int j = 0; j < windows.length; j++)
+				windowList.add(windows[j]);
+			windowList.add(frames[i]);
+		}
+
+		Iterator iterator = windowList.iterator();
+		while (iterator.hasNext()) {
+			VCLFrame f = findFrame((Component)iterator.next());
+			if (f != null) {
+				synchronized (f) {
+					f.enableFlushing(true);
+					f.enableFlushing(false);
 				}
 			}
 		}
@@ -1334,6 +1333,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private VCLGraphics graphics = null;
 
 	/**
+	 * The hidden menubar.
+	 */
+	private MenuBar hiddenMenuBar = null;
+
+	/**
 	 * The ignore mouse released modifiers.
 	 */
 	private int ignoreMouseReleasedModifiers = 0;
@@ -1610,6 +1614,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		children = null;
 		graphics.dispose();
 		graphics = null;
+		hiddenMenuBar = null;
 		insets = null;
 		lastCommittedInputMethodEvent = null;
 		lastUncommittedInputMethodEvent = null;
@@ -1701,8 +1706,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Update menubar state
 		Frame[] frames = Frame.getFrames();
 		for (int i = 0; i < frames.length; i++) {
-			if (frames[i] instanceof VCLFrame.NoPaintFrame)
-				((VCLFrame.NoPaintFrame)frames[i]).updateMenuBar();
+			VCLFrame f = findFrame(frames[i]);
+			if (f != null) {
+				synchronized (f) {
+					f.setMenuBar(f.getMenuBar());
+				}
+			}
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_GETFOCUS, this, 0));
@@ -1894,10 +1903,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	MenuBar getMenuBar() {
 
-		if (window instanceof Frame)
-			return ((Frame)window).getMenuBar();
-		else
-			return null;
+		MenuBar mb = null;
+
+		if (window instanceof Frame) {
+			mb = ((Frame)window).getMenuBar();
+			if (mb == null) {
+				synchronized (this) {
+					mb = hiddenMenuBar;
+				}
+			}
+		}
+
+		return mb;
 
 	}
 
@@ -3095,11 +3112,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLFrame frame = null;
 
 		/**
-		 * The hidden menubar.
-		 */
-		private MenuBar hiddenMenuBar = null;
-
-		/**
 		 * The minimum size.
 		 */
 		private Dimension minSize = null;
@@ -3133,20 +3145,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				return this;
 			else
 				return super.getFocusOwner();
-
-		}
-
-		/**
-		 * Returns the menubar for this frame.
-		 *
-		 * @return the menubar or <code>null</code>
-		 */
-		public synchronized MenuBar getMenuBar() {
-
-			MenuBar mb = super.getMenuBar();
-			if (mb == null)
-				mb = hiddenMenuBar;
-			return mb;
 
 		}
 
@@ -3212,47 +3210,61 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param mb the menubar or <code>null</code>
 		 */
-		public synchronized void setMenuBar(MenuBar mb) {
+		public void setMenuBar(MenuBar mb) {
 
-			MenuBar oldMenuBar = super.getMenuBar();
-
-			if (isActive()) {
-				hiddenMenuBar = null;
+			// Fix bug 3003 by only setting the menubar in the Java event
+			// dispatch thread
+			if (!EventQueue.isDispatchThread()) {
+				VCLFrame.SetMenuBarHandler handler = new VCLFrame.SetMenuBarHandler(this, mb);
+				Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+				Thread.yield();
+				return;
 			}
-			else {
-				hiddenMenuBar = mb;
-				mb = null;
+
+			MenuBar oldMenuBar = getMenuBar();
+
+			boolean active = isActive();
+			synchronized (frame) {
+				if (active) {
+					frame.hiddenMenuBar = null;
+				}
+				else {
+					frame.hiddenMenuBar = mb;
+					mb = null;
+				}
 			}
 
-			if (oldMenuBar != mb) {
+			synchronized (getTreeLock()) {
 				// If we are changing menubars, we need to remove all of the
 				// menus from the current menubar in reverse order and readd
 				// them after the menubar has been detached from the frame to
 				// prevent doubling of menus when a child dialog has focus
-				LinkedList oldMenus = new LinkedList();
-				if (oldMenuBar != null) {
-					int count = oldMenuBar.getMenuCount();
-					for (int i = count - 1; i >= 0; i--) {
-						Menu m = oldMenuBar.getMenu(i);
-						if (m != null) {
-							m.setEnabled(true);
-							oldMenuBar.remove(i);
-							oldMenus.add(m);
+				if (oldMenuBar != mb) {
+					LinkedList oldMenus = new LinkedList();
+					if (oldMenuBar != null) {
+						int count = oldMenuBar.getMenuCount();
+						for (int i = count - 1; i >= 0; i--) {
+							Menu m = oldMenuBar.getMenu(i);
+							if (m != null) {
+								m.setEnabled(true);
+								oldMenuBar.remove(i);
+								oldMenus.add(m);
+							}
 						}
 					}
-				}
 
-				// On Mac OS X 10.3.x, we need to remove the menubar before
-				// replacing it
-				if (mb != null)
-					super.setMenuBar(null);
-				super.setMenuBar(mb);
+					// On Mac OS X 10.3.x, we need to remove the menubar before
+					// replacing it
+					if (mb != null)
+						super.setMenuBar(null);
+					super.setMenuBar(mb);
 
-				if (oldMenuBar != null) {
-					while (oldMenus.size() > 0) {
-						Menu m = (Menu)oldMenus.removeLast();
-						if (m != null)
-							oldMenuBar.add(m);
+					if (oldMenuBar != null) {
+						while (oldMenus.size() > 0) {
+							Menu m = (Menu)oldMenus.removeLast();
+							if (m != null)
+								oldMenuBar.add(m);
+						}
 					}
 				}
 			}
@@ -3293,15 +3305,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * @param g the <code>Graphics</code>
 		 */
 		public void update(Graphics g) {}
-
-		/**
-		 * Update the menubar state.
-		 */
-		synchronized void updateMenuBar() {
-
-			setMenuBar(getMenuBar());
-
-		}
 
 	}
 
@@ -3428,6 +3431,43 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void run() {
 
 			VCLFrame.flushAllFrames();
+
+		}
+
+	}
+
+	/**
+	 * A class that handles flushing updates.
+	 */
+	final class SetMenuBarHandler implements Runnable {
+
+		/**
+		 * The menubar.
+		 */
+		private MenuBar menubar = null;
+
+		/**
+		 * The <code>Frame</code>.
+		 */
+		private Frame frame = null;
+
+		/**
+		 * Constructs a new
+		 * <code>VCLFrame.NoPaintFrame.SetMenuBarHandler</code> instance.
+		 *
+		 * @param f the <code>Frame</code>
+		 * @param m the <code>MenuBar</code>
+		 */
+		SetMenuBarHandler(Frame f, MenuBar m) {
+
+			frame = f;
+			menubar = m;
+
+		}
+
+		public void run() {
+
+			frame.setMenuBar(menubar);
 
 		}
 
