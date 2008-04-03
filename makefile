@@ -302,11 +302,11 @@ build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch b
 	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; rm "library.list"
 	touch "$@"
 
-build.imedia_nib_untar: $(IMEDIA_PATCHES_HOME)/nibs.tar
+build.imedia_nib_untar: $(IMEDIA_PATCHES_HOME)/nibs.tar build.imedia_checkout
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; tar xf "$(PWD)/$<"
 	touch "$@"
 
-build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_checkout build.imedia_nib_untar
+build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_nib_untar
 	-( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
