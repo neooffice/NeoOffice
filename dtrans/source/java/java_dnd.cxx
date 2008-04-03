@@ -513,6 +513,8 @@ IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 
 		delete pDragEvent;
 	}
+
+	return 0;
 }
 
 // ------------------------------------------------------------------------
