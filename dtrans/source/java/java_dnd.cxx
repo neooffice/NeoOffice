@@ -1010,5 +1010,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 			(*it)->drop( aDropEvent );
 	}
 
-	return pContext->getDropComplete();
+	// One of the listeners may have rejected the drop so use the rejected
+	// flag instead the context's getDropComplete() method
+	return !mbRejected;
 }
