@@ -45,6 +45,15 @@
 #include <vcl/virdev.hxx>
 #include <svtools/fltcall.hxx>
 
+#ifdef USE_JAVA
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <QuickTime/QuickTime.h>
+#include <postmac.h>
+
+#endif	// USE_JAVA
+
 // MT: NOOLDSV, someone should change the code...
 enum PenStyle { PEN_NULL, PEN_SOLID, PEN_DOT, PEN_DASH, PEN_DASHDOT };
 enum BrushStyle { BRUSH_NULL, BRUSH_SOLID, BRUSH_HORZ, BRUSH_VERT,
@@ -143,6 +152,10 @@ private:
 	ULONG ReadPixMapEtc(Bitmap & rBitmap, BOOL bBaseAddr, BOOL bColorTable,
 						Rectangle * pSrcRect, Rectangle * pDestRect,
 						BOOL bMode, BOOL bMaskRgn);
+
+#ifdef USE_JAVA
+	ULONG ReadQuickTimeImage(Bitmap & rBitmap, Rectangle * pDestRect);
+#endif	// USE_JAVA
 
 	void ReadHeader();
 		// Liesst den Kopf der Pict-Datei, setzt IsVersion2 und aBoundingRect
@@ -1052,6 +1065,113 @@ ULONG PictReader::ReadPixMapEtc( Bitmap &rBitmap, BOOL bBaseAddr, BOOL bColorTab
 	return nDataSize;
 }
 
+#ifdef USE_JAVA
+
+ULONG PictReader::ReadQuickTimeImage( Bitmap & rBitmap, Rectangle * pDestRect )
+{
+	USHORT nOpcode;
+	BYTE nOneByteOpcode;
+	ULONG nDataSize, nStartPos, nPos;
+	sal_uInt32 nSize;
+
+	*pPict >> nSize;
+	nDataSize = nSize + 4;
+
+	// Cache existing drawing state
+	Point aOldPenPosition = aPenPosition;
+	Point aOldTextPosition = aTextPosition;
+	Color aOldActForeColor = aActForeColor;
+	Color aOldActBackColor = aActBackColor;
+	PenStyle eOldActPenPenStyle = eActPenPenStyle;
+	BrushStyle eOldActPenBrushStyle = eActPenBrushStyle;
+	BrushStyle eOldActFillStyle = eActFillStyle;
+	BrushStyle eOldActBackStyle = eActBackStyle;
+	USHORT nOldActPenSize = nActPenSize;
+	RasterOp eOldActROP = eActROP;
+	PictDrawingMethod eOldActMethod = eActMethod;
+	Size aOldActOvalSize = aActOvalSize;
+	Font aOldActFont = Font( aActFont );
+
+	GDIMetaFile aMtf;
+	VirtualDevice *pOldVirDev = pVirDev;
+	pVirDev = new VirtualDevice();
+	pVirDev->EnableOutput( FALSE );
+	aMtf.Record( pVirDev );
+
+	// Skip the QuickTime error messages by reading until the next NOP opcode
+	pPict->SeekRel( nSize );
+	nStartPos = nPos = pPict->Tell();
+	for ( ; ; )
+	{
+		if ( IsVersion2 )
+			*pPict >> nOpcode;
+		else
+		{
+			*pPict >> nOneByteOpcode;
+			nOpcode = (USHORT)nOneByteOpcode;
+		}
+
+		if ( pPict->GetError() )
+			break;
+
+		if ( pPict->IsEof() )
+		{
+			pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
+			break;
+		}
+
+		if ( nOpcode == 0x0000 )
+		{
+			// We found the end of the QuickToime error messages so increase
+			// data size
+			nDataSize += nPos - nStartPos;
+			break;
+		}
+
+		if ( nOpcode==0x00ff )
+			break;
+
+		nSize = ReadData( nOpcode );
+
+		if ( IsVersion2 )
+		{
+			if ( nSize & 1 )
+				nSize++;
+
+			nPos += 2 + nSize;
+		}
+		else
+		{
+			nPos += 1 + nSize;
+		}
+
+		pPict->Seek( nPos );
+	}
+
+	aMtf.Stop();
+	delete pVirDev;
+	pVirDev = pOldVirDev;
+
+	// Restore cached drawing state
+	aPenPosition = aOldPenPosition;
+	aTextPosition = aOldTextPosition;
+	aActForeColor = aOldActForeColor;
+	aActBackColor = aOldActBackColor;
+	eActPenPenStyle = eOldActPenPenStyle;
+	eActPenBrushStyle = eOldActPenBrushStyle;
+	eActFillStyle = eOldActFillStyle;
+	eActBackStyle = eOldActBackStyle;
+	nActPenSize = nOldActPenSize;
+	eActROP = eOldActROP;
+	eActMethod = eOldActMethod;
+	aActOvalSize = aOldActOvalSize;
+	aActFont = aOldActFont;
+
+	return nDataSize;
+}
+
+#endif	// USE_JAVA
+
 void PictReader::ReadHeader()
 {
 	char nC;
@@ -1194,8 +1314,15 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		if		( nUSHORT == 23 ) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
 		else	aActFont.SetCharSet( gsl_getSystemTextEncoding() );
 #ifdef USE_JAVA
-		if (nUSHORT==2515)
+		if (nUSHORT==2010)
+		{
+			// Fix bug 2977 font misencoding and bad font matching
+			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
+		}
+		else if (nUSHORT==2515)
+		{
 			aActFont.SetName( aMTExtraFontName );
+		}
 #endif	// USE_JAVA
 		eActMethod=PDM_UNDEFINED;
 		nDataSize=2;
@@ -1434,8 +1561,15 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		sFName[ nLen ] = 0;
 		String aString( (const sal_Char*)&sFName, gsl_getSystemTextEncoding() );
 #ifdef USE_JAVA
-		if (nUSHORT==2515)
+		if (nUSHORT==2010)
+		{
+			// Fix bug 2977 font misencoding and bad font matching
+			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
+		}
+		else if (nUSHORT==2515)
+		{
 			aString = aMTExtraFontName;
+		}
 #endif	// USE_JAVA
 		aActFont.SetName( aString );
 		eActMethod=PDM_UNDEFINED;
@@ -1838,6 +1972,17 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 	case 0x00a1:   // LongComment
 		pPict->SeekRel(2); *pPict >> nUSHORT; nDataSize=4+nUSHORT;
 		break;
+
+#ifdef USE_JAVA
+	case 0x8200: { // Compressed QuickTime Image
+		Bitmap aBmp;
+		Rectangle aDestRect;
+		nDataSize=ReadQuickTimeImage(aBmp,&aDestRect);
+		DrawingMethod(PDM_PAINT);
+		pVirDev->DrawBitmap(aDestRect.TopLeft(),aDestRect.GetSize(),aBmp);
+		break;
+	}
+#endif	// USE_JAVA
 
 	default: // 0x00a2 bis 0xffff (zumeist Reserved)
 		if      (nOpcode<=0x00af) { *pPict >> nUSHORT; nDataSize=2+nUSHORT; }
