@@ -587,20 +587,19 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 
 BOOL JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
-	// Fix bug 3012 by returning false if the frame size is not larger than
-	// the frame's minimum size
-	if ( !maGeometry.nWidth || !maGeometry.nHeight )
-		return FALSE;
-
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
 	pState->mnX = maGeometry.nX - maGeometry.nLeftDecoration;
 	pState->mnY = maGeometry.nY - maGeometry.nTopDecoration;
 	pState->mnWidth = maGeometry.nWidth;
 	pState->mnHeight = maGeometry.nHeight;
 	pState->mnState = mpVCLFrame->getState();
-	pState->mnMask = 0;
 
-	return TRUE;
+	// Fix bug 3012 by returning false if the frame size is not larger than
+	// the frame's minimum size
+	if ( !maGeometry.nWidth || !maGeometry.nHeight )
+		return FALSE;
+	else
+		return TRUE;
 }
 
 // -----------------------------------------------------------------------
