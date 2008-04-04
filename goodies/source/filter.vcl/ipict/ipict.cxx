@@ -408,13 +408,6 @@ ULONG PictReader::ReadPattern(PenStyle * pPenStyle, BrushStyle * pBrushStyle)
 	else if (nBitCount<=48) ePnStyle=PEN_DASH;
 	else                    ePnStyle=PEN_SOLID;
 
-#ifdef USE_JAVA
-	// Fix bug 2977 by setting the foreground color to white when the pen
-	// style is set to PEN_NULL
-	if ( ePnStyle==PEN_NULL )
-		aActForeColor=Color(COL_WHITE);
-#endif	// USE_JAVA
-
 	// Einen BrushStyle machen:
 	if      (nHiBytes==0xffffffff && nLoBytes==0xffffffff) eBrStyle=BRUSH_SOLID;
 	else if (nHiBytes==0xff000000 && nLoBytes==0x00000000) eBrStyle=BRUSH_HORZ;
@@ -606,12 +599,24 @@ void PictReader::DrawingMethod(PictDrawingMethod eMethod)
 			break;
 		case PDM_PAINT:
 			SetLineColor( Color(COL_TRANSPARENT) );
+#ifdef USE_JAVA
+			// Fix bug 2977 by setting the foreground color to white when the
+			// pen style is set to PEN_NULL
+			if ( eActPenPenStyle==PEN_NULL )
+				SetFillColor( Color(COL_WHITE) );
+			else
+#endif	// USE_JAVA
 			SetFillColor( aActForeColor );
 			pVirDev->SetRasterOp(eActROP);
 			break;
 		case PDM_ERASE:
 			SetLineColor( Color(COL_TRANSPARENT) );
+#ifdef USE_JAVA
+			// Fix bug 2977 by using the background color to erase
+			SetFillColor( aActBackColor );
+#else	// USE_JAVA
 			SetFillColor( aActForeColor );
+#endif	// USE_JAVA
 			pVirDev->SetRasterOp(ROP_OVERPAINT);
 			break;
 		case PDM_INVERT:
