@@ -3014,7 +3014,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public Dimension getMinimumSize() {
 
-			return minSize;
+			// Fix bug 3012 by only returning a minimum size when the dialog
+			// is visible
+			if (isVisible())
+				return minSize;
+			else
+				return new Dimension(0,0);
 			
 		}
 
@@ -3155,7 +3160,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public Dimension getMinimumSize() {
 
-			return minSize;
+			// Fix bug 3012 by only returning a minimum size when the frame
+			// is visible
+			if (isVisible())
+				return minSize;
+			else
+				return new Dimension(0,0);
 			
 		}
 

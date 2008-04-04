@@ -557,6 +557,14 @@ void JavaSalFrame::GetClientSize( long& rWidth, long& rHeight )
 
 void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 {
+	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
+	{
+		if ( pState->mnState & SAL_FRAMESTATE_MINIMIZED )
+			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
+		else
+			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
+	}
+
 	USHORT nFlags = 0;
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_X )
 		nFlags |= SAL_FRAME_POSSIZE_X;
@@ -573,26 +581,24 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 		SetPosSize( pState->mnX, pState->mnY, pState->mnWidth, pState->mnHeight, nFlags );
 		mpParent = pParent;
 	}
-
-	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
-	{
-		if ( pState->mnState & SAL_FRAMESTATE_MINIMIZED )
-			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
-		else
-			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
-	}
 }
 
 // -----------------------------------------------------------------------
 
 BOOL JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
+	// Fix bug 3012 by returning false if the frame size is not larger than
+	// the frame's minimum size
+	if ( !maGeometry.nWidth || !maGeometry.nHeight )
+		return FALSE;
+
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
 	pState->mnX = maGeometry.nX - maGeometry.nLeftDecoration;
 	pState->mnY = maGeometry.nY - maGeometry.nTopDecoration;
 	pState->mnWidth = maGeometry.nWidth;
 	pState->mnHeight = maGeometry.nHeight;
 	pState->mnState = mpVCLFrame->getState();
+	pState->mnMask = 0;
 
 	return TRUE;
 }
@@ -956,6 +962,9 @@ LanguageType JavaSalFrame::GetInputLanguage()
 
 void JavaSalFrame::SetParent( SalFrame* pNewParent )
 {
+	if ( pNewParent == mpParent && !mbInShowOnlyMenus )
+		return;
+
 	if ( mpParent )
 	{
 		mpParent->maChildren.remove( this );
