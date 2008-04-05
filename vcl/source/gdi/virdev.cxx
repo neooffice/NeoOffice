@@ -408,9 +408,10 @@ void VirtualDevice::SetReferenceDevice( RefDevMode eRefDevMode )
         break;
     case REFDEV_MODE_PDF1:
 #ifdef USE_JAVA
-        // Fix bug 2183, 2432, 2629, and  2813 by using a higher device
-        // resolution more than we use for screen layout
-        mnDPIX = mnDPIY = 1440;
+		// Fix bugs 2183, 2432, 2629, 2682, 2964, and 3009 by using a higher
+		// resolution that is a direct multiple of the 96 DPI screen DPI that
+		// JavaSalGraphics uses
+        mnDPIX = mnDPIY = 960;
 #else	// USE_JAVA
         mnDPIX = mnDPIY = 720;
 #endif	// USE_JAVA
