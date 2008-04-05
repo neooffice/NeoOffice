@@ -1,3 +1,33 @@
+Index: FMDatabase.m
+===================================================================
+--- FMDatabase.m	(revision 541)
++++ FMDatabase.m	(working copy)
+@@ -197,8 +197,12 @@
+                 if (crashOnErrors) {
+                     [NSException raise:@"FMDatabaseException" format:@"(%d) \"%@\"", [self lastErrorCode], [self lastErrorMessage]];
+ #ifdef __BIG_ENDIAN__
++#if __GNUC__ < 4
++                    __asm__( "trap" );
++#else
+                     asm{ trap };
+ #endif
++#endif
+                 }
+             }
+             
+@@ -270,8 +274,12 @@
+                 if (crashOnErrors) {
+                     [NSException raise:@"FMDatabaseException" format:@"(%d) \"%@\"", [self lastErrorCode], [self lastErrorMessage]];
+                     #ifdef __BIG_ENDIAN__
++                    #if __GNUC__ < 4
++                    __asm__( "trap" );
++                    #else
+                     asm{ trap };
+                     #endif
++                    #endif
+                 }
+             }
+             
 Index: iMBPhotosView.m
 ===================================================================
 --- iMBPhotosView.m	(revision 536)
@@ -162,3 +192,27 @@ Index: iMBLinksView.m
     
  	return YES;
  }
+Index: MUPhotoView.h
+===================================================================
+--- MUPhotoView.h	(revision 541)
++++ MUPhotoView.h	(working copy)
+@@ -175,7 +175,6 @@
+ 
+ #pragma mark -
+ // Seriously, Don't Mess With Texas
+-#pragma mark Seriously, Don't Mess With Texas
+ // haven't tested changing these behaviors yet - there's no reason they shouldn't work... but use at your own risk.
+ - (float)photoVerticalSpacing;
+ - (void)setPhotoVerticalSpacing:(float)aPhotoVerticalSpacing;
+Index: MUPhotoView.m
+===================================================================
+--- MUPhotoView.m	(revision 541)
++++ MUPhotoView.m	(working copy)
+@@ -624,7 +624,6 @@
+ 
+ #pragma mark -
+ // Don't Mess With Texas
+-#pragma mark Don't Mess With Texas
+ // haven't tested changing these behaviors yet - there's no reason they shouldn't work... but use at your own risk.
+ 
+ - (float)photoVerticalSpacing
