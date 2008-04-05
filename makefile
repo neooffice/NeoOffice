@@ -306,8 +306,8 @@ build.imedia_nib_untar: $(IMEDIA_PATCHES_HOME)/nibs.tar build.imedia_checkout
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; tar xf "$(PWD)/$<"
 	touch "$@"
 
-build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source.tar build.imedia_checkout
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; tar xf "$(PWD)/$<"
+build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
+	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png ) | tar xvf -
 	touch "$@"
 
 build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_nib_untar build.imedia_src_untar
