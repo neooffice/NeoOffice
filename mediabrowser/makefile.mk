@@ -86,7 +86,7 @@ makeoxt : ALLTAR
 
 makeoxt :
 	$(RM) $(BIN)$/$(PRJNAME).oxt
-	zip -r $(BIN)$/$(PRJNAME).oxt META-INF MediaBrowser uiIntegration.xcu -x "*CVS*"
+	zip -r $(BIN)$/$(PRJNAME).oxt META-INF MediaBrowser uiIntegration.xcu Images -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
 .IF "$(debug)" == ""
 # Use stripped library if not in debug mode
