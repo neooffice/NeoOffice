@@ -1319,7 +1319,17 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		if		( nUSHORT == 23 ) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
 		else	aActFont.SetCharSet( gsl_getSystemTextEncoding() );
 #ifdef USE_JAVA
-		if (nUSHORT==2010)
+		Str255 aPascalName;
+		*aPascalName = '\0';
+		GetFontName( nUSHORT, aPascalName );
+		if ( *aPascalName )
+		{
+			sal_Char sFontName[ *aPascalName + 1 ];
+			memcpy( sFontName, (sal_Char *)aPascalName + 1, *aPascalName );
+			sFontName[ *aPascalName ] = '\0';
+			aActFont.SetName( String( sFontName, gsl_getSystemTextEncoding() ) );
+		}
+		else if (nUSHORT==2010)
 		{
 			// Fix bug 2977 font misencoding and bad font matching
 			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
