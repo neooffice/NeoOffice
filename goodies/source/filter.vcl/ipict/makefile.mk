@@ -64,7 +64,7 @@ SHL1OBJS=       $(SLO)$/ipict.obj
 .ENDIF
 
 .IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+=   -framework Carbon -framework QuickTime
+SHL1STDLIBS+=   -framework ApplicationServices
 .ENDIF
 
 SHL1VERSIONMAP=exports.map
