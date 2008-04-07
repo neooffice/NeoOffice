@@ -1319,6 +1319,10 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		if		( nUSHORT == 23 ) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
 		else	aActFont.SetCharSet( gsl_getSystemTextEncoding() );
 #ifdef USE_JAVA
+		// Fix bug 2977 font misencoding and bad font matching
+		if (nUSHORT==2010)
+			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
+
 		Str255 aPascalName;
 		*aPascalName = '\0';
 		GetFontName( nUSHORT, aPascalName );
@@ -1328,11 +1332,6 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 			memcpy( sFontName, (sal_Char *)aPascalName + 1, *aPascalName );
 			sFontName[ *aPascalName ] = '\0';
 			aActFont.SetName( String( sFontName, gsl_getSystemTextEncoding() ) );
-		}
-		else if (nUSHORT==2010)
-		{
-			// Fix bug 2977 font misencoding and bad font matching
-			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
 		}
 		else if (nUSHORT==2515)
 		{
@@ -1571,17 +1570,17 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		else                      aActFont.SetFamily(FAMILY_ROMAN);
 		if (nUSHORT==23) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL);
 		else aActFont.SetCharSet( gsl_getSystemTextEncoding() );
+#ifdef USE_JAVA
+		// Fix bug 2977 font misencoding and bad font matching
+		if (nUSHORT==2010)
+			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
+#endif	// USE_JAVA
 		*pPict >> nByteLen; nLen=((USHORT)nByteLen)&0x00ff;
 		pPict->Read( &sFName, nLen );
 		sFName[ nLen ] = 0;
 		String aString( (const sal_Char*)&sFName, gsl_getSystemTextEncoding() );
 #ifdef USE_JAVA
-		if (nUSHORT==2010)
-		{
-			// Fix bug 2977 font misencoding and bad font matching
-			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
-		}
-		else if (nUSHORT==2515)
+		if (nUSHORT==2515)
 		{
 			aString = aMTExtraFontName;
 		}
