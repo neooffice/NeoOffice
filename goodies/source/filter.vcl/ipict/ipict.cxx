@@ -47,9 +47,6 @@
 
 #ifdef USE_JAVA
 
-#include <osl/file.hxx>
-#include <unotools/tempfile.hxx>
-
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
@@ -62,21 +59,6 @@ enum BrushStyle { BRUSH_NULL, BRUSH_SOLID, BRUSH_HORZ, BRUSH_VERT,
 				  BRUSH_CROSS, BRUSH_DIAGCROSS, BRUSH_UPDIAG, BRUSH_DOWNDIAG,
 				  BRUSH_25, BRUSH_50, BRUSH_75,
 				  BRUSH_BITMAP };
-
-#ifdef USE_JAVA
-
-static size_t PICTDataConsumerPutBytesCallback( void *pInfo, const void *pBuffer, size_t nCount )
-{
-	size_t nRet = 0;
-
-	SvMemoryStream *pStream = (SvMemoryStream *)pInfo;
-	if ( pStream && nCount > 0 )
-		nRet = pStream->Write( pBuffer, nCount );
-
-	return nRet;
-}
-
-#endif	// USE_JAVA
 
 //============================ PictReader ==================================
 
@@ -114,10 +96,6 @@ private:
 
 	Fraction		aHRes;
 	Fraction		aVRes;
-
-#ifdef USE_JAVA
-	BOOL			bNeedsPICTHeader;
-#endif	// USE_JAVA
 
 	BOOL Callback(USHORT nPercent);
 
@@ -249,6 +227,14 @@ public:
 		aBitmap.ReleaseAccess( pReadAcc );				\
 	return 0xffffffff;									\
 }
+
+#ifdef USE_JAVA
+// Note: thiis the list of symbol fonts that we know of and each of the fonts in
+// this list must be in the hardcoded list in vcl/source/gdi/outdev3.cxx
+static String aEuclidFontName( RTL_CONSTASCII_USTRINGPARAM( "Euclid" ) );
+static String aMTExtraFontName( RTL_CONSTASCII_USTRINGPARAM( "MT Extra" ) );
+static String aSymbolFontName( RTL_CONSTASCII_USTRINGPARAM( "Symbol" ) );
+#endif	// USE_JAVA
 
 //=================== Methoden von PictReader ==============================
 
@@ -612,12 +598,24 @@ void PictReader::DrawingMethod(PictDrawingMethod eMethod)
 			break;
 		case PDM_PAINT:
 			SetLineColor( Color(COL_TRANSPARENT) );
+#ifdef USE_JAVA
+			// Fix bug 2977 by setting the foreground color to white when the
+			// pen style is set to PEN_NULL
+			if ( eActPenPenStyle==PEN_NULL )
+				SetFillColor( Color(COL_WHITE) );
+			else
+#endif	// USE_JAVA
 			SetFillColor( aActForeColor );
 			pVirDev->SetRasterOp(eActROP);
 			break;
 		case PDM_ERASE:
 			SetLineColor( Color(COL_TRANSPARENT) );
+#ifdef USE_JAVA
+			// Fix bug 2977 by using the background color to erase
+			SetFillColor( aActBackColor );
+#else	// USE_JAVA
 			SetFillColor( aActForeColor );
+#endif	// USE_JAVA
 			pVirDev->SetRasterOp(ROP_OVERPAINT);
 			break;
 		case PDM_INVERT:
@@ -658,8 +656,46 @@ ULONG PictReader::ReadAndDrawText()
 	while ( nLen > 0 && ( (unsigned char)sText[ nLen - 1 ] ) < 32 )
 			nLen--;
 	sText[ nLen ] = 0;
+#ifdef USE_JAVA
+	// Fix bug 2661 by using the font encoding to encode the text. Note that
+	// if any characters are in the 0xff00 to 0xffff range, then we should
+	// use the symbol encoding as well.
+	CharSet eOldCharSet = aActFont.GetCharSet();
+	String aOldFontName = aActFont.GetName();
+	String aString( (const sal_Char*)&sText, eOldCharSet );
+	if ( aActFont.GetCharSet() != RTL_TEXTENCODING_SYMBOL )
+	{
+		xub_StrLen nStrLen = aString.Len();
+		for ( xub_StrLen i = 0; i < nStrLen; i++ )
+		{
+			if ( ( aString.GetChar( i ) & 0xff00 ) == 0xff00 )
+			{
+				aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
+				pVirDev->SetFont( aActFont );
+				aString = String( (const sal_Char*)&sText, aActFont.GetCharSet() );
+				break;
+			}
+		}
+	}
+
+	// Use the Symbol font for non-symbol fonts when the symbol encoding is set
+	if ( aActFont.GetCharSet() == RTL_TEXTENCODING_SYMBOL && !aActFont.GetName().EqualsIgnoreCaseAscii( aEuclidFontName, 0, aEuclidFontName.Len() ) && !aActFont.GetName().EqualsIgnoreCaseAscii( aMTExtraFontName, 0, aMTExtraFontName.Len() ) && !aActFont.GetName().EqualsIgnoreCaseAscii( aSymbolFontName, 0, aSymbolFontName.Len() ) )
+	{
+		aActFont.SetName( aSymbolFontName );
+		pVirDev->SetFont( aActFont );
+	}
+#else	// USE_JAVA
 	String aString( (const sal_Char*)&sText, gsl_getSystemTextEncoding() );
+#endif	// USE_JAVA
 	pVirDev->DrawText( Point( aTextPosition.X(), aTextPosition.Y() ), aString );
+#ifdef USE_JAVA
+	if ( aActFont.GetCharSet() != eOldCharSet || aActFont.GetName() != aOldFontName )
+	{
+		aActFont.SetCharSet( eOldCharSet );
+		aActFont.SetName( aOldFontName );
+		pVirDev->SetFont( aActFont );
+	}
+#endif	// USE_JAVA
 	return nDataLen;
 }
 
@@ -1148,12 +1184,7 @@ void PictReader::ReadHeader()
 	sal_Char	sBuf[ 3 ];
 	pPict->SeekRel( 10 );
 	pPict->Read( sBuf, 3 );
-#ifdef USE_JAVA
-	bNeedsPICTHeader = ( sBuf[ 0 ] == 0x00 && sBuf[ 1 ] == 0x11 && ( sBuf[ 2 ] == 0x01 || sBuf[ 2 ] == 0x02 ) );
-	if ( bNeedsPICTHeader )
-#else	// USE_JAVA
 	if ( sBuf[ 0 ] == 0x00 && sBuf[ 1 ] == 0x11 && ( sBuf[ 2 ] == 0x01 || sBuf[ 2 ] == 0x02 ) )
-#endif	// USE_JAVA
 		pPict->SeekRel( -13 );		// this maybe a pict from a ms document
 	else
 		pPict->SeekRel( 512 - 13 );	// 512 Bytes Muell am Anfang
@@ -1286,6 +1317,26 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		else                      aActFont.SetFamily(FAMILY_ROMAN);
 		if		( nUSHORT == 23 ) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL );
 		else	aActFont.SetCharSet( gsl_getSystemTextEncoding() );
+#ifdef USE_JAVA
+		// Fix bug 2977 font misencoding and bad font matching
+		if (nUSHORT==2010)
+			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
+
+		Str255 aPascalName;
+		*aPascalName = '\0';
+		GetFontName( nUSHORT, aPascalName );
+		if ( *aPascalName )
+		{
+			sal_Char sFontName[ *aPascalName + 1 ];
+			memcpy( sFontName, (sal_Char *)aPascalName + 1, *aPascalName );
+			sFontName[ *aPascalName ] = '\0';
+			aActFont.SetName( String( sFontName, gsl_getSystemTextEncoding() ) );
+		}
+		else if (nUSHORT==2515)
+		{
+			aActFont.SetName( aMTExtraFontName );
+		}
+#endif	// USE_JAVA
 		eActMethod=PDM_UNDEFINED;
 		nDataSize=2;
 		break;
@@ -1518,10 +1569,21 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		else                      aActFont.SetFamily(FAMILY_ROMAN);
 		if (nUSHORT==23) aActFont.SetCharSet( RTL_TEXTENCODING_SYMBOL);
 		else aActFont.SetCharSet( gsl_getSystemTextEncoding() );
+#ifdef USE_JAVA
+		// Fix bug 2977 font misencoding and bad font matching
+		if (nUSHORT==2010)
+			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
+#endif	// USE_JAVA
 		*pPict >> nByteLen; nLen=((USHORT)nByteLen)&0x00ff;
 		pPict->Read( &sFName, nLen );
 		sFName[ nLen ] = 0;
 		String aString( (const sal_Char*)&sFName, gsl_getSystemTextEncoding() );
+#ifdef USE_JAVA
+		if (nUSHORT==2515)
+		{
+			aString = aMTExtraFontName;
+		}
+#endif	// USE_JAVA
 		aActFont.SetName( aString );
 		eActMethod=PDM_UNDEFINED;
 		break;
@@ -1980,14 +2042,7 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 
 	pVirDev = new VirtualDevice();
 	pVirDev->EnableOutput(FALSE);
-#ifdef USE_JAVA
-	// Use a temporary meta file that we can discard as we are only interested
-	// in finding the end of the PICT stream
-	GDIMetaFile aTmpMtf;
-	aTmpMtf.Record(pVirDev);
-#else	// USE_JAVA
 	rGDIMetaFile.Record(pVirDev);
-#endif	// USE_JAVA
 
 	pPict->SetNumberFormatInt(NUMBERFORMAT_INT_BIGENDIAN);
 
@@ -2002,58 +2057,7 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 
 	nPos=pPict->Tell();
 
-#ifdef USE_JAVA
-	ULONG nHeaderEndPos = nPos;
-
-	sal_uInt64 nBufSize = 4096;
-	sal_Char aBuf[ nBufSize ];
-	sal_uInt64 nBytesRead;
-	sal_uInt64 nBytesWritten;
-	sal_uInt64 nBytesLeft = nPos - nStartPos;
-
-	::rtl::OUString aTmpURL;
-	::rtl::OUString aTmpName( utl::TempFile::CreateTempName() );
-	::osl::FileBase::getFileURLFromSystemPath( aTmpName, aTmpURL );
-
-	oslFileHandle aFile;
-	if ( osl_openFile( aTmpURL.pData, &aFile, osl_File_OpenFlag_Write | osl_File_OpenFlag_Create) != osl_File_E_None )
-		pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-
-	pPict->Seek( nStartPos );
-
-	if ( !pPict->GetError() && bNeedsPICTHeader )
-	{
-		nBytesRead = 512;
-		memset( aBuf, 0, nBytesRead );
-		osl_writeFile( aFile, (void *)aBuf, nBytesRead, &nBytesWritten );
-		if ( nBytesRead != nBytesWritten )
-			pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-	}
-
-	while ( !pPict->GetError() && nBytesLeft && !pPict->IsEof() )
-	{
-		nBytesRead = pPict->Read( aBuf, nBufSize );
-		if ( nBytesRead )
-		{
-			if ( nBytesRead > nBytesLeft )
-				nBytesRead = nBytesLeft;
-			nBytesLeft -= nBytesRead;
-			osl_writeFile( aFile, (void *)aBuf, nBytesRead, &nBytesWritten );
-			if ( nBytesRead != nBytesWritten )
-			{
-				pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-				break;
-			}
-		}
-	}
-
-	pPict->Seek( nPos );
-
-	for ( ULONG nLastPos = nPos; !pPict->GetError(); nLastPos = nPos )
-	{
-#else	// USE_JAVA
 	for (;;) {
-#endif	// USE_JAVA
 
 		nPercent=(nPos-nStartPos)*100/(nEndPos-nStartPos);
 		if (nLastPercent+4<=nPercent) {
@@ -2093,130 +2097,8 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 		else
 			nPos+=1+nSize;
 
-#ifdef USE_JAVA
-		// QDPictDrawToCGContext() will hang with compressed QuickTime images
-		// so convert them to uncompressed images
-		if ( nOpcode != 0x8200 )
-		{
-			pPict->Seek( nLastPos );
-			nBytesLeft = nPos - nLastPos;
-			while ( nBytesLeft && !pPict->IsEof() )
-			{
-				nBytesRead = pPict->Read( aBuf, nBufSize );
-				if ( nBytesRead )
-				{
-					if ( nBytesRead > nBytesLeft )
-						nBytesRead = nBytesLeft;
-					nBytesLeft -= nBytesRead;
-					osl_writeFile( aFile, (void *)aBuf, nBytesRead, &nBytesWritten );
-					if ( nBytesRead != nBytesWritten )
-					{
-						pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-						break;
-					}
-				}
-			}
-		}
-#endif	// USE_JAVA
-
 		pPict->Seek(nPos);
 	}
-
-#ifdef USE_JAVA
-	// Discard temporary meta file actions
-	aTmpMtf.Stop();
-	aTmpMtf.Clear();
-
-	// Record native PICT as a graphics link
-	if ( !pPict->GetError() )
-	{
-		delete pVirDev;
-		pVirDev = new VirtualDevice();
-		pVirDev->EnableOutput( FALSE );
-		rGDIMetaFile.Record( pVirDev );
-
-		nBytesRead = 2;
-		aBuf[ 0 ] = 0x00;
-		aBuf[ 1 ] = 0xff;
-		osl_writeFile( aFile, (void *)aBuf, nBytesRead, &nBytesWritten );
-		if ( nBytesRead != nBytesWritten )
-		{
-			pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-		}
-		else
-		{
-			BOOL bRendered = FALSE;
-
-			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aTmpURL.getStr(), aTmpURL.getLength(), kCFAllocatorNull );
-			if ( aString )
-			{
-				CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
-				CFRelease( aString );
-
-				if ( aURL )
-				{
-					CGDataProviderRef aProvider = CGDataProviderCreateWithURL( aURL );
-					CFRelease( aURL );
-
-					if ( aProvider )
-					{
-						QDPictRef aPict = QDPictCreateWithProvider( aProvider );
-						CGDataProviderRelease( aProvider );
-
-						if ( aPict )
-						{
-							// Render PICT into a PDF context
-							ULONG nBitsLen = pPict->Tell() - nOrigPos;
-							SvMemoryStream aPDFStream( nBitsLen * 4, nBitsLen );
-							CGDataConsumerCallbacks aConsumerCallbacks;
-							aConsumerCallbacks.putBytes = PICTDataConsumerPutBytesCallback;
-							aConsumerCallbacks.releaseConsumer = NULL;
-							CGDataConsumerRef aConsumer = CGDataConsumerCreate( &aPDFStream, &aConsumerCallbacks );
-							if ( aConsumer )
-							{
-								CGRect aPictBounds = QDPictGetBounds( aPict );
-								CGContextRef aContext = CGPDFContextCreate( aConsumer, &aPictBounds, NULL );
-								if ( aContext )
-								{
-									CGPDFContextBeginPage( aContext, NULL );
-									QDPictDrawToCGContext( aContext, aPictBounds, aPict );
-									CGPDFContextEndPage( aContext );
-									CGContextRelease( aContext );
-
-									// Take ownership of PDF bits so that we can
-									// use OOo's DrawEPS method
-									aPDFStream.Seek( STREAM_SEEK_TO_BEGIN );
-									const void *pPDFBuffer = aPDFStream.GetData();
-									sal_Size nPDFBufferSize = aPDFStream.GetSize();
-									if ( pPDFBuffer && nPDFBufferSize > 0 )
-									{
-										aPDFStream.ObjectOwnsMemory( sal_False );
-										aBoundingRect = Rectangle( Point( (long)aPictBounds.origin.x, (long)aPictBounds.origin.y ), Size( (long)aPictBounds.size.width, (long)aPictBounds.size.height ) );
-										GfxLink aGfxLink( (BYTE *)pPDFBuffer, nPDFBufferSize, GFX_LINK_TYPE_EPS_BUFFER, TRUE );
-										pVirDev->DrawEPS( Point(), aBoundingRect.GetSize(), aGfxLink );
-
-										// Mark as rendered
-										bRendered = TRUE;
-									}
-								}
-
-								CGDataConsumerRelease( aConsumer );
-							}
-
-							QDPictRelease( aPict );
-						}
-					}
-				}
-			}
-
-			if ( !bRendered )
-				pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-		}
-	}
-
-	osl_closeFile( aFile );
-	osl_removeFile( aTmpURL.pData );
-#endif	// USE_JAVA
 
 	rGDIMetaFile.Stop();
 	delete pVirDev;
