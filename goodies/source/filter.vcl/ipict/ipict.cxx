@@ -2003,6 +2003,8 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 	nPos=pPict->Tell();
 
 #ifdef USE_JAVA
+	ULONG nHeaderEndPos = nPos;
+
 	sal_uInt64 nBufSize = 4096;
 	sal_Char aBuf[ nBufSize ];
 	sal_uInt64 nBytesRead;
@@ -2015,26 +2017,20 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 
 	oslFileHandle aFile;
 	if ( osl_openFile( aTmpURL.pData, &aFile, osl_File_OpenFlag_Write | osl_File_OpenFlag_Create) != osl_File_E_None )
-	{
 		pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-		goto cleanup;
-	}
 
 	pPict->Seek( nStartPos );
 
-	if ( bNeedsPICTHeader )
+	if ( !pPict->GetError() && bNeedsPICTHeader )
 	{
 		nBytesRead = 512;
 		memset( aBuf, 0, nBytesRead );
 		osl_writeFile( aFile, (void *)aBuf, nBytesRead, &nBytesWritten );
 		if ( nBytesRead != nBytesWritten )
-		{
 			pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-			goto cleanup;
-		}
 	}
 
-	while ( nBytesLeft && !pPict->IsEof() )
+	while ( !pPict->GetError() && nBytesLeft && !pPict->IsEof() )
 	{
 		nBytesRead = pPict->Read( aBuf, nBufSize );
 		if ( nBytesRead )
@@ -2046,18 +2042,17 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 			if ( nBytesRead != nBytesWritten )
 			{
 				pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-				goto cleanup;
+				break;
 			}
 		}
 	}
 
 	pPict->Seek( nPos );
-#endif	// USE_JAVA
 
+	for ( ULONG nLastPos = nPos; !pPict->GetError(); nLastPos = nPos )
+	{
+#else	// USE_JAVA
 	for (;;) {
-
-#ifdef USE_JAVA
-		ULONG nLastPos = nPos;
 #endif	// USE_JAVA
 
 		nPercent=(nPos-nStartPos)*100/(nEndPos-nStartPos);
@@ -2099,22 +2094,26 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 			nPos+=1+nSize;
 
 #ifdef USE_JAVA
-		nBytesLeft = nPos - nLastPos;
-
-		pPict->Seek( nLastPos );
-		while ( nOpcode != 0x8200 && nBytesLeft && !pPict->IsEof() )
+		// QDPictDrawToCGContext() will hang with compressed QuickTime images
+		// so convert them to uncompressed images
+		if ( nOpcode != 0x8200 )
 		{
-			nBytesRead = pPict->Read( aBuf, nBufSize );
-			if ( nBytesRead )
+			pPict->Seek( nLastPos );
+			nBytesLeft = nPos - nLastPos;
+			while ( nBytesLeft && !pPict->IsEof() )
 			{
-				if ( nBytesRead > nBytesLeft )
-					nBytesRead = nBytesLeft;
-				nBytesLeft -= nBytesRead;
-				osl_writeFile( aFile, (void *)aBuf, nBytesRead, &nBytesWritten );
-				if ( nBytesRead != nBytesWritten )
+				nBytesRead = pPict->Read( aBuf, nBufSize );
+				if ( nBytesRead )
 				{
-					pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-					goto cleanup;
+					if ( nBytesRead > nBytesLeft )
+						nBytesRead = nBytesLeft;
+					nBytesLeft -= nBytesRead;
+					osl_writeFile( aFile, (void *)aBuf, nBytesRead, &nBytesWritten );
+					if ( nBytesRead != nBytesWritten )
+					{
+						pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
+						break;
+					}
 				}
 			}
 		}
@@ -2143,78 +2142,78 @@ void PictReader::ReadPict( SvStream & rStreamPict, GDIMetaFile & rGDIMetaFile )
 		if ( nBytesRead != nBytesWritten )
 		{
 			pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
-			goto cleanup;
 		}
-
-		BOOL bRendered = FALSE;
-
-		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aTmpURL.getStr(), aTmpURL.getLength(), kCFAllocatorNull );
-		if ( aString )
+		else
 		{
-			CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
-			CFRelease( aString );
+			BOOL bRendered = FALSE;
 
-			if ( aURL )
+			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aTmpURL.getStr(), aTmpURL.getLength(), kCFAllocatorNull );
+			if ( aString )
 			{
-				CGDataProviderRef aProvider = CGDataProviderCreateWithURL( aURL );
-				CFRelease( aURL );
+				CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
+				CFRelease( aString );
 
-				if ( aProvider )
+				if ( aURL )
 				{
-					QDPictRef aPict = QDPictCreateWithProvider( aProvider );
-					CGDataProviderRelease( aProvider );
+					CGDataProviderRef aProvider = CGDataProviderCreateWithURL( aURL );
+					CFRelease( aURL );
 
-					if ( aPict )
+					if ( aProvider )
 					{
-						// Render PICT into a PDF context
-						ULONG nBitsLen = pPict->Tell() - nOrigPos;
-						SvMemoryStream aPDFStream( nBitsLen * 4, nBitsLen );
-						CGDataConsumerCallbacks aConsumerCallbacks;
-						aConsumerCallbacks.putBytes = PICTDataConsumerPutBytesCallback;
-						aConsumerCallbacks.releaseConsumer = NULL;
-						CGDataConsumerRef aConsumer = CGDataConsumerCreate( &aPDFStream, &aConsumerCallbacks );
-						if ( aConsumer )
+						QDPictRef aPict = QDPictCreateWithProvider( aProvider );
+						CGDataProviderRelease( aProvider );
+
+						if ( aPict )
 						{
-							CGRect aPictBounds = QDPictGetBounds( aPict );
-							CGContextRef aContext = CGPDFContextCreate( aConsumer, &aPictBounds, NULL );
-							if ( aContext )
+							// Render PICT into a PDF context
+							ULONG nBitsLen = pPict->Tell() - nOrigPos;
+							SvMemoryStream aPDFStream( nBitsLen * 4, nBitsLen );
+							CGDataConsumerCallbacks aConsumerCallbacks;
+							aConsumerCallbacks.putBytes = PICTDataConsumerPutBytesCallback;
+							aConsumerCallbacks.releaseConsumer = NULL;
+							CGDataConsumerRef aConsumer = CGDataConsumerCreate( &aPDFStream, &aConsumerCallbacks );
+							if ( aConsumer )
 							{
-								CGPDFContextBeginPage( aContext, NULL );
-								QDPictDrawToCGContext( aContext, aPictBounds, aPict );
-								CGPDFContextEndPage( aContext );
-								CGContextRelease( aContext );
-
-								// Take ownership of PDF bits so that we can
-								// use OOo's DrawEPS method
-								aPDFStream.Seek( STREAM_SEEK_TO_BEGIN );
-								const void *pPDFBuffer = aPDFStream.GetData();
-								sal_Size nPDFBufferSize = aPDFStream.GetSize();
-								if ( pPDFBuffer && nPDFBufferSize > 0 )
+								CGRect aPictBounds = QDPictGetBounds( aPict );
+								CGContextRef aContext = CGPDFContextCreate( aConsumer, &aPictBounds, NULL );
+								if ( aContext )
 								{
-									aPDFStream.ObjectOwnsMemory( sal_False );
-									aBoundingRect = Rectangle( Point( (long)aPictBounds.origin.x, (long)aPictBounds.origin.y ), Size( (long)aPictBounds.size.width, (long)aPictBounds.size.height ) );
-									GfxLink aGfxLink( (BYTE *)pPDFBuffer, nPDFBufferSize, GFX_LINK_TYPE_EPS_BUFFER, TRUE );
-									pVirDev->DrawEPS( Point(), aBoundingRect.GetSize(), aGfxLink );
+									CGPDFContextBeginPage( aContext, NULL );
+									QDPictDrawToCGContext( aContext, aPictBounds, aPict );
+									CGPDFContextEndPage( aContext );
+									CGContextRelease( aContext );
 
-									// Mark as rendered
-									bRendered = TRUE;
+									// Take ownership of PDF bits so that we can
+									// use OOo's DrawEPS method
+									aPDFStream.Seek( STREAM_SEEK_TO_BEGIN );
+									const void *pPDFBuffer = aPDFStream.GetData();
+									sal_Size nPDFBufferSize = aPDFStream.GetSize();
+									if ( pPDFBuffer && nPDFBufferSize > 0 )
+									{
+										aPDFStream.ObjectOwnsMemory( sal_False );
+										aBoundingRect = Rectangle( Point( (long)aPictBounds.origin.x, (long)aPictBounds.origin.y ), Size( (long)aPictBounds.size.width, (long)aPictBounds.size.height ) );
+										GfxLink aGfxLink( (BYTE *)pPDFBuffer, nPDFBufferSize, GFX_LINK_TYPE_EPS_BUFFER, TRUE );
+										pVirDev->DrawEPS( Point(), aBoundingRect.GetSize(), aGfxLink );
+
+										// Mark as rendered
+										bRendered = TRUE;
+									}
 								}
+
+								CGDataConsumerRelease( aConsumer );
 							}
 
-							CGDataConsumerRelease( aConsumer );
+							QDPictRelease( aPict );
 						}
-
-						QDPictRelease( aPict );
 					}
 				}
 			}
-		}
 
-		if ( !bRendered )
-			pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
+			if ( !bRendered )
+				pPict->SetError( SVSTREAM_FILEFORMAT_ERROR );
+		}
 	}
 
-cleanup:
 	osl_closeFile( aFile );
 	osl_removeFile( aTmpURL.pData );
 #endif	// USE_JAVA
