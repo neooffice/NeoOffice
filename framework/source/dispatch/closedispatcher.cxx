@@ -395,13 +395,16 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
             //     And that depends from the dispatched URL ...
             {
 #ifdef USE_JAVA
-                bEstablishBackingMode = sal_True;
+                // Fix bug 3004 by not creating more than one backing window
+                FrameListAnalyzer aCheckBackingMode(xDesktop, css::uno::Reference< css::frame::XFrame >(), FrameListAnalyzer::E_BACKINGCOMPONENT);
+                if (!aCheckBackingMode.m_xBackingComponent.is())
+                    bEstablishBackingMode = sal_True;
 #else	// USE_JAVA
                 if (eOperation == E_CLOSE_FRAME)
                     bTerminateApp = sal_True;
+#endif	// USE_JAVA
                 else
                     bCloseFrame = sal_True;
-#endif	// USE_JAVA
             }
         }
     }
