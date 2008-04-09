@@ -7,8 +7,11 @@
 				<prop oor:name="URL" oor:type="xs:string">
 					<value>macro:///MediaBrowser.XMediaBrowser.Main</value>
 				</prop>
-				<prop oor:name="Title" oor:type="xs:string" oor:localized="true">
-					<value>Show Media Browser</value>
+				<prop oor:name="Title" oor:type="xs:string">
+					<value xml:lang="en-US">Show Media Browser</value>
+					<value xml:lang="fr">Afficher le navigateur multimédia</value>
+					<value xml:lang="nl">Toon mediakiezer</value>
+					<value xml:lang="sv">Visa mediebläddrare</value>
 				</prop>
 				<prop oor:name="ImageIdentifier" oor:type="xs:string">
 					<value/>
@@ -22,25 +25,28 @@
 			</node>
 		</node>
 		<node oor:name="OfficeToolBar">
-		  <node oor:name="org.openoffice.Office.addon.mediabrowser" oor:op="replace">
-			<node oor:name="btn01" oor:op="replace">
-			  <prop oor:name="Context" oor:type="xs:string">
-				<value></value>
-			  </prop>
-			  <prop oor:name="Title" oor:type="xs:string">
-				<value xml:lang="en">Show Media Browser</value>
-			  </prop>
-			  <prop oor:name="URL" oor:type="xs:string">
-				<value>macro:///MediaBrowser.XMediaBrowser.Main</value>
-			  </prop>
-			  <prop oor:name="Target" oor:type="xs:string">
-				<value>_self</value>
-			  </prop>
-			  <prop oor:name="ImageIdentifier" oor:type="xs:string">
-				<value>%origin%/Images/mediaBrowser</value>
-			  </prop>
+			<node oor:name="org.openoffice.Office.addon.mediabrowser" oor:op="replace">
+				<node oor:name="btn01" oor:op="replace">
+					<prop oor:name="Context" oor:type="xs:string">
+						<value></value>
+					</prop>
+					<prop oor:name="Title" oor:type="xs:string">
+						<value xml:lang="en-US">Show Media Browser</value>
+						<value xml:lang="fr">Afficher le navigateur multimédia</value>
+						<value xml:lang="nl">Toon mediakiezer</value>
+						<value xml:lang="sv">Visa mediebläddrare</value>
+					</prop>
+					<prop oor:name="URL" oor:type="xs:string">
+						<value>macro:///MediaBrowser.XMediaBrowser.Main</value>
+					</prop>
+					<prop oor:name="Target" oor:type="xs:string">
+						<value>_self</value>
+					</prop>
+					<prop oor:name="ImageIdentifier" oor:type="xs:string">
+						<value>%origin%/Images/mediaBrowser</value>
+					</prop>
+				</node>
 			</node>
-		</node>
 		</node>
 	</node>
 </oor:component-data>
