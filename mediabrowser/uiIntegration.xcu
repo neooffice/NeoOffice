@@ -12,6 +12,7 @@
 					<value xml:lang="fr">Afficher le navigateur multimédia</value>
 					<value xml:lang="nl">Toon mediakiezer</value>
 					<value xml:lang="sv">Visa mediebläddrare</value>
+					<value xml:lang="es">Mostrar visualizador multimedia</value>
 				</prop>
 				<prop oor:name="ImageIdentifier" oor:type="xs:string">
 					<value/>
@@ -35,6 +36,7 @@
 						<value xml:lang="fr">Afficher le navigateur multimédia</value>
 						<value xml:lang="nl">Toon mediakiezer</value>
 						<value xml:lang="sv">Visa mediebläddrare</value>
+						<value xml:lang="es">Mostrar visualizador multimedia</value>
 					</prop>
 					<prop oor:name="URL" oor:type="xs:string">
 						<value>macro:///MediaBrowser.XMediaBrowser.Main</value>
