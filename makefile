@@ -144,6 +144,7 @@ ODF-CONVERTER_PACKAGE=odf-converter
 ODF-CONVERTER_TAG:=
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
 IMEDIA_PACKAGE=imedia-read-only
+IMEDIA_TAG:=--revision '{2008-04-14}'
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=-rNeoOffice-2_2_3
@@ -191,7 +192,7 @@ build.odf-converter_checkout:
 build.imedia_checkout:
 	rm -Rf "$(BUILD_HOME)/$(IMEDIA_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
+	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_TAG) $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(IMEDIA_PACKAGE)"
 	touch "$@"
 
