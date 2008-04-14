@@ -8102,6 +8102,12 @@ void PDFWriterImpl::drawPolyLine( const Polygon& rPoly, const PDFWriter::ExtLine
 
     updateGraphicsState();
 
+#ifdef USE_JAVA
+    // Fix bug 3025 by not invoking more shape drawing functions
+    if ( !m_bUsingMtf )
+        return;
+#endif	// USE_JAVA
+
     if( m_aGraphicsStack.front().m_aLineColor == Color( COL_TRANSPARENT ) )
         return;
 
