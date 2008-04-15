@@ -398,7 +398,8 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
                                         "Vivo Video", "viv",
 #ifdef USE_JAVA
                                         "WAVE Audio", "wav",
-                                        "WMV Video", "wmv" };
+                                        "WMV Video", "wmv",
+                                        "3GPP Video", "3gp;3g2" };
 #else	// USE_JAVA
                                         "WAVE Audio", "wav" };
 #endif	// USE_JAVA
