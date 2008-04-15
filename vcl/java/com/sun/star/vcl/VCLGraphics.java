@@ -2191,7 +2191,7 @@ public final class VCLGraphics {
 					m.setSelected(false);
 
 				Dimension d = VCLGraphics.checkBoxButton.getPreferredSize();
-				Rectangle bounds = new Rectangle(x, y - 4, VCLGraphics.radioButtonPreferredSize.width, VCLGraphics.radioButtonPreferredSize.height);
+				Rectangle bounds = new Rectangle(x, y - 3, VCLGraphics.radioButtonPreferredSize.width, VCLGraphics.radioButtonPreferredSize.height);
 				if (width > d.width)
 					bounds.x += (width - d.width) / 2;
 				if (height > d.height)
@@ -2243,7 +2243,9 @@ public final class VCLGraphics {
 	 */
 	public Rectangle getPreferredRadioButtonBounds(int x, int y, int width, int height, String title) {
 
-		return new Rectangle(x, y, VCLGraphics.radioButtonPreferredSize.width + 4, VCLGraphics.radioButtonPreferredSize.height);
+		// Fix bug 3028 by applying the same amount of adjustment to both
+		// the width and height
+		return new Rectangle(x, y, VCLGraphics.radioButtonPreferredSize.width + 4, VCLGraphics.radioButtonPreferredSize.height + 4);
 
 	}
 	
