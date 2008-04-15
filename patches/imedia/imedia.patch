@@ -324,3 +324,20 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			name = MediaBrowser.nib;
  			sourceTree = "<group>";
+@@ -1712,6 +1739,7 @@
+ 				);
+ 				PRODUCT_NAME = iMediaBrowser;
+ 				SKIP_INSTALL = YES;
++				ZERO_LINK = NO;
+ 			};
+ 			name = Debug;
+ 		};
+@@ -2010,7 +2038,7 @@
+ 				);
+ 				PREBINDING = NO;
+ 				PRODUCT_NAME = MetadataTool;
+-				ZERO_LINK = YES;
++				ZERO_LINK = NO;
+ 			};
+ 			name = Debug;
+ 		};
