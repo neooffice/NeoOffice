@@ -380,7 +380,14 @@ Window* MediaWindow::getWindow() const
 
 void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
 {
+#ifdef USE_JAVA
+    static const char* pFilters[] = {   "3GPP Video", "3gp;3g2",
+                                        "AAC Audio", "aac",
+                                        "AIF Audio", "aif;aiff",
+                                        
+#else	// USE_JAVA
     static const char* pFilters[] = {   "AIF Audio", "aif;aiff",
+#endif	// USE_JAVA
                                         "AU Audio", "au",
                                         "AVI", "avi",
                                         "CD Audio", "cda",
@@ -398,8 +405,7 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
                                         "Vivo Video", "viv",
 #ifdef USE_JAVA
                                         "WAVE Audio", "wav",
-                                        "WMV Video", "wmv",
-                                        "3GPP Video", "3gp;3g2" };
+                                        "WMV Video", "wmv" };
 #else	// USE_JAVA
                                         "WAVE Audio", "wav" };
 #endif	// USE_JAVA
