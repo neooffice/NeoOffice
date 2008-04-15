@@ -45,7 +45,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long rotationX, long rotationY );
+void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long rotationX, long rotationY, BOOL shiftDown, BOOL metaDown, BOOL altDown, BOOL controlDown );
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();

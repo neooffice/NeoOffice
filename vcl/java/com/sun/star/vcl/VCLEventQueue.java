@@ -173,8 +173,12 @@ public final class VCLEventQueue implements Runnable {
 	 * @param y the y coordinate
 	 * @param rotationX the horizontal wheel rotation
 	 * @param rotationY the vertical wheel rotation
+	 * @param shiftDown <code>true</code> if the Shift key is pressed
+	 * @param metaDown <code>true</code> if the Meta key is pressed
+	 * @param altDown <code>true</code> if the Alt key is pressed
+	 * @param controlDown <code>true</code> if the Control key is pressed
 	 */
-	public static void postMouseWheelEvent(Object o, int x, int y, int rotationX, int rotationY) {
+	public static void postMouseWheelEvent(Object o, int x, int y, int rotationX, int rotationY, boolean shiftDown, boolean metaDown, boolean altDown, boolean controlDown) {
 
 		if (o == null || (rotationX == 0 && rotationY == 0))
 			return;
@@ -203,16 +207,26 @@ public final class VCLEventQueue implements Runnable {
 		if (w == null || !w.isVisible())
 			return;
 
+		// Fix bug 3030 by setting the modifiers. Note that we ignore the Shift
+		// modifier as using it will disable horizontal scrolling.
+		int modifiers = 0;
+		if (metaDown)
+			modifiers |= InputEvent.META_DOWN_MASK;
+		if (altDown)
+			modifiers |= InputEvent.ALT_DOWN_MASK;
+		if (controlDown)
+			modifiers |= InputEvent.CTRL_DOWN_MASK;
+System.out.println("Here: " + shiftDown + " " + metaDown + " " + altDown + " " + controlDown);
+
 		// Note: no matter what buttons we press, the MouseWheelEvents in
 		// Apple's JVMs always seem to have the following constant values:
-		//   Modifiers == 0
 		//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
 		//   ScrollUnits == 1
 		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
 		if (rotationX != 0)
-			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), 0, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationX, true));
+			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationX, true));
 		if (rotationY != 0)
-			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), 0, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationY, false));
+			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationY, false));
 
 	}
 

@@ -102,10 +102,10 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 
 // ============================================================================
 
-void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long rotationX, long rotationY )
+void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long rotationX, long rotationY, BOOL shiftDown, BOOL metaDown, BOOL altDown, BOOL controlDown )
 {
 	if ( aPeer )
-		com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( aPeer, nX, nY, rotationX, rotationY );
+		com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( aPeer, nX, nY, rotationX, rotationY, shiftDown, metaDown, altDown, controlDown );
 }
 
 // ============================================================================
@@ -214,7 +214,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( jobject _par0, long _par1, long _par2, long _par3, long _par4 )
+void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( jobject _par0, long _par1, long _par2, long _par3, long _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -222,18 +222,22 @@ void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( jobject _par0, long _p
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Ljava/lang/Object;IIII)V";
+			char *cSignature = "(Ljava/lang/Object;IIIIZZZZ)V";
 			mID = t.pEnv->GetStaticMethodID( getMyClass(), "postMouseWheelEvent", cSignature );	
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[5];
+			jvalue args[9];
 			args[0].l = _par0;
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
+			args[5].z = jboolean( _par5 );
+			args[6].z = jboolean( _par6 );
+			args[7].z = jboolean( _par7 );
+			args[8].z = jboolean( _par8 );
 			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
 		}
 	}

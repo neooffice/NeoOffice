@@ -579,7 +579,8 @@ static VCLResponder *pSharedResponder = nil;
 		float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
 		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
 		NSPoint aLocation = [pEvent locationInWindow];
-		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( [pEvent deltaX] ), Float32ToLong( [pEvent deltaY] ) * -1 );
+		int nModifiers = [pEvent modifierFlags];
+		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( [pEvent deltaX] ), Float32ToLong( [pEvent deltaY] ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
 	}
 }
 
