@@ -21,7 +21,7 @@
 					<value>_self</value>
 				</prop>
 				<prop oor:name="Context" oor:type="xs:string">
-					<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument,com.sun.star.frame.Bibliography</value>
+					<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
 				</prop>
 			</node>
 		</node>
@@ -29,7 +29,7 @@
 			<node oor:name="org.openoffice.Office.addon.mediabrowser" oor:op="replace">
 				<node oor:name="btn01" oor:op="replace">
 					<prop oor:name="Context" oor:type="xs:string">
-						<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument,com.sun.star.frame.Bibliography</value>
+						<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
 					</prop>
 					<prop oor:name="Title" oor:type="xs:string">
 						<value xml:lang="en-US">Show Media Browser</value>
