@@ -392,12 +392,17 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
                                         "AVI", "avi",
                                         "CD Audio", "cda",
                                         "FLAC Audio", "flac",
-                                        "MIDI Audio", "mid;midi",
-                                        "MPEG Audio", "mp2;mp3;mpa",
 #ifdef USE_JAVA
-                                        "MPEG Video", "mpg;mpeg;mpv;mp4;m4v",
-                                        "OGG Audio/Video", "ogg",
+                                        "Flash Video", "flv",
+                                        "Matroska Video", "mkv",
+#endif	// USE_JAVA
+                                        "MIDI Audio", "mid;midi",
+#ifdef USE_JAVA
+                                        "MPEG Audio", "mp2;mp3;mpa;m1a;m2a",
+                                        "MPEG Video", "mpg;mpeg;mpv;mp4;m1v;m2v;m4v",
+                                        "OGG Audio/Video", "ogg;oga;ogm;ogv;ogx",
 #else	// USE_JAVA
+                                        "MPEG Audio", "mp2;mp3;mpa",
                                         "OGG Audio/Video", "ogg",
                                         "MPEG Video", "mpg;mpeg;mpv;mp4",
 #endif	// USE_JAVA
@@ -405,7 +410,7 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
                                         "Vivo Video", "viv",
 #ifdef USE_JAVA
                                         "WAVE Audio", "wav",
-                                        "WMV Video", "wmv" };
+                                        "Windows Media Audio/Video", "asf;wma;wmv" };
 #else	// USE_JAVA
                                         "WAVE Audio", "wav" };
 #endif	// USE_JAVA
