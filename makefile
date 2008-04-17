@@ -300,7 +300,7 @@ build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch b
 	touch "$@"
 
 build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png nl.lproj fr.lproj en.lproj it.lproj da.lproj sv.lproj de.lproj zh_TW.lproj ja.lproj zh_CN.lproj ) | tar xvf -
+	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj ) | tar xvf -
 	touch "$@"
 
 build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_src_untar
