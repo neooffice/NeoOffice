@@ -333,6 +333,16 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		mbInShow = TRUE;
 
+		// Fix bug 3032 by closing any show only menus frames
+		if ( !mbShowOnlyMenus && !IsFloatingFrame() )
+		{
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbShowOnlyMenus && (*it)->mbVisible )
+					(*it)->Show( FALSE );
+			}
+		}
+
 		// Get native window since it won't be created until first shown
 		maSysData.aWindow = (long)mpVCLFrame->getNativeWindowRef();
 		mbCenter = FALSE;
@@ -382,6 +392,25 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		if ( pSalData->mpLastDragFrame == this )
 			pSalData->mpLastDragFrame = NULL;
+
+		// Fix bug 3032 by showing one of the show only frames if no other
+		// non-floating windows are visible
+		JavaSalFrame *pShowOnlyMenusFrame = NULL;
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+		{
+			if ( (*it)->mbShowOnlyMenus )
+			{
+				pShowOnlyMenusFrame = *it;
+			}
+			else if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() )
+			{
+				pShowOnlyMenusFrame = NULL;
+				break;
+			}
+		}
+
+		if ( pShowOnlyMenusFrame && pShowOnlyMenusFrame != this )
+			pShowOnlyMenusFrame->Show( TRUE, FALSE );
 	}
 }
 
