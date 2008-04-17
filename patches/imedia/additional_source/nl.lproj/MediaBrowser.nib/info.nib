@@ -3,13 +3,17 @@
 <plist version="1.0">
 <dict>
 	<key>IBDocumentLocation</key>
-	<string>69 58 356 240 0 0 1920 1178 </string>
+	<string>68 133 356 240 0 0 1920 1178 </string>
 	<key>IBFramework Version</key>
 	<string>489.0</string>
 	<key>IBLastKnownRelativeProjectPath</key>
 	<string>../../iMediaBrowse.xcodeproj</string>
 	<key>IBOldestOS</key>
 	<integer>5</integer>
+	<key>IBOpenObjects</key>
+	<array>
+		<integer>33</integer>
+	</array>
 	<key>IBSystem Version</key>
 	<string>8S165</string>
 	<key>targetFramework</key>

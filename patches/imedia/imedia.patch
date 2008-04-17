@@ -220,20 +220,19 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
 ===================================================================
 --- iMediaBrowse.xcodeproj/project.pbxproj	(revision 542)
 +++ iMediaBrowse.xcodeproj/project.pbxproj	(working copy)
-@@ -155,6 +155,12 @@
+@@ -155,6 +155,11 @@
  		A93A6A770AE77F2B00C77AA4 /* UKFileWatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = A93A6A760AE77F2B00C77AA4 /* UKFileWatcher.m */; };
  		A9FECB070ADA696A00AB3426 /* iMBLibraryOutlineView.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FECB050ADA696A00AB3426 /* iMBLibraryOutlineView.h */; };
  		A9FECB080ADA696A00AB3426 /* iMBLibraryOutlineView.m in Sources */ = {isa = PBXBuildFile; fileRef = A9FECB060ADA696A00AB3426 /* iMBLibraryOutlineView.m */; };
 +		AC42E8200DA7D52500BCFCD5 /* iMBGalleryPicturesFolder.m in Sources */ = {isa = PBXBuildFile; fileRef = AC42E81F0DA7D52500BCFCD5 /* iMBGalleryPicturesFolder.m */; };
 +		AC42E8270DA7DB1F00BCFCD5 /* gallery.png in Resources */ = {isa = PBXBuildFile; fileRef = AC42E8260DA7DB1F00BCFCD5 /* gallery.png */; };
 +		AC42E82A0DA7DBD100BCFCD5 /* iMBGalleryPicturesFolder.h in Headers */ = {isa = PBXBuildFile; fileRef = AC42E8290DA7DBD100BCFCD5 /* iMBGalleryPicturesFolder.h */; };
-+		AC42E85A0DA7DEB400BCFCD5 /* iMBGalleryMusicFolder.m in Headers */ = {isa = PBXBuildFile; fileRef = AC42E8590DA7DEB400BCFCD5 /* iMBGalleryMusicFolder.m */; };
 +		AC42E8620DA7E1F200BCFCD5 /* iMBGalleryMusicFolder.h in Headers */ = {isa = PBXBuildFile; fileRef = AC42E8610DA7E1F200BCFCD5 /* iMBGalleryMusicFolder.h */; };
 +		AC42E8750DA7E29700BCFCD5 /* iMBGalleryMusicFolder.m in Sources */ = {isa = PBXBuildFile; fileRef = AC42E8590DA7DEB400BCFCD5 /* iMBGalleryMusicFolder.m */; };
  		CE080CE909F03A6600020ED0 /* NSPasteboard+iMedia.m in Sources */ = {isa = PBXBuildFile; fileRef = CE080CE709F03A6600020ED0 /* NSPasteboard+iMedia.m */; };
  		CE11017E0B69080B00783570 /* iMBLibrarySoundsParser.h in Headers */ = {isa = PBXBuildFile; fileRef = CE11017C0B69080B00783570 /* iMBLibrarySoundsParser.h */; };
  		CE11017F0B69080B00783570 /* iMBLibrarySoundsParser.m in Sources */ = {isa = PBXBuildFile; fileRef = CE11017D0B69080B00783570 /* iMBLibrarySoundsParser.m */; };
-@@ -485,6 +491,13 @@
+@@ -485,6 +490,14 @@
  		A93A6A760AE77F2B00C77AA4 /* UKFileWatcher.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = UKFileWatcher.m; sourceTree = "<group>"; };
  		A9FECB050ADA696A00AB3426 /* iMBLibraryOutlineView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = iMBLibraryOutlineView.h; sourceTree = "<group>"; };
  		A9FECB060ADA696A00AB3426 /* iMBLibraryOutlineView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = iMBLibraryOutlineView.m; sourceTree = "<group>"; };
@@ -244,6 +243,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
 +		AC42E8290DA7DBD100BCFCD5 /* iMBGalleryPicturesFolder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iMBGalleryPicturesFolder.h; sourceTree = "<group>"; };
 +		AC42E8590DA7DEB400BCFCD5 /* iMBGalleryMusicFolder.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = iMBGalleryMusicFolder.m; sourceTree = "<group>"; };
 +		AC42E8610DA7E1F200BCFCD5 /* iMBGalleryMusicFolder.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = iMBGalleryMusicFolder.h; sourceTree = "<group>"; };
++		AC820EEA0DB6F6DC0021F9B7 /* nl */ = {isa = PBXFileReference; lastKnownFileType = text.html; name = nl; path = nl.lproj/Info.html; sourceTree = "<group>"; };
  		CE080CE609F03A6600020ED0 /* NSPasteboard+iMedia.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = "NSPasteboard+iMedia.h"; sourceTree = "<group>"; };
  		CE080CE709F03A6600020ED0 /* NSPasteboard+iMedia.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; lineEnding = 0; path = "NSPasteboard+iMedia.m"; sourceTree = "<group>"; };
  		CE11017C0B69080B00783570 /* iMBLibrarySoundsParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; path = iMBLibrarySoundsParser.h; sourceTree = "<group>"; };
@@ -273,17 +273,16 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  				3C6355460C91B1210045E9E0 /* iMedia.tiff */,
  				CEE57B090C4D3C7300FCE138 /* i.tiff */,
  				CEE57B0A0C4D3C7300FCE138 /* i2.tiff */,
-@@ -1198,6 +1216,9 @@
+@@ -1198,6 +1216,8 @@
  				E549259E0D53418D002B9F89 /* iMediaConfiguration.h in Headers */,
  				5B29F47C0D6EB38B0045CD86 /* iMBMovieReference.h in Headers */,
  				5B29F47D0D6EB38C0045CD86 /* iMBMovieCacheDB.h in Headers */,
 +				AC42E82A0DA7DBD100BCFCD5 /* iMBGalleryPicturesFolder.h in Headers */,
-+				AC42E85A0DA7DEB400BCFCD5 /* iMBGalleryMusicFolder.m in Headers */,
 +				AC42E8620DA7E1F200BCFCD5 /* iMBGalleryMusicFolder.h in Headers */,
  			);
  			runOnlyForDeploymentPostprocessing = 0;
  		};
-@@ -1316,6 +1337,7 @@
+@@ -1316,6 +1336,7 @@
  				it,
  				zh_CN,
  				sv,
@@ -291,7 +290,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			mainGroup = 29B97314FDCFA39411CA2CEA /* iMediaBrowse */;
  			projectDirPath = "";
-@@ -1401,6 +1423,7 @@
+@@ -1401,6 +1422,7 @@
  				FD6008F20D6A552000A1146F /* MediaBrowser.nib in Resources */,
  				E541A96D0D3539740056AEC5 /* Abstract.nib in Resources */,
  				5B1AA7310D6C72CA003585CD /* minimovie.atomdata in Resources */,
@@ -299,7 +298,7 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			runOnlyForDeploymentPostprocessing = 0;
  		};
-@@ -1523,6 +1546,8 @@
+@@ -1523,6 +1545,8 @@
  				5B1AA72B0D6C72CA003585CD /* MovieCache.xcdatamodel in Sources */,
  				5B29F2850D6D726F0045CD86 /* iMBMovieCacheDB.m in Sources */,
  				5B29F28A0D6D72960045CD86 /* iMBMovieReference.m in Sources */,
@@ -308,13 +307,21 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			);
  			runOnlyForDeploymentPostprocessing = 0;
  		};
-@@ -1591,6 +1616,7 @@
+@@ -1591,6 +1615,7 @@
  				CE1AD3860A7E83F20083C01E /* it */,
  				CE55A6A10AD194C70091C8AE /* zh_CN */,
  				5B0628CF0AEDF38300419AEB /* sv */,
 +				AC365F570DB2E30C00EC59CA /* nl */,
  			);
  			name = Localizable.strings;
+ 			sourceTree = "<group>";
+@@ -1623,6 +1648,7 @@
+ 				CE4E790D0C5E77120044A5F9 /* sv */,
+ 				CE4E790E0C5E77170044A5F9 /* zh_CN */,
+ 				CE4E790F0C5E771C0044A5F9 /* zh_TW */,
++				AC820EEA0DB6F6DC0021F9B7 /* nl */,
+ 			);
+ 			name = Info.html;
  			sourceTree = "<group>";
 @@ -1638,6 +1664,7 @@
  				FD0220CB0D8F1A5100B48AAB /* it */,

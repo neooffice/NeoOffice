@@ -299,15 +299,11 @@ build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch b
 	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; rm "library.list"
 	touch "$@"
 
-build.imedia_nib_untar: $(IMEDIA_PATCHES_HOME)/nibs.tar build.imedia_checkout
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; tar xf "$(PWD)/$<"
-	touch "$@"
-
 build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png nl.lproj ) | tar xvf -
+	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png nl.lproj fr.lproj en.lproj it.lproj da.lproj sv.lproj de.lproj zh_TW.lproj ja.lproj zh_CN.lproj ) | tar xvf -
 	touch "$@"
 
-build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_nib_untar build.imedia_src_untar
+build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_src_untar
 	-( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug clean
