@@ -139,9 +139,9 @@ LIBWPG_SOURCE_URL=http://go-ooo.org/packages/SRC680/libwpg-0.1.0~cvs20070608.tar
 LIBWPS_SOURCE_URL=http://go-ooo.org/packages/SRC680/libwps-0.1.0~svn20070129.tar.gz
 XT_SOURCE_URL=http://go-ooo.org/packages/xt/xt-20051206-src-only.zip
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
-ODF-CONVERTER_SVNROOT=https://odf-converter.svn.sourceforge.net/svnroot/odf-converter/trunk
+ODF-CONVERTER_SVNROOT=https://odf-converter.svn.sourceforge.net/svnroot/odf-converter/tags/Release-1.1
 ODF-CONVERTER_PACKAGE=odf-converter
-ODF-CONVERTER_TAG:=--revision '{2008-04-15}'
+ODF-CONVERTER_TAG:=
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-04-14}'
@@ -178,7 +178,11 @@ build.ooo-build_checkout: build.oo_checkout
 build.odf-converter_checkout:
 	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; svn co $(ODF-CONVERTER_TAG) $(ODF-CONVERTER_SVNROOT) "$(ODF-CONVERTER_PACKAGE)"
+# The Release-1.1 tag is one directory below the top so we need to pull the
+# makefiles from an earlier tag and then overlay our current tag
+	cd "$(BUILD_HOME)" ; svn co https://odf-converter.svn.sourceforge.net/svnroot/odf-converter/tags/word1.1-M1 "$(ODF-CONVERTER_PACKAGE)"
+	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/source"
+	cd "$(BUILD_HOME)" ; svn co $(ODF-CONVERTER_TAG) $(ODF-CONVERTER_SVNROOT) "$(ODF-CONVERTER_PACKAGE)/source"
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(ODF-CONVERTER_PACKAGE)"
 # odf-converter engineers seem to not know that creating a file on Windows and
 # then checking it into cvs or svn from a Unix machine foobar's the newlines
