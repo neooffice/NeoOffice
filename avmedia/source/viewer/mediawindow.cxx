@@ -382,7 +382,7 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
 {
 #ifdef USE_JAVA
     static const char* pFilters[] = {   "3GPP Video", "3gp;3g2",
-                                        "AAC Audio", "aac;m4a",
+                                        "AAC Audio", "aac;m4a;m4p",
                                         "AIF Audio", "aif;aiff",
                                         
 #else	// USE_JAVA
