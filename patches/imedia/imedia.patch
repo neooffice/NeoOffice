@@ -1,3 +1,21 @@
+Index: iMBFireFoxParser.m
+===================================================================
+--- iMBFireFoxParser.m	(revision 541)
++++ iMBFireFoxParser.m	(working copy)
+@@ -55,11 +55,13 @@
+ 
+ + (void)load
+ {
++#if 0
+ 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+ 	
+ 	[iMediaConfiguration registerParser:[self class] forMediaType:@"links"];
+ 	
+ 	[pool release];
++#endif
+ }
+ 
+ - (id)init
 Index: FMDatabase.m
 ===================================================================
 --- FMDatabase.m	(revision 541)
