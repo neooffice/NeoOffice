@@ -216,7 +216,6 @@ public final class VCLEventQueue implements Runnable {
 			modifiers |= InputEvent.ALT_DOWN_MASK;
 		if (controlDown)
 			modifiers |= InputEvent.CTRL_DOWN_MASK;
-System.out.println("Here: " + shiftDown + " " + metaDown + " " + altDown + " " + controlDown);
 
 		// Note: no matter what buttons we press, the MouseWheelEvents in
 		// Apple's JVMs always seem to have the following constant values:
