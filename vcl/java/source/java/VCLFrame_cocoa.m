@@ -173,7 +173,10 @@
 			{
 				NSView *pSuperview = [pContentView superview];
 				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
+				{
 					[pSuperview _setUtilityWindow:YES];
+					[pWindow setLevel:NSFloatingWindowLevel];
+				}
 			}
 		}
 	}
@@ -268,8 +271,9 @@ void CWindow_makeUtilityWindow( id pCWindow )
 
 	if ( pCWindow )
 	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		MakeUtilityWindow *pMakeUtilityWindow = [MakeUtilityWindow createWithCWindow:pCWindow];
-		[pMakeUtilityWindow performSelectorOnMainThread:@selector(makeUtilityWindow:) withObject:pMakeUtilityWindow waitUntilDone:NO];
+		[pMakeUtilityWindow performSelectorOnMainThread:@selector(makeUtilityWindow:) withObject:pMakeUtilityWindow waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];

@@ -1456,11 +1456,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Create the native window
 		if (showOnlyMenus || (style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0)
 			undecorated = true;
-		else if (!showOnlyMenus && (style & SAL_FRAME_STYLE_TOOLWINDOW) != 0)
+		else if (!showOnlyMenus && (style & (SAL_FRAME_STYLE_TOOLTIP | SAL_FRAME_STYLE_TOOLWINDOW)) != 0)
 			utility = true;
 
 		Window w = null;
-		if (p != null)
+		if (p != null && !utility)
 			w = p.getWindow();
 		if (w instanceof Dialog)
 			window = new VCLFrame.NoPaintDialog(this, (Dialog)w);

@@ -397,6 +397,7 @@ static VCLResponder *pSharedResponder = nil;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setContentView:(NSView *)pView;
+- (void)setLevel:(int)nWindowLevel;
 @end
 
 @interface VCLWindow (CocoaAppWindow)
@@ -617,6 +618,15 @@ static VCLResponder *pSharedResponder = nil;
 			}
 		}
 	}
+}
+
+- (void)setLevel:(int)nWindowLevel
+{
+	// Don't let Java unset our window level changes
+	if ( nWindowLevel < [self level] && [[self className] isEqualToString:pCocoaAppWindowString] )
+		return;
+
+	[super setLevel:nWindowLevel];
 }
 
 @end
