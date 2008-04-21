@@ -127,6 +127,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public final static long SAL_FRAME_STYLE_TOOLTIP = 0x00000020;
 
 	/**
+	 * SAL_FRAME_STYLE_OWNERDRAWDECORATION constant.
+	 */
+	public final static long SAL_FRAME_STYLE_OWNERDRAWDECORATION = 0x00000040;
+
+	/**
+	 * SAL_FRAME_STYLE_DIALOG constant.
+	 */
+	public final static long SAL_FRAME_STYLE_DIALOG = 0x00000080;
+
+	/**
+	 * SAL_FRAME_STYLE_PARTIAL_FULLSCREEN constant.
+	 */
+	public final static long SAL_FRAME_STYLE_PARTIAL_FULLSCREEN = 0x08000000;
+
+	/**
 	 * SAL_FRAME_STYLE_CHILD constant.
 	 */
 	public final static long SAL_FRAME_STYLE_CHILD = 0x10000000;
@@ -135,6 +150,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * SAL_FRAME_STYLE_FLOAT constant.
 	 */
 	public final static long SAL_FRAME_STYLE_FLOAT = 0x20000000;
+
+	/**
+	 * SAL_FRAME_STYLE_TOOLWINDOW constant.
+	 */
+	public final static long SAL_FRAME_STYLE_TOOLWINDOW = 0x40000000;
+
+	/**
+	 * SAL_FRAME_STYLE_INTRO constant.
+	 */
+	public final static long SAL_FRAME_STYLE_INTRO = 0x80000000;
 
 	/**
 	 * SAL_FRAMESTATE_NORMAL constant.
