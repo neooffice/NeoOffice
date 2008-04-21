@@ -40,6 +40,10 @@
 - (NSWindow *)getNSWindow;
 @end
 
+@interface NSView (CWindow)
+- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
+@end
+
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;
@@ -130,6 +134,53 @@
 
 @end
 
+@interface MakeUtilityWindow : NSObject
+{
+	id					mpCWindow;
+}
++ (id)createWithCWindow:(id)pCWindow;
+- (id)initWithCWindow:(id)pCWindow;
+- (void)makeUtilityWindow:(id)pObject;
+@end
+
+@implementation MakeUtilityWindow
+
++ (id)createWithCWindow:(id)pCWindow
+{
+	MakeUtilityWindow *pRet = [[MakeUtilityWindow alloc] initWithCWindow:pCWindow];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+
+	return self;
+}
+
+- (void)makeUtilityWindow:(id)pObject
+{
+	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+	{
+		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
+		if ( pWindow && ![pWindow isVisible] )
+		{
+			NSView *pContentView = [pWindow contentView];
+			if ( pContentView )
+			{
+				NSView *pSuperview = [pContentView superview];
+				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
+					[pSuperview _setUtilityWindow:YES];
+			}
+		}
+	}
+}
+
+@end
+
 @interface UpdateLocation : NSObject
 {
 	id					mpCWindow;
@@ -209,6 +260,19 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 	[pPool release];
 
 	return aWindow;
+}
+
+void CWindow_makeUtilityWindow( id pCWindow )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pCWindow )
+	{
+		MakeUtilityWindow *pMakeUtilityWindow = [MakeUtilityWindow createWithCWindow:pCWindow];
+		[pMakeUtilityWindow performSelectorOnMainThread:@selector(makeUtilityWindow:) withObject:pMakeUtilityWindow waitUntilDone:NO];
+	}
+
+	[pPool release];
 }
 
 void CWindow_updateLocation( id pCWindow )

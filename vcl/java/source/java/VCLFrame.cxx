@@ -128,6 +128,45 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 
 // ----------------------------------------------------------------------------
 
+static void JNICALL Java_com_sun_star_vcl_VCLFrame_makeUtilityWindow( JNIEnv *pEnv, jobject object, jobject _par0 )
+{
+	if ( _par0 )
+	{
+		jclass tempClass = pEnv->FindClass( "apple/awt/ComponentModel" );
+		if ( tempClass && pEnv->IsInstanceOf( _par0, tempClass ) )
+		{
+			static jmethodID mIDGetModelPtr = NULL;
+			static bool bReturnsInt = false;
+			if ( !mIDGetModelPtr )
+			{
+				char *cSignature = "()J";
+				mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+				if ( !mIDGetModelPtr )
+				{
+					// Java 1.4.1 has a different signature so check
+					// for it if we cannot find the first signature
+					if ( pEnv->ExceptionCheck() )
+						pEnv->ExceptionClear();
+					cSignature = "()I";
+					mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+					if ( mIDGetModelPtr )
+						bReturnsInt = true;
+				}
+			}
+			OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
+			if ( mIDGetModelPtr )
+			{
+				if ( bReturnsInt )
+					CWindow_makeUtilityWindow( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
+				else
+					CWindow_makeUtilityWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
+			}
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 static void JNICALL Java_com_sun_star_vcl_VCLFrame_updateLocation( JNIEnv *pEnv, jobject object, jobject _par0 )
 {
 	if ( _par0 )
@@ -183,14 +222,17 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[2];
+			JNINativeMethod pMethods[3];
 			pMethods[0].name = "getTextLocation0";
 			pMethods[0].signature = "(J)Ljava/awt/Rectangle;";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_getTextLocation0;
-			pMethods[1].name = "updateLocation";
+			pMethods[1].name = "makeUtilityWindow";
 			pMethods[1].signature = "(Ljava/awt/peer/ComponentPeer;)V";
-			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_updateLocation;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 2 );
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_makeUtilityWindow;
+			pMethods[2].name = "updateLocation";
+			pMethods[2].signature = "(Ljava/awt/peer/ComponentPeer;)V";
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_updateLocation;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );

@@ -1427,6 +1427,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private boolean undecorated = false;
 
+	/** 
+	 * The window utility mode.
+	 */
+	private boolean utility = false;
+
 	/**
 	 * Constructs a new <code>VCLFrame</code> instance.
 	 *
@@ -1451,6 +1456,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// Create the native window
 		if (showOnlyMenus || (style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0)
 			undecorated = true;
+		else if (!showOnlyMenus && (style & SAL_FRAME_STYLE_TOOLWINDOW) != 0)
+			utility = true;
 
 		Window w = null;
 		if (p != null)
@@ -2266,6 +2273,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * Force the native window to be a utility window.
+	 *
+	 * @param p the <code>ComponentPeer</code>
+	 */
+	public native void makeUtilityWindow(ComponentPeer p);
+
+	/**
 	 * Invoked when the mouse has been clicked on a component.
 	 *
 	 * @param e the <code>MouseEvent</code>
@@ -3029,6 +3043,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Creates the native dialog.
+		 */
+		public void addNotify() {
+
+			super.addNotify();
+
+			// Make the native window a utility window if necessary
+			if (frame.utility)
+				frame.makeUtilityWindow(getPeer());
+
+		}
+
+		/**
 		 * Returns the focus owner of this dialog.
 		 *
 		 * @return the focus owner of this dialog
@@ -3171,6 +3198,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			frame = f;
 			queue = q;
 			initialize();
+
+		}
+
+		/**
+		 * Creates the native frame.
+		 */
+		public void addNotify() {
+
+			super.addNotify();
+
+			// Make the native window a utility window if necessary
+			if (frame.utility)
+				frame.makeUtilityWindow(getPeer());
 
 		}
 
