@@ -662,6 +662,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
 	/** 
+	 * The native utility window height change.
+	 */
+	private static int utilityWindowHeightChange = 0;
+
+	/** 
 	 * The native utility window insets.
 	 */
 	private static Insets utilityWindowInsets = null;
@@ -1504,6 +1509,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				Window uw = new VCLFrame.NoPaintFrame(this, queue);
 				uw.addNotify();
 				VCLFrame.utilityWindowInsets = uw.getInsets();
+				VCLFrame.utilityWindowHeightChange = VCLFrame.utilityWindowInsets.top - VCLScreen.getFrameInsets().top;
 				uw.removeNotify();
 			}
 			insets = VCLFrame.utilityWindowInsets;
@@ -1828,7 +1834,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		if (utility)
-			bounds = new Rectangle(bounds.x, bounds.y - VCLScreen.getFrameInsets().top + insets.top, bounds.width, bounds.height);
+			bounds = new Rectangle(bounds.x, bounds.y + VCLFrame.utilityWindowHeightChange, bounds.width, bounds.height);
 
 		return bounds;
 
@@ -2499,6 +2505,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (disposed || !window.isShowing() || b.isEmpty())
 			return;
+
+		if (utility) {
+			b.y += VCLFrame.utilityWindowHeightChange;
+			b.height -= VCLFrame.utilityWindowHeightChange;
+		}
 
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
 
