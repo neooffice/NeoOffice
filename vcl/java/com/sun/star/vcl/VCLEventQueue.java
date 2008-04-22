@@ -732,9 +732,7 @@ public final class VCLEventQueue implements Runnable {
 				Object o = toolkitGetPointerInfoMethod.invoke(null, new Object[]{});
 				pointerInfoGetLocationMethod = o.getClass().getMethod("getLocation", new Class[]{});
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
+			catch (Throwable t) {}
 
 		}
 
