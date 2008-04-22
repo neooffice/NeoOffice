@@ -218,7 +218,7 @@ bool JavaSalFrame::IsFloatingFrame()
 
 bool JavaSalFrame::IsUtilityWindow()
 {
-	return ( mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
+	return ( mnStyle & SAL_FRAME_STYLE_MOVEABLE && mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
 }
 
 // -----------------------------------------------------------------------

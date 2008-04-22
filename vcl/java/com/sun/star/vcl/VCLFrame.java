@@ -662,7 +662,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
 	/** 
-	 * The utility window insets.
+	 * The native utility window insets.
 	 */
 	private static Insets utilityWindowInsets = null;
 
@@ -1326,7 +1326,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 	}
-	
+
 	/**
 	 * The bit count.
 	 */
@@ -1496,18 +1496,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			bitCount = 32;
 
-		if (utility && VCLFrame.utilityWindowInsets == null) {
-			window.addNotify();
-			VCLFrame.utilityWindowInsets = window.getInsets();
-			window.removeNotify();
+		if (undecorated) {
+			insets = window.getInsets();
+		}
+		else if (utility) {
+			if (VCLFrame.utilityWindowInsets == null) {
+				Window uw = new VCLFrame.NoPaintFrame(this, queue);
+				uw.addNotify();
+				VCLFrame.utilityWindowInsets = uw.getInsets();
+				uw.removeNotify();
+			}
+			insets = VCLFrame.utilityWindowInsets;
+		}
+		else {
+			insets = VCLScreen.getFrameInsets();
 		}
 
-		if (undecorated)
-			insets = window.getInsets();
-		else if (utility)
-			insets = VCLFrame.utilityWindowInsets;
-		else
-			insets = VCLScreen.getFrameInsets();
 		graphics = new VCLGraphics(this);
 
 		// Register listeners
@@ -1822,6 +1826,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (p != null && (p.x != bounds.x || p.y != bounds.y))
 				bounds = new Rectangle(p.x, p.y, bounds.width, bounds.height);
 		}
+
+		if (utility)
+			bounds = new Rectangle(bounds.x, bounds.y - VCLScreen.getFrameInsets().top + insets.top, bounds.width, bounds.height);
 
 		return bounds;
 
@@ -3159,7 +3166,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			else
  				minimumFrameSize = VCLScreen.getMinimumFrameSize();
 
-			insets = getInsets();
+			Insets insets = getInsets();
 			width += insets.left + insets.right;
 			height += insets.top + insets.bottom;
 
@@ -3384,7 +3391,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			else
  				minimumFrameSize = VCLScreen.getMinimumFrameSize();
 
-			insets = getInsets();
+			Insets insets = getInsets();
 			width += insets.left + insets.right;
 			height += insets.top + insets.bottom;
 
