@@ -646,7 +646,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public final static int POINTER_PAINTBRUSH = 93;
 	
-	/** 
+	/**
 	 * The component to <code>VCLFrame</code> mapping.
 	 */
 	private static HashMap componentMap = new HashMap();
@@ -670,6 +670,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The native utility window insets.
 	 */
 	private static Insets utilityWindowInsets = null;
+
+	/** 
+	 * The native utility window adjust bounds flag.
+	 */
+	private static boolean utilityWindowAdjustBounds = false;
 
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
@@ -1330,6 +1335,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				customCursors.put(new Integer(POINTER_TEXT_VERTICAL), c);
 		}
 
+		// Set utilityWindowAdjustBounds flag to true if we are using Java 1.5
+		// or higher
+		try {
+			Class.forName("java.awt.MouseInfo");
+			utilityWindowAdjustBounds = true;
+		}
+		catch (Throwable t) {}
 	}
 
 	/**
@@ -2304,7 +2316,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
 	 * @param p the <code>ComponentPeer</code>
 	 */
-	public native void makeUtilityWindow(ComponentPeer p);
+	public native int makeUtilityWindow(ComponentPeer p);
 
 	/**
 	 * Invoked when the mouse has been clicked on a component.
@@ -3042,6 +3054,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLFrame frame = null;
 
 		/**
+		 * The inset height change.
+		 */
+		int insetsHeightChange = 0;
+
+		/**
 		 * The minimum size.
 		 */
 		private Dimension minSize = null;
@@ -3083,7 +3100,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Make the native window a utility window if necessary
 			if (frame.utility)
-				frame.makeUtilityWindow(getPeer());
+				insetsHeightChange = frame.makeUtilityWindow(getPeer());
 
 		}
 
@@ -3098,6 +3115,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				return this;
 			else
 				return super.getFocusOwner();
+
+		}
+
+		/**
+		 * Returns the insets for this dialog.
+		 *
+		 * @return the insets for this dialog
+		 */
+		public Insets getInsets() {
+
+			Insets insets = super.getInsets();
+
+			if (insets.top != 0 && insetsHeightChange != 0 && !VCLFrame.utilityWindowAdjustBounds)
+				insets.top += insetsHeightChange;
+
+			return insets;
 
 		}
 
@@ -3211,6 +3244,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLFrame frame = null;
 
 		/**
+		 * The inset height change.
+		 */
+		int insetsHeightChange = 0;
+
+		/**
 		 * The minimum size.
 		 */
 		private Dimension minSize = null;
@@ -3242,7 +3280,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Make the native window a utility window if necessary
 			if (frame.utility)
-				frame.makeUtilityWindow(getPeer());
+				insetsHeightChange = frame.makeUtilityWindow(getPeer());
 
 		}
 
@@ -3257,6 +3295,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				return this;
 			else
 				return super.getFocusOwner();
+
+		}
+
+		/**
+		 * Returns the insets for this frame.
+		 *
+		 * @return the insets for this frame
+		 */
+		public Insets getInsets() {
+
+			Insets insets = super.getInsets();
+
+			if (insets.top != 0 && insetsHeightChange != 0 && !VCLFrame.utilityWindowAdjustBounds)
+				insets.top += insetsHeightChange;
+
+			return insets;
 
 		}
 

@@ -218,7 +218,9 @@ bool JavaSalFrame::IsFloatingFrame()
 
 bool JavaSalFrame::IsUtilityWindow()
 {
-	return ( mnStyle & SAL_FRAME_STYLE_MOVEABLE && mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
+	// Never show utility windows on Mac OS X 10.3.x
+	return ( !IsRunningPanther() && mnStyle & SAL_FRAME_STYLE_MOVEABLE && mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
+
 }
 
 // -----------------------------------------------------------------------
@@ -997,7 +999,8 @@ LanguageType JavaSalFrame::GetInputLanguage()
 
 void JavaSalFrame::SetParent( SalFrame* pNewParent )
 {
-	if ( pNewParent == mpParent && !mbInShowOnlyMenus )
+	bool bUtilityWindow = IsUtilityWindow();
+	if ( bUtilityWindow && pNewParent == mpParent && !mbInShowOnlyMenus )
 		return;
 
 	if ( mpParent )
@@ -1008,7 +1011,6 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 	mpParent = (JavaSalFrame *)pNewParent;
 
-	bool bUtilityWindow = IsUtilityWindow();
 	::std::list< JavaSalObject* > aReshowObjects( maObjects );
 	bool bReshow = ( mbVisible && !bUtilityWindow );
 	if ( bReshow )
