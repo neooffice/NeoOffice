@@ -59,7 +59,7 @@ public:
 	static void			flushAllFrames();
 
 						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ) {}
-						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent, sal_Bool bShowOnlyMenus );
+						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent, sal_Bool bShowOnlyMenus, sal_Bool bUtilityWindow );
 	virtual				~com_sun_star_vcl_VCLFrame() {}
 
 	void				addChild( JavaSalFrame *_par0 );

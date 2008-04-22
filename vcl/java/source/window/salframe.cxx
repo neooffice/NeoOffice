@@ -216,6 +216,13 @@ bool JavaSalFrame::IsFloatingFrame()
 
 // -----------------------------------------------------------------------
 
+bool JavaSalFrame::IsUtilityWindow()
+{
+	return ( mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalFrame::RemoveObject( JavaSalObject *pObject )
 {
 	if ( pObject )
@@ -1011,7 +1018,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 	com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
 	com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
 
-	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus );
+	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, IsUtilityWindow() );
 	if ( mpVCLFrame )
 	{
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();

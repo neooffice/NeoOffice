@@ -96,6 +96,7 @@ public:
 
 	void					AddObject( JavaSalObject *pObject );
 	bool					IsFloatingFrame();
+	bool					IsUtilityWindow();
 	void					RemoveObject( JavaSalObject *pObject );
 	void					FlushAllObjects();
 

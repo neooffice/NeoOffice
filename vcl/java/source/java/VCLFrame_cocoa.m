@@ -179,35 +179,26 @@
 			NSView *pContentView = [pWindow contentView];
 			if ( pContentView )
 			{
-				// Retain current content view just to be safe
-				[pContentView retain];
-
-				// Temporarily change the content view to avoid missizing
-				// the current content view
-				NSView *pTempContentView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
-				if ( pTempContentView )
+				NSView *pSuperview = [pContentView superview];
+				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
 				{
-					[pWindow setContentView:pTempContentView];
+					NSRect aFrame = [pWindow frame];
 
-					NSView *pSuperview = [pTempContentView superview];
-					if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
-					{
-						float fHeightChange = [pSuperview frame].size.height * -1;
-						[pSuperview _setUtilityWindow:YES];
-						[pWindow setLevel:NSFloatingWindowLevel];
-						fHeightChange += [pSuperview frame].size.height;
-						mnHeightChange = (long)( fHeightChange + 0.5 );
+					float fHeightChange = [pSuperview frame].size.height * -1;
+					[pSuperview _setUtilityWindow:YES];
+					[pWindow setLevel:NSFloatingWindowLevel];
+					fHeightChange += [pSuperview frame].size.height;
+					mnHeightChange = (long)( fHeightChange < 0 ? fHeightChange - 0.5 : fHeightChange + 0.5 );
 
-						NSRect aBounds = [pContentView bounds];
-						aBounds.origin.y -= fHeightChange;
-						[pContentView setBounds:aBounds];
-					}
+					// The window size may have changed so set it back to
+					// the original size
+					[pWindow setFrame:aFrame display:YES];
 
-					[pWindow setContentView:pContentView];
-					[pTempContentView release];
+					// Adjust origin of content view by height change
+					NSRect aBounds = [pContentView bounds];
+					aBounds.origin.y -= fHeightChange;
+					[pContentView setBounds:aBounds];
 				}
-
-				[pContentView release];
 			}
 		}
 	}

@@ -661,6 +661,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
+	/** 
+	 * The utility window insets.
+	 */
+	private static Insets utilityWindowInsets = null;
+
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
 	 *
@@ -1444,23 +1449,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param m <code>true</code> if only menus are to shown and the frame is
 	 *  to always be hidden behind the native menubar otherwise
 	 *  <code>false</code> for normal frame behavior
+	 * @param u <code>true</code> if the frame should use a native utility
+	 *  window
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u) {
 
 		queue = q;
 		frame = f;
 		showOnlyMenus = m;
 		style = s;
 		useInputMethodFix = b;
+		utility = u;
 
 		// Create the native window
-		if (showOnlyMenus || (style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0)
+		if (!utility && (showOnlyMenus || (style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0))
 			undecorated = true;
-		else if (!showOnlyMenus && (style & (SAL_FRAME_STYLE_TOOLTIP | SAL_FRAME_STYLE_TOOLWINDOW)) != 0)
-			utility = true;
 
 		Window w = null;
-		if (p != null && !utility)
+		if (p != null)
 			w = p.getWindow();
 		if (w instanceof Dialog)
 			window = new VCLFrame.NoPaintDialog(this, (Dialog)w);
@@ -1490,11 +1496,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			bitCount = 32;
 
-		if (utility)
+		if (utility && VCLFrame.utilityWindowInsets == null) {
 			window.addNotify();
+			VCLFrame.utilityWindowInsets = window.getInsets();
+			window.removeNotify();
+		}
 
-		if (undecorated || utility)
+		if (undecorated)
 			insets = window.getInsets();
+		else if (utility)
+			insets = VCLFrame.utilityWindowInsets;
 		else
 			insets = VCLScreen.getFrameInsets();
 		graphics = new VCLGraphics(this);
@@ -2862,8 +2873,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			enableFlushing(false);
 			panel.setVisible(false);
 			window.hide();
-			if (!utility)
-				window.removeNotify();
+			window.removeNotify();
 		}
 
 	}
