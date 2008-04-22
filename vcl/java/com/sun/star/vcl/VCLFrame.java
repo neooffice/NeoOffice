@@ -1466,7 +1466,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			undecorated = true;
 
 		Window w = null;
-		if (p != null)
+		if (p != null && !utility)
 			w = p.getWindow();
 		if (w instanceof Dialog)
 			window = new VCLFrame.NoPaintDialog(this, (Dialog)w);
