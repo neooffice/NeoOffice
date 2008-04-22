@@ -133,9 +133,11 @@ static void JNICALL Java_com_sun_star_vcl_VCLFrame_makeUtilityWindow( JNIEnv *pE
 	if ( _par0 )
 	{
 		jclass tempClass = pEnv->FindClass( "apple/awt/ComponentModel" );
-		if ( tempClass && pEnv->IsInstanceOf( _par0, tempClass ) )
+		jclass tempClass2 = pEnv->FindClass( "apple/awt/ContainerModel" );
+		if ( tempClass && tempClass2 && pEnv->IsInstanceOf( _par0, tempClass ) && pEnv->IsInstanceOf( _par0, tempClass2 ) )
 		{
 			static jmethodID mIDGetModelPtr = NULL;
+			static jfieldID fIDInsets = NULL;
 			static bool bReturnsInt = false;
 			if ( !mIDGetModelPtr )
 			{
@@ -154,12 +156,40 @@ static void JNICALL Java_com_sun_star_vcl_VCLFrame_makeUtilityWindow( JNIEnv *pE
 				}
 			}
 			OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
-			if ( mIDGetModelPtr )
+			if ( !fIDInsets )
 			{
-				if ( bReturnsInt )
-					CWindow_makeUtilityWindow( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
-				else
-					CWindow_makeUtilityWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
+				char *cSignature = "Ljava/awt/Insets;";
+				fIDInsets = pEnv->GetFieldID( tempClass2, "fInsets", cSignature );
+			}
+			OSL_ENSURE( fIDInsets, "Unknown field id!" );
+			if ( mIDGetModelPtr && fIDInsets )
+			{
+				jobject tempObj = pEnv->GetObjectField( _par0, fIDInsets );
+				if ( tempObj )
+				{
+					jclass tempObjClass = pEnv->GetObjectClass( tempObj );
+					if ( tempObjClass )
+					{
+						static jfieldID fIDTop = NULL;
+						if ( !fIDTop )
+						{
+							char *cSignature = "I";
+							fIDTop = pEnv->GetFieldID( tempObjClass, "top", cSignature );
+						}
+						OSL_ENSURE( fIDInsets, "Unknown field id!" );
+						if ( fIDTop )
+						{
+							jint nHeightChange;
+							if ( bReturnsInt )
+								nHeightChange = (jint)CWindow_makeUtilityWindow( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
+							else
+								nHeightChange = (jint)CWindow_makeUtilityWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
+
+							if ( nHeightChange )
+								pEnv->SetIntField( tempObj, fIDTop, pEnv->GetIntField( tempObj, fIDTop ) + nHeightChange );
+						}
+					}
+				}
 			}
 		}
 	}

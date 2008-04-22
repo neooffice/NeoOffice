@@ -1490,7 +1490,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			bitCount = 32;
 
-		if (undecorated)
+		if (utility)
+			window.addNotify();
+
+		if (undecorated || utility)
 			insets = window.getInsets();
 		else
 			insets = VCLScreen.getFrameInsets();
@@ -2859,7 +2862,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			enableFlushing(false);
 			panel.setVisible(false);
 			window.hide();
-			window.removeNotify();
+			if (!utility)
+				window.removeNotify();
 		}
 
 	}
