@@ -187,6 +187,7 @@
 					float fHeightChange = [pSuperview frame].size.height * -1;
 					[pSuperview _setUtilityWindow:YES];
 					[pWindow setLevel:NSFloatingWindowLevel];
+					[pWindow setHidesOnDeactivate:YES];
 					fHeightChange += [pSuperview frame].size.height;
 					mnHeightChange = (long)( fHeightChange < 0 ? fHeightChange - 0.5 : fHeightChange + 0.5 );
 
