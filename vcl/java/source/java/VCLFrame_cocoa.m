@@ -195,10 +195,23 @@
 					// the original size
 					[pWindow setFrame:aFrame display:YES];
 
-					// Adjust origin of content view by height change
-					NSRect aBounds = [pContentView bounds];
-					aBounds.origin.y -= fHeightChange;
-					[pContentView setBounds:aBounds];
+					// Adjust origin of subviews by height change
+					NSArray *pSubviews = [pContentView subviews];
+					if ( pSubviews )
+					{
+						unsigned int nCount = [pSubviews count];
+						unsigned int i = 0;
+						for ( ; i < nCount; i++ )
+						{
+							NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+							if ( pSubview && [pSubview isFlipped] )
+							{
+								NSRect aBounds = [pSubview bounds];
+								aBounds.origin.y += fHeightChange;
+								[pSubview setBounds:aBounds];
+							}
+						}
+					}
 				}
 			}
 		}
