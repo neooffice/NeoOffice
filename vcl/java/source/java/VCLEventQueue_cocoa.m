@@ -387,12 +387,17 @@ static VCLResponder *pSharedResponder = nil;
 
 @end
 
+@interface NSView (VCLWindow)
+- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
+@end
+
 @interface VCLWindow : NSWindow
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyAndOrderFront:(id)pSender;
 - (void)makeKeyWindow;
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
@@ -460,14 +465,15 @@ static VCLResponder *pSharedResponder = nil;
 
 - (void)makeKeyAndOrderFront:(id)pSender
 {
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		// Fix bug 2992 by not allowing the key window to change when we are
-		// tracking the menubar
+		// tracking the menubar. Also, never let a utility window grab focus
+		// when first shown
 		MenuTrackingData aTrackingData;
-		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
+		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr || [self level] == NSFloatingWindowLevel )
 		{
-			[self orderFront:pSender];
+			[self orderWindow:NSWindowAbove relativeTo:0];
 			return;
 		}
 	}
@@ -480,13 +486,35 @@ static VCLResponder *pSharedResponder = nil;
 	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		// Fix bug 2992 by not allowing the key window to change when we are
-		// tracking the menubar
+		// tracking the menubar. Also, never let a utility window grab focus.
 		MenuTrackingData aTrackingData;
-		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr )
+		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr || [self level] == NSFloatingWindowLevel )
 			return;
 	}
 
 	[super makeKeyWindow];
+}
+
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
+{
+	[super orderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
+
+	if ( [self isVisible] && [self level] == NSFloatingWindowLevel && [[self className] isEqualToString:pCocoaAppWindowString] )
+	{
+		NSView *pContentView = [self contentView];
+		if ( pContentView )
+		{
+			NSView *pSuperview = [pContentView superview];
+			if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
+			{
+				NSRect aFrame = [self frame];
+				[pSuperview _setUtilityWindow:YES];
+				[self setLevel:NSFloatingWindowLevel];
+				[self setHidesOnDeactivate:YES];
+				[self setFrame:aFrame display:NO];
+			}
+		}
+	}
 }
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent

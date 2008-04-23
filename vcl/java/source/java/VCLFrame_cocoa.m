@@ -40,10 +40,6 @@
 - (NSWindow *)getNSWindow;
 @end
 
-@interface NSView (CWindow)
-- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
-@end
-
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;
@@ -137,10 +133,8 @@
 @interface MakeUtilityWindow : NSObject
 {
 	id					mpCWindow;
-	long 				mnHeightChange;
 }
 + (id)createWithCWindow:(id)pCWindow;
-- (long)getHeightChange;
 - (id)initWithCWindow:(id)pCWindow;
 - (void)makeUtilityWindow:(id)pObject;
 @end
@@ -154,17 +148,11 @@
 	return pRet;
 }
 
-- (long)getHeightChange
-{
-	return mnHeightChange;
-}
-
 - (id)initWithCWindow:(id)pCWindow
 {
 	[super init];
 
 	mpCWindow = pCWindow;
-	mnHeightChange = 0;
 
 	return self;
 }
@@ -181,38 +169,7 @@
 			{
 				NSView *pSuperview = [pContentView superview];
 				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
-				{
-					NSRect aFrame = [pWindow frame];
-
-					float fHeightChange = [pSuperview frame].size.height * -1;
-					[pSuperview _setUtilityWindow:YES];
 					[pWindow setLevel:NSFloatingWindowLevel];
-					[pWindow setHidesOnDeactivate:YES];
-					fHeightChange += [pSuperview frame].size.height;
-					mnHeightChange = (long)( fHeightChange < 0 ? fHeightChange - 0.5 : fHeightChange + 0.5 );
-
-					// The window size may have changed so set it back to
-					// the original size
-					[pWindow setFrame:aFrame display:YES];
-
-					// Adjust origin of subviews by height change
-					NSArray *pSubviews = [pContentView subviews];
-					if ( pSubviews )
-					{
-						unsigned int nCount = [pSubviews count];
-						unsigned int i = 0;
-						for ( ; i < nCount; i++ )
-						{
-							NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-							if ( pSubview && [pSubview isFlipped] )
-							{
-								NSRect aBounds = [pSubview bounds];
-								aBounds.origin.y += fHeightChange;
-								[pSubview setBounds:aBounds];
-							}
-						}
-					}
-				}
 			}
 		}
 	}
@@ -301,10 +258,8 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 	return aWindow;
 }
 
-long CWindow_makeUtilityWindow( id pCWindow )
+void CWindow_makeUtilityWindow( id pCWindow )
 {
-	long nRet = 0;
-
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pCWindow )
@@ -312,12 +267,9 @@ long CWindow_makeUtilityWindow( id pCWindow )
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		MakeUtilityWindow *pMakeUtilityWindow = [MakeUtilityWindow createWithCWindow:pCWindow];
 		[pMakeUtilityWindow performSelectorOnMainThread:@selector(makeUtilityWindow:) withObject:pMakeUtilityWindow waitUntilDone:YES modes:pModes];
-		nRet = [pMakeUtilityWindow getHeightChange];
 	}
 
 	[pPool release];
-
-	return nRet;
 }
 
 void CWindow_updateLocation( id pCWindow )
