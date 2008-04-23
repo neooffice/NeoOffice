@@ -511,7 +511,26 @@ static VCLResponder *pSharedResponder = nil;
 				[pSuperview _setUtilityWindow:YES];
 				[self setLevel:NSFloatingWindowLevel];
 				[self setHidesOnDeactivate:YES];
+				float fHeightChange = [self frame].size.height - aFrame.size.height;
 				[self setFrame:aFrame display:NO];
+
+				// Adjust origin of subviews by height change
+				NSArray *pSubviews = [pContentView subviews];
+				if ( pSubviews )
+				{
+					unsigned int nCount = [pSubviews count];
+					unsigned int i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+						if ( pSubview && [pSubview isFlipped] )
+						{
+							NSRect aBounds = [pSubview bounds];
+							aBounds.origin.y += fHeightChange;
+							[pSubview setBounds:aBounds];
+						}
+					}
+				}
 			}
 		}
 	}

@@ -133,8 +133,10 @@
 @interface MakeUtilityWindow : NSObject
 {
 	id					mpCWindow;
+	int					mnTopInset;
 }
 + (id)createWithCWindow:(id)pCWindow;
+- (int)getTopInset;
 - (id)initWithCWindow:(id)pCWindow;
 - (void)makeUtilityWindow:(id)pObject;
 @end
@@ -148,11 +150,17 @@
 	return pRet;
 }
 
+- (int)getTopInset
+{
+	return mnTopInset;
+}
+
 - (id)initWithCWindow:(id)pCWindow
 {
 	[super init];
 
 	mpCWindow = pCWindow;
+	mnTopInset = 0;
 
 	return self;
 }
@@ -169,7 +177,14 @@
 			{
 				NSView *pSuperview = [pContentView superview];
 				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
+				{
 					[pWindow setLevel:NSFloatingWindowLevel];
+
+					// Get the top inset for a utility window
+					NSRect aFrameRect = NSMakeRect( 0, 0, 100, 100 );
+					NSRect aContentRect = [NSWindow contentRectForFrameRect:aFrameRect styleMask:[pWindow styleMask] | NSUtilityWindowMask];
+					mnTopInset = aFrameRect.origin.y + aFrameRect.size.height - aContentRect.origin.y - aContentRect.size.height;
+				}
 			}
 		}
 	}
@@ -258,8 +273,10 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 	return aWindow;
 }
 
-void CWindow_makeUtilityWindow( id pCWindow )
+int CWindow_makeUtilityWindow( id pCWindow )
 {
+	int nRet = 0;
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pCWindow )
@@ -267,9 +284,12 @@ void CWindow_makeUtilityWindow( id pCWindow )
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		MakeUtilityWindow *pMakeUtilityWindow = [MakeUtilityWindow createWithCWindow:pCWindow];
 		[pMakeUtilityWindow performSelectorOnMainThread:@selector(makeUtilityWindow:) withObject:pMakeUtilityWindow waitUntilDone:YES modes:pModes];
+		nRet = [pMakeUtilityWindow getTopInset];
 	}
 
 	[pPool release];
+
+	return nRet;
 }
 
 void CWindow_updateLocation( id pCWindow )

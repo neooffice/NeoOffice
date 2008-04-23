@@ -50,7 +50,7 @@ BEGIN_C
 #endif
 id CWindow_getNSWindow( id pCWindow );
 WindowRef CWindow_getWindowRef( id pCWindow );
-void CWindow_makeUtilityWindow( id pCWindow );
+int CWindow_makeUtilityWindow( id pCWindow );
 void CWindow_updateLocation( id pCWindow );
 #ifdef __cplusplus
 END_C

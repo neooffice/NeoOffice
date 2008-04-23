@@ -1496,10 +1496,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else
 			bitCount = 32;
 
-		if (undecorated)
+		if (undecorated) {
 			insets = window.getInsets();
-		else
+		}
+		else if (utility) {
+			if (VCLFrame.utilityWindowInsets == null) {
+				Window uw = new VCLFrame.NoPaintFrame(this, queue);
+				uw.addNotify();
+				VCLFrame.utilityWindowInsets = uw.getInsets();
+				uw.removeNotify();
+			}
+			insets = VCLFrame.utilityWindowInsets;
+		}
+		else {
 			insets = VCLScreen.getFrameInsets();
+		}
 
 		graphics = new VCLGraphics(this);
 
@@ -2283,8 +2294,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Force the native window to be a utility window.
 	 *
 	 * @param p the <code>ComponentPeer</code>
+	 * @return the new top inset or zero if the method failed to change the
+	 *  window style
 	 */
-	public native void makeUtilityWindow(ComponentPeer p);
+	public native int makeUtilityWindow(ComponentPeer p);
 
 	/**
 	 * Invoked when the mouse has been clicked on a component.
@@ -3183,6 +3196,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private VCLEventQueue queue = null;
 
 		/**
+		 * The utility window top inset.
+		 */
+		private int utilityWindowTopInset = 0;
+
+		/**
 		 * Constructs a new <code>VCLFrame.NoPaintFrame</code> instance.
 		 *
 		 * @param f the <code>VCLFrame</code>
@@ -3204,7 +3222,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Make the native window a utility window if necessary
 			if (frame.utility)
-				frame.makeUtilityWindow(getPeer());
+				utilityWindowTopInset = frame.makeUtilityWindow(getPeer());
 
 		}
 
@@ -3219,6 +3237,22 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				return this;
 			else
 				return super.getFocusOwner();
+
+		}
+
+		/**
+		 * Returns the insets for this frame.
+		 *
+		 * @return the insets for this frame
+		 */
+		public Insets getInsets() {
+
+			Insets insets = super.getInsets();
+
+			if (frame.utility && utilityWindowTopInset != 0 && insets.top != 0)
+				insets.top = utilityWindowTopInset;
+
+			return insets;
 
 		}
 
