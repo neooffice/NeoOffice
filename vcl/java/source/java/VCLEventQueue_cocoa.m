@@ -489,23 +489,6 @@ static VCLResponder *pSharedResponder = nil;
 	[super makeKeyWindow];
 }
 
-- (void)resignKeyWindow
-{
-	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
-	{
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
-		{
-			if ( [pResponder hasMarkedText] )
-				[pResponder insertText:pCancelInputMethodText];
-			[pResponder abandonInput];
-		}
-	}
-
-	[super resignKeyWindow];
-}
-
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
 	BOOL bCommandKeyPressed = ( pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask );
@@ -566,6 +549,23 @@ static VCLResponder *pSharedResponder = nil;
 	}
 
 	return bRet;
+}
+
+- (void)resignKeyWindow
+{
+	// Fix bug 1819 by forcing cancellation of the input method
+	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	{
+		NSResponder *pResponder = [self firstResponder];
+		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		{
+			if ( [pResponder hasMarkedText] )
+				[pResponder insertText:pCancelInputMethodText];
+			[pResponder abandonInput];
+		}
+	}
+
+	[super resignKeyWindow];
 }
 
 - (void)sendEvent:(NSEvent *)pEvent
