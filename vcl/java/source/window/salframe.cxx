@@ -1000,7 +1000,7 @@ LanguageType JavaSalFrame::GetInputLanguage()
 void JavaSalFrame::SetParent( SalFrame* pNewParent )
 {
 	bool bUtilityWindow = IsUtilityWindow();
-	if ( bUtilityWindow && pNewParent == mpParent && !mbInShowOnlyMenus )
+	if ( bUtilityWindow && pNewParent == mpParent )
 		return;
 
 	if ( mpParent )
@@ -1011,7 +1011,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 	mpParent = (JavaSalFrame *)pNewParent;
 
-	if ( bUtilityWindow )
+	if ( !bUtilityWindow )
 	{
 		::std::list< JavaSalObject* > aReshowObjects( maObjects );
 		bool bReshow = mbVisible;
@@ -1023,7 +1023,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
 		com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
 
-		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, IsUtilityWindow() );
+		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, bUtilityWindow );
 		if ( mpVCLFrame )
 		{
 			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
@@ -1063,7 +1063,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		mpParent->maChildren.push_back( this );
 	}
 
-	if ( bUtilityWindow )
+	if ( !bUtilityWindow )
 	{
 		// Reattach floating children
 		::std::list< JavaSalFrame* >aChildren( maChildren );
