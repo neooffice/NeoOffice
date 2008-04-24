@@ -999,7 +999,8 @@ LanguageType JavaSalFrame::GetInputLanguage()
 
 void JavaSalFrame::SetParent( SalFrame* pNewParent )
 {
-	if ( !IsRunningPanther() && pNewParent == mpParent && !mbInShowOnlyMenus )
+	bool bUtilityWindow = IsUtilityWindow();
+	if ( bUtilityWindow && pNewParent == mpParent && !mbInShowOnlyMenus )
 		return;
 
 	if ( mpParent )
@@ -1010,41 +1011,51 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 	mpParent = (JavaSalFrame *)pNewParent;
 
-	::std::list< JavaSalObject* > aReshowObjects( maObjects );
-	bool bReshow = mbVisible;
-	if ( bReshow )
-		Show( FALSE );
-
-	// Fix bug 1310 by creating a new native window with the new parent
-	maSysData.aWindow = 0;
-	com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
-	com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
-
-	mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, IsUtilityWindow() );
-	if ( mpVCLFrame )
+	if ( bUtilityWindow )
 	{
-		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
-		mpVCLFrame->setTitle( maTitle );
+		::std::list< JavaSalObject* > aReshowObjects( maObjects );
+		bool bReshow = mbVisible;
+		if ( bReshow )
+			Show( FALSE );
 
-		if ( pOldVCLGraphics )
-			delete pOldVCLGraphics;
+		// Fix bug 1310 by creating a new native window with the new parent
+		maSysData.aWindow = 0;
+		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
+		com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
 
-		if ( pOldVCLFrame )
+		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, IsUtilityWindow() );
+		if ( mpVCLFrame )
 		{
-			pOldVCLFrame->dispose();
-			delete pOldVCLFrame;
+			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+			mpVCLFrame->setTitle( maTitle );
+
+			if ( pOldVCLGraphics )
+				delete pOldVCLGraphics;
+
+			if ( pOldVCLFrame )
+			{
+				pOldVCLFrame->dispose();
+				delete pOldVCLFrame;
+			}
+		}
+		else
+		{
+			mpVCLFrame = pOldVCLFrame;
+			mpGraphics->mpVCLGraphics = pOldVCLGraphics;
+		}
+
+		if ( mpParent )
+			SetPosSize( maGeometry.nX - mpParent->maGeometry.nX - mpParent->maGeometry.nLeftDecoration, maGeometry.nY - mpParent->maGeometry.nY - mpParent->maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+		else
+			SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
+
+		if ( bReshow )
+		{
+			Show( TRUE, FALSE );
+			for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
+					(*it)->Show( TRUE );
 		}
 	}
-	else
-	{
-		mpVCLFrame = pOldVCLFrame;
-		mpGraphics->mpVCLGraphics = pOldVCLGraphics;
-	}
-
-	if ( mpParent )
-		SetPosSize( maGeometry.nX - mpParent->maGeometry.nX - mpParent->maGeometry.nLeftDecoration, maGeometry.nY - mpParent->maGeometry.nY - mpParent->maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
-	else
-		SetPosSize( maGeometry.nX - maGeometry.nLeftDecoration, maGeometry.nY - maGeometry.nTopDecoration, maGeometry.nWidth, maGeometry.nHeight, SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT );
 
 	if ( mpParent )
 	{
@@ -1052,17 +1063,13 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		mpParent->maChildren.push_back( this );
 	}
 
-	if ( bReshow )
+	if ( bUtilityWindow )
 	{
-		Show( TRUE, FALSE );
-		for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
-			(*it)->Show( TRUE );
+		// Reattach floating children
+		::std::list< JavaSalFrame* >aChildren( maChildren );
+		for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
+			(*it)->SetParent( this );
 	}
-
-	// Reattach floating children
-	::std::list< JavaSalFrame* >aChildren( maChildren );
-	for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
-		(*it)->SetParent( this );
 }
 
 // -----------------------------------------------------------------------
