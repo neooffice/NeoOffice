@@ -1350,7 +1350,11 @@ void ImplDockingWindowWrapper::SetFloatingMode( BOOL bFloatMode )
                 ImplDockFloatWin2* pWin =
                     new ImplDockFloatWin2(
                                          mpParent,
+#ifdef USE_JAVA
+                                         mnFloatBits & ( WB_MOVEABLE | WB_CLOSEABLE ) ?
+#else	// USE_JAVA
                                          mnFloatBits & ( WB_MOVEABLE | WB_SIZEABLE | WB_CLOSEABLE ) ?
+#endif	// USE_JAVA
                                           mnFloatBits | WB_SYSTEMWINDOW
 #ifndef USE_JAVA
 //#ifdef __USE_OWNERDRAWDECORATION__
