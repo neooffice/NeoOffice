@@ -666,20 +666,56 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( !pPosSize )
 					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds() );
 
-				pFrame->maGeometry.nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
-				pFrame->maGeometry.nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
-				pFrame->maGeometry.nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
-				pFrame->maGeometry.nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
-
-				// Reset graphics
-				com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
-				if ( pVCLGraphics )
+				bool bPosChanged = false;
+				int nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
+				if ( pFrame->maGeometry.nX != nX )
 				{
-					pVCLGraphics->resetGraphics();
-					delete pVCLGraphics;
+					bPosChanged = true;
+					pFrame->maGeometry.nX = nX;
+				}
+				int nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
+				if ( pFrame->maGeometry.nY != nY )
+				{
+					bPosChanged = true;
+					pFrame->maGeometry.nY = nY;
 				}
 
-				pFrame->CallCallback( nID, NULL );
+				bool bSizeChanged = false;
+				unsigned int nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
+				if ( pFrame->maGeometry.nWidth != nWidth )
+				{
+					bSizeChanged = true;
+					pFrame->maGeometry.nWidth = nWidth;
+				}
+				unsigned int nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
+				if ( pFrame->maGeometry.nHeight != nHeight )
+				{
+					bSizeChanged = true;
+					pFrame->maGeometry.nHeight = nHeight;
+				}
+
+				// Fix bug 3045 by setting the event ID to the actual changes
+				// that have occurred. This also fixes the autodocking of
+				// native utility windows problem described in bug 3035.
+				if ( bPosChanged || bSizeChanged )
+				{
+					if ( bPosChanged && bSizeChanged )
+						nID = SALEVENT_MOVERESIZE;
+					else if ( bPosChanged )
+						nID = SALEVENT_MOVE;
+					else
+						nID = SALEVENT_RESIZE;
+
+					// Reset graphics
+					com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
+					if ( pVCLGraphics )
+					{
+						pVCLGraphics->resetGraphics();
+						delete pVCLGraphics;
+					}
+
+					pFrame->CallCallback( nID, NULL );
+				}
 			}
 			if ( pPosSize )
 				delete pPosSize;
