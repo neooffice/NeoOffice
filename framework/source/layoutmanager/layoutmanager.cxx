@@ -6295,12 +6295,7 @@ throw (::com::sun::star::uno::RuntimeException)
     bFloating = aUIDockingElement.m_bFloating;
 
     UIElement& rUIElement = impl_findElement( aUIDockingElement.m_aName );
-#ifdef USE_JAVA
-    // Fix bug 3045 by checking that the element is valid
-    if ( aUIDockingElement.m_xUIElement.is() && rUIElement.m_aName == aUIDockingElement.m_aName )
-#else	// USE_JAVA
     if ( rUIElement.m_aName == aUIDockingElement.m_aName )
-#endif	// USE_JAVA
     {
         if ( aUIDockingElement.m_bFloating )
         {
