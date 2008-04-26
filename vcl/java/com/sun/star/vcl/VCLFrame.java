@@ -1387,6 +1387,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private InputMethodEvent lastUncommittedInputMethodEvent = null;
 
 	/**
+	 * The last window dragged event.
+	 */
+	private MouseEvent lastWindowDraggedEvent = null;
+
+	/**
 	 * The native window's panel.
 	 */
 	private VCLFrame.NoPaintPanel panel = null;
@@ -1529,11 +1534,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.addInputMethodListener(this);
 			window.addMouseListener(this);
 			window.addMouseWheelListener(this);
-			// Fix bug 2370 by listening for mouse events in the window frame
-			if (!undecorated) {
-				window.addMouseMotionListener(this);
-				window.addWindowListener(this);
-			}
 		}
 
 	}
@@ -1615,6 +1615,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			VCLFrame.componentMap.put(panel, this);
 		}
 
+		// Fix bug 2370 by listening for mouse events in the window frame.
+		// Prevent dispatch of a mouseDragged() event when the window is
+		// first shown by listening to such events until after this event is
+		// dispatched.
+		if (!undecorated) {
+			window.addMouseMotionListener(this);
+			window.addWindowListener(this);
+		}
+
 	}
 
 	/**
@@ -1629,6 +1638,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		lastCommittedInputMethodEvent = null;
 		lastUncommittedInputMethodEvent = null;
+		lastWindowDraggedEvent = null;
+
+		if (!undecorated) {
+			window.removeMouseMotionListener(this);
+			window.removeWindowListener(this);
+		}
 
 		// Remove window and panel from mapping
 		synchronized (VCLFrame.class) {
@@ -1668,6 +1683,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		insets = null;
 		lastCommittedInputMethodEvent = null;
 		lastUncommittedInputMethodEvent = null;
+		lastWindowDraggedEvent = null;
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
@@ -1684,10 +1700,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.removeInputMethodListener(this);
 			window.removeMouseListener(this);
 			window.removeMouseWheelListener(this);
-			if (!undecorated) {
-				window.removeMouseMotionListener(this);
-				window.removeWindowListener(this);
-			}
 		}
 		queue.removeCachedEvents(frame);
 
@@ -2326,6 +2338,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		lastWindowDraggedEvent = null;
+
 		// The JVM can get confused when we click on a non-focused window. In
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
@@ -2355,6 +2369,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (disposed || !window.isShowing())
 			return;
+
+		lastWindowDraggedEvent = null;
 
 		// Cache only extended modifiers for synthetic mouse move event
 		int remainingModifiers = e.getModifiersEx();
@@ -2393,32 +2409,21 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		int x = e.getX();
-		int y = e.getY();
-
-		// For mouse drag events with a window component, limit location to the
-		// window's titlebar
-		Component c = e.getComponent();
-		if (c instanceof Window) {
-			Window w = (Window)c;
-			Rectangle b = new Rectangle(0, 0, w.getSize().width, w.getInsets().top);
-			if (b.isEmpty())
-				return;
-
-			if (x < b.x)
-				x = b.x;
-			else if (x >= b.x + b.width)
-				x = b.x + b.width;
-
-			if (y < b.y)
-				y = b.y;
-			else if (y >= b.y + b.height)
-				y = b.y + b.height;
-		}
-
 		// Use adjusted modifiers
 		int modifiers = queue.getLastAdjustedMouseModifiers();
-		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, x, y, e.getClickCount(), e.isPopupTrigger());
+		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
+
+		// For events where the component is a window, use the first drag event
+		// as the coordinates should not change but Java does sometimes change
+		// them
+		Component c = e.getComponent();
+		if (c instanceof Window) {
+			if (lastWindowDraggedEvent == null)
+				lastWindowDraggedEvent = e;
+			else
+				e = lastWindowDraggedEvent;
+System.out.println(e);
+		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
@@ -2436,6 +2441,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		lastWindowDraggedEvent = null;
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 	}
@@ -2451,6 +2458,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (disposed || !window.isShowing())
 			return;
+
+		lastWindowDraggedEvent = null;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSELEAVE, VCLFrame.findFrame(e.getComponent()), 0));
 
@@ -2469,6 +2478,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
+		lastWindowDraggedEvent = null;
+
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
 
 	}
@@ -2484,6 +2495,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (disposed || !window.isShowing())
 			return;
+
+		lastWindowDraggedEvent = null;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_WHEELMOUSE, VCLFrame.findFrame(e.getComponent()), 0));
 
@@ -2880,6 +2893,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			panel.setVisible(false);
 			window.hide();
 			window.removeNotify();
+
+			// Force immediate cleanup of cached window data
+			componentHidden(new ComponentEvent(window,  ComponentEvent.COMPONENT_HIDDEN));
 		}
 
 	}
