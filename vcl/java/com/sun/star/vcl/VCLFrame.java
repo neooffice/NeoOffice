@@ -1478,7 +1478,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (w instanceof Frame)
 			window = new VCLFrame.NoPaintDialog(this, (Frame)w);
 		else
-			window = new VCLFrame.NoPaintFrame(this, queue);
+			window = new VCLFrame.NoPaintFrame(this);
 
 		// Process remaining style flags
 		if (showOnlyMenus)
@@ -1506,7 +1506,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		else if (utility) {
 			if (VCLFrame.utilityWindowInsets == null) {
-				Window uw = new VCLFrame.NoPaintFrame(this, queue);
+				Window uw = new VCLFrame.NoPaintFrame(this);
 				uw.addNotify();
 				VCLFrame.utilityWindowInsets = uw.getInsets();
 				uw.removeNotify();
@@ -2422,7 +2422,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				lastWindowDraggedEvent = e;
 			else
 				e = lastWindowDraggedEvent;
-System.out.println(e);
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
@@ -3207,11 +3206,6 @@ System.out.println(e);
 		private Dimension minSize = null;
 
 		/**
-		 * The <code>VCLEventQueue</code>.
-		 */
-		private VCLEventQueue queue = null;
-
-		/**
 		 * The utility window top inset.
 		 */
 		private int utilityWindowTopInset = 0;
@@ -3221,10 +3215,9 @@ System.out.println(e);
 		 *
 		 * @param f the <code>VCLFrame</code>
 		 */
-		NoPaintFrame(VCLFrame f, VCLEventQueue q) {
+		NoPaintFrame(VCLFrame f) {
 
 			frame = f;
-			queue = q;
 			initialize();
 
 		}
