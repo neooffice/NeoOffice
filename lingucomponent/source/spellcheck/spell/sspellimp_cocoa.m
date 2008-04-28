@@ -252,7 +252,7 @@ BOOL NSSpellChecker_checkSpellingOfString( CFStringRef aString, CFStringRef aLoc
 
 CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 {
-	CFArrayRef aRet = nil;
+	CFMutableArrayRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -265,8 +265,25 @@ CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 		NSArray *pRet = (NSArray *)[pArgs result];
 		if ( pRet )
 		{
-			[pRet retain];
-			aRet = (CFArrayRef)pRet;
+			unsigned int nCount = [pRet count];
+			aRet = CFArrayCreateMutable( NULL, 0, &kCFTypeArrayCallBacks );
+			if ( aRet )
+			{
+				unsigned i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSString *pString = [pRet objectAtIndex:i];
+					if ( pString )
+					{
+						CFStringRef aString = CFStringCreateCopy( NULL, (CFStringRef)pString );
+						if ( aString )
+						{
+							CFArrayAppendValue( aRet, aString );
+							CFRelease( aString );
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -277,7 +294,7 @@ CFArrayRef NSSpellChecker_getGuesses( CFStringRef aString, CFStringRef aLocale )
 
 CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales )
 {
-	CFArrayRef aRet = nil;
+	CFMutableArrayRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -288,8 +305,25 @@ CFArrayRef NSSpellChecker_getLocales( CFArrayRef aAppLocales )
 	NSArray *pRet = (NSArray *)[pArgs result];
 	if ( pRet )
 	{
-		[pRet retain];
-		aRet = (CFArrayRef)pRet;
+		unsigned int nCount = [pRet count];
+		aRet = CFArrayCreateMutable( NULL, 0, &kCFTypeArrayCallBacks );
+		if ( aRet )
+		{
+			unsigned i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSString *pString = [pRet objectAtIndex:i];
+				if ( pString )
+				{
+					CFStringRef aString = CFStringCreateCopy( NULL, (CFStringRef)pString );
+					if ( aString )
+					{
+						CFArrayAppendValue( aRet, aString );
+						CFRelease( aString );
+					}
+				}
+			}
+		}
 	}
 
 	[pPool release];

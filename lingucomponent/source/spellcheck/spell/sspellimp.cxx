@@ -413,6 +413,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 					{
 						CFArrayAppendValue( aAppLocales, aString );
 						aAppLocalesList.push_back( aLocale );
+						CFRelease( aString );
 					}
 
 					if ( aLocale.Variant.getLength() )
@@ -423,7 +424,10 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 						{
 							CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
 							if ( aTmpString )
+							{
 								CFArrayAppendValue( aAppLocales, aTmpString );
+								CFRelease( aTmpString );
+							}
 						}
 					}
 
@@ -435,7 +439,10 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 						{
 							CFStringRef aTmpString = CFStringCreateWithCharactersNoCopy( NULL, aTmpLocaleString.getStr(), aTmpLocaleString.getLength(), kCFAllocatorNull );
 							if ( aTmpString )
+							{
 								CFArrayAppendValue( aAppLocales, aTmpString );
+								CFRelease( aTmpString );
+							}
 						}
 					}
 				}
