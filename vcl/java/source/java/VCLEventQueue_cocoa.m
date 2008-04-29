@@ -617,7 +617,22 @@ static VCLResponder *pSharedResponder = nil;
 {
 	[super sendEvent:pEvent];
 
-	if ( pEvent && [pEvent type] == NSScrollWheel && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	if ( !pEvent )
+		return;
+
+	NSEventType nType = [pEvent type];
+	if ( ( nType == NSLeftMouseDown || nType == NSLeftMouseUp ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	{
+		NSRect aFrame = [self frame];
+		NSRect aContentFrame = [self contentRectForFrameRect:aFrame];
+		float fLeftInset = aFrame.origin.x - aContentFrame.origin.x;
+		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
+		NSRect aTitlebarFrame = NSMakeRect( fLeftInset, aContentFrame.origin.y + aContentFrame.size.height - aFrame.origin.y, aFrame.size.width, fTopInset );
+		NSPoint aLocation = [pEvent locationInWindow];
+		if ( NSPointInRect( aLocation, aTitlebarFrame ) )
+			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
+	}
+	else if ( nType == NSScrollWheel && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		// Post flipped coordinates 
 		NSRect aFrame = [self frame];

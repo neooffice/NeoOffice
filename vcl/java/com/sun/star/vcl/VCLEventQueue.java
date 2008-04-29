@@ -165,25 +165,12 @@ public final class VCLEventQueue implements Runnable {
 	 */
 	private static long nextGCUseMemory3 = 0;
 
-	/**
-	 * Post a custom mouse wheel event.
-	 *
-	 * @param o the <code>Window</code> peer
-	 * @param x the x coordinate
-	 * @param y the y coordinate
-	 * @param rotationX the horizontal wheel rotation
-	 * @param rotationY the vertical wheel rotation
-	 * @param shiftDown <code>true</code> if the Shift key is pressed
-	 * @param metaDown <code>true</code> if the Meta key is pressed
-	 * @param altDown <code>true</code> if the Alt key is pressed
-	 * @param controlDown <code>true</code> if the Control key is pressed
-	 */
-	public static void postMouseWheelEvent(Object o, int x, int y, int rotationX, int rotationY, boolean shiftDown, boolean metaDown, boolean altDown, boolean controlDown) {
-
-		if (o == null || (rotationX == 0 && rotationY == 0))
-			return;
+	static Window findWindow(Object o) {
 
 		Window w = null;
+
+		if (o == null)
+			return w;
 
 		Frame[] frames = Frame.getFrames();
 		for (int i = 0; i < frames.length; i++) {
@@ -204,6 +191,29 @@ public final class VCLEventQueue implements Runnable {
 			}
 		}
 
+		return w;
+
+	}
+
+	/**
+	 * Post a custom mouse wheel event.
+	 *
+	 * @param o the <code>Window</code> peer
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param rotationX the horizontal wheel rotation
+	 * @param rotationY the vertical wheel rotation
+	 * @param shiftDown <code>true</code> if the Shift key is pressed
+	 * @param metaDown <code>true</code> if the Meta key is pressed
+	 * @param altDown <code>true</code> if the Alt key is pressed
+	 * @param controlDown <code>true</code> if the Control key is pressed
+	 */
+	public static void postMouseWheelEvent(Object o, int x, int y, int rotationX, int rotationY, boolean shiftDown, boolean metaDown, boolean altDown, boolean controlDown) {
+
+		if (rotationX == 0 && rotationY == 0)
+			return;
+
+		Window w = findWindow(o);
 		if (w == null || !w.isVisible())
 			return;
 
@@ -226,6 +236,29 @@ public final class VCLEventQueue implements Runnable {
 			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationX, true));
 		if (rotationY != 0)
 			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationY, false));
+
+	}
+
+	/**
+	 * Post a custom window move session event.
+	 *
+	 * @param o the <code>Window</code> peer
+	 * @param x the x coordinate
+	 * @param y the y coordinate
+	 * @param startSession <code>true</code> to start a session or
+	 *  <code>false</code> to end an existing session
+	 */
+	public static void postWindowMoveSessionEvent(Object o, int x, int y, boolean startSession) {
+
+		Window w = findWindow(o);
+		if (w == null || !w.isVisible())
+			return;
+
+		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
+		if (startSession)
+			eventQueue.postEvent(new MouseEvent(w, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK | InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false));
+		else
+			eventQueue.postEvent(new MouseEvent(w, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK, x, y, 1, false));
 
 	}
 

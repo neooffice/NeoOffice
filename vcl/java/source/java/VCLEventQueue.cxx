@@ -102,10 +102,18 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 
 // ============================================================================
 
-void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long rotationX, long rotationY, BOOL shiftDown, BOOL metaDown, BOOL altDown, BOOL controlDown )
+void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown )
 {
 	if ( aPeer )
-		com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( aPeer, nX, nY, rotationX, rotationY, shiftDown, metaDown, altDown, controlDown );
+		com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( aPeer, nX, nY, nRotationX, nRotationY, bShiftDown, bMetaDown, bAltDown, bControlDown );
+}
+
+// ----------------------------------------------------------------------------
+
+void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession )
+{
+	if ( aPeer )
+		com_sun_star_vcl_VCLEventQueue::postWindowMoveSessionEvent( aPeer, nX, nY, bStartSession );
 }
 
 // ============================================================================
@@ -238,6 +246,32 @@ void com_sun_star_vcl_VCLEventQueue::postMouseWheelEvent( jobject _par0, long _p
 			args[6].z = jboolean( _par6 );
 			args[7].z = jboolean( _par7 );
 			args[8].z = jboolean( _par8 );
+			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLEventQueue::postWindowMoveSessionEvent( jobject _par0, long _par1, long _par2, sal_Bool _par3 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Ljava/lang/Object;IIZ)V";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "postWindowMoveSessionEvent", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[4];
+			args[0].l = _par0;
+			args[1].i = jint( _par1 );
+			args[2].i = jint( _par2 );
+			args[3].z = jboolean( _par3 );
 			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
 		}
 	}

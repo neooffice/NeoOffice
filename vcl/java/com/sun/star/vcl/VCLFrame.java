@@ -2337,8 +2337,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		lastWindowDraggedEvent = null;
-
 		// The JVM can get confused when we click on a non-focused window. In
 		// these cases, we will receive no mouse move events so if the OOo code
 		// displays a popup menu, the popup menu will receive no mouse move
@@ -2349,6 +2347,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				ignoreMouseReleasedModifiers = e.getModifiersEx();
 				return;
 			}
+		}
+
+		// For events where the component is a window, use the first drag event
+		// as the coordinates should not change but Java does sometimes change
+		// them
+		Component c = e.getComponent();
+		if (c instanceof Window) {
+			if (modifiers == InputEvent.BUTTON1_DOWN_MASK)
+				lastWindowDraggedEvent = e;
+		}
+		else {
+			lastWindowDraggedEvent = null;
 		}
 
 		ignoreMouseReleasedModifiers = 0;
@@ -2369,10 +2379,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (disposed || !window.isShowing())
 			return;
 
-		lastWindowDraggedEvent = null;
-
 		// Cache only extended modifiers for synthetic mouse move event
 		int remainingModifiers = e.getModifiersEx();
+
+		if ((remainingModifiers & InputEvent.BUTTON1_DOWN_MASK) == 0)
+			lastWindowDraggedEvent = null;
 
 		// Use adjusted modifiers
 		int modifiers = queue.getLastAdjustedMouseModifiers();
@@ -2412,15 +2423,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		int modifiers = queue.getLastAdjustedMouseModifiers();
 		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
-		// For events where the component is a window, use the first drag event
-		// as the coordinates should not change but Java does sometimes change
-		// them
 		Component c = e.getComponent();
 		if (c instanceof Window) {
+			// This should have been set in the mousePressed() method
 			if (lastWindowDraggedEvent == null)
-				lastWindowDraggedEvent = e;
-			else
-				e = lastWindowDraggedEvent;
+				return;
+
+			e = lastWindowDraggedEvent;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOUSEMOVE, VCLFrame.findFrame(e.getComponent()), 0));
