@@ -179,6 +179,7 @@
 				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
 				{
 					[pWindow setLevel:NSFloatingWindowLevel];
+					[pWindow setHidesOnDeactivate:YES];
 
 					// Get the top inset for a utility window
 					NSRect aFrameRect = NSMakeRect( 0, 0, 100, 100 );

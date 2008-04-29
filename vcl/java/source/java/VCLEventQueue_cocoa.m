@@ -499,7 +499,7 @@ static VCLResponder *pSharedResponder = nil;
 {
 	[super orderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 
-	if ( [self isVisible] && [self level] == NSFloatingWindowLevel && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( [self isVisible] && [self level] == NSFloatingWindowLevel && [self styleMask] & NSTitledWindowMask && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSView *pContentView = [self contentView];
 		if ( pContentView )
@@ -509,8 +509,6 @@ static VCLResponder *pSharedResponder = nil;
 			{
 				NSRect aFrame = [self frame];
 				[pSuperview _setUtilityWindow:YES];
-				[self setLevel:NSFloatingWindowLevel];
-				[self setHidesOnDeactivate:YES];
 				float fHeightChange = [self frame].size.height - aFrame.size.height;
 				[self setFrame:aFrame display:NO];
 
