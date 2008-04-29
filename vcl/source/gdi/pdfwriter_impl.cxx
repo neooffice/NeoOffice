@@ -6091,7 +6091,13 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     int pCharPosAry[nMaxGlyphs];
     sal_Int32 nAdvanceWidths[nMaxGlyphs];
     ImplFontData* pFallbackFonts[nMaxGlyphs];
+#ifdef USE_JAVA
+    // Fix bugs 2183, 2432, 2629, 2682, 2964, 3009, and 3048 by always using
+    // the advance widths to position glyphs
+    sal_Int32 *pAdvanceWidths = nAdvanceWidths;
+#else	// USE_JAVA
     sal_Int32 *pAdvanceWidths = m_aCurrentPDFState.m_aFont.IsVertical() ? nAdvanceWidths : NULL;
+#endif	// USE_JAVA
     sal_Int32 nGlyphFlags[nMaxGlyphs];
     int nGlyphs;
     int nIndex = 0;
