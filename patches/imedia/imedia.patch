@@ -16,6 +16,24 @@ Index: iMBFireFoxParser.m
  }
  
  - (id)init
+Index: iMBGarageBandParser.m
+===================================================================
+--- iMBGarageBandParser.m	(revision 542)
++++ iMBGarageBandParser.m	(working copy)
+@@ -53,11 +53,13 @@
+ 
+ + (void)load
+ {
++#if 0
+ 	NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+ 
+ 	[iMediaConfiguration registerParser:[self class] forMediaType:@"music"];
+ 	
+ 	[pool release];
++#endif
+ }
+ 
+ - (id)init
 Index: FMDatabase.m
 ===================================================================
 --- FMDatabase.m	(revision 541)
