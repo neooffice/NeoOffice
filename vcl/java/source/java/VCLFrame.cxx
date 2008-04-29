@@ -128,7 +128,7 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 
 // ----------------------------------------------------------------------------
 
-static jint JNICALL Java_com_sun_star_vcl_VCLFrame_makeUtilityWindow( JNIEnv *pEnv, jobject object, jobject _par0 )
+static jint JNICALL Java_com_sun_star_vcl_VCLFrame_makeFloatingWindow( JNIEnv *pEnv, jobject object, jobject _par0 )
 {
 	jint nRet = 0;
 
@@ -182,9 +182,9 @@ static jint JNICALL Java_com_sun_star_vcl_VCLFrame_makeUtilityWindow( JNIEnv *pE
 						if ( fIDTop )
 						{
 							if ( bReturnsInt )
-								nRet = (jint)CWindow_makeUtilityWindow( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
+								nRet = (jint)CWindow_makeFloatingWindow( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
 							else
-								nRet = (jint)CWindow_makeUtilityWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
+								nRet = (jint)CWindow_makeFloatingWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
 
 							if ( nRet > 0 )
 								pEnv->SetIntField( tempObj, fIDTop, nRet );
@@ -259,9 +259,9 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 			pMethods[0].name = "getTextLocation0";
 			pMethods[0].signature = "(J)Ljava/awt/Rectangle;";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_getTextLocation0;
-			pMethods[1].name = "makeUtilityWindow";
+			pMethods[1].name = "makeFloatingWindow";
 			pMethods[1].signature = "(Ljava/awt/peer/ComponentPeer;)I";
-			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_makeUtilityWindow;
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_makeFloatingWindow;
 			pMethods[2].name = "updateLocation";
 			pMethods[2].signature = "(Ljava/awt/peer/ComponentPeer;)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_updateLocation;

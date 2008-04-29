@@ -130,7 +130,7 @@
 
 @end
 
-@interface MakeUtilityWindow : NSObject
+@interface MakeFloatingWindow : NSObject
 {
 	id					mpCWindow;
 	int					mnTopInset;
@@ -138,14 +138,14 @@
 + (id)createWithCWindow:(id)pCWindow;
 - (int)getTopInset;
 - (id)initWithCWindow:(id)pCWindow;
-- (void)makeUtilityWindow:(id)pObject;
+- (void)makeFloatingWindow:(id)pObject;
 @end
 
-@implementation MakeUtilityWindow
+@implementation MakeFloatingWindow
 
 + (id)createWithCWindow:(id)pCWindow
 {
-	MakeUtilityWindow *pRet = [[MakeUtilityWindow alloc] initWithCWindow:pCWindow];
+	MakeFloatingWindow *pRet = [[MakeFloatingWindow alloc] initWithCWindow:pCWindow];
 	[pRet autorelease];
 	return pRet;
 }
@@ -165,7 +165,7 @@
 	return self;
 }
 
-- (void)makeUtilityWindow:(id)pObject
+- (void)makeFloatingWindow:(id)pObject
 {
 	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
 	{
@@ -178,8 +178,15 @@
 				NSView *pSuperview = [pContentView superview];
 				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
 				{
-					[pWindow setLevel:NSFloatingWindowLevel];
-					[pWindow setHidesOnDeactivate:YES];
+					if ( [pWindow styleMask] & NSTitledWindowMask )
+					{
+						[pWindow setLevel:NSFloatingWindowLevel];
+						[pWindow setHidesOnDeactivate:YES];
+					}
+					else
+					{
+						[pWindow setLevel:NSPopUpMenuWindowLevel];
+					}
 
 					// Get the top inset for a utility window
 					NSRect aFrameRect = NSMakeRect( 0, 0, 100, 100 );
@@ -274,7 +281,7 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 	return aWindow;
 }
 
-int CWindow_makeUtilityWindow( id pCWindow )
+int CWindow_makeFloatingWindow( id pCWindow )
 {
 	int nRet = 0;
 
@@ -283,9 +290,9 @@ int CWindow_makeUtilityWindow( id pCWindow )
 	if ( pCWindow )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		MakeUtilityWindow *pMakeUtilityWindow = [MakeUtilityWindow createWithCWindow:pCWindow];
-		[pMakeUtilityWindow performSelectorOnMainThread:@selector(makeUtilityWindow:) withObject:pMakeUtilityWindow waitUntilDone:YES modes:pModes];
-		nRet = [pMakeUtilityWindow getTopInset];
+		MakeFloatingWindow *pMakeFloatingWindow = [MakeFloatingWindow createWithCWindow:pCWindow];
+		[pMakeFloatingWindow performSelectorOnMainThread:@selector(makeFloatingWindow:) withObject:pMakeFloatingWindow waitUntilDone:YES modes:pModes];
+		nRet = [pMakeFloatingWindow getTopInset];
 	}
 
 	[pPool release];

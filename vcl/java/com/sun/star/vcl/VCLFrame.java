@@ -2303,13 +2303,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Force the native window to be a utility window.
+	 * Force the native window to be a floating window.
 	 *
 	 * @param p the <code>ComponentPeer</code>
-	 * @return the new top inset or zero if the method failed to change the
-	 *  window style
+	 * @return the new top inset
 	 */
-	public native int makeUtilityWindow(ComponentPeer p);
+	public native int makeFloatingWindow(ComponentPeer p);
 
 	/**
 	 * Invoked when the mouse has been clicked on a component.
@@ -3078,6 +3077,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		/**
+		 * Creates the native dialog.
+		 */
+		public void addNotify() {
+
+			super.addNotify();
+
+			// Make the native window a utility window if necessary
+			if (isUndecorated() && getOwner() != null)
+				frame.makeFloatingWindow(getPeer());
+
+		}
+
+		/**
 		 * Returns the focus owner of this dialog.
 		 *
 		 * @return the focus owner of this dialog
@@ -3230,8 +3242,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			super.addNotify();
 
 			// Make the native window a utility window if necessary
-			if (frame.utility)
-				utilityWindowTopInset = frame.makeUtilityWindow(getPeer());
+			if (frame.utility || (isUndecorated() && getOwner() != null))
+				utilityWindowTopInset = frame.makeFloatingWindow(getPeer());
 
 		}
 
