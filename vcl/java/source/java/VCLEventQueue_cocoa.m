@@ -509,6 +509,12 @@ static VCLResponder *pSharedResponder = nil;
 			{
 				NSRect aFrame = [self frame];
 				[pSuperview _setUtilityWindow:YES];
+
+				// We must set the level again after changing the window to a
+				// utility window otherwise the resize icon does not display
+				// on Mac OS X 10.5.x
+				[self setLevel:NSFloatingWindowLevel];
+
 				float fHeightChange = [self frame].size.height - aFrame.size.height;
 				[self setFrame:aFrame display:NO];
 
