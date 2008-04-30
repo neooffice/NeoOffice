@@ -1660,8 +1660,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void addChild(VCLFrame f) {
 
-		if (f != null)
+		if (f != null) {
 			children.add(f);
+
+			// Update menubar if child is not a utility window
+			if (f.utility)
+				f.setMenuBar(getMenuBar());
+		}
 
 	}
 
@@ -2530,8 +2535,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	public synchronized void removeChild(VCLFrame f) {
 
-		if (f != null)
+		if (f != null) {
 			children.remove(f);
+
+			// Update menubar if child is a utility window
+			if (f.utility)
+				f.setMenuBar(null);
+		}
 
 	}
 
@@ -2614,8 +2624,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	void setMenuBar(MenuBar menubar) {
 
-		if (window instanceof Frame)
+		if (window instanceof Frame) {
 			((Frame)window).setMenuBar(menubar);
+
+			// Use the same menubar for any children are utility windows
+			Iterator iterator = children.iterator();
+			while (iterator.hasNext()) {
+				VCLFrame f = (VCLFrame)iterator.next();
+				if (f.utility)
+					f.setMenuBar(menubar);
+			}
+
+		}
 
 	}
 

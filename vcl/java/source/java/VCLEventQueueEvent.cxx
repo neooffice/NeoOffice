@@ -525,6 +525,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_GETFOCUS, pFrame, NULL );
 					aEvent.dispatch();
 				}
+				// Pass all potential menu shortcuts received by a utility
+				// window to its parent window
+				if ( pKeyEvent->mnCode & KEY_MOD1 )
+				{
+					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
+						pFrame = pFrame->mpParent;
+				}
 				pFrame->CallCallback( nID, pKeyEvent );
 			}
 			if ( pKeyEvent )
@@ -804,6 +811,13 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pMenuEvent = new SalMenuEvent();
 					pMenuEvent->mnId = getMenuID();
 					pMenuEvent->mpMenu = (void *)getMenuCookie();
+				}
+				// Pass all menu selections received by a utility window to
+				// its parent window
+				if ( nID == SALEVENT_MENUCOMMAND )
+				{
+					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
+						pFrame = pFrame->mpParent;
 				}
 				pFrame->CallCallback( nID, pMenuEvent );
 			}
