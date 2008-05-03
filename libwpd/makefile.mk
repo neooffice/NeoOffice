@@ -50,8 +50,13 @@ TARGET=wpd
 	@echo "Using system libwpd..."
 .ENDIF
 
+.IF "$(GUIBASE)" == "java"
+TARFILE_NAME=libwpd-0.8.13
+PATCH_FILE_NAME=$(TARFILE_NAME).diff
+.ELSE		# "$(GUIBASE)" == "java"
 TARFILE_NAME=libwpd-0.8.13
 #PATCH_FILE_NAME=$(TARFILE_NAME).diff
+.ENDIF		# "$(GUIBASE)" == "java"
 BUILD_ACTION=dmake $(MFLAGS) $(CALLMACROS)
 BUILD_DIR=src/lib
 

@@ -1,0 +1,68 @@
+--- misc/build/libwpd-0.8.13/src/lib/WPXContentListener.h	2007-09-23 03:12:27.000000000 -0700
++++ misc/build/libwpd-0.8.13/src/lib/WPXContentListener.h	2008-05-03 12:58:55.000000000 -0700
+@@ -89,7 +89,7 @@
+ 	uint32_t m_cellAttributeBits;
+ 	uint8_t m_paragraphJustificationBeforeTable;
+ 	
+-	std::list<WPXPageSpan>::iterator m_nextPageSpanIter;
++	int m_currentPage;
+ 	int m_numPagesRemainingInSpan;
+ 
+ 	bool m_sectionAttributesChanged;
+--- misc/build/libwpd-0.8.13/src/lib/WPXContentListener.cpp	2008-05-03 12:43:25.000000000 -0700
++++ misc/build/libwpd-0.8.13/src/lib/WPXContentListener.cpp	2008-05-03 13:00:53.000000000 -0700
+@@ -65,7 +65,7 @@
+ 	m_cellAttributeBits(0x00000000),
+ 	m_paragraphJustificationBeforeTable(WPX_PARAGRAPH_JUSTIFICATION_LEFT),
+ 	
+-	m_nextPageSpanIter(),
++	m_currentPage(0),
+ 	m_numPagesRemainingInSpan(0),
+ 
+ 	m_sectionAttributesChanged(false),
+@@ -125,7 +125,6 @@
+ 	m_listenerImpl(listenerImpl),
+ 	m_metaData()
+ {
+-	m_ps->m_nextPageSpanIter = pageList.begin();
+ }
+ 
+ WPXContentListener::~WPXContentListener()
+@@ -244,20 +243,23 @@
+ 	m_ps->m_listReferencePosition += m_ps->m_pageMarginLeft;
+ 	m_ps->m_listBeginPosition += m_ps->m_pageMarginLeft;
+ 	
+-	if ( m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end()))
++	if ( m_pageList.empty() || (m_ps->m_currentPage > m_pageList.size()) )
+ 	{
+-		WPD_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_nextPageSpanIter == m_pageList.end())\n"));
++		WPD_DEBUG_MSG(("m_pageList.empty() || (m_ps->m_currentPage > m_pageList.size())\n"));
+ 		throw ParseException();
+ 	}
+ 
+-	WPXPageSpan currentPage = (*m_ps->m_nextPageSpanIter);
++	std::list<WPXPageSpan>::iterator currentPageSpanIter = m_pageList.begin();
++	for ( int i = 0; i < m_ps->m_currentPage; i++ )
++		currentPageSpanIter++;
++
++	WPXPageSpan currentPage = (*currentPageSpanIter);
+ 	currentPage.makeConsistent(1);
+ 	
+ 	WPXPropertyList propList;
+ 	propList.insert("libwpd:num-pages", currentPage.getPageSpan());
+ 
+-	std::list<WPXPageSpan>::iterator lastPageSpan = --m_pageList.end(); 
+-	propList.insert("libwpd:is-last-page-span", ((m_ps->m_nextPageSpanIter == lastPageSpan) ? true : false));
++	propList.insert("libwpd:is-last-page-span", ((m_ps->m_currentPage == m_pageList.size()) ? true : false));
+ 	propList.insert("fo:page-height", currentPage.getFormLength());
+ 	propList.insert("fo:page-width", currentPage.getFormWidth());
+ 	if (currentPage.getFormOrientation() == LANDSCAPE)
+@@ -353,7 +355,7 @@
+ 	m_ps->m_paragraphTextIndent = m_ps->m_textIndentByParagraphIndentChange + m_ps->m_textIndentByTabs;
+ 
+ 	m_ps->m_numPagesRemainingInSpan = (currentPage.getPageSpan() - 1);
+-	m_ps->m_nextPageSpanIter++;
++	m_ps->m_currentPage++;
+ }
+ 
+ void WPXContentListener::_closePageSpan()
