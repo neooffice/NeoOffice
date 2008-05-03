@@ -638,7 +638,8 @@ static VCLResponder *pSharedResponder = nil;
 		if ( NSPointInRect( aLocation, aTitlebarFrame ) )
 			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
 	}
-	else if ( nType == NSScrollWheel && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	// Handle scroll wheel and magnify
+	else if ( ( nType == NSScrollWheel || nType == 30 ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		// Post flipped coordinates 
 		NSRect aFrame = [self frame];
@@ -647,7 +648,21 @@ static VCLResponder *pSharedResponder = nil;
 		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
 		NSPoint aLocation = [pEvent locationInWindow];
 		int nModifiers = [pEvent modifierFlags];
-		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( [pEvent deltaX] ), Float32ToLong( [pEvent deltaY] ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
+		float nDeltaX;
+		float nDeltaY;
+		if ( nType == 30 )
+		{
+			// Magnify events need to be converted to vertical scrolls
+			nDeltaX = [pEvent deltaZ];
+			nDeltaY = 0;
+		}
+		else
+		{
+			nDeltaX = [pEvent deltaX];
+			nDeltaY = [pEvent deltaY];
+		}
+
+		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( nDeltaX ), Float32ToLong( nDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
 	}
 }
 
