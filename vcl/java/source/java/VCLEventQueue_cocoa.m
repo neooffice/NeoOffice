@@ -653,8 +653,8 @@ static VCLResponder *pSharedResponder = nil;
 		if ( nType == 30 )
 		{
 			// Magnify events need to be converted to vertical scrolls
-			nDeltaX = [pEvent deltaZ];
-			nDeltaY = 0;
+			nDeltaX = 0;
+			nDeltaY = [pEvent deltaZ];
 		}
 		else
 		{
