@@ -648,23 +648,48 @@ static VCLResponder *pSharedResponder = nil;
 		float fTopInset = aFrame.origin.y + aFrame.size.height - aContentFrame.origin.y - aContentFrame.size.height;
 		NSPoint aLocation = [pEvent locationInWindow];
 		int nModifiers = [pEvent modifierFlags];
-		float nDeltaX;
-		float nDeltaY;
+		float fDeltaX;
+		float fDeltaY;
 		if ( nType == 30 )
 		{
 			// Magnify events need to be converted to vertical scrolls with
 			// the Command key pressed to force the OOo code to zoom
 			nModifiers |= NSCommandKeyMask;
-			nDeltaX = 0;
-			nDeltaY = [pEvent deltaZ];
+			fDeltaX = 0;
+			fDeltaY = [pEvent deltaZ];
 		}
 		else
 		{
-			nDeltaX = [pEvent deltaX];
-			nDeltaY = [pEvent deltaY];
+			fDeltaX = [pEvent deltaX];
+			fDeltaY = [pEvent deltaY];
 		}
 
-		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( nDeltaX ), Float32ToLong( nDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
+		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
+	}
+	// Handle swipe
+	else if ( nType == 31 && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		float fDeltaX = [pEvent deltaX];
+		float fDeltaY = [pEvent deltaY];
+		if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
+		{
+			unichar pChars[ 1 ];
+			pChars[ 0 ] = ( fDeltaY == 0 ? ( fDeltaX < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) : ( fDeltaY < 0 ? NSPageUpFunctionKey : NSPageDownFunctionKey ) );
+			unsigned short nKeyCode = ( pChars[ 0 ] == NSPageUpFunctionKey ? 0x74 : 0x79 );
+			NSString *pChar = [NSString stringWithCharacters:&pChars[0] length:1];
+			if ( pChar )
+			{
+				NSEvent *pKeyDownEvent = [NSEvent keyEventWithType:NSKeyDown location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+				NSEvent *pKeyUpEvent = [NSEvent keyEventWithType:NSKeyUp location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:NO keyCode:nKeyCode];
+				if ( pKeyDownEvent && pKeyUpEvent )
+				{
+					// Post in reverse order since we are posting to the front
+					[pApp postEvent:pKeyUpEvent atStart:YES];
+					[pApp postEvent:pKeyDownEvent atStart:YES];
+				}
+			}
+		}
 	}
 }
 
