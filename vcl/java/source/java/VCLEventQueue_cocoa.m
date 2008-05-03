@@ -652,7 +652,9 @@ static VCLResponder *pSharedResponder = nil;
 		float nDeltaY;
 		if ( nType == 30 )
 		{
-			// Magnify events need to be converted to vertical scrolls
+			// Magnify events need to be converted to vertical scrolls with
+			// the Command key pressed to force the OOo code to zoom
+			nModifiers |= NSCommandKeyMask;
 			nDeltaX = 0;
 			nDeltaY = [pEvent deltaZ];
 		}
