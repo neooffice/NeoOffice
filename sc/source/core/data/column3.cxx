@@ -373,17 +373,6 @@ void ScColumn::DeleteRange( SCSIZE nStartIndex, SCSIZE nEndIndex, USHORT nDelFla
 	BOOL bSimple = ((nDelFlag & IDF_CONTENTS) == IDF_CONTENTS);
 	SCSIZE i;
 
-	/*
-	  *If we are deleting a range that has filtered column, let it not be simple 
-	  */
-	  
-	if (bSimple)
-	{
-		for (i = nStartIndex; i <= nEndIndex && bSimple; i++)
-			if ( pDocument->RowFiltered(pItems[i].nRow, nTab))
-				bSimple = FALSE;
-	}
-
 		//	Notiz-Zeichenobjekte
 	if (nDelFlag & IDF_NOTE)
 	{
@@ -438,16 +427,6 @@ void ScColumn::DeleteRange( SCSIZE nStartIndex, SCSIZE nEndIndex, USHORT nDelFla
 			BOOL bDelete = FALSE;
 			ScBaseCell* pOldCell = pItems[j].pCell;
 			CellType eCellType = pOldCell->GetCellType();
-			
-			/*
-			  * If the rows are filtered continue instead deleting.
-			  */
-			if ( pDocument->RowFiltered( pItems[j].nRow, nTab))
-				{
-				++j;
-				continue;
-				}
-			
 			switch ( eCellType )
 			{
 				case CELLTYPE_VALUE:
@@ -1466,12 +1445,6 @@ void ScColumn::GetFilterEntries(SCROW nStartRow, SCROW nEndRow, TypedStrCollecti
 		TypedStrData*		 pData;
 		ULONG				 nFormat  = GetNumberFormat( nRow );
 
-		if  ( pDocument->RowFiltered(nRow, nTab))
-		{
-			++nIndex;
-			continue;
-		}
-			
 		ScCellFormat::GetInputString( pCell, nFormat, aString, *pFormatter );
 
 		if ( pDocument->HasStringData( nCol, nRow, nTab ) )
