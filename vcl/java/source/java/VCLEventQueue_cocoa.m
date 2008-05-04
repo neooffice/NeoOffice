@@ -671,7 +671,7 @@ static VCLResponder *pSharedResponder = nil;
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
 		float fDeltaX = [pEvent deltaX];
-		float fDeltaY = [pEvent deltaY];
+		float fDeltaY = [pEvent deltaY] * -1;
 		if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
 		{
 			unichar pChars[ 1 ];
