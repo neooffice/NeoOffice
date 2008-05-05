@@ -1762,6 +1762,12 @@ BOOL Printer::EndPage()
 		mpJobGraphics = NULL;
 		mbNewJobSetup = FALSE;
 
+#ifdef USE_JAVA
+		// Dispatch any pending events so that we can detect if the print job
+		// has been cancelled
+		Application::Reschedule();
+#endif  // USE_JAVA
+
 		return TRUE;
 	}
 
