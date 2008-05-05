@@ -87,6 +87,9 @@
 #include <salgdi.h>
 #endif
 
+#define MAX_TRANSPARENT_GRADIENT_BMP_PIXELS ( 2 * 1024 * 1024 )
+#define MIN_TRANSPARENT_GRADIENT_RESOLUTION 72
+
 #endif	// USE_JAVA
 
 // ========================================================================
@@ -540,10 +543,38 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 		{
 			VirtualDevice* pVDev = new VirtualDevice;
 
+#ifdef USE_JAVA
+			// Prevent runaway memory usage when drawing to the printer by
+			// lower the resolution of the temporary buffer if necessary
+			Rectangle aVirDevRect( aDstRect );
+			float fExcessPixelRatio = (float)MAX_TRANSPARENT_GRADIENT_BMP_PIXELS / ( ( mnDPIX * aDstRect.GetWidth() ) + ( mnDPIY * aDstRect.GetHeight() ) );
+			if ( fExcessPixelRatio < 1.0 )
+			{
+				((OutputDevice*)pVDev)->mnDPIX = mnDPIX * fExcessPixelRatio;
+				((OutputDevice*)pVDev)->mnDPIY = mnDPIY * fExcessPixelRatio;
+
+				if ( ((OutputDevice*)pVDev)->mnDPIX < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
+					((OutputDevice*)pVDev)->mnDPIX = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
+				if ( ((OutputDevice*)pVDev)->mnDPIY < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
+					((OutputDevice*)pVDev)->mnDPIY = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
+				Fraction aScaleX( ((OutputDevice*)pVDev)->mnDPIX, mnDPIX );
+				Fraction aScaleY( ((OutputDevice*)pVDev)->mnDPIY, mnDPIY );
+
+				aVirDevRect = Rectangle( Point( 0, 0 ), Size( (long)( ( (double)aScaleX * aDstRect.GetWidth() ) + 0.5 ), (long)( ( (double)aScaleY * aDstRect.GetHeight() ) + 0.5 ) ) );
+			}
+			else
+			{
+				((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
+				((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
+			}
+
+			if( pVDev->SetOutputSizePixel( aVirDevRect.GetSize() ) )
+#else	// USE_JAVA
 			((OutputDevice*)pVDev)->mnDPIX = mnDPIX;
 			((OutputDevice*)pVDev)->mnDPIY = mnDPIY;
 
 			if( pVDev->SetOutputSizePixel( aDstRect.GetSize() ) )
+#endif	// USE_JAVA
 			{
 				Bitmap		aPaint, aMask;
 				AlphaMask	aAlpha;
@@ -588,7 +619,11 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 				delete pVDev;
 
 				EnableMapMode( FALSE );
+#ifdef USE_JAVA
+				DrawBitmapEx( aDstRect.TopLeft(), aDstRect.GetSize(), aVirDevRect.TopLeft(), aVirDevRect.GetSize(), BitmapEx( aPaint, aAlpha ) );
+#else	// USE_JAVA
 				DrawBitmapEx( aDstRect.TopLeft(), BitmapEx( aPaint, aAlpha ) );
+#endif	// USE_JAVA
 				EnableMapMode( bOldMap );
 			}
 			else
