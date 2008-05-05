@@ -99,7 +99,6 @@ public:
 	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, int _par2 );
 	SalColor			getPixel( long _par0, long _par1 );
 	const Size			getResolution();
-	const Size			getScreenFontResolution();
 	void				invert( long _par0, long _par1, long _par2, long _par3, SalInvert _par4 );
 	void				invert( ULONG _par0, const SalPoint *_par1, SalInvert _par2 );
 	void				removeGraphicsChangeListener( JavaSalBitmap *_par0 );

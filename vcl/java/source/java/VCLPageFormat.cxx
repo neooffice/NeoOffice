@@ -593,14 +593,7 @@ Paper com_sun_star_vcl_VCLPageFormat::getPaperType()
 
 // ----------------------------------------------------------------------------
 
-float com_sun_star_vcl_VCLPageFormat::getScaleFactor()
-{
-	return NSPrintInfo_scale( getNativePrinterJob() );
-}
-
-// ----------------------------------------------------------------------------
-
-const Size com_sun_star_vcl_VCLPageFormat::getTextResolution()
+const Size com_sun_star_vcl_VCLPageFormat::getResolution()
 { 
 	static jmethodID mID = NULL;
 	static jfieldID fIDWidth = NULL;
@@ -612,7 +605,7 @@ const Size com_sun_star_vcl_VCLPageFormat::getTextResolution()
 		if ( !mID )
 		{
 			char *cSignature = "()Ljava/awt/Dimension;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getTextResolution", cSignature );
+			mID = t.pEnv->GetMethodID( getMyClass(), "getResolution", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
@@ -639,6 +632,13 @@ const Size com_sun_star_vcl_VCLPageFormat::getTextResolution()
 		}
 	}
 	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+float com_sun_star_vcl_VCLPageFormat::getScaleFactor()
+{
+	return NSPrintInfo_scale( getNativePrinterJob() );
 }
 
 // ----------------------------------------------------------------------------

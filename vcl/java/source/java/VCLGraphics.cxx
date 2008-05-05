@@ -1689,48 +1689,6 @@ const Size com_sun_star_vcl_VCLGraphics::getResolution()
 
 // ----------------------------------------------------------------------------
 
-const Size com_sun_star_vcl_VCLGraphics::getScreenFontResolution()
-{
-	static jmethodID mID = NULL;
-	static jfieldID fIDWidth = NULL;
-	static jfieldID fIDHeight = NULL;	 
-	Size out;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "()Ljava/awt/Dimension;";
-			mID = t.pEnv->GetMethodID( getMyClass(), "getScreenFontResolution", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
-			if ( tempObj )
-			{
-				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );
-				OSL_ENSURE( tempObjClass, "Java : FindClass not found!" );
-				if ( !fIDWidth )
-				{
-					char *cSignature = "I";
-					fIDWidth = t.pEnv->GetFieldID( tempObjClass, "width", cSignature );
-				}
-				out.setWidth( (long)t.pEnv->GetIntField( tempObj, fIDWidth ) );
-				if ( !fIDHeight )
-				{
-					char *cSignature = "I";
-					fIDHeight = t.pEnv->GetFieldID( tempObjClass, "height", cSignature );
-				}
-				out.setHeight( (long)t.pEnv->GetIntField( tempObj, fIDHeight ) );
-			}
-		}
-	}
-    return out;
-}
-
-// ----------------------------------------------------------------------------
-
 void com_sun_star_vcl_VCLGraphics::invert( long _par0, long _par1, long _par2, long _par3, SalInvert _par4 )
 {
 	static jmethodID mID = NULL;

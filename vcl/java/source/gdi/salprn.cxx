@@ -159,7 +159,7 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 		if ( pSetupData->mePaperFormat == PAPER_USER )
 		{
 			Size aSize( mpVCLPageFormat->getPageSize() );
-			Size aResolution( mpVCLPageFormat->getTextResolution() );
+			Size aResolution( mpVCLPageFormat->getResolution() );
 			pSetupData->mnPaperWidth = aSize.Width() * 2540 / aResolution.Width();
 			pSetupData->mnPaperHeight = aSize.Height() * 2540 / aResolution.Height();
 		}

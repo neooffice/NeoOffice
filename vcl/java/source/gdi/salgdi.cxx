@@ -78,8 +78,6 @@ JavaSalGraphics::JavaSalGraphics()
 	mnFontPitch = PITCH_DONTKNOW;
 	mnDPIX = 0;
 	mnDPIY = 0;
-	mnScreenFontDPIX = 0;
-	mnScreenFontDPIY = 0;
 
 	GetSalData()->maGraphicsList.push_back( this );
 }
@@ -116,15 +114,7 @@ void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 
 void JavaSalGraphics::GetScreenFontResolution( long& rDPIX, long& rDPIY )
 {
-	if ( !mnScreenFontDPIX || !mnScreenFontDPIY )
-	{
-		Size aSize( mpVCLGraphics->getScreenFontResolution() );
-		mnScreenFontDPIX = aSize.Width();
-		mnScreenFontDPIY = aSize.Height();
-	}
-
-	rDPIX = mnScreenFontDPIX;
-	rDPIY = mnScreenFontDPIY;
+	GetResolution( rDPIX, rDPIY );
 }
 
 // -----------------------------------------------------------------------

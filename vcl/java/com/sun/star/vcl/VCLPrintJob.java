@@ -439,7 +439,7 @@ public final class VCLPrintJob implements Pageable, Printable, Runnable {
 			printGraphics.rotate(rotatedPageAngle);
 
 			// Scale to printer resolution
-			Dimension pageResolution = pageFormat.getPageResolution();
+			Dimension pageResolution = pageFormat.getResolution();
 			double pageScaleX = (double)scale * 72 / pageResolution.width;
 			double pageScaleY = (double)scale * 72 / pageResolution.height;
 			if (rotatedPageAngle != 0.0f)

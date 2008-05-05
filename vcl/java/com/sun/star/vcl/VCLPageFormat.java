@@ -107,11 +107,6 @@ public final class VCLPageFormat {
 	public final static int PAPER_USER = 8;
 
 	/**
-	 * The printer text resolution.
-	 */
-	private static int printerTextResolution = 300;
-
-	/**
 	 * Set the paper dimensions to the specified values.
 	 *
 	 * @param p the paper
@@ -160,6 +155,11 @@ public final class VCLPageFormat {
 	private boolean paperRotated = false;
 
 	/**
+	 * The printer resolution.
+	 */
+	private Dimension printerResolution = null;
+
+	/**
 	 * Constructs a new <code>VCLPageFormat</code> instance.
 	 */
 	public VCLPageFormat() {
@@ -175,6 +175,7 @@ public final class VCLPageFormat {
 		// for bugs 2202 depend on this
 		pageFormat.setOrientation(PageFormat.PORTRAIT);
 		image = new VCLImage(1, 1, 32, this);
+		printerResolution = image.getGraphics().getResolution();
 
 	}
 
@@ -210,10 +211,10 @@ public final class VCLPageFormat {
 	 */
 	public Rectangle getImageableBounds() {
 
-		int width = (int)(pageFormat.getImageableWidth() * printerTextResolution / 72);
-		int height = (int)(pageFormat.getImageableHeight() * printerTextResolution / 72);
-		int x = (int)((pageFormat.getWidth() - pageFormat.getImageableX() - pageFormat.getImageableWidth()) * printerTextResolution / 72);
-		int y = (int)((pageFormat.getHeight() - pageFormat.getImageableY() - pageFormat.getImageableHeight()) * printerTextResolution / 72);
+		int width = (int)(pageFormat.getImageableWidth() * printerResolution.width / 72);
+		int height = (int)(pageFormat.getImageableHeight() * printerResolution.height / 72);
+		int x = (int)((pageFormat.getWidth() - pageFormat.getImageableX() - pageFormat.getImageableWidth()) * printerResolution.width / 72);
+		int y = (int)((pageFormat.getHeight() - pageFormat.getImageableY() - pageFormat.getImageableHeight()) * printerResolution.height / 72);
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
 		if (paperRotated)
@@ -248,18 +249,7 @@ public final class VCLPageFormat {
 
 	}
 
-	/**
-	 * Get the page resolution.
-	 *
-	 * @return the <code>VCLPageFormat</code> instance
-	 */
-	Dimension getPageResolution() {
-
-		return new Dimension(printerTextResolution, printerTextResolution);
-
-	}
-
-	/**
+ 	/**
 	 * Get the page size in pixels.
 	 *
 	 * @return the page size in pixels
@@ -268,9 +258,9 @@ public final class VCLPageFormat {
 
 		// Part of fix for bug 2202: Always return the portrait paper settings
 		if (paperRotated)
-			return new Dimension((int)(pageFormat.getHeight() * printerTextResolution / 72), (int)(pageFormat.getWidth() * printerTextResolution / 72));
+			return new Dimension((int)(pageFormat.getHeight() * printerResolution.height / 72), (int)(pageFormat.getWidth() * printerResolution.width / 72));
 		else
-			return new Dimension((int)(pageFormat.getWidth() * printerTextResolution / 72), (int)(pageFormat.getHeight() * printerTextResolution / 72));
+			return new Dimension((int)(pageFormat.getWidth() * printerResolution.width / 72), (int)(pageFormat.getHeight() * printerResolution.height/ 72));
 
 	}
 
@@ -327,16 +317,16 @@ public final class VCLPageFormat {
 	}  
 
 	/**
-	 * Get the text resolution.
+	 * Get the resolution in pixels per inch.
 	 *
-	 * @return the text resolution
+	 * @return the resolution in pixels per inch
 	 */
-	public Dimension getTextResolution() {
+	public Dimension getResolution() {
 
-		return new Dimension(printerTextResolution, printerTextResolution);
+		return printerResolution;
 
 	}
-
+ 
 	/**
 	 * Returns the editable state
 	 *

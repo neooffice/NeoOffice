@@ -307,11 +307,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 
                 // #i66849# Added fast path for exactly rectangular
                 // polygons
-#ifdef USE_JAVA
-                if( aPolyPoly.IsRect() )
-#else	// USE_JAVA
                 if( !pDisableNative && aPolyPoly.IsRect() )
-#endif	// USE_JAVA
                 {
                     // setup Graphics only here (other cases delegate
                     // to basic OutDev methods)

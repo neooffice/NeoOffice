@@ -257,9 +257,14 @@ public final class VCLGraphics {
 	private final static Dimension checkBoxButtonPreferredSize = new Dimension(16, 16);
 
 	/**
+	 * The cached printer resolution.
+	 */
+	private static Dimension printerResolution = null;
+
+	/**
 	 * The cached screen resolution.
 	 */
-	private static int screenResolution = 0;
+	private static Dimension screenResolution = null;
 
 	/**
 	 * The cached XOR image composite.
@@ -335,10 +340,14 @@ public final class VCLGraphics {
 		img.setRGB(1, 1, 0xff000000);
 		image50 = srcImage;
 
-		// Set the screen and font resolutions
-		screenResolution = Toolkit.getDefaultToolkit().getScreenResolution();
-		if (screenResolution < VCLScreen.MIN_SCREEN_RESOLUTION)
-			screenResolution = VCLScreen.MIN_SCREEN_RESOLUTION;
+		// Fix bug 3051 by setting the printer resolution to twips
+		printerResolution = new Dimension(1440, 1440);
+
+		// Set screen resolutions
+		int resolution = Toolkit.getDefaultToolkit().getScreenResolution();
+		if (resolution < VCLScreen.MIN_SCREEN_RESOLUTION)
+			resolution = VCLScreen.MIN_SCREEN_RESOLUTION;
+		screenResolution = new Dimension(resolution, resolution);
 
 		// Set the method references
 		try {
@@ -2554,27 +2563,10 @@ public final class VCLGraphics {
 	 */
 	public Dimension getResolution() {
 
-		if (pageFormat != null) {
-			Dimension pageResolution = pageFormat.getPageResolution();
-			if (rotatedPageAngle != 0.0f)
-				return new Dimension(pageResolution.height, pageResolution.width);
-			else
-				return new Dimension(pageResolution.width, pageResolution.height);
-		}
-		else {
-			return new Dimension(VCLGraphics.screenResolution, VCLGraphics.screenResolution);
-		}
-
-	}
-
-	/**
-	 * Returns the font resolution of the underlying graphics device.
-	 *
-	 * @return the font resolution of the underlying graphics device.
-	 */
-	public Dimension getScreenFontResolution() {
-
-		return getResolution();
+		if (pageFormat != null)
+			return VCLGraphics.printerResolution;
+		else
+			return VCLGraphics.screenResolution;
 
 	}
 
