@@ -546,12 +546,12 @@ void OutputDevice::DrawTransparent( const GDIMetaFile& rMtf, const Point& rPos,
 #ifdef USE_JAVA
 			// Prevent runaway memory usage when drawing to the printer by
 			// lower the resolution of the temporary buffer if necessary
-			Rectangle aVirDevRect( Point(), aDstRect.GetSize() );
+			Rectangle aVirDevRect( Point( 0, 0 ), aDstRect.GetSize() );
 			float fExcessPixelRatio = (float)MAX_TRANSPARENT_GRADIENT_BMP_PIXELS / ( ( mnDPIX * aDstRect.GetWidth() ) + ( mnDPIY * aDstRect.GetHeight() ) );
 			if ( fExcessPixelRatio < 1.0 )
 			{
-				((OutputDevice*)pVDev)->mnDPIX = mnDPIX * fExcessPixelRatio;
-				((OutputDevice*)pVDev)->mnDPIY = mnDPIY * fExcessPixelRatio;
+				((OutputDevice*)pVDev)->mnDPIX = (sal_uInt32)( mnDPIX * fExcessPixelRatio );
+				((OutputDevice*)pVDev)->mnDPIY = (sal_uInt32)( mnDPIY * fExcessPixelRatio );
 
 				if ( ((OutputDevice*)pVDev)->mnDPIX < MIN_TRANSPARENT_GRADIENT_RESOLUTION)
 					((OutputDevice*)pVDev)->mnDPIX = MIN_TRANSPARENT_GRADIENT_RESOLUTION;
