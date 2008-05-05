@@ -106,6 +106,10 @@ public:
 	FontWeight				mnFontWeight;
 	bool					mbFontItalic;
 	FontPitch				mnFontPitch;
+	sal_Int32				mnDPIX;
+	sal_Int32				mnDPIY;
+	sal_Int32				mnScreenFontDPIX;
+	sal_Int32				mnScreenFontDPIY;
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();
