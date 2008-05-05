@@ -670,7 +670,7 @@ static VCLResponder *pSharedResponder = nil;
 	else if ( nType == 31 && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
-		float fDeltaX = [pEvent deltaX];
+		float fDeltaX = [pEvent deltaX] * -1;
 		float fDeltaY = [pEvent deltaY] * -1;
 		if ( pApp && ( fDeltaX != 0 || fDeltaY != 0 ) )
 		{
