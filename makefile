@@ -513,7 +513,9 @@ ifeq ("$(PRODUCT_NAME)","RetroOffice")
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/RetroOffice Elements 2.1.1.070804/Contents/MacOS/"*.bmp "program"
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/RetroOffice Elements 2.1.1.070804/Contents/Resources/"*.icns "Resources"
+ifndef X11_PRODUCT
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "Resources/retro.icns" "Resources/ship.icns"
+endif
 	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" .
 	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_crystal.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"` svtools svx
 	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images_hicontrast.zip" `cat "$(PWD)/$(INSTALL_HOME)/toolbaricons"`
@@ -633,6 +635,7 @@ endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' | sed 's# #%20#g' > "program/versionrc"
 	rm -Rf "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/ship.icns" "Resources"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g'  | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
 ifdef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#<string>Editor</string>#<string>Viewer</string>#g' "Info.plist" | sed 's#<true/>#<false/>#g' > "../../out" ; mv -f "../../out" "Info.plist"
