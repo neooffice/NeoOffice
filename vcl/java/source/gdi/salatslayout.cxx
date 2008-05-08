@@ -1473,110 +1473,111 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
+	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
+	bool bPrinter = ( rJavaGraphics.mpPrinter ? true : false );
 	for ( int nStart = 0; ; )
 	{
-		int nGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
+		int nTotalGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
 
-		if ( !nGlyphCount )
+		if ( !nTotalGlyphCount )
 			break;
 
-		int i;
-		for ( i = 0; i < nGlyphCount && aGlyphArray[ i ] & GF_ISCHAR; i++ )
-			;
-		if ( i )
+		Point aCurrentPos( aPos );
+		int nCurrentGlyph = 0;
+		while ( nCurrentGlyph < nTotalGlyphCount )
 		{
-			nStart -= nGlyphCount - i;
-			continue;
-		}
+			int i;
+			int nStartGlyph = nCurrentGlyph;
+			int nGlyphCount = 0;
 
-		int nSkippedGlyphs = 0;
-		long nLastUnskippedGlyph = 0;
-		for ( i = 0 ; i < nGlyphCount; i++ )
-		{
-			if ( aGlyphArray[ i ] & GF_ISCHAR )
+			// Skip spacing glyphs. Fix bug 3061 by also skipping zero glyphs
+			// when printing.
+			for ( ; nStartGlyph < nTotalGlyphCount && ( aGlyphArray[ nStartGlyph ] & GF_ISCHAR || ( bPrinter && ! ( aGlyphArray[ nStartGlyph ] & GF_IDXMASK ) ) ); nStartGlyph++ )
+				aCurrentPos.X() += aDXArray[ nStartGlyph ];
+
+			// Determine glyph count but only allow one glyph at a time for
+			// rotated glyphs
+			Point aStartPos( aCurrentPos );
+			long nGlyphOrientation = aGlyphArray[ nStartGlyph ] & GF_ROTMASK;
+			if ( nStartGlyph < nTotalGlyphCount )
 			{
-				nSkippedGlyphs++;
-				nGlyphCount--;
-				aDXArray[ nLastUnskippedGlyph ] += aDXArray[ i ];
-			}
-
-			if ( nSkippedGlyphs )
-			{
-				nSkippedGlyphs++;
-				aGlyphArray[ i ] = aGlyphArray[ i + nSkippedGlyphs ];
-				aDXArray[ i ] = aDXArray[ i + nSkippedGlyphs ];
-				aCharPosArray[ i ] = aCharPosArray[ i + nSkippedGlyphs ];
-			}
-		}
-
-		long nTranslateX = 0;
-		long nTranslateY = 0;
-
-		long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
-		if ( nGlyphOrientation )
-		{
-			nStart -= nGlyphCount - 1;
-			int nOldGlyphCount = nGlyphCount;
-			nGlyphCount = 1;
-			for ( i = 1; i < nOldGlyphCount && aCharPosArray[ i ] == aCharPosArray[ 0 ]; i++ )
-			{
-				nStart++;
-				nGlyphCount++;
-			}
-
-			long nX;
-			long nY;
-			ImplATSLayoutData *pFoundLayout = GetVerticalGlyphTranslation( aGlyphArray[ 0 ], aCharPosArray[ 0 ], nX, nY );
-			if ( nGlyphOrientation == GF_ROTL )
-			{
-				nTranslateX = nX;
-				if ( pFoundLayout )
-					nTranslateY = Float32ToLong( pFoundLayout->mpHash->mfFontScaleX * nY );
-				else
-					nTranslateY = nY;
-			}
-			else
-			{
-				nTranslateX = nX;
-				if ( pFoundLayout )
-					nTranslateY = Float32ToLong( pFoundLayout->mpHash->mfFontScaleX * ( aDXArray[ 0 ] - nY ) );
-				else
-					nTranslateY = nY;
-			}
-		}
-
-		for ( i = 0; i < nGlyphCount; i++ )
-			aGlyphArray[ i ] &= GF_IDXMASK;
-
-		JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-		if ( rJavaGraphics.mpPrinter )
-		{
-			// Don't delete the CGGlyph buffer and let the Java native
-			// method print the buffer directly
-			CGGlyph *pGlyphs = (CGGlyph *)rtl_allocateMemory( nGlyphCount * sizeof( CGGlyph ) );
-			if ( pGlyphs )
-			{
-				for ( i = 0; i < nGlyphCount; i++ )
-					pGlyphs[ i ] = (CGGlyph)aGlyphArray[ i ];
-			}
-
-			// Don't delete the CGSize buffer and let the Java native
-			// method print the buffer directly
-			CGSize *pSizes = (CGSize *)rtl_allocateMemory( nGlyphCount * sizeof( CGSize ) );
-			if ( pSizes )
-			{
-				for ( i = 0; i < nGlyphCount; i++ )
+				if ( nGlyphOrientation )
 				{
-					pSizes[ i ].width = (float)aDXArray[ i ];
-					pSizes[ i ].height = 0.0f;
+					nGlyphCount = 1;
+					aCurrentPos.X() += aDXArray[ nStartGlyph ];
+				}
+				else
+				{
+					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( aGlyphArray[ i ] & GF_ISCHAR || ( bPrinter && ! ( aGlyphArray[ i ] & GF_IDXMASK ) ) ); i++ )
+					{
+						nGlyphCount++;
+						aCurrentPos.X() += aDXArray[ i ];
+					}
 				}
 			}
 
-			rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aPos.X(), aPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
-		}
-		else
-		{
-			rJavaGraphics.mpVCLGraphics->drawGlyphs( aPos.X(), aPos.Y(), nGlyphCount, aGlyphArray, aDXArray, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
+			nCurrentGlyph = nStartGlyph + nGlyphCount;
+			if ( !nGlyphCount )
+				continue;
+
+			long nTranslateX = 0;
+			long nTranslateY = 0;
+
+			if ( nGlyphOrientation )
+			{
+				long nX;
+				long nY;
+				ImplATSLayoutData *pFoundLayout = GetVerticalGlyphTranslation( aGlyphArray[ nStartGlyph ], aCharPosArray[ nStartGlyph ], nX, nY );
+				if ( nGlyphOrientation == GF_ROTL )
+				{
+					nTranslateX = nX;
+					if ( pFoundLayout )
+						nTranslateY = Float32ToLong( pFoundLayout->mpHash->mfFontScaleX * nY );
+					else
+						nTranslateY = nY;
+				}
+				else
+				{
+					nTranslateX = nX;
+					if ( pFoundLayout )
+						nTranslateY = Float32ToLong( pFoundLayout->mpHash->mfFontScaleX * ( aDXArray[ nStartGlyph ] - nY ) );
+					else
+						nTranslateY = nY;
+				}
+			}
+
+			for ( i = nStartGlyph; i < nGlyphCount; i++ )
+				aGlyphArray[ i ] &= GF_IDXMASK;
+
+			if ( bPrinter )
+			{
+				// Don't delete the CGGlyph buffer and let the Java native
+				// method print the buffer directly
+				CGGlyph *pGlyphs = (CGGlyph *)rtl_allocateMemory( nGlyphCount * sizeof( CGGlyph ) );
+				if ( pGlyphs )
+				{
+					for ( i = 0; i < nGlyphCount; i++ )
+						pGlyphs[ i ] = (CGGlyph)aGlyphArray[ i + nStartGlyph ];
+				}
+
+				// Don't delete the CGSize buffer and let the Java native
+				// method print the buffer directly
+				CGSize *pSizes = (CGSize *)rtl_allocateMemory( nGlyphCount * sizeof( CGSize ) );
+				if ( pSizes )
+				{
+					for ( i = 0; i < nGlyphCount; i++ )
+					{
+						pSizes[ i ].width = (float)aDXArray[ i + nStartGlyph ];
+						pSizes[ i ].height = 0.0f;
+					}
+				}
+
+				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
+			}
+			else
+			{
+				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
+			}
 		}
 	}
 }
