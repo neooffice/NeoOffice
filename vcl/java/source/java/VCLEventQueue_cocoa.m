@@ -388,6 +388,7 @@ static VCLResponder *pSharedResponder = nil;
 @end
 
 @interface NSWindow (VCLWindow)
+- (BOOL)_isUtilityWindow;
 - (void)_setUtilityWindow:(BOOL)bUtilityWindow;
 @end
 
@@ -395,7 +396,6 @@ static VCLResponder *pSharedResponder = nil;
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
-- (void)makeKeyAndOrderFront:(id)pSender;
 - (void)makeKeyWindow;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
@@ -463,33 +463,38 @@ static VCLResponder *pSharedResponder = nil;
 	return bRet;
 }
 
-- (void)makeKeyAndOrderFront:(id)pSender
-{
-	if ( [[self className] isEqualToString:pCocoaAppWindowString] )
-	{
-		// Fix bug 2992 by not allowing the key window to change when we are
-		// tracking the menubar. Also, never let a utility window grab focus
-		// when first shown
-		MenuTrackingData aTrackingData;
-		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr || [self level] == NSFloatingWindowLevel )
-		{
-			[self orderWindow:NSWindowAbove relativeTo:0];
-			return;
-		}
-	}
-
-	[super makeKeyAndOrderFront:pSender];
-}
-
 - (void)makeKeyWindow
 {
 	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		// Fix bug 2992 by not allowing the key window to change when we are
-		// tracking the menubar. Also, never let a utility window grab focus.
+		// tracking the menubar and never allow a borderless window to grab
+		// focus
 		MenuTrackingData aTrackingData;
-		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr || [self level] == NSFloatingWindowLevel )
+		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr && ! ( [self styleMask] & NSTitledWindowMask ) )
+		{
 			return;
+		}
+		else if ( [super respondsToSelector:@selector(_isUtilityWindow)] && [super _isUtilityWindow] )
+		{
+			// Do not allow utility windows to grab the focus except when the
+			// user presses Control-F6
+			BOOL bGrabFocus = NO;
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+			{
+				NSEvent *pEvent = [pApp currentEvent];
+				if ( pEvent && [pEvent type] == NSKeyDown && [pEvent modifierFlags] & NSControlKeyMask )
+				{
+					NSString *pChars = [pEvent charactersIgnoringModifiers];
+					if ( pChars && [pChars length] == 1 && [pChars characterAtIndex:0] == NSF6FunctionKey )
+						bGrabFocus = YES;
+				}
+			}
+
+			if ( !bGrabFocus )
+				return;
+		}
 	}
 
 	[super makeKeyWindow];
