@@ -509,7 +509,7 @@ static VCLResponder *pSharedResponder = nil;
 		NSView *pContentView = [self contentView];
 		if ( pContentView )
 		{
-			if ( [super respondsToSelector:@selector(_setUtilityWindow:)] )
+			if ( [super respondsToSelector:@selector(_isUtilityWindow)] && ![super _isUtilityWindow] && [super respondsToSelector:@selector(_setUtilityWindow:)] )
 			{
 				NSRect aFrame = [self frame];
 				[super _setUtilityWindow:YES];
