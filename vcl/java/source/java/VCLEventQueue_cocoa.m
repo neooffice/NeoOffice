@@ -387,7 +387,7 @@ static VCLResponder *pSharedResponder = nil;
 
 @end
 
-@interface NSView (VCLWindow)
+@interface NSWindow (VCLWindow)
 - (void)_setUtilityWindow:(BOOL)bUtilityWindow;
 @end
 
@@ -504,11 +504,10 @@ static VCLResponder *pSharedResponder = nil;
 		NSView *pContentView = [self contentView];
 		if ( pContentView )
 		{
-			NSView *pSuperview = [pContentView superview];
-			if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
+			if ( [super respondsToSelector:@selector(_setUtilityWindow:)] )
 			{
 				NSRect aFrame = [self frame];
-				[pSuperview _setUtilityWindow:YES];
+				[super _setUtilityWindow:YES];
 
 				// We must set the level again after changing the window to a
 				// utility window otherwise the resize icon does not display
