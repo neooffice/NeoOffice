@@ -223,7 +223,7 @@ public final class VCLFont {
 		 *
 		 * @return the native font
 		 */
-		int getNativeFont() {
+		public int getNativeFont() {
 
 			return nativeFont;
 
