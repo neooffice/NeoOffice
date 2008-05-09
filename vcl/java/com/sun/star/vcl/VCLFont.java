@@ -99,7 +99,7 @@ public final class VCLFont {
 	/**
 	 * The cached font.
 	 */
-	private VCLFont.NativeFont font = null;
+	private Font font = null;
 
 	/**
 	 * The cached X axis scale factor.
@@ -118,8 +118,10 @@ public final class VCLFont {
 	VCLFont(Font f, int s, boolean a, double x) throws FontFormatException {
 
 		antialiased = a;
-		font = new NativeFont(f.getName(), f.getStyle(), s);
 		scaleX = x;
+
+		// Cache font and font metrics
+		font = f.deriveFont((float)s);
 
 	}
 
@@ -135,7 +137,7 @@ public final class VCLFont {
 	public VCLFont(String n, int s, boolean a, double x) throws FontFormatException {
 
 		antialiased = a;
-		font = new NativeFont(n, Font.PLAIN, s);
+		font = new Font(n, Font.PLAIN, s);
 		scaleX = x;
 
 	}
@@ -181,64 +183,6 @@ public final class VCLFont {
 	boolean isAntialiased() {
 
 		return antialiased;
-
-	}
-
-	/**
-	 * Set the native font.
-	 *
-	 * @param nf the native font
-	 */
-	void setNativeFont(int nf) {
-
-		font.setNativeFont(nf);
-
-	}
-
-    /**
-     * A subclass of <code>Font</code> that stores its matching native font.
-     */
-    final class NativeFont extends Font {
-
-		/**
-		 * The native font.
-		 */
-		private int nativeFont = 0;
-
-		/**
-		 * Constructs a new <code>VCLFont.NativeFont</code> instance.
-		 *
-		 * @param name the font name
-		 * @param style the font style
-		 * @param size the font size
-		 */
-		NativeFont(String name, int style, int size) {
-
-			super(name, style, size);
-
-		}
-
-		/**
-		 * Returns the native font.
-		 *
-		 * @return the native font
-		 */
-		public int getNativeFont() {
-
-			return nativeFont;
-
-		}
-
-		/**
-		 * Set the native font.
-		 *
-		 * @param nf the native font
-		 */
-		void setNativeFont(int nf) {
-
-			nativeFont = nf;
-
-		}
 
 	}
 

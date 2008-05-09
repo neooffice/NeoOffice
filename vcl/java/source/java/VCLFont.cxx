@@ -148,11 +148,6 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 		{
 			mnNativeFont = it->second;
 		}
-
-		// Cache the native font in the Java font so that the Cocoa AWTFont
-		// class can access it
-		if ( mnNativeFont )
-			setNativeFont( mnNativeFont );
 	}
 
 	return mnNativeFont;
@@ -219,27 +214,4 @@ sal_Bool com_sun_star_vcl_VCLFont::isAntialiased()
 sal_Bool com_sun_star_vcl_VCLFont::isVertical()
 {
 	return mbVertical;
-}
-
-// ----------------------------------------------------------------------------
-
-void com_sun_star_vcl_VCLFont::setNativeFont( sal_IntPtr _par0 )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(I)V";
-			mID = t.pEnv->GetMethodID( getMyClass(), "setNativeFont", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		if ( mID )
-		{
-			jvalue args[1];
-			args[0].i = jint( _par0 );
-			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
-		}
-	}
 }
