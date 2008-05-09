@@ -84,6 +84,7 @@ import java.text.CharacterIterator;
 import java.text.AttributedCharacterIterator;
 import java.text.AttributedString;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Locale;
@@ -647,9 +648,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public final static int POINTER_PAINTBRUSH = 93;
 	
 	/**
-	 * The component to <code>VCLFrame</code> mapping.
+	 * The component to <code>VCLFrame</code> mapping. Use
+	 * <code>Hashtable</code> to ensure synchronized access.
 	 */
-	private static HashMap componentMap = new HashMap();
+	private static Hashtable componentMap = new Hashtable();
 
 	/** 
 	 * The custom cursors.
@@ -672,7 +674,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param c the component
 	 * @return the matching <code>VCLFrame</code>
 	 */
-	static synchronized VCLFrame findFrame(Component c) {
+	static VCLFrame findFrame(Component c) {
 
 		return (VCLFrame)componentMap.get(c);
 
@@ -1610,10 +1612,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			return;
 
 		// Add window and panel to mapping
-		synchronized (VCLFrame.class) {
-			VCLFrame.componentMap.put(window, this);
-			VCLFrame.componentMap.put(panel, this);
-		}
+		VCLFrame.componentMap.put(window, this);
+		VCLFrame.componentMap.put(panel, this);
 
 		// Fix bug 2370 by listening for mouse events in the window frame.
 		// Prevent dispatch of a mouseDragged() event when the window is
@@ -1646,10 +1646,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		// Remove window and panel from mapping
-		synchronized (VCLFrame.class) {
-			VCLFrame.componentMap.remove(window);
-			VCLFrame.componentMap.remove(panel);
-		}
+		VCLFrame.componentMap.remove(window);
+		VCLFrame.componentMap.remove(panel);
 
 	}
 
