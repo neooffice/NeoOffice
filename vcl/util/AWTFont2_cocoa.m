@@ -42,10 +42,13 @@
 // AWTFont class to ignore the custom transform that Java passes in.
 // Note: this file should only be loaded on Mac OS X 10.5 or higher.
 
+static jclass aNativeFontClass = nil;
+static jmethodID mGetNativeFontID = nil;
 static jmethodID mGetPSNameID = nil;
 
 @interface NSFont (AWTFontRef)
 - (ATSFontRef)_atsFontID;
+- (id)initWithFontRef:(unsigned long)aATSFontRef size:(float)fSize;
 @end
 
 @interface AWTFont : NSObject
@@ -90,32 +93,63 @@ static jmethodID mGetPSNameID = nil;
 
 	if ( aFont && pEnv )
 	{
-		jclass aFontClass = (*pEnv)->GetObjectClass( pEnv, aFont );
-        if ( aFontClass )
-        {
-			if ( !mGetPSNameID )
+		if ( !aNativeFontClass )
+		{
+			aNativeFontClass = (*pEnv)->FindClass( pEnv, "com/sun/star/vcl/VCLFont$NativeFont" );
+			if ( (*pEnv)->ExceptionCheck( pEnv ) )
+				(*pEnv)->ExceptionClear( pEnv );
+
+			if ( aNativeFontClass )
+				aNativeFontClass = (*pEnv)->NewGlobalRef( pEnv, aNativeFontClass );
+		}
+
+		// Fix bug 3031 by using retrieving the cached native font if it exists
+		if ( aNativeFontClass && (*pEnv)->IsInstanceOf( pEnv, aFont, aNativeFontClass ) )
+		{
+			if ( !mGetNativeFontID )
 			{
-				char *cSignature = "()Ljava/lang/String;";
-				mGetPSNameID = (*pEnv)->GetMethodID( pEnv, aFontClass, "getPSName", cSignature );
+				char *cSignature = "()I";
+				mGetNativeFontID = (*pEnv)->GetMethodID( pEnv, aNativeFontClass, "getNativeFont", cSignature );
 			}
-			if ( mGetPSNameID )
+			if ( mGetNativeFontID )
 			{
-				jstring tempObj = (jstring)( (*pEnv)->CallObjectMethod( pEnv, aFont, mGetPSNameID ) );
-				if ( tempObj )
+				ATSFontRef aATSFont = FMGetATSFontRefFromFont( (*pEnv)->CallNonvirtualIntMethod( pEnv, aNativeFontClass, aFont, mGetNativeFontID ) );
+				if ( aATSFont )
+					pRet = [[NSFont alloc] initWithFontRef:(unsigned long)aATSFont size:(float)12];
+			}
+		}
+
+		// As a fallback, search for the NSFont based on the Java fonts
+		// PostScript name
+		if ( !pRet )
+		{
+			jclass aFontClass = (*pEnv)->GetObjectClass( pEnv, aFont );
+			if ( aFontClass )
+			{
+				if ( !mGetPSNameID )
 				{
-					jboolean bCopy = JNI_FALSE;
-					const char *pChars = (*pEnv)->GetStringUTFChars( pEnv, tempObj, &bCopy );
-					if ( pChars )
-					{
-						NSString *pName = [NSString stringWithUTF8String:pChars];
-						if ( pName )
-							pRet = [NSFont fontWithName:pName size:(float)12];
-					}
+					char *cSignature = "()Ljava/lang/String;";
+					mGetPSNameID = (*pEnv)->GetMethodID( pEnv, aFontClass, "getPSName", cSignature );
 				}
-				else if ( pEnv && (*pEnv)->ExceptionCheck( pEnv ) )
+				if ( mGetPSNameID )
 				{
-					(*pEnv)->ExceptionDescribe( pEnv );
-					(*pEnv)->ExceptionClear( pEnv );
+					jstring tempObj = (jstring)( (*pEnv)->CallObjectMethod( pEnv, aFont, mGetPSNameID ) );
+					if ( tempObj )
+					{
+						jboolean bCopy = JNI_FALSE;
+						const char *pChars = (*pEnv)->GetStringUTFChars( pEnv, tempObj, &bCopy );
+						if ( pChars )
+						{
+							NSString *pName = [NSString stringWithUTF8String:pChars];
+							if ( pName )
+								pRet = [NSFont fontWithName:pName size:(float)12];
+						}
+					}
+					else if ( (*pEnv)->ExceptionCheck( pEnv ) )
+					{
+						(*pEnv)->ExceptionDescribe( pEnv );
+						(*pEnv)->ExceptionClear( pEnv );
+					}
 				}
 			}
 		}
