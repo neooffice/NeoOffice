@@ -78,6 +78,7 @@ public:
 	long				getSize();
 	sal_Bool			isAntialiased();
 	sal_Bool			isVertical();
+	void				setNativeFont( sal_IntPtr _par0 );
 };
 
 } // namespace vcl
