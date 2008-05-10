@@ -1490,9 +1490,8 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			int nStartGlyph = nCurrentGlyph;
 			int nGlyphCount = 0;
 
-			// Skip spacing glyphs. Fix bug 3061 by also skipping zero glyphs
-			// when printing.
-			for ( ; nStartGlyph < nTotalGlyphCount && ( aGlyphArray[ nStartGlyph ] & GF_ISCHAR || ( bPrinter && ! ( aGlyphArray[ nStartGlyph ] & GF_IDXMASK ) ) ); nStartGlyph++ )
+			// Skip spacing glyphs
+			for ( ; nStartGlyph < nTotalGlyphCount && aGlyphArray[ nStartGlyph ] & GF_ISCHAR; nStartGlyph++ )
 				aCurrentPos.X() += aDXArray[ nStartGlyph ];
 
 			// Determine glyph count but only allow one glyph at a time for
@@ -1508,7 +1507,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 				}
 				else
 				{
-					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( aGlyphArray[ i ] & GF_ISCHAR || ( bPrinter && ! ( aGlyphArray[ i ] & GF_IDXMASK ) ) ); i++ )
+					for ( i = nStartGlyph; i < nTotalGlyphCount && ! ( aGlyphArray[ i ] & GF_ISCHAR ); i++ )
 					{
 						nGlyphCount++;
 						aCurrentPos.X() += aDXArray[ i ];
