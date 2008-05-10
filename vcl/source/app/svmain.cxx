@@ -189,12 +189,10 @@ using namespace ::com::sun::star::lang;
 
 #ifdef USE_JAVA
 
-static BOOL ImplLoadNativeFont( OUString aPath )
+static void ImplLoadNativeFont( OUString aPath )
 {
-	BOOL bRet = FALSE;
-
 	if ( !aPath.getLength() )
-		return bRet;
+		return;
 
 	oslDirectory aDir = NULL;
 	if ( osl_openDirectory( aPath.pData, &aDir ) == osl_File_E_None )
@@ -205,10 +203,7 @@ static BOOL ImplLoadNativeFont( OUString aPath )
 			oslFileStatus aStatus;
 			memset( &aStatus, 0, sizeof( oslFileStatus ) );
 			if ( osl_getFileStatus( aDirItem, &aStatus, osl_FileStatus_Mask_FileURL ) == osl_File_E_None )
-			{
-				if ( ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) ) )
-					bRet = TRUE;
-			}
+				ImplLoadNativeFont( OUString( aStatus.ustrFileURL ) );
 		}
 		if ( aDirItem )
 			osl_releaseDirectoryItem( aDirItem );
@@ -221,12 +216,10 @@ static BOOL ImplLoadNativeFont( OUString aPath )
 			FSRef aFontPath;
 			FSSpec aFontSpec;
 			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
-			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr && ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL ) == noErr )
-				bRet = TRUE;
+			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr )
+				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL );
 		}
 	}
-
-	return bRet;
 }
 
 #endif	// USE_JAVA
@@ -364,15 +357,13 @@ BOOL SVMain()
     {
         // Activate the fonts in the "user/fonts" directory. Fix bug 2733 on
         // Leopard by loading the fonts before Java is ever loaded.
-		BOOL bNotify = FALSE;
         OUString aUserPath;
         if ( Bootstrap::locateUserInstallation( aUserPath ) == Bootstrap::PATH_EXISTS )
         {
             if ( aUserPath.getLength() )
             {
                 aUserPath += OUString::createFromAscii( "/user/fonts" );
-                if ( ImplLoadNativeFont( aUserPath ) )
-					bNotify = TRUE;
+                ImplLoadNativeFont( aUserPath );
             }
         }
 
@@ -383,13 +374,9 @@ BOOL SVMain()
             if ( aBasePath.getLength() )
             {
                 aBasePath += OUString::createFromAscii( "/share/fonts/truetype" );
-                if ( ImplLoadNativeFont( aBasePath ) )
-					bNotify = TRUE;
+                ImplLoadNativeFont( aBasePath );
             }
         }
-
-		if ( bNotify )
-			ATSFontNotify( kATSFontNotifyActionFontsChanged, NULL );
     }
 #endif	// USE_JAVA
 
