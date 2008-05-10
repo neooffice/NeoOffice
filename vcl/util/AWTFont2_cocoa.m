@@ -46,7 +46,6 @@ static jmethodID mGetPSNameID = nil;
 
 @interface NSFont (AWTFontRef)
 - (ATSFontRef)_atsFontID;
-- (id)initWithFontRef:(unsigned long)aATSFontRef size:(float)fSize;
 @end
 
 @interface AWTFont : NSObject
@@ -70,32 +69,11 @@ static jmethodID mGetPSNameID = nil;
 
 	if ( pName )
 	{
-		NSFont *pFont = nil;
-
-		// In most cases, Java passes the display to this selector
-		ATSFontRef aATSFont = ATSFontFindFromName( (CFStringRef)pName, kATSOptionFlagsDefault );
-		if ( !aATSFont )
-			aATSFont = ATSFontFindFromPostScriptName( (CFStringRef)pName, kATSOptionFlagsDefault );
-		if ( aATSFont )
-			pFont = [[NSFont alloc] initWithFontRef:(unsigned long)aATSFont size:(float)12];
-
-		// Fallback if we could not find an NSFont using the ATS functions
-		if ( !pFont )
-			pFont = [NSFont fontWithName:pName size:(float)12];
-
+		NSFont *pFont = [NSFont fontWithName:pName size:(float)12];
 		if ( pFont )
 		{
-			// Add to autorelease pool as invoking alloc disables
-			// autorelease
-			[pFont autorelease];
-
 			pRet = [[AWTFont alloc] initWithFont:pFont isFakeItalic:bFakeItalic];
-			if ( pRet )
-			{
-				// Add to autorelease pool as invoking alloc disables
-				// autorelease
-				[pRet autorelease];
-			}
+			[pRet autorelease];
 		}
 	}
 
@@ -108,10 +86,9 @@ static jmethodID mGetPSNameID = nil;
 
 	if ( aFont && pEnv )
 	{
-		// Fix bug 3031 by using retrieving the cached native font if it exists
 		jclass aFontClass = (*pEnv)->GetObjectClass( pEnv, aFont );
-		if ( aFontClass )
-		{
+        if ( aFontClass )
+        {
 			if ( !mGetPSNameID )
 			{
 				char *cSignature = "()Ljava/lang/String;";
@@ -128,26 +105,10 @@ static jmethodID mGetPSNameID = nil;
 					{
 						NSString *pName = [NSString stringWithUTF8String:pChars];
 						if ( pName )
-						{
-							ATSFontRef aATSFont = ATSFontFindFromPostScriptName( (CFStringRef)pName, kATSOptionFlagsDefault );
-							if ( aATSFont )
-								pRet = [[NSFont alloc] initWithFontRef:(unsigned long)aATSFont size:(float)12];
-
-							// Fallback if we could not find an NSFont using
-							// the ATS functions
-							if ( !pRet )
-								pRet = [NSFont fontWithName:pName size:(float)12];
-
-							if ( pRet )
-							{
-								// Add to autorelease pool as invoking alloc
-								// disables autorelease
-								[pRet autorelease];
-							}
-						}
+							pRet = [NSFont fontWithName:pName size:(float)12];
 					}
 				}
-				else if ( (*pEnv)->ExceptionCheck( pEnv ) )
+				else if ( pEnv && (*pEnv)->ExceptionCheck( pEnv ) )
 				{
 					(*pEnv)->ExceptionDescribe( pEnv );
 					(*pEnv)->ExceptionClear( pEnv );
