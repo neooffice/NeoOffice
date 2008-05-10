@@ -496,6 +496,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = fSize / fAdjustedSize;
+	mpNeedFallback = NULL;
 	int nLastNonSpacingIndex = -1;
 	for ( i = 0; i < mnGlyphCount && mpGlyphDataArray; i++ )
 	{
@@ -510,12 +511,28 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY );
 		}
 
-		// Make sure that ligature glyphs get all of the width and that their
-		// attached spacing glyphs have zero width so that the OOo code will
-		// force the cursor to the end of the ligature instead of the beginning
 		long nWidthAdjust = 0;
-		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+		if ( !mpGlyphDataArray[ i ].glyphID )
 		{
+			// Fix bug 3031 by detecting any zero glyphs
+			if ( !mpNeedFallback )
+			{
+				nBufSize = mpHash->mnLen * sizeof( bool );
+				mpNeedFallback = (bool *)rtl_allocateMemory( nBufSize );
+				memset( mpNeedFallback, 0, nBufSize );
+			}
+
+			mpNeedFallback[ nIndex ] = true;
+
+			if ( !mpFallbackFont )
+				mpFallbackFont = new com_sun_star_vcl_VCLFont( mpVCLFont );
+		}
+		else if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+		{
+			// Make sure that ligature glyphs get all of the width and that
+			// their attached spacing glyphs have zero width so that the OOo
+			// code will force the cursor to the end of the ligature instead of
+			// the beginning
 			if ( nLastNonSpacingIndex >= 0 && nLastNonSpacingIndex != nIndex )
 			{
 				mpCharAdvances[ nLastNonSpacingIndex ] += mpCharAdvances[ nIndex ] - 1;
@@ -574,11 +591,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 	// Find positions that require fallback fonts
-	mpNeedFallback = NULL;
-	UniCharArrayOffset nCurrentPos = 0;
+	UniCharArrayOffset nCurrentPos;
 	UniCharCount nOffset;
-	ATSUFontID nFontID;
-	for ( ; ; )
+	ATSUFontID nFontID = kATSUInvalidFontID;
+	bool bHasZeroGlyphs = ( mpFallbackFont ? true : false );
+	for ( nCurrentPos = 0; ; )
 	{
 		OSStatus nErr = ATSUMatchFontsToText( maLayout, nCurrentPos, kATSUToTextEnd, &nFontID, &nCurrentPos, &nOffset );
 		if ( nErr == kATSUFontsNotMatched )
@@ -598,6 +615,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			for ( ; nCurrentPos < nOffsetPos; nCurrentPos++ )
 				mpNeedFallback[ nCurrentPos ] = true;
 
+			// Allow replacement of the default zero glyph fallback font
+			if ( bHasZeroGlyphs && mpFallbackFont )
+			{
+				bHasZeroGlyphs = false;
+				delete mpFallbackFont;
+				mpFallbackFont = NULL;
+			}
+
 			// Update font for next pass through
 			if ( !mpFallbackFont )
 			{
@@ -609,8 +634,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				}
 				else
 				{
-					rtl_freeMemory( mpNeedFallback );
-					mpNeedFallback = NULL;
+					// Force the SalATSLayout to find a fallback font
+					mpFallbackFont = new com_sun_star_vcl_VCLFont( mpVCLFont );
 				}
 			}
 		}
@@ -1395,14 +1420,15 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	// Set fallback font
 	if ( pFallbackFont || bNeedSymbolFallback || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
-		// If this is the first fallback, first try using a font that most
-		// closely matches the currently requested font
+		// If this is the first fallback or the fallback font is the same as
+		// the current font, first try using a font that most closely matches
+		// the currently requested font
 		JavaImplFontData *pHighScoreFontData = NULL;
-		if ( ( !mnFallbackLevel || bNeedSymbolFallback ) && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
+		int nNativeFont = mpVCLFont->getNativeFont();
+		if ( ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) && ( !mnFallbackLevel || bNeedSymbolFallback || pFallbackFont->getNativeFont() == nNativeFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
-			int nNativeFont = mpVCLFont->getNativeFont();
 			if ( bNeedSymbolFallback )
 			{
 				::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) ) );
@@ -1454,7 +1480,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpKashidaLayoutData->mpFallbackFont );
 		else if ( pHighScoreFontData )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
-		else if ( pFallbackFont )
+		else if ( pFallbackFont && pFallbackFont != mpVCLFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
 		else
 			rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
