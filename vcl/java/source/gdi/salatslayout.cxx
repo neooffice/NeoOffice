@@ -328,13 +328,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// 32K Fixed data type limit that the ATSTrapezoid struct uses so we
 	// preemptively limit font size to a size that is most likely to fit the
 	// within the 32K limit
-	float fSize = (float)mpHash->mnFontSize;
-	float fAdjustedSize;
+	long nSize = mpHash->mnFontSize;
+	long nAdjustedSize;
 	if ( mpHash->mnFontSize * mpHash->mnLen * 2 > 0x00007fff )
-		fAdjustedSize = (float)( 0x00007fff / ( mpHash->mnLen * 2 ) );
+		nAdjustedSize = 0x00007fff / ( mpHash->mnLen * 2 );
 	else
-		fAdjustedSize = fSize;
-	Fixed fCurrentSize = X2Fix( fAdjustedSize );
+		nAdjustedSize = nSize;
+	Fixed fCurrentSize = X2Fix( (float)nAdjustedSize );
 	nTags[1] = kATSUSizeTag;
 	nBytes[1] = sizeof( Fixed );
 	nVals[1] = &fCurrentSize;
@@ -429,13 +429,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	while ( Fix2X( aTrapezoid.upperRight.x ) < 0 )
 	{
 		// Reset font size
-		fAdjustedSize /= 2;
-		fCurrentSize = X2Fix( fAdjustedSize );
+		nAdjustedSize /= 2;
+		fCurrentSize = X2Fix( (float)nAdjustedSize );
 		nTags[0] = kATSUSizeTag;
 		nBytes[0] = sizeof( Fixed );
 		nVals[0] = &fCurrentSize;
 
-		if ( fAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ( maVerticalFontStyle && ATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr ) || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
+		if ( nAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ( maVerticalFontStyle && ATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr ) || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
 		{
 			Destroy();
 			return;
@@ -495,7 +495,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	memset( mpCharAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
-	mfFontScaleY = fSize / fAdjustedSize;
+	mfFontScaleY = (float)nSize / nAdjustedSize;
 	mpNeedFallback = NULL;
 	int nLastNonSpacingIndex = -1;
 	for ( i = 0; i < mnGlyphCount && mpGlyphDataArray; i++ )
@@ -586,7 +586,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			ATSFontMetrics aFontMetrics;
 			ATSFontRef aFont = FMGetATSFontRefFromFont( mpHash->mnFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
-				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize );
+				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * nSize );
 		}
 	}
 
