@@ -845,7 +845,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 			{
 				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maFallbackFonts.begin(); ffit != mpGraphics->maFallbackFonts.end(); ++ffit )
 				{
-					if ( ffit->second->getNativeFont() == nNativeFont && ffit->first < mnFallbackLevel )
+					if ( ffit->first < mnFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
 					{
 						delete mpVCLFont;
 						mpVCLFont = NULL;
@@ -1425,7 +1425,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// the currently requested font
 		JavaImplFontData *pHighScoreFontData = NULL;
 		int nNativeFont = mpVCLFont->getNativeFont();
-		if ( ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) && ( !mnFallbackLevel || bNeedSymbolFallback || pFallbackFont->getNativeFont() == nNativeFont ) )
+		bool bFallbackIsCurrentFont = ( pFallbackFont ? pFallbackFont->getNativeFont() == nNativeFont : false );
+		if ( ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) && ( !mnFallbackLevel || bNeedSymbolFallback || bFallbackIsCurrentFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
@@ -1438,11 +1439,18 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( !pHighScoreFontData && !bUseNativeFallback )
 			{
-				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
-				if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
+				bool bFindHighScoreFontData = bFallbackIsCurrentFont;
+				if ( !bFindHighScoreFontData )
+				{
+					::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
+					if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
+						bFindHighScoreFontData = true;
+				}
+
+				if ( bFindHighScoreFontData )
 				{
 					USHORT nHighScore = 0;
-					for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
+					for ( ::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
 					{
 						if ( (int)it->first == nNativeFont )
 							continue;
@@ -1451,15 +1459,33 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nScore += ( it->second->GetWeight() == mpGraphics->mnFontWeight ? 4 : 0 );
 						nScore += ( it->second->GetFamilyType() == mpGraphics->mnFontFamily ? 2 : 0 );
 						nScore += ( it->second->GetPitch() == mpGraphics->mnFontPitch ? 1 : 0 );
-						if ( nScore == 15 )
+
+						if ( nHighScore < nScore )
 						{
-							pHighScoreFontData = it->second;
-							break;
-						}
-						else if ( nHighScore < nScore )
-						{
-							pHighScoreFontData = it->second;
-							nHighScore = nScore;
+							bool bSkipFont = false;
+							for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maFallbackFonts.begin(); ffit != mpGraphics->maFallbackFonts.end(); ++ffit )
+							{
+								if ( ffit->first < mnFallbackLevel && ffit->second->getNativeFont() == it->first )
+								{
+									bSkipFont = true;
+									break;
+								}
+							}
+							
+							if ( bSkipFont )
+							{
+								continue;
+							}
+							else if ( nScore == 15 )
+							{
+								pHighScoreFontData = it->second;
+								break;
+							}
+							else
+							{
+								pHighScoreFontData = it->second;
+								nHighScore = nScore;
+							}
 						}
 					}
 				}
