@@ -6216,10 +6216,10 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
     // try if fallback fonts support the missing unicodes
     for( int nFallbackLevel = 1; nFallbackLevel < MAX_FALLBACK; ++nFallbackLevel )
     {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
         // SetFont() will push the fallback font into aFontSelData
         mpGraphics->SetFont( &aFontSelData, nFallbackLevel );
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
         // find a font family suited for glyph fallback
         ImplFontEntry* pFallbackFont = mpFontCache->GetFallback( mpFontList,
             maFont, aFontSize, nFallbackLevel-nDevSpecificFallback );
@@ -6250,7 +6250,7 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
 #endif
 
         pFallbackFont->mnSetFontFlags = mpGraphics->SetFont( &aFontSelData, nFallbackLevel );
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
 
         // create and add glyph fallback layout to multilayout
         rLayoutArgs.ResetPos();
@@ -6268,9 +6268,9 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
                 pFallback->Release();
         }
 
-#if !defined USE_JAVA || !defined MACOSX
+#ifndef USE_JAVA
         mpFontCache->Release( pFallbackFont );
-#endif	// !USE_JAVA || !MACOSX
+#endif	// !USE_JAVA
 
 	// break when this fallback was sufficient
         if( !rLayoutArgs.PrepareFallback() )
