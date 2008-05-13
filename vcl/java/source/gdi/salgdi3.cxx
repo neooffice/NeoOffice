@@ -128,6 +128,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					if ( pFonts )
 					{
 						const OUString aGothic( OUString::createFromAscii( "Gothic" ) );
+						const OUString aLastResort( OUString::createFromAscii( "LastResort" ) );
 						const OUString aRoman( OUString::createFromAscii( "Roman" ) );
 						const OUString aSans( OUString::createFromAscii( "Sans" ) );
 						const OUString aSerif( OUString::createFromAscii( "Serif" ) );
@@ -211,6 +212,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							{
 								aDisplayName = OUString( aOpenSymbol );
 								aMapName = aSymbol + OUString::createFromAscii( ";" ) + aNeoSymbol;
+							}
+							else if ( aDisplayName == aLastResort )
+							{
+								// Ignore this Java font as it will mess up
+								// our font fallback process
+								continue;
 							}
 							else if ( aDisplayName == aTimesRoman )
 							{
