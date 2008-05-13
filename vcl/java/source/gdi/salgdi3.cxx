@@ -399,6 +399,10 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	
 	SalData *pSalData = GetSalData();
 
+	// Fix bug 3061 by never changing the ImplFontSelectData's mpFontData data
+	// member
+	ImplFontData *pFontData = pFont->mpFontData;
+
 	if ( nFallbackLevel )
 	{
 		// Retrieve the fallback font if one has been set by a text layout
@@ -408,19 +412,19 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			int pNativeFont = ffit->second->getNativeFont();
 			::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pNativeFont );
 			if ( it != pSalData->maNativeFontMapping.end() )
-				pFont->mpFontData = it->second;
+				pFontData = it->second;
 		}
 	}
 
 	// Fix bugs 1813, 2964, 2968, 2971, and 2972 by tryng to find a matching
 	// bold and/or italic font even if we are in a fallback level
-	BOOL bAddBold = ( pFont->GetWeight() > WEIGHT_MEDIUM && pFont->mpFontData->GetWeight() <= WEIGHT_MEDIUM );
-	BOOL bAddItalic = ( ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL ) && pFont->mpFontData->GetSlant() != ITALIC_OBLIQUE && pFont->mpFontData->GetSlant() != ITALIC_NORMAL );
+	BOOL bAddBold = ( pFont->GetWeight() > WEIGHT_MEDIUM && pFontData->GetWeight() <= WEIGHT_MEDIUM );
+	BOOL bAddItalic = ( ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL ) && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
 	if ( bAddBold || bAddItalic )
 	{
 		BOOL bBold = ( pFont->GetWeight() > WEIGHT_MEDIUM );
 		BOOL bItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
-		OUString aFontName( ((JavaImplFontData *)pFont->mpFontData)->maVCLFontName );
+		OUString aFontName( ((JavaImplFontData *)pFontData)->maVCLFontName );
 		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
 		CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
 		if ( aMatchedString )
@@ -443,7 +447,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
 		if ( it != pSalData->maFontNameMapping.end() && ( !bAddBold || it->second->meWeight > WEIGHT_MEDIUM ) && ( !bAddItalic || it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
 		{
-			pFont->mpFontData = it->second;
+			pFontData = it->second;
 		}
 		else if ( bAddBold && bAddItalic )
 		{
@@ -469,7 +473,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			it = pSalData->maFontNameMapping.find( aXubFontName );
 			if ( it != pSalData->maFontNameMapping.end() && it->second->meWeight > WEIGHT_MEDIUM )
 			{
-				pFont->mpFontData = it->second;
+				pFontData = it->second;
 			}
 			else
 			{
@@ -494,7 +498,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				aXubFontName = XubString( aFontName );
 				it = pSalData->maFontNameMapping.find( aXubFontName );
 				if ( it != pSalData->maFontNameMapping.end() && ( it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
-					pFont->mpFontData = it->second;
+					pFontData = it->second;
 			}
 		}
 
@@ -509,7 +513,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		maFallbackFonts.erase( ffit );
 	}
 
-	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( ((JavaImplFontData *)pFont->mpFontData)->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
+	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( ((JavaImplFontData *)pFontData)->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
 
 	if ( !nFallbackLevel )
 	{
