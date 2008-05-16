@@ -398,10 +398,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	}
 	
 	SalData *pSalData = GetSalData();
-
-	// Fix bug 3061 by never changing the ImplFontSelectData's mpFontData data
-	// member
-	ImplFontData *pFontData = pFont->mpFontData;
+	JavaImplFontData *pFontData = (JavaImplFontData *)pFont->mpFontData;
 
 	if ( nFallbackLevel )
 	{
@@ -422,9 +419,10 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	BOOL bAddItalic = ( ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL ) && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
 	if ( bAddBold || bAddItalic )
 	{
+		JavaImplFontData *pOldFontData = pFontData;
 		BOOL bBold = ( pFont->GetWeight() > WEIGHT_MEDIUM );
 		BOOL bItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
-		OUString aFontName( ((JavaImplFontData *)pFontData)->maVCLFontName );
+		OUString aFontName( pFontData->maVCLFontName );
 		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
 		CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
 		if ( aMatchedString )
@@ -504,6 +502,21 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 		if ( aString )
 			CFRelease( aString );
+
+		// Avoid selecting a font that has already been used in previous
+		// fallback levels
+		if ( nFallbackLevel && pOldFontData != pFontData )
+		{
+			int nNativeFont = pFontData->GetFontId();
+			for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
+			{
+				if ( ffit->first < nFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
+				{
+					pFontData = pOldFontData;
+					break;
+				}
+			}
+		}
 	}
 
 	::std::map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = maFallbackFonts.find( nFallbackLevel );
@@ -513,7 +526,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		maFallbackFonts.erase( ffit );
 	}
 
-	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( ((JavaImplFontData *)pFontData)->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
+	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
 
 	if ( !nFallbackLevel )
 	{
@@ -527,6 +540,9 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 	}
+
+	// Fix bug 3031 without causing 3061 by always updating the font's data
+	pFont->mpFontData = pFontData;
 
 	return 0;
 }
