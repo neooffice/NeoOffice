@@ -540,9 +540,12 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 	}
-
-	// Fix bug 3031 without causing 3061 by always updating the font's data
-	pFont->mpFontData = pFontData;
+	else
+	{
+		// Fix bug 3031 without causing 3061 by always updating the font's data
+		// in fallback levels
+		pFont->mpFontData = pFontData;
+	}
 
 	return 0;
 }
