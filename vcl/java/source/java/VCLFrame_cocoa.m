@@ -271,8 +271,9 @@ WindowRef CWindow_getWindowRef( id pCWindow )
 
 	if ( pCWindow )
 	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		GetWindowRef *pGetWindowRef = [GetWindowRef createWithCWindow:pCWindow];
-		[pGetWindowRef performSelectorOnMainThread:@selector(getWindowRef:) withObject:pGetWindowRef waitUntilDone:YES];
+		[pGetWindowRef performSelectorOnMainThread:@selector(getWindowRef:) withObject:pGetWindowRef waitUntilDone:YES modes:pModes];
 		aWindow = [pGetWindowRef windowRef];
 	}
 
