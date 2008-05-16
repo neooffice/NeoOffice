@@ -303,11 +303,6 @@ void OutputDevice::ImplUpdateFontData( bool bNewFontLists )
                 if( mpFontList && mpFontList != pSVData->maGDIData.mpScreenFontList )
                     mpFontList->Clear();
 
-#ifdef USE_JAVA
-                // Attempt to fix bug 2827 by not deleting the existing font
-                // cache as it causes a completely different set of native fonts
-				// to be used for the same requested font name
-#else	// USE_JAVA
                 if( mpPDFWriter )
                 {
                     if( mpFontList && mpFontList != pSVData->maGDIData.mpScreenFontList )
@@ -318,7 +313,6 @@ void OutputDevice::ImplUpdateFontData( bool bNewFontLists )
                     mpFontCache = new ImplFontCache( FALSE );
                 }
                 else
-#endif	// USE_JAVA
                 {
                     if( mpOutDevData )
                     {
