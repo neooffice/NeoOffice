@@ -561,7 +561,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 		else if ( nWidthAdjust && mpCharAdvances[ nIndex ] > 0 )
 		{
-			long nOldAdvance = mpCharAdvances[ nIndex ];
 			mpCharAdvances[ nIndex ] += nWidthAdjust;
 			if ( mpCharAdvances[ nIndex ] < 0 )
 			{
@@ -828,6 +827,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mpGraphics( pGraphics ),
 	mnFallbackLevel( nFallbackLevel ),
 	mpVCLFont( NULL ),
+	mpHebrewTestLayoutData( NULL ),
 	mpKashidaLayoutData( NULL ),
 	mnOrigWidth( 0 ),
 	mfGlyphScaleX( 1.0 )
@@ -1094,11 +1094,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		if ( bRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) )
 		{
 			bool bNeedArabicFontSupport = false;
+			bool bNeedHebrewFontSupport = false;
 			for ( int i = nMinCharPos; i < nEndCharPos; i++ )
 			{
 				if ( ( rArgs.mpStr[ i ] >= 0x0600 && rArgs.mpStr[ i ] < 0x0900 ) || ( rArgs.mpStr[ i ] >= 0xfb50 && rArgs.mpStr[ i ] < 0xfe00 ) || ( rArgs.mpStr[ i ] >= 0xfe70 && rArgs.mpStr[ i ] < 0xff00 ) )
 				{
 					bNeedArabicFontSupport = true;
+					break;
+				}
+				else if ( rArgs.mpStr[ i ] >= 0x0590 && rArgs.mpStr[ i ] < 0x0600 )
+				{
+					bNeedHebrewFontSupport = true;
 					break;
 				}
 			}
@@ -1170,6 +1176,82 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 							if ( mpKashidaLayoutData->mpFallbackFont )
 								pFallbackFont = mpKashidaLayoutData->mpFallbackFont;
+						}
+
+						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+					}
+					else
+					{
+						rArgs.mnFlags |= SAL_LAYOUT_KASHIDA_JUSTIFICATON;
+					}
+				}
+			}
+			else if ( bNeedHebrewFontSupport )
+			{
+				if ( !mpHebrewTestLayoutData )
+				{
+					sal_Unicode aArabicTest[ 3 ];
+					aArabicTest[ 0 ] = 0x05D0;
+					aArabicTest[ 1 ] = 0x05D1;
+					aArabicTest[ 2 ] = 0x05D2;
+					mpHebrewTestLayoutData = ImplATSLayoutData::GetLayoutData( aArabicTest, 3, 0, 3, rArgs.mnFlags | SAL_LAYOUT_BIDI_STRONG | SAL_LAYOUT_BIDI_RTL, mnFallbackLevel, mpVCLFont, this );
+				}
+
+				if ( mpHebrewTestLayoutData )
+				{
+					bool bHasHebrewFontSupport = true;
+					if ( !mpHebrewTestLayoutData->mpGlyphDataArray || ( mpHebrewTestLayoutData->mpNeedFallback && mpHebrewTestLayoutData->mpFallbackFont ) )
+					{
+						bHasHebrewFontSupport = false;
+					}
+					else
+					{
+						// Fix bug 3031 by detecting when a font cannot support
+						// Hebrew text layout. The characters in our layout
+						// should always product different glyphs for each
+						// character so if any are the same, the font does not
+						// support Hebrew properly.
+						for ( int i = 0; i < mpHebrewTestLayoutData->mnGlyphCount; i++ )
+						{
+							if ( !mpHebrewTestLayoutData->mpGlyphDataArray[ i ].glyphID )
+							{
+								bHasHebrewFontSupport = false;
+								break;
+							}
+							else if ( i && mpHebrewTestLayoutData->mpGlyphDataArray[ i ].glyphID == mpHebrewTestLayoutData->mpGlyphDataArray[ i - 1 ].glyphID )
+							{
+								bHasHebrewFontSupport = false;
+								break;
+							}
+							else if ( mpHebrewTestLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
+							{
+								break;
+							}
+						}
+					}
+
+					if ( !bHasHebrewFontSupport )
+					{
+						for ( int i = nMinCharPos; i < nEndCharPos; i++ )
+							rArgs.NeedFallback( i, bRunRTL );
+
+						if ( !pFallbackFont )
+						{
+							// If there is no fallback font but the font really
+							// does not support Hebrew,  assign Raanana as this
+							// layout's fallback font
+							if ( !mpHebrewTestLayoutData->mpFallbackFont )
+							{
+								SalData *pSalData = GetSalData();
+
+								int nNativeFont = mpVCLFont->getNativeFont();
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "Raanana" ) ) );
+								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != nNativeFont )
+									mpHebrewTestLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
+							}
+
+							if ( mpHebrewTestLayoutData->mpFallbackFont )
+								pFallbackFont = mpHebrewTestLayoutData->mpFallbackFont;
 						}
 
 						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
@@ -1426,7 +1508,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		JavaImplFontData *pHighScoreFontData = NULL;
 		int nNativeFont = mpVCLFont->getNativeFont();
 		bool bFallbackIsCurrentFont = ( pFallbackFont ? pFallbackFont->getNativeFont() == nNativeFont : false );
-		if ( ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) && ( !mnFallbackLevel || bNeedSymbolFallback || bFallbackIsCurrentFont ) )
+		if ( ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) && ( !mpHebrewTestLayoutData || !mpHebrewTestLayoutData->mpFallbackFont ) && ( !mnFallbackLevel || bNeedSymbolFallback || bFallbackIsCurrentFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
@@ -1501,9 +1583,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		// Always try the kashida fallback first so that we are assured of
-		// rendering a kashida if needed
+		// rendering a kashida if needed, then try the Hebrew test fallback
 		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpKashidaLayoutData->mpFallbackFont );
+		else if ( mpHebrewTestLayoutData && mpHebrewTestLayoutData->mpFallbackFont )
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpHebrewTestLayoutData->mpFallbackFont );
 		else if ( pHighScoreFontData )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
 		else if ( pFallbackFont && pFallbackFont != mpVCLFont )
@@ -1792,6 +1876,18 @@ void SalATSLayout::Destroy()
 {
 	maRuns.Clear();
 
+	if ( mpHebrewTestLayoutData )
+	{
+		mpHebrewTestLayoutData->Release();
+		mpHebrewTestLayoutData = NULL;
+	}
+
+	if ( mpKashidaLayoutData )
+	{
+		mpKashidaLayoutData->Release();
+		mpKashidaLayoutData = NULL;
+	}
+
 	while ( maLayoutData.size() )
 	{
 		maLayoutData.back()->Release();
@@ -1799,12 +1895,6 @@ void SalATSLayout::Destroy()
 	}
 
 	maLayoutMinCharPos.clear();
-
-	if ( mpKashidaLayoutData )
-	{
-		mpKashidaLayoutData->Release();
-		mpKashidaLayoutData = NULL;
-	}
 
 	if ( maMirroredLayoutData.size() )
 	{
