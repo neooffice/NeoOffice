@@ -66,7 +66,6 @@ class SalATSLayout : public GenericSalLayout
 	mutable ImplLayoutRuns	maRuns;
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
-	ImplATSLayoutData*	mpHebrewTestLayoutData;
 	ImplATSLayoutData*	mpKashidaLayoutData;
 	::std::map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
 	long				mnOrigWidth;
