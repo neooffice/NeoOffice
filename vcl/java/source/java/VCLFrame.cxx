@@ -249,9 +249,7 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
-		jclass blahClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFramerStuff" );
-		if ( t.pEnv->ExceptionCheck() )
-			t.pEnv->ExceptionClear();
+
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 
