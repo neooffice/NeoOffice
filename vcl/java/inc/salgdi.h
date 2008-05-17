@@ -106,6 +106,7 @@ public:
 	FontWeight				mnFontWeight;
 	bool					mbFontItalic;
 	FontPitch				mnFontPitch;
+	bool					mbForceFontFallback;
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
 

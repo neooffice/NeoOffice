@@ -497,11 +497,16 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			CFRelease( aString );
 
 		// Avoid selecting a font that has already been used
-		if ( nFallbackLevel && pOldFontData != pFontData )
+		if ( nFallbackLevel && pFontData != pOldFontData && ( !mbForceFontFallback || nFallbackLevel > 1 ) )
 		{
-			::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( 0 );
-			if ( ffit != maFallbackFonts.end() && ffit->second->getNativeFont() == pFontData->GetFontId() )
-				pFontData = pOldFontData;
+			for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
+			{
+				if ( ffit->first < nFallbackLevel && ffit->second->getNativeFont() == pFontData->GetFontId() )
+				{
+					pFontData = pOldFontData;
+					break;
+				}
+			}
 		}
 	}
 
@@ -525,6 +530,21 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mnFontWeight = pFont->GetWeight();    
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
+
+		// Fix bugs 3031 and 3061 by using forcing a fallback if we are using
+		// a different font in the first level as the OOo PDF export code
+		// will use the font that it set, not the one we use for layout
+		if ( pFontData != pFont->mpFontData )
+			mbForceFontFallback = true;
+		else
+			mbForceFontFallback = false;
+
+	}
+	else
+	{
+		// Fix bugs 3031 and 3061 by pushing the selected fallback font into
+		// the select data for fallback levels only
+		pFont->mpFontData = pFontData;
 	}
 
 	return 0;

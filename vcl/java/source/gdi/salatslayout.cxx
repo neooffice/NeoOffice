@@ -814,7 +814,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second );
 
 			// Prevent infinite fallback
-			if ( mpVCLFont )
+			if ( mpVCLFont && ( !mpGraphics->mbForceFontFallback || mnFallbackLevel > 1 ) )
 			{
 				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maFallbackFonts.begin(); ffit != mpGraphics->maFallbackFonts.end(); ++ffit )
 				{
@@ -1294,7 +1294,15 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
 					long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
-					if ( !nGlyph )
+					if ( mpGraphics->mbForceFontFallback && !mnFallbackLevel )
+					{
+						// In a forced fallback situation, always force fallback
+						// with the same font
+						nGlyph = 0;
+						rArgs.NeedFallback( nCharPos, bRunRTL );
+						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+					}
+					else if ( !nGlyph )
 					{
 						if ( nChar >= 0xe000 && nChar < 0xf900 )
 						{
@@ -1391,12 +1399,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	mnOrigWidth = aPos.X();
 
 	// Set fallback font
-	if ( pFallbackFont || bNeedSymbolFallback || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
+	if ( pFallbackFont || ( mpGraphics->mbForceFontFallback && !mnFallbackLevel ) || bNeedSymbolFallback || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
 		JavaImplFontData *pHighScoreFontData = NULL;
-		if ( ( !mnFallbackLevel || bNeedSymbolFallback ) && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
+		if ( ( !mpGraphics->mbForceFontFallback || mnFallbackLevel ) && ( !mnFallbackLevel || bNeedSymbolFallback ) && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
@@ -1446,9 +1454,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			mpGraphics->maFallbackFonts.erase( it );
 		}
 
-		// Always try the kashida fallback first so that we are assured of
-		// rendering a kashida if needed
-		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
+		// Always use the same font if the force font fallback flag is set and
+		// we are not in a fallback level. After that, always try the kashida
+		// fallback so that we are assured of rendering a kashida if needed
+		if ( mpGraphics->mbForceFontFallback && !mnFallbackLevel )
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpVCLFont );
+		else if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpKashidaLayoutData->mpFallbackFont );
 		else if ( pHighScoreFontData )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
