@@ -1773,6 +1773,9 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
  */
 BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, const Point& aPos, SalControlHandle& rControlHandle, BOOL& rIsInside )
 {
+	if ( !IsNativeControlSupported( nType, nPart ) )
+		return FALSE;
+
 	// [ed] Scrollbars are a special case:  in order to get proper regions,
 	// a full description of the scrollbar is required including its values
 	// and visible width.  We'll rely on the VCL scrollbar, which queried
@@ -1813,6 +1816,9 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
 BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption )
 {
 	BOOL bOK = FALSE;
+
+	if ( !IsNativeControlSupported( nType, nPart ) )
+		return bOK;
 
 	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
@@ -2050,6 +2056,9 @@ BOOL JavaSalGraphics::drawNativeControlText( ControlType nType, ControlPart nPar
 BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const OUString& rCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion )
 {
 	BOOL bReturn = FALSE;
+
+	if ( !IsNativeControlSupported( nType, nPart ) )
+		return bReturn;
 
 	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
@@ -2586,6 +2595,10 @@ static SalColor ConvertRGBColorToSalColor( const RGBColor& theColor )
 BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor )
 {
 	BOOL bReturn = FALSE;
+
+	if ( !IsNativeControlSupported( nType, nPart ) )
+		return bReturn;
+
 	RGBColor nativeColor;
 
 	switch( nType )
