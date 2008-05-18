@@ -91,6 +91,9 @@ static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
 static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
+static ::std::map< int, int > aBoldFontMap;
+static ::std::map< int, int > aBoldItalicFontMap;
+static ::std::map< int, int > aItalicFontMap;
 
 using namespace basegfx;
 using namespace rtl;
@@ -393,7 +396,15 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	SalData *pSalData = GetSalData();
 	JavaImplFontData *pFontData = (JavaImplFontData *)pFont->mpFontData;
 
-	if ( nFallbackLevel )
+	if ( !nFallbackLevel )
+	{
+		if ( mpForceFallbackFont )
+		{
+			delete mpForceFallbackFont;
+			mpForceFallbackFont = NULL;
+		}
+	}
+	else
 	{
 		// Retrieve the fallback font if one has been set by a text layout
 		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
@@ -413,37 +424,43 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( bAddBold || bAddItalic )
 	{
 		JavaImplFontData *pOldFontData = pFontData;
+		int nOldNativeFont = pOldFontData->GetFontId();
 		BOOL bBold = ( pFont->GetWeight() > WEIGHT_MEDIUM );
 		BOOL bItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
-		OUString aFontName( pFontData->maVCLFontName );
-		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
-		CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
-		if ( aMatchedString )
+
+		// Fix bug 3061 by caching the bold, italic, and bold italic variants
+		// of each font
+		int nCachedNativeFont = 0;
+		if ( bAddBold && bAddItalic )
 		{
-			CFRange aRange = CFStringFind( aMatchedString, CFSTR( ":" ), 0 );
-			CFIndex nLen;
-			if ( aRange.location != kCFNotFound )
-				nLen = aRange.location;
-			else
-				nLen = CFStringGetLength( aMatchedString );
-			aRange = CFRangeMake( 0, nLen );
-			sal_Unicode pBuffer[ nLen + 1 ];
-			CFStringGetCharacters( aMatchedString, aRange, pBuffer );
-			pBuffer[ nLen ] = 0;
-			aFontName = OUString( pBuffer );
-			CFRelease( aMatchedString );
+			::std::map< int, int >::const_iterator bifit = aBoldItalicFontMap.find( nOldNativeFont );
+			if ( bifit != aBoldItalicFontMap.end() )
+				nCachedNativeFont = bifit->second;
+		}
+		else if ( bAddBold )
+		{
+			::std::map< int, int >::const_iterator bfit = aBoldFontMap.find( nOldNativeFont );
+			if ( bfit != aBoldFontMap.end() )
+				nCachedNativeFont = bfit->second;
+		}
+		else
+		{
+			::std::map< int, int >::const_iterator ifit = aItalicFontMap.find( nOldNativeFont );
+			if ( ifit != aItalicFontMap.end() )
+				nCachedNativeFont = ifit->second;
 		}
 
-		String aXubFontName( aFontName );
-		::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
-		if ( it != pSalData->maFontNameMapping.end() && ( !bAddBold || it->second->meWeight > WEIGHT_MEDIUM ) && ( !bAddItalic || it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
+		if ( nCachedNativeFont )
 		{
-			pFontData = it->second;
+			::std::map< int, JavaImplFontData* >::const_iterator fnit = pSalData->maNativeFontMapping.find( nCachedNativeFont );
+			if ( fnit != pSalData->maNativeFontMapping.end() )
+				pFontData = fnit->second;
 		}
-		else if ( bAddBold && bAddItalic )
+		else
 		{
-			// Try with bold only
-			aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, FALSE, pFont->mnHeight );
+			OUString aFontName( pFontData->maVCLFontName );
+			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
+			CFStringRef aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
 			if ( aMatchedString )
 			{
 				CFRange aRange = CFStringFind( aMatchedString, CFSTR( ":" ), 0 );
@@ -460,16 +477,16 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				CFRelease( aMatchedString );
 			}
 
-			aXubFontName = XubString( aFontName );
-			it = pSalData->maFontNameMapping.find( aXubFontName );
-			if ( it != pSalData->maFontNameMapping.end() && it->second->meWeight > WEIGHT_MEDIUM )
+			String aXubFontName( aFontName );
+			::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aXubFontName );
+			if ( it != pSalData->maFontNameMapping.end() && ( !bAddBold || it->second->meWeight > WEIGHT_MEDIUM ) && ( !bAddItalic || it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
 			{
 				pFontData = it->second;
 			}
-			else
+			else if ( bAddBold && bAddItalic )
 			{
-				// Try with italic only
-				aMatchedString = NSFontManager_findFontNameWithStyle( aString, FALSE, bItalic, pFont->mnHeight );
+				// Try with bold only
+				aMatchedString = NSFontManager_findFontNameWithStyle( aString, bBold, FALSE, pFont->mnHeight );
 				if ( aMatchedString )
 				{
 					CFRange aRange = CFStringFind( aMatchedString, CFSTR( ":" ), 0 );
@@ -488,25 +505,76 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 				aXubFontName = XubString( aFontName );
 				it = pSalData->maFontNameMapping.find( aXubFontName );
-				if ( it != pSalData->maFontNameMapping.end() && ( it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
-					pFontData = it->second;
-			}
-		}
-
-		if ( aString )
-			CFRelease( aString );
-
-		// Avoid selecting a font that has already been used
-		if ( nFallbackLevel && pFontData != pOldFontData && ( !mbForceFontFallback || nFallbackLevel > 1 ) )
-		{
-			for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
-			{
-				if ( ffit->first < nFallbackLevel && ffit->second->getNativeFont() == pFontData->GetFontId() )
+				if ( it != pSalData->maFontNameMapping.end() && it->second->meWeight > WEIGHT_MEDIUM )
 				{
-					pFontData = pOldFontData;
-					break;
+					pFontData = it->second;
+				}
+				else
+				{
+					// Try with italic only
+					aMatchedString = NSFontManager_findFontNameWithStyle( aString, FALSE, bItalic, pFont->mnHeight );
+					if ( aMatchedString )
+					{
+						CFRange aRange = CFStringFind( aMatchedString, CFSTR( ":" ), 0 );
+						CFIndex nLen;
+						if ( aRange.location != kCFNotFound )
+							nLen = aRange.location;
+						else
+							nLen = CFStringGetLength( aMatchedString );
+						aRange = CFRangeMake( 0, nLen );
+						sal_Unicode pBuffer[ nLen + 1 ];
+						CFStringGetCharacters( aMatchedString, aRange, pBuffer );
+						pBuffer[ nLen ] = 0;
+						aFontName = OUString( pBuffer );
+						CFRelease( aMatchedString );
+					}
+
+					aXubFontName = XubString( aFontName );
+					it = pSalData->maFontNameMapping.find( aXubFontName );
+					if ( it != pSalData->maFontNameMapping.end() && ( it->second->meItalic == ITALIC_OBLIQUE || it->second->meItalic == ITALIC_NORMAL ) )
+						pFontData = it->second;
 				}
 			}
+
+			if ( aString )
+				CFRelease( aString );
+
+			//Cache the same font to avoid lookup again
+			if ( bAddBold && bAddItalic )
+				aBoldItalicFontMap[ nOldNativeFont ] = pFontData->GetFontId();
+			else if ( bAddBold )
+				aBoldFontMap[ nOldNativeFont ] = pFontData->GetFontId();
+			else
+				aItalicFontMap[ nOldNativeFont ] = pFontData->GetFontId();
+		}
+
+		int nNativeFont = pFontData->GetFontId();
+		if ( nNativeFont != nOldNativeFont )
+		{
+			// Fix bug 3031 by forcing a fallback if we are using a different
+			// font in the first level as the OOo PDF export code will use
+			// the font that it set, not the one we use for layout
+			if ( !nFallbackLevel )
+			{
+				// mpForceFallbackFont = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
+				pFontData = (JavaImplFontData *)pFont->mpFontData;
+			}
+			else
+			{
+				// Avoid selecting a font that has already been used
+			for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
+				{
+					if ( ffit->first < nFallbackLevel && ( !mpForceFallbackFont || ffit->first ) && ffit->second->getNativeFont() == nNativeFont )
+					{
+						pFontData = pOldFontData;
+						break;
+					}
+				}
+			}
+		}
+		else
+		{
+			pFontData = (JavaImplFontData *)pFont->mpFontData;
 		}
 	}
 
@@ -530,20 +598,10 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mnFontWeight = pFont->GetWeight();    
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
-
-		// Fix bugs 3031 and 3061 by using forcing a fallback if we are using
-		// a different font in the first level as the OOo PDF export code
-		// will use the font that it set, not the one we use for layout
-		if ( pFontData != pFont->mpFontData )
-			mbForceFontFallback = true;
-		else
-			mbForceFontFallback = false;
-
 	}
 	else
 	{
-		// Fix bugs 3031 and 3061 by pushing the selected fallback font into
-		// the select data for fallback levels only
+		// Update the select data in fallback levels only
 		pFont->mpFontData = pFontData;
 	}
 

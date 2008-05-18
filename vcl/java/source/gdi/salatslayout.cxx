@@ -810,15 +810,17 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
 		{
-			int nNativeFont = it->second->getNativeFont();	
 			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second );
 
 			// Prevent infinite fallback
-			if ( mpVCLFont && ( !mpGraphics->mbForceFontFallback || mnFallbackLevel > 1 ) )
+			int nNativeFont = mpVCLFont->getNativeFont();	
+			if ( mpVCLFont )
 			{
 				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maFallbackFonts.begin(); ffit != mpGraphics->maFallbackFonts.end(); ++ffit )
 				{
-					if ( ffit->first < mnFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
+					// It is OK to reuse the original font if a force fallback
+					// font is in use
+					if ( ffit->first < mnFallbackLevel && ( !mpGraphics->mpForceFallbackFont || ffit->first ) && ffit->second->getNativeFont() == nNativeFont )
 					{
 						delete mpVCLFont;
 						mpVCLFont = NULL;
@@ -1294,11 +1296,13 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
 					long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
-					if ( mpGraphics->mbForceFontFallback && !mnFallbackLevel )
+					if ( mpGraphics->mpForceFallbackFont && !mnFallbackLevel )
 					{
-						// In a forced fallback situation, always force fallback
-						// with the same font
-						nGlyph = 0;
+						// In a forced fallback situation, always use the force
+						// fallback font
+						bNeedSymbolFallback = false;
+						bUseNativeFallback = true;
+						pFallbackFont = mpGraphics->mpForceFallbackFont;
 						rArgs.NeedFallback( nCharPos, bRunRTL );
 						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 					}
@@ -1399,12 +1403,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	mnOrigWidth = aPos.X();
 
 	// Set fallback font
-	if ( pFallbackFont || ( mpGraphics->mbForceFontFallback && !mnFallbackLevel ) || bNeedSymbolFallback || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
+	if ( pFallbackFont || bNeedSymbolFallback || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
 		JavaImplFontData *pHighScoreFontData = NULL;
-		if ( ( !mpGraphics->mbForceFontFallback || mnFallbackLevel ) && ( !mnFallbackLevel || bNeedSymbolFallback ) && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
+		if ( ( !mnFallbackLevel || bNeedSymbolFallback ) && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
@@ -1454,12 +1458,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			mpGraphics->maFallbackFonts.erase( it );
 		}
 
-		// Always use the same font if the force font fallback flag is set and
-		// we are not in a fallback level. After that, always try the kashida
-		// fallback so that we are assured of rendering a kashida if needed
-		if ( mpGraphics->mbForceFontFallback && !mnFallbackLevel )
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpVCLFont );
-		else if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
+		// Use the kashida fallback font first so that we are assured of
+		// rendering a kashida if needed
+		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpKashidaLayoutData->mpFallbackFont );
 		else if ( pHighScoreFontData )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );

@@ -74,9 +74,9 @@ JavaSalGraphics::JavaSalGraphics()
 	mpVCLFont = NULL;
 	mnFontFamily = FAMILY_DONTKNOW;
 	mnFontWeight = WEIGHT_DONTKNOW;
-	mbFontItalic = false;
+	mpForceFallbackFont = NULL;
 	mnFontPitch = PITCH_DONTKNOW;
-	mbForceFontFallback = false;
+	mpForceFallbackFont = NULL;
 	mnDPIX = 0;
 	mnDPIY = 0;
 
