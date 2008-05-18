@@ -1359,7 +1359,7 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
  */
 
 #ifdef USE_JAVA
-PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, FontSubsetData *pSubsets )
+PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData& rSubsets )
 #else	// USE_JAVA
 PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
 #endif	// USE_JAVA
@@ -1404,10 +1404,10 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
     m_aStructure[0].m_nParentElement	= 0;
 
 #ifdef USE_JAVA
-    if ( pSubsets )
+    if ( rSubsets.size() )
     {
         m_bUsingMtf = true;
-        m_aSubsets = *pSubsets;
+        m_aSubsets = rSubsets;
         m_nNextFID += m_aSubsets.size();
     }
     else
@@ -1708,11 +1708,6 @@ void PDFWriterImpl::endCompression()
 
 bool PDFWriterImpl::writeBuffer( const void* pBuffer, sal_uInt64 nBytes )
 {
-#ifdef USE_JAVA
-    if( ! m_bUsingMtf )
-        return true;
-#endif	// USE_JAVA
-
     if( ! m_bOpen ) // we are already down the drain
         return false;
 
@@ -2015,11 +2010,6 @@ SalLayout* PDFWriterImpl::GetTextLayout( ImplLayoutArgs& rArgs, ImplFontSelectDa
 
 sal_Int32 PDFWriterImpl::newPage( sal_Int32 nPageWidth, sal_Int32 nPageHeight, PDFWriter::Orientation eOrientation )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaNewPagePDFAction( nPageWidth, nPageHeight, eOrientation ) );
-#endif	// USE_JAVA
-
     if( m_aContext.Encrypt && m_aPages.empty() )
         initEncryption();
 
@@ -5268,556 +5258,6 @@ bool PDFWriterImpl::emit()
     osl_closeFile( m_aFile );
     m_bOpen = false;
 
-#ifdef USE_JAVA
-    // Replay meta actions
-    if ( !m_bUsingMtf )
-    {
-        PDFWriterImpl aWriter( m_aContext, &m_aSubsets );
-		aWriter.setDocInfo( m_aDocInfo );
-        for ( ULONG i = 0, nCount = m_aMtf.GetActionCount(); i < nCount; i++ )
-        {
-            const MetaAction *pAction = m_aMtf.GetAction( i );
-            const USHORT nType = pAction->GetType();
-
-            switch( nType )
-            {
-                case( META_NEW_PAGE_PDF_ACTION ):
-                {
-                    const MetaNewPagePDFAction* pA = (const MetaNewPagePDFAction*) pAction;
-                    aWriter.newPage( pA->GetPageWidth(), pA->GetPageHeight(), pA->GetOrientation() );
-                }
-                break;
-
-                case( META_FONT_ACTION ):
-                {
-                    const MetaFontAction* pA = (const MetaFontAction*) pAction;
-                    aWriter.setFont( pA->GetFont() );
-                }
-                break;
-
-                case( META_TEXT_PDF_ACTION ):
-                {
-                    const MetaTextPDFAction* pA = (const MetaTextPDFAction*) pAction;
-                    aWriter.drawText( pA->GetPoint(), pA->GetText(), pA->GetIndex(), pA->GetLen(), pA->IsTextLines() );
-                }
-                break;
-
-                case( META_TEXTLINE_PDF_ACTION ):
-                {
-                    const MetaTextLinePDFAction* pA = (const MetaTextLinePDFAction*) pAction;
-                    aWriter.drawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->IsUnderlineAbove() );
-                }
-                break;
-
-                case( META_TEXTARRAY_PDF_ACTION ):
-                {
-                    const MetaTextArrayPDFAction* pA = (const MetaTextArrayPDFAction*) pAction;
-                    aWriter.drawTextArray( pA->GetPoint(), pA->GetText(), pA->GetDXArray(), pA->GetIndex(), pA->GetLen(), pA->IsTextLines() );
-                }
-                break;
-
-                case( META_STRETCHTEXT_PDF_ACTION ):
-                {
-                    const MetaStretchTextPDFAction* pA = (const MetaStretchTextPDFAction*) pAction;
-                    aWriter.drawStretchText( pA->GetPoint(), pA->GetWidth(), pA->GetText(), pA->GetIndex(), pA->GetLen(), pA->IsTextLines() );
-                }
-                break;
-
-                case( META_TEXTRECT_PDF_ACTION ):
-                {
-                    const MetaTextRectPDFAction* pA = (const MetaTextRectPDFAction*) pAction;
-                    aWriter.drawText( pA->GetRect(), pA->GetText(), pA->GetStyle(), pA->IsTextLines() );
-                }
-                break;
-
-                case( META_LINE_ACTION ):
-                {
-                    const MetaLineAction* pA = (const MetaLineAction*) pAction;
-                    aWriter.drawLine( pA->GetStartPoint(), pA->GetEndPoint(), pA->GetLineInfo() );
-                }
-                break;
-
-                case( META_POLYGON_ACTION ):
-                {
-                    const MetaPolygonAction* pA = (const MetaPolygonAction*) pAction;
-                    aWriter.drawPolygon( pA->GetPolygon() );
-                }
-                break;
-
-                case( META_POLYLINE_ACTION ):
-                {
-                    const MetaPolyLineAction* pA = (const MetaPolyLineAction*) pAction;
-                    aWriter.drawPolyLine( pA->GetPolygon(), pA->GetLineInfo() );
-                }
-                break;
-
-                case( META_POLYLINE_PDF_ACTION ):
-                {
-                    const MetaPolyLinePDFAction* pA = (const MetaPolyLinePDFAction*) pAction;
-                    aWriter.drawPolyLine( pA->GetPolygon(), pA->GetExtLineInfo() );
-                }
-                break;
-
-                case( META_RECT_ACTION ):
-                {
-                    const MetaRectAction* pA = (const MetaRectAction*) pAction;
-                    aWriter.drawRectangle( pA->GetRect() );
-                }
-                break;
-
-                case( META_ROUNDRECT_ACTION ):
-                {
-                    const MetaRoundRectAction* pA = (const MetaRoundRectAction*) pAction;
-                    aWriter.drawRectangle( pA->GetRect(), pA->GetHorzRound(), pA->GetVertRound() );
-                }
-                break;
-
-                case( META_ELLIPSE_ACTION ):
-                {
-                    const MetaEllipseAction* pA = (const MetaEllipseAction*) pAction;
-                    aWriter.drawEllipse( pA->GetRect() );
-                }
-                break;
-
-                case( META_PIE_ACTION ):
-                {
-                    const MetaArcAction* pA = (const MetaArcAction*) pAction;
-                    aWriter.drawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint(), true, false );
-                }
-                break;
-
-                case( META_CHORD_ACTION ):
-                {
-                    const MetaChordAction* pA = (const MetaChordAction*) pAction;
-                    aWriter.drawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint(), false, true );
-                }
-                break;
-
-                case( META_ARC_ACTION ):
-                {
-                    const MetaArcAction* pA = (const MetaArcAction*) pAction;
-                    aWriter.drawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint(), false, false );
-                }
-                break;
-
-                case( META_POLYPOLYGON_ACTION ):
-                {
-                    const MetaPolyPolygonAction* pA = (const MetaPolyPolygonAction*) pAction;
-                    aWriter.drawPolyPolygon( pA->GetPolyPolygon() );
-                }
-                break;
-
-                case( META_PIXEL_ACTION ):
-                {
-                    const MetaPixelAction* pA = (const MetaPixelAction*) pAction;
-                    aWriter.drawPixel( pA->GetPoint(), pA->GetColor() );
-                }
-                break;
-
-                case( META_PIXEL_PDF_ACTION ):
-                {
-                    const MetaPixelPDFAction* pA = (const MetaPixelPDFAction*) pAction;
-                    aWriter.drawPixel( pA->GetPoints(), pA->GetColors() );
-                }
-                break;
-
-                case( META_BMPSCALE_ACTION ):
-                {
-                    const MetaBmpScaleAction* pA = (const MetaBmpScaleAction*) pAction;
-                    aWriter.drawBitmap( pA->GetPoint(), pA->GetSize(), pA->GetBitmap() );
-                }
-                break;
-
-                case( META_BMPEXSCALE_ACTION ):
-                {
-                    const MetaBmpExScaleAction* pA = (const MetaBmpExScaleAction*) pAction;
-                    aWriter.drawBitmap( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx() );
-                }
-                break;
-
-                case( META_MASKSCALE_ACTION ):
-                {
-                    const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
-                    aWriter.drawMask( pA->GetPoint(), pA->GetSize(), pA->GetBitmap(), pA->GetColor() );
-                }
-                break;
-
-                case( META_GRADIENT_ACTION ):
-                {
-                    const MetaGradientAction* pA = (const MetaGradientAction*) pAction;
-                    aWriter.drawGradient( pA->GetRect(), pA->GetGradient() );
-                }
-                break;
-
-                case( META_GRADIENTEX_ACTION ):
-                {
-                    const MetaGradientExAction* pA = (const MetaGradientExAction*) pAction;
-                    aWriter.drawGradient( pA->GetPolyPolygon(), pA->GetGradient() );
-                }
-                break;
-
-                case META_HATCH_ACTION:
-                {
-                    const MetaHatchAction* pA = (const MetaHatchAction*) pAction;
-                    aWriter.drawHatch( pA->GetPolyPolygon(), pA->GetHatch() );
-                }
-                break;
-
-                case( META_WALLPAPER_ACTION ):
-                {
-                    const MetaWallpaperAction* pA = (const MetaWallpaperAction*) pAction;
-                    aWriter.drawWallpaper( pA->GetRect(), pA->GetWallpaper() );
-                }
-                break;
-
-                case( META_TRANSPARENT_ACTION ):
-                {
-                    const MetaTransparentAction* pA = (const MetaTransparentAction*) pAction;
-                    aWriter.drawTransparent( pA->GetPolyPolygon(), pA->GetTransparence() );
-                }
-                break;
-
-                case( META_PUSH_ACTION ):
-                {
-                    const MetaPushAction* pA = (const MetaPushAction*) pAction;
-
-                    aWriter.push( pA->GetFlags() );
-                }
-                break;
-
-                case( META_POP_ACTION ):
-                {
-                    aWriter.pop();
-                }
-                break;
-
-                case( META_MAPMODE_ACTION ):
-                {
-                    const MetaMapModeAction* pA = (const MetaMapModeAction*) pAction;
-                    aWriter.setMapMode( pA->GetMapMode() );
-                }
-                break;
-
-                case( META_LINECOLOR_ACTION ):
-                {
-                    const MetaLineColorAction* pA = (const MetaLineColorAction*) pAction;
-                    aWriter.setLineColor( pA->GetColor() );
-                }
-                break;
-
-                case( META_FILLCOLOR_ACTION ):
-                {
-                    const MetaFillColorAction* pA = (const MetaFillColorAction*) pAction;
-                    aWriter.setFillColor( pA->GetColor() );
-                }
-                break;
-
-                case( META_CLIPREGION_ACTION ):
-                {
-                    const MetaClipRegionAction* pA = (const MetaClipRegionAction*) pAction;
-                    if( pA->IsClipping() )
-                        aWriter.setClipRegion( pA->GetRegion() );
-                    else
-                        aWriter.clearClipRegion();
-                }
-                break;
-
-                case( META_MOVECLIPREGION_ACTION ):
-                {
-                    const MetaMoveClipRegionAction* pA = (const MetaMoveClipRegionAction*) pAction;
-                    aWriter.moveClipRegion( pA->GetHorzMove(), pA->GetVertMove() );
-                }
-                break;
-
-                case( META_ISECTRECTCLIPREGION_ACTION ):
-                {
-                    const MetaISectRectClipRegionAction* pA = (const MetaISectRectClipRegionAction*) pAction;
-                    aWriter.intersectClipRegion( pA->GetRect() );
-                }
-                break;
-
-                case( META_ISECTREGIONCLIPREGION_ACTION ):
-                {
-                   const MetaISectRegionClipRegionAction* pA = (const MetaISectRegionClipRegionAction*) pAction;
-                   aWriter.intersectClipRegion( pA->GetRegion() );
-                }
-                break;
-
-                case( META_ANTIALIAS_PDF_ACTION ):
-                {
-                    const MetaAntiAliasPDFAction* pA = (const MetaAntiAliasPDFAction*) pAction;
-                    aWriter.setAntiAlias( pA->GetAntiAlias() );
-                }
-                break;
-
-                case( META_LAYOUTMODE_ACTION ):
-                {
-                    const MetaLayoutModeAction* pA = (const MetaLayoutModeAction*) pAction;
-                    aWriter.setLayoutMode( pA->GetLayoutMode() );
-                }
-                break;
-
-                case( META_TEXTCOLOR_ACTION ):
-                {
-                    const MetaTextColorAction* pA = (const MetaTextColorAction*) pAction;
-                    aWriter.setTextColor( pA->GetColor() );
-                }
-                break;
-
-                case( META_TEXTFILLCOLOR_ACTION ):
-                {
-                    const MetaTextFillColorAction* pA = (const MetaTextFillColorAction*) pAction;
-                    if ( pA->IsSetting() )
-                        aWriter.setTextFillColor( pA->GetColor() );
-                    else
-                        aWriter.setTextFillColor();
-                }
-                break;
-
-                case( META_TEXTLINECOLOR_ACTION ):
-                {
-                    const MetaTextLineColorAction* pA = (const MetaTextLineColorAction*) pAction;
-                    if ( pA->IsSetting() )
-                        aWriter.setTextLineColor( pA->GetColor() );
-                    else
-                        aWriter.setTextLineColor();
-                }
-                break;
-
-                case( META_TEXTALIGN_ACTION ):
-                {
-                    const MetaTextAlignAction* pA = (const MetaTextAlignAction*) pAction;
-                    aWriter.setTextAlign( pA->GetTextAlign() );
-                }
-                break;
-
-                case( META_JPG_PDF_ACTION ):
-                {
-                    const MetaJpgPDFAction* pA = (const MetaJpgPDFAction*) pAction;
-                    aWriter.drawJPGBitmap( (SvStream&)pA->GetStream(), pA->IsTrueColor(), pA->GetSize(), pA->GetRect(), pA->GetMask() );
-                }
-                break;
-
-	            case( META_CREATELINK_PDF_ACTION ):
-                {
-                    const MetaCreateLinkPDFAction* pA = (const MetaCreateLinkPDFAction*) pAction;
-                    aWriter.createLink( pA->GetRect(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_CREATEDEST_PDF_ACTION ):
-                {
-                    const MetaCreateDestPDFAction* pA = (const MetaCreateDestPDFAction*) pAction;
-                    aWriter.createDest( pA->GetRect(), pA->GetPage(), pA->GetType() );
-                }
-                break;
-
-	            case( META_SETLINKDEST_PDF_ACTION ):
-                {
-                    const MetaSetLinkDestPDFAction* pA = (const MetaSetLinkDestPDFAction*) pAction;
-                    aWriter.setLinkDest( pA->GetLink(), pA->GetDest() );
-                }
-                break;
-
-	            case( META_SETLINKURL_PDF_ACTION ):
-                {
-                    const MetaSetLinkUrlPDFAction* pA = (const MetaSetLinkUrlPDFAction*) pAction;
-                    aWriter.setLinkURL( pA->GetLink(), pA->GetURL() );
-                }
-                break;
-
-	            case( META_SETLINKPROPERTYID_PDF_ACTION ):
-                {
-                    const MetaSetLinkPropertyIdPDFAction* pA = (const MetaSetLinkPropertyIdPDFAction*) pAction;
-                    aWriter.setLinkPropertyId( pA->GetLink(), pA->GetProperty() );
-                }
-                break;
-
-	            case( META_CREATEOUTLINEITEM_PDF_ACTION ):
-                {
-                    const MetaCreateOutlineItemPDFAction* pA = (const MetaCreateOutlineItemPDFAction*) pAction;
-                    aWriter.createOutlineItem( pA->GetParent(), pA->GetText(), pA->GetDest() );
-                }
-                break;
-
-	            case( META_SETOUTLINEITEMPARENT_PDF_ACTION ):
-                {
-                    const MetaSetOutlineItemParentPDFAction* pA = (const MetaSetOutlineItemParentPDFAction*) pAction;
-                    aWriter.setOutlineItemParent( pA->GetItem(), pA->GetParent() );
-                }
-                break;
-
-	            case( META_SETOUTLINEITEMTEXT_PDF_ACTION ):
-                {
-                    const MetaSetOutlineItemTextPDFAction* pA = (const MetaSetOutlineItemTextPDFAction*) pAction;
-                    aWriter.setOutlineItemText( pA->GetItem(), pA->GetText() );
-                }
-                break;
-
-	            case( META_SETOUTLINEITEMDEST_PDF_ACTION ):
-                {
-                    const MetaSetOutlineItemDestPDFAction* pA = (const MetaSetOutlineItemDestPDFAction*) pAction;
-                    aWriter.setOutlineItemDest( pA->GetItem(), pA->GetDest() );
-                }
-                break;
-
-	            case( META_CREATENOTE_PDF_ACTION ):
-                {
-                    const MetaCreateNotePDFAction* pA = (const MetaCreateNotePDFAction*) pAction;
-                    aWriter.createNote( pA->GetRect(), pA->GetNote(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ):
-                {
-                    const MetaBeginStructureElementPDFAction* pA = (const MetaBeginStructureElementPDFAction*) pAction;
-                    aWriter.beginStructureElement( pA->GetType() );
-                }
-                break;
-
-	            case( META_ENDSTRUCTUREELEMENT_PDF_ACTION ):
-                {
-                    aWriter.endStructureElement();
-                }
-                break;
-
-	            case( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ):
-                {
-                    const MetaSetCurrentStructureElementPDFAction* pA = (const MetaSetCurrentStructureElementPDFAction*) pAction;
-                    aWriter.setCurrentStructureElement( pA->GetElement() );
-                }
-                break;
-
-	            case( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ):
-                {
-                    const MetaSetStructureAttributePDFAction* pA = (const MetaSetStructureAttributePDFAction*) pAction;
-                    aWriter.setStructureAttribute( pA->GetAttribute(), pA->GetValue() );
-                }
-                break;
-
-	            case( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ):
-                {
-                    const MetaSetStructureAttributeNumericalPDFAction* pA = (const MetaSetStructureAttributeNumericalPDFAction*) pAction;
-                    aWriter.setStructureAttributeNumerical( pA->GetAttribute(), pA->GetValue() );
-                }
-                break;
-
-	            case( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ):
-                {
-                    const MetaSetStructureBoundingBoxPDFAction* pA = (const MetaSetStructureBoundingBoxPDFAction*) pAction;
-                    aWriter.setStructureBoundingBox( pA->GetRect() );
-                }
-                break;
-
-	            case( META_SETACTUALTEXT_PDF_ACTION ):
-                {
-                    const MetaSetActualTextPDFAction* pA = (const MetaSetActualTextPDFAction*) pAction;
-                    aWriter.setActualText( pA->GetText() );
-                }
-                break;
-
-	            case( META_SETALTERNATETEXT_PDF_ACTION ):
-                {
-                    const MetaSetAlternateTextPDFAction* pA = (const MetaSetAlternateTextPDFAction*) pAction;
-                    aWriter.setAlternateText( pA->GetText() );
-                }
-                break;
-
-                case( META_SETAUTOADVANCETIME_PDF_ACTION ):
-                {
-                    const MetaSetAutoAdvanceTimePDFAction* pA = (const MetaSetAutoAdvanceTimePDFAction*) pAction;
-                    aWriter.setAutoAdvanceTime( pA->GetSeconds(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_SETPAGETRANSITION_PDF_ACTION ):
-                {
-                    const MetaSetPageTransitionPDFAction* pA = (const MetaSetPageTransitionPDFAction*) pAction;
-                    aWriter.setPageTransition( pA->GetType(), pA->GetMilliSeconds(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_CREATECONTROL_PDF_ACTION ):
-                {
-                    const MetaCreateControlPDFAction* pA = (const MetaCreateControlPDFAction*) pAction;
-                    aWriter.createControl( pA->GetControl(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_BEGINCONTROLAPPEARANCE_PDF_ACTION ):
-                {
-                    const MetaBeginControlAppearancePDFAction* pA = (const MetaBeginControlAppearancePDFAction*) pAction;
-                    aWriter.beginControlAppearance( pA->GetControl() );
-                }
-                break;
-
-	            case( META_ENDCONTROLAPPEARANCE_PDF_ACTION ):
-                {
-                    const MetaEndControlAppearancePDFAction* pA = (const MetaEndControlAppearancePDFAction*) pAction;
-                    aWriter.endControlAppearance( pA->GetState() );
-                }
-                break;
-
-	            case( META_DIGITLANGUAGE_PDF_ACTION ):
-                {
-                    const MetaDigitLanguagePDFAction* pA = (const MetaDigitLanguagePDFAction*) pAction;
-                    aWriter.setDigitLanguage( pA->GetLanguage() );
-                }
-                break;
-
-	            case( META_BEGINPATTERN_PDF_ACTION ):
-                {
-                    aWriter.beginPattern();
-                }
-                break;
-
-	            case( META_ENDPATTERN_PDF_ACTION ):
-                {
-                    const MetaEndPatternPDFAction* pA = (const MetaEndPatternPDFAction*) pAction;
-                    aWriter.endPattern( pA->GetRect(), pA->GetTransform() );
-                }
-                break;
-
-	            case( META_POLYPOLYGON_PDF_ACTION ):
-                {
-                    const MetaPolyPolygonPDFAction* pA = (const MetaPolyPolygonPDFAction*) pAction;
-                    aWriter.drawPolyPolygon( pA->GetPolyPolygon(), pA->GetPattern(), pA->IsEOFill() );
-                }
-                break;
-
-                case( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ):
-                {
-                    aWriter.beginTransparencyGroup();
-                }
-                break;
-
-                case( META_ENDTRANSPARENCYGROUP_PDF_ACTION ):
-                {
-                    const MetaEndTransparencyGroupPDFAction* pA = (const MetaEndTransparencyGroupPDFAction*) pAction;
-                    aWriter.endTransparencyGroup( pA->GetBoundingRect(), pA->GetTransparentPercent() );
-                }
-                break;
-
-                case( META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION ):
-                {
-                    const MetaEndTransparencyGroupMaskPDFAction* pA = (const MetaEndTransparencyGroupMaskPDFAction*) pAction;
-                    aWriter.endTransparencyGroup( pA->GetBoundingRect(), pA->GetAlphaMask() );
-                }
-                break;
-
-                default:
-                    DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
-                break;
-            }
-
-        }
-
-        m_aMtf.Clear();
-
-        aWriter.emit();
-    }
-#endif	// USE_JAVA
-
     return true;
 }
 
@@ -6705,11 +6145,6 @@ void PDFWriterImpl::drawEmphasisMark( long nX, long nY,
 
 void PDFWriterImpl::drawText( const Point& rPos, const String& rText, xub_StrLen nIndex, xub_StrLen nLen, bool bTextLines )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaTextPDFAction( rPos, rText, nIndex, nLen, bTextLines ) );
-#endif	// USE_JAVA
-
     MARK( "drawText" );
 
     updateGraphicsState();
@@ -6726,11 +6161,6 @@ void PDFWriterImpl::drawText( const Point& rPos, const String& rText, xub_StrLen
 
 void PDFWriterImpl::drawTextArray( const Point& rPos, const String& rText, const sal_Int32* pDXArray, xub_StrLen nIndex, xub_StrLen nLen, bool bTextLines )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaTextArrayPDFAction( rPos, rText, pDXArray, nIndex, nLen, bTextLines ) );
-#endif	// USE_JAVA
-
     MARK( "drawText with array" );
 
     updateGraphicsState();
@@ -6747,11 +6177,6 @@ void PDFWriterImpl::drawTextArray( const Point& rPos, const String& rText, const
 
 void PDFWriterImpl::drawStretchText( const Point& rPos, ULONG nWidth, const String& rText, xub_StrLen nIndex, xub_StrLen nLen, bool bTextLines )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaStretchTextPDFAction( rPos, nWidth, rText, nIndex, nLen, bTextLines ) );
-#endif	// USE_JAVA
-
     MARK( "drawStretchText" );
 
     updateGraphicsState();
@@ -6768,11 +6193,6 @@ void PDFWriterImpl::drawStretchText( const Point& rPos, ULONG nWidth, const Stri
 
 void PDFWriterImpl::drawText( const Rectangle& rRect, const String& rOrigStr, USHORT nStyle, bool bTextLines )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaTextRectPDFAction( rRect, rOrigStr, nStyle, bTextLines ) );
-#endif	// USE_JAVA
-
     long        nWidth          = rRect.GetWidth();
     long        nHeight         = rRect.GetHeight();
 
@@ -6912,11 +6332,6 @@ void PDFWriterImpl::drawText( const Rectangle& rRect, const String& rOrigStr, US
 
 void PDFWriterImpl::drawLine( const Point& rStart, const Point& rStop )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaLineAction( rStart, rStop ) );
-#endif	// USE_JAVA
-
     MARK( "drawLine" );
 
     updateGraphicsState();
@@ -6935,11 +6350,6 @@ void PDFWriterImpl::drawLine( const Point& rStart, const Point& rStop )
 
 void PDFWriterImpl::drawLine( const Point& rStart, const Point& rStop, const LineInfo& rInfo )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaLineAction( rStart, rStop, rInfo ) );
-#endif	// USE_JAVA
-
     MARK( "drawLine with LineInfo" );
     updateGraphicsState();
 
@@ -7012,11 +6422,6 @@ void PDFWriterImpl::drawWaveLine( const Point& rStart, const Point& rStop, sal_I
 
 void PDFWriterImpl::drawTextLine( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, bUnderlineAbove ) );
-#endif	// USE_JAVA
-
     if ( !nWidth ||
          ( ((eStrikeout == STRIKEOUT_NONE)||(eStrikeout == STRIKEOUT_DONTKNOW)) &&
            ((eUnderline == UNDERLINE_NONE)||(eUnderline == UNDERLINE_DONTKNOW)) ) )
@@ -7405,11 +6810,6 @@ void PDFWriterImpl::drawTextLine( const Point& rPos, long nWidth, FontStrikeout 
 
 void PDFWriterImpl::drawPolygon( const Polygon& rPoly )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPolygonAction( rPoly ) );
-#endif	// USE_JAVA
-
     MARK( "drawPolygon" );
 
     updateGraphicsState();
@@ -7434,11 +6834,6 @@ void PDFWriterImpl::drawPolygon( const Polygon& rPoly )
 
 void PDFWriterImpl::drawPolyPolygon( const PolyPolygon& rPolyPoly )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPolyPolygonAction( rPolyPoly ) );
-#endif	// USE_JAVA
-
     MARK( "drawPolyPolygon" );
 
     updateGraphicsState();
@@ -7464,11 +6859,6 @@ void PDFWriterImpl::drawPolyPolygon( const PolyPolygon& rPolyPoly )
 
 void PDFWriterImpl::drawTransparent( const PolyPolygon& rPolyPoly, sal_uInt32 nTransparentPercent )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaTransparentAction( rPolyPoly, nTransparentPercent ) );
-#endif	// USE_JAVA
-
     DBG_ASSERT( nTransparentPercent <= 100, "invalid alpha value" );
     nTransparentPercent = nTransparentPercent % 100;
 
@@ -7611,11 +7001,6 @@ SvStream* PDFWriterImpl::endRedirect()
 
 void PDFWriterImpl::beginTransparencyGroup()
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaBeginTransparencyGroupPDFAction() );
-#endif	// USE_JAVA
-
     updateGraphicsState();
     if( m_aContext.Version >= PDFWriter::PDF_1_4 )
         beginRedirect( new SvMemoryStream( 1024, 1024 ), Rectangle() );
@@ -7623,11 +7008,6 @@ void PDFWriterImpl::beginTransparencyGroup()
 
 void PDFWriterImpl::endTransparencyGroup( const Rectangle& rBoundingBox, sal_uInt32 nTransparentPercent )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaEndTransparencyGroupPDFAction( rBoundingBox, nTransparentPercent ) );
-#endif	// USE_JAVA
-
     DBG_ASSERT( nTransparentPercent <= 100, "invalid alpha value" );
     nTransparentPercent = nTransparentPercent % 100;
 
@@ -7668,11 +7048,6 @@ void PDFWriterImpl::endTransparencyGroup( const Rectangle& rBoundingBox, sal_uIn
 
 void PDFWriterImpl::endTransparencyGroup( const Rectangle& rBoundingBox, const Bitmap& rAlphaMask )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaEndTransparencyGroupMaskPDFAction( rBoundingBox, rAlphaMask ) );
-#endif	// USE_JAVA
-
     if( m_aContext.Version >= PDFWriter::PDF_1_4 )
     {
         // create XObject
@@ -7715,11 +7090,6 @@ void PDFWriterImpl::endTransparencyGroup( const Rectangle& rBoundingBox, const B
 
 void PDFWriterImpl::drawRectangle( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaRectAction( rRect ) );
-#endif	// USE_JAVA
-
     MARK( "drawRectangle" );
 
     updateGraphicsState();
@@ -7744,11 +7114,6 @@ void PDFWriterImpl::drawRectangle( const Rectangle& rRect )
 
 void PDFWriterImpl::drawRectangle( const Rectangle& rRect, sal_uInt32 nHorzRound, sal_uInt32 nVertRound )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaRoundRectAction( rRect, nHorzRound, nVertRound ) );
-#endif	// USE_JAVA
-
     MARK( "drawRectangle with rounded edges" );
 
     if( !nHorzRound && !nVertRound )
@@ -7840,11 +7205,6 @@ void PDFWriterImpl::drawRectangle( const Rectangle& rRect, sal_uInt32 nHorzRound
 
 void PDFWriterImpl::drawEllipse( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaEllipseAction( rRect ) );
-#endif	// USE_JAVA
-
     MARK( "drawEllipse" );
 
     updateGraphicsState();
@@ -7931,18 +7291,6 @@ static double calcAngle( const Rectangle& rRect, const Point& rPoint )
 
 void PDFWriterImpl::drawArc( const Rectangle& rRect, const Point& rStart, const Point& rStop, bool bWithPie, bool bWithChord )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-    {
-        if ( bWithPie )
-            m_aMtf.AddAction( new MetaPieAction( rRect, rStart, rStop ) );
-        else if ( bWithChord )
-            m_aMtf.AddAction( new MetaChordAction( rRect, rStart, rStop ) );
-        else
-            m_aMtf.AddAction( new MetaArcAction( rRect, rStart, rStop ) );
-    }
-#endif	// USE_JAVA
-
     MARK( "drawArc" );
 
     updateGraphicsState();
@@ -8017,11 +7365,6 @@ void PDFWriterImpl::drawArc( const Rectangle& rRect, const Point& rStart, const 
 
 void PDFWriterImpl::drawPolyLine( const Polygon& rPoly )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPolyLineAction( rPoly ) );
-#endif	// USE_JAVA
-
     MARK( "drawPolyLine" );
 
     USHORT nPoints = rPoly.GetSize();
@@ -8042,11 +7385,6 @@ void PDFWriterImpl::drawPolyLine( const Polygon& rPoly )
 
 void PDFWriterImpl::drawPolyLine( const Polygon& rPoly, const LineInfo& rInfo )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPolyLineAction( rPoly, rInfo ) );
-#endif	// USE_JAVA
-
     MARK( "drawPolyLine with LineInfo" );
 
     updateGraphicsState();
@@ -8099,20 +7437,9 @@ void PDFWriterImpl::convertLineInfoToExtLineInfo( const LineInfo& rIn, PDFWriter
 
 void PDFWriterImpl::drawPolyLine( const Polygon& rPoly, const PDFWriter::ExtLineInfo& rInfo )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPolyLinePDFAction( rPoly, rInfo ) );
-#endif	// USE_JAVA
-
     MARK( "drawPolyLine with ExtLineInfo" );
 
     updateGraphicsState();
-
-#ifdef USE_JAVA
-    // Fix bug 3025 by not invoking more shape drawing functions
-    if ( !m_bUsingMtf )
-        return;
-#endif	// USE_JAVA
 
     if( m_aGraphicsStack.front().m_aLineColor == Color( COL_TRANSPARENT ) )
         return;
@@ -8214,11 +7541,6 @@ void PDFWriterImpl::drawPolyLine( const Polygon& rPoly, const PDFWriter::ExtLine
 
 void PDFWriterImpl::drawPixel( const Point& rPoint, const Color& rColor )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPixelAction( rPoint, rColor ) );
-#endif	// USE_JAVA
-
     MARK( "drawPixel" );
 
     Color aColor = ( rColor == Color( COL_TRANSPARENT ) ? m_aGraphicsStack.front().m_aLineColor : rColor );
@@ -8247,11 +7569,6 @@ void PDFWriterImpl::drawPixel( const Point& rPoint, const Color& rColor )
 
 void PDFWriterImpl::drawPixel( const Polygon& rPoints, const Color* pColors )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPixelPDFAction( rPoints, pColors ) );
-#endif	// USE_JAVA
-
     MARK( "drawPixel with Polygon" );
 
     updateGraphicsState();
@@ -8895,26 +8212,21 @@ bool PDFWriterImpl::writeBitmapObject( BitmapEmit& rObject, bool bMask )
 
 void PDFWriterImpl::drawJPGBitmap( SvStream& rDCTData, bool bIsTrueColor, const Size& rSizePixel, const Rectangle& rTargetArea, const Bitmap& rMask )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaJpgPDFAction( rDCTData, bIsTrueColor, rSizePixel, rTargetArea, rMask ) );
-#endif	// USE_JAVA
-
     MARK( "drawJPGBitmap" );
 
     OStringBuffer aLine( 80 );
     updateGraphicsState();
     
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        return;
-#endif	// USE_JAVA
-
     // #i40055# sanity check
     if( ! (rTargetArea.GetWidth() && rTargetArea.GetHeight() ) )
         return;
     if( ! (rSizePixel.Width() && rSizePixel.Height()) )
         return;
+
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        return;
+#endif	// USE_JAVA
 
     SvMemoryStream* pStream = new SvMemoryStream;
     rDCTData.Seek( 0 );
@@ -9029,11 +8341,6 @@ const PDFWriterImpl::BitmapEmit& PDFWriterImpl::createBitmapEmit( const BitmapEx
 
 void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, const Bitmap& rBitmap )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaBmpScaleAction( rDestPoint, rDestSize, rBitmap ) );
-#endif	// USE_JAVA
-
     MARK( "drawBitmap (Bitmap)" );
 
     // #i40055# sanity check
@@ -9046,11 +8353,6 @@ void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, 
 
 void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, const BitmapEx& rBitmap )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaBmpExScaleAction( rDestPoint, rDestSize, rBitmap ) );
-#endif	// USE_JAVA
-
     MARK( "drawBitmap (BitmapEx)" );
 
     // #i40055# sanity check
@@ -9063,11 +8365,6 @@ void PDFWriterImpl::drawBitmap( const Point& rDestPoint, const Size& rDestSize, 
 
 void PDFWriterImpl::drawMask( const Point& rDestPoint, const Size& rDestSize, const Bitmap& rBitmap, const Color& rFillColor )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaMaskScaleAction( rDestPoint, rDestSize, rBitmap, rFillColor ) );
-#endif	// USE_JAVA
-
     MARK( "drawMask" );
 
     // #i40055# sanity check
@@ -9121,11 +8418,6 @@ sal_Int32 PDFWriterImpl::createGradient( const Gradient& rGradient, const Size& 
 
 void PDFWriterImpl::drawGradient( const Rectangle& rRect, const Gradient& rGradient )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaGradientAction( rRect, rGradient ) );
-#endif	// USE_JAVA
-
     MARK( "drawGradient (Rectangle)" );
 
     if( m_aContext.Version == PDFWriter::PDF_1_2 )
@@ -9171,11 +8463,6 @@ void PDFWriterImpl::drawGradient( const Rectangle& rRect, const Gradient& rGradi
 
 void PDFWriterImpl::drawGradient( const PolyPolygon& rPolyPoly, const Gradient& rGradient )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
-#endif	// USE_JAVA
-
     MARK( "drawGradient (PolyPolygon)" );
 
     if( m_aContext.Version == PDFWriter::PDF_1_2 )
@@ -9214,11 +8501,6 @@ void PDFWriterImpl::drawGradient( const PolyPolygon& rPolyPoly, const Gradient& 
 
 void PDFWriterImpl::drawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaHatchAction( rPolyPoly, rHatch ) );
-#endif	// USE_JAVA
-
     MARK( "drawHatch" );
 
     updateGraphicsState();
@@ -9240,11 +8522,6 @@ void PDFWriterImpl::drawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch
 
 void PDFWriterImpl::drawWallpaper( const Rectangle& rRect, const Wallpaper& rWall )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaWallpaperAction( rRect, rWall ) );
-#endif	// USE_JAVA
-
     MARK( "drawWallpaper" );
 
     bool bDrawColor			= false;
@@ -9414,21 +8691,11 @@ void PDFWriterImpl::drawWallpaper( const Rectangle& rRect, const Wallpaper& rWal
 
 void PDFWriterImpl::beginPattern()
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaBeginPatternPDFAction() );
-#endif	// USE_JAVA
-
     beginRedirect( new SvMemoryStream(), Rectangle() );
 }
 
 sal_Int32 PDFWriterImpl::endPattern( const Rectangle& rRect, const SvtGraphicFill::Transform& rTransform )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaEndPatternPDFAction( rRect, rTransform ) );
-#endif	// USE_JAVA
-
     Rectangle aConvertRect( rRect );
     m_aPages.back().convertRect( aConvertRect );
     
@@ -9466,11 +8733,6 @@ sal_Int32 PDFWriterImpl::endPattern( const Rectangle& rRect, const SvtGraphicFil
 
 void PDFWriterImpl::drawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPolyPolygonPDFAction( rPolyPoly, nPattern, bEOFill ) );
-#endif	// USE_JAVA
-
     if( nPattern < 0 || nPattern >= (sal_Int32)m_aTilings.size() )
         return;
     
@@ -9684,11 +8946,6 @@ void PDFWriterImpl::updateGraphicsState()
 */
 void PDFWriterImpl::setFont( const Font& rFont )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaFontAction( rFont ) );
-#endif	// USE_JAVA
-
     Color aColor = rFont.GetColor();
     if( aColor == Color( COL_TRANSPARENT ) )
         aColor = m_aGraphicsStack.front().m_aFont.GetColor();
@@ -9699,22 +8956,12 @@ void PDFWriterImpl::setFont( const Font& rFont )
 
 void PDFWriterImpl::push( sal_uInt16 nFlags )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPushAction( nFlags ) );
-#endif	// USE_JAVA
-
     m_aGraphicsStack.push_front( m_aGraphicsStack.front() );
     m_aGraphicsStack.front().m_nFlags = nFlags;
 }
 
 void PDFWriterImpl::pop()
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaPopAction() );
-#endif	// USE_JAVA
-
     GraphicsState aState = m_aGraphicsStack.front();
     m_aGraphicsStack.pop_front();
     GraphicsState& rOld = m_aGraphicsStack.front();
@@ -9751,11 +8998,6 @@ void PDFWriterImpl::pop()
 
 void PDFWriterImpl::setMapMode( const MapMode& rMapMode )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaMapModeAction( rMapMode ) );
-#endif	// USE_JAVA
-
     m_aGraphicsStack.front().m_aMapMode = rMapMode;
     getReferenceDevice()->SetMapMode( rMapMode );
     m_aCurrentPDFState.m_aMapMode = rMapMode;
@@ -9763,11 +9005,6 @@ void PDFWriterImpl::setMapMode( const MapMode& rMapMode )
 
 void PDFWriterImpl::setClipRegion( const Region& rRegion )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaClipRegionAction( rRegion, TRUE ) );
-#endif	// USE_JAVA
-
     Region aRegion = getReferenceDevice()->LogicToPixel( rRegion, m_aGraphicsStack.front().m_aMapMode );
     aRegion = getReferenceDevice()->PixelToLogic( aRegion, m_aMapMode );
     m_aGraphicsStack.front().m_aClipRegion = aRegion;
@@ -9776,11 +9013,6 @@ void PDFWriterImpl::setClipRegion( const Region& rRegion )
 
 void PDFWriterImpl::moveClipRegion( sal_Int32 nX, sal_Int32 nY )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaMoveClipRegionAction( nX, nY ) );
-#endif	// USE_JAVA
-
     Point aPoint( lcl_convert( m_aGraphicsStack.front().m_aMapMode,
                                m_aMapMode,
                                getReferenceDevice(),
@@ -9795,11 +9027,6 @@ void PDFWriterImpl::moveClipRegion( sal_Int32 nX, sal_Int32 nY )
 
 bool PDFWriterImpl::intersectClipRegion( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaISectRectClipRegionAction( rRect ) );
-#endif	// USE_JAVA
-
     Rectangle aRect( lcl_convert( m_aGraphicsStack.front().m_aMapMode,
                                   m_aMapMode,
                                   getReferenceDevice(),
@@ -9811,11 +9038,6 @@ bool PDFWriterImpl::intersectClipRegion( const Rectangle& rRect )
 
 bool PDFWriterImpl::intersectClipRegion( const Region& rRegion )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaISectRegionClipRegionAction( rRegion ) );
-#endif	// USE_JAVA
-
     Region aRegion = getReferenceDevice()->LogicToPixel( rRegion, m_aGraphicsStack.front().m_aMapMode );
     aRegion = getReferenceDevice()->PixelToLogic( aRegion, m_aMapMode );
     m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateClipRegion;
@@ -9824,11 +9046,6 @@ bool PDFWriterImpl::intersectClipRegion( const Region& rRegion )
 
 void PDFWriterImpl::createNote( const Rectangle& rRect, const PDFNote& rNote, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaCreateNotePDFAction( rRect, rNote, nPageNr ) );
-#endif	// USE_JAVA
-
     if( nPageNr < 0 )
         nPageNr = m_nCurrentPage;
 
@@ -9848,11 +9065,6 @@ void PDFWriterImpl::createNote( const Rectangle& rRect, const PDFNote& rNote, sa
 
 sal_Int32 PDFWriterImpl::createLink( const Rectangle& rRect, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaCreateLinkPDFAction( rRect, nPageNr ) );
-#endif	// USE_JAVA
-
     if( nPageNr < 0 )
         nPageNr = m_nCurrentPage;
 
@@ -9876,11 +9088,6 @@ sal_Int32 PDFWriterImpl::createLink( const Rectangle& rRect, sal_Int32 nPageNr )
 
 sal_Int32 PDFWriterImpl::createDest( const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaCreateDestPDFAction( rRect, nPageNr, eType ) );
-#endif	// USE_JAVA
-
     if( nPageNr < 0 )
         nPageNr = m_nCurrentPage;
 
@@ -9901,11 +9108,6 @@ sal_Int32 PDFWriterImpl::createDest( const Rectangle& rRect, sal_Int32 nPageNr, 
 
 sal_Int32 PDFWriterImpl::setLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetLinkDestPDFAction( nLinkId, nDestId ) );
-#endif	// USE_JAVA
-
     if( nLinkId < 0 || nLinkId >= (sal_Int32)m_aLinks.size() )
         return -1;
     if( nDestId < 0 || nDestId >= (sal_Int32)m_aDests.size() )
@@ -9939,11 +9141,6 @@ static OUString escapeStringLiteral( const OUString& rStr )
 
 sal_Int32 PDFWriterImpl::setLinkURL( sal_Int32 nLinkId, const OUString& rURL )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetLinkUrlPDFAction( nLinkId, rURL ) );
-#endif	// USE_JAVA
-
     if( nLinkId < 0 || nLinkId >= (sal_Int32)m_aLinks.size() )
         return -1;
 
@@ -9974,21 +9171,11 @@ sal_Int32 PDFWriterImpl::setLinkURL( sal_Int32 nLinkId, const OUString& rURL )
 
 void PDFWriterImpl::setLinkPropertyId( sal_Int32 nLinkId, sal_Int32 nPropertyId )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetLinkPropertyIdPDFAction( nLinkId, nPropertyId ) );
-#endif	// USE_JAVA
-
     m_aLinkPropertyMap[ nPropertyId ] = nLinkId;
 }
 
 sal_Int32 PDFWriterImpl::createOutlineItem( sal_Int32 nParent, const OUString& rText, sal_Int32 nDestID )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaCreateOutlineItemPDFAction( nParent, rText, nDestID ) );
-#endif	// USE_JAVA
-
     // create new item
     sal_Int32 nNewItem = m_aOutline.size();
     m_aOutline.push_back( PDFOutlineEntry() );
@@ -10003,11 +9190,6 @@ sal_Int32 PDFWriterImpl::createOutlineItem( sal_Int32 nParent, const OUString& r
 
 sal_Int32 PDFWriterImpl::setOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetOutlineItemParentPDFAction( nItem, nNewParent ) );
-#endif	// USE_JAVA
-
     if( nItem < 1 || nItem >= (sal_Int32)m_aOutline.size() )
         return -1;
 
@@ -10043,11 +9225,6 @@ sal_Int32 PDFWriterImpl::setOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewPa
 
 sal_Int32 PDFWriterImpl::setOutlineItemText( sal_Int32 nItem, const OUString& rText )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetOutlineItemTextPDFAction( nItem, rText ) );
-#endif	// USE_JAVA
-
     if( nItem < 1 || nItem >= (sal_Int32)m_aOutline.size() )
         return -1;
 
@@ -10057,11 +9234,6 @@ sal_Int32 PDFWriterImpl::setOutlineItemText( sal_Int32 nItem, const OUString& rT
 
 sal_Int32 PDFWriterImpl::setOutlineItemDest( sal_Int32 nItem, sal_Int32 nDestID )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetOutlineItemDestPDFAction( nItem, nDestID ) );
-#endif	// USE_JAVA
-
     if( nItem < 1 || nItem >= (sal_Int32)m_aOutline.size() ) // item does not exist
         return -1;
     if( nDestID < 0 || nDestID >= (sal_Int32)m_aDests.size() ) // dest does not exist
@@ -10185,11 +9357,6 @@ bool PDFWriterImpl::checkEmitStructure()
 
 sal_Int32 PDFWriterImpl::beginStructureElement( PDFWriter::StructElement eType )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaBeginStructureElementPDFAction( eType ) );
-#endif	// USE_JAVA
-
     if( m_nCurrentPage < 0 )
         return -1;
 
@@ -10263,11 +9430,6 @@ sal_Int32 PDFWriterImpl::beginStructureElement( PDFWriter::StructElement eType )
 
 void PDFWriterImpl::endStructureElement()
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaEndStructureElementPDFAction() );
-#endif	// USE_JAVA
-
     if( m_nCurrentPage < 0 )
         return;
 
@@ -10305,11 +9467,6 @@ void PDFWriterImpl::endStructureElement()
 
 bool PDFWriterImpl::setCurrentStructureElement( sal_Int32 nEle )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetCurrentStructureElementPDFAction( nEle ) );
-#endif	// USE_JAVA
-
     bool bSuccess = false;
 
     if( m_aContext.Tagged && nEle >= 0 && nEle < sal_Int32(m_aStructure.size()) )
@@ -10341,11 +9498,6 @@ sal_Int32 PDFWriterImpl::getCurrentStructureElement()
 
 bool PDFWriterImpl::setStructureAttribute( enum PDFWriter::StructAttribute eAttr, enum PDFWriter::StructAttributeValue eVal )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetStructureAttributePDFAction( eAttr, eVal ) );
-#endif	// USE_JAVA
-
     if( !m_aContext.Tagged )
         return false;
 
@@ -10540,11 +9692,6 @@ bool PDFWriterImpl::setStructureAttribute( enum PDFWriter::StructAttribute eAttr
 
 bool PDFWriterImpl::setStructureAttributeNumerical( enum PDFWriter::StructAttribute eAttr, sal_Int32 nValue )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetStructureAttributeNumericalPDFAction( eAttr, nValue ) );
-#endif	// USE_JAVA
-
     if( ! m_aContext.Tagged )
         return false;
 
@@ -10671,11 +9818,6 @@ bool PDFWriterImpl::setStructureAttributeNumerical( enum PDFWriter::StructAttrib
 
 void PDFWriterImpl::setStructureBoundingBox( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetStructureBoundingBoxPDFAction( rRect ) );
-#endif	// USE_JAVA
-
     sal_Int32 nPageNr = m_nCurrentPage;
     if( nPageNr < 0 || nPageNr >= (sal_Int32)m_aPages.size() || !m_aContext.Tagged )
         return;
@@ -10697,11 +9839,6 @@ void PDFWriterImpl::setStructureBoundingBox( const Rectangle& rRect )
 
 void PDFWriterImpl::setActualText( const String& rText )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetActualTextPDFAction( rText ) );
-#endif	// USE_JAVA
-
     if( m_aContext.Tagged && m_nCurrentStructElement > 0 && m_bEmitStructure )
     {
         m_aStructure[ m_nCurrentStructElement ].m_aActualText = rText;
@@ -10710,11 +9847,6 @@ void PDFWriterImpl::setActualText( const String& rText )
 
 void PDFWriterImpl::setAlternateText( const String& rText )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetAlternateTextPDFAction( rText ) );
-#endif	// USE_JAVA
-
     if( m_aContext.Tagged && m_nCurrentStructElement > 0 && m_bEmitStructure )
     {
         m_aStructure[ m_nCurrentStructElement ].m_aAltText = rText;
@@ -10723,11 +9855,6 @@ void PDFWriterImpl::setAlternateText( const String& rText )
 
 void PDFWriterImpl::setAutoAdvanceTime( sal_uInt32 nSeconds, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetAutoAdvanceTimePDFAction( nSeconds, nPageNr ) );
-#endif	// USE_JAVA
-
     if( nPageNr < 0 )
         nPageNr = m_nCurrentPage;
 
@@ -10739,11 +9866,6 @@ void PDFWriterImpl::setAutoAdvanceTime( sal_uInt32 nSeconds, sal_Int32 nPageNr )
 
 void PDFWriterImpl::setPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaSetPageTransitionPDFAction( eType, nMilliSec, nPageNr ) );
-#endif	// USE_JAVA
-
     if( nPageNr < 0 )
         nPageNr = m_nCurrentPage;
 
@@ -10867,11 +9989,6 @@ sal_Int32 PDFWriterImpl::findRadioGroupWidget( const PDFWriter::RadioButtonWidge
 
 sal_Int32 PDFWriterImpl::createControl( const PDFWriter::AnyWidget& rControl, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaCreateControlPDFAction( rControl, nPageNr ) );
-#endif	// USE_JAVA
-
     if( nPageNr < 0 )
         nPageNr = m_nCurrentPage;
 
@@ -11065,11 +10182,6 @@ sal_Int32 PDFWriterImpl::createControl( const PDFWriter::AnyWidget& rControl, sa
 
 void PDFWriterImpl::beginControlAppearance( sal_Int32 nControl )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaBeginControlAppearancePDFAction( nControl ) );
-#endif	// USE_JAVA
-
     if( nControl < 0 || nControl >= (sal_Int32)m_aWidgets.size() )
         return;
 
@@ -11093,11 +10205,6 @@ void PDFWriterImpl::beginControlAppearance( sal_Int32 nControl )
 
 bool PDFWriterImpl::endControlAppearance( PDFWriter::WidgetState eState )
 {
-#ifdef USE_JAVA
-    if ( !m_bUsingMtf )
-        m_aMtf.AddAction( new MetaEndControlAppearancePDFAction( eState ) );
-#endif	// USE_JAVA
-
     bool bRet = false;
     if( ! m_aOutputStreams.empty() )
         writeBuffer( "\nEMC\n", 5 );

@@ -92,11 +92,7 @@
 #include <metaact.hxx>
 #endif
 
-#define META_TEXT_PDF_ACTION					META_TEXT_ACTION
 #define META_TEXTLINE_PDF_ACTION				META_TEXTLINE_ACTION
-#define META_TEXTARRAY_PDF_ACTION				META_TEXTARRAY_ACTION
-#define META_STRETCHTEXT_PDF_ACTION				META_STRETCHTEXT_ACTION
-#define META_TEXTRECT_PDF_ACTION				META_TEXTRECT_ACTION
 #define META_NEW_PAGE_PDF_ACTION				(10000)
 #define META_PIXEL_PDF_ACTION					(10001)
 #define META_JPG_PDF_ACTION						(10002)
@@ -123,15 +119,14 @@
 #define META_SETAUTOADVANCETIME_PDF_ACTION		(10023)
 #define META_SETPAGETRANSITION_PDF_ACTION		(10024)
 #define META_CREATECONTROL_PDF_ACTION			(10025)
-#define META_BEGINCONTROLAPPEARANCE_PDF_ACTION	(10026)
-#define META_ENDCONTROLAPPEARANCE_PDF_ACTION	(10027)
-#define META_DIGITLANGUAGE_PDF_ACTION			(10028)
-#define META_BEGINPATTERN_PDF_ACTION			(10029)
-#define META_ENDPATTERN_PDF_ACTION				(10030)
-#define META_POLYPOLYGON_PDF_ACTION				(10031)
-#define META_BEGINTRANSPARENCYGROUP_PDF_ACTION	(10032)
-#define META_ENDTRANSPARENCYGROUP_PDF_ACTION	(10033)
-#define META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION	(10034)
+#define META_DIGITLANGUAGE_PDF_ACTION			(10026)
+#define META_BEGINPATTERN_PDF_ACTION			(10027)
+#define META_ENDPATTERN_PDF_ACTION				(10028)
+#define META_POLYPOLYGON_PDF_ACTION				(10029)
+#define META_BEGINTRANSPARENCYGROUP_PDF_ACTION	(10030)
+#define META_ENDTRANSPARENCYGROUP_PDF_ACTION	(10031)
+#define META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION	(10032)
+#define META_SETDOCINFO_PDF_ACTION				(10033)
 
 class MetaAntiAliasPDFAction : public MetaAction
 {
@@ -1138,7 +1133,7 @@ methods for PDF security
 
 public:
 #ifdef USE_JAVA
-    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, FontSubsetData *pSubsets = NULL );
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData& rSubsets );
 #else	// USE_JAVA
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext );
 #endif	// USE_JAVA
@@ -1183,80 +1178,48 @@ public:
 
     void setLineColor( const Color& rColor )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaLineColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aLineColor = ImplIsColorTransparent(rColor) ? Color( COL_TRANSPARENT ) : rColor;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateLineColor;
     }
 
     void setFillColor( const Color& rColor )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaFillColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFillColor = ImplIsColorTransparent(rColor) ? Color( COL_TRANSPARENT ) : rColor;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFillColor;        
     }
 
     void setTextLineColor()
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aTextLineColor = Color( COL_TRANSPARENT );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateTextLineColor;        
     }
 
     void setTextLineColor( const Color& rColor )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaTextLineColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aTextLineColor = rColor;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateTextLineColor;        
     }
 
     void setTextFillColor( const Color& rColor )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaTextFillColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFont.SetFillColor( rColor );
         m_aGraphicsStack.front().m_aFont.SetTransparent( ImplIsColorTransparent( rColor ) ? TRUE : FALSE );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
     void setTextFillColor()
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), FALSE ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFont.SetFillColor( Color( COL_TRANSPARENT ) );
         m_aGraphicsStack.front().m_aFont.SetTransparent( TRUE );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
     void setTextColor( const Color& rColor )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaTextColorAction( rColor ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aFont.SetColor( rColor );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
 
     void clearClipRegion()
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaClipRegionAction( Region(), FALSE ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_aClipRegion.SetNull();
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateClipRegion;
     }
@@ -1271,42 +1234,24 @@ public:
 
     void setLayoutMode( sal_Int32 nLayoutMode )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaLayoutModeAction( nLayoutMode ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_nLayoutMode = nLayoutMode;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateLayoutMode;
     }
     
     void setDigitLanguage( LanguageType eLang )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaDigitLanguagePDFAction( eLang ) );
-#endif	// USE_JAVA
-
         m_aGraphicsStack.front().m_aDigitLanguage = eLang;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateDigitLanguage;
     }
 
     void setTextAlign( TextAlign eAlign )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaTextAlignAction( eAlign ) );
-#endif	// USE_JAVA
-
         m_aGraphicsStack.front().m_aFont.SetAlign( eAlign );
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateFont;
     }
 
     void setAntiAlias( sal_Int32 nAntiAlias )
     {
-#ifdef USE_JAVA
-        if ( !m_bUsingMtf )
-            m_aMtf.AddAction( new MetaAntiAliasPDFAction( nAntiAlias ) );
-#endif	// USE_JAVA
         m_aGraphicsStack.front().m_nAntiAlias = nAntiAlias;
         m_aGraphicsStack.front().m_nUpdateFlags |= GraphicsState::updateAntiAlias;
     }
@@ -1404,21 +1349,17 @@ public:
         emitComment( pString );
 #endif
     }
+
+#ifdef USE_JAVA
+    void addAction( MetaAction *pAction ) { if ( pAction && !m_bUsingMtf ) m_aMtf.AddAction( pAction ); }
+    const PDFWriter::PDFWriterContext& getContext() { return m_aContext; }
+    const GDIMetaFile& getMetaFile() { return m_aMtf; }
+    const FontSubsetData& getSubsets() { return m_aSubsets; }
+    bool isUsingMetaFile() { return m_bUsingMtf; }
+#endif	// USE_JAVA
 };
 
 #ifdef USE_JAVA
-
-class MetaTextPDFAction : public MetaTextAction
-{
-private:
-    bool				mbTextLines;
-
-public:
-    					MetaTextPDFAction( const Point& rPt, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextAction( rPt, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
-    virtual				~MetaTextPDFAction() {}
-
-    bool				IsTextLines() const { return mbTextLines; }
-};
 
 class MetaTextLinePDFAction : public MetaTextLineAction
 {
@@ -1430,56 +1371,6 @@ public:
     virtual				~MetaTextLinePDFAction() {}
 
     bool				IsUnderlineAbove() const { return mbUnderlineAbove; }
-};
-
-class MetaTextArrayPDFAction : public MetaTextArrayAction
-{
-private:
-    long*				mpDXAry;
-    bool				mbTextLines;
-
-public:
-    					MetaTextArrayPDFAction( const Point& rPt, const XubString& rStr, const long* pDXAry, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaTextArrayAction( rPt, rStr, pDXAry, nIndex, nLen ), mpDXAry( NULL ), mbTextLines( bTextLines )
-    					{
-    						if ( pDXAry )
-    						{
-    							size_t nSize = nLen * sizeof( long );
-    							mpDXAry = (long *)rtl_allocateMemory( nSize );
-    							memcpy( mpDXAry, pDXAry, nSize );
-    						}
-    					}
-    virtual				~MetaTextArrayPDFAction()
-    					{
-    						if ( mpDXAry )
-    							rtl_freeMemory( mpDXAry );
-    					}
-
-    long*				GetDXArray() const { return mpDXAry; }
-    bool				IsTextLines() const { return mbTextLines; }
-};
-
-class MetaStretchTextPDFAction : public MetaStretchTextAction
-{
-private:
-    bool				mbTextLines;
-
-public:
-						MetaStretchTextPDFAction( const Point& rPt, ULONG nWidth, const XubString& rStr, USHORT nIndex, USHORT nLen, bool bTextLines ) : MetaStretchTextAction( rPt, nWidth, rStr, nIndex, nLen ), mbTextLines( bTextLines ) {}
-    virtual				~MetaStretchTextPDFAction() {}
-
-    bool				IsTextLines() const { return mbTextLines; }
-};
-
-class MetaTextRectPDFAction : public MetaTextRectAction
-{
-private:
-    bool				mbTextLines;
-
-public:
-    					MetaTextRectPDFAction( const Rectangle& rRect, const XubString& rStr, USHORT nStyle, bool bTextLines ) : MetaTextRectAction( rRect, rStr, nStyle ), mbTextLines( bTextLines ) {}
-    virtual				~MetaTextRectPDFAction() {}
-
-    bool				IsTextLines() const { return mbTextLines; }
 };
 
 class MetaNewPagePDFAction : public MetaAction
@@ -1706,30 +1597,6 @@ public:
     sal_Int32			GetPage() const { return mnPage; }
 };
 
-class MetaBeginControlAppearancePDFAction : public MetaAction
-{
-private:
-    sal_Int32			mnControl;
-
-public:
-    					MetaBeginControlAppearancePDFAction( sal_Int32 nControl ) : MetaAction( META_BEGINCONTROLAPPEARANCE_PDF_ACTION ), mnControl( nControl ) {}
-    virtual				~MetaBeginControlAppearancePDFAction() {}
-
-    sal_Int32			GetControl() const { return mnControl; }
-};
-
-class MetaEndControlAppearancePDFAction : public MetaAction
-{
-private:
-    ::vcl::PDFWriter::WidgetState	meState;
-
-public:
-    					MetaEndControlAppearancePDFAction( ::vcl::PDFWriter::WidgetState eState ) : MetaAction( META_ENDCONTROLAPPEARANCE_PDF_ACTION ), meState( eState ) {}
-    virtual				~MetaEndControlAppearancePDFAction() {}
-
-    ::vcl::PDFWriter::WidgetState	GetState() const { return meState; }
-};
-
 class MetaBeginStructureElementPDFAction : public MetaAction
 {
 private:
@@ -1925,6 +1792,18 @@ public:
 
     const Rectangle&	GetBoundingRect() const { return maBoundingRect; }
     const Bitmap&		GetAlphaMask() const { return maAlphaMask; }
+};
+
+class MetaSetDocInfoPDFAction : public MetaAction
+{
+private:
+    PDFDocInfo			maDocInfo;
+
+public:
+    					MetaSetDocInfoPDFAction( const PDFDocInfo& rDocInfo ) : MetaAction( META_SETDOCINFO_PDF_ACTION ), maDocInfo( rDocInfo ) {}
+    virtual				~MetaSetDocInfoPDFAction() {}
+
+    const PDFDocInfo&	GetDocInfo() const { return maDocInfo; }
 };
 
 #endif	// USE_JAVA
