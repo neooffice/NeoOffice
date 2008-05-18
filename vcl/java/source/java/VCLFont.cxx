@@ -73,7 +73,7 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX, int nNativeFont ) : java_lang_Object( (jobject)NULL ), maName( aName ), mnNativeFont( nNativeFont ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mnSize( nSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical )
+com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX, sal_IntPtr nNativeFont ) : java_lang_Object( (jobject)NULL ), maName( aName ), mnNativeFont( nNativeFont ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mnSize( nSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -118,7 +118,7 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 		SalData *pSalData = GetSalData();
 
 		OUString aPSName( getPSName() );
-		::std::map< OUString, int >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
+		::std::map< OUString, sal_IntPtr >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
 		if ( it == pSalData->maJavaNativeFontMapping.end() )
 		{
 			::std::map< OUString, JavaImplFontData* >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
@@ -136,7 +136,7 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
 					if ( aFont )
 					{
-						mnNativeFont = (int)FMGetFontFromATSFontRef( aFont );
+						mnNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 					}
 

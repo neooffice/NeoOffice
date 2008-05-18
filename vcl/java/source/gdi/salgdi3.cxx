@@ -120,6 +120,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			pSalData->maJavaFontNameMapping.clear();
 			pSalData->maJavaNativeFontMapping.clear();
 			SalATSLayout::ClearLayoutDataCache();
+			aBoldFontMap.clear();
+			aBoldItalicFontMap.clear();
+			aItalicFontMap.clear();
 
 			if ( !Application::IsShutDown() )
 			{
@@ -174,7 +177,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !aPSName.getLength() )
 								continue;
 
-							int pNativeFont = (int)FMGetFontFromATSFontRef( aFont );
+							sal_IntPtr pNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)pNativeFont == kATSUInvalidFontID )
 								continue;
 
@@ -336,7 +339,7 @@ static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData 
 
 // =======================================================================
 
-JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, OUString aVCLFontName, sal_IntPtr nATSUFontID, int nJavaFontID ) : ImplFontData( rAttributes, 0 ), maVCLFontName( aVCLFontName ), mnATSUFontID( nATSUFontID ), mnJavaFontID( nJavaFontID )
+JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, OUString aVCLFontName, sal_IntPtr nATSUFontID ) : ImplFontData( rAttributes, 0 ), maVCLFontName( aVCLFontName ), mnATSUFontID( nATSUFontID )
 {
 
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
@@ -363,20 +366,20 @@ ImplFontEntry* JavaImplFontData::CreateFontInstance( ImplFontSelectData& rData )
 
 ImplFontData* JavaImplFontData::Clone() const
 {
-	return new JavaImplFontData( *this, maVCLFontName, mnATSUFontID, mnJavaFontID );
+	return new JavaImplFontData( *this, maVCLFontName, mnATSUFontID );
 }
 
 // -----------------------------------------------------------------------
 
 sal_IntPtr JavaImplFontData::GetFontId() const
 {
-	if ( !mnJavaFontID )
+	if ( !mnATSUFontID )
 	{
 		com_sun_star_vcl_VCLFont aVCLFont( maVCLFontName, GetHeight(), 0, sal_True, sal_False, GetWidth() ? (double)GetWidth() / (double)GetHeight() : 1.0, 0 );
-		mnJavaFontID = aVCLFont.getNativeFont();
+		mnATSUFontID = aVCLFont.getNativeFont();
 	}
 
-	return mnJavaFontID;
+	return mnATSUFontID;
 }
 
 // =======================================================================
@@ -396,22 +399,14 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	SalData *pSalData = GetSalData();
 	JavaImplFontData *pFontData = (JavaImplFontData *)pFont->mpFontData;
 
-	if ( !nFallbackLevel )
-	{
-		if ( mpForceFallbackFont )
-		{
-			delete mpForceFallbackFont;
-			mpForceFallbackFont = NULL;
-		}
-	}
-	else
+	if ( nFallbackLevel )
 	{
 		// Retrieve the fallback font if one has been set by a text layout
 		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
 		if ( ffit != maFallbackFonts.end() )
 		{
-			int pNativeFont = ffit->second->getNativeFont();
-			::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pNativeFont );
+			sal_IntPtr pNativeFont = ffit->second->getNativeFont();
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pNativeFont );
 			if ( it != pSalData->maNativeFontMapping.end() )
 				pFontData = it->second;
 		}
@@ -428,7 +423,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		BOOL bBold = ( pFont->GetWeight() > WEIGHT_MEDIUM );
 		BOOL bItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 
-		// Fix bug 3061 by caching the bold, italic, and bold italic variants
+		// Fix bug 3031 by caching the bold, italic, and bold italic variants
 		// of each font
 		int nCachedNativeFont = 0;
 		if ( bAddBold && bAddItalic )
@@ -452,7 +447,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 		if ( nCachedNativeFont )
 		{
-			::std::map< int, JavaImplFontData* >::const_iterator fnit = pSalData->maNativeFontMapping.find( nCachedNativeFont );
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator fnit = pSalData->maNativeFontMapping.find( nCachedNativeFont );
 			if ( fnit != pSalData->maNativeFontMapping.end() )
 				pFontData = fnit->second;
 		}
@@ -539,7 +534,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			if ( aString )
 				CFRelease( aString );
 
-			//Cache the same font to avoid lookup again
+			// Cache the same font to avoid lookup again
 			if ( bAddBold && bAddItalic )
 				aBoldItalicFontMap[ nOldNativeFont ] = pFontData->GetFontId();
 			else if ( bAddBold )
@@ -548,33 +543,21 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				aItalicFontMap[ nOldNativeFont ] = pFontData->GetFontId();
 		}
 
-		int nNativeFont = pFontData->GetFontId();
-		if ( nNativeFont != nOldNativeFont )
+		if ( nFallbackLevel )
 		{
-			// Fix bug 3031 by forcing a fallback if we are using a different
-			// font in the first level as the OOo PDF export code will use
-			// the font that it set, not the one we use for layout
-			if ( !nFallbackLevel )
-			{
-				mpForceFallbackFont = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, 0 );
-				pFontData = (JavaImplFontData *)pFont->mpFontData;
-			}
-			else
+			int nNativeFont = pFontData->GetFontId();
+			if ( nNativeFont != nOldNativeFont )
 			{
 				// Avoid selecting a font that has already been used
-			for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
+				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
 				{
-					if ( ffit->first < nFallbackLevel && ( !mpForceFallbackFont || ffit->first ) && ffit->second->getNativeFont() == nNativeFont )
+					if ( ffit->first < nFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
 					{
 						pFontData = pOldFontData;
 						break;
 					}
 				}
 			}
-		}
-		else
-		{
-			pFontData = (JavaImplFontData *)pFont->mpFontData;
 		}
 	}
 
@@ -599,11 +582,9 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 	}
-	else
-	{
-		// Update the select data in fallback levels only
-		pFont->mpFontData = pFontData;
-	}
+
+	// Always update the select data
+	pFont->mpFontData = pFontData;
 
 	return 0;
 }

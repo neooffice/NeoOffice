@@ -600,7 +600,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			if ( !mpFallbackFont )
 			{
 				SalData *pSalData = GetSalData();
-				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (int)nFontID );
+				::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
 					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX, 0 );
@@ -813,14 +813,14 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second );
 
 			// Prevent infinite fallback
-			int nNativeFont = mpVCLFont->getNativeFont();	
+			sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();	
 			if ( mpVCLFont )
 			{
 				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maFallbackFonts.begin(); ffit != mpGraphics->maFallbackFonts.end(); ++ffit )
 				{
 					// It is OK to reuse the original font if a force fallback
 					// font is in use
-					if ( ffit->first < mnFallbackLevel && ( !mpGraphics->mpForceFallbackFont || ffit->first ) && ffit->second->getNativeFont() == nNativeFont )
+					if ( ffit->first < mnFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
 					{
 						delete mpVCLFont;
 						mpVCLFont = NULL;
@@ -1137,7 +1137,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								int nNativeFont = mpVCLFont->getNativeFont();
+								sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) ) );
 								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != nNativeFont )
 									mpKashidaLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), 0 );
@@ -1296,17 +1296,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
 					long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
-					if ( mpGraphics->mpForceFallbackFont && !mnFallbackLevel )
-					{
-						// In a forced fallback situation, always use the force
-						// fallback font
-						bNeedSymbolFallback = false;
-						bUseNativeFallback = true;
-						pFallbackFont = mpGraphics->mpForceFallbackFont;
-						rArgs.NeedFallback( nCharPos, bRunRTL );
-						rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
-					}
-					else if ( !nGlyph )
+					if ( !nGlyph )
 					{
 						if ( nChar >= 0xe000 && nChar < 0xf900 )
 						{
@@ -1412,7 +1402,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		{
 			SalData *pSalData = GetSalData();
 
-			int nNativeFont = mpVCLFont->getNativeFont();
+			sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
 			if ( bNeedSymbolFallback )
 			{
 				::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) ) );
@@ -1422,7 +1412,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 			if ( !pHighScoreFontData && !bUseNativeFallback )
 			{
-				::std::map< int, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
+				::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
 				if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 				{
 					USHORT nHighScore = 0;

@@ -75,8 +75,8 @@ public:
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
 	::std::map< String, JavaImplFontData* >	maFontNameMapping;
 	::std::map< ::rtl::OUString, JavaImplFontData* >	maJavaFontNameMapping;
-	::std::map< int, JavaImplFontData* >	maNativeFontMapping;
-	::std::map< OUString, int >	maJavaNativeFontMapping;
+	::std::map< sal_IntPtr, JavaImplFontData* >	maNativeFontMapping;
+	::std::map< OUString, sal_IntPtr >	maJavaNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbInNativeModalSheet;
