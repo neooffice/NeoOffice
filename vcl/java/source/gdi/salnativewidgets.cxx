@@ -1648,6 +1648,10 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 {
 	BOOL isSupported = FALSE;
 
+#ifdef NO_NATIVE_CONTROLS
+	return isSupported;
+#endif	// NO_NATIVE_CONTROLS
+
 	switch( nType )
 	{
 		case CTRL_PUSHBUTTON:
@@ -1773,8 +1777,10 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
  */
 BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, const Point& aPos, SalControlHandle& rControlHandle, BOOL& rIsInside )
 {
+#ifdef NO_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
 		return FALSE;
+#endif	// NO_NATIVE_CONTROLS
 
 	// [ed] Scrollbars are a special case:  in order to get proper regions,
 	// a full description of the scrollbar is required including its values
@@ -1817,8 +1823,10 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 {
 	BOOL bOK = FALSE;
 
+#ifdef NO_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
 		return bOK;
+#endif	// NO_NATIVE_CONTROLS
 
 	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
@@ -2057,8 +2065,10 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 {
 	BOOL bReturn = FALSE;
 
+#ifdef NO_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
 		return bReturn;
+#endif	// NO_NATIVE_CONTROLS
 
 	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
@@ -2596,8 +2606,10 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 {
 	BOOL bReturn = FALSE;
 
+#ifdef NO_NATIVE_CONTROLS
 	if ( !IsNativeControlSupported( nType, nPart ) )
 		return bReturn;
+#endif	// NO_NATIVE_CONTROLS
 
 	RGBColor nativeColor;
 
