@@ -1133,7 +1133,7 @@ methods for PDF security
 
 public:
 #ifdef USE_JAVA
-    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData& rSubsets );
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData* pSubsets = NULL );
 #else	// USE_JAVA
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext );
 #endif	// USE_JAVA
@@ -1354,7 +1354,7 @@ public:
     void addAction( MetaAction *pAction ) { if ( pAction && !m_bUsingMtf ) m_aMtf.AddAction( pAction ); }
     const PDFWriter::PDFWriterContext& getContext() { return m_aContext; }
     const GDIMetaFile& getMetaFile() { return m_aMtf; }
-    const FontSubsetData& getSubsets() { return m_aSubsets; }
+    const FontSubsetData* getSubsets() { return &m_aSubsets; }
     bool isUsingMetaFile() { return m_bUsingMtf; }
 #endif	// USE_JAVA
 };

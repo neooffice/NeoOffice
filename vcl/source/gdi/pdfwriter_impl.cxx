@@ -1359,7 +1359,7 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
  */
 
 #ifdef USE_JAVA
-PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData& rSubsets )
+PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData* pSubsets )
 #else	// USE_JAVA
 PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
 #endif	// USE_JAVA
@@ -1404,10 +1404,10 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
     m_aStructure[0].m_nParentElement	= 0;
 
 #ifdef USE_JAVA
-    if ( rSubsets.size() )
+    if ( pSubsets )
     {
         m_bUsingMtf = true;
-        m_aSubsets = rSubsets;
+        m_aSubsets = *pSubsets;
         m_nNextFID += m_aSubsets.size();
     }
     else
@@ -1710,6 +1710,11 @@ bool PDFWriterImpl::writeBuffer( const void* pBuffer, sal_uInt64 nBytes )
 {
     if( ! m_bOpen ) // we are already down the drain
         return false;
+
+#ifdef USE_JAVA
+    if ( !m_bUsingMtf )
+        return true;
+#endif	// USE_JAVA
 
     if( ! nBytes ) // huh ?
         return true;

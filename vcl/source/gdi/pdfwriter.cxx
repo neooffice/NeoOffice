@@ -49,11 +49,7 @@ PDFWriter::AnyWidget::~AnyWidget()
 
 PDFWriter::PDFWriter( const PDFWriter::PDFWriterContext& rContext )
         :
-#ifdef USE_JAVA
-        pImplementation( new PDFWriterImpl( rContext, PDFWriterImpl::FontSubsetData() ) )
-#else	// USE_JAVA
         pImplementation( new PDFWriterImpl( rContext ) )
-#endif	// USE_JAVA
 {
 }
 
