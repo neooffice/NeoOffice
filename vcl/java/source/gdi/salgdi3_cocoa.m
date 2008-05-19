@@ -99,9 +99,10 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 
 				if ( pNewNSFont && pNewNSFont != pNSFont )
 				{
+					// Fix bug 3061 by returning the font's PostScript name
 					ATSFontRef aFont = NSFont_getATSFontRef( pNewNSFont );
 					if ( aFont )
-						ATSFontGetName( aFont, kATSOptionFlagsDefault, &aRet );
+						ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aRet );
 				}
 			}
 		}
