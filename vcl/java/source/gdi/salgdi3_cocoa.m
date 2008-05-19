@@ -66,9 +66,9 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 	return aRet;
 }
 
-CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize )
+ATSFontRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize )
 {
-	CFStringRef aRet = nil;
+	ATSFontRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -98,12 +98,7 @@ CFStringRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBo
 				NSFontManager_release();
 
 				if ( pNewNSFont && pNewNSFont != pNSFont )
-				{
-					// Fix bug 3061 by returning the font's PostScript name
-					ATSFontRef aFont = NSFont_getATSFontRef( pNewNSFont );
-					if ( aFont )
-						ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aRet );
-				}
+					aRet = NSFont_getATSFontRef( pNewNSFont );
 			}
 		}
 	}
