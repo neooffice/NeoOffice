@@ -584,16 +584,11 @@ public final class VCLGraphics {
 		pageFormat = p;
 		rotatedPageAngle = r;
 		Rectangle bounds = pageFormat.getImageableBounds();
-		if (rotatedPageAngle != 0.0f) {
-			graphicsBounds = new Rectangle(0, 0, bounds.height, bounds.width);
-			pageScaleX = y;
-			pageScaleY = x;
-		}
-		else {
-			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
-			pageScaleX = x;
-			pageScaleY = y;
-		}
+		// Fix bug 3079 by not rotating the bounds as they are already
+		// rotated by the VCLPageFormat class
+		graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
+		pageScaleX = x;
+		pageScaleY = y;
 		graphics = (Graphics2D)g;
 		bitCount = 24;
 
