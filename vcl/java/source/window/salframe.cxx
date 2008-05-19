@@ -342,16 +342,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		mbInShow = TRUE;
 
-		// Fix bug 3032 by closing any show only menus frames
-		if ( !mbShowOnlyMenus && !mpParent && !IsFloatingFrame() )
-		{
-			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->mbShowOnlyMenus && (*it)->mbVisible )
-					(*it)->Show( FALSE );
-			}
-		}
-
 		// Get native window since it won't be created until first shown
 		maSysData.aWindow = (long)mpVCLFrame->getNativeWindowRef();
 		mbCenter = FALSE;
