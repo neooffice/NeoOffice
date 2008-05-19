@@ -654,11 +654,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				{
 					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX, 0 );
 				}
-				else
-				{
-					rtl_freeMemory( mpNeedFallback );
-					mpNeedFallback = NULL;
-				}
 			}
 		}
 		else
