@@ -105,7 +105,6 @@ public:
 	FontWeight				mnFontWeight;
 	bool					mbFontItalic;
 	FontPitch				mnFontPitch;
-	::vcl::com_sun_star_vcl_VCLFont*	mpForceFallbackFont;
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
 
