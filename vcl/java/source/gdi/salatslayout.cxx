@@ -852,27 +852,8 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	if ( mnFallbackLevel )
 	{
 		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
-		if ( it != mpGraphics->maFallbackFonts.end() )
-		{
+		if ( it != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
 			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second );
-
-			// Prevent infinite fallback
-			sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();	
-			if ( mpVCLFont )
-			{
-				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = mpGraphics->maFallbackFonts.begin(); ffit != mpGraphics->maFallbackFonts.end(); ++ffit )
-				{
-					// It is OK to reuse the original font if a force fallback
-					// font is in use
-					if ( ffit->first < mnFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
-					{
-						delete mpVCLFont;
-						mpVCLFont = NULL;
-						break;
-					}
-				}
-			}
-		}
 	}
 	else
 	{
