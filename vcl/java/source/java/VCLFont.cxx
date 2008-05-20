@@ -113,43 +113,6 @@ OUString com_sun_star_vcl_VCLFont::getName()
 
 sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 {
-	if ( !mnNativeFont )
-	{
-		SalData *pSalData = GetSalData();
-
-		OUString aPSName( getPSName() );
-		::std::map< OUString, sal_IntPtr >::iterator it = pSalData->maJavaNativeFontMapping.find( aPSName );
-		if ( it == pSalData->maJavaNativeFontMapping.end() )
-		{
-			::std::map< OUString, JavaImplFontData* >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
-			if ( jit != pSalData->maJavaFontNameMapping.end() )
-			{
-				mnNativeFont = jit->second->mnATSUFontID;
-				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
-			}
-			else
-			{
-				// Fix bug 1611 by adding another search for mismatched names
-				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPSName.getStr(), aPSName.getLength(), kCFAllocatorNull );
-				if ( aString )
-				{
-					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
-					if ( aFont )
-					{
-						mnNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
-						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
-					}
-
-					CFRelease( aString );
-				}
-			}
-		}
-		else
-		{
-			mnNativeFont = it->second;
-		}
-	}
-
 	return mnNativeFont;
 }
 
