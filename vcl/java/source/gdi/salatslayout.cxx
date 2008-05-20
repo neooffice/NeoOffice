@@ -505,22 +505,22 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	if ( mpHash->mbRTL )
 	{
 		i = 0;
-		for ( int j = mpHash->mnLen - 1; j >= 0 && i < mnGlyphCount && mpGlyphDataArray; j-- )
+		for ( int j = mpHash->mnLen - 1; j >= 0 && i < (int)mnGlyphCount && mpGlyphDataArray; j-- )
 		{
-			int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
+			unsigned int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				;
 		}
 	}
 	else
 	{
 		i = 0;
-		for ( int j = 0; j < mpHash->mnLen && i < mnGlyphCount && mpGlyphDataArray; j++ )
+		for ( int j = 0; j < mpHash->mnLen && i < (int)mnGlyphCount && mpGlyphDataArray; j++ )
 		{
-			int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
+			unsigned int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				;
 		}
 	}
@@ -531,7 +531,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
-	for ( i = 0; i < mnGlyphCount && mpGlyphDataArray; i++ )
+	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 		if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
@@ -546,10 +546,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = (float)nSize / nAdjustedSize;
 	int nLastNonSpacingIndex = -1;
-	for ( i = 0; i < mnGlyphCount && mpGlyphDataArray; i++ )
+	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
-		if ( i == mnGlyphCount - 1 )
+		if ( i == (int)mnGlyphCount - 1 )
 		{
 			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 				mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY );
@@ -641,7 +641,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				memset( mpNeedFallback, 0, nBufSize );
 			}
 
-			int nOffsetPos = nCurrentPos + nOffset;
+			UniCharArrayOffset nOffsetPos = nCurrentPos + nOffset;
 			for ( ; nCurrentPos < nOffsetPos; nCurrentPos++ )
 				mpNeedFallback[ nCurrentPos ] = true;
 
@@ -1128,7 +1128,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						// should always product different glyphs for each
 						// character so if any are the same, the font does not
 						// support Arabic properly.
-						for ( int i = 0; i < mpKashidaLayoutData->mnGlyphCount; i++ )
+						for ( int i = 0; i < (int)mpKashidaLayoutData->mnGlyphCount; i++ )
 						{
 							if ( !mpKashidaLayoutData->mpGlyphDataArray[ i ].glyphID )
 							{
@@ -1318,9 +1318,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
  
 				nCharWidth = pCurrentLayoutData->mpCharAdvances[ nIndex ];
 
-				for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				for ( ItemCount i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && (int)( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
-					long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
+					sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 					if ( !nGlyph )
 					{
 						if ( nChar >= 0xe000 && nChar < 0xf900 )
@@ -1493,8 +1493,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
 	int nMaxGlyphs = 256;
-	long aGlyphArray[ nMaxGlyphs ];
-	long aDXArray[ nMaxGlyphs ];
+	sal_Int32 aGlyphArray[ nMaxGlyphs ];
+	sal_Int32 aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
@@ -1522,7 +1522,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			// Determine glyph count but only allow one glyph at a time for
 			// rotated glyphs
 			Point aStartPos( aCurrentPos );
-			long nGlyphOrientation = aGlyphArray[ nStartGlyph ] & GF_ROTMASK;
+			sal_Int32 nGlyphOrientation = aGlyphArray[ nStartGlyph ] & GF_ROTMASK;
 			if ( nStartGlyph < nTotalGlyphCount )
 			{
 				if ( nGlyphOrientation )
@@ -1624,12 +1624,12 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		return bRet;
 
 	int nMaxGlyphs( 1 );
-	long aGlyphArray[ nMaxGlyphs ];
-	long aDXArray[ nMaxGlyphs ];
+	sal_Int32 aGlyphArray[ nMaxGlyphs ];
+	sal_Int32 aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 
 	Point aPos;
-	int nRunIndex = 0;
+	unsigned int nRunIndex = 0;
 	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
 	int nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
 	maRuns.ResetPos();
@@ -1690,10 +1690,10 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			}
 		}
 
-		for ( int i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && ( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+		for ( ItemCount i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && (int)( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 		{
-			long nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
-			if ( ( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
+			sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
+			if ( ( aGlyphArray[ 0 ] & (sal_Int32)GF_IDXMASK ) != nGlyph )
 				continue;
 
 			// Fix bug 2390 by ignoring the value of nErr passed by reference
@@ -1723,7 +1723,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 
 			aPolyPolygon.Move( aPos.X(), aPos.Y() );
 
-			long nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
+			sal_Int32 nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 			if ( pCurrentLayoutData->maVerticalFontStyle )
 			{
 				long nX;
@@ -1792,14 +1792,14 @@ void SalATSLayout::Destroy()
 
 // ----------------------------------------------------------------------------
 
-ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int nCharPos, long& nX, long& nY ) const
+ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, long& nX, long& nY ) const
 {
 	ImplATSLayoutData *pRet = NULL;
 
 	nX = 0;
 	nY = 0;
 
-	int nRunIndex = 0;
+	unsigned int nRunIndex = 0;
 	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
 	int nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
 	maRuns.ResetPos();
@@ -1840,7 +1840,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( long nGlyph, int n
 		}
 	}
 
-	long nGlyphOrientation = nGlyph & GF_ROTMASK;
+	sal_Int32 nGlyphOrientation = nGlyph & GF_ROTMASK;
 
 	if ( pRet->maVerticalFontStyle && nGlyphOrientation & GF_ROTMASK )
 	{
