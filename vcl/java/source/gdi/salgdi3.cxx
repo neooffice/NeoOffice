@@ -91,9 +91,9 @@ static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
 static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
-static ::std::map< int, int > aBoldFontMap;
-static ::std::map< int, int > aBoldItalicFontMap;
-static ::std::map< int, int > aItalicFontMap;
+static ::std::map< sal_IntPtr, JavaImplFontData* > aBoldFontMap;
+static ::std::map< sal_IntPtr, JavaImplFontData* > aItalicFontMap;
+static ::std::map< sal_IntPtr, JavaImplFontData* > aBoldItalicFontMap;
 
 using namespace basegfx;
 using namespace rtl;
@@ -121,8 +121,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			pSalData->maJavaNativeFontMapping.clear();
 			SalATSLayout::ClearLayoutDataCache();
 			aBoldFontMap.clear();
-			aBoldItalicFontMap.clear();
 			aItalicFontMap.clear();
+			aBoldItalicFontMap.clear();
 
 			if ( !Application::IsShutDown() )
 			{
@@ -144,7 +144,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
 						const OUString aTimes( OUString::createFromAscii( "Times" ) );
 						const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
-						for ( int i = 0; pFonts[ i ]; i++ )
+
+						int i;
+						for ( i = 0; pFonts[ i ]; i++ )
 						{
 							void *pNSFont = (void *)pFonts[ i ];
 
@@ -275,6 +277,59 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							// rely on the native font to look up the font name.
 							pSalData->maNativeFontMapping[ nNativeFont ] = pFontData;
 							pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
+						}
+
+						// Cache matching bold, italic, and bold italic fonts
+						for ( i = 0; pFonts[ i ]; i++ )
+						{
+							void *pNSFont = (void *)pFonts[ i ];
+
+							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
+							if ( !aFont )
+								continue;
+
+							sal_IntPtr nNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
+							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
+								continue;
+
+							// Try bold
+							ATSFontRef aBoldFont = NSFont_findATSFontWithStyle( pNSFont, TRUE, FALSE );
+							if ( aBoldFont )
+							{
+								sal_IntPtr nBoldNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aBoldFont );
+								if ( nBoldNativeFont )
+								{
+									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nBoldNativeFont );
+									if ( nfit != pSalData->maNativeFontMapping.end() )
+										aBoldFontMap[ nNativeFont ] = nfit->second;
+								}
+							}
+
+							// Try italic
+							ATSFontRef aItalicFont = NSFont_findATSFontWithStyle( pNSFont, FALSE, TRUE );
+							if ( aItalicFont )
+							{
+								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aItalicFont );
+								if ( nBoldItalicNativeFont )
+								{
+									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
+									if ( nfit != pSalData->maNativeFontMapping.end() )
+										aItalicFontMap[ nNativeFont ] = nfit->second;
+								}
+							}
+
+							// Try bold italic
+							ATSFontRef aBoldItalicFont = NSFont_findATSFontWithStyle( pNSFont, TRUE, TRUE );
+							if ( aBoldItalicFont )
+							{
+								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aBoldItalicFont );
+								if ( nBoldItalicNativeFont )
+								{
+									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
+									if ( nfit != pSalData->maNativeFontMapping.end() )
+										aBoldItalicFontMap[ nNativeFont ] = nfit->second;
+								}
+							}
 						}
 
 						NSFontManager_releaseAllFonts( pFonts );
@@ -413,93 +468,35 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( bAddBold || bAddItalic )
 	{
 		JavaImplFontData *pOldFontData = pFontData;
-		int nOldNativeFont = pOldFontData->GetFontId();
-		BOOL bBold = ( pFont->GetWeight() > WEIGHT_MEDIUM );
-		BOOL bItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
+		sal_IntPtr nOldNativeFont = pOldFontData->GetFontId();
 
 		// Fix bug 3031 by caching the bold, italic, and bold italic variants
 		// of each font
-		int nCachedNativeFont = 0;
-		if ( bAddBold && bAddItalic )
+		if ( bAddBold && bAddItalic && pFontData == pOldFontData )
 		{
-			::std::map< int, int >::const_iterator bifit = aBoldItalicFontMap.find( nOldNativeFont );
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bifit = aBoldItalicFontMap.find( nOldNativeFont );
 			if ( bifit != aBoldItalicFontMap.end() )
-				nCachedNativeFont = bifit->second;
+				pFontData = bifit->second;
 		}
-		else if ( bAddBold )
+
+		if ( bAddBold && pFontData == pOldFontData )
 		{
-			::std::map< int, int >::const_iterator bfit = aBoldFontMap.find( nOldNativeFont );
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bfit = aBoldFontMap.find( nOldNativeFont );
 			if ( bfit != aBoldFontMap.end() )
-				nCachedNativeFont = bfit->second;
+				pFontData = bfit->second;
 		}
-		else
+
+		if ( bAddItalic && pFontData == pOldFontData )
 		{
-			::std::map< int, int >::const_iterator ifit = aItalicFontMap.find( nOldNativeFont );
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator ifit = aItalicFontMap.find( nOldNativeFont );
 			if ( ifit != aItalicFontMap.end() )
-				nCachedNativeFont = ifit->second;
+				pFontData = ifit->second;
 		}
 
-		if ( nCachedNativeFont )
+		int nNativeFont = pFontData->GetFontId();
+		if ( nNativeFont != nOldNativeFont )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator fnit = pSalData->maNativeFontMapping.find( nCachedNativeFont );
-			if ( fnit != pSalData->maNativeFontMapping.end() )
-				pFontData = fnit->second;
-		}
-		else
-		{
-			OUString aFontName( pFontData->maVCLFontName );
-			CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aFontName.getStr(), aFontName.getLength(), kCFAllocatorNull );
-
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator fnit = pSalData->maNativeFontMapping.end();
-			ATSFontRef aFont = NSFontManager_findFontNameWithStyle( aString, bBold, bItalic, pFont->mnHeight );
-			if ( aFont )
-				fnit = pSalData->maNativeFontMapping.find( (sal_IntPtr)FMGetFontFromATSFontRef( aFont ) );
-
-			if ( fnit != pSalData->maNativeFontMapping.end() && ( !bAddBold || fnit->second->meWeight > WEIGHT_MEDIUM ) && ( !bAddItalic || fnit->second->meItalic == ITALIC_OBLIQUE || fnit->second->meItalic == ITALIC_NORMAL ) )
-			{
-				pFontData = fnit->second;
-			}
-			else if ( bAddBold && bAddItalic )
-			{
-				// Try with bold only
-				fnit = pSalData->maNativeFontMapping.end();
-				aFont = NSFontManager_findFontNameWithStyle( aString, bBold, FALSE, pFont->mnHeight );
-				if ( aFont )
-					fnit = pSalData->maNativeFontMapping.find( (sal_IntPtr)FMGetFontFromATSFontRef( aFont ) );
-
-				if ( fnit != pSalData->maNativeFontMapping.end() && fnit->second->meWeight > WEIGHT_MEDIUM )
-				{
-					pFontData = fnit->second;
-				}
-				else
-				{
-					// Try with italic only
-					fnit = pSalData->maNativeFontMapping.end();
-					aFont = NSFontManager_findFontNameWithStyle( aString, FALSE, bItalic, pFont->mnHeight );
-					if ( aFont )
-						fnit = pSalData->maNativeFontMapping.find( (sal_IntPtr)FMGetFontFromATSFontRef( aFont ) );
-
-					if ( fnit != pSalData->maNativeFontMapping.end() && ( fnit->second->meItalic == ITALIC_OBLIQUE || fnit->second->meItalic == ITALIC_NORMAL ) )
-						pFontData = fnit->second;
-				}
-			}
-
-			if ( aString )
-				CFRelease( aString );
-
-			// Cache the same font to avoid lookup again
-			if ( bAddBold && bAddItalic )
-				aBoldItalicFontMap[ nOldNativeFont ] = pFontData->GetFontId();
-			else if ( bAddBold )
-				aBoldFontMap[ nOldNativeFont ] = pFontData->GetFontId();
-			else
-				aItalicFontMap[ nOldNativeFont ] = pFontData->GetFontId();
-		}
-
-		if ( nFallbackLevel )
-		{
-			int nNativeFont = pFontData->GetFontId();
-			if ( nNativeFont != nOldNativeFont )
+			if ( nFallbackLevel )
 			{
 				// Avoid selecting a font that has already been used
 				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
@@ -511,6 +508,10 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 					}
 				}
 			}
+		}
+		else
+		{
+			pFontData = pOldFontData;
 		}
 	}
 
@@ -536,7 +537,6 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mnFontPitch = pFont->GetPitch();
 	}
 
-	// Always update the select data
 	pFont->mpFontData = pFontData;
 
 	return 0;

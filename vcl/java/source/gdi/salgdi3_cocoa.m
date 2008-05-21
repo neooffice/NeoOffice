@@ -66,40 +66,36 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 	return aRet;
 }
 
-ATSFontRef NSFontManager_findFontNameWithStyle( CFStringRef aFontName, BOOL bBold, BOOL bItalic, long nSize )
+ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic )
 {
 	ATSFontRef aRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( aFontName && nSize )
+	if ( pNSFont )
 	{
 		NSFontManager *pFontManager = [NSFontManager sharedFontManager];
 		if ( pFontManager )
 		{
-			NSFont *pNSFont = [NSFont fontWithName:(NSString *)aFontName size:(float)nSize];
-			if ( pNSFont )
+			int nWeight = [pFontManager weightOfFont:pNSFont];
+			NSFontTraitMask nTraits = [pFontManager traitsOfFont:pNSFont] & ( NSItalicFontMask | NSBoldFontMask | NSExpandedFontMask | NSCondensedFontMask | NSCompressedFontMask );
+			if ( bBold )
 			{
-				int nWeight = [pFontManager weightOfFont:pNSFont];
-				NSFontTraitMask nTraits = [pFontManager traitsOfFont:pNSFont] & ( NSItalicFontMask | NSBoldFontMask | NSExpandedFontMask | NSCondensedFontMask | NSCompressedFontMask );
-				if ( bBold )
-				{
-					nTraits |= NSBoldFontMask;
+				nTraits |= NSBoldFontMask;
 
-					// Fix bug 1128 by ensuring that the weight is at least 9
-					if ( nWeight < 9 )
-						nWeight = 9;
-				}
-				if ( bItalic )
-					nTraits |= NSItalicFontMask;
-
-				NSFontManager_acquire();
-				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:(float)nSize];
-				NSFontManager_release();
-
-				if ( pNewNSFont && pNewNSFont != pNSFont )
-					aRet = NSFont_getATSFontRef( pNewNSFont );
+				// Fix bug 1128 by ensuring that the weight is at least 9
+				if ( nWeight < 9 )
+					nWeight = 9;
 			}
+			if ( bItalic )
+				nTraits |= NSItalicFontMask;
+
+			NSFontManager_acquire();
+			NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:[pNSFont pointSize]];
+			NSFontManager_release();
+
+			if ( pNewNSFont && pNewNSFont != pNSFont )
+				aRet = NSFont_getATSFontRef( pNewNSFont );
 		}
 	}
 
