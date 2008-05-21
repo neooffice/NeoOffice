@@ -305,10 +305,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							ATSFontRef aItalicFont = NSFont_findATSFontWithStyle( pNSFont, FALSE, TRUE );
 							if ( aItalicFont )
 							{
-								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aItalicFont );
-								if ( nBoldItalicNativeFont )
+								sal_IntPtr nItalicNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aItalicFont );
+								if ( nItalicNativeFont )
 								{
-									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
+									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nItalicNativeFont );
 									if ( nfit != pSalData->maNativeFontMapping.end() )
 										pSalData->maItalicNativeFontMapping[ nNativeFont ] = nfit->second;
 								}
