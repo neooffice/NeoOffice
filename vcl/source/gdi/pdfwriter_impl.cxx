@@ -5572,6 +5572,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         m_pReferenceDevice->ImplNewFont();
     }
 
+#ifndef USE_JAVA
     // perform artificial italics if necessary
     if( ( m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_NORMAL ||
           m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_OBLIQUE ) &&
@@ -5581,6 +5582,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     {
         fSkew = M_PI/12.0;
     }
+#endif	// USE_JAVA
 
     // if the mapmode is distorted we need to adjust for that also
     if( m_aCurrentPDFState.m_aMapMode.GetScaleX() != m_aCurrentPDFState.m_aMapMode.GetScaleY() )
@@ -5602,6 +5604,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
     bool bPop = false;
     bool bABold = false;
+#ifndef USE_JAVA
     // artificial bold necessary ?
     if( m_pReferenceDevice->mpFontEntry->maFontSelData.mpFontData->GetWeight() <= WEIGHT_MEDIUM &&
         m_pReferenceDevice->mpFontEntry->maFontSelData.GetWeight() > WEIGHT_MEDIUM )
@@ -5611,6 +5614,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         bPop = true;
         bABold = true;
     }
+#endif	// !USE_JAVA
     // setup text colors (if necessary)
     Color aStrokeColor( COL_TRANSPARENT );
     Color aNonStrokeColor( COL_TRANSPARENT );
