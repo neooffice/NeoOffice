@@ -91,9 +91,6 @@ static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
 static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
-static ::std::map< sal_IntPtr, JavaImplFontData* > aBoldFontMap;
-static ::std::map< sal_IntPtr, JavaImplFontData* > aItalicFontMap;
-static ::std::map< sal_IntPtr, JavaImplFontData* > aBoldItalicFontMap;
 
 using namespace basegfx;
 using namespace rtl;
@@ -118,11 +115,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			pSalData->maFontNameMapping.clear();
 			pSalData->maNativeFontMapping.clear();
 			pSalData->maJavaFontNameMapping.clear();
-			pSalData->maJavaNativeFontMapping.clear();
+			pSalData->maBoldNativeFontMapping.clear();
+			pSalData->maItalicNativeFontMapping.clear();
+			pSalData->maBoldItalicNativeFontMapping.clear();
 			SalATSLayout::ClearLayoutDataCache();
-			aBoldFontMap.clear();
-			aItalicFontMap.clear();
-			aBoldItalicFontMap.clear();
 
 			if ( !Application::IsShutDown() )
 			{
@@ -301,7 +297,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								{
 									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nBoldNativeFont );
 									if ( nfit != pSalData->maNativeFontMapping.end() )
-										aBoldFontMap[ nNativeFont ] = nfit->second;
+										pSalData->maBoldNativeFontMapping[ nNativeFont ] = nfit->second;
 								}
 							}
 
@@ -314,7 +310,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								{
 									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
 									if ( nfit != pSalData->maNativeFontMapping.end() )
-										aItalicFontMap[ nNativeFont ] = nfit->second;
+										pSalData->maItalicNativeFontMapping[ nNativeFont ] = nfit->second;
 								}
 							}
 
@@ -327,7 +323,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								{
 									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
 									if ( nfit != pSalData->maNativeFontMapping.end() )
-										aBoldItalicFontMap[ nNativeFont ] = nfit->second;
+										pSalData->maBoldItalicNativeFontMapping[ nNativeFont ] = nfit->second;
 								}
 							}
 						}
@@ -474,22 +470,22 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// of each font
 		if ( bAddBold && bAddItalic && pFontData == pOldFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bifit = aBoldItalicFontMap.find( nOldNativeFont );
-			if ( bifit != aBoldItalicFontMap.end() )
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bifit = pSalData->maBoldItalicNativeFontMapping.find( nOldNativeFont );
+			if ( bifit != pSalData->maBoldItalicNativeFontMapping.end() )
 				pFontData = bifit->second;
 		}
 
 		if ( bAddBold && pFontData == pOldFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bfit = aBoldFontMap.find( nOldNativeFont );
-			if ( bfit != aBoldFontMap.end() )
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bfit = pSalData->maBoldNativeFontMapping.find( nOldNativeFont );
+			if ( bfit != pSalData->maBoldNativeFontMapping.end() )
 				pFontData = bfit->second;
 		}
 
 		if ( bAddItalic && pFontData == pOldFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator ifit = aItalicFontMap.find( nOldNativeFont );
-			if ( ifit != aItalicFontMap.end() )
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator ifit = pSalData->maItalicNativeFontMapping.find( nOldNativeFont );
+			if ( ifit != pSalData->maItalicNativeFontMapping.end() )
 				pFontData = ifit->second;
 		}
 

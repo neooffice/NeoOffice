@@ -76,7 +76,9 @@ public:
 	::std::map< String, JavaImplFontData* >	maFontNameMapping;
 	::std::map< ::rtl::OUString, JavaImplFontData* >	maJavaFontNameMapping;
 	::std::map< sal_IntPtr, JavaImplFontData* >	maNativeFontMapping;
-	::std::map< OUString, sal_IntPtr >	maJavaNativeFontMapping;
+	::std::map< sal_IntPtr, JavaImplFontData* >	maBoldNativeFontMapping;
+	::std::map< sal_IntPtr, JavaImplFontData* >	maItalicNativeFontMapping;
+	::std::map< sal_IntPtr, JavaImplFontData* >	maBoldItalicNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbInNativeModalSheet;
