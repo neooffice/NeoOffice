@@ -1359,7 +1359,7 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
  */
 
 #ifdef USE_JAVA
-PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData* pSubsets )
+PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, PDFWriterImpl *pParentWriter )
 #else	// USE_JAVA
 PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
 #endif	// USE_JAVA
@@ -1380,6 +1380,9 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
         m_nZaDbObject( -1 ),
         m_nHelvRegObject( -1 ),
 
+#ifdef USE_JAVA
+        m_pParentWriter( pParentWriter ),
+#endif	// USE_JAVA
         m_pCodec( NULL ),
 		m_aCipher( (rtlCipher)NULL ),
 		m_aDigest( NULL ),
@@ -1403,19 +1406,6 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
     m_aStructure[0].m_nOwnElement		= 0;
     m_aStructure[0].m_nParentElement	= 0;
 
-#ifdef USE_JAVA
-    if ( pSubsets )
-    {
-        m_bUsingMtf = true;
-        m_aSubsets = *pSubsets;
-        m_nNextFID += m_aSubsets.size();
-    }
-    else
-    {
-        m_bUsingMtf = false;
-    }
-#endif	// USE_JAVA
-
     Font aFont;
     aFont.SetName( String( RTL_CONSTASCII_USTRINGPARAM( "Times" ) ) );
     aFont.SetSize( Size( 0, 12 ) );
@@ -1424,6 +1414,14 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
     aState.m_aMapMode		= m_aMapMode;
     aState.m_aFont			= aFont;
     m_aGraphicsStack.push_front( aState );
+
+#ifdef USE_JAVA
+    if ( isReplayWriter() )
+    {
+        m_aSubsets = m_pParentWriter->m_aSubsets;
+        m_nNextFID = m_pParentWriter->m_nNextFID;
+    }
+#endif	// USE_JAVA
 
     oslFileError  aError = osl_openFile( m_aContext.URL.pData, &m_aFile, osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
     if( aError != osl_File_E_None )
@@ -1712,7 +1710,7 @@ bool PDFWriterImpl::writeBuffer( const void* pBuffer, sal_uInt64 nBytes )
         return false;
 
 #ifdef USE_JAVA
-    if ( !m_bUsingMtf )
+    if ( !isReplayWriter() )
         return true;
 #endif	// USE_JAVA
 
@@ -3355,6 +3353,10 @@ bool PDFWriterImpl::emitFonts()
     std::map< sal_Int32, sal_Int32 > aFontIDToObject;
 
 #ifdef USE_JAVA
+    // Encode the glyphs using the native font encoding before outputting the
+    // subsets to the PDF file
+    encodeGlyphs();
+
     std::map< OString, sal_Int32 > aFontStrToObject;
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
@@ -5248,12 +5250,6 @@ bool PDFWriterImpl::emit()
     // needed for widget tab order
     sortWidgets();
 
-#ifdef USE_JAVA
-    // Encode the glyphs using the native font encoding
-    if ( !m_bUsingMtf )
-        encodeGlyphs();
-#endif	// USE_JAVA
-
     // emit catalog
     CHECK_RETURN( emitCatalog() );
 
@@ -5728,7 +5724,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
 #ifdef USE_JAVA
         registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
-        if ( !m_bUsingMtf )
+        if ( !isReplayWriter() )
             continue;
 #else	// USE_JAVA
         registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedFontObjects, pFallbackFonts );
@@ -8233,7 +8229,7 @@ void PDFWriterImpl::drawJPGBitmap( SvStream& rDCTData, bool bIsTrueColor, const 
         return;
 
 #ifdef USE_JAVA
-    if ( !m_bUsingMtf )
+    if ( !isReplayWriter() )
         return;
 #endif	// USE_JAVA
 
@@ -10550,6 +10546,7 @@ according to the table 3.15, pdf v 1.4 */
 /* end i12626 methods */
 
 #ifdef USE_JAVA
+
 sal_Int32 PDFWriterImpl::getNextPDFObject( oslFileHandle aFile, PDFObjectMapping& rObjectMapping )
 {
     sal_uInt64 nLastNewlinePos;
@@ -10828,9 +10825,7 @@ sal_Int32 PDFWriterImpl::getNextPDFObject( oslFileHandle aFile, PDFObjectMapping
 
     return aObj.m_nID;
 }
-#endif	// USE_JAVA
 
-#ifdef USE_JAVA
 sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle aFile, PDFObjectMapping& rObjMapping, sal_Int32 nFontID, std::map< sal_Int32, sal_Int32 >& rIDMapping )
 {
     // Check if we have already handled this object
@@ -10966,11 +10961,13 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
 
     return nNewID;
 }
-#endif	// USE_JAVA
 
-#ifdef USE_JAVA
 void PDFWriterImpl::encodeGlyphs()
 {
+    // This cannot be called within the replay writer
+    if ( isReplayWriter() )
+        return;
+
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
@@ -11376,4 +11373,11 @@ void PDFWriterImpl::encodeGlyphs()
         CGFontRelease( aFont );
     }
 }
+
+void PDFWriterImpl::addAction( MetaAction *pAction )
+{
+    if ( pAction && !isReplayWriter() )
+        m_aReplayMtf.AddAction( pAction );
+}
+
 #endif	// USE_JAVA

@@ -733,8 +733,8 @@ private:
     GraphicsState							m_aCurrentPDFState;
 
 #ifdef USE_JAVA
-    GDIMetaFile								m_aMtf;
-    bool									m_bUsingMtf;
+    PDFWriterImpl*				            m_pParentWriter;
+    GDIMetaFile								m_aReplayMtf;
 #endif	// USE_JAVA
 
     ZCodec*									m_pCodec;
@@ -1062,7 +1062,7 @@ methods for PDF security
 
 public:
 #ifdef USE_JAVA
-    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, const FontSubsetData* pSubsets = NULL );
+    PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, PDFWriterImpl *pParentWriter = NULL );
 #else	// USE_JAVA
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext );
 #endif	// USE_JAVA
@@ -1280,11 +1280,10 @@ public:
     }
 
 #ifdef USE_JAVA
-    void addAction( MetaAction *pAction ) { if ( pAction && !m_bUsingMtf ) m_aMtf.AddAction( pAction ); }
+    void addAction( MetaAction *pAction );
     const PDFWriter::PDFWriterContext& getContext() { return m_aContext; }
-    const GDIMetaFile& getMetaFile() { return m_aMtf; }
-    const FontSubsetData* getSubsets() { return &m_aSubsets; }
-    bool isUsingMetaFile() { return m_bUsingMtf; }
+    const GDIMetaFile& getReplayMetaFile() { return m_aReplayMtf; }
+    bool isReplayWriter() { return ( m_pParentWriter ? true : false ); }
 #endif	// USE_JAVA
 };
 

@@ -582,7 +582,7 @@ OutputDevice* PDFWriter::GetReferenceDevice()
 sal_Int32 PDFWriter::NewPage( sal_Int32 nPageWidth, sal_Int32 nPageHeight, Orientation eOrientation )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaNewPagePDFAction( nPageWidth, nPageHeight, eOrientation ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->newPage( nPageWidth, nPageHeight, eOrientation );
@@ -591,16 +591,16 @@ sal_Int32 PDFWriter::NewPage( sal_Int32 nPageWidth, sal_Int32 nPageHeight, Orien
 bool PDFWriter::Emit()
 {
 #ifdef USE_JAVA
+    bool bRet = false;
+
     // Replay meta actions
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() && ((PDFWriterImpl*)pImplementation)->emit() )
     {
-		((PDFWriterImpl*)pImplementation)->emit();
-
-        bool bRet = false;
+		const GDIMetaFile &rMtf = ((PDFWriterImpl*)pImplementation)->getReplayMetaFile();
+        PDFWriterImpl aWriter( ((PDFWriterImpl*)pImplementation)->getContext(), (PDFWriterImpl*)pImplementation );
 		void *pOldImplementation = pImplementation;
-        pImplementation = new PDFWriterImpl( ((PDFWriterImpl*)pOldImplementation)->getContext(), ((PDFWriterImpl*)pOldImplementation)->getSubsets() );
+		pImplementation = &aWriter;
 
-		const GDIMetaFile &rMtf = ((PDFWriterImpl*)pOldImplementation)->getMetaFile();
         for ( ULONG i = 0, nCount = rMtf.GetActionCount(); i < nCount; i++ )
         {
             const MetaAction *pAction = rMtf.GetAction( i );
@@ -1155,14 +1155,13 @@ bool PDFWriter::Emit()
 
         bRet = ((PDFWriterImpl*)pImplementation)->emit();
 
-        delete (PDFWriterImpl*)pImplementation;
         pImplementation = pOldImplementation;
-
-		return bRet;
     }
-	else
-#endif	// USE_JAVA
+
+    return bRet;
+#else	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->emit();
+#endif	// USE_JAVA
 }
 
 PDFWriter::PDFVersion PDFWriter::GetVersion() const
@@ -1172,7 +1171,7 @@ PDFWriter::PDFVersion PDFWriter::GetVersion() const
 
 void PDFWriter::SetDocInfo( const PDFDocInfo& rInfo )
 {
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
     ((PDFWriterImpl*)pImplementation)->setDocInfo( rInfo );
 }
 
@@ -1184,7 +1183,7 @@ const PDFDocInfo& PDFWriter::GetDocInfo() const
 void PDFWriter::SetFont( const Font& rFont )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaFontAction( rFont ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setFont( rFont );
@@ -1193,7 +1192,7 @@ void PDFWriter::SetFont( const Font& rFont )
 void PDFWriter::DrawText( const Point& rPos, const String& rText )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextAction( rPos, rText, 0, STRING_LEN ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawText( rPos, rText );
@@ -1207,7 +1206,7 @@ void PDFWriter::DrawTextLine(
                              BOOL bUnderlineAbove )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, bUnderlineAbove ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawTextLine( rPos, nWidth, eStrikeout, eUnderline, bUnderlineAbove );
@@ -1221,7 +1220,7 @@ void PDFWriter::DrawTextArray(
                               xub_StrLen nLen )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextArrayAction( rStartPt, rStr, pDXAry, nIndex, nLen ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawTextArray( rStartPt, rStr, pDXAry, nIndex, nLen );
@@ -1235,7 +1234,7 @@ void PDFWriter::DrawStretchText(
                                 xub_StrLen nLen )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawStretchText( rStartPt, nWidth, rStr, nIndex, nLen );
@@ -1247,7 +1246,7 @@ void PDFWriter::DrawText(
                          USHORT nStyle )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextRectAction( rRect, rStr, nStyle ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawText( rRect, rStr, nStyle );
@@ -1256,7 +1255,7 @@ void PDFWriter::DrawText(
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineAction( rStart, rStop ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawLine( rStart, rStop );
@@ -1265,7 +1264,7 @@ void PDFWriter::DrawLine( const Point& rStart, const Point& rStop )
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop, const LineInfo& rInfo )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineAction( rStart, rStop, rInfo ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawLine( rStart, rStop, rInfo );
@@ -1274,7 +1273,7 @@ void PDFWriter::DrawLine( const Point& rStart, const Point& rStop, const LineInf
 void PDFWriter::DrawPolygon( const Polygon& rPoly )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolygonAction( rPoly ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPolygon( rPoly );
@@ -1283,7 +1282,7 @@ void PDFWriter::DrawPolygon( const Polygon& rPoly )
 void PDFWriter::DrawPolyLine( const Polygon& rPoly )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLineAction( rPoly ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly );
@@ -1292,7 +1291,7 @@ void PDFWriter::DrawPolyLine( const Polygon& rPoly )
 void PDFWriter::DrawRect( const Rectangle& rRect )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaRectAction( rRect ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawRectangle( rRect );
@@ -1301,7 +1300,7 @@ void PDFWriter::DrawRect( const Rectangle& rRect )
 void PDFWriter::DrawRect( const Rectangle& rRect, ULONG nHorzRound, ULONG nVertRound )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaRoundRectAction( rRect, nHorzRound, nVertRound ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawRectangle( rRect, nHorzRound, nVertRound );
@@ -1310,7 +1309,7 @@ void PDFWriter::DrawRect( const Rectangle& rRect, ULONG nHorzRound, ULONG nVertR
 void PDFWriter::DrawEllipse( const Rectangle& rRect )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEllipseAction( rRect ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawEllipse( rRect );
@@ -1319,7 +1318,7 @@ void PDFWriter::DrawEllipse( const Rectangle& rRect )
 void PDFWriter::DrawArc( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaArcAction( rRect, rStart, rStop ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, false, false );
@@ -1328,7 +1327,7 @@ void PDFWriter::DrawArc( const Rectangle& rRect, const Point& rStart, const Poin
 void PDFWriter::DrawPie( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPieAction( rRect, rStart, rStop ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, true, false );
@@ -1337,7 +1336,7 @@ void PDFWriter::DrawPie( const Rectangle& rRect, const Point& rStart, const Poin
 void PDFWriter::DrawChord( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaChordAction( rRect, rStart, rStop ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, false, true );
@@ -1346,7 +1345,7 @@ void PDFWriter::DrawChord( const Rectangle& rRect, const Point& rStart, const Po
 void PDFWriter::DrawPolyLine( const Polygon& rPoly, const LineInfo& rInfo )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLineAction( rPoly, rInfo ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly, rInfo );
@@ -1355,7 +1354,7 @@ void PDFWriter::DrawPolyLine( const Polygon& rPoly, const LineInfo& rInfo )
 void PDFWriter::DrawPolyLine( const Polygon& rPoly, const ExtLineInfo& rInfo )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLinePDFAction( rPoly, rInfo ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly, rInfo );
@@ -1364,7 +1363,7 @@ void PDFWriter::DrawPolyLine( const Polygon& rPoly, const ExtLineInfo& rInfo )
 void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyPolygonAction( rPolyPoly ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPolyPolygon( rPolyPoly );
@@ -1373,7 +1372,7 @@ void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly )
 void PDFWriter::DrawPixel( const Point& rPos, const Color& rColor )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPixelAction( rPos, rColor ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPixel( rPos, rColor );
@@ -1382,7 +1381,7 @@ void PDFWriter::DrawPixel( const Point& rPos, const Color& rColor )
 void PDFWriter::DrawPixel( const Polygon& rPts, const Color* pColors )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPixelPDFAction( rPts, pColors ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPixel( rPts, pColors );
@@ -1394,7 +1393,7 @@ void PDFWriter::DrawBitmap( const Point& rDestPt, const Bitmap& rBitmap )
                                              rBitmap.GetPrefMapMode(),
                                              ((PDFWriterImpl*)pImplementation)->getMapMode() );
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpAction( rDestPt, rBitmap ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, aSize, rBitmap );
@@ -1403,7 +1402,7 @@ void PDFWriter::DrawBitmap( const Point& rDestPt, const Bitmap& rBitmap )
 void PDFWriter::DrawBitmap( const Point& rDestPt, const Size& rDestSize, const Bitmap& rBitmap )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpScaleAction( rDestPt, rDestSize, rBitmap ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, rBitmap );
@@ -1414,7 +1413,7 @@ void PDFWriter::DrawBitmap( const Point& rDestPt, const Size& rDestSize, const P
     Bitmap aBitmap( rBitmap );
     aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpScaleAction( rDestPt, rDestSize, aBitmap ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
@@ -1426,7 +1425,7 @@ void PDFWriter::DrawBitmapEx( const Point& rDestPt, const BitmapEx& rBitmap )
                                              rBitmap.GetPrefMapMode(),
                                              ((PDFWriterImpl*)pImplementation)->getMapMode() );
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExAction( rDestPt, rBitmap ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, aSize, rBitmap );
@@ -1435,7 +1434,7 @@ void PDFWriter::DrawBitmapEx( const Point& rDestPt, const BitmapEx& rBitmap )
 void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const BitmapEx& rBitmap )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, rBitmap ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, rBitmap );
@@ -1446,7 +1445,7 @@ void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const
     BitmapEx aBitmap( rBitmap );
     aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, aBitmap ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
@@ -1458,7 +1457,7 @@ void PDFWriter::DrawMask( const Point& rDestPt, const Bitmap& rBitmap, const Col
                                              rBitmap.GetPrefMapMode(),
                                              ((PDFWriterImpl*)pImplementation)->getMapMode() );
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskAction( rDestPt, rBitmap, rMaskColor ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, aSize, rBitmap, rMaskColor );
@@ -1467,7 +1466,7 @@ void PDFWriter::DrawMask( const Point& rDestPt, const Bitmap& rBitmap, const Col
 void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Bitmap& rBitmap, const Color& rMaskColor )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskScaleAction( rDestPt, rDestSize, rBitmap, rMaskColor ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, rDestSize, rBitmap, rMaskColor );
@@ -1478,7 +1477,7 @@ void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Poi
     Bitmap aBitmap( rBitmap );
     aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskScaleAction( rDestPt, rDestSize, aBitmap, rMaskColor ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, rDestSize, aBitmap, rMaskColor );
@@ -1487,7 +1486,7 @@ void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Poi
 void PDFWriter::DrawGradient( const Rectangle& rRect, const Gradient& rGradient )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaGradientAction( rRect, rGradient ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawGradient( rRect, rGradient );
@@ -1496,7 +1495,7 @@ void PDFWriter::DrawGradient( const Rectangle& rRect, const Gradient& rGradient 
 void PDFWriter::DrawGradient( const PolyPolygon& rPolyPoly, const Gradient& rGradient )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawGradient( rPolyPoly, rGradient );
@@ -1505,7 +1504,7 @@ void PDFWriter::DrawGradient( const PolyPolygon& rPolyPoly, const Gradient& rGra
 void PDFWriter::DrawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaHatchAction( rPolyPoly, rHatch ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawHatch( rPolyPoly, rHatch );
@@ -1514,7 +1513,7 @@ void PDFWriter::DrawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch )
 void PDFWriter::DrawWallpaper( const Rectangle& rRect, const Wallpaper& rWallpaper )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaWallpaperAction( rRect, rWallpaper ) );
 #endif	// USE_JAVA 
     ((PDFWriterImpl*)pImplementation)->drawWallpaper( rRect, rWallpaper );
@@ -1523,7 +1522,7 @@ void PDFWriter::DrawWallpaper( const Rectangle& rRect, const Wallpaper& rWallpap
 void PDFWriter::DrawTransparent( const PolyPolygon& rPolyPoly, USHORT nTransparencePercent )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawTransparent( rPolyPoly, nTransparencePercent );
@@ -1532,7 +1531,7 @@ void PDFWriter::DrawTransparent( const PolyPolygon& rPolyPoly, USHORT nTranspare
 void PDFWriter::BeginTransparencyGroup()
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginTransparencyGroupPDFAction() );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->beginTransparencyGroup();
@@ -1541,7 +1540,7 @@ void PDFWriter::BeginTransparencyGroup()
 void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, USHORT nTransparentPercent )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndTransparencyGroupPDFAction( rRect, nTransparentPercent ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->endTransparencyGroup( rRect, nTransparentPercent );
@@ -1550,7 +1549,7 @@ void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, USHORT nTransparen
 void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, const Bitmap& rAlphaMask )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndTransparencyGroupMaskPDFAction( rRect, rAlphaMask ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->endTransparencyGroup( rRect, rAlphaMask );
@@ -1559,7 +1558,7 @@ void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, const Bitmap& rAlp
 void PDFWriter::Push( USHORT nFlags )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPushAction( nFlags ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->push( nFlags );
@@ -1568,7 +1567,7 @@ void PDFWriter::Push( USHORT nFlags )
 void PDFWriter::Pop()
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPopAction() ); 
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->pop();
@@ -1577,7 +1576,7 @@ void PDFWriter::Pop()
 void PDFWriter::SetMapMode( const MapMode& rMapMode )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMapModeAction( rMapMode ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setMapMode( rMapMode );
@@ -1585,7 +1584,7 @@ void PDFWriter::SetMapMode( const MapMode& rMapMode )
 
 void PDFWriter::SetMapMode()
 {
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMapModeAction( ((PDFWriterImpl*)pImplementation)->getMapMode() ) );
     ((PDFWriterImpl*)pImplementation)->setMapMode();
 }
@@ -1593,7 +1592,7 @@ void PDFWriter::SetMapMode()
 void PDFWriter::SetLineColor( const Color& rColor )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setLineColor( rColor );
@@ -1602,7 +1601,7 @@ void PDFWriter::SetLineColor( const Color& rColor )
 void PDFWriter::SetFillColor( const Color& rColor )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaFillColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setFillColor( rColor );
@@ -1611,7 +1610,7 @@ void PDFWriter::SetFillColor( const Color& rColor )
 void PDFWriter::SetClipRegion()
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region(), FALSE ) );
 #endif	// USE_JAVA 
     ((PDFWriterImpl*)pImplementation)->clearClipRegion();
@@ -1620,7 +1619,7 @@ void PDFWriter::SetClipRegion()
 void PDFWriter::SetClipRegion( const Region& rRegion )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( rRegion, TRUE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setClipRegion( rRegion );
@@ -1629,7 +1628,7 @@ void PDFWriter::SetClipRegion( const Region& rRegion )
 void PDFWriter::MoveClipRegion( long nHorzMove, long nVertMove )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMoveClipRegionAction( nHorzMove, nVertMove ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->moveClipRegion( nHorzMove, nVertMove );
@@ -1638,7 +1637,7 @@ void PDFWriter::MoveClipRegion( long nHorzMove, long nVertMove )
 void PDFWriter::IntersectClipRegion( const Region& rRegion )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRegionClipRegionAction( rRegion ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRegion );
@@ -1647,7 +1646,7 @@ void PDFWriter::IntersectClipRegion( const Region& rRegion )
 void PDFWriter::IntersectClipRegion( const Rectangle& rRect )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRectClipRegionAction( rRect ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRect );
@@ -1656,7 +1655,7 @@ void PDFWriter::IntersectClipRegion( const Rectangle& rRect )
 void PDFWriter::SetAntialiasing( USHORT nMode )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaAntiAliasPDFAction( nMode ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setAntiAlias( (sal_Int32)nMode );
@@ -1665,7 +1664,7 @@ void PDFWriter::SetAntialiasing( USHORT nMode )
 void PDFWriter::SetLayoutMode( ULONG nMode )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLayoutModeAction( nMode ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setLayoutMode( (sal_Int32)nMode );
@@ -1674,7 +1673,7 @@ void PDFWriter::SetLayoutMode( ULONG nMode )
 void PDFWriter::SetDigitLanguage( LanguageType eLang )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaDigitLanguagePDFAction( eLang ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setDigitLanguage( eLang );
@@ -1683,7 +1682,7 @@ void PDFWriter::SetDigitLanguage( LanguageType eLang )
 void PDFWriter::SetTextColor( const Color& rColor )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextColorAction( rColor ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setTextColor( rColor );
@@ -1692,7 +1691,7 @@ void PDFWriter::SetTextColor( const Color& rColor )
 void PDFWriter::SetTextFillColor()
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), FALSE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setTextFillColor();
@@ -1701,7 +1700,7 @@ void PDFWriter::SetTextFillColor()
 void PDFWriter::SetTextFillColor( const Color& rColor )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setTextFillColor( rColor );
@@ -1710,7 +1709,7 @@ void PDFWriter::SetTextFillColor( const Color& rColor )
 void PDFWriter::SetTextLineColor()
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setTextLineColor();
@@ -1719,7 +1718,7 @@ void PDFWriter::SetTextLineColor()
 void PDFWriter::SetTextLineColor( const Color& rColor )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setTextLineColor( rColor );
@@ -1728,7 +1727,7 @@ void PDFWriter::SetTextLineColor( const Color& rColor )
 void PDFWriter::SetTextAlign( ::TextAlign eAlign )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextAlignAction( eAlign ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setTextAlign( eAlign );
@@ -1737,7 +1736,7 @@ void PDFWriter::SetTextAlign( ::TextAlign eAlign )
 void PDFWriter::DrawJPGBitmap( SvStream& rStreamData, bool bIsTrueColor, const Size& rSrcSizePixel, const Rectangle& rTargetArea, const Bitmap& rMask )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaJpgPDFAction( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawJPGBitmap( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask );
@@ -1746,7 +1745,7 @@ void PDFWriter::DrawJPGBitmap( SvStream& rStreamData, bool bIsTrueColor, const S
 sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateLinkPDFAction( rRect, nPageNr ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->createLink( rRect, nPageNr );
@@ -1755,7 +1754,7 @@ sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
 sal_Int32 PDFWriter::CreateDest( const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateDestPDFAction( rRect, nPageNr, eType ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->createDest( rRect, nPageNr, eType );
@@ -1764,7 +1763,7 @@ sal_Int32 PDFWriter::CreateDest( const Rectangle& rRect, sal_Int32 nPageNr, PDFW
 sal_Int32 PDFWriter::SetLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkDestPDFAction( nLinkId, nDestId ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->setLinkDest( nLinkId, nDestId );
@@ -1773,7 +1772,7 @@ sal_Int32 PDFWriter::SetLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )
 sal_Int32 PDFWriter::SetLinkURL( sal_Int32 nLinkId, const rtl::OUString& rURL )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkUrlPDFAction( nLinkId, rURL ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->setLinkURL( nLinkId, rURL );
@@ -1782,7 +1781,7 @@ sal_Int32 PDFWriter::SetLinkURL( sal_Int32 nLinkId, const rtl::OUString& rURL )
 void PDFWriter::SetLinkPropertyID( sal_Int32 nLinkId, sal_Int32 nPropertyId )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkPropertyIdPDFAction( nLinkId, nPropertyId ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setLinkPropertyId( nLinkId, nPropertyId );
@@ -1791,7 +1790,7 @@ void PDFWriter::SetLinkPropertyID( sal_Int32 nLinkId, sal_Int32 nPropertyId )
 sal_Int32 PDFWriter::CreateOutlineItem( sal_Int32 nParent, const rtl::OUString& rText, sal_Int32 nDestID )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateOutlineItemPDFAction( nParent, rText, nDestID ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->createOutlineItem( nParent, rText, nDestID );
@@ -1800,7 +1799,7 @@ sal_Int32 PDFWriter::CreateOutlineItem( sal_Int32 nParent, const rtl::OUString& 
 sal_Int32 PDFWriter::SetOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemParentPDFAction( nItem, nNewParent ) ); 
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->setOutlineItemParent( nItem, nNewParent );
@@ -1809,7 +1808,7 @@ sal_Int32 PDFWriter::SetOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent
 sal_Int32 PDFWriter::SetOutlineItemText( sal_Int32 nItem, const rtl::OUString& rText )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemTextPDFAction( nItem, rText ) );
 #endif	// USE_JAVA
     return  ((PDFWriterImpl*)pImplementation)->setOutlineItemText( nItem, rText );
@@ -1818,7 +1817,7 @@ sal_Int32 PDFWriter::SetOutlineItemText( sal_Int32 nItem, const rtl::OUString& r
 sal_Int32 PDFWriter::SetOutlineItemDest( sal_Int32 nItem, sal_Int32 nDest )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemDestPDFAction( nItem, nDest ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->setOutlineItemDest( nItem, nDest );
@@ -1827,7 +1826,7 @@ sal_Int32 PDFWriter::SetOutlineItemDest( sal_Int32 nItem, sal_Int32 nDest )
 void PDFWriter::CreateNote( const Rectangle& rRect, const PDFNote& rNote, sal_Int32 nPageNr )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateNotePDFAction( rRect, rNote, nPageNr ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->createNote( rRect, rNote, nPageNr );
@@ -1836,7 +1835,7 @@ void PDFWriter::CreateNote( const Rectangle& rRect, const PDFNote& rNote, sal_In
 sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginStructureElementPDFAction( eType ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->beginStructureElement( eType );
@@ -1845,7 +1844,7 @@ sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType )
 void PDFWriter::EndStructureElement()
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndStructureElementPDFAction() );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->endStructureElement();
@@ -1854,7 +1853,7 @@ void PDFWriter::EndStructureElement()
 bool PDFWriter::SetCurrentStructureElement( sal_Int32 nID )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetCurrentStructureElementPDFAction( nID ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->setCurrentStructureElement( nID );
@@ -1868,7 +1867,7 @@ sal_Int32 PDFWriter::GetCurrentStructureElement()
 bool PDFWriter::SetStructureAttribute( enum StructAttribute eAttr, enum StructAttributeValue eVal )
 {
 #ifdef USE_JAVA     
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureAttributePDFAction( eAttr, eVal ) );          
 #endif	// USE_JAVA 
     return ((PDFWriterImpl*)pImplementation)->setStructureAttribute( eAttr, eVal );
@@ -1877,7 +1876,7 @@ bool PDFWriter::SetStructureAttribute( enum StructAttribute eAttr, enum StructAt
 bool PDFWriter::SetStructureAttributeNumerical( enum StructAttribute eAttr, sal_Int32 nValue )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureAttributeNumericalPDFAction( eAttr, nValue ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->setStructureAttributeNumerical( eAttr, nValue );
@@ -1886,7 +1885,7 @@ bool PDFWriter::SetStructureAttributeNumerical( enum StructAttribute eAttr, sal_
 void PDFWriter::SetStructureBoundingBox( const Rectangle& rRect )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureBoundingBoxPDFAction( rRect ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setStructureBoundingBox( rRect );
@@ -1895,7 +1894,7 @@ void PDFWriter::SetStructureBoundingBox( const Rectangle& rRect )
 void PDFWriter::SetActualText( const String& rText )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetActualTextPDFAction( rText ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setActualText( rText );
@@ -1904,7 +1903,7 @@ void PDFWriter::SetActualText( const String& rText )
 void PDFWriter::SetAlternateText( const String& rText )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetAlternateTextPDFAction( rText ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setAlternateText( rText );
@@ -1913,7 +1912,7 @@ void PDFWriter::SetAlternateText( const String& rText )
 void PDFWriter::SetAutoAdvanceTime( sal_uInt32 nSeconds, sal_Int32 nPageNr )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetAutoAdvanceTimePDFAction( nSeconds, nPageNr ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setAutoAdvanceTime( nSeconds, nPageNr );
@@ -1922,7 +1921,7 @@ void PDFWriter::SetAutoAdvanceTime( sal_uInt32 nSeconds, sal_Int32 nPageNr )
 void PDFWriter::SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetPageTransitionPDFAction( eType, nMilliSec, nPageNr ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setPageTransition( eType, nMilliSec, nPageNr );
@@ -1931,7 +1930,7 @@ void PDFWriter::SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 n
 sal_Int32 PDFWriter::CreateControl( const PDFWriter::AnyWidget& rControl, sal_Int32 nPageNr )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateControlPDFAction( rControl, nPageNr ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->createControl( rControl, nPageNr );
@@ -1940,7 +1939,7 @@ sal_Int32 PDFWriter::CreateControl( const PDFWriter::AnyWidget& rControl, sal_In
 void PDFWriter::BeginPattern()
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginPatternPDFAction() );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->beginPattern();
@@ -1949,7 +1948,7 @@ void PDFWriter::BeginPattern()
 sal_Int32 PDFWriter::EndPattern( const Rectangle& rCellBounds, const SvtGraphicFill::Transform& rTransform )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndPatternPDFAction( rCellBounds, rTransform ) );
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->endPattern( rCellBounds, rTransform );
@@ -1958,7 +1957,7 @@ sal_Int32 PDFWriter::EndPattern( const Rectangle& rCellBounds, const SvtGraphicF
 void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill )
 {
 #ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isUsingMetaFile() )
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyPolygonPDFAction( rPolyPoly, nPattern, bEOFill ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPolyPolygon( rPolyPoly, nPattern, bEOFill );
