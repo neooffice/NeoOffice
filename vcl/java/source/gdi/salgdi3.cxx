@@ -89,7 +89,6 @@ typedef void NativeShutdownCancelledHandler_Type();
 
 static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
-static ATSFontNotificationRef aFontNotification = NULL;
 static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
@@ -340,14 +339,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					}
 				}
 			}
-
-			// If this is our first time through, register a notification so
-			// that our font list gets updated
-			if ( !aFontNotification )
-				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
-
-			// Force all OOo cached font lists to be cleared
-			OutputDevice::ImplUpdateAllFontData( true );
 
 			rSolarMutex.release();
 		}
