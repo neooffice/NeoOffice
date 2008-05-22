@@ -102,6 +102,13 @@ using namespace vos;
 
 static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData )
 {
+	static bool bInLoad = false;
+
+	if ( bInLoad )
+		return;
+
+	bInLoad = true;
+
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -109,9 +116,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 		if ( !Application::IsShutDown() )
 		{
 			SalData *pSalData = GetSalData();
-
-			// Force all OOo cached font lists to be cleared
-			OutputDevice::ImplUpdateAllFontData( true );
 
 			// Clean out caches
 			for ( ::std::map< String, JavaImplFontData* >::const_iterator fnit = pSalData->maFontNameMapping.begin(); fnit != pSalData->maFontNameMapping.end(); ++fnit )
@@ -342,28 +346,24 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			if ( !aFontNotification )
 				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
 
+			// Force all OOo cached font lists to be cleared
+			OutputDevice::ImplUpdateAllFontData( true );
+
 			rSolarMutex.release();
 		}
 	}
+
+	bInLoad = false;
 }
 
 // -----------------------------------------------------------------------
 
 static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData )
 {
-	static bool bInLoad = false;
-
-	if ( bInLoad )
-		return;
-
-	bInLoad = true;
-
 	ImplFontListChangedCallback( NULL, NULL );
 
 	// Release any waiting thread
 	aLoadNativeFontsCondition.set();
-
-	bInLoad = false;
 }
 
 // =======================================================================
