@@ -89,6 +89,7 @@ typedef void NativeShutdownCancelledHandler_Type();
 
 static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
+static ATSFontNotificationRef aFontNotification = NULL;
 static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
@@ -108,6 +109,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 		if ( !Application::IsShutDown() )
 		{
 			SalData *pSalData = GetSalData();
+
+			// Force all OOo cached font lists to be cleared
+			OutputDevice::ImplUpdateAllFontData( true );
 
 			// Clean out caches
 			for ( ::std::map< String, JavaImplFontData* >::const_iterator fnit = pSalData->maFontNameMapping.begin(); fnit != pSalData->maFontNameMapping.end(); ++fnit )
@@ -331,38 +335,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						NSFontManager_releaseAllFonts( pFonts );
 					}
 				}
-
-				// Reset any cached VCLFont instances
-				for ( ::std::list< JavaSalGraphics* >::const_iterator git = pSalData->maGraphicsList.begin(); git != pSalData->maGraphicsList.end(); ++git )
-				{
-					com_sun_star_vcl_VCLFont *pCurrentFont = (*git)->mpVCLFont;
-					if ( pCurrentFont )
-					{
-						OUString aFontName( pCurrentFont->getName() );
-						::std::map< OUString, JavaImplFontData* >::const_iterator it = pSalData->maJavaFontNameMapping.find( aFontName );
-						if ( it != pSalData->maJavaFontNameMapping.end() )
-						{
-							(*git)->mpVCLFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX(), it->second->mnATSUFontID );
-							delete pCurrentFont;
-						}
-
-						for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = (*git)->maFallbackFonts.begin(); ffit != (*git)->maFallbackFonts.end(); ++ffit )
-						{
-							pCurrentFont = ffit->second;
-							if ( pCurrentFont )
-							{
-								OUString aCurrentFontName( pCurrentFont->getName() );
-								::std::map< OUString, JavaImplFontData* >::const_iterator mit = pSalData->maJavaFontNameMapping.find( aCurrentFontName );
-								if ( mit != pSalData->maJavaFontNameMapping.end() )
-								{
-									ffit->second = new com_sun_star_vcl_VCLFont( mit->second->maVCLFontName, pCurrentFont->getSize(), pCurrentFont->getOrientation(), pCurrentFont->isAntialiased(), pCurrentFont->isVertical(), pCurrentFont->getScaleX(), mit->second->mnATSUFontID  );
-									delete pCurrentFont;
-								}
-							}
-						}
-					}
-				}
 			}
+
+			// If this is our first time through, register a notification so
+			// that our font list gets updated
+			if ( !aFontNotification )
+				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
 
 			rSolarMutex.release();
 		}
@@ -522,6 +500,11 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 	if ( !nFallbackLevel )
 	{
+		// Set font data for graphics device
+		if ( mpFontData )
+			delete mpFontData;
+		mpFontData = (JavaImplFontData *)pFontData->Clone();
+
 		// Set font for graphics device
 		if ( mpVCLFont )
 			delete mpVCLFont;
@@ -542,15 +525,6 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
-	SalData *pSalData = GetSalData();
-
-	JavaImplFontData *pData;
-	::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( pMetric->maName );
-	if ( it != pSalData->maFontNameMapping.end() )
-		pData = it->second;
-	else
- 		pData = NULL;
-
 	if ( mpVCLFont )
 	{
 		pMetric->mnWidth = mpVCLFont->getSize();
@@ -562,45 +536,47 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		pMetric->mnOrientation = 0;
 	}
 
-	if ( pData && pMetric->mnWidth )
+	if ( mpFontData )
 	{
-		ATSFontMetrics aFontMetrics;
-		ATSFontRef aFont = FMGetATSFontRefFromFont( pData->mnATSUFontID );
-		if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr ) {
-			// Mac OS X seems to overstate the leading for some fonts (usually
-			// CJK fonts like Hiragino) so fix fix bugs 2827 and 2847 by
-			// adding combining the leading with descent
-			pMetric->mnAscent = (long)( ( aFontMetrics.ascent * pMetric->mnWidth ) + 0.5 );
-			if ( pMetric->mnAscent < 1 )
-				pMetric->mnAscent = 1;
-			// Fix bug 2881 by handling cases where font does not have negative
-			// descent
-			pMetric->mnDescent = (long)( ( ( aFontMetrics.leading + fabs( aFontMetrics.descent ) ) * pMetric->mnWidth ) + 0.5 );
-			if ( pMetric->mnDescent < 0 )
-				pMetric->mnDescent = 0;
-		}
-		else
+		if ( pMetric->mnWidth )
 		{
-			pMetric->mnAscent = 0;
-			pMetric->mnDescent = 0;
+			ATSFontMetrics aFontMetrics;
+			ATSFontRef aFont = FMGetATSFontRefFromFont( mpFontData->mnATSUFontID );
+			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
+			{
+				// Mac OS X seems to overstate the leading for some fonts
+				// (usually CJK fonts like Hiragino) so fix fix bugs 2827 and
+				// 2847 by adding combining the leading with descent
+				pMetric->mnAscent = (long)( ( aFontMetrics.ascent * pMetric->mnWidth ) + 0.5 );
+				if ( pMetric->mnAscent < 1 )
+					pMetric->mnAscent = 1;
+				// Fix bug 2881 by handling cases where font does not have
+				// negative descent
+				pMetric->mnDescent = (long)( ( ( aFontMetrics.leading + fabs( aFontMetrics.descent ) ) * pMetric->mnWidth ) + 0.5 );
+				if ( pMetric->mnDescent < 0 )
+					pMetric->mnDescent = 0;
+			}
+			else
+			{
+				pMetric->mnAscent = 0;
+				pMetric->mnDescent = 0;
+			}
 		}
 
-		pMetric->mbDevice = pData->mbDevice;
+		pMetric->mbDevice = mpFontData->mbDevice;
 		pMetric->mbScalableFont = true;
-		pMetric->maName = pData->GetFamilyName();
-		pMetric->maStyleName = pData->GetStyleName();
-		pMetric->meWeight = pData->GetWeight();
-		pMetric->meFamily = pData->GetFamilyType();
-		pMetric->meItalic = pData->GetSlant();
-		pMetric->mePitch = pData->GetPitch();
-		pMetric->mbSymbolFlag = pData->IsSymbolFont();
+		pMetric->maName = mpFontData->GetFamilyName();
+		pMetric->maStyleName = mpFontData->GetStyleName();
+		pMetric->meWeight = mpFontData->GetWeight();
+		pMetric->meFamily = mpFontData->GetFamilyType();
+		pMetric->meItalic = mpFontData->GetSlant();
+		pMetric->mePitch = mpFontData->GetPitch();
+		pMetric->mbSymbolFlag = mpFontData->IsSymbolFont();
 	}
 	else
 	{
 		pMetric->mnAscent = 0;
 		pMetric->mnDescent = 0;
-		pMetric->mnSlant = 0;
-
 		pMetric->mbDevice = false;
 		pMetric->mbScalableFont = false;
 		pMetric->maName = String();

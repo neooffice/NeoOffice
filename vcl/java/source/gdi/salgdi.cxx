@@ -70,6 +70,7 @@ JavaSalGraphics::JavaSalGraphics()
 	mpFrame = NULL;
 	mpPrinter = NULL;
 	mpVirDev = NULL;
+	mpFontData = NULL;
 	mpVCLGraphics = NULL;
 	mpVCLFont = NULL;
 	mnFontFamily = FAMILY_DONTKNOW;
@@ -86,6 +87,9 @@ JavaSalGraphics::JavaSalGraphics()
 JavaSalGraphics::~JavaSalGraphics()
 {
 	GetSalData()->maGraphicsList.remove( this );
+
+	if ( mpFontData )
+		delete mpFontData;
 
 	if ( mpVCLFont )
 		delete mpVCLFont;

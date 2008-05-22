@@ -98,6 +98,7 @@ public:
 	JavaSalPrinter*			mpPrinter;
 	JavaSalVirtualDevice*	mpVirDev;
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
+	JavaImplFontData*		mpFontData;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
 	::std::map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
 	ImplLayoutRuns			maFallbackRuns;
