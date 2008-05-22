@@ -559,6 +559,564 @@ public:
 
 using namespace vcl;
 
+#ifdef USE_JAVA
+
+static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
+{
+    for ( ULONG i = 0, nCount = rMtf.GetActionCount(); i < nCount; i++ )
+    {
+        const MetaAction *pAction = rMtf.GetAction( i );
+        const USHORT nType = pAction->GetType();
+
+        switch( nType )
+        {
+            case( META_NEW_PAGE_PDF_ACTION ):
+            {
+                const MetaNewPagePDFAction* pA = (const MetaNewPagePDFAction*) pAction;
+                aWriter.NewPage( pA->GetPageWidth(), pA->GetPageHeight(), pA->GetOrientation() );
+            }
+            break;
+
+            case( META_FONT_ACTION ):
+            {
+                const MetaFontAction* pA = (const MetaFontAction*) pAction;
+                aWriter.SetFont( pA->GetFont() );
+            }
+            break;
+
+            case( META_TEXT_ACTION ):
+            {
+                const MetaTextAction* pA = (const MetaTextAction*) pAction;
+                aWriter.DrawText( pA->GetPoint(), pA->GetText() );
+            }
+            break;
+
+            case( META_TEXTLINE_PDF_ACTION ):
+            {
+                const MetaTextLinePDFAction* pA = (const MetaTextLinePDFAction*) pAction;
+                aWriter.DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->IsUnderlineAbove() );
+            }
+            break;
+
+            case( META_TEXTARRAY_ACTION ):
+            {
+                const MetaTextArrayAction* pA = (const MetaTextArrayAction*) pAction;
+                aWriter.DrawTextArray( pA->GetPoint(), pA->GetText(), pA->GetDXArray(), pA->GetIndex(), pA->GetLen() );
+            }
+            break;
+
+            case( META_STRETCHTEXT_ACTION ):
+            {
+                const MetaStretchTextAction* pA = (const MetaStretchTextAction*) pAction;
+                aWriter.DrawStretchText( pA->GetPoint(), pA->GetWidth(), pA->GetText(), pA->GetIndex(), pA->GetLen() );
+            }
+            break;
+
+            case( META_TEXTRECT_ACTION ):
+            {
+                const MetaTextRectAction* pA = (const MetaTextRectAction*) pAction;
+                aWriter.DrawText( pA->GetRect(), pA->GetText(), pA->GetStyle() );
+            }
+            break;
+
+            case( META_LINE_ACTION ):
+            {
+                const MetaLineAction* pA = (const MetaLineAction*) pAction;
+                aWriter.DrawLine( pA->GetStartPoint(), pA->GetEndPoint(), pA->GetLineInfo() );
+            }
+            break;
+
+            case( META_POLYGON_ACTION ):
+            {
+                const MetaPolygonAction* pA = (const MetaPolygonAction*) pAction;
+                aWriter.DrawPolygon( pA->GetPolygon() );
+            }
+            break;
+
+            case( META_POLYLINE_ACTION ):
+            {
+                const MetaPolyLineAction* pA = (const MetaPolyLineAction*) pAction;
+                aWriter.DrawPolyLine( pA->GetPolygon(), pA->GetLineInfo() );
+            }
+            break;
+
+            case( META_POLYLINE_PDF_ACTION ):
+            {
+                const MetaPolyLinePDFAction* pA = (const MetaPolyLinePDFAction*) pAction;
+                aWriter.DrawPolyLine( pA->GetPolygon(), pA->GetExtLineInfo() );
+            }
+            break;
+
+            case( META_RECT_ACTION ):
+            {
+                const MetaRectAction* pA = (const MetaRectAction*) pAction;
+                aWriter.DrawRect( pA->GetRect() );
+            }
+            break;
+
+            case( META_ROUNDRECT_ACTION ):
+            {
+                const MetaRoundRectAction* pA = (const MetaRoundRectAction*) pAction;
+                aWriter.DrawRect( pA->GetRect(), pA->GetHorzRound(), pA->GetVertRound() );
+            }
+            break;
+
+            case( META_ELLIPSE_ACTION ):
+            {
+                const MetaEllipseAction* pA = (const MetaEllipseAction*) pAction;
+                aWriter.DrawEllipse( pA->GetRect() );
+            }
+            break;
+
+            case( META_PIE_ACTION ):
+            {
+                const MetaArcAction* pA = (const MetaArcAction*) pAction;
+                aWriter.DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
+            }
+            break;
+
+            case( META_CHORD_ACTION ):
+            {
+                const MetaChordAction* pA = (const MetaChordAction*) pAction;
+                aWriter.DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
+            }
+            break;
+
+            case( META_ARC_ACTION ):
+            {
+                const MetaArcAction* pA = (const MetaArcAction*) pAction;
+                aWriter.DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
+            }
+            break;
+
+            case( META_POLYPOLYGON_ACTION ):
+            {
+                const MetaPolyPolygonAction* pA = (const MetaPolyPolygonAction*) pAction;
+                aWriter.DrawPolyPolygon( pA->GetPolyPolygon() );
+            }
+            break;
+
+            case( META_PIXEL_ACTION ):
+            {
+                const MetaPixelAction* pA = (const MetaPixelAction*) pAction;
+                aWriter.DrawPixel( pA->GetPoint(), pA->GetColor() );
+            }
+            break;
+
+            case( META_PIXEL_PDF_ACTION ):
+            {
+                const MetaPixelPDFAction* pA = (const MetaPixelPDFAction*) pAction;
+                aWriter.DrawPixel( pA->GetPoints(), pA->GetColors() );
+            }
+            break;
+
+            case( META_BMP_ACTION ):
+            {
+                const MetaBmpAction* pA = (const MetaBmpAction*) pAction;
+                aWriter.DrawBitmap( pA->GetPoint(), pA->GetBitmap() );
+            }
+            break;
+
+            case( META_BMPSCALE_ACTION ):
+            {
+                const MetaBmpScaleAction* pA = (const MetaBmpScaleAction*) pAction;
+                aWriter.DrawBitmap( pA->GetPoint(), pA->GetSize(), pA->GetBitmap() );
+            }
+            break;
+
+            case( META_BMPEX_ACTION ):
+            {
+                const MetaBmpExAction* pA = (const MetaBmpExAction*) pAction;
+                aWriter.DrawBitmapEx( pA->GetPoint(), pA->GetBitmapEx() );
+            }
+            break;
+
+            case( META_BMPEXSCALE_ACTION ):
+            {
+                const MetaBmpExScaleAction* pA = (const MetaBmpExScaleAction*) pAction;
+                aWriter.DrawBitmapEx( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx() );
+            }
+            break;
+
+            case( META_MASK_ACTION ):
+            {
+                const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
+                aWriter.DrawMask( pA->GetPoint(), pA->GetBitmap(), pA->GetColor() );
+            }
+            break;
+
+            case( META_MASKSCALE_ACTION ):
+            {
+                const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
+                aWriter.DrawMask( pA->GetPoint(), pA->GetSize(), pA->GetBitmap(), pA->GetColor() );
+            }
+            break;
+
+            case( META_GRADIENT_ACTION ):
+            {
+                const MetaGradientAction* pA = (const MetaGradientAction*) pAction;
+                aWriter.DrawGradient( pA->GetRect(), pA->GetGradient() );
+            }
+            break;
+
+            case( META_GRADIENTEX_ACTION ):
+            {
+                const MetaGradientExAction* pA = (const MetaGradientExAction*) pAction;
+                aWriter.DrawGradient( pA->GetPolyPolygon(), pA->GetGradient() );
+            }
+            break;
+
+            case META_HATCH_ACTION:
+            {
+                const MetaHatchAction* pA = (const MetaHatchAction*) pAction;
+                aWriter.DrawHatch( pA->GetPolyPolygon(), pA->GetHatch() );
+            }
+            break;
+
+            case( META_WALLPAPER_ACTION ):
+            {
+                const MetaWallpaperAction* pA = (const MetaWallpaperAction*) pAction;
+                aWriter.DrawWallpaper( pA->GetRect(), pA->GetWallpaper() );
+            }
+            break;
+
+            case( META_TRANSPARENT_ACTION ):
+            {
+                const MetaTransparentAction* pA = (const MetaTransparentAction*) pAction;
+                aWriter.DrawTransparent( pA->GetPolyPolygon(), pA->GetTransparence() );
+            }
+            break;
+
+            case( META_PUSH_ACTION ):
+            {
+                const MetaPushAction* pA = (const MetaPushAction*) pAction;
+
+                aWriter.Push( pA->GetFlags() );
+            }
+            break;
+
+            case( META_POP_ACTION ):
+            {
+                aWriter.Pop();
+            }
+            break;
+
+            case( META_MAPMODE_ACTION ):
+            {
+                const MetaMapModeAction* pA = (const MetaMapModeAction*) pAction;
+                aWriter.SetMapMode( pA->GetMapMode() );
+            }
+            break;
+
+            case( META_LINECOLOR_ACTION ):
+            {
+                const MetaLineColorAction* pA = (const MetaLineColorAction*) pAction;
+                aWriter.SetLineColor( pA->GetColor() );
+            }
+            break;
+
+            case( META_FILLCOLOR_ACTION ):
+            {
+                const MetaFillColorAction* pA = (const MetaFillColorAction*) pAction;
+                aWriter.SetFillColor( pA->GetColor() );
+            }
+            break;
+
+            case( META_CLIPREGION_ACTION ):
+            {
+                const MetaClipRegionAction* pA = (const MetaClipRegionAction*) pAction;
+                if( pA->IsClipping() )
+                    aWriter.SetClipRegion( pA->GetRegion() );
+                else
+                    aWriter.SetClipRegion();
+            }
+            break;
+
+            case( META_MOVECLIPREGION_ACTION ):
+            {
+                const MetaMoveClipRegionAction* pA = (const MetaMoveClipRegionAction*) pAction;
+                aWriter.MoveClipRegion( pA->GetHorzMove(), pA->GetVertMove() );
+            }
+            break;
+
+            case( META_ISECTRECTCLIPREGION_ACTION ):
+            {
+                const MetaISectRectClipRegionAction* pA = (const MetaISectRectClipRegionAction*) pAction;
+                aWriter.IntersectClipRegion( pA->GetRect() );
+            }
+            break;
+
+            case( META_ISECTREGIONCLIPREGION_ACTION ):
+            {
+               const MetaISectRegionClipRegionAction* pA = (const MetaISectRegionClipRegionAction*) pAction;
+               aWriter.IntersectClipRegion( pA->GetRegion() );
+            }
+            break;
+
+            case( META_ANTIALIAS_PDF_ACTION ):
+            {
+                const MetaAntiAliasPDFAction* pA = (const MetaAntiAliasPDFAction*) pAction;
+                aWriter.SetAntialiasing( pA->GetAntiAlias() );
+            }
+            break;
+
+            case( META_LAYOUTMODE_ACTION ):
+            {
+                const MetaLayoutModeAction* pA = (const MetaLayoutModeAction*) pAction;
+                aWriter.SetLayoutMode( pA->GetLayoutMode() );
+            }
+            break;
+
+            case( META_TEXTCOLOR_ACTION ):
+            {
+                const MetaTextColorAction* pA = (const MetaTextColorAction*) pAction;
+                aWriter.SetTextColor( pA->GetColor() );
+            }
+            break;
+
+            case( META_TEXTFILLCOLOR_ACTION ):
+            {
+                const MetaTextFillColorAction* pA = (const MetaTextFillColorAction*) pAction;
+                if ( pA->IsSetting() )
+                    aWriter.SetTextFillColor( pA->GetColor() );
+                else
+                    aWriter.SetTextFillColor();
+            }
+            break;
+
+            case( META_TEXTLINECOLOR_ACTION ):
+            {
+                const MetaTextLineColorAction* pA = (const MetaTextLineColorAction*) pAction;
+                if ( pA->IsSetting() )
+                    aWriter.SetTextLineColor( pA->GetColor() );
+                else
+                    aWriter.SetTextLineColor();
+            }
+            break;
+
+            case( META_TEXTALIGN_ACTION ):
+            {
+                const MetaTextAlignAction* pA = (const MetaTextAlignAction*) pAction;
+                aWriter.SetTextAlign( pA->GetTextAlign() );
+            }
+            break;
+
+            case( META_JPG_PDF_ACTION ):
+            {
+                const MetaJpgPDFAction* pA = (const MetaJpgPDFAction*) pAction;
+                aWriter.DrawJPGBitmap( (SvStream&)pA->GetStream(), pA->IsTrueColor(), pA->GetSize(), pA->GetRect(), pA->GetMask() );
+            }
+            break;
+
+            case( META_CREATELINK_PDF_ACTION ):
+            {
+                const MetaCreateLinkPDFAction* pA = (const MetaCreateLinkPDFAction*) pAction;
+                aWriter.CreateLink( pA->GetRect(), pA->GetPage() );
+            }
+            break;
+
+            case( META_CREATEDEST_PDF_ACTION ):
+            {
+                const MetaCreateDestPDFAction* pA = (const MetaCreateDestPDFAction*) pAction;
+                aWriter.CreateDest( pA->GetRect(), pA->GetPage(), pA->GetType() );
+            }
+            break;
+
+            case( META_SETLINKDEST_PDF_ACTION ):
+            {
+                const MetaSetLinkDestPDFAction* pA = (const MetaSetLinkDestPDFAction*) pAction;
+                aWriter.SetLinkDest( pA->GetLink(), pA->GetDest() );
+            }
+            break;
+
+            case( META_SETLINKURL_PDF_ACTION ):
+            {
+                const MetaSetLinkUrlPDFAction* pA = (const MetaSetLinkUrlPDFAction*) pAction;
+                aWriter.SetLinkURL( pA->GetLink(), pA->GetURL() );
+            }
+            break;
+
+            case( META_SETLINKPROPERTYID_PDF_ACTION ):
+            {
+                const MetaSetLinkPropertyIdPDFAction* pA = (const MetaSetLinkPropertyIdPDFAction*) pAction;
+                aWriter.SetLinkPropertyID( pA->GetLink(), pA->GetProperty() );
+            }
+            break;
+
+            case( META_CREATEOUTLINEITEM_PDF_ACTION ):
+            {
+                const MetaCreateOutlineItemPDFAction* pA = (const MetaCreateOutlineItemPDFAction*) pAction;
+                aWriter.CreateOutlineItem( pA->GetParent(), pA->GetText(), pA->GetDest() );
+            }
+            break;
+
+            case( META_SETOUTLINEITEMPARENT_PDF_ACTION ):
+            {
+                const MetaSetOutlineItemParentPDFAction* pA = (const MetaSetOutlineItemParentPDFAction*) pAction;
+                aWriter.SetOutlineItemParent( pA->GetItem(), pA->GetParent() );
+            }
+            break;
+
+            case( META_SETOUTLINEITEMTEXT_PDF_ACTION ):
+            {
+                const MetaSetOutlineItemTextPDFAction* pA = (const MetaSetOutlineItemTextPDFAction*) pAction;
+                aWriter.SetOutlineItemText( pA->GetItem(), pA->GetText() );
+            }
+            break;
+
+            case( META_SETOUTLINEITEMDEST_PDF_ACTION ):
+            {
+                const MetaSetOutlineItemDestPDFAction* pA = (const MetaSetOutlineItemDestPDFAction*) pAction;
+                aWriter.SetOutlineItemDest( pA->GetItem(), pA->GetDest() );
+            }
+            break;
+
+            case( META_CREATENOTE_PDF_ACTION ):
+            {
+                const MetaCreateNotePDFAction* pA = (const MetaCreateNotePDFAction*) pAction;
+                aWriter.CreateNote( pA->GetRect(), pA->GetNote(), pA->GetPage() );
+            }
+            break;
+
+            case( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ):
+            {
+                const MetaBeginStructureElementPDFAction* pA = (const MetaBeginStructureElementPDFAction*) pAction;
+                aWriter.BeginStructureElement( pA->GetType() );
+            }
+            break;
+
+            case( META_ENDSTRUCTUREELEMENT_PDF_ACTION ):
+            {
+                aWriter.EndStructureElement();
+            }
+            break;
+
+            case( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ):
+            {
+                const MetaSetCurrentStructureElementPDFAction* pA = (const MetaSetCurrentStructureElementPDFAction*) pAction;
+                aWriter.SetCurrentStructureElement( pA->GetElement() );
+            }
+            break;
+
+            case( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ):
+            {
+                const MetaSetStructureAttributePDFAction* pA = (const MetaSetStructureAttributePDFAction*) pAction;
+                aWriter.SetStructureAttribute( pA->GetAttribute(), pA->GetValue() );
+            }
+            break;
+
+            case( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ):
+            {
+                const MetaSetStructureAttributeNumericalPDFAction* pA = (const MetaSetStructureAttributeNumericalPDFAction*) pAction;
+                aWriter.SetStructureAttributeNumerical( pA->GetAttribute(), pA->GetValue() );
+            }
+            break;
+
+            case( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ):
+            {
+                const MetaSetStructureBoundingBoxPDFAction* pA = (const MetaSetStructureBoundingBoxPDFAction*) pAction;
+                aWriter.SetStructureBoundingBox( pA->GetRect() );
+            }
+            break;
+
+            case( META_SETACTUALTEXT_PDF_ACTION ):
+            {
+                const MetaSetActualTextPDFAction* pA = (const MetaSetActualTextPDFAction*) pAction;
+                aWriter.SetActualText( pA->GetText() );
+            }
+            break;
+
+            case( META_SETALTERNATETEXT_PDF_ACTION ):
+            {
+                const MetaSetAlternateTextPDFAction* pA = (const MetaSetAlternateTextPDFAction*) pAction;
+                aWriter.SetAlternateText( pA->GetText() );
+            }
+            break;
+
+            case( META_SETAUTOADVANCETIME_PDF_ACTION ):
+            {
+                const MetaSetAutoAdvanceTimePDFAction* pA = (const MetaSetAutoAdvanceTimePDFAction*) pAction;
+                aWriter.SetAutoAdvanceTime( pA->GetSeconds(), pA->GetPage() );
+            }
+            break;
+
+            case( META_SETPAGETRANSITION_PDF_ACTION ):
+            {
+                const MetaSetPageTransitionPDFAction* pA = (const MetaSetPageTransitionPDFAction*) pAction;
+                aWriter.SetPageTransition( pA->GetType(), pA->GetMilliSeconds(), pA->GetPage() );
+            }
+            break;
+
+            case( META_CREATECONTROL_PDF_ACTION ):
+            {
+                const MetaCreateControlPDFAction* pA = (const MetaCreateControlPDFAction*) pAction;
+                aWriter.CreateControl( pA->GetControl(), pA->GetPage() );
+            }
+            break;
+
+            case( META_DIGITLANGUAGE_PDF_ACTION ):
+            {
+                const MetaDigitLanguagePDFAction* pA = (const MetaDigitLanguagePDFAction*) pAction;
+                aWriter.SetDigitLanguage( pA->GetLanguage() );
+            }
+            break;
+
+            case( META_BEGINPATTERN_PDF_ACTION ):
+            {
+                aWriter.BeginPattern();
+            }
+            break;
+
+            case( META_ENDPATTERN_PDF_ACTION ):
+            {
+                const MetaEndPatternPDFAction* pA = (const MetaEndPatternPDFAction*) pAction;
+                aWriter.EndPattern( pA->GetRect(), pA->GetTransform() );
+            }
+            break;
+
+            case( META_POLYPOLYGON_PDF_ACTION ):
+            {
+                const MetaPolyPolygonPDFAction* pA = (const MetaPolyPolygonPDFAction*) pAction;
+                aWriter.DrawPolyPolygon( pA->GetPolyPolygon(), pA->GetPattern(), pA->IsEOFill() );
+            }
+            break;
+
+            case( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ):
+            {
+                aWriter.BeginTransparencyGroup();
+            }
+            break;
+
+            case( META_ENDTRANSPARENCYGROUP_PDF_ACTION ):
+            {
+                const MetaEndTransparencyGroupPDFAction* pA = (const MetaEndTransparencyGroupPDFAction*) pAction;
+                aWriter.EndTransparencyGroup( pA->GetBoundingRect(), pA->GetTransparentPercent() );
+            }
+            break;
+
+            case( META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION ):
+            {
+                const MetaEndTransparencyGroupMaskPDFAction* pA = (const MetaEndTransparencyGroupMaskPDFAction*) pAction;
+                aWriter.EndTransparencyGroup( pA->GetBoundingRect(), pA->GetAlphaMask() );
+            }
+            break;
+
+            case( META_SETDOCINFO_PDF_ACTION ):
+            {
+                const MetaSetDocInfoPDFAction* pA = (const MetaSetDocInfoPDFAction*) pAction;
+                aWriter.SetDocInfo( pA->GetDocInfo() );
+            }
+            break;
+
+            default:
+                DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
+            break;
+        }
+    }
+}
+
+#endif	// USE_JAVA
+
 PDFWriter::AnyWidget::~AnyWidget()
 {
 }
@@ -596,566 +1154,28 @@ bool PDFWriter::Emit()
     // Replay meta actions
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() && ((PDFWriterImpl*)pImplementation)->emit() )
     {
-		const GDIMetaFile &rMtf = ((PDFWriterImpl*)pImplementation)->getReplayMetaFile();
-        PDFWriterImpl aWriter( ((PDFWriterImpl*)pImplementation)->getContext(), (PDFWriterImpl*)pImplementation );
-		void *pOldImplementation = pImplementation;
-		pImplementation = &aWriter;
-
-        for ( ULONG i = 0, nCount = rMtf.GetActionCount(); i < nCount; i++ )
-        {
-            const MetaAction *pAction = rMtf.GetAction( i );
-            const USHORT nType = pAction->GetType();
-
-            switch( nType )
-            {
-                case( META_NEW_PAGE_PDF_ACTION ):
-                {
-                    const MetaNewPagePDFAction* pA = (const MetaNewPagePDFAction*) pAction;
-                    NewPage( pA->GetPageWidth(), pA->GetPageHeight(), pA->GetOrientation() );
-                }
-                break;
-
-                case( META_FONT_ACTION ):
-                {
-                    const MetaFontAction* pA = (const MetaFontAction*) pAction;
-                    SetFont( pA->GetFont() );
-                }
-                break;
-
-                case( META_TEXT_ACTION ):
-                {
-                    const MetaTextAction* pA = (const MetaTextAction*) pAction;
-                    DrawText( pA->GetPoint(), pA->GetText() );
-                }
-                break;
-
-                case( META_TEXTLINE_PDF_ACTION ):
-                {
-                    const MetaTextLinePDFAction* pA = (const MetaTextLinePDFAction*) pAction;
-                    DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->IsUnderlineAbove() );
-                }
-                break;
-
-                case( META_TEXTARRAY_ACTION ):
-                {
-                    const MetaTextArrayAction* pA = (const MetaTextArrayAction*) pAction;
-                    DrawTextArray( pA->GetPoint(), pA->GetText(), pA->GetDXArray(), pA->GetIndex(), pA->GetLen() );
-                }
-                break;
-
-                case( META_STRETCHTEXT_ACTION ):
-                {
-                    const MetaStretchTextAction* pA = (const MetaStretchTextAction*) pAction;
-                    DrawStretchText( pA->GetPoint(), pA->GetWidth(), pA->GetText(), pA->GetIndex(), pA->GetLen() );
-                }
-                break;
-
-                case( META_TEXTRECT_ACTION ):
-                {
-                    const MetaTextRectAction* pA = (const MetaTextRectAction*) pAction;
-                    DrawText( pA->GetRect(), pA->GetText(), pA->GetStyle() );
-                }
-                break;
-
-                case( META_LINE_ACTION ):
-                {
-                    const MetaLineAction* pA = (const MetaLineAction*) pAction;
-                    DrawLine( pA->GetStartPoint(), pA->GetEndPoint(), pA->GetLineInfo() );
-                }
-                break;
-
-                case( META_POLYGON_ACTION ):
-                {
-                    const MetaPolygonAction* pA = (const MetaPolygonAction*) pAction;
-                    DrawPolygon( pA->GetPolygon() );
-                }
-                break;
-
-                case( META_POLYLINE_ACTION ):
-                {
-                    const MetaPolyLineAction* pA = (const MetaPolyLineAction*) pAction;
-                    DrawPolyLine( pA->GetPolygon(), pA->GetLineInfo() );
-                }
-                break;
-
-                case( META_POLYLINE_PDF_ACTION ):
-                {
-                    const MetaPolyLinePDFAction* pA = (const MetaPolyLinePDFAction*) pAction;
-                    DrawPolyLine( pA->GetPolygon(), pA->GetExtLineInfo() );
-                }
-                break;
-
-                case( META_RECT_ACTION ):
-                {
-                    const MetaRectAction* pA = (const MetaRectAction*) pAction;
-                    DrawRect( pA->GetRect() );
-                }
-                break;
-
-                case( META_ROUNDRECT_ACTION ):
-                {
-                    const MetaRoundRectAction* pA = (const MetaRoundRectAction*) pAction;
-                    DrawRect( pA->GetRect(), pA->GetHorzRound(), pA->GetVertRound() );
-                }
-                break;
-
-                case( META_ELLIPSE_ACTION ):
-                {
-                    const MetaEllipseAction* pA = (const MetaEllipseAction*) pAction;
-                    DrawEllipse( pA->GetRect() );
-                }
-                break;
-
-                case( META_PIE_ACTION ):
-                {
-                    const MetaArcAction* pA = (const MetaArcAction*) pAction;
-                    DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
-                }
-                break;
-
-                case( META_CHORD_ACTION ):
-                {
-                    const MetaChordAction* pA = (const MetaChordAction*) pAction;
-                    DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
-                }
-                break;
-
-                case( META_ARC_ACTION ):
-                {
-                    const MetaArcAction* pA = (const MetaArcAction*) pAction;
-                    DrawArc( pA->GetRect(), pA->GetStartPoint(), pA->GetEndPoint() );
-                }
-                break;
-
-                case( META_POLYPOLYGON_ACTION ):
-                {
-                    const MetaPolyPolygonAction* pA = (const MetaPolyPolygonAction*) pAction;
-                    DrawPolyPolygon( pA->GetPolyPolygon() );
-                }
-                break;
-
-                case( META_PIXEL_ACTION ):
-                {
-                    const MetaPixelAction* pA = (const MetaPixelAction*) pAction;
-                    DrawPixel( pA->GetPoint(), pA->GetColor() );
-                }
-                break;
-
-                case( META_PIXEL_PDF_ACTION ):
-                {
-                    const MetaPixelPDFAction* pA = (const MetaPixelPDFAction*) pAction;
-                    DrawPixel( pA->GetPoints(), pA->GetColors() );
-                }
-                break;
-
-                case( META_BMP_ACTION ):
-                {
-                    const MetaBmpAction* pA = (const MetaBmpAction*) pAction;
-                    DrawBitmap( pA->GetPoint(), pA->GetBitmap() );
-                }
-                break;
-
-                case( META_BMPSCALE_ACTION ):
-                {
-                    const MetaBmpScaleAction* pA = (const MetaBmpScaleAction*) pAction;
-                    DrawBitmap( pA->GetPoint(), pA->GetSize(), pA->GetBitmap() );
-                }
-                break;
-
-                case( META_BMPEX_ACTION ):
-                {
-                    const MetaBmpExAction* pA = (const MetaBmpExAction*) pAction;
-                    DrawBitmapEx( pA->GetPoint(), pA->GetBitmapEx() );
-                }
-                break;
-
-                case( META_BMPEXSCALE_ACTION ):
-                {
-                    const MetaBmpExScaleAction* pA = (const MetaBmpExScaleAction*) pAction;
-                    DrawBitmapEx( pA->GetPoint(), pA->GetSize(), pA->GetBitmapEx() );
-                }
-                break;
-
-                case( META_MASK_ACTION ):
-                {
-                    const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
-                    DrawMask( pA->GetPoint(), pA->GetBitmap(), pA->GetColor() );
-                }
-                break;
-
-                case( META_MASKSCALE_ACTION ):
-                {
-                    const MetaMaskScaleAction* pA = (const MetaMaskScaleAction*) pAction;
-                    DrawMask( pA->GetPoint(), pA->GetSize(), pA->GetBitmap(), pA->GetColor() );
-                }
-                break;
-
-                case( META_GRADIENT_ACTION ):
-                {
-                    const MetaGradientAction* pA = (const MetaGradientAction*) pAction;
-                    DrawGradient( pA->GetRect(), pA->GetGradient() );
-                }
-                break;
-
-                case( META_GRADIENTEX_ACTION ):
-                {
-                    const MetaGradientExAction* pA = (const MetaGradientExAction*) pAction;
-                    DrawGradient( pA->GetPolyPolygon(), pA->GetGradient() );
-                }
-                break;
-
-                case META_HATCH_ACTION:
-                {
-                    const MetaHatchAction* pA = (const MetaHatchAction*) pAction;
-                    DrawHatch( pA->GetPolyPolygon(), pA->GetHatch() );
-                }
-                break;
-
-                case( META_WALLPAPER_ACTION ):
-                {
-                    const MetaWallpaperAction* pA = (const MetaWallpaperAction*) pAction;
-                    DrawWallpaper( pA->GetRect(), pA->GetWallpaper() );
-                }
-                break;
-
-                case( META_TRANSPARENT_ACTION ):
-                {
-                    const MetaTransparentAction* pA = (const MetaTransparentAction*) pAction;
-                    DrawTransparent( pA->GetPolyPolygon(), pA->GetTransparence() );
-                }
-                break;
-
-                case( META_PUSH_ACTION ):
-                {
-                    const MetaPushAction* pA = (const MetaPushAction*) pAction;
-
-                    Push( pA->GetFlags() );
-                }
-                break;
-
-                case( META_POP_ACTION ):
-                {
-                    Pop();
-                }
-                break;
-
-                case( META_MAPMODE_ACTION ):
-                {
-                    const MetaMapModeAction* pA = (const MetaMapModeAction*) pAction;
-                    SetMapMode( pA->GetMapMode() );
-                }
-                break;
-
-                case( META_LINECOLOR_ACTION ):
-                {
-                    const MetaLineColorAction* pA = (const MetaLineColorAction*) pAction;
-                    SetLineColor( pA->GetColor() );
-                }
-                break;
-
-                case( META_FILLCOLOR_ACTION ):
-                {
-                    const MetaFillColorAction* pA = (const MetaFillColorAction*) pAction;
-                    SetFillColor( pA->GetColor() );
-                }
-                break;
-
-                case( META_CLIPREGION_ACTION ):
-                {
-                    const MetaClipRegionAction* pA = (const MetaClipRegionAction*) pAction;
-                    if( pA->IsClipping() )
-                        SetClipRegion( pA->GetRegion() );
-                    else
-                        SetClipRegion();
-                }
-                break;
-
-                case( META_MOVECLIPREGION_ACTION ):
-                {
-                    const MetaMoveClipRegionAction* pA = (const MetaMoveClipRegionAction*) pAction;
-                    MoveClipRegion( pA->GetHorzMove(), pA->GetVertMove() );
-                }
-                break;
-
-                case( META_ISECTRECTCLIPREGION_ACTION ):
-                {
-                    const MetaISectRectClipRegionAction* pA = (const MetaISectRectClipRegionAction*) pAction;
-                    IntersectClipRegion( pA->GetRect() );
-                }
-                break;
-
-                case( META_ISECTREGIONCLIPREGION_ACTION ):
-                {
-                   const MetaISectRegionClipRegionAction* pA = (const MetaISectRegionClipRegionAction*) pAction;
-                   IntersectClipRegion( pA->GetRegion() );
-                }
-                break;
-
-                case( META_ANTIALIAS_PDF_ACTION ):
-                {
-                    const MetaAntiAliasPDFAction* pA = (const MetaAntiAliasPDFAction*) pAction;
-                    SetAntialiasing( pA->GetAntiAlias() );
-                }
-                break;
-
-                case( META_LAYOUTMODE_ACTION ):
-                {
-                    const MetaLayoutModeAction* pA = (const MetaLayoutModeAction*) pAction;
-                    SetLayoutMode( pA->GetLayoutMode() );
-                }
-                break;
-
-                case( META_TEXTCOLOR_ACTION ):
-                {
-                    const MetaTextColorAction* pA = (const MetaTextColorAction*) pAction;
-                    SetTextColor( pA->GetColor() );
-                }
-                break;
-
-                case( META_TEXTFILLCOLOR_ACTION ):
-                {
-                    const MetaTextFillColorAction* pA = (const MetaTextFillColorAction*) pAction;
-                    if ( pA->IsSetting() )
-                        SetTextFillColor( pA->GetColor() );
-                    else
-                        SetTextFillColor();
-                }
-                break;
-
-                case( META_TEXTLINECOLOR_ACTION ):
-                {
-                    const MetaTextLineColorAction* pA = (const MetaTextLineColorAction*) pAction;
-                    if ( pA->IsSetting() )
-                        SetTextLineColor( pA->GetColor() );
-                    else
-                        SetTextLineColor();
-                }
-                break;
-
-                case( META_TEXTALIGN_ACTION ):
-                {
-                    const MetaTextAlignAction* pA = (const MetaTextAlignAction*) pAction;
-                    SetTextAlign( pA->GetTextAlign() );
-                }
-                break;
-
-                case( META_JPG_PDF_ACTION ):
-                {
-                    const MetaJpgPDFAction* pA = (const MetaJpgPDFAction*) pAction;
-                    DrawJPGBitmap( (SvStream&)pA->GetStream(), pA->IsTrueColor(), pA->GetSize(), pA->GetRect(), pA->GetMask() );
-                }
-                break;
-
-	            case( META_CREATELINK_PDF_ACTION ):
-                {
-                    const MetaCreateLinkPDFAction* pA = (const MetaCreateLinkPDFAction*) pAction;
-                    CreateLink( pA->GetRect(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_CREATEDEST_PDF_ACTION ):
-                {
-                    const MetaCreateDestPDFAction* pA = (const MetaCreateDestPDFAction*) pAction;
-                    CreateDest( pA->GetRect(), pA->GetPage(), pA->GetType() );
-                }
-                break;
-
-	            case( META_SETLINKDEST_PDF_ACTION ):
-                {
-                    const MetaSetLinkDestPDFAction* pA = (const MetaSetLinkDestPDFAction*) pAction;
-                    SetLinkDest( pA->GetLink(), pA->GetDest() );
-                }
-                break;
-
-	            case( META_SETLINKURL_PDF_ACTION ):
-                {
-                    const MetaSetLinkUrlPDFAction* pA = (const MetaSetLinkUrlPDFAction*) pAction;
-                    SetLinkURL( pA->GetLink(), pA->GetURL() );
-                }
-                break;
-
-	            case( META_SETLINKPROPERTYID_PDF_ACTION ):
-                {
-                    const MetaSetLinkPropertyIdPDFAction* pA = (const MetaSetLinkPropertyIdPDFAction*) pAction;
-                    SetLinkPropertyID( pA->GetLink(), pA->GetProperty() );
-                }
-                break;
-
-	            case( META_CREATEOUTLINEITEM_PDF_ACTION ):
-                {
-                    const MetaCreateOutlineItemPDFAction* pA = (const MetaCreateOutlineItemPDFAction*) pAction;
-                    CreateOutlineItem( pA->GetParent(), pA->GetText(), pA->GetDest() );
-                }
-                break;
-
-	            case( META_SETOUTLINEITEMPARENT_PDF_ACTION ):
-                {
-                    const MetaSetOutlineItemParentPDFAction* pA = (const MetaSetOutlineItemParentPDFAction*) pAction;
-                    SetOutlineItemParent( pA->GetItem(), pA->GetParent() );
-                }
-                break;
-
-	            case( META_SETOUTLINEITEMTEXT_PDF_ACTION ):
-                {
-                    const MetaSetOutlineItemTextPDFAction* pA = (const MetaSetOutlineItemTextPDFAction*) pAction;
-                    SetOutlineItemText( pA->GetItem(), pA->GetText() );
-                }
-                break;
-
-	            case( META_SETOUTLINEITEMDEST_PDF_ACTION ):
-                {
-                    const MetaSetOutlineItemDestPDFAction* pA = (const MetaSetOutlineItemDestPDFAction*) pAction;
-                    SetOutlineItemDest( pA->GetItem(), pA->GetDest() );
-                }
-                break;
-
-	            case( META_CREATENOTE_PDF_ACTION ):
-                {
-                    const MetaCreateNotePDFAction* pA = (const MetaCreateNotePDFAction*) pAction;
-                    CreateNote( pA->GetRect(), pA->GetNote(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_BEGINSTRUCTUREELEMENT_PDF_ACTION ):
-                {
-                    const MetaBeginStructureElementPDFAction* pA = (const MetaBeginStructureElementPDFAction*) pAction;
-                    BeginStructureElement( pA->GetType() );
-                }
-                break;
-
-	            case( META_ENDSTRUCTUREELEMENT_PDF_ACTION ):
-                {
-                    EndStructureElement();
-                }
-                break;
-
-	            case( META_SETCURRENTSTRUCTUREELEMENT_PDF_ACTION ):
-                {
-                    const MetaSetCurrentStructureElementPDFAction* pA = (const MetaSetCurrentStructureElementPDFAction*) pAction;
-                    SetCurrentStructureElement( pA->GetElement() );
-                }
-                break;
-
-	            case( META_SETSTRUCTUREATTRIBUTE_PDF_ACTION ):
-                {
-                    const MetaSetStructureAttributePDFAction* pA = (const MetaSetStructureAttributePDFAction*) pAction;
-                    SetStructureAttribute( pA->GetAttribute(), pA->GetValue() );
-                }
-                break;
-
-	            case( META_SETSTRUCTUREATTRIBUTENUMERICAL_PDF_ACTION ):
-                {
-                    const MetaSetStructureAttributeNumericalPDFAction* pA = (const MetaSetStructureAttributeNumericalPDFAction*) pAction;
-                    SetStructureAttributeNumerical( pA->GetAttribute(), pA->GetValue() );
-                }
-                break;
-
-	            case( META_SETSTRUCTUREBOUNDINGBOX_PDF_ACTION ):
-                {
-                    const MetaSetStructureBoundingBoxPDFAction* pA = (const MetaSetStructureBoundingBoxPDFAction*) pAction;
-                    SetStructureBoundingBox( pA->GetRect() );
-                }
-                break;
-
-	            case( META_SETACTUALTEXT_PDF_ACTION ):
-                {
-                    const MetaSetActualTextPDFAction* pA = (const MetaSetActualTextPDFAction*) pAction;
-                    SetActualText( pA->GetText() );
-                }
-                break;
-
-	            case( META_SETALTERNATETEXT_PDF_ACTION ):
-                {
-                    const MetaSetAlternateTextPDFAction* pA = (const MetaSetAlternateTextPDFAction*) pAction;
-                    SetAlternateText( pA->GetText() );
-                }
-                break;
-
-                case( META_SETAUTOADVANCETIME_PDF_ACTION ):
-                {
-                    const MetaSetAutoAdvanceTimePDFAction* pA = (const MetaSetAutoAdvanceTimePDFAction*) pAction;
-                    SetAutoAdvanceTime( pA->GetSeconds(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_SETPAGETRANSITION_PDF_ACTION ):
-                {
-                    const MetaSetPageTransitionPDFAction* pA = (const MetaSetPageTransitionPDFAction*) pAction;
-                    SetPageTransition( pA->GetType(), pA->GetMilliSeconds(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_CREATECONTROL_PDF_ACTION ):
-                {
-                    const MetaCreateControlPDFAction* pA = (const MetaCreateControlPDFAction*) pAction;
-                    CreateControl( pA->GetControl(), pA->GetPage() );
-                }
-                break;
-
-	            case( META_DIGITLANGUAGE_PDF_ACTION ):
-                {
-                    const MetaDigitLanguagePDFAction* pA = (const MetaDigitLanguagePDFAction*) pAction;
-                    SetDigitLanguage( pA->GetLanguage() );
-                }
-                break;
-
-	            case( META_BEGINPATTERN_PDF_ACTION ):
-                {
-                    BeginPattern();
-                }
-                break;
-
-	            case( META_ENDPATTERN_PDF_ACTION ):
-                {
-                    const MetaEndPatternPDFAction* pA = (const MetaEndPatternPDFAction*) pAction;
-                    EndPattern( pA->GetRect(), pA->GetTransform() );
-                }
-                break;
-
-	            case( META_POLYPOLYGON_PDF_ACTION ):
-                {
-                    const MetaPolyPolygonPDFAction* pA = (const MetaPolyPolygonPDFAction*) pAction;
-                    DrawPolyPolygon( pA->GetPolyPolygon(), pA->GetPattern(), pA->IsEOFill() );
-                }
-                break;
-
-                case( META_BEGINTRANSPARENCYGROUP_PDF_ACTION ):
-                {
-                    BeginTransparencyGroup();
-                }
-                break;
-
-                case( META_ENDTRANSPARENCYGROUP_PDF_ACTION ):
-                {
-                    const MetaEndTransparencyGroupPDFAction* pA = (const MetaEndTransparencyGroupPDFAction*) pAction;
-                    EndTransparencyGroup( pA->GetBoundingRect(), pA->GetTransparentPercent() );
-                }
-                break;
-
-                case( META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION ):
-                {
-                    const MetaEndTransparencyGroupMaskPDFAction* pA = (const MetaEndTransparencyGroupMaskPDFAction*) pAction;
-                    EndTransparencyGroup( pA->GetBoundingRect(), pA->GetAlphaMask() );
-                }
-                break;
-
-                case( META_SETDOCINFO_PDF_ACTION ):
-                {
-                    const MetaSetDocInfoPDFAction* pA = (const MetaSetDocInfoPDFAction*) pAction;
-                    SetDocInfo( pA->GetDocInfo() );
-                }
-                break;
-
-                default:
-                    DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
-                break;
-            }
-
-        }
-
-        bRet = ((PDFWriterImpl*)pImplementation)->emit();
-
+        GDIMetaFile aMtf( ((PDFWriterImpl*)pImplementation)->getReplayMetaFile() );
+        PDFWriterContext aContext( ((PDFWriterImpl*)pImplementation)->getContext() );
+        void *pOldImplementation = pImplementation;
+
+        // Fix bug 3061 by making a substitute writer and copying the actions
+        // into that as the current writer seems to get mangled layouts in some
+        // cases
+        PDFWriterImpl aSubstituteWriter( aContext );
+        pImplementation = &aSubstituteWriter;
+        ReplayMetaFile( *this, aMtf );
+        bRet = aSubstituteWriter.emit();
         pImplementation = pOldImplementation;
+
+        // Now replay the same meta file into the final destination
+        if ( bRet )
+        {
+            PDFWriterImpl aFinalWriter( aContext, &aSubstituteWriter );
+            pImplementation = &aFinalWriter;
+            ReplayMetaFile( *this, aMtf );
+            bRet = aFinalWriter.emit();
+            pImplementation = pOldImplementation;
+        }
     }
 
     return bRet;
