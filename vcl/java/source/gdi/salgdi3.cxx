@@ -295,6 +295,19 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
 								continue;
 
+							// Try plain
+							ATSFontRef aPlainFont = NSFont_findATSFontWithStyle( pNSFont, FALSE, FALSE );
+							if ( aPlainFont )
+							{
+								sal_IntPtr nPlainNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aPlainFont );
+								if ( nPlainNativeFont )
+								{
+									::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nPlainNativeFont );
+									if ( nfit != pSalData->maNativeFontMapping.end() )
+										pSalData->maPlainNativeFontMapping[ nNativeFont ] = nfit->second;
+								}
+							}
+
 							// Try bold
 							ATSFontRef aBoldFont = NSFont_findATSFontWithStyle( pNSFont, TRUE, FALSE );
 							if ( aBoldFont )
@@ -433,10 +446,19 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	// bold and/or italic font even if we are in a fallback level
 	BOOL bAddBold = ( pFont->GetWeight() > WEIGHT_MEDIUM && pFontData->GetWeight() <= WEIGHT_MEDIUM );
 	BOOL bAddItalic = ( ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL ) && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
-	if ( bAddBold || bAddItalic )
+	if ( nFallbackLevel || bAddBold || bAddItalic )
 	{
 		JavaImplFontData *pOldFontData = pFontData;
 		sal_IntPtr nOldNativeFont = pOldFontData->GetFontId();
+
+		// Remove any bold or italic variants so that we don't get drifting to
+		// bold or italic in fallback levels where none was requested
+		if ( nFallbackLevel )
+		{
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator pfit = pSalData->maPlainNativeFontMapping.find( pFontData->GetFontId() );
+			if ( pfit != pSalData->maPlainNativeFontMapping.end() )
+				pFontData = pfit->second;
+		}
 
 		// Fix bug 3031 by caching the bold, italic, and bold italic variants
 		// of each font

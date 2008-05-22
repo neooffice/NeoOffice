@@ -79,16 +79,24 @@ ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic )
 		{
 			int nWeight = [pFontManager weightOfFont:pNSFont];
 			NSFontTraitMask nTraits = [pFontManager traitsOfFont:pNSFont] & ( NSItalicFontMask | NSBoldFontMask | NSExpandedFontMask | NSCondensedFontMask | NSCompressedFontMask );
-			if ( bBold )
+			if ( bBold || bItalic )
 			{
-				nTraits |= NSBoldFontMask;
-
-				// Fix bug 1128 by ensuring that the weight is at least 9
-				if ( nWeight < 9 )
-					nWeight = 9;
+				if ( bBold )
+				{
+					nTraits |= NSBoldFontMask;
+	
+					// Fix bug 1128 by ensuring that the weight is at least 9
+					if ( nWeight < 9 )
+						nWeight = 9;
+				}
+				if ( bItalic )
+					nTraits |= NSItalicFontMask;
 			}
-			if ( bItalic )
-				nTraits |= NSItalicFontMask;
+			else
+			{
+				nTraits &= ~( NSBoldFontMask | NSItalicFontMask );
+				nWeight = 5;
+			}
 
 			NSFontManager_acquire();
 			NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:[pNSFont pointSize]];
