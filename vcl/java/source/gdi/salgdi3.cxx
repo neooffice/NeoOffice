@@ -416,7 +416,7 @@ void JavaSalGraphics::SetTextColor( SalColor nSalColor )
 
 USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 {
-	if ( !pFont )
+	if ( !pFont || !pFont->mpFontData )
 		return 0;
 
 	SalData *pSalData = GetSalData();
