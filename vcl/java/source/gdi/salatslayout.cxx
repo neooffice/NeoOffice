@@ -916,6 +916,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		return bRet;
 
 	JavaImplFontData *pSymbolFallbackFontData = NULL;
+	bool bUseNativeFallback = false;
 	int nEstimatedGlyphs = 0;
 
 	// Aggregate runs
@@ -1338,6 +1339,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
+						else if ( GetVerticalFlags( nChar ) != GF_NONE )
+						{
+							// Fix bug 2772 by always using the fallback font
+							// picked by the native APIs when rotatable
+							// characters are used
+							bUseNativeFallback = true;
+							if ( !pFallbackFont )
+								pFallbackFont = pCurrentLayoutData->mpFallbackFont;
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
 						else if ( pCurrentLayoutData->mpFallbackFont )
 						{
 							// Fix bug 2091 by suppressing zero glyphs if there
@@ -1429,7 +1441,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
 		JavaImplFontData *pHighScoreFontData = pSymbolFallbackFontData;
-		if ( !pHighScoreFontData && !mnFallbackLevel && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
+		if ( !pHighScoreFontData && !bUseNativeFallback && !mnFallbackLevel && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
