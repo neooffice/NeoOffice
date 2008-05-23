@@ -671,7 +671,7 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 
 BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 {
-	rRect.SetEmpty();
+	rRect = Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
 
 	com_sun_star_vcl_VCLFont *pVCLFont = NULL;
 
@@ -689,7 +689,10 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 	}
 
 	if ( pVCLFont )
+	{
 		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
+		rRect.Justify();
+	}
 
 	// Fix bug 2191 by always returning true so that the OOo code doesn't
 	// exeecute its "draw the glyph and see which pixels are black" code
