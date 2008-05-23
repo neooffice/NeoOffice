@@ -1527,8 +1527,8 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			{
 				if ( nGlyphOrientation )
 				{
-					nGlyphCount = 1;
-					aCurrentPos.X() += aDXArray[ nStartGlyph ];
+					nGlyphCount++;
+					aCurrentPos.Y() += aDXArray[ nStartGlyph ];
 				}
 				else
 				{
@@ -1570,7 +1570,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 				}
 			}
 
-			for ( i = nStartGlyph; i < nGlyphCount; i++ )
+			for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
 			if ( bPrinter )
