@@ -444,8 +444,19 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 	// Fix bugs 1813, 2964, 2968, 2971, and 2972 by tryng to find a matching
 	// bold and/or italic font even if we are in a fallback level
-	BOOL bAddBold = ( pFont->GetWeight() > WEIGHT_MEDIUM && pFontData->GetWeight() <= WEIGHT_MEDIUM );
-	BOOL bAddItalic = ( ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL ) && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
+	BOOL bAddBold;
+	BOOL bAddItalic;
+	if ( !nFallbackLevel )
+	{
+		bAddBold = ( pFont->GetWeight() > WEIGHT_MEDIUM && pFontData->GetWeight() <= WEIGHT_MEDIUM );
+		bAddItalic = ( ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL ) && pFontData->GetSlant() != ITALIC_OBLIQUE && pFontData->GetSlant() != ITALIC_NORMAL );
+	}
+	else
+	{
+		bAddBold = ( mnFontWeight > WEIGHT_MEDIUM );
+		bAddItalic = mbFontItalic;
+	}
+
 	if ( nFallbackLevel || bAddBold || bAddItalic )
 	{
 		JavaImplFontData *pOldFontData = pFontData;
@@ -460,25 +471,28 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				pFontData = pfit->second;
 		}
 
+		JavaImplFontData *pPlainFontData = pFontData;
+		sal_IntPtr nPlainNativeFont = pPlainFontData->GetFontId();
+
 		// Fix bug 3031 by caching the bold, italic, and bold italic variants
 		// of each font
-		if ( bAddBold && bAddItalic && pFontData == pOldFontData )
+		if ( bAddBold && bAddItalic && pFontData == pPlainFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bifit = pSalData->maBoldItalicNativeFontMapping.find( nOldNativeFont );
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bifit = pSalData->maBoldItalicNativeFontMapping.find( nPlainNativeFont );
 			if ( bifit != pSalData->maBoldItalicNativeFontMapping.end() )
 				pFontData = bifit->second;
 		}
 
-		if ( bAddBold && pFontData == pOldFontData )
+		if ( bAddBold && pFontData == pPlainFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bfit = pSalData->maBoldNativeFontMapping.find( nOldNativeFont );
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bfit = pSalData->maBoldNativeFontMapping.find( nPlainNativeFont );
 			if ( bfit != pSalData->maBoldNativeFontMapping.end() )
 				pFontData = bfit->second;
 		}
 
-		if ( bAddItalic && pFontData == pOldFontData )
+		if ( bAddItalic && pFontData == pPlainFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator ifit = pSalData->maItalicNativeFontMapping.find( nOldNativeFont );
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator ifit = pSalData->maItalicNativeFontMapping.find( nPlainNativeFont );
 			if ( ifit != pSalData->maItalicNativeFontMapping.end() )
 				pFontData = ifit->second;
 		}
@@ -526,9 +540,9 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			delete mpVCLFont;
 		mpVCLFont = new com_sun_star_vcl_VCLFont( maFallbackFonts[ nFallbackLevel ] );
 
-		mnFontFamily = pFont->GetFamilyType();
-		mnFontWeight = pFont->GetWeight();    
-		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
+		mnFontFamily = pFontData->GetFamilyType();
+		mnFontWeight = ( pFontData->GetWeight() > pFont->GetWeight() ? pFontData->GetWeight() : pFont->GetWeight() );
+		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL || pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 	}
 
