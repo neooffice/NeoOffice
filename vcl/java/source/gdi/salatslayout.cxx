@@ -1350,15 +1350,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						else
 							continue;
 					}
-					// Prevent display of zero glyphs in fallback levels where
-					// we know that there is a valid fallback font
-					else if ( !nGlyph && mnFallbackLevel && mnFallbackLevel < MAX_FALLBACK - 1 && pFallbackFont )
-					{
-						if ( bFirstGlyph )
-							nGlyph = 0x0020 | GF_ISCHAR;
-						else
-							continue;
-					}
 
 					// Fix bug 2512 without breaking fix for bug 2453 by
 					// allowing spacing glyphs to go through but marking when
