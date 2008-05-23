@@ -287,6 +287,11 @@ public:
     ImplFontData*	 GetFallbackFontData( int nFallbackLevel ) const
     { return mpFallbackFonts[ nFallbackLevel ]; }
 
+#ifdef USE_JAVA
+    SalLayout*		 GetLayout( int nFallbackLevel ) const
+    { return mpLayouts[ nFallbackLevel ]; }
+#endif	// USE_JAVA
+
 protected:
     virtual         ~MultiSalLayout();
 

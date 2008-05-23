@@ -5747,7 +5747,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 {
                     fDeltaAngle = M_PI/2.0;
 #ifdef USE_JAVA
-                    SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
+                    SalATSLayout *pATSLayout;
+                    if( pGlyphs[n] & GF_FONTMASK )
+                         pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout&)rLayout).GetLayout( ( pGlyphs[n] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                    else
+                         pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
+
                     if ( pATSLayout )
                     {
                         long nX;
@@ -5774,7 +5779,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 {
                     fDeltaAngle = -M_PI/2.0;
 #ifdef USE_JAVA
-                    SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
+                    SalATSLayout *pATSLayout;
+                    if( pGlyphs[n] & GF_FONTMASK )
+                         pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout&)rLayout).GetLayout( ( pGlyphs[n] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                    else
+                         pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
+
                     if ( pATSLayout )
                     {
                         long nX;
