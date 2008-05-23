@@ -915,7 +915,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mpVCLFont )
 		return bRet;
 
-	bool bNeedSymbolFallback = false;
+	JavaImplFontData *pSymbolFallbackFontData = NULL;
 	int nEstimatedGlyphs = 0;
 
 	// Aggregate runs
@@ -1326,7 +1326,15 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							// If there is no fallback font and it is a Private
 							// Use Area character, use the symbol font
-							bNeedSymbolFallback = true;
+							if ( !pSymbolFallbackFontData )
+							{
+								SalData *pSalData = GetSalData();
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) ) );
+								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != mpVCLFont->getNativeFont() )
+									pSymbolFallbackFontData = it->second;
+							}
+
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
@@ -1352,7 +1360,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					}
 					// Prevent display of zero glyphs in fallback levels where
 					// we know that there is a valid fallback font
-					else if ( !nGlyph && mnFallbackLevel && mnFallbackLevel < MAX_FALLBACK - 1 && pFallbackFont )
+					else if ( !nGlyph && mnFallbackLevel && mnFallbackLevel < MAX_FALLBACK - 1 && ( pSymbolFallbackFontData || pFallbackFont ) )
 					{
 						nCharWidth = 0;
 						if ( bFirstGlyph )
@@ -1416,48 +1424,38 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	mnOrigWidth = aPos.X();
 
 	// Set fallback font
-	if ( pFallbackFont || bNeedSymbolFallback || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
+	if ( pFallbackFont || pSymbolFallbackFontData || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
-		JavaImplFontData *pHighScoreFontData = NULL;
-		if ( ( !mnFallbackLevel || bNeedSymbolFallback ) && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
+		JavaImplFontData *pHighScoreFontData = pSymbolFallbackFontData;
+		if ( !pHighScoreFontData && !mnFallbackLevel && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
 		{
 			SalData *pSalData = GetSalData();
 
-			sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
-			if ( bNeedSymbolFallback )
+			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
+			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
-				::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) ) );
-				if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != nNativeFont )
-					pHighScoreFontData = it->second;
-			}
-
-			if ( !pHighScoreFontData )
-			{
-				::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
-				if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
+				USHORT nHighScore = 0;
+				sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
+				for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
 				{
-					USHORT nHighScore = 0;
-					for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
-					{
-						if ( (int)it->first == nNativeFont )
-							continue;
+					if ( (int)it->first == nNativeFont )
+						continue;
 
-						USHORT nScore = ( ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic ? 8 : 0 );
-						nScore += ( it->second->GetWeight() == mpGraphics->mnFontWeight ? 4 : 0 );
-						nScore += ( it->second->GetFamilyType() == mpGraphics->mnFontFamily ? 2 : 0 );
-						nScore += ( it->second->GetPitch() == mpGraphics->mnFontPitch ? 1 : 0 );
-						if ( nScore == 15 )
-						{
-							pHighScoreFontData = it->second;
-							break;
-						}
-						else if ( nHighScore < nScore )
-						{
-							pHighScoreFontData = it->second;
-							nHighScore = nScore;
-						}
+					USHORT nScore = ( ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic ? 8 : 0 );
+					nScore += ( it->second->GetWeight() == mpGraphics->mnFontWeight ? 4 : 0 );
+					nScore += ( it->second->GetFamilyType() == mpGraphics->mnFontFamily ? 2 : 0 );
+					nScore += ( it->second->GetPitch() == mpGraphics->mnFontPitch ? 1 : 0 );
+					if ( nScore == 15 )
+					{
+						pHighScoreFontData = it->second;
+						break;
+					}
+					else if ( nHighScore < nScore )
+					{
+						pHighScoreFontData = it->second;
+						nHighScore = nScore;
 					}
 				}
 			}
