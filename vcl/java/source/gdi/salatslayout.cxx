@@ -1343,7 +1343,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
 					// 0x0000ffff glyphs as spaces
-					if ( nGlyph >= 0x0000ffff || ( !nGlyph && pFallbackFont ) )
+					if ( nGlyph >= 0x0000ffff )
 					{
 						if ( bFirstGlyph )
 							nGlyph = 0x0020 | GF_ISCHAR;
