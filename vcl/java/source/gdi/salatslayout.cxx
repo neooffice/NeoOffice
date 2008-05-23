@@ -916,7 +916,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		return bRet;
 
 	bool bNeedSymbolFallback = false;
-	bool bUseNativeFallback = false;
 	int nEstimatedGlyphs = 0;
 
 	// Aggregate runs
@@ -1331,17 +1330,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
-						else if ( GetVerticalFlags( nChar ) != GF_NONE )
-						{
-							// Fix bug 2772 by always using the fallback font
-							// picked by the native APIs when rotatable
-							// characters are used
-							bUseNativeFallback = true;
-							if ( !pFallbackFont )
-								pFallbackFont = pCurrentLayoutData->mpFallbackFont;
-							rArgs.NeedFallback( nCharPos, bRunRTL );
-							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
-						}
 						else if ( pCurrentLayoutData->mpFallbackFont )
 						{
 							// Fix bug 2091 by suppressing zero glyphs if there
@@ -1355,7 +1343,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
 					// 0x0000ffff glyphs as spaces
-					if ( nGlyph >= 0x0000ffff )
+					if ( nGlyph >= 0x0000ffff || ( !nGlyph && pFallbackFont ) )
 					{
 						if ( bFirstGlyph )
 							nGlyph = 0x0020 | GF_ISCHAR;
@@ -1435,7 +1423,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					pHighScoreFontData = it->second;
 			}
 
-			if ( !pHighScoreFontData && !bUseNativeFallback )
+			if ( !pHighScoreFontData )
 			{
 				::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
 				if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
@@ -1500,12 +1488,30 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 	Point aPos;
 	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
 	bool bPrinter = ( rJavaGraphics.mpPrinter ? true : false );
+	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
-		int nTotalGlyphCount = GetNextGlyphs( nMaxGlyphs, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
+		int nOldStart = nStart;
+		int nTotalGlyphCount = GetNextGlyphs( nFetchGlyphCount, aGlyphArray, aPos, nStart, aDXArray, aCharPosArray );
 
 		if ( !nTotalGlyphCount )
 			break;
+
+		// The GenericSalLayout class should return glyph runs with the same
+		// rotation mask
+		sal_Int32 nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
+		if ( nGlyphOrientation && nFetchGlyphCount > 1 )
+		{
+			nFetchGlyphCount = 1;
+			nStart = nOldStart;
+			continue;
+		}
+		else if ( !nGlyphOrientation && nFetchGlyphCount < nMaxGlyphs )
+		{
+			nFetchGlyphCount = nMaxGlyphs;
+			nStart = nOldStart;
+			continue;
+		}
 
 		Point aCurrentPos( aPos );
 		int nCurrentGlyph = 0;
@@ -1522,7 +1528,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			// Determine glyph count but only allow one glyph at a time for
 			// rotated glyphs
 			Point aStartPos( aCurrentPos );
-			sal_Int32 nGlyphOrientation = aGlyphArray[ nStartGlyph ] & GF_ROTMASK;
 			if ( nStartGlyph < nTotalGlyphCount )
 			{
 				if ( nGlyphOrientation )
