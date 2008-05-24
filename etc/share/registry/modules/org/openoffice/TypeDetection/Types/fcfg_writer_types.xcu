@@ -531,7 +531,7 @@
 		<prop oor:name="UIName">
 			<value xml:lang="x-default">Microsoft Word 2007 Document</value>
 		</prop>
-		<prop oor:name="ClipboardFormat"><value>doctype:wordDocument</value></prop>
+		<prop oor:name="ClipboardFormat"><value>Microsoft Word 2007 Document</value></prop>
 	</node>
 
 
