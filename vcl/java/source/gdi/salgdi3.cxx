@@ -136,8 +136,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					long *pFonts = NSFontManager_getAllFonts();
 					if ( pFonts )
 					{
+						const OUString aCourier( OUString::createFromAscii( "Courier" ) );
 						const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
-						const OUString aGothic( OUString::createFromAscii( "Gothic" ) );
 						const OUString aLastResort( OUString::createFromAscii( "LastResort" ) );
 						const OUString aRoman( OUString::createFromAscii( "Roman" ) );
 						const OUString aSans( OUString::createFromAscii( "Sans" ) );
@@ -252,7 +252,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								nFamily = FAMILY_MODERN;
 							else if ( aPSName.indexOf( aSans ) >= 0 )
 								nFamily = FAMILY_SWISS;
-							else if ( aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 || aPSName.indexOf( aGothic ) >= 0 )
+							else if ( aPSName.indexOf( aCourier ) >= 0 || aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 )
 								nFamily = FAMILY_ROMAN;
 							else
 								nFamily = FAMILY_SWISS;
@@ -542,8 +542,8 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mpVCLFont = new com_sun_star_vcl_VCLFont( maFallbackFonts[ nFallbackLevel ] );
 
 		mnFontFamily = pFont->GetFamilyType();
-		mnFontWeight = ( pFontData->GetWeight() > pFont->GetWeight() ? pFontData->GetWeight() : pFont->GetWeight() );
-		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL || pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL );
+		mnFontWeight = pFont->GetWeight();
+		mbFontItalic = bAddItalic;
 		mnFontPitch = pFont->GetPitch();
 	}
 
