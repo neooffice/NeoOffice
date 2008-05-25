@@ -66,10 +66,10 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
 
-static String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
-static String aHelveticaCYPlain( RTL_CONSTASCII_USTRINGPARAM( "Helvetica CY Plain" ) );
-static String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
-static String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
+static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
+static const String aHelveticaCYPlain( RTL_CONSTASCII_USTRINGPARAM( "Helvetica CY Plain" ) );
+static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
+static const String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
