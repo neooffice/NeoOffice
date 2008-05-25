@@ -136,6 +136,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					long *pFonts = NSFontManager_getAllFonts();
 					if ( pFonts )
 					{
+						const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
 						const OUString aGothic( OUString::createFromAscii( "Gothic" ) );
 						const OUString aLastResort( OUString::createFromAscii( "LastResort" ) );
 						const OUString aRoman( OUString::createFromAscii( "Roman" ) );
@@ -199,13 +200,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pDisplayBuffer[ nDisplayLen ] = 0;
 							CFRelease( aDisplayString );
 
-							OUString aMapName;
+							OUString aMapName( aPSName );
 							OUString aDisplayName( pDisplayBuffer );
 							sal_Int32 nColon = aDisplayName.indexOf( (sal_Unicode)':' );
 							if ( nColon >= 0 )
 							{
-								aMapName = aDisplayName;
 								aDisplayName = OUString( aDisplayName.getStr(), nColon );
+								aMapName += aFontSeparator + aDisplayName;
 							}
 
 							// Ignore empty font names or font names that start
@@ -222,7 +223,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							else if ( aDisplayName == aNeoSymbol )
 							{
 								aDisplayName = OUString( aOpenSymbol );
-								aMapName = aSymbol + OUString::createFromAscii( ";" ) + aNeoSymbol;
+								aMapName += aFontSeparator + aSymbol + aFontSeparator + aNeoSymbol;
 							}
 							else if ( aDisplayName == aLastResort )
 							{
@@ -232,7 +233,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							}
 							else if ( aDisplayName == aTimesRoman )
 							{
-								aMapName = aTimes;
+								aMapName += aFontSeparator + aTimes;
 							}
 
 							String aXubMapName( aMapName );
@@ -540,7 +541,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			delete mpVCLFont;
 		mpVCLFont = new com_sun_star_vcl_VCLFont( maFallbackFonts[ nFallbackLevel ] );
 
-		mnFontFamily = pFontData->GetFamilyType();
+		mnFontFamily = pFont->GetFamilyType();
 		mnFontWeight = ( pFontData->GetWeight() > pFont->GetWeight() ? pFontData->GetWeight() : pFont->GetWeight() );
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL || pFontData->GetSlant() == ITALIC_OBLIQUE || pFontData->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
