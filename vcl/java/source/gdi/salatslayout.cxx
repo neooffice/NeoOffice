@@ -66,6 +66,11 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
 
+static String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
+static String aHelveticaCYPlain( RTL_CONSTASCII_USTRINGPARAM( "Helvetica CY Plain" ) );
+static String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
+static String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
+
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 struct ImplATSLayoutDataHash {
@@ -1163,8 +1168,8 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								SalData *pSalData = GetSalData();
 
 								sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) ) );
-								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != nNativeFont )
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
+								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != nNativeFont )
 									mpKashidaLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), it->second->mnATSUFontID );
 							}
 
@@ -1323,7 +1328,24 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 					if ( !nGlyph )
 					{
-						if ( nChar >= 0xe000 && nChar < 0xf900 )
+						if ( nChar >= 0x0400 && nChar < 0x0500 )
+						{
+							// Fix bug 3087 if there is no fallback font and it
+							// is a Cyrillic character by using a font that we
+							// can actually render Cyrillic
+							if ( !pSymbolFallbackFontData )
+							{
+								SalData *pSalData = GetSalData();
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aTimesNewRoman : aHelveticaCYPlain );
+								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != mpVCLFont->getNativeFont() )
+									pSymbolFallbackFontData = it->second;
+							}
+
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
+						else if ( nChar >= 0xe000 && nChar < 0xf900 )
 						{
 							// If there is no fallback font and it is a Private
 							// Use Area character, use the symbol font
@@ -1331,7 +1353,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( String( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) ) );
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aOpenSymbol );
 								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != mpVCLFont->getNativeFont() )
 									pSymbolFallbackFontData = it->second;
 							}
@@ -1452,7 +1474,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
 				for ( it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
 				{
-					if ( (int)it->first == nNativeFont )
+					if ( it->first == nNativeFont )
 						continue;
 
 					USHORT nScore = ( ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) == mpGraphics->mbFontItalic ? 8 : 0 );
