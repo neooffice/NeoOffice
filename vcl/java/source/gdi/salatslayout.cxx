@@ -67,9 +67,9 @@
 #endif
 
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
-static const String aHelveticaCYPlain( RTL_CONSTASCII_USTRINGPARAM( "Helvetica CY Plain" ) );
+static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
-static const String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
+static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
@@ -1328,17 +1328,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 					if ( !nGlyph )
 					{
-						if ( nChar >= 0x0400 && nChar < 0x0500 )
+						if ( nChar < 0x0500 )
 						{
 							// Fix bug 3087 if there is no fallback font and it
-							// is a Cyrillic character by using a font that we
-							// can actually render Cyrillic
+							// is a European or Cyrillic character by using a
+							// font that we can render those ranges nicely
 							if ( !pSymbolFallbackFontData )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aTimesNewRoman : aHelveticaCYPlain );
-								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != mpVCLFont->getNativeFont() )
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aTimesRoman : aHelvetica );
+								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != mpVCLFont->getNativeFont() )
 									pSymbolFallbackFontData = it->second;
 							}
 
@@ -1354,7 +1354,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								SalData *pSalData = GetSalData();
 
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aOpenSymbol );
-								if ( it != pSalData->maFontNameMapping.end() && (int)it->second->GetFontId() != mpVCLFont->getNativeFont() )
+								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != mpVCLFont->getNativeFont() )
 									pSymbolFallbackFontData = it->second;
 							}
 
