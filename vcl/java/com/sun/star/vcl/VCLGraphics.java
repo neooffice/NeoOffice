@@ -585,8 +585,12 @@ public final class VCLGraphics {
 		rotatedPageAngle = r;
 		Rectangle bounds = pageFormat.getImageableBounds();
 		// Fix bug 3079 by not rotating the bounds as they are already
-		// rotated by the VCLPageFormat class
-		graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
+		// rotated by the VCLPageFormat class. Fix bug 3090 by only applying
+		// the fix when the page is portrait.
+		if (p.getOrientation() == VCLPageFormat.ORIENTATION_PORTRAIT)
+			graphicsBounds = new Rectangle(0, 0, bounds.width, bounds.height);
+		else
+			graphicsBounds = new Rectangle(0, 0, bounds.height, bounds.width);
 		pageScaleX = x;
 		pageScaleY = y;
 		graphics = (Graphics2D)g;
