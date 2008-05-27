@@ -543,7 +543,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 		mnFontFamily = pFont->GetFamilyType();
 		mnFontWeight = pFont->GetWeight();
-		mbFontItalic = bAddItalic;
+		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 	}
 
