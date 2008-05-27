@@ -469,11 +469,26 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 	// Fix bug 2919 by still producing a valid text layout even if no glyphs
-	// can be retrieved
-	ATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&mpGlyphDataArray, &mnGlyphCount );
+	// can be retrieved. Also, fix bug 3063 by not holding onto the
+	// ATSLayoutRecord and, instead, making our own private copy.
+	ByteCount nBufSize;
+	ATSLayoutRecord *pGlyphDataArray = NULL;
+	ATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &mnGlyphCount );
+	if ( pGlyphDataArray )
+	{
+		if ( mnGlyphCount )
+		{
+			nBufSize = mnGlyphCount * sizeof( ATSLayoutRecord );
+			mpGlyphDataArray = (ATSLayoutRecord *)rtl_allocateMemory( nBufSize );
+			if ( mpGlyphDataArray )
+				memcpy( mpGlyphDataArray, pGlyphDataArray, nBufSize );
+
+			ATSUDirectReleaseLayoutDataArrayPtr( NULL, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray );
+		}
+	}
 
 	// Cache mapping of characters to glyph character indices
-	ByteCount nBufSize = mpHash->mnLen * sizeof( int );
+	nBufSize = mpHash->mnLen * sizeof( int );
 	mpCharsToChars = (int *)rtl_allocateMemory( nBufSize );
 
 	int i;
@@ -702,7 +717,7 @@ void ImplATSLayoutData::Destroy()
 
 	if ( mpGlyphDataArray )
 	{
-		ATSUDirectReleaseLayoutDataArrayPtr( NULL, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&mpGlyphDataArray );
+		rtl_freeMemory( mpGlyphDataArray );
 		mpGlyphDataArray = NULL;
 	}
 
