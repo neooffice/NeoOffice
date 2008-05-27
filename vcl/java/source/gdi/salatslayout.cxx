@@ -346,8 +346,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// within the 32K limit
 	long nSize = mpHash->mnFontSize;
 	long nAdjustedSize;
-	if ( mpHash->mnFontSize * mpHash->mnLen * 2 > 0x00007fff )
-		nAdjustedSize = 0x00007fff / ( mpHash->mnLen * 2 );
+	if ( mpHash->mnFontSize * mpHash->mnLen * 4 > 0x00007fff )
+		nAdjustedSize = 0x00007fff / ( mpHash->mnLen * 4 );
 	else
 		nAdjustedSize = nSize;
 	Fixed fCurrentSize = Long2Fix( nAdjustedSize );
@@ -468,34 +468,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	// Fix bug 652 by forcing ATSUI to layout the text before we request any
-	// glyph data
-	ATSTrapezoid aTrapezoid;
-	if ( ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
-	{
-		Destroy();
-		return;
-	}
-
-	// If the font is still too large that the text length exceeds the 32K
-	// Fixed data type limit and becomes negative, reduce the font size until
-	// we find a small enough size that works
-	while ( Fix2X( aTrapezoid.upperRight.x ) < 0 )
-	{
-		// Reset font size
-		nAdjustedSize /= 2;
-		fCurrentSize = Long2Fix( nAdjustedSize );
-		nTags[0] = kATSUSizeTag;
-		nBytes[0] = sizeof( Fixed );
-		nVals[0] = &fCurrentSize;
-
-		if ( nAdjustedSize < 1 || ATSUSetAttributes( maFontStyle, 1, nTags, nBytes, nVals ) != noErr || ( maVerticalFontStyle && ATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr ) || ATSUGetGlyphBounds( maLayout, 0, 0, kATSUFromTextBeginning, kATSUToTextEnd, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) != noErr )
-		{
-			Destroy();
-			return;
-		}
-	}
-
 	// Fix bug 2919 by still producing a valid text layout even if no glyphs
 	// can be retrieved
 	ATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&mpGlyphDataArray, &mnGlyphCount );
@@ -556,6 +528,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 		if ( i == (int)mnGlyphCount - 1 )
 		{
+			ATSTrapezoid aTrapezoid;
 			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 				mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY );
 		}
