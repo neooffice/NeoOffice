@@ -91,19 +91,14 @@ ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic )
 				}
 				if ( bItalic )
 					nTraits |= NSItalicFontMask;
-			}
-			else
-			{
-				nTraits &= ~( NSBoldFontMask | NSItalicFontMask );
-				nWeight = 5;
-			}
 
-			NSFontManager_acquire();
-			NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:[pNSFont pointSize]];
-			NSFontManager_release();
+				NSFontManager_acquire();
+				NSFont *pNewNSFont = [pFontManager fontWithFamily:[pNSFont familyName] traits:nTraits weight:nWeight size:[pNSFont pointSize]];
+				NSFontManager_release();
 
-			if ( pNewNSFont && pNewNSFont != pNSFont )
-				aRet = NSFont_getATSFontRef( pNewNSFont );
+				if ( pNewNSFont && pNewNSFont != pNSFont )
+					aRet = NSFont_getATSFontRef( pNewNSFont );
+			}
 		}
 	}
 
