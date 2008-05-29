@@ -37,13 +37,30 @@
 #import <Carbon/Carbon.h>
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
+#import "../gdi/salgdi3_cocoa.h"
 
+static NSRecursiveLock *pFontLock = nil;
+static NSMutableDictionary *pFontDictionary = nil;
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
+
+inline void MapVCLFont( NSString *pFontName, NSFont *pNSFont )
+{
+	if ( pFontName && pNSFont )
+	{
+		NSString *pValue = [pNSFont fontName];
+		if ( pValue )
+		{
+			[pFontDictionary setObject:pValue forKey:pFontName];
+			[pFontDictionary setObject:pValue forKey:[pNSFont displayName]];
+			[pFontDictionary setObject:pValue forKey:[pNSFont fontName]];
+		}
+	}
+}
 
 @interface NSObject (ApplicationHasDelegate)
 - (void)cancelTermination;
@@ -134,6 +151,57 @@ inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f -
 
 @end
 
+@interface VCLFont : NSFont
++ (NSFont *)fontWithName:(NSString *)pFontName size:(float)fFontSize;
++ (NSFont *)fontWithName:(NSString *)pFontName matrix:(const float *)fFontMatrix;
+@end
+
+@implementation VCLFont
+
++ (NSFont *)fontWithName:(NSString *)pFontName size:(float)fFontSize
+{
+	NSFont *pRet = nil;
+
+	[pFontLock lock];
+	NSString *pMappedFontName = [pFontDictionary objectForKey:pFontName];
+	if ( !pMappedFontName )
+	{
+		pRet = [super fontWithName:pFontName size:fFontSize];
+		MapVCLFont( pFontName, pRet );
+	}
+	else
+	{
+		pRet = [super fontWithName:pMappedFontName size:fFontSize];
+	}
+
+	[pFontLock unlock];
+
+	return pRet;
+}
+
++ (NSFont *)fontWithName:(NSString *)pFontName matrix:(const float *)fFontMatrix
+{
+	NSFont *pRet = nil;
+
+	[pFontLock lock];
+	NSString *pMappedFontName = [pFontDictionary objectForKey:pFontName];
+	if ( !pMappedFontName )
+	{
+		pRet = [super fontWithName:pFontName matrix:fFontMatrix];
+		MapVCLFont( pFontName, pRet );
+	}
+	else
+	{
+		pRet = [super fontWithName:pMappedFontName matrix:fFontMatrix];
+	}
+
+	[pFontLock unlock];
+
+	return pRet;
+}
+
+@end
+
 // Fix for bugs 1685, 1694, and 1859. Java 1.5 and higher will arbitrarily
 // change the selected font by creating a new font from the font's family
 // name and style. We fix these bugs by prepending the font names to the
@@ -184,16 +252,16 @@ inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f -
 	}
 	else
 	{
-		NSFont *pFont = [NSFont fontWithName:family size:12];
-		if ( pFont )
+		NSFont *pNSFont = [NSFont fontWithName:family size:12];
+		if ( pNSFont )
 		{
 			NSMutableArray *pFontEntries = [NSMutableArray arrayWithCapacity:4];
 			if ( pFontEntries )
 			{
-				[pFontEntries addObject:[pFont fontName]];
+				[pFontEntries addObject:[pNSFont fontName]];
 				[pFontEntries addObject:@""];
-				[pFontEntries addObject:[NSNumber numberWithInt:[self weightOfFont:pFont]]];
-				[pFontEntries addObject:[NSNumber numberWithUnsignedInt:[self traitsOfFont:pFont]]];
+				[pFontEntries addObject:[NSNumber numberWithInt:[self weightOfFont:pNSFont]]];
+				[pFontEntries addObject:[NSNumber numberWithUnsignedInt:[self traitsOfFont:pNSFont]]];
 				pRet = [NSArray arrayWithObject:pFontEntries];
 			}
 		}
@@ -832,6 +900,8 @@ static VCLResponder *pSharedResponder = nil;
 - (void)installVCLEventQueueClasses:(id)pObject
 {
 	// Do not retain as invoking alloc disables autorelease
+	pFontLock = [[NSRecursiveLock alloc] init];
+	pFontDictionary = [[NSMutableDictionary alloc] initWithCapacity:1024];
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
 	// Initialize statics
@@ -844,6 +914,7 @@ static VCLResponder *pSharedResponder = nil;
 		pSharedResponder = [[VCLResponder alloc] init];
 	}
 
+	[VCLFont poseAsClass:[NSFont class]];
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];

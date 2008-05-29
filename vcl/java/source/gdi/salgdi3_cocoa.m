@@ -66,6 +66,24 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 	return aRet;
 }
 
+CFStringRef NSFont_getFontName( id pNSFont )
+{
+	CFStringRef aRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pNSFont )
+	{
+		aRet = (CFStringRef)[pNSFont fontName];
+		if ( aRet )
+			CFRetain( aRet );
+	}
+
+	[pPool release];
+
+	return aRet;
+}
+
 ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic )
 {
 	ATSFontRef aRet = nil;
@@ -113,10 +131,10 @@ long *NSFontManager_getAllFonts()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSFontManager *pManager = [NSFontManager sharedFontManager];
-	if ( pManager )
+	NSFontManager *pFontManager = [NSFontManager sharedFontManager];
+	if ( pFontManager )
 	{
-		NSArray *pFontNames = [pManager availableFonts];
+		NSArray *pFontNames = [pFontManager availableFonts];
 		if ( pFontNames )
 		{
 			unsigned nCount = [pFontNames count];

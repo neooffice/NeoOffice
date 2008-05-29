@@ -164,8 +164,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
 							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
 
-							CFStringRef aPSString;
-							if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
+							CFStringRef aPSString = NSFont_getFontName( pNSFont );
+							if ( !aPSString )
 								continue;
 
 							OUString aPSName;
