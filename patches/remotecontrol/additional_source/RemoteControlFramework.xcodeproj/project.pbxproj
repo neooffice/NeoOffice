@@ -31,6 +31,17 @@
 		ACA351B30DED05B90081A4AD /* System.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351B20DED05B90081A4AD /* System.framework */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXBuildRule section */
+		3F04EAEF0DEEF419003BA8BD /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.gcc.4_0;
+			fileType = sourcecode.c;
+			isEditable = 1;
+			outputFiles = (
+			);
+		};
+/* End PBXBuildRule section */
+
 /* Begin PBXCopyFilesBuildPhase section */
 		ACA351B90DED06CC0081A4AD /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
@@ -188,6 +199,7 @@
 				ACA351B90DED06CC0081A4AD /* CopyFiles */,
 			);
 			buildRules = (
+				3F04EAEF0DEEF419003BA8BD /* PBXBuildRule */,
 			);
 			dependencies = (
 			);

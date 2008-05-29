@@ -204,11 +204,8 @@ build.imedia_checkout:
 build.remotecontrol_checkout:
 	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
-# curl here to get from website
 	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; curl -L -O "$(REMOTECONTROL_ZIP_URL)"
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; cp "$(PWD)/patches/remotecontrol/RemoteControlWrapper_R962.tgz" .
-# unzip
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; tar xvfz "$(REMOTECONTROL_ZIP_FILENAME)"
 	touch "$@"
 
@@ -377,8 +374,9 @@ build.neo_%_component: % build.neo_configure
 	touch "$@"
 
 build.neo_patches: build.oo_all \
-	 build.imedia_patches \
-	 build.odf-converter_patches \
+	build.imedia_patches \
+	build.remotecontrol_patches \
+	build.odf-converter_patches \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(X11_PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	build.neo_avmedia_patch \
