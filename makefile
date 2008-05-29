@@ -82,6 +82,7 @@ OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
 IMEDIA_PATCHES_HOME:=patches/imedia
+REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
 ifeq ("$(UNAME)","powerpc")
 OO_ENV_X11:=$(BUILD_HOME)/MacOSXPPCEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
@@ -145,6 +146,10 @@ ODF-CONVERTER_TAG:=
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-04-14}'
+REMOTECONTROL_PACKAGE=remotecontrol
+#!!! FIXME !!!
+REMOTECONTROL_ZIP_URL=http://martinkahr.com/files/source/RemoteControlWrapper_R962.tgz
+REMOTECONTROL_ZIP_FILENAME=RemoteControlWrapper_R962.tgz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=-rNeoOffice-2_2_3
@@ -194,6 +199,17 @@ build.imedia_checkout:
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_TAG) $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(IMEDIA_PACKAGE)"
+	touch "$@"
+
+build.remotecontrol_checkout:
+	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
+	mkdir -p "$(BUILD_HOME)"
+# curl here to get from website
+	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; curl -L -O "$(REMOTECONTROL_ZIP_URL)"
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; cp "$(PWD)/patches/remotecontrol/RemoteControlWrapper_R962.tgz" .
+# unzip
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; tar xvfz "$(REMOTECONTROL_ZIP_FILENAME)"
 	touch "$@"
 
 build.oo_patches: build.ooo-build_patches \
@@ -312,6 +328,12 @@ build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_src_untar
 	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug clean
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug
+	touch "$@"
+
+build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source build.remotecontrol_checkout
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.xcodeproj *.plist ) | tar xvf -
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release clean
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release
 	touch "$@"
 	
 build.configure: build.oo_patches

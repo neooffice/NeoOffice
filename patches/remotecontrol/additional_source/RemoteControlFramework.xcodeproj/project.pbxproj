@@ -1,0 +1,353 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		ACA34FB80DED043F0081A4AD /* license.txt in Resources */ = {isa = PBXBuildFile; fileRef = ACA34FA50DED043F0081A4AD /* license.txt */; };
+		ACA34FB90DED043F0081A4AD /* readme.txt in Resources */ = {isa = PBXBuildFile; fileRef = ACA34FA60DED043F0081A4AD /* readme.txt */; };
+		ACA34FBA0DED043F0081A4AD /* MultiClickRemoteBehavior.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FA80DED043F0081A4AD /* MultiClickRemoteBehavior.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		ACA34FBB0DED043F0081A4AD /* MultiClickRemoteBehavior.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FA90DED043F0081A4AD /* MultiClickRemoteBehavior.m */; };
+		ACA34FBC0DED043F0081A4AD /* RemoteControl.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FAB0DED043F0081A4AD /* RemoteControl.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		ACA34FBD0DED043F0081A4AD /* RemoteControl.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FAC0DED043F0081A4AD /* RemoteControl.m */; };
+		ACA34FBE0DED043F0081A4AD /* HIDRemoteControlDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FAD0DED043F0081A4AD /* HIDRemoteControlDevice.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		ACA34FBF0DED043F0081A4AD /* HIDRemoteControlDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FAE0DED043F0081A4AD /* HIDRemoteControlDevice.m */; };
+		ACA34FC00DED043F0081A4AD /* AppleRemote.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FB00DED043F0081A4AD /* AppleRemote.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		ACA34FC10DED043F0081A4AD /* AppleRemote.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FB10DED043F0081A4AD /* AppleRemote.m */; };
+		ACA34FC20DED043F0081A4AD /* KeyspanFrontRowControl.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FB20DED043F0081A4AD /* KeyspanFrontRowControl.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		ACA34FC30DED043F0081A4AD /* KeyspanFrontRowControl.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FB30DED043F0081A4AD /* KeyspanFrontRowControl.m */; };
+		ACA34FC40DED043F0081A4AD /* GlobalKeyboardDevice.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FB40DED043F0081A4AD /* GlobalKeyboardDevice.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		ACA34FC50DED043F0081A4AD /* GlobalKeyboardDevice.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FB50DED043F0081A4AD /* GlobalKeyboardDevice.m */; };
+		ACA34FC60DED043F0081A4AD /* RemoteControlContainer.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FB60DED043F0081A4AD /* RemoteControlContainer.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		ACA34FC70DED043F0081A4AD /* RemoteControlContainer.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FB70DED043F0081A4AD /* RemoteControlContainer.m */; };
+		ACA351AD0DED05A20081A4AD /* AppKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351A80DED05A20081A4AD /* AppKit.framework */; };
+		ACA351AE0DED05A20081A4AD /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351A90DED05A20081A4AD /* Carbon.framework */; };
+		ACA351AF0DED05A20081A4AD /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351AA0DED05A20081A4AD /* Cocoa.framework */; };
+		ACA351B00DED05A20081A4AD /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351AB0DED05A20081A4AD /* Foundation.framework */; };
+		ACA351B10DED05A20081A4AD /* IOKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351AC0DED05A20081A4AD /* IOKit.framework */; };
+		ACA351B30DED05B90081A4AD /* System.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACA351B20DED05B90081A4AD /* System.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		ACA351B90DED06CC0081A4AD /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 1;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		ACA34F860DED03E00081A4AD /* RemoteControl.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RemoteControl.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACA34F880DED03E00081A4AD /* RemoteControl-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "RemoteControl-Info.plist"; sourceTree = "<group>"; };
+		ACA34FA50DED043F0081A4AD /* license.txt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = license.txt; sourceTree = SOURCE_ROOT; };
+		ACA34FA60DED043F0081A4AD /* readme.txt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = readme.txt; sourceTree = SOURCE_ROOT; };
+		ACA34FA80DED043F0081A4AD /* MultiClickRemoteBehavior.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MultiClickRemoteBehavior.h; sourceTree = SOURCE_ROOT; };
+		ACA34FA90DED043F0081A4AD /* MultiClickRemoteBehavior.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = MultiClickRemoteBehavior.m; sourceTree = SOURCE_ROOT; };
+		ACA34FAB0DED043F0081A4AD /* RemoteControl.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = RemoteControl.h; sourceTree = SOURCE_ROOT; };
+		ACA34FAC0DED043F0081A4AD /* RemoteControl.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = RemoteControl.m; sourceTree = SOURCE_ROOT; };
+		ACA34FAD0DED043F0081A4AD /* HIDRemoteControlDevice.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = HIDRemoteControlDevice.h; sourceTree = SOURCE_ROOT; };
+		ACA34FAE0DED043F0081A4AD /* HIDRemoteControlDevice.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = HIDRemoteControlDevice.m; sourceTree = SOURCE_ROOT; };
+		ACA34FB00DED043F0081A4AD /* AppleRemote.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = AppleRemote.h; sourceTree = SOURCE_ROOT; };
+		ACA34FB10DED043F0081A4AD /* AppleRemote.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = AppleRemote.m; sourceTree = SOURCE_ROOT; };
+		ACA34FB20DED043F0081A4AD /* KeyspanFrontRowControl.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = KeyspanFrontRowControl.h; sourceTree = SOURCE_ROOT; };
+		ACA34FB30DED043F0081A4AD /* KeyspanFrontRowControl.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = KeyspanFrontRowControl.m; sourceTree = SOURCE_ROOT; };
+		ACA34FB40DED043F0081A4AD /* GlobalKeyboardDevice.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = GlobalKeyboardDevice.h; sourceTree = SOURCE_ROOT; };
+		ACA34FB50DED043F0081A4AD /* GlobalKeyboardDevice.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = GlobalKeyboardDevice.m; sourceTree = SOURCE_ROOT; };
+		ACA34FB60DED043F0081A4AD /* RemoteControlContainer.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = RemoteControlContainer.h; sourceTree = SOURCE_ROOT; };
+		ACA34FB70DED043F0081A4AD /* RemoteControlContainer.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = RemoteControlContainer.m; sourceTree = SOURCE_ROOT; };
+		ACA351A80DED05A20081A4AD /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = /System/Library/Frameworks/AppKit.framework; sourceTree = "<absolute>"; };
+		ACA351A90DED05A20081A4AD /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+		ACA351AA0DED05A20081A4AD /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
+		ACA351AB0DED05A20081A4AD /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = /System/Library/Frameworks/Foundation.framework; sourceTree = "<absolute>"; };
+		ACA351AC0DED05A20081A4AD /* IOKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = IOKit.framework; path = /System/Library/Frameworks/IOKit.framework; sourceTree = "<absolute>"; };
+		ACA351B20DED05B90081A4AD /* System.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = System.framework; path = /System/Library/Frameworks/System.framework; sourceTree = "<absolute>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ACA34F840DED03E00081A4AD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACA351AD0DED05A20081A4AD /* AppKit.framework in Frameworks */,
+				ACA351AE0DED05A20081A4AD /* Carbon.framework in Frameworks */,
+				ACA351AF0DED05A20081A4AD /* Cocoa.framework in Frameworks */,
+				ACA351B00DED05A20081A4AD /* Foundation.framework in Frameworks */,
+				ACA351B10DED05A20081A4AD /* IOKit.framework in Frameworks */,
+				ACA351B30DED05B90081A4AD /* System.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		ACA34F750DED03CA0081A4AD = {
+			isa = PBXGroup;
+			children = (
+				ACA350670DED04700081A4AD /* Frameworks */,
+				ACA34FAF0DED043F0081A4AD /* Devices */,
+				ACA34FAA0DED043F0081A4AD /* Base Classes */,
+				ACA34FA70DED043F0081A4AD /* Behaviors */,
+				ACA34FA50DED043F0081A4AD /* license.txt */,
+				ACA34FA60DED043F0081A4AD /* readme.txt */,
+				ACA34F870DED03E00081A4AD /* Products */,
+				ACA34F880DED03E00081A4AD /* RemoteControl-Info.plist */,
+			);
+			sourceTree = "<group>";
+		};
+		ACA34F870DED03E00081A4AD /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ACA34F860DED03E00081A4AD /* RemoteControl.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		ACA34FA70DED043F0081A4AD /* Behaviors */ = {
+			isa = PBXGroup;
+			children = (
+				ACA34FA80DED043F0081A4AD /* MultiClickRemoteBehavior.h */,
+				ACA34FA90DED043F0081A4AD /* MultiClickRemoteBehavior.m */,
+			);
+			name = Behaviors;
+			sourceTree = SOURCE_ROOT;
+		};
+		ACA34FAA0DED043F0081A4AD /* Base Classes */ = {
+			isa = PBXGroup;
+			children = (
+				ACA34FAB0DED043F0081A4AD /* RemoteControl.h */,
+				ACA34FAC0DED043F0081A4AD /* RemoteControl.m */,
+				ACA34FAD0DED043F0081A4AD /* HIDRemoteControlDevice.h */,
+				ACA34FAE0DED043F0081A4AD /* HIDRemoteControlDevice.m */,
+			);
+			name = "Base Classes";
+			sourceTree = SOURCE_ROOT;
+		};
+		ACA34FAF0DED043F0081A4AD /* Devices */ = {
+			isa = PBXGroup;
+			children = (
+				ACA34FB00DED043F0081A4AD /* AppleRemote.h */,
+				ACA34FB10DED043F0081A4AD /* AppleRemote.m */,
+				ACA34FB20DED043F0081A4AD /* KeyspanFrontRowControl.h */,
+				ACA34FB30DED043F0081A4AD /* KeyspanFrontRowControl.m */,
+				ACA34FB40DED043F0081A4AD /* GlobalKeyboardDevice.h */,
+				ACA34FB50DED043F0081A4AD /* GlobalKeyboardDevice.m */,
+				ACA34FB60DED043F0081A4AD /* RemoteControlContainer.h */,
+				ACA34FB70DED043F0081A4AD /* RemoteControlContainer.m */,
+			);
+			name = Devices;
+			sourceTree = SOURCE_ROOT;
+		};
+		ACA350670DED04700081A4AD /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				ACA351B20DED05B90081A4AD /* System.framework */,
+				ACA351A80DED05A20081A4AD /* AppKit.framework */,
+				ACA351A90DED05A20081A4AD /* Carbon.framework */,
+				ACA351AA0DED05A20081A4AD /* Cocoa.framework */,
+				ACA351AB0DED05A20081A4AD /* Foundation.framework */,
+				ACA351AC0DED05A20081A4AD /* IOKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		ACA34F810DED03E00081A4AD /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACA34FBA0DED043F0081A4AD /* MultiClickRemoteBehavior.h in Headers */,
+				ACA34FBC0DED043F0081A4AD /* RemoteControl.h in Headers */,
+				ACA34FBE0DED043F0081A4AD /* HIDRemoteControlDevice.h in Headers */,
+				ACA34FC00DED043F0081A4AD /* AppleRemote.h in Headers */,
+				ACA34FC20DED043F0081A4AD /* KeyspanFrontRowControl.h in Headers */,
+				ACA34FC40DED043F0081A4AD /* GlobalKeyboardDevice.h in Headers */,
+				ACA34FC60DED043F0081A4AD /* RemoteControlContainer.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		ACA34F850DED03E00081A4AD /* RemoteControl */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ACA34F890DED03E20081A4AD /* Build configuration list for PBXNativeTarget "RemoteControl" */;
+			buildPhases = (
+				ACA34F810DED03E00081A4AD /* Headers */,
+				ACA34F820DED03E00081A4AD /* Resources */,
+				ACA34F830DED03E00081A4AD /* Sources */,
+				ACA34F840DED03E00081A4AD /* Frameworks */,
+				ACA351B90DED06CC0081A4AD /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RemoteControl;
+			productName = RemoteControl;
+			productReference = ACA34F860DED03E00081A4AD /* RemoteControl.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ACA34F770DED03CA0081A4AD /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = ACA34F780DED03CA0081A4AD /* Build configuration list for PBXProject "RemoteControlFramework" */;
+			hasScannedForEncodings = 0;
+			mainGroup = ACA34F750DED03CA0081A4AD;
+			productRefGroup = ACA34F870DED03E00081A4AD /* Products */;
+			projectDirPath = "";
+			targets = (
+				ACA34F850DED03E00081A4AD /* RemoteControl */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ACA34F820DED03E00081A4AD /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACA34FB80DED043F0081A4AD /* license.txt in Resources */,
+				ACA34FB90DED043F0081A4AD /* readme.txt in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ACA34F830DED03E00081A4AD /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACA34FBB0DED043F0081A4AD /* MultiClickRemoteBehavior.m in Sources */,
+				ACA34FBD0DED043F0081A4AD /* RemoteControl.m in Sources */,
+				ACA34FBF0DED043F0081A4AD /* HIDRemoteControlDevice.m in Sources */,
+				ACA34FC10DED043F0081A4AD /* AppleRemote.m in Sources */,
+				ACA34FC30DED043F0081A4AD /* KeyspanFrontRowControl.m in Sources */,
+				ACA34FC50DED043F0081A4AD /* GlobalKeyboardDevice.m in Sources */,
+				ACA34FC70DED043F0081A4AD /* RemoteControlContainer.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		ACA34F790DED03CA0081A4AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+				);
+				COPY_PHASE_STRIP = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Debug;
+		};
+		ACA34F7A0DED03CA0081A4AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+				);
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Release;
+		};
+		ACA34F8A0DED03E20081A4AD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+				);
+				COPY_PHASE_STRIP = NO;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_MODEL_TUNING = G5;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INFOPLIST_FILE = "RemoteControl-Info.plist";
+				INSTALL_PATH = "@executable_path/../Frameworks";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = RemoteControl;
+				ZERO_LINK = YES;
+			};
+			name = Debug;
+		};
+		ACA34F8B0DED03E20081A4AD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+				);
+				COPY_PHASE_STRIP = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				FRAMEWORK_VERSION = A;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = NO;
+				GCC_MODEL_TUNING = G5;
+				GCC_PRECOMPILE_PREFIX_HEADER = YES;
+				GCC_PREFIX_HEADER = "$(SYSTEM_LIBRARY_DIR)/Frameworks/Carbon.framework/Headers/Carbon.h";
+				INFOPLIST_FILE = "RemoteControl-Info.plist";
+				INSTALL_PATH = "@executable_path/../Frameworks";
+				OTHER_LDFLAGS = (
+					"-framework",
+					Carbon,
+				);
+				PREBINDING = NO;
+				PRODUCT_NAME = RemoteControl;
+				ZERO_LINK = NO;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ACA34F780DED03CA0081A4AD /* Build configuration list for PBXProject "RemoteControlFramework" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACA34F790DED03CA0081A4AD /* Debug */,
+				ACA34F7A0DED03CA0081A4AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACA34F890DED03E20081A4AD /* Build configuration list for PBXNativeTarget "RemoteControl" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACA34F8A0DED03E20081A4AD /* Debug */,
+				ACA34F8B0DED03E20081A4AD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = ACA34F770DED03CA0081A4AD /* Project object */;
+}
