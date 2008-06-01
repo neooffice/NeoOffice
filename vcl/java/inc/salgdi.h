@@ -36,7 +36,7 @@
 #ifndef _SV_SALGDI_H
 #define _SV_SALGDI_H
 
-#include <map>
+#include <hash_map>
 
 #ifndef _SV_SALGDI_HXX
 #include <salgdi.hxx>
@@ -100,7 +100,7 @@ public:
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
 	JavaImplFontData*		mpFontData;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-	::std::map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
+	::std::hash_map< int, ::vcl::com_sun_star_vcl_VCLFont* >	maFallbackFonts;
 	ImplLayoutRuns			maFallbackRuns;
 	FontFamily				mnFontFamily;
 	FontWeight				mnFontWeight;

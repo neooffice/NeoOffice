@@ -87,6 +87,7 @@
 
 typedef void NativeShutdownCancelledHandler_Type();
 
+static ATSFontNotificationRef aFontNotification = NULL;
 static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
 static ::vos::OModule aShutdownCancelledHandlerModule;
@@ -296,7 +297,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
 								continue;
 
-							::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
+							::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
 							if ( nfit == pSalData->maNativeFontMapping.end() )
 								continue;
 
@@ -359,6 +360,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 					}
 				}
 			}
+
+			// Fix bug 3095 by handling font change notifications
+			if ( !aFontNotification )
+				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
+
+			OutputDevice::ImplUpdateAllFontData( true );
 
 			rSolarMutex.release();
 		}
@@ -439,11 +446,11 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( nFallbackLevel )
 	{
 		// Retrieve the fallback font if one has been set by a text layout
-		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
+		::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
 		if ( ffit != maFallbackFonts.end() )
 		{
 			sal_IntPtr nNativeFont = ffit->second->getNativeFont();
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( nNativeFont );
+			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( nNativeFont );
 			if ( it != pSalData->maNativeFontMapping.end() )
 				pFontData = it->second;
 		}
@@ -473,7 +480,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// bold or italic in fallback levels where none was requested
 		if ( nFallbackLevel )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator pfit = pSalData->maPlainNativeFontMapping.find( pFontData->GetFontId() );
+			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator pfit = pSalData->maPlainNativeFontMapping.find( pFontData->GetFontId() );
 			if ( pfit != pSalData->maPlainNativeFontMapping.end() )
 				pFontData = pfit->second;
 		}
@@ -485,21 +492,21 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		// of each font
 		if ( bAddBold && bAddItalic && pFontData == pPlainFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bifit = pSalData->maBoldItalicNativeFontMapping.find( nPlainNativeFont );
+			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator bifit = pSalData->maBoldItalicNativeFontMapping.find( nPlainNativeFont );
 			if ( bifit != pSalData->maBoldItalicNativeFontMapping.end() )
 				pFontData = bifit->second;
 		}
 
 		if ( bAddBold && pFontData == pPlainFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator bfit = pSalData->maBoldNativeFontMapping.find( nPlainNativeFont );
+			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator bfit = pSalData->maBoldNativeFontMapping.find( nPlainNativeFont );
 			if ( bfit != pSalData->maBoldNativeFontMapping.end() )
 				pFontData = bfit->second;
 		}
 
 		if ( bAddItalic && pFontData == pPlainFontData )
 		{
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator ifit = pSalData->maItalicNativeFontMapping.find( nPlainNativeFont );
+			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator ifit = pSalData->maItalicNativeFontMapping.find( nPlainNativeFont );
 			if ( ifit != pSalData->maItalicNativeFontMapping.end() )
 				pFontData = ifit->second;
 		}
@@ -510,7 +517,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			if ( nFallbackLevel )
 			{
 				// Avoid selecting a font that has already been used
-				for ( ::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
+				for ( ::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.begin(); ffit != maFallbackFonts.end(); ++ffit )
 				{
 					if ( ffit->first < nFallbackLevel && ffit->second->getNativeFont() == nNativeFont )
 					{
@@ -526,7 +533,29 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		}
 	}
 
-	::std::map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = maFallbackFonts.find( nFallbackLevel );
+	// Check that the font still exists as it might have been disabled or
+	// removed by the ATS server
+	::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( pFont->mpFontData->GetFontId() );
+	if ( nfit == pSalData->maNativeFontMapping.end() )
+	{
+		::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.find( pFontData->maVCLFontName );
+		if ( jfnit != pSalData->maJavaFontNameMapping.end() )
+		{
+			pFontData = jfnit->second;
+		}
+		else if ( pSalData->maJavaFontNameMapping.size() )
+		{
+			pFontData = pSalData->maJavaFontNameMapping.begin()->second;
+		}
+		else
+		{
+			// We should never get here as there should always be at least one
+			// font
+			return SAL_SETFONT_BADFONT;
+		}
+	}
+
+	::std::hash_map< int, com_sun_star_vcl_VCLFont* >::iterator ffit = maFallbackFonts.find( nFallbackLevel );
 	if ( ffit != maFallbackFonts.end() )
 	{
 		delete ffit->second;
@@ -552,8 +581,10 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 	}
-
-	pFont->mpFontData = pFontData;
+	else
+	{
+		pFont->mpFontData = pFontData;
+	}
 
 	return 0;
 }
@@ -704,7 +735,7 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 	else
 	{
 		// Retrieve the fallback font if one has been set by a text layout
-		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
+		::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator ffit = maFallbackFonts.find( nFallbackLevel );
 		if ( ffit != maFallbackFonts.end() )
 			pVCLFont = ffit->second;
 	}

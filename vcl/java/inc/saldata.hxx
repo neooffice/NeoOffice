@@ -37,6 +37,7 @@
 #define _SV_SALDATA_HXX
 
 #include <list>
+#include <hash_map>
 #include <map>
 
 #ifndef _SV_SVDATA_HXX
@@ -74,12 +75,12 @@ public:
 	XubString				maDefaultPrinter;
 	::vcl::com_sun_star_vcl_VCLEventQueue*	mpEventQueue;
 	::std::map< String, JavaImplFontData* >	maFontNameMapping;
-	::std::map< ::rtl::OUString, JavaImplFontData* >	maJavaFontNameMapping;
-	::std::map< sal_IntPtr, JavaImplFontData* >	maNativeFontMapping;
-	::std::map< sal_IntPtr, JavaImplFontData* >	maPlainNativeFontMapping;
-	::std::map< sal_IntPtr, JavaImplFontData* >	maBoldNativeFontMapping;
-	::std::map< sal_IntPtr, JavaImplFontData* >	maItalicNativeFontMapping;
-	::std::map< sal_IntPtr, JavaImplFontData* >	maBoldItalicNativeFontMapping;
+	::std::hash_map< ::rtl::OUString, JavaImplFontData*, ::rtl::OUStringHash >	maJavaFontNameMapping;
+	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maNativeFontMapping;
+	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maPlainNativeFontMapping;
+	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maBoldNativeFontMapping;
+	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maItalicNativeFontMapping;
+	::std::hash_map< sal_IntPtr, JavaImplFontData* >	maBoldItalicNativeFontMapping;
 	JavaSalFrame*			mpPresentationFrame;
 	::osl::Condition		maNativeEventCondition;
 	bool					mbInNativeModalSheet;

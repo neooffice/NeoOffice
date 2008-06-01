@@ -37,30 +37,13 @@
 #import <Carbon/Carbon.h>
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
-#import "../gdi/salgdi3_cocoa.h"
 
-static NSRecursiveLock *pFontLock = nil;
-static NSMutableDictionary *pFontDictionary = nil;
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
-
-inline void MapVCLFont( NSString *pFontName, NSFont *pNSFont )
-{
-	if ( pFontName && pNSFont )
-	{
-		NSString *pValue = [pNSFont fontName];
-		if ( pValue )
-		{
-			[pFontDictionary setObject:pValue forKey:pFontName];
-			[pFontDictionary setObject:pValue forKey:[pNSFont displayName]];
-			[pFontDictionary setObject:pValue forKey:[pNSFont fontName]];
-		}
-	}
-}
 
 @interface NSObject (ApplicationHasDelegate)
 - (void)cancelTermination;
@@ -147,57 +130,6 @@ inline void MapVCLFont( NSString *pFontName, NSFont *pNSFont )
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 		mbActive = ( [pApp isActive] && ![pApp modalWindow] );
-}
-
-@end
-
-@interface VCLFont : NSFont
-+ (NSFont *)fontWithName:(NSString *)pFontName size:(float)fFontSize;
-+ (NSFont *)fontWithName:(NSString *)pFontName matrix:(const float *)fFontMatrix;
-@end
-
-@implementation VCLFont
-
-+ (NSFont *)fontWithName:(NSString *)pFontName size:(float)fFontSize
-{
-	NSFont *pRet = nil;
-
-	[pFontLock lock];
-	NSString *pMappedFontName = [pFontDictionary objectForKey:pFontName];
-	if ( !pMappedFontName )
-	{
-		pRet = [super fontWithName:pFontName size:fFontSize];
-		MapVCLFont( pFontName, pRet );
-	}
-	else
-	{
-		pRet = [super fontWithName:pMappedFontName size:fFontSize];
-	}
-
-	[pFontLock unlock];
-
-	return pRet;
-}
-
-+ (NSFont *)fontWithName:(NSString *)pFontName matrix:(const float *)fFontMatrix
-{
-	NSFont *pRet = nil;
-
-	[pFontLock lock];
-	NSString *pMappedFontName = [pFontDictionary objectForKey:pFontName];
-	if ( !pMappedFontName )
-	{
-		pRet = [super fontWithName:pFontName matrix:fFontMatrix];
-		MapVCLFont( pFontName, pRet );
-	}
-	else
-	{
-		pRet = [super fontWithName:pMappedFontName matrix:fFontMatrix];
-	}
-
-	[pFontLock unlock];
-
-	return pRet;
 }
 
 @end
@@ -900,8 +832,6 @@ static VCLResponder *pSharedResponder = nil;
 - (void)installVCLEventQueueClasses:(id)pObject
 {
 	// Do not retain as invoking alloc disables autorelease
-	pFontLock = [[NSRecursiveLock alloc] init];
-	pFontDictionary = [[NSMutableDictionary alloc] initWithCapacity:1024];
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
 	// Initialize statics
@@ -914,7 +844,6 @@ static VCLResponder *pSharedResponder = nil;
 		pSharedResponder = [[VCLResponder alloc] init];
 	}
 
-	[VCLFont poseAsClass:[NSFont class]];
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];

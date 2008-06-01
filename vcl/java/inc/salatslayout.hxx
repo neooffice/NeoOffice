@@ -36,7 +36,7 @@
 #ifndef _SV_SALATSLAYOUT_HXX
 #define _SV_SALATSLAYOUT_HXX
 
-#include <map>
+#include <hash_map>
 #include <vector>
 
 #ifndef _SV_SALLAYOUT_HXX
@@ -67,7 +67,7 @@ class SalATSLayout : public GenericSalLayout
 	::std::vector< ImplATSLayoutData* >	maLayoutData;
 	::std::vector< int >	maLayoutMinCharPos;
 	ImplATSLayoutData*	mpKashidaLayoutData;
-	::std::map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
+	::std::hash_map< sal_Unicode, ImplATSLayoutData* >	maMirroredLayoutData;
 	long				mnOrigWidth;
 	float				mfGlyphScaleX;
 

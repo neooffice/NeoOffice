@@ -44,7 +44,6 @@
  ************************************************************************/
 
 #include <sys/sysctl.h>
-#include <hash_map>
 #include <unicode/ubidi.h>
 
 #ifndef _SV_SALATSLAYOUT_HXX
@@ -440,7 +439,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			ItemCount nActualCount = 0;
 
 			ATSUFontID aATSUFonts[ nCount ];
-			for ( ::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
+			for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
 				aATSUFonts[ nActualCount++ ] = it->first;
 
 			if ( !nActualCount || ATSUSetObjFontFallbacks( ImplATSLayoutData::maFontFallbacks, nActualCount, aATSUFonts, kATSUSequentialFallbacksExclusive ) != noErr )
@@ -642,7 +641,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			if ( !mpFallbackFont )
 			{
 				SalData *pSalData = GetSalData();
-				::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)nFontID );
+				::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 				{
 					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX, it->second->mnATSUFontID );
@@ -844,7 +843,7 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 {
 	if ( mnFallbackLevel )
 	{
-		::std::map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
+		::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() && mnFallbackLevel < MAX_FALLBACK )
 			mpVCLFont = new com_sun_star_vcl_VCLFont( it->second );
 	}
@@ -1275,7 +1274,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					sal_Unicode nMirroredChar = (sal_Unicode)GetMirroredChar( nChar );
 					if ( nMirroredChar != nChar )
 					{
-						::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
+						::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 						if ( mit == maMirroredLayoutData.end() )
 						{
 							sal_Unicode aMirrored[ 1 ];
@@ -1455,7 +1454,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		{
 			SalData *pSalData = GetSalData();
 
-			::std::map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
+			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
 			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
 				USHORT nHighScore = 0;
@@ -1484,7 +1483,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		}
 
 		int nNextLevel = mnFallbackLevel + 1;
-		::std::map< int, com_sun_star_vcl_VCLFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
+		::std::hash_map< int, com_sun_star_vcl_VCLFont* >::iterator it = mpGraphics->maFallbackFonts.find( nNextLevel );
 		if ( it != mpGraphics->maFallbackFonts.end() )
 		{
 			delete it->second;
@@ -1717,7 +1716,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		sal_Unicode nChar = pCurrentLayoutData->mpHash->mpStr[ nIndex ];
 		if ( pCurrentLayoutData->mpHash->mbRTL )
 		{
-			::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
+			::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 			if ( mit != maMirroredLayoutData.end() )
 			{
 				pCurrentLayoutData = mit->second;
@@ -1816,7 +1815,7 @@ void SalATSLayout::Destroy()
 
 	if ( maMirroredLayoutData.size() )
 	{
-		for ( ::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.begin(); mit != maMirroredLayoutData.end(); ++mit )
+		for ( ::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.begin(); mit != maMirroredLayoutData.end(); ++mit )
 			mit->second->Release();
 		maMirroredLayoutData.clear();
 	}
@@ -1867,7 +1866,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 	sal_Unicode nChar = pRet->mpHash->mpStr[ nIndex ];
 	if ( pRet->mpHash->mbRTL )
 	{
-		::std::map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
+		::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 		if ( mit != maMirroredLayoutData.end() )
 		{
 			pRet = mit->second;
