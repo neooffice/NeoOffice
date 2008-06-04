@@ -643,9 +643,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				SalData *pSalData = GetSalData();
 				::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
-				{
-					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX, it->second->mnATSUFontID );
-				}
+					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 			}
 		}
 		else
@@ -1157,7 +1155,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
 								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != nNativeFont )
-									mpKashidaLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), it->second->mnATSUFontID );
+									mpKashidaLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
 							}
 
 							if ( mpKashidaLayoutData->mpFallbackFont )
@@ -1495,7 +1493,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpFallbackFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( mpKashidaLayoutData->mpFallbackFont );
 		else if ( pHighScoreFontData )
-			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX(), pHighScoreFontData->mnATSUFontID );
+			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pHighScoreFontData->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
 		else if ( pFallbackFont )
 			mpGraphics->maFallbackFonts[ nNextLevel ] = new com_sun_star_vcl_VCLFont( pFallbackFont );
 		else

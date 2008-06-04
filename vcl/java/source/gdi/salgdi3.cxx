@@ -165,8 +165,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
 							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
 
-							CFStringRef aPSString = NSFont_getFontName( pNSFont );
-							if ( !aPSString )
+							CFStringRef aPSString;
+							if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
 								continue;
 
 							OUString aPSName;
@@ -562,7 +562,10 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		maFallbackFonts.erase( ffit );
 	}
 
-	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0, pFontData->mnATSUFontID );
+	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
+
+	// Update the native font as Java may be using a different font
+	pFontData->mnATSUFontID = maFallbackFonts[ nFallbackLevel ]->getNativeFont();
 
 	if ( !nFallbackLevel )
 	{

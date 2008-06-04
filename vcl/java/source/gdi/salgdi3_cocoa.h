@@ -44,7 +44,6 @@ typedef void* id;
 BEGIN_C
 #endif
 ATSFontRef NSFont_getATSFontRef( id pNSFont );
-CFStringRef NSFont_getFontName( id pNSFont );
 ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic );
 long *NSFontManager_getAllFonts();
 BOOL NSFontManager_isFixedPitch( id pNSFont );

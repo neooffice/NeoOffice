@@ -66,7 +66,7 @@ protected:
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLFont( ::rtl::OUString aName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX, sal_IntPtr nNativeFont );
+						com_sun_star_vcl_VCLFont( ::rtl::OUString aName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
 						com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont );
 
 	com_sun_star_vcl_VCLFont*	clone();
