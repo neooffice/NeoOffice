@@ -2521,7 +2521,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	synchronized void paint(Rectangle b) {
 
-		if (disposed || !window.isShowing() || b.isEmpty())
+		if (disposed || !window.isShowing() || b.isEmpty() || getState() == SAL_FRAMESTATE_MINIMIZED)
 			return;
 
 		queue.postCachedEvent(new VCLEvent(new PaintEvent(panel, PaintEvent.UPDATE, b), VCLEvent.SALEVENT_PAINT, this, 0));
