@@ -3060,6 +3060,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// state, the size of the window is updated but not the location.
 		updateLocation(window.getPeer());
 
+		// Fix bug 3107 by forcing a repaint if the window has changed state
+		paint(new Rectangle(panel.getSize()));
+
 	}
 
 	/**

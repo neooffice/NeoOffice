@@ -532,7 +532,7 @@ public final class VCLEventQueue implements Runnable {
 					{
 						VCLEventQueue.QueueItem eqi = queue.head;
 						while (eqi != null) {
-							if (eqi.event.getID() == VCLEvent.SALEVENT_CLOSE && eqi.event.getFrame() == newItem.event.getFrame())
+							if (eqi.event.getID() == id && eqi.event.getFrame() == newItem.event.getFrame())
 								return;
 							eqi = eqi.next;
 						}
@@ -542,7 +542,7 @@ public final class VCLEventQueue implements Runnable {
 					{
 						// Reduce flicker when backspacing through uncommitted
 						// text
-						if (queue.tail != null && queue.tail.event.getID() == VCLEvent.SALEVENT_EXTTEXTINPUT && queue.tail.event.getText() == null)
+						if (queue.tail != null && queue.tail.event.getID() == id && queue.tail.event.getText() == null)
 							queue.tail.remove = true;
 					}
 					break;
@@ -562,13 +562,13 @@ public final class VCLEventQueue implements Runnable {
 					break;
 				case VCLEvent.SALEVENT_MOUSEMOVE:
 					{
-						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_MOUSEMOVE && queue.tail.event.getFrame() == newItem.event.getFrame())
+						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == id && queue.tail.event.getFrame() == newItem.event.getFrame())
 							queue.tail.remove = true;
 					}
 					break;
 				case VCLEvent.SALEVENT_WHEELMOUSE:
 					{
-						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == VCLEvent.SALEVENT_WHEELMOUSE && queue.tail.event.isHorizontal() == newItem.event.isHorizontal() && queue.tail.event.getFrame() == newItem.event.getFrame()) {
+						if (queue.tail != null && !queue.tail.remove && queue.tail.event.getID() == id && queue.tail.event.isHorizontal() == newItem.event.isHorizontal() && queue.tail.event.getFrame() == newItem.event.getFrame()) {
 							queue.tail.remove = true;
 							newItem.event.addWheelRotation(queue.tail.event.getWheelRotation());
 						}
