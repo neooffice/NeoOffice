@@ -155,6 +155,9 @@ static void InitializeScrollBarPreferencesTimerCallback( EventLoopTimerRef aTime
 
 static void BeginTrackingScrollBar( ScrollBar *toTrack )
 {
+	if ( !toTrack || !toTrack->IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
+		return;
+
 	if ( !pRelayoutScrollBarHandler )
 	{
 		pRelayoutScrollBarHandler = NewEventHandlerUPP( RelayoutScrollBars );
