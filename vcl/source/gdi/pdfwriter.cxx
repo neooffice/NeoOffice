@@ -1191,7 +1191,10 @@ PDFWriter::PDFVersion PDFWriter::GetVersion() const
 
 void PDFWriter::SetDocInfo( const PDFDocInfo& rInfo )
 {
+#ifdef USE_JAVA
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetDocInfoPDFAction( rInfo ) );
+#endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setDocInfo( rInfo );
 }
 
