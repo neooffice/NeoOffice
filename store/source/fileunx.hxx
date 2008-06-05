@@ -173,6 +173,11 @@ inline storeError __store_fopen (
 	}
 
 	// Acquire (advisory) Lock (Multiple Reader | Single Writer)
+#ifdef MACOSX
+	// Mac OS X will return ENOTSUP for mounted file systems so ignore the
+	// error for read locks
+	if (::flock (rhFile, ( nMode & store_File_OpenWrite ? LOCK_EX : LOCK_SH ) | LOCK_NB) == 0 || errno != ENOTSUP)
+#else	// MACOSX
 	struct flock lock;
 
 	if (nMode & store_File_OpenWrite)
@@ -184,11 +189,6 @@ inline storeError __store_fopen (
 	lock.l_start  = 0;
 	lock.l_len    = 0;
 
-#ifdef MACOSX
-	// Mac OS X will return ENOTSUP for mounted file systems so ignore the
-	// error for read locks
-	if (::fcntl (rhFile, F_SETLK, &lock) < 0 && errno != ENOTSUP)
-#else	// MACOSX
 	if (::fcntl (rhFile, F_SETLK, &lock) < 0)
 #endif	// MACOSX
 	{
@@ -331,6 +331,9 @@ inline storeError __store_fsync (HSTORE h)
  */
 inline storeError __store_fclose (HSTORE h)
 {
+#ifdef MACOSX
+	(void)::flock(h, LOCK_UN | LOCK_NB);
+#else	// MACOSX
 	// Release (advisory) Lock (Multiple Reader | Single Writer)
 	struct flock lock;
 
@@ -340,6 +343,7 @@ inline storeError __store_fclose (HSTORE h)
 	lock.l_len    = 0;
 
 	(void)::fcntl (h, F_SETLK, &lock);
+#endif	// MACOSX
 
 	// Close file handle.
 	if (::close (h) == -1)

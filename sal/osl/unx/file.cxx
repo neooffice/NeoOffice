@@ -353,30 +353,23 @@ static int adjustLockFlags(const char * path, int flags)
   
     if( 0 <= statfs( path, &s ) )
     {
-        if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
-        {
-            flags &= ~O_EXLOCK;
-            flags |= O_SHLOCK;
-        }    
 #ifdef USE_JAVA
         /*
          * Fix bugs 2504 and 2639 and other file locking bugs by not making an
          * exlusive lock until after the file is open like on Linux and Solaris.
          * Some filesystems do not support any locking so open the file without
-         * any locking. Also, fix bug 2443 by not applying this same fix to
-         * SAMBA volumes as any locking during the opening of file will cause
-         * this bug. Also, attempt to fix bug 2696 by always replacing the
-         * exclusive lock with a shared lock for all other filesytems and not
-         * just for AFP.
+         * any locking.
          *
-         * Important note: as described in bug 2696 we cannot apply this same
-         * fix to AFP file systems as all locking after the file is open will
-         * always fail.
+         * Important note: we need to use flock() instead of fcntl() to lock
+         * files or bug 2696 will reoccur with AFP file systems.
          */
-        else
+        flags &= ~( O_EXLOCK | O_SHLOCK );
+#else	// USE_JAVA
+        if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
         {
-            flags &= ~( O_EXLOCK | O_SHLOCK );
-        }
+            flags &= ~O_EXLOCK;
+            flags |= O_SHLOCK;
+        }    
 #endif	// USE_JAVA
     }
 #ifdef USE_JAVA
@@ -849,15 +842,13 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 {
                     bOK = true;
                 }
-                else if( -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
+                else if( 0 == flock( fd, LOCK_EX | LOCK_NB ) || errno == ENOTSUP )
                 {
                     if( errno == ENOTSUP )
                     {
                         /* Try to get at least a read lock */
-                        aflock.l_type = F_RDLCK;
-                        if ( -1 != fcntl( fd, F_SETLK, &aflock ) || errno == ENOTSUP )
+                        if ( 0 == flock( fd, LOCK_SH | LOCK_NB ) || errno == ENOTSUP )
                             bOK = true;
-                        aflock.l_type = F_WRLCK;
                     }
                     else
                     {
@@ -950,7 +941,7 @@ oslFileError osl_closeFile( oslFileHandle Handle )
              * Mac OS X will return ENOTSUP for mounted file systems so ignore
              * the error for write locks
              */
-            if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) && errno != ENOTSUP )
+            if ( 0 != flock( pHandleImpl->fd, LOCK_UN | LOCK_NB ) && errno != ENOTSUP )
 #else	/* USE_JAVA */
             if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
 #endif	/* USE_JAVA */
