@@ -1793,17 +1793,7 @@ BOOL JavaSalGraphics::hitTestNativeControl( ControlType nType, ControlPart nPart
 	// these regions, to perform our hit testing.
 
 	if ( nType == CTRL_SCROLLBAR )
-	{
-		if ( nPart == PART_ENTIRE_CONTROL )
-		{
-			rIsInside = rControlRegion.IsInside( aPos );
-			return TRUE;
-		}
-		else
-		{
-			return FALSE;
-		}
-	}
+		return FALSE;
 
 	Region aNativeBoundingRegion;
 	Region aNativeContentRegion;
