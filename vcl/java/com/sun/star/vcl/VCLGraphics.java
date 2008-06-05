@@ -1025,15 +1025,10 @@ public final class VCLGraphics {
 			return;
 
 		LinkedList clipList = new LinkedList();
-		Rectangle clipBounds;
-		if (graphics != null)
-			clipBounds = graphicsBounds;
-		else
-			clipBounds = destBounds;
 		if (userClipList != null) {
 			Iterator clipRects = userClipList.iterator();
 			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(clipBounds);
+				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
 				if (!clip.isEmpty())
 					clipList.add(clip);
 			}
@@ -1042,7 +1037,7 @@ public final class VCLGraphics {
 			clipList.add(new Rectangle());
 		}
 		else {
-			clipList.add(clipBounds);
+			clipList.add(destBounds);
 		}
 
 		Graphics2D g = getGraphics();
