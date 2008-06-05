@@ -173,11 +173,11 @@ inline storeError __store_fopen (
 	}
 
 	// Acquire (advisory) Lock (Multiple Reader | Single Writer)
-#ifdef MACOSX
+#ifdef USE_JAVA 
 	// Mac OS X will return ENOTSUP for mounted file systems so ignore the
 	// error for read locks
-	if (::flock (rhFile, ( nMode & store_File_OpenWrite ? LOCK_EX : LOCK_SH ) | LOCK_NB) == 0 || errno != ENOTSUP)
-#else	// MACOSX
+	if (::flock (rhFile, ( nMode & store_File_OpenWrite ? LOCK_EX : LOCK_SH ) | LOCK_NB) != 0 && errno != ENOTSUP)
+#else	// USE_JAVA
 	struct flock lock;
 
 	if (nMode & store_File_OpenWrite)
@@ -190,7 +190,7 @@ inline storeError __store_fopen (
 	lock.l_len    = 0;
 
 	if (::fcntl (rhFile, F_SETLK, &lock) < 0)
-#endif	// MACOSX
+#endif	// USE_JAVA
 	{
 		// Save original result.
 		storeError result;
@@ -331,9 +331,9 @@ inline storeError __store_fsync (HSTORE h)
  */
 inline storeError __store_fclose (HSTORE h)
 {
-#ifdef MACOSX
+#ifdef USE_JAVA
 	(void)::flock(h, LOCK_UN | LOCK_NB);
-#else	// MACOSX
+#else	// USE_JAVA
 	// Release (advisory) Lock (Multiple Reader | Single Writer)
 	struct flock lock;
 
@@ -343,7 +343,7 @@ inline storeError __store_fclose (HSTORE h)
 	lock.l_len    = 0;
 
 	(void)::fcntl (h, F_SETLK, &lock);
-#endif	// MACOSX
+#endif	// USE_JAVA
 
 	// Close file handle.
 	if (::close (h) == -1)

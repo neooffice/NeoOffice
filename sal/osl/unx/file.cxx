@@ -353,6 +353,11 @@ static int adjustLockFlags(const char * path, int flags)
   
     if( 0 <= statfs( path, &s ) )
     {
+        if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
+        {
+            flags &= ~O_EXLOCK;
+            flags |= O_SHLOCK;
+        }    
 #ifdef USE_JAVA
         /*
          * Fix bugs 2504 and 2639 and other file locking bugs by not making an
@@ -363,13 +368,10 @@ static int adjustLockFlags(const char * path, int flags)
          * Important note: we need to use flock() instead of fcntl() to lock
          * files or bug 2696 will reoccur with AFP file systems.
          */
-        flags &= ~( O_EXLOCK | O_SHLOCK );
-#else	// USE_JAVA
-        if( 0 == strncmp("afpfs", s.f_fstypename, 5) )
+        else
         {
-            flags &= ~O_EXLOCK;
-            flags |= O_SHLOCK;
-        }    
+            flags &= ~( O_EXLOCK | O_SHLOCK );
+        }
 #endif	// USE_JAVA
     }
 #ifdef USE_JAVA
@@ -835,7 +837,8 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 #ifdef USE_JAVA
                 /*
                  * Mac OS X will return ENOTSUP for mounted file systems so
-                 * ignore the error for write locks
+                 * ignore the error for write locks. Also, fix bug 3110 by
+                 * using flock() instead of fcntl() to lock the file.
                  */
                 bool bOK = false;
                 if( F_WRLCK != aflock.l_type )
@@ -939,7 +942,8 @@ oslFileError osl_closeFile( oslFileHandle Handle )
 #ifdef USE_JAVA
             /*
              * Mac OS X will return ENOTSUP for mounted file systems so ignore
-             * the error for write locks
+             * the error for write locks. Also, fix bug 3110 by using flock()
+             * instead of fcntl() to lock the file.
              */
             if ( 0 != flock( pHandleImpl->fd, LOCK_UN | LOCK_NB ) && errno != ENOTSUP )
 #else	/* USE_JAVA */
