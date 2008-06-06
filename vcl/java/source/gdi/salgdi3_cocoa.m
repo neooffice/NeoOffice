@@ -130,7 +130,9 @@ long *NSFontManager_getAllFonts()
 					for ( ; i < nCount; i++ )
 					{
 						NSFont *pCurrentFont = [NSFont fontWithName:(NSString *)[pFontNames objectAtIndex:i] size:(float)12];
-						if ( pCurrentFont )
+
+						// Fix bug 3097 by excluding bitmap fonts
+						if ( pCurrentFont && [pCurrentFont printerFont] == pCurrentFont)
 						{
 							[pCurrentFont retain];
 							pRet[ nIndex++ ] = (long)pCurrentFont;
