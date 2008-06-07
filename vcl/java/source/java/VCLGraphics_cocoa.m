@@ -79,6 +79,19 @@
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
+
 			NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
 			if ( pData )
 			{
@@ -87,23 +100,7 @@
 					pImage = [NSPDFImageRep imageRepWithData:pData];
 
 				if ( pImage )
-				{
-					CGMutablePathRef aAdjustedClipPath = nil;
-					if ( maClipPath )
-					{
-						aAdjustedClipPath = CGPathCreateMutable();
-						if ( aAdjustedClipPath )
-						{
-							CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
-							CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
-							CGContextAddPath( aContext, aAdjustedClipPath );
-							CGContextClip( aContext );
-							CGPathRelease( aAdjustedClipPath );
-						}
-					}
-
 					[pImage drawInRect:NSMakeRect( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 )];
-				}
 			}
 
 			CGContextRestoreGState( aContext );
@@ -175,10 +172,9 @@
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 
-			CGMutablePathRef aAdjustedClipPath = nil;
 			if ( maClipPath )
 			{
-				aAdjustedClipPath = CGPathCreateMutable();
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
 				if ( aAdjustedClipPath )
 				{
 					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
@@ -231,26 +227,23 @@
 	float				mfGlyphRotateAngle;
 	float				mfGlyphScaleX;
 	float				mfGlyphScaleY;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)create:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)create:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawGlyphs:(id)pObject;
-- (id)init:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)init:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawGlyphs
 
-+ (id)create:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)create:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawGlyphs *pRet = [[DrawGlyphs alloc] init:fX y:fY count:nCount glyphs:pGlyphs sizes:pSizes font:aFont fontSize:nFontSize color:nColor glyphTranslateX:fGlyphTranslateX glyphTranslateY:fGlyphTranslateY glyphRotateAngle:fGlyphRotateAngle glyphScaleX:fGlyphScaleX glyphScaleY:fGlyphScaleY clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawGlyphs *pRet = [[DrawGlyphs alloc] init:fX y:fY count:nCount glyphs:pGlyphs sizes:pSizes font:aFont fontSize:nFontSize color:nColor glyphTranslateX:fGlyphTranslateX glyphTranslateY:fGlyphTranslateY glyphRotateAngle:fGlyphRotateAngle glyphScaleX:fGlyphScaleX glyphScaleY:fGlyphScaleY clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -268,8 +261,19 @@
 			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
 
 			CGContextTranslateCTM( aContext, mfX * mfScaleX, mfY * mfScaleY );
 			CGContextRotateCTM( aContext, mfGlyphRotateAngle );
@@ -296,6 +300,7 @@
 					pAdjustedSizes[ i ].width = mpSizes[ i ].width * mfScaleX;
 					pAdjustedSizes[ i ].height = mpSizes[ i ].height * mfScaleY;
 				}
+
 				CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, pAdjustedSizes, mnCount );
 				free( pAdjustedSizes );
 			}
@@ -305,7 +310,7 @@
 	}
 }
 
-- (id)init:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)init:(float)fX y:(float)fY count:(size_t)nCount glyphs:(CGGlyph *)pGlyphs sizes:(CGSize *)pSizes font:(CGFontRef)aFont fontSize:(int)nFontSize color:(int)nColor glyphTranslateX:(float)fGlyphTranslateX glyphTranslateY:(float)fGlyphTranslateY glyphRotateAngle:(float)fGlyphRotateAngle glyphScaleX:(float)fGlyphScaleX glyphScaleY:(float)fGlyphScaleY clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -322,10 +327,7 @@
 	mfGlyphRotateAngle = fGlyphRotateAngle;
 	mfGlyphScaleX = fGlyphScaleX;
 	mfGlyphScaleY = fGlyphScaleY;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -791,13 +793,13 @@
 
 @end
 
-void CGContext_drawGlyphs( float fX, float fY, size_t nCount, CGGlyph *pGlyphs, CGSize *pSizes, CGFontRef aFont, int nFontSize, int nColor, float fGlyphTranslateX, float fGlyphTranslateY, float fGlyphRotateAngle, float fGlyphScaleX, float fGlyphScaleY, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGContext_drawGlyphs( float fX, float fY, size_t nCount, CGGlyph *pGlyphs, CGSize *pSizes, CGFontRef aFont, int nFontSize, int nColor, float fGlyphTranslateX, float fGlyphTranslateY, float fGlyphRotateAngle, float fGlyphScaleX, float fGlyphScaleY, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( nCount && pGlyphs && pSizes && aFont && nFontSize )
 	{
-		DrawGlyphs *pDrawGlyphs = [DrawGlyphs create:fX y:fY count:nCount glyphs:pGlyphs sizes:pSizes font:aFont fontSize:nFontSize color:nColor glyphTranslateX:fGlyphTranslateX glyphTranslateY:fGlyphTranslateY glyphRotateAngle:fGlyphRotateAngle glyphScaleX:fGlyphScaleX glyphScaleY:fGlyphScaleY clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		DrawGlyphs *pDrawGlyphs = [DrawGlyphs create:fX y:fY count:nCount glyphs:pGlyphs sizes:pSizes font:aFont fontSize:nFontSize color:nColor glyphTranslateX:fGlyphTranslateX glyphTranslateY:fGlyphTranslateY glyphRotateAngle:fGlyphRotateAngle glyphScaleX:fGlyphScaleX glyphScaleY:fGlyphScaleY clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 		if ( bDrawInMainThread )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

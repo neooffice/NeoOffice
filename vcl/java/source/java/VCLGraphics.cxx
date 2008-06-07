@@ -450,7 +450,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jint _par7, jint _par8, jint _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jboolean _par17, jfloat _par18, jfloat _par19, jfloat _par20, jfloat _par21, jfloat _par22 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jint _par7, jint _par8, jint _par9, jfloat _par10, jfloat _par11, jfloat _par12, jlong _par13, jboolean _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
 {
 	// Mark the glyph data for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -489,6 +489,23 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 			aGlyphDataList.push_back( _par4 );
 	}
 
+	CGPathRef aPath = (CGPathRef)_par13;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	// Convert and cache font as a CGFontRef to reduce the number of font
 	// subsets in the PDF
 	if ( _par5 )
@@ -508,7 +525,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 		}
 
 		if ( _par3 && _par4 && aFont )
-			CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, (float)_par8, (float)_par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20, _par21, _par22 );
+			CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, (float)_par8, (float)_par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19 );
 	}
 }
 
@@ -661,7 +678,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].signature = "(JJFFFFJZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
 			pMethods[3].name = "drawGlyphBuffer0";
-			pMethods[3].signature = "(IIIJJIIIIIFFFFFFFZFFFFF)V";
+			pMethods[3].signature = "(IIIJJIIIIIFFFJZFFFFF)V";
 			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0;
 			pMethods[4].name = "drawLine0";
 			pMethods[4].signature = "(FFFFIFFFFZFFFFF)V";
@@ -831,12 +848,13 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 {
 	// Mark the clip path for deletion in case the Java drawing method
 	// never calls any of the native methods
-	if ( _par9 )
+	CGPathRef aPath = (CGPathRef)_par9;
+	if ( aPath )
 	{
 		bool bFound = false;
 		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
 		{
-			if ( *it == (CGPathRef)_par9 )
+			if ( *it == aPath )
 			{
 				bFound = true;
 				break;
@@ -844,9 +862,8 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 		}
 
 		if ( !bFound )
-			aCGClipPathList.push_back( (CGPathRef)_par9 );
+			aCGClipPathList.push_back( aPath );
 	}
-
 
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -895,12 +912,13 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 
 	// Mark the clip path for deletion in case the Java drawing method
 	// never calls any of the native methods
-	if ( _par9 )
+	CGPathRef aPath = (CGPathRef)_par9;
+	if ( aPath )
 	{
 		bool bFound = false;
 		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
 		{
-			if ( *it == (CGPathRef)_par9 )
+			if ( *it == aPath )
 			{
 				bFound = true;
 				break;
@@ -908,8 +926,9 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 		}
 
 		if ( !bFound )
-			aCGClipPathList.push_back( (CGPathRef)_par9 );
+			aCGClipPathList.push_back( aPath );
 	}
+
 
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -941,7 +960,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _par2, CGGlyph *_par3, CGSize *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _par2, CGGlyph *_par3, CGSize *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11, CGPathRef _par12 )
 {
 	// Mark the glyph array for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -979,19 +998,38 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 			aGlyphDataList.push_back( (jlong)_par4 );
 	}
 
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CGPathRef aPath = _par12;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIJJIIDIIIIIF)V";
+			char *cSignature = "(IIIJJIIDIIIIIFJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphBuffer", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[14];
+			jvalue args[15];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
@@ -1006,6 +1044,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 			args[11].i = jint( _par9 );
 			args[12].i = jint( _par10 );
 			args[13].f = jfloat( _par11 );
+			args[14].j = jlong( _par12 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -1081,12 +1120,13 @@ void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2,
 
 	// Mark the clip path for deletion in case the Java drawing method
 	// never calls any of the native methods
-	if ( _par6 )
+	CGPathRef aPath = (CGPathRef)_par6;
+	if ( aPath )
 	{
 		bool bFound = false;
 		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
 		{
-			if ( *it == (CGPathRef)_par6 )
+			if ( *it == aPath )
 			{
 				bFound = true;
 				break;
@@ -1094,7 +1134,7 @@ void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2,
 		}
 
 		if ( !bFound )
-			aCGClipPathList.push_back( (CGPathRef)_par6 );
+			aCGClipPathList.push_back( aPath );
 	}
 
 	static jmethodID mID = NULL;
