@@ -63,8 +63,7 @@
 #include "VCLGraphics_cocoa.h"
 
 static ::std::list< CGImageRef > aCGImageList;
-static ::osl::Mutex aCGClipPathMutex;
-static ::std::map< CGPathRef, USHORT > aCGClipPathMap;
+static ::std::list< CGPathRef > aCGClipPathList;
 static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
 static ::std::list< jlong > aEPSDataList;
@@ -204,13 +203,18 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 		CGPathRef aPath = (CGPathRef)_par11;
 		if ( aPath )
 		{
-			ClearableMutexGuard aClipPathGuard( aCGClipPathMutex );
-			::std::map< CGPathRef, USHORT >::iterator cpit = aCGClipPathMap.find( aPath );
-			if ( cpit != aCGClipPathMap.end() )
-				cpit->second++;
-			else
-				aCGClipPathMap[ aPath ] = 1;
-			aClipPathGuard.clear();
+			bool bFound = false;
+			for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+			{
+				if ( *cpit == aPath )
+				{
+					bFound = true;
+					break;
+				}
+			}
+
+			if ( !bFound )
+				aCGClipPathList.push_back( aPath );
 		}
 
 		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, aPath, _par12, _par13, _par14, _par15, _par16, _par17 );
@@ -305,13 +309,18 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 		CGPathRef aPath = (CGPathRef)_par9;
 		if ( aPath )
 		{
-			ClearableMutexGuard aClipPathGuard( aCGClipPathMutex );
-			::std::map< CGPathRef, USHORT >::iterator cpit = aCGClipPathMap.find( aPath );
-			if ( cpit != aCGClipPathMap.end() )
-				cpit->second++;
-			else
-				aCGClipPathMap[ aPath ] = 1;
-			aClipPathGuard.clear();
+			bool bFound = false;
+			for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+			{
+				if ( *cpit == aPath )
+				{
+					bFound = true;
+					break;
+				}
+			}
+
+			if ( !bFound )
+				aCGClipPathList.push_back( aPath );
 		}
 
 		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, aPath, _par10, _par11, _par12, _par13, _par14, _par15 );
@@ -372,24 +381,11 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 		aCGImageList.pop_front();
 	}
 
-	// Release the initial retain but use a copy of the map to ensure that the
-	// map does not change while iterating through the items
-	ClearableMutexGuard aClipPathGuard( aCGClipPathMutex );
-	::std::map< CGPathRef, USHORT > aCGClipPathMapCopy( aCGClipPathMap );
-	for ( ::std::map< CGPathRef, USHORT >::const_iterator cpit = aCGClipPathMapCopy.begin(); cpit != aCGClipPathMapCopy.end(); ++cpit )
+	while ( aCGClipPathList.size() )
 	{
-		::std::map< CGPathRef, USHORT >::iterator it = aCGClipPathMap.find( cpit->first );
-		if ( it != aCGClipPathMap.end() )
-		{
-			it->second--;
-			if ( !it->second )
-			{
-				aCGClipPathMap.erase( it );
-				CGPathRelease( it->first );
-			}
-		}
+		CGPathRelease( aCGClipPathList.front() );
+		aCGClipPathList.pop_front();
 	}
-	aClipPathGuard.clear();
 
 	while ( aGlyphDataList.size() )
 	{
@@ -822,13 +818,18 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 	// never calls any of the native methods
 	if ( _par9 )
 	{
-		ClearableMutexGuard aGuard( aCGClipPathMutex );
-		::std::map< CGPathRef, USHORT >::iterator it = aCGClipPathMap.find( _par9 );
-		if ( it != aCGClipPathMap.end() )
-			it->second++;
-		else
-			aCGClipPathMap[ _par9 ] = 1;
-		aGuard.clear();
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == (CGPathRef)_par9 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aEPSDataList.push_back( (CGPathRef)_par9 );
 	}
 
 
@@ -881,13 +882,18 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 	// never calls any of the native methods
 	if ( _par9 )
 	{
-		ClearableMutexGuard aGuard( aCGClipPathMutex );
-		::std::map< CGPathRef, USHORT >::iterator it = aCGClipPathMap.find( _par9 );
-		if ( it != aCGClipPathMap.end() )
-			it->second++;
-		else
-			aCGClipPathMap[ _par9 ] = 1;
-		aGuard.clear();
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == (CGPathRef)_par9 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aEPSDataList.push_back( (CGPathRef)_par9 );
 	}
 
 	static jmethodID mID = NULL;
