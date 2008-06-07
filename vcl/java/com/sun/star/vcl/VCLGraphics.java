@@ -381,7 +381,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawEPSMethod = VCLGraphics.class.getMethod("drawEPS", new Class[]{ long.class, long.class, int.class, int.class, int.class, int.class });
+			drawEPSMethod = VCLGraphics.class.getMethod("drawEPS", new Class[]{ long.class, long.class, int.class, int.class, int.class, int.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -913,11 +913,8 @@ public final class VCLGraphics {
 					clipList.add(clip);
 			}
 		}
-		else if (graphics != null) {
-			clipList.add(new Rectangle());
-		}
-		else {
-			clipList.add(destBounds);
+		else if (graphics == null) {
+			clipList.add(graphicsBounds);
 		}
 
 		Graphics2D g = getGraphics();
@@ -1017,22 +1014,6 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else if (graphics != null) {
-			clipList.add(new Rectangle());
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
@@ -1078,15 +1059,16 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawEPS(long epsData, long epsDataSize, int destX, int destY, int destWidth, int destHeight) {
+	public void drawEPS(long epsData, long epsDataSize, int destX, int destY, int destWidth, int destHeight, long nativeClipPath) {
 
 		// Only allow drawing of EPS data to printer
 		if (graphics == null)
 			return;
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawEPSMethod, new Object[]{ new Long(epsData), new Long(epsDataSize), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawEPSMethod, new Object[]{ new Long(epsData), new Long(epsDataSize), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1095,35 +1077,12 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else if (graphics != null) {
-			clipList.add(new Rectangle());
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			Rectangle bounds = pageFormat.getImageableBounds();
 			try {
 				AffineTransform transform = g.getTransform();
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					Rectangle clip = (Rectangle)clipRects.next();
-					g.setClip(clip);
-					drawEPS0(epsData, epsDataSize, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-				}
-				if (userPolygonClip)
-					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+				drawEPS0(epsData, epsDataSize, destX, destY, destWidth, destHeight, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1142,6 +1101,7 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -1149,7 +1109,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawEPS0(long epsData, long epsDataSize, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawEPS0(long epsData, long epsDataSize, float destX, float destY, float destWidth, float destHeight, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified glyph codes using the specified font and color. Note
@@ -2970,6 +2930,9 @@ public final class VCLGraphics {
 	 */
 	public void unionClipRegion(int x, int y, int width, int height, boolean b) {
 
+		if (graphics != null)
+			return;
+
 		Rectangle bounds = new Rectangle(x, y, width, height);
 		if (bounds.isEmpty())
 			return;
@@ -3087,6 +3050,9 @@ public final class VCLGraphics {
 	 *  <code>false</code>
 	 */
 	public boolean unionClipRegion(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, boolean b) {
+
+		if (graphics != null)
+			return false;
 
 		for (int i = 0; i < npoly; i++) {
 			Polygon p = new Polygon(xpoints[i], ypoints[i], npoints[i]);

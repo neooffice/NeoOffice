@@ -54,7 +54,7 @@ void CGContext_drawPolyline( int nPoints, float *pXPoints, float *pYPoints, int 
 void CGContext_drawPolyPolygon( int nPoly, int *pNPoints, float **ppXPoints, float **ppYPoints, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 void CGContext_drawRect( float fX, float fY, float fWidth, float fHeight, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
-void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
+void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY );
 #ifdef __cplusplus
 END_C
 #endif

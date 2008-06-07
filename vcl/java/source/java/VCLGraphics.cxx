@@ -110,6 +110,23 @@ static void ReleaseBitmapBufferCallback( void *pInfo, const void *pPointer, size
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloatArray _par11, jboolean _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17 )
 {
+	CGPathRef aPath = (CGPathRef)_par11;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	if ( !_par0 )
 		return;
 
@@ -199,24 +216,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-
-		CGPathRef aPath = (CGPathRef)_par11;
-		if ( aPath )
-		{
-			bool bFound = false;
-			for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
-			{
-				if ( *cpit == aPath )
-				{
-					bFound = true;
-					break;
-				}
-			}
-
-			if ( !bFound )
-				aCGClipPathList.push_back( aPath );
-		}
-
 		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, aPath, _par12, _par13, _par14, _par15, _par16, _par17 );
 	}
 }
@@ -225,6 +224,23 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jlong _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
 {
+	CGPathRef aPath = (CGPathRef)_par9;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
 	if ( !pBuffer )
 		return;
@@ -305,24 +321,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-
-		CGPathRef aPath = (CGPathRef)_par9;
-		if ( aPath )
-		{
-			bool bFound = false;
-			for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
-			{
-				if ( *cpit == aPath )
-				{
-					bFound = true;
-					break;
-				}
-			}
-
-			if ( !bFound )
-				aCGClipPathList.push_back( aPath );
-		}
-
 		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, aPath, _par10, _par11, _par12, _par13, _par14, _par15 );
 	}
 }
@@ -412,14 +410,31 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1, jfloat _par2, jfloat _par3, jfloat _par4, jfloat _par5, jlong _par6, jboolean _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12 )
 {
+	CGPathRef aPath = (CGPathRef)_par6;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	if ( _par0 )
 	{
 		bool bFound = false;
-		for ( ::std::list< jlong >::const_iterator it = aEPSDataList.begin(); it != aEPSDataList.end(); ++it )
+		for ( ::std::list< jlong >::const_iterator eit = aEPSDataList.begin(); eit != aEPSDataList.end(); ++eit )
 		{
-			if ( *it == _par0 )
+			if ( *eit == _par0 )
 			{
 				bFound = true;
 				break;
@@ -429,7 +444,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 		if ( !bFound )
 			aEPSDataList.push_back( _par0 );
 
-		NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
+		NSEPSImageRep_drawInRect( (void *)_par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12 );
 	}
 }
 
@@ -643,7 +658,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[1].signature = "(JIIIIFFFFJZFFFFF)V";
 			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0;
 			pMethods[2].name = "drawEPS0";
-			pMethods[2].signature = "(JJFFFFFFFFZFFFFF)V";
+			pMethods[2].signature = "(JJFFFFJZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
 			pMethods[3].name = "drawGlyphBuffer0";
 			pMethods[3].signature = "(IIIJJIIIIIFFFFFFFZFFFFF)V";
@@ -829,7 +844,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 		}
 
 		if ( !bFound )
-			aEPSDataList.push_back( (CGPathRef)_par9 );
+			aCGClipPathList.push_back( (CGPathRef)_par9 );
 	}
 
 
@@ -893,7 +908,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 		}
 
 		if ( !bFound )
-			aEPSDataList.push_back( (CGPathRef)_par9 );
+			aCGClipPathList.push_back( (CGPathRef)_par9 );
 	}
 
 	static jmethodID mID = NULL;
@@ -1044,7 +1059,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2, long _par3, long _par4, long _par5 )
+void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, CGPathRef _par6 )
 {
 	// Mark the EPS data for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -1064,25 +1079,44 @@ void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2,
 			aEPSDataList.push_back( (jlong)_par0 );
 	}
 
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par6 )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == (CGPathRef)_par6 )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( (CGPathRef)_par6 );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(JJIIII)V";
+			char *cSignature = "(JJIIIIJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawEPS", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[6];
+			jvalue args[7];
 			args[0].j = jlong( _par0 );
 			args[1].j = jlong( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
 			args[5].i = jint( _par5 );
+			args[6].j = jlong( _par6 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

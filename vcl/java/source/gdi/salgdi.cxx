@@ -406,7 +406,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 				// Don't delete the copied buffer and let the Java native
                 // method print the buffer directly
 				memcpy( pPtrCopy, pPtr, nSize );
-				mpVCLGraphics->drawEPS( pPtrCopy, nSize, nX, nY, nWidth, nHeight );
+				mpVCLGraphics->drawEPS( pPtrCopy, nSize, nX, nY, nWidth, nHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 				bRet = TRUE;
 			}
 		}

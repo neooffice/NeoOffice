@@ -44,26 +44,23 @@
 	float				mfY;
 	float				mfWidth;
 	float				mfHeight;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)createWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)createWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawEPSInRect:(id)pObject;
-- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawEPSInRect
 
-+ (id)createWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)createWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawEPSInRect *pRet = [[DrawEPSInRect alloc] initWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawEPSInRect *pRet = [[DrawEPSInRect alloc] initWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -81,8 +78,6 @@
 			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
 
 			NSData *pData = [NSData dataWithBytesNoCopy:mpPtr length:mnSize freeWhenDone:NO];
 			if ( pData )
@@ -92,7 +87,23 @@
 					pImage = [NSPDFImageRep imageRepWithData:pData];
 
 				if ( pImage )
+				{
+					CGMutablePathRef aAdjustedClipPath = nil;
+					if ( maClipPath )
+					{
+						aAdjustedClipPath = CGPathCreateMutable();
+						if ( aAdjustedClipPath )
+						{
+							CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+							CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+							CGContextAddPath( aContext, aAdjustedClipPath );
+							CGContextClip( aContext );
+							CGPathRelease( aAdjustedClipPath );
+						}
+					}
+
 					[pImage drawInRect:NSMakeRect( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 )];
+				}
 			}
 
 			CGContextRestoreGState( aContext );
@@ -100,7 +111,7 @@
 	}
 }
 
-- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)initWithPtr:(void *)pPtr size:(unsigned)nSize x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -110,10 +121,7 @@
 	mfY = fY;
 	mfWidth = fWidth;
 	mfHeight = fHeight;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -177,14 +185,12 @@
 					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
 					CGContextAddPath( aContext, aAdjustedClipPath );
 					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
 				}
 			}
 
 			CGContextDrawImage( aContext, CGRectMake( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 ), maImage );
 			CGContextRestoreGState( aContext );
-
-			if ( aAdjustedClipPath )
-				CGPathRelease( aAdjustedClipPath );
 		}
 	}
 }
@@ -926,13 +932,13 @@ void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth,
 	[pPool release];
 }
 
-void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void NSEPSImageRep_drawInRect( void *pPtr, unsigned nSize, float fX, float fY, float fWidth, float fHeight, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pPtr && nSize && fWidth && fHeight )
 	{
-		DrawEPSInRect *pDrawEPSInRect = [DrawEPSInRect createWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		DrawEPSInRect *pDrawEPSInRect = [DrawEPSInRect createWithPtr:pPtr size:nSize x:fX y:fY width:fWidth height:fHeight clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 		if ( bDrawInMainThread )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
