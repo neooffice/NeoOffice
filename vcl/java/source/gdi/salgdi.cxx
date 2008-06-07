@@ -298,14 +298,14 @@ void JavaSalGraphics::SetROPFillColor( SalROPColor nROPColor )
 void JavaSalGraphics::drawPixel( long nX, long nY )
 {
 	if ( mnLineColor )
-		mpVCLGraphics->setPixel( nX, nY, mnLineColor );
+		mpVCLGraphics->setPixel( nX, nY, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 {
-	mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000 );
+	mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
 // -----------------------------------------------------------------------
@@ -313,7 +313,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 {
 	if ( mnLineColor )
-		mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, mnLineColor );
+		mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
 // -----------------------------------------------------------------------
@@ -321,9 +321,9 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 {
 	if ( mnFillColor )
-		mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnFillColor, TRUE );
+		mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnFillColor, TRUE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	if ( mnLineColor )
-		mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnLineColor, FALSE );
+		mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnLineColor, FALSE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
 // -----------------------------------------------------------------------
@@ -346,7 +346,7 @@ bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight
 void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 {
 	if ( mnLineColor )
-		mpVCLGraphics->drawPolyline( nPoints, pPtAry, mnLineColor );
+		mpVCLGraphics->drawPolyline( nPoints, pPtAry, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
 // -----------------------------------------------------------------------
@@ -354,9 +354,9 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 {
 	if ( mnFillColor )
-		mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnFillColor, TRUE );
+		mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnFillColor, TRUE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	if ( mnLineColor )
-		mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnLineColor, FALSE );
+		mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnLineColor, FALSE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
 // -----------------------------------------------------------------------
@@ -364,9 +364,9 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
 {
 	if ( mnFillColor )
-		mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnFillColor, TRUE );
+		mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnFillColor, TRUE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	if ( mnLineColor )
-		mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnLineColor, FALSE);
+		mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnLineColor, FALSE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
 // -----------------------------------------------------------------------

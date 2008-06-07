@@ -346,26 +346,23 @@
 	float				mfX2;
 	float				mfY2;
 	int					mnColor;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)create:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)create:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawLine:(id)pObject;
-- (id)init:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)init:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawLine
 
-+ (id)create:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)create:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawLine *pRet = [[DrawLine alloc] init:fX1 y1:fY1 x2:fX2 y2:fY2 color:nColor clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawLine *pRet = [[DrawLine alloc] init:fX1 y1:fY1 x2:fX2 y2:fY2 color:nColor clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -383,8 +380,18 @@
 			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
 
 			CGContextBeginPath( aContext );
 			CGContextMoveToPoint( aContext, mfX1 * mfScaleX, mfY1 * mfScaleY );
@@ -398,7 +405,7 @@
 	}
 }
 
-- (id)init:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)init:(float)fX1 y1:(float)fY1 x2:(float)fX2 y2:(float)fY2 color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -407,10 +414,7 @@
 	mfX2 = fX2;
 	mfY2 = fY2;
 	mnColor = nColor;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -429,26 +433,23 @@
 	float*				mpYPoints;
 	int					mnColor;
 	BOOL				mbFill;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawPolygon:(id)pObject;
-- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawPolygon
 
-+ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawPolygon *pRet = [[DrawPolygon alloc] initWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawPolygon *pRet = [[DrawPolygon alloc] initWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -466,8 +467,18 @@
 			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
 
 			CGContextBeginPath( aContext );
 			CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
@@ -492,7 +503,7 @@
 	}
 }
 
-- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -501,10 +512,7 @@
 	mpYPoints = pYPoints;
 	mnColor = nColor;
 	mbFill = bFill;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -522,26 +530,23 @@
 	float*				mpXPoints;
 	float*				mpYPoints;
 	int					mnColor;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawPolyline:(id)pObject;
-- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawPolyline
 
-+ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)createWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawPolyline *pRet = [[DrawPolyline alloc] initWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawPolyline *pRet = [[DrawPolyline alloc] initWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -559,8 +564,18 @@
 			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
 
 			CGContextBeginPath( aContext );
 			CGContextMoveToPoint( aContext, mpXPoints[ 0 ] * mfScaleX, mpYPoints[ 0 ] * mfScaleY );
@@ -576,7 +591,7 @@
 	}
 }
 
-- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)initWithPoints:(int)nPoints xPoints:(float *)pXPoints yPoints:(float *)pYPoints color:(int)nColor clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -584,10 +599,7 @@
 	mpXPoints = pXPoints;
 	mpYPoints = pYPoints;
 	mnColor = nColor;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -607,26 +619,23 @@
 	float**				mppYPoints;
 	int					mnColor;
 	BOOL				mbFill;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)createWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)createWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawPolyPolygon:(id)pObject;
-- (id)initWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)initWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawPolyPolygon
 
-+ (id)createWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)createWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawPolygon *pRet = [[DrawPolyPolygon alloc] initWithPolygons:nPoly points:pPoints xPoints:ppXPoints yPoints:ppYPoints color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawPolygon *pRet = [[DrawPolyPolygon alloc] initWithPolygons:nPoly points:pPoints xPoints:ppXPoints yPoints:ppYPoints color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -644,8 +653,18 @@
 			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
 
 			CGContextBeginPath( aContext );
 			int i = 0;
@@ -679,7 +698,7 @@
 	}
 }
 
-- (id)initWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)initWithPolygons:(int)nPoly points:(int *)pPoints xPoints:(float **)ppXPoints yPoints:(float **)ppYPoints color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -689,10 +708,7 @@
 	mppYPoints = ppYPoints;
 	mnColor = nColor;
 	mbFill = bFill;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -712,26 +728,23 @@
 	float				mfHeight;
 	int					mnColor;
 	BOOL				mbFill;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)create:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)create:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawRect:(id)pObject;
-- (id)init:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)init:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawRect
 
-+ (id)create:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)create:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawRect *pRet = [[DrawRect alloc] init:fX y:fY width:fWidth height:fHeight color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawRect *pRet = [[DrawRect alloc] init:fX y:fY width:fWidth height:fHeight color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -749,8 +762,18 @@
 			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
 
 			if ( mbFill )
 			{
@@ -768,7 +791,7 @@
 	}
 }
 
-- (id)init:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)init:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -778,10 +801,7 @@
 	mfHeight = fHeight;
 	mnColor = nColor;
 	mbFill = bFill;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -814,11 +834,11 @@ void CGContext_drawGlyphs( float fX, float fY, size_t nCount, CGGlyph *pGlyphs, 
 	[pPool release];
 }
 
-void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	DrawLine *pDrawLine = [DrawLine create:fX1 y1:fY1 x2:fX2 y2:fY2 color:nColor clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawLine *pDrawLine = [DrawLine create:fX1 y1:fY1 x2:fX2 y2:fY2 color:nColor clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	if ( bDrawInMainThread )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -832,13 +852,13 @@ void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor,
 	[pPool release];
 }
 
-void CGContext_drawPolygon( int nPoints, float *pXPoints, float *pYPoints, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGContext_drawPolygon( int nPoints, float *pXPoints, float *pYPoints, int nColor, BOOL bFill, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( nPoints && pXPoints && pYPoints )
 	{
-		DrawPolygon *pDrawPolygon = [DrawPolygon createWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		DrawPolygon *pDrawPolygon = [DrawPolygon createWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 		if ( bDrawInMainThread )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -853,13 +873,13 @@ void CGContext_drawPolygon( int nPoints, float *pXPoints, float *pYPoints, int n
 	[pPool release];
 }
 
-void CGContext_drawPolyline( int nPoints, float *pXPoints, float *pYPoints, int nColor, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGContext_drawPolyline( int nPoints, float *pXPoints, float *pYPoints, int nColor, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( nPoints && pXPoints && pYPoints )
 	{
-		DrawPolyline *pDrawPolyline = [DrawPolyline createWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		DrawPolyline *pDrawPolyline = [DrawPolyline createWithPoints:nPoints xPoints:pXPoints yPoints:pYPoints color:nColor clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 		if ( bDrawInMainThread )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -874,13 +894,13 @@ void CGContext_drawPolyline( int nPoints, float *pXPoints, float *pYPoints, int 
 	[pPool release];
 }
 
-void CGContext_drawPolyPolygon( int nPoly, int *pNPoints, float **ppXPoints, float **ppYPoints, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGContext_drawPolyPolygon( int nPoly, int *pNPoints, float **ppXPoints, float **ppYPoints, int nColor, BOOL bFill, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( nPoly && pNPoints && ppXPoints && ppYPoints && *ppXPoints && *ppYPoints )
 	{
-		DrawPolyPolygon *pDrawPolyPolygon = [DrawPolyPolygon createWithPolygons:nPoly points:pNPoints xPoints:ppXPoints yPoints:ppYPoints color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		DrawPolyPolygon *pDrawPolyPolygon = [DrawPolyPolygon createWithPolygons:nPoly points:pNPoints xPoints:ppXPoints yPoints:ppYPoints color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 		if ( bDrawInMainThread )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -895,11 +915,11 @@ void CGContext_drawPolyPolygon( int nPoly, int *pNPoints, float **ppXPoints, flo
 	[pPool release];
 }
 
-void CGContext_drawRect( float fX, float fY, float fWidth, float fHeight, int nColor, BOOL bFill, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGContext_drawRect( float fX, float fY, float fWidth, float fHeight, int nColor, BOOL bFill, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	DrawRect *pDrawRect = [DrawRect create:fX y:fY width:fWidth height:fHeight color:nColor fill:bFill clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawRect *pDrawRect = [DrawRect create:fX y:fY width:fWidth height:fHeight color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	if ( bDrawInMainThread )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

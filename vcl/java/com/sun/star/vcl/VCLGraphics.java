@@ -177,11 +177,6 @@ public final class VCLGraphics {
 	private static Method drawGlyphBufferMethod = null;
 
 	/**
-	 * The drawGlyphs method.
-	 */
-	private static Method drawGlyphsMethod = null;
-
-	/**
 	 * The drawLine method.
 	 */
 	private static Method drawLineMethod = null;
@@ -375,37 +370,31 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawGlyphsMethod = VCLGraphics.class.getMethod("drawGlyphs", new Class[]{ int.class, int.class, int[].class, int[].class, VCLFont.class, int.class, int.class, int.class, int.class, int.class, float.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
 			drawEPSMethod = VCLGraphics.class.getMethod("drawEPS", new Class[]{ long.class, long.class, int.class, int.class, int.class, int.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
 		try {
-			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class });
+			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
 		try {
-			drawPolygonMethod = VCLGraphics.class.getMethod("drawPolygon", new Class[]{ int.class, int[].class, int[].class, int.class, boolean.class });
+			drawPolygonMethod = VCLGraphics.class.getMethod("drawPolygon", new Class[]{ int.class, int[].class, int[].class, int.class, boolean.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
 		try {
-			drawPolylineMethod = VCLGraphics.class.getMethod("drawPolyline", new Class[]{ int.class, int[].class, int[].class, int.class });
+			drawPolylineMethod = VCLGraphics.class.getMethod("drawPolyline", new Class[]{ int.class, int[].class, int[].class, int.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
 		try {
-			drawPolyPolygonMethod = VCLGraphics.class.getMethod("drawPolyPolygon", new Class[]{ int.class, int[].class, int[][].class, int[][].class, int.class, boolean.class });
+			drawPolyPolygonMethod = VCLGraphics.class.getMethod("drawPolyPolygon", new Class[]{ int.class, int[].class, int[][].class, int[][].class, int.class, boolean.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -423,17 +412,18 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class });
+			drawRectMethod = VCLGraphics.class.getMethod("drawRect", new Class[]{ int.class, int.class, int.class, int.class, int.class, boolean.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
 		try {
-			setPixelMethod = VCLGraphics.class.getMethod("setPixel", new Class[]{ int.class, int.class, int.class });
+			setPixelMethod = VCLGraphics.class.getMethod("setPixel", new Class[]{ int.class, int.class, int.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
+
 	}
 
 	/**
@@ -632,6 +622,9 @@ public final class VCLGraphics {
 	 *  methods otherwise <code>false</code>
 	 */
 	public void beginSetClipRegion(boolean b) {
+
+		if (graphics != null)
+			return;
 
 		resetClipRegion(b);
 
@@ -904,19 +897,6 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else if (graphics == null) {
-			clipList.add(graphicsBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
@@ -925,6 +905,19 @@ public final class VCLGraphics {
 					drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					// Make sure source bounds don't fall outside the bitmap
 					float scaleX = destWidth / srcWidth;
 					float scaleY = destHeight / srcHeight;
@@ -1228,11 +1221,9 @@ public final class VCLGraphics {
 	 */
 	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int glyphOrientation, int translateX, int translateY, float glyphScaleX) {
 
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphsMethod, new Object[]{ new Integer(x), new Integer(y), glyphs, advances, font, new Integer(color), new Integer(orientation), new Integer(glyphOrientation), new Integer(translateX), new Integer(translateY), new Float(glyphScaleX) });
-			pageQueue.postDrawingOperation(pqi);
+		// Don't allow drawing of glyphs to printer
+		if (graphics != null)
 			return;
-		}
 
 		LinkedList clipList = new LinkedList();
 		if (userClipList != null) {
@@ -1335,11 +1326,12 @@ public final class VCLGraphics {
 	 * @param x2 the second point's x coordinate
 	 * @param y2 the second point's y coordinate
 	 * @param color the color of the line
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawLine(int x1, int y1, int x2, int y2, int color) {
+	public void drawLine(int x1, int y1, int x2, int y2, int color, long nativeClipPath) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawLineMethod, new Object[]{ new Integer(x1), new Integer(y1), new Integer(x2), new Integer(y2), new Integer(color) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawLineMethod, new Object[]{ new Integer(x1), new Integer(y1), new Integer(x2), new Integer(y2), new Integer(color), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1351,36 +1343,27 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else if (graphics != null) {
-			clipList.add(new Rectangle());
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						Rectangle clip = (Rectangle)clipRects.next();
-						drawLine0(x1, y1, x2, y2, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					if (userPolygonClip)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					drawLine0(x1, y1, x2, y2, color, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
@@ -1415,10 +1398,7 @@ public final class VCLGraphics {
 	 * @param x2 the second point's x coordinate
 	 * @param y2 the second point's y coordinate
 	 * @param color the color of the line
-	 * @param clipX the x coordinate of the graphics to clip to
-	 * @param clipY the y coordinate of the graphics to clip to
-	 * @param clipWidth the width of the graphics to clip to
-	 * @param clipHeight the height of the graphics to clip to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -1426,7 +1406,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawLine0(float x1, float y1, float x2, float y2, int color, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawLine0(float x1, float y1, float x2, float y2, int color, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws or fills the specified polygon with the specified color.
@@ -1437,11 +1417,12 @@ public final class VCLGraphics {
 	 * @param color the color of the polygon
 	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
 	 *  to draw just the outline
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawPolygon(int npoints, int[] xpoints, int[] ypoints, int color, boolean fill) {
+	public void drawPolygon(int npoints, int[] xpoints, int[] ypoints, int color, boolean fill, long nativeClipPath) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolygonMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(color), new Boolean(fill) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolygonMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(color), new Boolean(fill), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1460,7 +1441,7 @@ public final class VCLGraphics {
 			destBounds.height *= -1;
 		}
 		if (destBounds.width == 0 || destBounds.height == 0) {
-			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color, nativeClipPath);
 			return;
 		}
 		if (!fill) {
@@ -1471,36 +1452,27 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else if (graphics != null) {
-			clipList.add(new Rectangle());
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						Rectangle clip = (Rectangle)clipRects.next();
-						drawPolygon0(npoints, xpoints, ypoints, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					if (userPolygonClip)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					drawPolygon0(npoints, xpoints, ypoints, color, fill, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					if (xor) {
 						// Smooth out image drawing for bug 2475 image
 						if (fill)
@@ -1545,10 +1517,7 @@ public final class VCLGraphics {
 	 * @param color the color of the polygon
 	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
 	 *  to draw just the outline
-	 * @param clipX the x coordinate of the graphics to clip to
-	 * @param clipY the y coordinate of the graphics to clip to
-	 * @param clipWidth the width of the graphics to clip to
-	 * @param clipHeight the height of the graphics to clip to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -1556,7 +1525,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawPolygon0(int npoints, int[] xpoints, int[] ypoints, int color, boolean fill, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawPolygon0(int npoints, int[] xpoints, int[] ypoints, int color, boolean fill, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified polyline with the specified color.
@@ -1565,11 +1534,12 @@ public final class VCLGraphics {
 	 * @param xpoints the array of x coordinates
 	 * @param ypoints the array of y coordinates
 	 * @param color the color of the polyline
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawPolyline(int npoints, int[] xpoints, int[] ypoints, int color) {
+	public void drawPolyline(int npoints, int[] xpoints, int[] ypoints, int color, long nativeClipPath) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolylineMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(color) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolylineMethod, new Object[]{ new Integer(npoints), xpoints, ypoints, new Integer(color), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1588,7 +1558,7 @@ public final class VCLGraphics {
 			destBounds.height *= -1;
 		}
 		if (destBounds.width == 0 || destBounds.height == 0) {
-			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color, nativeClipPath);
 			return;
 		}
 		destBounds.width++;
@@ -1597,36 +1567,27 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else if (graphics != null) {
-			clipList.add(new Rectangle());
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						Rectangle clip = (Rectangle)clipRects.next();
-						drawPolyline0(npoints, xpoints, ypoints, color, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					if (userPolygonClip)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					drawPolyline0(npoints, xpoints, ypoints, color, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
@@ -1659,10 +1620,7 @@ public final class VCLGraphics {
 	 * @param xpoints the array of x coordinates
 	 * @param ypoints the array of y coordinates
 	 * @param color the color of the polygon
-	 * @param clipX the x coordinate of the graphics to clip to
-	 * @param clipY the y coordinate of the graphics to clip to
-	 * @param clipWidth the width of the graphics to clip to
-	 * @param clipHeight the height of the graphics to clip to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -1670,7 +1628,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawPolyline0(int npoints, int[] xpoints, int[] ypoints, int color, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawPolyline0(int npoints, int[] xpoints, int[] ypoints, int color, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws or fills the specified set of polygons with the specified color.
@@ -1682,11 +1640,12 @@ public final class VCLGraphics {
 	 * @param color the color of the polygons
 	 * @param fill <code>true</code> to fill the polygons and <code>false</code>
 	 *  to draw just the outline
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawPolyPolygon(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, int color, boolean fill) {
+	public void drawPolyPolygon(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, int color, boolean fill, long nativeClipPath) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolyPolygonMethod, new Object[]{ new Integer(npoly), npoints, xpoints, ypoints, new Integer(color), new Boolean(fill) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPolyPolygonMethod, new Object[]{ new Integer(npoly), npoints, xpoints, ypoints, new Integer(color), new Boolean(fill), new Long(nativeClipPath), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1695,7 +1654,7 @@ public final class VCLGraphics {
 			return;
 		}
 		else if (npoly == 1) {
-			drawPolygon(npoints[0], xpoints[0], ypoints[0], color, fill);
+			drawPolygon(npoints[0], xpoints[0], ypoints[0], color, fill, nativeClipPath);
 			return;
 		}
 
@@ -1721,7 +1680,7 @@ public final class VCLGraphics {
 			destBounds.height *= -1;
 		}
 		if (destBounds.width == 0 || destBounds.height == 0) {
-			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color, nativeClipPath);
 			return;
 		}
 		if (!fill) {
@@ -1732,33 +1691,27 @@ public final class VCLGraphics {
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						Rectangle clip = (Rectangle)clipRects.next();
-						drawPolyPolygon0(npoly, npoints, xpoints, ypoints, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					if (userPolygonClip)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					drawPolyPolygon0(npoly, npoints, xpoints, ypoints, color, fill, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
@@ -1798,10 +1751,7 @@ public final class VCLGraphics {
 	 * @param color the color of the polygons
 	 * @param fill <code>true</code> to fill the polygons and <code>false</code>
 	 *  to draw just the outline
-	 * @param clipX the x coordinate of the graphics to clip to
-	 * @param clipY the y coordinate of the graphics to clip to
-	 * @param clipWidth the width of the graphics to clip to
-	 * @param clipHeight the height of the graphics to clip to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -1809,7 +1759,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawPolyPolygon0(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, int color, boolean fill, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawPolyPolygon0(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, int color, boolean fill, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws or fills the specified rectangle with the specified color.
@@ -1821,11 +1771,12 @@ public final class VCLGraphics {
 	 * @param color the color of the rectangle
 	 * @param fill <code>true</code> to fill the rectangle and
 	 *  <code>false</code> to draw just the outline
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawRect(int x, int y, int width, int height, int color, boolean fill) {
+	public void drawRect(int x, int y, int width, int height, int color, boolean fill, long nativeClipPath) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawRectMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), new Integer(color), new Boolean(fill) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawRectMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), new Integer(color), new Boolean(fill), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1840,46 +1791,37 @@ public final class VCLGraphics {
 		}
 		Rectangle destBounds = new Rectangle(x, y, width, height);
 		if (destBounds.width == 0 || destBounds.height == 0) {
-			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color);
+			drawLine(destBounds.x, destBounds.y, destBounds.x + destBounds.width, destBounds.y + destBounds.height, color, nativeClipPath);
 			return;
 		}
 		destBounds = destBounds.intersection(graphicsBounds);
 		if (destBounds.isEmpty())
 			return;
 
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else if (graphics != null) {
-			clipList.add(new Rectangle());
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						Rectangle clip = (Rectangle)clipRects.next();
-						if (fill)
-							drawRect0(x, y, width, height, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-						else
-							drawRect0(x, y, width - 1, height - 1, color, fill, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					if (userPolygonClip)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					if (fill)
+						drawRect0(x, y, width, height, color, fill, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					else
+						drawRect0(x, y, width - 1, height - 1, color, fill, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
 					if (xor)
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
@@ -1921,10 +1863,7 @@ public final class VCLGraphics {
 	 * @param color the color of the rectangle
 	 * @param fill <code>true</code> to fill the rectangle and
 	 *  <code>false</code> to draw just the outline
-	 * @param clipX the x coordinate of the graphics to clip to
-	 * @param clipY the y coordinate of the graphics to clip to
-	 * @param clipWidth the width of the graphics to clip to
-	 * @param clipHeight the height of the graphics to clip to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -1932,7 +1871,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawRect0(float x, float y, float width, float height, int color, boolean fill, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawRect0(float x, float y, float width, float height, int color, boolean fill, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws a pushbutton into the graphics using the default Swing LAF.
@@ -2777,6 +2716,9 @@ public final class VCLGraphics {
 	 */
 	public void resetClipRegion(boolean b) {
 
+		if (graphics != null)
+			return;
+
 		if (b) {
 			frameClip = null;
 			frameClipList = null;
@@ -2824,11 +2766,12 @@ public final class VCLGraphics {
 	 * @param x the x coordinate of the source rectangle
 	 * @param y the y coordinate of the source rectangle
 	 * @param color the color of the pixel
+	 * @param nativeClipPath the native clip path
 	 */
-	public void setPixel(int x, int y, int color) {
+	public void setPixel(int x, int y, int color, long nativeClipPath) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.setPixelMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(color) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.setPixelMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(color), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -2859,7 +2802,7 @@ public final class VCLGraphics {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, 0, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
 					if (xor)

@@ -531,15 +531,49 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawLine0( JNIEnv *pEnv, jobject object, jfloat _par0, jfloat _par1, jfloat _par2, jfloat _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jboolean _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawLine0( JNIEnv *pEnv, jobject object, jfloat _par0, jfloat _par1, jfloat _par2, jfloat _par3, jint _par4, jlong _par5, jboolean _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11 )
 {
-	CGContext_drawLine( _par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14 );
+	CGPathRef aPath = (CGPathRef)_par5;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
+	CGContext_drawLine( _par0, _par1, _par2, _par3, _par4, aPath, _par6, _par7, _par8, _par9, _par10, _par11 );
 }
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolygon0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jintArray _par2, jint _par3, jboolean _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jboolean _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolygon0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jintArray _par2, jint _par3, jboolean _par4, jlong _par5, jboolean _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11 )
 {
+	CGPathRef aPath = (CGPathRef)_par5;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	if ( _par0 > 0 && _par1 && pEnv->GetArrayLength( _par1 ) >= _par0 && _par2 && pEnv->GetArrayLength( _par2 ) >= _par0 )
 	{
 		float aXPoints[ _par0 ];
@@ -558,14 +592,31 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolygon0( JNIEnv *p
 		pEnv->ReleasePrimitiveArrayCritical( _par2, pYBits, 0 );
 		pEnv->ReleasePrimitiveArrayCritical( _par1, pXBits, 0 );
 		
-		CGContext_drawPolygon( _par0, aXPoints, aYPoints, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14 );
+		CGContext_drawPolygon( _par0, aXPoints, aYPoints, _par3, _par4, aPath, _par6, _par7, _par8, _par9, _par10, _par11 );
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyline0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jintArray _par2, jint _par3, jfloat _par4, jfloat _par5, jfloat _par6, jfloat _par7, jboolean _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyline0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jintArray _par2, jint _par3, jlong _par4, jboolean _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10 )
 {
+	CGPathRef aPath = (CGPathRef)_par4;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	if ( _par0 > 0 && _par1 && pEnv->GetArrayLength( _par1 ) >= _par0 && _par2 && pEnv->GetArrayLength( _par2 ) >= _par0 )
 	{
 		float aXPoints[ _par0 ];
@@ -584,14 +635,31 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyline0( JNIEnv *
 		pEnv->ReleasePrimitiveArrayCritical( _par2, pYBits, 0 );
 		pEnv->ReleasePrimitiveArrayCritical( _par1, pXBits, 0 );
 		
-		CGContext_drawPolyline( _par0, aXPoints, aYPoints, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13 );
+		CGContext_drawPolyline( _par0, aXPoints, aYPoints, _par3, aPath, _par5, _par6, _par7, _par8, _par9, _par10 );
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyPolygon0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jobjectArray _par2, jobjectArray _par3, jint _par4, jboolean _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyPolygon0( JNIEnv *pEnv, jobject object, jint _par0, jintArray _par1, jobjectArray _par2, jobjectArray _par3, jint _par4, jboolean _par5, jlong _par6, jboolean _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12 )
 {
+	CGPathRef aPath = (CGPathRef)_par6;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	if ( _par0 > 0 && _par1 && pEnv->GetArrayLength( _par1 ) >= _par0 && _par2 && pEnv->GetArrayLength( _par2 ) >= _par0 && _par3 && pEnv->GetArrayLength( _par3 ) >= _par0 )
 	{
 		int aNPoints[ _par0 ];
@@ -630,7 +698,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyPolygon0( JNIEn
 
 			pEnv->ReleasePrimitiveArrayCritical( _par1, pCount, 0 );
 
-			CGContext_drawPolyPolygon( _par0, aNPoints, ppXPoints, ppYPoints, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
+			CGContext_drawPolyPolygon( _par0, aNPoints, ppXPoints, ppYPoints, _par4, _par5, aPath, _par7, _par8, _par9, _par10, _par11, _par12 );
 
 			for ( i = 0; i < _par0; i++ )
 			{
@@ -643,9 +711,26 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPolyPolygon0( JNIEn
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawRect0( JNIEnv *pEnv, jobject object, jfloat _par0, jfloat _par1, jfloat _par2, jfloat _par3, jint _par4, jboolean _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawRect0( JNIEnv *pEnv, jobject object, jfloat _par0, jfloat _par1, jfloat _par2, jfloat _par3, jint _par4, jboolean _par5, jlong _par6, jboolean _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12 )
 {
-	CGContext_drawRect( _par0, _par1, _par2, _par3, _par4, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15 );
+	CGPathRef aPath = (CGPathRef)_par6;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator cpit = aCGClipPathList.begin(); cpit != aCGClipPathList.end(); ++cpit )
+		{
+			if ( *cpit == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
+	CGContext_drawRect( _par0, _par1, _par2, _par3, _par4, _par5, aPath, _par7, _par8, _par9, _par10, _par11, _par12 );
 }
 
 // ============================================================================
@@ -681,19 +766,19 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[3].signature = "(IIIJJIIIIIFFFJZFFFFF)V";
 			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0;
 			pMethods[4].name = "drawLine0";
-			pMethods[4].signature = "(FFFFIFFFFZFFFFF)V";
+			pMethods[4].signature = "(FFFFIJZFFFFF)V";
 			pMethods[4].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawLine0;
 			pMethods[5].name = "drawPolygon0";
-			pMethods[5].signature = "(I[I[IIZFFFFZFFFFF)V";
+			pMethods[5].signature = "(I[I[IIZJZFFFFF)V";
 			pMethods[5].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolygon0;
 			pMethods[6].name = "drawPolyline0";
-			pMethods[6].signature = "(I[I[IIFFFFZFFFFF)V";
+			pMethods[6].signature = "(I[I[IIJZFFFFF)V";
 			pMethods[6].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolyline0;
 			pMethods[7].name = "drawPolyPolygon0";
-			pMethods[7].signature = "(I[I[[I[[IIZFFFFZFFFFF)V";
+			pMethods[7].signature = "(I[I[[I[[IIZJZFFFFF)V";
 			pMethods[7].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawPolyPolygon0;
 			pMethods[8].name = "drawRect0";
-			pMethods[8].signature = "(FFFFIZFFFFZFFFFF)V";
+			pMethods[8].signature = "(FFFFIZJZFFFFF)V";
 			pMethods[8].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawRect0;
 			pMethods[9].name = "notifyGraphicsChanged";
 			pMethods[9].signature = "([JZ)V";
@@ -1164,26 +1249,46 @@ void com_sun_star_vcl_VCLGraphics::drawEPS( void *_par0, long _par1, long _par2,
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawLine( long _par0, long _par1, long _par2, long _par3, SalColor _par4 )
+void com_sun_star_vcl_VCLGraphics::drawLine( long _par0, long _par1, long _par2, long _par3, SalColor _par4, CGPathRef _par5 )
 {
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CGPathRef aPath = (CGPathRef)_par5;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIII)V";
+			char *cSignature = "(IIIIIJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawLine", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[5];
+			jvalue args[6];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
+			args[5].j = jlong( _par5 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -1191,15 +1296,34 @@ void com_sun_star_vcl_VCLGraphics::drawLine( long _par0, long _par1, long _par2,
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_par1, SalColor _par2, sal_Bool _par3 )
+void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_par1, SalColor _par2, sal_Bool _par3, CGPathRef _par4 )
 {
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CGPathRef aPath = (CGPathRef)_par4;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I[I[IIZ)V";
+			char *cSignature = "(I[I[IIZJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawPolygon", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1226,12 +1350,13 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_pa
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
-			jvalue args[5];
+			jvalue args[6];
 			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
 			args[4].z = jboolean( _par3 );
+			args[5].j = jlong( _par4 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -1239,15 +1364,34 @@ void com_sun_star_vcl_VCLGraphics::drawPolygon( ULONG _par0, const SalPoint *_pa
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_par1, SalColor _par2 )
+void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_par1, SalColor _par2, CGPathRef _par3 )
 {
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CGPathRef aPath = (CGPathRef)_par3;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I[I[II)V";
+			char *cSignature = "(I[I[IIJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawPolyline", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1274,11 +1418,12 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_p
 			t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 			t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
 
-			jvalue args[4];
+			jvalue args[5];
 			args[0].i = nPoints;
 			args[1].l = xarray;
 			args[2].l = yarray;
 			args[3].i = jint( _par2 );
+			args[4].j = jlong( _par3 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -1286,15 +1431,34 @@ void com_sun_star_vcl_VCLGraphics::drawPolyline( ULONG _par0, const SalPoint *_p
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, SalColor _par3, sal_Bool _par4 )
+void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, SalColor _par3, sal_Bool _par4, CGPathRef _par5 )
 {
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CGPathRef aPath = (CGPathRef)_par5;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(I[I[[I[[IIZ)V";
+			char *cSignature = "(I[I[[I[[IIZJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawPolyPolygon", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1334,13 +1498,14 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
 			}
 
-			jvalue args[6];
+			jvalue args[7];
 			args[0].i = jint( _par0 );
 			args[1].l = ptsarray;
 			args[2].l = xptsarray;
 			args[3].l = yptsarray;
 			args[4].i = jint( _par3 );
 			args[5].z = jboolean( _par4 );
+			args[6].j = jlong( _par5 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -1348,27 +1513,47 @@ void com_sun_star_vcl_VCLGraphics::drawPolyPolygon( ULONG _par0, const ULONG *_p
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 )
+void com_sun_star_vcl_VCLGraphics::drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5, CGPathRef _par6 )
 {
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CGPathRef aPath = (CGPathRef)_par6;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIIIZ)V";
+			char *cSignature = "(IIIIIZJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawRect", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[6];
+			jvalue args[7];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
 			args[3].i = jint( _par3 );
 			args[4].i = jint( _par4 );
 			args[5].z = jboolean( _par5 );
+			args[6].j = jlong( _par6 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -1986,24 +2171,44 @@ void com_sun_star_vcl_VCLGraphics::resetGraphics()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::setPixel( long _par0, long _par1, SalColor _par2 )
+void com_sun_star_vcl_VCLGraphics::setPixel( long _par0, long _par1, SalColor _par2, CGPathRef _par3 )
 {
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CGPathRef aPath = (CGPathRef)_par3;
+	if ( aPath )
+	{
+		bool bFound = false;
+		for ( ::std::list< CGPathRef >::const_iterator it = aCGClipPathList.begin(); it != aCGClipPathList.end(); ++it )
+		{
+			if ( *it == aPath )
+			{
+				bFound = true;
+				break;
+			}
+		}
+
+		if ( !bFound )
+			aCGClipPathList.push_back( aPath );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(III)V";
+			char *cSignature = "(IIIJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "setPixel", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[3];
+			jvalue args[4];
 			args[0].i = jint( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
+			args[3].j = jlong( _par3 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

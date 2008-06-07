@@ -83,11 +83,11 @@ public:
 	void				drawEPS( void *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, CGPathRef _par6 );
 	void				drawGlyphBuffer( int _par0, int _par1, int _par2, CGGlyph *_par3, CGSize *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11, CGPathRef _par12 );
 	void				drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 );
-	void				drawLine( long _par0, long _par1, long _par2, long _par3, SalColor _par4 );
-	void				drawPolygon( ULONG _par0, const SalPoint *_par1, SalColor _par2, sal_Bool _par3 );
-	void				drawPolyline( ULONG _par0, const SalPoint *_par1, SalColor _par2 );
-	void				drawPolyPolygon( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, SalColor _par3, sal_Bool _par4 );
-	void				drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5 );
+	void				drawLine( long _par0, long _par1, long _par2, long _par3, SalColor _par4, CGPathRef _par5 );
+	void				drawPolygon( ULONG _par0, const SalPoint *_par1, SalColor _par2, sal_Bool _par3, CGPathRef _par4 );
+	void				drawPolyline( ULONG _par0, const SalPoint *_par1, SalColor _par2, CGPathRef _par3 );
+	void				drawPolyPolygon( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, SalColor _par3, sal_Bool _par4, CGPathRef _par5 );
+	void				drawRect( long _par0, long _par1, long _par2, long _par3, SalColor _par4, sal_Bool _par5, CGPathRef _par6 );
 	void				drawPushButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, sal_Bool _par8 );
 	const Rectangle		getPreferredPushButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 	void				drawRadioButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
@@ -104,7 +104,7 @@ public:
 	void				removeGraphicsChangeListener( JavaSalBitmap *_par0 );
 	void				resetClipRegion( sal_Bool _par0 );
 	void				resetGraphics();
-	void				setPixel( long _par0, long _par1, SalColor _par2 );
+	void				setPixel( long _par0, long _par1, SalColor _par2, CGPathRef _par3 );
 	void				setXORMode( sal_Bool _par0 );
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 );
 	sal_Bool			unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3 );
