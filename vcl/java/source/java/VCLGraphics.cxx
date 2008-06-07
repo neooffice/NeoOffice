@@ -63,6 +63,8 @@
 #include "VCLGraphics_cocoa.h"
 
 static ::std::list< CGImageRef > aCGImageList;
+static ::osl::Mutex aCGClipPathMutex;
+static ::std::map< CGPathRef, USHORT > aCGClipPathMap;
 static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
 static ::std::list< jlong > aEPSDataList;
@@ -107,7 +109,7 @@ static void ReleaseBitmapBufferCallback( void *pInfo, const void *pPointer, size
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jboolean _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19, jfloat _par20 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pEnv, jobject object, jintArray _par0, jint _par1, jint _par2, jint _par3, jint _par4, jint _par5, jint _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloatArray _par11, jboolean _par12, jfloat _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17 )
 {
 	if ( !_par0 )
 		return;
@@ -198,13 +200,26 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18, _par19, _par20 );
+
+		CGPathRef aPath = (CGPathRef)_par11;
+		if ( aPath )
+		{
+			ClearableMutexGuard aClipPathGuard( aCGClipPathMutex );
+			::std::map< CGPathRef, USHORT >::iterator cpit = aCGClipPathMap.find( aPath );
+			if ( cpit != aCGClipPathMap.end() )
+				cpit->second++;
+			else
+				aCGClipPathMap[ aPath ] = 1;
+			aClipPathGuard.clear();
+		}
+
+		CGImageRef_drawInRect( aImage, _par7, _par8, _par9, _par10, aPath, _par12, _par13, _par14, _par15, _par16, _par17 );
 	}
 }
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jboolean _par13, jfloat _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIEnv *pEnv, jobject object, jlong _par0, jint _par1, jint _par2, jint _par3, jint _par4, jfloat _par5, jfloat _par6, jfloat _par7, jfloat _par8, jlong _par9, jboolean _par10, jfloat _par11, jfloat _par12, jfloat _par13, jfloat _par14, jfloat _par15 )
 {
 	BitmapBuffer *pBuffer = (BitmapBuffer *)_par0;
 	if ( !pBuffer )
@@ -260,13 +275,13 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 		return;
 	}
 
-	ClearableMutexGuard aGuard( aBitmapBufferMutex );
-	::std::map< BitmapBuffer*, USHORT >::iterator it = aBitmapBufferMap.find( pBuffer );
-	if ( it != aBitmapBufferMap.end() )
-		it->second++;
+	ClearableMutexGuard aBitmapBufferGuard( aBitmapBufferMutex );
+	::std::map< BitmapBuffer*, USHORT >::iterator bbit = aBitmapBufferMap.find( pBuffer );
+	if ( bbit != aBitmapBufferMap.end() )
+		bbit->second++;
 	else
 		aBitmapBufferMap[ pBuffer ] = 1;
-	aGuard.clear();
+	aBitmapBufferGuard.clear();
 
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( !aColorSpace )
@@ -286,7 +301,20 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 	if ( aImage )
 	{
 		aCGImageList.push_back( aImage );
-		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, _par9, _par10, _par11, _par12, _par13, _par14, _par15, _par16, _par17, _par18 );
+
+		CGPathRef aPath = (CGPathRef)_par9;
+		if ( aPath )
+		{
+			ClearableMutexGuard aClipPathGuard( aCGClipPathMutex );
+			::std::map< CGPathRef, USHORT >::iterator cpit = aCGClipPathMap.find( aPath );
+			if ( cpit != aCGClipPathMap.end() )
+				cpit->second++;
+			else
+				aCGClipPathMap[ aPath ] = 1;
+			aClipPathGuard.clear();
+		}
+
+		CGImageRef_drawInRect( aImage, _par5, _par6, _par7, _par8, aPath, _par10, _par11, _par12, _par13, _par14, _par15 );
 	}
 }
 
@@ -330,17 +358,38 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_notifyGraphicsChanged( 
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( JNIEnv *pEnv, jobject object, jboolean _par0 )
 {
-	// Release the initial retain
-	ClearableMutexGuard aGuard( aBitmapBufferMutex );
-	for ( ::std::map< BitmapBuffer*, USHORT >::const_iterator it = aBitmapBufferMap.begin(); it != aBitmapBufferMap.end(); ++it )
-		ReleaseBitmapBufferCallback( it->first, NULL, 0 );
-	aGuard.clear();
+	// Release the initial retain but use a copy of the map to ensure that the
+	// map does not change while iterating through the items
+	ClearableMutexGuard aBitmapBufferGuard( aBitmapBufferMutex );
+	::std::map< BitmapBuffer*, USHORT > aBitmapBufferMapCopy( aBitmapBufferMap );
+	for ( ::std::map< BitmapBuffer*, USHORT >::const_iterator bbit = aBitmapBufferMapCopy.begin(); bbit != aBitmapBufferMapCopy.end(); ++bbit )
+		ReleaseBitmapBufferCallback( bbit->first, NULL, 0 );
+	aBitmapBufferGuard.clear();
 
 	while ( aCGImageList.size() )
 	{
 		CGImageRelease( aCGImageList.front() );
 		aCGImageList.pop_front();
 	}
+
+	// Release the initial retain but use a copy of the map to ensure that the
+	// map does not change while iterating through the items
+	ClearableMutexGuard aClipPathGuard( aCGClipPathMutex );
+	::std::map< CGPathRef, USHORT > aCGClipPathMapCopy( aCGClipPathMap );
+	for ( ::std::map< CGPathRef, USHORT >::const_iterator cpit = aCGClipPathMapCopy.begin(); cpit != aCGClipPathMapCopy.end(); ++cpit )
+	{
+		::std::map< CGPathRef, USHORT >::iterator it = aCGClipPathMap.find( cpit->first );
+		if ( it != aCGClipPathMap.end() )
+		{
+			it->second--;
+			if ( !it->second )
+			{
+				aCGClipPathMap.erase( it );
+				CGPathRelease( it->first );
+			}
+		}
+	}
+	aClipPathGuard.clear();
 
 	while ( aGlyphDataList.size() )
 	{
@@ -592,10 +641,10 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			// Register the native methods for our class
 			JNINativeMethod pMethods[11]; 
 			pMethods[0].name = "drawBitmap0";
-			pMethods[0].signature = "([IIIIIIIFFFFFFFFZFFFFF)V";
+			pMethods[0].signature = "([IIIIIIIFFFFJZFFFFF)V";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmap0;
 			pMethods[1].name = "drawBitmapBuffer0";
-			pMethods[1].signature = "(JIIIIFFFFFFFFZFFFFF)V";
+			pMethods[1].signature = "(JIIIIFFFFJZFFFFF)V";
 			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0;
 			pMethods[2].name = "drawEPS0";
 			pMethods[2].signature = "(JJFFFFFFFFZFFFFF)V";
@@ -767,21 +816,35 @@ void com_sun_star_vcl_VCLGraphics::copyBits( BYTE *_par0, long _par1, long _par2
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
+void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, CGPathRef _par9 )
 {
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par9 )
+	{
+		ClearableMutexGuard aGuard( aCGClipPathMutex );
+		::std::map< CGPathRef, USHORT >::iterator it = aCGClipPathMap.find( _par9 );
+		if ( it != aCGClipPathMap.end() )
+			it->second++;
+		else
+			aCGClipPathMap[ _par9 ] = 1;
+		aGuard.clear();
+	}
+
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Lcom/sun/star/vcl/VCLBitmap;IIIIIIII)V";
+			char *cSignature = "(Lcom/sun/star/vcl/VCLBitmap;IIIIIIIIJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawBitmap", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[9];
+			jvalue args[10];
 			args[0].l = _par0->getJavaObject();
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
@@ -791,6 +854,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
+			args[9].j = jlong( _par9 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
@@ -798,7 +862,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmap( const com_sun_star_vcl_VCLBitmap 
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8 )
+void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _par1, long _par2, long _par3, long _par4, long _par5, long _par6, long _par7, long _par8, CGPathRef _par9 )
 {
 	// Mark the bitmap buffer for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -813,19 +877,32 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 		aGuard.clear();
 	}
 
+	// Mark the clip path for deletion in case the Java drawing method
+	// never calls any of the native methods
+	if ( _par9 )
+	{
+		ClearableMutexGuard aGuard( aCGClipPathMutex );
+		::std::map< CGPathRef, USHORT >::iterator it = aCGClipPathMap.find( _par9 );
+		if ( it != aCGClipPathMap.end() )
+			it->second++;
+		else
+			aCGClipPathMap[ _par9 ] = 1;
+		aGuard.clear();
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(JIIIIIIII)V";
+			char *cSignature = "(JIIIIIIIIJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawBitmapBuffer", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[9];
+			jvalue args[10];
 			args[0].j = jlong( _par0 );
 			args[1].i = jint( _par1 );
 			args[2].i = jint( _par2 );
@@ -835,6 +912,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 			args[6].i = jint( _par6 );
 			args[7].i = jint( _par7 );
 			args[8].i = jint( _par8 );
+			args[9].j = jlong( _par9 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

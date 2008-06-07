@@ -51,6 +51,11 @@
 #include <sv.h>
 #endif 
 
+#include <premac.h>
+#include <ApplicationServices/ApplicationServices.h>
+#include <postmac.h>
+#undef check
+
 class ImplDevFontAttributes;
 class ImplFontSelectData;
 class JavaSalFrame;
@@ -108,6 +113,7 @@ public:
 	FontPitch				mnFontPitch;
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
+	CGMutablePathRef		maNativeClipPath;
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();

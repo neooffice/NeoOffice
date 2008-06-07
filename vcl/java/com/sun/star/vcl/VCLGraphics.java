@@ -351,13 +351,13 @@ public final class VCLGraphics {
 
 		// Set the method references
 		try {
-			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
+			drawBitmapMethod = VCLGraphics.class.getMethod("drawBitmap", new Class[]{ VCLBitmap.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
 		}
 		try {
-			drawBitmapBufferMethod = VCLGraphics.class.getMethod("drawBitmapBuffer", new Class[]{ long.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class });
+			drawBitmapBufferMethod = VCLGraphics.class.getMethod("drawBitmapBuffer", new Class[]{ long.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -886,11 +886,12 @@ public final class VCLGraphics {
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+	public void drawBitmap(VCLBitmap bmp, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight, long nativeClipPath) {
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapMethod, new Object[]{ bmp, new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -924,13 +925,7 @@ public final class VCLGraphics {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					Iterator clipRects = clipList.iterator();
-					while (clipRects.hasNext()) {
-						Rectangle clip = (Rectangle)clipRects.next();
-						drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-					}
-					if (userPolygonClip)
-						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+					drawBitmap0(bmp.getData(), bmp.getWidth(), bmp.getHeight(), srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
 					// Make sure source bounds don't fall outside the bitmap
@@ -982,10 +977,7 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
-	 * @param clipX the x coordinate of the graphics to clip to
-	 * @param clipY the y coordinate of the graphics to clip to
-	 * @param clipWidth the width of the graphics to clip to
-	 * @param clipHeight the height of the graphics to clip to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -993,7 +985,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawBitmap0(int[] bmpData, int width, int height, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified BitmapBuffer pointer to the underlying graphics.
@@ -1007,15 +999,16 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
+	 * @param nativeClipPath the native clip path
 	 */
-	public void drawBitmapBuffer(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight) {
+	public void drawBitmapBuffer(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, int destX, int destY, int destWidth, int destHeight, long nativeClipPath) {
 
 		// Only allow drawing of JavaSalBitmp to printer
 		if (graphics == null)
 			return;
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapBufferMethod, new Object[]{ new Long(buffer), new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawBitmapBufferMethod, new Object[]{ new Long(buffer), new Integer(srcX), new Integer(srcY), new Integer(srcWidth), new Integer(srcHeight), new Integer(destX), new Integer(destY), new Integer(destWidth), new Integer(destHeight), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1044,13 +1037,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				AffineTransform transform = g.getTransform();
-				Iterator clipRects = clipList.iterator();
-				while (clipRects.hasNext()) {
-					Rectangle clip = (Rectangle)clipRects.next();
-					drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, clip.x, clip.y, clip.width, clip.height, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
-				}
-				if (userPolygonClip)
-					throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
+				drawBitmapBuffer0(buffer, srcX, srcY, srcWidth, srcHeight, destX, destY, destWidth, destHeight, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
@@ -1072,10 +1059,7 @@ public final class VCLGraphics {
 	 * @param destY the y coordinate of the graphics to draw to
 	 * @param destWidth the width of the graphics to copy to
 	 * @param destHeight the height of the graphics to copy to
-	 * @param clipX the x coordinate of the graphics to clip to
-	 * @param clipY the y coordinate of the graphics to clip to
-	 * @param clipWidth the width of the graphics to clip to
-	 * @param clipHeight the height of the graphics to clip to
+	 * @param nativeClipPath the native clip path
 	 * @param drawOnMainThread do drawing on main event dispatch thread
 	 * @param translateX the horizontal translation
 	 * @param translateY the vertical translation
@@ -1083,7 +1067,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawBitmapBuffer0(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, float clipX, float clipY, float clipWidth, float clipHeight, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawBitmapBuffer0(long buffer, int srcX, int srcY, int srcWidth, int srcHeight, float destX, float destY, float destWidth, float destHeight, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws specified EPS data to the underlying graphics.
@@ -2939,7 +2923,7 @@ public final class VCLGraphics {
 			try {
 				if (graphics != null) {
 					AffineTransform transform = g.getTransform();
-					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, 0, 0, 0, 0, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+					drawBitmap0(new int[]{ color }, 1, 1, 0, 0, 1, 1, x, y, 1, 1, 0, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
 				}
 				else {
 					if (xor)

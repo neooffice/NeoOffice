@@ -78,6 +78,7 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 			if ( mfClipWidth && mfClipHeight )
@@ -131,26 +132,23 @@
 	float				mfY;
 	float				mfWidth;
 	float				mfHeight;
-	float				mfClipX;
-	float				mfClipY;
-	float				mfClipWidth;
-	float				mfClipHeight;
+	CGPathRef			maClipPath;
 	float				mfTranslateX;
 	float				mfTranslateY;
 	float				mfRotateAngle;
 	float				mfScaleX;
 	float				mfScaleY;
 }
-+ (id)createWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
++ (id)createWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 - (void)drawImageInRect:(id)pObject;
-- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
 @end
 
 @implementation DrawImageInRect
 
-+ (id)createWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
++ (id)createWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
-	DrawImageInRect *pRet = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	DrawImageInRect *pRet = [[DrawImageInRect alloc] initWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 	[pRet autorelease];
 	return pRet;
 }
@@ -165,17 +163,33 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
-			if ( mfClipWidth && mfClipHeight )
-				CGContextClipToRect( aContext, CGRectMake( mfClipX * mfScaleX, mfClipY * mfScaleY, mfClipWidth * mfScaleX, mfClipHeight * mfScaleY ) );
+
+			CGMutablePathRef aAdjustedClipPath = nil;
+			if ( maClipPath )
+			{
+				aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+				}
+			}
+
 			CGContextDrawImage( aContext, CGRectMake( mfX * mfScaleX, ( mfY + mfHeight ) * mfScaleY, mfWidth * mfScaleX, mfHeight * mfScaleY * -1 ), maImage );
 			CGContextRestoreGState( aContext );
+
+			if ( aAdjustedClipPath )
+				CGPathRelease( aAdjustedClipPath );
 		}
 	}
 }
 
-- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipX:(float)fClipX clipY:(float)fClipY clipWidth:(float)fClipWidth clipHeight:(float)fClipHeight translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+- (id)initWithImage:(CGImageRef)aImage x:(float)fX y:(float)fY width:(float)fWidth height:(float)fHeight clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
 {
 	[super init];
 
@@ -184,10 +198,7 @@
 	mfY = fY;
 	mfWidth = fWidth;
 	mfHeight = fHeight;
-	mfClipX = fClipX;
-	mfClipY = fClipY;
-	mfClipWidth = fClipWidth;
-	mfClipHeight = fClipHeight;
+	maClipPath = aClipPath;
 	mfTranslateX = fTranslateX;
 	mfTranslateY = fTranslateY;
 	mfRotateAngle = fRotateAngle;
@@ -248,6 +259,7 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 			if ( mfClipWidth && mfClipHeight )
@@ -360,6 +372,7 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 			if ( mfClipWidth && mfClipHeight )
@@ -442,6 +455,7 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 			if ( mfClipWidth && mfClipHeight )
@@ -534,6 +548,7 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 			if ( mfClipWidth && mfClipHeight )
@@ -618,6 +633,7 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 			if ( mfClipWidth && mfClipHeight )
@@ -722,6 +738,7 @@
 		{
 			// Fix bug 1218 by setting the clip here and not in Java
 			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
 			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
 			CGContextRotateCTM( aContext, mfRotateAngle );
 			if ( mfClipWidth && mfClipHeight )
@@ -888,13 +905,13 @@ void CGContext_drawRect( float fX, float fY, float fWidth, float fHeight, int nC
 	[pPool release];
 }
 
-void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, float fClipX, float fClipY, float fClipWidth, float fClipHeight, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+void CGImageRef_drawInRect( CGImageRef aImage, float fX, float fY, float fWidth, float fHeight, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( aImage && fWidth && fHeight )
 	{
-		DrawImageInRect *pDrawImageInRect = [DrawImageInRect createWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipX:fClipX clipY:fClipY clipWidth:fClipWidth clipHeight:fClipHeight translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		DrawImageInRect *pDrawImageInRect = [DrawImageInRect createWithImage:aImage x:fX y:fY width:fWidth height:fHeight clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
 		if ( bDrawInMainThread )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];

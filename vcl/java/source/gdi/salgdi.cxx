@@ -78,6 +78,7 @@ JavaSalGraphics::JavaSalGraphics()
 	mnFontPitch = PITCH_DONTKNOW;
 	mnDPIX = 0;
 	mnDPIY = 0;
+	maNativeClipPath = NULL;
 
 	GetSalData()->maGraphicsList.push_back( this );
 }
@@ -96,6 +97,9 @@ JavaSalGraphics::~JavaSalGraphics()
 
 	for ( ::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
 		delete it->second;
+
+	if ( maNativeClipPath )
+		CFRelease( maNativeClipPath );
 }
 
 // -----------------------------------------------------------------------
@@ -131,21 +135,50 @@ USHORT JavaSalGraphics::GetBitCount()
 
 void JavaSalGraphics::ResetClipRegion()
 {
-	mpVCLGraphics->resetClipRegion( sal_False );
+	if ( mpPrinter )
+	{
+		if ( maNativeClipPath )
+		{
+			CFRelease( maNativeClipPath );
+			maNativeClipPath = NULL;
+		}
+	}
+	else
+	{
+		mpVCLGraphics->resetClipRegion( sal_False );
+	}
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
 {
-	mpVCLGraphics->beginSetClipRegion( sal_False );
+	if ( mpPrinter )
+		ResetClipRegion();
+	else
+		mpVCLGraphics->beginSetClipRegion( sal_False );
 }
 
 // -----------------------------------------------------------------------
 
 BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
-	mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_False );
+	if ( mpPrinter )
+	{
+		if ( nWidth > 0 && nHeight > 0 )
+		{
+			if ( !maNativeClipPath )
+				; // maNativeClipPath = CGPathCreateMutable();
+
+			if ( maNativeClipPath )
+				CGPathAddRect( maNativeClipPath, NULL, CGRectMake( (float)nX, (float)nY, (float)nWidth, (float)nHeight ) );
+		}
+	}
+	else
+	{
+		mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_False );
+	}
+
 	return TRUE;
 }
 
@@ -153,14 +186,56 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 
 BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
 {
-	return mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False );
+	BOOL bRet = FALSE;
+
+	if ( mpPrinter )
+	{
+		for ( ULONG i = 0; i < nPoly; i++ )
+		{
+			// CGMutablePathRef aPolyPath = CGPathCreateMutable();
+			CGMutablePathRef aPolyPath = NULL;
+			if ( !aPolyPath )
+				continue;
+
+			ULONG nCount = pPoints[ i ];
+			if ( nCount )
+			{
+				CGPathMoveToPoint( aPolyPath, NULL, (float)pPtAry[ i ][ 0 ].mnX, (float)pPtAry[ i ][ 0 ].mnY );
+				for ( ULONG j = 1; j < nCount; j++ )
+					CGPathAddLineToPoint( aPolyPath, NULL, (float)pPtAry[ i ][ j ].mnX, (float)pPtAry[ i ][ j ].mnY );
+				CGPathCloseSubpath( aPolyPath );
+			}
+				
+			CGRect aBounds = CGPathGetBoundingBox( aPolyPath );
+			if ( aBounds.size.width > 0 && aBounds.size.height > 0 )
+			{
+				if ( !maNativeClipPath )
+					maNativeClipPath = CGPathCreateMutable();
+
+				if ( maNativeClipPath )
+				{
+					CGPathAddPath( maNativeClipPath, NULL, aPolyPath );
+					bRet = TRUE;
+				}
+			}
+
+			CFRelease( aPolyPath );
+		}
+	}
+	else
+	{
+		bRet = mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False );
+	}
+
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::EndSetClipRegion()
 {
-	mpVCLGraphics->endSetClipRegion( sal_False );
+	if ( !mpPrinter )
+		mpVCLGraphics->endSetClipRegion( sal_False );
 }
 
 // -----------------------------------------------------------------------
@@ -355,7 +430,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 							if ( bRet )
 							{
 								t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
-								mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, nWidth, nHeight, nX, nY, nWidth, nHeight );
+								mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, nWidth, nHeight, nX, nY, nWidth, nHeight, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 							}
 							else
 							{
