@@ -140,9 +140,14 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						const OUString aCourier( OUString::createFromAscii( "Courier" ) );
 						const OUString aFontSeparator( OUString::createFromAscii( ";" ) );
 						const OUString aLastResort( OUString::createFromAscii( "LastResort" ) );
+						const OUString aMincho( OUString::createFromAscii( "Mincho" ) );
+						const OUString aMing( OUString::createFromAscii( "Ming" ) );
+						const OUString aMyungjo( OUString::createFromAscii( "Myungjo" ) );
 						const OUString aRoman( OUString::createFromAscii( "Roman" ) );
 						const OUString aSans( OUString::createFromAscii( "Sans" ) );
 						const OUString aSerif( OUString::createFromAscii( "Serif" ) );
+						const OUString aSong( OUString::createFromAscii( "Song" ) );
+						const OUString aSung( OUString::createFromAscii( "Sung" ) );
 						const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
 						const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
 						const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
@@ -253,7 +258,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								nFamily = FAMILY_MODERN;
 							else if ( aPSName.indexOf( aSans ) >= 0 )
 								nFamily = FAMILY_SWISS;
-							else if ( aPSName.indexOf( aCourier ) >= 0 || aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 )
+							else if ( aPSName.indexOf( aCourier ) >= 0 || aPSName.indexOf( aMincho ) >= 0 || aPSName.indexOf( aMing ) >= 0 || aPSName.indexOf( aMyungjo ) >= 0 || aPSName.indexOf( aRoman ) >= 0 || aPSName.indexOf( aSerif ) >= 0 || aPSName.indexOf( aTimes ) >= 0 || aPSName.indexOf( aSong ) >= 0 || aPSName.indexOf( aSung ) >= 0 )
 								nFamily = FAMILY_ROMAN;
 							else
 								nFamily = FAMILY_SWISS;
