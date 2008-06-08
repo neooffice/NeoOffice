@@ -400,6 +400,11 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, OU
 
 JavaImplFontData::~JavaImplFontData()
 {
+	while ( maChildren.size() )
+	{
+		delete maChildren.front();
+		maChildren.pop_front();
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -583,9 +588,23 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mnFontWeight = pFont->GetWeight();
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
+
+		// Clone the new font data and make it a child of the requested font
+		// data so that it will eventually get deleted
+		if ( pFont->mpFontData != pFontData )
+		{
+			JavaImplFontData *pChildFontData = (JavaImplFontData *)pFontData->Clone();
+			if ( pChildFontData )
+			{
+				((JavaImplFontData *)pFont->mpFontData)->maChildren.push_back( pChildFontData );
+				pFont->mpFontData = pChildFontData;
+			}
+		}
 	}
 	else
 	{
+		// No need to clone as the select data is merely temporary data in
+		// fallback levels
 		pFont->mpFontData = pFontData;
 	}
 
