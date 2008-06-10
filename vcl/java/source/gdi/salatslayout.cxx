@@ -907,7 +907,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	if ( !mpVCLFont )
 		return bRet;
 
-	JavaImplFontData *pSymbolFallbackFontData = NULL;
+	com_sun_star_vcl_VCLFont *pSymbolFallbackFont = NULL;
 	bool bUseNativeFallback = false;
 	int nEstimatedGlyphs = 0;
 
@@ -1154,10 +1154,16 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								sal_IntPtr nNativeFont = mpVCLFont->getNativeFont();
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
-								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != nNativeFont )
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
 									mpKashidaLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
+									if ( mpKashidaLayoutData->mpFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									{
+										delete mpKashidaLayoutData->mpFallbackFont;
+										mpKashidaLayoutData->mpFallbackFont = NULL;
+									}
+								}
 							}
 
 							if ( mpKashidaLayoutData->mpFallbackFont )
@@ -1320,13 +1326,20 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							// Fix bug 3087 if there is no fallback font and it
 							// is a European or Cyrillic character by using a
 							// font that we can render those ranges nicely
-							if ( !pSymbolFallbackFontData )
+							if ( !pSymbolFallbackFont )
 							{
 								SalData *pSalData = GetSalData();
 
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aTimesRoman : aHelvetica );
-								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != mpVCLFont->getNativeFont() )
-									pSymbolFallbackFontData = it->second;
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
 							}
 
 							rArgs.NeedFallback( nCharPos, bRunRTL );
@@ -1336,13 +1349,20 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						{
 							// If there is no fallback font and it is a Private
 							// Use Area character, use the symbol font
-							if ( !pSymbolFallbackFontData )
+							if ( !pSymbolFallbackFont )
 							{
 								SalData *pSalData = GetSalData();
 
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aOpenSymbol );
-								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != mpVCLFont->getNativeFont() )
-									pSymbolFallbackFontData = it->second;
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
 							}
 
 							rArgs.NeedFallback( nCharPos, bRunRTL );
@@ -1353,13 +1373,20 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							// Fix bugs 2772 and 3097 if there is no fallback
 							// font and it is a Japanese character by using a
 							// font that we can render those ranges nicely
-							if ( !pSymbolFallbackFontData )
+							if ( !pSymbolFallbackFont )
 							{
 								SalData *pSalData = GetSalData();
 
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aHiraginoMinchoProW3 : aHiraginoKakuGothicProW3 );
-								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != mpVCLFont->getNativeFont() )
-									pSymbolFallbackFontData = it->second;
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
 							}
 
 							rArgs.NeedFallback( nCharPos, bRunRTL );
@@ -1387,7 +1414,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					}
 					// Prevent display of zero glyphs in fallback levels where
 					// we know that there is a valid fallback font
-					else if ( !nGlyph && mnFallbackLevel < MAX_FALLBACK - 1 && ( pSymbolFallbackFontData || pFallbackFont ) )
+					else if ( !nGlyph && mnFallbackLevel < MAX_FALLBACK - 1 && ( pSymbolFallbackFont || pFallbackFont ) )
 					{
 						nCharWidth = 0;
 						if ( bFirstGlyph )
@@ -1451,15 +1478,19 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	mnOrigWidth = aPos.X();
 
 	// Set fallback font
-	if ( pFallbackFont || pSymbolFallbackFontData || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
+	if ( pFallbackFont || pSymbolFallbackFont || ! ( rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING ) )
 	{
+		SalData *pSalData = GetSalData();
+
 		// If this is the first fallback, first try using a font that most
 		// closely matches the currently requested font
-		JavaImplFontData *pHighScoreFontData = pSymbolFallbackFontData;
+		JavaImplFontData *pHighScoreFontData = NULL;
+		::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( pSymbolFallbackFont ? pSymbolFallbackFont->getNativeFont() : 0 );
+		if ( nfit != pSalData->maNativeFontMapping.end() )
+			pHighScoreFontData = nfit->second;
+		
 		if ( !pHighScoreFontData && !bUseNativeFallback && !mnFallbackLevel && ( !mpKashidaLayoutData || !mpKashidaLayoutData->mpFallbackFont ) )
 		{
-			SalData *pSalData = GetSalData();
-
 			::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( pFallbackFont ? pFallbackFont->getNativeFont() : 0 );
 			if ( it == pSalData->maNativeFontMapping.end() || it->second->GetFamilyType() != mpGraphics->mnFontFamily || it->second->GetWeight() != mpGraphics->mnFontWeight || ( it->second->GetSlant() == ITALIC_OBLIQUE || it->second->GetSlant() == ITALIC_NORMAL ? true : false ) != mpGraphics->mbFontItalic || it->second->GetPitch() != mpGraphics->mnFontPitch )
 			{
