@@ -98,6 +98,7 @@ struct ImplATSLayoutData {
 	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 	static int			mnLayoutCacheSize;
+	static ATSUFontFallbacks	maFontFallbacks;
 
 	mutable int			mnRefCount;
 	ImplATSLayoutDataHash*	mpHash;
@@ -167,6 +168,10 @@ int ImplATSLayoutData::mnLayoutCacheSize = 0;
 
 // ----------------------------------------------------------------------------
 
+ATSUFontFallbacks ImplATSLayoutData::maFontFallbacks = NULL;
+
+// ----------------------------------------------------------------------------
+
 void ImplATSLayoutData::ClearLayoutDataCache()
 {
 	mnLayoutCacheSize = 0;
@@ -176,6 +181,12 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 	{
 		maLayoutCacheList.back()->Release();
 		maLayoutCacheList.pop_back();
+	}
+
+	if ( maFontFallbacks )
+	{
+		ATSUDisposeFontFallbacks( maFontFallbacks );
+		maFontFallbacks = NULL;
 	}
 }
 
@@ -416,6 +427,44 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		Destroy();
 		return;
+	}
+
+	// Initialize font fallbacks list if necessary
+	if ( !ImplATSLayoutData::maFontFallbacks )
+	{
+		if ( ATSUCreateFontFallbacks( &ImplATSLayoutData::maFontFallbacks ) == noErr )
+		{
+			SalData *pSalData = GetSalData();
+			ItemCount nCount = pSalData->maNativeFontMapping.size();
+			ItemCount nActualCount = 0;
+
+			ATSUFontID aATSUFonts[ nCount ];
+			for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
+				aATSUFonts[ nActualCount++ ] = it->first;
+
+			if ( !nActualCount || ATSUSetObjFontFallbacks( ImplATSLayoutData::maFontFallbacks, nActualCount, aATSUFonts, kATSUSequentialFallbacksExclusive ) != noErr )
+			{
+				if ( ImplATSLayoutData::maFontFallbacks )
+				{
+					ATSUDisposeFontFallbacks( ImplATSLayoutData::maFontFallbacks );
+					ImplATSLayoutData::maFontFallbacks = NULL;
+				}
+			}
+		}
+	}
+
+	// Set the font fallbacks list
+	if ( ImplATSLayoutData::maFontFallbacks )
+	{
+		nTags[0] = kATSULineFontFallbacksTag;
+		nBytes[0] = sizeof( ATSUFontFallbacks );
+		nVals[0] = &ImplATSLayoutData::maFontFallbacks;
+
+		if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) != noErr )
+		{
+			Destroy();
+			return;
+		}
 	}
 
 	// Fix bug 2919 by still producing a valid text layout even if no glyphs
