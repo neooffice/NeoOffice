@@ -67,6 +67,8 @@
 
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
+static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
+static const String aHiraginoMinchoProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Mincho Pro W3" ) );
 static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
 static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
 
@@ -1346,14 +1348,20 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
-						else if ( GetVerticalFlags( nChar ) != GF_NONE )
+						else if ( nChar >= 0x3000 && ( nChar < 0x3100 || ( nChar >= 0x31f0 && nChar < 0x3200 ) || ( nChar >= 0xfe30 && nChar < 0xfe50 ) || ( nChar >= 0xff00 && nChar < 0xfff0 ) ) )
 						{
-							// Fix bug 2772 by always using the fallback font
-							// picked by the native APIs when rotatable
-							// characters are used
-							bUseNativeFallback = true;
-							if ( !pFallbackFont )
-								pFallbackFont = pCurrentLayoutData->mpFallbackFont;
+							// Fix bugs 2772 and 3097 if there is no fallback
+							// font and it is a Japanese character by using a
+							// font that we can render those ranges nicely
+							if ( !pSymbolFallbackFontData )
+							{
+								SalData *pSalData = GetSalData();
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aHiraginoMinchoProW3 : aHiraginoKakuGothicProW3 );
+								if ( it != pSalData->maFontNameMapping.end() && it->second->GetFontId() != mpVCLFont->getNativeFont() )
+									pSymbolFallbackFontData = it->second;
+							}
+
 							rArgs.NeedFallback( nCharPos, bRunRTL );
 							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 						}
