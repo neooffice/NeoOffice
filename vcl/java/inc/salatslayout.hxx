@@ -72,6 +72,7 @@ class SalATSLayout : public GenericSalLayout
 	float				mfGlyphScaleX;
 
 public:
+	static void			SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount );
 	static void			ClearLayoutDataCache();
 
 						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );

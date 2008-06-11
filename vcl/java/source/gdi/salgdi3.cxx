@@ -156,7 +156,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 
 						int i;
+						int nCount = 0;
 						for ( i = 0; pFonts[ i ]; i++ )
+							nCount++;
+
+						sal_uInt32 nActualCount = 0;
+						ATSUFontID aATSUFonts[ nCount ];
+						for ( i = 0; i < nCount; i++ )
 						{
 							void *pNSFont = (void *)pFonts[ i ];
 
@@ -287,10 +293,14 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							// rely on the native font to look up the font name.
 							pSalData->maNativeFontMapping[ nNativeFont ] = pFontData;
 							pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
+
+							aATSUFonts[ nActualCount++ ] = nNativeFont;
 						}
 
+						SalATSLayout::SetFontFallbacks( aATSUFonts, nActualCount );
+
 						// Cache matching bold, italic, and bold italic fonts
-						for ( i = 0; pFonts[ i ]; i++ )
+						for ( i = 0; i < nCount; i++ )
 						{
 							void *pNSFont = (void *)pFonts[ i ];
 

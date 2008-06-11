@@ -120,6 +120,7 @@ struct ImplATSLayoutData {
 	bool				mbValid;
 
 	static void					ClearLayoutDataCache();
+	static void					SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount );
 	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
 
 						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
@@ -189,6 +190,30 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 	{
 		ATSUDisposeFontFallbacks( maFontFallbacks );
 		maFontFallbacks = NULL;
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void ImplATSLayoutData::SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount )
+{
+	if ( maFontFallbacks )
+	{
+		ATSUDisposeFontFallbacks( maFontFallbacks );
+		maFontFallbacks = NULL;
+	}
+
+	// Initialize font fallbacks list if necessary
+	if ( pFonts && nCount )
+	{
+		if ( ATSUCreateFontFallbacks( &maFontFallbacks ) == noErr && maFontFallbacks )
+		{
+			if ( ATSUSetObjFontFallbacks( maFontFallbacks, (ItemCount)nCount, pFonts, kATSUSequentialFallbacksExclusive ) != noErr )
+			{
+				ATSUDisposeFontFallbacks( maFontFallbacks );
+				maFontFallbacks = NULL;
+			}
+		}
 	}
 }
 
@@ -429,30 +454,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		Destroy();
 		return;
-	}
-
-	// Initialize font fallbacks list if necessary
-	if ( !ImplATSLayoutData::maFontFallbacks )
-	{
-		if ( ATSUCreateFontFallbacks( &ImplATSLayoutData::maFontFallbacks ) == noErr )
-		{
-			SalData *pSalData = GetSalData();
-			ItemCount nCount = pSalData->maNativeFontMapping.size();
-			ItemCount nActualCount = 0;
-
-			ATSUFontID aATSUFonts[ nCount ];
-			for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
-				aATSUFonts[ nActualCount++ ] = it->first;
-
-			if ( !nActualCount || ATSUSetObjFontFallbacks( ImplATSLayoutData::maFontFallbacks, nActualCount, aATSUFonts, kATSUSequentialFallbacksExclusive ) != noErr )
-			{
-				if ( ImplATSLayoutData::maFontFallbacks )
-				{
-					ATSUDisposeFontFallbacks( ImplATSLayoutData::maFontFallbacks );
-					ImplATSLayoutData::maFontFallbacks = NULL;
-				}
-			}
-		}
 	}
 
 	// Set the font fallbacks list
@@ -829,6 +830,13 @@ SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackL
 void SalATSLayout::ClearLayoutDataCache()
 {
 	ImplATSLayoutData::ClearLayoutDataCache();
+}
+
+// ----------------------------------------------------------------------------
+
+void SalATSLayout::SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount )
+{
+	ImplATSLayoutData::SetFontFallbacks( pFonts, nCount );
 }
 
 // ----------------------------------------------------------------------------
