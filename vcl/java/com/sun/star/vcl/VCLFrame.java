@@ -2217,7 +2217,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD && e.getModifiersEx() == InputEvent.META_DOWN_MASK && keyCode == KeyEvent.VK_MULTIPLY)) {
 			// Fix bug 3018 by stripping out the Alt modifier for arrow keys
-			if ((modifiers & InputEvent.ALT_DOWN_MASK) != 0 && (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_UP))
+			if (modifiers == InputEvent.ALT_DOWN_MASK && (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_UP))
 				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | modifiers) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), keyCode, e.getKeyChar());
 
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, this, 0));
@@ -2245,7 +2245,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		else if (e.isActionKey() || keyCode == KeyEvent.VK_BACK_SPACE || keyCode == KeyEvent.VK_ENTER || keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_ESCAPE || (e.getKeyLocation() == KeyEvent.KEY_LOCATION_NUMPAD && e.getModifiersEx() == InputEvent.META_DOWN_MASK && keyCode == KeyEvent.VK_MULTIPLY)) {
 			// Fix bug 3018 by stripping out the Alt modifier for arrow keys
-			if ((modifiers & InputEvent.ALT_DOWN_MASK) != 0 && (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_UP))
+			if (modifiers == InputEvent.ALT_DOWN_MASK && (keyCode == KeyEvent.VK_DOWN || keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT || keyCode == KeyEvent.VK_UP))
 				e = new KeyEvent(e.getComponent(), e.getID(), e.getWhen(), (e.getModifiers() | modifiers) & ~(InputEvent.ALT_MASK | InputEvent.ALT_DOWN_MASK), keyCode, e.getKeyChar());
 
 			queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, this, 0));
