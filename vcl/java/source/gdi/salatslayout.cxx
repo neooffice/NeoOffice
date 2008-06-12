@@ -120,7 +120,7 @@ struct ImplATSLayoutData {
 	bool				mbValid;
 
 	static void					ClearLayoutDataCache();
-	static void					SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount );
+	static void					SetFontFallbacks();
 	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
 
 						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
@@ -195,7 +195,7 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 
 // ----------------------------------------------------------------------------
 
-void ImplATSLayoutData::SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount )
+void ImplATSLayoutData::SetFontFallbacks()
 {
 	if ( maFontFallbacks )
 	{
@@ -204,11 +204,19 @@ void ImplATSLayoutData::SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount 
 	}
 
 	// Initialize font fallbacks list if necessary
-	if ( pFonts && nCount )
+	if ( ATSUCreateFontFallbacks( &maFontFallbacks ) == noErr )
 	{
-		if ( ATSUCreateFontFallbacks( &maFontFallbacks ) == noErr && maFontFallbacks )
+		SalData *pSalData = GetSalData();
+		ItemCount nCount = pSalData->maNativeFontMapping.size();
+		ItemCount nActualCount = 0;
+
+		ATSUFontID aATSUFonts[ nCount ];
+		for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
+			aATSUFonts[ nActualCount++ ] = it->first;
+
+		if ( !nActualCount || ATSUSetObjFontFallbacks( maFontFallbacks, nActualCount, aATSUFonts, kATSUSequentialFallbacksExclusive ) != noErr )
 		{
-			if ( ATSUSetObjFontFallbacks( maFontFallbacks, (ItemCount)nCount, pFonts, kATSUSequentialFallbacksExclusive ) != noErr )
+			if ( maFontFallbacks )
 			{
 				ATSUDisposeFontFallbacks( maFontFallbacks );
 				maFontFallbacks = NULL;
@@ -834,9 +842,9 @@ void SalATSLayout::ClearLayoutDataCache()
 
 // ----------------------------------------------------------------------------
 
-void SalATSLayout::SetFontFallbacks( ATSUFontID *pFonts, sal_uInt32 nCount )
+void SalATSLayout::SetFontFallbacks()
 {
-	ImplATSLayoutData::SetFontFallbacks( pFonts, nCount );
+	ImplATSLayoutData::SetFontFallbacks();
 }
 
 // ----------------------------------------------------------------------------

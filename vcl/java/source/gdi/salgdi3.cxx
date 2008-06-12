@@ -297,8 +297,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							aATSUFonts[ nActualCount++ ] = nNativeFont;
 						}
 
-						SalATSLayout::SetFontFallbacks( aATSUFonts, nActualCount );
-
 						// Cache matching bold, italic, and bold italic fonts
 						for ( i = 0; i < nCount; i++ )
 						{
@@ -380,6 +378,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			if ( !aFontNotification )
 				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
 
+			SalATSLayout::SetFontFallbacks();
 			OutputDevice::ImplUpdateAllFontData( true );
 
 			rSolarMutex.release();
