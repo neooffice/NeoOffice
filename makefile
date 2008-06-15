@@ -535,7 +535,7 @@ ifeq ("$(PRODUCT_NAME)","RetroOffice")
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/RetroOffice Elements 2.1.1.070804/Contents/MacOS/"*.bmp "program"
 endif
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "tmp/RetroOffice Elements 2.1.1.070804/Contents/Resources/"*.icns "Resources"
-ifndef X11_PRODUCT
+ifdef X11_PRODUCT
 	cd "$(INSTALL_HOME)/package/Contents" ; mv "Resources/retro.icns" "Resources/ship.icns"
 endif
 	cd "$(INSTALL_HOME)/package/Contents/tmp/RetroOffice Elements 2.1.1.070804/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/share/config/images.zip" .
