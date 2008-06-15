@@ -131,12 +131,18 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(argc, argv)
     rtl::OUString sVendor2(RTL_CONSTASCII_USTRINGPARAM("IBM Corporation"));
     rtl::OUString sVendor3(RTL_CONSTASCII_USTRINGPARAM("Blackdown Java-Linux Team"));
     rtl::OUString sVendor4(RTL_CONSTASCII_USTRINGPARAM("Apple Computer, Inc."));
+#ifdef USE_JAVA
+    rtl::OUString sVendor4a(RTL_CONSTASCII_USTRINGPARAM("Apple Inc."));
+#endif	// USE_JAVA
     rtl::OUString sVendor5(RTL_CONSTASCII_USTRINGPARAM("BEA Systems, Inc."));
     rtl::OUString sVendor6(RTL_CONSTASCII_USTRINGPARAM("Free Software Foundation, Inc."));
     if ( ! (sVendor1.equals(pInfo->sVendor) == sal_True
             || sVendor2.equals(pInfo->sVendor) == sal_True
             || sVendor3.equals(pInfo->sVendor) == sal_True
             || sVendor4.equals(pInfo->sVendor) == sal_True
+#ifdef USE_JAVA
+            || sVendor4a.equals(pInfo->sVendor) == sal_True
+#endif	// USE_JAVA
             || sVendor5.equals(pInfo->sVendor) == sal_True
 	    || sVendor6.equals(pInfo->sVendor) == sal_True))
         return 0;
