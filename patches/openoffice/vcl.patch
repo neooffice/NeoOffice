@@ -1,11 +1,11 @@
-Index: inc/salgdi.hxx
+Index: inc/vcl/salgdi.hxx
 ===================================================================
-RCS file: /cvs/gsl/vcl/inc/Attic/salgdi.hxx,v
-retrieving revision 1.36
-diff -u -r1.36 salgdi.hxx
---- inc/salgdi.hxx	14 Nov 2006 15:22:46 -0000	1.36
-+++ inc/salgdi.hxx	7 May 2007 20:24:38 -0000
-@@ -171,6 +171,7 @@
+RCS file: /cvs/gsl/vcl/inc/vcl/salgdi.hxx,v
+retrieving revision 1.5
+diff -u -r1.5 salgdi.hxx
+--- inc/vcl/salgdi.hxx	11 Apr 2008 07:53:59 -0000	1.5
++++ inc/vcl/salgdi.hxx	10 Jun 2008 20:57:03 -0000
+@@ -155,6 +155,7 @@
      virtual BOOL        getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState,
                                                  const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& aCaption,
                                                  Region &rNativeBoundingRegion, Region &rNativeContentRegion );
@@ -13,42 +13,42 @@ diff -u -r1.36 salgdi.hxx
  
      /** Render bitmap with alpha channel
  
-@@ -463,6 +464,13 @@
- 										 Region &rNativeBoundingRegion,
+@@ -459,6 +460,13 @@
  										 Region &rNativeContentRegion,
                                           const OutputDevice *pOutDev );
+ 
++	// Query the VCL implementation for the text color that should be used to draw a native control
++	BOOL GetNativeControlTextColor( ControlType nType,
++										 ControlPart nPart,
++										 ControlState nState,
++										 const ImplControlValue& aValue,
++										 Color& textColor );
 +
-+    // Query the VCL implementation for the text color that should be used to draw a native control
-+    BOOL GetNativeControlTextColor( ControlType nType, 
-+    									 ControlPart nPart, 
-+    									 ControlState nState, 
-+    									 const ImplControlValue& aValue, 
-+    									 Color& textColor );
-                                          
      static void AddDevFontSubstitute( OutputDevice* pOutDev,
                                        const String& rFontName,
-Index: inc/salnativewidgets.hxx
+                                       const String& rReplaceFontName,
+Index: inc/vcl/salnativewidgets.hxx
 ===================================================================
-RCS file: /cvs/gsl/vcl/inc/salnativewidgets.hxx,v
+RCS file: /cvs/gsl/vcl/inc/vcl/salnativewidgets.hxx,v
 retrieving revision 1.9
 diff -u -r1.9 salnativewidgets.hxx
---- inc/salnativewidgets.hxx	19 Jun 2006 19:07:59 -0000	1.9
-+++ inc/salnativewidgets.hxx	7 Jan 2007 02:17:52 -0000
+--- inc/vcl/salnativewidgets.hxx	19 Jun 2006 19:07:59 -0000	1.9
++++ inc/vcl/salnativewidgets.hxx	7 Jan 2007 02:17:52 -0000
 @@ -138,6 +138,18 @@
- // tool tips
- #define CTRL_TOOLTIP            140
+ #define CTRL_LISTNET            171
+ 
  
 +// progress bars
-+#define CTRL_PROGRESSBAR		150
++#define CTRL_PROGRESSBAR		200
 +
 +// hierarchical tree control expand/collapse handle
-+#define CTRL_DISCLOSUREBTN		160
++#define CTRL_DISCLOSUREBTN		230
 +
 +// list view header cell appearing above columns in lists
-+#define CTRL_LISTVIEWHEADER		170
++#define CTRL_LISTVIEWHEADER		240
 +
 +// native frame to draw around list views.  Default is sunken Win95 well.
-+#define CTRL_LISTVIEWBOX		180
++#define CTRL_LISTVIEWBOX		250
 +
  /* Control Parts:
   *
@@ -138,29 +138,34 @@ diff -u -r1.9 salnativewidgets.hxx
 +		~ListViewHeaderValue() {};
 +};
 +
- /* ImplControlValue:
+ /*	PushButtonValue:
   *
-  *   Generic value container for all control parts.
---- inc/window.hxx	2006-10-12 07:57:43.000000000 -0700
-+++ inc/window.hxx	2007-01-20 14:50:43.000000000 -0800
-@@ -1079,6 +1079,13 @@
+  *  Value container for pushbuttons specifying additional drawing hints
+Index: inc/vcl/window.hxx
+===================================================================
+RCS file: /cvs/gsl/vcl/inc/vcl/window.hxx,v
+retrieving revision 1.8
+diff -u -r1.8 window.hxx
+--- inc/vcl/window.hxx	11 Apr 2008 08:09:51 -0000	1.8
++++ inc/vcl/window.hxx	10 Jun 2008 21:01:20 -0000
+@@ -1118,6 +1118,13 @@
  										  Region &rNativeBoundingRegion,
  										  Region &rNativeContentRegion );
  
 +    // Query the VCL implementation for the text color that should be used to draw a native control
-+    BOOL GetNativeControlTextColor( ControlType nType, 
-+    									 ControlPart nPart, 
-+    									 ControlState nState, 
-+    									 const ImplControlValue& aValue, 
-+    									 Color& textColor );
++    BOOL GetNativeControlTextColor( ControlType nType,
++										  ControlPart nPart,
++										  ControlState nState,
++										  const ImplControlValue& aValue,
++										  Color& textColor );
 +
      // a helper method for a Control's Draw method
      void PaintToDevice( OutputDevice* pDevice, const Point& rPos, const Size& rSize );
- };
+     
 --- source/gdi/salgdilayout.cxx	2006-09-17 05:10:36.000000000 -0700
 +++ source/gdi/salgdilayout.cxx	2007-01-20 15:26:56.000000000 -0800
 @@ -620,6 +620,19 @@
-                                                 rNativeBoundingRegion, rNativeContentRegion );
+ 	return drawAlphaRect( nX, nY, nWidth, nHeight, nTransparency );
  }
  
 +BOOL SalGraphics::GetNativeControlTextColor( ControlType nType, 
@@ -236,33 +241,3 @@ diff -u -r1.5 salnativewidgets-none.cxx
  WaitObject::~WaitObject()
  {
      if ( mpWindow )
-Index: util/makefile.mk
-===================================================================
-RCS file: /cvs/gsl/vcl/util/makefile.mk,v
-retrieving revision 1.82
-diff -u -r1.82 makefile.mk
---- util/makefile.mk	6 Oct 2006 10:07:49 -0000	1.82
-+++ util/makefile.mk	7 Jan 2007 02:17:54 -0000
-@@ -185,6 +185,13 @@
-     SHL1STDLIBS+=   $(FREETYPELIB)
- .ENDIF # USE_BUILTIN_RASTERIZER
- 
-+.IF "$(OS)"=="MACOSX"
-+SHL1STDLIBS += -framework CoreFoundation
-+.IF "$(GUI)"=="UNX"
-+SHL1STDLIBS += -lX11
-+.ENDIF		# "$(GUI)"=="UNX"
-+.ENDIF		# "$(OS)"=="MACOSX"
-+
- SHL1LIBS=   $(LIB1TARGET)
- .IF "$(GUI)"!="UNX"
- SHL1OBJS=   $(SLO)$/salshl.obj
-@@ -275,7 +275,7 @@
- .IF "$(USE_XINERAMA)" != "NO"
- 
- .IF "$(OS)"=="MACOSX"
--XINERAMALIBS=-lXinerama
-+XINERAMALIBS= /usr/X11R6/lib/libXinerama.a
- .ELSE
- .IF "$(OS)" != "SOLARIS" || "$(USE_XINERAMA_VERSION)" == "Xorg"
- .IF "$(XINERAMA_LINK)" == "dynamic"

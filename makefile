@@ -57,11 +57,13 @@ SHELL:=/bin/tcsh
 UNAME:=$(shell uname -p)
 ifeq ("$(UNAME)","powerpc")
 ULONGNAME=PowerPC
+CPUNAME=P
 UOUTPUTDIR=unxmacxp.pro
 DLLSUFFIX=mxp
 TARGET_FILE_TYPE=Mach-O executable ppc
 else
 ULONGNAME=Intel
+CPUNAME=I
 UOUTPUTDIR=unxmacxi.pro
 DLLSUFFIX=mxi
 TARGET_FILE_TYPE=Mach-O executable i386
@@ -100,17 +102,17 @@ NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
 
 # Product information
 OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=2.2.1
+OO_PRODUCT_VERSION=3.0.0
 OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
-PRODUCT_VERSION_FAMILY=2.2
-PRODUCT_VERSION=2.2.4
-PREVIOUS_PRODUCT_VERSION=2.2.3
-PRODUCT_DIR_VERSION=2.2.4
-X11_PRODUCT_VERSION=2.2.4
-X11_PREVIOUS_PRODUCT_VERSION=2.2.3
-X11_PRODUCT_DIR_VERSION=2.2.4
+PRODUCT_VERSION_FAMILY=3.0
+PRODUCT_VERSION=3.0
+PREVIOUS_PRODUCT_VERSION=3.0
+PRODUCT_DIR_VERSION=3.0
+X11_PRODUCT_VERSION=3.0
+X11_PREVIOUS_PRODUCT_VERSION=3.0
+X11_PRODUCT_DIR_VERSION=3.0
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
@@ -130,18 +132,17 @@ X11_PRODUCT_COMPONENT_MODULES=
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
-OO_PACKAGES:=OpenOffice2
-OO_TAG:=-rOpenOffice_2_2_1
-OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_2_2_1
+OO_PACKAGES:=OpenOffice3 swext apache-commons tomcat hyphen
+OO_TAG:=-rDEV300_m14
+OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/trunk
 OOO-BUILD_PACKAGE:=ooo-build
 OOO-BUILD_TAG:=
-OOO-BUILD_APPLY_TAG:=OOF680_m18
+OOO-BUILD_APPLY_TAG:=DEV300_m14
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 LIBWPD_SOURCE_URL=http://go-ooo.org/packages/libwpd/libwpd-0.8.10.tar.gz
 LIBWPG_SOURCE_URL=http://go-ooo.org/packages/SRC680/libwpg-0.1.0~cvs20070608.tar.gz
 LIBWPS_SOURCE_URL=http://go-ooo.org/packages/SRC680/libwps-0.1.0~svn20070129.tar.gz
 XT_SOURCE_URL=http://go-ooo.org/packages/xt/xt-20051206-src-only.zip
-MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
 ODF-CONVERTER_SVNROOT=https://odf-converter.svn.sourceforge.net/svnroot/odf-converter/tags/Release-1.1
 ODF-CONVERTER_PACKAGE=odf-converter
 ODF-CONVERTER_TAG:=
@@ -211,34 +212,20 @@ build.remotecontrol_checkout:
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; tar xvfz "$(REMOTECONTROL_ZIP_FILENAME)"
 	touch "$@"
 
-build.oo_patches: build.ooo-build_patches \
-	build.oo_automation_patch \
-	build.oo_berkeleydb_patch \
-	build.oo_binfilter_patch \
-	build.oo_chart2_patch \
-	build.oo_config_office_patch \
+build.oo_patches:\
 	build.oo_external_patch \
-	build.oo_forms_patch \
 	build.oo_framework_patch \
 	build.oo_instsetoo_native_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \
 	build.oo_moz_patch \
-	build.oo_padmin_patch \
-	build.oo_sc_patch \
-	build.oo_sj2_patch \
-	build.oo_solenv_patch \
-	build.oo_store_patch \
 	build.oo_sw_patch \
-	build.oo_toolkit_patch \
-	build.oo_ucb_patch \
 	build.oo_vcl_patch \
-	build.oo_vos_patch \
-	build.oo_macab_patch
+	build.oo_vos_patch
 # Copy modified compiler scripts to work around gcc 3.3 breakage in Apple's
 # latest system updates
-	mkdir -p "$(COMPILERDIR)"
-	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
+#	mkdir -p "$(COMPILERDIR)"
+#	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
 	touch "$@"
 
 build.oo_odk_patches: build.oo_patches
@@ -265,7 +252,23 @@ build.oo_macab_patch: build.ooo-build_patches \
 	chmod -Rf u+w "$(BUILD_HOME)/connectivity"
 	touch "$@"
 
-build.oo_moz_patch: build.ooo-build_patches
+build.oo_moz_patch: build.ooo-build_patches \
+	$(OO_PATCHES_HOME)/MACOSXGCCUinc.zip \
+	$(OO_PATCHES_HOME)/MACOSXGCCUlib.zip \
+	$(OO_PATCHES_HOME)/MACOSXGCCUruntime.zip
+	cp "$(OO_PATCHES_HOME)/MACOSXGCCUinc.zip" "$(BUILD_HOME)/moz/zipped/MACOSXGCC$(CPUNAME)inc.zip"
+	cp "$(OO_PATCHES_HOME)/MACOSXGCCUlib.zip" "$(BUILD_HOME)/moz/zipped/MACOSXGCC$(CPUNAME)lib.zip"
+	cp "$(OO_PATCHES_HOME)/MACOSXGCCUruntime.zip" "$(BUILD_HOME)/moz/zipped/MACOSXGCC$(CPUNAME)runtime.zip"
+	touch "$@"
+
+build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
+	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	touch "$@"
+
+build.ooo-build_patches: build.ooo-build_checkout
+	touch "$@"
+
 	cd "$(BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
 	touch "$@"
 
@@ -274,9 +277,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
-build.ooo-build_patches: build.ooo-build_checkout \
-	build.ooo-build_apply_patch \
-	build.ooo-build_svx_patch
+build.ooo-build_patches: build.ooo-build_checkout
 	touch "$@"
 
 build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout
@@ -337,7 +338,7 @@ build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source bui
 	
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --without-system-mdbtools --with-x --x-includes=/usr/X11R6/include --with-lang="$(OO_LANGUAGES)" )
+	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --disable-build-mozilla --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --with-use-shell=bash --with-stlport=no --disable-mediawiki )
 	echo 'setenv LIBIDL_CONFIG "$(LIBIDL_CONFIG)"' >> "$(OO_ENV_X11)"
 	echo 'setenv PKG_CONFIG "$(PKG_CONFIG)"' >> "$(OO_ENV_X11)"
 	echo 'unsetenv LD_SEG_ADDR_TABLE' >> "$(OO_ENV_X11)"
