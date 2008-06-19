@@ -269,9 +269,6 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 build.ooo-build_patches: build.ooo-build_checkout
 	touch "$@"
 
-	cd "$(BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
-	touch "$@"
-
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
