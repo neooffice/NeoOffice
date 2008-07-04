@@ -1376,6 +1376,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private Insets insets = null;
 
+	/** 
+	 * The Panther or Tiger flag.
+	 */
+	private boolean isPantherOrTiger = false;
+
 	/**
 	 * The last committed input method event.
 	 */
@@ -1455,11 +1460,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *  <code>false</code> for normal frame behavior
 	 * @param u <code>true</code> if the frame should use a native utility
 	 *  window
+	 * @param pot <code>true</code> if we are running Panther or Tiger
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u, boolean pot) {
 
 		queue = q;
 		frame = f;
+		isPantherOrTiger = pot;
 		showOnlyMenus = m;
 		style = s;
 		useInputMethodFix = b;
@@ -3363,7 +3370,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility)
+			if (frame.utility && !frame.isPantherOrTiger)
 				b = true;
 
 			super.setFocusable(b);
@@ -3380,7 +3387,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility)
+			if (frame.utility && !frame.isPantherOrTiger)
 				b = true;
 
 			super.setFocusableWindowState(b);
