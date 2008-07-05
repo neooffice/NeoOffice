@@ -259,7 +259,9 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
-build.ooo-build_patches: build.ooo-build_checkout
+build.ooo-build_patches: build.ooo-build_checkout \
+	build.ooo-build_apply_patch \
+	build.ooo-build_svx_patch
 	touch "$@"
 
 build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout

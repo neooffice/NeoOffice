@@ -1,7 +1,7 @@
-Index: patches/src680/apply
+Index: patches/dev300/apply
 ===================================================================
---- patches/src680/apply	(revision 9613)
-+++ patches/src680/apply	(working copy)
+--- patches/dev300/apply	(revision 9613)
++++ patches/dev300/apply	(working copy)
 @@ -161,7 +161,8 @@
  linkoo-type.diff
  
@@ -12,13 +12,3 @@ Index: patches/src680/apply
  
  # Improve the behavior of input fields inline editing.
  sw-input-field-inline-edit.diff, Zhang Yun
-@@ -626,7 +627,8 @@
- [ NotMacOSX ]
- 
- # Make the delete key happy again in starcalc  - wontfix [!]
--gui-sc-delete.diff, i#17965, michael
-+# Disable because it causes NeoOffice backspace and delete events to be backwards
-+# gui-sc-delete.diff, i#17965, michael
- 
- [ Misc ]
- # Insert symbol defaults to the Symbol font - not a random one
