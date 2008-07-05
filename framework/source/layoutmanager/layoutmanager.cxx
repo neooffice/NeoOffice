@@ -6297,7 +6297,12 @@ throw (::com::sun::star::uno::RuntimeException)
     UIElement& rUIElement = impl_findElement( aUIDockingElement.m_aName );
     if ( rUIElement.m_aName == aUIDockingElement.m_aName )
     {
-        if ( aUIDockingElement.m_bFloating )
+#ifndef USE_JAVA
+        // Fix bug 3078 by testing validity of element
+        if ( aUIDockingElement.m_bFloating && aUIDockingElement.m_xUIElement.is() )
+#else	// USE_JAVA
+        if ( aUIDockingElement.m_bFloating && aUIDockingElement.m_xUIElement.is() )
+#endif	// USE_JAVA
         {
             // Write last position into position data
             Reference< css::awt::XWindow > xWindow( aUIDockingElement.m_xUIElement->getRealInterface(), UNO_QUERY );

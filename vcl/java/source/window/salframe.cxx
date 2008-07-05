@@ -585,14 +585,6 @@ void JavaSalFrame::GetClientSize( long& rWidth, long& rHeight )
 
 void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 {
-	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
-	{
-		if ( pState->mnState & SAL_FRAMESTATE_MINIMIZED )
-			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
-		else
-			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
-	}
-
 	USHORT nFlags = 0;
 	if ( pState->mnMask & SAL_FRAMESTATE_MASK_X )
 		nFlags |= SAL_FRAME_POSSIZE_X;
@@ -608,6 +600,15 @@ void JavaSalFrame::SetWindowState( const SalFrameState* pState )
 		mpParent = NULL;
 		SetPosSize( pState->mnX, pState->mnY, pState->mnWidth, pState->mnHeight, nFlags );
 		mpParent = pParent;
+	}
+
+	// Fix bug 3078 by setting the state after setting the size
+	if ( pState->mnMask & SAL_FRAMESTATE_MASK_STATE )
+	{
+		if ( pState->mnState & SAL_FRAMESTATE_MINIMIZED )
+			mpVCLFrame->setState( SAL_FRAMESTATE_MINIMIZED );
+		else
+			mpVCLFrame->setState( SAL_FRAMESTATE_NORMAL );
 	}
 }
 

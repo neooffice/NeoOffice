@@ -360,6 +360,15 @@ static int adjustLockFlags(const char * path, int flags)
         }    
 #ifdef USE_JAVA
         /*
+         * Fix bug 3110 by using a shared lock for SAMBA file systems like we
+         * use for AFP file systems
+         */
+        else if( 0 == strncmp("smbfs", s.f_fstypename, 5) )
+        {
+            flags &= ~O_EXLOCK;
+            flags |= O_SHLOCK;
+        }    
+        /*
          * Fix bugs 2504 and 2639 and other file locking bugs by not making an
          * exlusive lock until after the file is open like on Linux and Solaris.
          * Some filesystems do not support any locking so open the file without

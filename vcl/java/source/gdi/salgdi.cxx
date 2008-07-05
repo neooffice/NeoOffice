@@ -168,7 +168,7 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 		if ( nWidth > 0 && nHeight > 0 )
 		{
 			if ( !maNativeClipPath )
-				; // maNativeClipPath = CGPathCreateMutable();
+				maNativeClipPath = CGPathCreateMutable();
 
 			if ( maNativeClipPath )
 				CGPathAddRect( maNativeClipPath, NULL, CGRectMake( (float)nX, (float)nY, (float)nWidth, (float)nHeight ) );

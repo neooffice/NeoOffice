@@ -662,9 +662,19 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
 	/** 
+	 * The show only menus frame list.
+	 */
+	private static LinkedList showOnlyMenusFrames = new LinkedList();
+
+	/** 
 	 * The native utility window insets.
 	 */
 	private static Insets utilityWindowInsets = null;
+
+	/** 
+	 * The visible top level frame list.
+	 */
+	private static LinkedList visibleTopLevelFrames = new LinkedList();
 
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
@@ -709,6 +719,35 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				synchronized (f) {
 					f.enableFlushing(true);
 					f.enableFlushing(false);
+				}
+			}
+		}
+
+	}
+
+	/**
+	 * Find the matching <code>VCLFrame</code> for the specified component.
+	 *
+	 * @param c the component
+	 * @return the matching <code>VCLFrame</code>
+	 */
+	static synchronized void updateShowOnlyMenusFrames() {
+
+		// Fix bug 3032 by disabling focus for show only menus frames when
+		// any top level frames are visible
+		boolean enableFocus = (visibleTopLevelFrames.size() == 0 ? true : false);
+		Iterator iterator = showOnlyMenusFrames.iterator();
+		while (iterator.hasNext()) {
+			VCLFrame f = (VCLFrame)iterator.next();
+			if (f != null) {
+				synchronized (f) {
+					Window w = f.getWindow();
+					if (w != null) {
+						w.setFocusable(enableFocus);
+						w.setFocusableWindowState(enableFocus);
+					}
+					if (enableFocus)
+						f.toFront();
 				}
 			}
 		}
@@ -1376,6 +1415,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private Insets insets = null;
 
+	/** 
+	 * The Panther or Tiger flag.
+	 */
+	private boolean isPantherOrTiger = false;
+
 	/**
 	 * The last committed input method event.
 	 */
@@ -1455,11 +1499,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *  <code>false</code> for normal frame behavior
 	 * @param u <code>true</code> if the frame should use a native utility
 	 *  window
+	 * @param pot <code>true</code> if we are running Panther or Tiger
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u, boolean pot) {
 
 		queue = q;
 		frame = f;
+		isPantherOrTiger = pot;
 		showOnlyMenus = m;
 		style = s;
 		useInputMethodFix = b;
@@ -1505,16 +1551,24 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			insets = window.getInsets();
 		}
 		else if (utility) {
-			if (VCLFrame.utilityWindowInsets == null) {
-				Window uw = new VCLFrame.NoPaintFrame(this);
-				uw.addNotify();
-				VCLFrame.utilityWindowInsets = uw.getInsets();
-				uw.removeNotify();
+			synchronized (VCLFrame.class) {
+				if (VCLFrame.utilityWindowInsets == null) {
+					Window uw = new VCLFrame.NoPaintFrame(this);
+					uw.addNotify();
+					VCLFrame.utilityWindowInsets = uw.getInsets();
+					uw.removeNotify();
+				}
 			}
 			insets = VCLFrame.utilityWindowInsets;
 		}
 		else {
 			insets = VCLScreen.getFrameInsets();
+		}
+
+		if (showOnlyMenus) {
+			synchronized (VCLFrame.class) {
+				showOnlyMenusFrames.add(this);
+			}
 		}
 
 		graphics = new VCLGraphics(this);
@@ -1613,6 +1667,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		synchronized (VCLFrame.class) {
 			VCLFrame.componentMap.put(window, this);
 			VCLFrame.componentMap.put(panel, this);
+			if (!showOnlyMenus && window instanceof Frame && window.getOwner() == null) {
+				VCLFrame.visibleTopLevelFrames.add(this);
+				VCLFrame.updateShowOnlyMenusFrames();
+			}
 		}
 
 		// Fix bug 2370 by listening for mouse events in the window frame.
@@ -1649,6 +1707,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		synchronized (VCLFrame.class) {
 			VCLFrame.componentMap.remove(window);
 			VCLFrame.componentMap.remove(panel);
+			VCLFrame.visibleTopLevelFrames.remove(this);
+			VCLFrame.updateShowOnlyMenusFrames();
 		}
 
 	}
@@ -1689,6 +1749,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		lastCommittedInputMethodEvent = null;
 		lastUncommittedInputMethodEvent = null;
 		lastWindowDraggedEvent = null;
+
+		if (showOnlyMenus) {
+			synchronized (VCLFrame.class) {
+				showOnlyMenusFrames.remove(this);
+			}
+		}
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
@@ -3363,7 +3429,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility)
+			if (frame.utility && !frame.isPantherOrTiger)
 				b = true;
 
 			super.setFocusable(b);
@@ -3380,7 +3446,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility)
+			if (frame.utility && !frame.isPantherOrTiger)
 				b = true;
 
 			super.setFocusableWindowState(b);
