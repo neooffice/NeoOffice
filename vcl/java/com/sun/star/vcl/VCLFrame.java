@@ -672,9 +672,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private static Insets utilityWindowInsets = null;
 
 	/** 
-	 * The visible top level frame list.
+	 * The visible frame list.
 	 */
-	private static LinkedList visibleTopLevelFrames = new LinkedList();
+	private static LinkedList visibleFrames = new LinkedList();
 
 	/**
 	 * Find the matching <code>VCLFrame</code> for the specified component.
@@ -734,8 +734,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	static synchronized void updateShowOnlyMenusFrames() {
 
 		// Fix bug 3032 by disabling focus for show only menus frames when
-		// any top level frames are visible
-		boolean enableFocus = (visibleTopLevelFrames.size() == 0 ? true : false);
+		// any frames are visible
+		boolean enableFocus = (visibleFrames.size() == 0 ? true : false);
 		Iterator iterator = showOnlyMenusFrames.iterator();
 		while (iterator.hasNext()) {
 			VCLFrame f = (VCLFrame)iterator.next();
@@ -1667,8 +1667,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		synchronized (VCLFrame.class) {
 			VCLFrame.componentMap.put(window, this);
 			VCLFrame.componentMap.put(panel, this);
-			if (!showOnlyMenus && window instanceof Frame && window.getOwner() == null) {
-				VCLFrame.visibleTopLevelFrames.add(this);
+			if (!showOnlyMenus) {
+				VCLFrame.visibleFrames.add(this);
 				VCLFrame.updateShowOnlyMenusFrames();
 			}
 		}
@@ -1707,7 +1707,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		synchronized (VCLFrame.class) {
 			VCLFrame.componentMap.remove(window);
 			VCLFrame.componentMap.remove(panel);
-			VCLFrame.visibleTopLevelFrames.remove(this);
+			VCLFrame.visibleFrames.remove(this);
 			VCLFrame.updateShowOnlyMenusFrames();
 		}
 
