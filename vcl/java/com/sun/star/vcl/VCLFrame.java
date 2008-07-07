@@ -726,10 +726,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
-	 * Find the matching <code>VCLFrame</code> for the specified component.
-	 *
-	 * @param c the component
-	 * @return the matching <code>VCLFrame</code>
+	 * Update the focusability of any show only menus frames depending on
+	 * whether or not any other frames are visible.
 	 */
 	static synchronized void updateShowOnlyMenusFrames() {
 
