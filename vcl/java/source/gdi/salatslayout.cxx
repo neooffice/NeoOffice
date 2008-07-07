@@ -1098,8 +1098,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	{
 		maRuns.NextRun();
 
-		// Check if this run will need Kashida justification
-		if ( bRunRTL && ( rArgs.mpDXArray || rArgs.mnLayoutWidth ) )
+		// Check if this run will need Kashida justification. Fix bug 3149
+		// by always checking if Arabic font support is needed even if
+		// kashidas won't be needed.
+		if ( bRunRTL )
 		{
 			bool bNeedArabicFontSupport = false;
 			for ( int i = nMinCharPos; i < nEndCharPos; i++ )
@@ -1166,19 +1168,24 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							// does not support Arabic (e.g. non-AAT fonts like
 							// STIXihei), assign Geeza Pro as this layout's
 							// fallback font
-							if ( !mpKashidaLayoutData->mpFallbackFont )
+							if ( mpKashidaLayoutData->mpFallbackFont )
 							{
-								SalData *pSalData = GetSalData();
+								delete mpKashidaLayoutData->mpFallbackFont;
+								mpKashidaLayoutData->mpFallbackFont = NULL;
+							}
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
-								if ( it != pSalData->maFontNameMapping.end() )
+							SalData *pSalData = GetSalData();
+
+							::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aGeezaPro );
+							if ( it != pSalData->maFontNameMapping.end() )
+							{
+								com_sun_star_vcl_VCLFont *pVCLFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
+								if ( pVCLFont )
 								{
-									mpKashidaLayoutData->mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
-									if ( mpKashidaLayoutData->mpFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
-									{
-										delete mpKashidaLayoutData->mpFallbackFont;
-										mpKashidaLayoutData->mpFallbackFont = NULL;
-									}
+									if ( pVCLFont->getNativeFont() != mpVCLFont->getNativeFont() )
+										mpKashidaLayoutData->mpFallbackFont = pVCLFont;
+									else
+										delete pVCLFont;
 								}
 							}
 
