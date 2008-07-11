@@ -304,6 +304,8 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( bVisible == mbVisible )
 		return;
 
+	SalData *pSalData = GetSalData();
+
 	// Fix bug 2501 by closing any dialogs that are child windows of this
 	// window. This is necessary because in a few cases, the OOo code closes
 	// a dialog's parent and expects the dialog to still remain showing!
@@ -323,8 +325,12 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pWindow )
 			Dialog::EndAllDialogs( pWindow );
 	}
-
-	SalData *pSalData = GetSalData();
+	// Fix bug 3153 by setting parent to the focus frame for dialogs that
+	// have a show only menus frame as their parent
+	else if ( mpParent && mpParent->mbShowOnlyMenus && mpParent != pSalData->mpFocusFrame && !IsUtilityWindow() )
+	{
+		SetParent( pSalData->mpFocusFrame );
+	}
 
 	mbVisible = bVisible;
 
