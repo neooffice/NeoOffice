@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE script:module PUBLIC "-//OpenOffice.org//DTD OfficeDocument 1.0//EN" "module.dtd">
+<script:module xmlns:script="http://openoffice.org/2000/script" script:name="XNeoOfficeMobile" script:language="StarBasic">REM  *****  BASIC  *****
+
+REM  NeoOffice Mobile and BASIC driver program.
+REM
+REM  The Contents of this file are made available subject to the terms of
+REM  either of the following licenses
+REM
+REM         - GNU General Public License Version 2.1
+REM
+REM  GNU General Public License Version 2.1
+REM  =============================================
+REM  Copyright 2008 by Planamesa Inc.
+REM
+REM  This library is free software; you can redistribute it and/or
+REM  modify it under the terms of the GNU General Public
+REM  License version 2.1, as published by the Free Software Foundation.
+REM
+REM  This library is distributed in the hope that it will be useful,
+REM  but WITHOUT ANY WARRANTY; without even the implied warranty of
+REM  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+REM  General Public License for more details.
+REM
+REM  You should have received a copy of the GNU General Public
+REM  License along with this library; if not, write to the Free Software
+REM  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+REM  MA  02111-1307  USA
+
+Sub Main
+	Dim mbService as Object
+	mbService = CreateUnoService(&quot;org.neooffice.NeoOfficeMobile&quot;)
+	if IsNull(mbService) Then
+		MsgBox &quot;NeoOffice Mobile is not available for this operating system.&quot;, 0, &quot;NeoOffice Mobile&quot;
+		Exit Sub
+	End If
+	
+	If mbService.hasNeoOfficeMobile() = False Then
+		MsgBox &quot;Mac OS X 10.3 or higher is required to use NeoOfficeMobile.&quot;, 0, &quot;NeoOffice Mobile&quot;
+		Exit Sub
+	End If
+	
+	mbService.showNeoOfficeMobile()
+End Sub
+</script:module>
