@@ -1,0 +1,2 @@
+rc	remotecontrol	:	NULL
+rc	remotecontrol	nmake	-	all	rc_lib	NULL
