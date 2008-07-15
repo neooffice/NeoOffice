@@ -1513,9 +1513,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!utility && (showOnlyMenus || (style & (SAL_FRAME_STYLE_DEFAULT | SAL_FRAME_STYLE_MOVEABLE | SAL_FRAME_STYLE_SIZEABLE)) == 0))
 			undecorated = true;
 
-		// Utility windows should never be attached to a parent window
+		// Utility windows should never be attached to a parent window. Prevent
+		// deadlock when opening a document when toolbars are showing and we
+		// are in show only menus mode.
 		Window w = null;
-		if (p != null && !utility)
+		if (p != null && !p.showOnlyMenus && !utility)
 			w = p.getWindow();
 		if (w instanceof Dialog)
 			window = new VCLFrame.NoPaintDialog(this, (Dialog)w);
@@ -1549,13 +1551,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			insets = window.getInsets();
 		}
 		else if (utility) {
-			synchronized (VCLFrame.class) {
-				if (VCLFrame.utilityWindowInsets == null) {
-					Window uw = new VCLFrame.NoPaintFrame(this);
-					uw.addNotify();
-					VCLFrame.utilityWindowInsets = uw.getInsets();
-					uw.removeNotify();
-				}
+			if (VCLFrame.utilityWindowInsets == null) {
+				Window uw = new VCLFrame.NoPaintFrame(this);
+				uw.addNotify();
+				VCLFrame.utilityWindowInsets = uw.getInsets();
+				uw.removeNotify();
 			}
 			insets = VCLFrame.utilityWindowInsets;
 		}
@@ -1747,12 +1747,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		lastCommittedInputMethodEvent = null;
 		lastUncommittedInputMethodEvent = null;
 		lastWindowDraggedEvent = null;
-
-		if (showOnlyMenus) {
-			synchronized (VCLFrame.class) {
-				showOnlyMenusFrames.remove(this);
-			}
-		}
 
 		// Unregister listeners
 		panel.removeFocusListener(this);
