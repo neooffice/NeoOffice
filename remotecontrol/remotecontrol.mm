@@ -515,13 +515,7 @@ id rcBehavior;
 						[rcContainer performSelector:@selector(instantiateAndAddRemoteControlDeviceWithClass:) withObject:keyspanRemoteClass];
 					else
 						fprintf(stderr, "KeyspanFrontRowControl class not found\n");
-						
-					Class keyboardRemoteClass=NSClassFromString(@"GlobalKeyboardDevice");
-					if(keyboardRemoteClass)
-						[rcContainer performSelector:@selector(instantiateAndAddRemoteControlDeviceWithClass:) withObject:keyboardRemoteClass];
-					else
-						fprintf(stderr, "GlobalKeyboardDevice class not found\n");
-					
+										
 					[rcContainer performSelector:@selector(startListening:) withObject:self];
 				}
 			}
