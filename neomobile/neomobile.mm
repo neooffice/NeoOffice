@@ -82,12 +82,11 @@
 
 #include "premac.h"
 #import <Carbon/Carbon.h>
-#import <Cocoa/Cocoa.h>
-#import <WebKit/WebKit.h>
 #include "postmac.h"
 
 #include <string>
 #include <strstream>
+#include "neomobilewebview.h"
 
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
@@ -267,6 +266,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 #pragma mark -
 
+static NeoMobileWebView *pSharedWebView = nil;
+
 @interface CreateWebViewImpl : NSObject
 {
 }
@@ -284,7 +285,15 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)showWebView:(id)obj
 {
-	fprintf( stderr, "NeoOffice Mobile WebView not implemented\n" );
+	if ( !pSharedWebView )
+		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil];
+
+	if ( pSharedWebView )
+	{
+		NSWindow *pWindow = [pSharedWebView window];
+		if ( pWindow && ![pWindow isVisible] )
+			[pWindow orderFront:self];
+	}
 }
 @end
 
@@ -322,7 +331,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
-	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone: 1 modes: pModes];
+	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
 	Application::AcquireSolarMutex( nCount );
 		
 	[imp release];

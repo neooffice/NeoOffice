@@ -63,7 +63,8 @@ UNOTYPES= \
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
 
 SLOFILES= \
-	$(SLO)$/neomobile.obj
+	$(SLO)$/neomobile.obj \
+	$(SLO)$/neomobilewebview.obj
 
 SHL1TARGET=$(TARGET)
 SHL1OBJS=$(SLOFILES)
