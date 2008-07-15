@@ -520,24 +520,34 @@ static VCLResponder *pSharedResponder = nil;
 				[self setLevel:NSFloatingWindowLevel];
 
 				float fHeightChange = [self frame].size.height - aFrame.size.height;
+
 				[self setFrame:aFrame display:NO];
 
 				// Adjust origin of subviews by height change
-				NSArray *pSubviews = [pContentView subviews];
-				if ( pSubviews )
+				if ( bUseQuickTimeContentViewHack )
 				{
-					unsigned int nCount = [pSubviews count];
-					unsigned int i = 0;
-					for ( ; i < nCount; i++ )
+					NSArray *pSubviews = [pContentView subviews];
+					if ( pSubviews )
 					{
-						NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-						if ( pSubview && [pSubview isFlipped] )
+						unsigned int nCount = [pSubviews count];
+						unsigned int i = 0;
+						for ( ; i < nCount; i++ )
 						{
-							NSRect aBounds = [pSubview bounds];
-							aBounds.origin.y += fHeightChange;
-							[pSubview setBounds:aBounds];
+							NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+							if ( pSubview && [pSubview isFlipped] )
+							{
+								NSRect aBounds = [pSubview bounds];
+								aBounds.origin.y += fHeightChange;
+								[pSubview setBounds:aBounds];
+							}
 						}
 					}
+				}
+				else
+				{
+					NSRect aBounds = [pContentView bounds];
+					aBounds.origin.y += fHeightChange;
+					[pContentView setBounds:aBounds];
 				}
 			}
 		}
@@ -825,6 +835,15 @@ static VCLResponder *pSharedResponder = nil;
 	mbUseKeyEntryFix = bUseKeyEntryFix;
 	mbUsePartialKeyEntryFix = bUsePartialKeyEntryFix;
 	mbUseQuickTimeContentViewHack = bUseQuickTimeContentViewHack;
+
+	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
+	// or earlier
+	if ( mbUseQuickTimeContentViewHack )
+	{
+		long res = 0;
+		if ( Gestalt( gestaltQuickTime, &res ) == noErr && res >= 0x07500000 )
+			mbUseQuickTimeContentViewHack = NO;
+	}
 
 	return self;
 }
