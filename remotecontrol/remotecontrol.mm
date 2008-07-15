@@ -585,20 +585,26 @@ id rcBehavior;
 	
 	if(outMode==kUIModeNormal)
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		try
+		{
+			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			
+			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+			
+			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+			Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
 		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
-	
-		Reference< XDispatchProvider > rDispatchProvider(rFrame,UNO_QUERY); 
-		
-		Sequence< PropertyValue > args(0);
-		
-		rDispatchHelper->executeDispatch(rDispatchProvider, OUString::createFromAscii(".uno:Presentation"), OUString::createFromAscii(""), 0, args);
+			Reference< XDispatchProvider > rDispatchProvider(rFrame,UNO_QUERY); 
+			
+			Sequence< PropertyValue > args(0);
+			
+			rDispatchHelper->executeDispatch(rDispatchProvider, OUString::createFromAscii(".uno:Presentation"), OUString::createFromAscii(""), 0, args);
+		}
+		catch (...)
+		{
+		}
 	}
 	else if(outMode==kUIModeAllHidden)
 	{
