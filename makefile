@@ -551,8 +551,8 @@ else
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libdtransjava$${UPD}$(DLLSUFFIX).dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "fps_java.uno.dylib"
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "libmozab2.dylib"
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "updchk.uno.dylib"
 endif
+	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "updchk.uno.dylib"
 	cd "$(INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names" | sed "s#-#_#g"` ; do mkdir -p "$${i}.lproj" ; mkdir -p `echo "$${i}" | sed "s#_.*\\$$##"`".lproj" ; done'
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents" ; rm -Rf "droplet" "program/fondu" "program/gengal" "program/open-url" "program/oo_product.bmp" "program/testtool.bin" share/readme/*
 ifndef X11_PRODUCT
@@ -647,6 +647,9 @@ build.patch_package_shared:
 	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/lingucomponent/$(UOUTPUTDIR)/lib/libspell$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "$(PWD)/$(BUILD_HOME)/sc/$(UOUTPUTDIR)/lib/libsc$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/sc/$(UOUTPUTDIR)/lib/libscui$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/store/$(UOUTPUTDIR)/lib/libstore.dylib.3" "$(PWD)/$(BUILD_HOME)/writerperfect/$(UOUTPUTDIR)/lib/libwpft$${UPD}$(DLLSUFFIX).dylib" "program"
 ifndef X11_PRODUCT
 	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/avmedia/$(UOUTPUTDIR)/lib/libavmedia$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/framework/$(UOUTPUTDIR)/lib/libfwk$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/goodies/$(UOUTPUTDIR)/lib/libgo$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/goodies/$(UOUTPUTDIR)/lib/libipt$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$${UPD}$(DLLSUFFIX).dylib" "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcljava2.dylib" "program"
+else
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(INSTALL_HOME)/package/Contents/program/services.rdb" "program/services.rdb" ; chmod a+rw "program/services.rdb"
+	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents/program" ; regcomp -register -r services.rdb -c "updchk.uno.dylib"
 endif
 # With gcc 4.x, we must fully strip the soffice.bin executable
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "program/soffice.bin" ; chmod a+x "program/soffice.bin" ; strip "program/soffice.bin"
