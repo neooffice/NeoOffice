@@ -125,7 +125,7 @@ PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
 X11_PRODUCT_SUPPORT_URL_TEXT:=$(X11_PRODUCT_NAME) Support
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 X11_PRODUCT_UPDATE_CHECK_URL=$(X11_PRODUCT_BASE_URL)/patchcheck.php
-PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser
+PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 X11_PRODUCT_COMPONENT_MODULES=
 
 # CVS macros
@@ -575,6 +575,9 @@ endif
 # Integrate the iMediaBrowser framework
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Frameworks"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(IMEDIA_PACKAGE)/build/Debug" ; gnutar cvf - --exclude Headers --exclude PrivateHeaders iMediaBrowser.framework ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x iMediaBrowser.framework/Versions/A/iMediaBrowser ) )
+# Integrate the RemoteControl framework
+	mkdir -p "$(INSTALL_HOME)/package/Contents/Frameworks"
+	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)/build/Release" ; gnutar cvf - --exclude Headers RemoteControl.framework ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x RemoteControl.framework/Versions/A/RemoteControl ) )
 # Integrate the odf-converter. Don't strip the binaries as it will break the
 # Mono libraries
 	mkdir -p "$(INSTALL_HOME)/package/Contents/program/mono/2.0"
@@ -675,6 +678,9 @@ endif
 # Integrate the iMediaBrowser framework
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
 	cd "$(PATCH_INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(IMEDIA_PACKAGE)/build/Debug" ; gnutar cvf - --exclude Headers --exclude PrivateHeaders iMediaBrowser.framework ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x iMediaBrowser.framework/Versions/A/iMediaBrowser ) )
+# Integrate the RemoteControl framework
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
+	cd "$(PATCH_INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)/build/Release" ; gnutar cvf - --exclude Headers RemoteControl.framework ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x RemoteControl.framework/Versions/A/RemoteControl ) )
 # Integrate the odf-converter. Don't strip the binaries as it will break the
 # Mono libraries
 	cd "$(PATCH_INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; gnutar cvf - ./OdfConverter ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/program" ; gnutar xvf - ) )
