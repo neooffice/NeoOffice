@@ -32,6 +32,25 @@
  *************************************************************************/
 
 #include "neomobilewebview.h"
+#include <objc/objc-class.h>
+
+/**
+ * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
+ * set the JavaScript prompt dialog to have no title like the other JavaScript
+ * dialogs.
+ */
+static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector, ... )
+{
+	NSWindowController *pController = (NSWindowController *)pThis;
+	if ( pController )
+	{
+		NSWindow *pWindow = [pController window];
+		if ( pWindow )
+			[pWindow setTitle:@""];
+	}
+
+	return pThis;
+}
 
 @interface NeoMobileWebViewDelegate : NSObject
 - (void)webView:(WebView *)self didCommitLoadForFrame:(WebFrame *)pWebFrame;
@@ -108,6 +127,8 @@
 
 @end
 
+static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
+
 @implementation NeoMobileWebView
 
 - (void)dealloc
@@ -123,6 +144,33 @@
 
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName
 {
+	if ( !bWebJavaScriptTextInputPanelSwizzeled )
+	{
+		// Override [WebJavaScriptTextInputPanel windowDidLoad]
+		NSBundle *pBundle = [NSBundle bundleForClass:[WebView class]];
+		if ( pBundle )
+		{
+			Class aClass = [pBundle classNamed:@"WebJavaScriptTextInputPanel"];
+			if ( aClass )
+			{
+				SEL aSelector = @selector(windowDidLoad);
+				NSMethodSignature *pSignature = [NSWindowController instanceMethodSignatureForSelector:aSelector];
+				if ( pSignature )
+				{
+					// Do not free method list
+					struct objc_method_list *pMethods = (struct objc_method_list *)malloc( sizeof( struct objc_method_list ) );
+					pMethods->method_count = 1;
+					pMethods->method_list[ 0 ].method_name = aSelector;
+					pMethods->method_list[ 0 ].method_types = (char *)[pSignature methodReturnType];
+					pMethods->method_list[ 0 ].method_imp = WebJavaScriptTextInputPanel_windowDidLoadIMP;
+					class_addMethods( aClass, pMethods );
+
+					bWebJavaScriptTextInputPanelSwizzeled = YES;
+				}
+			}
+		}
+	}
+
 	[super initWithFrame:aFrame frameName:pFrameName groupName:pGroupName];
 
 	mpDelegate = [[NeoMobileWebViewDelegate alloc] init];
