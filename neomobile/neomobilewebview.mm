@@ -33,11 +33,13 @@
 
 #include "neomobilewebview.h"
 
-@interface NeoMobileWebFrameLoadDelegate : NSObject
+@interface NeoMobileWebViewDelegate : NSObject
 - (void)webView:(WebView *)self didCommitLoadForFrame:(WebFrame *)pWebFrame;
+- (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame;
+- (MacOSBOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame;
 @end
 
-@implementation NeoMobileWebFrameLoadDelegate
+@implementation NeoMobileWebViewDelegate
 
 - (void)webView:(WebView *)pWebView didCommitLoadForFrame:(WebFrame *)pWebFrame
 {
@@ -53,6 +55,7 @@
 		return;
 
 #ifdef DEBUG
+	fprintf( stderr, "Load Frame URL: %s\n", [[[pResponse URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 	fprintf( stderr, "Response code: %i\nHeaders:\n", [pResponse statusCode] );
 	NSDictionary *pHeaders = [pResponse allHeaderFields];
 	if ( pHeaders )
@@ -71,12 +74,47 @@
 		[pWindow orderFront:self];
 }
 
+- (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame
+{
+	if ( !pWebView )
+		return;
+
+	NSWindow *pWindow = [pWebView window];
+	if ( !pWindow || ![pWindow isVisible] )
+		return;
+
+	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+	if ( pAlert )
+		[pAlert runModal];
+}
+
+- (MacOSBOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame
+{
+	MacOSBOOL bRet = NO;
+
+	if ( !pWebView )
+		return bRet;
+
+	NSWindow *pWindow = [pWebView window];
+	if ( !pWindow || ![pWindow isVisible] )
+		return bRet;
+
+	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@""];
+	if ( pAlert && [pAlert runModal] == NSAlertDefaultReturn )
+		bRet = YES;
+
+	return bRet;
+}
+
 @end
 
 @implementation NeoMobileWebView
 
 - (void)dealloc
 {
+	if ( mpDelegate )
+		[mpDelegate release];
+
 	if ( mpPanel )
 		[mpPanel release];
 
@@ -87,22 +125,23 @@
 {
 	[super initWithFrame:aFrame frameName:pFrameName groupName:pGroupName];
 
+	mpDelegate = [[NeoMobileWebViewDelegate alloc] init];
+	if ( mpDelegate )
+	{
+		WebPreferences *pPrefs = [self preferences];
+		if ( pPrefs )
+			[pPrefs setJavaScriptEnabled:YES];
+
+		[self setFrameLoadDelegate:mpDelegate];
+		[self setUIDelegate:mpDelegate];
+		[[self mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://neomobile-test.neooffice.org/neofolders/"]]];
+	}
+
 	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 500) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
 	{
 		[mpPanel setFloatingPanel:YES];
 		[mpPanel setContentView:self];
-		NeoMobileWebFrameLoadDelegate *pDelegate = [[NeoMobileWebFrameLoadDelegate alloc] init];
-		if ( pDelegate )
-		{
-			WebPreferences *pPrefs = [self preferences];
-			if ( pPrefs )
-			{
-				[pPrefs setJavaScriptEnabled:YES];
-				[self setFrameLoadDelegate:pDelegate];
-				[[self mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://neomobile-test.neooffice.org/neofolders/"]]];
-			}
-		}
 	}
 
 	return self;

@@ -48,6 +48,7 @@
 
 @interface NeoMobileWebView : WebView
 {
+	NSObject*				mpDelegate;
 	NSPanel*				mpPanel;
 }
 - (void)dealloc;
