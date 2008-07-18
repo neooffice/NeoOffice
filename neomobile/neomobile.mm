@@ -304,13 +304,13 @@ static NeoMobileWebView *pSharedWebView = nil;
 		SAL_CALL MacOSXNeoOfficeMobileImpl::hasNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
-	// we currently need to be running on 10.3 in order to have full WebView
+	// we currently need to be running on 10.4 in order to have full WebView
 	// support.  Check using our gestalt.
 	
 	long res=0;
 	if(Gestalt(gestaltSystemVersion, &res)==noErr)
 	{
-		bool isPantherOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x3 ) );
+		bool isPantherOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
 		if(!isPantherOrHigher)
 			return(false);
 	}
