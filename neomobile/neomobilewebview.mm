@@ -53,7 +53,8 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 }
 
 @interface NeoMobileWebViewDelegate : NSObject
-- (void)webView:(WebView *)self didCommitLoadForFrame:(WebFrame *)pWebFrame;
+- (void)webView:(WebView *)pWebView didCommitLoadForFrame:(WebFrame *)pWebFrame;
+- (id)webView:(WebView *)pWebView identifierForInitialRequest:(NSURLRequest *)pRequest fromDataSource:(WebDataSource *)pDataSource;
 - (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame;
 - (MacOSBOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame;
 @end
@@ -87,10 +88,30 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 		}
 	}
 #endif	// DEBUG
+}
 
-	NSWindow *pWindow = [pWebView window];
-	if ( pWindow )
-		[pWindow orderFront:self];
+- (id)webView:(WebView *)pWebView identifierForInitialRequest:(NSURLRequest *)pRequest fromDataSource:(WebDataSource *)pDataSource
+{
+	id pRet = pRequest;
+
+	if ( !pWebView || !pRequest )
+		return pRet;
+
+#ifdef DEBUG
+	fprintf( stderr, "Request URL: %s\n", [[[pRequest URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	NSDictionary *pHeaders = [pRequest allHTTPHeaderFields];
+	if ( pHeaders )
+	{
+		NSString *pKey;
+		NSEnumerator *pEnum = [pHeaders keyEnumerator];
+		while ( ( pKey = (NSString *)[pEnum nextObject] ) ) {
+			NSString *pValue = (NSString *)[pHeaders objectForKey:pKey];
+			fprintf( stderr, "    %s: %s\n", [pKey cStringUsingEncoding:NSUTF8StringEncoding], pValue ? [pValue cStringUsingEncoding:NSUTF8StringEncoding] : "" );
+		}
+	}
+#endif	// DEBUG
+
+	return pRet;
 }
 
 - (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame
@@ -181,6 +202,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			[pPrefs setJavaScriptEnabled:YES];
 
 		[self setFrameLoadDelegate:mpDelegate];
+		[self setResourceLoadDelegate:mpDelegate];
 		[self setUIDelegate:mpDelegate];
 		[[self mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://neomobile-test.neooffice.org/neofolders/"]]];
 	}
