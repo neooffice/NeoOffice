@@ -133,7 +133,7 @@ X11_PRODUCT_COMPONENT_MODULES=
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice3 swext apache-commons tomcat hyphen
-OO_TAG:=-rDEV300_m14
+OO_TAG:=-rDEV300_m25
 OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/trunk
 OOO-BUILD_PACKAGE:=ooo-build
 OOO-BUILD_TAG:=
@@ -222,10 +222,6 @@ build.oo_patches:\
 	build.oo_sw_patch \
 	build.oo_vcl_patch \
 	build.oo_vos_patch
-# Copy modified compiler scripts to work around gcc 3.3 breakage in Apple's
-# latest system updates
-#	mkdir -p "$(COMPILERDIR)"
-#	cd "$(COMPILERDIR)" ; sh -c -e 'for i in cc gcc c++ g++ ; do cp "$(PWD)/$(OO_PATCHES_HOME)/cc" "$$i" ; chmod 755 "$$i"; done'
 	touch "$@"
 
 build.oo_odk_patches: build.oo_patches
