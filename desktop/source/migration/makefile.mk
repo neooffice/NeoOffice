@@ -51,11 +51,6 @@ RSCUPDVER=$(RSCREVISION)(SV$(UPD)$(UPDMINOR))
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
-.IF "$(X11_PRODUCT_DIR_NAME)" != ""
-CDEFS += -DX11_PRODUCT_DIR_NAME='"$(X11_PRODUCT_DIR_NAME)"'
-CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
-.ENDIF
-
 # --- Files --------------------------------------------------------
 
 SLOFILES = \

@@ -82,14 +82,6 @@
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
 
-#ifdef X11_PRODUCT_DIR_NAME
-
-#ifndef _DESKTOPX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
-
-#endif	// X11_PRODUCT_DIR_NAME
-
 
 using namespace vos;
 using namespace rtl;
@@ -323,11 +315,6 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	OfficeIPCThread* pThread = new OfficeIPCThread;
 
 #ifdef PRODUCT_DIR_NAME
-#ifdef X11_PRODUCT_DIR_NAME
-    if ( ::desktop::IsX11Product() )
-		pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" X11_PRODUCT_DIR_NAME "IPC_" ) );
-	else
-#endif	// X11_PRODUCT_DIR_NAME
 		pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" PRODUCT_DIR_NAME "IPC_" ) );
 #else	// PRODUCT_DIR_NAME
 	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "SingleOfficeIPC_" ) );

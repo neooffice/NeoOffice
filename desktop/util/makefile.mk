@@ -69,13 +69,6 @@ TARGETOBJS=	\
 			$(OBJ)$/userinstall.obj         \
 			$(OBJ)$/desktopcontext.obj
 
-.IF "$(GUIBASE)"=="java"
-CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
-TARGETOBJS+=	\
-			$(OBJ)$/main_cocoa.obj          \
-			$(OBJ)$/X11productcheck.obj
-.ENDIF		# "$(GUIBASE)"=="java"
-
 
 
 # --- Resourcen ----------------------------------------------------

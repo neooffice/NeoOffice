@@ -63,40 +63,6 @@
 #include <rtl/ustrbuf.hxx>
 #include <rtl/math.hxx>
 
-#ifdef USE_JAVA
-
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#ifndef _OSL_MODULE_HXX_
-#include <osl/module.hxx>
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
-
-static bool IsX11Product()
-{
-    static bool bX11 = sal_False;
-    static ::osl::Module aVCLModule;
-
-    if ( !aVCLModule.is() )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
-		aVCLModule.load( aLibName );
-        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
-            bX11 = true;
-    }
-
-    return bX11;
-}
-
-#endif	// USE_JAVA
-
 #define NOT_LOADED  ((long)-1)
 
 using namespace ::rtl;
@@ -134,16 +100,9 @@ SplashScreen::SplashScreen(const Reference< XMultiServiceFactory >& rSMgr)
     loadConfig();
 
 #ifdef USE_JAVA
-    if ( IsX11Product() )
-    {
-        _pProgressBar = NULL;
-    }
-    else
-    {
-        _pProgressBar = new ProgressBar( this );
-        _pProgressBar->SetPaintTransparent( TRUE );
-        _barheight = _pProgressBar->GetOutputSizePixel().Height();
-    }
+    _pProgressBar = new ProgressBar( this );
+    _pProgressBar->SetPaintTransparent( TRUE );
+    _barheight = _pProgressBar->GetOutputSizePixel().Height();
 #endif	// USE_JAVA
 }
 

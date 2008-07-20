@@ -50,10 +50,6 @@ ENABLE_EXCEPTIONS=TRUE
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
-.IF "$(X11_PRODUCT_DIR_NAME)" != ""
-CDEFS += -DX11_PRODUCT_DIR_NAME='"$(X11_PRODUCT_DIR_NAME)"'
-.ENDIF
-
 # --- Files --------------------------------------------------------
 
 OBJFILES = \
@@ -79,10 +75,6 @@ OBJFILES = \
 		$(OBJ)$/userinstall.obj             \
 		$(OBJ)$/desktopcontext.obj
 
-.IF "$(GUIBASE)" == "java"
-OBJFILES += \
-        $(OBJ)$/main_cocoa.obj
-.ENDIF
 
 SRS1NAME=	desktop
 SRC1FILES=	desktop.src	
