@@ -152,9 +152,6 @@
 #ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
 #endif
-#ifndef _SFXX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
 
 #include <vcl/sysdata.hxx>
 #include "topfrm_cocoa.h"
@@ -1181,7 +1178,7 @@ String SfxTopViewFrame::UpdateTitle()
         pWindow->SetText( aTitle );
 
 #ifdef USE_JAVA
-    if ( pWindow && !::sfx2::IsX11Product() )
+    if ( pWindow )
     {
         ::rtl::OUString aName;
         ::rtl::OUString aPath;

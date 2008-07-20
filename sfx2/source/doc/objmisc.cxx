@@ -185,10 +185,6 @@ using namespace ::com::sun::star::script;
 
 #ifdef USE_JAVA
 
-#ifndef _SFXX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
-
 // [ed] 4/26/07 Includes for invoking NSWindow setDocumentEdited
 #include <vcl/sysdata.hxx>
 #include "objmisc_cocoa.h"
@@ -436,19 +432,16 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 	}
 
 #ifdef USE_JAVA
-	if ( !::sfx2::IsX11Product() )
+	// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
+	SfxViewFrame* pFrame = SfxViewFrame::GetFirst( this );
+	while( pFrame )
 	{
-		// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
-		SfxViewFrame* pFrame = SfxViewFrame::GetFirst( this );
-		while( pFrame )
+		unsigned long macWin=(unsigned long)pFrame->GetWindow().GetSystemData()->aWindow;
+		if(macWin)
 		{
-			unsigned long macWin=(unsigned long)pFrame->GetWindow().GetSystemData()->aWindow;
-			if(macWin)
-			{
-				DoCocoaSetWindowModifiedBit(macWin, IsModified());
-			}
-			pFrame = SfxViewFrame::GetNext( *pFrame, this );
+			DoCocoaSetWindowModifiedBit(macWin, IsModified());
 		}
+		pFrame = SfxViewFrame::GetNext( *pFrame, this );
 	}
 #endif	// USE_JAVA
 

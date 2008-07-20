@@ -122,7 +122,6 @@ SHL1STDLIBS+=\
 .ENDIF # WNT
 
 .IF "$(GUIBASE)"=="java"
-SHL1OBJS = $(SLO)$/X11productcheck.obj
 SHL1STDLIBS += -framework AppKit -framework Carbon
 .ENDIF
 
