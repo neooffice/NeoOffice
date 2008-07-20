@@ -32,7 +32,18 @@
  *************************************************************************/
 
 #include "neomobilewebview.h"
+#include "neomobileappevent.hxx"
 #include <objc/objc-class.h>
+
+#ifndef _VOS_MUTEX_HXX
+#include <vos/mutex.hxx>
+#endif
+
+using namespace vos;
+
+// TODO: Pass the base URL in from the component's menus and toolbar buttons
+static NSString *pBaseURL = @"https://neomobile-test.neooffice.org/";
+static NSString *pUploadURI = @"/neofiles/add";
 
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
@@ -53,15 +64,14 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 }
 
 @interface NeoMobileWebViewDelegate : NSObject
-- (void)webView:(WebView *)pWebView didCommitLoadForFrame:(WebFrame *)pWebFrame;
-- (id)webView:(WebView *)pWebView identifierForInitialRequest:(NSURLRequest *)pRequest fromDataSource:(WebDataSource *)pDataSource;
+- (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame;
 - (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame;
 - (MacOSBOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame;
 @end
 
 @implementation NeoMobileWebViewDelegate
 
-- (void)webView:(WebView *)pWebView didCommitLoadForFrame:(WebFrame *)pWebFrame
+- (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
 {
 	if ( !pWebView || !pWebFrame )
 		return;
@@ -72,6 +82,10 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 
 	NSHTTPURLResponse *pResponse = (NSHTTPURLResponse *)[pDataSource response];
 	if ( !pResponse )
+		return;
+
+	NSURL *pURL = [pResponse URL];
+	if ( !pURL )
 		return;
 
 #ifdef DEBUG
@@ -88,30 +102,22 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 		}
 	}
 #endif	// DEBUG
-}
 
-- (id)webView:(WebView *)pWebView identifierForInitialRequest:(NSURLRequest *)pRequest fromDataSource:(WebDataSource *)pDataSource
-{
-	id pRet = pRequest;
-
-	if ( !pWebView || !pRequest )
-		return pRet;
-
-#ifdef DEBUG
-	fprintf( stderr, "Request URL: %s\n", [[[pRequest URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
-	NSDictionary *pHeaders = [pRequest allHTTPHeaderFields];
-	if ( pHeaders )
+	// Post a NeoMobilExportFileAppEvent and have the OOo code execute it
+	if ( [[pURL path] compare:pUploadURI options:NSCaseInsensitiveSearch] == NSOrderedSame )
 	{
-		NSString *pKey;
-		NSEnumerator *pEnum = [pHeaders keyEnumerator];
-		while ( ( pKey = (NSString *)[pEnum nextObject] ) ) {
-			NSString *pValue = (NSString *)[pHeaders objectForKey:pKey];
-			fprintf( stderr, "    %s: %s\n", [pKey cStringUsingEncoding:NSUTF8StringEncoding], pValue ? [pValue cStringUsingEncoding:NSUTF8StringEncoding] : "" );
+		vos::IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( Application::IsInMain() )
+		{
+			NeoMobilExportFileAppEvent aEvent;
+			Application::PostUserEvent( LINK( &aEvent, NeoMobilExportFileAppEvent, ExportFile ) );
+			while ( !aEvent.IsFinished() && Application::IsInMain() )
+				Application::Reschedule();
+			rSolarMutex.release();
 		}
 	}
-#endif	// DEBUG
-
-	return pRet;
 }
 
 - (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame
@@ -202,9 +208,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			[pPrefs setJavaScriptEnabled:YES];
 
 		[self setFrameLoadDelegate:mpDelegate];
-		[self setResourceLoadDelegate:mpDelegate];
 		[self setUIDelegate:mpDelegate];
-		[[self mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:@"https://neomobile-test.neooffice.org/neofolders/"]]];
+		[[self mainFrame] loadRequest:[NSURLRequest requestWithURL:[NSURL URLWithString:pBaseURL]]];
 	}
 
 	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 500) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];

@@ -64,6 +64,7 @@ UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
 
 SLOFILES= \
 	$(SLO)$/neomobile.obj \
+	$(SLO)$/neomobileappevent.obj \
 	$(SLO)$/neomobilewebview.obj
 
 SHL1TARGET=$(TARGET)
