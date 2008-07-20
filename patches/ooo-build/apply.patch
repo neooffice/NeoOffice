@@ -1,14 +1,25 @@
 Index: patches/dev300/apply
 ===================================================================
---- patches/dev300/apply	(revision 9613)
+--- patches/dev300/apply	(revision 13313)
 +++ patches/dev300/apply	(working copy)
-@@ -161,7 +161,8 @@
- linkoo-type.diff
+@@ -476,7 +476,8 @@
+ #FIXME src680: xmlsecurity-verify-usages.diff, i#76871, pmladek
  
- #Improve the behavior of input field dialog.
--sw-input-field-dialog.diff, Zhang Yun
-+# Disable because it causes NeoOffice bug 2234
-+# sw-input-field-dialog.diff, Zhang Yun
+ # fix that allows OOo to work with a standard (unpatched) libjpeg,
+-jpegc.c.diff, i#80674, n#272574, flr
++# Disable because it causes NeoOffice bug 2613
++# jpegc.c.diff, i#80674, n#272574, flr
  
- # Improve the behavior of input fields inline editing.
- sw-input-field-inline-edit.diff, Zhang Yun
+ [ Fixes < dev300-m24 ]
+ # When there's no scheme in the hyperlink, it's probably a file
+@@ -2017,10 +2018,6 @@
+ 
+ # fix lpsolve build for OSX
+ macosx-lpsolve-makefile.diff
+-# fixes build with gcc-3.3; required for MacOSX build
+-# it is usable only until anyone uses the disabled code => MacOSXOnly
+-# we will move to gcc-4.x, so it does not make sense to push it upstream
+-buildfix-boost-gcc33.diff
+ 
+ [ PardusOnly ]
+ pardus-default-ExternalMailer.diff
