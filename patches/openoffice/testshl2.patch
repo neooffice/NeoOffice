@@ -13,4 +13,3 @@ diff -u -r1.6 build.lst
 -t2  testshl2\util                      nmake   -   all t2_util t2_src NULL
 -
 +t2  testshl2   :  NULL
-\ No newline at end of file
