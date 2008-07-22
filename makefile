@@ -199,6 +199,7 @@ build.oo_patches:\
 	build.oo_lingucomponent_patch \
 	build.oo_moz_patch \
 	build.oo_sw_patch \
+	build.oo_testshl2_patch \
 	build.oo_vcl_patch \
 	build.oo_vos_patch
 	touch "$@"
