@@ -1,0 +1,11 @@
+--- dialogbuttonhbox.cxx.bak	2008-07-23 19:55:46.000000000 +0200
++++ dialogbuttonhbox.cxx	2008-07-23 19:56:41.000000000 +0200
+@@ -60,7 +60,7 @@
+ //FIXME: how to set platform-dependant variables?
+ DialogButtonHBox::Ordering const DialogButtonHBox::DEFAULT_ORDERING =
+ #if defined( MACOSX )
+-    DialogButtonHBox::MacOS;
++    DialogButtonHBox::MACOS;
+ #elif defined( SAL_W32 )
+ DialogButtonHBox::WINDOWS;
+ #elif defined( ENABLE_KDE )
