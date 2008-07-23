@@ -4,14 +4,20 @@ Intructions for Building NeoOffice
 At this time, the NeoOffice build only supports building on Mac OS X 10.4 (Tiger). When compiled on Tiger, PowerPC builds should install and run on machines running Mac OS X 10.3.9 or later and Intel builds should install and run on machines running Mac OS X 10.4 or later.
 
 
-Steps for building on Mac OS X 10.4 (Tiger) for both PowerPC and Intel
-----------------------------------------------------------------------
+Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC and Intel
+----------------------------------------------------------------------------------------
 
 1. Make sure that you have downloaded and installed the following dependencies from http://connect.apple.com/ website:
 
+   For OS X 10.4 Tiger:
+   
    Xcode Tools v2.4.1
+   
+   For OS X 10.5 Leopard:
+   
+   Xcode Tools v3.0
 
-2. Make sure that you have set the compiler version to the correct version by executing the following command:
+2. If you are building under Mac OS X 10.4 Tiger, make sure that you have set the compiler version to the correct version by executing the following command:
 
    sudo gcc_select 4.0
 
@@ -19,12 +25,15 @@ Steps for building on Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
    Archive::Zip
 
-4. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.darwinports.org/ website. Note that you will need to follow the instructions on the website for downloading, compiling, and installing the DarwinPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
+4. Make sure that you have installed the "gcp" and "pkg-config" commands. You can download, compile, and install these commands by downloading, compiling, and installing the following packages from the http://www.macports.org/ website. Note that you will need to follow the instructions on the website for downloading, compiling, and installing the DarwinPorts "port" command. The "port" command is then used to do the downloading, compiling, and installation of the following packages:
 
    sudo /path/to/port/command install coreutils
    sudo /path/to/port/command install pkgconfig
    sudo /path/to/port/command install libIDL
    sudo /path/to/port/command install gperf
+   
+   And if you are building under Mac OS X 10.5 (Leopard):
+   
    sudo /path/to/port/command install flex
 
 5. Make sure that you have downloaded and installed the Mono Mac OS X framework:
