@@ -113,7 +113,7 @@ PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
-OO_PACKAGES:=OpenOffice3 swext apache-commons tomcat hyphen
+OO_PACKAGES:=OpenOffice3 swext apache-commons tomcat hyphen hunspell
 OO_TAG:=-rDEV300_m25
 OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/trunk
 OOO-BUILD_PACKAGE:=ooo-build
