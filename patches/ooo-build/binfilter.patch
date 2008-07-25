@@ -1,0 +1,11 @@
+--- bf_xmloff/source/draw/xmloff_sdpropls.cxx	2008-07-24 18:25:53.000000000 -0700
++++ bf_xmloff/source/draw/xmloff_sdpropls.cxx	2008-07-24 18:27:15.000000000 -0700
+@@ -678,7 +678,7 @@
+ 	{ XML_FALSE,		drawing::TextFitToSizeType_NONE },
+ 	{ XML_TRUE, 		drawing::TextFitToSizeType_PROPORTIONAL },
+ 	{ XML_TRUE,	    	drawing::TextFitToSizeType_ALLLINES },
+-	{ XML_TRUE,		    drawing::TextFitToSizeType_RESIZEATTR },
++	{ XML_TRUE,		    drawing::TextFitToSizeType_AUTOFIT },
+ 	{ XML_TOKEN_INVALID, 0 }
+ };
+ 
