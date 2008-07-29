@@ -102,6 +102,7 @@
 #import <Cocoa/Cocoa.h>
 #include <mach-o/dyld.h>
 #import <Foundation/NSObjCRuntime.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include "postmac.h"
 
 #define kRemoteControlFrameworkName	"@executable_path/../Frameworks/RemoteControl.framework/Versions/A/RemoteControl"
@@ -424,6 +425,15 @@ id rcBehavior;
 		if(!isTigerOrHigher)
 			return(false);
 	}
+	
+	// add a CFPreference to allow users to explicitly disable the remote control
+	// support
+	
+	MacOSBoolean hasKey=false;
+	
+	MacOSBoolean useRemote=CFPreferencesGetAppBooleanValue(CFSTR("remoteEnabled"), kCFPreferencesCurrentApplication, &hasKey);
+	if(hasKey && !useRemote)
+		return(false);
 	
 	// load our framework out of our bundle's directory
 	

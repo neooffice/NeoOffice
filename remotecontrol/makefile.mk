@@ -75,7 +75,7 @@ SHL1STDLIBS= \
 	$(VOSLIB)	\
 	$(VCLLIB)
 
-SHL1STDLIBS += -framework AppKit -framework Carbon -framework Foundation 
+SHL1STDLIBS += -framework AppKit -framework Carbon -framework Foundation -framework CoreFoundation
 
 # --- Targets ------------------------------------------------------
 
