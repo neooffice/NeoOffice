@@ -102,6 +102,7 @@
 #import <Cocoa/Cocoa.h>
 #include <mach-o/dyld.h>
 #import <Foundation/NSObjCRuntime.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include "postmac.h"
 
 #define kRemoteControlFrameworkName	"@executable_path/../Frameworks/RemoteControl.framework/Versions/A/RemoteControl"
@@ -382,18 +383,29 @@ MacOSXRemoteControlImpl::~MacOSXRemoteControlImpl()
 	return(::com::sun::star::uno::Any(res));
 }
 
+@interface NSObject (RemoteControlAppDelegate)
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification;
+- (void)applicationWillResignActive:(NSNotification *)pNotification;
+@end
+
 @interface RemoteControlDelegateImpl : NSObject
 {
+id realAppDelegate;
 id rcContainer;
 id rcBehavior;
 }
 - (id)init;
 - (void)dealloc;
 - (void)bindRemoteControls:(id)obj;
-- (void)remoteButton: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (BOOL) pressedDown clickCount: (unsigned int)clickCount;
+- (void)remoteButton: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown clickCount: (unsigned int)clickCount;
 - (void)startPresentation:(id)obj;
 - (void)previousSlide:(id)obj;
 - (void)nextSlide:(id)obj;
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification;
+- (void)applicationWillResignActive:(NSNotification *)pNotification;
+- (void)forwardInvocation:(NSInvocation *)pInvocation;
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector;
+- (MacOSBOOL)respondsToSelector:(SEL)aSelector;
 @end
 
 /**
@@ -413,6 +425,15 @@ id rcBehavior;
 		if(!isTigerOrHigher)
 			return(false);
 	}
+	
+	// add a CFPreference to allow users to explicitly disable the remote control
+	// support
+	
+	MacOSBoolean hasKey=false;
+	
+	MacOSBoolean useRemote=CFPreferencesGetAppBooleanValue(CFSTR("remoteEnabled"), kCFPreferencesCurrentApplication, &hasKey);
+	if(hasKey && !useRemote)
+		return(false);
 	
 	// load our framework out of our bundle's directory
 	
@@ -460,6 +481,7 @@ id rcBehavior;
 
 - (id)init
 {
+	realAppDelegate=nil;
 	rcContainer=nil;
 	rcBehavior=nil;
 	self = [super init];
@@ -468,6 +490,8 @@ id rcBehavior;
 
 - (void)dealloc
 {
+	if(realAppDelegate)
+		[realAppDelegate autorelease];
 	if(rcContainer)
 		[rcContainer autorelease];
 	if(rcBehavior)
@@ -515,8 +539,13 @@ id rcBehavior;
 						[rcContainer performSelector:@selector(instantiateAndAddRemoteControlDeviceWithClass:) withObject:keyspanRemoteClass];
 					else
 						fprintf(stderr, "KeyspanFrontRowControl class not found\n");
-										
-					[rcContainer performSelector:@selector(startListening:) withObject:self];
+
+					realAppDelegate = [NSApp delegate];
+					if(realAppDelegate)
+						[realAppDelegate retain];
+					[NSApp setDelegate:self];
+					if([NSApp isActive])
+						[rcContainer performSelector:@selector(startListening:) withObject:self];
 				}
 			}
 			else
@@ -531,7 +560,7 @@ id rcBehavior;
 	}
 }
 
-- (void)remoteButton: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (BOOL) pressedDown clickCount: (unsigned int)clickCount
+- (void)remoteButton: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown clickCount: (unsigned int)clickCount
 {	
 	switch(buttonIdentifier) 
 	{
@@ -682,4 +711,59 @@ id rcBehavior;
 		[pool release];
 	}
 }
+
+- (void)applicationWillBecomeActive:(NSNotification *)pNotification
+{
+	if(rcContainer)
+		[rcContainer performSelector:@selector(startListening:) withObject:self];
+
+	if(realAppDelegate && [realAppDelegate respondsToSelector:@selector(applicationWillBecomeActive:)])
+		[realAppDelegate applicationWillBecomeActive:pNotification];
+}
+
+- (void)applicationWillResignActive:(NSNotification *)pNotification
+{
+	if(rcContainer)
+		[rcContainer performSelector:@selector(stopListening:) withObject:self];
+
+	if(realAppDelegate && [realAppDelegate respondsToSelector:@selector(applicationWillResignActive:)])
+		[realAppDelegate applicationWillResignActive:pNotification];
+}
+
+- (void)forwardInvocation:(NSInvocation *)pInvocation
+{
+	MacOSBOOL bHandled = NO;
+
+	SEL aSelector = [pInvocation selector];
+
+	if(realAppDelegate && [realAppDelegate respondsToSelector:aSelector])
+	{
+		[pInvocation invokeWithTarget:realAppDelegate];
+		bHandled = YES;
+	}
+
+	if ( !bHandled )
+		[self doesNotRecognizeSelector:aSelector];
+}
+
+- (NSMethodSignature *)methodSignatureForSelector:(SEL)aSelector
+{
+	NSMethodSignature *pRet = [super methodSignatureForSelector:aSelector];
+
+	if(!pRet && realAppDelegate && [realAppDelegate respondsToSelector:aSelector])
+		pRet = [realAppDelegate methodSignatureForSelector:aSelector];
+
+	return pRet;
+}
+
+- (MacOSBOOL)respondsToSelector:(SEL)aSelector
+{
+	MacOSBOOL bRet = [super respondsToSelector:aSelector];
+
+	if (!bRet && realAppDelegate)
+		bRet = [realAppDelegate respondsToSelector:aSelector];
+
+	return bRet;
+}
+
 @end
