@@ -36,7 +36,7 @@
 
 #include <cstdio> 
  
-#include "mediawindow.hxx"
+#include <avmedia/mediawindow.hxx>
 #include "mediawindow_impl.hxx"
 #include "mediamisc.hxx"
 #include "mediawindow.hrc"
@@ -44,16 +44,9 @@
 #include <vcl/msgbox.hxx>
 #include <svtools/pathoptions.hxx>
 #include <sfx2/filedlghelper.hxx>
-
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_MEDIA_XMANAGER_HPP_
 #include <com/sun/star/media/XManager.hpp>
-#endif
 #include "com/sun/star/ui/dialogs/TemplateDescription.hpp"
 
 #define AVMEDIA_FRAMEGRABBER_DEFAULTFRAME_MEDIATIME 3.0
@@ -384,7 +377,6 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
     static const char* pFilters[] = {   "3GPP Video", "3gp;3g2",
                                         "AAC Audio", "aac;m4a;m4p",
                                         "AIF Audio", "aif;aiff",
-                                        
 #else	// USE_JAVA
     static const char* pFilters[] = {   "AIF Audio", "aif;aiff",
 #endif	// USE_JAVA
@@ -403,8 +395,8 @@ void MediaWindow::getMediaFilters( FilterNameVector& rFilterNameVector )
                                         "OGG Audio/Video", "ogg;oga;ogm;ogv;ogx",
 #else	// USE_JAVA
                                         "MPEG Audio", "mp2;mp3;mpa",
-                                        "OGG Audio/Video", "ogg",
                                         "MPEG Video", "mpg;mpeg;mpv;mp4",
+                                        "Ogg bitstream", "ogg",
 #endif	// USE_JAVA
                                         "Quicktime Video", "mov",
                                         "Vivo Video", "viv",
@@ -516,6 +508,8 @@ bool MediaWindow::isMediaURL( const ::rtl::OUString& rURL, bool bDeep, Size* pPr
             {
                 try
                 {
+                    fprintf(stderr, "-->%s uno reference \n\n",AVMEDIA_MANAGER_SERVICE_NAME);
+                    
                     uno::Reference< ::com::sun::star::media::XManager > xManager(
                         xFactory->createInstance( ::rtl::OUString::createFromAscii( AVMEDIA_MANAGER_SERVICE_NAME ) ),
                         uno::UNO_QUERY );
