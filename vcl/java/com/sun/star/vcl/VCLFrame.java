@@ -743,9 +743,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					if (w != null) {
 						w.setFocusable(enableFocus);
 						w.setFocusableWindowState(enableFocus);
+						if (enableFocus && w.isVisible())
+							f.toFront();
 					}
-					if (enableFocus)
-						f.toFront();
 				}
 			}
 		}
