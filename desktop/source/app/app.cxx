@@ -1716,9 +1716,12 @@ void Desktop::Main()
         impl_checkRecoveryState(bCrashed, bExistsRecoveryData, bExistsSessionData);
         RTL_LOGFILE_CONTEXT_TRACE( aLog, "} impl_checkRecoveryState" );
 
-#ifndef USE_JAVA
         if (
+#ifdef USE_JAVA
+            (pCmdLineArgs->IsNoDefault()                                           ) &&
+#else	// USE_JAVA
             (pCmdLineArgs->IsEmptyOrAcceptOnly()                                   ) &&
+#endif	// USE_JAVA
             (SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SSTARTMODULE)) &&
             (!bExistsRecoveryData                                                  ) &&
             (!bExistsSessionData                                                   )
@@ -1766,7 +1769,6 @@ void Desktop::Main()
             }
             RTL_LOGFILE_CONTEXT_TRACE( aLog, "} create BackingComponent" );
         }
-#endif	// !USE_JAVA
     }
     catch ( com::sun::star::lang::WrappedTargetException& wte )
     {
@@ -2972,9 +2974,11 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
                     xBackingComp->attachFrame(xBackingFrame);
                     xContainerWindow->setVisible(sal_True);
 
+#ifndef USE_JAVA
                     Window* pCompWindow = VCLUnoHelper::GetWindow(xBackingFrame->getComponentWindow());
                     if (pCompWindow)
                         pCompWindow->Update();
+#endif	// USE_JAVA
                 }
             }
         }
