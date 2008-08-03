@@ -69,11 +69,11 @@ JAVAFILES  = \
 	BezierPolyPolygon.java \
 	SpriteRunner.java
 
-.IF "$(GUIBASE)"=="unx" || "$(GUIBASE)"=="java"
+.IF "$(GUIBASE)"=="unx"
 
 JAVAFILES += x11/WindowAdapter.java
 
-.ELIF "$(GUIBASE)"=="aqua"
+.ELIF "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
 
 JAVAFILES += aqua/WindowAdapter.java
 
@@ -81,7 +81,7 @@ JAVAFILES += aqua/WindowAdapter.java
 
 JAVAFILES += win/WindowAdapter.java
 
-.ENDIF		# "$(GUIBASE)"=="unx" || "$(GUIBASE)"=="java"
+.ENDIF		# "$(GUIBASE)"=="unx"
 
 JARFILES 		= jurt.jar unoil.jar ridl.jar juh.jar java_uno.jar
 #JAVACLASSFILES	= $(foreach,i,$(JAVAFILES) $(CLASSDIR)$/$(PACKAGE)$/$(i:b).class)
