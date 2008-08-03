@@ -38,6 +38,7 @@
 #include "precompiled_canvas.hxx"
 
 #include <canvas/debug.hxx>
+#include <tools/diagnose_ex.h>
 #include <canvas/verbosetrace.hxx>
 
 #include <rtl/math.hxx>
@@ -71,34 +72,31 @@ namespace vclcanvas
     SpriteHelper::SpriteHelper() :
         mpBackBuffer(),
         mpBackBufferMask(),
-        mpSpriteCanvas(),
         maContent(),
         mbShowSpriteBounds(false)
     {
     }
 
-    void SpriteHelper::init( const geometry::RealSize2D&	rSpriteSize,
-                             const SpriteCanvasRef&			rSpriteCanvas,
-                             const BackBufferSharedPtr&		rBackBuffer,
-                             const BackBufferSharedPtr&		rBackBufferMask,
-                             bool							bShowSpriteBounds )
+    void SpriteHelper::init( const geometry::RealSize2D&               rSpriteSize,
+                             const ::canvas::SpriteSurface::Reference& rOwningSpriteCanvas,
+                             const BackBufferSharedPtr&                rBackBuffer,
+                             const BackBufferSharedPtr&                rBackBufferMask,
+                             bool                                      bShowSpriteBounds )
     {
-        ENSURE_AND_THROW( rSpriteCanvas.get() && rBackBuffer && rBackBufferMask,
-                          "SpriteHelper::init(): Invalid sprite canvas or back buffer" );
-
+        ENSURE_OR_THROW( rOwningSpriteCanvas.get() && rBackBuffer && rBackBufferMask,
+                         "SpriteHelper::init(): Invalid sprite canvas or back buffer" );
+        
         mpBackBuffer 		= rBackBuffer;
         mpBackBufferMask 	= rBackBufferMask;
-        mpSpriteCanvas 		= rSpriteCanvas;
         mbShowSpriteBounds 	= bShowSpriteBounds;
-
-        init( rSpriteSize, rSpriteCanvas.get() );
+        
+        init( rSpriteSize, rOwningSpriteCanvas );
     }
 
     void SpriteHelper::disposing()
     {
         mpBackBuffer.reset();
         mpBackBufferMask.reset();
-        mpSpriteCanvas.clear();
 
         // forward to parent
         CanvasCustomSpriteHelper::disposing();
@@ -111,8 +109,7 @@ namespace vclcanvas
     {
         (void)bBufferedUpdate; // not used on every platform
 
-        if( !mpSpriteCanvas.get() || 
-            !mpBackBuffer || 
+        if( !mpBackBuffer || 
             !mpBackBufferMask )
         {
             return; // we're disposed
@@ -173,6 +170,9 @@ namespace vclcanvas
                     Bitmap aMask( mpBackBufferMask->getOutDev().GetBitmap( aEmptyPoint, 
                                                                            aOutputSize ) );
 
+					// bitmasks are much faster than alphamasks on some platforms
+					// so convert to bitmask if useful
+#ifndef QUARTZ
                     if( aMask.GetBitCount() != 1 )
                     {
                         OSL_ENSURE(false,
@@ -180,6 +180,7 @@ namespace vclcanvas
                                    "monochrome (performance!)");
                         aMask.MakeMono(255);
                     }
+#endif
 
                     // Note: since we retrieved aBmp and aMask
                     // directly from an OutDev, it's already a
@@ -262,7 +263,7 @@ namespace vclcanvas
                 if( getClip().is() )
                 {
                     ::basegfx::B2DPolyPolygon aClipPoly(
-                        ::canvas::tools::polyPolygonFromXPolyPolygon2D( 
+                        ::basegfx::unotools::b2DPolyPolygonFromXPolyPolygon2D( 
                             getClip() ));
 
                     if( aClipPoly.count() )
@@ -272,7 +273,7 @@ namespace vclcanvas
                         // the final sprite output position.
                         aClipPoly.transform( aTransform );
 
-#if !defined WNT && !defined USE_JAVA
+#if ! defined WNT && ! defined QUARTZ && !defined USE_JAVA
                         // non-Windows only - bAtLeastOnePolygon is
                         // only used in non-WNT code below
 
@@ -303,10 +304,10 @@ namespace vclcanvas
                             rTargetSurface.SetLineColor( Color( 0,255,0 ) );
                             rTargetSurface.SetFillColor();
 
-                            rTargetSurface.DrawPolyPolygon( aClipPoly );
+                            rTargetSurface.DrawPolyPolygon(PolyPolygon(aClipPoly)); // #i76339#
                         }
 
-#if !defined WNT && !defined USE_JAVA
+#if ! defined WNT && ! defined QUARTZ && !defined USE_JAVA
                         // as a matter of fact, this fast path only
                         // performs well for X11 - under Windows, the
                         // clip via SetTriangleClipRegion is faster.
@@ -335,7 +336,7 @@ namespace vclcanvas
                             rTargetSurface.SetLineColor();
                             rTargetSurface.SetFillColor( COL_BLACK );
                             rTargetSurface.SetRasterOp( ROP_0 );
-                            rTargetSurface.DrawPolyPolygon( aClipPoly );
+                            rTargetSurface.DrawPolyPolygon(PolyPolygon(aClipPoly)); // #i76339#
 
                             rTargetSurface.SetRasterOp( ROP_XOR );
                             rTargetSurface.DrawBitmap( aOutPos, 
@@ -360,7 +361,9 @@ namespace vclcanvas
                             ::basegfx::B2DRange aOutputRect(::basegfx::B2DPoint(0,0),::basegfx::B2DPoint(aSize.Width(),aSize.Height()));
                             ::basegfx::B2DPolygon aClippedClip(::basegfx::tools::clipTriangleListOnRange(aTriangulatedClip,aOutputRect));
 
-                            PolyPolygon aPolyPoly( aClippedClip );
+							// #i76339#
+                            const Polygon aPoly(aClippedClip);
+                            const PolyPolygon aPolyPoly(aPoly);
                             rTargetSurface.SetTriangleClipRegion(aPolyPoly);
                         }
                     }
@@ -409,47 +412,41 @@ namespace vclcanvas
                                                     aOutPos.Y() + aOutputSize.Height()-1) ) );
 
                     // Paint little red sprite area markers
-                    rTargetSurface.SetLineColor( Color( 255,0,0 ) );
+                    rTargetSurface.SetLineColor( COL_RED );
                     rTargetSurface.SetFillColor();
 
                     for( int i=0; i<aMarkerPoly.Count(); ++i )
                     {
                         rTargetSurface.DrawPolyLine( aMarkerPoly.GetObject((USHORT)i) );
                     }
+
+                    // paint sprite prio
+                    Font aVCLFont;
+                    aVCLFont.SetHeight( std::min(long(20),aOutputSize.Height()) );
+                    aVCLFont.SetColor( COL_RED );
+                    
+                    rTargetSurface.SetTextAlign(ALIGN_TOP);
+                    rTargetSurface.SetTextColor( COL_RED );
+                    rTargetSurface.SetFont( aVCLFont );
+                    
+                    ::rtl::OUString text( ::rtl::math::doubleToUString( getPriority(),
+                                                                        rtl_math_StringFormat_F,
+                                                                        2,'.',NULL,' ') );
+                    
+                    rTargetSurface.DrawText( aOutPos+Point(2,2), text );
+
+#if defined(VERBOSE) && OSL_DEBUG_LEVEL > 0
+                    OSL_TRACE( "SpriteHelper::redraw(): sprite %X has prio %f\n", 
+                               this, getPriority() );
+#endif
                 }
             }
         }
     }
 
-    void SpriteHelper::clearSurface()
-    {
-        ENSURE_AND_THROW( mpBackBuffer && mpBackBufferMask,
-                          "SpriteHelper::clearSurface(): disposed" );
-
-        const ::Point 		aEmptyPoint;
-        const ::Rectangle	aSpriteRect( aEmptyPoint,
-                                 ::vcl::unotools::sizeFromB2DSize( getSizePixel() ) );
-        const ::Color		aWhiteColor( COL_WHITE );
-
-        OutputDevice& rOutDev( mpBackBuffer->getOutDev() );
-        rOutDev.EnableMapMode( FALSE );
-        rOutDev.SetFillColor( aWhiteColor );
-        rOutDev.SetLineColor();
-        rOutDev.DrawRect( aSpriteRect );
-
-        OutputDevice& rMaskOutDev( mpBackBufferMask->getOutDev() );
-        rMaskOutDev.SetDrawMode( DRAWMODE_DEFAULT );
-        rMaskOutDev.EnableMapMode( FALSE );
-        rMaskOutDev.SetFillColor( aWhiteColor );
-        rMaskOutDev.SetLineColor();
-        rMaskOutDev.DrawRect( aSpriteRect );
-        rMaskOutDev.SetDrawMode( DRAWMODE_BLACKLINE | DRAWMODE_BLACKFILL | DRAWMODE_BLACKTEXT |
-                                 DRAWMODE_BLACKGRADIENT | DRAWMODE_BLACKBITMAP );
-    }
-
     ::basegfx::B2DPolyPolygon SpriteHelper::polyPolygonFromXPolyPolygon2D( uno::Reference< rendering::XPolyPolygon2D >& xPoly ) const
     {
-        return ::canvas::tools::polyPolygonFromXPolyPolygon2D( xPoly );
+        return ::basegfx::unotools::b2DPolyPolygonFromXPolyPolygon2D( xPoly );
     }
 
 }
