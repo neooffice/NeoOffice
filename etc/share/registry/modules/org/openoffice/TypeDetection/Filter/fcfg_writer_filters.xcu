@@ -519,7 +519,7 @@
 		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 	</node>
 	<node oor:name="MOOX" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE OWN DEFAULT PREFERRED</value></prop>
+		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE ALIEN PREFERRED</value></prop>
 		<prop oor:name="UIComponent"/>
 		<prop oor:name="FilterService"/>
 		<prop oor:name="UserData"><value>CXML,Preprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /DOCX2ODT /I %SOURCE% /O %TARGET%&gt;,Postprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /ODT2DOCX /I %SOURCE% /O %TARGET%&gt;</value></prop>
