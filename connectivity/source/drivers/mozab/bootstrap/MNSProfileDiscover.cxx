@@ -106,9 +106,7 @@ static ::rtl::OUString szDirectoryString =::rtl::OUString::createFromAscii("dire
 #ifndef MAXPATHLEN
 #define MAXPATHLEN 1024
 #endif
-#ifndef _MNSFOLDERS_HXX_
 #include <MNSFolders.hxx>
-#endif
 #include <MNSINIParser.hxx>
 
 namespace connectivity
@@ -242,7 +240,7 @@ namespace connectivity
 						getter_Copies(regData));
 				if (NS_FAILED(rv)) continue;
 
-#if defined(XP_MAC) || defined(XP_MACOSX)
+#if defined(XP_MAC) || defined(XP_MACOSX) || defined(MACOSX)
 					rv = NS_NewNativeLocalFile(nsCString(), PR_TRUE, getter_AddRefs(tempLocal));
 				if (NS_SUCCEEDED(rv))
 					rv = tempLocal->SetPersistentDescriptor(NS_LossyConvertUCS2toASCII(regData));
