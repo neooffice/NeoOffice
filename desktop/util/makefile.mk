@@ -39,6 +39,7 @@ PRJ=..
 PRJNAME=desktop
 TARGET=soffice
 TARGETTYPE=GUI
+LIBTARGET=NO
 GEN_HID=TRUE
 GEN_HID_OTHER=TRUE
 
@@ -46,49 +47,17 @@ GEN_HID_OTHER=TRUE
 
 .INCLUDE :  settings.mk
 
+UWINAPILIB =
+
 VERINFONAME=verinfo
-
-TARGETOBJS=	\
-			$(OBJ)$/main.obj				\
-			$(OBJ)$/app.obj					\
-			$(OBJ)$/lockfile.obj			\
-			$(OBJ)$/lockfile2.obj			\
-			$(OBJ)$/intro.obj				\
-			$(OBJ)$/officeipcthread.obj		\
-			$(OBJ)$/appinit.obj				\
-			$(OBJ)$/cmdlineargs.obj			\
-			$(OBJ)$/oinstanceprovider.obj	\
-			$(OBJ)$/opluginframefactory.obj	\
-			$(OBJ)$/appsys.obj				\
-			$(OBJ)$/desktopresid.obj		\
-			$(OBJ)$/dispatchwatcher.obj		\
-			$(OBJ)$/configinit.obj				\
-			$(OBJ)$/checkinstall.obj		\
-			$(OBJ)$/cmdlinehelp.obj         \
-			$(OBJ)$/langselect.obj          \
-			$(OBJ)$/userinstall.obj         \
-			$(OBJ)$/desktopcontext.obj
-
-
 
 # --- Resourcen ----------------------------------------------------
 
 .IF "$(GUI)" == "WNT"
 RCFILES=verinfo.rc
 .ENDIF
-
-# --- Linking of static libs ---------------------------------------
-
-.IF "$(GUI)" == "WNT"
-
-LIB1TARGET=$(SLB)$/$(TARGET).lib
-LIB1FILES=$(TARGETOBJS)
-LIB1FILES += $(OBJ)$/copyright_ascii_sun.obj
-
-#LIB2TARGET=$(SLB)$/officeloader.lib
-#LIB2FILES=$(OBJ)$/officeloader.obj
-
-
+.IF "$(GUI)" == "OS2"
+RCFILES=ooverinfo2.rc
 .ENDIF
 
 # --- Linken der Applikation ---------------------------------------
@@ -97,54 +66,29 @@ LIB1FILES += $(OBJ)$/copyright_ascii_sun.obj
 LINKFLAGSAPPGUI!:=	$(LINKFLAGSAPPGUI:s/-bind_at_load//)
 .ENDIF # MACOSX
 
-.IF "$(OS)" == "LINUX" || "$(OS)" == "FREEBSD" || "$(OS)" == "NETBSD"
-# #74158# linux needs sal/vos/tools at end of link list, solaris needs it first,
-# winXX is handled like solaris for now
-APP1_STDPRE=
-APP1_STDPOST=$(CPPULIB) $(CPPUHELPERLIB) $(UNOLIB) $(TOOLSLIB) \
-	$(VOSLIB) $(SALLIB)
-.ELSE
-APP1_STDPRE=$(SALLIB) $(VOSLIB) $(TOOLSLIB) $(UNOLIB) $(CPPULIB) \
-	$(CPPUHELPERLIB)
-APP1_STDPOST=
-.ENDIF
+#.IF "$(OS)" == "LINUX" || "$(OS)" == "FREEBSD" || "$(OS)" == "NETBSD"
+## #74158# linux needs sal/vos/tools at end of link list, solaris needs it first,
+## winXX is handled like solaris for now
+#APP1_STDPRE=
+#APP1_STDPOST=$(CPPULIB) $(CPPUHELPERLIB) $(UNOLIB) $(TOOLSLIB) \
+#	$(VOSLIB) $(SALLIB)
+#.ELSE
+#APP1_STDPRE=$(SALLIB) $(VOSLIB) $(TOOLSLIB) $(UNOLIB) $(CPPULIB) \
+#	$(CPPUHELPERLIB)
+#APP1_STDPOST=
+#.ENDIF
 
 RESLIB1NAME=		dkt
 RESLIB1IMAGES=		$(PRJ)$/res
 RESLIB1SRSFILES=	$(SRS)$/desktop.srs \
                     $(SRS)$/wizard.srs
 
+.IF "$(GUI)" != "OS2"
 APP1TARGET=so$/$(TARGET)
 APP1NOSAL=TRUE
-APP1STDLIBS=			\
-	$(VCLLIB)			\
-    $(SVLLIB)           \
-    $(SVTOOLLIB)            \
-	$(UNOTOOLSLIB)		\
-	$(TOOLSLIB)			\
-	$(I18NISOLANGLIB)   \
-	$(COMPHELPERLIB)	\
-	$(UCBHELPERLIB)		\
-	$(VOSLIB)			\
-	$(CPPUHELPERLIB)	\
-	$(CPPULIB)			\
-    $(TKLIB)            \
-        $(SALLIB)
-
-
-#	$(APP1_STDPRE)		\
-#	$(SVLLIB)			\
-#	$(SVMEMLIB)			\
-#	$(VCLLIB)			\
-#   $(APP1_STDPOST)		\
-#	$(UNOTOOLSLIB)		\
-#	$(UCBHELPERLIB)		\
-#	$(COMPHELPERLIB)	\
-#	$(SALHELPERLIB)		\
-
-APP1OBJS=$(TARGETOBJS)
-APP1OBJS += $(OBJ)$/copyright_ascii_sun.obj
-
+APP1RPATH=BRAND
+APP1OBJS=$(OBJ)$/copyright_ascii_sun.obj $(OBJ)$/main.obj
+APP1STDLIBS = $(SALLIB) $(SOFFICELIB)
 .IF "$(GUI)" == "UNX"
 .IF "$(OS)" == "LINUX" || "$(OS)" == "FREEBSD"
 APP1STDLIBS+= -lXext -lSM -lICE
@@ -156,7 +100,6 @@ APP1STDLIBS += -framework AppKit -framework Carbon
 .ENDIF
 
 APP1DEPN= $(APP1RES) verinfo.rc
-APP1DEF=    $(MISCX)$/$(TARGET).def
 
 .IF "$(GUI)" == "WNT"
 APP1RES=    $(RES)$/desktop.res
@@ -168,30 +111,17 @@ APP1STACK=10000000
 # create a manifest file with the same name as the
 #office executable file soffice.exe.manifest
 #$(BIN)$/$(TARGET).exe.manifest: template.manifest
-#+$(COPY) $< $@
+#$(COPY) $< $@
 
 .ENDIF # WNT
 
+.ENDIF # "$(GUI)" != "OS2"
+
 APP5TARGET=soffice
 APP5NOSAL=TRUE
-APP5STDLIBS=			\
-	$(VCLLIB)			\
-	$(SVLLIB)			\
-    $(SVTOOLLIB)        \
-    $(UNOTOOLSLIB)      \
-	$(TOOLSLIB)			\
-	$(I18NISOLANGLIB)   \
-	$(COMPHELPERLIB)	\
-	$(UCBHELPERLIB)		\
-	$(VOSLIB)			\
-	$(CPPUHELPERLIB)	\
-	$(CPPULIB)			\
-	$(SALLIB)			\
-	$(TKLIB)
-
-APP5OBJS=$(TARGETOBJS)
-APP5OBJS += $(OBJ)$/copyright_ascii_ooo.obj
-
+APP5RPATH=BRAND
+APP5OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
+APP5STDLIBS = $(SALLIB) $(SOFFICELIB)
 .IF "$(OS)" == "LINUX"
 APP5STDLIBS+= -lXext -lSM -lICE
 .ENDIF # LINUX
@@ -211,6 +141,14 @@ APP5LINKRES=$(MISC)$/ooffice5.res
 APP5STACK=10000000
 .ENDIF # WNT
 
+.IF "$(GUI)" == "OS2"
+APP5DEF= # automatic
+APP5RES=    $(RES)$/oodesktop.res
+APP5ICON=$(SOLARRESDIR)$/icons/ooo-main-app.ico
+APP5VERINFO=ooverinfo2.rc
+APP5LINKRES=$(MISC)$/ooffice.res
+.ENDIF # OS2
+
 .IF "$(GUI)" == "WNT"
 APP6TARGET=so$/officeloader
 APP6RES=$(RES)$/soloader.res
@@ -220,8 +158,10 @@ APP6VERINFO=verinfo.rc
 APP6LINKRES=$(MISC)$/soffice6.res
 APP6ICON=$(SOLARRESDIR)$/icons/so8-main-app.ico
 APP6OBJS = \
-		$(OBJ)$/officeloader.obj
-STDLIB6=advapi32.lib
+    $(OBJ)$/extendloaderenvironment.obj \
+    $(OBJ)$/officeloader.obj \
+    $(SOLARLIBDIR)$/pathutils-obj.obj
+STDLIB6=$(ADVAPI32LIB) $(SHELL32LIB) $(SHLWAPILIB)
 
 APP7TARGET=officeloader
 APP7RES=$(RES)$/ooloader.res
@@ -231,16 +171,10 @@ APP7VERINFO=ooverinfo.rc
 APP7LINKRES=$(MISC)$/ooffice7.res
 APP7ICON=$(SOLARRESDIR)$/icons/ooo-main-app.ico
 APP7OBJS = \
-		$(OBJ)$/officeloader.obj
-STDLIB7=advapi32.lib
-.ENDIF # WNT
-
-all: $(BIN)$/so ALLTAR
-
-.IF "$(GUI)" == "WNT"
-
-ALLTAR: $(MISC)$/$(TARGET).exe.manifest
-
+    $(OBJ)$/extendloaderenvironment.obj \
+    $(OBJ)$/officeloader.obj \
+    $(SOLARLIBDIR)$/pathutils-obj.obj
+STDLIB7=$(ADVAPI32LIB) $(SHELL32LIB) $(SHLWAPILIB)
 .ENDIF # WNT
 
 # --- Targets -------------------------------------------------------------
@@ -248,8 +182,16 @@ ALLTAR: $(MISC)$/$(TARGET).exe.manifest
 .INCLUDE :  target.mk
 
 .IF "$(APP1TARGETN)"!=""
-$(APP1TARGETN) : $(BIN)$/so
+$(APP1TARGETN) :  $(MISC)$/binso_created.flg
 .ENDIF			# "$(APP1TARGETN)"!=""
+
+.IF "$(APP5TARGETN)"!=""
+$(APP5TARGETN) :  $(MISC)$/binso_created.flg
+.ENDIF			# "$(APP6TARGETN)"!=""
+
+.IF "$(APP6TARGETN)"!=""
+$(APP6TARGETN) :  $(MISC)$/binso_created.flg
+.ENDIF			# "$(APP6TARGETN)"!=""
 
 .IF "$(GUI)" == "WNT"
 ALLTAR: $(MISC)$/$(TARGET).exe.manifest
@@ -258,40 +200,62 @@ ALLTAR: $(BIN)$/$(TARGET).bin
 ALLTAR: $(BIN)$/so$/$(TARGET).bin
 .ENDIF # WNT
 
-$(BIN)$/soffice_oo$(EXECPOST) : $(APP5TARGETN)
-	+$(COPY) $< $@
+.IF "$(GUI)" == "OS2"
+ALLTAR: $(BIN)$/$(TARGET).bin
+.ENDIF # OS2
 
+$(BIN)$/soffice_oo$(EXECPOST) : $(APP5TARGETN)
+	$(COPY) $< $@
+
+.IF "$(GUI)" != "OS2"
 $(BIN)$/so$/soffice_so$(EXECPOST) : $(APP1TARGETN)
-	+$(COPY) $< $@
+	$(COPY) $< $@
 
 ALLTAR : $(BIN)$/so$/soffice_so$(EXECPOST) $(BIN)$/soffice_oo$(EXECPOST)
+
+.ENDIF
 
 
 .IF "$(GUI)" == "WNT"
 
 # create a manifest file with the same name as the
 # office executable file soffice.exe.manifest
+.IF "$(CCNUMVER)" <= "001399999999"
 $(MISC)$/$(TARGET).exe.manifest: template.manifest
-   +$(COPY) $< $@
+   $(COPY) $< $@
+.ELSE
+$(MISC)$/$(TARGET).exe.template.manifest: template.manifest
+   $(COPY) $< $@
+
+$(MISC)$/$(TARGET).exe.linker.manifest: $(BIN)$/$(TARGET)$(EXECPOST)
+   mt.exe -inputresource:$(BIN)$/$(TARGET)$(EXECPOST) -out:$@
+
+$(MISC)$/$(TARGET).exe.manifest: $(MISC)$/$(TARGET).exe.template.manifest $(MISC)$/$(TARGET).exe.linker.manifest
+   mt.exe -manifest $(MISC)$/$(TARGET).exe.linker.manifest $(MISC)$/$(TARGET).exe.template.manifest -out:$@
+.ENDIF
 
 # create a manifest file with the same name as the
-# office executable file soffice.bin.manifest 
+# office executable file soffice.bin.manifest
+.IF "$(CCNUMVER)" <= "001399999999"
 $(MISC)$/$(TARGET).bin.manifest: template.manifest
-   +$(COPY) $< $@
+   $(COPY) $< $@
+.ELSE
+$(MISC)$/$(TARGET).bin.manifest: $(MISC)$/$(TARGET).exe.manifest
+   $(COPY) $(MISC)$/$(TARGET).exe.manifest $@
+.ENDIF
 
 $(BIN)$/$(TARGET).bin: $(BIN)$/$(TARGET)$(EXECPOST)
-   +$(COPY) $< $@
+   $(COPY) $< $@
 
 $(BIN)$/so$/$(TARGET).bin: $(BIN)$/so$/$(TARGET)$(EXECPOST)
-   +$(COPY) $< $@
-
-$(MISCX)$/$(APP1TARGET).def : makefile.mk
-	echo  NAME			soffice								>$@
-    echo  DESCRIPTION   'StarDesktop Version 5'           >>$@
-	echo  DATA			READ WRITE NONSHARED		   >>$@
+   $(COPY) $< $@
 
 .ENDIF # WNT
 
-$(BIN)$/so: makefile.mk
-	@echo APP5 : $(APP5TARGET)
-	@+-mkdir $(BIN)$/so >& $(NULLDEV)
+.IF "$(GUI)" == "OS2"
+$(BIN)$/$(TARGET).bin: $(BIN)$/$(TARGET)$(EXECPOST)
+   $(COPY) $< $@
+.ENDIF # OS2
+
+$(MISC)$/binso_created.flg :
+	@@-$(MKDIRHIER) $(BIN)$/so && $(TOUCH) $@

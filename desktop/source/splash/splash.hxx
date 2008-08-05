@@ -34,48 +34,23 @@
  *
  ************************************************************************/
 
-#ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UNO_EXCEPTION_HPP_
 #include <com/sun/star/uno/Exception.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UNO_REFERENCE_H_
 #include <com/sun/star/uno/Reference.h>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XCOMPONENT_HPP_
 #include <com/sun/star/lang/XComponent.hpp>
-#endif
-#ifndef _COM_SUN_STAR_TASK_XSTATUSINDICATOR_HPP_
 #include <com/sun/star/task/XStatusIndicator.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
 #include <com/sun/star/lang/XInitialization.hpp>
-#endif
-#ifndef _CPPUHELPER_IMPLBASE2_HXX_
 #include <cppuhelper/implbase2.hxx>
-#endif
-#ifndef _CPPUHELPER_INTERFACECONTAINER_H_
 #include <cppuhelper/interfacecontainer.h>
-#endif
-#ifndef _SV_INTROWIN_HXX
 #include <vcl/introwin.hxx>
-#endif
-#ifndef _SV_BITMAP_HXX
 #include <vcl/bitmap.hxx>
-#endif
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <osl/mutex.hxx>
 #include <vcl/virdev.hxx>
-#ifndef _RTL_BOOTSTRAP_HXX_
-#include <rtl/bootstrap.hxx>
-#endif
 
 #ifdef USE_JAVA
 
-#ifndef _PRGSBAR_HXX
 #include <svtools/prgsbar.hxx>
-#endif
 
 #endif	// USE_JAVA
 
@@ -99,7 +74,7 @@ private:
         double _fRelWidth;
         double _fRelHeight;
     };
-    enum BitmapMode { BM_FULLSCREEN, BM_DEFAULT };
+    enum BitmapMode { BM_FULLSCREEN, BM_DEFAULTMODE };
 
 	// don't allow anybody but ourselves to create instances of this class
 	SplashScreen(const SplashScreen&);
@@ -113,10 +88,12 @@ private:
     void loadConfig();
 	void initBitmap();
 	void updateStatus();
-    bool findScreenBitmap();
-    bool findAppBitmap();
-    bool findBitmap( const rtl::OUString aBmpFileName );
-    void determineProgressRatioValues( rtl::Bootstrap& rIniFile, double& rXRelPos, double& rYRelPos, double& rRelWidth, double& rRelHeight );
+    bool findScreenBitmap(rtl::OUString const & path);
+    bool findAppBitmap(rtl::OUString const & path);
+    bool findBitmap(rtl::OUString const & path);
+    bool loadBitmap(
+        rtl::OUString const & path, const rtl::OUString &rBmpFileName );
+    void determineProgressRatioValues( double& rXRelPos, double& rYRelPos, double& rRelWidth, double& rRelHeight );
 
 	static  SplashScreen *_pINSTANCE;
 
@@ -127,7 +104,6 @@ private:
     Bitmap          _aIntroBmp;
     Color           _cProgressFrameColor;
     Color           _cProgressBarColor;
-    OUString        _sExecutePath;
     OUString        _sAppName;
     std::vector< FullScreenProgressRatioValue > _sFullScreenProgressRatioValues;
 
@@ -137,6 +113,7 @@ private:
 	sal_Bool    _bPaintBitmap;
 	sal_Bool    _bPaintProgress;
 	sal_Bool    _bVisible;
+    sal_Bool    _bShowLogo;
     sal_Bool    _bFullScreenSplash;
     sal_Bool    _bProgressEnd;
 	long _height, _width, _tlx, _tly, _barwidth;
@@ -155,10 +132,6 @@ public:
 	static const sal_Char *supportedServiceNames[];
 
     static Reference< XInterface > getInstance(const Reference < XMultiServiceFactory >& xFactory);
-
-	// static service info
-    static OUString  impl_getImplementationName();
-	static Sequence<OUString> impl_getSupportedServiceNames();
 
 	// XStatusIndicator
 	virtual void SAL_CALL end() throw ( RuntimeException );

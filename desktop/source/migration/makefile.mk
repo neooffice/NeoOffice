@@ -45,13 +45,17 @@ ENABLE_EXCEPTIONS=TRUE
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
-RSCUPDVER=$(RSCREVISION)(SV$(UPD)$(UPDMINOR))
 
 .IF "$(PRODUCT_DIR_NAME)" != ""
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
 # --- Files --------------------------------------------------------
+
+RSCEXTINC=..$/app
+
+# hacky - is no define
+CDEFS+=-I..$/app
 
 SLOFILES = \
         $(SLO)$/migration.obj \

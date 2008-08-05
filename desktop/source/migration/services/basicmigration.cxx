@@ -36,17 +36,9 @@
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_desktop.hxx"
-
-#ifndef _DESKTOP_BASICMIGRATION_HXX_
 #include "basicmigration.hxx"
-#endif
-
-#ifndef _URLOBJ_HXX
 #include <tools/urlobj.hxx>
-#endif
-#ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
-#endif
 
 
 using namespace ::com::sun::star;
