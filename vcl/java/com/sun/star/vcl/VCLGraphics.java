@@ -232,6 +232,11 @@ public final class VCLGraphics {
 	private static InvertComposite invertComposite = new InvertComposite();
 
 	/**
+	 * The needs dispose graphics.
+	 */
+	private static VCLGraphics needsDisposeGraphics = null;
+
+	/**
 	 * The radio button component.
 	 */
 	private static JRadioButton radioButton = null;
@@ -277,6 +282,46 @@ public final class VCLGraphics {
 	public static void beep() {
 
 		Toolkit.getDefaultToolkit().beep();
+
+	}
+
+	/**
+	 * Dispose the needs dispose graphics.
+	 */
+	static void disposeNeedsDisposeGraphics() {
+
+		if (needsDisposeGraphics != null) {
+			if (needsDisposeGraphics.image != null)
+				needsDisposeGraphics.image.dispose();
+			else
+				needsDisposeGraphics.dispose();
+		}
+
+	}
+
+	/**
+	 * Set the needs dispose graphics.
+	 *
+	 * @param disposeGraphics the needs dispose graphics
+	 * @return <code>true</code> if the need dispose graphics has been set
+	 *  to the specified graphics otherwise <code>false</false>
+	 */
+	static boolean setNeedsDisposeGraphics(VCLGraphics disposeGraphics) {
+
+		if (disposeGraphics == null || disposeGraphics.image == null)
+			return false;
+		else if (disposeGraphics == needsDisposeGraphics)
+			return true;
+
+		// If the new graphics is smaller than the current needs dispose
+		// graphics, don't make any change. Note: if they are the same size,
+		// use the new graphics as that speeds up slideshow transitions.
+		// if (needsDisposeGraphics != null && needsDisposeGraphics.image != null && needsDisposeGraphics.image.getWidth() * needsDisposeGraphics.image.getHeight() > disposeGraphics.image.getWidth() * disposeGraphics.image.getHeight())
+		//	return false;
+
+		disposeNeedsDisposeGraphics();
+		needsDisposeGraphics = disposeGraphics;
+		return true;
 
 	}
 
@@ -435,6 +480,11 @@ public final class VCLGraphics {
 	 * The change listeners.
 	 */
 	private LinkedList changeListeners = null;
+
+	/**
+	 * The disposed flag.
+	 */
+	private boolean disposed = false;
 
 	/**
 	 * The frame that the graphics draws to.
@@ -673,6 +723,14 @@ public final class VCLGraphics {
 	 * it is using.
 	 */
 	boolean dispose() {
+
+		if (disposed)
+			return true;
+		else if (VCLGraphics.needsDisposeGraphics != this && VCLGraphics.setNeedsDisposeGraphics(this))
+			return false;
+
+		// Prevent recursion if this is the need dispose graphics
+		disposed = true;
 
 		notifyGraphicsChanged();
 		changeListeners = null;
@@ -2692,6 +2750,9 @@ public final class VCLGraphics {
 			while (changeListeners.size() > 0)
 				listenerArray[currentElement++] = ((Long)changeListeners.removeFirst()).longValue();
 			notifyGraphicsChanged(listenerArray, d);
+
+			if (VCLGraphics.needsDisposeGraphics == this && changeListeners.size() == 0)
+				VCLGraphics.disposeNeedsDisposeGraphics();
 		}
 
 	}
@@ -2703,8 +2764,12 @@ public final class VCLGraphics {
 	 */
 	public void removeGraphicsChangeListener(long listener) {
 
-		if (changeListeners != null)
+		if (changeListeners != null) {
 			changeListeners.remove(new Long(listener));
+
+			if (!disposed && VCLGraphics.needsDisposeGraphics == this && changeListeners.size() == 0)
+				VCLGraphics.disposeNeedsDisposeGraphics();
+		}
 
 	}
 
