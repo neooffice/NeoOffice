@@ -115,6 +115,7 @@ public final class VCLImage {
 		}
 		catch (OutOfMemoryError ome) {
 			// Force the garbage collector to run
+			VCLGraphics.disposeNeedsDisposeGraphics();
 			VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
 			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
 		}
@@ -154,7 +155,10 @@ public final class VCLImage {
 	public void dispose() {
 
 		if (graphics != null) {
-			graphics.dispose();
+			// Don't continue disposing if the graphics is being saved for
+			// rendering to a bitmap later
+			if (!graphics.dispose())
+				return;
 			graphics = null;
 		}
 		image = null;
