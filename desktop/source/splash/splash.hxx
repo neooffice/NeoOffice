@@ -50,7 +50,9 @@
 
 #ifdef USE_JAVA
 
+#ifndef _PRGSBAR_HXX
 #include <svtools/prgsbar.hxx>
+#endif
 
 #endif	// USE_JAVA
 
