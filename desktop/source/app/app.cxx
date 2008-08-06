@@ -1165,7 +1165,7 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 
         _bSuppressOpenDefault = true;
 
-        ProcessDocumentsRequest aRequest;
+        ProcessDocumentsRequest aRequest( OUString() );
         aRequest.pcProcessed = NULL;
         OUString aData( rAppEvent.GetData() );
         if ( aData.getLength() )
