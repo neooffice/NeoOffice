@@ -304,7 +304,7 @@ install_info MigrationImpl::findInstallation()
     OUString usAltInstall;
     if (rtl::Bootstrap::get(OUString::createFromAscii("SYSUSERCONFIG"), usAltInstall))
     {
-        OUString aProductPrefsDirName = OUString::createFromAscii( PRODUCT_DIR_NAME "-2.1" );
+        OUString aProductPrefsDirName = OUString::createFromAscii( PRODUCT_DIR_NAME "-2.2" );
         usAltInstall += OUString::createFromAscii("/Library/Preferences/");
         usAltInstall += aProductPrefsDirName;
         Directory dir(usAltInstall);
