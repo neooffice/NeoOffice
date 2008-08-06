@@ -1,0 +1,16 @@
+Index: inc/unxmacx.mk
+===================================================================
+RCS file: /cvs/tools/solenv/inc/unxmacx.mk,v
+retrieving revision 1.34
+diff -u -r1.34 unxmacx.mk
+--- inc/unxmacx.mk	11 Jul 2008 14:45:24 -0000	1.34
++++ inc/unxmacx.mk	6 Aug 2008 18:14:38 -0000
+@@ -251,7 +251,7 @@
+ STDOBJCUI=
+ STDSLOCUI=
+ 
+-.IF "$(GUIBASE)" == "aqua"
++.IF "$(GUIBASE)" == "aqua" || "$(GUIBASE)" == "java"
+ 	STDLIBCUIMT=CPPRUNTIME -lm
+ 	STDLIBGUIMT=-framework Carbon -framework Cocoa -lpthread CPPRUNTIME -lm
+ 	STDSHLCUIMT=-lpthread CPPRUNTIME -lm
