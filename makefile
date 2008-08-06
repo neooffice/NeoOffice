@@ -347,7 +347,6 @@ build.neo_patches: build.oo_all \
 	build.neo_extensions_patch \
 	build.neo_filter_patch \
 	build.neo_fpicker_patch \
-	build.neo_fpicker_patch \
 	build.neo_framework_patch \
 	build.neo_goodies_patch \
 	build.neo_hsqldb_patch \
