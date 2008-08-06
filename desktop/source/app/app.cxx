@@ -1160,12 +1160,13 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 #ifdef USE_JAVA
     if ( rAppEvent.IsOpenEvent() || rAppEvent.IsPrintEvent() )
     {
-        if ( GetCommandLineArgs()->IsInvisible() )
+        CommandLineArgs* pCmdLineArgs = GetCommandLineArgs();
+        if ( pCmdLineArgs->IsInvisible() )
             return;
 
         _bSuppressOpenDefault = true;
 
-        ProcessDocumentsRequest aRequest( OUString() );
+        ProcessDocumentsRequest aRequest( pCmdLineArgs->getCwdUrl() );
         aRequest.pcProcessed = NULL;
         OUString aData( rAppEvent.GetData() );
         if ( aData.getLength() )
