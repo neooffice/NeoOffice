@@ -128,10 +128,6 @@ SHL1STDLIBS= \
 SHL1STDLIBS+=   $(ULINGULIB)
 .ENDIF
 
-.IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+= -framework AppKit
-.ENDIF
-
 # build DLL
 SHL1LIBS=		$(SLB)$/$(TARGET).lib
 SHL1IMPLIB=		i$(TARGET)

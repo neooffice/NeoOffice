@@ -79,10 +79,6 @@ SHL1STDLIBS=$(EXPATASCII3RDLIB)\
 	$(COMPHELPERLIB)
 .ENDIF # MACOSX
 
-.IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+=-framework CoreFoundation -framework Cocoa
-.ENDIF	# "$(GUIBASE)" == "java"
-
 SHL1LIBS=$(SLB)$/xmlparser.lib
 SHL1OBJS=$(SLOFILES)
 SHL1VERSIONMAP=recfile.map

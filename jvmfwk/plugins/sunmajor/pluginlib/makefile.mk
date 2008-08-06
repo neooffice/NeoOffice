@@ -87,9 +87,6 @@ SHL1STDLIBS= \
 		$(SALLIB) \
 		$(SALHELPERLIB)
 		
-.IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+= -framework Carbon
-.ENDIF		# "$(GUIBASE)" == "java"
 
 .IF "$(GUI)" == "WNT"
 .IF "$(COM)"!="GCC"
@@ -105,7 +102,7 @@ SHL1IMPLIB=	i$(UNOCOMPONENT1)
 SHL1LIBS=	$(LIB1TARGET) 
 SHL1DEF=	$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=	$(SHL1TARGET)
-
+SHL1RPATH=  URELIB
 
 JAVACLASSFILES= \
     $(CLASSDIR)$/JREProperties.class					
@@ -128,7 +125,7 @@ BOOTSTRAPFILE=$(BIN)$/sunjavapluginrc
 
 
 $(BOOTSTRAPFILE): sunjavapluginrc
-	+-$(COPY) $< $@
+	-$(COPY) $< $@
 
 
 ALLTAR: \
