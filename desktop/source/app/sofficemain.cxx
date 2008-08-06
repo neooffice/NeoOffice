@@ -222,7 +222,7 @@ extern "C" int soffice_main( int argc, char **argv )
     putenv( "SAL_ENABLE_FILE_LOCKING=1" );
 
     // Set Mono environment variables
-    aTmpPath = OString( "MONO_ROOT=" );
+    OString aTmpPath( "MONO_ROOT=" );
     aTmpPath += aCmdPath;
     putenv( (char *)aTmpPath.getStr() );
     aTmpPath = OString( "MONO_CFG_DIR=" );
