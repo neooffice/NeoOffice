@@ -308,16 +308,19 @@ public final class VCLGraphics {
 	 */
 	static boolean setNeedsDisposeGraphics(VCLGraphics disposeGraphics) {
 
+		// There is no need to cache a graphics for which no notifications
+		// will be done
+		if (needsDisposeGraphics != null && (needsDisposeGraphics.image == null || needsDisposeGraphics.changeListeners == null || needsDisposeGraphics.changeListeners.size() == 0)) {
+			disposeNeedsDisposeGraphics();
+			needsDisposeGraphics = null;
+		}
+
 		if (disposeGraphics == null || disposeGraphics.image == null)
 			return false;
 		else if (disposeGraphics == needsDisposeGraphics)
 			return true;
-
-		// If the new graphics is smaller than the current needs dispose
-		// graphics, don't make any change. Note: if they are the same size,
-		// use the new graphics as that speeds up slideshow transitions.
-		// if (needsDisposeGraphics != null && needsDisposeGraphics.image != null && needsDisposeGraphics.image.getWidth() * needsDisposeGraphics.image.getHeight() > disposeGraphics.image.getWidth() * disposeGraphics.image.getHeight())
-		//	return false;
+		else if (disposeGraphics.changeListeners == null || disposeGraphics.changeListeners.size() == 0)
+			return false;
 
 		disposeNeedsDisposeGraphics();
 		needsDisposeGraphics = disposeGraphics;
