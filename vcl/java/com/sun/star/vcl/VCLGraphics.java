@@ -799,8 +799,15 @@ public final class VCLGraphics {
 
 		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight || userPolygonClip) {
 			BufferedImage img = null;
-			if (vg.getImage() != null)
+			boolean flushingEnabled = false;
+			if (vg.getImage() != null) {
 				img = vg.getImage().getImage();
+
+				// Allow presentation transition previews to work properly by
+				// by enabling flushing in certain cases
+				if (img != null && frame != null && allowXOR)
+					flushingEnabled = true;
+			}
 
 			if (img == null) {
 				VCLImage srcImage = vg.createImage(srcBounds.x, srcBounds.y, srcBounds.width, srcBounds.height);
@@ -816,6 +823,9 @@ public final class VCLGraphics {
 				img = srcImage.getImage();
 				srcImage.dispose();
 			}
+
+			if (flushingEnabled && frame != null)
+				frame.enableFlushing(true);
 
 			Graphics2D g = getGraphics();
 			if (g != null) {
@@ -851,6 +861,9 @@ public final class VCLGraphics {
 				}
 				g.dispose();
 			}
+
+			if (flushingEnabled && frame != null)
+				frame.enableFlushing(false);
 		}
 		else {
 			Graphics2D g = getGraphics();
