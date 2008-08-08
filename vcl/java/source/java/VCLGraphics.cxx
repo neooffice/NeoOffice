@@ -2266,7 +2266,7 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3 )
+sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3, sal_Int32 _par4, sal_Int32 _par5 )
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
@@ -2305,8 +2305,8 @@ sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG
 				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
 				for ( jsize j = 0; j < points; j++ )
 				{
-					pXBits[ j ] = pPts[ j ].mnX;
-					pYBits[ j ] = pPts[ j ].mnY;
+					pXBits[ j ] = pPts[ j ].mnX + _par4;
+					pYBits[ j ] = pPts[ j ].mnY + _par5;
 				}
 				t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
 				t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );

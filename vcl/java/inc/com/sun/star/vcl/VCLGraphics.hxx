@@ -107,7 +107,7 @@ public:
 	void				setPixel( long _par0, long _par1, SalColor _par2, CGPathRef _par3 );
 	void				setXORMode( sal_Bool _par0 );
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 );
-	sal_Bool			unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3 );
+	sal_Bool			unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3, sal_Int32 _par4, sal_Int32 _par5 );
 };
 
 } // namespace vcl
