@@ -188,19 +188,32 @@ static bool ImplWaitForDropTargetAppEvent()
 {
 	if ( !pDropTargetAppEvent )
 		return false;
-	
-	ULONG nCount = Application::ReleaseSolarMutex();
 
-	TimeValue aValue;
-	aValue.Seconds = 0;
-	aValue.Nanosec = 50;
-	while ( pDropTargetAppEvent && !pDropTargetAppEvent->IsFinished() && !Application::IsShutDown() )
+	if ( OThread::getCurrentIdentifier() == Application::GetMainThreadIdentifier() )
 	{
-	NSApplication_dispatchPendingEvents();
-		osl_waitThread( &aValue );
-	}
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
 
-	Application::AcquireSolarMutex( nCount );
+		while ( pDropTargetAppEvent && !pDropTargetAppEvent->IsFinished() && !Application::IsShutDown() )
+			Application::Reschedule();
+
+		rSolarMutex.release();
+	}
+	else
+	{
+		ULONG nCount = Application::ReleaseSolarMutex();
+
+		TimeValue aValue;
+		aValue.Seconds = 0;
+		aValue.Nanosec = 50;
+		while ( pDropTargetAppEvent && !pDropTargetAppEvent->IsFinished() && !Application::IsShutDown() )
+		{
+			NSApplication_dispatchPendingEvents();
+			osl_waitThread( &aValue );
+		}
+
+		Application::AcquireSolarMutex( nCount );
+	}
 
 	return true;
 }
