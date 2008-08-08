@@ -68,6 +68,9 @@ using namespace rtl;
 using namespace std;
 using namespace vos;
 
+// This function is defined in the vcl module
+extern "C" void NSApplication_dispatchPendingEvents();
+
 static EventLoopTimerUPP pTrackDragTimerUPP = NULL;
 static DragTrackingHandlerUPP pDragTrackingHandlerUPP = NULL;
 static DragTrackingHandlerUPP pDropTrackingHandlerUPP = NULL;
@@ -356,7 +359,26 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 				{
 					ImplUpdateCurrentAction( aDrag );
 
-					if ( pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+					// Execute the handleDrop() method in the OOo event
+					// dispatch thread to avoid deadlocking in main thread
+					// when dropping a file on a document window while the
+					// document is being loaded
+					JavaDropTargetAppEvent aEvent( pTarget, (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag );
+					Application::PostUserEvent( LINK( &aEvent, JavaDropTargetAppEvent, handleDrop ) );
+					ULONG nCount = Application::ReleaseSolarMutex();
+
+					TimeValue aValue;
+					aValue.Seconds = 0;
+					aValue.Nanosec = 50;
+					while ( !aEvent.IsFinished() && !Application::IsShutDown() )
+					{
+						NSApplication_dispatchPendingEvents();
+						osl_waitThread( &aValue );
+					}
+					if ( nCount )
+						Application::AcquireSolarMutex( nCount );
+
+					if ( aEvent.GetResult() )
 					{
 						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
 						nRet = noErr;
@@ -1013,4 +1035,18 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 	// One of the listeners may have rejected the drop so use the rejected
 	// flag instead the context's getDropComplete() method
 	return !mbRejected;
+}
+
+// ========================================================================
+
+IMPL_LINK( JavaDropTargetAppEvent, handleDrop, void*, EMPTY_ARG )
+{
+	if ( !mbFinished )
+	{
+		if ( mpDropTarget && maDrag )
+			mbResult = mpDropTarget->handleDrop( mnX, mnY, maDrag );
+		mbFinished = true;
+	}
+
+	return 0;
 }

@@ -150,6 +150,23 @@ public:
 
 ::com::sun::star::uno::Sequence< ::rtl::OUString > SAL_CALL JavaDropTarget_getSupportedServiceNames();
 ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > SAL_CALL JavaDropTarget_createInstance( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XMultiServiceFactory >& xMultiServiceFactory );
+
+class JavaDropTargetAppEvent
+{
+	JavaDropTarget*			mpDropTarget;
+	sal_Int32				mnX;
+	sal_Int32				mnY;
+	DragRef					maDrag;
+	bool					mbFinished;
+	bool					mbResult;
+
+public:
+							JavaDropTargetAppEvent( JavaDropTarget *pDropTarget, sal_Int32 nX, sal_Int32 nY, DragRef aDrag ) : mpDropTarget( pDropTarget ), mnX( nX ), mnY( nY ), maDrag( aDrag ), mbFinished( false ), mbResult( false ) {}
+	virtual					~JavaDropTargetAppEvent() {}
+							DECL_LINK( handleDrop, void* );
+	bool					GetResult() { return mbResult; }
+	bool					IsFinished() { return mbFinished; }
+};
 }
 
 #endif
