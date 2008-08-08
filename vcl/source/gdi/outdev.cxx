@@ -1669,7 +1669,7 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 
 #ifdef USE_JAVA
 	mpGraphics->BeginSetClipRegion( 1 );
-	mbOutputClipped = ( ((JavaSalGraphics *)mpGraphics)->unionClipRegion( k, pPointAry, pPointAryAry ) ? FALSE : TRUE );
+	mbOutputClipped = ( ((JavaSalGraphics *)mpGraphics)->unionClipRegion( k, pPointAry, pPointAryAry, offset_x, offset_y ) ? FALSE : TRUE );
 	mpGraphics->EndSetClipRegion();
 
 	delete[] pPointAry;

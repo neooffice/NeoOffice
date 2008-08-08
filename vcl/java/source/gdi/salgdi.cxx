@@ -184,7 +184,7 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 
 // -----------------------------------------------------------------------
 
-BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
+BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry, sal_Int32 nOffsetX, sal_Int32 nOffsetY )
 {
 	BOOL bRet = FALSE;
 
@@ -200,9 +200,9 @@ BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONST
 			ULONG nCount = pPoints[ i ];
 			if ( nCount )
 			{
-				CGPathMoveToPoint( aPolyPath, NULL, (float)pPtAry[ i ][ 0 ].mnX, (float)pPtAry[ i ][ 0 ].mnY );
+				CGPathMoveToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ 0 ].mnX + nOffsetX ), (float)( pPtAry[ i ][ 0 ].mnY + nOffsetY ) );
 				for ( ULONG j = 1; j < nCount; j++ )
-					CGPathAddLineToPoint( aPolyPath, NULL, (float)pPtAry[ i ][ j ].mnX, (float)pPtAry[ i ][ j ].mnY );
+					CGPathAddLineToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ j ].mnX + nOffsetX ), (float)( pPtAry[ i ][ j ].mnY + nOffsetY ) );
 				CGPathCloseSubpath( aPolyPath );
 			}
 				
@@ -224,7 +224,7 @@ BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONST
 	}
 	else
 	{
-		bRet = mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False );
+		bRet = mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False, nOffsetX, nOffsetY );
 	}
 
 	return bRet;
