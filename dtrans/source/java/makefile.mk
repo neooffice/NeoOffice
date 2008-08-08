@@ -45,6 +45,11 @@ LIBTARGET=NO
 
 ENVCDEFS += -Iinc
 
+.IF "$(GUIBASE)"=="java"
+# Link to modified $(VCLLIB)
+SOLARLIB:=-L$(PRJ)$/..$/vcl$/$(INPATH)$/lib $(SOLARLIB)
+.ENDIF
+
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
@@ -95,7 +100,8 @@ APP1STDLIBS=\
 		$(TOOLSLIB)	\
 		$(CPPULIB)			\
 		$(CPPUHELPERLIB)	\
-		$(COMPHELPERLIB)
+		$(COMPHELPERLIB)	\
+		$(VCLLIB)
 
 .IF "$(OS)"=="MACOSX"
 APP1STDLIBS += -framework QuickTime
