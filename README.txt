@@ -11,7 +11,7 @@ Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC a
 
    For OS X 10.4 Tiger:
    
-   Xcode Tools v2.4.1
+   Xcode Tools v2.5
    
    For OS X 10.5 Leopard:
    
@@ -31,9 +31,6 @@ Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC a
    sudo /path/to/port/command install pkgconfig
    sudo /path/to/port/command install libIDL
    sudo /path/to/port/command install gperf
-   
-   And if you are building under Mac OS X 10.5 (Leopard):
-   
    sudo /path/to/port/command install flex
 
 5. Make sure that you have downloaded and installed the Mono Mac OS X framework:
