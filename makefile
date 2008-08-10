@@ -49,6 +49,9 @@ PRODUCT_TRADEMARKED_NAME_RTF=$(PRODUCT_NAME)
 -include custom.mk
 
 # Set the shell to tcsh since the OpenOffice.org build requires it
+ifndef TMP
+TMP:=/tmp
+endif
 SHELL:=/bin/tcsh
 UNAME:=$(shell uname -p)
 ifeq ("$(UNAME)","powerpc")
@@ -299,12 +302,11 @@ build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source bui
 	
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --disable-build-mozilla --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --with-use-shell=bash --with-stlport=no --disable-mediawiki --without-system-mdbtools )
+	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) TMP=$(TMP) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --disable-build-mozilla --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --without-system-mdbtools )
 	echo 'setenv LIBIDL_CONFIG "$(LIBIDL_CONFIG)"' >> "$(OO_ENV_AQUA)"
 	echo 'setenv PKG_CONFIG "$(PKG_CONFIG)"' >> "$(OO_ENV_AQUA)"
-	echo 'unsetenv LD_SEG_ADDR_TABLE' >> "$(OO_ENV_AQUA)"
-	echo 'unsetenv LD_PREBIND' >> "$(OO_ENV_AQUA)"
-	echo 'unsetenv LD_PREBIND_ALLOW_OVERLAP' >> "$(OO_ENV_AQUA)"
+	echo 'setenv TMP "$(TMP)"' >> "$(OO_ENV_AQUA)"
+	echo 'setenv TEMP "$(TMP)"' >> "$(OO_ENV_AQUA)"
 	( cd "$(BUILD_HOME)" ; ./bootstrap )
 	touch "$@"
 
