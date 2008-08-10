@@ -82,6 +82,10 @@ extern "C" int soffice_main( int argc, char **argv )
     // If TMPDIR is not set, set it to /tmp
     if ( !getenv( "TMPDIR" ) )
         putenv( "TMPDIR=" TMPDIR );
+    if ( !getenv( "TMP" ) )
+        putenv( "TMP=" TMPDIR );
+    if ( !getenv( "TEMP" ) )
+        putenv( "TEMP=" TMPDIR );
 
     // Get absolute path of command's directory
     OString aCmdPath( pCmdPath );
