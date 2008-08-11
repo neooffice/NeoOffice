@@ -814,8 +814,8 @@ public final class VCLGraphics {
 				if (srcImage == null)
 					return;
 
-				srcX = srcBounds.x - srcX;
-				srcY = srcBounds.y - srcY;
+				srcX -= srcBounds.x;
+				srcY -= srcBounds.y;
 				srcBounds.x = 0;
 				srcBounds.y = 0;
 				srcBounds.width = srcImage.getWidth();
