@@ -345,7 +345,6 @@ build.neo_patches: build.oo_all \
 	build.neo_canvas_patch \
 	build.neo_connectivity_patch \
 	build.neo_desktop_patch \
-	build.neo_dtrans_patch \
 	build.neo_extensions_patch \
 	build.neo_filter_patch \
 	build.neo_fpicker_patch \
@@ -364,6 +363,7 @@ build.neo_patches: build.oo_all \
 	build.neo_svx_patch \
 	build.neo_sw_patch \
 	build.neo_vcl_patch \
+	build.neo_dtrans_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_libwpd_patch build.neo_writerperfect_patch
 	touch "$@"
