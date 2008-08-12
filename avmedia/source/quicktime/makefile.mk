@@ -75,6 +75,7 @@ SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
 
 SHL1STDLIBS += \
+	-framework AppKit \
 	-framework QTKit
 
 .ENDIF	# "$(OS)" == "MACOSX"
