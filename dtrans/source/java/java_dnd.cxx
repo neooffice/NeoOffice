@@ -57,6 +57,8 @@
 #include <vos/mutex.hxx>
 #endif
 
+#include "java_dnd_cocoa.h"
+
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::dnd;
 using namespace com::sun::star::lang;
@@ -721,7 +723,7 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw( 
 WindowRef JavaDragSource::getNativeWindow()
 {
 	if ( mpEnvData )
-		return (WindowRef)mpEnvData->aWindow;
+		return (WindowRef)NSView_windowRef( mpEnvData->pView );
 	else
 		return NULL;
 }
@@ -899,7 +901,7 @@ Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw( 
 WindowRef JavaDropTarget::getNativeWindow()
 {
 	if ( mpEnvData )
-		return (WindowRef)mpEnvData->aWindow;
+		return (WindowRef)NSView_windowRef( mpEnvData->pView );
 	else
 		return NULL;
 }

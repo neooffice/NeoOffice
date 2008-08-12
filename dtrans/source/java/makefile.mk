@@ -68,6 +68,7 @@ SLOFILES=\
 	$(SLO)$/DTransTransferable.obj \
 	$(SLO)$/java_clipboard.obj \
 	$(SLO)$/java_dnd.obj \
+	$(SLO)$/java_dnd_cocoa.obj \
 	$(SLO)$/java_dndcontext.obj \
 	$(SLO)$/java_service.obj
 
@@ -84,6 +85,7 @@ SHL1STDLIBS= \
 
 .IF "$(OS)"=="MACOSX"
 SHL1STDLIBS += \
+	-framework AppKit	\
 	-framework Carbon	\
 	-framework QuickTime
 .ENDIF
