@@ -23,6 +23,9 @@
 # <http://www.openoffice.org/license.html>
 # for a copy of the LGPLv3 License.
 #
+# Modified August 2008 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
+#
 #*************************************************************************
 
 PRJ=..$/..$/..
