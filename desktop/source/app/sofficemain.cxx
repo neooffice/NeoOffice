@@ -74,6 +74,24 @@ extern "C" int soffice_main( int argc, char **argv )
         _exit( 1 );
     }
 
+  	// Fix bug 3182 by detecting incorrectly formatted HOME values
+  	OString aHomePath( getenv( "HOME" ) );
+  	if ( aHomePath.getLength() )
+  	{
+  		// Make path absolute
+  		if ( aHomePath.getStr()[0] != '/' )
+  			aHomePath = OString( "/" ) + aHomePath;
+  		// Trim any trailing '/' characters
+  		sal_Int32 i = aHomePath.getLength() - 1;
+  		while ( i && aHomePath.getStr()[ i ] == '/' )
+  			i--;
+  		aHomePath = aHomePath.copy( 0, i + 1 );
+  
+  		OString aTmpPath( "HOME=" );
+  		aTmpPath += aHomePath;
+  		putenv( (char *)aTmpPath.getStr() );
+  	}
+
     // Make sure TMPDIR exists as a softlink to /private/tmp as it can be
     // easily removed. In most cases, this call should fail, but we do it
     // just to be sure.
@@ -137,7 +155,6 @@ extern "C" int soffice_main( int argc, char **argv )
 
     OString aStandardLibPath( aCmdPath );
     aStandardLibPath += OString( ":/usr/lib:/usr/local/lib:" );
-    OString aHomePath( getenv( "HOME" ) );
     if ( aHomePath.getLength() )
     {
         aStandardLibPath += aHomePath;
