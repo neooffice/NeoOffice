@@ -100,9 +100,9 @@ OO_REGISTRATION_URL=http://www.openoffice.org/welcome/registration20.html
 OO_SUPPORT_URL=http://www.openoffice.org
 OO_SUPPORT_URL_TEXT=www.openoffice.org
 PRODUCT_VERSION_FAMILY=3.0
-PRODUCT_VERSION=3.0
-PREVIOUS_PRODUCT_VERSION=3.0
-PRODUCT_DIR_VERSION=3.0
+PRODUCT_VERSION=3.0 Beta Early Access
+PREVIOUS_PRODUCT_VERSION=3.0 Beta Early Access
+PRODUCT_DIR_VERSION=3.0_Beta_Early_Access
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
@@ -117,11 +117,11 @@ PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice3 swext apache-commons tomcat hyphen hunspell
-OO_TAG:=-rDEV300_m25
+OO_TAG:=-rOOO300_m2
 OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/trunk
 OOO-BUILD_PACKAGE:=ooo-build
-OOO-BUILD_TAG:=--revision 13361
-OOO-BUILD_APPLY_TAG:=DEV300_m25
+OOO-BUILD_TAG:=--revision 13546
+OOO-BUILD_APPLY_TAG:=OOO300_m2
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 LIBWPD_SOURCE_URL=http://download.go-oo.org/libwpd/libwpd-0.8.14.tar.gz
 LIBWPG_SOURCE_URL=http://download.go-oo.org/SRC680/libwpg-0.1.2.tar.gz
@@ -203,7 +203,6 @@ build.oo_patches:\
 	build.oo_moz_patch \
 	build.oo_solenv_patch \
 	build.oo_sw_patch \
-	build.oo_testshl2_patch \
 	build.oo_toolkit_patch \
 	build.oo_vcl_patch \
 	build.oo_vos_patch
@@ -241,8 +240,8 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	touch "$@"
 
 build.ooo-build_patches: build.ooo-build_checkout \
-	build.ooo-build_apply_patch \
-	build.ooo-build_binfilter_patch
+	build.ooo-build_svx_patch \
+	build.ooo-build_apply_patch
 	touch "$@"
 
 build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout
@@ -258,8 +257,8 @@ build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_chec
 	touch "$@"
 
 build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.oo_checkout build.ooo-build_checkout
-	-( cd "$(BUILD_HOME)/$(@:build.ooo-build_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.ooo-build_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	-( cd "$(BUILD_HOME)/ooo-build" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/ooo-build" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch build.odf-converter_checkout

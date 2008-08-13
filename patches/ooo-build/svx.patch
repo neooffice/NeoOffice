@@ -1,0 +1,17 @@
+Index: patches/dev300/layout-simple-dialogs-svx.diff
+===================================================================
+--- patches/dev300/layout-simple-dialogs-svx.diff	(revision 13546)
++++ patches/dev300/layout-simple-dialogs-svx.diff	(working copy)
+@@ -10,9 +10,9 @@
+ -CFLAGS+= -DENABLE_LAYOUT=1 -I../$(PRJ)/layout/inc -I../$(PRJ)/layout/$(INPATH)/inc
+ -.ENDIF # ENABLE_LAYOUT == TRUE
+ -
+- .IF "$(ENABLE_GTK)" != ""
+- CFLAGS+=-DENABLE_GTK
+- .ENDIF
++ # --- Files --------------------------------------------------------
++
++ SRS1NAME=dialogs 
+ diff --git a/svx/source/dialog/zoom.cxx b/svx/source/dialog/zoom.cxx
+ index ef1b8e2..50dc336 100644
+ --- svx/source/dialog/zoom.cxx

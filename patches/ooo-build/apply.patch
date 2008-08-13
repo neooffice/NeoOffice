@@ -1,7 +1,9 @@
---- patches/dev300/apply	2008-07-24 12:05:19.000000000 -0700
-+++ patches/dev300/apply.bak	2008-07-24 12:12:18.000000000 -0700
-@@ -450,7 +450,8 @@
- nsplugin-path.diff, i#49590, michael
+Index: patches/dev300/apply
+===================================================================
+--- patches/dev300/apply	(revision 13546)
++++ patches/dev300/apply	(working copy)
+@@ -418,7 +418,8 @@
+ sd-builddep.diff, i#92662, michael
  
  # use basic (advanced) shapes for rectangle/ellipse on draw/impress's toolbars. make shapes wrap words by default, n#171052, rodo
 -sd-toolbar-advanced-shapes.diff, n#171052, rodo
@@ -10,7 +12,7 @@
  svx-shapes-default-word-wrap-enable.diff, n#171052, rodo
  svx-honour-customshape-capabilities.diff, n#395372, thorsten
  
-@@ -495,7 +496,8 @@
+@@ -458,7 +459,8 @@
  #FIXME src680: xmlsecurity-verify-usages.diff, i#76871, pmladek
  
  # fix that allows OOo to work with a standard (unpatched) libjpeg,
@@ -18,9 +20,9 @@
 +# Disable because it causes NeoOffice bug 2613
 +# jpegc.c.diff, i#80674, n#272574, flr
  
- [ Fixes < dev300-m24 ]
- # When there's no scheme in the hyperlink, it's probably a file
-@@ -701,7 +703,8 @@
+ # handle hyperlinks to files better
+ sw-hyperlinks-relative.diff, n#405712, i#91522, jholesov
+@@ -618,7 +620,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -30,7 +32,7 @@
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -2078,10 +2081,6 @@
+@@ -1877,10 +1880,6 @@
  
  # fix lpsolve build for OSX
  macosx-lpsolve-makefile.diff
