@@ -239,12 +239,15 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 			// Ignore SALEVENT_SHUTDOWN events when recursing into this
 			// method or when in presentation mode
-			ImplSVData *pSVData = ImplGetSVData();
-			if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
+			if ( !isShutdownCancelled() )
 			{
-				JavaSalFrame *pFrame = pSalData->maFrameList.front();
-				if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
-					bCancelShutdown = false;
+				ImplSVData *pSVData = ImplGetSVData();
+				if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
+				{
+					JavaSalFrame *pFrame = pSalData->maFrameList.front();
+					if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
+						bCancelShutdown = false;
+				}
 			}
 
 			if ( bCancelShutdown )
@@ -1354,6 +1357,27 @@ sal_Bool com_sun_star_vcl_VCLEvent::isHorizontal()
 		{
 			char *cSignature = "()Z";
 			mID = t.pEnv->GetMethodID( getMyClass(), "isHorizontal", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+sal_Bool com_sun_star_vcl_VCLEvent::isShutdownCancelled()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isShutdownCancelled", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )

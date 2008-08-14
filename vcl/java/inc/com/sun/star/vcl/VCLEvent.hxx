@@ -94,6 +94,7 @@ public:
 	ULONG				getVisiblePosition();
 	long				getWheelRotation();
 	sal_Bool			isHorizontal();
+	sal_Bool			isShutdownCancelled();
 };
 
 } // namespace vcl

@@ -515,18 +515,13 @@ public final class VCLEventQueue implements Runnable {
 	 */
 	public void postCachedEvent(VCLEvent event) {
 
-		int id = event.getID();
-		if (shutdownDisabled && id == VCLEvent.SALEVENT_SHUTDOWN) {
-			event.cancelShutdown();
-			return;
-		}
-
 		VCLEventQueue.Queue queue = (event.isAWTEvent() ? queueList[0] : queueList[1]);
 
 		// Add the event to the cache
 		VCLEventQueue.QueueItem newItem = new VCLEventQueue.QueueItem(event);
 		synchronized (queueList) {
 			// Coalesce events
+			int id = event.getID();
 			switch (id) {
 				case VCLEvent.SALEVENT_CLOSE:
 					{
@@ -701,6 +696,8 @@ public final class VCLEventQueue implements Runnable {
 	public void setShutdownDisabled(boolean b) {
 
 		shutdownDisabled = b;
+		if (!shutdownDisabled)
+			return;
 
 		synchronized (queueList) {
 			for (int i = 0; i < queueList.length; i++) {
@@ -711,10 +708,8 @@ public final class VCLEventQueue implements Runnable {
 
 				VCLEventQueue.QueueItem eqi = queue.head;
 				while (eqi != null) {
-					if (eqi.event.getID() == VCLEvent.SALEVENT_SHUTDOWN) {
+					if (eqi.event.getID() == VCLEvent.SALEVENT_SHUTDOWN)
 						eqi.event.cancelShutdown();
-						eqi.remove = true;
-					}
 					eqi = eqi.next;
 				}
 				// Purge removed events from the front of the queue
