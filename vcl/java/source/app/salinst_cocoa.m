@@ -59,7 +59,27 @@
 {
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
+	{
 		mpModalWindow = [pApp modalWindow];
+		if ( !mpModalWindow )
+		{
+			NSArray *pWindows = [pApp windows];
+			if ( pWindows )
+			{
+				unsigned int nCount = [pWindows count];
+				unsigned int i = 0;
+				for ( ; i < nCount ; i++ )
+				{
+					NSWindow *pWindow = [pWindows objectAtIndex:i];
+					if ( [pWindow isSheet] || [pWindow isVisible] )
+					{
+						mpModalWindow = pWindow;
+						break;
+					}
+				}
+			}
+		}
+	}
 }
 
 - (id)init
