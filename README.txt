@@ -35,7 +35,7 @@ Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC a
 
 5. Make sure that you have downloaded and installed the Mono Mac OS X framework:
 
-   ftp://www.go-mono.com/archive/1.2.4/macos-10-universal/4/MonoFramework-1.9.1_3.macos10.novell.universal.dmg
+   http://www.go-mono.com/mono-downloads/download.html
 
 6. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
 
