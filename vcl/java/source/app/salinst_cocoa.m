@@ -71,7 +71,7 @@
 				for ( ; i < nCount ; i++ )
 				{
 					NSWindow *pWindow = [pWindows objectAtIndex:i];
-					if ( [pWindow isSheet] || [pWindow isVisible] )
+					if ( [pWindow isSheet] && [pWindow isVisible] )
 					{
 						mpModalWindow = pWindow;
 						break;
