@@ -197,6 +197,7 @@ build.remotecontrol_checkout:
 build.oo_patches:\
 	build.oo_external_patch \
 	build.oo_framework_patch \
+	build.oo_i18npool_patch \
 	build.oo_instsetoo_native_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \
