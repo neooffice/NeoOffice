@@ -11,7 +11,7 @@ diff -u -r1.5 makefile.mk
  
 +# turn off optimizations on MACOSX due to optimization errors in gcc 4.0.1
 +.IF "$(OS)"=="MACOSX"
-+CFLAGSOPT = -O0
++CDEFS+=-O0
 +.ENDIF
 +
  .IF "$(SOLAR_JAVA)"==""
@@ -30,7 +30,7 @@ diff -u -r1.9 makefile.mk
  
 +# turn off optimizations on MACOSX due to optimization errors in gcc 4.0.1
 +.IF "$(OS)" == "MACOSX"
-+CFLAGSOPT = -O0
++CDEFS+=-O0
 +.ENDIF
 +
  #.INCLUDE :  ..$/cppumaker.mk
@@ -49,7 +49,7 @@ diff -u -r1.9 makefile.mk
  
 +# turn off optimizations on MACOSX due to optimization errors in gcc 4.0.1
 +.IF "$(OS)" == "MACOSX"
-+CFLAGSOPT = -O0
++CDEFS+=-O0
 +.ENDIF
 +
  .IF "$(UNIXVERSIONNAMES)" == ""
