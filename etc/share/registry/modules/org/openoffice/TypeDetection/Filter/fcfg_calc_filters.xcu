@@ -378,7 +378,7 @@
 	</node>
 
 	<node oor:name="MOOXS" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE ALIEN PREFERRED</value></prop>
+		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE OWN DEFAULT PREFERRED</value></prop>
 		<prop oor:name="UIComponent"/>
 		<prop oor:name="FilterService"/>
 		<prop oor:name="UserData"><value>CXML,Preprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /XLSX2ODS /I %SOURCE% /O %TARGET%&gt;,Postprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /ODS2XLSX /I %SOURCE% /O %TARGET%&gt;</value></prop>
