@@ -14,3 +14,21 @@ diff -u -r1.34 unxmacx.mk
  	STDLIBCUIMT=CPPRUNTIME -lm
  	STDLIBGUIMT=-framework Carbon -framework Cocoa -lpthread CPPRUNTIME -lm
  	STDSHLCUIMT=-lpthread CPPRUNTIME -lm
+--- bin/modules/installer/simplepackage.pm	2008-07-11 07:43:10.000000000 -0700
++++ bin/modules/installer/simplepackage.pm	2008-08-11 19:03:00.000000000 -0700
+@@ -144,6 +144,15 @@
+ 
+ 			my $returnvalue = $?;	# $? contains the return value of the systemcall
+ 
++			# On Mac OS X 10.4.x, the unopkg command can fail on the first try
++			if ($returnvalue)
++			{
++				open (UNOPKG, $systemcall);
++				while (<UNOPKG>) {push(@unopkgoutput, $_); }
++				close (UNOPKG);
++				$returnvalue = $?;	# $? contains the return value of the systemcall
++			}
++
+ 			if ($returnvalue)
+ 			{
+ 				$infoline = "ERROR: Could not execute \"$systemcall\"!\nExitcode: '$returnvalue'\n";
