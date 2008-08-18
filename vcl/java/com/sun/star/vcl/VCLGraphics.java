@@ -718,9 +718,7 @@ public final class VCLGraphics {
 	 */
 	boolean dispose() {
 
-		if (disposed)
-			return true;
-		else if (VCLGraphics.setNeedsDisposeGraphics(this))
+		if (disposed || VCLGraphics.setNeedsDisposeGraphics(this))
 			return false;
 
 		// Prevent recursion if this is the need dispose graphics
