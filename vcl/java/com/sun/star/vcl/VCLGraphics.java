@@ -295,6 +295,7 @@ public final class VCLGraphics {
 				needsDisposeGraphics.image.dispose();
 			else
 				needsDisposeGraphics.dispose();
+			needsDisposeGraphics = null;
 		}
 
 	}
@@ -308,18 +309,8 @@ public final class VCLGraphics {
 	 */
 	static boolean setNeedsDisposeGraphics(VCLGraphics disposeGraphics) {
 
-		// There is no need to cache a graphics for which no notifications
-		// will be done
-		if (needsDisposeGraphics != null && (needsDisposeGraphics.image == null || needsDisposeGraphics.changeListeners == null || needsDisposeGraphics.changeListeners.size() == 0)) {
-			disposeNeedsDisposeGraphics();
-			needsDisposeGraphics = null;
-		}
-
-		if (disposeGraphics == null || disposeGraphics.image == null)
-			return false;
-		else if (disposeGraphics == needsDisposeGraphics)
-			return true;
-		else if (disposeGraphics.changeListeners == null || disposeGraphics.changeListeners.size() == 0)
+		// Fix bug 3189 by always returning false if both graphics are the same
+		if (disposeGraphics == needsDisposeGraphics || disposeGraphics == null || disposeGraphics.image == null || disposeGraphics.disposed || disposeGraphics.changeListeners == null)
 			return false;
 
 		disposeNeedsDisposeGraphics();
@@ -729,7 +720,7 @@ public final class VCLGraphics {
 
 		if (disposed)
 			return true;
-		else if (VCLGraphics.needsDisposeGraphics != this && VCLGraphics.setNeedsDisposeGraphics(this))
+		else if (VCLGraphics.setNeedsDisposeGraphics(this))
 			return false;
 
 		// Prevent recursion if this is the need dispose graphics
