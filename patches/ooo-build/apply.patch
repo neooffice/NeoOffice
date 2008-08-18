@@ -42,7 +42,17 @@ Index: patches/dev300/apply
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -1877,10 +1881,6 @@
+@@ -752,7 +756,8 @@
+ 
+ [ Misc ]
+ # Insert symbol defaults to the Symbol font - not a random one
+-gui-sw-insert-symbol.diff, i#15512, michael
++# Disable because it causes NeoOffice bug 3187
++# gui-sw-insert-symbol.diff, i#15512, michael
+ # Address data source ordering x#62860
+ addrbk-datasrc-ordering.diff, michael
+ # Changed the default option in the Templates and Documents dialog.
+@@ -1877,10 +1882,6 @@
  
  # fix lpsolve build for OSX
  macosx-lpsolve-makefile.diff
