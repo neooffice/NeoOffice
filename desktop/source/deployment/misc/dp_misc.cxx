@@ -241,7 +241,7 @@ bool office_is_running()
         if (
 #if defined UNIX            
             sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SOFFICE2)))
-#elif defined WNT
+#elif defined WNT || defined OS2
             //osl_getExecutableFile should deliver "soffice.bin" on windows
             //even if swriter.exe, scalc.exe etc. was started. This is a bug
             //in osl_getExecutableFile
