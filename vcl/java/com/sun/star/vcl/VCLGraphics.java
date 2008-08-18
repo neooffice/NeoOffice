@@ -2771,12 +2771,8 @@ public final class VCLGraphics {
 	 */
 	public void removeGraphicsChangeListener(long listener) {
 
-		if (changeListeners != null) {
+		if (changeListeners != null)
 			changeListeners.remove(new Long(listener));
-
-			if (!disposed && VCLGraphics.needsDisposeGraphics == this && changeListeners.size() == 0)
-				VCLGraphics.disposeNeedsDisposeGraphics();
-		}
 
 	}
 
