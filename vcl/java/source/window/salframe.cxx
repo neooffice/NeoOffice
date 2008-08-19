@@ -767,14 +767,33 @@ void JavaSalFrame::ToTop( USHORT nFlags )
 
 	if ( !pFrame || pFrame->IsFloatingFrame() || !pFrame->mbVisible )
 		return;
-	
+
 	bool bSuccess;
 	if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS )
+	{
 		bSuccess = pFrame->mpVCLFrame->toFront();
+	}
 	else if ( nFlags & SAL_FRAME_TOTOP_GRABFOCUS_ONLY )
-		bSuccess = pFrame->mpVCLFrame->requestFocus();
+	{
+		// Fix bug 3193 by invoking toFront() if the frame is a modal dialog
+		bool bModal = false;
+		ImplSVData *pSVData = ImplGetSVData();
+		if ( pSVData->maWinData.mpLastExecuteDlg )
+		{
+			SystemWindow *pSystemWindow = pSVData->maWinData.mpLastExecuteDlg->GetSystemWindow();
+			if ( pSystemWindow && pSystemWindow->ImplGetFrame() == pFrame )
+				bModal = true;
+		}
+
+		if ( bModal )
+			bSuccess = pFrame->mpVCLFrame->toFront();
+		else
+			bSuccess = pFrame->mpVCLFrame->requestFocus();
+	}
 	else
+	{
 		bSuccess = false;
+	}
 
 	// If Java has set the focus, update it now in the OOo code as it may
 	// take a while before the Java event shows up in the queue. Fix bug
