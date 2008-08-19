@@ -108,7 +108,7 @@ public final class VCLBitmap {
 	public void dispose() {
 
 		image = null;
-		VCLEventQueue.runGCIfNeeded(0);
+		VCLEventQueue.runGCIfNeeded(width * height);
 
 	}
 

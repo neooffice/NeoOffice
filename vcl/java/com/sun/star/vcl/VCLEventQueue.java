@@ -108,7 +108,7 @@ public final class VCLEventQueue implements Runnable {
 	/**
 	 * The GC_DISPOSED_PIXELS constant.
 	 */
-	public final static long GC_DISPOSED_PIXELS = 1024 * 1024;
+	public final static long GC_DISPOSED_PIXELS = 2048 * 2048;
 
 	/**
 	 * The GC_INTERVAL_1 constant.

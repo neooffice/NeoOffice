@@ -163,7 +163,7 @@ public final class VCLImage {
 		}
 		image = null;
 		pageFormat = null;
-		VCLEventQueue.runGCIfNeeded(0);
+		VCLEventQueue.runGCIfNeeded(width * height);
 
 	}
 
