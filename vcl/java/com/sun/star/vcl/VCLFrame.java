@@ -3702,6 +3702,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			synchronized (VCLFrame.flushAllFramesQueue) {
 				flushAllFramesQueue.remove(this);
 				VCLFrame.flushAllFrames();
+				flushAllFramesQueue.notifyAll();
 			}
 
 		}
