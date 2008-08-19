@@ -37,7 +37,11 @@
 #define _COMMON_H
 
 #import <premac.h>
+#ifdef POWERPC
+#import "/Developer/SDKs/MacOSX10.3.9.sdk/System/Library/Frameworks/QTKit.framework/Headers/QTKit.h"
+#else	// POWERPC
 #import <QTKit/QTKit.h>
+#endif	// POWERPC
 #import <postmac.h>
 
 // Redefine Cocoa YES and NO defines types for convenience
