@@ -792,11 +792,10 @@ public final class VCLGraphics {
 				img = vg.getImage().getImage();
 
 				// Fix bug 3189 and wipe down presentation transition previews
-				// with causing bug 3191 by flushing in certain cases
-				if (img != null && frame != null && allowXOR) {
-					VCLFrame.flushAllFrames();
-					Thread.yield();
-				}
+				// with causing bug 3191 by synchronously flushing in certain
+				// cases
+				if (img != null && frame != null && allowXOR)
+					VCLFrame.flushAllFrames(true);
 			}
 
 			if (img == null) {
