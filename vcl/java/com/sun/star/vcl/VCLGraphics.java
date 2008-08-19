@@ -2390,8 +2390,11 @@ public final class VCLGraphics {
 			g = null;
 		}
 
-		if (g != null)
+		if (g != null) {
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
+			if (notify)
+				notifyGraphicsChanged();
+		}
 
 		return g;
 
