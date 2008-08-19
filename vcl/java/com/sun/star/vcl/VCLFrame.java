@@ -661,6 +661,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private final static AttributedCharacterIterator defaultAttributedCharacterIterator = new AttributedString("").getIterator();
 
+	/**
+	 * The flush all frames queue.
+	 */
+	private static LinkedList flushAllFramesQueue = new LinkedList();
+
 	/** 
 	 * The show only menus frame list.
 	 */
@@ -696,9 +701,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!EventQueue.isDispatchThread()) {
 			VCLEventQueue.runGCIfNeeded(0);
 
-			FlushAllFramesHandler handler = new FlushAllFramesHandler();
-			Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
-			Thread.yield();
+			synchronized (flushAllFramesQueue) {
+				if (flushAllFramesQueue.size() == 0) {
+					FlushAllFramesHandler handler = new FlushAllFramesHandler();
+					Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
+					flushAllFramesQueue.add(handler);
+				}
+			}
 			return;
 		}
 
@@ -2613,6 +2622,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		if (window.isShowing() && !isFloatingWindow()) {
 			panel.requestFocusInWindow();
+			Thread.yield();
 			return true;
 		}
 		else {
@@ -3008,6 +3018,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (window.isShowing() && !isFloatingWindow()) {
 			window.toFront();
 			panel.requestFocusInWindow();
+			Thread.yield();
 			return true;
 		}
 		else {
@@ -3688,7 +3699,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		public void run() {
 
-			VCLFrame.flushAllFrames();
+			synchronized (VCLFrame.flushAllFramesQueue) {
+				flushAllFramesQueue.remove(this);
+				VCLFrame.flushAllFrames();
+			}
 
 		}
 
