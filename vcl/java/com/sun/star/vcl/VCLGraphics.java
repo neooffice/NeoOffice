@@ -788,14 +788,15 @@ public final class VCLGraphics {
 
 		if ((xor && allowXOR) || vg != this || srcWidth != destWidth || srcHeight != destHeight || userPolygonClip) {
 			BufferedImage img = null;
-			boolean flushingEnabled = false;
 			if (vg.getImage() != null) {
 				img = vg.getImage().getImage();
 
-				// Allow presentation transition previews to work properly by
-				// by enabling flushing in certain cases
-				if (img != null && frame != null && allowXOR)
-					flushingEnabled = true;
+				// Fix bug 3189 and wipe down presentation transition previews
+				// with causing bug 3191 by flushing in certain cases
+				if (img != null && frame != null && allowXOR) {
+					VCLFrame.flushAllFrames();
+					Thread.yield();
+				}
 			}
 
 			if (img == null) {
@@ -812,9 +813,6 @@ public final class VCLGraphics {
 				img = srcImage.getImage();
 				srcImage.dispose();
 			}
-
-			if (flushingEnabled && frame != null)
-				frame.enableFlushing(true);
 
 			Graphics2D g = getGraphics();
 			if (g != null) {
@@ -850,9 +848,6 @@ public final class VCLGraphics {
 				}
 				g.dispose();
 			}
-
-			if (flushingEnabled && frame != null)
-				frame.enableFlushing(false);
 		}
 		else {
 			Graphics2D g = getGraphics();
@@ -2395,11 +2390,8 @@ public final class VCLGraphics {
 			g = null;
 		}
 
-		if (g != null) {
+		if (g != null)
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
-			if (notify)
-				notifyGraphicsChanged();
-		}
 
 		return g;
 
