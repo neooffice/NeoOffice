@@ -1530,20 +1530,6 @@ namespace cppcanvas
                     case META_EPS_ACTION:
                     {
                         MetaEPSAction* 		pAct = static_cast<MetaEPSAction*>(pCurrAct);
-#ifdef USE_JAVA
-                        // Fix bug 2218 by rendering EPS to a bitmap
-                        VirtualDevice aVDev( static_cast< const OutputDevice& >( rVDev ) );
-                        if ( aVDev.SetOutputSizePixel( pAct->GetSize() ) )
-                        {
-                            GDIMetaFile aTmpMtf( pAct->GetSubstitute() );
-                            aVDev.DrawEPS( Point(), pAct->GetSize(), pAct->GetLink(), &aTmpMtf );
-                            BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(), pAct->GetSize() );
-                            MetaBmpExAction *pBmpExAction = new MetaBmpExAction( pAct->GetPoint(), aBmpEx );
-                            aTmpMtf.Clear();
-                            aTmpMtf.AddAction( pBmpExAction );
-                            createActions( aTmpMtf, rFactoryParms, bSubsettableActions );
-                        }
-#else	// USE_JAVA
                         const GDIMetaFile&  rSubstitute = pAct->GetSubstitute();
 
                         // #121806# explicitely kept integer
@@ -1577,13 +1563,27 @@ namespace cppcanvas
                         rVDev.Push();
                         rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
                         
+#ifdef USE_JAVA
+                        // Fix bug 2218 by rendering EPS to a bitmap
+                        VirtualDevice aVDev( static_cast< const OutputDevice& >( rVDev ) );
+                        if ( aVDev.SetOutputSizePixel(  aMtfSizePix ) )
+                        {
+                            GDIMetaFile aTmpMtf( pAct->GetSubstitute() );
+                            aVDev.DrawEPS( Point(),  aMtfSizePix, pAct->GetLink(), &aTmpMtf );
+                            BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(),  aMtfSizePix );
+                            MetaBmpExAction *pBmpExAction = new MetaBmpExAction( Point(), aBmpEx );
+                            aTmpMtf.Clear();
+                            aTmpMtf.AddAction( pBmpExAction );
+                            createActions( aTmpMtf, rFactoryParms, bSubsettableActions );
+                        }
+#else	// USE_JAVA
                         createActions( const_cast<GDIMetaFile&>(pAct->GetSubstitute()),
                                        rFactoryParms,
                                        bSubsettableActions );
+#endif	// USE_JAVA
 
                         rVDev.Pop();
                         popState( rStates );
-#endif	// USE_JAVA
                     }
                     break;
 
