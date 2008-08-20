@@ -82,11 +82,6 @@ import javax.swing.JRadioButton;
 public final class VCLGraphics {
 
 	/**
-	 * The MAX_DRAW_PIXELS constant.
-	 */
-	public final static int MAX_DRAW_PIXELS = 1024 * 1024;
-
-	/**
 	 * The SAL_INVERT_HIGHLIGHT constant.
 	 */
 	public final static int SAL_INVERT_HIGHLIGHT = 0x0001;
@@ -907,7 +902,7 @@ public final class VCLGraphics {
 		srcBounds.y += destBounds.y - destY;
 
 		boolean inRetry = false;
-		int incrementY = VCLGraphics.MAX_DRAW_PIXELS / destBounds.width;
+		int incrementY = (int)VCLEventQueue.GC_DISPOSED_PIXELS / destBounds.width;
 		for (int offsetY = 0; offsetY < destBounds.height; offsetY += incrementY) {
 			Graphics2D g = getGraphics(false);
 			if (g != null) {
@@ -915,26 +910,22 @@ public final class VCLGraphics {
 					Rectangle currentDestBounds = new Rectangle(destBounds.x, destBounds.y + offsetY, destBounds.width, destBounds.height - offsetY);
 					if (currentDestBounds.height > incrementY)
 						currentDestBounds.height = incrementY;
-					try {
-						g.setComposite(VCLGraphics.copyComposite);
-						VCLGraphics.copyComposite.setData(buffer, currentDestBounds, dataWidth, dataHeight);
-						g.setClip(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
-						g.fillRect(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
-					}
-					catch (OutOfMemoryError ome) {
-						// Force rerunning of this section
-						if (!inRetry) {
-							inRetry = true;
-							VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
-							offsetY -= incrementY;
-						}
-						else {
-							inRetry = false;
-						}
-					}
+					g.setComposite(VCLGraphics.copyComposite);
+					VCLGraphics.copyComposite.setData(buffer, currentDestBounds, dataWidth, dataHeight);
+					g.setClip(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
+					g.fillRect(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
 				}
 				catch (Throwable t) {
-					t.printStackTrace();
+					// Force rerunning of this section
+					VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
+					if (!inRetry) {
+						inRetry = true;
+						offsetY -= incrementY;
+					}
+					else {
+						inRetry = false;
+						t.printStackTrace();
+					}
 				}
 				g.dispose();
 			}
