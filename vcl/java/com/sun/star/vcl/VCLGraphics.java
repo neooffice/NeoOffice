@@ -82,9 +82,9 @@ import javax.swing.JRadioButton;
 public final class VCLGraphics {
 
 	/**
-	 * The AUTO_FLUSH_INTERVAL constant.
+	 * The MAX_DRAW_PIXELS constant.
 	 */
-	public final static long AUTO_FLUSH_INTERVAL = 100;
+	public final static int MAX_DRAW_PIXELS = 1024 * 1024;
 
 	/**
 	 * The SAL_INVERT_HIGHLIGHT constant.
@@ -906,18 +906,38 @@ public final class VCLGraphics {
 		srcBounds.x += destBounds.x - destX;
 		srcBounds.y += destBounds.y - destY;
 
-		Graphics2D g = getGraphics(false);
-		if (g != null) {
-			try {
-				g.setComposite(VCLGraphics.copyComposite);
-				VCLGraphics.copyComposite.setData(buffer, destBounds, dataWidth, dataHeight);
-				g.setClip(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height);
-				g.fillRect(srcBounds.x, srcBounds.y, destBounds.width, destBounds.height);
+		boolean inRetry = false;
+		int incrementY = VCLGraphics.MAX_DRAW_PIXELS / destBounds.width;
+		for (int offsetY = 0; offsetY < destBounds.height; offsetY += incrementY) {
+			Graphics2D g = getGraphics(false);
+			if (g != null) {
+				try {
+					Rectangle currentDestBounds = new Rectangle(destBounds.x, destBounds.y + offsetY, destBounds.width, destBounds.height - offsetY);
+					if (currentDestBounds.height > incrementY)
+						currentDestBounds.height = incrementY;
+					try {
+						g.setComposite(VCLGraphics.copyComposite);
+						VCLGraphics.copyComposite.setData(buffer, currentDestBounds, dataWidth, dataHeight);
+						g.setClip(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
+						g.fillRect(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
+					}
+					catch (OutOfMemoryError ome) {
+						// Force rerunning of this section
+						if (!inRetry) {
+							inRetry = true;
+							VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
+							offsetY -= incrementY;
+						}
+						else {
+							inRetry = false;
+						}
+					}
+				}
+				catch (Throwable t) {
+					t.printStackTrace();
+				}
+				g.dispose();
 			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
 		}
 
 	}
