@@ -128,7 +128,7 @@ public final class VCLEventQueue implements Runnable {
 	/**
 	 * The GC_MEMORY_2 constant.
 	 */
-	public final static long GC_MEMORY_2 = 4 * GC_DISPOSED_PIXELS;
+	public final static long GC_MEMORY_2 = GC_DISPOSED_PIXELS / 2;
 
 	/**
 	 * The GC_MEMORY_3 constant.
