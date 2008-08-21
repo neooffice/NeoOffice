@@ -41,6 +41,12 @@ TARGETTYPE=CUI
 
 .INCLUDE :  ..$/util$/makefile.pmk
 
+.IF "$(GUIBASE)"=="aqua"
+dummy:
+    @echo "Nothing to build for GUIBASE aqua."
+    
+.ELSE
+
 # --- Files --------------------------------------------------------
 
 INCPRE+=-I$(SOLARINCDIR)$/mozilla$/plugin
@@ -90,19 +96,13 @@ APP1STDLIBS+= -lXt -lXext -lX11 -ldl
 .ENDIF
 .ENDIF
 
-.IF "$(HAVE_READDIR_R)" != "YES"
-.IF "$(OS)" == "WNT"
-APP1STDLIBS+= gnu_readdir.lib
-.ELSE
-APP1STDLIBS+=-lgnu_readdir_r
-.ENDIF
-.ENDIF
-
 APP1DEF=	$(MISC)$/$(TARGET).def
 
 .ENDIF # $(WITH_MOZILLA) != "NO"
 
 .ENDIF		# "$(GUIBASE)" != "java"
+
+.ENDIF # $(GUIBASE)==aqua
 
 # --- Targets ------------------------------------------------------
 

@@ -41,91 +41,34 @@
 #endif
 
 #include <cppuhelper/weak.hxx>
-
-#ifndef _COM_SUN_STAR_AWT_KEY_HPP_
 #include <com/sun/star/awt/Key.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_KEYFUNCTION_HPP_
 #include <com/sun/star/awt/KeyFunction.hpp>
-#endif
-#ifndef _COM_SUN_STAR_BEANS_PROPERTYATTRIBUTE_HPP_
 #include <com/sun/star/beans/PropertyAttribute.hpp>
-#endif
-#ifndef _COM_SUN_STAR_PLUGIN_PLUGINMODE_HPP_
 #include <com/sun/star/plugin/PluginMode.hpp>
-#endif
-#ifndef _COM_SUN_STAR_PLUGIN_PLUGINDESCRIPTION_HPP_
 #include <com/sun/star/plugin/PluginDescription.hpp>
-#endif
-#ifndef _COM_SUN_STAR_PLUGIN_PLUGINEXCEPTION_HPP_
 #include <com/sun/star/plugin/PluginException.hpp>
-#endif
-#ifndef _COM_SUN_STAR_PLUGIN_PLUGINVARIABLE_HPP_
 #include <com/sun/star/plugin/PluginVariable.hpp>
-#endif
-#ifndef _COM_SUN_STAR_PLUGIN_XPLUGIN_HPP_
 #include <com/sun/star/plugin/XPlugin.hpp>
-#endif
-#ifndef _COM_SUN_STAR_PLUGIN_XPLUGINMANAGER_HPP_
 #include <com/sun/star/plugin/XPluginManager.hpp>
-#endif
-#ifndef _COM_SUN_STAR_PLUGIN_XPLUGINCONTEXT_HPP_
 #include <com/sun/star/plugin/XPluginContext.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XCONNECTABLE_HPP_
 #include <com/sun/star/io/XConnectable.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XOUTPUTSTREAM_HPP_
 #include <com/sun/star/io/XOutputStream.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XDATAOUTPUTSTREAM_HPP_
 #include <com/sun/star/io/XDataOutputStream.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XACTIVEDATACONTROL_HPP_
 #include <com/sun/star/io/XActiveDataControl.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XDATAINPUTSTREAM_HPP_
 #include <com/sun/star/io/XDataInputStream.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XMARKABLESTREAM_HPP_
 #include <com/sun/star/io/XMarkableStream.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XINPUTSTREAM_HPP_
 #include <com/sun/star/io/XInputStream.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XSTREAMLISTENER_HPP_
 #include <com/sun/star/io/XStreamListener.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XACTIVEDATASINK_HPP_
 #include <com/sun/star/io/XActiveDataSink.hpp>
-#endif
-#ifndef _COM_SUN_STAR_IO_XACTIVEDATASOURCE_HPP_
 #include <com/sun/star/io/XActiveDataSource.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSERVICENAME_HPP_
 #include <com/sun/star/lang/XServiceName.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSINGLESERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_GRADIENTSTYLE_HPP_
 #include <com/sun/star/awt/GradientStyle.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_RASTEROPERATION_HPP_
 #include <com/sun/star/awt/RasterOperation.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_GRADIENT_HPP_
 #include <com/sun/star/awt/Gradient.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_XGRAPHICS_HPP_
 #include <com/sun/star/awt/XGraphics.hpp>
-#endif
 
 #include <cppuhelper/implbase3.hxx>
 #include <cppuhelper/implbase2.hxx>
@@ -141,11 +84,15 @@
 #include <plugin/os2/sysplug.hxx>
 #endif
 
-#ifdef UNX
+#if defined(UNX)
 #ifdef USE_JAVA
 #include <plugin/java/sysplug.hxx>
 #else	// USE_JAVA
+#if defined(QUARTZ)
+#include <plugin/aqua/sysplug.hxx>
+#else
 #include <plugin/unx/sysplug.hxx>
+#endif
 #endif	// USE_JAVA
 #endif
 
@@ -163,7 +110,7 @@ using namespace com::sun::star::uno;
 #define PROVIDING_MODEL_UPDATE		2
 
 // forwards
-namespace ucb { class Content; }
+namespace ucbhelper { class Content; }
 class PluginStream;
 class PluginInputStream;
 class PluginOutputStream;
@@ -322,7 +269,6 @@ private:
 	static PluginManager*		pManager;
 
 	PluginManager();
-	~PluginManager();
 public:
 
 	static PluginManager& get();
@@ -343,7 +289,6 @@ public:
 	virtual ~XPluginManager_Impl();
 
 	static XPlugin_Impl* getXPluginFromNPP( NPP );
-	static XPlugin_Impl* getFirstXPlugin();
 	static XPlugin_Impl* getPluginImplementation( const Reference< com::sun::star::plugin::XPlugin >& plugin );
 
 	virtual Reference< com::sun::star::plugin::XPluginContext > SAL_CALL createPluginContext() throw();
@@ -394,7 +339,7 @@ class PluginInputStream :
 				>
 {
 private:
-	::ucb::Content*				m_pContent;
+	::ucbhelper::Content*		m_pContent;
 	sal_Int32					m_nMode;
 	UINT32						m_nWritePos;
 
@@ -421,7 +366,7 @@ public:
 	void setMode( sal_Int32 nMode );
 	UINT32 read( UINT32 offset, sal_Int8* buffer, UINT32 size );
 	void setSource( const Reference< com::sun::star::io::XActiveDataSource >& xSource ) { m_xSource = xSource; }
-	// get contents ot url via ucb::Content
+	// get contents ot url via ucbhelper::Content
 	void load();
 
     // clear reference

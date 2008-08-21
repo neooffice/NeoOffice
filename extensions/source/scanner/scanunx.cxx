@@ -148,7 +148,7 @@ struct SaneHolder
     bool				m_bBusy;
 };
 
-DECLARE_LIST( SaneHolderList, SaneHolder* );
+DECLARE_LIST( SaneHolderList, SaneHolder* )
 
 static SaneHolderList	allSanes;
 static vos::OMutex		aSaneProtector;
@@ -295,7 +295,7 @@ fprintf( stderr, "Here 0\n" );
     fprintf( stderr, "ScannerManager::configureScanner\n" );
 #endif
 
-	if( scanner_context.InternalData < 0 || scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
@@ -354,7 +354,7 @@ fprintf( stderr, "Here 1\n" );
     fprintf( stderr, "ScannerManager::startScan\n" );
 #endif
 
-	if( scanner_context.InternalData < 0 || scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
@@ -380,7 +380,7 @@ ScanError ScannerManager::getError( const ScannerContext& scanner_context ) thro
 {
 	vos::OGuard aGuard( aSaneProtector );
 
-	if( scanner_context.InternalData < 0 || scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
@@ -398,7 +398,7 @@ REF( AWT::XBitmap ) ScannerManager::getBitmap( const ScannerContext& scanner_con
 {
 	vos::OGuard aGuard( aSaneProtector );
 
-	if( scanner_context.InternalData < 0 || scanner_context.InternalData >= allSanes.Count() )
+	if( scanner_context.InternalData < 0 || (ULONG)scanner_context.InternalData >= allSanes.Count() )
 		throw ScannerException(
 			::rtl::OUString::createFromAscii( "Scanner does not exist" ),
 			REF( XScannerManager )( this ),
