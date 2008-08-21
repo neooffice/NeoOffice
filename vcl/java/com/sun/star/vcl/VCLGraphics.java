@@ -904,12 +904,18 @@ public final class VCLGraphics {
 		boolean inRetry = false;
 		int incrementY = (int)VCLEventQueue.GC_DISPOSED_PIXELS / destBounds.width;
 		for (int offsetY = 0; offsetY < destBounds.height; offsetY += incrementY) {
+			if (incrementY < destBounds.height)
+				VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
+			else
+				VCLEventQueue.runGCIfNeeded(destBounds.width * destBounds.height);
+
 			Graphics2D g = getGraphics(false);
 			if (g != null) {
 				try {
 					Rectangle currentDestBounds = new Rectangle(destBounds.x, destBounds.y + offsetY, destBounds.width, destBounds.height - offsetY);
 					if (currentDestBounds.height > incrementY)
 						currentDestBounds.height = incrementY;
+
 					g.setComposite(VCLGraphics.copyComposite);
 					VCLGraphics.copyComposite.setData(buffer, currentDestBounds, dataWidth, dataHeight);
 					g.setClip(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
