@@ -1565,14 +1565,13 @@ namespace cppcanvas
                         
 #ifdef USE_JAVA
                         // Fix bug 2218 by rendering EPS to a bitmap
-                        VirtualDevice aVDev( static_cast< const OutputDevice& >( rVDev ) );
-                        if ( aVDev.SetOutputSizePixel(  aMtfSizePix ) )
+                        VirtualDevice aVDev;
+                        if ( aVDev.SetOutputSizePixel( aMtfSizePix ) )
                         {
-                            GDIMetaFile aTmpMtf( pAct->GetSubstitute() );
-                            aVDev.DrawEPS( Point(),  aMtfSizePix, pAct->GetLink(), &aTmpMtf );
-                            BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(),  aMtfSizePix );
+                            aVDev.DrawEPS( Point(), aMtfSizePix, pAct->GetLink(), NULL );
+                            BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(), aMtfSizePix );
                             MetaBmpExAction *pBmpExAction = new MetaBmpExAction( Point(), aBmpEx );
-                            aTmpMtf.Clear();
+                            GDIMetaFile aTmpMtf;
                             aTmpMtf.AddAction( pBmpExAction );
                             createActions( aTmpMtf, rFactoryParms, bSubsettableActions );
                         }
