@@ -502,6 +502,10 @@ id rcBehavior;
 
 - (void)bindRemoteControls:(id)obj
 {
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( !pApp )
+		return;
+
 	// load our framework out of our bundle's directory
 	
 	const struct mach_header * frameworkLib=NSAddImage(kRemoteControlFrameworkName, NSADDIMAGE_OPTION_RETURN_ON_ERROR | NSADDIMAGE_OPTION_WITH_SEARCHING);
@@ -540,11 +544,11 @@ id rcBehavior;
 					else
 						fprintf(stderr, "KeyspanFrontRowControl class not found\n");
 
-					realAppDelegate = [NSApp delegate];
+					realAppDelegate = [pApp delegate];
 					if(realAppDelegate)
 						[realAppDelegate retain];
-					[NSApp setDelegate:self];
-					if([NSApp isActive])
+					[pApp setDelegate:self];
+					if([pApp isActive])
 						[rcContainer performSelector:@selector(startListening:) withObject:self];
 				}
 			}
@@ -601,11 +605,19 @@ id rcBehavior;
 
 - (void)startPresentation: (id)ignore
 {
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( !pApp )
+		return;
+
+	NSWindow *pKeyWindow = [pApp keyWindow];
+	if ( !pKeyWindow )
+		return;
+
 	SystemUIMode outMode;
 	SystemUIOptions outOptions;
 	
 	GetSystemUIMode(&outMode, &outOptions);
-	
+
 	if(outMode==kUIModeNormal)
 	{
 		try
@@ -632,15 +644,15 @@ id rcBehavior;
 	else if(outMode==kUIModeAllHidden)
 	{
 		NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
-		
+
 		unichar escape=27;
 		NSString *characters=[NSString stringWithCharacters: &escape length: 1];
-		[NSApp postEvent:
+		[pApp postEvent:
 			[NSEvent keyEventWithType:NSKeyDown
 				location: NSZeroPoint
 				modifierFlags: 0
 				timestamp: 0
-				windowNumber: [[NSApp mainWindow] windowNumber]
+				windowNumber: [pKeyWindow windowNumber]
 				context: nil
 				characters: characters
 				charactersIgnoringModifiers: characters
@@ -654,6 +666,14 @@ id rcBehavior;
 
 - (void)previousSlide:(id)ignore
 {
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( !pApp )
+		return;
+
+	NSWindow *pKeyWindow = [pApp keyWindow];
+	if ( !pKeyWindow )
+		return;
+
 	SystemUIMode outMode;
 	SystemUIOptions outOptions;
 	
@@ -665,12 +685,12 @@ id rcBehavior;
 		
 		unichar leftArrow=NSLeftArrowFunctionKey;
 		NSString *characters=[NSString stringWithCharacters: &leftArrow length: 1];
-		[NSApp postEvent:
+		[pApp postEvent:
 			[NSEvent keyEventWithType:NSKeyDown
 				location: NSZeroPoint
 				modifierFlags: 0
 				timestamp: 0
-				windowNumber: [[NSApp mainWindow] windowNumber]
+				windowNumber: [pKeyWindow windowNumber]
 				context: nil
 				characters: characters
 				charactersIgnoringModifiers: characters
@@ -684,6 +704,14 @@ id rcBehavior;
 
 - (void)nextSlide:(id)ignore
 {
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( !pApp )
+		return;
+
+	NSWindow *pKeyWindow = [pApp keyWindow];
+	if ( !pKeyWindow )
+		return;
+
 	SystemUIMode outMode;
 	SystemUIOptions outOptions;
 	
@@ -695,12 +723,12 @@ id rcBehavior;
 	
 		unichar rightArrow=NSRightArrowFunctionKey;
 		NSString *characters=[NSString stringWithCharacters: &rightArrow length: 1];
-		[NSApp postEvent:
+		[pApp postEvent:
 			[NSEvent keyEventWithType:NSKeyDown
 				location: NSZeroPoint
 				modifierFlags: 0
 				timestamp: 0
-				windowNumber: [[NSApp mainWindow] windowNumber]
+				windowNumber: [pKeyWindow windowNumber]
 				context: nil
 				characters: characters
 				charactersIgnoringModifiers: characters
