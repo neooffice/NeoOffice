@@ -91,6 +91,14 @@
 #include <com/sun/star/drawing/XShapes.hpp>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _COM_SUN_STAR_VIEW_XVIEWSETTINGSSUPPLIER_HPP_
+#include <com/sun/star/view/XViewSettingsSupplier.hpp>
+#endif
+
+#endif	// USE_JAVA
+
 using namespace ::rtl;
 using namespace ::vcl;
 using namespace ::com::sun::star;
@@ -634,6 +642,29 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 					aSelection = Any();
 					aSelection <<= mxSrcDoc;
 				}
+
+#ifdef USE_JAVA
+				// Determine if we need to toggle back to browser mode after
+				// PDF export has finished
+				sal_Bool bToggleBrowserMode = sal_False;
+				uno::Reference< frame::XModel > xModel( mxSrcDoc, UNO_QUERY );
+				if ( xModel.is() )
+				{
+					uno::Reference< frame::XController > xController = xModel->getCurrentController();
+					if ( xController.is() )
+					{
+						OUString aShowOnlineLayoutKey = OUString( RTL_CONSTASCII_USTRINGPARAM( "ShowOnlineLayout" ) );
+						Reference < XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
+						if ( xSettings.is() )
+						{
+							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
+							Any aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+							aShowOnlineLayout >>= bToggleBrowserMode;
+						}
+					}
+				}
+#endif	// USE_JAVA
+
 				sal_Bool		bSecondPassForImpressNotes = sal_False;
                 const sal_Int32 nPageCount = xRenderable->getRendererCount( aSelection, aRenderOptions );
 				const Range     aRange( 1, nPageCount );
@@ -678,6 +709,17 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 					rExportNotesValue <<= sal_True;
                     bRet = ExportSelection( *pPDFWriter, xRenderable, aSelection, aMultiSelection, aRenderOptions, nPageCount );
 				}
+#ifdef USE_JAVA
+				// Fix bugs 2462 and 2548 by reverting to browser mode at the
+				// end of PDF export
+				if ( bToggleBrowserMode )
+				{
+					aRenderOptions.realloc( 1 );
+					aRenderOptions[ 0 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) );
+					aRenderOptions[ 0 ].Value <<= sal_True;
+					xRenderable->render( 0, aSelection, aRenderOptions );
+				}
+#endif	// USE_JAVA
 				if ( mxStatusIndicator.is() )
 					mxStatusIndicator->end();
 
