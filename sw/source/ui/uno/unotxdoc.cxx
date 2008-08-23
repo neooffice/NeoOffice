@@ -2771,7 +2771,7 @@ void SAL_CALL SwXTextDocument::render(
             rxOptions[ 0 ].Value >>= bToggleBrowserMode;
             if ( bToggleBrowserMode )
             {
-                pDocShell->ToggleBrowserMode( true, pView );
+                pDocShell->ToggleBrowserMode( true, (SwView *)pView );
 
                 const TypeId aSwViewTypeId = TYPE(SwView);
                 SwWrtShell* pWrtShell = pView->IsA(aSwViewTypeId) ? ((SwView*)pView)->GetWrtShellPtr() : 0;
