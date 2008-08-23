@@ -670,8 +670,8 @@ struct CheckPasswordCapability
         return  _pFilter && _pFilter->IsOwnFormat()
 			&&	_pFilter->UsesStorage()
 #ifdef USE_JAVA
-			&&	_pFilter->GetUserData().SearchAscii( ",Preprocess" ) == STRING_NOTFOUND
-			&&	_pFilter->GetUserData().SearchAscii( ",Postprocess" ) == STRING_NOTFOUND
+			&&	_pFilter->GetUserData().SearchAscii( "Preprocess" ) == STRING_NOTFOUND
+			&&	_pFilter->GetUserData().SearchAscii( "Postprocess" ) == STRING_NOTFOUND
 #endif	// USE_JAVA
 			&&	( SOFFICE_FILEFORMAT_60 <= _pFilter->GetVersion() );
 	}
