@@ -36,6 +36,7 @@
 
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
+unset DYLD_LIBRARY_PATH
 
 umask 022
 
