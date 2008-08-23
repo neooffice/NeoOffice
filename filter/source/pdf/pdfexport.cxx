@@ -91,6 +91,44 @@
 #include <com/sun/star/drawing/XShapes.hpp>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static bool IsX11Product()
+{
+    static bool bX11 = sal_False;
+    static ::osl::Module aVCLModule;
+
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+            bX11 = true;
+    }
+
+    return bX11;
+}
+
+#ifndef _COM_SUN_STAR_VIEW_XVIEWSETTINGSSUPPLIER_HPP_
+#include <com/sun/star/view/XViewSettingsSupplier.hpp>
+#endif
+
+#endif	// USE_JAVA
+
 using namespace ::rtl;
 using namespace ::vcl;
 using namespace ::com::sun::star;
@@ -634,6 +672,29 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 					aSelection = Any();
 					aSelection <<= mxSrcDoc;
 				}
+
+#ifdef USE_JAVA
+				// Determine if we need to toggle back to browser mode after
+				// PDF export has finished
+				sal_Bool bToggleBrowserMode = sal_False;
+				uno::Reference< frame::XModel > xModel( mxSrcDoc, UNO_QUERY );
+				if ( xModel.is() )
+				{
+					uno::Reference< frame::XController > xController = xModel->getCurrentController();
+					if ( xController.is() )
+					{
+						OUString aShowOnlineLayoutKey = OUString( RTL_CONSTASCII_USTRINGPARAM( "ShowOnlineLayout" ) );
+						Reference < XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
+						if ( xSettings.is() )
+						{
+							Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
+							Any aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
+							aShowOnlineLayout >>= bToggleBrowserMode;
+						}
+					}
+				}
+#endif	// USE_JAVA
+
 				sal_Bool		bSecondPassForImpressNotes = sal_False;
                 const sal_Int32 nPageCount = xRenderable->getRendererCount( aSelection, aRenderOptions );
 				const Range     aRange( 1, nPageCount );
@@ -678,6 +739,17 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 					rExportNotesValue <<= sal_True;
                     bRet = ExportSelection( *pPDFWriter, xRenderable, aSelection, aMultiSelection, aRenderOptions, nPageCount );
 				}
+#ifdef USE_JAVA
+				// Fix bugs 2462 and 2548 by reverting to browser mode at the
+				// end of PDF export
+				if ( bToggleBrowserMode )
+				{
+					aRenderOptions.realloc( 1 );
+					aRenderOptions[ 0 ].Name = OUString( RTL_CONSTASCII_USTRINGPARAM( "ToggleBrowserMode" ) );
+					aRenderOptions[ 0 ].Value <<= sal_True;
+					xRenderable->render( 0, aSelection, aRenderOptions );
+				}
+#endif	// USE_JAVA
 				if ( mxStatusIndicator.is() )
 					mxStatusIndicator->end();
 
@@ -1012,23 +1084,28 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 				{
 					const MetaEPSAction*	pA = (const MetaEPSAction*) pAction;
 #ifdef USE_JAVA
-					const Point& rPos = pA->GetPoint();
-					const Size& rSize = pA->GetSize();
-
-					Size aDstSizePixel( rDummyVDev.LogicToPixel( rSize ) );
-					if ( aDstSizePixel.Width() && aDstSizePixel.Height() )
+					if ( !IsX11Product() )
 					{
-						VirtualDevice* pVDev = new VirtualDevice;
-						if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
+						const Point& rPos = pA->GetPoint();
+						const Size& rSize = pA->GetSize();
+
+						Size aDstSizePixel( rDummyVDev.LogicToPixel( rSize ) );
+						if ( aDstSizePixel.Width() && aDstSizePixel.Height() )
 						{
-							// Convert EPS to bitmap
-							Point aPoint;
-							pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
-							ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize,pVDev->GetBitmapEx( aPoint, aDstSizePixel ) );
+							VirtualDevice* pVDev = new VirtualDevice;
+							if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
+							{
+								// Convert EPS to bitmap
+								Point aPoint;
+								pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
+								ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize,pVDev->GetBitmapEx( aPoint, aDstSizePixel ) );
+							}
+							delete pVDev;
 						}
-						delete pVDev;
 					}
-#else	// USE_JAVA
+					else
+					{
+#endif	// USE_JAVA
 					const GDIMetaFile		aSubstitute( pA->GetSubstitute() );
 
 					rWriter.Push();
@@ -1045,6 +1122,8 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 					ImplWriteActions( rWriter, NULL, aSubstitute, rDummyVDev );
 					rDummyVDev.Pop();
 					rWriter.Pop();
+#ifdef USE_JAVA
+				}
 #endif	// USE_JAVA
 				}
 				break;

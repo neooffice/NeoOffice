@@ -242,9 +242,6 @@
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
-#ifndef _COM_SUN_STAR_VIEW_XVIEWSETTINGSSUPPLIER_HPP_
-#include <com/sun/star/view/XViewSettingsSupplier.hpp>
-#endif
 
 #endif	// USE_JAVA
 
@@ -1756,32 +1753,10 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 								aArgs[1].Name = ::rtl::OUString::createFromAscii( "OutputStream" );
 								aArgs[1].Value <<= com::sun::star::uno::Reference< com::sun::star::io::XOutputStream >( xPDFStream->getOutputStream() );
 
-								uno::Reference< frame::XController > xController = GetModel()->getCurrentController();
-								if ( xController.is() )
+								if ( xFilter->filter( aArgs ) )
 								{
-									// Fix bug 2462 by setting the ShowOnlineLayout
-									// property to what it was before exporting to PDF
-									OUString aShowOnlineLayoutKey = OUString::createFromAscii( "ShowOnlineLayout" );
-									Reference < css::view::XViewSettingsSupplier > xSettings( xController, UNO_QUERY );
-									Any aShowOnlineLayout;
-									if ( xSettings.is() )
-									{
-										Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
-										aShowOnlineLayout = xViewProps->getPropertyValue( aShowOnlineLayoutKey );
-									}
-
-									if ( xFilter->filter( aArgs ) )
-									{
-										uno::Reference< embed::XTransactedObject > xTransact( xThumbnailStor, uno::UNO_QUERY_THROW );
-										xTransact->commit();
-									}
-
-									if ( aShowOnlineLayout.hasValue() && xSettings.is() )
-									{
-										Reference < XPropertySet > xViewProps = xSettings->getViewSettings();
-                			xViewProps->setPropertyValue( aShowOnlineLayoutKey, aShowOnlineLayout );
-										xController->restoreViewData( xController->getViewData() );
-									}
+									uno::Reference< embed::XTransactedObject > xTransact( xThumbnailStor, uno::UNO_QUERY_THROW );
+									xTransact->commit();
 								}
 							}
 						}
