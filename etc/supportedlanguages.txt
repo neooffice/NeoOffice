@@ -29,7 +29,8 @@ it,1,Italian
 ja,1,Japanese
 ko,1,Korean
 lt,0,Lithuanian
-lv,0,Latvian
+#Fix bug 3201 by disabling Latvian language pack
+#lv,0,Latvian
 mk,1,Macedonian
 mr-IN,0,Marathi
 nb,0,Norwegian
