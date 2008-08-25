@@ -14,6 +14,7 @@ oox	oox\com\sun\star\table	nmake	-   all	oox_api_table NULL
 oox	oox\com\sun\star\xml	nmake	-   all	oox_api_xml NULL
 oox	oox\com\sun\star\xml\sax	nmake	-   all	oox_api_xmlsax oox_api_xml NULL
 oox	oox\source\tools		nmake	-   all	oox_tools NULL
+oox	oox\source\fastparser		nmake	-   all	oox_fastparser NULL
 oox	oox\source\token		nmake	-   all	oox_token oox_api oox_tools NULL
 oox	oox\source\helper		nmake	-   all	oox_helper oox_token NULL
 oox	oox\source\core			nmake	-   all	oox_core oox_token NULL
