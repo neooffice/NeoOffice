@@ -42,7 +42,6 @@ PACKAGE=com$/sun$/star
 # ------------------------------------------------------------------------
 
 UNOTYPES=\
-	com.sun.star.awt.XFont2 \
 	com.sun.star.chart.DataLabelPlacement \
 	com.sun.star.chart.ErrorBarStyle \
 	com.sun.star.chart2.AxisType \

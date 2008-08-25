@@ -1,8 +1,7 @@
 oox	oox : vos cppu cppuhelper comphelper sal offapi sax basegfx tools BOOST:boost NULL
 oox	oox				usr1	-   all	oox_mkout NULL
 oox	oox\prj				get	-   all	oox_prj NULL
-oox	oox\com\sun\star	nmake	-   all	oox_api oox_api_awt oox_api_chart oox_api_chart2 oox_api_drawing oox_api_document oox_api_graphic oox_api_sheet oox_api_table oox_api_xmlsax NULL
-oox	oox\com\sun\star\awt	nmake	-   all	oox_api_awt NULL
+oox	oox\com\sun\star	nmake	-   all	oox_api oox_api_chart oox_api_chart2 oox_api_drawing oox_api_document oox_api_graphic oox_api_sheet oox_api_table oox_api_xmlsax NULL
 oox	oox\com\sun\star\chart	nmake	-   all	oox_api_chart NULL
 oox	oox\com\sun\star\chart2	nmake	-   all	oox_api_chart2 oox_api_chart2data NULL
 oox	oox\com\sun\star\chart2\data	nmake	-   all	oox_api_chart2data NULL
