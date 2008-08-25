@@ -132,6 +132,7 @@ X11_PRODUCT_COMPONENT_MODULES=
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice2
 OO_TAG:=-rOpenOffice_2_2_1
+OO_OOX_TAG:=-rOOO300_m3
 OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_2_2_1
 OOO-BUILD_PACKAGE:=ooo-build
 OOO-BUILD_TAG:=
@@ -359,7 +360,19 @@ build.neo_configure: build.oo_all neo_configure.mk
 	$(MAKE) $(MFLAGS) build.neo_configure_phony
 	touch "$@"
 
-build.neo_%_patch: % build.neo_configure
+build.oo_oox_checkout:
+	rm -Rf "$(BUILD_HOME)/oox"
+	mkdir -p "$(BUILD_HOME)"
+# The OOo cvs server gets messed up with tags so we need to do a little trick
+# to get the checkout to work
+	rm -Rf "$(BUILD_HOME)/tmp" ; mkdir -p "$(BUILD_HOME)/tmp" ; cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d $(OO_TAG)
+	rm -Rf "$(BUILD_HOME)/tmp"
+# Do the real checkout
+	cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co $(OO_OOX_TAG) oox
+	chmod -Rf u+w "$(BUILD_HOME)/oox"
+	touch "$@"
+
+build.neo_%_patch: % build.oo_oox_checkout build.neo_configure
 	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR)` ; do mkdir -p "$$i" ; done'
 	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR)` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 	sh -e -c 'if [ ! -d "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" -a -d "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)" ] ; then rm -Rf "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; mv -f "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)" "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; fi'
@@ -396,6 +409,7 @@ build.neo_patches: build.oo_all \
 	build.neo_hsqldb_patch \
 	build.neo_jvmfwk_patch \
 	build.neo_lingucomponent_patch \
+	build.neo_oox_patch \
 	build.neo_rhino_patch \
 	build.neo_sal_patch \
 	build.neo_sc_patch \
