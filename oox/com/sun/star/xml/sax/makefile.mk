@@ -40,28 +40,16 @@ PACKAGE=com$/sun$/star$/xml$/sax
 # ------------------------------------------------------------------------
 
 IDLFILES=\
-	InputSource.idl \
-	SAXException.idl \
-	SAXInvalidCharacterException.idl \
-	SAXParseException.idl \
-	XAttributeList.idl \
-	XDocumentHandler.idl \
-	XDTDHandler.idl \
-	XEntityResolver.idl \
-	XErrorHandler.idl \
-	XExtendedDocumentHandler.idl \
-	XLocator.idl \
-	XParser.idl \
-	XSAXSerializable.idl \
-	XFastParser.idl \
-	XFastDocumentHandler.idl \
+	FastShapeContextHandler.idl \
+	FastToken.idl \
+	FastTokenHandler.idl \
+	XFastAttributeList.idl \
 	XFastContextHandler.idl \
+	XFastDocumentHandler.idl \
+	XFastParser.idl \
 	XFastShapeContextHandler.idl \
 	XFastTokenHandler.idl \
-	XFastAttributeList.idl \
-	FastToken.idl \
-	FastShapeContextHandler.idl \
-	FastTokenHandler.idl
+	XSAXSerializable.idl
 
 # ------------------------------------------------------------------
 

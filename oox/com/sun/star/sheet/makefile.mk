@@ -42,7 +42,6 @@ PACKAGE=com$/sun$/star$/sheet
 # ------------------------------------------------------------------------
 
 IDLFILES= \
-	_NamedRange.idl \
 	AccessibleCell.idl \
 	AccessibleCsvCell.idl \
 	AccessibleCsvRuler.idl \
@@ -51,10 +50,8 @@ IDLFILES= \
 	AccessibleSpreadsheet.idl \
 	AccessibleSpreadsheetDocumentView.idl \
 	AccessibleSpreadsheetPageView.idl \
-	ActivationEvent.idl \
 	AddIn.idl \
 	AddressConvention.idl \
-	Border.idl \
 	CellAnnotation.idl \
 	CellAnnotationShape.idl \
 	CellAnnotations.idl \
@@ -62,39 +59,22 @@ IDLFILES= \
 	CellAreaLink.idl \
 	CellAreaLinks.idl \
 	CellAreaLinksEnumeration.idl \
-	CellDeleteMode.idl \
-	CellFlags.idl \
 	CellFormatRanges.idl \
 	CellFormatRangesEnumeration.idl \
-	CellInsertMode.idl \
 	Cells.idl \
 	CellsEnumeration.idl \
 	ComplexReference.idl \
-	ConditionOperator.idl \
 	ConsolidationDescriptor.idl \
 	DDELink.idl \
 	DDELinkMode.idl \
 	DDELinks.idl \
 	DDELinksEnumeration.idl \
-	DataImportMode.idl \
 	DataPilotDescriptor.idl \
 	DataPilotField.idl \
-	DataPilotFieldAutoShowInfo.idl \
 	DataPilotFieldFilter.idl \
 	DataPilotFieldGroup.idl \
-	DataPilotFieldGroupBy.idl \
-	DataPilotFieldGroupInfo.idl \
 	DataPilotFieldGroupItem.idl \
 	DataPilotFieldGroups.idl \
-	DataPilotFieldLayoutInfo.idl \
-	DataPilotFieldLayoutMode.idl \
-	DataPilotFieldOrientation.idl \
-	DataPilotFieldReference.idl \
-	DataPilotFieldReferenceItemType.idl \
-	DataPilotFieldReferenceType.idl \
-	DataPilotFieldShowItemsMode.idl \
-	DataPilotFieldSortInfo.idl \
-	DataPilotFieldSortMode.idl \
 	DataPilotFields.idl \
 	DataPilotFieldsEnumeration.idl \
 	DataPilotItem.idl \
@@ -117,52 +97,32 @@ IDLFILES= \
 	DataPilotTableResultData.idl \
 	DataPilotTables.idl \
 	DataPilotTablesEnumeration.idl \
-	DataResult.idl \
-	DataResultFlags.idl \
 	DatabaseImportDescriptor.idl \
 	DatabaseRange.idl \
 	DatabaseRanges.idl \
 	DatabaseRangesEnumeration.idl \
 	DocumentSettings.idl \
-	FillDateMode.idl \
-	FillDirection.idl \
-	FillMode.idl \
-	FilterConnection.idl \
-	FilterOperator.idl \
 	FormulaLanguage.idl \
 	FormulaMapGroup.idl \
 	FormulaMapGroupSpecialOffset.idl \
 	FormulaOpCodeMapEntry.idl \
 	FormulaParser.idl \
-	FormulaResult.idl \
 	FormulaToken.idl \
 	FunctionAccess.idl \
-	FunctionArgument.idl \
-	FunctionCategory.idl \
 	FunctionDescription.idl \
 	FunctionDescriptionEnumeration.idl \
 	FunctionDescriptions.idl \
-	GeneralFunction.idl \
 	GlobalSheetSettings.idl \
-	GoalResult.idl \
 	HeaderFooterContent.idl \
 	LabelRange.idl \
 	LabelRanges.idl \
 	LabelRangesEnumeration.idl \
-	LocalizedName.idl \
-	MemberResult.idl \
-	MemberResultFlags.idl \
-	MoveDirection.idl \
 	NamedRange.idl \
-	NamedRangeFlag.idl \
 	NamedRanges.idl \
 	NamedRangesEnumeration.idl \
-	PasteOperation.idl \
 	RangeSelectionArguments.idl \
-	RangeSelectionEvent.idl \
 	RecentFunctions.idl \
 	ReferenceFlags.idl \
-	ResultEvent.idl \
 	Scenario.idl \
 	Scenarios.idl \
 	ScenariosEnumeration.idl \
@@ -174,7 +134,6 @@ IDLFILES= \
 	SheetCellRangesEnumeration.idl \
 	SheetFilterDescriptor.idl \
 	SheetLink.idl \
-	SheetLinkMode.idl \
 	SheetLinks.idl \
 	SheetLinksEnumeration.idl \
 	SheetRangesQuery.idl \
@@ -194,8 +153,6 @@ IDLFILES= \
 	SpreadsheetViewSettings.idl \
 	Spreadsheets.idl \
 	SpreadsheetsEnumeration.idl \
-	StatusBarFunction.idl \
-	SubTotalColumn.idl \
 	SubTotalDescriptor.idl \
 	SubTotalField.idl \
 	SubTotalFieldsEnumeration.idl \
@@ -208,122 +165,24 @@ IDLFILES= \
 	TableConditionalEntry.idl \
 	TableConditionalEntryEnumeration.idl \
 	TableConditionalFormat.idl \
-	TableFilterField.idl \
-	TableOperationMode.idl \
-	TablePageBreakData.idl \
 	TablePageStyle.idl \
 	TableValidation.idl \
-	TableValidationVisibility.idl \
 	UniqueCellFormatRanges.idl \
 	UniqueCellFormatRangesEnumeration.idl \
-	ValidationAlertStyle.idl \
-	ValidationType.idl \
 	VolatileResult.idl \
-	XActivationBroadcaster.idl \
-	XActivationEventListener.idl \
-	XAddIn.idl \
-	XAreaLink.idl \
-	XAreaLinks.idl \
-	XArrayFormulaRange.idl \
 	XArrayFormulaTokens.idl \
-	XCalculatable.idl \
-	XCellAddressable.idl \
-	XCellFormatRangesSupplier.idl \
-	XCellRangeAddressable.idl \
-	XCellRangeData.idl \
-	XCellRangeFormula.idl \
-	XCellRangeMovement.idl \
-	XCellRangeReferrer.idl \
 	XCellRangesAccess.idl \
-	XCellRangesQuery.idl \
-	XCellSeries.idl \
-	XCompatibilityNames.idl \
-	XConsolidatable.idl \
-	XConsolidationDescriptor.idl \
-	XDDELink.idl \
 	XDDELinkResults.idl \
 	XDDELinks.idl \
-	XDataPilotDescriptor.idl \
-	XDataPilotField.idl \
-	XDataPilotFieldGrouping.idl \
-	XDataPilotMemberResults.idl \
-	XDataPilotResults.idl \
-	XDataPilotTable.idl \
 	XDataPilotTable2.idl \
-	XDataPilotTables.idl \
-	XDataPilotTablesSupplier.idl \
-	XDatabaseRange.idl \
-	XDatabaseRanges.idl \
-	XDimensionsSupplier.idl \
-	XDocumentAuditing.idl \
 	XDrillDownDataSupplier.idl \
-	XEnhancedMouseClickBroadcaster.idl \
 	XExternalSheetName.idl \
-	XFillAcrossSheet.idl \
 	XFormulaOpCodeMapper.idl \
 	XFormulaParser.idl \
-	XFormulaQuery.idl \
 	XFormulaTokens.idl \
-	XFunctionAccess.idl \
-	XFunctionDescriptions.idl \
-	XGoalSeek.idl \
-	XHeaderFooterContent.idl \
-	XHierarchiesSupplier.idl \
-	XLabelRange.idl \
-	XLabelRanges.idl \
-	XLevelsSupplier.idl \
-	XMembersSupplier.idl \
 	XMultiFormulaTokens.idl \
-	XMultipleOperation.idl \
-	XNamedRange.idl \
-	XNamedRanges.idl \
-	XPrintAreas.idl \
-	XRangeSelection.idl \
-	XRangeSelectionChangeListener.idl \
-	XRangeSelectionListener.idl \
-	XRecentFunctions.idl \
-	XResultListener.idl \
-	XScenario.idl \
-	XScenarioEnhanced.idl \
-	XScenarios.idl \
-	XScenariosSupplier.idl \
-	XSheetAnnotation.idl \
-	XSheetAnnotationAnchor.idl \
-	XSheetAnnotationShapeSupplier.idl \
-	XSheetAnnotations.idl \
-	XSheetAnnotationsSupplier.idl \
-	XSheetAuditing.idl \
-	XSheetCellCursor.idl \
-	XSheetCellRange.idl \
-	XSheetCellRangeContainer.idl \
-	XSheetCellRanges.idl \
-	XSheetCondition.idl \
-	XSheetConditionalEntries.idl \
-	XSheetConditionalEntry.idl \
-	XSheetFilterDescriptor.idl \
-	XSheetFilterable.idl \
-	XSheetFilterableEx.idl \
-	XSheetLinkable.idl \
-	XSheetOperation.idl \
-	XSheetOutline.idl \
-	XSheetPageBreak.idl \
-	XSheetPastable.idl \
 	XSolver.idl \
-	XSolverDescription.idl \
-	XSpreadsheet.idl \
-	XSpreadsheetDocument.idl \
-	XSpreadsheetView.idl \
-	XSpreadsheets.idl \
-	XSubTotalCalculatable.idl \
-	XSubTotalDescriptor.idl \
-	XSubTotalField.idl \
-	XUniqueCellFormatRangesSupplier.idl \
-	XUsedAreaCursor.idl \
-	XViewFreezable.idl \
-	XViewPane.idl \
-	XViewPanesSupplier.idl \
-	XViewSplitable.idl \
-	XVolatileResult.idl
+	XSolverDescription.idl
 
 # ------------------------------------------------------------------
 
