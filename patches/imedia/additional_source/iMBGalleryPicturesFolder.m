@@ -124,7 +124,7 @@
 - (iMBLibraryNode *)parseDatabase
 {
 	iMBLibraryNode *root = [[iMBLibraryNode alloc] init];
-	[root setName:LocalizedStringInThisBundle(@"NeoOffice Gallery", @"Photos from the NeoOffice gallery")];
+	[root setName:LocalizedStringInIMedia(@"NeoOffice Gallery", @"Photos from the NeoOffice gallery")];
 	[root setIconName:@"gallery"];
 		
 	if (![[NSFileManager defaultManager] fileExistsAtPath:myDatabase])
