@@ -251,6 +251,18 @@ Index: MUPhotoView.m
  // haven't tested changing these behaviors yet - there's no reason they shouldn't work... but use at your own risk.
  
  - (float)photoVerticalSpacing
+Index: iMBAbstractView.m
+===================================================================
+--- iMBAbstractView.m	(revision 647)
++++ iMBAbstractView.m	(working copy)
+@@ -371,6 +371,7 @@
+ 		
+ 		[d setObject:customFolders forKey:[NSString stringWithFormat:@"%@Dropped", [(NSObject*)self className]]];
+ 		[[NSUserDefaults standardUserDefaults] setObject:d forKey:[NSString stringWithFormat:@"iMB-%@", [[iMediaConfiguration sharedConfiguration] identifier]]];
++		[[NSUserDefaults standardUserDefaults] synchronize];
+ 	}
+ 
+ 	return results;
 Index: iMediaBrowse.xcodeproj/project.pbxproj
 ===================================================================
 --- iMediaBrowse.xcodeproj/project.pbxproj	(revision 647)
