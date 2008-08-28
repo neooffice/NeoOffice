@@ -263,6 +263,14 @@ Index: iMBAbstractView.m
  	}
  
  	return results;
+@@ -631,6 +632,7 @@
+ 	
+ 	[d setObject:customFolders forKey:[NSString stringWithFormat:@"%@Dropped", [(NSObject*)self className]]];
+ 	[[NSUserDefaults standardUserDefaults] setObject:d forKey:[NSString stringWithFormat:@"iMB-%@", [[iMediaConfiguration sharedConfiguration] identifier]]];
++	[[NSUserDefaults standardUserDefaults] synchronize];
+ }
+ 
+ #pragma mark -
 Index: iMediaBrowse.xcodeproj/project.pbxproj
 ===================================================================
 --- iMediaBrowse.xcodeproj/project.pbxproj	(revision 647)
