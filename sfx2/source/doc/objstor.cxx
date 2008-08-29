@@ -242,6 +242,9 @@
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
+#ifndef _SV_FIXED_HXX
+#include <vcl/fixed.hxx>
+#endif
 
 #endif	// USE_JAVA
 
@@ -262,6 +265,50 @@ using namespace ::cppu;
 using ::basic::SfxLibraryContainer;
 
 namespace css = ::com::sun::star;
+
+#ifdef USE_JAVA
+
+class InvokeExternalAppMonitor_Impl : public ModelessDialog
+{
+	FixedText			maMessage;
+	CancelButton		maCancel;
+
+public:
+						InvokeExternalAppMonitor_Impl( Window *pParent );
+
+						DECL_LINK( CancelHdl, Button * );
+};
+
+InvokeExternalAppMonitor_Impl::InvokeExternalAppMonitor_Impl( Window *pParent ) :
+	ModelessDialog( pParent ),
+    maMessage( this, WB_CENTER | WB_NOLABEL ),
+    maCancel( this, WB_DEFBUTTON )
+{
+	Size aDialogSize( 100, 40 );
+	SetSizePixel( LogicToPixel( aDialogSize, MAP_APPFONT ) );
+
+	Rectangle aMessageRect( LogicToPixel( Rectangle( Point( 0, 6 ), Size( aDialogSize.Width(), 10 ) ), MAP_APPFONT ) );
+	maMessage.SetPosSizePixel( aMessageRect.nLeft, aMessageRect.nTop, aMessageRect.GetWidth(), aMessageRect.GetHeight() );
+	String aMessageText( SfxResId( STR_DOC_LOADING ) );
+	aMessageText += String( RTL_CONSTASCII_USTRINGPARAM( "..." ) );
+	maMessage.SetText( aMessageText );
+	maMessage.Show();
+
+	Size aCancelBtnSize( 50, 14 );
+	Rectangle aCancelBtnRect( LogicToPixel( Rectangle( Point( ( aDialogSize.Width() - aCancelBtnSize.Width() ) / 2, aDialogSize.Height() / 2 ), aCancelBtnSize ), MAP_APPFONT ) );
+	maCancel.SetPosSizePixel( aCancelBtnRect.nLeft, aCancelBtnRect.nTop, aCancelBtnRect.GetWidth(), aCancelBtnRect.GetHeight() );
+	maCancel.Show();
+	maCancel.Enable();
+	maCancel.SetClickHdl( LINK( this, InvokeExternalAppMonitor_Impl, CancelHdl ) );
+}
+
+IMPL_LINK( InvokeExternalAppMonitor_Impl, CancelHdl, Button *, EMPTYARG )
+{
+	Hide();
+	return 0;
+}
+
+#endif	// USE_JAVA
 
 class StatusThread : public osl::Thread
 {
@@ -291,7 +338,11 @@ public:
     
 };
 
+#ifdef USE_JAVA
+static sal_Bool invokeExternalApp(String aAppName, ::rtl::OUString sourceParam, ::rtl::OUString targetParam, uno::Reference< ::com::sun::star::task::XStatusIndicator > xStatusIndicator, Window *pWindow )
+#else	// USE_JAVA
 static sal_Bool invokeExternalApp(String aAppName, ::rtl::OUString sourceParam, ::rtl::OUString targetParam, uno::Reference< ::com::sun::star::task::XStatusIndicator > xStatusIndicator)
+#endif	// USE_JAVA
 {
 		static const char EXPAND_WILDCARD_CONST[] ="vnd.sun.star.expand:";
 		static const char SOURCE_WILDCARD_CONST[]="%source%";
@@ -353,13 +404,29 @@ static sal_Bool invokeExternalApp(String aAppName, ::rtl::OUString sourceParam, 
 			if (xStatusIndicator.is()) {
 			    xStatusIndicator->start(::rtl::OUString::createFromAscii("waiting for external application..."), MAXBARTICKS);
 			}
+#ifdef USE_JAVA
+			InvokeExternalAppMonitor_Impl aMonitor( pWindow );
+			aMonitor.Show();
+			aMonitor.Update();
+			TimeValue wait = {0, 250000};
+#endif	// USE_JAVA
 			do {
+#ifndef USE_JAVA
 			    TimeValue wait = {1, 0};
+#endif	// !USE_JAVA
 			    error=osl_joinProcessWithTimeout( pProcess, &wait);
 			    if (xStatusIndicator.is()) {
 				xStatusIndicator->setValue(statusThread.progressTicks%MAXBARTICKS);
 			    }
+#ifdef USE_JAVA
+			} while (error==osl_Process_E_TimedOut && aMonitor.IsVisible());
+			if ( !aMonitor.IsVisible() )
+				error=osl_terminateProcess( pProcess );
+			else
+				aMonitor.Hide();
+#else	// USE_JAVA
 			} while (error==osl_Process_E_TimedOut);
+#endif	// USE_JAVA
 			if (xStatusIndicator.is()) {
 			    xStatusIndicator->end();
 			}
@@ -997,7 +1064,15 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
 					myMed.CloseInStream();
 					myMed.SetTemporary(sal_True);
 
+#ifdef USE_JAVA
+					Window *pWindow = GetDialogParent();
+					if ( !pWindow )
+						bOk = sal_False;
+					else
+						bOk = invokeExternalApp(aAppName, ::rtl::OUString(pMed->GetPhysicalName()), ::rtl::OUString(myMed.GetPhysicalName()), xStatusIndicator, pWindow);
+#else	// USE_JAVA
 					bOk = invokeExternalApp(aAppName, ::rtl::OUString(pMed->GetPhysicalName()), ::rtl::OUString(myMed.GetPhysicalName()), xStatusIndicator);
+#endif	// USE_JAVA
 
 					// load from copy
 					if (bOk) {
@@ -2013,7 +2088,15 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 			::utl::LocalFileHelper::ConvertPhysicalNameToURL( aTargetFile, aTargetFileURL );
 			osl_removeFile(::rtl::OUString(aTargetFileURL).pData);
 
+#ifdef USE_JAVA
+			Window *pWindow = GetDialogParent();
+			if ( !pWindow )
+				bOk=sal_False;
+			else
+				bOk=invokeExternalApp(aAppName, aSourceFile, aTargetFile, xStatusIndicator, pWindow);
+#else	// USE_JAVA
 			bOk=invokeExternalApp(aAppName, aSourceFile, aTargetFile, xStatusIndicator);
+#endif	// USE_JAVA
 
 			if (bOk) {
 			    // create a new tmp storage
