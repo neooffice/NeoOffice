@@ -48,9 +48,8 @@ static NSImage *sDRMIcon = nil;
 	
 	NSBundle *bndl = [NSBundle bundleForClass:[self class]];
 	NSString *iconPath = [bndl pathForResource:@"MBiTunes4Song" ofType:@"png"];
-	sSongIcon = [[NSImage alloc] initWithContentsOfFile:iconPath];
-	iconPath = [bndl pathForResource:@"iTunesDRM" ofType:@"png"];
-	sDRMIcon = [[NSImage alloc] initWithContentsOfFile:iconPath];
+	sSongIcon = [[[NSWorkspace sharedWorkspace] iconForFileType:@"mp3"] retain];
+	sDRMIcon = [[[NSWorkspace sharedWorkspace] iconForFileType:@"m4p"] retain];
 	
 	[pool release];
 }
@@ -80,8 +79,8 @@ static NSImage *sDRMIcon = nil;
 
 - (id)initWithContentsOfFile:(NSString *)file
 {
-    NSString *musicFolderName = LocalizedStringInThisBundle(@"NeoOffice Gallery", @"Audio from the NeoOffice Gallery");
-    NSString *unknownArtistName = LocalizedStringInThisBundle(@"Unknown", @"Unknown music key");
+    NSString *musicFolderName = LocalizedStringInIMedia(@"NeoOffice Gallery", @"Audio from the NeoOffice Gallery");
+    NSString *unknownArtistName = LocalizedStringInIMedia(@"Unknown", @"Unknown music key");
     NSString *iconName = @"gallery";
 
 	return [self initWithContentsOfFile:file musicFolderName:musicFolderName unknownArtistName:unknownArtistName iconName:iconName parseMetadata:YES];
@@ -254,7 +253,7 @@ static NSImage *sDRMIcon = nil;
         iMBLibraryNode *root = [[[iMBLibraryNode alloc] init] autorelease];
         
         // the name will include 'loading' until it is populated.
-        NSString *loadingString = LocalizedStringInThisBundle(@"Loading...", @"Name extension to indicate it is loading.");
+        NSString *loadingString = LocalizedStringInIMedia(@"Loading...", @"Name extension to indicate it is loading.");
         [root setName:[myMusicFolderName stringByAppendingFormat:@" (%@)", loadingString]];
         [root setIconName:myIconName];
         

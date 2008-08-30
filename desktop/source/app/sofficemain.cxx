@@ -253,9 +253,10 @@ extern "C" int soffice_main( int argc, char **argv )
     aTmpPath += aCmdPath;
     aTmpPath += OString( "/mono/2.0/machine.config" );
     putenv( (char *)aTmpPath.getStr() );
-    // Unset MONO_DISABLE_SHM variable as OdfConverter will abort with it set
-    aTmpPath = OString( "MONO_DISABLE_SHM=" );
-    putenv( (char *)aTmpPath.getStr() );
+	// Fix bug 2394 by turning off shared memory. Note that Mono is picky and
+	// so the value must be set to "yes" to actually disable shared memory.
+	aTmpPath = OString( "MONO_DISABLE_SHM=yes" );
+	putenv( (char *)aTmpPath.getStr() );
 
     // We need to fork and exec javaldx to properly create preferences the
     // first time or else some preferences won't be imported

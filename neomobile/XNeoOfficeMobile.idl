@@ -43,6 +43,8 @@ module neooffice
 	{
 		boolean hasNeoOfficeMobile( );
 		boolean showNeoOfficeMobile( );
+		boolean setPropertyValue( [in] string key, [in] string value );
+		string getPropertyValue( [in] string key );
 	};
 	
 	service NeoOfficeMobile

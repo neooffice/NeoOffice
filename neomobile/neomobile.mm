@@ -79,6 +79,19 @@
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
+#include <com/sun/star/lang/Locale.hpp>
+
+#include <com/sun/star/frame/XDispatchHelper.hpp>
+#include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
+#include <com/sun/star/frame/XDesktop.hpp>
+#include <com/sun/star/beans/PropertyValue.hpp>
+#include <com/sun/star/beans/XPropertySet.hpp>
+#include <com/sun/star/beans/XPropertyContainer.hpp>
+#include <cppuhelper/bootstrap.hxx>
+#include <com/sun/star/task/XJob.hpp>
+#include <comphelper/processfactory.hxx>
+#include <com/sun/star/document/XDocumentInfoSupplier.hpp>
 
 #include "premac.h"
 #import <Carbon/Carbon.h>
@@ -97,7 +110,11 @@ using namespace ::cppu;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
+using namespace ::com::sun::star::frame;
+using namespace ::com::sun::star::beans;
 using namespace ::org::neooffice;
+using namespace ::com::sun::star::task;
+using namespace ::com::sun::star::document;
 
 //========================================================================
 class MacOSXNeoOfficeMobileImpl
@@ -127,6 +144,12 @@ public:
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
 		SAL_CALL showNeoOfficeMobile( ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool 
+		SAL_CALL setPropertyValue( const rtl::OUString& key, const rtl::OUString& value ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::rtl::OUString
+		SAL_CALL getPropertyValue( const rtl::OUString& key ) 
 		throw (::com::sun::star::uno::RuntimeException);
 };
 
@@ -339,4 +362,81 @@ static NeoMobileWebView *pSharedWebView = nil;
 	[pool release];
 	
 	return(true);
+}
+
+::sal_Bool 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::setPropertyValue( const rtl::OUString& key, const rtl::OUString& value ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+		try
+		{
+			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			
+			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+			
+			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+			Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
+			
+			Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY );
+			
+			if(xDocInfoSupplier.is())
+			{
+				Reference< XDocumentInfo > docInfo = xDocInfoSupplier->getDocumentInfo();
+				
+				try
+				{
+					Reference< XPropertyContainer > propContainer( docInfo, UNO_QUERY );
+					propContainer->addProperty(key, 0, Any(value));
+					return(true);
+				}
+				catch (PropertyExistException e)
+				{
+					Reference< XPropertySet > bagOfMe( docInfo, UNO_QUERY );
+					bagOfMe->setPropertyValue(key, Any(value));
+				}
+				
+				return(true);
+			}
+		}
+		catch (...)
+		{
+		}
+		
+		return(false);
+}
+
+::rtl::OUString
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getPropertyValue( const rtl::OUString& key ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+		try
+		{
+			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			
+			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+			
+			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+			Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
+			
+			Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY );
+			
+			if(xDocInfoSupplier.is())
+			{
+				Reference< XDocumentInfo > docInfo = xDocInfoSupplier->getDocumentInfo();
+				Reference< XPropertySet > bagOfMe( docInfo, UNO_QUERY );
+				
+				rtl::OUString res;
+				bagOfMe->getPropertyValue(key) >>= res;
+				return(res);
+			}
+		}
+		catch (...)
+		{
+		}
+		
+	return(OUString::createFromAscii(""));
 }
