@@ -246,7 +246,7 @@
 #include <vcl/fixed.hxx>
 #endif
 
-#include "../../../sw/inc/statstr.hrc"
+#include "../../../build/sw/inc/statstr.hrc"
 
 #endif	// USE_JAVA
 
