@@ -246,6 +246,8 @@
 #include <vcl/fixed.hxx>
 #endif
 
+#include "../../../sw/inc/statstr.hrc"
+
 #endif	// USE_JAVA
 
 extern sal_uInt32 CheckPasswd_Impl( SfxObjectShell*, SfxItemPool&, SfxMedium* );
@@ -268,18 +270,20 @@ namespace css = ::com::sun::star;
 
 #ifdef USE_JAVA
 
+static ResMgr *pSwResMgr = NULL;
+
 class InvokeExternalAppMonitor_Impl : public ModelessDialog
 {
 	FixedText			maMessage;
 	CancelButton		maCancel;
 
 public:
-						InvokeExternalAppMonitor_Impl( Window *pParent );
+						InvokeExternalAppMonitor_Impl( Window *pParent, sal_Bool bExport );
 
 						DECL_LINK( CancelHdl, Button * );
 };
 
-InvokeExternalAppMonitor_Impl::InvokeExternalAppMonitor_Impl( Window *pParent ) :
+InvokeExternalAppMonitor_Impl::InvokeExternalAppMonitor_Impl( Window *pParent, sal_Bool bExport ) :
 	ModelessDialog( pParent ),
     maMessage( this, WB_CENTER | WB_NOLABEL ),
     maCancel( this, WB_DEFBUTTON )
@@ -289,8 +293,23 @@ InvokeExternalAppMonitor_Impl::InvokeExternalAppMonitor_Impl( Window *pParent ) 
 
 	Rectangle aMessageRect( LogicToPixel( Rectangle( Point( 0, 6 ), Size( aDialogSize.Width(), 10 ) ), MAP_APPFONT ) );
 	maMessage.SetPosSizePixel( aMessageRect.nLeft, aMessageRect.nTop, aMessageRect.GetWidth(), aMessageRect.GetHeight() );
-	String aMessageText( SfxResId( STR_DOC_LOADING ) );
-	aMessageText += String( RTL_CONSTASCII_USTRINGPARAM( "..." ) );
+	String aMessageText;
+	if ( bExport )
+	{
+		if ( !pSwResMgr )
+			pSwResMgr = SfxApplication::CreateResManager("sw");
+		if ( pSwResMgr )
+			aMessageText = String( ResId( STR_STATSTR_SWGWRITE, pSwResMgr ) );
+		if ( !aMessageText.Len() )
+			aMessageText = String( RTL_CONSTASCII_USTRINGPARAM( "Saving document..." ) );
+	}
+	else
+	{
+		aMessageText = String( SfxResId( STR_DOC_LOADING ) );
+		if ( !aMessageText.Len() )
+			aMessageText = String( RTL_CONSTASCII_USTRINGPARAM( "Loading Document" ) );
+		aMessageText += String( RTL_CONSTASCII_USTRINGPARAM( "..." ) );
+	}
 	maMessage.SetText( aMessageText );
 	maMessage.Show();
 
@@ -339,7 +358,7 @@ public:
 };
 
 #ifdef USE_JAVA
-static sal_Bool invokeExternalApp(String aAppName, ::rtl::OUString sourceParam, ::rtl::OUString targetParam, uno::Reference< ::com::sun::star::task::XStatusIndicator > xStatusIndicator, Window *pWindow )
+static sal_Bool invokeExternalApp(String aAppName, ::rtl::OUString sourceParam, ::rtl::OUString targetParam, uno::Reference< ::com::sun::star::task::XStatusIndicator > xStatusIndicator, Window *pWindow, sal_Bool bExport )
 #else	// USE_JAVA
 static sal_Bool invokeExternalApp(String aAppName, ::rtl::OUString sourceParam, ::rtl::OUString targetParam, uno::Reference< ::com::sun::star::task::XStatusIndicator > xStatusIndicator)
 #endif	// USE_JAVA
@@ -405,7 +424,7 @@ static sal_Bool invokeExternalApp(String aAppName, ::rtl::OUString sourceParam, 
 			    xStatusIndicator->start(::rtl::OUString::createFromAscii("waiting for external application..."), MAXBARTICKS);
 			}
 #ifdef USE_JAVA
-			InvokeExternalAppMonitor_Impl aMonitor( pWindow );
+			InvokeExternalAppMonitor_Impl aMonitor( pWindow, bExport );
 			aMonitor.Show();
 			aMonitor.Update();
 			TimeValue wait = {0, 250000};
@@ -1069,7 +1088,7 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
 					if ( !pWindow )
 						bOk = sal_False;
 					else
-						bOk = invokeExternalApp(aAppName, ::rtl::OUString(pMed->GetPhysicalName()), ::rtl::OUString(myMed.GetPhysicalName()), xStatusIndicator, pWindow);
+						bOk = invokeExternalApp(aAppName, ::rtl::OUString(pMed->GetPhysicalName()), ::rtl::OUString(myMed.GetPhysicalName()), xStatusIndicator, pWindow, sal_False);
 #else	// USE_JAVA
 					bOk = invokeExternalApp(aAppName, ::rtl::OUString(pMed->GetPhysicalName()), ::rtl::OUString(myMed.GetPhysicalName()), xStatusIndicator);
 #endif	// USE_JAVA
@@ -2093,7 +2112,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 			if ( !pWindow )
 				bOk=sal_False;
 			else
-				bOk=invokeExternalApp(aAppName, aSourceFile, aTargetFile, xStatusIndicator, pWindow);
+				bOk=invokeExternalApp(aAppName, aSourceFile, aTargetFile, xStatusIndicator, pWindow, sal_True);
 #else	// USE_JAVA
 			bOk=invokeExternalApp(aAppName, aSourceFile, aTargetFile, xStatusIndicator);
 #endif	// USE_JAVA
