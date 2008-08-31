@@ -68,9 +68,6 @@ using namespace rtl;
 using namespace std;
 using namespace vos;
 
-// This function is defined in the vcl module
-extern "C" void NSApplication_dispatchPendingEvents();
-
 static EventLoopTimerUPP pTrackDragTimerUPP = NULL;
 static DragTrackingHandlerUPP pDragTrackingHandlerUPP = NULL;
 static DragTrackingHandlerUPP pDropTrackingHandlerUPP = NULL;
@@ -80,7 +77,6 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
-static JavaDropTargetAppEvent *pDropTargetAppEvent = NULL;
 
 // ========================================================================
 
@@ -184,42 +180,6 @@ static void ImplSetDragAllowableActions( DragRef aDrag, sal_Int8 nActions )
 
 // ------------------------------------------------------------------------
 
-static bool ImplWaitForDropTargetAppEvent()
-{
-	if ( !pDropTargetAppEvent )
-		return false;
-
-	if ( OThread::getCurrentIdentifier() == Application::GetMainThreadIdentifier() )
-	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		while ( pDropTargetAppEvent && !pDropTargetAppEvent->IsFinished() && !Application::IsShutDown() )
-			Application::Reschedule();
-
-		rSolarMutex.release();
-	}
-	else
-	{
-		ULONG nCount = Application::ReleaseSolarMutex();
-
-		TimeValue aValue;
-		aValue.Seconds = 0;
-		aValue.Nanosec = 50;
-		while ( pDropTargetAppEvent && !pDropTargetAppEvent->IsFinished() && !Application::IsShutDown() )
-		{
-			NSApplication_dispatchPendingEvents();
-			osl_waitThread( &aValue );
-		}
-
-		Application::AcquireSolarMutex( nCount );
-	}
-
-	return true;
-}
-
-// ------------------------------------------------------------------------
-
 static void ImplUpdateCurrentAction( DragRef aDrag )
 {
 	if ( pTrackDragOwner )
@@ -271,12 +231,6 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			if ( ImplWaitForDropTargetAppEvent() )
-			{
-				rSolarMutex.release();
-				return noErr;
-			}
-
 			if ( pTrackDragOwner )
 			{
 				JavaDragSource *pSource = NULL;
@@ -322,12 +276,6 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			if ( ImplWaitForDropTargetAppEvent() )
-			{
-				rSolarMutex.release();
-				return noErr;
-			}
-
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -390,12 +338,6 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			if ( ImplWaitForDropTargetAppEvent() )
-			{
-				rSolarMutex.release();
-				return nRet;
-			}
-
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -414,18 +356,7 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 				{
 					ImplUpdateCurrentAction( aDrag );
 
-					// Execute the handleDrop() method in the OOo event
-					// dispatch thread to avoid deadlocking in main thread
-					// when dropping a file on a document window while the
-					// document is being loaded
-					JavaDropTargetAppEvent aEvent( pTarget, (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag );
-					pDropTargetAppEvent = &aEvent;
-					Application::PostUserEvent( LINK( pDropTargetAppEvent, JavaDropTargetAppEvent, handleDrop ) );
-
-					ImplWaitForDropTargetAppEvent();
-
-					pDropTargetAppEvent = NULL;
-					if ( aEvent.GetResult() )
+					if ( pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
 					{
 						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
 						nRet = noErr;
@@ -449,7 +380,7 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 
-	if ( pSource && pTrackDragOwner == pSource && !ImplWaitForDropTargetAppEvent() )
+	if ( pSource && pTrackDragOwner == pSource )
 	{
 		DragRef aDrag;
 		if ( NewDrag( &aDrag ) == noErr )
@@ -1082,18 +1013,4 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 	// One of the listeners may have rejected the drop so use the rejected
 	// flag instead the context's getDropComplete() method
 	return !mbRejected;
-}
-
-// ========================================================================
-
-IMPL_LINK( JavaDropTargetAppEvent, handleDrop, void*, EMPTY_ARG )
-{
-	if ( !mbFinished )
-	{
-		if ( mpDropTarget && maDrag )
-			mbResult = mpDropTarget->handleDrop( mnX, mnY, maDrag );
-		mbFinished = true;
-	}
-
-	return 0;
 }
