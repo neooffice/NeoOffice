@@ -2681,7 +2681,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 		// Run the garbage collector as we are guaranteed to be creating or
 		// releasing one or more large bitmaps
-		System.gc();
+		VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
 
 	}
 
