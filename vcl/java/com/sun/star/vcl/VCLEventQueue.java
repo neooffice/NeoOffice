@@ -834,6 +834,10 @@ public final class VCLEventQueue implements Runnable {
 					int id = event.getID();
 					if (id == MouseEvent.MOUSE_PRESSED || id == MouseEvent.MOUSE_RELEASED) {
 						queue.setLastAdjustedMouseModifiers(((MouseEvent)event).getModifiersEx());
+
+						// Fix bug 3190 by running the garbage collector if we
+						// potentially start or end mouse dragging
+						VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
 					}
 				}
 			}
