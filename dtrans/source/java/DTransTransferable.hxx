@@ -57,9 +57,10 @@ private:
 	void*				mpNativeTransferable;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
 	int					mnTransferableType;
+	sal_uInt16			mnItem;
 
 public:
-						DTransTransferable( void *myNativeTransferable, int nTransferableType ) : mpNativeTransferable( myNativeTransferable ), mnTransferableType( nTransferableType ) {}
+						DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem = 0 );
 	virtual				~DTransTransferable();
 
 	void				flush();

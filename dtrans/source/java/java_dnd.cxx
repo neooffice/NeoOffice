@@ -57,8 +57,6 @@
 #include <vos/mutex.hxx>
 #endif
 
-#include "java_dnd_cocoa.h"
-
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::dnd;
 using namespace com::sun::star::lang;
@@ -70,9 +68,6 @@ using namespace rtl;
 using namespace std;
 using namespace vos;
 
-// This function is defined in the vcl module
-extern "C" void NSApplication_dispatchPendingEvents();
-
 static EventLoopTimerUPP pTrackDragTimerUPP = NULL;
 static DragTrackingHandlerUPP pDragTrackingHandlerUPP = NULL;
 static DragTrackingHandlerUPP pDropTrackingHandlerUPP = NULL;
@@ -82,7 +77,6 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
-static JavaDropTargetAppEvent *pDropTargetAppEvent = NULL;
 
 // ========================================================================
 
@@ -186,42 +180,6 @@ static void ImplSetDragAllowableActions( DragRef aDrag, sal_Int8 nActions )
 
 // ------------------------------------------------------------------------
 
-static bool ImplWaitForDropTargetAppEvent()
-{
-	if ( !pDropTargetAppEvent )
-		return false;
-
-	if ( OThread::getCurrentIdentifier() == Application::GetMainThreadIdentifier() )
-	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-
-		while ( pDropTargetAppEvent && !pDropTargetAppEvent->IsFinished() && !Application::IsShutDown() )
-			Application::Reschedule();
-
-		rSolarMutex.release();
-	}
-	else
-	{
-		ULONG nCount = Application::ReleaseSolarMutex();
-
-		TimeValue aValue;
-		aValue.Seconds = 0;
-		aValue.Nanosec = 50;
-		while ( pDropTargetAppEvent && !pDropTargetAppEvent->IsFinished() && !Application::IsShutDown() )
-		{
-			NSApplication_dispatchPendingEvents();
-			osl_waitThread( &aValue );
-		}
-
-		Application::AcquireSolarMutex( nCount );
-	}
-
-	return true;
-}
-
-// ------------------------------------------------------------------------
-
 static void ImplUpdateCurrentAction( DragRef aDrag )
 {
 	if ( pTrackDragOwner )
@@ -273,12 +231,6 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			if ( ImplWaitForDropTargetAppEvent() )
-			{
-				rSolarMutex.release();
-				return noErr;
-			}
-
 			if ( pTrackDragOwner )
 			{
 				JavaDragSource *pSource = NULL;
@@ -324,12 +276,6 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			if ( ImplWaitForDropTargetAppEvent() )
-			{
-				rSolarMutex.release();
-				return noErr;
-			}
-
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -342,9 +288,10 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 			if ( pTarget )
 			{
+				UInt16 nCount = 0;
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				if ( CountDragItems( aDrag, &nCount ) == noErr && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
 					ImplUpdateCurrentAction( aDrag );
 
@@ -354,7 +301,8 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					switch ( nMessage )
 					{
 						case kDragTrackingEnterWindow:
-							pTarget->handleDragEnter( nX, nY, aDrag );
+							for ( sal_uInt16 i = 1; i <= nCount; i++ )
+								pTarget->handleDragEnter( nX, nY, aDrag, i );
 							break;
 						case kDragTrackingInWindow:
 							pTarget->handleDragOver( nX, nY, aDrag );
@@ -392,12 +340,6 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			if ( ImplWaitForDropTargetAppEvent() )
-			{
-				rSolarMutex.release();
-				return nRet;
-			}
-
 			JavaDropTarget *pTarget = NULL;
 			for ( ::std::list< JavaDropTarget* >::const_iterator it = aDropTargets.begin(); it != aDropTargets.end(); ++it )
 			{
@@ -410,28 +352,33 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 
 			if ( pTarget )
 			{
+				UInt16 nCount = 0;
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				if ( CountDragItems( aDrag, &nCount ) == noErr && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
+					sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
+					sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
+
 					ImplUpdateCurrentAction( aDrag );
 
-					// Execute the handleDrop() method in the OOo event
-					// dispatch thread to avoid deadlocking in main thread
-					// when dropping a file on a document window while the
-					// document is being loaded
-					JavaDropTargetAppEvent aEvent( pTarget, (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag );
-					pDropTargetAppEvent = &aEvent;
-					Application::PostUserEvent( LINK( pDropTargetAppEvent, JavaDropTargetAppEvent, handleDrop ) );
-
-					ImplWaitForDropTargetAppEvent();
-
-					pDropTargetAppEvent = NULL;
-					if ( aEvent.GetResult() )
+					for ( sal_uInt16 i = 1; i <= nCount; i++ )
 					{
-						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
-						nRet = noErr;
+						// Drag over to make sure that the OOo code does not
+						// ignore the drop
+						if ( i > 1 )
+						{
+							pTarget->handleDragExit( nX, nY, aDrag );
+							pTarget->handleDragEnter( nX, nY, aDrag, i );
+						}
+
+						// Treat any subset that succeed as success
+						if ( pTarget->handleDrop( nX, nY, aDrag, i ) )
+							nRet = noErr;
 					}
+
+					if ( nRet == noErr )
+						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
 				}
 			}
 
@@ -451,7 +398,7 @@ void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 
-	if ( pSource && pTrackDragOwner == pSource && !ImplWaitForDropTargetAppEvent() )
+	if ( pSource && pTrackDragOwner == pSource )
 	{
 		DragRef aDrag;
 		if ( NewDrag( &aDrag ) == noErr )
@@ -594,7 +541,8 @@ JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
 	mpEnvData( NULL ),
-	mpWindow( NULL )
+	mpWindow( NULL ),
+	maWindowRef( NULL )
 {
 }
 
@@ -722,10 +670,10 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw( 
 
 WindowRef JavaDragSource::getNativeWindow()
 {
-	if ( mpEnvData )
-		return (WindowRef)NSView_windowRef( mpEnvData->pView );
-	else
-		return NULL;
+	if ( !maWindowRef && mpEnvData )
+		maWindowRef = (WindowRef)NSView_windowRef( mpEnvData->pView );
+
+	return maWindowRef;
 }
 
 // ------------------------------------------------------------------------
@@ -772,7 +720,8 @@ JavaDropTarget::JavaDropTarget() :
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
 	mbRejected( false ),
 	mpEnvData( NULL ),
-	mpWindow( NULL )
+	mpWindow( NULL ),
+	maWindowRef( NULL )
 {
 }
 
@@ -900,15 +849,15 @@ Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw( 
 
 WindowRef JavaDropTarget::getNativeWindow()
 {
-	if ( mpEnvData )
-		return (WindowRef)NSView_windowRef( mpEnvData->pView );
-	else
-		return NULL;
+	if ( !maWindowRef && mpEnvData )
+		maWindowRef = (WindowRef)NSView_windowRef( mpEnvData->pView );
+
+	return maWindowRef;
 }
 
 // ------------------------------------------------------------------------
 
-void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
+void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem )
 {
 	mbRejected = false;
 
@@ -930,7 +879,7 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativ
 		aDragEnterEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
 		aDragEnterEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
 
-		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG );
+		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG, nItem );
 		if ( pTransferable )
 		{
 			aDragEnterEvent.SupportedDataFlavors = pTransferable->getTransferDataFlavors();
@@ -1026,7 +975,7 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 
 // ------------------------------------------------------------------------
 
-bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
+bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem )
 {
 	// Don't set the cursor to the reject cursor since a drop has occurred
 	bNoRejectCursor = true;
@@ -1065,7 +1014,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 		aDropEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
 		aDropEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
 
-		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG );
+		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG, nItem );
 		if ( pTransferable )
 			aDropEvent.Transferable = Reference< XTransferable >( pTransferable );
 	}
@@ -1084,18 +1033,4 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 	// One of the listeners may have rejected the drop so use the rejected
 	// flag instead the context's getDropComplete() method
 	return !mbRejected;
-}
-
-// ========================================================================
-
-IMPL_LINK( JavaDropTargetAppEvent, handleDrop, void*, EMPTY_ARG )
-{
-	if ( !mbFinished )
-	{
-		if ( mpDropTarget && maDrag )
-			mbResult = mpDropTarget->handleDrop( mnX, mnY, maDrag );
-		mbFinished = true;
-	}
-
-	return 0;
 }

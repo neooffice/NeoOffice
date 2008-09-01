@@ -380,7 +380,8 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 	Any out;
 
-	FourCharCode nRequestedType = NULL;
+	FourCharCode nRequestedType;
+	memset( &nRequestedType, 0, sizeof( FourCharCode ) );
 	bool bRequestedTypeIsText = false;
 	OSStatus nErr = noErr;
 
@@ -402,10 +403,10 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 		{
 			nErr = GetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize );
 		}
-		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
+		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && mnItem )
 		{
 			DragItemRef aItem;
-			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
+			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, mnItem, &aItem ) == noErr )
 				nErr = GetFlavorDataSize( (DragRef)mpNativeTransferable, aItem, nRequestedType, &nSize );
 		}
 		else
@@ -424,10 +425,10 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 			{
 				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, *hData ) == noErr );
 			}
-			else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
+			else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && mnItem )
 			{
 				DragItemRef aItem;
-				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr )
+				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, mnItem, &aItem ) == noErr )
 					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, *hData, &nSize, 0 ) == noErr );
 			}
 			HUnlock( hData );
@@ -599,6 +600,21 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 // ----------------------------------------------------------------------------
 
+DTransTransferable::DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem ) :
+	mpNativeTransferable( pNativeTransferable ),
+	mnTransferableType( nTransferableType ),
+	mnItem( 0 )
+{
+	if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && nItem )
+	{
+		UInt16 nCount = 0;
+		if ( CountDragItems( (DragRef)mpNativeTransferable, &nCount ) == noErr && nItem <= nCount )
+			mnItem = nItem;
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 DTransTransferable::~DTransTransferable()
 {
 	aTransferableList.remove( this );
@@ -642,11 +658,11 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 			delete[] pInfo;
 		}
 	}
-	else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
+	else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && mnItem )
 	{
 		DragItemRef aItem;
 		UInt16 nCount;
-		if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, 1, &aItem ) == noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == noErr && nCount > 0 )
+		if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, mnItem, &aItem ) == noErr && CountDragItemFlavors( (DragRef)mpNativeTransferable, aItem, &nCount ) == noErr && nCount > 0 )
 		{
 			for ( USHORT i = 0; i < nSupportedTypes; i++ )
 			{
@@ -696,7 +712,8 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 	sal_Bool out = sal_False;
 
-	FourCharCode nRequestedType = NULL;
+	FourCharCode nRequestedType;
+	memset( &nRequestedType, 0, sizeof( FourCharCode ) );
 	Type aRequestedDataType;
 	for ( USHORT i = 0; i < nSupportedTypes; i++ )
 	{
@@ -879,6 +896,12 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 							continue;
 
 						AddDragItemFlavor( (DragRef)mpNativeTransferable, (DragItemRef)this, aSupportedNativeTypes[ j ], NULL, 0, 0 );
+
+						// Set item to the last item
+						UInt16 nCount = 0;
+						if ( CountDragItems( (DragRef)mpNativeTransferable, &nCount ) == noErr && nCount )
+							mnItem = nCount;
+
 						if ( bRenderImmediately )
 							ImplDragSendDataCallback( aSupportedNativeTypes[ j ], (void *)this, (DragItemRef)this, (DragRef)mpNativeTransferable );
 					}
