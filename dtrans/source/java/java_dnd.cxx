@@ -57,6 +57,8 @@
 #include <vos/mutex.hxx>
 #endif
 
+#include "java_dnd_cocoa.h"
+
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::dnd;
 using namespace com::sun::star::lang;
