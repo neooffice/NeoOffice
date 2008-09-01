@@ -288,9 +288,10 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 			if ( pTarget )
 			{
+				UInt16 nCount = 0;
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				if ( CountDragItems( aDrag, &nCount ) == noErr && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
 					ImplUpdateCurrentAction( aDrag );
 
@@ -300,7 +301,8 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					switch ( nMessage )
 					{
 						case kDragTrackingEnterWindow:
-							pTarget->handleDragEnter( nX, nY, aDrag );
+							for ( sal_uInt16 i = 1; i <= nCount; i++ )
+								pTarget->handleDragEnter( nX, nY, aDrag, i );
 							break;
 						case kDragTrackingInWindow:
 							pTarget->handleDragOver( nX, nY, aDrag );
@@ -350,17 +352,33 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 
 			if ( pTarget )
 			{
+				UInt16 nCount = 0;
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				if ( CountDragItems( aDrag, &nCount ) == noErr && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
+					sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
+					sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
+
 					ImplUpdateCurrentAction( aDrag );
 
-					if ( pTarget->handleDrop( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ), aDrag ) )
+					for ( sal_uInt16 i = 1; i <= nCount; i++ )
 					{
-						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
-						nRet = noErr;
+						// Drag over to make sure that the OOo code does not
+						// ignore the drop
+						if ( i > 1 )
+						{
+							pTarget->handleDragExit( nX, nY, aDrag );
+							pTarget->handleDragEnter( nX, nY, aDrag, i );
+						}
+
+						// Treat any subset that succeed as success
+						if ( pTarget->handleDrop( nX, nY, aDrag, i ) )
+							nRet = noErr;
 					}
+
+					if ( nRet == noErr )
+						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
 				}
 			}
 
@@ -837,7 +855,7 @@ WindowRef JavaDropTarget::getNativeWindow()
 
 // ------------------------------------------------------------------------
 
-void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
+void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem )
 {
 	mbRejected = false;
 
@@ -859,7 +877,7 @@ void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativ
 		aDragEnterEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
 		aDragEnterEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
 
-		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG );
+		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG, nItem );
 		if ( pTransferable )
 		{
 			aDragEnterEvent.SupportedDataFlavors = pTransferable->getTransferDataFlavors();
@@ -955,7 +973,7 @@ void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNative
 
 // ------------------------------------------------------------------------
 
-bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
+bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem )
 {
 	// Don't set the cursor to the reject cursor since a drop has occurred
 	bNoRejectCursor = true;
@@ -994,7 +1012,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTran
 		aDropEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
 		aDropEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
 
-		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG );
+		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG, nItem );
 		if ( pTransferable )
 			aDropEvent.Transferable = Reference< XTransferable >( pTransferable );
 	}
