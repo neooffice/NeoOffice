@@ -7,7 +7,7 @@
 				<prop oor:name="Title" oor:type="xs:string">
 					<value xml:lang="en-US">Check Grammar</value>
 					<value xml:lang="fr">Vérifier la grammaire</value>
-					<value xml:lang="nl">Controleer Grammatica</value>
+					<value xml:lang="nl">Controleer grammatica</value>
 				</prop>
 				<prop oor:name="Context" oor:type="xs:string">
 					<value>com.sun.star.text.TextDocument</value>
@@ -20,7 +20,7 @@
 			            <prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">Entire Document</value>
 							<value xml:lang="fr">Document entier</value>
-							<value xml:lang="nl">Gehele Document</value>
+							<value xml:lang="nl">Gehele document</value>
 						</prop>
 			            <prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
@@ -39,7 +39,7 @@
 			            <prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">Selected Text</value>
 							<value xml:lang="fr">Sélection</value>
-							<value xml:lang="nl">Geselecteerde Tekst</value>
+							<value xml:lang="nl">Geselecteerde tekst</value>
 						</prop>
 			            <prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
