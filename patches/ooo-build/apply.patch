@@ -1,6 +1,6 @@
 Index: patches/dev300/apply
 ===================================================================
---- patches/dev300/apply	(revision 13546)
+--- patches/dev300/apply	(revision 13855)
 +++ patches/dev300/apply	(working copy)
 @@ -23,7 +23,8 @@
  	      FedoraLinuxOnlyFixes, LinuxOnly, SystemBits, \
@@ -12,8 +12,18 @@ Index: patches/dev300/apply
  Win32Common : Common, Defaults, TangoIcons, \
  	      Win32Only, NotDebian
  # Experimental sections
-@@ -418,7 +419,8 @@
- sd-builddep.diff, i#92662, michael
+@@ -339,7 +340,8 @@
+ # make menu layout prettier
+ vcl-menu-fixes.diff, i#67123, michael
+ 
+-# Tell the desktop we support the VFS
++# Tell the desktop we support the VFSA
++[ FixesNotForUpstream <= dev300-m30 < ooo300-m5 ]
+ uses-vfs.diff, i#43504, michael
+ 
+ [ FixesNotForUpstream < dev300-m30 ]
+@@ -405,7 +407,8 @@
+ printing-bugfix-254573.diff, n#254573, rodo
  
  # use basic (advanced) shapes for rectangle/ellipse on draw/impress's toolbars. make shapes wrap words by default, n#171052, rodo
 -sd-toolbar-advanced-shapes.diff, n#171052, rodo
@@ -22,8 +32,8 @@ Index: patches/dev300/apply
  svx-shapes-default-word-wrap-enable.diff, n#171052, rodo
  svx-honour-customshape-capabilities.diff, n#395372, thorsten
  
-@@ -458,7 +460,8 @@
- #FIXME src680: xmlsecurity-verify-usages.diff, i#76871, pmladek
+@@ -445,7 +448,8 @@
+ xmlsecurity-verify-usages.diff, i#76871, pmladek
  
  # fix that allows OOo to work with a standard (unpatched) libjpeg,
 -jpegc.c.diff, i#80674, n#272574, flr
@@ -32,7 +42,15 @@ Index: patches/dev300/apply
  
  # handle hyperlinks to files better
  sw-hyperlinks-relative.diff, n#405712, i#91522, jholesov
-@@ -618,7 +621,8 @@
+@@ -496,6 +500,7 @@
+ # such directories if they exist on the server's host system.
+ win32-invalid-names.diff, n#277603, tml
+ 
++[ Fixes < ooo300-m5 ]
+ # fixes the realpath buffer size to avoid crash when detecting soffice path
+ cppuhelper-findsofficepath-realpath-buffer-size.diff, i#93393, pmladek
+ 
+@@ -629,7 +634,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -42,7 +60,7 @@ Index: patches/dev300/apply
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -752,7 +756,8 @@
+@@ -773,7 +779,8 @@
  
  [ Misc ]
  # Insert symbol defaults to the Symbol font - not a random one
@@ -52,7 +70,7 @@ Index: patches/dev300/apply
  # Address data source ordering x#62860
  addrbk-datasrc-ordering.diff, michael
  # Changed the default option in the Templates and Documents dialog.
-@@ -1555,7 +1560,8 @@
+@@ -1664,7 +1671,8 @@
  sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
  sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
  # hack to ignore writerfilter if odf-converter is present
@@ -62,7 +80,7 @@ Index: patches/dev300/apply
  
  
  [ msaccess ]
-@@ -1591,7 +1597,8 @@
+@@ -1700,7 +1708,8 @@
  
  writerfilter-source-dmapper-domainmapper-debug.diff
  
@@ -70,9 +88,9 @@ Index: patches/dev300/apply
 +# Disable because we want to allow user to decide which filter to use
 +# buildfix-oox-depends-on-unotools.diff
  
- # fix build dependencies
- #FIXME still necessary? oox-token-deps.diff, pmladek
-@@ -1877,10 +1884,6 @@
+ [ CalcFixes ]
+ 
+@@ -1995,10 +2004,6 @@
  
  # fix lpsolve build for OSX
  macosx-lpsolve-makefile.diff
