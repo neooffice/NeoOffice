@@ -10,7 +10,7 @@ diff -u -r1.12 makefile.mk
  .ENDIF
  
 +.IF "$(OS)" == "MACOSX"
-+CDEFS+=-O0
++CDEFS+=-g -O0
 +.ENDIF
 +
  # --- Files --------------------------------------------------------
