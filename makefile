@@ -195,6 +195,7 @@ build.remotecontrol_checkout:
 	touch "$@"
 
 build.oo_patches:\
+	build.oo_cppu_patch \
 	build.oo_external_patch \
 	build.oo_framework_patch \
 	build.oo_i18npool_patch \
