@@ -563,15 +563,21 @@ void JavaSalFrame::GetWorkArea( Rectangle &rRect )
 	long nWidth = rRect.GetWidth();
 	long nHeight = rRect.GetHeight();
     
-	// If the input rectangle is empty, we are being called by the platform
-	// independent VCL code and so we need to use the parent window's bounds
-	// if there is one
+	// Use the parent frame's bounds if there is one. Fix bug 3163 by always
+	// excluding the frame's insets
 	if ( mpParent )
 	{
-		nX = mpParent->maGeometry.nX - maGeometry.nLeftDecoration;
-		nY = mpParent->maGeometry.nY - maGeometry.nTopDecoration;
-		nWidth  = mpParent->maGeometry.nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
-		nHeight  = mpParent->maGeometry.nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
+		nX = mpParent->maGeometry.nX;
+		nY = mpParent->maGeometry.nY;
+		nWidth = mpParent->maGeometry.nWidth;
+		nHeight = mpParent->maGeometry.nHeight;
+	}
+	else
+	{
+		nX += maGeometry.nLeftDecoration;
+		nY += maGeometry.nTopDecoration;
+		nWidth -= maGeometry.nLeftDecoration + maGeometry.nRightDecoration;
+		nHeight -= maGeometry.nTopDecoration + maGeometry.nBottomDecoration;
 	}
 
 	Rectangle aRect( com_sun_star_vcl_VCLScreen::getScreenBounds( nX, nY, nWidth, nHeight, bFullScreenMode ) );
