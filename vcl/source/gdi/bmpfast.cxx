@@ -490,6 +490,14 @@ bool ImplConvertToBitmap( TrueColorPixelPtr<SRCFMT>& rSrcLine,
     if( SRCFMT == DSTFMT )
         return false;
 
+#ifdef USE_JAVA
+    // Fix bug 3190 by not using the fast conversions when passing in our own
+    // buffer, the source is 24 bit, and the destination is 32 bit as these
+    // cases this will cause memory corruption in the Java VM
+    if( rSrcBuffer.mnBitCount == 24 && rDstBuffer.mnBitCount == 32 )
+        return false;
+#endif	// USE_JAVA
+
     const int nSrcLinestep = rSrcBuffer.mnScanlineSize;
     int nDstLinestep = rDstBuffer.mnScanlineSize;
 
