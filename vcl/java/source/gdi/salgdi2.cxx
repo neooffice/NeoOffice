@@ -518,6 +518,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 										// the mask bitmap
 										Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
 										FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_1BIT_MSB_PAL;
+										jint *pDestBits = pBits;
 										for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
 										{
 											bool bTransPixels = ( i < pTransDestBuffer->mnHeight );
@@ -527,15 +528,15 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 												{
 													BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
                                     				if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
-														pBits[ j ] = 0x00000000;
+														pDestBits[ j ] = 0x00000000;
 												}
 												else
 												{
-													pBits[ j ] = 0x00000000;
+													pDestBits[ j ] = 0x00000000;
 												}
 											}
 	
-											pBits += pDestBuffer->mnWidth;
+											pDestBits += pDestBuffer->mnWidth;
 											pTransBits += pTransDestBuffer->mnScanlineSize;
 										}
 
