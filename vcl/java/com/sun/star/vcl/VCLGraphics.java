@@ -68,6 +68,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.StringTokenizer;
 import javax.swing.ButtonModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
@@ -237,6 +238,16 @@ public final class VCLGraphics {
 	private static JRadioButton radioButton = null;
 
 	/**
+	 * The radio button x coordinate offset.
+	 */
+	private static int radioButtonXOffset = 0;
+
+	/**
+	 * The radio button y coordinate offset.
+	 */
+	private static int radioButtonYOffset = 0;
+
+	/**
 	 * The radio button preferred size.
 	 */
 	private final static Dimension radioButtonPreferredSize = new Dimension(16, 16);
@@ -245,6 +256,16 @@ public final class VCLGraphics {
 	 * The checkbox component.
 	 */
 	private static JCheckBox checkBoxButton = null;
+
+	/**
+	 * The checkbox x coordinate offset.
+	 */
+	private static int checkBoxButtonXOffset = 0;
+
+	/**
+	 * The checkbox y coordinate offset.
+	 */
+	private static int checkBoxButtonYOffset = 0;
 
 	/**
 	 * The checkbox preferred size.
@@ -338,6 +359,28 @@ public final class VCLGraphics {
 	 */
 	static {
 
+		// Determine OS version
+		StringTokenizer tokenizer = new StringTokenizer(System.getProperty("os.version"), ".");
+		int osVersion = 0;
+		if (tokenizer.hasMoreTokens()) {
+			try {
+				osVersion |= ( Integer.valueOf(tokenizer.nextToken()).intValue() & 0x000000ff ) << 16;
+			}
+			catch (Throwable t) {}
+		}
+		if (tokenizer.hasMoreTokens()) {
+			try {
+				osVersion |= ( Integer.valueOf(tokenizer.nextToken()).intValue() & 0x000000ff ) << 8;
+			}
+			catch (Throwable t) {}
+		}
+		if (tokenizer.hasMoreTokens()) {
+			try {
+				osVersion |= Integer.valueOf(tokenizer.nextToken()).intValue() & 0x000000ff;
+			}
+			catch (Throwable t) {}
+		}
+
 		// Set the draw on main thread flag
 		try {
 			// Test for Java 1.5 or higher
@@ -354,9 +397,23 @@ public final class VCLGraphics {
 
 		radioButton = new JRadioButton();
 		radioButton.setBackground(c);
-		
+
 		checkBoxButton = new JCheckBox();
 		checkBoxButton.setBackground(c);
+
+		// Adjust offsets for Swing controls
+		if (osVersion < 0x000a0505) {
+			VCLGraphics.radioButtonXOffset = 0;
+			VCLGraphics.radioButtonYOffset = -2;
+			VCLGraphics.checkBoxButtonXOffset = 0;
+			VCLGraphics.checkBoxButtonYOffset = -1;
+		}
+		else {
+			VCLGraphics.radioButtonXOffset = -3;
+			VCLGraphics.radioButtonYOffset = -1;
+			VCLGraphics.checkBoxButtonXOffset = -3;
+			VCLGraphics.checkBoxButtonYOffset = 0;
+		}
 
 		// Create the image50 image
 		int w = 2;
@@ -2127,7 +2184,7 @@ public final class VCLGraphics {
 
 				// Fix bug 3028 by using the adjusted preferred bounds
 				Dimension d = getPreferredRadioButtonBounds(0, 0, 1, 1, "").getSize();
-				Rectangle bounds = new Rectangle(x, y - 3, d.width, d.height);
+				Rectangle bounds = new Rectangle(x + VCLGraphics.radioButtonXOffset, y + VCLGraphics.radioButtonYOffset, d.width, d.height);
 				if (width > d.width)
 					bounds.x += (width - d.width) / 2;
 				if (height > d.height)
@@ -2240,7 +2297,7 @@ public final class VCLGraphics {
 
 				// Fix bug 3028 by using the adjusted preferred bounds
 				Dimension d = getPreferredCheckBoxBounds(0, 0, 1, 1, "").getSize();
-				Rectangle bounds = new Rectangle(x, y - 1, d.width, d.height);
+				Rectangle bounds = new Rectangle(x + VCLGraphics.checkBoxButtonXOffset, y + VCLGraphics.checkBoxButtonYOffset, d.width, d.height);
 				if (width > d.width)
 					bounds.x += (width - d.width) / 2;
 				if (height > d.height)

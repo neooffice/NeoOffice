@@ -70,8 +70,9 @@ public:
 	::rtl::OUString		getKeyName( USHORT _par0 );
 	void*				getNativeWindow();
 	void*				getNativeWindowRef();
-	java_lang_Object*	getPeer();
+	void*				getPeer();
 	ULONG				getState();
+	void				makeModal();
 	void				removeChild( JavaSalFrame *_par0 );
 	sal_Bool			requestFocus();
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
