@@ -325,6 +325,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pWindow )
 			Dialog::EndAllDialogs( pWindow );
 	}
+
 	// Fix bug 3153 by setting parent to the focus frame for dialogs that
 	// have a show only menus frame as their parent
 	else if ( mpParent && mpParent->mbShowOnlyMenus && mpParent != pSalData->mpFocusFrame && !IsUtilityWindow() )
@@ -347,6 +348,16 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	if ( mbVisible )
 	{
 		mbInShow = TRUE;
+
+		// Fix bug 3228 by setting the OOo modal dialogs to the native modal
+		// window level
+		ImplSVData *pSVData = ImplGetSVData();
+		if ( pSVData->maWinData.mpLastExecuteDlg )
+		{
+			SystemWindow *pSystemWindow = pSVData->maWinData.mpLastExecuteDlg->GetSystemWindow();
+			if ( pSystemWindow && pSystemWindow->ImplGetFrame() == this )
+				mpVCLFrame->makeModal();
+		}
 
 		// Get native window since it won't be created until first shown
 		maSysData.aWindow = (long)mpVCLFrame->getNativeWindowRef();

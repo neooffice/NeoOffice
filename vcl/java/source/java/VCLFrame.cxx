@@ -544,112 +544,22 @@ const Rectangle com_sun_star_vcl_VCLFrame::getInsets()
 
 void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 {
-	void *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *peer = getPeer();
-		if ( peer )
-		{
-			jobject tempObj = peer->getJavaObject();
-			if ( tempObj )
-			{
-				jclass tempClass = t.pEnv->FindClass( "apple/awt/ComponentModel" );
-				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-				{
-					static jmethodID mIDGetModelPtr = NULL;
-					static bool bReturnsInt = false;
-					if ( !mIDGetModelPtr )
-					{
-						char *cSignature = "()J";
-						mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-						if ( !mIDGetModelPtr )
-						{
-							// Java 1.4.1 has a different signature so check
-							// for it if we cannot find the first signature
-							if ( t.pEnv->ExceptionCheck() )
-								t.pEnv->ExceptionClear();
-							cSignature = "()I";
-							mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-							if ( mIDGetModelPtr )
-								bReturnsInt = true;
-						}
-					}
-					OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
-					if ( mIDGetModelPtr )
-					{
-						if ( bReturnsInt )
-							out = (void *)CWindow_getNSWindow( (void *) t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
-						else
-							out = (void *)CWindow_getNSWindow( (void *) t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
-					}
-				}
-			}
-			delete peer;
-		}
-	}
-
-	return out;
+	return (void *)CWindow_getNSWindow( getPeer() );
 }
 
 // ----------------------------------------------------------------------------
 
 void *com_sun_star_vcl_VCLFrame::getNativeWindowRef()
 {
-	void *out = NULL;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		java_lang_Object *peer = getPeer();
-		if ( peer )
-		{
-			jobject tempObj = peer->getJavaObject();
-			if ( tempObj )
-			{
-				jclass tempClass = t.pEnv->FindClass( "apple/awt/ComponentModel" );
-				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
-				{
-					static jmethodID mIDGetModelPtr = NULL;
-					static bool bReturnsInt = false;
-					if ( !mIDGetModelPtr )
-					{
-						char *cSignature = "()J";
-						mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-						if ( !mIDGetModelPtr )
-						{
-							// Java 1.4.1 has a different signature so check
-							// for it if we cannot find the first signature
-							if ( t.pEnv->ExceptionCheck() )
-								t.pEnv->ExceptionClear();
-							cSignature = "()I";
-							mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-							if ( mIDGetModelPtr )
-								bReturnsInt = true;
-						}
-					}
-					OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
-					if ( mIDGetModelPtr )
-					{
-						if ( bReturnsInt )
-							out = (void *)CWindow_getWindowRef( (void *)t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
-						else
-							out = (void *)CWindow_getWindowRef( (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
-					}
-				}
-			}
-			delete peer;
-		}
-	}
-
-	return out;
+	return (void *)CWindow_getWindowRef( getPeer() );
 }
 
 // ----------------------------------------------------------------------------
 
-java_lang_Object *com_sun_star_vcl_VCLFrame::getPeer()
+void *com_sun_star_vcl_VCLFrame::getPeer()
 {
 	static jmethodID mID = NULL;
-	java_lang_Object *out = NULL;
+	void *out = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
@@ -663,7 +573,38 @@ java_lang_Object *com_sun_star_vcl_VCLFrame::getPeer()
 		{
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
 			if ( tempObj )
-				out = new java_lang_Object( tempObj );
+			{
+				jclass tempClass = t.pEnv->FindClass( "apple/awt/ComponentModel" );
+				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
+				{
+					static jmethodID mIDGetModelPtr = NULL;
+					static bool bReturnsInt = false;
+					if ( !mIDGetModelPtr )
+					{
+						char *cSignature = "()J";
+						mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+						if ( !mIDGetModelPtr )
+						{
+							// Java 1.4.1 has a different signature so check
+							// for it if we cannot find the first signature
+							if ( t.pEnv->ExceptionCheck() )
+								t.pEnv->ExceptionClear();
+							cSignature = "()I";
+							mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
+							if ( mIDGetModelPtr )
+								bReturnsInt = true;
+						}
+					}
+					OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
+					if ( mIDGetModelPtr )
+					{
+						if ( bReturnsInt )
+							out = (void *)t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr );
+						else
+							out = (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr );
+					}
+				}
+			}
 		}
 	}
 	return out;
@@ -688,6 +629,13 @@ ULONG com_sun_star_vcl_VCLFrame::getState()
 			out = (ULONG)t.pEnv->CallNonvirtualLongMethod( object, getMyClass(), mID );
 	}
 	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFrame::makeModal()
+{
+	CWindow_makeModalWindow( getPeer() );
 }
 
 // ----------------------------------------------------------------------------
