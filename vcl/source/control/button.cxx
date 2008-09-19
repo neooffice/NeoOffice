@@ -116,6 +116,8 @@
 #include <salvd.hxx>
 #endif
 
+using namespace vcl;
+
 #endif	// USE_JAVA
 
 
@@ -4454,11 +4456,12 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                                 {
                                     if ( pBuffer->mpBits )
                                     {
+										int nMinAlpha = ( IsRunningPanther() || IsRunningTiger() ? 0xC7000000 : 0x7C000000 );
                                         long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
                                         int *pBits = (int *)pBuffer->mpBits;
                                         for ( long j = 0; j < nPixels; j++ )
                                         {
-                                            if ( ( pBits[ j ] & 0xFF000000 ) < 0xC7000000 )
+                                            if ( ( pBits[ j ] & 0xFF000000 ) < nMinAlpha )
                                                 pBits[ j ] = 0x00000000;
                                         }
                                     }
