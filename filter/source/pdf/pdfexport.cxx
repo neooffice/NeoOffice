@@ -1089,15 +1089,22 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 						const Point& rPos = pA->GetPoint();
 						const Size& rSize = pA->GetSize();
 
-						if ( rSize.Width() && rSize.Height() )
+						Size aDstSizePixel( rDummyVDev.LogicToPixel( rSize ) );
+						if ( aDstSizePixel.Width() && aDstSizePixel.Height() )
 						{
+							// Draw EPS at 300 DPI
+							sal_Int32 nEPSRes = 300;
+							if ( nEPSRes > mnMaxImageResolution )
+								nEPSRes = mnMaxImageResolution;
+							aDstSizePixel = Size( aDstSizePixel.Width() * nEPSRes / 72, aDstSizePixel.Height() * nEPSRes / 72 );
+
 							VirtualDevice* pVDev = new VirtualDevice;
-							if ( pVDev->SetOutputSizePixel( rSize ) )
+							if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
 							{
 								// Convert EPS to bitmap
 								Point aPoint;
-								pVDev->DrawEPS( aPoint, rSize, pA->GetLink() );
-								ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize,pVDev->GetBitmapEx( aPoint, rSize ) );
+								pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
+								ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize,pVDev->GetBitmapEx( aPoint, aDstSizePixel ) );
 							}
 							delete pVDev;
 						}
