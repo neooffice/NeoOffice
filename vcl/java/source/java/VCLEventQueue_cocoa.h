@@ -40,6 +40,29 @@
 
 #ifdef __cplusplus
 typedef void* id;
+#else
+@interface NSWindow (VCLWindow)
+- (void)_clearModalWindowLevel;
+- (BOOL)_isUtilityWindow;
+- (void)_restoreModalWindowLevel;
+- (void)_setModalWindowLevel;
+- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
+@end
+
+@interface VCLWindow : NSWindow
++ (void)clearModalWindowLevel;
++ (void)restoreModalWindowLevel;
+- (void)becomeKeyWindow;
+- (void)displayIfNeeded;
+- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
+- (void)makeKeyWindow;
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
+- (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
+- (void)resignKeyWindow;
+- (void)sendEvent:(NSEvent *)pEvent;
+- (void)setContentView:(NSView *)pView;
+- (void)setLevel:(int)nWindowLevel;
+@end
 #endif
 
 #ifdef __cplusplus
