@@ -116,8 +116,6 @@
 #include <salvd.hxx>
 #endif
 
-using namespace vcl;
-
 #endif	// USE_JAVA
 
 
@@ -4449,20 +4447,22 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                                 ((JavaSalBitmap *)pSalBmp)->NotifyGraphicsChanged( false );
 
                                 // OOo will change some semi-transparent pixels
-                                // to pink so force those pixels to fully
-                                // transparent
+                                // to pink so premultiply alpha
                                 BitmapBuffer *pBuffer = pSalBmp->AcquireBuffer( false );
                                 if ( pBuffer )
                                 {
                                     if ( pBuffer->mpBits )
                                     {
-										int nMinAlpha = ( IsRunningPanther() || IsRunningTiger() ? 0xC7000000 : 0x7C000000 );
                                         long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
                                         int *pBits = (int *)pBuffer->mpBits;
                                         for ( long j = 0; j < nPixels; j++ )
                                         {
-                                            if ( ( pBits[ j ] & 0xFF000000 ) < nMinAlpha )
+                                            int nAlphaMask = pBits[ j ] & 0xFF000000;
+                                            sal_uInt8 nAlpha = (sal_uInt8)( nAlphaMask >> 24 );
+                                            if ( nAlpha < 0x7D )
                                                 pBits[ j ] = 0x00000000;
+                                            else
+                                                pBits[ j ] = MAKE_SALCOLOR( SALCOLOR_RED( pBits[ j ] ) * nAlpha / 0xFF, SALCOLOR_GREEN( pBits[ j ] ) * nAlpha / 0xFF, SALCOLOR_BLUE( pBits[ j ] ) * nAlpha / 0xFF ) | nAlphaMask;
                                         }
                                     }
 
