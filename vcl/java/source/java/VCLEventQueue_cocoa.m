@@ -387,23 +387,7 @@ static VCLResponder *pSharedResponder = nil;
 
 @end
 
-@interface NSWindow (VCLWindow)
-- (BOOL)_isUtilityWindow;
-- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
-@end
-
-@interface VCLWindow : NSWindow
-- (void)becomeKeyWindow;
-- (void)displayIfNeeded;
-- (BOOL)makeFirstResponder:(NSResponder *)pResponder;
-- (void)makeKeyWindow;
-- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
-- (BOOL)performKeyEquivalent:(NSEvent *)pEvent;
-- (void)resignKeyWindow;
-- (void)sendEvent:(NSEvent *)pEvent;
-- (void)setContentView:(NSView *)pView;
-- (void)setLevel:(int)nWindowLevel;
-@end
+static NSMutableArray *pNeedRestoreModalWindows = NULL;
 
 @interface VCLWindow (CocoaAppWindow)
 - (jobject)peer;
@@ -411,8 +395,71 @@ static VCLResponder *pSharedResponder = nil;
 
 @implementation VCLWindow
 
++ (void)clearModalWindowLevel
+{
+	if ( !pNeedRestoreModalWindows )
+	{
+		// Do not retain as invoking alloc disables autorelease
+		pNeedRestoreModalWindows = [[NSMutableArray alloc] initWithCapacity:4];
+		if ( !pNeedRestoreModalWindows )
+			return;
+	}
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp && ![pApp isActive] )
+	{
+		NSArray *pWindows = [pApp windows];
+		if ( pWindows )
+		{
+			unsigned int nCount = [pWindows count];
+			unsigned int i = 0;
+			for ( ; i < nCount; i++ )
+			{
+				NSWindow *pWindow = (NSWindow *)[pWindows objectAtIndex:i];
+				if ( pWindow && [pWindow level] == NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_clearModalWindowLevel)] && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+				{
+					[pWindow _clearModalWindowLevel];
+
+					// Make sure that hidden windows are purged from the array
+					// and that the current window is at the back of the array
+					[pNeedRestoreModalWindows removeObject:pWindow];
+					if ( [pWindow isVisible] )
+						[pNeedRestoreModalWindows addObject:pWindow];
+				}
+			}
+		}
+	}
+}
+
++ (void)restoreModalWindowLevel
+{
+	if ( !pNeedRestoreModalWindows )
+		return;
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp && [pApp isActive] )
+	{
+		unsigned int nCount = [pNeedRestoreModalWindows count];
+		unsigned int i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSWindow *pWindow = (NSWindow *)[pNeedRestoreModalWindows objectAtIndex:i];
+			if ( pWindow && [pWindow level] != NSModalPanelWindowLevel && [pWindow respondsToSelector:@selector(_restoreModalWindowLevel)] )
+			{
+				if ( [pWindow isVisible] )
+					[pWindow _restoreModalWindowLevel];
+			}
+		}
+	}
+
+	// Make sure that all windows are purged from the array
+	[pNeedRestoreModalWindows removeAllObjects];
+}
+
 - (void)becomeKeyWindow
 {
+	[VCLWindow restoreModalWindowLevel];
+
 	[super becomeKeyWindow];
 
 	// Fix bug 1819 by forcing cancellation of the input method
@@ -631,6 +678,8 @@ static VCLResponder *pSharedResponder = nil;
 	}
 
 	[super resignKeyWindow];
+
+	[VCLWindow clearModalWindowLevel];
 }
 
 - (void)sendEvent:(NSEvent *)pEvent
@@ -744,8 +793,8 @@ static VCLResponder *pSharedResponder = nil;
 
 - (void)setLevel:(int)nWindowLevel
 {
-	// Don't let Java unset our window level changes
-	if ( nWindowLevel < [self level] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	// Don't let Java unset our window level changes unless it is modal window
+	if ( [self level] > nWindowLevel && [self level] != NSModalPanelWindowLevel && [[self className] isEqualToString:pCocoaAppWindowString] )
 		return;
 
 	[super setLevel:nWindowLevel];

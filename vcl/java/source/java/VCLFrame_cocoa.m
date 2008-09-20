@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import "VCLEventQueue_cocoa.h"
 #import "VCLFrame_cocoa.h"
 
 @interface NSObject (CWindow)
@@ -232,8 +233,14 @@
 	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
 	{
 		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
-		if ( pWindow && [pWindow styleMask] & NSTitledWindowMask )
-			[pWindow setLevel:NSModalPanelWindowLevel];
+		if ( pWindow && [pWindow styleMask] & NSTitledWindowMask && [pWindow respondsToSelector:@selector(_setModalWindowLevel)] )
+		{
+			[pWindow _setModalWindowLevel];
+
+			// Run VCLWindow selector to ensure that the window level is set
+			// correctly if the application is not active
+			[VCLWindow clearModalWindowLevel];
+		}
 	}
 }
 
