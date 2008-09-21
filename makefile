@@ -117,11 +117,11 @@ PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice3 apache-commons jfreereport sdext swext tomcat xpdf
-OO_TAG:=-rOOO300_m5
-OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_3_0_0_3
+OO_TAG:=-rOOO300_m7
+OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_3_0_0_4
 OOO-BUILD_PACKAGE:=ooo-build
 OOO-BUILD_TAG:=
-OOO-BUILD_APPLY_TAG:=OOO300_m5
+OOO-BUILD_APPLY_TAG:=OOO300_m7
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 LIBWPD_SOURCE_URL=http://download.go-oo.org/libwpd/libwpd-0.8.14.tar.gz
 LIBWPG_SOURCE_URL=http://download.go-oo.org/SRC680/libwpg-0.1.3.tar.gz
