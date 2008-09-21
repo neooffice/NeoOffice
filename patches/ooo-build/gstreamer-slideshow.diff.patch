@@ -1,0 +1,17 @@
+Index: patches/gstreamer/gstreamer-slideshow.diff
+===================================================================
+--- patches/gstreamer/gstreamer-slideshow.diff	(revision 13976)
++++ patches/gstreamer/gstreamer-slideshow.diff	(working copy)
+@@ -27,9 +27,9 @@
+  							aDeviceParams[ 0 ] >>= aImplName;
+  						
+  							if( aImplName.endsWithIgnoreAsciiCaseAsciiL( 
+--                                    RTL_CONSTASCII_STRINGPARAM("VCLCanvas") ))
+-+                                    RTL_CONSTASCII_STRINGPARAM("VCLCanvas") ) || aImplName.endsWithIgnoreAsciiCaseAsciiL( 
+-+                                    RTL_CONSTASCII_STRINGPARAM("CairoCanvas") ) )
++-                                    RTL_CONSTASCII_STRINGPARAM("VCL") ))
+++                                    RTL_CONSTASCII_STRINGPARAM("VCL") ) || aImplName.endsWithIgnoreAsciiCaseAsciiL( 
+++                                    RTL_CONSTASCII_STRINGPARAM("Cairo") ) )
+                              {
+  								implInitializeVCLBasedPlayerWindow( rBounds, aDeviceParams );
+                              }
