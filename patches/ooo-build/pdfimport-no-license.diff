@@ -1,0 +1,12 @@
+Index: patches/dev300/pdfimport-no-license.diff
+===================================================================
+--- patches/dev300/pdfimport-no-license.diff	(revision 13976)
++++ patches/dev300/pdfimport-no-license.diff	(working copy)
+@@ -15,6 +15,6 @@
+ -        </simple-license>
+ -    </registration>
+ -
+-     <version value="0.3" />
++     <version value="0.3.2" />
+  
+      <platform value="UPDATED_SUPPORTED_PLATFORM" />
