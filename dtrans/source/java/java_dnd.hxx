@@ -88,6 +88,7 @@ public:
     ::osl::Mutex			maMutex;
 	const SystemEnvData*	mpEnvData;
 	Window*					mpWindow;
+	WindowRef				maWindowRef;
 
 							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void* );
 
@@ -120,6 +121,7 @@ public:
     bool					mbRejected;
 	const SystemEnvData*	mpEnvData;
 	Window*					mpWindow;
+	WindowRef				maWindowRef;
 
 							JavaDropTarget();
 	virtual					~JavaDropTarget();

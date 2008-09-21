@@ -75,10 +75,6 @@ ULINGULIB=libulingu.lib
 CDEFS += -DPRODUCT_NAME='"$(PRODUCT_NAME)"'
 .ENDIF
 
-.IF "$(X11_PRODUCT_NAME)" != ""
-CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
-.ENDIF
-
 .IF "$(GUIBASE)" == "java"
 OBJCFLAGS+=-fobjc-exceptions
 .ENDIF
@@ -130,10 +126,6 @@ SHL1STDLIBS= \
 
 .IF "$(SYSTEM_HUNSPELL)" != "YES"
 SHL1STDLIBS+=   $(ULINGULIB)
-.ENDIF
-
-.IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+= -framework AppKit
 .ENDIF
 
 # build DLL

@@ -38,6 +38,7 @@
 #include "precompiled_cppcanvas.hxx"
 
 #include <canvas/debug.hxx>
+#include <tools/diagnose_ex.h>
 #include <canvas/verbosetrace.hxx>
 
 #include <osl/mutex.hxx>
@@ -47,6 +48,8 @@
 #include <rtl/logfile.hxx>
 
 #include <comphelper/sequence.hxx>
+#include <comphelper/anytostring.hxx>
+#include <cppuhelper/exc_hlp.hxx>
 
 #include <cppcanvas/canvas.hxx>
 
@@ -130,8 +133,9 @@ namespace
             aColor.SetTransparency(0);
             //aColor.SetTransparency(128);
 
-            rColorSequence = ::vcl::unotools::colorToDoubleSequence( rCanvas->getUNOCanvas()->getDevice(),
-                                                                     aColor );
+            rColorSequence = ::vcl::unotools::colorToDoubleSequence( 
+                aColor,
+                rCanvas->getUNOCanvas()->getDevice()->getDeviceColorSpace() );
         }
     }
 
@@ -293,6 +297,8 @@ namespace
         {
             const ::cppcanvas::internal::OutDevState& rState( getState( rParms.mrStates ) );
 
+            // TODO(F1): Interpret OutDev::GetRefPoint() for the start of the dashing.
+
             // interpret dash info only if explicitely enabled as
             // style
             const ::basegfx::B2DSize aDistance( rLineInfo.GetDistance(), 0 );
@@ -350,6 +356,112 @@ namespace
                         
         return BitmapEx( aSolid, aMask );
     }
+
+    /** Shameless rip from vcl/source/gdi/outdev3.cxx
+
+        Should consolidate, into something like basetxt...
+     */
+    sal_Unicode getLocalizedChar( sal_Unicode nChar, LanguageType eLang )
+    {
+        // currently only conversion from ASCII digits is interesting
+        if( (nChar < '0') || ('9' < nChar) )
+            return nChar;
+
+        sal_Unicode nOffset(0);
+        switch( eLang )
+        {
+            default:
+                break;
+
+            case LANGUAGE_ARABIC:
+                // FALLTHROUGS intended
+            case LANGUAGE_ARABIC_SAUDI_ARABIA:
+            case LANGUAGE_ARABIC_IRAQ:
+            case LANGUAGE_ARABIC_EGYPT:
+            case LANGUAGE_ARABIC_LIBYA:
+            case LANGUAGE_ARABIC_ALGERIA:
+            case LANGUAGE_ARABIC_MOROCCO:
+            case LANGUAGE_ARABIC_TUNISIA:
+            case LANGUAGE_ARABIC_OMAN:
+            case LANGUAGE_ARABIC_YEMEN:
+            case LANGUAGE_ARABIC_SYRIA:
+            case LANGUAGE_ARABIC_JORDAN:
+            case LANGUAGE_ARABIC_LEBANON:
+            case LANGUAGE_ARABIC_KUWAIT:
+            case LANGUAGE_ARABIC_UAE:
+            case LANGUAGE_ARABIC_BAHRAIN:
+            case LANGUAGE_ARABIC_QATAR:
+            case LANGUAGE_URDU:
+            case LANGUAGE_URDU_PAKISTAN:
+            case LANGUAGE_URDU_INDIA:
+            case LANGUAGE_PUNJABI: //???
+                nOffset = 0x0660 - '0';  // arabic/persian/urdu
+                break;
+            case LANGUAGE_BENGALI:
+                nOffset = 0x09E6 - '0';  // bengali
+                break;
+            case LANGUAGE_HINDI:
+                nOffset = 0x0966 - '0';  // devanagari
+                break;
+            case LANGUAGE_GUJARATI:
+                nOffset = 0x0AE6 - '0';  // gujarati
+                break;
+            case LANGUAGE_KANNADA:
+                nOffset = 0x0CE6 - '0';  // kannada
+                break;
+            case LANGUAGE_KHMER:
+                nOffset = 0x17E0 - '0';  // khmer
+                break;
+            case LANGUAGE_LAO:
+                nOffset = 0x0ED0 - '0';  // lao
+                break;
+            case LANGUAGE_MALAYALAM:
+                nOffset = 0x0D66 - '0';   // malayalam
+                break;
+            case LANGUAGE_MONGOLIAN:
+                nOffset = 0x1810 - '0';   // mongolian
+                break;
+            case LANGUAGE_ORIYA:
+                nOffset = 0x0B66 - '0';   // oriya
+                break;
+            case LANGUAGE_TAMIL:
+                nOffset = 0x0BE7 - '0';   // tamil
+                break;
+            case LANGUAGE_TELUGU:
+                nOffset = 0x0C66 - '0';   // telugu
+                break;
+            case LANGUAGE_THAI:
+                nOffset = 0x0E50 - '0';   // thai
+                break;
+            case LANGUAGE_TIBETAN:
+                nOffset = 0x0F20 - '0';   // tibetan
+                break;
+        }
+
+        nChar = sal::static_int_cast<sal_Unicode>(nChar + nOffset);
+        return nChar;
+    }
+
+    void convertToLocalizedNumerals( XubString&   rStr,
+                                     LanguageType eTextLanguage )
+    {
+        const sal_Unicode* pBase = rStr.GetBuffer();
+        const sal_Unicode* pBegin = pBase + 0;
+        const xub_StrLen nEndIndex = rStr.Len();
+        const sal_Unicode* pEnd = pBase + nEndIndex;
+
+        for( ; pBegin < pEnd; ++pBegin )
+        {
+            // TODO: are there non-digit localizations?
+            if( (*pBegin >= '0') && (*pBegin <= '9') )
+            {
+                // translate characters to local preference
+                sal_Unicode cChar = getLocalizedChar( *pBegin, eTextLanguage );
+                if( cChar != *pBegin )
+                    rStr.SetChar( sal::static_int_cast<USHORT>(pBegin - pBase), cChar );
+            }
+        }
+    }
 }
 
 
@@ -397,7 +509,7 @@ namespace cppcanvas
                                         const char*  pCommentString,
                                         sal_Int32& 	 io_rCurrActionIndex ) const
         {
-            ENSURE_AND_THROW( pCommentString,
+            ENSURE_OR_THROW( pCommentString,
                               "ImplRenderer::skipContent(): NULL string given" );
 
             MetaAction* pCurrAct;
@@ -423,7 +535,7 @@ namespace cppcanvas
                                               const char*  pCommentString,
                                               USHORT	   nType ) const
         {
-            ENSURE_AND_THROW( pCommentString,
+            ENSURE_OR_THROW( pCommentString,
                               "ImplRenderer::isActionContained(): NULL string given" );
 
             bool bRet( false );
@@ -518,13 +630,25 @@ namespace cppcanvas
                     aVCLEndColor.SetRed( (UINT8)(aVCLEndColor.GetRed() * nEndIntensity / 100) );
                     aVCLEndColor.SetGreen( (UINT8)(aVCLEndColor.GetGreen() * nEndIntensity / 100) );
                     aVCLEndColor.SetBlue( (UINT8)(aVCLEndColor.GetBlue() * nEndIntensity / 100) );
-                    
+
+                    uno::Reference<rendering::XColorSpace> xColorSpace(
+                        rParms.mrCanvas->getUNOCanvas()->getDevice()->getDeviceColorSpace());
                     const uno::Sequence< double > aStartColor(
-                        ::vcl::unotools::colorToDoubleSequence( rParms.mrCanvas->getUNOCanvas()->getDevice(),
-                                                                aVCLStartColor ) );
+                        ::vcl::unotools::colorToDoubleSequence( aVCLStartColor,
+                                                                xColorSpace ));
                     const uno::Sequence< double > aEndColor(
-                        ::vcl::unotools::colorToDoubleSequence( rParms.mrCanvas->getUNOCanvas()->getDevice(),
-                                                                aVCLEndColor ) );
+                        ::vcl::unotools::colorToDoubleSequence( aVCLEndColor,
+                                                                xColorSpace ));
+
+                    uno::Sequence< uno::Sequence < double > > aColors(2);
+                    uno::Sequence< double > aStops(2);
+                    
+                    aStops[0] = 0.0;
+                    aStops[1] = 1.0;
+                    
+                    aColors[0] = aStartColor;
+                    aColors[1] = aEndColor;
+
 
                     // Setup texture transformation
                     // ----------------------------
@@ -575,13 +699,13 @@ namespace cppcanvas
                             {
                                 case GRADIENT_LINEAR:
                                     nOffsetX = rGradient.GetBorder() / 100.0;
-                                    aTexture.Gradient = xFactory->createLinearHorizontalGradient( aStartColor,
-                                                                                                  aEndColor );
+                                    aTexture.Gradient = xFactory->createLinearHorizontalGradient( aColors,
+                                                                                                  aStops );
                                     break;
 
                                 case GRADIENT_AXIAL:
-                                    aTexture.Gradient = xFactory->createAxialHorizontalGradient( aStartColor,
-                                                                                                 aEndColor );
+                                    aTexture.Gradient = xFactory->createAxialHorizontalGradient( aColors,
+                                                                                                 aStops );
                                     break;
 
                                 default: // other cases can't happen
@@ -682,8 +806,8 @@ namespace cppcanvas
                                     aTextureTransformation.scale( nScale, nScale );
                                     aTextureTransformation.translate( 0.5, 0.5 );
 
-                                    aTexture.Gradient = xFactory->createEllipticalGradient( aEndColor,
-                                                                                            aStartColor,
+                                    aTexture.Gradient = xFactory->createEllipticalGradient( aColors,
+                                                                                            aStops,
                                                                                             geometry::RealRectangle2D(0.0,0.0,
                                                                                                                     1.0,1.0) );
                                 }
@@ -698,8 +822,8 @@ namespace cppcanvas
                                     aTextureTransformation.translate( 0.5, 0.5 );
 
                                     aTexture.Gradient = xFactory->createEllipticalGradient( 
-                                        aEndColor,
-                                        aStartColor,
+                                        aColors,
+                                        aStops,
                                         ::basegfx::unotools::rectangle2DFromB2DRectangle( 
                                             aBounds ));
                                 }
@@ -718,16 +842,16 @@ namespace cppcanvas
                                         nScaleX = nScaleY;
                                     }
 
-                                    aTexture.Gradient = xFactory->createRectangularGradient( aEndColor,
-                                                                                             aStartColor,
+                                    aTexture.Gradient = xFactory->createRectangularGradient( aColors,
+                                                                                             aStops,
                                                                                              geometry::RealRectangle2D(0.0,0.0,
                                                                                                                        1.0,1.0) );
                                     break;
 
                                 case GRADIENT_RECT:
                                     aTexture.Gradient = xFactory->createRectangularGradient( 
-                                        aEndColor,
-                                        aStartColor,
+                                        aColors,
+                                        aStops,
                                         ::basegfx::unotools::rectangle2DFromB2DRectangle( 
                                             aBounds ) );
                                     break;
@@ -751,7 +875,7 @@ namespace cppcanvas
                         break;
 
                         default:
-                            ENSURE_AND_THROW( false,
+                            ENSURE_OR_THROW( false,
                                               "ImplRenderer::createGradientAction(): Unexpected gradient type" );
                             break;
                     }
@@ -912,7 +1036,7 @@ namespace cppcanvas
                                              const ActionFactoryParameters& rParms,
                                              bool                           bSubsettableActions )
         {
-            ENSURE_AND_THROW( nIndex >= 0 && nLength <= rString.Len() + nIndex,
+            ENSURE_OR_THROW( nIndex >= 0 && nLength <= rString.Len() + nIndex,
                               "ImplRenderer::createTextWithEffectsAction(): Invalid text index" );
 
             if( !nLength )
@@ -928,6 +1052,9 @@ namespace cppcanvas
             ::Size  aShadowOffset;
             ::Size  aReliefOffset;
 
+            uno::Reference<rendering::XColorSpace> xColorSpace(
+                rParms.mrCanvas->getUNOCanvas()->getDevice()->getDeviceColorSpace() );
+
             if( rState.isTextEffectShadowSet )
             {
                 // calculate shadow offset (similar to outdev3.cxx)
@@ -940,8 +1067,8 @@ namespace cppcanvas
                 aShadowOffset.setHeight( nShadowOffset );
 
                 // determine shadow color (from outdev3.cxx)
-                ::Color aTextColor = ::vcl::unotools::sequenceToColor(
-                    rParms.mrCanvas->getUNOCanvas()->getDevice(), rState.textColor );
+                ::Color aTextColor = ::vcl::unotools::doubleSequenceToColor(
+                    rState.textColor, xColorSpace );
                 bool bIsDark = (aTextColor.GetColor() == COL_BLACK)
                     || (aTextColor.GetLuminance() < 8);
 
@@ -964,9 +1091,8 @@ namespace cppcanvas
                 aReliefOffset.setHeight( nReliefOffset );
 
                 // determine relief color (from outdev3.cxx)
-                ::Color aTextColor = ::vcl::unotools::sequenceToColor(
-                    rParms.mrCanvas->getUNOCanvas()->getDevice(), 
-                    rState.textColor );
+                ::Color aTextColor = ::vcl::unotools::doubleSequenceToColor(
+                    rState.textColor, xColorSpace );
 
                 aReliefColor = ::Color( COL_LIGHTGRAY );
 
@@ -977,8 +1103,8 @@ namespace cppcanvas
                 {
                     aTextColor = ::Color( COL_WHITE );
                     getState( rParms.mrStates ).textColor =
-                        ::vcl::unotools::colorToDoubleSequence( rParms.mrCanvas->getUNOCanvas()->getDevice(),
-                                                                aTextColor );
+                        ::vcl::unotools::colorToDoubleSequence(
+                            aTextColor, xColorSpace );
                 }
 
                 if( aTextColor.GetColor() == COL_WHITE )
@@ -1004,12 +1130,94 @@ namespace cppcanvas
                     rParms.mrParms,
                     bSubsettableActions ) );
 
+            ActionSharedPtr pStrikeoutTextAction;
+
+            if ( rState.textStrikeoutStyle == STRIKEOUT_X || rState.textStrikeoutStyle == STRIKEOUT_SLASH )
+            {
+                long nWidth = rParms.mrVDev.GetTextWidth( rString,nIndex,nLength );
+
+                xub_Unicode pChars[5];
+                if ( rState.textStrikeoutStyle == STRIKEOUT_X )
+                    pChars[0] = 'X';
+                else
+                    pChars[0] = '/';
+                pChars[3]=pChars[2]=pChars[1]=pChars[0];
+
+                long nStrikeoutWidth = nWidth;
+                String aStrikeoutTest( pChars, 4 );
+
+                if( aStrikeoutTest.Len() )
+                {
+                    nStrikeoutWidth = ( rParms.mrVDev.GetTextWidth( aStrikeoutTest ) + 2 ) / 4;
+                    aStrikeoutTest.Erase();
+
+                    if( nStrikeoutWidth <= 0 ) 
+                        nStrikeoutWidth = 1;
+                }
+
+                long nMaxWidth = nStrikeoutWidth/2;
+                if ( nMaxWidth < 2 )
+                    nMaxWidth = 2;
+                nMaxWidth += nWidth + 1;
+
+                long nFullStrikeoutWidth = 0;
+                String aStrikeoutText( pChars, 0 );
+                while( (nFullStrikeoutWidth+=nStrikeoutWidth ) < nMaxWidth+1 )
+                    aStrikeoutText += pChars[0];
+
+
+                sal_Int32 nStartPos = 0;
+                xub_StrLen nLen = aStrikeoutText.Len();
+
+                if( nLen )
+                {
+                    long nInterval = ( nWidth - nStrikeoutWidth * nLen ) / nLen;
+                    nStrikeoutWidth += nInterval;
+                    sal_Int32* pStrikeoutCharWidths = new sal_Int32[nLen];
+
+                    for ( int i = 0;i<nLen; i++)
+                    {
+                        pStrikeoutCharWidths[i] = nStrikeoutWidth;
+                    }
+
+                    for ( int i = 1;i< nLen; i++ )
+                    {
+                        pStrikeoutCharWidths[ i ] += pStrikeoutCharWidths[ i-1 ];
+                    }
+
+                    pStrikeoutTextAction = 
+                        TextActionFactory::createTextAction(
+                            rStartPoint,
+                            aReliefOffset,
+                            aReliefColor,
+                            aShadowOffset,
+                            aShadowColor,
+                            aStrikeoutText,
+                            nStartPos,
+                            aStrikeoutText.Len(),
+                            pStrikeoutCharWidths,
+                            rParms.mrVDev,
+                            rParms.mrCanvas,
+                            rState,
+                            rParms.mrParms,
+                            bSubsettableActions ) ;
+                }
+            }
+
             if( pTextAction )
             {
                 maActions.push_back( 
                     MtfAction( 
                         pTextAction,
                         rParms.mrCurrActionIndex ) );
+
+                if ( pStrikeoutTextAction )
+                {
+                    maActions.push_back( 
+                        MtfAction( 
+                        pStrikeoutTextAction,
+                        rParms.mrCurrActionIndex ) );
+                }
 
                 rParms.mrCurrActionIndex += pTextAction->getActionCount()-1;
             }
@@ -1025,7 +1233,7 @@ namespace cppcanvas
             const bool bEmptyClipRect( rState.clipRect.IsEmpty() );
             const bool bEmptyClipPoly( rState.clip.count() == 0 );
 
-            ENSURE_AND_THROW( bEmptyClipPoly || bEmptyClipRect,
+            ENSURE_OR_THROW( bEmptyClipPoly || bEmptyClipRect,
                               "ImplRenderer::updateClipping(): Clip rect and polygon are both set!" );
 
             if( !bIntersect ||
@@ -1108,7 +1316,7 @@ namespace cppcanvas
             const bool bEmptyClipRect( rState.clipRect.IsEmpty() );
             const bool bEmptyClipPoly( rState.clip.count() == 0 );
 
-            ENSURE_AND_THROW( bEmptyClipPoly || bEmptyClipRect,
+            ENSURE_OR_THROW( bEmptyClipPoly || bEmptyClipRect,
                               "ImplRenderer::updateClipping(): Clip rect and polygon are both set!" );
 
             if( !bIntersect ||
@@ -1248,6 +1456,12 @@ namespace cppcanvas
 
                     case META_POP_ACTION:
                         popState( rStates );
+                        break;
+
+                    case META_TEXTLANGUAGE_ACTION:
+                        // FALLTHROUGH intended
+                    case META_REFPOINT_ACTION:
+                        // handled via pCurrAct->Execute( &rVDev )
                         break;
 
                     case META_MAPMODE_ACTION:
@@ -1392,8 +1606,9 @@ namespace cppcanvas
                             aColor.SetTransparency(0);
 
                             getState( rStates ).textColor =
-                                ::vcl::unotools::colorToDoubleSequence( rCanvas->getUNOCanvas()->getDevice(),
-                                                                        aColor );
+                                ::vcl::unotools::colorToDoubleSequence(
+                                    aColor, 
+                                    rCanvas->getUNOCanvas()->getDevice()->getDeviceColorSpace() );
                         }
                     }
                     break;
@@ -1450,14 +1665,6 @@ namespace cppcanvas
                     break;
 
                     case META_RASTEROP_ACTION:
-                        // TODO(F2): NYI
-                        break;
-
-                    case META_REFPOINT_ACTION:
-                        // TODO(F2): NYI
-                        break;
-                        
-                    case META_TEXTLANGUAGE_ACTION:
                         // TODO(F2): NYI
                         break;
 
@@ -1543,14 +1750,13 @@ namespace cppcanvas
                         const Size aMtfSizePix( ::std::max( aMtfSizePixPre.Width(), 1L ),
                                                 ::std::max( aMtfSizePixPre.Height(), 1L ) );
 
-                        const Point aEmptyPt;
-                        const Point aMtfOriginPix( rVDev.LogicToPixel( aEmptyPt,
-                                                                       rSubstitute.GetPrefMapMode() ) );
-
                         // Setup local transform, such that the 
                         // metafile renders itself into the given
                         // output rectangle 
                         pushState( rStates, PUSH_ALL );
+                        
+                        rVDev.Push();
+                        rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
                         
                         const ::Point& rPos( rVDev.LogicToPixel( pAct->GetPoint() ) );
                         const ::Size&  rSize( rVDev.LogicToPixel( pAct->GetSize() ) );
@@ -1560,9 +1766,6 @@ namespace cppcanvas
                         getState( rStates ).transform.scale( (double)rSize.Width() / aMtfSizePix.Width(),
                                                              (double)rSize.Height() / aMtfSizePix.Height() );
 
-                        rVDev.Push();
-                        rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
-                        
 #ifdef USE_JAVA
                         // Fix bug 2218 by rendering EPS to a bitmap
                         VirtualDevice aVDev;
@@ -1913,8 +2116,8 @@ namespace cppcanvas
                                     ::vcl::unotools::b2DPointFromPoint( rRect.TopLeft() ),
                                     ::vcl::unotools::b2DPointFromPoint( rRect.BottomRight() ) +
                                     ::basegfx::B2DPoint(1,1) ),
-                                static_cast<MetaRoundRectAction*>(pCurrAct)->GetHorzRound(),
-                                static_cast<MetaRoundRectAction*>(pCurrAct)->GetVertRound() ));
+                                ( (double) static_cast<MetaRoundRectAction*>(pCurrAct)->GetHorzRound() ) / rRect.GetWidth(),
+                                ( (double) static_cast<MetaRoundRectAction*>(pCurrAct)->GetVertRound() ) / rRect.GetHeight() ) );
                         aPoly.transform( getState( rStates ).mapModeTransform );
 
                         createFillAndStroke( aPoly,
@@ -2417,10 +2620,14 @@ namespace cppcanvas
                     case META_TEXT_ACTION:
                     {
                         MetaTextAction* pAct = static_cast<MetaTextAction*>(pCurrAct);
+                        XubString sText = XubString( pAct->GetText() );
+
+                        if( rVDev.GetDigitLanguage())
+                            convertToLocalizedNumerals ( sText,rVDev.GetDigitLanguage() );
 
                         createTextAction(
                             pAct->GetPoint(), 
-                            pAct->GetText(), 
+                            sText,
                             pAct->GetIndex(), 
                             pAct->GetLen() == (USHORT)STRING_LEN ? pAct->GetText().Len() - pAct->GetIndex() : pAct->GetLen(),
                             NULL, 
@@ -2432,10 +2639,14 @@ namespace cppcanvas
                     case META_TEXTARRAY_ACTION:
                     {
                         MetaTextArrayAction* pAct = static_cast<MetaTextArrayAction*>(pCurrAct);
+                        XubString sText = XubString( pAct->GetText() );
+
+                        if( rVDev.GetDigitLanguage())
+                            convertToLocalizedNumerals ( sText,rVDev.GetDigitLanguage() );
 
                         createTextAction(
                             pAct->GetPoint(), 
-                            pAct->GetText(), 
+                            sText,
                             pAct->GetIndex(), 
                             pAct->GetLen() == (USHORT)STRING_LEN ? pAct->GetText().Len() - pAct->GetIndex() : pAct->GetLen(),
                             pAct->GetDXArray(), 
@@ -2507,6 +2718,10 @@ namespace cppcanvas
                     case META_STRETCHTEXT_ACTION:
                     {
                         MetaStretchTextAction* pAct = static_cast<MetaStretchTextAction*>(pCurrAct);
+                        XubString sText = XubString( pAct->GetText() );
+
+                        if( rVDev.GetDigitLanguage())
+                            convertToLocalizedNumerals ( sText,rVDev.GetDigitLanguage() );
 
                         const USHORT nLen( pAct->GetLen() == (USHORT)STRING_LEN ? 
                                            pAct->GetText().Len() - pAct->GetIndex() : pAct->GetLen() );
@@ -2542,7 +2757,7 @@ namespace cppcanvas
 
                         createTextAction(
                             pAct->GetPoint(), 
-                            pAct->GetText(), 
+                            sText,
                             pAct->GetIndex(), 
                             pAct->GetLen() == (USHORT)STRING_LEN ? pAct->GetText().Len() - pAct->GetIndex() : pAct->GetLen(),
                             pDXArray.get(),
@@ -2687,8 +2902,8 @@ namespace cppcanvas
                     aSubset.mnSubsetEnd   = ::std::min( aRangeBegin->mpAction->getActionCount(),
                                                         nEndIndex - aRangeBegin->mnOrigIndex );
 
-                    ENSURE_AND_RETURN( aSubset.mnSubsetBegin >= 0 && aSubset.mnSubsetEnd >= 0,
-                                       "ImplRenderer::forSubsetRange(): Invalid indices" );
+                    ENSURE_OR_RETURN( aSubset.mnSubsetBegin >= 0 && aSubset.mnSubsetEnd >= 0,
+                                      "ImplRenderer::forSubsetRange(): Invalid indices" );
 
                     rFunctor( *aRangeBegin, aSubset );
                 }
@@ -2703,8 +2918,8 @@ namespace cppcanvas
                                                         nStartIndex - aRangeBegin->mnOrigIndex );
                     aSubset.mnSubsetEnd   = aRangeBegin->mpAction->getActionCount();
 
-                    ENSURE_AND_RETURN( aSubset.mnSubsetBegin >= 0 && aSubset.mnSubsetEnd >= 0,
-                                       "ImplRenderer::forSubsetRange(): Invalid indices" );
+                    ENSURE_OR_RETURN( aSubset.mnSubsetBegin >= 0 && aSubset.mnSubsetEnd >= 0,
+                                      "ImplRenderer::forSubsetRange(): Invalid indices" );
 
                     rFunctor( *aRangeBegin, aSubset );
 
@@ -2732,8 +2947,8 @@ namespace cppcanvas
                     aSubset.mnSubsetBegin = 0;
                     aSubset.mnSubsetEnd   = nEndIndex - aRangeEnd->mnOrigIndex;
                 
-                    ENSURE_AND_RETURN( aSubset.mnSubsetBegin >= 0 && aSubset.mnSubsetEnd >= 0,
-                                       "ImplRenderer::forSubsetRange(): Invalid indices" );
+                    ENSURE_OR_RETURN( aSubset.mnSubsetBegin >= 0 && aSubset.mnSubsetEnd >= 0,
+                                      "ImplRenderer::forSubsetRange(): Invalid indices" );
                 
                     rFunctor( *aRangeEnd, aSubset );
                 }
@@ -2747,11 +2962,11 @@ namespace cppcanvas
                                              ActionVector::const_iterator& 	o_rRangeBegin,
                                              ActionVector::const_iterator& 	o_rRangeEnd ) const
         {
-            ENSURE_AND_RETURN( io_rStartIndex<=io_rEndIndex,
-                               "ImplRenderer::getSubsetIndices(): invalid action range" );
+            ENSURE_OR_RETURN( io_rStartIndex<=io_rEndIndex,
+                              "ImplRenderer::getSubsetIndices(): invalid action range" );
 
-            ENSURE_AND_RETURN( !maActions.empty(),
-                               "ImplRenderer::getSubsetIndices(): no actions to render" );
+            ENSURE_OR_RETURN( !maActions.empty(),
+                              "ImplRenderer::getSubsetIndices(): no actions to render" );
 
             const sal_Int32 nMinActionIndex( maActions.front().mnOrigIndex );
             const sal_Int32 nMaxActionIndex( maActions.back().mnOrigIndex +
@@ -2967,33 +3182,46 @@ namespace cppcanvas
             ActionVector::const_iterator aRangeBegin;
             ActionVector::const_iterator aRangeEnd;
 
-            if( !getSubsetIndices( nStartIndex, nEndIndex,
-                                   aRangeBegin, aRangeEnd ) )
-                return true; // nothing to render (but _that_ was successful)
+            try
+            {
+                if( !getSubsetIndices( nStartIndex, nEndIndex,
+                                       aRangeBegin, aRangeEnd ) )
+                    return true; // nothing to render (but _that_ was successful)
 
-            // now, aRangeBegin references the action in which the
-            // subset rendering must start, and aRangeEnd references
-            // the action in which the subset rendering must end (it
-            // might also end right at the start of the referenced
-            // action, such that zero of that action needs to be
-            // rendered).
+                // now, aRangeBegin references the action in which the
+                // subset rendering must start, and aRangeEnd references
+                // the action in which the subset rendering must end (it
+                // might also end right at the start of the referenced
+                // action, such that zero of that action needs to be
+                // rendered).
             
 
-            // render subset of actions
-            // ========================
+                // render subset of actions
+                // ========================
 
-            ::basegfx::B2DHomMatrix aMatrix;
-            ::canvas::tools::getRenderStateTransform( aMatrix, 
-                                                      getRenderState() );
+                ::basegfx::B2DHomMatrix aMatrix;
+                ::canvas::tools::getRenderStateTransform( aMatrix, 
+                                                          getRenderState() );
 
-            ActionRenderer aRenderer( aMatrix );
+                ActionRenderer aRenderer( aMatrix );
                                    
-            return forSubsetRange( aRenderer,
-                                   aRangeBegin,
-                                   aRangeEnd,
-                                   nStartIndex,
-                                   nEndIndex,
-                                   maActions.end() );
+                return forSubsetRange( aRenderer,
+                                       aRangeBegin,
+                                       aRangeEnd,
+                                       nStartIndex,
+                                       nEndIndex,
+                                       maActions.end() );
+            }
+            catch( uno::Exception& )
+            {
+                OSL_ENSURE( false,
+                            rtl::OUStringToOString(
+                                comphelper::anyToString( cppu::getCaughtException() ),
+                                RTL_TEXTENCODING_UTF8 ).getStr() ); 
+
+                // convert error to return value
+                return false;
+            }
         }
 
         ::basegfx::B2DRange ImplRenderer::getSubsetArea( sal_Int32	nStartIndex,
@@ -3042,7 +3270,19 @@ namespace cppcanvas
             ::canvas::tools::getRenderStateTransform( aMatrix, 
                                                       getRenderState() );
 
-            return ::std::for_each( maActions.begin(), maActions.end(), ActionRenderer( aMatrix ) ).result();
+            try
+            {
+                return ::std::for_each( maActions.begin(), maActions.end(), ActionRenderer( aMatrix ) ).result();
+            }
+            catch( uno::Exception& )
+            {
+                OSL_ENSURE( false,
+                            rtl::OUStringToOString(
+                                comphelper::anyToString( cppu::getCaughtException() ),
+                                RTL_TEXTENCODING_UTF8 ).getStr() ); 
+
+                return false;
+            }
         }
     }
 }

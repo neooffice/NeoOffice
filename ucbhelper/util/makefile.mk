@@ -55,9 +55,9 @@ SHL1STDLIBS = \
     $(SALLIB) \
     $(VOSLIB)
 
-.IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework SystemConfiguration -framework CoreFoundation
-.ENDIF		# "$(OS)"=="MACOSX"
+.IF "$(GUIBASE)"=="java"
+SHL1STDLIBS += -framework SystemConfiguration
+.ENDIF		# "$(GUIBASE)"=="java"
 
 SHL1DEPN=
 SHL1IMPLIB=	i$(TARGET)

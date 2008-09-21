@@ -126,10 +126,6 @@
 
 #include <set>
 
-#ifndef _SFXX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
-
 #include <svtools/dynamicmenuoptions.hxx> 
 #include "shutdownicon_cocoa.h"
 
@@ -802,94 +798,91 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 #ifdef WNT
 				initSystray();
 #elif defined USE_JAVA
-				if ( !::sfx2::IsX11Product() )
+				// collect the URLs of the entries in the File/New menu
+				::std::set< ::rtl::OUString > aFileNewAppsAvailable;
+				SvtDynamicMenuOptions aOpt;
+				Sequence < Sequence < PropertyValue > > aNewMenu = aOpt.GetMenu( E_NEWMENU );
+				const ::rtl::OUString sURLKey( RTL_CONSTASCII_USTRINGPARAM( "URL" ) );
+
+				const Sequence< PropertyValue >* pNewMenu = aNewMenu.getConstArray();
+				const Sequence< PropertyValue >* pNewMenuEnd = aNewMenu.getConstArray() + aNewMenu.getLength();
+				for ( ; pNewMenu != pNewMenuEnd; ++pNewMenu )
 				{
-				    // collect the URLs of the entries in the File/New menu
-					::std::set< ::rtl::OUString > aFileNewAppsAvailable;
-					SvtDynamicMenuOptions aOpt;
-					Sequence < Sequence < PropertyValue > > aNewMenu = aOpt.GetMenu( E_NEWMENU );
-					const ::rtl::OUString sURLKey( RTL_CONSTASCII_USTRINGPARAM( "URL" ) );
-
-					const Sequence< PropertyValue >* pNewMenu = aNewMenu.getConstArray();
-					const Sequence< PropertyValue >* pNewMenuEnd = aNewMenu.getConstArray() + aNewMenu.getLength();
-					for ( ; pNewMenu != pNewMenuEnd; ++pNewMenu )
-					{
-						::comphelper::SequenceAsHashMap aEntryItems( *pNewMenu );
-						::rtl::OUString sURL( aEntryItems.getUnpackedValueOrDefault( sURLKey, ::rtl::OUString() ) );
-						if ( sURL.getLength() )
-							aFileNewAppsAvailable.insert( sURL );
-					}
-
-					// describe the menu entries for launching the applications
-					struct MenuEntryDescriptor
-					{
-						SvtModuleOptions::EModule	eModuleIdentifier;
-						MenuCommand					nMenuItemID;
-						const char*					pAsciiURLDescription;
-						const char*					pFallbackDescription;
-					} aMenuItems[] =
-					{
-						{ SvtModuleOptions::E_SWRITER, WRITER_COMMAND_ID, WRITER_URL, WRITER_FALLBACK_DESC },
-						{ SvtModuleOptions::E_SCALC, CALC_COMMAND_ID, CALC_URL, CALC_FALLBACK_DESC },
-						{ SvtModuleOptions::E_SIMPRESS, IMPRESS_COMMAND_ID, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC },
-						{ SvtModuleOptions::E_SDRAW, DRAW_COMMAND_ID, DRAW_URL, DRAW_FALLBACK_DESC },
-						{ SvtModuleOptions::E_SDATABASE, BASE_COMMAND_ID, BASE_URL, BASE_FALLBACK_DESC }
-					};
-
-					// Disable shutdown
-					SetVeto( true );
-					addTerminateListener();
-
-					// insert the menu entries for launching the applications
-					int nItems = 0;
-					MenuCommand aIDs[ 8 ];
-					CFStringRef aStrings[ 8 ];
-					XubString aDesc;
-					SvtModuleOptions aModuleOptions;
-					for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( MenuEntryDescriptor ); ++i )
-					{
-						// the complete application is not even installed
-						if ( !aModuleOptions.IsModuleInstalled( aMenuItems[i].eModuleIdentifier ) )
-							continue;
-
-						::rtl::OUString sURL( ::rtl::OUString::createFromAscii( aMenuItems[i].pAsciiURLDescription ) );
-
-						// the application is installed, but the entry has been
-						// configured to *not* appear in the File/New menu =>
-						//  also let not appear it in the quickstarter
-						if ( aFileNewAppsAvailable.find( sURL ) == aFileNewAppsAvailable.end() )
-							continue;
-
-						aIDs[ nItems ] = aMenuItems[i].nMenuItemID;
-						aDesc = XubString( GetUrlDescription( sURL ) );
-						aDesc.EraseAllChars( '~' );
-						// Fix bug 2206 by putting in some default text if the
-						// description is an empty string
-						if ( !aDesc.Len() )
-						{
-							aDesc = XubString( ::rtl::OUString::createFromAscii( aMenuItems[i].pFallbackDescription ) );
-							aDesc.EraseAllChars( '~' );
-						}
-						aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-					}
-
-					// insert the remaining menu entries
-					aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
-					aDesc = XubString( GetResString( STR_QUICKSTART_FROMTEMPLATE ) );
-					aDesc.EraseAllChars( '~' );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-					aIDs[ nItems ] = FILEOPEN_COMMAND_ID;
-					aDesc = XubString( GetResString( STR_QUICKSTART_FILEOPEN ) );
-					aDesc.EraseAllChars( '~' );
-					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-
-					ULONG nCount = Application::ReleaseSolarMutex();
-					AddQuickstartMenuItems( nItems, aIDs, aStrings );
-					Application::AcquireSolarMutex( nCount );
-
-					for ( int i = 0; i < nItems; i++ )
-						CFRelease( aStrings[ i ] );
+					::comphelper::SequenceAsHashMap aEntryItems( *pNewMenu );
+					::rtl::OUString sURL( aEntryItems.getUnpackedValueOrDefault( sURLKey, ::rtl::OUString() ) );
+					if ( sURL.getLength() )
+						aFileNewAppsAvailable.insert( sURL );
 				}
+
+				// describe the menu entries for launching the applications
+				struct MenuEntryDescriptor
+				{
+					SvtModuleOptions::EModule	eModuleIdentifier;
+					MenuCommand					nMenuItemID;
+					const char*					pAsciiURLDescription;
+					const char*					pFallbackDescription;
+				} aMenuItems[] =
+				{
+					{ SvtModuleOptions::E_SWRITER, WRITER_COMMAND_ID, WRITER_URL, WRITER_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SCALC, CALC_COMMAND_ID, CALC_URL, CALC_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SIMPRESS, IMPRESS_COMMAND_ID, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SDRAW, DRAW_COMMAND_ID, DRAW_URL, DRAW_FALLBACK_DESC },
+					{ SvtModuleOptions::E_SDATABASE, BASE_COMMAND_ID, BASE_URL, BASE_FALLBACK_DESC }
+				};
+
+				// Disable shutdown
+				SetVeto( true );
+				addTerminateListener();
+
+				// insert the menu entries for launching the applications
+				int nItems = 0;
+				MenuCommand aIDs[ 8 ];
+				CFStringRef aStrings[ 8 ];
+				XubString aDesc;
+				SvtModuleOptions aModuleOptions;
+				for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( MenuEntryDescriptor ); ++i )
+				{
+					// the complete application is not even installed
+					if ( !aModuleOptions.IsModuleInstalled( aMenuItems[i].eModuleIdentifier ) )
+						continue;
+
+					::rtl::OUString sURL( ::rtl::OUString::createFromAscii( aMenuItems[i].pAsciiURLDescription ) );
+
+					// the application is installed, but the entry has been
+					// configured to *not* appear in the File/New menu =>
+					//  also let not appear it in the quickstarter
+					if ( aFileNewAppsAvailable.find( sURL ) == aFileNewAppsAvailable.end() )
+						continue;
+
+					aIDs[ nItems ] = aMenuItems[i].nMenuItemID;
+					aDesc = XubString( GetUrlDescription( sURL ) );
+					aDesc.EraseAllChars( '~' );
+					// Fix bug 2206 by putting in some default text if the
+					// description is an empty string
+					if ( !aDesc.Len() )
+					{
+						aDesc = XubString( ::rtl::OUString::createFromAscii( aMenuItems[i].pFallbackDescription ) );
+						aDesc.EraseAllChars( '~' );
+					}
+					aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
+				}
+
+				// insert the remaining menu entries
+				aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
+				aDesc = XubString( GetResString( STR_QUICKSTART_FROMTEMPLATE ) );
+				aDesc.EraseAllChars( '~' );
+				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
+				aIDs[ nItems ] = FILEOPEN_COMMAND_ID;
+				aDesc = XubString( GetResString( STR_QUICKSTART_FILEOPEN ) );
+				aDesc.EraseAllChars( '~' );
+				aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
+
+				ULONG nCount = Application::ReleaseSolarMutex();
+				AddQuickstartMenuItems( nItems, aIDs, aStrings );
+				Application::AcquireSolarMutex( nCount );
+
+				for ( int i = 0; i < nItems; i++ )
+					CFRelease( aStrings[ i ] );
 #endif
 			}
 			catch(const ::com::sun::star::lang::IllegalArgumentException&)

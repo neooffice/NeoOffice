@@ -15,11 +15,11 @@ diff -u -r1.6 saxnamespacefilter.cxx
 +	}
 +	catch ( RuntimeException& re )
 +	{
-+		re.Message = OUString( getErrorLineString() + re.Message );
++		re.Message = ::rtl::OUString( getErrorLineString() + re.Message );
 +		SAXException e;
 +		e.Message = re.Message;
 +		throw e;
 +	}
  }
  
- void SAL_CALL SaxNamespaceFilter::endElement(const rtl::OUString& aName)
+ void SAL_CALL SaxNamespaceFilter::endElement(const OUString& aName)

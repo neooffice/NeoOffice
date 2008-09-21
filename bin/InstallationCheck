@@ -99,21 +99,4 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 
 fi
 
-# If this is an X11 installation, check that X11 is intalled
-if [ -d "$scriptdir" -a -f "$scriptdir/$(X11_FILE_LIST_FILE)" -a -s "$scriptdir/$(X11_FILE_LIST_FILE)" ] ; then
-	while read i ; do
-		# Return 96 + 21 if any files are not found
-		if [ ! -f "$i" ] ; then
-			# Open installation guide before exiting
-			if [ -f "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)" -a -s "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)" ] ; then
-				if [ `id -u` != "0" ] ; then
-					open -a TextEdit "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)"
-				fi
-			fi
-			exit 117
-		fi
-	done < "$scriptdir/$(X11_FILE_LIST_FILE)"
-fi
-
 exit 0
-

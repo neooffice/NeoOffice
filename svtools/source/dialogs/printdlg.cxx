@@ -86,14 +86,6 @@
 #include <comphelper/processfactory.hxx>
 #endif
 
-#ifdef USE_JAVA
-
-#ifndef _SVTOOLSX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
-
-#endif	// USE_JAVA
-
 using namespace com::sun::star::uno;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::ui::dialogs;
@@ -635,34 +627,26 @@ short PrintDialog::Execute()
 	ImplModifyControlHdl( NULL );
 
 #ifdef USE_JAVA
-	short nRet;
-	if ( !::svt::IsX11Product() )
+	// Fix bug 2753 by using a job value to indicate that the native dialog
+	// should be shown
+	mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "true" ) );
+	short nRet = mpPrinter->StartJob( String() );
+	mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "" ) );
+	if ( nRet )
+		nRet = ClickOptionsHdl();
+	if ( nRet )
 	{
-		// Fix bug 2753 by using a job value to indicate that the native dialog
-		// should be shown
-		mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "true" ) );
-		nRet = mpPrinter->StartJob( String() );
-		mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "" ) );
-		if ( nRet )
-			nRet = ClickOptionsHdl();
-		if ( nRet )
+		// Get and store the page range
+		String aRange( mpPrinter->GetJobValue( String::CreateFromAscii( "PAGERANGE" ) ) );
+		if ( aRange.Len() > 0 )
 		{
-			// Get and store the page range
-			String aRange( mpPrinter->GetJobValue( String::CreateFromAscii( "PAGERANGE" ) ) );
-			if ( aRange.Len() > 0 )
-			{
-				maRbtPages.Check( TRUE );
-				maEdtPages.SetText( aRange );
-			}
-		}
-		else
-		{
-			mpPrinter->EndJob();
+			maRbtPages.Check( TRUE );
+			maEdtPages.SetText( aRange );
 		}
 	}
 	else
 	{
-		nRet = ModalDialog::Execute();
+		mpPrinter->EndJob();
 	}
 #else	// USE_JAVA
 	// Dialog starten

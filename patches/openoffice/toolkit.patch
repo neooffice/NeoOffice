@@ -1,26 +1,11 @@
-Index: util/makefile.mk
-===================================================================
-RCS file: /cvs/gsl/toolkit/util/makefile.mk,v
-retrieving revision 1.18
-diff -u -r1.18 makefile.mk
---- util/makefile.mk	9 Sep 2005 13:25:15 -0000	1.18
-+++ util/makefile.mk	21 Nov 2006 18:08:47 -0000
-@@ -78,17 +78,8 @@
- DEF1DES		=TK
- DEFLIB1NAME	=tk
- 
--.IF "$(OS)"=="MACOSX" 
--
--# [ed] 6/16/02 Add in X libraries if we're building X
--
--.IF "$(GUIBASE)"=="unx"
--SHL1STDLIBS +=\
--	-lX11 -lXt -lXmu
--.ENDIF
--
--.ELSE
- .IF "$(GUI)"=="UNX"
-+.IF "$(OS)"!="MACOSX" 
- SHL1STDLIBS +=\
- 	-lX11
- .ENDIF
+--- source/layout/dialogbuttonhbox.cxx	2008-07-23 19:55:46.000000000 +0200
++++ source/layout/dialogbuttonhbox.cxx	2008-07-23 19:56:41.000000000 +0200
+@@ -60,7 +60,7 @@
+ //FIXME: how to set platform-dependant variables?
+ DialogButtonHBox::Ordering const DialogButtonHBox::DEFAULT_ORDERING =
+ #if defined( MACOSX )
+-    DialogButtonHBox::MacOS;
++    DialogButtonHBox::MACOS;
+ #elif defined( SAL_W32 )
+ DialogButtonHBox::WINDOWS;
+ #elif defined( ENABLE_KDE )

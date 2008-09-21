@@ -49,15 +49,14 @@ all:
 #mozilla specific stuff.
 MOZ_LIB=$(SOLARVERSION)$/$(INPATH)$/lib$(UPDMINOREXT)
 MOZ_INC=$(SOLARVERSION)$/$(INPATH)$/inc$(UPDMINOREXT)$/mozilla
-#.ENDIF
 
 .IF "$(OS)"=="WNT" 
 .IF "$(USE_SHELL)"=="4nt"
-MOZ_EMBED_LIB := $(shell +-dir /ba:f $(MOZ_LIB)$/embed_base_s.lib 2>NUL )
-MOZ_REG_LIB	  := $(shell +-dir /ba:f $(MOZ_LIB)$/mozreg_s.lib 2>NUL )
+MOZ_EMBED_LIB := $(shell @+-dir /ba:f $(MOZ_LIB)$/embed_base_s.lib 2>NUL )
+MOZ_REG_LIB	  := $(shell @+-dir /ba:f $(MOZ_LIB)$/mozreg_s.lib 2>NUL )
 .ELSE	#"$(USE_SHELL)"=="4nt"
-MOZ_EMBED_LIB := $(shell +-test -f $(MOZ_LIB)$/embed_base_s.lib && echo $(MOZ_LIB)$/embed_base_s.lib )
-MOZ_REG_LIB	  := $(shell +-test -f $(MOZ_LIB)$/mozreg_s.lib && echo $(MOZ_LIB)$/mozreg_s.lib )
+MOZ_EMBED_LIB := $(shell @-test -f $(MOZ_LIB)$/embed_base_s.lib && echo $(MOZ_LIB)$/embed_base_s.lib )
+MOZ_REG_LIB	  := $(shell @-test -f $(MOZ_LIB)$/mozreg_s.lib && echo $(MOZ_LIB)$/mozreg_s.lib )
 .ENDIF
 
 .IF X"$(MOZ_EMBED_LIB)"=="X"
@@ -68,10 +67,14 @@ MOZ_REG_LIB := $(MOZ_LIB)$/mozreg.lib
 .ENDIF
 .ENDIF
 
-.IF "$(COM)"=="MSC" 
+.IF "$(OS)"=="WNT" 
+.IF "$(COM)"=="GCC"
+MOZ_LIB_XPCOM= -L$(MOZ_LIB) -lembed_base_s -lnspr4 -lmozreg_s -lxpcom
+.ELSE
 LIB += $(MOZ_LIB)
 MOZ_LIB_XPCOM= $(MOZ_EMBED_LIB) $(MOZ_LIB)$/nspr4.lib $(MOZ_REG_LIB) $(MOZ_LIB)$/xpcom.lib
-.ELSE "$(COM)"=="MSC" 
+.ENDIF
+.ELSE "$(OS)"=="WNT" 
 MOZ_LIB_XPCOM= -L$(MOZ_LIB) -lembed_base_s -lnspr4 -lmozreg_s -lxpcom
 .ENDIF
 #End of mozilla specific stuff.
@@ -112,7 +115,6 @@ SHL1STDLIBS=\
 	$(CPPULIB)					\
 	$(CPPUHELPERLIB)			\
 	$(VOSLIB)					\
-	$(OSLLIB)					\
 	$(SALLIB)					\
 	$(DBTOOLSLIB)				\
 	$(COMPHELPERLIB)
@@ -176,7 +178,6 @@ SHL2STDLIBS=\
 	$(CPPULIB)					\
 	$(CPPUHELPERLIB)			\
 	$(VOSLIB)					\
-	$(OSLLIB)					\
 	$(SALLIB)					\
 	$(DBTOOLSLIB)				\
 	$(COMPHELPERLIB)			\
@@ -184,7 +185,7 @@ SHL2STDLIBS=\
 
 .IF "$(GUI)"=="WNT"
 	SHL2STDLIBS += \
-                 shell32.lib
+                 $(SHELL32LIB)
 .ENDIF # "$(GUI)"=="WNT"
 
 SHL2DEPN=
@@ -200,13 +201,11 @@ DEF2NAME=	$(SHL2TARGET)
 
 $(MISC)$/$(SHL1TARGET).flt: makefile.mk
 	@echo ------------------------------
-    @echo CLEAR_THE_FILE	> $@
-	@echo _TI				>>$@
+	@echo _TI				>$@
 	@echo _real				>>$@
 
 $(MISC)$/$(SHL2TARGET).flt: makefile.mk
 	@echo ------------------------------
-    @echo CLEAR_THE_FILE	> $@
-	@echo _TI				>>$@
+	@echo _TI				>$@
 	@echo _real				>>$@
 

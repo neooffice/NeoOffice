@@ -55,74 +55,28 @@
 #include "boost/scoped_array.hpp"
 #include "boost/shared_ptr.hpp"
 
-#ifdef X11_PRODUCT_DIR_NAME
-
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#ifndef _OSL_MODULE_HXX_
-#include <osl/module.hxx>
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
-
-static bool IsX11Product()
-{
-    static bool bX11 = sal_False;
-    static ::osl::Module aVCLModule;
-
-    if ( !aVCLModule.is() )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
-		aVCLModule.load( aLibName );
-        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
-            bX11 = true;
-    }
-
-    return bX11;
-}
-
-#endif	// X11_PRODUCT_DIR_NAME
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
 using ::rtl::OUString;
 
+
+#define SOFFICE1 "soffice.exe"
+#define SOFFICE2 "soffice.bin"
+#define SBASE "sbase.exe"
+#define SCALC "scalc.exe"
+#define SDRAW "sdraw.exe"
+#define SIMPRESS "simpress.exe"
+#define SWRITER "swriter.exe"
+
 namespace dp_misc {
 namespace {
-
-struct StrOperatingSystem :
-        public rtl::StaticWithInit<const OUString, StrOperatingSystem> {
-    const OUString operator () () {
-        OUString os( RTL_CONSTASCII_USTRINGPARAM("$_OS") );
-        ::rtl::Bootstrap::expandMacros( os );
-        return os;
-    }
-};
-
-struct StrPlatform : public rtl::StaticWithInit<
-    const OUString, StrPlatform> {
-    const OUString operator () () {
-        ::rtl::OUStringBuffer buf;
-        buf.append( StrOperatingSystem::get() );
-        buf.append( static_cast<sal_Unicode>('_') );
-        OUString arch( RTL_CONSTASCII_USTRINGPARAM("$_ARCH") );
-        ::rtl::Bootstrap::expandMacros( arch );
-        buf.append( arch );
-        return buf.makeStringAndClear();
-    }
-};
 
 struct UnoRc : public rtl::StaticWithInit<
     const boost::shared_ptr<rtl::Bootstrap>, UnoRc> {
     const boost::shared_ptr<rtl::Bootstrap> operator () () {
         OUString unorc( RTL_CONSTASCII_USTRINGPARAM(
-                            "$ORIGIN/" SAL_CONFIGFILE("uno")) );
+                            "$OOO_BASE_DIR/program/" SAL_CONFIGFILE("uno")) );
         ::rtl::Bootstrap::expandMacros( unorc );
         ::boost::shared_ptr< ::rtl::Bootstrap > ret(
             new ::rtl::Bootstrap( unorc ) );
@@ -168,11 +122,6 @@ const OUString OfficePipeId::operator () ()
     ::rtl::OUStringBuffer buf;
 
 #ifdef PRODUCT_DIR_NAME
-#ifdef X11_PRODUCT_DIR_NAME
-    if ( IsX11Product() )
-        buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" X11_PRODUCT_DIR_NAME "IPC_") );
-    else
-#endif	// X11_PRODUCT_DIR_NAME
         buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("Single" PRODUCT_DIR_NAME "IPC_") );
 #else	// PRODUCT_DIR_NAME
     buf.appendAscii( RTL_CONSTASCII_STRINGPARAM("SingleOfficeIPC_") );
@@ -183,34 +132,19 @@ const OUString OfficePipeId::operator () ()
     return buf.makeStringAndClear();
 }
 
+bool existsOfficePipe()
+{
+    OUString const & pipeId = OfficePipeId::get();
+    if (pipeId.getLength() == 0)
+        return false;
+    ::osl::Security sec;
+    ::osl::Pipe pipe( pipeId, osl_Pipe_OPEN, sec );
+    return pipe.is();
+}
+
 } // anon namespace
 
 //==============================================================================
-OUString const & getPlatformString()
-{
-    return StrPlatform::get();
-}
-
-//==============================================================================
-bool platform_fits( OUString const & platform_string )
-{
-    sal_Int32 index = 0;
-    for (;;)
-    {
-        const OUString token(
-            platform_string.getToken( 0, ',', index ).trim() );
-        // check if this platform:
-        if (token.equalsIgnoreAsciiCase( StrPlatform::get() ) ||
-            (token.indexOf( '_' ) < 0 && /* check OS part only */
-             token.equalsIgnoreAsciiCase( StrOperatingSystem::get() )))
-        {
-            return true;
-        }
-        if (index < 0)
-            break;
-    }
-    return false;
-}
 
 namespace {
 inline OUString encodeForRcFile( OUString const & str )
@@ -296,12 +230,44 @@ OUString expandUnoRcUrl( OUString const & url )
 //==============================================================================
 bool office_is_running()
 {
-    OUString const & pipeId = OfficePipeId::get();
-    if (pipeId.getLength() == 0)
-        return false;
-    ::osl::Security sec;
-    ::osl::Pipe pipe( pipeId, osl_Pipe_OPEN, sec );
-    return pipe.is();
+    //We need to check if we run within the office process. Then we must not use the pipe, because
+    //this could cause a deadlock. This is actually a workaround for i82778
+    OUString sFile;
+    oslProcessError err = osl_getExecutableFile(& sFile.pData);
+    bool ret = false;
+    if (osl_Process_E_None == err)
+    {
+        sFile = sFile.copy(sFile.lastIndexOf('/') + 1);
+        if (
+#if defined UNIX            
+            sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SOFFICE2)))
+#elif defined WNT || defined OS2
+            //osl_getExecutableFile should deliver "soffice.bin" on windows
+            //even if swriter.exe, scalc.exe etc. was started. This is a bug
+            //in osl_getExecutableFile
+            sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SOFFICE1)))
+            || sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SOFFICE2)))
+            || sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SBASE)))
+            || sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SCALC)))
+            || sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SDRAW)))
+            || sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SIMPRESS)))
+            || sFile.equals(OUString(RTL_CONSTASCII_USTRINGPARAM(SWRITER)))
+#else
+#error "Unsupported platform"
+#endif            
+            
+            )
+            ret = true;
+        else
+            ret = existsOfficePipe();
+    }
+    else
+    {
+        OSL_ENSURE(0, "NOT osl_Process_E_None ");
+        //if osl_getExecutable file than we take the risk of creating a pipe
+        ret =  existsOfficePipe();  
+    }
+    return ret;
 }
 
 //==============================================================================
@@ -383,5 +349,16 @@ Reference<XInterface> resolveUnoURL(
         }
     }
 }
+
+OUString getExtensionDefaultUpdateURL()
+{
+    ::rtl::OUString sUrl(
+        RTL_CONSTASCII_USTRINGPARAM(
+        "${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("version")
+        ":Version:ExtensionUpdateURL}"));
+    ::rtl::Bootstrap::expandMacros(sUrl);
+    return sUrl;
+}
+
 
 }

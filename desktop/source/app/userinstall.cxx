@@ -42,58 +42,26 @@
 #include "langselect.hxx"
 
 #include <stdio.h>
-
-#ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
-#endif
-#ifndef _RTL_USTRBUF_HXX_
 #include <rtl/ustrbuf.hxx>
-#endif
-
-#ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
-#endif
-#ifndef _OSL_MUTEX_HXX_
 #include <osl/mutex.hxx>
-#endif
-#ifndef _OSL_PROCESS_H_
 #include <osl/process.h>
-#endif
-#ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
-#endif
-
-#ifndef _VOS_SECURITY_HXX_
 #include <vos/security.hxx>
-#endif
-#ifndef _VOS_REF_HXX_
 #include <vos/ref.hxx>
-#endif
-#ifndef _VOS_PROCESS_HXX_
 #include <vos/process.hxx>
-#endif
 
 #ifndef _TOOLS_RESMGR_HXX_
 #include <tools/resmgr.hxx>
 #endif
-
-#ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
-#endif
-
-#ifndef _SVTOOLS_LANGUAGEOPTIONS_HXX
 #include <svtools/languageoptions.hxx>
-#endif
 #ifndef _SVTOOLS_SYSLOCALEOPTIONSOPTIONS_HXX
 #include <svtools/syslocaleoptions.hxx>
 #endif
-
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
-#ifndef _COM_SUN_STAR_CONTAINER_XNAMEACCESS_HPP_
 #include <com/sun/star/container/XNameAccess.hpp>
-#endif
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <i18npool/mslangid.hxx>
@@ -150,7 +118,7 @@ namespace desktop {
             OUString aUserLanguage = LanguageSelection::getLanguageString();
             Locale aLocale = LanguageSelection::IsoStringToLocale(aUserLanguage);
             localizable->setLocale(aLocale);
-            
+
             Sequence< Any > theArgs(1);
             NamedValue v;
             v.Name = OUString::createFromAscii("NodePath");
@@ -186,18 +154,18 @@ namespace desktop {
     UserInstall::UserInstallError UserInstall::finalize()
     {
         OUString aUserInstallPath;
-        Bootstrap::PathStatus aLocateResult =
-            Bootstrap::locateUserInstallation(aUserInstallPath);
+        utl::Bootstrap::PathStatus aLocateResult =
+            utl::Bootstrap::locateUserInstallation(aUserInstallPath);
 
         switch (aLocateResult) {
 
-            case Bootstrap::DATA_INVALID:
-            case Bootstrap::DATA_MISSING:
-            case Bootstrap::DATA_UNKNOWN:
+            case utl::Bootstrap::DATA_INVALID:
+            case utl::Bootstrap::DATA_MISSING:
+            case utl::Bootstrap::DATA_UNKNOWN:
                 // cannot find a valid path or path is missing
                 return E_Unknown;
 
-            case Bootstrap::PATH_EXISTS:
+            case utl::Bootstrap::PATH_EXISTS:
             {
                 // path exists, check if an installation lives there
                 if ( is_user_install() )
@@ -206,7 +174,7 @@ namespace desktop {
                 }
                 // Note: fall-thru intended.
             }
-            case Bootstrap::PATH_VALID:
+            case utl::Bootstrap::PATH_VALID:
                 // found a path but need to create user install
                 return create_user_install(aUserInstallPath);
             default:
@@ -263,10 +231,10 @@ namespace desktop {
                     err = copy_recursive(newSrcUnqPath, newDstUnqPath);
                 }
                 aDir.close();
-                
+
                 if ( err != osl::FileBase::E_None )
                     return err;
-                if( next != FileBase::E_NOENT ) 
+                if( next != FileBase::E_NOENT )
                     err = FileBase::E_INVAL;
             }
         }
@@ -301,7 +269,7 @@ namespace desktop {
     static UserInstall::UserInstallError create_user_install(OUString& aUserPath)
     {
         OUString aBasePath;
-        if (Bootstrap::locateBaseInstallation(aBasePath) != Bootstrap::PATH_EXISTS)
+        if (utl::Bootstrap::locateBaseInstallation(aBasePath) != utl::Bootstrap::PATH_EXISTS)
             return UserInstall::E_InvalidBaseinstall;
 
         // create the user directory
@@ -319,7 +287,7 @@ namespace desktop {
             rc = copy_recursive(
                     aBasePath + OUString::createFromAscii(pszSrcList[i]),
                     aUserPath + OUString::createFromAscii(pszDstList[i]));
-            if ((rc != FileBase::E_None) && (rc != FileBase::E_EXIST)) 
+            if ((rc != FileBase::E_None) && (rc != FileBase::E_EXIST))
             {
                 if ( rc == FileBase::E_NOSPC )
                     return UserInstall::E_NoDiskSpace;
@@ -364,3 +332,5 @@ namespace desktop {
 
     }
 }
+
+

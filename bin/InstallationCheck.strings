@@ -3,7 +3,6 @@
 "18" = "The $(PRODUCT_NAME) application can only be installed on a PowerPC machine and it cannot be installed on an Intel-based machine.";
 "19" = "The $(PRODUCT_NAME) application can only be installed on an Intel-based machine and it cannot be installed on a PowerPC machine.";
 "20" = "The $(PRODUCT_NAME) installer could not determine whether or not this is a PowerPC or an Intel-based machine.";
-"21" = "The $(PRODUCT_NAME) application cannot be installed unless you have already installed Apple's X11 for Mac OS X application. Please read the X11 Installation Guide document that the installer has just opened.";
 "24" = "The version of Java on this machine is too old. To install this application, you must get a current version of Java from Apple. To get a current version of Java, run Mac OS X's Software Update tool in the System Preferences application and install any listed Java and Mac OS X updates.";
 "25" = "The $(PRODUCT_NAME) application appears to be running. Please retry after you have quit the $(PRODUCT_NAME) application.";
 

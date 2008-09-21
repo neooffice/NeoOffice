@@ -93,14 +93,6 @@
 #include "view.hrc"
 #include "helpid.hrc"
 
-#ifdef USE_JAVA
-
-#ifndef _SFXX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
-
-#endif  // USE_JAVA
-
 TYPEINIT1(SfxPrintingHint, SfxHint);
 
 // -----------------------------------------------------------------------
@@ -182,12 +174,7 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 
 	// Dialog ausf"uhren
 #ifdef USE_JAVA
-	bool bX11 = ::sfx2::IsX11Product();
-	SfxPrintOptionsDialog* pDlg;
-	if ( !bX11 )
-		pDlg = new SfxPrintOptionsDialog( NULL, _pViewSh, _pOptions );
-	else
-		pDlg = new SfxPrintOptionsDialog( _pParent, _pViewSh, _pOptions );
+	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( NULL, _pViewSh, _pOptions );
 #else	// USE_JAVA
 	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( _pParent, _pViewSh, _pOptions );
 #endif// USE_JAVA
@@ -206,10 +193,7 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 	delete pDlg;
 
 #ifdef USE_JAVA
-	if ( !bX11 )
-		return nRet;
-	else
-		return 0;
+	return nRet;
 #else	// USE_JAVA
 	return 0;
 #endif	// USE_JAVA
@@ -495,20 +479,12 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			// Let the document stay nonmodified during the printing if the configuration says to do so
 			SfxPrintGuard_Impl aGuard( pDoc );
 
-#ifdef USE_JAVA
-			bool bX11 = ::sfx2::IsX11Product();
-#endif	// USE_JAVA
-
 	        // if no arguments are given, retrieve them from a dialog
 	        if ( !bIsAPI )
 			{
 #ifdef USE_JAVA
-                // Don't make a copy as we need to run StartJob() multiple times
-                SfxPrinter* pDlgPrinter;
-                if ( !bX11 )
-				    pDlgPrinter = pPrinter;
-                else
-				    pDlgPrinter = pPrinter->Clone();
+				// Don't make a copy as we need to run StartJob() multiple times
+				SfxPrinter* pDlgPrinter = pPrinter;
 #else	// USE_JAVA
 	            // PrinterDialog needs a temporary printer
 				SfxPrinter* pDlgPrinter = pPrinter->Clone();
@@ -541,14 +517,12 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 						nDialogRet = pPrintDlg->Execute();
 						if ( pExecutor && pExecutor->GetOptions() )
 						{
-#ifdef USE_JAVA
-							if ( bX11 && nDialogRet == RET_OK )
-#else	// USE_JAVA
+#ifndef USE_JAVA
 							if ( nDialogRet == RET_OK )
-#endif	// USE_JAVA
 		                        // remark: have to be recorded if possible!
 								pDlgPrinter->SetOptions( *pExecutor->GetOptions() );
 							else
+#endif	// !USE_JAVA
 							{
 								pPrinter->SetOptions( *pExecutor->GetOptions() );
 								SetPrinter( pPrinter, SFX_PRINTER_OPTIONS );
@@ -588,15 +562,10 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	                    aReq.Done();
 	                }
 
-#ifdef USE_JAVA
-                    if ( bX11 )
-                    {
-#endif	// USE_JAVA
+#ifndef USE_JAVA
 	                // take the changes made in the dialog
 					pPrinter = SetPrinter_Impl( pDlgPrinter );
-#ifdef USE_JAVA
-                    }
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 
 	                // forget new printer, it was taken over (as pPrinter) or deleted
 	                pDlgPrinter = NULL;
@@ -615,16 +584,11 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				}
 				else
 	            {
-#ifdef USE_JAVA
-                    if ( bX11 )
-                    {
-#endif	// USE_JAVA
+#ifndef USE_JAVA
 	                // PrinterDialog is used to transfer information on printing,
 	                // so it will only be deleted here if dialog was cancelled
 	                DELETEZ( pDlgPrinter );
-#ifdef USE_JAVA
-                    }
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
 	                DELETEZ( pPrintDlg );
 	                rReq.Ignore();
 					if ( SID_PRINTDOC == nId )
@@ -663,19 +627,14 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					pPrintDlg->DisableHelp();
 				pPrintDlg->SetPrinter( pPrinter );
 #ifdef USE_JAVA
-				if ( !bX11 )
+				nDialogRet = pPrintDlg->Execute();
+				if ( nDialogRet == RET_CANCEL )
 				{
-					nDialogRet = pPrintDlg->Execute();
-					if ( nDialogRet == RET_CANCEL )
-					{
-						DELETEZ( pPrintDlg );
-						rReq.Ignore();
-						break;
-					}
+					DELETEZ( pPrintDlg );
+					rReq.Ignore();
+					break;
 				}
-				else
-				{
-#endif	// USE_JAVA
+#else	// USE_JAVA
 				::DisableRanges( *pPrintDlg, pPrinter );
 
 	            // PrintToFile requested?
@@ -747,8 +706,6 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					pPrintDlg->SetFirstPage( nFrom );
 					pPrintDlg->SetLastPage( nTo );
 				}
-#ifdef USE_JAVA
-				}
 #endif	// USE_JAVA
 			}
 
@@ -781,7 +738,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
 #ifdef USE_JAVA
 				// Redirect slot to make sure that the print dialog is shown
-				if ( !::sfx2::IsX11Product() && !pPrintDlg )
+				if ( !pPrintDlg )
 				{
 					BOOL bPrintOptions = pImp->bHasPrintOptions;
 					pImp->bHasPrintOptions = FALSE;
@@ -790,9 +747,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					pImp->bHasPrintOptions = bPrintOptions;
 					return;
 				}
-				else
-				{
-#endif	// USE_JAVA
+#else	// USE_JAVA
 	            if( pPrinter->IsOriginal() && pPrinter->GetName() != Printer::GetDefaultPrinterName() )
 	            {
 	                // redirect slot to call the print dialog
@@ -800,8 +755,6 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	                rReq.SetSlot( SID_PRINTDOC );
 					ExecPrint_Impl( rReq );
 					return;
-	            }
-#ifdef USE_JAVA
 	            }
 #endif	// USE_JAVA
 	        }
@@ -834,7 +787,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			GetObjectShell()->Broadcast( SfxPrintingHint( -1, pPrintDlg, pPrinter ) );
 #ifdef USE_JAVA
 			ErrCode nError;
-			if ( ::sfx2::IsX11Product() || pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
+			if ( pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
 				nError = DoPrint( pPrinter, pPrintDlg, bSilent, bIsAPI );
 			else
 				nError = DoPrint( pPrinter, NULL, FALSE, bIsAPI );

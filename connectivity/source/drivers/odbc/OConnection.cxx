@@ -36,51 +36,23 @@
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_connectivity.hxx"
-#ifndef _CONNECTIVITY_OTOOLS_HXX_
 #include "odbc/OTools.hxx"
-#endif
-#ifndef _CONNECTIVITY_ODBC_OCONNECTION_HXX_
 #include "odbc/OConnection.hxx"
-#endif
-#ifndef _CONNECTIVITY_ODBC_ODATABASEMETADATA_HXX_
 #include "odbc/ODatabaseMetaData.hxx"
-#endif
-#ifndef _CONNECTIVITY_ODBC_OFUNCTIONS_HXX_
 #include "odbc/OFunctions.hxx"
-#endif
-#ifndef _CONNECTIVITY_ODBC_ODRIVER_HXX_
 #include "odbc/ODriver.hxx"
-#endif
-#ifndef _CONNECTIVITY_ODBC_OSTATEMENT_HXX_
 #include "odbc/OStatement.hxx"
-#endif
-#ifndef _CONNECTIVITY_ODBC_OPREPAREDSTATEMENT_HXX_
 #include "odbc/OPreparedStatement.hxx"
-#endif
-#ifndef _COM_SUN_STAR_SDBC_COLUMNVALUE_HPP_
 #include <com/sun/star/sdbc/ColumnValue.hpp>
-#endif
-#ifndef _COM_SUN_STAR_SDBC_XROW_HPP_
 #include <com/sun/star/sdbc/XRow.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_DISPOSEDEXCEPTION_HPP_
 #include <com/sun/star/lang/DisposedException.hpp>
-#endif
-#ifndef _DBHELPER_DBCHARSET_HXX_
 #include <connectivity/dbcharset.hxx>
-#endif
-#ifndef _CONNECTIVITY_FILE_VALUE_HXX_
 #include <connectivity/FValue.hxx>
-#endif
-#ifndef _COMPHELPER_EXTRACT_HXX_
 #include <comphelper/extract.hxx>
-#endif
-#ifndef CONNECTIVITY_DIAGNOSE_EX_H
 #include "diagnose_ex.h"
-#endif
-#ifndef _DBHELPER_DBEXCEPTION_HXX_
 #include <connectivity/dbexception.hxx>
-#endif
+
+#include <string.h>
 
 #ifdef USE_JAVA
 
@@ -102,7 +74,6 @@ using namespace com::sun::star::sdbc;
 // --------------------------------------------------------------------------------
 OConnection::OConnection(const SQLHANDLE _pDriverHandle,ODBCDriver*	_pDriver)
 						 : OSubComponent<OConnection, OConnection_BASE>((::cppu::OWeakObject*)_pDriver, this)
-                         ,m_xMetaData(NULL)
                          ,m_pDriver(_pDriver)
 						 ,m_pDriverHandleCopy(_pDriverHandle)
                          ,m_nStatementCount(0)
@@ -157,7 +128,6 @@ SQLRETURN OConnection::OpenConnection(const ::rtl::OUString& aConnectStr,sal_Int
 	::rtl::OString aConStr(::rtl::OUStringToOString(aConnectStr,getTextEncoding()));
 	memcpy(szConnStrIn, (SDB_ODBC_CHAR*) aConStr.getStr(), ::std::min<sal_Int32>((sal_Int32)2048,aConStr.getLength()));
 
-
 #ifdef USE_JAVA
 	// Fix bug 2770 by not setting the login timeout as it will cause crashing
 	// on Mac OS X 10.5
@@ -165,9 +135,13 @@ SQLRETURN OConnection::OpenConnection(const ::rtl::OUString& aConnectStr,sal_Int
 	Gestalt( gestaltSystemVersion, &res );
 	bool isLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x5 ) );
 	if ( !isLeopard )
-#endif	// USE_JAVA
+		N3SQLSetConnectAttr(m_aConnectionHandle,SQL_ATTR_LOGIN_TIMEOUT,(SQLPOINTER)nTimeOut,SQL_IS_UINTEGER);
+#else	// USE_JAVA
+#ifndef MACOSX
 	N3SQLSetConnectAttr(m_aConnectionHandle,SQL_ATTR_LOGIN_TIMEOUT,(SQLPOINTER)nTimeOut,SQL_IS_UINTEGER);
 	// Verbindung aufbauen
+#endif
+#endif	// USE_JAVA
 
 #ifdef LINUX
     OSL_UNUSED( bSilent );
@@ -219,12 +193,11 @@ SQLRETURN OConnection::OpenConnection(const ::rtl::OUString& aConnectStr,sal_Int
 	{
 	}
 
-#ifndef MAC
+
 	// autocoomit ist immer default
 
 	if (!bReadOnly)
 		N3SQLSetConnectAttr(m_aConnectionHandle,SQL_ATTR_AUTOCOMMIT,(SQLPOINTER)SQL_AUTOCOMMIT_ON,SQL_IS_INTEGER);
-#endif
 
 	return nSQLRETURN;
 }
@@ -233,7 +206,7 @@ SQLRETURN OConnection::Construct(const ::rtl::OUString& url,const Sequence< Prop
 {
 	m_aConnectionHandle  = SQL_NULL_HANDLE;
 	m_sURL	= url;
-	m_aInfo = info;
+	setConnectionInfo(info);
 
 	// Connection allozieren
 	N3SQLAllocHandle(SQL_HANDLE_DBC,m_pDriverHandleCopy,&m_aConnectionHandle);
@@ -319,7 +292,6 @@ SQLRETURN OConnection::Construct(const ::rtl::OUString& url,const Sequence< Prop
 				m_nTextEncoding = RTL_TEXTENCODING_DONTKNOW;
 			if(m_nTextEncoding == RTL_TEXTENCODING_DONTKNOW)
 				m_nTextEncoding = osl_getThreadTextEncoding();
-
 		}
 	}
 	m_sUser = aUID;
@@ -563,6 +535,7 @@ void OConnection::buildTypeInfo() throw( SQLException)
 		::connectivity::ORowSetValue aValue;
 		::std::vector<sal_Int32> aTypes;
 		Reference<XResultSetMetaData> xResultSetMetaData = Reference<XResultSetMetaDataSupplier>(xRs,UNO_QUERY)->getMetaData();
+        sal_Int32 nCount = xResultSetMetaData->getColumnCount();
 		// Loop on the result set until we reach end of file
 		while (xRs->next ()) 
 		{
@@ -570,7 +543,6 @@ void OConnection::buildTypeInfo() throw( SQLException)
 			sal_Int32 nPos = 1;
             if ( aTypes.empty() )
             {
-                sal_Int32 nCount = xResultSetMetaData->getColumnCount();
                 if ( nCount < 1 )
                     nCount = 18;
                 aTypes.reserve(nCount+1);
@@ -623,9 +595,12 @@ void OConnection::buildTypeInfo() throw( SQLException)
 			++nPos;
             aValue.fill(nPos,aTypes[nPos],xRow);
 			aInfo.nMaximumScale	= aValue;
-            nPos = 18;
-            aValue.fill(nPos,aTypes[nPos],xRow);
-			aInfo.nNumPrecRadix	= aValue;
+            if ( nCount >= 18 )
+            {
+                nPos = 18;
+                aValue.fill(nPos,aTypes[nPos],xRow);
+			    aInfo.nNumPrecRadix	= aValue;
+            }
 
 			// check if values are less than zero like it happens in a oracle jdbc driver
 			if( aInfo.nPrecision < 0)
@@ -656,15 +631,7 @@ void OConnection::disposing()
 {
 	::osl::MutexGuard aGuard(m_aMutex);
 
-
-	//	m_aTables.disposing();
-	for (OWeakRefArray::iterator i = m_aStatements.begin(); m_aStatements.end() != i; ++i)
-	{
-		Reference< XComponent > xComp(i->get(), UNO_QUERY);
-		if (xComp.is())
-			xComp->dispose();
-	}
-	m_aStatements.clear();
+    OConnection_BASE::disposing();
 
 	for (::std::map< SQLHANDLE,OConnection*>::iterator aConIter = m_aConnections.begin();aConIter != m_aConnections.end();++aConIter )
 		aConIter->second->dispose();
@@ -674,10 +641,8 @@ void OConnection::disposing()
 	if(!m_bClosed)
 		N3SQLDisconnect(m_aConnectionHandle);
 	m_bClosed	= sal_True;
-	m_xMetaData = ::com::sun::star::uno::WeakReference< ::com::sun::star::sdbc::XDatabaseMetaData>();
 
 	dispose_ChildImpl();
-	OConnection_BASE::disposing();
 }
 // -----------------------------------------------------------------------------
 OConnection* OConnection::cloneConnection()
@@ -696,7 +661,7 @@ SQLHANDLE OConnection::createStatementHandle()
 		{
 			OConnection* pConnection = cloneConnection();
 			pConnection->acquire();
-			pConnection->Construct(m_sURL,m_aInfo);
+			pConnection->Construct(m_sURL,getConnectionInfo());
 			pConnectionTemp = pConnection;
 			bNew = sal_True;
 		}

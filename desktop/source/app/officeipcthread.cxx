@@ -41,55 +41,25 @@
 #include "officeipcthread.hxx"
 #include "cmdlineargs.hxx"
 #include "dispatchwatcher.hxx"
+#include <memory>
 #include <stdio.h>
-
-#ifndef _VOS_PROCESS_HXX_
 #include <vos/process.hxx>
-#endif
-#ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_HELP_HXX
 #include <vcl/help.hxx>
-#endif
-#ifndef _UTL_CONFIGMGR_HXX_
 #include <unotools/configmgr.hxx>
-#endif
-#ifndef _THREAD_HXX_
 #include <osl/thread.hxx>
-#endif
-#ifndef _RTL_DIGEST_H_
 #include <rtl/digest.h>
-#endif
-#ifndef _RTL_USTRBUF_HXX_
 #include <rtl/ustrbuf.hxx>
-#endif
-#ifndef INCLUDED_RTL_INSTANCE_HXX
 #include <rtl/instance.hxx>
-#endif
-#ifndef _OSL_CONDITN_HXX_
 #include <osl/conditn.hxx>
-#endif
-#ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
-#endif
-#ifndef _RTL_BOOTSTRAP_HXX_
 #include <rtl/bootstrap.hxx>
-#endif
+#include <rtl/strbuf.hxx>
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
-
-#ifdef X11_PRODUCT_DIR_NAME
-
-#ifndef _DESKTOPX11PRODUCTCHECK_HXX
-#include "X11productcheck.hxx"
-#endif
-
-#endif	// X11_PRODUCT_DIR_NAME
-
+#include "osl/file.hxx"
+#include "rtl/process.h"
+#include "tools/getprocessworkingdir.hxx"
 
 using namespace vos;
 using namespace rtl;
@@ -97,7 +67,6 @@ using namespace desktop;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::frame;
-using namespace ::com::sun::star::uri;
 
 const char  *OfficeIPCThread::sc_aTerminationSequence = "InternalIPC::TerminateThread";
 const int OfficeIPCThread::sc_nTSeqLength = 28;
@@ -105,6 +74,8 @@ const char  *OfficeIPCThread::sc_aShowSequence = "-tofront";
 const int OfficeIPCThread::sc_nShSeqLength = 5;
 const char  *OfficeIPCThread::sc_aConfirmationSequence = "InternalIPC::ProcessingDone";
 const int OfficeIPCThread::sc_nCSeqLength = 27;
+
+namespace { static char const ARGUMENT_PREFIX[] = "InternalIPC::Arguments"; }
 
 // Type of pipe we use
 enum PipeMode
@@ -117,7 +88,144 @@ enum PipeMode
 namespace desktop
 {
 
-String GetURL_Impl( const String& rName );
+namespace {
+
+class Parser: public CommandLineArgs::Supplier {
+public:
+    explicit Parser(rtl::OString const & input): m_input(input) {
+        if (!m_input.match(ARGUMENT_PREFIX) ||
+            m_input.getLength() == RTL_CONSTASCII_LENGTH(ARGUMENT_PREFIX))
+        {
+            throw CommandLineArgs::Supplier::Exception();
+        }
+        m_index = RTL_CONSTASCII_LENGTH(ARGUMENT_PREFIX);
+        switch (m_input[m_index++]) {
+        case '0':
+            break;
+        case '1':
+            {
+                rtl::OUString url;
+                if (!next(&url, false)) {
+                    throw CommandLineArgs::Supplier::Exception();
+                }
+                m_cwdUrl.reset(url);
+                break;
+            }
+        case '2':
+            {
+                rtl::OUString path;
+                if (!next(&path, false)) {
+                    throw CommandLineArgs::Supplier::Exception();
+                }
+                rtl::OUString url;
+                if (osl::FileBase::getFileURLFromSystemPath(path, url) ==
+                    osl::FileBase::E_None)
+                {
+                    m_cwdUrl.reset(url);
+                }
+                break;
+            }
+        default:
+            throw CommandLineArgs::Supplier::Exception();
+        }
+    }
+
+    virtual ~Parser() {}
+
+    virtual boost::optional< rtl::OUString > getCwdUrl() { return m_cwdUrl; }
+
+    virtual bool next(rtl::OUString * argument) { return next(argument, true); }
+
+private:
+    virtual bool next(rtl::OUString * argument, bool prefix) {
+        OSL_ASSERT(argument != NULL);
+        if (m_index < m_input.getLength()) {
+            if (prefix) {
+                if (m_input[m_index] != ',') {
+                    throw CommandLineArgs::Supplier::Exception();
+                }
+                ++m_index;
+            }
+            rtl::OStringBuffer b;
+            while (m_index < m_input.getLength()) {
+                char c = m_input[m_index];
+                if (c == ',') {
+                    break;
+                }
+                ++m_index;
+                if (c == '\\') {
+                    if (m_index < m_input.getLength()) {
+                        c = m_input[m_index++];
+                        switch (c) {
+                        case '0':
+                            c = '\0';
+                            break;
+                        case ',':
+                        case '\\':
+                            break;
+                        default:
+                            throw CommandLineArgs::Supplier::Exception();
+                        }
+                    } else {
+                        throw CommandLineArgs::Supplier::Exception();
+                    }
+                }
+                b.append(c);
+            }
+            rtl::OString b2(b.makeStringAndClear());
+            if (!rtl_convertStringToUString(
+                    &argument->pData, b2.getStr(), b2.getLength(),
+                    RTL_TEXTENCODING_UTF8,
+                    (RTL_TEXTTOUNICODE_FLAGS_UNDEFINED_ERROR |
+                     RTL_TEXTTOUNICODE_FLAGS_MBUNDEFINED_ERROR |
+                     RTL_TEXTTOUNICODE_FLAGS_INVALID_ERROR)))
+            {
+                throw CommandLineArgs::Supplier::Exception();
+            }
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    boost::optional< rtl::OUString > m_cwdUrl;
+    rtl::OString m_input;
+    sal_Int32 m_index;
+};
+
+bool addArgument(
+    ByteString * arguments, char prefix, rtl::OUString const & argument)
+{
+    rtl::OString utf8;
+    if (!argument.convertToString(
+            &utf8, RTL_TEXTENCODING_UTF8,
+            (RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR |
+             RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR)))
+    {
+        return false;
+    }
+    *arguments += prefix;
+    for (sal_Int32 i = 0; i < utf8.getLength(); ++i) {
+        char c = utf8[i];
+        switch (c) {
+        case '\0':
+            *arguments += "\\0";
+            break;
+        case ',':
+            *arguments += "\\,";
+            break;
+        case '\\':
+            *arguments += "\\\\";
+            break;
+        default:
+            *arguments += c;
+            break;
+        }
+    }
+    return true;
+}
+
+}
 
 OfficeIPCThread*	OfficeIPCThread::pGlobalOfficeIPCThread = 0;
 namespace { struct Security : public rtl::Static<OSecurity, Security> {}; }
@@ -270,13 +378,6 @@ throw( RuntimeException )
 	return *pOfficeIPCThreadMutex;
 }
 
-OfficeIPCThread* OfficeIPCThread::GetOfficeIPCThread()
-{
-	// Return the one and only OfficeIPCThread pointer
-	::osl::MutexGuard	aGuard( GetMutex() );
-	return pGlobalOfficeIPCThread;
-}
-
 void OfficeIPCThread::BlockAllRequests()
 {
 	// We have the order to block all incoming requests. Framework
@@ -323,12 +424,7 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 	OfficeIPCThread* pThread = new OfficeIPCThread;
 
 #ifdef PRODUCT_DIR_NAME
-#ifdef X11_PRODUCT_DIR_NAME
-    if ( ::desktop::IsX11Product() )
-		pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" X11_PRODUCT_DIR_NAME "IPC_" ) );
-	else
-#endif	// X11_PRODUCT_DIR_NAME
-		pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" PRODUCT_DIR_NAME "IPC_" ) );
+	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "Single" PRODUCT_DIR_NAME "IPC_" ) );
 #else	// PRODUCT_DIR_NAME
 	pThread->maPipeIdent = OUString( RTL_CONSTASCII_USTRINGPARAM( "SingleOfficeIPC_" ) );
 #endif	// PRODUCT_DIR_NAME
@@ -358,7 +454,7 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
     {
         aIniName    = aIniName.copy( 0, lastIndex+1 );
         aIniName    += OUString( RTL_CONSTASCII_USTRINGPARAM( "perftune" ));
-#ifdef WNT
+#if defined(WNT) || defined(OS2)
         aIniName    += OUString( RTL_CONSTASCII_USTRINGPARAM( ".ini" ));
 #else
         aIniName    += OUString( RTL_CONSTASCII_USTRINGPARAM( "rc" ));
@@ -433,63 +529,24 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 		pThread->maStreamPipe = pThread->maPipe;
 
 		sal_Bool bWaitBeforeClose = sal_False;
-		ByteString aArguments;
-        ULONG nCount = aInfo.getCommandArgCount();
-
-        if ( nCount == 0 )
+		ByteString aArguments(RTL_CONSTASCII_STRINGPARAM(ARGUMENT_PREFIX));
+        rtl::OUString cwdUrl;
+        if (!(tools::getProcessWorkingDir(&cwdUrl) &&
+              addArgument(&aArguments, '1', cwdUrl)))
+        {
+            aArguments += '0';
+        }
+        sal_uInt32 nCount = rtl_getAppCommandArgCount();
+        for( sal_uInt32 i=0; i < nCount; i++ )
 		{
-			// Use default argument so the first office can distinguish between a real second
-			// office and another program that check the existence of the the pipe!!
-
-			aArguments += ByteString( sc_aShowSequence );
-		}
-		else
-		{
-            sal_Bool    bPrintTo = sal_False;
-            OUString    aPrintToCmd( RTL_CONSTASCII_USTRINGPARAM( "-pt" ));
-
-            Reference< XExternalUriReferenceTranslator > xTranslator(
-                comphelper::getProcessServiceFactory()->createInstance(
-                OUString::createFromAscii(
-                "com.sun.star.uri.ExternalUriReferenceTranslator")),
-                UNO_QUERY);
-
-            for( ULONG i=0; i < nCount; i++ )
+			rtl_getAppCommandArg( i, &aDummy.pData );
+			if( aDummy.indexOf('-',0) != 0 )
 			{
-				aInfo.getCommandArg( i, aDummy );
-				// Make absolute pathes from relative ones!
-				// It's neccessary to use current working directory of THESE office instance and not of
-				// currently running once, which get these information by using pipe.
-				// Otherwhise relativ pathes are not right for his environment ...
-				if( aDummy.indexOf('-',0) != 0 )
-				{
-                    bWaitBeforeClose = sal_True;
-                    // convert to an absolut url, but don't touch extrnal file URLs here
-                    if ( !bPrintTo)
-                    {
-                        // convert file URLs to internal form #112849#
-                        if (aDummy.indexOf(OUString::createFromAscii("file:"))==0 &&
-                            xTranslator.is())
-                        {
-                            OUString tmp(xTranslator->translateToInternal(aDummy));
-                            if (tmp.getLength() > 0)
-                                aDummy = tmp;
-                        }
-					    aDummy = GetURL_Impl( aDummy );
-                    }
-                    bPrintTo = sal_False;
-				}
-                else
-                {
-                    if ( aDummy.equalsIgnoreAsciiCase( aPrintToCmd ))
-                        bPrintTo = sal_True;
-                    else
-                        bPrintTo = sal_False;
-                }
-
-				aArguments += ByteString( String( aDummy ), osl_getThreadTextEncoding() );
-				aArguments += '|';
+                bWaitBeforeClose = sal_True;
 			}
+            if (!addArgument(&aArguments, ',', aDummy)) {
+                return IPC_STATUS_BOOTSTRAP_ERROR;
+            }
 		}
 		// finaly, write the string onto the pipe
 		pThread->maStreamPipe.write( aArguments.GetBuffer(), aArguments.Len() );
@@ -504,10 +561,10 @@ OfficeIPCThread::Status OfficeIPCThread::EnableOfficeIPCThread()
 		delete pThread;
 		if (aToken.CompareTo(aReceiveBuffer)!= COMPARE_EQUAL) {
 			// something went wrong
-			delete aReceiveBuffer;
+			delete[] aReceiveBuffer;
 			return IPC_STATUS_BOOTSTRAP_ERROR;
 		} else {
-			delete aReceiveBuffer;
+			delete[] aReceiveBuffer;
 			return IPC_STATUS_2ND_OFFICE;
 		}
 	}
@@ -634,11 +691,22 @@ void SAL_CALL OfficeIPCThread::run()
             if(( aArguments.CompareTo( sc_aTerminationSequence, sc_nTSeqLength ) == COMPARE_EQUAL ) ||
                     mbBlockRequests ) return;
             String           aEmpty;
-            CommandLineArgs  aCmdLineArgs( OUString( aArguments.GetBuffer(),
-				aArguments.Len(), gsl_getSystemTextEncoding() ));
+            std::auto_ptr< CommandLineArgs > aCmdLineArgs;
+            try
+            {
+                Parser p( aArguments );
+                aCmdLineArgs.reset( new CommandLineArgs( p ) );
+            }
+            catch ( CommandLineArgs::Supplier::Exception & )
+            {
+#if (OSL_DEBUG_LEVEL > 1) || defined DBG_UTIL
+                fprintf( stderr, "Error in received command line arguments\n" );
+#endif
+                continue;
+            }
             CommandLineArgs	*pCurrentCmdLineArgs = Desktop::GetCommandLineArgs();
 
-			if ( aCmdLineArgs.IsQuickstart() )
+			if ( aCmdLineArgs->IsQuickstart() )
 			{
 				// we have to use application event, because we have to start quickstart service in main thread!!
 				ApplicationEvent* pAppEvent =
@@ -650,7 +718,7 @@ void SAL_CALL OfficeIPCThread::run()
 			// handle request for acceptor
 			sal_Bool bAcceptorRequest = sal_False;
 			OUString aAcceptString;
-            if ( aCmdLineArgs.GetAcceptString(aAcceptString) && Desktop::CheckOEM()) {
+            if ( aCmdLineArgs->GetAcceptString(aAcceptString) && Desktop::CheckOEM()) {
 				ApplicationEvent* pAppEvent =
 					new ApplicationEvent( aEmpty, aEmpty,
 										  "ACCEPT", aAcceptString );
@@ -659,7 +727,7 @@ void SAL_CALL OfficeIPCThread::run()
 			}
 			// handle acceptor removal
 			OUString aUnAcceptString;
-			if ( aCmdLineArgs.GetUnAcceptString(aUnAcceptString) ) {
+			if ( aCmdLineArgs->GetUnAcceptString(aUnAcceptString) ) {
 				ApplicationEvent* pAppEvent =
 					new ApplicationEvent( aEmpty, aEmpty,
 										 "UNACCEPT", aUnAcceptString );
@@ -670,7 +738,7 @@ void SAL_CALL OfficeIPCThread::run()
 #ifndef UNX
 			// only in non-unix version, we need to handle a -help request
 			// in a running instance in order to display  the command line help
-			if ( aCmdLineArgs.IsHelp() ) {
+			if ( aCmdLineArgs->IsHelp() ) {
 				ApplicationEvent* pAppEvent =
 					new ApplicationEvent( aEmpty, aEmpty, "HELP", aEmpty );
 				ImplPostForeignAppEvent( pAppEvent );
@@ -678,25 +746,26 @@ void SAL_CALL OfficeIPCThread::run()
 #endif
 
 			sal_Bool bDocRequestSent = sal_False;
-			ProcessDocumentsRequest* pRequest = new ProcessDocumentsRequest;
+			ProcessDocumentsRequest* pRequest = new ProcessDocumentsRequest(
+                aCmdLineArgs->getCwdUrl());
             cProcessed.reset();
             pRequest->pcProcessed = &cProcessed;
 
 			// Print requests are not dependent on the -invisible cmdline argument as they are
 			// loaded with the "hidden" flag! So they are always checked.
-			bDocRequestSent |= aCmdLineArgs.GetPrintList( pRequest->aPrintList );
-			bDocRequestSent |= ( aCmdLineArgs.GetPrintToList( pRequest->aPrintToList ) &&
-									aCmdLineArgs.GetPrinterName( pRequest->aPrinterName )		);
+			bDocRequestSent |= aCmdLineArgs->GetPrintList( pRequest->aPrintList );
+			bDocRequestSent |= ( aCmdLineArgs->GetPrintToList( pRequest->aPrintToList ) &&
+									aCmdLineArgs->GetPrinterName( pRequest->aPrinterName )		);
 
 			if ( !pCurrentCmdLineArgs->IsInvisible() )
 			{
 				// Read cmdline args that can open/create documents. As they would open a window
 				// they are only allowed if the "-invisible" is currently not used!
-				bDocRequestSent |= aCmdLineArgs.GetOpenList( pRequest->aOpenList );
-				bDocRequestSent |= aCmdLineArgs.GetViewList( pRequest->aViewList );
-                bDocRequestSent |= aCmdLineArgs.GetStartList( pRequest->aStartList );
-				bDocRequestSent |= aCmdLineArgs.GetForceOpenList( pRequest->aForceOpenList );
-				bDocRequestSent |= aCmdLineArgs.GetForceNewList( pRequest->aForceNewList );
+				bDocRequestSent |= aCmdLineArgs->GetOpenList( pRequest->aOpenList );
+				bDocRequestSent |= aCmdLineArgs->GetViewList( pRequest->aViewList );
+                bDocRequestSent |= aCmdLineArgs->GetStartList( pRequest->aStartList );
+				bDocRequestSent |= aCmdLineArgs->GetForceOpenList( pRequest->aForceOpenList );
+				bDocRequestSent |= aCmdLineArgs->GetForceNewList( pRequest->aForceNewList );
 
 				// Special command line args to create an empty document for a given module
 
@@ -704,25 +773,25 @@ void SAL_CALL OfficeIPCThread::run()
                 // we only do this if no document was specified on the command line,
                 // since this would be inconsistent with the the behaviour of
                 // the first process, see OpenClients() (call to OpenDefault()) in app.cxx
-                if ( aCmdLineArgs.HasModuleParam() && Desktop::CheckOEM() && (!bDocRequestSent))
+                if ( aCmdLineArgs->HasModuleParam() && Desktop::CheckOEM() && (!bDocRequestSent))
 				{
 					SvtModuleOptions aOpt;
 					SvtModuleOptions::EFactory eFactory = SvtModuleOptions::E_WRITER;
-					if ( aCmdLineArgs.IsWriter() )
+					if ( aCmdLineArgs->IsWriter() )
 						eFactory = SvtModuleOptions::E_WRITER;
-					else if ( aCmdLineArgs.IsCalc() )
+					else if ( aCmdLineArgs->IsCalc() )
 						eFactory = SvtModuleOptions::E_CALC;
-					else if ( aCmdLineArgs.IsDraw() )
+					else if ( aCmdLineArgs->IsDraw() )
 						eFactory = SvtModuleOptions::E_DRAW;
-					else if ( aCmdLineArgs.IsImpress() )
+					else if ( aCmdLineArgs->IsImpress() )
 						eFactory = SvtModuleOptions::E_IMPRESS;
-					else if ( aCmdLineArgs.IsBase() )
+					else if ( aCmdLineArgs->IsBase() )
 						eFactory = SvtModuleOptions::E_DATABASE;
-					else if ( aCmdLineArgs.IsMath() )
+					else if ( aCmdLineArgs->IsMath() )
 						eFactory = SvtModuleOptions::E_MATH;
-					else if ( aCmdLineArgs.IsGlobal() )
+					else if ( aCmdLineArgs->IsGlobal() )
 						eFactory = SvtModuleOptions::E_WRITERGLOBAL;
-					else if ( aCmdLineArgs.IsWeb() )
+					else if ( aCmdLineArgs->IsWeb() )
 						eFactory = SvtModuleOptions::E_WRITERWEB;
 
                     if ( pRequest->aOpenList.getLength() )
@@ -733,28 +802,28 @@ void SAL_CALL OfficeIPCThread::run()
 				}
             }
 
-            if (!aCmdLineArgs.IsQuickstart() && Desktop::CheckOEM()) {
+            if (!aCmdLineArgs->IsQuickstart() && Desktop::CheckOEM()) {
                 sal_Bool bShowHelp = sal_False;
                 rtl::OUStringBuffer aHelpURLBuffer;
-                if (aCmdLineArgs.IsHelpWriter()) {
+                if (aCmdLineArgs->IsHelpWriter()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://swriter/start");
-                } else if (aCmdLineArgs.IsHelpCalc()) {
+                } else if (aCmdLineArgs->IsHelpCalc()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://scalc/start");
-                } else if (aCmdLineArgs.IsHelpDraw()) {
+                } else if (aCmdLineArgs->IsHelpDraw()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://sdraw/start");
-                } else if (aCmdLineArgs.IsHelpImpress()) {
+                } else if (aCmdLineArgs->IsHelpImpress()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://simpress/start");
-				} else if (aCmdLineArgs.IsHelpBase()) {
+				} else if (aCmdLineArgs->IsHelpBase()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://sdatabase/start");
-                } else if (aCmdLineArgs.IsHelpBasic()) {
+                } else if (aCmdLineArgs->IsHelpBasic()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://sbasic/start");
-                } else if (aCmdLineArgs.IsHelpMath()) {
+                } else if (aCmdLineArgs->IsHelpMath()) {
                     bShowHelp = sal_True;
                     aHelpURLBuffer.appendAscii("vnd.sun.star.help://smath/start");
                 }
@@ -770,6 +839,8 @@ void SAL_CALL OfficeIPCThread::run()
                     aHelpURLBuffer.appendAscii("&System=WIN");
 #elif defined MAC
                     aHelpURLBuffer.appendAscii("&System=MAC");
+#elif defined OS2
+                    aHelpURLBuffer.appendAscii("&System=OS2");
 #endif
                     ApplicationEvent* pAppEvent =
                         new ApplicationEvent( aEmpty, aEmpty,
@@ -782,18 +853,18 @@ void SAL_CALL OfficeIPCThread::run()
  			{
 				// Send requests to dispatch watcher if we have at least one. The receiver
 				// is responsible to delete the request after processing it.
-                if ( aCmdLineArgs.HasModuleParam() )
+                if ( aCmdLineArgs->HasModuleParam() )
                 {
                     SvtModuleOptions    aOpt;
 
                     // Support command line parameters to start a module (as preselection)
-                    if ( aCmdLineArgs.IsWriter() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
+                    if ( aCmdLineArgs->IsWriter() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SWRITER ) )
                         pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::E_WRITER );
-                    else if ( aCmdLineArgs.IsCalc() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
+                    else if ( aCmdLineArgs->IsCalc() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SCALC ) )
                         pRequest->aModule = aOpt.GetFactoryName( SvtModuleOptions::E_CALC );
-                    else if ( aCmdLineArgs.IsImpress() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
+                    else if ( aCmdLineArgs->IsImpress() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SIMPRESS ) )
                         pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::E_IMPRESS );
-                    else if ( aCmdLineArgs.IsDraw() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
+                    else if ( aCmdLineArgs->IsDraw() && aOpt.IsModuleInstalled( SvtModuleOptions::E_SDRAW ) )
                         pRequest->aModule= aOpt.GetFactoryName( SvtModuleOptions::E_DRAW );
                 }
 
@@ -807,7 +878,7 @@ void SAL_CALL OfficeIPCThread::run()
 				pRequest = NULL;
 			}
 			if (( aArguments.CompareTo( sc_aShowSequence, sc_nShSeqLength ) == COMPARE_EQUAL ) ||
-				aArguments.Len() == 0 )
+				aCmdLineArgs->IsEmpty() )
 			{
 				// no document was sent, just bring Office to front
 				ApplicationEvent* pAppEvent =
@@ -844,6 +915,7 @@ void SAL_CALL OfficeIPCThread::run()
 
 static void AddToDispatchList(
 	DispatchWatcher::DispatchList& rDispatchList,
+    boost::optional< rtl::OUString > const & cwdUrl,
 	const OUString& aRequestList,
 	DispatchWatcher::RequestType nType,
     const OUString& aParam,
@@ -857,7 +929,7 @@ static void AddToDispatchList(
 			OUString aToken = aRequestList.getToken( 0, APPEVENT_PARAM_DELIMITER, nIndex );
 			if ( aToken.getLength() > 0 )
 				rDispatchList.push_back(
-                    DispatchWatcher::DispatchRequest( nType, aToken, aParam, aFactory ));
+                    DispatchWatcher::DispatchRequest( nType, aToken, cwdUrl, aParam, aFactory ));
 		}
 		while ( nIndex >= 0 );
 	}
@@ -869,13 +941,13 @@ sal_Bool OfficeIPCThread::ExecuteCmdLineRequests( ProcessDocumentsRequest& aRequ
 	DispatchWatcher::DispatchList	aDispatchList;
 
 	// Create dispatch list for dispatch watcher
-    AddToDispatchList( aDispatchList, aRequest.aOpenList, DispatchWatcher::REQUEST_OPEN, aEmpty, aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aViewList, DispatchWatcher::REQUEST_VIEW, aEmpty, aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aStartList, DispatchWatcher::REQUEST_START, aEmpty, aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aPrintList, DispatchWatcher::REQUEST_PRINT, aEmpty, aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aPrintToList, DispatchWatcher::REQUEST_PRINTTO, aRequest.aPrinterName, aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aForceOpenList, DispatchWatcher::REQUEST_FORCEOPEN, aEmpty, aRequest.aModule );
-    AddToDispatchList( aDispatchList, aRequest.aForceNewList, DispatchWatcher::REQUEST_FORCENEW, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aOpenList, DispatchWatcher::REQUEST_OPEN, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aViewList, DispatchWatcher::REQUEST_VIEW, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aStartList, DispatchWatcher::REQUEST_START, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aPrintList, DispatchWatcher::REQUEST_PRINT, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aPrintToList, DispatchWatcher::REQUEST_PRINTTO, aRequest.aPrinterName, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aForceOpenList, DispatchWatcher::REQUEST_FORCEOPEN, aEmpty, aRequest.aModule );
+    AddToDispatchList( aDispatchList, aRequest.aCwdUrl, aRequest.aForceNewList, DispatchWatcher::REQUEST_FORCENEW, aEmpty, aRequest.aModule );
 
 	osl::ClearableMutexGuard aGuard( GetMutex() );
 	sal_Bool bShutdown( sal_False );

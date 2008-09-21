@@ -239,7 +239,7 @@ LINKFLAGSSHL += /ENTRY:LibMain@12
 # --- UNX ----------------------------------------------------------------
 
 .IF "$(GUIBASE)" == "java"
-SHL1STDLIBS += -framework ApplicationServices -framework Carbon -framework AudioToolbox -framework AudioUnit -framework AppKit
+SHL1STDLIBS += -framework ApplicationServices -framework AudioToolbox -framework AudioUnit
 .ENDIF
 
 # UNX sal plugins

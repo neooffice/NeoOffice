@@ -57,6 +57,8 @@
 #include <vos/mutex.hxx>
 #endif
 
+#include "java_dnd_cocoa.h"
+
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::dnd;
 using namespace com::sun::star::lang;
@@ -541,7 +543,8 @@ JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
 	mpEnvData( NULL ),
-	mpWindow( NULL )
+	mpWindow( NULL ),
+	maWindowRef( NULL )
 {
 }
 
@@ -669,10 +672,10 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw( 
 
 WindowRef JavaDragSource::getNativeWindow()
 {
-	if ( mpEnvData )
-		return (WindowRef)mpEnvData->aWindow;
-	else
-		return NULL;
+	if ( !maWindowRef && mpEnvData )
+		maWindowRef = (WindowRef)NSView_windowRef( mpEnvData->pView );
+
+	return maWindowRef;
 }
 
 // ------------------------------------------------------------------------
@@ -719,7 +722,8 @@ JavaDropTarget::JavaDropTarget() :
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
 	mbRejected( false ),
 	mpEnvData( NULL ),
-	mpWindow( NULL )
+	mpWindow( NULL ),
+	maWindowRef( NULL )
 {
 }
 
@@ -847,10 +851,10 @@ Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw( 
 
 WindowRef JavaDropTarget::getNativeWindow()
 {
-	if ( mpEnvData )
-		return (WindowRef)mpEnvData->aWindow;
-	else
-		return NULL;
+	if ( !maWindowRef && mpEnvData )
+		maWindowRef = (WindowRef)NSView_windowRef( mpEnvData->pView );
+
+	return maWindowRef;
 }
 
 // ------------------------------------------------------------------------

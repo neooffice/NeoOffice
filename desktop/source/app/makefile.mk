@@ -38,7 +38,6 @@ PRJ=..$/..
 
 PRJNAME=desktop
 TARGET=dkt
-LIBTARGET=NO
 AUTOSEG=true
 ENABLE_EXCEPTIONS=TRUE
 
@@ -50,42 +49,60 @@ ENABLE_EXCEPTIONS=TRUE
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
-.IF "$(X11_PRODUCT_DIR_NAME)" != ""
-CDEFS += -DX11_PRODUCT_DIR_NAME='"$(X11_PRODUCT_DIR_NAME)"'
-.ENDIF
-
-# --- Files --------------------------------------------------------
+SHL1TARGET = sofficeapp
+SHL1OBJS = \
+    $(SLO)$/app.obj \
+    $(SLO)$/appfirststart.obj \
+    $(SLO)$/appinit.obj \
+    $(SLO)$/appsys.obj \
+    $(SLO)$/cfgfilter.obj \
+    $(SLO)$/checkinstall.obj \
+    $(SLO)$/cmdlineargs.obj \
+    $(SLO)$/cmdlinehelp.obj \
+    $(SLO)$/configinit.obj \
+    $(SLO)$/desktopcontext.obj \
+    $(SLO)$/desktopresid.obj \
+    $(SLO)$/dispatchwatcher.obj \
+    $(SLO)$/intro.obj \
+    $(SLO)$/langselect.obj \
+    $(SLO)$/lockfile.obj \
+    $(SLO)$/lockfile2.obj \
+    $(SLO)$/migration.obj \
+    $(SLO)$/officeipcthread.obj \
+    $(SLO)$/oinstanceprovider.obj \
+    $(SLO)$/opluginframefactory.obj \
+    $(SLO)$/pages.obj \
+    $(SLO)$/sofficemain.obj \
+    $(SLO)$/userinstall.obj \
+    $(SLO)$/wizard.obj
+SHL1STDLIBS = \
+    $(COMPHELPERLIB) \
+    $(CPPUHELPERLIB) \
+    $(CPPULIB) \
+    $(I18NISOLANGLIB) \
+    $(SALLIB) \
+    $(SFXLIB) \
+    $(SVLLIB) \
+    $(SVTOOLLIB) \
+    $(TKLIB) \
+    $(TOOLSLIB) \
+    $(UCBHELPERLIB) \
+    $(UNOTOOLSLIB) \
+    $(VCLLIB) \
+    $(VOSLIB)
+SHL1VERSIONMAP = version.map
+SHL1IMPLIB = i$(SHL1TARGET)
+DEF1NAME = $(SHL1TARGET)
 
 OBJFILES = \
-        $(OBJ)$/main.obj					\
-        $(OBJ)$/app.obj						\
-        $(OBJ)$/copyright_ascii_sun.obj		\
-        $(OBJ)$/copyright_ascii_ooo.obj		\
-        $(OBJ)$/lockfile.obj				\
-        $(OBJ)$/lockfile2.obj				\
-		$(OBJ)$/intro.obj					\
-		$(OBJ)$/officeipcthread.obj			\
-		$(OBJ)$/appinit.obj					\
-		$(OBJ)$/cmdlineargs.obj				\
-		$(OBJ)$/oinstanceprovider.obj		\
-		$(OBJ)$/opluginframefactory.obj		\
-		$(OBJ)$/appsys.obj					\
-		$(OBJ)$/desktopresid.obj			\
-		$(OBJ)$/dispatchwatcher.obj			\
-		$(OBJ)$/configinit.obj				\
-		$(OBJ)$/checkinstall.obj			\
-		$(OBJ)$/langselect.obj			    \
-		$(OBJ)$/cmdlinehelp.obj             \
-		$(OBJ)$/userinstall.obj             \
-		$(OBJ)$/desktopcontext.obj
+    $(OBJ)$/copyright_ascii_ooo.obj \
+    $(OBJ)$/copyright_ascii_sun.obj \
+    $(OBJ)$/main.obj
 
-.IF "$(GUIBASE)" == "java"
-OBJFILES += \
-        $(OBJ)$/main_cocoa.obj
-.ENDIF
+SLOFILES = $(SHL1OBJS)
 
 SRS1NAME=	desktop
-SRC1FILES=	desktop.src	
+SRC1FILES=	desktop.src
 
 # --- Targets ------------------------------------------------------
 

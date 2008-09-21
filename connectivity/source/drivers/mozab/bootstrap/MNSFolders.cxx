@@ -36,9 +36,7 @@
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_connectivity.hxx"
-#ifndef _MNSFOLDERS_HXX_
 #include <MNSFolders.hxx>
-#endif
 
 #ifdef UNIX
 #include <sys/types.h>
@@ -54,22 +52,15 @@
 #include <objidl.h>
 #include "post_include_windows.h"
 #endif // End WNT
-
-#ifndef _OSL_SECURITY_HXX_
 #include <osl/security.hxx>
-#endif
-#ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
-#endif
-#ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
-#endif
 
 using namespace ::com::sun::star::mozilla;
 
 namespace
 {
-    #if defined(XP_MAC) || defined(XP_MACOSX)
+    #if defined(XP_MAC) || defined(XP_MACOSX) || defined(MACOSX) 
         #define APP_REGISTRY_NAME "Application Registry"
     #elif defined(XP_WIN) || defined(XP_OS2)
         #define APP_REGISTRY_NAME "registry.dat"
@@ -94,16 +85,20 @@ namespace
         { "Mozilla/", NULL, NULL },
         { "Mozilla/Firefox/", NULL, NULL },
         { "Thunderbird/", "Mozilla/Thunderbird/", NULL }
-    #else
+    #elif(MACOSX)
 #ifdef USE_JAVA
         { "Library/Mozilla/", NULL, NULL },
         { "Library/Application Support/Firefox/", NULL, NULL },
         { "Library/Thunderbird/", NULL, NULL }
 #else	// USE_JAVA
+        { "../Mozilla/", NULL, NULL },
+        { "Firefox/", NULL, NULL },
+        { "../Thunderbird/", NULL, NULL }
+#endif	// USE_JAVA
+    #else
         { ".mozilla/", NULL, NULL },
         { ".mozilla/firefox/", NULL, NULL },
         { ".thunderbird/", ".mozilla-thunderbird/", ".mozilla/thunderbird/" }
-#endif	// USE_JAVA
     #endif
     };
 

@@ -121,11 +121,6 @@ SHL1STDLIBS+=\
 
 .ENDIF # WNT
 
-.IF "$(GUIBASE)"=="java"
-SHL1OBJS = $(SLO)$/X11productcheck.obj
-SHL1STDLIBS += -framework AppKit -framework Carbon
-.ENDIF
-
 .IF "$(GUI)"!="MAC"
 SHL1DEPN += $(shell $(FIND) $(SLO) -type f -name "*.OBJ" -print)
 .ENDIF

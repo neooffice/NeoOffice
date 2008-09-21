@@ -76,32 +76,6 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
-
-static bool IsX11Product()
-{
-    static bool bX11 = sal_False;
-    static ::osl::Module aVCLModule;
-
-    if ( !aVCLModule.is() )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
-		aVCLModule.load( aLibName );
-        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
-            bX11 = true;
-    }
-
-    return bX11;
-}
-
 #endif	// USE_JAVA
 
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
@@ -741,9 +715,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+7].optionString = "-Dapple.awt.graphics.UseQuartz=true";
     options[i+7].extraInfo = NULL;
 
-    size_t nUserMem = 64;
-    if ( !IsX11Product() )
-    	nUserMem = 256;
+    size_t nUserMem = 256;
     rtl::OStringBuffer aBuf( "-Xmx" );
     aBuf.append( (sal_Int32)nUserMem );
     aBuf.append( "m" );

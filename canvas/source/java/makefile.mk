@@ -41,7 +41,7 @@ PRJ		= ..$/..
 TARGET	= javacanvas
 PACKAGE = canvas
 
-USE_JAVAVER:=TRUE 
+USE_JAVAVER:=TRUE
 
 # --- Settings -----------------------------------------------------
 
@@ -51,7 +51,7 @@ USE_JAVAVER:=TRUE
 # Since Canvas needs newer features like
 # e.g. java.awt.image.BufferStrategy,
 # disabled for now for everything <1.4
-.IF "$(JAVANUMVER:s/.//)" >= "000100040000" 
+.IF "$(JAVANUMVER:s/.//)" >= "000100040000"
 
 JAVAFILES  = \
 	SpriteBase.java \
@@ -69,30 +69,34 @@ JAVAFILES  = \
 	BezierPolyPolygon.java \
 	SpriteRunner.java
 
-.IF "$(GUIBASE)"!="unx" && "$(GUIBASE)"!="java"
-
-JAVAFILES += win/WindowAdapter.java
-
-.ELSE		# "$(GUIBASE)"!="unx" && "$(GUIBASE)"!="java"
+.IF "$(GUIBASE)"=="unx"
 
 JAVAFILES += x11/WindowAdapter.java
 
-.ENDIF		# "$(GUIBASE)"!="unx" && "$(GUIBASE)"!="java"
+.ELIF "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
+
+JAVAFILES += aqua/WindowAdapter.java
+
+.ELSE
+
+JAVAFILES += win/WindowAdapter.java
+
+.ENDIF		# "$(GUIBASE)"=="unx"
 
 JARFILES 		= jurt.jar unoil.jar ridl.jar juh.jar java_uno.jar
 #JAVACLASSFILES	= $(foreach,i,$(JAVAFILES) $(CLASSDIR)$/$(PACKAGE)$/$(i:b).class)
 
 JARTARGET               = $(TARGET).uno.jar
 JARCOMPRESS             = TRUE
-#JARCLASSDIRS            = $(PACKAGE) 
+#JARCLASSDIRS            = $(PACKAGE)
 CUSTOMMANIFESTFILE      = manifest
 
-.ENDIF # "$(JAVANUMVER:s/.//)" >= "000100040000" 
+.ENDIF # "$(JAVANUMVER:s/.//)" >= "000100040000"
 .ENDIF # "$(SOLAR_JAVA)"=="TRUE"
 
 # --- Targets ------------------------------------------------------
 
 .INCLUDE: target.mk
 
-#dist: $(JAVA_FILES:b:+".class") 
+#dist: $(JAVA_FILES:b:+".class")
 #	+jar -cvfm $(CLASSDIR)/JavaCanvas.jar $(JARMANIFEST) $(JAVACLASSFILES)

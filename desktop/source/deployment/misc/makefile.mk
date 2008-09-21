@@ -41,15 +41,14 @@ TARGET = deployment_misc
 USE_DEFFILE = TRUE
 ENABLE_EXCEPTIONS = TRUE
 
+.IF "$(GUI)"=="OS2"
+TARGET = deplmisc
+.ENDIF
+
 .INCLUDE : settings.mk
 
 .IF "$(PRODUCT_DIR_NAME)" != ""
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
-.ENDIF
-
-.IF "$(X11_PRODUCT_DIR_NAME)" != ""
-CDEFS += -DX11_PRODUCT_DIR_NAME='"$(X11_PRODUCT_DIR_NAME)"'
-CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 .ENDIF
 
 # Reduction of exported symbols:
@@ -68,16 +67,23 @@ SRS1NAME = $(TARGET)
 SRC1FILES = \
 	dp_misc.src
 
-SHL1TARGET = deploymentmisc$(UPD)$(DLLPOSTFIX)
+.IF "$(GUI)"=="OS2"
+SHL1TARGET = $(TARGET)
+.ELSE
+SHL1TARGET = deploymentmisc$(DLLPOSTFIX)
+.ENDIF
 SHL1OBJS = \
         $(SLO)$/dp_misc.obj \
         $(SLO)$/dp_resource.obj \
+        $(SLO)$/dp_identifier.obj \
         $(SLO)$/dp_interact.obj \
         $(SLO)$/dp_ucb.obj \
         $(SLO)$/db.obj \
         $(SLO)$/dp_version.obj \
         $(SLO)$/dp_descriptioninfoset.obj \
-        $(SLO)$/dp_dependencies.obj
+        $(SLO)$/dp_dependencies.obj \
+        $(SLO)$/dp_platform.obj
+        
 SHL1STDLIBS = \
     $(BERKELEYLIB) \
     $(CPPUHELPERLIB) \
@@ -87,7 +93,14 @@ SHL1STDLIBS = \
     $(UCBHELPERLIB) \
     $(UNOTOOLSLIB) \
     $(XMLSCRIPTLIB)
+.IF "$(GUI)"=="OS2"
+SHL1IMPLIB = ideploymentmisc$(DLLPOSTFIX)
+LIB1TARGET = $(SLB)$/_deplmisc.lib
+LIB1OBJFILES = $(SHL1OBJS)
+DEFLIB1NAME = _deplmisc
+.ELSE
 SHL1IMPLIB = i$(SHL1TARGET)
+.ENDIF
 DEF1NAME = $(SHL1TARGET)
 
 SLOFILES = $(SHL1OBJS)

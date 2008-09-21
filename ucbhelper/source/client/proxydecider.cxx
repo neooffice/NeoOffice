@@ -78,13 +78,13 @@
 #include "ucbhelper/proxydecider.hxx"
 #endif
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 
 #include <premac.h>
 #include <SystemConfiguration/SystemConfiguration.h>
 #include <postmac.h>
 
-#endif	// MACOSX
+#endif	// USE_JAVA 
 
 using namespace com::sun::star;
 using namespace ucbhelper;
@@ -172,11 +172,11 @@ class InternetProxyDecider_Impl :
     InternetProxyServer                      m_aHttpProxy;
     InternetProxyServer                      m_aFtpProxy;
     const InternetProxyServer                m_aEmptyProxy;
-#ifdef MACOSX
+#ifdef USE_JAVA
     mutable InternetProxyServer              m_aFtpSystemProxy;
     mutable InternetProxyServer              m_aHttpSystemProxy;
     mutable InternetProxyServer              m_aHttpsSystemProxy;
-#endif	// MACOSX
+#endif	// USE_JAVA 
     sal_Int32                                m_nProxyType;
     uno::Reference< util::XChangesNotifier > m_xNotifier;
     std::vector< NoProxyListEntry >          m_aNoProxyList;
@@ -559,7 +559,7 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
 {
     osl::Guard< osl::Mutex > aGuard( m_aMutex );
 
-#ifdef MACOSX
+#ifdef USE_JAVA
     // Use system proxy even if no proxies are set
     if ( m_nProxyType == 0 || m_nProxyType == 1 )
     {
@@ -705,13 +705,13 @@ const InternetProxyServer & InternetProxyDecider_Impl::getProxy(
 
         return m_aEmptyProxy;
     }
-#else	// MACOSX
+#else	// USE_JAVA
     if ( m_nProxyType == 0 )
     {
         // Never use proxy.
         return m_aEmptyProxy;
     }
-#endif	// MACOSX
+#endif	// USE_JAVA
 
     if ( rHost.getLength() && m_aNoProxyList.size() )
     {

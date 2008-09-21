@@ -56,7 +56,13 @@ LIB1FILES  = \
 .IF "$(GUIBASE)"=="java"
 SHL1LINKLIB = $(SLB)$/pljava.lib
 .ELSE	# "$(GUIBASE)"=="java"
+.IF "$(GUIBASE)"=="aqua"
+.IF "$(WITH_MOZILLA)"=="YES"
+SHL1LINKLIB = $(SLB)$/plaqua.lib
+.ENDIF
+.ELSE
 SHL1LINKLIB = $(SLB)$/plunx.lib
+.ENDIF # $(GUIBASE)==aqua
 .ENDIF		# "$(GUIBASE)"=="java"
 .IF "$(OS)" == "SOLARIS"
 SHL1OWNLIBS = -lsocket
@@ -66,12 +72,12 @@ SHL1OWNLIBS = -lsocket
 .IF "$(GUI)" == "WNT"
 SHL1LINKLIB = $(SLB)$/plwin.lib
 SHL1OWNLIBS = \
-	version.lib	\
-	ole32.lib	\
-	advapi32.lib
+	$(VERSIONLIB)	\
+	$(OLE32LIB)	\
+	$(ADVAPI32LIB)
 .ENDIF # WNT
 
-SHL1TARGET= $(TARGET)$(UPD)$(DLLPOSTFIX)
+SHL1TARGET= $(TARGET)$(DLLPOSTFIX)
 SHL1IMPLIB= i$(TARGET)
 
 SHL1VERSIONMAP=exports.map
@@ -99,10 +105,8 @@ SHL1STDLIBS+= \
 	$(CPPULIB)			\
 	$(SALLIB)
 
-.IF "$(OS)"=="MACOSX"
-.IF "$(GUIBASE)"!="java"
+.IF "$(OS)"=="MACOSX" && "$(GUIBASE)"=="unx"
 SHL1STDLIBS+= -lX11
-.ENDIF		# "$(GUIBASE)"!="java"
 .ENDIF
 
 SHL1STDLIBS+=$(SHL1OWNLIBS)

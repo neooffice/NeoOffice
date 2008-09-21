@@ -36,19 +36,10 @@
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_extensions.hxx"
-
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSINGLESERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LOADER_XIMPLEMENTATIONLOADER_HPP_
 #include <com/sun/star/loader/XImplementationLoader.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LOADER_CANNOTACTIVATEFACTORYEXCEPTION_HPP_
 #include <com/sun/star/loader/CannotActivateFactoryException.hpp>
-#endif
 
 #include <plugin/impl.hxx>
 #include <tools/fsys.hxx>
@@ -59,7 +50,7 @@
 #include <vos/timer.hxx>
 #include <osl/file.hxx>
 
-#if defined UNX && !defined USE_JAVA
+#ifdef UNX && !defined USE_JAVA
 #include <sys/types.h>
 #include <sys/socket.h>
 #endif	// UNX && !USE_JAVA
@@ -68,6 +59,7 @@
 #include <stdio.h>
 #endif
 
+using namespace com::sun::star;
 using namespace com::sun::star::io;
 using namespace com::sun::star::beans;
 using namespace com::sun::star::plugin;
@@ -119,25 +111,25 @@ Any XPlugin_Impl::queryAggregation( const Type& type ) throw( RuntimeException )
 }
 
 
-XPlugin_Impl::XPlugin_Impl( const Reference< com::sun::star::lang::XMultiServiceFactory >  & rSMgr) :
-        m_xSMgr( rSMgr ),
+XPlugin_Impl::XPlugin_Impl( const uno::Reference< com::sun::star::lang::XMultiServiceFactory >  & rSMgr) :
         PluginControl_Impl(),
+        m_xSMgr( rSMgr ),
         m_pPluginComm( NULL ),
-        m_pArgn( NULL ),
+        m_aEncoding( gsl_getSystemTextEncoding() ),
         m_pArgv( NULL ),
+        m_pArgn( NULL ),
         m_nArgs( 0 ),
         m_aPluginMode( NP_FULL ),
         m_nProvidingState( PROVIDING_NONE ),
         m_nCalledFromPlugin( 0 ),
         m_pDisposer( NULL ),
-        m_bIsDisposed( sal_False ),
-        m_aEncoding( gsl_getSystemTextEncoding() )
+        m_bIsDisposed( sal_False )
 {
     memset( &m_aInstance, 0, sizeof( m_aInstance ) );
     memset( &m_aNPWindow, 0, sizeof( m_aNPWindow ) );
 
     m_xModel = new PluginModel();
-    Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
+    uno::Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
     xPS->addPropertyChangeListener( OUString(), this );
 
     Guard< Mutex > aGuard( PluginManager::get().getPluginMutex() );
@@ -196,7 +188,7 @@ void XPlugin_Impl::checkListeners( const char* normalizedURL )
     }
 }
 
-IMPL_LINK( XPlugin_Impl, secondLevelDispose, XPlugin_Impl*, pThis )
+IMPL_LINK( XPlugin_Impl, secondLevelDispose, XPlugin_Impl*, /*pThis*/ )
 {
     Guard< Mutex > aGuard( m_aMutex );
 
@@ -206,7 +198,7 @@ IMPL_LINK( XPlugin_Impl, secondLevelDispose, XPlugin_Impl*, pThis )
     std::list<XPlugin_Impl*>::iterator iter;
 
     {
-        Guard< Mutex > aGuard( PluginManager::get().getPluginMutex() );
+        Guard< Mutex > aPluginGuard( PluginManager::get().getPluginMutex() );
         for( iter = rList.begin(); iter != rList.end(); ++iter )
         {
             if( *iter == this )
@@ -222,11 +214,11 @@ IMPL_LINK( XPlugin_Impl, secondLevelDispose, XPlugin_Impl*, pThis )
         m_pDisposer = NULL;
     }
 
-    Reference< XPlugin >  xProtection( this );
-    Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
+    uno::Reference< XPlugin >  xProtection( this );
+    uno::Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
     xPS->removePropertyChangeListener( OUString(), this );
     {
-        Guard< Mutex > aGuard( PluginManager::get().getPluginMutex() );
+        Guard< Mutex > aPluginGuard( PluginManager::get().getPluginMutex() );
         rList.remove( this );
     }
     m_aNPWindow.window = NULL;
@@ -329,7 +321,7 @@ void XPlugin_Impl::handleSpecialArgs()
         {
             try
             {
-                Reference< XPropertySet > xProp( m_xModel, UNO_QUERY );
+                uno::Reference< XPropertySet > xProp( m_xModel, UNO_QUERY );
                 Any aProp = xProp->getPropertyValue( OUString( RTL_CONSTASCII_USTRINGPARAM( "URL" ) ) );
                 aProp >>= aURL;
             }
@@ -399,7 +391,7 @@ void XPlugin_Impl::handleSpecialArgs()
         {
             try
             {
-                Reference< XPropertySet > xProp( m_xModel, UNO_QUERY );
+                uno::Reference< XPropertySet > xProp( m_xModel, UNO_QUERY );
                 Any aProp = xProp->getPropertyValue( OUString( RTL_CONSTASCII_USTRINGPARAM( "URL" ) ) );
                 aProp >>= aURL;
             }
@@ -459,7 +451,7 @@ void XPlugin_Impl::modelChanged()
 
     OUString aURL = getCreationURL();
     provideNewStream( m_aDescription.Mimetype,
-                      Reference< XActiveDataSource >(),
+                      uno::Reference< XActiveDataSource >(),
                       aURL,
                       0, 0, (sal_Bool)(aURL.compareToAscii( "file:", 5 ) == 0) );
     m_nProvidingState = PROVIDING_NONE;
@@ -470,7 +462,7 @@ OUString XPlugin_Impl::getCreationURL()
     Guard< Mutex > aGuard( m_aMutex );
 
     OUString aRet;
-    Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
+    uno::Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
     if( xPS.is() )
     {
         Any aValue = xPS->getPropertyValue( OUString::createFromAscii( "URL" ) );
@@ -480,12 +472,12 @@ OUString XPlugin_Impl::getCreationURL()
 }
 
 
-sal_Bool XPlugin_Impl::setModel( const Reference< com::sun::star::awt::XControlModel > & Model )
+sal_Bool XPlugin_Impl::setModel( const uno::Reference< com::sun::star::awt::XControlModel > & Model )
     throw( RuntimeException )
 {
     Guard< Mutex > aGuard( m_aMutex );
 
-    Reference< com::sun::star::beans::XPropertySet >  xPS( Model, UNO_QUERY );
+    uno::Reference< com::sun::star::beans::XPropertySet >  xPS( Model, UNO_QUERY );
     if( ! xPS.is() )
         return sal_False;
 
@@ -499,7 +491,7 @@ sal_Bool XPlugin_Impl::setModel( const Reference< com::sun::star::awt::XControlM
     return sal_False;
 }
 
-void XPlugin_Impl::createPeer( const Reference< com::sun::star::awt::XToolkit > & xToolkit, const Reference< com::sun::star::awt::XWindowPeer > & Parent )
+void XPlugin_Impl::createPeer( const uno::Reference< com::sun::star::awt::XToolkit > & xToolkit, const uno::Reference< com::sun::star::awt::XWindowPeer > & Parent )
     throw( RuntimeException )
 {
     Guard< Mutex > aGuard( m_aMutex );
@@ -527,9 +519,9 @@ void XPlugin_Impl::loadPlugin()
         }
     }
     const SystemEnvData* pEnvData = getSysChildSysData();
-#if defined UNX && !defined USE_JAVA
+#if defined( UNX ) && !(defined(QUARTZ))
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// UNX && !USE_JAVA
+#endif	// UNX && !QUARTZ
     if( ! getPluginComm() )
     {
         if( m_aDescription.PluginName.getLength() )
@@ -542,12 +534,21 @@ void XPlugin_Impl::loadPlugin()
 #else	// USE_JAVA
             int sv[2];
             if( !socketpair( AF_UNIX, SOCK_STREAM, 0, sv ) )
+#ifdef QUARTZ
+                pComm = new MacPluginComm( m_aDescription.Mimetype,
+                                           m_aDescription.PluginName,
+                                           pEnvData->pView,
+                                           sv[0],
+                                           sv[1]
+                                           );
+#else
                 pComm = new UnxPluginComm( m_aDescription.Mimetype,
                                            m_aDescription.PluginName,
                                            (XLIB_Window)pEnvData->aWindow,
                                            sv[0],
                                            sv[1]
                                            );
+#endif //QUARTZ
 #endif	// USE_JAVA
 #elif (defined WNT || defined OS2)
             PluginComm* pComm = new PluginComm_Impl( m_aDescription.Mimetype,
@@ -565,17 +566,23 @@ void XPlugin_Impl::loadPlugin()
                                                   m_aEncoding).getStr(),
                  getNPPInstance(),
                  m_aPluginMode == PluginMode::FULL ? NP_FULL : NP_EMBED,
-                 m_nArgs,
+                 ::sal::static_int_cast< int16, int >( m_nArgs ),
                  (char**)(m_nArgs ? m_pArgn : NULL),
                  (char**)(m_nArgs ? m_pArgv : NULL),
                  NULL );
 
-#if defined UNX && !defined USE_JAVA
+#if defined( UNX ) && !defined(QUARTZ)
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// UNX && !USE_JAVA
+#endif	// UNX && !QUARTZ
 #ifdef UNX
+#if !defined(QUARTZ)
     m_aNPWindow.window      = (void*)pEnvData->aWindow;
     m_aNPWindow.ws_info     = NULL;
+#else
+    // FIXME: this is untested and possiblz wrong
+    m_aNPWindow.window      = (void*)pEnvData->pView;
+    m_aNPWindow.type        = NPWindowTypeWindow;
+#endif //QUARTZ
 #else
     m_aNPWindow.window = (void*)pEnvData->hWnd;
 #endif
@@ -598,8 +605,8 @@ void XPlugin_Impl::loadPlugin()
 
     m_aNPWindow.clipRect.top        = 0;
     m_aNPWindow.clipRect.left       = 0;
-    m_aNPWindow.clipRect.bottom     = aPosSize.Height;
-    m_aNPWindow.clipRect.right      = aPosSize.Width;
+    m_aNPWindow.clipRect.bottom     = ::sal::static_int_cast< uint16, sal_Int32 >( aPosSize.Height );
+    m_aNPWindow.clipRect.right      = ::sal::static_int_cast< uint16, sal_Int32 >( aPosSize.Width );
     m_aNPWindow.type = NPWindowTypeWindow;
 
     m_aNPWindow.x       = 0;
@@ -644,7 +651,7 @@ PluginStream* XPlugin_Impl::getStreamFromNPStream( NPStream* stream )
 }
 
 sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
-                                        const Reference< com::sun::star::io::XActiveDataSource > & stream,
+                                        const uno::Reference< com::sun::star::io::XActiveDataSource > & stream,
                                         const OUString& url, sal_Int32 length,
                                         sal_Int32 lastmodified, sal_Bool isfile) throw()
 
@@ -657,7 +664,7 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
         m_nProvidingState = PROVIDING_NOW;
         Any aAny;
         aAny <<= url;
-        Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
+        uno::Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
         if( xPS.is() )
         {
             try
@@ -719,7 +726,7 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
 
      // set mimetype on model
      {
-         Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
+         uno::Reference< com::sun::star::beans::XPropertySet >  xPS( m_xModel, UNO_QUERY );
          if( xPS.is() )
          {
              try
@@ -755,7 +762,7 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
 
      PluginInputStream* pStream = new PluginInputStream( this, aURL.getStr(),
                                                         length, lastmodified );
-     Reference< com::sun::star::io::XOutputStream > xNewStream( pStream );
+     uno::Reference< com::sun::star::io::XOutputStream > xNewStream( pStream );
 
      if( iter != m_aPEventListeners.end() )
          pStream->getStream()->notifyData = (*iter)->getNotifyData();
@@ -782,7 +789,7 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
                                         &stype ) )
     {
 #if OSL_DEBUG_LEVEL > 1
-        char* pType;
+        const char* pType;
         switch( stype )
         {
             case NP_NORMAL:     pType = "NP_NORMAL";break;
@@ -820,7 +827,7 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
             }
             else
             {
-                Reference< com::sun::star::io::XConnectable > xConnectable( stream, UNO_QUERY );
+                uno::Reference< com::sun::star::io::XConnectable > xConnectable( stream, UNO_QUERY );
                 pStream->setPredecessor( xConnectable );
                 if( xConnectable.is() )
                 {
@@ -830,11 +837,11 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
                 }
                 stream->setOutputStream( xNewStream );
                 pStream->setSource( stream );
-                Reference< com::sun::star::io::XActiveDataControl > xController;
+                uno::Reference< com::sun::star::io::XActiveDataControl > xController;
                 if( xConnectable.is() )
-                    xController = Reference< com::sun::star::io::XActiveDataControl >( xConnectable, UNO_QUERY );
+                    xController = uno::Reference< com::sun::star::io::XActiveDataControl >( xConnectable, UNO_QUERY );
                 else
-                    xController = Reference< com::sun::star::io::XActiveDataControl >( stream, UNO_QUERY );
+                    xController = uno::Reference< com::sun::star::io::XActiveDataControl >( stream, UNO_QUERY );
 
                 if( xController.is() )
                     xController->start();
@@ -848,7 +855,7 @@ sal_Bool XPlugin_Impl::provideNewStream(const OUString& mimetype,
     return bRet;
 }
 
-void XPlugin_Impl::disposing( const com::sun::star::lang::EventObject& rSource ) throw()
+void XPlugin_Impl::disposing( const com::sun::star::lang::EventObject& /*rSource*/ ) throw()
 {
 }
 
@@ -871,7 +878,7 @@ void XPlugin_Impl::propertyChange( const com::sun::star::beans::PropertyChangeEv
     }
 }
 
-void XPlugin_Impl::setPluginContext( const Reference< XPluginContext > & rContext )
+void XPlugin_Impl::setPluginContext( const uno::Reference< XPluginContext > & rContext )
 {
     m_rBrowserContext = rContext;
 }
@@ -894,8 +901,8 @@ void XPlugin_Impl::setPosSize( sal_Int32 nX_, sal_Int32 nY_, sal_Int32 nWidth_, 
     m_aNPWindow.height  			= nHeight_;
     m_aNPWindow.clipRect.top		= 0;
     m_aNPWindow.clipRect.left		= 0;
-    m_aNPWindow.clipRect.right		= nWidth_;
-    m_aNPWindow.clipRect.bottom		= nHeight_;
+    m_aNPWindow.clipRect.right		= ::sal::static_int_cast< uint16, sal_Int32 >( nWidth_ );
+    m_aNPWindow.clipRect.bottom		= ::sal::static_int_cast< uint16, sal_Int32 >( nHeight_ );
     
     if(getPluginComm())
         getPluginComm()->NPP_SetWindow( getNPPInstance(), &m_aNPWindow );
@@ -903,7 +910,7 @@ void XPlugin_Impl::setPosSize( sal_Int32 nX_, sal_Int32 nY_, sal_Int32 nWidth_, 
 
 PluginDescription XPlugin_Impl::fitDescription( const OUString& rURL )
 {
-    Reference< XPluginManager >  xPMgr( m_xSMgr->createInstance( OUString::createFromAscii( "com.sun.star.plugin.PluginManager" ) ), UNO_QUERY );
+    uno::Reference< XPluginManager >  xPMgr( m_xSMgr->createInstance( OUString::createFromAscii( "com.sun.star.plugin.PluginManager" ) ), UNO_QUERY );
     if( !xPMgr.is() )
     {
         m_nProvidingState = PROVIDING_NONE;
@@ -931,8 +938,6 @@ PluginDescription XPlugin_Impl::fitDescription( const OUString& rURL )
             }
         }
     }
-
-    int nDescr = -1;
 
     int nPos = rURL.lastIndexOf( (sal_Unicode)'.' );
     OUString aExt = rURL.copy( nPos ).toAsciiLowerCase();
@@ -1056,15 +1061,15 @@ void PluginInputStream::load()
     aUrl.SetSmartProtocol( INET_PROT_FILE );
     aUrl.SetSmartURL(
         String( getStream()->url,
-                strlen( getStream()->url ),
+                ::sal::static_int_cast< USHORT, size_t >( strlen( getStream()->url ) ),
                 RTL_TEXTENCODING_MS_1252
             ) );
     try
     {
         m_pContent =
-            new ucb::Content(
+            new ::ucbhelper::Content(
                                aUrl.GetMainURL(INetURLObject::DECODE_TO_IURI),
-                               Reference< com::sun::star::ucb::XCommandEnvironment >()
+                               uno::Reference< com::sun::star::ucb::XCommandEnvironment >()
                                );
         m_pContent->openStream( static_cast< XOutputStream* >( this ) );
     }
@@ -1141,7 +1146,7 @@ void PluginInputStream::closeOutput() throw()
     Guard< Mutex > aGuard( m_pPlugin->getMutex() );
 
     flush();
-    m_xSource = Reference< com::sun::star::io::XActiveDataSource >();
+    m_xSource = uno::Reference< com::sun::star::io::XActiveDataSource >();
 }
 
 sal_uInt32 PluginInputStream::read( sal_uInt32 offset, sal_Int8* buffer, sal_uInt32 size )

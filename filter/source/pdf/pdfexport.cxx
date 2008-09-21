@@ -93,36 +93,6 @@
 
 #ifdef USE_JAVA
 
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#ifndef _OSL_MODULE_HXX_
-#include <osl/module.hxx>
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
-
-static bool IsX11Product()
-{
-    static bool bX11 = sal_False;
-    static ::osl::Module aVCLModule;
-
-    if ( !aVCLModule.is() )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
-		aVCLModule.load( aLibName );
-        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
-            bX11 = true;
-    }
-
-    return bX11;
-}
-
 #ifndef _COM_SUN_STAR_VIEW_XVIEWSETTINGSSUPPLIER_HPP_
 #include <com/sun/star/view/XViewSettingsSupplier.hpp>
 #endif
@@ -1084,28 +1054,29 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 				{
 					const MetaEPSAction*	pA = (const MetaEPSAction*) pAction;
 #ifdef USE_JAVA
-					if ( !IsX11Product() )
-					{
-						const Point& rPos = pA->GetPoint();
-						const Size& rSize = pA->GetSize();
+					const Point& rPos = pA->GetPoint();
+					const Size& rSize = pA->GetSize();
 
-						Size aDstSizePixel( rDummyVDev.LogicToPixel( rSize ) );
-						if ( aDstSizePixel.Width() && aDstSizePixel.Height() )
-						{
-							VirtualDevice* pVDev = new VirtualDevice;
-							if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
-							{
-								// Convert EPS to bitmap
-								Point aPoint;
-								pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
-								ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize,pVDev->GetBitmapEx( aPoint, aDstSizePixel ) );
-							}
-							delete pVDev;
-						}
-					}
-					else
+					Size aDstSizePixel( rDummyVDev.LogicToPixel( rSize ) );
+					if ( aDstSizePixel.Width() && aDstSizePixel.Height() )
 					{
-#endif	// USE_JAVA
+						// Draw EPS at 300 DPI
+						sal_Int32 nEPSRes = 300;
+						if ( nEPSRes > mnMaxImageResolution )
+							nEPSRes = mnMaxImageResolution;
+						aDstSizePixel = Size( aDstSizePixel.Width() * nEPSRes / 72, aDstSizePixel.Height() * nEPSRes / 72 );
+
+						VirtualDevice* pVDev = new VirtualDevice;
+						if ( pVDev->SetOutputSizePixel( aDstSizePixel ) )
+						{
+							// Convert EPS to bitmap
+							Point aPoint;
+							pVDev->DrawEPS( aPoint, aDstSizePixel, pA->GetLink() );
+							ImplWriteBitmapEx( rWriter, rDummyVDev, rPos, rSize,pVDev->GetBitmapEx( aPoint, aDstSizePixel ) );
+						}
+						delete pVDev;
+					}
+#else	// USE_JAVA
 					const GDIMetaFile		aSubstitute( pA->GetSubstitute() );
 
 					rWriter.Push();
@@ -1122,8 +1093,6 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 					ImplWriteActions( rWriter, NULL, aSubstitute, rDummyVDev );
 					rDummyVDev.Pop();
 					rWriter.Pop();
-#ifdef USE_JAVA
-				}
 #endif	// USE_JAVA
 				}
 				break;
