@@ -83,7 +83,17 @@ Index: patches/dev300/apply
  
  [ PardusOnly ]
  pardus-default-ExternalMailer.diff
-@@ -2591,7 +2594,7 @@
+@@ -2056,7 +2059,8 @@
+ layout-simple-dialogs-scp2.diff
+ layout-simple-dialogs-scripting.diff
+ layout-simple-dialogs-sd.diff
+-layout-simple-dialogs-sfx2.diff
++# Disable Binfilter to avoid build breakage in sfx2 module
++# layout-simple-dialogs-sfx2.diff
+ layout-simple-dialogs-solenv.diff
+ layout-simple-dialogs-starmath.diff
+ layout-simple-dialogs-svx.diff
+@@ -2591,7 +2595,7 @@
  
  [ Fixes <= dev300-m30 <= ooo300-m3 ]
  win32-mergemodule-pm-m30.diff, i#93065, tml
