@@ -244,7 +244,6 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 
 build.ooo-build_patches: build.ooo-build_checkout \
 	build.ooo-build_gstreamer-slideshow.diff_patch \
-	build.ooo-build_layout-simple-dialogs-sfx2.diff_patch \
 	build.ooo-build_pdfimport-no-license.diff_patch \
 	build.ooo-build_apply_patch
 	touch "$@"
@@ -306,7 +305,7 @@ build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source bui
 	
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) TMP=$(TMP) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --disable-build-mozilla --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --without-system-mdbtools )
+	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) TMP=$(TMP) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --disable-build-mozilla --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --without-system-mdbtools --enable-layout )
 	echo 'setenv LIBIDL_CONFIG "$(LIBIDL_CONFIG)"' >> "$(OO_ENV_AQUA)"
 	echo 'setenv PKG_CONFIG "$(PKG_CONFIG)"' >> "$(OO_ENV_AQUA)"
 	echo 'setenv TMP "$(TMP)"' >> "$(OO_ENV_AQUA)"
