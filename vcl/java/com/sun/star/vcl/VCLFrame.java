@@ -1653,7 +1653,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// lightweight title bar so we need to ignore move events associated
 		// with that action as they will be out of sync with what the OOo
 		// code expects
-		if (isFloatingWindow() && queue.getLastAdjustedMouseModifiers() != 0)
+		if (!utility && isFloatingWindow() && queue.getLastAdjustedMouseModifiers() != 0)
 			return;
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_MOVERESIZE, this, 0));
