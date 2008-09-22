@@ -244,6 +244,7 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 
 build.ooo-build_patches: build.ooo-build_checkout \
 	build.ooo-build_gstreamer-slideshow.diff_patch \
+	build.ooo-build_layout-simple-dialogs-sfx2.diff_patch \
 	build.ooo-build_pdfimport-no-license.diff_patch \
 	build.ooo-build_apply_patch
 	touch "$@"

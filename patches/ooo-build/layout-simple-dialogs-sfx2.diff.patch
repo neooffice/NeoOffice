@@ -1,0 +1,24 @@
+Index: patches/dev300/layout-simple-dialogs-sfx2.diff
+===================================================================
+--- patches/dev300/layout-simple-dialogs-sfx2.diff	(revision 13976)
++++ patches/dev300/layout-simple-dialogs-sfx2.diff	(working copy)
+@@ -147,7 +147,7 @@
+ index b3eb789..b02bd15 100644
+ --- sfx2/inc/sfx2/tabdlg.hxx
+ +++ sfx2/inc/sfx2/tabdlg.hxx
+-@@ -34,17 +34,17 @@
++@@ -34,17 +34,15 @@
+  #include "sfx2/dllapi.h"
+  #include "sal/types.h"
+  #include <vcl/tabdlg.hxx>
+@@ -162,10 +162,8 @@
+  
+ -#include <map>
+ -namespace layout { class TabPage; }
+-+#if ENABLE_LAYOUT
+ +#include <layout/layout.hxx>
+ +namespace layout { class SfxTabDialog; }
+-+#endif /* ENABLE_LAYOUT */
+  
+  class SfxPoolItem;
+  class SfxTabDialog;
