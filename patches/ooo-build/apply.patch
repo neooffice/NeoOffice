@@ -1,8 +1,23 @@
 Index: patches/dev300/apply
 ===================================================================
---- patches/dev300/apply	(revision 13976)
+--- patches/dev300/apply	(revision 14020)
 +++ patches/dev300/apply	(working copy)
-@@ -23,7 +23,8 @@
+@@ -10,6 +10,7 @@
+ OLDEST_SUPPORTED=dev300-m28 ooo300-m0
+ 
+ # -------- Functional sub-sets --------
++# Disable LayoutDialogs to avoid build breakage
+ Common : PreprocessPatches, BuildBits, TemporaryHacks, FixesNotForUpstream, \
+ 	 Fixes, DefaultSettings, Features, VCL, Misc, \
+ 	 Icons, Branding, CalcFixes, WriterFixes, EasterEgg, \
+@@ -17,13 +18,14 @@
+ 	 Layout, VBABits, VBAObjects, CalcErrors, Store, CJK, GCJ, Lwp, \
+ 	 OOXML, SVGImport, AutoCorrectCapsLock, UnitTesting, \
+ 	 PopupRemoval, LinkWarningDlg, RadioButtons, InternalCairo, \
+-	 FedoraCommonFixes, InternalMesaHeaders, LayoutDialogs, UnusedMethodsRemoval
++	 FedoraCommonFixes, InternalMesaHeaders, UnusedMethodsRemoval
+ 
+ LinuxCommon : Common, Defaults, TangoIcons, FontConfigTemporaryHacks, \
  	      FedoraLinuxOnlyFixes, LinuxOnly, SystemBits, \
  	      msaccess, OpenGLTransitions, \
  	      Fpickers, Mono, AddressBooks, QuickStarter
@@ -12,7 +27,7 @@ Index: patches/dev300/apply
  Win32Common : Common, Defaults, TangoIcons, \
  	      Win32Only, NotDebian
  # Experimental sections
-@@ -414,7 +415,8 @@
+@@ -414,7 +416,8 @@
  printing-bugfix-254573.diff, n#254573, rodo
  
  # use basic (advanced) shapes for rectangle/ellipse on draw/impress's toolbars. make shapes wrap words by default, n#171052, rodo
@@ -22,7 +37,7 @@ Index: patches/dev300/apply
  svx-shapes-default-word-wrap-enable.diff, n#171052, rodo
  svx-honour-customshape-capabilities.diff, n#395372, thorsten
  
-@@ -454,7 +456,8 @@
+@@ -454,7 +457,8 @@
  xmlsecurity-verify-usages.diff, i#76871, pmladek
  
  # fix that allows OOo to work with a standard (unpatched) libjpeg,
@@ -32,7 +47,7 @@ Index: patches/dev300/apply
  
  # handle hyperlinks to files better
  sw-hyperlinks-relative.diff, n#405712, i#91522, jholesov
-@@ -643,7 +646,8 @@
+@@ -643,7 +647,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -42,7 +57,7 @@ Index: patches/dev300/apply
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -787,7 +791,8 @@
+@@ -787,7 +792,8 @@
  
  [ Misc ]
  # Insert symbol defaults to the Symbol font - not a random one
@@ -52,7 +67,7 @@ Index: patches/dev300/apply
  # Address data source ordering x#62860
  addrbk-datasrc-ordering.diff, michael
  # Changed the default option in the Templates and Documents dialog.
-@@ -1645,7 +1650,8 @@
+@@ -1645,7 +1651,8 @@
  sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
  sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
  # hack to ignore writerfilter if odf-converter is present
@@ -62,7 +77,7 @@ Index: patches/dev300/apply
  sw-accept-reject-redline.diff, n#249775, Amelia Wang
  
  
-@@ -1682,7 +1688,8 @@
+@@ -1682,7 +1689,8 @@
  
  writerfilter-source-dmapper-domainmapper-debug.diff
  
@@ -72,7 +87,7 @@ Index: patches/dev300/apply
  
  [ CalcFixes ]
  
-@@ -1981,10 +1988,6 @@
+@@ -1981,10 +1989,6 @@
  
  # fix lpsolve build for OSX
  macosx-lpsolve-makefile.diff
@@ -83,17 +98,7 @@ Index: patches/dev300/apply
  
  [ PardusOnly ]
  pardus-default-ExternalMailer.diff
-@@ -2056,7 +2059,8 @@
- layout-simple-dialogs-scp2.diff
- layout-simple-dialogs-scripting.diff
- layout-simple-dialogs-sd.diff
--layout-simple-dialogs-sfx2.diff
-+# Disable Binfilter to avoid build breakage in sfx2 module
-+# layout-simple-dialogs-sfx2.diff
- layout-simple-dialogs-solenv.diff
- layout-simple-dialogs-starmath.diff
- layout-simple-dialogs-svx.diff
-@@ -2591,7 +2595,7 @@
+@@ -2591,7 +2594,7 @@
  
  [ Fixes <= dev300-m30 <= ooo300-m3 ]
  win32-mergemodule-pm-m30.diff, i#93065, tml
