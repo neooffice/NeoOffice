@@ -665,6 +665,9 @@ ifdef X11_PRODUCT
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#<string>Editor</string>#<string>Viewer</string>#g' "Info.plist" | sed 's#<true/>#<false/>#g' > "../../out" ; mv -f "../../out" "Info.plist"
 endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
+# Integrate the iMediaBrowser framework
+	cd "$(PATCH_INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(IMEDIA_PACKAGE)/build/Debug" ; gnutar cvf - iMediaBrowser.framework/Versions/A/Resources ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ) )
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/Spotlight" ; curl -L "$(NEOLIGHT_MDIMPORTER_URL)" | tar zxvf -
