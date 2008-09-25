@@ -72,7 +72,7 @@ SLOFILES=\
 	$(SLO)$/java_dndcontext.obj \
 	$(SLO)$/java_service.obj
 
-SHL1TARGET= $(TARGET)$(UPD)$(DLLPOSTFIX)
+SHL1TARGET= $(TARGET)$(DLLPOSTFIX)
 
 SHL1STDLIBS= \
 		$(SALLIB)	\
