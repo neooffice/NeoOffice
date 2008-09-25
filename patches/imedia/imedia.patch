@@ -275,10 +275,6 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
 ===================================================================
 --- iMediaBrowse.xcodeproj/project.pbxproj	(revision 647)
 +++ iMediaBrowse.xcodeproj/project.pbxproj	(working copy)
-Index: project.pbxproj
-===================================================================
---- project.pbxproj	(revision 647)
-+++ project.pbxproj	(working copy)
 @@ -108,6 +108,11 @@
  		A93A6A770AE77F2B00C77AA4 /* UKFileWatcher.m in Sources */ = {isa = PBXBuildFile; fileRef = A93A6A760AE77F2B00C77AA4 /* UKFileWatcher.m */; };
  		A9FECB070ADA696A00AB3426 /* iMBLibraryOutlineView.h in Headers */ = {isa = PBXBuildFile; fileRef = A9FECB050ADA696A00AB3426 /* iMBLibraryOutlineView.h */; };
