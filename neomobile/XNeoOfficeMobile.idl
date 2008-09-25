@@ -45,6 +45,9 @@ module neooffice
 		boolean showNeoOfficeMobile( );
 		boolean setPropertyValue( [in] string key, [in] string value );
 		string getPropertyValue( [in] string key );
+		boolean saveAsPDF( [in] string url );
+		boolean saveAsHTML( [in] string url );
+		boolean saveAsOpenDocument( [in] string url );
 	};
 	
 	service NeoOfficeMobile

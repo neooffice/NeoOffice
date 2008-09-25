@@ -92,6 +92,7 @@
 #include <com/sun/star/task/XJob.hpp>
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/document/XDocumentInfoSupplier.hpp>
+#include <com/sun/star/frame/XStorable.hpp>
 
 #include "premac.h"
 #import <Carbon/Carbon.h>
@@ -150,6 +151,15 @@ public:
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
 		SAL_CALL getPropertyValue( const rtl::OUString& key ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL saveAsPDF( const rtl::OUString& url ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL saveAsHTML( const rtl::OUString& url ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL saveAsOpenDocument( const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
 };
 
@@ -439,4 +449,145 @@ static NeoMobileWebView *pSharedWebView = nil;
 		}
 		
 	return(OUString::createFromAscii(""));
+}
+
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsPDF( const rtl::OUString& url ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		Sequence< PropertyValue > lProperties(2);
+		
+		lProperties[0].Name=OUString::createFromAscii("FilterName");
+		
+		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("writer_pdf_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("calc_pdf_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.drawing.DrawingDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("draw_pdf_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("impress_pdf_Export");
+		else
+			return(false);
+		
+		lProperties[1].Name=OUString::createFromAscii("Overwrite");
+		lProperties[1].Value <<= (::sal_Bool)true;
+		
+		Reference< XStorable > xStore(rModel, UNO_QUERY);
+		xStore->storeToURL(url, lProperties);
+		
+		return(true);
+	}
+	catch (...)
+	{
+	}
+
+	return(false);
+}
+
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsHTML( const rtl::OUString& url ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		Sequence< PropertyValue > lProperties(2);
+		
+		lProperties[0].Name=OUString::createFromAscii("FilterName");
+		
+		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("HTML (StarWriter)");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("HTML (StarCalc)");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.drawing.DrawingDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("draw_html_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("impress_html_Export");
+		else
+			return(false);
+		
+		lProperties[1].Name=OUString::createFromAscii("Overwrite");
+		lProperties[1].Value <<= (::sal_Bool)true;
+		
+		Reference< XStorable > xStore(rModel, UNO_QUERY);
+		xStore->storeToURL(url, lProperties);
+		
+		return(true);
+	}
+	catch (...)
+	{
+	}
+
+	return(false);
+}
+
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsOpenDocument( const rtl::OUString& url ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		Sequence< PropertyValue > lProperties(2);
+		
+		lProperties[0].Name=OUString::createFromAscii("FilterName");
+		
+		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("writer8");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("calc8");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.drawing.DrawingDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("draw8");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("impress8");
+		else
+			return(false);
+		
+		lProperties[1].Name=OUString::createFromAscii("Overwrite");
+		lProperties[1].Value <<= (::sal_Bool)true;
+		
+		Reference< XStorable > xStore(rModel, UNO_QUERY);
+		xStore->storeToURL(url, lProperties);
+		
+		return(true);
+	}
+	catch (...)
+	{
+	}
+
+	return(false);
 }
