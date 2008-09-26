@@ -429,11 +429,9 @@ public final class VCLGraphics {
 		// Fix bug 3051 by setting the printer resolution to twips
 		printerResolution = new Dimension(1440, 1440);
 
-		// Set screen resolutions
-		int resolution = Toolkit.getDefaultToolkit().getScreenResolution();
-		if (resolution < VCLScreen.MIN_SCREEN_RESOLUTION)
-			resolution = VCLScreen.MIN_SCREEN_RESOLUTION;
-		screenResolution = new Dimension(resolution, resolution);
+		// Set screen resolutions. Fix bug 3242 by always forcing the screen
+		// resolution to a fixed value.
+		screenResolution = new Dimension(VCLScreen.MIN_SCREEN_RESOLUTION, VCLScreen.MIN_SCREEN_RESOLUTION);
 
 		// Set the method references
 		try {
