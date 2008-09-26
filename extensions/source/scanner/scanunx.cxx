@@ -286,7 +286,6 @@ SEQ( ScannerContext ) ScannerManager::getAvailableScanners() throw()
 BOOL ScannerManager::configureScanner( ScannerContext& scanner_context ) throw( ScannerException )
 {
 #ifdef USE_JAVA
-fprintf( stderr, "Here 0\n" );
 	return TRUE;
 #else	// USE_JAVA
 	vos::OGuard aGuard( aSaneProtector );
@@ -325,7 +324,6 @@ void ScannerManager::startScan( const ScannerContext& scanner_context,
 								const REF( com::sun::star::lang::XEventListener )& listener ) throw( ScannerException )
 {
 #ifdef USE_JAVA
-fprintf( stderr, "Here 1\n" );
 	uno::Reference< lang::XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
 
 	// Invoke the ImageCapture UNO component's BASIC script
