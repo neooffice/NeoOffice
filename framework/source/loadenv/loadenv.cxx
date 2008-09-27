@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified April 2008 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified April 2008 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -38,26 +31,17 @@
 #include "precompiled_framework.hxx"
 //_______________________________________________
 // includes of own project
-
-#ifndef __FRAMEWORK_LOADENV_LOADENV_HXX_
 #include <loadenv/loadenv.hxx>
-#endif
 
 #ifndef __FRAMEWORK_LOADENV_TARGETHELPER_HXX_
 #include <loadenv/targethelper.hxx>
 #endif
-
-#ifndef __FRAMEWORK_CLASSES_FRAMELISTANALYZER_HXX_
 #include <classes/framelistanalyzer.hxx>
-#endif
 
 #ifndef __FRAMEWORK_CONSTANT_FILTER_HXX_
 #include <constant/filter.hxx>
 #endif
-
-#ifndef __FRAMEWORK_DISPATCH_INTERACTION_HXX_
 #include <dispatch/interaction.hxx>
-#endif
 
 #ifndef __FRAMEWORK_CONSTANT_FRAMELOADER_HXX_
 #include <constant/frameloader.hxx>
@@ -70,200 +54,62 @@
 #ifndef __FRAMEWORK_CONSTANT_CONTAINERQUERY_HXX_
 #include <constant/containerquery.hxx>
 #endif
-
-#ifndef __FRAMEWORK_INTERACTION_STILLINTERACTION_HXX_
 #include <interaction/stillinteraction.hxx>
-#endif
-
-#ifndef __FRAMEWORK_THREADHELP_WRITEGUARD_HXX_
 #include <threadhelp/writeguard.hxx>
-#endif
-
-#ifndef __FRAMEWORK_THREADHELP_READGUARD_HXX_
 #include <threadhelp/readguard.hxx>
-#endif
-
-#ifndef __FRAMEWORK_THREADHELP_RESETABLEGUARD_HXX_
 #include <threadhelp/resetableguard.hxx>
-#endif
-
-#ifndef __FRAMEWORK_PROPERTIES_H_
 #include <properties.h>
-#endif
-
-#ifndef __FRAMEWORK_PROTOCOLS_H_
 #include <protocols.h>
-#endif
-
-#ifndef __FRAMEWORK_SERVICES_H_
 #include <services.h>
-#endif
-
-#ifndef __FRAMEWORK_DISPATCH_INTERACTION_HXX_
 #include <dispatch/interaction.hxx>
-#endif
 
 //_______________________________________________
 // includes of uno interface
-
-#ifndef _COM_SUN_STAR_TASK_ERRORCODEREQUEST_HPP_
 #include <com/sun/star/task/ErrorCodeRequest.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UNO_RUNTIMEEXCEPTION_HPP_
 #include <com/sun/star/uno/RuntimeException.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_DISPATCHRESULTSTATE_HPP_
 #include <com/sun/star/frame/DispatchResultState.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_FRAMESEARCHFLAG_HPP_
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XURLTRANSFORMER_HPP_
 #include <com/sun/star/util/XURLTransformer.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UCB_XCONTENTPROVIDERMANAGER_HPP_
 #include <com/sun/star/ucb/XContentProviderManager.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XCLOSEABLE_HPP_
 #include <com/sun/star/util/XCloseable.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_LANG_XCOMPONENT_HPP_
 #include <com/sun/star/lang/XComponent.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XWINDOW_HPP_
 #include <com/sun/star/awt/XWindow.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XWINDOW2_HPP_
 #include <com/sun/star/awt/XWindow2.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XTOPWINDOW_HPP_
 #include <com/sun/star/awt/XTopWindow.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XMODEL_HPP_
 #include <com/sun/star/frame/XModel.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XFRAMELOADER_HPP_
 #include <com/sun/star/frame/XFrameLoader.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XSYNCHRONOUSFRAMELOADER_HPP_
 #include <com/sun/star/frame/XSynchronousFrameLoader.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XNOTIFYINGDISPATCH_HPP_
 #include <com/sun/star/frame/XNotifyingDispatch.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_TASK_XSTATUSINDICATORFACTORY_HPP_
 #include <com/sun/star/task/XStatusIndicatorFactory.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_TASK_XSTATUSINDICATOR_HPP_
 #include <com/sun/star/task/XStatusIndicator.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XMODIFIABLE_HPP_
 #include <com/sun/star/util/XModifiable.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XDISPATCHPROVIDER_HPP_
 #include <com/sun/star/frame/XDispatchProvider.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_DOCUMENT_XTYPEDETECTION_HPP_
 #include <com/sun/star/document/XTypeDetection.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_DOCUMENT_XACTIONLOCKABLE_HPP_
 #include <com/sun/star/document/XActionLockable.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_IO_XINPUTSTREAM_HPP_
 #include <com/sun/star/io/XInputStream.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_TASK_XINTERACTIONHANDLER_HPP_
 #include <com/sun/star/task/XInteractionHandler.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_CONTAINER_XNAMEACCESS_HPP_
 #include <com/sun/star/container/XNameAccess.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_CONTAINER_XCONTAINERQUERY_HPP_
 #include <com/sun/star/container/XContainerQuery.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_CONTAINER_XENUMERATION_HPP_
 #include <com/sun/star/container/XEnumeration.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_DOCUMENT_MACROEXECMODE_HPP_
 #include <com/sun/star/document/MacroExecMode.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_DOCUMENT_UPDATEDOCMODE_HPP_
 #include <com/sun/star/document/UpdateDocMode.hpp>
-#endif
 
 //_______________________________________________
 // includes of an other project
-
-#ifndef _SV_WINDOW_HXX
 #include <vcl/window.hxx>
-#endif
-
-#ifndef _SV_WRKWIN_HXX
 #include <vcl/wrkwin.hxx>
-#endif
-
-#ifndef _SV_SYSWIN_HXX
 #include <vcl/syswin.hxx>
-#endif
 
 #ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/unohlp.hxx>
 #endif
-
-#ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
-#endif
-
-#ifndef _SFXECODE_HXX
 #include <svtools/sfxecode.hxx>
-#endif
-
-#ifndef _UNOTOOLS_PROCESSFACTORY_HXX_
 #include <unotools/processfactory.hxx>
-#endif
-
-#ifndef _COMPHELPER_CONFIGURATIONHELPER_HXX_
 #include <comphelper/configurationhelper.hxx>
-#endif
-
-#ifndef _RTL_USTRBUF_HXX_
 #include <rtl/ustrbuf.hxx>
-#endif
-
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
 
 //_______________________________________________
 // namespace
@@ -389,6 +235,24 @@ css::uno::Reference< css::lang::XComponent > LoadEnv::loadComponentFromURL(const
     return xComponent;
 }
 
+//-----------------------------------------------
+::comphelper::MediaDescriptor impl_mergeMediaDescriptorWithMightExistingModelArgs(const css::uno::Sequence< css::beans::PropertyValue >& lOutsideDescriptor)
+{
+    ::comphelper::MediaDescriptor lDescriptor(lOutsideDescriptor);
+    css::uno::Reference< css::frame::XModel > xModel     = lDescriptor.getUnpackedValueOrDefault(
+                                                            ::comphelper::MediaDescriptor::PROP_MODEL (),
+                                                            css::uno::Reference< css::frame::XModel > ());
+    if (xModel.is ())
+    {
+        ::comphelper::MediaDescriptor lModelDescriptor(xModel->getArgs());
+        ::comphelper::MediaDescriptor::iterator pIt = lModelDescriptor.find( ::comphelper::MediaDescriptor::PROP_MACROEXECUTIONMODE() );
+		if ( pIt != lModelDescriptor.end() )
+			lDescriptor[::comphelper::MediaDescriptor::PROP_MACROEXECUTIONMODE()] = pIt->second;
+    }
+    
+    return lDescriptor;
+}
+
 /*-----------------------------------------------
     20.08.2003 09:49
 -----------------------------------------------*/
@@ -411,7 +275,7 @@ void LoadEnv::initializeLoading(const ::rtl::OUString&                          
     // take over all new parameters.
     m_xTargetFrame.clear();
     m_xBaseFrame                    = xBaseFrame        ;
-    m_lMediaDescriptor              << lMediaDescriptor ;
+    m_lMediaDescriptor              = impl_mergeMediaDescriptorWithMightExistingModelArgs(lMediaDescriptor);
     m_sTarget                       = sTarget           ;
     m_nSearchFlags                  = nSearchFlags      ;
     m_eFeature                      = eFeature          ;
@@ -1456,9 +1320,9 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
     // such search is allowed for special requests only ...
     // or better its not allowed for some requests in general :-)
     if (
-        (!TargetHelper::matchSpecialTarget(m_sTarget, TargetHelper::E_DEFAULT)                                                        ) ||
+        ( ! TargetHelper::matchSpecialTarget(m_sTarget, TargetHelper::E_DEFAULT)                                               ) ||
         (m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_ASTEMPLATE() , sal_False) == sal_True) ||
-        (m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_HIDDEN()     , sal_False) == sal_True) ||
+//      (m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_HIDDEN()     , sal_False) == sal_True) ||
         (m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_OPENNEWVIEW(), sal_False) == sal_True)
        )
     {
@@ -1490,6 +1354,12 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
     // document has different versions! Then its URLs are the same ...
     sal_Int16 nNewVersion = m_lMediaDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_VERSION(), (sal_Int16)(-1));
 
+    // will be used to save the first hidden frame referring the searched model
+    // Normaly we are interested on visible frames ... but if there is no such visible
+    // frame we referr to any hidden frame also (but as fallback only).
+    css::uno::Reference< css::frame::XFrame > xHiddenTask;
+    css::uno::Reference< css::frame::XFrame > xTask;
+    
     sal_Int32 count = xTaskList->getCount();
     for (sal_Int32 i=0; i<count; ++i)
     {
@@ -1498,23 +1368,32 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
             // locate model of task
             // Note: Without a model there is no chance to decide if
             // this task contains the searched document or not!
-            css::uno::Reference< css::frame::XFrame > xTask;
             xTaskList->getByIndex(i) >>= xTask;
             if (!xTask.is())
                 continue;
 
             css::uno::Reference< css::frame::XController > xController = xTask->getController();
             if (!xController.is())
+			{
+				xTask.clear ();
                 continue;
+			}
 
             css::uno::Reference< css::frame::XModel > xModel = xController->getModel();
             if (!xModel.is())
+			{
+				xTask.clear ();
                 continue;
+			}
 
             // don't check the complete URL here.
             // use its main part - ignore optional jumpmarks!
-            if (!m_aURL.Main.equals(xModel->getURL()))
+			const ::rtl::OUString sURL = xModel->getURL();
+            if (!m_aURL.Main.equals(sURL))
+			{
+				xTask.clear ();
                 continue;
+			}
 
             // get the original load arguments from the current document
             // and decide if its realy the same then the one will be.
@@ -1523,34 +1402,58 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchAlreadyLoaded()
             ::comphelper::MediaDescriptor lOldDocDescriptor(xModel->getArgs());
 
             if (lOldDocDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_VERSION(), (sal_Int32)(-1)) != nNewVersion)
+			{
+				xTask.clear ();
                 continue;
-
-            if (lOldDocDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_HIDDEN(), sal_False) == sal_True)
+			}
+            
+            // Hidden frames are special.
+            // They will be used as "last chance" if there is no visible frame pointing to the same model.
+            // Safe the result but continue with current loop might be looking for other visible frames.
+            ::sal_Bool bIsHidden = lOldDocDescriptor.getUnpackedValueOrDefault(::comphelper::MediaDescriptor::PROP_HIDDEN(), sal_False);
+            if (
+                (   bIsHidden       ) &&
+                ( ! xHiddenTask.is())
+               )
+            {
+                xHiddenTask = xTask;
+                xTask.clear ();
                 continue;
-
-            // Now we are shure, that this task includes the searched document.
-            // It's time to activate it. As special feature we try to jump internaly
-            // if an optional jumpmark is given too.
-            if (m_aURL.Mark.getLength())
-                impl_jumpToMark(xTask, m_aURL);
-
-            // bring it to front ...
-            impl_makeFrameWindowVisible(xTask->getContainerWindow(), sal_True);
-
-            // It doesn't matter if we was able to bring it to front.
-            // But we have found such task and can return it as our result.
-            return xTask;
+            }
+            
+            // We found a visible task pointing to the right model ...
+            // Break search.
+            break;
         }
-        catch(const css::uno::RuntimeException&)
-            { throw; }
+        catch(const css::uno::RuntimeException& exRun)
+            { throw exRun; }
         catch(const css::uno::Exception&)
             { continue; }
     }
 
+    css::uno::Reference< css::frame::XFrame > xResult;
+    if (xTask.is())
+        xResult = xTask;
+    else
+    if (xHiddenTask.is())
+        xResult = xHiddenTask;
+    
+    if (xResult.is())
+    {
+        // Now we are shure, that this task includes the searched document.
+        // It's time to activate it. As special feature we try to jump internaly
+        // if an optional jumpmark is given too.
+        if (m_aURL.Mark.getLength())
+            impl_jumpToMark(xResult, m_aURL);
+    
+        // bring it to front and make sure it's visible...
+        impl_makeFrameWindowVisible(xResult->getContainerWindow(), sal_True);
+    }
+    
     aReadLock.unlock();
     // <- SAFE
 
-    return css::uno::Reference< css::frame::XFrame >();
+    return xResult;
 }
 
 /*-----------------------------------------------
@@ -1592,7 +1495,11 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
     if (aTasksAnalyzer.m_xBackingComponent.is())
     {
         if (!impl_isFrameAlreadyUsedForLoading(aTasksAnalyzer.m_xBackingComponent))
+        {
+            // bring it to front ...
+            impl_makeFrameWindowVisible(aTasksAnalyzer.m_xBackingComponent->getContainerWindow(), sal_True);
             return aTasksAnalyzer.m_xBackingComponent;
+        }
     }
 #endif	// !USE_JAVA
 
@@ -1695,6 +1602,9 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
     m_bReactivateControllerOnError = bReactivateOldControllerOnError;
     aWriteLock.unlock();
     // <- SAFE ..................................
+    
+    // bring it to front ...
+    impl_makeFrameWindowVisible(xTask->getContainerWindow(), sal_True);
 
     return xTask;
 }

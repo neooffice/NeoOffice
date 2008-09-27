@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified January 2008 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified January 2008 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -40,211 +33,78 @@
 //_________________________________________________________________________________________________________________
 //	my own includes
 //_________________________________________________________________________________________________________________
-
-#ifndef __FRAMEWORK_SERVICES_FRAME_HXX_
 #include <services/frame.hxx>
-#endif
-
-#ifndef __FRAMEWORK_DISPATCH_DISPATCHPROVIDER_HXX_
 #include <dispatch/dispatchprovider.hxx>
-#endif
 
 #ifndef __FRAMEWORK_DISPATCH_INTERCEPTIONHELPER_HXX_
 #include <dispatch/interceptionhelper.hxx>
 #endif
-
-#ifndef __FRAMEWORK_DISPATCH_CLOSEDISPATCHER_HXX_
 #include <dispatch/closedispatcher.hxx>
-#endif
-
-#ifndef __FRAMEWORK_LOADENV_LOADENV_HXX_
+#include <dispatch/windowcommanddispatch.hxx>
 #include <loadenv/loadenv.hxx>
-#endif
-
-#ifndef __FRAMEWORK_HELPER_OFRAMES_HXX_
 #include <helper/oframes.hxx>
-#endif
-
-#ifndef __FRAMEWORK_HELPER_STATUSINDICATORFACTORY_HXX_
 #include <helper/statusindicatorfactory.hxx>
-#endif
-
-#ifndef __FRAMEWORK_CLASSES_TARGETFINDER_HXX_
+#include <helper/titlehelper.hxx>
 #include <classes/targetfinder.hxx>
-#endif
-
-#ifndef __FRAMEWORK_CLASSES_DROPTARGETLISTENER_HXX_
 #include <classes/droptargetlistener.hxx>
-#endif
-
-#ifndef __FRAMEWORK_CLASSES_TASKCREATOR_HXX_
 #include <classes/taskcreator.hxx>
-#endif
-
-#ifndef __FRAMEWORK_CLASSES_FRAMELISTANALYZER_HXX_
+#include <loadenv/targethelper.hxx>
 #include <classes/framelistanalyzer.hxx>
-#endif
-
-#ifndef __FRAMEWORK_HELPER_DOCKINGAREADEFAULTACCEPTOR_HXX_
 #include <helper/dockingareadefaultacceptor.hxx>
-#endif
-
-#ifndef __FRAMEWORK_DISPATCH_DISPATCHINFORMATIONPROVIDER_HXX_
 #include <dispatch/dispatchinformationprovider.hxx>
-#endif
-
-#ifndef __FRAMEWORK_THREADHELP_TRANSACTIONGUARD_HXX_
 #include <threadhelp/transactionguard.hxx>
-#endif
-
-#ifndef __FRAMEWORK_SERVICES_H_
+#include <pattern/window.hxx>
 #include <services.h>
-#endif
-
-#ifndef __FRAMEWORK_PROPERTIES_H_
 #include <properties.h>
-#endif
 
 //_________________________________________________________________________________________________________________
 //	interface includes
 //_________________________________________________________________________________________________________________
-
-#ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
 #include <com/sun/star/lang/XInitialization.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_TASK_XJOBEXECUTOR_HPP_
 #include <com/sun/star/task/XJobExecutor.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XURLTRANSFORMER_HPP_
 #include <com/sun/star/util/XURLTransformer.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XDEVICE_HPP_
+#include <com/sun/star/util/XCloseable.hpp>
 #include <com/sun/star/awt/XDevice.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XTOPWINDOW_HPP_
 #include <com/sun/star/awt/XTopWindow.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HPP_
 #include <com/sun/star/frame/XDesktop.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_POSSIZE_HPP_
 #include <com/sun/star/awt/PosSize.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_FRAMESEARCHFLAG_HPP_
 #include <com/sun/star/frame/FrameSearchFlag.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XWINDOWPEER_HPP_
 #include <com/sun/star/awt/XWindowPeer.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XVCLWINDOWPEER_HPP_
 #include <com/sun/star/awt/XVclWindowPeer.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_TASK_XSTATUSINDICATORSUPPLIER_HPP_
 #include <com/sun/star/task/XStatusIndicatorSupplier.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_PROPERTYATTRIBUTE_HPP_
 #include <com/sun/star/beans/PropertyAttribute.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUE_HPP_
 #include <com/sun/star/beans/PropertyValue.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_XPROPERTYSET_HPP_
 #include <com/sun/star/beans/XPropertySet.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XMODEL_HPP_
 #include <com/sun/star/frame/XModel.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_XDATATRANSFERPROVIDERACCESS_HPP_
 #include <com/sun/star/awt/XDataTransferProviderAccess.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDROPTARGET_HPP_
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_AWT_WINDOWATTRIBUTE_HPP_
 #include <com/sun/star/awt/WindowAttribute.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_CONTAINER_XINDEXACCESS_HPP_
 #include <com/sun/star/container/XIndexAccess.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_XMATERIALHOLDER_HPP_
 #include <com/sun/star/beans/XMaterialHolder.hpp>
-#endif
 
+#ifndef _COM_SUN_STAR_FRAME_XTITLECHANGEBROADCASTER_HPP_
+#include <com/sun/star/frame/XTitleChangeBroadcaster.hpp>
+#endif
 
 //_________________________________________________________________________________________________________________
 //	includes of other projects
 //_________________________________________________________________________________________________________________
-
-#ifndef _COMPHELPER_SEQUENCEASHASHMAP_HXX_
 #include <comphelper/sequenceashashmap.hxx>
-#endif
-
-#ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx>
-#endif
-
-#ifndef _CPPUHELPER_TYPEPROVIDER_HXX_
 #include <cppuhelper/typeprovider.hxx>
-#endif
-
-#ifndef _CPPUHELPER_FACTORY_HXX_
 #include <cppuhelper/factory.hxx>
-#endif
-
-#ifndef _CPPUHELPER_PROPTYPEHLP_HXX
 #include <cppuhelper/proptypehlp.hxx>
-#endif
-
-#ifndef _RTL_USTRBUF_HXX_
 #include <rtl/ustrbuf.hxx>
-#endif
-
-#ifndef _SV_WINDOW_HXX
 #include <vcl/window.hxx>
-#endif
-
-#ifndef _SV_WRKWIN_HXX
 #include <vcl/wrkwin.hxx>
-#endif
-
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
 
 #ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/unohlp.hxx>
 #endif
-
-#ifndef _TOOLKIT_AWT_VCLXWINDOW_HXX_
 #include <toolkit/awt/vclxwindow.hxx>
-#endif
-
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
-
-#ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
-#endif
 
 #ifdef ENABLE_ASSERTIONS
 	#ifndef _RTL_STRBUF_HXX_
@@ -260,20 +120,7 @@
 #include <services/backingcomp.hxx>
 #endif
 
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
-
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
-
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
-
-static ::vos::OModule aModule;
 
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
@@ -302,7 +149,7 @@ css::uno::WeakReference< css::frame::XFrame > Frame::m_xCloserFrame = css::uno::
 //*****************************************************************************************************************
 //	XInterface, XTypeProvider, XServiceInfo
 //*****************************************************************************************************************
-DEFINE_XINTERFACE_19                (   Frame                                                                   ,
+DEFINE_XINTERFACE_21                (   Frame                                                                   ,
 										OWeakObject																,
 										DIRECT_INTERFACE(css::lang::XTypeProvider								),
 										DIRECT_INTERFACE(css::lang::XServiceInfo								),
@@ -322,10 +169,12 @@ DEFINE_XINTERFACE_19                (   Frame                                   
                                         DIRECT_INTERFACE(css::document::XActionLockable                         ),
                                         DIRECT_INTERFACE(css::util::XCloseable                                  ),
                                         DIRECT_INTERFACE(css::util::XCloseBroadcaster                           ),
-                                        DIRECT_INTERFACE(css::frame::XComponentLoader                           )
+                                        DIRECT_INTERFACE(css::frame::XComponentLoader                           ),
+                                        DIRECT_INTERFACE(css::frame::XTitle                                     ),
+                                        DIRECT_INTERFACE(css::frame::XTitleChangeBroadcaster                    )
 									)
 
-DEFINE_XTYPEPROVIDER_18             (   Frame                                                                   ,
+DEFINE_XTYPEPROVIDER_20             (   Frame                                                                   ,
 										css::lang::XTypeProvider												,
 										css::lang::XServiceInfo													,
 										css::frame::XFramesSupplier												,
@@ -343,7 +192,9 @@ DEFINE_XTYPEPROVIDER_18             (   Frame                                   
                                         css::lang::XEventListener                                               ,
                                         css::util::XCloseable                                                   ,
                                         css::util::XCloseBroadcaster                                            ,
-                                        css::frame::XComponentLoader
+                                        css::frame::XComponentLoader                                            ,
+                                        css::frame::XTitle                                                      ,
+                                        css::frame::XTitleChangeBroadcaster
 									)
 
 DEFINE_XSERVICEINFO_MULTISERVICE	(	Frame																	,
@@ -359,6 +210,7 @@ DEFINE_INIT_SERVICE                 (   Frame,
                                                 to create a new instance of this class by our own supported service factory.
                                                 see macro DEFINE_XSERVICEINFO_MULTISERVICE and "impl_initService()" for further informations!
                                             */
+                                            css::uno::Reference< css::uno::XInterface > xThis(static_cast< ::cppu::OWeakObject* >(this), css::uno::UNO_QUERY_THROW);
 
                                             //-------------------------------------------------------------------------------------------------------------
                                             // Initialize a new dispatchhelper-object to handle dispatches.
@@ -458,6 +310,7 @@ Frame::Frame( const css::uno::Reference< css::lang::XMultiServiceFactory >& xFac
         ,   m_nExternalLockCount        ( 0                                                 )
         ,   m_bSelfClose                ( sal_False                                         ) // Important!
         ,   m_bIsHidden                 ( sal_True                                          )
+        ,   m_xTitleHelper              (                                                   )
         ,   m_aChildFrameContainer      (                                                   )
 {
     // Check incoming parameter to avoid against wrong initialization.
@@ -609,7 +462,7 @@ void SAL_CALL Frame::setActiveFrame( const css::uno::Reference< css::frame::XFra
     // m_aChildFrameContainer is threadsafe himself and he live if we live!!!
     // ...and our transaction is non breakable too ...
     css::uno::Reference< css::frame::XFrame > xActiveChild = m_aChildFrameContainer.getActive();
-    EActiveState                              eActiveState = m_eActiveState                    ;
+    EActiveState                              eActiveState = m_eActiveState             ;
 
     aWriteLock.unlock();
     /* UNSAFE AREA --------------------------------------------------------------------------------------------- */
@@ -663,6 +516,35 @@ void SAL_CALL Frame::setActiveFrame( const css::uno::Reference< css::frame::XFra
         aWriteLock.unlock();
         implts_sendFrameActionEvent( css::frame::FrameAction_FRAME_UI_ACTIVATED );
     }
+}
+
+/*-****************************************************************************************************//**
+   initialize new created layout manager
+**/
+void lcl_enableLayoutManager(const css::uno::Reference< css::frame::XLayoutManager >& xLayoutManager,
+                             const css::uno::Reference< css::frame::XFrame >&         xFrame        )
+{
+    // Provide container window to our layout manager implementation
+    xLayoutManager->attachFrame(xFrame);
+
+    css::uno::Reference< css::frame::XFrameActionListener > xListen(xLayoutManager, css::uno::UNO_QUERY_THROW);
+    xFrame->addFrameActionListener(xListen);
+
+    DockingAreaDefaultAcceptor* pAcceptor = new DockingAreaDefaultAcceptor(xFrame);
+    css::uno::Reference< css::ui::XDockingAreaAcceptor > xDockingAreaAcceptor( static_cast< ::cppu::OWeakObject* >(pAcceptor), css::uno::UNO_QUERY_THROW);
+    xLayoutManager->setDockingAreaAcceptor(xDockingAreaAcceptor);
+}
+
+/*-****************************************************************************************************//**
+   deinitialize layout manager
+**/
+void lcl_disableLayoutManager(const css::uno::Reference< css::frame::XLayoutManager >& xLayoutManager,
+                              const css::uno::Reference< css::frame::XFrame >&         xFrame        )
+{
+    css::uno::Reference< css::frame::XFrameActionListener > xListen(xLayoutManager, css::uno::UNO_QUERY_THROW);
+    xFrame->removeFrameActionListener(xListen);
+    xLayoutManager->setDockingAreaAcceptor(css::uno::Reference< css::ui::XDockingAreaAcceptor >());
+    xLayoutManager->attachFrame(css::uno::Reference< css::frame::XFrame >());
 }
 
 /*-****************************************************************************************************//**
@@ -722,14 +604,7 @@ void SAL_CALL Frame::initialize( const css::uno::Reference< css::awt::XWindow >&
 	/* UNSAFE AREA --------------------------------------------------------------------------------------------- */
 
     if (xLayoutManager.is())
-    {
-        // Provide container window to our layout manager implementation
-        xLayoutManager->attachFrame(this);
-        addFrameActionListener(css::uno::Reference< css::frame::XFrameActionListener >(xLayoutManager, css::uno::UNO_QUERY));
-        DockingAreaDefaultAcceptor* pAcceptor = new DockingAreaDefaultAcceptor(this);
-        css::uno::Reference< css::ui::XDockingAreaAcceptor > xDockingAreaAcceptor( static_cast< ::cppu::OWeakObject* >(pAcceptor), css::uno::UNO_QUERY );
-        xLayoutManager->setDockingAreaAcceptor(xDockingAreaAcceptor);
-    }
+        lcl_enableLayoutManager(xLayoutManager, this);
 
     // create progress helper
     css::uno::Reference< css::frame::XFrame >                 xThis            (static_cast< css::frame::XFrame* >(this)                        , css::uno::UNO_QUERY_THROW);
@@ -756,6 +631,14 @@ void SAL_CALL Frame::initialize( const css::uno::Reference< css::awt::XWindow >&
     implts_startWindowListening();
 
     impl_enablePropertySet();
+    
+    // create WindowCommandDispatch; it is supposed to release itself at frame destruction
+    (void)new WindowCommandDispatch(xSMGR, this);
+
+    // Initialize title functionality
+    TitleHelper* pTitleHelper = new TitleHelper(xSMGR);
+    m_xTitleHelper = css::uno::Reference< css::frame::XTitle >(static_cast< ::cppu::OWeakObject* >(pTitleHelper), css::uno::UNO_QUERY_THROW);
+    pTitleHelper->setOwner(xThis);
 }
 
 /*-****************************************************************************************************//**
@@ -878,7 +761,7 @@ void SAL_CALL Frame::setName( const ::rtl::OUString& sName ) throw( css::uno::Ru
     WriteGuard aWriteLock( m_aLock );
     // Set new name ... but look for invalid special target names!
     // They are not allowed to set.
-    if (TargetCheck::isValidFrameName(sName))
+    if (TargetHelper::isValidNameForFrame(sName))
         m_sName = sName;
 	aWriteLock.unlock();
 	/* } SAFE */
@@ -939,9 +822,10 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Frame::findFrame( const ::rtl
     // get threadsafe some neccessary member which are neccessary for following functionality
     /* SAFE { */
     ReadGuard aReadLock( m_aLock );
-    css::uno::Reference< css::frame::XFrame >              xParent  ( m_xParent, css::uno::UNO_QUERY );
-    css::uno::Reference< css::lang::XMultiServiceFactory > xFactory = m_xFactory;
-    sal_Bool                                               bIsTop   = m_bIsFrameTop;
+    css::uno::Reference< css::frame::XFrame >              xParent      ( m_xParent, css::uno::UNO_QUERY );
+    css::uno::Reference< css::lang::XMultiServiceFactory > xFactory     = m_xFactory;
+    sal_Bool                                               bIsTopFrame  = m_bIsFrameTop;
+    sal_Bool                                               bIsTopWindow = WindowHelper::isTopWindow(m_xContainerWindow);
     aReadLock.unlock();
     /* } SAFE */
 
@@ -975,7 +859,7 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Frame::findFrame( const ::rtl
     else
     if ( sTargetFrameName==SPECIALTARGET_TOP )
     {
-        if (bIsTop)
+        if (bIsTopFrame)
             xTarget = this;
         else
         if (xParent.is()) // If we are not top - the parent MUST exist. But may it's better to check it again .-)
@@ -1005,7 +889,7 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Frame::findFrame( const ::rtl
     if ( sTargetFrameName==SPECIALTARGET_BEAMER )
     {
         // We are a task => search or create the beamer
-        if (bIsTop)
+        if (bIsTopWindow)
         {
             xTarget = m_aChildFrameContainer.searchOnDirectChildrens(SPECIALTARGET_BEAMER);
             if ( ! xTarget.is() )
@@ -1076,8 +960,8 @@ css::uno::Reference< css::frame::XFrame > SAL_CALL Frame::findFrame( const ::rtl
         //  or we can ignore it if we have no valid parent.
         //-------------------------------------------------------------------------------------------------
         if (
-            ( bIsTop && (nSearchFlags & css::frame::FrameSearchFlag::TASKS) )   ||
-            ( !bIsTop                                                       )
+            (   bIsTopFrame && (nSearchFlags & css::frame::FrameSearchFlag::TASKS) )   ||
+            ( ! bIsTopFrame                                                        )
            )
         {
             //-------------------------------------------------------------------------------------------------
@@ -1235,7 +1119,7 @@ void SAL_CALL Frame::activate() throw( css::uno::RuntimeException )
     // he is threadsafe himself and live if we live.
     // We use a registered transaction to prevent us against
     // breaks during this operation!
-    css::uno::Reference< css::frame::XFrame >           xActiveChild    = m_aChildFrameContainer.getActive()                              ;
+    css::uno::Reference< css::frame::XFrame >           xActiveChild    = m_aChildFrameContainer.getActive()                                ;
     css::uno::Reference< css::frame::XFramesSupplier >  xParent         ( m_xParent, css::uno::UNO_QUERY )                                ;
     css::uno::Reference< css::frame::XFrame >           xThis           ( static_cast< ::cppu::OWeakObject* >(this), css::uno::UNO_QUERY );
     css::uno::Reference< css::awt::XWindow >            xComponentWindow( m_xComponentWindow, css::uno::UNO_QUERY )                       ;
@@ -1331,7 +1215,7 @@ void SAL_CALL Frame::deactivate() throw( css::uno::RuntimeException )
     WriteGuard aWriteLock( m_aLock );
 
     // Copy neccessary member and free the lock.
-    css::uno::Reference< css::frame::XFrame >           xActiveChild    = m_aChildFrameContainer.getActive()                              ;
+    css::uno::Reference< css::frame::XFrame >           xActiveChild    = m_aChildFrameContainer.getActive()                                     ;
     css::uno::Reference< css::frame::XFramesSupplier >  xParent         ( m_xParent, css::uno::UNO_QUERY )                                ;
     css::uno::Reference< css::frame::XFrame >           xThis           ( static_cast< ::cppu::OWeakObject* >(this), css::uno::UNO_QUERY );
     EActiveState                                        eState          = m_eActiveState                                                  ;
@@ -1593,7 +1477,6 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
     if ( !pShowOnlyMenusForWindow )
     {
         ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
         aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
         aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
         if ( aModule.load( aLibName ) )
@@ -1896,6 +1779,102 @@ void SAL_CALL Frame::removeCloseListener( const css::uno::Reference< css::util::
     m_aListenerContainer.removeInterface( ::getCppuType( ( const css::uno::Reference< css::util::XCloseListener >* ) NULL ), xListener );
 }
 
+//*****************************************************************************************************************
+::rtl::OUString SAL_CALL Frame::getTitle()
+    throw (css::uno::RuntimeException)
+{
+    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
+
+	// SAFE ->
+	ReadGuard aReadLock(m_aLock);
+	css::uno::Reference< css::frame::XTitle > xTitle(m_xTitleHelper, css::uno::UNO_QUERY_THROW);
+	aReadLock.unlock();
+	// <- SAFE
+
+    return xTitle->getTitle();
+}
+
+//*****************************************************************************************************************
+void SAL_CALL Frame::setTitle( const ::rtl::OUString& sTitle )
+    throw (css::uno::RuntimeException)
+{
+    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
+
+	// SAFE ->
+	ReadGuard aReadLock(m_aLock);
+	css::uno::Reference< css::frame::XTitle > xTitle(m_xTitleHelper, css::uno::UNO_QUERY_THROW);
+	aReadLock.unlock();
+	// <- SAFE
+
+    xTitle->setTitle(sTitle);
+}
+
+//*****************************************************************************************************************
+void SAL_CALL Frame::addTitleChangeListener( const css::uno::Reference< css::frame::XTitleChangeListener >& xListener)
+    throw (css::uno::RuntimeException)
+{
+    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
+
+	// SAFE ->
+	ReadGuard aReadLock(m_aLock);
+	css::uno::Reference< css::frame::XTitleChangeBroadcaster > xTitle(m_xTitleHelper, css::uno::UNO_QUERY_THROW);
+	aReadLock.unlock();
+	// <- SAFE
+
+    xTitle->addTitleChangeListener(xListener);
+}
+
+//*****************************************************************************************************************
+void SAL_CALL Frame::removeTitleChangeListener( const css::uno::Reference< css::frame::XTitleChangeListener >& xListener )
+    throw (css::uno::RuntimeException)
+{
+    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
+
+	// SAFE ->
+	ReadGuard aReadLock(m_aLock);
+	css::uno::Reference< css::frame::XTitleChangeBroadcaster > xTitle(m_xTitleHelper, css::uno::UNO_QUERY_THROW);
+	aReadLock.unlock();
+	// <- SAFE
+
+    xTitle->removeTitleChangeListener(xListener);
+}
+
+/*-****************************************************************************************************/
+void Frame::implts_forgetSubFrames()
+{
+	// SAFE ->
+	ReadGuard aReadLock(m_aLock);
+	css::uno::Reference< css::container::XIndexAccess > xContainer(m_xFramesHelper, css::uno::UNO_QUERY_THROW);
+	aReadLock.unlock();
+	// <- SAFE
+
+	sal_Int32 c = xContainer->getCount();
+	sal_Int32 i = 0;
+
+	for (i=0; i<c; ++i)
+	{
+		try
+		{
+			css::uno::Reference< css::frame::XFrame > xFrame;
+			xContainer->getByIndex(i) >>= xFrame;
+			if (xFrame.is())
+				xFrame->setCreator(css::uno::Reference< css::frame::XFramesSupplier >());
+		}
+		catch(const css::uno::Exception&)
+		{
+			// Ignore errors here.
+			// Nobody can guarantee a stable index in multi threaded environments .-)
+		}
+	}
+
+	// SAFE ->
+	WriteGuard aWriteLock(m_aLock);
+    m_xFramesHelper.clear(); // clear uno reference
+    m_aChildFrameContainer.clear(); // clear container content
+	aWriteLock.unlock();
+	// <- SAFE
+}
+
 /*-****************************************************************************************************//**
 	@short		destroy instance
 	@descr		The owner of this object calles the dispose method if the object
@@ -2009,8 +1988,7 @@ void SAL_CALL Frame::dispose() throw( css::uno::RuntimeException )
         Otherwise we get a null reference and could finish removing successfuly.
         => You see: Order of calling operations is important!!!
      */
-    m_aChildFrameContainer.clear();
-    m_xFramesHelper.clear();
+	implts_forgetSubFrames();
 
     // Release some other references.
     // This calls should be easy ... I hope it :-)
@@ -2356,7 +2334,7 @@ aEvent
     // Look for rejected calls.
     // Sometimes called during dispose() => soft exceptions
     TransactionGuard aTransaction( m_aTransactionManager, E_SOFTEXCEPTIONS );
-
+	
 	/* SAFE AREA ----------------------------------------------------------------------------------------------- */
     ReadGuard aReadLock( m_aLock );
 
@@ -2437,7 +2415,7 @@ void SAL_CALL Frame::windowClosing( const css::lang::EventObject& ) throw( css::
     css::uno::Reference< css::util::XURLTransformer > xParser(xFactory->createInstance(SERVICENAME_URLTRANSFORMER), css::uno::UNO_QUERY_THROW);
     xParser->parseStrict(aURL);
 
-    css::uno::Reference< css::frame::XDispatch > xCloser = queryDispatch(aURL, SPECIALTARGET_TOP, 0);
+    css::uno::Reference< css::frame::XDispatch > xCloser = queryDispatch(aURL, SPECIALTARGET_SELF, 0);
     if (xCloser.is())
         xCloser->dispatch(aURL, css::uno::Sequence< css::beans::PropertyValue >());
 
@@ -2696,27 +2674,9 @@ void SAL_CALL Frame::impl_setPropertyValue(const ::rtl::OUString& /*sProperty*/,
 	{
         case FRAME_PROPHANDLE_TITLE :
                 {
-                    ::rtl::OUStringBuffer sCompleteTitle(256);
-
-                    ::rtl::OUString sDocName;
-                    aValue >>= sDocName;
-
-                    rtl::OUString sTabString;
-                    css::uno::Reference< css::beans::XMaterialHolder > xHolder(m_xSMGR->createInstance(SERVICENAME_TABREG), css::uno::UNO_QUERY);
-                    if (xHolder.is())
-                    {
-                        ::comphelper::SequenceAsHashMap lMaterial(xHolder->getMaterial());
-                        sTabString = lMaterial.getUnpackedValueOrDefault(MATERIALPROP_TITLE, ::rtl::OUString());
-                    }
-
-                    sCompleteTitle.append(sDocName);
-                    if (sTabString.getLength())
-                    {
-                        sCompleteTitle.appendAscii(" "       );
-                        sCompleteTitle.append     (sTabString);
-                    }
-
-                    implts_setTitleOnWindow(sCompleteTitle.makeStringAndClear());
+                    ::rtl::OUString sExternalTitle;
+                    aValue >>= sExternalTitle;
+					setTitle (sExternalTitle);
                 }
                 break;
 
@@ -2725,7 +2685,20 @@ void SAL_CALL Frame::impl_setPropertyValue(const ::rtl::OUString& /*sProperty*/,
                 break;
 
         case FRAME_PROPHANDLE_LAYOUTMANAGER :
-                aValue >>= m_xLayoutManager;
+                {
+                    css::uno::Reference< css::frame::XLayoutManager > xOldLayoutManager = m_xLayoutManager;
+                    css::uno::Reference< css::frame::XLayoutManager > xNewLayoutManager;
+                    aValue >>= xNewLayoutManager;
+                
+                    if (xOldLayoutManager != xNewLayoutManager)
+                    {
+                        m_xLayoutManager = xNewLayoutManager;
+                        if (xOldLayoutManager.is())
+                            lcl_disableLayoutManager(xOldLayoutManager, this);
+                        if (xNewLayoutManager.is())
+                            lcl_enableLayoutManager(xNewLayoutManager, this);
+                    }
+                }
                 break;
 
         case FRAME_PROPHANDLE_INDICATORINTERCEPTION :
@@ -2761,7 +2734,8 @@ css::uno::Any SAL_CALL Frame::impl_getPropertyValue(const ::rtl::OUString& /*sPr
 	switch (nHandle)
 	{
         case FRAME_PROPHANDLE_TITLE :
-                aValue <<= implts_getTitleFromWindow();
+                //aValue <<= implts_getTitleFromWindow();
+				aValue <<= getTitle ();
                 break;
 
         case FRAME_PROPHANDLE_DISPATCHRECORDERSUPPLIER :

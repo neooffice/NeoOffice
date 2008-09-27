@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,56 +32,34 @@
 
 //_______________________________________________
 // my own includes
-
-#ifndef __FRAMEWORK_DISPATCH_CLOSEDISPATCHER_HXX_
 #include <dispatch/closedispatcher.hxx>
-#endif
-
-#ifndef __FRAMEWORK_PATTERN_FRAME_HXX_
 #include <pattern/frame.hxx>
-#endif
-
-#ifndef __FRAMEWORK_THREADHELP_READGUARD_HXX_
 #include <threadhelp/readguard.hxx>
-#endif
-
-#ifndef __FRAMEWORK_THREADHELP_WRITEGUARD_HXX_
 #include <threadhelp/writeguard.hxx>
-#endif
-
-#ifndef __FRAMEWORK_CLASSES_FRAMELISTANALYZER_HXX_
 #include <classes/framelistanalyzer.hxx>
-#endif
-
-#ifndef __FRAMEWORK_SERVICES_H_
 #include <services.h>
-#endif
-
-#ifndef __FRAMEWORK_GENERAL_H_
 #include <general.h>
-#endif
 
 //_______________________________________________
 // interface includes
-
-#ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HPP_
 #include <com/sun/star/frame/XDesktop.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XCONTROLLER_HPP_
 #include <com/sun/star/frame/XController.hpp>
+#include <com/sun/star/frame/CommandGroup.hpp>
+
+#ifndef __COM_SUN_STAR_AWT_XTOPWINDOW_HPP_
+#include <com/sun/star/awt/XTopWindow.hpp>
 #endif
 
-#ifndef _COM_SUN_STAR_FRAME_COMMANDGROUP_HPP_
-#include <com/sun/star/frame/CommandGroup.hpp>
-#endif
+#include "com/sun/star/beans/XFastPropertySet.hpp"
+#include <toolkit/helper/vclunohelper.hxx>
 
 //_______________________________________________
 // includes of other projects
 
-#ifndef _SV_SVAPP_HXX
+#include <vcl/window.hxx>
 #include <vcl/svapp.hxx>
-#endif
+#include <vos/mutex.hxx>
+#include <svtools/moduleoptions.hxx>
 
 //_______________________________________________
 // namespace
@@ -125,15 +96,16 @@ DEFINE_XTYPEPROVIDER_4(CloseDispatcher                         ,
                        css::frame::XDispatch                   )
 
 //-----------------------------------------------
-CloseDispatcher::CloseDispatcher(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR      ,
-                                 const css::uno::Reference< css::frame::XFrame >&              xCloseFrame)
+CloseDispatcher::CloseDispatcher(const css::uno::Reference< css::lang::XMultiServiceFactory >& xSMGR  ,
+                                 const css::uno::Reference< css::frame::XFrame >&              xFrame ,
+                                 const ::rtl::OUString&                                        sTarget)
     : ThreadHelpBase     (&Application::GetSolarMutex()                   )
     , ::cppu::OWeakObject(                                                )
     , m_xSMGR            (xSMGR                                           )
-    , m_xCloseFrame      (xCloseFrame                                     )
     , m_aAsyncCallback   (LINK( this, CloseDispatcher, impl_asyncCallback))
     , m_lStatusListener  (m_aLock.getShareableOslMutex()                  )
 {
+    m_xCloseFrame = CloseDispatcher::static_impl_searchRightTargetFrame(xFrame, sTarget);
 }
 
 //-----------------------------------------------
@@ -294,7 +266,8 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
     // Allow calling of XController->suspend() everytimes.
     // Dispatch is an UI functionality. We implement such dispatch object here.
     // And further XController->suspend() was designed to bring an UI ...
-    sal_Bool bAllowSuspend = sal_True;
+    sal_Bool bAllowSuspend        = sal_True;
+    sal_Bool bControllerSuspended = sal_False;
 
     // SAFE -> ----------------------------------
     ReadGuard aReadLock(m_aLock);
@@ -332,8 +305,8 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
     if (aCheck1.m_bReferenceIsBacking)
         bEstablishBackingMode = sal_True;
     else
-#endif	// USE_JAVA
 
+#endif	// USE_JAVA
     // a) If the curent frame (where the close dispatch was requested for) does not have
     //    any parent frame ... it will close this frame only. Such frame isnt part of the
     //    global desktop tree ... and such frames are used as "implementation details" only.
@@ -365,7 +338,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
     // d) Otherwhise we have to: close all views to the same document, close the
     //    document inside our own frame and decide then again, what has to be done!
     {
-        if (implts_closeView(bAllowSuspend, bCloseAllViewsToo))
+        if (implts_prepareFrameForClosing(m_xCloseFrame, bAllowSuspend, bCloseAllViewsToo, bControllerSuspended))
         {
             // OK; this frame is empty now.
             // Check the environment again to decide, what is the next step.
@@ -388,6 +361,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
                )
                 bCloseFrame = sal_True;
 
+			else
             // c3) there is no other (visible) frame open ...
             //     The help module will be ignored everytimes!
             //     But we have to decide if we must terminate the
@@ -403,8 +377,10 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
                 if (eOperation == E_CLOSE_FRAME)
                     bTerminateApp = sal_True;
 #endif	// USE_JAVA
+                else if( SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SSTARTMODULE) )
+                    bEstablishBackingMode = sal_True;
                 else
-                    bCloseFrame = sal_True;
+                    bTerminateApp = sal_True;
             }
         }
     }
@@ -415,11 +391,47 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
         bSuccess = implts_closeFrame();
     else
     if (bEstablishBackingMode)
+    #if defined QUARTZ
+    {
+        // on mac close down, quickstarter keeps the process alive
+        // however if someone has shut down the quickstarter
+        // behave as any other platform
+        
+        bool bQuickstarterRunning = false;
+        // get quickstart service
+        try
+        {
+            css::uno::Reference< css::beans::XFastPropertySet > xSet( xSMGR->createInstance(IMPLEMENTATIONNAME_QUICKLAUNCHER), css::uno::UNO_QUERY_THROW );
+            if( xSet.is() )
+            {
+                css::uno::Any aVal( xSet->getFastPropertyValue( 0 ) );
+                sal_Bool bState = sal_False;
+                if( aVal >>= bState )
+                    bQuickstarterRunning = bState;
+            }
+        }
+        catch( css::uno::Exception& )
+        {
+        }
+        bSuccess = bQuickstarterRunning ? implts_terminateApplication() : implts_establishBackingMode();
+    }
+    #else
         bSuccess = implts_establishBackingMode();
+    #endif
     else
     if (bTerminateApp)
         bSuccess = implts_terminateApplication();
 
+    if (
+        ( ! bSuccess             ) &&
+        (   bControllerSuspended )
+       )
+    {
+        css::uno::Reference< css::frame::XController > xController = xCloseFrame->getController();
+        if (xController.is())
+            xController->suspend(sal_False);
+    }
+    
     // inform listener
     sal_Int16 nState = css::frame::DispatchResultState::FAILURE;
     if (bSuccess)
@@ -451,26 +463,27 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
 }
 
 //-----------------------------------------------
-sal_Bool CloseDispatcher::implts_closeView(sal_Bool bAllowSuspend         ,
-                                           sal_Bool bCloseAllOtherViewsToo)
+sal_Bool CloseDispatcher::implts_prepareFrameForClosing(const css::uno::Reference< css::frame::XFrame >& xFrame                ,
+                                                              sal_Bool                                   bAllowSuspend         ,
+                                                              sal_Bool                                   bCloseAllOtherViewsToo,
+                                                              sal_Bool&                                  bControllerSuspended  )
 {
-    // SAFE -> ----------------------------------
-    ReadGuard aReadLock(m_aLock);
-    css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR  = m_xSMGR;
-    css::uno::Reference< css::frame::XFrame >              xFrame (m_xCloseFrame.get(), css::uno::UNO_QUERY);
-    aReadLock.unlock();
-    // <- SAFE ----------------------------------
-
     // Frame already dead ... so this view is closed ... is closed ... is ... .-)
     if (! xFrame.is())
         return sal_True;
-
+    
     // Close all views to the same document ... if forced to do so.
     // But dont touch our own frame here!
     // We must do so ... because the may be following controller->suspend()
     // will show the "save/discard/cancel" dialog for the last view only!
     if (bCloseAllOtherViewsToo)
     {
+        // SAFE -> ----------------------------------
+        ReadGuard aReadLock(m_aLock);
+        css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR  = m_xSMGR;
+        aReadLock.unlock();
+        // <- SAFE ----------------------------------
+    
         css::uno::Reference< css::frame::XFramesSupplier > xDesktop(xSMGR->createInstance(SERVICENAME_DESKTOP), css::uno::UNO_QUERY_THROW);
         FrameListAnalyzer aCheck(xDesktop, xFrame, FrameListAnalyzer::E_ALL);
 
@@ -488,12 +501,11 @@ sal_Bool CloseDispatcher::implts_closeView(sal_Bool bAllowSuspend         ,
     if (bAllowSuspend)
     {
         css::uno::Reference< css::frame::XController > xController = xFrame->getController();
-        if (
-            (xController.is()               ) &&  // some views dont uses a controller .-( (e.g. the help window)
-            (!xController->suspend(sal_True))
-           )
+        if (xController.is()) // some views dont uses a controller .-( (e.g. the help window)
         {
-            return sal_False;
+            bControllerSuspended = xController->suspend(sal_True);
+            if (! bControllerSuspended)
+                return sal_False;
         }
     }
 
@@ -590,6 +602,53 @@ void CloseDispatcher::implts_notifyResultListener(const css::uno::Reference< css
         aResult);
 
     xListener->dispatchFinished(aEvent);
+}
+
+//-----------------------------------------------
+css::uno::Reference< css::frame::XFrame > CloseDispatcher::static_impl_searchRightTargetFrame(const css::uno::Reference< css::frame::XFrame >& xFrame ,
+                                                                                              const ::rtl::OUString&                           sTarget)
+{
+    if (sTarget.equalsIgnoreAsciiCaseAscii("_self"))
+        return xFrame;
+
+    OSL_ENSURE((sTarget.getLength() < 1), "CloseDispatch used for unexpected target. Magic things will happen now .-)");
+        
+    css::uno::Reference< css::frame::XFrame > xTarget = xFrame;
+    while(sal_True)
+    {
+        // a) top frames wil be closed
+        if (xTarget->isTop())
+            return xTarget;
+                
+        // b) even child frame containing top level windows (e.g. query designer of database) will be closed
+        css::uno::Reference< css::awt::XWindow >    xWindow        = xTarget->getContainerWindow();
+        css::uno::Reference< css::awt::XTopWindow > xTopWindowCheck(xWindow, css::uno::UNO_QUERY);
+        if (xTopWindowCheck.is())
+        {
+            // b1) Note: Toolkit interface XTopWindow sometimes is used by real VCL-child-windows also .-)
+            //     Be sure that these window is realy a "top system window".
+            //     Attention ! Checking Window->GetParent() isnt the right approach here.
+            //     Because sometimes VCL create "implicit border windows" as parents even we created
+            //     a simple XWindow using the toolkit only .-(
+            ::vos::OGuard aSolarLock(&Application::GetSolarMutex());
+            Window* pWindow = VCLUnoHelper::GetWindow( xWindow );
+            if (
+                (pWindow				  ) &&
+                (pWindow->IsSystemWindow())
+               )
+                return xTarget;
+        }
+            
+        // c) try to find better results on parent frame
+        //    If no parent frame exists (because this frame is used outside the desktop tree)
+        //    the given frame must be used directly.
+        css::uno::Reference< css::frame::XFrame > xParent(xTarget->getCreator(), css::uno::UNO_QUERY);
+        if ( ! xParent.is())
+            return xTarget;
+        
+        // c1) check parent frame inside next loop ...
+        xTarget = xParent;
+    }
 }
 
 } // namespace framework
