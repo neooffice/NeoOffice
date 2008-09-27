@@ -388,6 +388,8 @@ build.package_shared:
 	hdiutil mount "$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice/dmg/install/en-US/OOo_$(OO_PRODUCT_VERSION)_"*"$(ULONGNAME)_install.dmg"
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice.org $(PRODUCT_VERSION_FAMILY)/OpenOffice.org.app" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) )
+# Remove OOo system plugins
+	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
 	hdiutil unmount "/Volumes/OpenOffice.org $(PRODUCT_VERSION_FAMILY)"
 # Regroup the OOo langauge packs
 	cd "$(BUILD_HOME)/instsetoo_native/$(UOUTPUTDIR)/OpenOffice_languagepack/dmg/install" ; find . -type d -maxdepth 1 -exec basename {} \; | grep -v '^\.$$' | grep -v '^log$$' > "$(PWD)/$(INSTALL_HOME)/language_names"
