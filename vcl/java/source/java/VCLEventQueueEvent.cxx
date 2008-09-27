@@ -258,7 +258,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( !pShutdownCancelledHandler )
 				{
 					OUString aLibName = OUString::createFromAscii( "libsfx" );
-					aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
 					aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 					aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 					if ( aShutdownCancelledHandlerModule.load( aLibName ) )
@@ -296,7 +295,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( !pAboutHandler )
 			{
 				OUString aLibName = OUString::createFromAscii( "libsfx" );
-				aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
 				aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 				if ( aAboutHandlerModule.load( aLibName ) )
@@ -314,7 +312,6 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( !pPreferencesHandler )
 			{
 				OUString aLibName = OUString::createFromAscii( "libsfx" );
-				aLibName += OUString::valueOf( (sal_Int32)SUPD, 10 );
 				aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 				if ( aPreferencesHandlerModule.load( aLibName ) )

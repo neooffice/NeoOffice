@@ -377,7 +377,6 @@ Reference< XInterface > SAL_CALL MacOSXGrammarCheckerImpl_create(
 	if ( !pShowOnlyMenusForWindow )
 	{
 		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
-		aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
 		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
 		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
 		if ( aModule.load( aLibName ) )
