@@ -953,7 +953,7 @@ javaFrameworkError SAL_CALL jfw_getEnabled(sal_Bool *pbEnabled)
 		if (!*pbEnabled)
 		{
 			jfw_setEnabled(sal_True);
-			*pbEnabled = node.getEnabled();
+			*pbEnabled = settings.getEnabled();
 		}
 #endif	// USE_JAVA
     }

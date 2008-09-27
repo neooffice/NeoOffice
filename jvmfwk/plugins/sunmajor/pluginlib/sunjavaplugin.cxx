@@ -568,7 +568,12 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[0].extraInfo= (void* )(sal_IntPtr)abort_handler;
     rtl::OString sClassPathProp("-Djava.class.path=");
     rtl::OString sClassPathOption;
+#ifdef USE_JAVA
+    int i = 0;
+    for (; i < cOptions; i++)
+#else	// USE_JAVA
     for (int i = 0; i < cOptions; i++)
+#endif	// USE_JAVA
     {
 #ifdef UNX
     // Until java 1.5 we need to put a plugin.jar or javaplugin.jar (<1.4.2)
