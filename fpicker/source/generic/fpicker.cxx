@@ -1,65 +1,50 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_fpicker.hxx"
-
-#ifndef _SAL_TYPES_H_
 #include "sal/types.h"
-#endif
-
-#ifndef _RTL_USTRING_HXX_
 #include "rtl/ustring.hxx"
-#endif
 
 #ifndef _CPPUHELPER_IMPLEMENTATIONENTRY_HXX_
 #include "cppuhelper/implementationentry.hxx"
 #endif
-
-#ifndef _COM_SUN_STAR_LANG_XMULTICOMPONENTFACTORY_HPP_
 #include "com/sun/star/lang/XMultiComponentFactory.hpp"
+
+#ifdef WNT
+#include <tools/prewin.h>
+#include <tools/postwin.h>
+#include <odma_lib.hxx>
 #endif
 
-#ifndef INCLUDED_SVTOOLS_MISCOPT_HXX
 #include "svtools/miscopt.hxx"
-#endif
-
-#ifndef SVTOOLS_PICKERHISTORYACCESS_HXX
 #include "svtools/pickerhistoryaccess.hxx"
-#endif
 
 #ifndef _SV_APP_HXX
 #include "vcl/svapp.hxx"
@@ -76,13 +61,22 @@ using rtl::OUString;
  */
 static OUString FilePicker_getSystemPickerServiceName()
 {
+#ifdef UNX
 	OUString aDesktopEnvironment (Application::GetDesktopEnvironment());
 	if (aDesktopEnvironment.equalsIgnoreAsciiCaseAscii ("gnome"))
 		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.GtkFilePicker"));
 	else if (aDesktopEnvironment.equalsIgnoreAsciiCaseAscii ("kde"))
 		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.KDEFilePicker"));
-	else
-		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.SystemFilePicker"));
+    else if (aDesktopEnvironment.equalsIgnoreAsciiCaseAscii ("macosx"))
+        return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.AquaFilePicker"));
+#endif
+#ifdef WNT
+	if (SvtMiscOptions().TryODMADialog() && ::odma::DMSsAvailable()) {
+		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.ODMAFilePicker"));
+	}
+	return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.Win32FilePicker"));
+#endif
+	return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.SystemFilePicker"));
 }
 
 static Reference< css::uno::XInterface > FilePicker_createInstance (
@@ -147,12 +141,20 @@ static Sequence< OUString > FilePicker_getSupportedServiceNames()
 static OUString FolderPicker_getSystemPickerServiceName()
 {
 	OUString aDesktopEnvironment (Application::GetDesktopEnvironment());
+#ifdef UNX
 	if (aDesktopEnvironment.equalsIgnoreAsciiCaseAscii ("gnome"))
 		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.GtkFolderPicker"));
 	else if (aDesktopEnvironment.equalsIgnoreAsciiCaseAscii ("kde"))
 		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.KDEFolderPicker"));
-	else
-		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.SystemFolderPicker"));
+    else if (aDesktopEnvironment.equalsIgnoreAsciiCaseAscii ("macosx"))
+        return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.AquaFolderPicker"));
+#endif
+#ifdef WNT
+	if (SvtMiscOptions().TryODMADialog() && ::odma::DMSsAvailable()) {
+		return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.ODMAFolderPicker"));
+	}
+#endif
+	return OUString (RTL_CONSTASCII_USTRINGPARAM ("com.sun.star.ui.dialogs.SystemFolderPicker"));
 }
 
 static Reference< css::uno::XInterface > FolderPicker_createInstance (
@@ -178,7 +180,9 @@ static Reference< css::uno::XInterface > FolderPicker_createInstance (
 				{
 					// Handled below (see @ fallback).
 				}
+#ifndef USE_JAVA
 			}
+#endif	// USE_JAVA
 			if (!xResult.is())
 			{
 				// Always fall back to OfficeFolderPicker.
@@ -191,9 +195,7 @@ static Reference< css::uno::XInterface > FolderPicker_createInstance (
 				// Add to FolderPicker history.
 				svt::addFolderPicker (xResult);
 			}
-#ifndef USE_JAVA
 		}
-#endif	// USE_JAVA
 	}
 	return xResult;
 }
