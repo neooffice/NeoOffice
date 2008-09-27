@@ -1,39 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
- *
- *    Modified July 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -42,6 +32,7 @@
 #if OSL_DEBUG_LEVEL > 0
 #include <stdio.h>
 #endif
+#include <string.h>
 
 #include "boost/scoped_array.hpp"
 #include "osl/diagnose.h"
@@ -88,20 +79,7 @@ using namespace jfw_plugin;
 
 namespace {
 
-struct Init
-{
-    osl::Mutex * operator()()
-        {
-            static osl::Mutex aInstance;
-            return &aInstance;
-        }
-};
-osl::Mutex * getPluginMutex()
-{
-    return rtl_Instance< osl::Mutex, Init, ::osl::MutexGuard,
-        ::osl::GetGlobalMutex >::create(
-            Init(), ::osl::GetGlobalMutex());
-}
+struct PluginMutex: public ::rtl::Static<osl::Mutex, PluginMutex> {}; 
 
 #if defined UNX
 OString getPluginJarPath(
@@ -480,7 +458,9 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     JavaVM ** ppVm,
     JNIEnv ** ppEnv)
 {
-    osl::MutexGuard guard(getPluginMutex());
+    // unless guard is volatile the following warning occurs on gcc:
+    // warning: variable 't' might be clobbered by `longjmp' or `vfork'
+    volatile osl::MutexGuard guard(PluginMutex::get());
     // unless errcode is volatile the following warning occurs on gcc:
     // warning: variable 'errcode' might be clobbered by `longjmp' or `vfork'
     volatile javaPluginError errcode = JFW_PLUGIN_E_NONE;
@@ -489,13 +469,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     //Check if the Vendor (pInfo->sVendor) is supported by this plugin
     if ( ! isVendorSupported(pInfo->sVendor))
         return JFW_PLUGIN_E_WRONG_VENDOR;
-
 #ifdef USE_JAVA
     rtl::Reference<VendorBase> aVendorInfo = getJREInfoByPath( ::rtl::OUString( pInfo->sLocation ) );
     if ( !aVendorInfo.is() || aVendorInfo->compareVersions( ::rtl::OUString( pInfo->sVersion ) ) < 0 )
         return JFW_PLUGIN_E_VM_CREATION_FAILED;
 #endif	// USE_JAVA
-
     rtl::OUString sRuntimeLib = getRuntimeLib(pInfo->arVendorData);
     JFW_TRACE2(OUSTR("[Java framework] Using Java runtime library: ")
               + sRuntimeLib + OUSTR(".\n"));
@@ -590,12 +568,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[0].extraInfo= (void* )(sal_IntPtr)abort_handler;
     rtl::OString sClassPathProp("-Djava.class.path=");
     rtl::OString sClassPathOption;
-#ifdef USE_JAVA
-    int i = 0;
-    for (; i < cOptions; i++)
-#else	// USE_JAVA
     for (int i = 0; i < cOptions; i++)
-#endif	// USE_JAVA
     {
 #ifdef UNX
     // Until java 1.5 we need to put a plugin.jar or javaplugin.jar (<1.4.2)
@@ -609,19 +582,6 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
                 sClassPathOption = sClassPath + rtl::OString(sep) + sAddPath;
             else
                 sClassPathOption = sClassPath;
-
-#ifdef USE_JAVA
-            // Add JREProperties.class to the classpath
-            rtl::OUString aExe;
-            osl_getExecutableFile( &aExe.pData );
-            rtl::OUString aExeSysPath;
-            if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
-            {
-                rtl::OString aJREPropsSysPath( aExeSysPath, aExeSysPath.lastIndexOf('/'), RTL_TEXTENCODING_UTF8 );
-                sClassPathOption = sClassPathOption + rtl::OString(sep) + aJREPropsSysPath;
-            }
-#endif	// USE_JAVA
-
             options[i+1].optionString = (char *) sClassPathOption.getStr();
             options[i+1].extraInfo = arOptions[i].extraInfo;
         }
@@ -639,6 +599,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif
     }
 
+#ifdef MACOSX
 #ifdef USE_JAVA
     // Limit the directories that extensions can be loaded from to prevent
     // random JVM crashing
@@ -721,11 +682,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     aBuf.append( "m" );
     options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
     options[i+8].extraInfo = NULL;
-   
-    vm_args.version= JNI_VERSION_1_4;
-#else	// USE_JAVA
-    vm_args.version= JNI_VERSION_1_2;
 #endif	// USE_JAVA
+    vm_args.version= JNI_VERSION_1_4; // issue 88987
+#else
+    vm_args.version= JNI_VERSION_1_2;
+#endif
     vm_args.options= options;
 #ifdef USE_JAVA
     vm_args.nOptions= cOptions + 9;
@@ -754,19 +715,6 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         g_bInGetJavaVM = 0;
 
 #ifdef USE_JAVA
-        // We cannot trust that the OOo build has honored the -source flag so
-        // don't use it here. This will will prevent loading of JVM's that
-        // cannot load all classes built by OOo.
-        if (err == 0)
-        {
-            (*ppEnv)->FindClass( "JREProperties" );
-            if ((*ppEnv)->ExceptionCheck())
-            {
-                (*ppEnv)->ExceptionDescribe();
-                err = 1;
-            }
-        }
-
         // The JVM's native drawing methods print many spurious error messages
         // on Mac OS X 10.4 and higher which will flood the system log so we
         // need to filter out the messages

@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -62,6 +55,7 @@
 #pragma warning(pop)
 #endif
 #endif
+#include <string.h>
 
 #include "sunjre.hxx"
 #include "vendorlist.hxx"
@@ -113,8 +107,6 @@ char const *g_arSearchPaths[] = {
     "System/Library/Frameworks/JavaVM.framework/Versions/1.6.0/",
     "System/Library/Frameworks/JavaVM.framework/Versions/1.5.1/",
     "System/Library/Frameworks/JavaVM.framework/Versions/1.5.0/",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.3/",
-    "System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/"
 #else	// USE_JAVA
     "System/Library/Frameworks/JavaVM.framework/Versions/1.4.2/"
 #endif	// USE_JAVA
@@ -124,6 +116,9 @@ char const *g_arSearchPaths[] = {
     "usr/local/",
     "usr/local/IBMJava2-ppc-142",
     "usr/local/j2sdk1.3.1",
+#ifdef X86_64
+    "usr/lib64/",
+#endif
     "usr/lib/",
     "usr/bin/"
 #endif
@@ -484,7 +479,7 @@ bool getJavaProps(const OUString & exePath,
     TimeValue waitMax= {5 ,0};
     procErr = osl_joinProcessWithTimeout(javaProcess, &waitMax);
     OSL_ASSERT(procErr == osl_Process_E_None);
-    
+    osl_freeProcessHandle(javaProcess);
     return ret;
 }
 
@@ -788,88 +783,64 @@ bool getJREInfoByPath(const rtl::OUString& path,
     return ret;
 }
 
-/** Checks if the path is a directory. If it is a link to a directory than
-    it is resolved.
-    In case of an error the returned string has the length 0
+/** Checks if the path is a directory. Links are resolved.
+    In case of an error the returned string has the length 0.
+    Otherwise the returned string is the "resolved" file URL.
  */
 OUString resolveDirPath(const OUString & path)
 {
-    OUString sResolved = path;
     OUString ret;
-    while (1)
+    OUString sResolved;
+    if (File::getAbsoluteFileURL(
+        rtl::OUString(), path, sResolved) != File::E_None)
+        return OUString();
+
+    //check if this is a valid path and if it is a directory
+    DirectoryItem item;
+    if (DirectoryItem::get(sResolved, item) == File::E_None)
     {
-        DirectoryItem item;
-        if (DirectoryItem::get(sResolved, item) == File::E_None)
-        {
-            FileStatus status(FileStatusMask_Type |
-                              FileStatusMask_LinkTargetURL |
-                              FileStatusMask_FileURL);
+        FileStatus status(FileStatusMask_Type |
+                          FileStatusMask_LinkTargetURL |
+                          FileStatusMask_FileURL);
         
-            if (item.getFileStatus(status) == File::E_None)
-            {
-                FileStatus::Type t = status.getFileType();
-                if (t == FileStatus::Directory)
-                {
-                    ret = sResolved;
-                    break;
-                }
-                else if ( t == FileStatus::Link )
-                {
-                    sResolved = status.getLinkTargetURL();
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else
-                break;
-            }
-        else
-            break;
+        if (item.getFileStatus(status) == File::E_None
+            && status.getFileType() == FileStatus::Directory)
+        {
+            ret = sResolved;
+        }
     }
+    else
+        return OUString();
     return ret;
 }
 /** Checks if the path is a file. If it is a link to a file than
-    it is resolved.
-    In case of an error the returned string has the length 0
+    it is resolved. 
  */
 OUString resolveFilePath(const OUString & path)
 {
-    OUString sResolved = path;
     OUString ret;
-    while (1)
+    OUString sResolved;
+
+    if (File::getAbsoluteFileURL(
+        rtl::OUString(), path, sResolved) != File::E_None)
+        return OUString();
+
+    //check if this is a valid path to a file or and if it is a link
+    DirectoryItem item;
+    if (DirectoryItem::get(sResolved, item) == File::E_None)
     {
-        DirectoryItem item;
-        if (DirectoryItem::get(sResolved, item) == File::E_None)
+        FileStatus status(FileStatusMask_Type |
+                          FileStatusMask_LinkTargetURL |
+                          FileStatusMask_FileURL);
+        if (item.getFileStatus(status) == File::E_None
+            && status.getFileType() == FileStatus::Regular)
         {
-            FileStatus status(FileStatusMask_Type |
-                              FileStatusMask_LinkTargetURL |
-                              FileStatusMask_FileURL);
-        
-            if (item.getFileStatus(status) == File::E_None)
-            {
-                FileStatus::Type t = status.getFileType();
-                if (t == FileStatus::Regular)
-                {
-                    ret = sResolved;
-                    break;
-                }
-                else if ( t == FileStatus::Link )
-                {
-                    sResolved = status.getLinkTargetURL();
-                }
-                else
-                {
-                    break;
-                }
-            }
-            else
-                break;
-            }
-        else
-            break;
+            ret = sResolved;
+        }                    
     }
+    else
+        return OUString();
+    
     return ret;
 }
 
@@ -893,7 +864,11 @@ rtl::Reference<VendorBase> getJREInfoByPath(
     
     //check if the directory path is good, that is a JRE was already recognized.
     //Then we need not detect it again
-    MapIt entry2 = mapJREs.find(sResolvedDir);
+    //For example, a sun JKD contains <jdk>/bin/java and <jdk>/jre/bin/java.
+    //When <jdk>/bin/java has been found then we need not find <jdk>/jre/bin/java.
+    //Otherwise we would execute java two times for evers JDK found.
+    MapIt entry2 = find_if(mapJREs.begin(), mapJREs.end(),
+                           SameOrSubDirJREMap(sResolvedDir));
     if (entry2 != mapJREs.end())
     {
         JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION ": ")
@@ -928,8 +903,9 @@ rtl::Reference<VendorBase> getJREInfoByPath(
                 sFullPath = sResolvedDir +
                 OUString(RTL_CONSTASCII_USTRINGPARAM("/")) + (*i);
 
-            sFilePath = resolveFilePath(sFullPath);
 
+            sFilePath = resolveFilePath(sFullPath);
+            
             if (sFilePath.getLength() == 0)
             {
                 //The file path (to java exe) is not valid
@@ -1035,9 +1011,9 @@ rtl::Reference<VendorBase> getJREInfoByPath(
     else
     {
         JFW_TRACE2(OUSTR("[Java framework] sunjavaplugin"SAL_DLLEXTENSION ": ")
-                   + OUSTR("Detected another JRE: ") + sResolvedDir 
+                   + OUSTR("Found JRE: ") + sResolvedDir 
                    + OUSTR(" \n at: ") + path + OUSTR(".\n"));
-
+ 
         mapJREs.insert(MAPJRE::value_type(sResolvedDir, ret));
         mapJREs.insert(MAPJRE::value_type(sFilePath, ret));        
     }

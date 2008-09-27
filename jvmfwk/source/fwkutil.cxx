@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified April 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified April 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -48,6 +41,7 @@
 #endif
 
 #include <string>
+#include <string.h>
 #include "osl/mutex.hxx"
 #include "osl/module.hxx"
 #include "osl/thread.hxx"
@@ -59,6 +53,8 @@
 #include "rtl/instance.hxx"
 #include "rtl/uri.hxx"
 #include "osl/getglobalmutex.hxx"
+#include "com/sun/star/lang/IllegalArgumentException.hpp"
+#include "cppuhelper/bootstrap.hxx"
 
 #include "framework.hxx"
 #include "fwkutil.hxx"
@@ -69,24 +65,15 @@ using namespace osl;
 namespace jfw
 {
 
-struct Init
-{
-    osl::Mutex * operator()()
-        {
-            static osl::Mutex aInstance;
-            return &aInstance;
-        }
-};
-osl::Mutex * getFwkMutex()
-{
-    return rtl_Instance< osl::Mutex, Init, ::osl::MutexGuard,
-        ::osl::GetGlobalMutex >::create(
-            Init(), ::osl::GetGlobalMutex());
-}
-
-
 bool isAccessibilitySupportDesired()
 {
+    OUString sValue;
+    if ((sal_True == ::rtl::Bootstrap::get(
+        OUString(RTL_CONSTASCII_USTRINGPARAM("JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY")), sValue))
+        && sValue.equals(OUString(RTL_CONSTASCII_USTRINGPARAM("1")))
+        )
+        return false;
+
     bool retVal = false;
 #ifdef WNT
     HKEY    hKey = 0;
@@ -224,21 +211,13 @@ rtl::OUString getDirFromFile(const rtl::OUString& usFilePath)
     return rtl::OUString(usFilePath.getStr(), index);
 }
 
-rtl::OUString getFileFromURL(const rtl::OUString& sFileURL)
-{
-    sal_Int32 index= sFileURL.lastIndexOf('/');
-    if (index == -1)
-        return sFileURL;
-    return sFileURL.copy(index + 1);
-}
-
 rtl::OUString getExecutableDirectory()
 {
     rtl_uString* sExe = NULL;
     if (osl_getExecutableFile( & sExe) != osl_Process_E_None)
         throw FrameworkException(
             JFW_E_ERROR,
-            "[Java framework] Error in function getApplicationBase (fwkutil.cxx)");
+            "[Java framework] Error in function getExecutableDirectory (fwkutil.cxx)");
     
     rtl::OUString ouExe(sExe, SAL_NO_ACQUIRE);
     return getDirFromFile(ouExe);
@@ -247,10 +226,25 @@ rtl::OUString getExecutableDirectory()
 rtl::OUString findPlugin(
     const rtl::OUString & baseUrl, const rtl::OUString & plugin)
 {
+    rtl::OUString expandedPlugin;
+    try
+    {
+        expandedPlugin = cppu::bootstrap_expandUri(plugin);
+    }
+    catch (com::sun::star::lang::IllegalArgumentException & e)
+    {
+        throw FrameworkException(
+            JFW_E_ERROR,
+            (rtl::OString(
+                RTL_CONSTASCII_STRINGPARAM(
+                    "[Java framework] IllegalArgumentException in"
+                    " findPlugin: "))
+             + rtl::OUStringToOString(e.Message, osl_getThreadTextEncoding())));
+    }
     rtl::OUString sUrl;
     try
     {
-        sUrl = rtl::Uri::convertRelToAbs(baseUrl, plugin);
+        sUrl = rtl::Uri::convertRelToAbs(baseUrl, expandedPlugin);
     }
     catch (rtl::MalformedUriException & e)
     {
@@ -327,103 +321,38 @@ rtl::OUString getLibraryLocation()
     return getDirFromFile(libraryFileUrl);
 }
 
-//Todo is this still needed?
-rtl::OUString searchFileNextToThisLib(const rtl::OUString & sFile)
+jfw::FileStatus checkFileURL(const rtl::OUString & sURL)
 {
-    rtl::OUString ret;
-    rtl::OUString sLib;
-    if (osl::Module::getUrlFromAddress(
-            reinterpret_cast< oslGenericFunction >(searchFileNextToThisLib),
-            sLib))
-    {
-        sLib = getDirFromFile(sLib);
-        rtl::OUStringBuffer sBufVendor(256);
-        sBufVendor.append(sLib);
-        sBufVendor.appendAscii("/");
-        sBufVendor.append(sFile);
-        sLib =  sBufVendor.makeStringAndClear();
-        //check if the file exists
-        osl::DirectoryItem item;
-        osl::File::RC fileError = osl::DirectoryItem::get(sLib, item);
-        if (fileError == osl::FileBase::E_None)
-            ret = sLib;
-    }
-    return ret;
-}
-
-jfw::FileStatus checkFileURL(const rtl::OUString & path)
-{
-    rtl::OString sExcMsg("[Java framework] Error in function "
-                         "resolveFileURL (fwkutil.cxx).");
-    OUString sResolved = path;
     jfw::FileStatus ret = jfw::FILE_OK;
-    while (1)
+    DirectoryItem item;
+    File::RC rc_item = DirectoryItem::get(sURL, item);
+    if (File::E_None == rc_item)
     {
-        DirectoryItem item;
-        File::RC fileErr =
-            DirectoryItem::get(sResolved, item);
-        if (fileErr == File::E_None)
-        {
-            osl::FileStatus status(FileStatusMask_Type |
-                              FileStatusMask_LinkTargetURL |
-                              FileStatusMask_FileURL);
+        osl::FileStatus status(FileStatusMask_Validate);
         
-            if (item.getFileStatus(status) == File::E_None)
-            {
-                osl::FileStatus::Type t = status.getFileType();
-                if (t == osl::FileStatus::Regular)
-                {
-                    ret = jfw::FILE_OK;
-                    break;
-                }
-                else if ( t == osl::FileStatus::Link )
-                {
-                    sResolved = status.getLinkTargetURL();
-                }
-                else
-                {
-                    ret = FILE_INVALID;
-                    break;
-                }
-            }
-            else
-            {
-                throw FrameworkException(JFW_E_ERROR, sExcMsg);
-            }
+        File::RC rc_stat = item.getFileStatus(status);
+        if (File::E_None == rc_stat)
+        {
+            ret = FILE_OK;
         }
-        else if(fileErr == File::E_NOENT)
+        else if (File::E_NOENT == rc_stat)
         {
             ret = FILE_DOES_NOT_EXIST;
-            break;
         }
         else
         {
             ret = FILE_INVALID;
-			break;
         }
     }
-    return ret;
-}
-const rtl::Bootstrap& getBootstrap()
-{
-    static rtl::Bootstrap *pBootstrap = 0;
-    rtl::OUString sIni;
-    if( !pBootstrap )
+    else if (File::E_NOENT == rc_item)
     {
-        rtl::OUStringBuffer buf( 255);
-        buf.append( getLibraryLocation());
-        buf.appendAscii( SAL_CONFIGFILE("/jvmfwk3") );
-        sIni = buf.makeStringAndClear();
-        static rtl::Bootstrap  bootstrap(sIni);
-        pBootstrap = &bootstrap;
-#if OSL_DEBUG_LEVEL >=2
-        rtl::OString o = rtl::OUStringToOString( sIni , osl_getThreadTextEncoding() );
-        fprintf(stderr, "[Java framework] Using configuration file %s\n" , o.getStr() );
-#endif
+        ret = FILE_DOES_NOT_EXIST;
     }
-    
-    return *pBootstrap;
-
+    else
+    {
+        ret = FILE_INVALID;
+    }
+    return ret;
 }
 
 }
