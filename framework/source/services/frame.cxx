@@ -120,7 +120,20 @@
 #include <services/backingcomp.hxx>
 #endif
 
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
+
+static ::vos::OModule aModule;
 
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
