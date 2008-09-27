@@ -46,7 +46,7 @@
 class JavaPluginComm : public PluginComm
 {
 public:
-						JavaPluginComm( const rtl::OUString& rMIME, const rtl::OUString& rName, long windowRef );
+						JavaPluginComm( const rtl::OUString& rMIME, const rtl::OUString& rName, void *pView );
 	virtual				~JavaPluginComm();
 	
 public:

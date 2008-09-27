@@ -40,7 +40,7 @@
 
 // ============================================================================
 
-JavaPluginComm::JavaPluginComm( const rtl::OUString& rMIME, const rtl::OUString& rName, long windowRef ) : PluginComm( OUStringToOString( rName, RTL_TEXTENCODING_UTF8 ) )
+JavaPluginComm::JavaPluginComm( const rtl::OUString& rMIME, const rtl::OUString& rName, void *pView ) : PluginComm( OUStringToOString( rName, RTL_TEXTENCODING_UTF8 ) )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaPluginComm::JavaPluginComm not implemented\n" );
