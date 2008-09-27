@@ -389,6 +389,7 @@ build.package_shared:
 	mkdir -p "$(INSTALL_HOME)/package/Contents"
 	cd "$(INSTALL_HOME)/package" ; ( ( cd "/Volumes/OpenOffice.org $(PRODUCT_VERSION_FAMILY)/OpenOffice.org.app" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package" ; gnutar xvf - --exclude="._*" ) )
 # Remove OOo system plugins
+	rm -Rf "$(INSTALL_HOME)/package/Contents/Frameworks"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
 	hdiutil unmount "/Volumes/OpenOffice.org $(PRODUCT_VERSION_FAMILY)"
 # Regroup the OOo langauge packs
