@@ -6,6 +6,7 @@
 			<node oor:name="org.neooffice.grammarchecker.grammarchecker" oor:op="replace">
 				<prop oor:name="Title" oor:type="xs:string">
 					<value xml:lang="en-US">Check Grammar</value>
+					<value xml:lang="es">Revisar gramática</value>
 					<value xml:lang="fr">Vérifier la grammaire</value>
 					<value xml:lang="nl">Controleer grammatica</value>
 				</prop>
@@ -19,6 +20,7 @@
 						</prop>
 			            <prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">Entire Document</value>
+							<value xml:lang="es">A todo el documento</value>
 							<value xml:lang="fr">Document entier</value>
 							<value xml:lang="nl">Gehele document</value>
 						</prop>
@@ -38,6 +40,7 @@
 						</prop>
 			            <prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">Selected Text</value>
+							<value xml:lang="es">Al texto seleccionado</value>
 							<value xml:lang="fr">Sélection</value>
 							<value xml:lang="nl">Geselecteerde tekst</value>
 						</prop>
