@@ -194,9 +194,10 @@ build.remotecontrol_checkout:
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; tar xvfz "$(REMOTECONTROL_ZIP_FILENAME)"
 	touch "$@"
 
-build.oo_patches:\
+build.oo_patches: \
 	build.oo_cppu_patch \
 	build.oo_external_patch \
+	build.oo_filter_patch \
 	build.oo_framework_patch \
 	build.oo_i18npool_patch \
 	build.oo_instsetoo_native_patch \

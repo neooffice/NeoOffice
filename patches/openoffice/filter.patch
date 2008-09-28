@@ -1,0 +1,17 @@
+Index: source/xsltfilter/XSLTransformer.java
+===================================================================
+RCS file: /cvs/framework/filter/source/xsltfilter/XSLTransformer.java,v
+retrieving revision 1.19.90.1
+diff -u -r1.19.90.1 XSLTransformer.java
+--- source/xsltfilter/XSLTransformer.java	6 Aug 2008 14:04:33 -0000	1.19.90.1
++++ source/xsltfilter/XSLTransformer.java	28 Sep 2008 23:09:00 -0000
+@@ -217,7 +217,8 @@
+         // notify listeners
+         t = new Thread() {
+ 
+-            @Override
++            // Disable annotations to allow compiling with Java 1.4
++            // @Override
+             public void run() {
+ 
+                 // Local variabes used outside try block in finally block                  
