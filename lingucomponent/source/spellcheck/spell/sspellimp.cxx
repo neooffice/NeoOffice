@@ -1,62 +1,43 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_lingucomponent.hxx"
-
-#ifndef _COM_SUN_STAR_UNO_REFERENCE_H_
 #include <com/sun/star/uno/Reference.h>
-#endif
-#ifndef _COM_SUN_STAR_LINGUISTIC2_XSEARCHABLEDICTIONARYLIST_HPP_
 #include <com/sun/star/linguistic2/XSearchableDictionaryList.hpp>
-#endif
 
 #include <com/sun/star/linguistic2/SpellFailure.hpp>
 #include <cppuhelper/factory.hxx>	// helper for factories
 #include <com/sun/star/registry/XRegistryKey.hpp>
-
-#ifndef _TOOLS_DEBUG_HXX //autogen wg. DBG_ASSERT
 #include <tools/debug.hxx>
-#endif
-#ifndef _UNOTOOLS_PROCESSFACTORY_HXX_
 #include <unotools/processfactory.hxx>
-#endif
-#ifndef _OSL_MUTEX_HXX_
 #include <osl/mutex.hxx>
-#endif
 
 #include <hunspell.hxx>
 #include <dictmgr.hxx>
@@ -67,20 +48,21 @@
 
 #include <linguistic/lngprops.hxx>
 #include "spelldta.hxx"
-
-#ifndef INCLUDED_SVTOOLS_PATHOPTIONS_HXX
+#include <i18npool/mslangid.hxx>
 #include <svtools/pathoptions.hxx>
-#endif
-#ifndef INCLUDED_SVTOOLS_USEROPTIONS_HXX
+#include <svtools/lingucfg.hxx>
 #include <svtools/useroptions.hxx>
-#endif
 #include <osl/file.hxx>
 #include <rtl/ustrbuf.hxx>
+
+#include <lingutil.hxx>
+
+#include <list>
+#include <set>
 
 #ifdef USE_JAVA
 #include <unistd.h>
 #endif	// USE_JAVA
-
 
 using namespace utl;
 using namespace osl;
@@ -113,15 +95,6 @@ static OUString ImplGetLocaleString( Locale aLocale )
 }
 
 #endif // USE_JAVA
-
-///////////////////////////////////////////////////////////////////////////
-
-BOOL operator == ( const Locale &rL1, const Locale &rL2 )
-{
-	return	rL1.Language ==  rL2.Language	&&
-			rL1.Country  ==  rL2.Country	&&
-			rL1.Variant  ==  rL2.Variant;
-}
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -185,151 +158,125 @@ PropertyHelper_Spell & SpellChecker::GetPropHelper_Impl()
 Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 		throw(RuntimeException)
 {
-	MutexGuard	aGuard( GetLinguMutex() );
+    MutexGuard  aGuard( GetLinguMutex() );
 
-        // this routine should return the locales supported by the installed
-        // dictionaries.  So here we need to parse both the user edited 
-        // dictionary list and the shared dictionary list 
-        // to see what dictionaries the admin/user has installed
+    // this routine should return the locales supported by the installed
+    // dictionaries.
 
-        int numusr;          // number of user dictionary entries
-        int numshr;          // number of shared dictionary entries
-        dictentry * spdict;  // shared dict entry pointer
-        dictentry * updict;  // user dict entry pointer
-        SvtPathOptions aPathOpt;
+    if (!numdict) 
+    {
+        SvtLinguConfig aLinguCfg;
 
-	std::vector<dictentry *> postspdict;
-	std::vector<dictentry *> postupdict;
-
-
-	if (!numdict) {
-
-            // invoke a dictionary manager to get the user dictionary list
-            OUString usrlst = aPathOpt.GetUserDictionaryPath() + A2OU("/dictionary.lst");
-            OUString ulst;
-	    osl::FileBase::getSystemPathFromFileURL(usrlst,ulst);
-            OString uTmp(OU2ENC(ulst, osl_getThreadTextEncoding()));
-	    DictMgr* udMgr = new DictMgr(uTmp.getStr(),"DICT");
-            numusr = 0;
-            if (udMgr) 
-                 numusr = udMgr->get_list(&updict);
-
-
-            // invoke a second  dictionary manager to get the shared dictionary list
-            OUString shrlst = aPathOpt.GetLinguisticPath() + A2OU("/ooo/dictionary.lst");
-            OUString slst;
-	    osl::FileBase::getSystemPathFromFileURL(shrlst,slst);
-            OString sTmp(OU2ENC(slst, osl_getThreadTextEncoding()));
-	    DictMgr* sdMgr = new DictMgr(sTmp.getStr(),"DICT");
-            numshr = 0;
-            if (sdMgr) 
-                 numshr = sdMgr->get_list(&spdict);
-
-            //Test for existence of the dictionaries
-            for (int i = 0; i < numusr; i++)
-	    {
-            	OUString str = aPathOpt.GetUserDictionaryPath() + A2OU("/") + A2OU(updict[i].filename) + 
-			A2OU(".dic");
-		osl::File aTest(str);
-		if (aTest.open(osl_File_OpenFlag_Read))
-			continue;
-		aTest.close();
-		postupdict.push_back(&updict[i]);
-            }
-
-            for (int i = 0; i < numshr; i++)
-	    {
-                OUString str = aPathOpt.GetLinguisticPath() + A2OU("/ooo/") + A2OU(spdict[i].filename) + 
-			A2OU(".dic");
-		osl::File aTest(str);
-		if (aTest.open(osl_File_OpenFlag_Read))
-			continue;
-		aTest.close();
-		postspdict.push_back(&spdict[i]);
-            }
-
-	    numusr = postupdict.size();
-            numshr = postspdict.size();
-
-            // we really should merge these and remove duplicates but since 
-            // users can name their dictionaries anything they want it would
-            // be impossible to know if a real duplication exists unless we
-            // add some unique key to each myspell dictionary
-            numdict = numshr + numusr;
-
-            if (numdict) {
-	        aDicts = new Hunspell* [numdict];
-	        aDEncs  = new rtl_TextEncoding [numdict];
-                aDLocs = new Locale [numdict];
-                aDNames = new OUString [numdict];
-	        aSuppLocales.realloc(numdict);
-                Locale * pLocale = aSuppLocales.getArray();
-                int numlocs = 0;
-                int newloc;
-                int i,j;
-                int k = 0;
-
-                //first add the user dictionaries
-                for (i = 0; i < numusr; i++) {
-	            Locale nLoc( A2OU(postupdict[i]->lang), A2OU(postupdict[i]->region), OUString() );
-                    newloc = 1;
-	            for (j = 0; j < numlocs; j++) {
-                        if (nLoc == pLocale[j]) newloc = 0;
-                    }
-                    if (newloc) {
-                        pLocale[numlocs] = nLoc;
-                        numlocs++;
-                    }
-                    aDLocs[k] = nLoc;
-                    aDicts[k] = NULL;
-                    aDEncs[k] = 0;
-                    aDNames[k] = aPathOpt.GetUserDictionaryPath() + A2OU("/") + A2OU(postupdict[i]->filename);
-                    k++;
-                }
-
-                // now add the shared dictionaries
-                for (i = 0; i < numshr; i++) {
-	            Locale nLoc( A2OU(postspdict[i]->lang), A2OU(postspdict[i]->region), OUString() );
-                    newloc = 1;
-	            for (j = 0; j < numlocs; j++) {
-                        if (nLoc == pLocale[j]) newloc = 0;
-                    }
-                    if (newloc) {
-                        pLocale[numlocs] = nLoc;
-                        numlocs++;
-                    }
-                    aDLocs[k] = nLoc;
-                    aDicts[k] = NULL;
-                    aDEncs[k] = 0;
-                    aDNames[k] = aPathOpt.GetLinguisticPath() + A2OU("/ooo/") + A2OU(postspdict[i]->filename);
-                    k++;
-                }
-
-                aSuppLocales.realloc(numlocs);
-
-            } else {
-	      /* no dictionary.lst found so register no dictionaries */
-	        numdict = 0;
-	        aDicts = NULL;
-                aDEncs  = NULL;
-                aDLocs = NULL;
-                aDNames = NULL;
-	        aSuppLocales.realloc(0);
-            }
-
-            /* de-allocation of memory is handled inside the DictMgr */
-            updict = NULL;
-            if (udMgr) { 
-                  delete udMgr;
-                  udMgr = NULL;
-            }
-            spdict = NULL;
-            if (sdMgr) { 
-                  delete sdMgr;
-                  sdMgr = NULL;
-            }
-
+        // get list of extension dictionaries-to-use
+		// (or better speaking: the list of dictionaries using the
+		// new configuration entries).
+        std::list< SvtLinguConfigDictionaryEntry > aDics;
+        uno::Sequence< rtl::OUString > aFormatList;
+        aLinguCfg.GetSupportedDictionaryFormatsFor( A2OU("SpellCheckers"), 
+                A2OU("org.openoffice.lingu.MySpellSpellChecker"), aFormatList );
+        sal_Int32 nLen = aFormatList.getLength();
+        for (sal_Int32 i = 0;  i < nLen;  ++i)
+        {
+            std::vector< SvtLinguConfigDictionaryEntry > aTmpDic( 
+                    aLinguCfg.GetActiveDictionariesByFormat( aFormatList[i] ) );
+            aDics.insert( aDics.end(), aTmpDic.begin(), aTmpDic.end() );
         }
+
+        //!! for compatibility with old dictionaries (the ones not using extensions 
+        //!! or new configuration entries, but still using the dictionary.lst file)
+		//!! Get the list of old style spell checking dictionaries to use...
+        std::vector< SvtLinguConfigDictionaryEntry > aOldStyleDics( 
+				GetOldStyleDics( "DICT" ) );
+
+		// to prefer dictionaries with configuration entries we will only
+		// use those old style dictionaries that add a language that
+		// is not yet supported by the list od new style dictionaries
+		MergeNewStyleDicsAndOldStyleDics( aDics, aOldStyleDics );
+
+        numdict = aDics.size();
+        if (numdict) 
+        {
+            // get supported locales from the dictionaries-to-use...
+            sal_Int32 k = 0;
+            std::set< rtl::OUString, lt_rtl_OUString > aLocaleNamesSet;
+            std::list< SvtLinguConfigDictionaryEntry >::const_iterator aDictIt;
+            for (aDictIt = aDics.begin();  aDictIt != aDics.end();  ++aDictIt)
+            {
+                uno::Sequence< rtl::OUString > aLocaleNames( aDictIt->aLocaleNames );
+                sal_Int32 nLen2 = aLocaleNames.getLength();
+                for (k = 0;  k < nLen2;  ++k)
+                {
+                    aLocaleNamesSet.insert( aLocaleNames[k] );
+                }
+            }    
+            // ... and add them to the resulting sequence
+            aSuppLocales.realloc( aLocaleNamesSet.size() );
+            std::set< rtl::OUString, lt_rtl_OUString >::const_iterator aItB;
+            k = 0;
+            for (aItB = aLocaleNamesSet.begin();  aItB != aLocaleNamesSet.end();  ++aItB)
+            {
+				Locale aTmp( MsLangId::convertLanguageToLocale(
+						MsLangId::convertIsoStringToLanguage( *aItB )));
+                aSuppLocales[k++] = aTmp;
+            }    
+            
+            //! For each dictionary and each locale we need a seperate entry.
+            //! If this results in more than one dictionary per locale than (for now)
+			//! it is undefined which dictionary gets used.
+			//! In the future the implementation should support using several dictionaries
+			//! for one locale. 
+			numdict = 0;
+            for (aDictIt = aDics.begin();  aDictIt != aDics.end();  ++aDictIt)
+				numdict = numdict + aDictIt->aLocaleNames.getLength();
+
+            // add dictionary information
+            aDicts  = new Hunspell* [numdict];
+            aDEncs  = new rtl_TextEncoding [numdict];
+            aDLocs  = new Locale [numdict];
+            aDNames = new OUString [numdict];
+            k = 0;
+            for (aDictIt = aDics.begin();  aDictIt != aDics.end();  ++aDictIt)
+            {
+                if (aDictIt->aLocaleNames.getLength() > 0 && 
+                    aDictIt->aLocations.getLength() > 0)
+                {
+                    uno::Sequence< rtl::OUString > aLocaleNames( aDictIt->aLocaleNames );
+                    sal_Int32 nLocales = aLocaleNames.getLength();
+
+                    // currently only one language per dictionary is supported in the actual implementation...
+                    // Thus here we work-around this by adding the same dictionary several times.
+                    // Once for each of it's supported locales.
+                    for (sal_Int32 i = 0;  i < nLocales;  ++i)
+                    {
+                        aDicts[k]  = NULL;
+                        aDEncs[k]  = 0;
+                        aDLocs[k]  = MsLangId::convertLanguageToLocale(
+                                        MsLangId::convertIsoStringToLanguage( aLocaleNames[i] ));
+                        // also both files have to be in the same directory and the
+                        // file names must only differ in the extension (.aff/.dic).
+                        // Thus we use the first location only and strip the extension part.
+                        rtl::OUString aLocation = aDictIt->aLocations[0];
+                        sal_Int32 nPos = aLocation.lastIndexOf( '.' );
+                        aLocation = aLocation.copy( 0, nPos );
+                        aDNames[k] = aLocation;
+                        
+                        ++k;
+                    }
+                }
+            }
+            DBG_ASSERT( k == numdict, "index mismatch?" );
+        } 
+        else 
+        {
+            /* no dictionary found so register no dictionaries */
+            numdict = 0;
+            aDicts  = NULL;
+            aDEncs  = NULL;
+            aDLocs  = NULL;
+            aDNames = NULL;
+            aSuppLocales.realloc(0);
+        }
+    }    
 
 #ifdef USE_JAVA
 	if ( !maLocales )
@@ -668,7 +615,6 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 	return bRes;
 }
 
-
 INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocale )
 {       
         Hunspell * pMS;
@@ -705,8 +651,7 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 		else
 		{
 #endif	// USE_JAVA
-
-            for (int i =0; i < numdict; i++) {
+            for (sal_Int32 i = 0; i < numdict; ++i) {
 	        pMS = NULL;
                 aEnc = 0;
 
@@ -722,6 +667,16 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
  	              osl::FileBase::getSystemPathFromFileURL(affpath,aff);
                       OString aTmpaff(OU2ENC(aff,osl_getThreadTextEncoding()));
                       OString aTmpdict(OU2ENC(dict,osl_getThreadTextEncoding()));
+
+#if defined(WNT)
+					  // workaround for Windows specifc problem that the 
+					  // path length in calls to 'fopen' is limted to somewhat
+					  // about 120+ characters which will usually be exceed when
+					  // using dictionaries as extensions.
+					  aTmpaff = Win_GetShortPathName( aff );
+					  aTmpdict = Win_GetShortPathName( dict );
+#endif
+
                       aDicts[i] = new Hunspell(aTmpaff.getStr(),aTmpdict.getStr());
                       aDEncs[i] = 0;
                       if (aDicts[i]) {
@@ -799,6 +754,7 @@ sal_Bool SAL_CALL
 #else	// USE_JAVA
  	if (rLocale == Locale()  ||  !rWord.getLength())
 #endif	// USE_JAVA
+		return TRUE;
 
 	if (!hasLocale( rLocale ))
 #ifdef LINGU_EXCEPTIONS
@@ -878,7 +834,6 @@ Reference< XSpellAlternatives >
 		else
 		{
 #endif	// USE_JAVA
-
             for (int i =0; i < numdict; i++) {
 	        pMS = NULL;
                 aEnc = 0;
@@ -915,7 +870,6 @@ Reference< XSpellAlternatives >
                     }
 		}
 	    }
-
 #ifdef USE_JAVA
 		}
 
@@ -1066,11 +1020,7 @@ OUString SAL_CALL
 		throw(RuntimeException)
 {
 	MutexGuard	aGuard( GetLinguMutex() );
-#ifdef PRODUCT_NAME
-	return A2OU( PRODUCT_NAME " Mac OS X Spellchecker with Hunspell" );
-#else	// PRODUCT_NAME
-	return A2OU( "OpenOffice.org Hunspell SpellChecker" );
-#endif	// PRODUCT_NAME
+	return A2OU( "Hunspell SpellChecker" );
 }
 
 
@@ -1097,8 +1047,9 @@ void SAL_CALL
 			xPropHelper = pPropHelper;
 			pPropHelper->AddAsPropListener();	//! after a reference is established
 		}
-		else
+		else {
 			DBG_ERROR( "wrong number of arguments in sequence" );
+        }
 
 	}
 }

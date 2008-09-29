@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -40,27 +33,18 @@
 #include <uno/lbnames.h>			// CPPU_CURRENT_LANGUAGE_BINDING_NAME macro, which specify the environment type
 #include <cppuhelper/implbase1.hxx>	// helper for implementations
 #include <cppuhelper/implbase6.hxx>	// helper for implementations
-
-#ifndef _COM_SUN_STAR_LANG_XCOMPONENT_HPP_
 #include <com/sun/star/lang/XComponent.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
 #include <com/sun/star/lang/XInitialization.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSERVICEDISPLAYNAME_HPP_
 #include <com/sun/star/lang/XServiceDisplayName.hpp>
-#endif
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/PropertyValues.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/linguistic2/XSpellChecker.hpp>
 #include <com/sun/star/linguistic2/XSearchableDictionaryList.hpp>
 #include <com/sun/star/linguistic2/XLinguServiceEventBroadcaster.hpp>
-
-#ifndef _TOOLS_TABLE_HXX
 #include <tools/table.hxx>
-#endif
 
+#include <lingutil.hxx>
 #include <linguistic/misc.hxx>
 #include "sprophelp.hxx"
 
@@ -76,17 +60,6 @@ using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::linguistic2;
-
-
-#define A2OU(x)	::rtl::OUString::createFromAscii( x )
-
-#define OU2A(rtlOUString)     ::rtl::OString((rtlOUString).getStr(), (rtlOUString).getLength(), RTL_TEXTENCODING_ASCII_US).getStr()
-
-#define OU2UTF8(rtlOUString)     ::rtl::OString((rtlOUString).getStr(), (rtlOUString).getLength(), RTL_TEXTENCODING_UTF8).getStr()
-
-#define OU2ISO_1(rtlOUString)     ::rtl::OString((rtlOUString).getStr(), (rtlOUString).getLength(), RTL_TEXTENCODING_ISO_8859_1).getStr()
-
-#define OU2ENC(rtlOUString, rtlEncoding)     ::rtl::OString((rtlOUString).getStr(), (rtlOUString).getLength(), rtlEncoding, RTL_UNICODETOTEXT_FLAGS_UNDEFINED_QUESTIONMARK).getStr()
 
 
 ///////////////////////////////////////////////////////////////////////////
@@ -109,12 +82,12 @@ class SpellChecker :
         Locale *                           aDLocs;
         OUString *                         aDNames;
         sal_Int32                          numdict;
+
 #ifdef USE_JAVA
 	CFArrayRef								maLocales;
 	::std::map< ::rtl::OUString, CFStringRef >	maPrimaryNativeLocaleMap;
 	::std::map< ::rtl::OUString, CFStringRef >	maSecondaryNativeLocaleMap;
 #endif	// USE_JAVA
-
 	::cppu::OInterfaceContainerHelper		aEvtListeners;
 	Reference< XPropertyChangeListener >	xPropHelper;
 	PropertyHelper_Spell *			 		pPropHelper;
