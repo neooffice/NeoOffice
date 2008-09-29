@@ -284,22 +284,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                     aDicts[k] = NULL;
                     aDEncs[k] = 0;
                     aDNames[k] = aPathOpt.GetUserDictionaryPath() + A2OU("/") + A2OU(postupdict[i]->filename);
-#ifdef USE_JAVA
-                    // Don't add dictionaries that don't exist
-                    OUString dicpath = aDNames[i] + A2OU(".dic");
-                    OUString affpath = aDNames[i] + A2OU(".aff");
-                    OUString dict;
-                    OUString aff;
-                    osl::FileBase::getSystemPathFromFileURL(dicpath,dict);
-                    osl::FileBase::getSystemPathFromFileURL(affpath,aff);
-                    OString aTmpaff(OU2ENC(aff,osl_getThreadTextEncoding()));
-                    OString aTmpdict(OU2ENC(dict,osl_getThreadTextEncoding()));
-
-                    if (!access(aTmpaff.getStr(), R_OK) && !access(aTmpdict.getStr(), R_OK))
-                        k++;
-#else	// USE_JAVA
                     k++;
-#endif	// USE_JAVA
                 }
 
                 // now add the shared dictionaries
@@ -317,21 +302,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                     aDicts[k] = NULL;
                     aDEncs[k] = 0;
                     aDNames[k] = aPathOpt.GetLinguisticPath() + A2OU("/ooo/") + A2OU(postspdict[i]->filename);
-#ifdef USE_JAVA
-                    // Don't add dictionaries that don't exist
-                    OUString dicpath = aDNames[i] + A2OU(".dic");
-                    OUString affpath = aDNames[i] + A2OU(".aff");
-                    OUString dict;
-                    OUString aff;
-                    osl::FileBase::getSystemPathFromFileURL(dicpath,dict);
-                    osl::FileBase::getSystemPathFromFileURL(affpath,aff);
-                    OString aTmpaff(OU2ENC(aff,osl_getThreadTextEncoding()));
-                    OString aTmpdict(OU2ENC(dict,osl_getThreadTextEncoding()));
-                    if (!access(aTmpaff.getStr(), R_OK) && !access(aTmpdict.getStr(), R_OK))
-                        k++;
-#else	// USE_JAVA
                     k++;
-#endif	// USE_JAVA
                 }
 
                 aSuppLocales.realloc(numlocs);
