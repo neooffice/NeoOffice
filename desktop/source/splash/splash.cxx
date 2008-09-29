@@ -693,9 +693,9 @@ void SplashScreen::Paint( const Rectangle&)
         Rectangle aClipRect( Point( _pProgressBar->GetPosPixel().X(), _pProgressBar->GetPosPixel().Y() + 1 ), Size( _pProgressBar->GetSizePixel().Width(), _pProgressBar->GetSizePixel().Height() - 1 ) );
         if ( _bPaintProgress )
         {
-            SetClipRegion( Region( aClipRect ) );
+            Rectangle aProgressBarClip( Point( 0, 1 ), aClipRect.GetSize() );
+            _pProgressBar->SetClipRegion( Region( aProgressBarClip ) );
             _pProgressBar->SetValue( _iProgress );
-            SetClipRegion();
         }
 
         // Copy top to screen
