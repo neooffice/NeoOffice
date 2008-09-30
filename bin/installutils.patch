@@ -124,8 +124,8 @@ update_installation() {
 
 	# Install shared .oxt files
 	if [ "$INSTALLER_TEMP" != "$HOME" -a `cd "$INSTALLER_TEMP" ; pwd` != "$HOME" ] ; then
-		for i in `find "$1/Contents/Resources" -name "*.oxt"` ; do
-			( cd "$2/Contents/MacOS" || exit 1 ; HOME="$INSTALLER_TEMP" ; export HOME ; rm -Rf "$INSTALLER_TEMP/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)" ; "./unopkg.bin" remove --shared `basename "$i"` ; rm -Rf "$INSTALLER_TEMP/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)" ; "./unopkg.bin" add --shared "$i" )
+		for i in `cd "$1/Contents/Resources" ; find . -name "*.oxt"` ; do
+			( cd "$2/Contents/MacOS" || exit 1 ; HOME="$INSTALLER_TEMP" ; export HOME ; rm -Rf "$INSTALLER_TEMP/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)" ; "./unopkg.bin" remove --shared `basename "$i"` ; rm -Rf "$INSTALLER_TEMP/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)" ; "./unopkg.bin" add --shared "$1/Contents/Resources/$i" )
 			sync
 		done
 	fi
