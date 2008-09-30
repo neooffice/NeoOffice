@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -82,9 +75,6 @@
 
 #if GLIBC >= 2
 #   include <shadow.h>
-#   if ! (defined(SPARC) || defined(X86_64))
-#       include <asm/sigcontext.h>
-#   endif
 #   include <pthread.h>
 #   include <sys/file.h>
 #   include <sys/ioctl.h>
@@ -98,11 +88,12 @@
 #	if __BYTE_ORDER == __LITTLE_ENDIAN
 #		define _LITTLE_ENDIAN
 #	elif __BYTE_ORDER == __BIG_ENDIAN
-#		define _BIG_ENDIAN
+#               ifndef _BIG_ENDIAN
+#               define _BIG_ENDIAN
+#               endif
 #	elif __BYTE_ORDER == __PDP_ENDIAN
 #		define _PDP_ENDIAN
 #	endif
-#	define  PTR_SIZE_T(s)				((size_t *)&(s))
 #	define 	IORESOURCE_TRANSFER_BSD 
 #	define 	IOCHANNEL_TRANSFER_BSD_RENO
 #	define	pthread_testcancel()
@@ -157,7 +148,6 @@
 #   elif BYTE_ORDER == PDP_ENDIAN
 #   	define _PDP_ENDIAN_OO
 #   endif
-#	define  PTR_SIZE_T(s)				((size_t *)&(s))
 #	define 	IORESOURCE_TRANSFER_BSD 
 #	define 	IOCHANNEL_TRANSFER_BSD_RENO
 #	define	pthread_testcancel()
@@ -248,7 +238,6 @@ extern unsigned int nanosleep(unsigned int);
 #	define  sched_yield() 				pthread_yield()
 #	define  SLEEP_TIMESPEC(timespec)  	nsleep(&timespec, 0)
 #	define  LIBPATH "LIBPATH"
-#	define  PTR_SIZE_T(s)				((size_t *)&(s))
 #	define  NO_PTHREAD_SEMAPHORES
 #   define  NO_DL_FUNCTIONS
 #endif
@@ -266,7 +255,6 @@ extern unsigned int nanosleep(unsigned int);
 #	include <crypt.h>
 #	include <machine/param.h>
 #	define  LIBPATH "SHLIB_PATH"
-#	define  PTR_SIZE_T(s)				((int *)&(s))
 #	define  PTR_FD_SET(s)				((int *)&(s))
 #	define  PTHREAD_VALUE(t)			((t).field2)
 # 	define  PTHREAD_NONE_INIT			{ 0, -1 }
@@ -290,7 +278,6 @@ extern unsigned int nanosleep(unsigned int);
 #	include <sys/un.h>
 #	include <sys/stropts.h>
 #	include <netinet/tcp.h>
-#	include <procfs/procfs.h>
 #   include <sys/endian.h>
 #   if BYTE_ORDER == LITTLE_ENDIAN
 #	undef _BIG_ENDIAN
@@ -304,7 +291,6 @@ extern unsigned int nanosleep(unsigned int);
 #   endif
 #	define  SA_FAMILY_DECL \
 		union { struct { short sa_family2; } sa_generic; } sa_union
-#	define  PTR_SIZE_T(s)				((int *)&(s))
 #	define  NO_PTHREAD_PRIORITY
 #	include <dlfcn.h>
 #	define 	IOCHANNEL_TRANSFER_BSD
@@ -313,7 +299,6 @@ extern char *strdup(const char *);
 
 #ifdef SOLARIS
 #	include <shadow.h>
-#	include <sys/procfs.h>
 #	include <sys/un.h>
 #	include <stropts.h>
 #	include <pthread.h>
@@ -325,7 +310,6 @@ extern char *strdup(const char *);
 #	define 	IORESOURCE_TRANSFER_SYSV 
 #	define 	IOCHANNEL_TRANSFER_BSD
 #	define  LIBPATH "LD_LIBRARY_PATH"
-#	define  PTR_SIZE_T(s)				((int *)&(s))
 #endif
 
 #ifdef MACOSX
@@ -370,9 +354,7 @@ extern char *strdup(const char *);
 #ifdef USE_JAVA
 #       include <sal/types.h>
 #endif	/* USE_JAVA */
-#ifndef HAVE_READDIR_H
 int  readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result );
-#endif
 char *asctime_r( const struct tm *tm, char *buffer );
 void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion, unsigned int *minorVersion, unsigned int *minorMinorVersion );
 #ifdef __cplusplus
@@ -393,7 +375,7 @@ int macxp_resolveAlias(char *path, int buflen);
 #if !defined(_WIN32)  && !defined(_WIN16) && !defined(OS2)  && \
     !defined(LINUX)   && !defined(NETBSD) && !defined(FREEBSD) && !defined(SCO)  && \
 	!defined(AIX)     && !defined(HPUX)   && \
-	!defined(SOLARIS) && !defined(IRIX)   && !defined(MAC) && \
+	!defined(SOLARIS) && !defined(IRIX)   && \
 	!defined(MACOSX)
 #	error "Target platform not specified!"
 #endif
@@ -414,10 +396,6 @@ int macxp_resolveAlias(char *path, int buflen);
 #else
 #	error undetermined endianess
 #endif
-#endif
-
-#ifndef PTR_SIZE_T
-#	define PTR_SIZE_T(s)				(&(s))
 #endif
 
 #ifndef PTR_FD_SET
@@ -545,10 +523,10 @@ extern struct spwd *getspnam_r(const char *name, struct spwd *result,
 struct tm *localtime_r(const time_t *timep, struct tm *buffer);
 struct tm *gmtime_r(const time_t *timep, struct tm *buffer);
 #endif /* !defined FREEBSD || (__FreeBSD_version < 500112) */
-#if !defined(FREEBSD) || (__FreeBSD_version < 700015)
+#if !defined(FREEBSD) || (__FreeBSD_version < 601103)
 struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 								char *buffer, int buflen, int *h_errnop);
-#endif /* !defined(FREEBSD) || (__FreeBSD_version < 700015) */
+#endif /* !defined(FREEBSD) || (__FreeBSD_version < 601103) */
 #endif
 
 #endif /* __OSL_SYSTEM_H__ */

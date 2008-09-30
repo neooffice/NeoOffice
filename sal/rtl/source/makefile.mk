@@ -1,36 +1,30 @@
 #*************************************************************************
 #
-#   $RCSfile$
+# Copyright 2008 by Sun Microsystems, Inc.
 #
-#   $Revision$
+# $RCSfile$
 #
-#   last change: $Author$ $Date$
+# $Revision$
 #
-#   The Contents of this file are made available subject to
-#   the terms of GNU General Public License Version 2.1.
+# This file is part of NeoOffice.
 #
+# NeoOffice is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3
+# only, as published by the Free Software Foundation.
 #
-#     GNU General Public License Version 2.1
-#     =============================================
-#     Copyright 2005 by Sun Microsystems, Inc.
-#     901 San Antonio Road, Palo Alto, CA 94303, USA
+# NeoOffice is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
 #
-#     This library is free software; you can redistribute it and/or
-#     modify it under the terms of the GNU General Public
-#     License version 2.1, as published by the Free Software Foundation.
+# You should have received a copy of the GNU General Public License
+# version 3 along with NeoOffice.  If not, see
+# <http://www.gnu.org/licenses/gpl-3.0.txt>
+# for a copy of the GPLv3 License.
 #
-#     This library is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#     General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public
-#     License along with this library; if not, write to the Free Software
-#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#     MA  02111-1307  USA
-#
-#     Modified July 2006 by Patrick Luby. NeoOffice is distributed under
-#     GPL only under modification term 3 of the LGPL.
+# Modified July 2006 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
@@ -45,6 +39,10 @@ PROJECTPCH4DLL=TRUE
 PROJECTPCH=cont_pch
 PROJECTPCHSOURCE=cont_pch
 
+.IF "$(GUI)" == "OS2"
+STL_OS2_BUILDING=1
+.ENDIF
+
 TARGETTYPE=CUI
 
 # --- Settings -----------------------------------------------------
@@ -55,7 +53,14 @@ TARGETTYPE=CUI
 CDEFS+= -DFORCE_SYSALLOC
 .ENDIF
 
+CFLAGS+= $(LFS_CFLAGS)
+CXXFLAGS+= $(LFS_CFLAGS)
+
 # --- Files --------------------------------------------------------
+
+# safe that way: gen_makefile doesn't want it,
+# no other link target here
+UWINAPILIB:=
 
 .IF "$(header)" == ""
 
@@ -87,12 +92,16 @@ SLOFILES=   \
             $(SLO)$/uri.obj			\
             $(SLO)$/bootstrap.obj  	\
             $(SLO)$/cmdargs.obj		\
-            $(SLO)$/macro.obj		\
             $(SLO)$/unload.obj		\
             $(SLO)$/logfile.obj     \
             $(SLO)$/tres.obj        \
             $(SLO)$/debugprint.obj        \
             $(SLO)$/math.obj
+
+.IF "$(OS)"=="MACOSX"
+SLOFILES+=$(SLO)$/memory_fini.obj
+.ENDIF
+
 
 #.IF "$(UPDATER)"=="YES"
 OBJFILES=   \
@@ -117,19 +126,23 @@ OBJFILES=   \
             $(OBJ)$/uri.obj			\
             $(OBJ)$/bootstrap.obj  	\
             $(OBJ)$/cmdargs.obj		\
-            $(OBJ)$/macro.obj		\
             $(OBJ)$/unload.obj		\
             $(OBJ)$/logfile.obj     \
             $(OBJ)$/tres.obj        \
             $(OBJ)$/math.obj
-			
+
+.IF "$(OS)"=="MACOSX"
+OBJFILES+=$(OBJ)$/memory_fini.obj
+.ENDIF
+
+
 APP1TARGET=gen_makefile
 APP1OBJS=$(SLO)$/gen_makefile.obj
 APP1LIBSALCPPRT=
 
 # --- Extra objs ----------------------------------------------------
 
-.IF "$(OS)"=="LINUX"
+.IF "$(OS)"=="LINUX" || "$(OS)"=="OS2"
 
 #
 # This part builds a second version of alloc.c, with 
@@ -175,8 +188,10 @@ $(ALWAYSDBGFILES):
 	@echo --- ALWAYSDBG ---
 	@dmake $(MFLAGS) $(MAKEFILE) debug=true ALWAYSDBG_FLAG=TRUE $(CALLMACROS) $@
 	@echo --- ALWAYSDBG OVER ---
+
 .ENDIF
 .ENDIF
+
 
 ALLTAR : $(BOOTSTRAPMK)
 

@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -42,40 +35,32 @@
  *      - cleanup of resource transfer
  */
 
+#if defined(SOLARIS)
+  // The procfs may only be used without LFS in 32bits.
+# ifdef _FILE_OFFSET_BITS     
+#   undef   _FILE_OFFSET_BITS
+# endif
+#endif
+
 
 #ifdef FREEBSD
 #include <machine/param.h>
 #endif
 
 #include "system.h"
-
-#ifndef _OSL_DIAGNOSE_H_
+#if defined(SOLARIS) || defined(IRIX)
+# include <sys/procfs.h>
+#endif
 #include <osl/diagnose.h>
-#endif
-
-#ifndef _OSL_MUTEX_H_
 #include <osl/mutex.h>
-#endif
 
 #ifndef _OSL_CONDITN_H_
 #include <osl/conditn.h>
 #endif
-
-#ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
-#endif
-
-#ifndef _OSL_FILE_H_
 #include <osl/file.h>
-#endif
-
-#ifndef _OSL_SIGNAL_H_
 #include <osl/signal.h>
-#endif
-
-#ifndef _RTL_ALLOC_H_
 #include <rtl/alloc.h>
-#endif
 
 #include <grp.h>
 
@@ -866,13 +851,13 @@ oslProcessError SAL_CALL osl_psz_executeProcess(sal_Char *pszImageName,
 		(osl_searchPath_impl(pszImageName, NULL, '\0', path, sizeof(path)) == osl_Process_E_None))
 		pszImageName = path;
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 	// The fork() function will eventually hang the process if too many
 	// non-existant executables are called so don't bother forking if we know
 	// exec() will fail
 	if (access(pszImageName, R_OK | X_OK))
 		return osl_Process_E_NotFound;
-#endif  /* MACOSX */
+#endif  /* USE_JAVA */
 
 	Data.m_pszArgs[0] = strdup(pszImageName);
 	Data.m_pszArgs[1] = 0;

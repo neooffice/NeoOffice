@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -54,37 +47,17 @@
 
 #include <algorithm>
 #include <limits>
-
-#ifndef __OSL_SYSTEM_H__
 #include "system.h"
-#endif
-
-#ifndef _RTL_ALLOC_H_
 #include <rtl/alloc.h>
-#endif
 
 #include "osl/file.hxx"
 
 
-#ifndef _SAL_TYPES_H_
 #include <sal/types.h>
-#endif
-
-#ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
-#endif
-
-#ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
-#endif
-
-#ifndef _FILE_ERROR_TRANSL_H_
 #include "file_error_transl.h"
-#endif
-
-#ifndef _OSL_TIME_H_
 #include <osl/time.h>
-#endif
 
 #ifndef _FILE_URL_H_
 #include "file_url.h"
@@ -238,6 +211,7 @@ typedef struct
 {
     rtl_uString* ustrFilePath;      /* holds native file path */
     int fd;
+    sal_Bool bLocked;
 } oslFileHandleImpl;
 
 
@@ -450,8 +424,10 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
             }
         }
         else
+        {
             /* should be removed by optimizer in product version */
             PERROR( "osl_openDirectory", path );
+        }
     }
 
     rtl_uString_release( ustrSystemPath );
@@ -532,6 +508,7 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     if (NULL == pEntry)
         return osl_File_E_NOENT;
 
+
 #if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2) && !defined USE_JAVA
 
     // convert decomposed filename to precomposed unicode 
@@ -545,7 +522,6 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 	osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
 
 #else  /* !MACOSX && !USE_JAVA */
-
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
@@ -554,7 +530,6 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 #endif	/* !MACOSX && !USE_JAVA */
 
 	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
-
 #ifdef USE_JAVA
     /*
      * Fix bug 1246 by ensuring that the normalized directory name exists,
@@ -576,7 +551,6 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
     }
 #endif	/* USE_JAVA */
-
     rtl_uString_release( ustrFileName );
 
 #ifdef _DIRENT_HAVE_D_TYPE
@@ -585,8 +559,6 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     *pItem = (oslDirectoryItem) oslDirectoryItemImpl_CreateNew( ustrFilePath, true, pEntry->d_type );
 #else
     /* use path as directory item */
-	if (*pItem)
-		rtl_uString_release( (rtl_uString *) *pItem );
     *pItem = (oslDirectoryItem) ustrFilePath;
 #endif
 
@@ -700,6 +672,9 @@ oslFileHandle osl_createFileHandleFromFD( int fd )
 			pHandleImpl->ustrFilePath = NULL;
 			rtl_uString_new( &pHandleImpl->ustrFilePath );
 			pHandleImpl->fd = fd;
+
+            /* FIXME: it should be detected whether the file has been locked */
+			pHandleImpl->bLocked = sal_True;
 		}
 	}
 
@@ -805,64 +780,77 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 #endif
             }
 
+            sal_Bool bNeedsLock = ( ( uFlags & osl_File_OpenFlag_NoLock ) == 0 );
+            if ( !bNeedsLock )
+            {
+#ifdef MACOSX
+                flags &= ~O_EXLOCK;
+                flags &= ~O_SHLOCK;
+#endif
+            }    
+
             /* open the file */
             fd = open( buffer, flags, mode );
             if ( fd >= 0 )
             {
-                /* check if file lock is enabled and clear l_type member of flock otherwise */
-                if( (char *) -1 == pFileLockEnvVar )
+                sal_Bool bLocked = sal_False;
+                if( bNeedsLock )
                 {
-                    /* FIXME: this is not MT safe */
-                    pFileLockEnvVar = getenv("SAL_ENABLE_FILE_LOCKING");
+#ifndef HAVE_O_EXLOCK
+                    /* check if file lock is enabled and clear l_type member of flock otherwise */
+                    if( (char *) -1 == pFileLockEnvVar )
+                    {
+                        /* FIXME: this is not MT safe */
+                        pFileLockEnvVar = getenv("SAL_ENABLE_FILE_LOCKING");
 
-                    if( NULL == pFileLockEnvVar)
-                        pFileLockEnvVar = getenv("STAR_ENABLE_FILE_LOCKING");
-                }
-#ifdef HAVE_O_EXLOCK
+                        if( NULL == pFileLockEnvVar)
+                            pFileLockEnvVar = getenv("STAR_ENABLE_FILE_LOCKING");
+                    }
+#else
 #ifndef USE_JAVA
-                /* disable range based locking */
-                pFileLockEnvVar = NULL;
+                    /* disable range based locking */
+                    pFileLockEnvVar = NULL;
 #endif	/* !USE_JAVA */
-                
-                /* remove the NONBLOCK flag again */
-                flags = fcntl(fd, F_GETFL, NULL);
-                flags &= ~O_NONBLOCK;
-                if( 0 > fcntl(fd, F_GETFL, flags) )
-                    return oslTranslateFileError(OSL_FET_ERROR, errno);
+                    
+                    /* remove the NONBLOCK flag again */
+                    flags = fcntl(fd, F_GETFL, NULL);
+                    flags &= ~O_NONBLOCK;
+                    if( 0 > fcntl(fd, F_GETFL, flags) )
+                        return oslTranslateFileError(OSL_FET_ERROR, errno);
 #endif
-                if( NULL == pFileLockEnvVar )
-                    aflock.l_type = 0;
+                    if( NULL == pFileLockEnvVar )
+                        aflock.l_type = 0;
 
-                /* lock the file if flock.l_type is set */
+                    /* lock the file if flock.l_type is set */
 #ifdef USE_JAVA
-                /*
-                 * Mac OS X will return ENOTSUP for mounted file systems so
-                 * ignore the error for write locks. Also, fix bug 3110 by
-                 * using flock() instead of fcntl() to lock the file.
-                 */
-                bool bOK = false;
-                if( F_WRLCK != aflock.l_type )
-                {
-                    bOK = true;
-                }
-                else if( 0 == flock( fd, LOCK_EX | LOCK_NB ) || errno == ENOTSUP )
-                {
-                    if( errno == ENOTSUP )
+                    /*
+                     * Mac OS X will return ENOTSUP for mounted file systems so
+                     * ignore the error for write locks. Also, fix bug 3110 by
+                     * using flock() instead of fcntl() to lock the file.
+                     */
+                    if( F_WRLCK != aflock.l_type )
                     {
-                        /* Try to get at least a read lock */
-                        if ( 0 == flock( fd, LOCK_SH | LOCK_NB ) || errno == ENOTSUP )
-                            bOK = true;
+                        bLocked = sal_True;
                     }
-                    else
+                    else if( 0 == flock( fd, LOCK_EX | LOCK_NB ) || errno == ENOTSUP )
                     {
-                        bOK = true;
+                        if( errno == ENOTSUP )
+                        {
+                            /* Try to get at least a read lock */
+                            if ( 0 == flock( fd, LOCK_SH | LOCK_NB ) || errno == ENOTSUP )
+                                bLocked = sal_True;
+                        }
+                        else
+                        {
+                            bLocked = sal_True;
+                        }
                     }
+#else	/* USE_JAVA */
+                    bLocked = ( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) );
+#endif	/* USE_JAVA */
                 }
 
-                if( bOK )
-#else	/* USE_JAVA */
-                if( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) )
-#endif	/* USE_JAVA */
+                if ( !bNeedsLock || bLocked )
                 {
                     /* allocate memory for impl structure */
                     pHandleImpl = (oslFileHandleImpl*) rtl_allocateMemory( sizeof(oslFileHandleImpl) );
@@ -870,6 +858,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                     {
                         pHandleImpl->ustrFilePath = ustrFilePath;
                         pHandleImpl->fd = fd;
+			            pHandleImpl->bLocked = bLocked;
 
                         *pHandle = (oslFileHandle) pHandleImpl;
 
@@ -936,20 +925,25 @@ oslFileError osl_closeFile( oslFileHandle Handle )
             aflock.l_start = 0;
             aflock.l_len = 0;
 
-            /* FIXME: check if file is really locked ?  */
+            if ( pHandleImpl->bLocked )
+            {
+                /* FIXME: check if file is really locked ?  */
 
-            /* release the file share lock on this file */
+                /* release the file share lock on this file */
 #ifdef USE_JAVA
-            /*
-             * Mac OS X will return ENOTSUP for mounted file systems so ignore
-             * the error for write locks. Also, fix bug 3110 by using flock()
-             * instead of fcntl() to lock the file.
-             */
-            if ( 0 != flock( pHandleImpl->fd, LOCK_UN | LOCK_NB ) && errno != ENOTSUP )
+                /*
+                 * Mac OS X will return ENOTSUP for mounted file systems so
+                 * ignore the error for write locks. Also, fix bug 3110 by
+                 * using flock() instead of fcntl() to lock the file.
+                 */
+                if( 0 != flock( pHandleImpl->fd, LOCK_UN | LOCK_NB ) && errno != ENOTSUP )
 #else	/* USE_JAVA */
-            if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
+                if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
 #endif	/* USE_JAVA */
-                PERROR( "osl_closeFile", "unlock failed" );
+                {
+                    PERROR( "osl_closeFile", "unlock failed" );
+                }
+            }
         }
 
         if( 0 > close( pHandleImpl->fd ) )
@@ -1985,7 +1979,7 @@ static oslFileError osl_psz_removeFile( const sal_Char* pszPath )
     int nRet=0;
     struct stat aStat;
 
-    nRet = stat(pszPath,&aStat);
+    nRet = lstat(pszPath,&aStat);
     if ( nRet < 0 )
     {
         nRet=errno;
@@ -2448,11 +2442,12 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
     return *ustrValid;
 }
 
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
+
 /*****************************************
  * oslSetFileTypeFromPsz
  ****************************************/
 
-#if defined USE_JAVA && defined PRODUCT_FILETYPE
 static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
 {
     FSRef aFSRef;
@@ -2466,6 +2461,7 @@ static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
         }
     }
 }
+
 #endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
 /*****************************************************************************
@@ -2977,7 +2973,7 @@ static oslFileError osl_mountFloppy(oslVolumeDeviceHandle hFloppy)
     oslVolumeDeviceHandleImpl* pItem=0;
     int nRet;
     sal_Char  pszCmd[PATH_MAX];
-    sal_Char* pszMountProg = "mount";
+    const sal_Char* pszMountProg = "mount";
     sal_Char* pszSuDo = 0;
     sal_Char* pszTmp = 0;
 
@@ -3112,7 +3108,7 @@ static oslFileError osl_unmountFloppy(oslVolumeDeviceHandle hFloppy)
     sal_Char pszCmd[PATH_MAX];
     sal_Char* pszTmp = 0;
     sal_Char* pszSuDo = 0;
-    sal_Char* pszUmountProg = "umount";
+    const sal_Char* pszUmountProg = "umount";
 
     pszCmd[0] = '\0';
     

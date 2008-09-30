@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,6 +32,16 @@
 #include "system.h"
 
 #define MAX_STACK_FRAMES 256
+
+#if defined( MACOSX )
+
+#if defined( INTEL )
+#include "backtrace.h"
+#define INCLUDE_BACKTRACE
+#define STACKTYPE "MacOsX_X86"
+#endif /* INTEL */
+
+#endif /* MACOSX */
 
 #ifdef LINUX
 #include <execinfo.h>
@@ -66,6 +69,7 @@
 #include <osl/signal.h>
 #include <osl/process.h>
 #include <osl/thread.h>
+#include <rtl/bootstrap.h>
 #include <rtl/digest.h>
 
 #include "file_path_helper.h"
@@ -145,11 +149,11 @@ what looks like a bug in the new handler*/
 };
 const int NoSignals = sizeof(Signals) / sizeof(struct SignalAction);
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 static sal_Bool               bErrorReportingEnabled = sal_False;
-#else	/* MACOSX */
+#else	/* USE_JAVA */
 static sal_Bool               bErrorReportingEnabled = sal_True;
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
 static sal_Bool  			  bInitSignal = sal_False;
 static oslMutex 			  SignalListMutex;
 static oslSignalHandlerImpl*  SignalList;
@@ -307,6 +311,7 @@ static sal_Bool DeInitSignal()
 }
 
 #if defined (SAL_ENABLE_CRASH_REPORT) && defined(INCLUDE_BACKTRACE)
+
 /*****************************************************************************/
 /* Generate MD5 checksum	*/
 /*****************************************************************************/
@@ -477,7 +482,7 @@ static int ReportCrash( int Signal )
 				int  iFrame;
 				int  nFrames = backtrace( stackframes, sizeof(stackframes)/sizeof(stackframes[0]));
 
-				FILE *xmlout, *stackout, *checksumout;
+				FILE *xmlout = NULL, *stackout = NULL, *checksumout = NULL;
 				int fdxml, fdstk, fdchksum;
 
 				strncpy( szXMLTempNameBuffer, P_tmpdir, sizeof(szXMLTempNameBuffer) );
@@ -512,12 +517,12 @@ static int ReportCrash( int Signal )
 					{
 						Dl_info dl_info;
 
-						fprintf( stackout, "0x%x:",
-							(unsigned int)stackframes[iFrame] );
+						fprintf( stackout, "0x%" SAL_PRIxUINTPTR ":",
+							SAL_INT_CAST(sal_uIntPtr, stackframes[iFrame]) );
 
-						fprintf( xmlout, "<errormail:StackInfo pos=\"%d\" ip=\"0x%x\"",
+						fprintf( xmlout, "<errormail:StackInfo pos=\"%d\" ip=\"0x%" SAL_PRIxUINTPTR "\"",
 							iFrame,
-							(unsigned int)stackframes[iFrame]
+							SAL_INT_CAST(sal_uIntPtr, stackframes[iFrame])
 							);
 
 						memset( &dl_info, 0, sizeof(dl_info) );
@@ -570,12 +575,12 @@ static int ReportCrash( int Signal )
 
 							if ( dl_info.dli_fbase && dl_info.dli_fname )
 							{
-								fprintf( stackout, " %s + 0x%x",
+								fprintf( stackout, " %s + 0x%" SAL_PRI_PTRDIFFT "x",
 									dl_info.dli_fname,
 									(char*)stackframes[iFrame] - (char*)dl_info.dli_fbase
 									);
 
-								fprintf( xmlout, " rel=\"0x%x\"", (char *)stackframes[iFrame] - (char *)dl_info.dli_fbase );
+								fprintf( xmlout, " rel=\"0x%" SAL_PRI_PTRDIFFT "x\"", (char *)stackframes[iFrame] - (char *)dl_info.dli_fbase );
 								if ( dli_fname )
 									fprintf( xmlout, " name=\"%s\"", dli_fname );
 
@@ -589,12 +594,12 @@ static int ReportCrash( int Signal )
 							{
 								fputs( " (", stackout );
 								fputs_xml( dl_info.dli_sname, stackout );
-								fprintf( stackout, " + 0x%x)", 
+								fprintf( stackout, " + 0x%" SAL_PRI_PTRDIFFT "x)", 
 									(char*)stackframes[iFrame] - (char*)dl_info.dli_saddr );
 
 								fputs( " ordinal=\"", xmlout );
 								fputs_xml( dl_info.dli_sname, xmlout );
-								fprintf( xmlout, "+0x%x\"", 
+								fprintf( xmlout, "+0x%" SAL_PRI_PTRDIFFT "x\"", 
 									(char *)stackframes[iFrame] - (char *)dl_info.dli_saddr );
 							}
 
@@ -611,10 +616,6 @@ static int ReportCrash( int Signal )
 
 					fprintf( xmlout, "</errormail:Stack>\n" );
 					fprintf( checksumout, "</errormail:Checksums>\n" );
-
-					fclose( stackout );
-					fclose( xmlout );
-					fclose( checksumout );
 				}
 				else
 				{
@@ -622,6 +623,13 @@ static int ReportCrash( int Signal )
 				    pStackTempName = NULL;
 					pChecksumTempName = NULL;
 				}
+				
+				if ( stackout )
+					fclose( stackout );
+				if ( xmlout )
+					fclose( xmlout );
+				if ( checksumout )
+					fclose( checksumout );
 
 #if defined( LINUX )
 				if ( pXMLTempName && pChecksumTempName && pStackTempName )
@@ -633,6 +641,40 @@ static int ReportCrash( int Signal )
 						pChecksumTempName, 
 						pStackTempName,
 						bAutoCrashReport ? " -noui -send" : " -noui" );
+#elif defined( MACOSX )
+				if ( pXMLTempName && pChecksumTempName && pStackTempName )
+				{
+					rtl_uString	*crashrep_url = NULL;
+					rtl_uString *crashrep_path = NULL;
+					rtl_String  *crashrep_path_system = NULL;
+
+					rtl_string2UString( &crashrep_url, RTL_CONSTASCII_USTRINGPARAM("$BRAND_BASE_DIR/program/crash_report.bin"), OSTRING_TO_OUSTRING_CVTFLAGS );
+					rtl_bootstrap_expandMacros( &crashrep_url );
+					osl_getSystemPathFromFileURL( crashrep_url, &crashrep_path );
+					rtl_uString2String( 
+						&crashrep_path_system, 
+						rtl_uString_getStr( crashrep_path ), 
+						rtl_uString_getLength( crashrep_path ), 
+						osl_getThreadTextEncoding(), 
+						RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR | RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR );
+
+					rtl_uString_release( crashrep_url );
+					rtl_uString_release( crashrep_path );
+
+					snprintf( szShellCmd, sizeof(szShellCmd)/sizeof(szShellCmd[0]),
+						"%s -p %d -s %d -xml %s -chksum %s -stack %s%s",
+						rtl_string_getStr( crashrep_path_system ),
+						getpid(), 
+						Signal, 
+						pXMLTempName, 
+						pChecksumTempName, 
+						pStackTempName,
+						bAutoCrashReport ? " -noui -send" : " -noui" );
+
+					rtl_string_release( crashrep_path_system );
+
+					printf( "%s\n", szShellCmd );
+				}
 #elif defined ( SOLARIS )
 				if ( pXMLTempName && pChecksumTempName )
 					snprintf( szShellCmd, sizeof(szShellCmd)/sizeof(szShellCmd[0]),
@@ -660,7 +702,7 @@ static int ReportCrash( int Signal )
 
 				if ( pChecksumTempName )
 					unlink( pChecksumTempName );
-
+					
 				if ( -1 != ret )
 				{
 					bCrashReporterExecuted = sal_True;
@@ -687,14 +729,14 @@ static int ReportCrash( int Signal )
 static void PrintStack( int sig )
 {
 #ifndef USE_JAVA
-#ifndef MACOSX
+#if ! defined(MACOSX) || defined(INCLUDE_BACKTRACE)
 	void *buffer[MAX_STACK_FRAMES];
 	int size = backtrace( buffer, sizeof(buffer) / sizeof(buffer[0]) );
 #endif
 
 	fprintf( stderr, "\n\nFatal exception: Signal %d\n", sig );
 
-#ifdef MACOSX
+#if defined(MACOSX) && ! defined(INCLUDE_BACKTRACE)
 	fprintf( stderr, "Please turn on Enable Crash Reporting and\nAutomatic Display of Crashlogs in the Console application\n" );
 #else
 	if ( size > 0 )

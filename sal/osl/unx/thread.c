@@ -1,52 +1,37 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified August 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified August 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 #include "system.h"
 #include <string.h>
-
-#ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
-#endif
-#ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
-#endif
-
-#ifndef _OSL_NLSUPPORT_H_
 #include <osl/nlsupport.h>
-#endif
 #ifndef _RTL_TEXTENC_H_
 #include <rtl/textenc.h>
 #endif
@@ -380,13 +365,9 @@ oslThread osl_createSuspendedThread (
 /*****************************************************************************/
 void SAL_CALL osl_destroyThread(oslThread Thread)
 {
-	Thread_Impl* pImpl= (Thread_Impl*)Thread;
-
-	OSL_ASSERT(pImpl);
-	if (!pImpl)
-		return; /* EINVAL */
-
-	osl_thread_cleanup_Impl (pImpl);
+    if (Thread != NULL) {
+        osl_thread_cleanup_Impl(Thread);
+    }
 }
 
 /*****************************************************************************/
@@ -450,9 +431,8 @@ sal_Bool SAL_CALL osl_isThreadRunning(const oslThread Thread)
 	sal_Bool active;
 	Thread_Impl* pImpl= (Thread_Impl*)Thread;
 
-	OSL_ASSERT(pImpl);
 	if (!pImpl)
-		return sal_False; /* EINVAL */
+		return sal_False;
 
 	pthread_mutex_lock (&(pImpl->m_Lock));
 	active = ((pImpl->m_Flags & THREADIMPL_FLAGS_ACTIVE) > 0);
@@ -469,9 +449,8 @@ void SAL_CALL osl_joinWithThread(oslThread Thread)
 	int attached;
 	Thread_Impl* pImpl= (Thread_Impl*)Thread;
 
-	OSL_ASSERT(pImpl);
 	if (!pImpl)
-		return; /* EINVAL */
+		return;
 
 	pthread_mutex_lock (&(pImpl->m_Lock));
 
@@ -1011,6 +990,15 @@ static void osl_thread_textencoding_init_Impl (void)
 		defaultEncoding = osl_getTextEncodingFromLocale(NULL);
 
 	OSL_ASSERT(defaultEncoding != RTL_TEXTENCODING_DONTKNOW);
+
+	/*
+	Tools string functions call abort() on an unknown encoding so ASCII
+	is a meaningfull fallback regardless wether the assertion makes sense.
+	*/
+
+	if ( RTL_TEXTENCODING_DONTKNOW == defaultEncoding )
+		defaultEncoding = RTL_TEXTENCODING_ASCII_US;
+
 	g_thread.m_textencoding.m_default = defaultEncoding;
 }
 

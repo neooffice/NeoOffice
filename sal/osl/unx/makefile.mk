@@ -1,36 +1,30 @@
 #*************************************************************************
 #
-#   $RCSfile$
+# Copyright 2008 by Sun Microsystems, Inc.
 #
-#   $Revision$
+# $RCSfile$
 #
-#   last change: $Author$ $Date$
+# $Revision$
 #
-#   The Contents of this file are made available subject to
-#   the terms of GNU General Public License Version 2.1.
+# This file is part of NeoOffice.
 #
+# NeoOffice is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3
+# only, as published by the Free Software Foundation.
 #
-#     GNU General Public License Version 2.1
-#     =============================================
-#     Copyright 2005 by Sun Microsystems, Inc.
-#     901 San Antonio Road, Palo Alto, CA 94303, USA
+# NeoOffice is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
 #
-#     This library is free software; you can redistribute it and/or
-#     modify it under the terms of the GNU General Public
-#     License version 2.1, as published by the Free Software Foundation.
+# You should have received a copy of the GNU General Public License
+# version 3 along with NeoOffice.  If not, see
+# <http://www.gnu.org/licenses/gpl-3.0.txt>
+# for a copy of the GPLv3 License.
 #
-#     This library is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#     General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public
-#     License along with this library; if not, write to the Free Software
-#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#     MA  02111-1307  USA
-#
-#     Modified December 2005 by Patrick Luby. NeoOffice is distributed under
-#     GPL only under modification term 3 of the LGPL.
+# Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
@@ -58,15 +52,8 @@ ENVCDEFS += -DPRODUCT_FILETYPE=\'$(PRODUCT_FILETYPE)\'
 
 .INCLUDE :  settings.mk
 
-.IF "$(HAVE_READDIR_R)"=="YES"
-CDEFS+=-DHAVE_READDIR_H
-.ELSE
-.IF "$(OS)" == "WNT"
-SHL1STDLIBS+= gnu_readdir.lih
-.ELSE
-SHL1STDLIBS+= -lgnu_readdir
-.ENDIF
-.ENDIF
+CFLAGS+= $(LFS_CFLAGS)
+CXXFLAGS+= $(LFS_CFLAGS)
 
 # --- Files --------------------------------------------------------
 
@@ -94,7 +81,8 @@ SLOFILES=   $(SLO)$/conditn.obj  \
 			$(SLO)$/file_path_helper.obj\
 			$(SLO)$/uunxapi.obj\
 			$(SLO)$/process_impl.obj\
-			$(SLO)$/file_stat.obj
+			$(SLO)$/file_stat.obj \
+			$(SLO)$/salinit.obj
 
 #.IF "$(UPDATER)"=="YES"
 OBJFILES=   $(OBJ)$/conditn.obj  \
@@ -121,10 +109,16 @@ OBJFILES=   $(OBJ)$/conditn.obj  \
 			$(OBJ)$/file_path_helper.obj\
 			$(OBJ)$/uunxapi.obj\
 			$(OBJ)$/process_impl.obj\
-			$(OBJ)$/file_stat.obj
+			$(OBJ)$/file_stat.obj \
+			$(OBJ)$/salinit.obj
+			
 #.ENDIF
 
-.IF "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD" || "$(OS)"=="NETBSD" || "$(OS)$(CPU)"=="LINUXS"
+.IF "$(OS)"=="MACOSX"
+SLOFILES += $(SLO)$/osxlocale.obj
+.ENDIF
+
+.IF "$(OS)"=="SOLARIS" || "$(OS)"=="FREEBSD" || "$(OS)"=="NETBSD" || "$(OS)$(CPU)"=="LINUXS" || "$(OS)"=="MACOSX"
 SLOFILES += $(SLO)$/backtrace.obj
 OBJFILES += $(OBJ)$/backtrace.obj
 .ENDIF
@@ -156,7 +150,7 @@ CFLAGS+=-DSAL_ENABLE_CRASH_REPORT
 
 .INCLUDE :  target.mk
 
-.IF "$(OS)$(CPU)"=="SOLARISS" || "$(OS)$(CPU)"=="NETBSDS" || "$(OS)$(CPU)"=="LINUXS"
+.IF "$(OS)$(CPU)"=="SOLARISU" || "$(OS)$(CPU)"=="SOLARISS" || "$(OS)$(CPU)"=="NETBSDS" || "$(OS)$(CPU)"=="LINUXS"
 
 $(SLO)$/interlck.obj: $(SLO)$/interlck.o
 	 touch $(SLO)$/interlck.obj
@@ -171,7 +165,7 @@ $(OBJ)$/interlck.o: $(MISC)$/interlck_sparc.s
 	$(ASM) $(AFLAGS) -o $@ $<
 
 $(MISC)$/interlck_sparc.s: asm/interlck_sparc.s
-	+tr -d "\015" < $< > $@
+	tr -d "\015" < $< > $@
 
 .ENDIF
 
@@ -190,6 +184,6 @@ $(OBJ)$/interlck.o: $(MISC)$/interlck_x86.s
 	$(ASM) $(AFLAGS) -o $@ $<
 
 $(MISC)$/interlck_x86.s: asm/interlck_x86.s
-	+tr -d "\015" < $< > $@
+	tr -d "\015" < $< > $@
 
 .ENDIF

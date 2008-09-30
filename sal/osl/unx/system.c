@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified August 2008 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -340,7 +333,7 @@ struct passwd *getpwnam_r(const char* name, struct passwd* s, char* buffer, int 
 }
 #endif /* defined SCO */
 
-#if !defined(FREEBSD) || (__FreeBSD_version < 700015)
+#if !defined(FREEBSD) || (__FreeBSD_version < 601103)
 
 extern int h_errno;
 
@@ -431,15 +424,13 @@ struct hostent *gethostbyname_r(const char *name, struct hostent *result,
 
   	return res;
 }
-#endif /* !defined(FREEBSD) || (__FreeBSD_version < 700015) */
+#endif /* !defined(FREEBSD) || (__FreeBSD_version < 601103) */
 
 #if defined(MACOSX)
 /*
  * This section works around calls that are missing or broken
  * in MacOS X 10.1.x and earlier.
  */
-
-#ifndef HAVE_READDIR_H
 
 /* MacOS X doesn't have readdir_r() standard, plus readdir() isn't threadsafe. */
 
@@ -478,8 +469,6 @@ int readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result )
 
     return nRet;
 }
-
-#endif
 
 /* No reentrant asctime() either... */
 
@@ -524,6 +513,10 @@ void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion,
 	*minorMinorVersion = 0;
 }
 
+/*
+ * Add support for resolving Mac native alias files (not the same as unix alias files)
+ * returns 0 on success.
+ */
 #ifdef USE_JAVA
 
 static int macxp_resolveAliasImpl(FSRef *pFSRef)
