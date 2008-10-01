@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified November 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified November 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -97,7 +90,7 @@ inline const SvxBorderLine* GetNullOrLine( const SvxBoxItem* pBox, FillInfoLineP
 
 void lcl_GetMergeRange( SCsCOL nX, SCsROW nY, SCSIZE nArrY,
 							ScDocument* pDoc, RowInfo* pRowInfo,
-							SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2, SCTAB nTab,
+							SCCOL nX1, SCROW nY1, SCCOL /* nX2 */, SCROW /* nY2 */, SCTAB nTab,
 							SCsCOL& rStartX, SCsROW& rStartY, SCsCOL& rEndX, SCsROW& rEndY )
 {
 	CellInfo* pInfo = &pRowInfo[nArrY].pCellInfo[nX+1];
@@ -189,8 +182,6 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 			(const SvxBrushItem*) &pPool->GetDefaultItem( ATTR_BACKGROUND );
 	const ScMergeAttr* pDefMerge =
 			(const ScMergeAttr*) &pPool->GetDefaultItem( ATTR_MERGE );
-	const SvxBoxItem* pDefLines =
-			(const SvxBoxItem*) &pPool->GetDefaultItem( ATTR_BORDER );
 	const SvxShadowItem* pDefShadow =
 			(const SvxShadowItem*) &pPool->GetDefaultItem( ATTR_SHADOW );
 
@@ -211,8 +202,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 												// versteckter erster Zeile / Spalte
 	BOOL bPaintMarks = FALSE;
 	BOOL bSkipMarks = FALSE;
-	SCCOL nBlockStartX, nBlockEndX;
-	SCROW nBlockEndY, nBlockStartY;
+    SCCOL nBlockStartX = 0, nBlockEndX = 0;
+    SCROW nBlockEndY = 0, nBlockStartY = 0;
 	if (pMarkData && pMarkData->IsMarked())
 	{
 		ScRange aTmpRange;
@@ -581,39 +572,41 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 						nArrY = 1;
 						nCurRow = nY1;										// einzelne Zeile
 						nThisRow = nY1;										// Ende des Bereichs
-						(void) pThisMarkArr->Search( nY1, nIndex );
 
-						do
-						{
-							nThisRow=pThisMarkArr->pData[nIndex].nRow;		// Ende des Bereichs
-							bThisMarked=pThisMarkArr->pData[nIndex].bMarked;
+                        if ( pThisMarkArr->Search( nY1, nIndex ) )
+                        {
+                            do
+                            {
+                                nThisRow=pThisMarkArr->pData[nIndex].nRow;      // Ende des Bereichs
+                                bThisMarked=pThisMarkArr->pData[nIndex].bMarked;
 
-							do
-							{
-								if ( !RowHidden( nCurRow,nTab ) )
-								{
-									if ( bThisMarked )
-									{
-										BOOL bSkip = bSkipMarks &&
-													nX		>= nBlockStartX &&
-													nX	    <= nBlockEndX   &&
-													nCurRow >= nBlockStartY &&
-													nCurRow <= nBlockEndY;
-										if (!bSkip)
-										{
-											RowInfo* pThisRowInfo = &pRowInfo[nArrY];
-											CellInfo* pInfo = &pThisRowInfo->pCellInfo[nArrX];
-											pInfo->bMarked = TRUE;
-										}
-									}
-									++nArrY;
-								}
-								++nCurRow;
-							}
-							while (nCurRow <= nThisRow && nCurRow <= nY2);
-							++nIndex;
-						}
-						while ( nIndex < pThisMarkArr->nCount && nThisRow < nY2 );
+                                do
+                                {
+                                    if ( !RowHidden( nCurRow,nTab ) )
+                                    {
+                                        if ( bThisMarked )
+                                        {
+                                            BOOL bSkip = bSkipMarks &&
+                                                        nX      >= nBlockStartX &&
+                                                        nX      <= nBlockEndX   &&
+                                                        nCurRow >= nBlockStartY &&
+                                                        nCurRow <= nBlockEndY;
+                                            if (!bSkip)
+                                            {
+                                                RowInfo* pThisRowInfo = &pRowInfo[nArrY];
+                                                CellInfo* pInfo = &pThisRowInfo->pCellInfo[nArrX];
+                                                pInfo->bMarked = TRUE;
+                                            }
+                                        }
+                                        ++nArrY;
+                                    }
+                                    ++nCurRow;
+                                }
+                                while (nCurRow <= nThisRow && nCurRow <= nY2);
+                                ++nIndex;
+                            }
+                            while ( nIndex < pThisMarkArr->nCount && nThisRow < nY2 );
+                        }
 					}
 				}
 				else									// vordere Spalten
@@ -687,11 +680,11 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 		for (nArrY=0; nArrY<nArrCount; nArrY++)
 		{
 			RowInfo* pThisRowInfo = &pRowInfo[nArrY];
-			SCsROW nY = nArrY ? pThisRowInfo->nRowNo : ((SCsROW)nY1)-1;
+            nSignedY = nArrY ? pThisRowInfo->nRowNo : ((SCsROW)nY1)-1;
 
 			for (nArrX=nX1; nArrX<=nX2+2; nArrX++)					// links und rechts einer mehr
 			{
-				SCsCOL nX = ((SCsCOL) nArrX) - 1;
+                SCsCOL nSignedX = ((SCsCOL) nArrX) - 1;
 				CellInfo* pInfo = &pThisRowInfo->pCellInfo[nArrX];
 
 				if (pInfo->bMerged || pInfo->bHOverlapped || pInfo->bVOverlapped)
@@ -700,7 +693,7 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 					SCsROW nStartY;
 					SCsCOL nEndX;
 					SCsROW nEndY;
-					lcl_GetMergeRange( nX,nY, nArrY, this,pRowInfo, nX1,nY1,nX2,nY2,nTab,
+					lcl_GetMergeRange( nSignedX,nSignedY, nArrY, this,pRowInfo, nX1,nY1,nX2,nY2,nTab,
 										nStartX,nStartY, nEndX,nEndY );
 					const ScPatternAttr* pStartPattern = GetPattern( nStartX,nStartY,nTab );
 					const SfxItemSet* pStartCond = GetCondResult( nStartX,nStartY,nTab );
@@ -735,8 +728,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 					{
 						const ScMarkArray* pThisMarkArr = pMarkData->GetArray()+nStartX;
 						SCSIZE nIndex;
-						(void) pThisMarkArr->Search( nStartY, nIndex );
-						bCellMarked=pThisMarkArr->pData[nIndex].bMarked;
+                        if ( pThisMarkArr->Search( nStartY, nIndex ) )
+                            bCellMarked=pThisMarkArr->pData[nIndex].bMarked;
 					}
 
 					pInfo->bMarked = bCellMarked;
@@ -789,6 +782,10 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 							case SVX_SHADOW_BOTTOMLEFT:	 eLoc = SVX_SHADOW_BOTTOMRIGHT;	break;
 							case SVX_SHADOW_TOPRIGHT:	 eLoc = SVX_SHADOW_TOPLEFT;		break;
 							case SVX_SHADOW_TOPLEFT:	 eLoc = SVX_SHADOW_TOPRIGHT;	break;
+                            default:
+                            {
+                                // added to avoid warnings
+                            }
 						}
 					}
 
@@ -882,7 +879,7 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 		}
 	}
 
-    rTabInfo.mnArrCount = nArrCount;
+    rTabInfo.mnArrCount = sal::static_int_cast<USHORT>(nArrCount);
     rTabInfo.mbPageMode = bPageMode;
 
     // ========================================================================
@@ -966,7 +963,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 
                 // last visible row
                 USHORT nLastCellInfoY = nCellInfoY;
-                while( (nLastCellInfoY + 1 < nArrCount) && (pRowInfo[ nLastCellInfoY + 1 ].nRowNo <= nLastRealDocRow) )
+                while( (sal::static_int_cast<SCSIZE>(nLastCellInfoY + 1) < nArrCount) &&
+                            (pRowInfo[ nLastCellInfoY + 1 ].nRowNo <= nLastRealDocRow) )
                     ++nLastCellInfoY;
                 SCROW nLastDocRow = (nLastCellInfoY > 0) ? pRowInfo[ nLastCellInfoY ].nRowNo : static_cast< SCROW >( nY1 - 1 );
                 size_t nLastRow = static_cast< size_t >( nLastCellInfoY );

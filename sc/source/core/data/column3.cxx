@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -58,6 +51,7 @@
 #include "subtotal.hxx"
 #include "markdata.hxx"
 #include "detfunc.hxx"			// fuer Notizen bei DeleteRange
+#include "postit.hxx"
 
 // Err527 Workaround
 extern const ScFormulaCell* pLastFormulaTreeTop;	// in cellform.cxx
@@ -113,7 +107,7 @@ void ScColumn::Insert( SCROW nRow, ScBaseCell* pNewCell )
 					else
 					{
 						nLimit *= 2;
-						if ( nLimit > MAXROWCOUNT )
+                        if ( nLimit > sal::static_int_cast<SCSIZE>(MAXROWCOUNT) )
 							nLimit = MAXROWCOUNT;
 					}
 				}
@@ -181,7 +175,7 @@ void ScColumn::Append( SCROW nRow, ScBaseCell* pCell )
 			else
 			{
 				nLimit *= 2;
-				if ( nLimit > MAXROWCOUNT )
+                if ( nLimit > sal::static_int_cast<SCSIZE>(MAXROWCOUNT) )
 					nLimit = MAXROWCOUNT;
 			}
 		}
@@ -282,8 +276,8 @@ void ScColumn::DeleteRow( SCROW nStartRow, SCSIZE nSize )
 
 	BOOL bFound=FALSE;
 	SCROW nEndRow = nStartRow + nSize - 1;
-	SCSIZE nStartIndex;
-	SCSIZE nEndIndex;
+    SCSIZE nStartIndex = 0;
+    SCSIZE nEndIndex = 0;
 	SCSIZE i;
 
 	for ( i = nFirstIndex; i < nCount && pItems[i].nRow <= nEndRow; i++ )
@@ -422,7 +416,7 @@ void ScColumn::DeleteRange( SCSIZE nStartIndex, SCSIZE nEndIndex, USHORT nDelFla
 	else					// Zellen einzeln durchgehen
 	{
 		SCSIZE j = nStartIndex;
-		for (SCSIZE i = nStartIndex; i <= nEndIndex; i++)
+        for (i = nStartIndex; i <= nEndIndex; i++)
 		{
 			BOOL bDelete = FALSE;
 			ScBaseCell* pOldCell = pItems[j].pCell;
@@ -449,6 +443,10 @@ void ScColumn::DeleteRange( SCSIZE nStartIndex, SCSIZE nEndIndex, USHORT nDelFla
 					bDelete = ((nDelFlag & IDF_NOTE) != 0) &&
 								(pOldCell->GetBroadcaster() == NULL);
 					break;
+                default:
+                {
+                    // added to avoid warnings
+                }
 			}
 
 			if (bDelete)
@@ -555,8 +553,8 @@ void ScColumn::DeleteArea(SCROW nStartRow, SCROW nEndRow, USHORT nDelFlag)
 		else
 		{
 			BOOL bFound=FALSE;
-			SCSIZE nStartIndex;
-			SCSIZE nEndIndex;
+            SCSIZE nStartIndex = 0;
+            SCSIZE nEndIndex = 0;
 			for (SCSIZE i = 0; i < nCount; i++)
 				if ((pItems[i].nRow >= nStartRow) && (pItems[i].nRow <= nEndRow))
 				{
@@ -620,6 +618,10 @@ ScFormulaCell* ScColumn::CreateRefCell( ScDocument* pDestDoc, const ScAddress& r
 		case CELLTYPE_STRING:
 		case CELLTYPE_EDIT:		bMatch = ((nFlags & IDF_STRING) != 0); break;
 		case CELLTYPE_FORMULA:	bMatch = ((nFlags & IDF_FORMULA) != 0); break;
+        default:
+        {
+            // added to avoid warnings
+        }
 	}
 	if (!bMatch)
 		return NULL;
@@ -747,7 +749,6 @@ void ScColumn::CopyFromClip(SCROW nRow1, SCROW nRow2, long nDy,
 			//	rows at the beginning may be skipped if filtered rows are left out,
 			//	nDestRow may be negative then
 
-			ScBaseCell* pOld = rColumn.pItems[i].pCell;
 			ScBaseCell* pNew;
 
 			if ( bAsLink )
@@ -765,13 +766,15 @@ void ScColumn::CopyFromClip(SCROW nRow1, SCROW nRow2, long nDy,
 					    pNew->DeleteNote();
                     else
                     {
-                        // Set the cell note rectangle dimensions to default position 
+                        // Set the cell note rectangle dimensions to default position
                         // following the paste.
                         ScPostIt aCellNote(pDocument);
                         if(pNew->GetNote(aCellNote))
                         {
                             Rectangle aRect = aCellNote.DefaultRectangle(ScAddress(nCol,nDestRow,nTab));
                             aCellNote.SetRectangle(aRect);
+                            // #i84412# pasted note is not visible, FIXME: make it visible
+                            aCellNote.SetShown(FALSE);
                             pNew->SetNote(aCellNote);
                         }
                     }
@@ -833,11 +836,12 @@ ScBaseCell* ScColumn::CloneCell(SCSIZE nIndex, USHORT nFlags,
 				bool bForceFormula = false;
 				if ( nFlags & IDF_SPECIAL_BOOLEAN )
 				{
-					String aVal;
+					rtl::OUStringBuffer aBuf;
 					// #TODO #FIXME do we have a localisation issue here?
-					pForm->GetEnglishFormula( aVal );
-					if ( aVal.EqualsAscii("=TRUE()" )
-						|| aVal.EqualsAscii("=FALSE()") )
+					pForm->GetFormula( aBuf );
+					rtl::OUString aVal( aBuf.makeStringAndClear() );
+					if ( aVal.equalsAscii( "=TRUE()" )
+						|| aVal.equalsAscii( "=FALSE()" ) )
 						bForceFormula = true;	
 				}
 				if ( bForceFormula || (nFlags & IDF_FORMULA) )
@@ -893,8 +897,17 @@ ScBaseCell* ScColumn::CloneCell(SCSIZE nIndex, USHORT nFlags,
 							String aString;
 							pForm->GetString(aString);
 							if ( aString.Len() )
-								pNew = new ScStringCell(aString);
-								// #33224# LeerStrings nicht kopieren
+                            {
+                                if ( pForm->IsMultilineResult() )
+                                {
+                                    pNew = new ScEditCell( aString, pDestDoc );
+                                }
+                                else
+                                {
+                                    pNew = new ScStringCell(aString);
+                                    // #33224# LeerStrings nicht kopieren
+                                }
+                            }
 						}
 					}
 					if ( pNew && pSource->GetNotePtr() && ( nFlags & IDF_NOTE ) )
@@ -906,6 +919,10 @@ ScBaseCell* ScColumn::CloneCell(SCSIZE nIndex, USHORT nFlags,
 				}
 			}
 			break;
+            default:
+            {
+                // added to avoid warnings
+            }
 	}
 
 	if ( !pNew && pSource->GetNotePtr() && ( nFlags & IDF_NOTE ) )
@@ -1012,7 +1029,7 @@ void ScColumn::MixData( SCROW nRow1, SCROW nRow2,
 		if ( nIndex < nCount && nNextThis == nRow )
 			pDest = pItems[nIndex].pCell;
 
-		DBG_ASSERT( pSrc || pDest, "Nanu ??!?" );
+        DBG_ASSERT( pSrc || pDest, "Nanu ?" );
 
 		CellType eSrcType  = pSrc  ? pSrc->GetCellType()  : CELLTYPE_NONE;
 		CellType eDestType = pDest ? pDest->GetCellType() : CELLTYPE_NONE;
@@ -1155,9 +1172,11 @@ void ScColumn::MixData( SCROW nRow1, SCROW nRow2,
 
 ScAttrIterator* ScColumn::CreateAttrIterator( SCROW nStartRow, SCROW nEndRow ) const
 {
+#ifdef USE_JAVA
 	// Attempt to fix bug 2677 by returning NULL if pAttrArray is NULL
 	if ( !pAttrArray )
 		return NULL;
+#endif	// USE_JAVA
 
 	return new ScAttrIterator( pAttrArray, nStartRow, nEndRow );
 }
@@ -1245,8 +1264,8 @@ void ScColumn::StartListeningInArea( SCROW nRow1, SCROW nRow2 )
 
 
 //	TRUE = Zahlformat gesetzt
-BOOL ScColumn::SetString( SCROW nRow, SCTAB nTab, const String& rString,
-						  ScAddress::Convention conv )
+BOOL ScColumn::SetString( SCROW nRow, SCTAB nTabP, const String& rString,
+						  ScAddress::Convention eConv )
 {
 	BOOL bNumFmtSet = FALSE;
 	if (VALIDROW(nRow))
@@ -1256,7 +1275,7 @@ BOOL ScColumn::SetString( SCROW nRow, SCTAB nTab, const String& rString,
 		if (rString.Len() > 0)
 		{
 			double nVal;
-			sal_uInt32 nIndex, nOldIndex;
+            sal_uInt32 nIndex, nOldIndex = 0;
 			sal_Unicode cFirstChar;
 			SvNumberFormatter* pFormatter = pDocument->GetFormatTable();
 			SfxObjectShell* pDocSh = pDocument->GetDocumentShell();
@@ -1283,7 +1302,9 @@ BOOL ScColumn::SetString( SCROW nRow, SCTAB nTab, const String& rString,
 					pNewCell = new ScStringCell( rString );
 				else											// =Formel
 					pNewCell = new ScFormulaCell( pDocument,
-						ScAddress( nCol, nRow, nTab ), rString, conv, 0 );
+                        ScAddress( nCol, nRow, nTabP ), rString,
+                        ScGrammar::mergeToGrammar( ScGrammar::GRAM_DEFAULT,
+                            eConv), MM_NONE );
 			}
 			else if ( cFirstChar == '\'')						// 'Text
 				pNewCell = new ScStringCell( rString.Copy(1) );
@@ -1409,7 +1430,7 @@ BOOL ScColumn::SetString( SCROW nRow, SCTAB nTab, const String& rString,
 					}
 					else
 						pDocument->Broadcast( ScHint( SC_HINT_DATACHANGED,
-							ScAddress( nCol, nRow, nTab ), pNewCell ) );
+                            ScAddress( nCol, nRow, nTabP ), pNewCell ) );
 				}
 				else
 				{
@@ -1434,7 +1455,7 @@ void ScColumn::GetFilterEntries(SCROW nStartRow, SCROW nEndRow, TypedStrCollecti
 {
 	SvNumberFormatter* pFormatter = pDocument->GetFormatTable();
 	String aString;
-	SCROW nRow;
+    SCROW nRow = 0;
 	SCSIZE nIndex;
 
 	Search( nStartRow, nIndex );
@@ -1466,6 +1487,15 @@ void ScColumn::GetFilterEntries(SCROW nStartRow, SCROW nEndRow, TypedStrCollecti
 				default:
 					nValue = 0.0;
 			}
+
+            if (pFormatter)
+            {
+                short nType = pFormatter->GetType(nFormat);
+                if ((nType & NUMBERFORMAT_DATE) && !(nType & NUMBERFORMAT_TIME))
+                    // special case for date values.  Disregard the time
+                    // element if the number format is of date type.
+                    nValue = ::rtl::math::approxFloor(nValue);
+            }
 
 			pData = new TypedStrData( aString, nValue, SC_STRTYPE_VALUE );
 		}
@@ -1707,7 +1737,7 @@ double ScColumn::GetValue( SCROW nRow ) const
 		{
 			case CELLTYPE_VALUE:
 				return ((ScValueCell*)pCell)->GetValue();
-				break;
+//                break;
 			case CELLTYPE_FORMULA:
 				{
 					if (((ScFormulaCell*)pCell)->IsValue())
@@ -1715,10 +1745,10 @@ double ScColumn::GetValue( SCROW nRow ) const
 					else
 						return 0.0;
 				}
-				break;
+//                break;
 			default:
 				return 0.0;
-				break;
+//                break;
 		}
 	}
 	return 0.0;

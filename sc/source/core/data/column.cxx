@@ -1,35 +1,30 @@
 /*************************************************************************
  *
- *  OpenOffice.org - a multi-platform office productivity suite
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $RCSfile$
+ * OpenOffice.org - a multi-platform office productivity suite
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of OpenOffice.org.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU Lesser General Public License Version 2.1.
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * OpenOffice.org is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU Lesser General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
- *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU Lesser General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    Lesser General Public License for more details.
- *
- *    You should have received a copy of the GNU Lesser General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
  *
  ************************************************************************/
 
@@ -57,7 +52,8 @@
 #include "compiler.hxx"
 #include "brdcst.hxx"
 #include "markdata.hxx"
-#include "detfunc.hxx"			// for Notes in Sort/Swap 
+#include "detfunc.hxx"			// for Notes in Sort/Swap
+#include "postit.hxx"
 
 //#pragma optimize ( "", off )
 //	nur Search ohne Optimierung!
@@ -87,8 +83,8 @@ ScColumn::ScColumn() :
 	nCount( 0 ),
 	nLimit( 0 ),
 	pItems( NULL ),
-	pDocument( NULL ),
-	pAttrArray( NULL )
+    pAttrArray( NULL ),
+    pDocument( NULL )
 {
 }
 
@@ -249,13 +245,6 @@ BOOL ScColumn::HasSelectionMatrixFragment(const ScMarkData& rMark) const
 }
 
 
-BOOL ScColumn::HasLines( SCROW nRow1, SCROW nRow2, Rectangle& rSizes,
-							BOOL bLeft, BOOL bRight ) const
-{
-	return pAttrArray->HasLines( nRow1, nRow2, rSizes, bLeft, bRight );
-}
-
-
 BOOL ScColumn::HasAttrib( SCROW nRow1, SCROW nRow2, USHORT nMask ) const
 {
 	return pAttrArray->HasAttrib( nRow1, nRow2, nMask );
@@ -298,9 +287,13 @@ void ScColumn::MergeSelectionPattern( ScMergePatternState& rState, const ScMarkD
 
 	if ( rMark.IsMultiMarked() )
 	{
-		ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
-		while (aMarkIter.Next( nTop, nBottom ))
-			pAttrArray->MergePatternArea( nTop, nBottom, rState, bDeep );
+        const ScMarkArray* pArray = rMark.GetArray() + nCol;
+        if ( pArray->HasMarks() )
+        {
+            ScMarkArrayIter aMarkIter( pArray );
+            while (aMarkIter.Next( nTop, nBottom ))
+                pAttrArray->MergePatternArea( nTop, nBottom, rState, bDeep );
+        }
 	}
 }
 
@@ -346,7 +339,7 @@ const ScPatternAttr* ScColumn::GetMostUsedPattern( SCROW nStartRow, SCROW nEndRo
 
     ScAttrIterator aAttrIter( pAttrArray, nStartRow, nEndRow );
     const ScPatternAttr* pPattern;
-    SCROW nAttrRow1, nAttrRow2;
+    SCROW nAttrRow1 = 0, nAttrRow2 = 0;
 
     while( (pPattern = aAttrIter.Next( nAttrRow1, nAttrRow2 )) != 0 )
     {
@@ -368,11 +361,27 @@ ULONG ScColumn::GetNumberFormat( SCROW nRow ) const
 	return pAttrArray->GetPattern( nRow )->GetNumberFormat( pDocument->GetFormatTable() );
 }
 
-
-SCsROW ScColumn::ApplySelectionCache( SfxItemPoolCache* pCache, const ScMarkData& rMark )
+sal_uInt32 ScColumn::GetNumberFormat( SCROW nStartRow, SCROW nEndRow ) const
 {
-	SCROW nTop;
-	SCROW nBottom;
+    SCROW nPatStartRow, nPatEndRow;
+    const ScPatternAttr* pPattern = pAttrArray->GetPatternRange(nPatStartRow, nPatEndRow, nStartRow);
+    sal_uInt32 nFormat = pPattern->GetNumberFormat(pDocument->GetFormatTable());
+    while (nEndRow > nPatEndRow)
+    {
+        nStartRow = nPatEndRow + 1;
+        pPattern = pAttrArray->GetPatternRange(nPatStartRow, nPatEndRow, nStartRow);
+        sal_uInt32 nTmpFormat = pPattern->GetNumberFormat(pDocument->GetFormatTable());
+        if (nFormat != nTmpFormat)
+            return 0;
+    }
+    return nFormat;
+}
+
+
+SCsROW ScColumn::ApplySelectionCache( SfxItemPoolCache* pCache, const ScMarkData& rMark, ScEditDataArray* pDataArray )
+{
+    SCROW nTop = 0;
+    SCROW nBottom = 0;
 	BOOL bFound = FALSE;
 
 	if ( rMark.IsMultiMarked() )
@@ -380,7 +389,7 @@ SCsROW ScColumn::ApplySelectionCache( SfxItemPoolCache* pCache, const ScMarkData
 		ScMarkArrayIter aMarkIter( rMark.GetArray() + nCol );
 		while (aMarkIter.Next( nTop, nBottom ))
 		{
-			pAttrArray->ApplyCacheArea( nTop, nBottom, pCache );
+			pAttrArray->ApplyCacheArea( nTop, nBottom, pCache, pDataArray );
 			bFound = TRUE;
 		}
 	}
@@ -454,11 +463,12 @@ void ScColumn::ApplyPattern( SCROW nRow, const ScPatternAttr& rPatAttr )
 }
 
 
-void ScColumn::ApplyPatternArea( SCROW nStartRow, SCROW nEndRow, const ScPatternAttr& rPatAttr )
+void ScColumn::ApplyPatternArea( SCROW nStartRow, SCROW nEndRow, const ScPatternAttr& rPatAttr, 
+                                 ScEditDataArray* pDataArray )
 {
 	const SfxItemSet* pSet = &rPatAttr.GetItemSet();
 	SfxItemPoolCache aCache( pDocument->GetPool(), pSet );
-	pAttrArray->ApplyCacheArea( nStartRow, nEndRow, &aCache );
+	pAttrArray->ApplyCacheArea( nStartRow, nEndRow, &aCache, pDataArray );
 }
 
 
@@ -569,7 +579,7 @@ const ScStyleSheet* ScColumn::GetSelectionStyle( const ScMarkData& rMark, BOOL& 
 		SCROW nRow;
 		SCROW nDummy;
 		const ScPatternAttr* pPattern;
-		while (bEqual && ( pPattern = aAttrIter.Next( nRow, nDummy ) ))
+        while (bEqual && ( pPattern = aAttrIter.Next( nRow, nDummy ) ) != NULL)
 		{
 			pNewStyle = pPattern->GetStyleSheet();
 			rFound = TRUE;
@@ -596,7 +606,7 @@ const ScStyleSheet*	ScColumn::GetAreaStyle( BOOL& rFound, SCROW nRow1, SCROW nRo
 	SCROW nRow;
 	SCROW nDummy;
 	const ScPatternAttr* pPattern;
-	while (bEqual && ( pPattern = aAttrIter.Next( nRow, nDummy ) ))
+    while (bEqual && ( pPattern = aAttrIter.Next( nRow, nDummy ) ) != NULL)
 	{
 		pNewStyle = pPattern->GetStyleSheet();
 		rFound = TRUE;
@@ -688,7 +698,9 @@ void ScColumn::ApplyAttr( SCROW nRow, const SfxPoolItem& rAttr )
 #endif
 }
 
+#ifdef _MSC_VER
 #pragma optimize ( "", off )
+#endif
 
 
 BOOL ScColumn::Search( SCROW nRow, SCSIZE& nIndex ) const
@@ -779,7 +791,9 @@ BOOL ScColumn::Search( SCROW nRow, SCSIZE& nIndex ) const
 	return bFound;
 }
 
+#ifdef _MSC_VER
 #pragma optimize ( "", on )
+#endif
 
 
 ScBaseCell* ScColumn::GetCell( SCROW nRow ) const
@@ -793,7 +807,7 @@ ScBaseCell* ScColumn::GetCell( SCROW nRow ) const
 
 void ScColumn::Resize( SCSIZE nSize )
 {
-	if (nSize > MAXROWCOUNT)
+    if (nSize > sal::static_int_cast<SCSIZE>(MAXROWCOUNT))
 		nSize = MAXROWCOUNT;
 	if (nSize < nCount)
 		nSize = nCount;
@@ -818,41 +832,6 @@ void ScColumn::Resize( SCSIZE nSize )
 		delete[] pItems;
 	}
 	pItems = pNewItems;
-}
-
-//	SetNewRow gehoert zu SwapRow
-
-void ScColumn::SetNewRow( SCROW nOldRow, SCROW nNewRow )	// nNewRow muss leer sein
-{
-	SCSIZE	nIndex;
-	if (Search(nOldRow, nIndex))
-	{
-		ScBaseCell* pCell = pItems[nIndex].pCell;
-		--nCount;
-		memmove( &pItems[nIndex], &pItems[nIndex + 1], (nCount - nIndex) * sizeof(ColEntry) );
-
-		SvtBroadcaster* pBC = pCell->GetBroadcaster();
-		if (pBC)
-		{
-			MoveListeners( *pBC, nOldRow );		// Broadcaster bleibt an alter Stelle
-			pCell->SetBroadcaster(NULL);
-		}
-
-		if (pCell->GetCellType() != CELLTYPE_NOTE)		// sonst geloescht
-		{
-			Insert(nNewRow, pCell);
-
-			long dy = (long)nNewRow - (long)nOldRow;
-			if (pCell->GetCellType() == CELLTYPE_FORMULA)
-			{
-				ScFormulaCell* pFormula = (ScFormulaCell*)pCell;
-				ScRange aRange( ScAddress( 0, nNewRow, nTab ),
-								ScAddress( MAXCOL, nNewRow, nTab ) );
-				pFormula->aPos.SetRow( nNewRow );
-				pFormula->UpdateReference(URM_MOVE, aRange, 0, -dy, 0);
-			}
-		}
-	}
 }
 
 //	SwapRow zum Sortieren
@@ -1222,7 +1201,7 @@ BOOL ScColumn::TestInsertCol( SCROW nStartRow, SCROW nEndRow) const
 		BOOL bTest = TRUE;
 		if (pItems)
 			for (SCSIZE i=0; (i<nCount) && bTest; i++)
-				bTest = ((pItems[i].nRow < nStartRow) && (pItems[i].nRow > nEndRow))
+				bTest = (pItems[i].nRow < nStartRow) || (pItems[i].nRow > nEndRow)
 						|| !CellVisible(pItems[i].pCell);
 
 		//	AttrArray testet nur zusammengefasste
@@ -1244,7 +1223,7 @@ BOOL ScColumn::TestInsertRow( SCSIZE nSize ) const
     //  AttrArray only looks for merged cells
 
 	if ( pItems && nCount )
-        return ( nSize <= MAXROW &&
+        return ( nSize <= sal::static_int_cast<SCSIZE>(MAXROW) &&
                  pItems[nCount-1].nRow <= MAXROW-(SCROW)nSize && pAttrArray->TestInsertRow( nSize ) );
 	else
 		return pAttrArray->TestInsertRow( nSize );
@@ -1381,11 +1360,10 @@ void ScColumn::CopyToClip(SCROW nRow1, SCROW nRow2, ScColumn& rColumn, BOOL bKee
 
 	SCSIZE i;
 	SCSIZE nBlockCount = 0;
-	SCSIZE nStartIndex, nEndIndex;
+    SCSIZE nStartIndex = 0, nEndIndex = 0;
 	for (i = 0; i < nCount; i++)
 		if ((pItems[i].nRow >= nRow1) && (pItems[i].nRow <= nRow2))
 		{
-
 			if (!nBlockCount)
 				nStartIndex = i;
 			nEndIndex = i;
@@ -1429,7 +1407,9 @@ void ScColumn::CopyToColumn(SCROW nRow1, SCROW nRow2, USHORT nFlags, BOOL bMarke
 			}
 		}
 		else
+		{
 			DBG_ERROR("CopyToColumn: bMarked, aber keine Markierung");
+		}
 		return;
 	}
 
@@ -1458,7 +1438,7 @@ void ScColumn::CopyToColumn(SCROW nRow1, SCROW nRow2, USHORT nFlags, BOOL bMarke
 	{
 		SCSIZE i;
 		SCSIZE nBlockCount = 0;
-		SCSIZE nStartIndex, nEndIndex;
+        SCSIZE nStartIndex = 0, nEndIndex = 0;
 		for (i = 0; i < nCount; i++)
 			if ((pItems[i].nRow >= nRow1) && (pItems[i].nRow <= nRow2))
 			{
@@ -1474,7 +1454,6 @@ void ScColumn::CopyToColumn(SCROW nRow1, SCROW nRow2, USHORT nFlags, BOOL bMarke
 			ScAddress aAdr( rColumn.nCol, 0, rColumn.nTab );
 			for (i = nStartIndex; i <= nEndIndex; i++)
 			{
-				ScBaseCell* pOld = pItems[i].pCell;
 				aAdr.SetRow( pItems[i].nRow );
 				ScBaseCell* pNew;
 				if (bAsLink)
@@ -1597,7 +1576,7 @@ BOOL ScColumn::TestCopyScenarioTo( const ScColumn& rDestCol ) const
 {
 	BOOL bOk = TRUE;
 	ScAttrIterator aAttrIter( pAttrArray, 0, MAXROW );
-	SCROW nStart, nEnd;
+	SCROW nStart = 0, nEnd = 0;
 	const ScPatternAttr* pPattern = aAttrIter.Next( nStart, nEnd );
 	while (pPattern && bOk)
 	{
@@ -1992,11 +1971,19 @@ BOOL ScColumn::IsRangeNameInUse(SCROW nRow1, SCROW nRow2, USHORT nIndex) const
 	return bInUse;
 }
 
+void ScColumn::FindRangeNamesInUse(SCROW nRow1, SCROW nRow2, std::set<USHORT>& rIndexes) const
+{
+    if (pItems)
+        for (SCSIZE i = 0; i < nCount; i++)
+            if ((pItems[i].nRow >= nRow1) &&
+                (pItems[i].nRow <= nRow2) &&
+                (pItems[i].pCell->GetCellType() == CELLTYPE_FORMULA))
+                    ((ScFormulaCell*)pItems[i].pCell)->FindRangeNamesInUse(rIndexes);
+}
 
 void ScColumn::ReplaceRangeNamesInUse(SCROW nRow1, SCROW nRow2,
 									 const ScIndexMap& rMap )
 {
-	BOOL bInUse = FALSE;
 	if (pItems)
 		for (SCSIZE i = 0; i < nCount; i++)
 		{
@@ -2186,7 +2173,7 @@ void ScColumn::CompileAll()
 				SCROW nRow = pItems[i].nRow;
 				// fuer unbedingtes kompilieren
 				// bCompile=TRUE und pCode->nError=0
-				((ScFormulaCell*)pCell)->GetCode()->SetError( 0 );
+				((ScFormulaCell*)pCell)->GetCode()->SetCodeError( 0 );
 				((ScFormulaCell*)pCell)->SetCompile( TRUE );
 				((ScFormulaCell*)pCell)->CompileTokenArray();
 				if ( nRow != pItems[i].nRow )
@@ -2246,14 +2233,16 @@ BOOL ScColumn::HasEditCells(SCROW nStartRow, SCROW nEndRow, SCROW& rFirst) const
 {
 	//	used in GetOptimalHeight - ambiguous script type counts as edit cell
 
-	SCROW nRow;
+    SCROW nRow = 0;
 	SCSIZE nIndex;
 	Search(nStartRow,nIndex);
 	while ( (nIndex < nCount) ? ((nRow=pItems[nIndex].nRow) <= nEndRow) : FALSE )
 	{
 		ScBaseCell* pCell = pItems[nIndex].pCell;
-		if ( pCell->GetCellType() == CELLTYPE_EDIT ||
-			 IsAmbiguousScriptNonZero( pDocument->GetScriptType(nCol, nRow, nTab, pCell) ) )
+        CellType eCellType = pCell->GetCellType();
+		if ( eCellType == CELLTYPE_EDIT ||
+			 IsAmbiguousScriptNonZero( pDocument->GetScriptType(nCol, nRow, nTab, pCell) ) ||
+             ((eCellType == CELLTYPE_FORMULA) && ((ScFormulaCell*)pCell)->IsMultilineResult()) )
 		{
 			rFirst = nRow;
 			return TRUE;
