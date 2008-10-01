@@ -1,36 +1,30 @@
 #*************************************************************************
 #
-#   $RCSfile$
+# Copyright 2008 by Sun Microsystems, Inc.
 #
-#   $Revision$
+# $RCSfile$
 #
-#   last change: $Author$ $Date$
+# $Revision$
 #
-#   The Contents of this file are made available subject to
-#   the terms of GNU General Public License Version 2.1.
+# This file is part of NeoOffice.
 #
+# NeoOffice is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3
+# only, as published by the Free Software Foundation.
 #
-#     GNU General Public License Version 2.1
-#     =============================================
-#     Copyright 2005 by Sun Microsystems, Inc.
-#     901 San Antonio Road, Palo Alto, CA 94303, USA
+# NeoOffice is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
 #
-#     This library is free software; you can redistribute it and/or
-#     modify it under the terms of the GNU General Public
-#     License version 2.1, as published by the Free Software Foundation.
+# You should have received a copy of the GNU General Public License
+# version 3 along with NeoOffice.  If not, see
+# <http://www.gnu.org/licenses/gpl-3.0.txt>
+# for a copy of the GPLv3 License.
 #
-#     This library is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#     General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public
-#     License along with this library; if not, write to the Free Software
-#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#     MA  02111-1307  USA
-#
-#     Modified December 2005 by Patrick Luby. NeoOffice is distributed under
-#     GPL only under modification term 3 of the LGPL.
+# Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
@@ -46,27 +40,29 @@ LIBTARGET=NO
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
-.IF "$(PRODUCT_SUPPORT_URL)" != ""
-CDEFS += -DPRODUCT_SUPPORT_URL='"$(PRODUCT_SUPPORT_URL)"'
-.ENDIF
-
 # w.g. compilerbugs
 .IF "$(GUI)"=="WNT"
+.IF "$(COM)"!="GCC"
 CFLAGS+=-Od
+CFLAGS+=-DENABLE_QUICKSTART_APPLET
+.ENDIF
+.ENDIF
+
+.IF "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
 CFLAGS+=-DENABLE_QUICKSTART_APPLET
 .ENDIF
 
 .IF "$(GUI)"=="UNX"
-        CDEFS+=-DDLL_NAME=libsfx$(UPD)$(DLLPOSTFIX)$(DLLPOST)
+        CDEFS+=-DDLL_NAME=libsfx$(DLLPOSTFIX)$(DLLPOST)
 .IF "$(ENABLE_SYSTRAY_GTK)"=="TRUE"
         PKGCONFIG_MODULES=gtk+-2.0
         .INCLUDE: pkg_config.mk
         CFLAGS+=$(PKGCONFIG_CFLAGS)
         CFLAGS+=-DENABLE_QUICKSTART_APPLET
-        CDEFS+=-DPLUGIN_NAME=libqstart_gtk$(UPD)$(DLLPOSTFIX)$(DLLPOST)
+        CDEFS+=-DPLUGIN_NAME=libqstart_gtk$(DLLPOSTFIX)$(DLLPOST)
 .ENDIF # "$(ENABLE_SYSTRAY_GTK)"=="TRUE"
 .ELSE
-        CDEFS+=-DDLL_NAME=sfx$(UPD)$(DLLPOSTFIX)$(DLLPOST)
+        CDEFS+=-DDLL_NAME=sfx$(DLLPOSTFIX)$(DLLPOST)
 .ENDIF
 
 # --- Files --------------------------------------------------------
@@ -113,14 +109,18 @@ SFX_OBJECTS = \
 	$(SLO)$/shutdowniconw32.obj \
 	$(SLO)$/workwin.obj \
         $(SLO)$/xpackcreator.obj \
-    $(SLO)$/fwkhelper.obj \
-    $(SLO)$/updatedlg.obj
+    $(SLO)$/fwkhelper.obj
 
-.IF "$(OS)" == "MACOSX"
-.IF "$(GUIBASE)" == "java"
-SFX_OBJECTS += \
-	$(SLO)$/shutdownicon_cocoa.obj
+.IF "$(GUI)"=="OS2"
+SFX_OBJECTS +=  $(SLO)$/shutdowniconOs2.obj
 .ENDIF
+
+.IF "$(GUIBASE)"=="aqua"
+SFX_OBJECTS += $(SLO)$/shutdowniconaqua.obj
+.ENDIF
+
+.IF "$(GUIBASE)" == "java"
+SFX_OBJECTS += $(SLO)$/shutdowniconjava.obj
 .ENDIF
 
 SLOFILES = $(SFX_OBJECTS)
@@ -133,6 +133,10 @@ SLOFILES += $(QUICKSTART_OBJECTS)
 
 LIB2TARGET= $(SLB)$/quickstart.lib
 LIB2OBJFILES= $(QUICKSTART_OBJECTS)
+.ENDIF
+
+.IF "$(GUI)"=="OS2"
+SLOFILES +=  $(SLO)$/shutdowniconOs2.obj
 .ENDIF
 
 EXCEPTIONSFILES=\
@@ -149,13 +153,8 @@ EXCEPTIONSFILES=\
 	$(SLO)$/shutdowniconw32.obj \
 	$(SLO)$/sfxpicklist.obj		\
 	$(SLO)$/helpdispatch.obj	\
-    $(SLO)$/xpackcreator.obj    \
-    $(SLO)$/updatedlg.obj
+    $(SLO)$/xpackcreator.obj
 
-.IF "$(GUI)" == "MAC"
-SLOFILES +=\
-		$(SLO)$/appmac.obj
-.ENDIF
 
 # --- Targets -------------------------------------------------------
 
