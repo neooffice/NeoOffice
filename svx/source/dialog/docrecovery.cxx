@@ -1,66 +1,50 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified May 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified May 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svx.hxx"
+#include <svx/dialmgr.hxx>
 
-#ifndef _SVX_DIALMGR_HXX
-#include "dialmgr.hxx"
-#endif
-
-#include "dialogs.hrc"
+#include <svx/dialogs.hrc>
 #include "docrecovery.hxx"
 #include "docrecovery.hrc"
 
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequenceashashmap.hxx>
-#ifndef _COMPHELPER_CONFIGURATIONHELPER_HXX_
 #include <comphelper/configurationhelper.hxx>
-#endif
 #include <svtools/imagemgr.hxx>
-#ifndef _XTEXTEDT_HXX
 #include <svtools/xtextedt.hxx>
-#endif
 #include <tools/urlobj.hxx>
 #include <vcl/msgbox.hxx>
 #include <vcl/svapp.hxx>
 #include <rtl/ustrbuf.hxx>
-#ifndef _SV_SCRBAR_HXX
 #include <vcl/scrbar.hxx>
-#endif
 
 #ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/unohlp.hxx>
@@ -77,26 +61,11 @@
 #include <com/sun/star/awt/XWindow.hpp>
 #include <com/sun/star/ui/dialogs/XFolderPicker.hpp>
 #include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
-
-#ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
-#endif
-
-#ifndef _OSL_SECURITY_HXX_
 #include <osl/security.hxx>
-#endif
-
-#ifndef _RTL_BOOTSTRAP_HXX_
 #include <rtl/bootstrap.hxx>
-#endif
-
-#ifndef INCLUDED_SVTOOLS_PATHOPTIONS_HXX
 #include <svtools/pathoptions.hxx>
-#endif
-
-#ifndef _UNOTOOLS_LOCALFILEHELPER_HXX
 #include <unotools/localfilehelper.hxx>
-#endif
 
 #define RET_BACK    100
 
@@ -502,7 +471,7 @@ ERecoveryState RecoveryCore::mapDocState2RecoverState(sal_Int32 eDocState)
         ((eDocState & E_TRY_LOAD_BACKUP  ) == E_TRY_LOAD_BACKUP  ) ||
         ((eDocState & E_TRY_LOAD_ORIGINAL) == E_TRY_LOAD_ORIGINAL)
        )
-        eRecState = E_RECOVERY_IN_PROGRESS;
+        eRecState = E_RECOVERY_IS_IN_PROGRESS;
     // red
     else
     if ((eDocState & E_DAMAGED) == E_DAMAGED)
@@ -787,14 +756,14 @@ void SAL_CALL PluginProgress::reset()
 SaveDialog::SaveDialog(Window*       pParent,
                        RecoveryCore* pCore  )
     : IExtendedTabPage( pParent, SVX_RES( RID_SVXPAGE_DOCRECOVERY_SAVE ) )
-    , m_aTitleWin    ( this   , ResId  ( WIN_SAVE_TITLE              ) )
-    , m_aTitleFT     ( this   , ResId  ( FT_SAVE_TITLE               ) )
-    , m_aTitleFL     ( this   , ResId  ( FL_SAVE_TITLE               ) )
-    , m_aDescrFT     ( this   , ResId  ( FT_SAVE_DESCR               ) )
-    , m_aFileListFT  ( this   , ResId  ( FT_SAVE_FILELIST            ) )
-    , m_aFileListLB  ( this   , ResId  ( LB_SAVE_FILELIST            ) )
-    , m_aBottomFL    ( this   , ResId  ( FL_SAVE_BOTTOM              ) )
-    , m_aOkBtn       ( this   , ResId  ( BT_SAVE_OK                  ) )
+    , m_aTitleWin    ( this   , SVX_RES  ( WIN_SAVE_TITLE              ) )
+    , m_aTitleFT     ( this   , SVX_RES  ( FT_SAVE_TITLE               ) )
+    , m_aTitleFL     ( this   , SVX_RES  ( FL_SAVE_TITLE               ) )
+    , m_aDescrFT     ( this   , SVX_RES  ( FT_SAVE_DESCR               ) )
+    , m_aFileListFT  ( this   , SVX_RES  ( FT_SAVE_FILELIST            ) )
+    , m_aFileListLB  ( this   , SVX_RES  ( LB_SAVE_FILELIST            ) )
+    , m_aBottomFL    ( this   , SVX_RES  ( FL_SAVE_BOTTOM              ) )
+    , m_aOkBtn       ( this   , SVX_RES  ( BT_SAVE_OK                  ) )
     , m_pCore        ( pCore                                           )
 {
     FreeResource();
@@ -879,9 +848,9 @@ void SaveDialog::setDefButton()
 SaveProgressDialog::SaveProgressDialog(Window*       pParent,
                                        RecoveryCore* pCore  )
     : ModalDialog   ( pParent        , SVX_RES( RID_SVX_MDLG_DOCRECOVERY_PROGR ) )
-    , m_aHintFT     ( this           , ResId  ( FT_SAVEPROGR_HINT              ) )
-    , m_aProgrFT    ( this           , ResId  ( FT_SAVEPROGR_PROGR             ) )
-    , m_aProgrParent( this           , ResId  ( WIN_SAVEPROGR_PROGR            ) )
+    , m_aHintFT     ( this           , SVX_RES  ( FT_SAVEPROGR_HINT              ) )
+    , m_aProgrFT    ( this           , SVX_RES  ( FT_SAVEPROGR_PROGR             ) )
+    , m_aProgrParent( this           , SVX_RES  ( WIN_SAVEPROGR_PROGR            ) )
     , m_pCore       ( pCore                                                      )
 {
     FreeResource();
@@ -987,7 +956,7 @@ void RecovDocListEntry::Paint(const Point&       aPos   ,
         }
         break;
 
-        case E_RECOVERY_IN_PROGRESS :
+        case E_RECOVERY_IS_IN_PROGRESS :
         {
             pImg = 0;
             pTxt = &pList->m_aRecovInProgrStr;
@@ -1019,17 +988,17 @@ void RecovDocListEntry::Paint(const Point&       aPos   ,
 RecovDocList::RecovDocList(      Window* pParent,
                            const ResId&  rResId )
     : SvxSimpleTable      ( pParent, rResId            )
-    , m_aGreenCheckImg    ( ResId(IMG_GREENCHECK     ) )
-    , m_aYellowCheckImg   ( ResId(IMG_YELLOWCHECK    ) )
-    , m_aRedCrossImg      ( ResId(IMG_REDCROSS       ) )
-    , m_aGreenCheckImgHC  ( ResId(IMG_GREENCHECK_HC  ) )
-    , m_aYellowCheckImgHC ( ResId(IMG_YELLOWCHECK_HC ) )
-    , m_aRedCrossImgHC    ( ResId(IMG_REDCROSS_HC    ) )
-    , m_aSuccessRecovStr  ( ResId(STR_SUCCESSRECOV   ) )
-    , m_aOrigDocRecovStr  ( ResId(STR_ORIGDOCRECOV   ) )
-    , m_aRecovFailedStr   ( ResId(STR_RECOVFAILED    ) )
-    , m_aRecovInProgrStr  ( ResId(STR_RECOVINPROGR   ) )
-    , m_aNotRecovYetStr   ( ResId(STR_NOTRECOVYET    ) )
+    , m_aGreenCheckImg    ( ResId(IMG_GREENCHECK,*rResId.GetResMgr()     ) )
+    , m_aYellowCheckImg   ( ResId(IMG_YELLOWCHECK,*rResId.GetResMgr()    ) )
+    , m_aRedCrossImg      ( ResId(IMG_REDCROSS,*rResId.GetResMgr()       ) )
+    , m_aGreenCheckImgHC  ( ResId(IMG_GREENCHECK_HC,*rResId.GetResMgr()  ) )
+    , m_aYellowCheckImgHC ( ResId(IMG_YELLOWCHECK_HC,*rResId.GetResMgr() ) )
+    , m_aRedCrossImgHC    ( ResId(IMG_REDCROSS_HC,*rResId.GetResMgr()    ) )
+    , m_aSuccessRecovStr  ( ResId(STR_SUCCESSRECOV,*rResId.GetResMgr()   ) )
+    , m_aOrigDocRecovStr  ( ResId(STR_ORIGDOCRECOV,*rResId.GetResMgr()   ) )
+    , m_aRecovFailedStr   ( ResId(STR_RECOVFAILED,*rResId.GetResMgr()    ) )
+    , m_aRecovInProgrStr  ( ResId(STR_RECOVINPROGR,*rResId.GetResMgr()   ) )
+    , m_aNotRecovYetStr   ( ResId(STR_NOTRECOVYET,*rResId.GetResMgr()    ) )
 {
     //SetEntryHeight( short( maGreenCheckImg.GetSizePixel().Height() ) );
 }
@@ -1068,22 +1037,22 @@ short impl_askUserForWizardCancel(Window* pParent, sal_Int16 nRes)
 RecoveryDialog::RecoveryDialog(Window*       pParent,
                                RecoveryCore* pCore  )
     : IExtendedTabPage( pParent      , SVX_RES( RID_SVXPAGE_DOCRECOVERY_RECOVER ) )
-    , m_aTitleWin           ( this           , ResId  ( WIN_RECOV_TITLE                ) )
-    , m_aTitleFT            ( this           , ResId  ( FT_RECOV_TITLE                 ) )
-    , m_aTitleFL            ( this           , ResId  ( FL_RECOV_TITLE                 ) )
-    , m_aDescrFT            ( this           , ResId  ( FT_RECOV_DESCR                 ) )
-    , m_aProgressFT         ( this           , ResId  ( FT_RECOV_PROGR                 ) )
-    , m_aProgrParent        ( this           , ResId  ( WIN_RECOV_PROGR                ) )
-    , m_aFileListFT         ( this           , ResId  ( FT_RECOV_FILELIST              ) )
-    , m_aFileListLB         ( this           , ResId  ( LB_RECOV_FILELIST              ) )
-    , m_aBottomFL           ( this           , ResId  ( FL_RECOV_BOTTOM                ) )
-    , m_aNextBtn            ( this           , ResId  ( BTN_RECOV_NEXT                 ) )
-    , m_aCancelBtn          ( this           , ResId  ( BTN_RECOV_CANCEL               ) )
-    , m_aNextStr            (                  ResId  ( STR_RECOVERY_NEXT              ) )
-    , m_aTitleRecoveryInProgress(              ResId  ( STR_RECOVERY_INPROGRESS        ) )
-    , m_aTitleRecoveryReport(                  ResId  ( STR_RECOVERY_REPORT            ) )
-    , m_aRecoveryOnlyFinish (                  ResId  ( STR_RECOVERYONLY_FINISH        ) )
-    , m_aRecoveryOnlyFinishDescr(              ResId  ( STR_RECOVERYONLY_FINISH_DESCR  ) )
+    , m_aTitleWin           ( this           , SVX_RES  ( WIN_RECOV_TITLE                ) )
+    , m_aTitleFT            ( this           , SVX_RES  ( FT_RECOV_TITLE                 ) )
+    , m_aTitleFL            ( this           , SVX_RES  ( FL_RECOV_TITLE                 ) )
+    , m_aDescrFT            ( this           , SVX_RES  ( FT_RECOV_DESCR                 ) )
+    , m_aProgressFT         ( this           , SVX_RES  ( FT_RECOV_PROGR                 ) )
+    , m_aProgrParent        ( this           , SVX_RES  ( WIN_RECOV_PROGR                ) )
+    , m_aFileListFT         ( this           , SVX_RES  ( FT_RECOV_FILELIST              ) )
+    , m_aFileListLB         ( this           , SVX_RES  ( LB_RECOV_FILELIST              ) )
+    , m_aBottomFL           ( this           , SVX_RES  ( FL_RECOV_BOTTOM                ) )
+    , m_aNextBtn            ( this           , SVX_RES  ( BTN_RECOV_NEXT                 ) )
+    , m_aCancelBtn          ( this           , SVX_RES  ( BTN_RECOV_CANCEL               ) )
+    , m_aNextStr            (                  SVX_RES  ( STR_RECOVERY_NEXT              ) )
+    , m_aTitleRecoveryInProgress(              SVX_RES  ( STR_RECOVERY_INPROGRESS        ) )
+    , m_aTitleRecoveryReport(                  SVX_RES  ( STR_RECOVERY_REPORT            ) )
+    , m_aRecoveryOnlyFinish (                  SVX_RES  ( STR_RECOVERYONLY_FINISH        ) )
+    , m_aRecoveryOnlyFinishDescr(              SVX_RES  ( STR_RECOVERYONLY_FINISH_DESCR  ) )
     , m_pDefButton          ( NULL                                                       )
     , m_pCore               ( pCore                                                      )
     , m_eRecoveryState      (RecoveryDialog::E_RECOVERY_PREPARED)
@@ -1102,14 +1071,14 @@ RecoveryDialog::RecoveryDialog(Window*       pParent,
 
     static long nTabs[] = { 2, 0, 40*RECOV_CONTROLWIDTH/100 };
     m_aFileListLB.SetTabs( &nTabs[0] );
-    m_aFileListLB.InsertHeaderEntry( String( ResId( STR_HEADERBAR ) ) );
+    m_aFileListLB.InsertHeaderEntry( String( SVX_RES( STR_HEADERBAR ) ) );
 
     FreeResource();
 
     ::rtl::OUString CFG_PACKAGE_RECOVERY( RTL_CONSTASCII_USTRINGPARAM  ( "org.openoffice.Office.Recovery/" ));
     ::rtl::OUString CFG_PATH_CRASHREPORTER( RTL_CONSTASCII_USTRINGPARAM( "CrashReporter"                 ));
     ::rtl::OUString CFG_ENTRY_ENABLED( RTL_CONSTASCII_USTRINGPARAM     ( "Enabled"                       ));
-    
+
     sal_Bool bCrashRepEnabled( sal_True );
     css::uno::Any aVal = ::comphelper::ConfigurationHelper::readDirectKey(
                                 pCore->getSMGR(),
@@ -1137,7 +1106,7 @@ RecoveryDialog::RecoveryDialog(Window*       pParent,
     m_aNextBtn.Enable(TRUE);
     m_aNextBtn.SetClickHdl( LINK( this, RecoveryDialog, NextButtonHdl ) );
     m_aCancelBtn.SetClickHdl( LINK( this, RecoveryDialog, CancelButtonHdl ) );
-    
+
     // fill list box first time
     TURLList*                pURLList = m_pCore->getURLListAccess();
     TURLList::const_iterator pIt;
@@ -1147,7 +1116,10 @@ RecoveryDialog::RecoveryDialog(Window*       pParent,
     {
         const TURLInfo& rInfo = *pIt;
 
-        SvLBoxEntry* pEntry = m_aFileListLB.InsertEntry(rInfo.DisplayName, rInfo.StandardImage, rInfo.StandardImage);
+        String sName( rInfo.DisplayName );
+        sName += '\t';
+        sName += impl_getStatusString( rInfo );
+        SvLBoxEntry* pEntry = m_aFileListLB.InsertEntry(sName, rInfo.StandardImage, rInfo.StandardImage);
         pEntry->SetUserData((void*)&rInfo);
         m_aFileListLB.SetExpandedEntryBmp (pEntry, rInfo.HCImage, BMP_COLOR_HIGHCONTRAST);
         m_aFileListLB.SetCollapsedEntryBmp(pEntry, rInfo.HCImage, BMP_COLOR_HIGHCONTRAST);
@@ -1403,6 +1375,23 @@ void RecoveryDialog::start()
 //===============================================
 void RecoveryDialog::updateItems()
 {
+    ULONG c = m_aFileListLB.GetEntryCount();
+    ULONG i = 0;
+    for ( i=0; i<c; ++i )
+    {
+        SvLBoxEntry* pEntry = m_aFileListLB.GetEntry(i);
+        if ( !pEntry )
+            continue;
+
+        TURLInfo* pInfo = (TURLInfo*)pEntry->GetUserData();
+        if ( !pInfo )
+            continue;
+
+        String sStatus = impl_getStatusString( *pInfo );
+        if ( sStatus.Len() > 0 )
+            m_aFileListLB.SetEntryText( sStatus, pEntry, 1 );
+    }
+
     m_aFileListLB.Invalidate();
     m_aFileListLB.Update();
 }
@@ -1456,7 +1445,7 @@ IMPL_LINK( RecoveryDialog, CancelButtonHdl, void*, EMPTYARG )
     {
         if (impl_askUserForWizardCancel(this, RID_SVXQB_EXIT_RECOVERY) == DLG_RET_CANCEL)
             return 0;
-    } 
+    }
     m_bUserDecideNext = sal_False;
     m_bWaitForUser    = sal_False;
     return 0;
@@ -1468,19 +1457,46 @@ void RecoveryDialog::impl_refreshDocList()
 }
 
 //===============================================
+String RecoveryDialog::impl_getStatusString( const TURLInfo& rInfo ) const
+{
+    String sStatus;
+    switch ( rInfo.RecoveryState )
+    {
+        case E_SUCCESSFULLY_RECOVERED :
+            sStatus = m_aFileListLB.m_aSuccessRecovStr;
+            break;
+        case E_ORIGINAL_DOCUMENT_RECOVERED :
+            sStatus = m_aFileListLB.m_aOrigDocRecovStr;
+            break;
+        case E_RECOVERY_FAILED :
+            sStatus = m_aFileListLB.m_aRecovFailedStr;
+            break;
+        case E_RECOVERY_IS_IN_PROGRESS :
+            sStatus = m_aFileListLB.m_aRecovInProgrStr;
+            break;
+        case E_NOT_RECOVERED_YET :
+            sStatus = m_aFileListLB.m_aNotRecovYetStr;
+            break;
+        default:
+            break;
+    }
+    return sStatus;
+}
+
+//===============================================
 BrokenRecoveryDialog::BrokenRecoveryDialog(Window*       pParent        ,
                                            RecoveryCore* pCore          ,
                                            sal_Bool      bBeforeRecovery)
     : ModalDialog   ( pParent, SVX_RES( RID_SVX_MDLG_DOCRECOVERY_BROKEN ) )
-    , m_aDescrFT    ( this   , ResId( FT_BROKEN_DESCR                   ) )
-    , m_aFileListFT ( this   , ResId( FT_BROKEN_FILELIST                ) )
-    , m_aFileListLB ( this   , ResId( LB_BROKEN_FILELIST                ) )
-    , m_aSaveDirFT  ( this   , ResId( FT_BROKEN_SAVEDIR                 ) )
-    , m_aSaveDirED  ( this   , ResId( ED_BROKEN_SAVEDIR                 ) )
-    , m_aSaveDirBtn ( this   , ResId( BTN_BROKEN_SAVEDIR                ) )
-    , m_aBottomFL   ( this   , ResId( FL_BROKEN_BOTTOM                  ) )
-    , m_aOkBtn      ( this   , ResId( BTN_BROKEN_OK                     ) )
-    , m_aCancelBtn  ( this   , ResId( BTN_BROKEN_CANCEL                 ) )
+    , m_aDescrFT    ( this   , SVX_RES( FT_BROKEN_DESCR                   ) )
+    , m_aFileListFT ( this   , SVX_RES( FT_BROKEN_FILELIST                ) )
+    , m_aFileListLB ( this   , SVX_RES( LB_BROKEN_FILELIST                ) )
+    , m_aSaveDirFT  ( this   , SVX_RES( FT_BROKEN_SAVEDIR                 ) )
+    , m_aSaveDirED  ( this   , SVX_RES( ED_BROKEN_SAVEDIR                 ) )
+    , m_aSaveDirBtn ( this   , SVX_RES( BTN_BROKEN_SAVEDIR                ) )
+    , m_aBottomFL   ( this   , SVX_RES( FL_BROKEN_BOTTOM                  ) )
+    , m_aOkBtn      ( this   , SVX_RES( BTN_BROKEN_OK                     ) )
+    , m_aCancelBtn  ( this   , SVX_RES( BTN_BROKEN_CANCEL                 ) )
     , m_pCore       ( pCore                                               )
     , m_bBeforeRecovery (bBeforeRecovery)
     , m_bExecutionNeeded(sal_False)
@@ -1607,14 +1623,14 @@ void BrokenRecoveryDialog::impl_askForSavePath()
 
 	ErrorRepWelcomeDialog::ErrorRepWelcomeDialog( Window* _pParent, sal_Bool _bAllowBack )
 			:IExtendedTabPage        ( _pParent, SVX_RES( RID_SVXPAGE_ERR_REP_WELCOME ) )
-			,maTitleWin		( this, ResId( WIN_RECOV_TITLE ) )
-            ,maTitleFT      ( this, ResId( FT_RECOV_TITLE ) )
-            ,maTitleFL      ( this, ResId( FL_RECOV_TITLE ) )
-			,maDescrFT		( this, ResId( FT_RECOV_DESCR ) )
-			,maBottomFL		( this, ResId( FL_RECOV_BOTTOM ) )
-			,maPrevBtn		( this, ResId( BTN_RECOV_PREV ) )
-			,maNextBtn		( this, ResId( BTN_RECOV_NEXT ) )
-			,maCancelBtn	( this, ResId( BTN_RECOV_CANCEL ) )
+			,maTitleWin		( this, SVX_RES( WIN_RECOV_TITLE ) )
+            ,maTitleFT      ( this, SVX_RES( FT_RECOV_TITLE ) )
+            ,maTitleFL      ( this, SVX_RES( FL_RECOV_TITLE ) )
+			,maDescrFT		( this, SVX_RES( FT_RECOV_DESCR ) )
+			,maBottomFL		( this, SVX_RES( FL_RECOV_BOTTOM ) )
+			,maPrevBtn		( this, SVX_RES( BTN_RECOV_PREV ) )
+			,maNextBtn		( this, SVX_RES( BTN_RECOV_NEXT ) )
+			,maCancelBtn	( this, SVX_RES( BTN_RECOV_CANCEL ) )
 		{
 			FreeResource();
 
@@ -1714,25 +1730,25 @@ void BrokenRecoveryDialog::impl_askForSavePath()
 
         ErrorRepSendDialog::ErrorRepSendDialog( Window* _pParent )
 			:IExtendedTabPage	    ( _pParent, SVX_RES( RID_SVXPAGE_ERR_REP_SEND ) )
-			,maTitleWin		( this, ResId( WIN_RECOV_TITLE ) )
-            ,maTitleFT      ( this, ResId( FT_RECOV_TITLE ) )
-            ,maTitleFL      ( this, ResId( FL_RECOV_TITLE ) )
-			,maDescrFT		( this, ResId( FT_RECOV_DESCR ) )
+			,maTitleWin		( this, SVX_RES( WIN_RECOV_TITLE ) )
+            ,maTitleFT      ( this, SVX_RES( FT_RECOV_TITLE ) )
+            ,maTitleFL      ( this, SVX_RES( FL_RECOV_TITLE ) )
+			,maDescrFT		( this, SVX_RES( FT_RECOV_DESCR ) )
 
-			,maDocTypeFT	( this, ResId( FT_ERRSEND_DOCTYPE ) )
-			,maDocTypeED	( this, ResId( ED_ERRSEND_DOCTYPE ) )
-			,maUsingFT		( this, ResId( FT_ERRSEND_USING ) )
-			,maUsingML		( this, ResId( ML_ERRSEND_USING ) )
-			,maShowRepBtn	( this, ResId( BTN_ERRSEND_SHOWREP ) )
-			,maOptBtn		( this, ResId( BTN_ERRSEND_OPT ) )
-			,maContactCB	( this, ResId( CB_ERRSEND_CONTACT ) )
-			,maEMailAddrFT	( this, ResId( FT_ERRSEND_EMAILADDR ) )
-			,maEMailAddrED	( this, ResId( ED_ERRSEND_EMAILADDR ) )
+			,maDocTypeFT	( this, SVX_RES( FT_ERRSEND_DOCTYPE ) )
+			,maDocTypeED	( this, SVX_RES( ED_ERRSEND_DOCTYPE ) )
+			,maUsingFT		( this, SVX_RES( FT_ERRSEND_USING ) )
+			,maUsingML		( this, SVX_RES( ML_ERRSEND_USING ) )
+			,maShowRepBtn	( this, SVX_RES( BTN_ERRSEND_SHOWREP ) )
+			,maOptBtn		( this, SVX_RES( BTN_ERRSEND_OPT ) )
+			,maContactCB	( this, SVX_RES( CB_ERRSEND_CONTACT ) )
+			,maEMailAddrFT	( this, SVX_RES( FT_ERRSEND_EMAILADDR ) )
+			,maEMailAddrED	( this, SVX_RES( ED_ERRSEND_EMAILADDR ) )
 
-			,maBottomFL		( this, ResId( FL_RECOV_BOTTOM ) )
-			,maPrevBtn		( this, ResId( BTN_RECOV_PREV ) )
-			,maNextBtn		( this, ResId( BTN_RECOV_NEXT ) )
-			,maCancelBtn	( this, ResId( BTN_RECOV_CANCEL ) )
+			,maBottomFL		( this, SVX_RES( FL_RECOV_BOTTOM ) )
+			,maPrevBtn		( this, SVX_RES( BTN_RECOV_PREV ) )
+			,maNextBtn		( this, SVX_RES( BTN_RECOV_NEXT ) )
+			,maCancelBtn	( this, SVX_RES( BTN_RECOV_CANCEL ) )
 		{
 			FreeResource();
 
@@ -1903,18 +1919,18 @@ void BrokenRecoveryDialog::impl_askForSavePath()
 
 		ErrorRepOptionsDialog::ErrorRepOptionsDialog( Window* _pParent, ErrorRepParams& _rParams )
 			:ModalDialog	( _pParent, SVX_RES( RID_SVX_MDLG_ERR_REP_OPTIONS ) )
-			,maProxyFL( this, ResId( FL_ERROPT_PROXY ) )
-			,maSystemBtn( this, ResId( BTN_ERROPT_SYSTEM ) )
-			,maDirectBtn( this, ResId( BTN_ERROPT_DIRECT ) )
-			,maManualBtn( this, ResId( BTN_ERROPT_MANUAL ) )
-			,maProxyServerFT( this, ResId( FT_ERROPT_PROXYSERVER ) )
-			,maProxyServerEd( this, ResId( ED_ERROPT_PROXYSERVER ) )
-			,maProxyPortFT( this, ResId( FT_ERROPT_PROXYPORT ) )
-			,maProxyPortEd( this, ResId( ED_ERROPT_PROXYPORT ) )
-			,maDescriptionFT( this, ResId( FT_ERROPT_DESCRIPTION ) )
-            ,maButtonsFL( this, ResId( FL_ERROPT_BUTTONS ) )
-            ,maOKBtn( this, ResId( BTN_ERROPT_OK ) )
-            ,maCancelBtn( this, ResId( BTN_ERROPT_CANCEL ) )
+			,maProxyFL( this, SVX_RES( FL_ERROPT_PROXY ) )
+			,maSystemBtn( this, SVX_RES( BTN_ERROPT_SYSTEM ) )
+			,maDirectBtn( this, SVX_RES( BTN_ERROPT_DIRECT ) )
+			,maManualBtn( this, SVX_RES( BTN_ERROPT_MANUAL ) )
+			,maProxyServerFT( this, SVX_RES( FT_ERROPT_PROXYSERVER ) )
+			,maProxyServerEd( this, SVX_RES( ED_ERROPT_PROXYSERVER ) )
+			,maProxyPortFT( this, SVX_RES( FT_ERROPT_PROXYPORT ) )
+			,maProxyPortEd( this, SVX_RES( ED_ERROPT_PROXYPORT ) )
+			,maDescriptionFT( this, SVX_RES( FT_ERROPT_DESCRIPTION ) )
+            ,maButtonsFL( this, SVX_RES( FL_ERROPT_BUTTONS ) )
+            ,maOKBtn( this, SVX_RES( BTN_ERROPT_OK ) )
+            ,maCancelBtn( this, SVX_RES( BTN_ERROPT_CANCEL ) )
 			,mrParams( _rParams )
 		{
 			FreeResource();
@@ -2037,20 +2053,22 @@ void BrokenRecoveryDialog::impl_askForSavePath()
 		static ::rtl::OUString GetCrashConfigDir()
 		{
 
-#ifdef WNT
-			OUString	ustrValue = OUString::createFromAscii("${$SYSBINDIR/bootstrap.ini:UserInstallation}");
+#if defined(WNT) || defined(OS2)
+			OUString	ustrValue = OUString::createFromAscii("${$BRAND_BASE_DIR/program/bootstrap.ini:UserInstallation}");
+#elif defined( MACOSX )
+			OUString	ustrValue = OUString::createFromAscii("~");
 #else
 			OUString	ustrValue = OUString::createFromAscii("$SYSUSERCONFIG");
 #endif
 			Bootstrap::expandMacros( ustrValue );
 
-#ifdef WNT
+#if defined(WNT) || defined(OS2)
 			ustrValue += OUString::createFromAscii("/user/crashdata");
 #endif
 			return ustrValue;
 		}
 
-#ifdef WNT
+#if defined(WNT) || defined(OS2)
 #define CHKFILE	"crashdat.chk"
 #define STKFILE "crashdat.stk"
 #define PRVFILE "crashdat.prv"
@@ -2095,6 +2113,7 @@ void BrokenRecoveryDialog::impl_askForSavePath()
 			String	aFileContent;
 			::osl::File aFile( rURL );
 
+			printf( "Loading %s:", OString( rURL.getStr(), rURL.getLength(), osl_getThreadTextEncoding() ).getStr() );
 			if ( ::osl::FileBase::E_None == aFile.open( OpenFlag_Read ) )
 			{
 				::rtl::OString	aContent;
@@ -2118,7 +2137,11 @@ void BrokenRecoveryDialog::impl_askForSavePath()
 				aFileContent = ustrContent;
 
 				aFile.close();
+
+				printf( "SUCCEEDED\n" );
 			}
+			else
+				printf( "FAILED\n" );
 
 			return aFileContent;
 		}
@@ -2127,8 +2150,8 @@ void BrokenRecoveryDialog::impl_askForSavePath()
 
 		ErrorRepPreviewDialog::ErrorRepPreviewDialog( Window* _pParent )
             :ModalDialog    ( _pParent, SVX_RES( RID_SVX_MDLG_ERR_REP_PREVIEW ) )
-			,maContentML( this, ResId( ML_ERRPREVIEW_CONTENT ) )
-			,maOKBtn( this, ResId( BTN_ERRPREVIEW_OK ) )
+			,maContentML( this, SVX_RES( ML_ERRPREVIEW_CONTENT ) )
+			,maOKBtn( this, SVX_RES( BTN_ERRPREVIEW_OK ) )
 
 		{
 			FreeResource();

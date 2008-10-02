@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified January 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified January 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -42,111 +35,53 @@
 #endif
 
 // include ---------------------------------------------------------------
-
-#ifndef _SHL_HXX
 #include <tools/shl.hxx>
-#endif
-#ifndef _CONFIG_HXX
 #include <tools/config.hxx>
-#endif
-#ifndef _SV_MSGBOX_HXX //autogen
 #include <vcl/msgbox.hxx>
-#endif
-#ifndef _SFXINTITEM_HXX //autogen
 #include <svtools/intitem.hxx>
-#endif
-#ifndef _SFXSTRITEM_HXX //autogen
 #include <svtools/stritem.hxx>
-#endif
-#ifndef _SFXENUMITEM_HXX //autogen
 #include <svtools/eitem.hxx>
-#endif
-#ifndef _SFXSLSTITM_HXX //autogen
 #include <svtools/slstitm.hxx>
-#endif
-#ifndef _SFX_FCONTNR_HXX //autogen
 #include <sfx2/fcontnr.hxx>
-#endif
-#ifndef _SFXDISPATCH_HXX //autogen
 #include <sfx2/dispatch.hxx>
-#endif
-#ifndef _SFX_DOCFILT_HACK_HXX //autogen
 #include <sfx2/docfilt.hxx>
-#endif
-#ifndef _SFXVIEWSH_HXX
 #include <sfx2/viewsh.hxx>
-#endif
-#ifndef _SFXSIDS_HRC
 #include <sfx2/sfxsids.hrc>
-#endif
-#ifndef _FILEDLGHELPER_HXX
 #include <sfx2/filedlghelper.hxx>
-#endif
-#ifndef _TOOLS_INETDEF_HXX
 #include <tools/inetdef.hxx>
-#endif
-#ifndef SVTOOLS_URIHELPER_HXX
 #include <svtools/urihelper.hxx>
-#endif
 
 #ifndef _CNTWIDS_HRC
 #include <svtools/cntwids.hrc>
 #endif
-#ifndef _SVTOOLS_INETOPTIONS_HXX_
 #include <svtools/inetoptions.hxx>
-#endif
 #ifndef _SV_SVAPP_HXX
 #include <sfx2/app.hxx>
 #endif
-#ifndef _SFX_OBJSH_HXX
 #include <sfx2/objsh.hxx>
-#endif
-#ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
-#endif
-#ifndef _SV_HELP_HXX
 #include <vcl/help.hxx>
-#endif
-
-#ifndef _SFXVIEWFRM_HXX
 #include <sfx2/viewfrm.hxx>
-#endif
-#ifndef _URLOBJ_HXX
 #include <tools/urlobj.hxx>
-#endif
-#ifndef INCLUDED_SVTOOLS_PATHOPTIONS_HXX
 #include <svtools/pathoptions.hxx>
-#endif
 #ifndef INCLUDED_SVTOOLS_SECURITIYOPTIONS_HXX
 #include <svtools/securityoptions.hxx>
 #endif
 #ifndef _SVTOOLS_JAVAPTIONS_HXX
 #include <svtools/javaoptions.hxx>
 #endif
-#ifndef _UNOTOOLS_LOCALFILEHELPER_HXX
 #include <unotools/localfilehelper.hxx>
-#endif
-
-#ifndef INCLUDED_SVTOOLS_EXTENDEDSECURITYOPTIONS_HXX
 #include <svtools/extendedsecurityoptions.hxx>
-#endif
-#ifndef _COM_SUN_STAR_UNO_SEQUENCE_HXX_
 #include <com/sun/star/uno/Sequence.hxx>
-#endif
 #define _SVX_OPTINET2_CXX
-
-#ifndef _SVX_DIALMGR_HXX
-#include "dialmgr.hxx"
-#endif
-#ifndef _SVX_OPTINET_HXX
+#include <svx/dialmgr.hxx>
 #include "optinet2.hxx"
-#endif
 //CHINA001 #ifndef _SVX_MULTIFIL_HXX
 //CHINA001 #include "multifil.hxx"
 //CHINA001 #endif
-#include "svxdlg.hxx" //CHINA001
+#include <svx/svxdlg.hxx> //CHINA001
 #ifndef _SVX_DIALOGS_HRC
-#include "dialogs.hrc"
+#include <svx/dialogs.hrc>
 #endif
 #ifndef _SVX_OPTINET_HRC
 #include "optinet2.hrc"
@@ -155,17 +90,11 @@
 #include "helpid.hrc"
 #endif
 #include "ofaitem.hxx"
-#ifndef _SVX_HTMLMODE_HXX
 #include "htmlmode.hxx"
-#endif
 
 // for security TP
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
-#ifndef _COM_SUN_STAR_SECURITY_XDOCUMENTDIGITALSIGNATURES_HPP_
 #include <com/sun/star/security/XDocumentDigitalSignatures.hpp>
-#endif
 
 #ifdef UNX
 #include <sys/types.h>
@@ -175,62 +104,32 @@
 #include <pwd.h>
 #include <sys/types.h>
 #include <string.h>
-#include <osl/process.h>
 #include <rtl/textenc.h>
 #include <rtl/locale.h>
 #include <osl/nlsupport.h>
 #endif
-
-#ifndef _SAL_TYPES_H_
 #include <sal/types.h>
-#endif
-
-#ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
-#endif
-
-#ifndef _OSL_MODULE_HXX_
-#include <osl/module.hxx>
-#endif
-
-#ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
-#endif
-
-#ifndef _COM_SUN_STAR_CONTAINER_XNAMEREPLACE_HPP_
+#include <osl/process.h>
 #include <com/sun/star/container/XNameReplace.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_CONTAINER_XNAMEACCESS_HPP_
 #include <com/sun/star/container/XNameAccess.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUE_HPP_
 #include <com/sun/star/beans/PropertyValue.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_XPROPERTYSET_HPP_
 #include <com/sun/star/beans/XPropertySet.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_XPROPERTYSTATE_HPP_
 #include <com/sun/star/beans/XPropertyState.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UTIL_XCHANGESBATCH_HPP_
 #include <com/sun/star/util/XChangesBatch.hpp>
-#endif
-
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
 
 #include "com/sun/star/ui/dialogs/TemplateDescription.hpp"
+#include "com/sun/star/task/XMasterPasswordHandling.hpp"
+#include "com/sun/star/task/XPasswordContainer.hpp"
+#include "securityoptions.hxx"
+#include "webconninfo.hxx"
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
-using namespace ::rtl;
 using namespace ::sfx2;
+using ::rtl::OUString;
 
 //CHINA001 copy from multipat.hxx begin
 // define ----------------------------------------------------------------
@@ -267,7 +166,7 @@ String lcl_MakeTabEntry(const SfxFilter* pFilter)
 	sEntry += pFilter->GetWildcard().GetWildCard();
 	sEntry += '\t';
 	sEntry += pFilter->GetName();
-#if defined(OS2) || defined(MAC)
+#if defined(OS2)
 	sEntry += '\t';
 	sEntry += pFilter->GetTypeName();
 #endif
@@ -333,7 +232,7 @@ void SvxNoSpaceEdit::Modify()
 		XubString aValue = GetText();
 
 		if ( !ByteString(::rtl::OUStringToOString(aValue,RTL_TEXTENCODING_UTF8)).IsNumericAscii() || (long)aValue.ToInt32() > USHRT_MAX )
-			// der Höchstwert einer Portnummer ist USHRT_MAX
+			// der Hï¿½chstwert einer Portnummer ist USHRT_MAX
 			ErrorBox( this, SVX_RES( RID_SVXERR_OPT_PROXYPORTS ) ).Execute();
 	}
 }
@@ -348,39 +247,48 @@ void SvxNoSpaceEdit::Modify()
 /********************************************************************/
 
 SvxProxyTabPage::SvxProxyTabPage(Window* pParent, const SfxItemSet& rSet ) :
-	SfxTabPage( pParent, ResId( RID_SVXPAGE_INET_PROXY, DIALOG_MGR() ), rSet ),
-	aOptionGB   (this, ResId(GB_SETTINGS)),
+	SfxTabPage( pParent, SVX_RES( RID_SVXPAGE_INET_PROXY ), rSet ),
+	aOptionGB   (this, SVX_RES(GB_SETTINGS)),
 
-	aProxyModeFT  (this, ResId(FT_PROXYMODE)),
-	aProxyModeLB  (this, ResId(LB_PROXYMODE)),
+	aProxyModeFT  (this, SVX_RES(FT_PROXYMODE)),
+	aProxyModeLB  (this, SVX_RES(LB_PROXYMODE)),
 
-	aHttpProxyFT      (this, ResId( FT_HTTP_PROXY	  )),
-	aHttpProxyED      (this, ResId( ED_HTTP_PROXY     )),
-	aHttpPortFT       (this, ResId( FT_HTTP_PORT      )),
-	aHttpPortED       (this, ResId( ED_HTTP_PORT      ), TRUE),
+	aHttpProxyFT      (this, SVX_RES( FT_HTTP_PROXY	  )),
+	aHttpProxyED      (this, SVX_RES( ED_HTTP_PROXY     )),
+	aHttpPortFT       (this, SVX_RES( FT_HTTP_PORT      )),
+	aHttpPortED       (this, SVX_RES( ED_HTTP_PORT      ), TRUE),
 
-	aFtpProxyFT       (this, ResId( FT_FTP_PROXY      )),
-	aFtpProxyED       (this, ResId( ED_FTP_PROXY      )),
-	aFtpPortFT        (this, ResId( FT_FTP_PORT       )),
-	aFtpPortED        (this, ResId( ED_FTP_PORT       ), TRUE),
+    aHttpsProxyFT      (this, SVX_RES( FT_HTTPS_PROXY	  )),
+	aHttpsProxyED      (this, SVX_RES( ED_HTTPS_PROXY     )),
+	aHttpsPortFT       (this, SVX_RES( FT_HTTPS_PORT      )),
+	aHttpsPortED       (this, SVX_RES( ED_HTTPS_PORT      ), TRUE),
 
-	aNoProxyForFT     (this, ResId( FT_NOPROXYFOR     )),
-	aNoProxyForED     (this, ResId( ED_NOPROXYFOR     )),
-    aNoProxyDescFT    (this, ResId( ED_NOPROXYDESC    )),
-    sFromBrowser        (       ResId( ST_PROXY_FROM_BROWSER ) ),
+	aFtpProxyFT       (this, SVX_RES( FT_FTP_PROXY      )),
+	aFtpProxyED       (this, SVX_RES( ED_FTP_PROXY      )),
+	aFtpPortFT        (this, SVX_RES( FT_FTP_PORT       )),
+	aFtpPortED        (this, SVX_RES( ED_FTP_PORT       ), TRUE),
+
+	aNoProxyForFT     (this, SVX_RES( FT_NOPROXYFOR     )),
+	aNoProxyForED     (this, SVX_RES( ED_NOPROXYFOR     )),
+    aNoProxyDescFT    (this, SVX_RES( ED_NOPROXYDESC    )),
+    sFromBrowser        (       SVX_RES( ST_PROXY_FROM_BROWSER ) ),
     aProxyModePN(RTL_CONSTASCII_USTRINGPARAM("ooInetProxyType")),
     aHttpProxyPN(RTL_CONSTASCII_USTRINGPARAM("ooInetHTTPProxyName")),
     aHttpPortPN(RTL_CONSTASCII_USTRINGPARAM("ooInetHTTPProxyPort")),
-    aFtpProxyPN(RTL_CONSTASCII_USTRINGPARAM("ooInetFTPProxyName")),
+    aHttpsProxyPN(RTL_CONSTASCII_USTRINGPARAM("ooInetHTTPSProxyName")),
+    aHttpsPortPN(RTL_CONSTASCII_USTRINGPARAM("ooInetHTTPSProxyPort")),
+	aFtpProxyPN(RTL_CONSTASCII_USTRINGPARAM("ooInetFTPProxyName")),
     aFtpPortPN(RTL_CONSTASCII_USTRINGPARAM("ooInetFTPProxyPort")),
     aNoProxyDescPN(RTL_CONSTASCII_USTRINGPARAM("ooInetNoProxy"))
 {
 	FreeResource();
 
 	aHttpPortED.SetMaxTextLen(5);
+	aHttpsPortED.SetMaxTextLen(5);
 	aFtpPortED.SetMaxTextLen(5);
 	Link aLink = LINK( this, SvxProxyTabPage, LoseFocusHdl_Impl );
 	aHttpPortED.SetLoseFocusHdl( aLink );
+	aHttpsPortED.SetLoseFocusHdl( aLink );
 	aFtpPortED.SetLoseFocusHdl( aLink );
 
 	aProxyModeLB.SetSelectHdl(LINK( this, SvxProxyTabPage, ProxyHdl_Impl ));
@@ -410,10 +318,12 @@ SvxProxyTabPage::SvxProxyTabPage(Window* pParent, const SfxItemSet& rSet ) :
                     RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.configuration.ConfigurationUpdateAccess" ) ),
                     aArgumentList );
         }
-
-        catch (RuntimeException e) {
+        catch ( RuntimeException& )
+        {
         }
     }
+
+    ArrangeControls_Impl();
 }
 
 /*-----------------12.08.96 14.55-------------------
@@ -458,6 +368,16 @@ void SvxProxyTabPage::ReadConfigData_Impl()
         if( xNameAccess->getByName(aHttpPortPN) >>= nIntValue )
         {
             aHttpPortED.SetText( String::CreateFromInt32( nIntValue ));
+        }
+
+        if( xNameAccess->getByName(aHttpsProxyPN) >>= aStringValue )
+        {
+            aHttpsProxyED.SetText( aStringValue );
+        }
+
+        if( xNameAccess->getByName(aHttpsPortPN) >>= nIntValue )
+        {
+            aHttpsPortED.SetText( String::CreateFromInt32( nIntValue ));
         }
 
         if( xNameAccess->getByName(aFtpProxyPN) >>= aStringValue )
@@ -513,6 +433,16 @@ void SvxProxyTabPage::ReadConfigDefaults_Impl()
             aHttpPortED.SetText( String::CreateFromInt32( nIntValue ));
         }
 
+		if( xPropertyState->getPropertyDefault(aHttpsProxyPN) >>= aStringValue )
+        {
+            aHttpsProxyED.SetText( aStringValue );
+        }
+
+        if( xPropertyState->getPropertyDefault(aHttpsPortPN) >>= nIntValue )
+        {
+            aHttpsPortED.SetText( String::CreateFromInt32( nIntValue ));
+        }
+
         if( xPropertyState->getPropertyDefault(aFtpProxyPN) >>= aStringValue )
         {
             aFtpProxyED.SetText( aStringValue );
@@ -556,6 +486,8 @@ void SvxProxyTabPage::RestoreConfigDefaults_Impl()
         xPropertyState->setPropertyToDefault(aProxyModePN);
         xPropertyState->setPropertyToDefault(aHttpProxyPN);
         xPropertyState->setPropertyToDefault(aHttpPortPN);
+        xPropertyState->setPropertyToDefault(aHttpsProxyPN);
+        xPropertyState->setPropertyToDefault(aHttpsPortPN);
         xPropertyState->setPropertyToDefault(aFtpProxyPN);
         xPropertyState->setPropertyToDefault(aFtpPortPN);
         xPropertyState->setPropertyToDefault(aNoProxyDescPN);
@@ -590,6 +522,8 @@ void SvxProxyTabPage::Reset(const SfxItemSet&)
     aProxyModeLB.SaveValue();
     aHttpProxyED.SaveValue();
     aHttpPortED.SaveValue();
+    aHttpsProxyED.SaveValue();
+    aHttpsPortED.SaveValue();
     aFtpProxyED.SaveValue();
     aFtpPortED.SaveValue();
     aNoProxyForED.SaveValue();
@@ -633,6 +567,20 @@ BOOL SvxProxyTabPage::FillItemSet(SfxItemSet& )
         {
             xPropertySet->setPropertyValue( aHttpPortPN,
                 makeAny(aHttpPortED.GetText().ToInt32()));
+            bModified = TRUE;
+        }
+
+		if(aHttpsProxyED.GetSavedValue() != aHttpsProxyED.GetText())
+        {
+            xPropertySet->setPropertyValue( aHttpsProxyPN,
+                makeAny(rtl::OUString(aHttpsProxyED.GetText())));
+            bModified = TRUE;
+        }
+
+        if ( aHttpsPortED.GetSavedValue() != aHttpsPortED.GetText() )
+        {
+            xPropertySet->setPropertyValue( aHttpsPortPN,
+                makeAny(aHttpsPortED.GetText().ToInt32()));
             bModified = TRUE;
         }
 
@@ -683,6 +631,58 @@ BOOL SvxProxyTabPage::FillItemSet(SfxItemSet& )
 
     return bModified;
 }
+
+void SvxProxyTabPage::ArrangeControls_Impl()
+{
+    //-->Calculate dynamical width of controls, add buy wuy for i71445 Time: 2007.02.27
+    long nWidth = aProxyModeFT.GetCtrlTextWidth( aProxyModeFT.GetText() );
+    long nTemp = aHttpProxyFT.GetCtrlTextWidth( aHttpProxyFT.GetText() );
+	if ( nTemp > nWidth )
+        nWidth = nTemp;
+    nTemp = aHttpsProxyFT.GetCtrlTextWidth( aHttpsProxyFT.GetText() );
+    if ( nTemp > nWidth )
+        nWidth = nTemp;
+    nTemp = aFtpProxyFT.GetCtrlTextWidth( aFtpProxyFT.GetText() );
+    if ( nTemp > nWidth )
+        nWidth = nTemp;
+    nTemp = aNoProxyForFT.GetCtrlTextWidth( aNoProxyForFT.GetText() );
+    if ( nTemp > nWidth )
+        nWidth = nTemp;
+
+    nWidth += 10; // To be sure the length of the FixedText is enough on all platforms
+    const long nFTWidth = aProxyModeFT.GetSizePixel().Width();
+    if ( nWidth > nFTWidth )
+    {
+        Size aNewSize = aProxyModeFT.GetSizePixel();
+        aNewSize.Width() = nWidth;
+
+        aProxyModeFT.SetSizePixel( aNewSize );
+        aHttpProxyFT.SetSizePixel( aNewSize );
+		aHttpsProxyFT.SetSizePixel( aNewSize );
+        aFtpProxyFT.SetSizePixel( aNewSize );
+        aNoProxyForFT.SetSizePixel( aNewSize );
+
+        const long nDelta = nWidth - nFTWidth;
+        Point aNewPos = aProxyModeLB.GetPosPixel();
+        aNewPos.X() += nDelta;
+
+        aProxyModeLB.SetPosPixel( aNewPos );
+
+        aNewSize = aHttpProxyED.GetSizePixel();
+        aNewSize.Width() -= nDelta;
+
+        aNewPos.Y() = aHttpProxyED.GetPosPixel().Y();
+        aHttpProxyED.SetPosSizePixel( aNewPos, aNewSize );
+		aNewPos.Y() = aHttpsProxyED.GetPosPixel().Y();
+        aHttpsProxyED.SetPosSizePixel( aNewPos, aNewSize );
+        aNewPos.Y() = aFtpProxyED.GetPosPixel().Y();
+        aFtpProxyED.SetPosSizePixel( aNewPos, aNewSize );
+        aNewPos.Y() = aNoProxyForED.GetPosPixel().Y();
+        aNoProxyForED.SetPosSizePixel( aNewPos, aNewSize );
+    }
+    //<--End buy wuy for i71445 Time: 2007.02.27
+}
+
 /*-----------------12.08.96 13.38-------------------
 
 --------------------------------------------------*/
@@ -692,6 +692,11 @@ void SvxProxyTabPage::EnableControls_Impl(BOOL bEnable)
 	aHttpProxyED.Enable(bEnable);
 	aHttpPortFT.Enable(bEnable);
 	aHttpPortED.Enable(bEnable);
+
+	aHttpsProxyFT.Enable(bEnable);
+	aHttpsProxyED.Enable(bEnable);
+	aHttpsPortFT.Enable(bEnable);
+	aHttpsPortED.Enable(bEnable);
 
 	aFtpProxyFT.Enable(bEnable);
 	aFtpProxyED.Enable(bEnable);
@@ -744,31 +749,31 @@ SvxSearchTabPage::SvxSearchTabPage(Window* pParent, const SfxItemSet& rSet ) :
 
 	SfxTabPage( pParent, SVX_RES( RID_SVXPAGE_INET_SEARCH ), rSet ),
 
-	aSearchGB		( this, ResId( GB_SEARCH ) ),
-	aSearchLB		( this, ResId( LB_SEARCH ) ),
-	aSearchNameFT	( this, ResId( FT_SEARCH_NAME ) ),
-	aSearchNameED	( this, ResId( ED_SEARCH_NAME ) ),
-	aSearchFT		( this, ResId( FT_SEARCH ) ),
-	aAndRB			( this, ResId( RB_AND ) ),
-	aOrRB			( this, ResId( RB_OR ) ),
-	aExactRB		( this, ResId( RB_EXACT ) ),
+	aSearchGB		( this, SVX_RES( GB_SEARCH ) ),
+	aSearchLB		( this, SVX_RES( LB_SEARCH ) ),
+	aSearchNameFT	( this, SVX_RES( FT_SEARCH_NAME ) ),
+	aSearchNameED	( this, SVX_RES( ED_SEARCH_NAME ) ),
+	aSearchFT		( this, SVX_RES( FT_SEARCH ) ),
+	aAndRB			( this, SVX_RES( RB_AND ) ),
+	aOrRB			( this, SVX_RES( RB_OR ) ),
+	aExactRB		( this, SVX_RES( RB_EXACT ) ),
 
-	aURLFT			( this, ResId( FT_URL ) ),
-	aURLED			( this, ResId( ED_URL ) ),
+	aURLFT			( this, SVX_RES( FT_URL ) ),
+	aURLED			( this, SVX_RES( ED_URL ) ),
 
-	aPostFixFT		( this, ResId( FT_POSTFIX ) ),
-	aPostFixED		( this, ResId( ED_POSTFIX ) ),
-	aSeparatorFT	( this, ResId( FT_SEPARATOR ) ),
-	aSeparatorED	( this, ResId( ED_SEPARATOR ) ),
-	aCaseFT			( this, ResId( FT_CASE ) ),
-	aCaseED			( this, ResId( ED_CASE ) ),
+	aPostFixFT		( this, SVX_RES( FT_POSTFIX ) ),
+	aPostFixED		( this, SVX_RES( ED_POSTFIX ) ),
+	aSeparatorFT	( this, SVX_RES( FT_SEPARATOR ) ),
+	aSeparatorED	( this, SVX_RES( ED_SEPARATOR ) ),
+	aCaseFT			( this, SVX_RES( FT_CASE ) ),
+	aCaseED			( this, SVX_RES( ED_CASE ) ),
 
-	aNewPB			( this, ResId( PB_NEW ) ),
-	aAddPB			( this, ResId( PB_ADD ) ),
-	aChangePB		( this, ResId( PB_CHANGE ) ),
-    aDeletePB       ( this, ResId( PB_DELETE ) ),
+	aNewPB			( this, SVX_RES( PB_NEW ) ),
+	aAddPB			( this, SVX_RES( PB_ADD ) ),
+	aChangePB		( this, SVX_RES( PB_CHANGE ) ),
+    aDeletePB       ( this, SVX_RES( PB_DELETE ) ),
 
-	sModifyMsg(ResId(MSG_MODIFY))
+	sModifyMsg(SVX_RES(MSG_MODIFY))
 {
 	FreeResource();
     SetExchangeSupport();
@@ -1225,11 +1230,11 @@ JavaScriptDisableQueryBox_Impl::JavaScriptDisableQueryBox_Impl( Window* pParent 
 
 	ModalDialog( pParent, SVX_RES( RID_SVXDLG_OPT_JAVASCRIPT_DISABLE ) ),
 
-	aImage		( this, ResId( IMG_JSCPT_WARNING ) ),
-	aWarningFT	( this, ResId( FT_JSCPT_WARNING ) ),
-	aDisableCB	( this, ResId( CB_JSCPT_DISABLE ) ),
-	aYesBtn		( this, ResId( BTN_JSCPT_YES ) ),
-	aNoBtn		( this, ResId( BTN_JSCPT_NO ) )
+	aImage		( this, SVX_RES( IMG_JSCPT_WARNING ) ),
+	aWarningFT	( this, SVX_RES( FT_JSCPT_WARNING ) ),
+	aDisableCB	( this, SVX_RES( CB_JSCPT_DISABLE ) ),
+	aYesBtn		( this, SVX_RES( BTN_JSCPT_YES ) ),
+	aNoBtn		( this, SVX_RES( BTN_JSCPT_NO ) )
 
 {
 	FreeResource();
@@ -1283,37 +1288,39 @@ void SvxScriptExecListBox::RequestHelp( const HelpEvent& rHEvt )
 
 SvxSecurityTabPage::SvxSecurityTabPage( Window* pParent, const SfxItemSet& rSet )
 	:SfxTabPage			( pParent, SVX_RES( RID_SVXPAGE_INET_SECURITY ), rSet )
-	,maSecOptionsFL		( this, ResId( FL_SEC_SECOPTIONS ) )
-	,maSecOptionsFI		( this, ResId( FI_SEC_SECOPTIONS ) )
-    ,maSaveOrSendDocsFI ( this, ResId( FI_SEC_SAVEORSENDDOCS ) )
-    ,maSaveOrSendDocsCB ( this, ResId( CB_SEC_SAVEORSENDDOCS ) )
-    ,maSignDocsFI       ( this, ResId( FI_SEC_SIGNDOCS ) )
-    ,maSignDocsCB       ( this, ResId( CB_SEC_SIGNDOCS ) )
-    ,maPrintDocsFI      ( this, ResId( FI_SEC_PRINTDOCS ) )
-    ,maPrintDocsCB      ( this, ResId( CB_SEC_PRINTDOCS ) )
-    ,maCreatePdfFI      ( this, ResId( FI_SEC_CREATEPDF ) )
-    ,maCreatePdfCB      ( this, ResId( CB_SEC_CREATEPDF ) )
-    ,maRemovePersInfoFI ( this, ResId( FI_SEC_REMOVEPERSINFO ) )
-    ,maRemovePersInfoCB ( this, ResId( CB_SEC_REMOVEPERSINFO ) )
-    ,maRecommPasswdFI   ( this, ResId( FI_SEC_RECOMMPASSWD ) )
-    ,maRecommPasswdCB   ( this, ResId( CB_SEC_RECOMMPASSWD ) )
-    ,maMacroSecFL       ( this, ResId( FL_SEC_MACROSEC ) )
-	,maMacroSecFI		( this, ResId( FI_SEC_MACROSEC ) )
-	,maMacroSecPB		( this, ResId( PB_SEC_MACROSEC ) )
-	,maFilesharingFL	( this, ResId( FL_SEC_FILESHARING ) )
-	,maRecommReadOnlyCB	( this, ResId( CB_SEC_RECOMMREADONLY ) )
-	,maRecordChangesCB	( this, ResId( CB_SEC_RECORDCHANGES ) )
-	,maProtectRecordsPB	( this, ResId( PB_SEC_PROTRECORDS ) )
-	,mpSecOptions		( new SvtSecurityOptions )
+
+    ,maSecurityOptionsFL( this, SVX_RES( FL_SEC_SECURITYOPTIONS ) )
+    ,maSecurityOptionsFI( this, SVX_RES( FI_SEC_SECURITYOPTIONS ) )
+    ,maSecurityOptionsPB( this, SVX_RES( PB_SEC_SECURITYOPTIONS ) )
+    ,maPasswordsFL      ( this, SVX_RES( FL_SEC_PASSWORDS ) )
+    ,maSavePasswordsCB  ( this, SVX_RES( CB_SEC_SAVEPASSWORDS ) )
+    ,maMasterPasswordPB ( this, SVX_RES( PB_SEC_MASTERPASSWORD ) )
+    ,maMasterPasswordFI ( this, SVX_RES( FI_SEC_MASTERPASSWORD ) )
+    ,maShowPasswordsPB  ( this, SVX_RES( PB_SEC_SHOWPASSWORDS ) )
+    ,maMacroSecFL       ( this, SVX_RES( FL_SEC_MACROSEC ) )
+	,maMacroSecFI		( this, SVX_RES( FI_SEC_MACROSEC ) )
+	,maMacroSecPB		( this, SVX_RES( PB_SEC_MACROSEC ) )
+	,maFilesharingFL	( this, SVX_RES( FL_SEC_FILESHARING ) )
+	,maRecommReadOnlyCB	( this, SVX_RES( CB_SEC_RECOMMREADONLY ) )
+	,maRecordChangesCB	( this, SVX_RES( CB_SEC_RECORDCHANGES ) )
+	,maProtectRecordsPB	( this, SVX_RES( PB_SEC_PROTRECORDS ) )
+
+    ,mpSecOptions       ( new SvtSecurityOptions )
+    ,mpSecOptDlg        ( NULL )
 	,meRedlingMode		( RL_NONE )
-	,msProtectRecordsStr( 		ResId( STR_SEC_PROTRECORDS ) )
-	,msUnprotectRecordsStr(		ResId( STR_SEC_UNPROTRECORDS ) )
+	,msProtectRecordsStr( 		SVX_RES( STR_SEC_PROTRECORDS ) )
+	,msUnprotectRecordsStr(		SVX_RES( STR_SEC_UNPROTRECORDS ) )
+    ,msPasswordStoringDeactivateStr( SVX_RES( STR_SEC_NOPASSWDSAVE ) )
 {
 	FreeResource();
 
     InitControls();
 
-	maMacroSecPB.SetClickHdl( LINK( this, SvxSecurityTabPage, MacroSecPBHdl ) );
+    maSecurityOptionsPB.SetClickHdl( LINK( this, SvxSecurityTabPage, SecurityOptionsHdl ) );
+    maSavePasswordsCB.SetClickHdl( LINK( this, SvxSecurityTabPage, SavePasswordHdl ) );
+    maMasterPasswordPB.SetClickHdl( LINK( this, SvxSecurityTabPage, MasterPasswordHdl ) );
+    maShowPasswordsPB.SetClickHdl( LINK( this, SvxSecurityTabPage, ShowPasswordsHdl ) );
+    maMacroSecPB.SetClickHdl( LINK( this, SvxSecurityTabPage, MacroSecPBHdl ) );
 	maProtectRecordsPB.SetClickHdl( LINK( this, SvxSecurityTabPage, ProtectRecordsPBHdl ) );
 	maRecordChangesCB.SetClickHdl( LINK( this, SvxSecurityTabPage, RecordChangesCBHdl ) );
 
@@ -1323,11 +1330,104 @@ SvxSecurityTabPage::SvxSecurityTabPage( Window* pParent, const SfxItemSet& rSet 
 SvxSecurityTabPage::~SvxSecurityTabPage()
 {
 	delete mpSecOptions;
+    delete mpSecOptDlg;
 }
 
-IMPL_LINK( SvxSecurityTabPage, AdvancedPBHdl, void*, EMPTYARG )
+IMPL_LINK( SvxSecurityTabPage, SecurityOptionsHdl, PushButton*, EMPTYARG )
 {
-	return 0;
+    if ( !mpSecOptDlg )
+        mpSecOptDlg = new svx::SecurityOptionsDialog( this, mpSecOptions );
+    mpSecOptDlg->Execute();
+    return 0;
+}
+
+IMPL_LINK( SvxSecurityTabPage, SavePasswordHdl, void*, EMPTYARG )
+{
+    try
+    {
+        Reference< task::XMasterPasswordHandling > xMasterPasswd(
+            comphelper::getProcessServiceFactory()->createInstance(
+                rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.task.PasswordContainer" ) ) ),
+            UNO_QUERY_THROW );
+
+        if ( maSavePasswordsCB.IsChecked() )
+        {
+            sal_Bool bOldValue = xMasterPasswd->allowPersistentStoring( sal_True );
+            xMasterPasswd->removeMasterPassword();
+            if ( xMasterPasswd->changeMasterPassword( Reference< task::XInteractionHandler >() ) )
+            {
+                maMasterPasswordPB.Enable( TRUE );
+                maShowPasswordsPB.Enable( TRUE );
+            }
+            else
+            {
+                xMasterPasswd->allowPersistentStoring( bOldValue );
+                maSavePasswordsCB.Check( FALSE );
+            }
+        }
+        else
+        {
+            QueryBox aQuery( this, WB_YES_NO|WB_DEF_NO, msPasswordStoringDeactivateStr );
+            USHORT nRet = aQuery.Execute();
+
+            if( RET_YES == nRet )
+            {
+                xMasterPasswd->allowPersistentStoring( sal_False );
+                maMasterPasswordPB.Enable( FALSE );
+                maShowPasswordsPB.Enable( FALSE );
+            }
+            else
+            {
+                maSavePasswordsCB.Check( TRUE );
+                maMasterPasswordPB.Enable( TRUE );
+                maShowPasswordsPB.Enable( TRUE );
+            }
+        }
+    }
+    catch( Exception& )
+    {
+        maSavePasswordsCB.Check( !maSavePasswordsCB.IsChecked() );
+    }
+
+    return 0;
+}
+
+IMPL_LINK( SvxSecurityTabPage, MasterPasswordHdl, PushButton*, EMPTYARG )
+{
+    try
+    {
+        Reference< task::XMasterPasswordHandling > xMasterPasswd(
+            comphelper::getProcessServiceFactory()->createInstance(
+                rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.task.PasswordContainer" ) ) ),
+            UNO_QUERY );
+
+        if ( xMasterPasswd.is() && xMasterPasswd->isPersistentStoringAllowed() )
+            xMasterPasswd->changeMasterPassword( Reference< task::XInteractionHandler >() );
+    }
+    catch( Exception& )
+    {}
+
+    return 0;
+}
+
+IMPL_LINK( SvxSecurityTabPage, ShowPasswordsHdl, PushButton*, EMPTYARG )
+{
+    try
+    {
+        Reference< task::XMasterPasswordHandling > xMasterPasswd(
+            comphelper::getProcessServiceFactory()->createInstance(
+                rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.task.PasswordContainer" ) ) ),
+            UNO_QUERY );
+
+        if ( xMasterPasswd.is() && xMasterPasswd->isPersistentStoringAllowed() && xMasterPasswd->authorizateWithMasterPassword( Reference< task::XInteractionHandler>() ) )
+        {
+            svx::WebConnectionInfoDialog aDlg( this );
+            aDlg.Execute();
+        }
+    }
+    catch( Exception& )
+    {}
+    return 0;
 }
 
 IMPL_LINK( SvxSecurityTabPage, MacroSecPBHdl, void*, EMPTYARG )
@@ -1464,8 +1564,6 @@ void SvxSecurityTabPage::CheckRecordChangesState( void )
 
 void SvxSecurityTabPage::InitControls()
 {
-    const long nOffset = 10;
-
     // Hide all controls which belong to the macro security button in case the macro
     // security settings managed by the macro security dialog opened via the button
     // are all readonly or if the macros are disabled in general.
@@ -1497,47 +1595,75 @@ void SvxSecurityTabPage::InitControls()
             (*pCurrent)->SetPosPixel( aNewPos );
         }
     }
-    else
+
+    // one button too small for its text?
+    sal_Int32 i = 0;
+    long nBtnTextWidth = 0;
+    Window* pButtons[] = { &maSecurityOptionsPB, &maMasterPasswordPB,
+                            &maShowPasswordsPB, &maMacroSecPB, &maProtectRecordsPB };
+    Window** pButton = pButtons;
+    const sal_Int32 nBCount = sizeof( pButtons ) / sizeof( pButtons[ 0 ] );
+    for ( ; i < nBCount; ++i, ++pButton )
     {
-        // if the button text is too wide, then broaden the button
-        String sText = maMacroSecPB.GetText();
-        long nTxtW = maMacroSecPB.GetTextWidth( sText );
-        if ( sText.Search( '~' ) == STRING_NOTFOUND )
-            nTxtW += nOffset;
-        long nBtnW = maMacroSecPB.GetSizePixel().Width();
-        if ( nTxtW > nBtnW )
+        long nTemp = (*pButton)->GetCtrlTextWidth( (*pButton)->GetText() );
+        if ( nTemp > nBtnTextWidth )
+            nBtnTextWidth = nTemp;
+    }
+    nBtnTextWidth = nBtnTextWidth * 115 / 100; // a little offset
+    long nButtonWidth = maSecurityOptionsPB.GetSizePixel().Width();
+    long nMaxWidth = nButtonWidth * 130 / 100;
+    nBtnTextWidth = std::min( nBtnTextWidth, nMaxWidth );
+    if ( nBtnTextWidth > nButtonWidth )
+    {
+        // so make the buttons broader and its control in front of it smaller
+        long nDelta = nBtnTextWidth - nButtonWidth;
+        pButton = pButtons;
+        for ( i = 0; i < nBCount; ++i, ++pButton )
         {
-            // broaden the button
-            long nDelta = nTxtW - nBtnW;
-            Size aNewSize = maMacroSecPB.GetSizePixel();
-            aNewSize.Width() += nDelta;
-            maMacroSecPB.SetSizePixel( aNewSize );
-            Point aNewPos = maMacroSecPB.GetPosPixel();
+            Point aNewPos = (*pButton)->GetPosPixel();
             aNewPos.X() -= nDelta;
-            maMacroSecPB.SetPosPixel( aNewPos );
-            // and narrow the fixedtext of the left side
-            aNewSize = maMacroSecFI.GetSizePixel();
+            Size aNewSize = (*pButton)->GetSizePixel();
+            aNewSize.Width() += nDelta;
+            (*pButton)->SetPosSizePixel( aNewPos, aNewSize );
+        }
+
+        Window* pControls[] = { &maSecurityOptionsFI, &maSavePasswordsCB,
+                                &maMasterPasswordFI, &maMacroSecFI,
+                                &maRecommReadOnlyCB, &maRecordChangesCB };
+        Window** pControl = pControls;
+        const sal_Int32 nCCount = sizeof( pControls ) / sizeof( pControls[ 0 ] );
+        for ( i = 0; i < nCCount; ++i, ++pControl )
+        {
+            Size aNewSize = (*pControl)->GetSizePixel();
             aNewSize.Width() -= nDelta;
-            maMacroSecFI.SetSizePixel( aNewSize );
+            (*pControl)->SetSizePixel( aNewSize );
         }
     }
 
-    long nTxtW1 = maProtectRecordsPB.GetTextWidth( msProtectRecordsStr );
-    if ( msProtectRecordsStr.Search( '~' ) == STRING_NOTFOUND )
-        nTxtW1 += nOffset;
-    long nTxtW2 = maProtectRecordsPB.GetTextWidth( msUnprotectRecordsStr );
-    if ( msUnprotectRecordsStr.Search( '~' ) == STRING_NOTFOUND )
-        nTxtW2 += nOffset;
-    long nTxtW = Max( nTxtW1, nTxtW2 );
-    long nBtnW = maProtectRecordsPB.GetSizePixel().Width();
-    if ( nTxtW > nBtnW )
+    maMasterPasswordPB.Enable( FALSE );
+    maShowPasswordsPB.Enable( FALSE );
+
+    // initialize the password saving checkbox
+    try
     {
-        // broaden the button
-        long nDelta = nTxtW - nBtnW;
-        Size aNewSize = maProtectRecordsPB.GetSizePixel();
-        aNewSize.Width() += nDelta;
-        maProtectRecordsPB.SetSizePixel( aNewSize );
+        Reference< task::XMasterPasswordHandling > xMasterPasswd(
+            comphelper::getProcessServiceFactory()->createInstance(
+                rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.task.PasswordContainer" ) ) ),
+            UNO_QUERY_THROW );
+
+        if ( xMasterPasswd->isPersistentStoringAllowed() )
+        {
+            maMasterPasswordPB.Enable( TRUE );
+            maShowPasswordsPB.Enable( TRUE );
+            maSavePasswordsCB.Check( TRUE );
+        }
     }
+    catch( Exception& )
+    {
+        maSavePasswordsCB.Enable( FALSE );
+    }
+
+
 }
 
 SfxTabPage* SvxSecurityTabPage::Create(Window* pParent, const SfxItemSet& rAttrSet )
@@ -1577,16 +1703,15 @@ namespace
 		return b;
 	}
 
-	bool CheckAndSave( SvtSecurityOptions& _rOpt, SvtSecurityOptions::EOption _eOpt, const CheckBox& _rCtrl, bool& _rModfied )
+    bool CheckAndSave( SvtSecurityOptions& _rOpt, SvtSecurityOptions::EOption _eOpt, const bool _bIsChecked, bool& _rModfied )
 	{
-		bool	bModified = false;
-		if( _rOpt.IsOptionEnabled( _eOpt ) )
+        bool bModified = false;
+        if ( _rOpt.IsOptionEnabled( _eOpt ) )
 		{
-			bool	bNew = _rCtrl.IsChecked();
-			bModified = _rOpt.IsOptionSet( _eOpt ) != bNew;
-			if( bModified )
+            bModified = _rOpt.IsOptionSet( _eOpt ) != _bIsChecked;
+            if ( bModified )
 			{
-				_rOpt.SetOption( _eOpt, bNew );
+                _rOpt.SetOption( _eOpt, _bIsChecked );
 				_rModfied = true;
 			}
 		}
@@ -1599,14 +1724,18 @@ BOOL SvxSecurityTabPage::FillItemSet( SfxItemSet& )
 {
 	bool bModified = false;
 
-	CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SAVEORSEND, maSaveOrSendDocsCB, bModified );
-	CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SIGNING, maSignDocsCB, bModified );
-	CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_PRINT, maPrintDocsCB, bModified );
-	CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_CREATEPDF, maCreatePdfCB, bModified );
-	CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO, maRemovePersInfoCB, bModified );
-	CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_RECOMMENDPASSWORD, maRecommPasswdCB, bModified );
+    if ( mpSecOptDlg )
+    {
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SAVEORSEND, mpSecOptDlg->IsSaveOrSendDocsChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SIGNING, mpSecOptDlg->IsSignDocsChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_PRINT, mpSecOptDlg->IsPrintDocsChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_CREATEPDF, mpSecOptDlg->IsCreatePdfChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO, mpSecOptDlg->IsRemovePersInfoChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_RECOMMENDPASSWORD, mpSecOptDlg->IsRecommPasswdChecked(), bModified );
+        CheckAndSave( *mpSecOptions, SvtSecurityOptions::E_CTRLCLICK_HYPERLINK, mpSecOptDlg->IsCtrlHyperlinkChecked(), bModified );
+    }
 
-	// document options
+    // document options
 	SfxObjectShell* pCurDocShell = SfxObjectShell::Current();
 	if( pCurDocShell )
 	{
@@ -1622,13 +1751,6 @@ BOOL SvxSecurityTabPage::FillItemSet( SfxItemSet& )
 
 void SvxSecurityTabPage::Reset( const SfxItemSet& )
 {
-    EnableAndSet( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SAVEORSEND, maSaveOrSendDocsCB, maSaveOrSendDocsFI );
-    EnableAndSet( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_SIGNING, maSignDocsCB, maSignDocsFI );
-    EnableAndSet( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_PRINT, maPrintDocsCB, maPrintDocsFI );
-    EnableAndSet( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_CREATEPDF, maCreatePdfCB, maCreatePdfFI );
-    EnableAndSet( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO, maRemovePersInfoCB, maRemovePersInfoFI );
-    EnableAndSet( *mpSecOptions, SvtSecurityOptions::E_DOCWARN_RECOMMENDPASSWORD, maRecommPasswdCB, maRecommPasswdFI );
-
 	String sNewText = msProtectRecordsStr;
 	SfxObjectShell* pCurDocShell = SfxObjectShell::Current();
 	if( pCurDocShell )
@@ -1692,9 +1814,9 @@ void SvxSecurityTabPage::Reset( const SfxItemSet& )
 
 //added by jmeng begin
 MozPluginTabPage::MozPluginTabPage(Window* pParent, const SfxItemSet& rSet)
-	: SfxTabPage( pParent, ResId( RID_SVXPAGE_INET_MOZPLUGIN, DIALOG_MGR() ), rSet ),
-	aMSWordGB		( this, ResId( GB_MOZPLUGIN	    ) ),
-	aWBasicCodeCB	( this, ResId( CB_MOZPLUGIN_CODE ) )
+	: SfxTabPage( pParent, SVX_RES( RID_SVXPAGE_INET_MOZPLUGIN ), rSet ),
+	aMSWordGB		( this, SVX_RES( GB_MOZPLUGIN	    ) ),
+	aWBasicCodeCB	( this, SVX_RES( CB_MOZPLUGIN_CODE ) )
 {
 	FreeResource();
 }
@@ -1740,18 +1862,19 @@ extern "C" {
 #endif
 
 #define NPP_PATH_MAX 2048
-inline ::rtl::OString getDllURL( void )
+inline bool getDllURL(rtl::OString * path)
 {
-//    ::rtl::OUString libPath(rtl::OUString::createFromAscii("libcui680li.so"));
+    OSL_ASSERT(path != NULL);
     ::rtl::OUString dirPath/*dllPath, */;
-    osl::Module::getUrlFromAddress(reinterpret_cast< oslGenericFunction >(getDllURL), dirPath);
+    if (osl_getExecutableFile(&dirPath.pData) != osl_Process_E_None) {
+        return false;
+    }
     dirPath = dirPath.copy(0, dirPath.lastIndexOf('/'));
 //    osl::FileBase::getAbsoluteFileURL(dirPath, libPath, dllPath);
     ::rtl::OUString sysDirPath;
 	osl::FileBase::getSystemPathFromFileURL(dirPath, sysDirPath);
-    ::rtl::OString oSysDirPath;
-    oSysDirPath = OUStringToOString(sysDirPath, RTL_TEXTENCODING_ASCII_US);
-    return oSysDirPath;
+    *path = OUStringToOString(sysDirPath, RTL_TEXTENCODING_ASCII_US);
+    return true;
 }
 
 BOOL MozPluginTabPage::isInstalled()
@@ -1778,7 +1901,9 @@ BOOL MozPluginTabPage::isInstalled()
     // get the real file path
     char realFilePath[NPP_PATH_MAX] = {0};
     ::rtl::OString tempString;
-    tempString = getDllURL();
+    if (!getDllURL(&tempString)) {
+        return false;
+    }
     strncpy(realFilePath, tempString.getStr(), NPP_PATH_MAX);
 	strcat(realFilePath, "/libnpsoplugin" SAL_DLLEXTENSION);
 
@@ -1791,7 +1916,9 @@ BOOL MozPluginTabPage::isInstalled()
 		BOOL ret = true;
 	::rtl::OString tempString;
 	char realFilePath[NPP_PATH_MAX] = {0};
-    tempString = getDllURL();
+    if (!getDllURL(&tempString)){
+        return false;
+    }
     strncpy(realFilePath, tempString.getStr(), NPP_PATH_MAX);
 	if(! lc_isInstalled(realFilePath))
 		ret =true;
@@ -1825,7 +1952,9 @@ BOOL MozPluginTabPage::installPlugin()
     // get the real file path
     char realFilePath[NPP_PATH_MAX] = {0};
     ::rtl::OString tempString;
-    tempString = getDllURL();
+    if (!getDllURL(&tempString)) {
+        return false;
+    }
     strncpy(realFilePath, tempString.getStr(), NPP_PATH_MAX);
 	strcat(realFilePath, "/libnpsoplugin" SAL_DLLEXTENSION);
 
@@ -1837,7 +1966,9 @@ BOOL MozPluginTabPage::installPlugin()
 #ifdef WNT
 	::rtl::OString tempString;
 	char realFilePath[NPP_PATH_MAX] = {0};
-    tempString = getDllURL();
+    if (!getDllURL(&tempString)) {
+        return false;
+    }
     strncpy(realFilePath, tempString.getStr(), NPP_PATH_MAX);
 	if( !lc_installPlugin(realFilePath))
 		return true;
@@ -1862,7 +1993,9 @@ BOOL MozPluginTabPage::uninstallPlugin()
 #ifdef WNT
 	::rtl::OString tempString;
 	char realFilePath[NPP_PATH_MAX] = {0};
-    tempString = getDllURL();
+    if (!getDllURL(&tempString)) {
+        return false;
+    }
     strncpy(realFilePath, tempString.getStr(), NPP_PATH_MAX);
 	if(!lc_uninstallPlugin(realFilePath))
 		return true;
@@ -1976,13 +2109,13 @@ struct SvxEMailTabPage_Impl
 };
 
 SvxEMailTabPage::SvxEMailTabPage(Window* pParent, const SfxItemSet& rSet) :
-    SfxTabPage(pParent, ResId( RID_SVXPAGE_INET_MAIL, DIALOG_MGR() ), rSet),
-    aMailFL(this,           ResId(FL_MAIL           )),
-    aMailerURLFI(this,      ResId(FI_MAILERURL      )),
-    aMailerURLFT(this,      ResId(FT_MAILERURL      )),
-    aMailerURLED(this,      ResId(ED_MAILERURL      )),
-    aMailerURLPB(this,      ResId(PB_MAILERURL      )),
-    m_sDefaultFilterName(	ResId(STR_DEFAULT_FILENAME		)),
+    SfxTabPage(pParent, SVX_RES( RID_SVXPAGE_INET_MAIL ), rSet),
+    aMailFL(this,           SVX_RES(FL_MAIL           )),
+    aMailerURLFI(this,      SVX_RES(FI_MAILERURL      )),
+    aMailerURLFT(this,      SVX_RES(FT_MAILERURL      )),
+    aMailerURLED(this,      SVX_RES(ED_MAILERURL      )),
+    aMailerURLPB(this,      SVX_RES(PB_MAILERURL      )),
+    m_sDefaultFilterName(	SVX_RES(STR_DEFAULT_FILENAME		)),
     pImpl(new SvxEMailTabPage_Impl)
 {
     FreeResource();

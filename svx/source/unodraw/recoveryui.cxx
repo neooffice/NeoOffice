@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,38 +32,16 @@
 
 //===============================================
 // includes
-
-#ifndef _RECOVERYUI_HXX
 #include "recoveryui.hxx"
-#endif
-
-#ifndef _SVX_DOCRECOVERY_HXX
 #include "docrecovery.hxx"
-#endif
-
-#ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
 #include <com/sun/star/lang/XInitialization.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_FRAME_XFRAMESSUPPLIER_HPP_
 #include <com/sun/star/frame/XFramesSupplier.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_NAMEDVALUE_HPP_
 #include <com/sun/star/beans/NamedValue.hpp>
-#endif
-
-#ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
-#endif
-
-#ifndef _RTL_BOOTSTRAP_HXX_
 #include <rtl/bootstrap.hxx>
-#endif
-
-#ifndef _COMPHELPER_CONFIGURATIONHELPER_HXX_
 #include <comphelper/configurationhelper.hxx>
-#endif
+
+#include <vcl/svapp.hxx>
 
 //===============================================
 // const
@@ -138,6 +109,10 @@ css::uno::Any SAL_CALL RecoveryUI::dispatchWithReturnValue(const css::util::URL&
                                                    const css::uno::Sequence< css::beans::PropertyValue >& )
     throw(css::uno::RuntimeException)
 {
+    // Internaly we use VCL ... every call into vcl based code must
+    // be guarded by locking the global solar mutex.
+    ::vos::OGuard aSolarLock(&Application::GetSolarMutex());
+
     css::uno::Any aRet;
     RecoveryUI::EJob eJob = impl_classifyJob(aURL);
     // TODO think about outside arguments
@@ -216,14 +191,16 @@ css::uno::Reference< css::uno::XInterface > SAL_CALL RecoveryUI::st_createInstan
 static OUString GetCrashConfigDir() 
 {
 
-#ifdef WNT
-	OUString	ustrValue = OUString::createFromAscii("${$SYSBINDIR/bootstrap.ini:UserInstallation}");
+#if defined(WNT) || defined(OS2)
+	OUString	ustrValue = OUString::createFromAscii("${$BRAND_BASE_DIR/program/bootstrap.ini:UserInstallation}");
+#elif defined(MACOSX)
+	OUString	ustrValue = OUString::createFromAscii("~");
 #else
 	OUString	ustrValue = OUString::createFromAscii("$SYSUSERCONFIG");
 #endif
 	Bootstrap::expandMacros( ustrValue );
 
-#ifdef WNT
+#if defined(WNT) || defined(OS2)
 	ustrValue += OUString::createFromAscii("/user/crashdata");
 #endif
 	return ustrValue;
@@ -231,7 +208,7 @@ static OUString GetCrashConfigDir()
 
 //===============================================
 
-#ifdef WNT
+#if defined(WNT) || defined(OS2)
 #define LCKFILE "crashdat.lck"
 #else
 #define LCKFILE ".crash_report_unsent"
@@ -322,9 +299,9 @@ sal_Bool RecoveryUI::impl_doEmergencySave()
 //===============================================
 void RecoveryUI::impl_doRecovery()
 {
-#if defined USE_JAVA && defined MACOSX
+#ifdef USE_JAVA
     sal_Bool bRecoveryOnly( sal_True );
-#else	// USE_JAVA && MACOSX
+#else	// USE_JAVA
     sal_Bool bRecoveryOnly( sal_False );
 
     ::rtl::OUString CFG_PACKAGE_RECOVERY( RTL_CONSTASCII_USTRINGPARAM  ( "org.openoffice.Office.Recovery/" ));
@@ -340,7 +317,7 @@ void RecoveryUI::impl_doRecovery()
                                 ::comphelper::ConfigurationHelper::E_READONLY);
     aVal >>= bCrashRepEnabled;
     bRecoveryOnly = !bCrashRepEnabled;
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA
     
     // create core service, which implements the real "emergency save" algorithm.
     svxdr::RecoveryCore* pCore = new svxdr::RecoveryCore(m_xSMGR, sal_False);
