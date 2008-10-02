@@ -40,9 +40,7 @@ TARGET=saljava
 
 # --- Settings -----------------------------------------------------
 
-.INCLUDE :  svpre.mk
 .INCLUDE :  settings.mk
-.INCLUDE :  sv.mk
 
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
