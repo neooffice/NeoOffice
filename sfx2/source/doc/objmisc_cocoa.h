@@ -41,10 +41,10 @@ extern "C" {
 #endif
 
 /**
- * Perform a SetWindowModified on a WindowRef that has been extracted from
+ * Perform a SetWindowModified on an NSView that has been extracted from
  * a Cocoa window.
  */
-void DoCocoaSetWindowModifiedBit( unsigned long winRef, bool isModified );
+void DoCocoaSetWindowModifiedBit( void *pView, bool isModified );
 
 #ifdef __cplusplus
 }

@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,51 +32,28 @@
 
 #include <com/sun/star/uno/Reference.hxx>
 
-#ifndef _COM_SUN_STAR_DOCUMENT_UPDATEDOCMODE_HPP_
+#include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/UpdateDocMode.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XLAYOUTMANAGER_HPP_
 #include <com/sun/star/frame/XLayoutManager.hpp>
-#endif
-#ifndef _COM_SUN_STAR_EMBED_ELEMENTMODES_HPP_
 #include <com/sun/star/embed/ElementModes.hpp>
-#endif
-
-#ifndef _CACHESTR_HXX //autogen
+#include <com/sun/star/document/XStandaloneDocumentInfo.hpp>
+#include <com/sun/star/beans/XFastPropertySet.hpp>
 #include <tools/cachestr.hxx>
-#endif
-#ifndef _SV_MSGBOX_HXX //autogen wg. QueryBox
 #include <vcl/msgbox.hxx>
-#endif
-#ifndef _SFXSTYLE_HXX //autogen
 #include <svtools/style.hxx>
-#endif
-#ifndef _SV_WRKWIN_HXX //autogen
 #include <vcl/wrkwin.hxx>
-#endif
-
-#ifndef GCC
-#endif
 
 #include <svtools/stritem.hxx>
 #include <svtools/intitem.hxx>
 #include <svtools/rectitem.hxx>
+#include <svtools/eitem.hxx>
 #include <svtools/urihelper.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/storagehelper.hxx>
-
-#ifndef INCLUDED_SVTOOLS_SECURITYOPTIONS_HXX
 #include <svtools/securityoptions.hxx>
-#endif
-#ifndef _SFXECODE_HXX
 #include <svtools/sfxecode.hxx>
-#endif
-#ifndef _EHDL_HXX
 #include <svtools/ehdl.hxx>
-#endif
-#ifndef _DATETIME_HXX
 #include <tools/datetime.hxx>
-#endif
 #include <math.h>
 
 #include <svtools/saveopt.hxx>
@@ -91,33 +61,33 @@
 #include <unotools/localfilehelper.hxx>
 #include <vcl/virdev.hxx>
 
+#include <sfx2/app.hxx>
+#include "sfxresid.hxx"
+#include "appdata.hxx"
+#include <sfx2/dinfdlg.hxx>
+#include "fltfnc.hxx"
+#include <sfx2/docfac.hxx>
+#include <sfx2/viewsh.hxx>
+#include <sfx2/objsh.hxx>
+#include "objshimp.hxx"
+#include <sfx2/evntconf.hxx>
+#include "sfxhelp.hxx"
+#include <sfx2/dispatch.hxx>
+#include <sfx2/printer.hxx>
+#include <sfx2/topfrm.hxx>
+#include "basmgr.hxx"
+#include <sfx2/doctempl.hxx>
+#include "doc.hrc"
+#include <sfx2/sfxbasemodel.hxx>
+#include <sfx2/docfile.hxx>
+#include <sfx2/request.hxx>
+#include "openflag.hxx"
+
 #ifdef USE_JAVA
 
 #include <svtools/printdlg.hxx>
 
 #endif	// USE_JAVA
-
-#include "app.hxx"
-#include "sfxresid.hxx"
-#include "dinfdlg.hxx"
-#include "fltfnc.hxx"
-#include "docfac.hxx"
-#include "viewsh.hxx"
-#include "objsh.hxx"
-#include "objshimp.hxx"
-#include "evntconf.hxx"
-#include "sfxhelp.hxx"
-#include "dispatch.hxx"
-#include "printer.hxx"
-#include "topfrm.hxx"
-#include "basmgr.hxx"
-#include "doctempl.hxx"
-#include "doc.hrc"
-#include "sfxbasemodel.hxx"
-#include "docfile.hxx"
-#include "objuno.hxx"
-#include "request.hxx"
-#include "openflag.hxx"
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -129,12 +99,43 @@ using namespace ::com::sun::star::uno;
 
 //====================================================================
 
-GDIMetaFile* SfxObjectShell::GetPreviewMetaFile( sal_Bool bFullContent ) const
+static
+bool operator> (const util::DateTime& i_rLeft, const util::DateTime& i_rRight)
+{
+    if ( i_rLeft.Year != i_rRight.Year )
+        return i_rLeft.Year > i_rRight.Year;
+
+    if ( i_rLeft.Month != i_rRight.Month )
+        return i_rLeft.Month > i_rRight.Month;
+
+    if ( i_rLeft.Day != i_rRight.Day )
+        return i_rLeft.Day > i_rRight.Day;
+
+    if ( i_rLeft.Hours != i_rRight.Hours )
+        return i_rLeft.Hours > i_rRight.Hours;
+
+    if ( i_rLeft.Minutes != i_rRight.Minutes )
+        return i_rLeft.Minutes > i_rRight.Minutes;
+
+    if ( i_rLeft.Seconds != i_rRight.Seconds )
+        return i_rLeft.Seconds > i_rRight.Seconds;
+
+    if ( i_rLeft.HundredthSeconds != i_rRight.HundredthSeconds )
+        return i_rLeft.HundredthSeconds > i_rRight.HundredthSeconds;
+
+    return sal_False;
+}
+
+
+::boost::shared_ptr<GDIMetaFile>
+SfxObjectShell::GetPreviewMetaFile( sal_Bool bFullContent ) const
 {
 	return CreatePreviewMetaFile_Impl( bFullContent, sal_False );
 }
 
-GDIMetaFile* SfxObjectShell::CreatePreviewMetaFile_Impl( sal_Bool bFullContent, sal_Bool bHighContrast ) const
+
+::boost::shared_ptr<GDIMetaFile>
+SfxObjectShell::CreatePreviewMetaFile_Impl( sal_Bool bFullContent, sal_Bool bHighContrast ) const
 {
 	// Nur wenn gerade nicht gedruckt wird, darf DoDraw aufgerufen
 	// werden, sonst wird u.U. der Printer abgeschossen !
@@ -142,9 +143,9 @@ GDIMetaFile* SfxObjectShell::CreatePreviewMetaFile_Impl( sal_Bool bFullContent, 
 	if ( pFrame && pFrame->GetViewShell() &&
 		 pFrame->GetViewShell()->GetPrinter() &&
 		 pFrame->GetViewShell()->GetPrinter()->IsPrinting() )
-		 return 0;
+		 return ::boost::shared_ptr<GDIMetaFile>();
 
-	GDIMetaFile* pFile = new GDIMetaFile;
+    ::boost::shared_ptr<GDIMetaFile> pFile(new GDIMetaFile);
 
 	VirtualDevice aDevice;
 	aDevice.EnableOutput( FALSE );
@@ -206,11 +207,7 @@ GDIMetaFile* SfxObjectShell::CreatePreviewMetaFile_Impl( sal_Bool bFullContent, 
 //REMOVE	            SfxTopFrame* pTop = (SfxTopFrame*) pFrame->GetFrame();
 //REMOVE	            pTop->GetTopWindow_Impl();
 //REMOVE
-//REMOVE	#if SUPD<613//MUSTINI
-//REMOVE				char cToken = SfxIniManager::GetToken();
-//REMOVE	#else
 //REMOVE				char cToken = ',';
-//REMOVE	#endif
 //REMOVE	            const BOOL bActWin = pActFrame == pFrame;
 //REMOVE	            String aUserData;
 //REMOVE	            pFrame->GetViewShell()->WriteUserData(aUserData);
@@ -226,9 +223,6 @@ GDIMetaFile* SfxObjectShell::CreatePreviewMetaFile_Impl( sal_Bool bFullContent, 
 //REMOVE	                aWinData += SFX_WINSIZE_MIN;
 //REMOVE	            else
 //REMOVE	*/
-//REMOVE	#if SUPD<613//MUSTINI
-//REMOVE	            aWinData += SfxIniManager::GetString( pWin->GetPosPixel(), pWin->GetSizePixel() );
-//REMOVE	#endif
 //REMOVE	            aWinData += cToken;
 //REMOVE	            aWinData += aUserData;
 //REMOVE
@@ -330,7 +324,7 @@ SfxViewFrame* SfxObjectShell::LoadWindows_Impl( SfxTopFrame *pPreferedFrame )
 			break;
 
 		// check for minimized/maximized/size
-		if ( aPosSize.EqualsAscii( "min" ) )
+		if ( aPosSize.EqualsAscii( "max" ) )
             bMaximized = TRUE;
 		else if ( aPosSize.EqualsAscii( "min" ) )
 		{
@@ -438,54 +432,53 @@ SfxViewFrame* SfxObjectShell::LoadWindows_Impl( SfxTopFrame *pPreferedFrame )
 
 void SfxObjectShell::UpdateDocInfoForSave()
 {
-	SfxDocumentInfo &rDocInfo = GetDocInfo();
-	rDocInfo.SetTemplateConfig( sal_False );
-
-	if ( IsModified() )
-	{
-		// Keine Unterschiede mehr zwischen Save, SaveAs
-		String aUserName = SvtUserOptions().GetFullName();
-		if ( !rDocInfo.IsUseUserData() )
-       	{
-           	SfxStamp aCreated = rDocInfo.GetCreated();
-           	if ( aUserName == aCreated.GetName() )
-           	{
-               	aCreated.SetName( String() );
-              	rDocInfo.SetCreated( aCreated );
-           	}
-
-           	SfxStamp aPrinted = rDocInfo.GetPrinted();
-           	if ( aUserName == aPrinted.GetName() )
-           	{
-               	aPrinted.SetName( String() );
-              	rDocInfo.SetPrinted( aPrinted );
-           	}
-
-			aUserName.Erase();
-       	}
-
-		rDocInfo.SetChanged( aUserName );
-		if ( !HasName() || pImp->bIsSaving )
-			UpdateTime_Impl( rDocInfo );
-	}
-
-	if ( !pImp->bIsSaving )
-		rDocInfo.SetPasswd( pImp->bPasswd );
+    uno::Reference<document::XDocumentProperties> xDocProps(getDocProperties());
 
 	// clear user data if recommend (see 'Tools - Options - Open/StarOffice - Security')
-	if ( SvtSecurityOptions().IsOptionSet( SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO ) )
-		rDocInfo.DeleteUserDataCompletely();
-
-	Broadcast( SfxDocumentInfoHint( &rDocInfo ) );
+	if ( SvtSecurityOptions().IsOptionSet(
+            SvtSecurityOptions::E_DOCWARN_REMOVEPERSONALINFO ) )
+    {
+		xDocProps->resetUserData( ::rtl::OUString() );
+    }
+	else if ( IsModified() )
+	{
+		String aUserName = SvtUserOptions().GetFullName();
+		if ( !IsUseUserData() )
+        {
+			// remove all data pointing to the current user
+            if (xDocProps->getAuthor().equals(aUserName)) {
+                xDocProps->setAuthor( ::rtl::OUString() );
+            }
+            xDocProps->setModifiedBy( ::rtl::OUString() );
+            if (xDocProps->getPrintedBy().equals(aUserName)) {
+                xDocProps->setPrintedBy( ::rtl::OUString() );
+            }
+        }
+		else
+		{
+			// update ModificationAuthor, revision and editing time
+            ::DateTime now;
+            xDocProps->setModificationDate( util::DateTime(
+                now.Get100Sec(), now.GetSec(), now.GetMin(),
+                now.GetHour(), now.GetDay(), now.GetMonth(),
+                now.GetYear() ) );
+            xDocProps->setModifiedBy( aUserName );
+			if ( !HasName() || pImp->bIsSaving )
+				// QUESTION: not in case of "real" SaveAs as this is meant to create a new document
+				UpdateTime_Impl( xDocProps );
+		}
+	}
 }
 
 //--------------------------------------------------------------------
 
 // Bearbeitungszeit aktualisieren
-SfxDocumentInfo& SfxObjectShell::UpdateTime_Impl(SfxDocumentInfo &rInfo)
+void SfxObjectShell::UpdateTime_Impl(
+    const uno::Reference<document::XDocumentProperties> & i_xDocProps)
 {
 	// Get old time from documentinfo
-	Time aOldTime(rInfo.GetTime());
+    sal_Int32 secs = i_xDocProps->getEditingDuration();
+	Time aOldTime(secs/3600, (secs%3600)/60, secs%60);
 
 	// Initialize some local member! Its neccessary for wollow operations!
 	DateTime	aNow					;	// Date and time at current moment
@@ -525,82 +518,13 @@ SfxDocumentInfo& SfxObjectShell::UpdateTime_Impl(SfxDocumentInfo &rInfo)
 		aOldTime += nAddTime;
 	}
 
-	rInfo.SetTime(aOldTime.GetTime());
 	pImp->nTime = aNow;
-	rInfo.IncDocumentNumber();
-	//! DocumentNummer
-#if 0
-	const String aDocNo(rInfo.GetUserKey(0).GetWord());
-	const String aTitle(rInfo.GetUserKey(0).GetTitle());
-	USHORT nNo = 1;
-	if ( aDocNo.Len() )
-	{
-		nNo = (USHORT)aDocNo;
-		if(nNo)
-			++nNo;
-		else
-			nNo = 1;
-	}
-	rInfo.SetUserKey(SfxDocUserKey(aTitle, nNo), 0);
-#endif
-	return rInfo;
+	i_xDocProps->setEditingDuration(
+        aOldTime.GetHour()*3600+aOldTime.GetMin()*60+aOldTime.GetSec());
+    i_xDocProps->setEditingCycles(i_xDocProps->getEditingCycles() + 1);
 }
 
 //--------------------------------------------------------------------
-
-void SfxObjectShell::DocInfoDlg_Impl( SfxDocumentInfo &rDocInfo )
-{
-	// anzuzeigenden Dokumentnamen ermitteln
-	String aURL, aTitle;
-	if ( HasName() && !pImp->aNewName.Len() )
-	{
-		aURL = GetMedium()->GetName();
-		aTitle = GetTitle();
-	}
-	else
-	{
-		if ( !pImp->aNewName.Len() )
-		{
-			aURL = DEFINE_CONST_UNICODE( "private:factory/" );
-			aURL += String::CreateFromAscii( GetFactory().GetShortName() );
-			// aTitle = String( SfxResId( STR_NONAME ) );
-		}
-		else
-		{
-			aURL = DEFINE_CONST_UNICODE( "[private:factory/" );
-			aURL += String::CreateFromAscii( GetFactory().GetShortName() );
-			aURL += DEFINE_CONST_UNICODE( "]" );
-			INetURLObject aURLObj( pImp->aNewName );
-			aURL += String(aURLObj.GetMainURL( INetURLObject::DECODE_TO_IURI ));
-			// aTitle = aURLObj.GetBase();
-		}
-		aTitle = GetTitle();
-	}
-
-	// Itemset f"ur Dialog aufbereiten
-	SfxDocumentInfoItem aDocInfoItem( aURL, rDocInfo );
-	if ( !GetSlotState( SID_DOCTEMPLATE ) )
-		aDocInfoItem.SetTemplate(FALSE);
-	SfxItemSet aSet(GetPool(), SID_DOCINFO, SID_DOCINFO,
-                    SID_EXPLORER_PROPS_START, SID_EXPLORER_PROPS_START, SID_BASEURL, SID_BASEURL,
-					0L );
-	aSet.Put( aDocInfoItem );
-	aSet.Put( SfxStringItem( SID_EXPLORER_PROPS_START, aTitle ) );
-    aSet.Put( SfxStringItem( SID_BASEURL, GetMedium()->GetBaseURL() ) );
-
-	// Dialog via Factory erzeugen und ausf"uhren
-	SfxDocumentInfoDialog *pDlg = CreateDocumentInfoDialog(0, aSet);
-	if ( RET_OK == pDlg->Execute() )
-	{
-		// neue DocInfo aus Dialog holen
-		const SfxPoolItem *pItem = 0;
-        if ( SFX_ITEM_SET == pDlg->GetOutputItemSet()->GetItemState( SID_DOCINFO, TRUE, &pItem ) )
-			rDocInfo = (*(const SfxDocumentInfoItem *)pItem)();
-	}
-	delete pDlg;
-}
-
-//------------------------------------------------------------------------
 
 SfxDocumentInfoDialog* SfxObjectShell::CreateDocumentInfoDialog
 (
@@ -641,6 +565,7 @@ USHORT SfxObjectShell::GetContentCount(
 			SfxStyleSheetBasePool *pStylePool = GetStyleSheetPool();
 			if(!pStylePool)
 				return 0;
+
 			SetOrganizerSearchMask(pStylePool);
 			return pStylePool->Count();
 		}
@@ -1024,7 +949,7 @@ BOOL SfxObjectShell::Remove
 		SfxStyleFamily  eFamily = pMySheet->GetFamily();
 		if (pMySheet)
 		{
-			pMyPool->Erase(pMySheet);
+			pMyPool->Remove(pMySheet);
 			bRet = TRUE;
 		}
 
@@ -1094,7 +1019,7 @@ BOOL SfxObjectShell::Print
 
 #ifdef USE_JAVA
 			// Fix bug 1279 by forcing the print dialog to be shown
-			PrintDialog *pPrintDlg = new PrintDialog( NULL );
+			PrintDialog *pPrintDlg = new PrintDialog( NULL, false );
 			if ( !pPrintDlg )
 				return FALSE;
 			pPrintDlg->SetFirstPage( 1 );
@@ -1289,7 +1214,7 @@ void SfxObjectShell::LoadStyles
 		if(pFound[i].pSource->HasFollowSupport())
 			pFound[i].pDest->SetFollow(pFound[i].pSource->GetParent());
 	}
-	delete pFound;
+	delete [] pFound;
 }
 
 //--------------------------------------------------------------------
@@ -1325,12 +1250,12 @@ void SfxObjectShell::UpdateFromTemplate_Impl(  )
 	sal_Int16 bCanUpdateFromTemplate = pUpdateDocItem ? pUpdateDocItem->GetValue() : document::UpdateDocMode::NO_UPDATE;
 
     // created from template?
-	SfxDocumentInfo *pInfo = &GetDocInfo();
-	String aTemplName( pInfo->GetTemplateName() );
-	String aTemplFileName( pInfo->GetTemplateFileName() );
+    uno::Reference<document::XDocumentProperties> xDocProps(getDocProperties());
+    ::rtl::OUString aTemplName( xDocProps->getTemplateName() );
+    ::rtl::OUString aTemplURL( xDocProps->getTemplateURL() );
     String aFoundName;
 
-    if ( aTemplName.Len() || aTemplFileName.Len() && !IsReadOnly() )
+    if ( aTemplName.getLength() || aTemplURL.getLength() && !IsReadOnly() )
 	{
         // try to locate template, first using filename
         // this must be done because writer global document uses this "great" idea to manage the templates of all parts
@@ -1338,14 +1263,14 @@ void SfxObjectShell::UpdateFromTemplate_Impl(  )
         // but it is NOT an error if the template filename points not to a valid file
         SfxDocumentTemplates aTempl;
         aTempl.Construct();
-        if ( aTemplFileName.Len() )
+        if ( aTemplURL.getLength() )
         {
             String aURL;
-            if( ::utl::LocalFileHelper::ConvertSystemPathToURL( aTemplFileName, GetMedium()->GetName(), aURL ) )
+            if( ::utl::LocalFileHelper::ConvertSystemPathToURL( aTemplURL, GetMedium()->GetName(), aURL ) )
                 aFoundName = aURL;
         }
 
-        if( !aFoundName.Len() && aTemplName.Len() )
+        if( !aFoundName.Len() && aTemplName.getLength() )
             // if the template filename did not lead to success, try to get a file name for the logical template name
             aTempl.GetFull( String(), aTemplName, aFoundName );
 	}
@@ -1353,43 +1278,42 @@ void SfxObjectShell::UpdateFromTemplate_Impl(  )
     if ( aFoundName.Len() )
 	{
         // check existence of template storage
-        aTemplFileName = aFoundName;
+        aTemplURL = aFoundName;
 		BOOL bLoad = FALSE;
 
         // should the document checked against changes in the template ?
-        if ( pInfo->IsQueryLoadTemplate() )
+        if ( IsQueryLoadTemplate() )
 		{
             // load document info of template
             BOOL bOK = FALSE;
-			DateTime aTemplDate;
-            Reference < document::XStandaloneDocumentInfo > xDocInfo (
-                    ::comphelper::getProcessServiceFactory()->createInstance(
-                        ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.document.StandaloneDocumentInfo") ) ), UNO_QUERY );
-            Reference < beans::XFastPropertySet > xSet( xDocInfo, UNO_QUERY );
-            if ( xDocInfo.is() && xSet.is() )
+			util::DateTime aTemplDate;
+            try
             {
-                try
+                Reference < document::XStandaloneDocumentInfo > xDocInfo (
+                    ::comphelper::getProcessServiceFactory()->createInstance(
+                        ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(
+                            "com.sun.star.document.StandaloneDocumentInfo") ) ),
+                    UNO_QUERY_THROW );
+                Reference < beans::XFastPropertySet > xSet( xDocInfo,
+                    UNO_QUERY_THROW );
+                xDocInfo->loadFromURL( aTemplURL );
+                Any aAny = xSet->getFastPropertyValue( WID_DATE_MODIFIED );
+                ::com::sun::star::util::DateTime aTmp;
+                if ( aAny >>= aTemplDate )
                 {
-                    xDocInfo->loadFromURL( aTemplFileName );
-                    Any aAny = xSet->getFastPropertyValue( WID_DATE_MODIFIED );
-                    ::com::sun::star::util::DateTime aTmp;
-                    if ( aAny >>= aTmp )
-                    {
-                        // get modify date from document info
-                        aTemplDate = SfxDocumentInfoObject::impl_DateTime_Struct2Object( aTmp );
-                        bOK = TRUE;
-                    }
+                    // get modify date from document info
+                    bOK = TRUE;
                 }
-                catch ( Exception& )
-                {
-                }
+            }
+            catch ( Exception& )
+            {
             }
 
             // if modify date was read successfully
             if ( bOK )
 			{
                 // compare modify data of template with the last check date of the document
-                const DateTime aInfoDate( pInfo->GetTemplateDate(), pInfo->GetTemplateDate() );
+                const util::DateTime aInfoDate( xDocProps->getTemplateDate() );
 				if ( aTemplDate > aInfoDate )
 				{
                     // ask user
@@ -1406,7 +1330,7 @@ void SfxObjectShell::UpdateFromTemplate_Impl(  )
 					if( !bLoad )
 					{
                         // user refuses, so don't ask again for this document
-						pInfo->SetQueryLoadTemplate(FALSE);
+						SetQueryLoadTemplate(FALSE);
 						SetModified( TRUE );
 					}
 				}
@@ -1431,7 +1355,7 @@ void SfxObjectShell::UpdateFromTemplate_Impl(  )
 					LoadStyles(*xTemplDoc);
 
                     // remember date/time of check
-                    pInfo->SetTemplateDate(aTemplDate);
+                    xDocProps->setTemplateDate(aTemplDate);
                     // TODO/LATER: new functionality to store document info is required ( didn't work for SO7 XML format )
 //REPLACE					pInfo->Save(xDocStor);
 				}
@@ -1513,6 +1437,7 @@ SfxObjectShellRef MakeObjectShellForOrganizer_Impl( const String& aTargetURL, BO
     StreamMode nMode = bForWriting ? SFX_STREAM_READWRITE : SFX_STREAM_READONLY;
     SfxMedium *pMed = new SfxMedium( aTargetURL, nMode, FALSE, 0 );
 	const SfxFilter* pFilter = NULL;
+    pMed->UseInteractionHandler(TRUE);
     if( SFX_APP()->GetFilterMatcher().GuessFilter( *pMed, &pFilter ) == ERRCODE_NONE && pFilter && pFilter->IsOwnFormat() )
 	{
         // create document
@@ -1541,5 +1466,84 @@ sal_Bool SfxObjectShell::IsHelpDocument() const
 {
     const SfxFilter* pFilter = GetMedium()->GetFilter();
     return ( pFilter && pFilter->GetFilterName().CompareToAscii("writer_web_HTML_help") == COMPARE_EQUAL );
+}
+
+void SfxObjectShell::ResetFromTemplate( const String& rTemplateName, const String& rFileName )
+{
+    uno::Reference<document::XDocumentProperties> xDocProps(getDocProperties());
+    xDocProps->setTemplateURL( ::rtl::OUString() );
+    xDocProps->setTemplateName( ::rtl::OUString() );
+    xDocProps->setTemplateDate( util::DateTime() );
+    xDocProps->resetUserData( ::rtl::OUString() );
+
+	// TODO/REFACTOR:
+	// Title?
+
+    if( ::utl::LocalFileHelper::IsLocalFile( rFileName ) )
+	{
+        String aFoundName;
+        if( SFX_APP()->Get_Impl()->GetDocumentTemplates()->GetFull( String(), rTemplateName, aFoundName ) )
+        {
+            INetURLObject aObj( rFileName );
+            xDocProps->setTemplateURL( aObj.GetMainURL(INetURLObject::DECODE_TO_IURI) );
+            xDocProps->setTemplateName( rTemplateName );
+
+            ::DateTime now;
+            xDocProps->setTemplateDate( util::DateTime(
+                now.Get100Sec(), now.GetSec(), now.GetMin(),
+                now.GetHour(), now.GetDay(), now.GetMonth(),
+                now.GetYear() ) );
+
+			SetQueryLoadTemplate( sal_True );
+        }
+    }
+}
+
+sal_Bool SfxObjectShell::IsQueryLoadTemplate() const
+{
+	return pImp->bQueryLoadTemplate;
+}
+
+sal_Bool SfxObjectShell::IsUseUserData() const
+{
+	return pImp->bUseUserData;
+}
+
+void SfxObjectShell::SetQueryLoadTemplate( sal_Bool bNew )
+{
+	if ( pImp->bQueryLoadTemplate != bNew )
+		SetModified( TRUE );
+	pImp->bQueryLoadTemplate = bNew;
+}
+
+void SfxObjectShell::SetUseUserData( sal_Bool bNew )
+{
+	if ( pImp->bUseUserData != bNew )
+		SetModified( TRUE );
+	pImp->bUseUserData = bNew;
+}
+
+sal_Bool SfxObjectShell::IsLoadReadonly() const
+{
+	return pImp->bLoadReadonly;
+}
+
+sal_Bool SfxObjectShell::IsSaveVersionOnClose() const
+{
+	return pImp->bSaveVersionOnClose;
+}
+
+void SfxObjectShell::SetLoadReadonly( sal_Bool bNew )
+{
+	if ( pImp->bLoadReadonly != bNew )
+		SetModified( TRUE );
+	pImp->bLoadReadonly = bNew;
+}
+
+void SfxObjectShell::SetSaveVersionOnClose( sal_Bool bNew )
+{
+	if ( pImp->bSaveVersionOnClose != bNew )
+		SetModified( TRUE );
+	pImp->bSaveVersionOnClose = bNew;
 }
 

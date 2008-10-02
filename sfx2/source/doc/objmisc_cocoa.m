@@ -38,27 +38,27 @@
 
 @interface DoSetModified : NSObject
 {
-	WindowRef theRef;
+	NSView*	theView;
 	BOOL theState;
 }
-+ (id)createWithState:(BOOL)state winRef:(WindowRef)r;
-- (id)initWithState:(BOOL)state winRef:(WindowRef)r;
++ (id)createWithState:(BOOL)state view:(NSView *)r;
+- (id)initWithState:(BOOL)state view:(NSView *)r;
 - (void)setModified:(id)pObject;
 @end
 
 @implementation DoSetModified
-+ (id)createWithState:(BOOL)state winRef:(WindowRef)r
++ (id)createWithState:(BOOL)state view:(NSView *)r
 {
-	DoSetModified *pRet = [[DoSetModified alloc] initWithState:state winRef:r];
+	DoSetModified *pRet = [[DoSetModified alloc] initWithState:state view:r];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithState:(BOOL)state winRef:(WindowRef)r
+- (id)initWithState:(BOOL)state view:(NSView *)r
 {
 	[super init];
 
-	theRef=r;
+	theView=r;
 	theState=state;
 
 	return(self);
@@ -66,30 +66,23 @@
 
 - (void)setModified:(id)ignore
 {
-	NSEnumerator *windowIter=[[NSApp windows] objectEnumerator];
-	NSWindow *theWin;
-	while((theWin=(NSWindow *)[windowIter nextObject])!=nil)
-	{
-		if([theWin windowRef]==theRef)
-		{
-			[theWin setDocumentEdited: theState];
-			break;
-		}
-	}
+	NSWindow *theWin = [theView window];
+	if (theWin )
+		[theWin setDocumentEdited: theState];
 }
 @end
 
 /**
- * Perform a SetWindowModified on a WindowRef that has been extracted from
+ * Perform a SetWindowModified on an NSView that has been extracted from
  * a Cocoa window.
  */
-void DoCocoaSetWindowModifiedBit( unsigned long winRef, bool isModified )
+void DoCocoaSetWindowModifiedBit( void *pView, bool isModified )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( winRef )
+	if ( pView )
 	{
-		DoSetModified *pDoSetModified = [DoSetModified createWithState:((isModified) ? YES : NO) winRef:(WindowRef)winRef];
+		DoSetModified *pDoSetModified = [DoSetModified createWithState:((isModified) ? YES : NO) view:(NSView *)pView ];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pDoSetModified performSelectorOnMainThread:@selector(setModified:) withObject:pDoSetModified waitUntilDone:YES modes:pModes];
 	}
