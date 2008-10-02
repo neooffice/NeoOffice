@@ -1,36 +1,30 @@
 #*************************************************************************
 #
-#   $RCSfile$
+# Copyright 2008 by Sun Microsystems, Inc.
 #
-#   $Revision$
+# $RCSfile$
 #
-#   last change: $Author$ $Date$
+# $Revision$
 #
-#   The Contents of this file are made available subject to
-#   the terms of GNU General Public License Version 2.1.
+# This file is part of NeoOffice.
 #
+# NeoOffice is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3
+# only, as published by the Free Software Foundation.
 #
-#     GNU General Public License Version 2.1
-#     =============================================
-#     Copyright 2005 by Sun Microsystems, Inc.
-#     901 San Antonio Road, Palo Alto, CA 94303, USA
+# NeoOffice is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
 #
-#     This library is free software; you can redistribute it and/or
-#     modify it under the terms of the GNU General Public
-#     License version 2.1, as published by the Free Software Foundation.
+# You should have received a copy of the GNU General Public License
+# version 3 along with NeoOffice.  If not, see
+# <http://www.gnu.org/licenses/gpl-3.0.txt>
+# for a copy of the GPLv3 License.
 #
-#     This library is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#     General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public
-#     License along with this library; if not, write to the Free Software
-#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#     MA  02111-1307  USA
-#
-#     Modified February 2006 by Patrick Luby. NeoOffice is distributed under
-#     GPL only under modification term 3 of the LGPL.
+# Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
@@ -39,11 +33,10 @@ PRJ=..
 PRJNAME=vcl
 TARGET=vcl
 TARGETTYPE=GUI
-VERSION=$(UPD)
 USE_DEFFILE=TRUE
 
-.IF "$(OS)" == "SOLARIS"
-LINKFLAGSRUNPATH=-R/usr/sfw/lib -R\''$$ORIGIN'\'
+.IF "$(SNDFILE_LIBS)"!=""
+SNDFILELIB=$(SNDFILE_LIBS)
 .ENDIF
 
 # --- Settings -----------------------------------------------------------
@@ -52,86 +45,89 @@ LINKFLAGSRUNPATH=-R/usr/sfw/lib -R\''$$ORIGIN'\'
 .INCLUDE :  makefile.pmk
 .INCLUDE :  makefile2.pmk
 
+.IF "$(OS)" == "SOLARIS"
+LINKFLAGSRUNPATH_OOO := -R/usr/sfw/lib $(LINKFLAGSRUNPATH_OOO)
+.ENDIF
 
 # --- Allgemein ----------------------------------------------------------
 
-HXXDEPNLST= $(INC)$/accel.hxx       \
-            $(INC)$/animate.hxx     \
-            $(INC)$/apptypes.hxx    \
-            $(INC)$/bitmap.hxx      \
-            $(INC)$/bitmapex.hxx    \
-            $(INC)$/bmpacc.hxx      \
-            $(INC)$/btndlg.hxx      \
-            $(INC)$/button.hxx      \
-            $(INC)$/ctrl.hxx        \
-            $(INC)$/cursor.hxx      \
-            $(INC)$/cmdevt.hxx      \
-            $(INC)$/decoview.hxx    \
-            $(INC)$/dialog.hxx      \
-            $(INC)$/dllapi.h        \
-            $(INC)$/dockwin.hxx     \
-            $(INC)$/edit.hxx        \
-            $(INC)$/event.hxx       \
-            $(INC)$/field.hxx       \
-            $(INC)$/fixed.hxx       \
-            $(INC)$/floatwin.hxx    \
-            $(INC)$/font.hxx        \
-            $(INC)$/fontcvt.hxx     \
-            $(INC)$/floatwin.hxx    \
-            $(INC)$/graph.hxx       \
-            $(INC)$/group.hxx       \
-            $(INC)$/help.hxx        \
-            $(INC)$/jobset.hxx      \
-            $(INC)$/keycodes.hxx    \
-            $(INC)$/keycod.hxx      \
-            $(INC)$/image.hxx       \
-            $(INC)$/lstbox.h        \
-            $(INC)$/lstbox.hxx      \
-            $(INC)$/mapmod.hxx      \
-            $(INC)$/metaact.hxx     \
-            $(INC)$/menu.hxx        \
-            $(INC)$/menubtn.hxx     \
-            $(INC)$/metric.hxx      \
-            $(INC)$/morebtn.hxx     \
-            $(INC)$/msgbox.hxx      \
-            $(INC)$/octree.hxx      \
-            $(INC)$/outdev.hxx      \
-            $(INC)$/outdev3d.hxx    \
-            $(INC)$/pointr.hxx      \
-            $(INC)$/ptrstyle.hxx    \
-            $(INC)$/prntypes.hxx    \
-            $(INC)$/print.hxx       \
-            $(INC)$/prndlg.hxx      \
-            $(INC)$/region.hxx      \
-            $(INC)$/salbtype.hxx    \
-            $(INC)$/scrbar.hxx      \
-            $(INC)$/slider.hxx      \
-            $(INC)$/seleng.hxx      \
-            $(INC)$/settings.hxx    \
-            $(INC)$/sound.hxx       \
-            $(INC)$/sndstyle.hxx    \
-            $(INC)$/split.hxx       \
-            $(INC)$/splitwin.hxx    \
-            $(INC)$/spin.hxx        \
-            $(INC)$/spinfld.hxx     \
-            $(INC)$/status.hxx      \
-            $(INC)$/stdtext.hxx     \
-            $(INC)$/sv.h            \
-            $(INC)$/svapp.hxx       \
-            $(INC)$/syschild.hxx    \
-            $(INC)$/sysdata.hxx     \
-            $(INC)$/syswin.hxx      \
-            $(INC)$/tabctrl.hxx     \
-            $(INC)$/tabdlg.hxx      \
-            $(INC)$/tabpage.hxx     \
-            $(INC)$/toolbox.hxx     \
-            $(INC)$/timer.hxx       \
-            $(INC)$/virdev.hxx      \
-            $(INC)$/wall.hxx        \
-            $(INC)$/waitobj.hxx     \
-            $(INC)$/wintypes.hxx    \
-            $(INC)$/window.hxx      \
-            $(INC)$/wrkwin.hxx
+HXXDEPNLST= $(INC)$/vcl$/accel.hxx       \
+            $(INC)$/vcl$/animate.hxx     \
+            $(INC)$/vcl$/apptypes.hxx    \
+            $(INC)$/vcl$/bitmap.hxx      \
+            $(INC)$/vcl$/bitmapex.hxx    \
+            $(INC)$/vcl$/bmpacc.hxx      \
+            $(INC)$/vcl$/btndlg.hxx      \
+            $(INC)$/vcl$/button.hxx      \
+            $(INC)$/vcl$/ctrl.hxx        \
+            $(INC)$/vcl$/cursor.hxx      \
+            $(INC)$/vcl$/cmdevt.hxx      \
+            $(INC)$/vcl$/decoview.hxx    \
+            $(INC)$/vcl$/dialog.hxx      \
+            $(INC)$/vcl$/dllapi.h        \
+            $(INC)$/vcl$/dockwin.hxx     \
+            $(INC)$/vcl$/edit.hxx        \
+            $(INC)$/vcl$/event.hxx       \
+            $(INC)$/vcl$/field.hxx       \
+            $(INC)$/vcl$/fixed.hxx       \
+            $(INC)$/vcl$/floatwin.hxx    \
+            $(INC)$/vcl$/font.hxx        \
+            $(INC)$/vcl$/fontcvt.hxx     \
+            $(INC)$/vcl$/floatwin.hxx    \
+            $(INC)$/vcl$/graph.hxx       \
+            $(INC)$/vcl$/group.hxx       \
+            $(INC)$/vcl$/help.hxx        \
+            $(INC)$/vcl$/jobset.hxx      \
+            $(INC)$/vcl$/keycodes.hxx    \
+            $(INC)$/vcl$/keycod.hxx      \
+            $(INC)$/vcl$/image.hxx       \
+            $(INC)$/vcl$/lstbox.h             \
+            $(INC)$/vcl$/lstbox.hxx      \
+            $(INC)$/vcl$/mapmod.hxx      \
+            $(INC)$/vcl$/metaact.hxx     \
+            $(INC)$/vcl$/menu.hxx        \
+            $(INC)$/vcl$/menubtn.hxx     \
+            $(INC)$/vcl$/metric.hxx      \
+            $(INC)$/vcl$/morebtn.hxx     \
+            $(INC)$/vcl$/msgbox.hxx      \
+            $(INC)$/vcl$/octree.hxx      \
+            $(INC)$/vcl$/outdev.hxx      \
+            $(INC)$/vcl$/outdev3d.hxx    \
+            $(INC)$/vcl$/pointr.hxx      \
+            $(INC)$/vcl$/ptrstyle.hxx    \
+            $(INC)$/vcl$/prntypes.hxx    \
+            $(INC)$/vcl$/print.hxx       \
+            $(INC)$/vcl$/prndlg.hxx      \
+            $(INC)$/vcl$/region.hxx      \
+            $(INC)$/vcl$/salbtype.hxx    \
+            $(INC)$/vcl$/scrbar.hxx      \
+            $(INC)$/vcl$/slider.hxx      \
+            $(INC)$/vcl$/seleng.hxx      \
+            $(INC)$/vcl$/settings.hxx    \
+            $(INC)$/vcl$/sound.hxx       \
+            $(INC)$/vcl$/sndstyle.hxx    \
+            $(INC)$/vcl$/split.hxx       \
+            $(INC)$/vcl$/splitwin.hxx    \
+            $(INC)$/vcl$/spin.hxx        \
+            $(INC)$/vcl$/spinfld.hxx     \
+            $(INC)$/vcl$/status.hxx      \
+            $(INC)$/vcl$/stdtext.hxx     \
+            $(INC)$/vcl$/sv.h            \
+            $(INC)$/vcl$/svapp.hxx       \
+            $(INC)$/vcl$/syschild.hxx    \
+            $(INC)$/vcl$/sysdata.hxx     \
+            $(INC)$/vcl$/syswin.hxx      \
+            $(INC)$/vcl$/tabctrl.hxx     \
+            $(INC)$/vcl$/tabdlg.hxx      \
+            $(INC)$/vcl$/tabpage.hxx     \
+            $(INC)$/vcl$/toolbox.hxx     \
+            $(INC)$/vcl$/timer.hxx       \
+            $(INC)$/vcl$/virdev.hxx      \
+            $(INC)$/vcl$/wall.hxx        \
+            $(INC)$/vcl$/waitobj.hxx     \
+            $(INC)$/vcl$/wintypes.hxx    \
+            $(INC)$/vcl$/window.hxx      \
+            $(INC)$/vcl$/wrkwin.hxx
 
 .IF "$(linkinc)" != ""
 SHL11FILE=  $(MISC)$/app.slo
@@ -152,18 +148,17 @@ LIB1FILES=  $(SLB)$/app.lib     \
             $(SLB)$/helper.lib	\
             $(SLB)$/components.lib
 
-
-.IF "$(GUI)" == "UNX" && "$(GUIBASE)" != "java"
+.IF "$(GUI)" == "UNX" && "$(GUIBASE)"!="aqua" && "$(GUIBASE)"!="java"
 LIB1FILES+=$(SLB)$/salplug.lib
+SHL1STDLIBS+=\
+             $(PSPLIB)
 .ELSE
 LIB1FILES+= \
             $(SLB)$/salwin.lib  \
             $(SLB)$/salgdi.lib  \
             $(SLB)$/salapp.lib
-
-.IF "$(GUIBASE)" == "java"
-LIB1FILES+= \
-            $(SLB)$/saljava.lib
+.IF "$(GUIBASE)"=="java"
+LIB1FILES+= $(SLB)$/saljava.lib
 .ENDIF
 .ENDIF
 
@@ -205,9 +200,59 @@ SHL1OBJS=   $(SLO)$/salshl.obj
 
 .IF "$(GUI)" != "MAC"
 .IF "$(GUI)" != "UNX"
+.ENDIF
+
+SHL1TARGET= vcl$(DLLPOSTFIX)
+SHL1IMPLIB= ivcl
+SHL1STDLIBS+=\
+            $(SOTLIB)           \
+            $(UNOTOOLSLIB)      \
+            $(TOOLSLIB)         \
+            $(I18NISOLANGLIB)   \
+            $(COMPHELPERLIB)	\
+            $(UCBHELPERLIB)     \
+            $(CPPUHELPERLIB)    \
+            $(CPPULIB)          \
+            $(VOSLIB)           \
+            $(SALLIB)			\
+            $(BASEGFXLIB)		\
+            $(ICUUCLIB)			\
+            $(ICULELIB)			\
+			$(JVMACCESSLIB)
+SHL1USE_EXPORTS=name
+
+.IF "$(GUIBASE)"=="aqua"
+SHL1STDLIBS+=$(BASEBMPLIB)
+SHL1STDLIBS+= \
+             -framework QTKit
+LIB1FILES+= \
+            $(SLB)$/sala11y.lib
+.ENDIF
+
+.IF "$(GUIBASE)" == "java"
+SHL1STDLIBS+= \
+	-framework ApplicationServices
+	-framework AudioToolbox
+	-framework AudioUnit
+LIB1FILES+=$(SLB)$/sala11y.lib
+.ENDIF
+
+.IF "$(USE_BUILTIN_RASTERIZER)"!=""
+    LIB1FILES +=    $(SLB)$/glyphs.lib
+    SHL1STDLIBS+=   $(FREETYPELIB)  $(PSPLIB)
+.ENDIF # USE_BUILTIN_RASTERIZER
+
+SHL1LIBS=   $(LIB1TARGET)
+.IF "$(GUI)"!="UNX"
+.IF "$(COM)"!="GCC"
+SHL1OBJS=   $(SLO)$/salshl.obj
+.ENDIF
+.ENDIF
+
+.IF "$(GUI)" != "UNX"
 SHL1RES=    $(RES)$/salsrc.res
 .ENDIF
-.ENDIF
+
 SHL1DEF=    $(MISC)$/$(SHL1TARGET).def
 
 DEF1NAME    =$(SHL1TARGET)
@@ -220,30 +265,42 @@ DEFLIB1NAME =vcl
 
 .IF "$(GUI)" == "WNT"
 
-SHL1STDLIBS += uwinapi.lib      \
-               gdi32.lib        \
-               msimg32.lib     \
-               winspool.lib     \
-               ole32.lib        \
-               shell32.lib      \
-               advapi32.lib     \
-               apsp.lib         \
-               imm32.lib
+.IF "$(COM)" == "GCC"
+SHL1STDLIBS += $(PSPLIB)
+.ENDIF
+
+SHL1STDLIBS += $(UWINAPILIB)      \
+               $(GDI32LIB)        \
+               $(MSIMG32LIB)        \
+               $(WINSPOOLLIB)     \
+               $(OLE32LIB)        \
+               $(SHELL32LIB)      \
+               $(ADVAPI32LIB)
+
+.IF "$(COM)" == "GCC"
+SHL1STDLIBS += $(IMM32LIB)
+.ELSE
+SHL1STDLIBS += $(PSPLIB)         \
+               $(IMM32LIB)
+.ENDIF
 
 .IF "$(GUI)$(COM)$(CPU)" == "WNTMSCI"
 LINKFLAGSSHL += /ENTRY:LibMain@12
 .ENDIF
 .ENDIF
 
+# --- OS2 ----------------------------------------------------------------
+
+.IF "$(GUI)" == "OS2"
+STDSHL1 += ft2lib.lib apsp.lib
+.ENDIF
 
 # --- UNX ----------------------------------------------------------------
 
-.IF "$(GUIBASE)" == "java"
-SHL1STDLIBS += -framework ApplicationServices -framework AudioToolbox -framework AudioUnit
-.ENDIF
+SHL1STDLIBS += $(PSPLIB)
 
 # UNX sal plugins
-.IF "$(GUI)" == "UNX" && "$(GUIBASE)" != "java"
+.IF "$(GUI)" == "UNX" && "$(GUIBASE)" != "aqua" && "$(GUIBASE)"!="java"
 
 # basic pure X11 plugin
 LIB2TARGET=$(SLB)$/ipure_x
@@ -251,7 +308,7 @@ LIB2FILES= \
             $(SLB)$/salwin.lib  \
             $(SLB)$/salgdi.lib  \
             $(SLB)$/salapp.lib
-SHL2TARGET=vclplug_gen$(UPD)$(DLLPOSTFIX)
+SHL2TARGET=vclplug_gen$(DLLPOSTFIX)
 SHL2IMPLIB=ipure_x
 SHL2LIBS=$(LIB2TARGET)
 SHL2DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN)
@@ -259,7 +316,7 @@ SHL2DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN)
 # libs for generic plugin
 SHL2STDLIBS=\
 			$(VCLLIB)\
-			-lpsp$(VERSION)$(DLLPOSTFIX)\
+			 $(PSPLIB)\
             $(SOTLIB)           \
             $(UNOTOOLSLIB)      \
             $(TOOLSLIB)         \
@@ -274,7 +331,7 @@ SHL2STDLIBS=\
 .IF "$(USE_XINERAMA)" != "NO"
 
 .IF "$(OS)"=="MACOSX"
-XINERAMALIBS= /usr/X11R6/lib/libXinerama.a
+XINERAMALIBS=-lXinerama
 .ELSE
 .IF "$(OS)" != "SOLARIS" || "$(USE_XINERAMA_VERSION)" == "Xorg"
 .IF "$(XINERAMA_LINK)" == "dynamic"
@@ -292,69 +349,28 @@ SHL2STDLIBS += $(XINERAMALIBS)
 SHL2STDLIBS+=`pkg-config --libs xrender`
 .ENDIF
 
-
-.IF "$(ENABLE_PASF)" != ""
-.IF "$(OS)"=="MACOSX"
-SHL2STDLIBS += -framework CoreAudio -framework AudioToolbox
-.ENDIF
-SHL2STDLIBS += -lsndfile -lportaudio
-.ENDIF # ENABLE_PASF
-
-.IF "$(ENABLE_NAS)" != ""
-SHL2STDLIBS += -laudio
-.IF "$(XAU_LIBS)" != ""
-SHL2STDLIBS += $(XAU_LIBS)
-.ENDIF
-.IF "$(OS)"=="SOLARIS"
-# needed by libaudio.a
-SHL2STDLIBS += -ldl -lnsl -lsocket
-.ENDIF # SOLARIS
-.ENDIF
-
 .IF "$(GUIBASE)"=="unx"
 
-.IF "$(WITH_LIBSN)"=="YES"
-SHL2STDLIBS+=$(LIBSN_LIBS)
-.ENDIF
-
-SHL2STDLIBS += -lXext -lSM -lICE -lX11
+SHL2STDLIBS += -lXext -lXtst -lSM -lICE -lX11
 .IF "$(OS)"!="MACOSX" && "$(OS)"!="FREEBSD"
 # needed by salprnpsp.cxx
 SHL2STDLIBS+= -ldl
 .ENDIF
 
+.IF "$(ENABLE_RANDR)" != ""
+.IF "$(XRANDR_DLOPEN)" == "FALSE"
+SHL2STDLIBS+= $(XRANDR_LIBS)
+.ENDIF
+.ENDIF
+
 .ENDIF          # "$(GUIBASE)"=="unx"
-
-# dummy plugin
-LIB3TARGET=$(SLB)$/idummy_plug_
-LIB3FILES= \
-            $(SLB)$/dapp.lib
-SHL3TARGET=vclplug_dummy$(UPD)$(DLLPOSTFIX)
-SHL3IMPLIB=idummy_plug_
-SHL3LIBS=$(LIB3TARGET)
-SHL3DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN)
-
-# libs for dummy plugin
-SHL3STDLIBS=\
-			$(VCLLIB)\
-			-lpsp$(VERSION)$(DLLPOSTFIX)\
-            $(SOTLIB)           \
-            $(UNOTOOLSLIB)      \
-            $(TOOLSLIB)         \
-            $(COMPHELPERLIB)	\
-            $(UCBHELPERLIB)     \
-            $(CPPUHELPERLIB)    \
-            $(CPPULIB)          \
-            $(VOSLIB)           \
-            $(SALLIB)
 
 # gtk plugin
 .IF "$(ENABLE_GTK)" != ""
-.IF "$(ENABLE_DBUS)" == "YES"
-CDEFS+= -DENABLE_DBUS
+PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0
+.IF "$(ENABLE_DBUS)" != ""
+PKGCONFIG_MODULES+= dbus-glib-1
 .ENDIF
-
-PKGCONFIG_MODULES=gtk+-2.0 gthread-2.0 $(DBUS_PACKAGE)
 .INCLUDE: pkg_config.mk
 
 LIB4TARGET=$(SLB)$/igtk_plug_
@@ -364,7 +380,7 @@ LIB4FILES=\
 			$(SLB)$/gtkgdi.lib\
 			$(SLB)$/gtkwin.lib
 
-SHL4TARGET=vclplug_gtk$(UPD)$(DLLPOSTFIX)
+SHL4TARGET=vclplug_gtk$(DLLPOSTFIX)
 SHL4IMPLIB=igtk_plug_
 SHL4LIBS=$(LIB4TARGET)
 SHL4DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN) $(SHL2IMPLIBN) $(SHL2TARGETN)
@@ -378,24 +394,57 @@ SHL4NOCHECK=TRUE
 
 
 SHL4STDLIBS+=-l$(SHL2TARGET)
-SHL4STDLIBS+=$(SHL3STDLIBS)
+SHL4STDLIBS+=\
+            $(VCLLIB)		\
+            $(PSPLIB)		\
+            $(SOTLIB)           \
+            $(UNOTOOLSLIB)      \
+            $(TOOLSLIB)         \
+            $(COMPHELPERLIB)	\
+            $(UCBHELPERLIB)     \
+            $(CPPUHELPERLIB)    \
+            $(CPPULIB)          \
+            $(VOSLIB)           \
+            $(SALLIB)
+
+.IF "$(ENABLE_RANDR)" != ""
+.IF "$(XRANDR_DLOPEN)" == "FALSE"
+SHL4STDLIBS+= $(XRANDR_LIBS)
+.ENDIF
+.ENDIF
+
 .ENDIF # "$(ENABLE_GTK)" != ""
 
 # KDE plugin
 .IF "$(ENABLE_KDE)" != ""
+.IF "$(KDE_ROOT)"!=""
+EXTRALIBPATHS+=-L$(KDE_ROOT)$/lib
+.ENDIF
 LIB5TARGET=$(SLB)$/ikde_plug_
 LIB5FILES=$(SLB)$/kdeplug.lib
-SHL5TARGET=vclplug_kde$(UPD)$(DLLPOSTFIX)
+SHL5TARGET=vclplug_kde$(DLLPOSTFIX)
 SHL5IMPLIB=ikde_plug_
 SHL5LIBS=$(LIB5TARGET)
 SHL5DEPN=$(SHL2TARGETN)
 # libs for KDE plugin
 SHL5STDLIBS=$(KDE_LIBS)
 SHL5STDLIBS+=-l$(SHL2TARGET)
-SHL5STDLIBS+=$(SHL3STDLIBS)
+SHL5STDLIBS+=\
+        $(VCLLIB)       \
+        $(PSPLIB)	\
+        $(TOOLSLIB)     \
+        $(VOSLIB)       \
+        $(SALLIB)
+
+.IF "$(ENABLE_RANDR)" != ""
+.IF "$(XRANDR_DLOPEN)" == "FALSE"
+SHL5STDLIBS+= $(XRANDR_LIBS)
+.ENDIF
+.ENDIF
+
 .ENDIF # "$(ENABLE_KDE)" != ""
 
-.ENDIF # UNX && !java
+.ENDIF # UNX
 
 .IF "$(GUIBASE)"=="java"
 

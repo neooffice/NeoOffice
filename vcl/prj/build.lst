@@ -1,4 +1,4 @@
-vc	vcl	:	BOOST:boost NAS:nas FREETYPE:freetype psprint rsc sot ucbhelper unotools ICU:icu i18npool unoil ridljar X11_EXTENSIONS:x11_extensions offuh basegfx SNDFILE:sndfile PORTAUDIO:portaudio transex3 NULL
+vc	vcl	:	BOOST:boost psprint rsc sot ucbhelper unotools ICU:icu i18npool unoil ridljar X11_EXTENSIONS:x11_extensions offuh basegfx basebmp tools transex3 icc NULL
 vc	vcl										usr1	-	all	vc_mkout NULL
 vc	vcl\inc									nmake	-	all	vc_inc NULL
 vc	vcl\source\glyphs						nmake	-	all	vc_glyphs vc_inc NULL
@@ -8,6 +8,11 @@ vc	vcl\source\window						nmake	-	all	vc_win vc_inc NULL
 vc	vcl\source\control						nmake	-	all	vc_ctrl vc_inc NULL
 vc	vcl\source\src							nmake	-	all	vc_src vc_inc NULL
 vc	vcl\source\helper						nmake	-	all	vc_hlp vc_inc NULL
+vc  vcl\source\salmain                      nmake   -   all vc_salmain vc_inc NULL
+vc	vcl\os2\source\app						nmake	-	p	vc__appp vc_inc NULL
+vc	vcl\os2\source\gdi						nmake	-	p	vc__gdip vc_inc NULL
+vc	vcl\os2\source\window					nmake	-	p	vc__winp vc_inc NULL
+vc	vcl\os2\source\src						nmake	-	p	vc__srcp vc_inc NULL
 vc  vcl\source\components					nmake	-	all	vc_components NULL
 vc	vcl\win\source\app						nmake	-	w	vc__appw vc_inc NULL
 vc	vcl\win\source\gdi						nmake	-	w	vc__gdiw vc_inc NULL
@@ -17,14 +22,16 @@ vc  vcl\unx\source\plugadapt				nmake	-	u	vc__plug vc_inc NULL
 vc	vcl\unx\source\app						nmake	-	u	vc__appu vc_inc NULL
 vc	vcl\unx\source\gdi						nmake	-	u	vc__gdiu vc_inc NULL
 vc	vcl\unx\source\window					nmake	-	u	vc__winu vc_inc NULL
-vc  vcl\unx\dummy							nmake   -   u   vc__du   vc_inc NULL
-vc  vcl\unx\gtk\a11y							nmake   -   u   vc__gtky vc_inc NULL
+vc  vcl\unx\gtk\a11y						nmake   -   u   vc__gtky vc_inc NULL
 vc  vcl\unx\gtk\app							nmake   -   u   vc__gtka vc_inc NULL
 vc  vcl\unx\gtk\window						nmake   -   u   vc__gtkw vc_inc NULL
 vc  vcl\unx\gtk\gdi 						nmake   -   u   vc__gtkg vc_inc NULL
+vc  vcl\unx\headless						nmake   -   u   vc__hl   vc_inc NULL
 vc  vcl\unx\kde							nmake   -   u   vc__kde  vc_inc NULL
+vc	vcl\aqua\source\a11y					nmake	-	u	vc__aquy vc_inc NULL
 vc	vcl\aqua\source\app						nmake	-	u	vc__appa vc_inc NULL
 vc	vcl\aqua\source\gdi						nmake	-	u	vc__gdia vc_inc NULL
+vc	vcl\aqua\source\res                 nmake   -   u   vc__resa NULL
 vc	vcl\aqua\source\window					nmake	-	u	vc__wina vc_inc NULL
 vc	vcl\mac\source\app						nmake	-	m	vc__appm vc_inc NULL
 vc	vcl\mac\source\gdi						nmake	-	m	vc__gdim vc_inc NULL
@@ -37,5 +44,5 @@ vc	vcl\java\source\java					nmake	-	u	vc__javaj NULL
 vc	vcl\java\com\sun\star\vcl				nmake   -	u	vc__javavcl NULL
 vc	vcl\java\com\sun\star\vcl\images		nmake   -	u	vc__javavclimages vc__javavcl.u NULL
 vc	vcl\java\com\sun\star\vcl\macosx		nmake	-	u	vc__javavclmacosx vc__javavcl.u NULL
-vc	vcl\util								nmake	-	all	vc_util vc__plug.u vc__appa.u vc__appm.m vc__appu.u vc__appw.w vc__appj.u vc__gdim.m vc__gdiu.u vc__gdiw.w vc__gdij.u vc__srcm.m vc__srcw.w vc__wina.u vc__winm.m vc__winu.u vc__winw.w vc__winj.u vc__du.u vc__gtka.u vc__gtky.u vc__gtkw.u vc__gtkg.u vc__kde.u vc__javaj.u vc__javavcl.u vc__javavclimages.u vc__javavclmacosx.u vc_app vc_ctrl vc_gdi vc_hlp vc_src vc_win vc_glyphs vc_app vc_ctrl vc_gdi vc_hlp vc_src vc_win vc_glyphs vc_components NULL
-vc	vcl\workben								nmake	-	all	vc_wrkb vc_util NULL
+vc	vcl\util								nmake	-	all	vc_util vc__plug.u vc__aquy.u vc__appa.u vc__appm.m vc__appu.u vc__appw.w vc__appp.p vc__appj.u vc__gdia.u vc__gdim.m vc__gdiu.u vc__gdiw.w vc__gdip.p vc__gdij.u vc__srcm.m vc__srcw.w vc__srcp.p vc__wina.u vc__winm.m vc__winu.u vc__winw.w vc__winp.p vc__winj.u vc__gtka.u vc__gtky.u vc__gtkw.u vc__gtkg.u vc__kde.u vc__hl.u vc__javaj.u vc__javavcl.u vc__javavclimages.u vc__javavclmacosx.u vc_app vc_ctrl vc_gdi vc_hlp vc_src vc_win vc_glyphs vc_components NULL
+vc  vcl\util\linksvp                        nmake   -   u   vc_lsvp vc_util NULL

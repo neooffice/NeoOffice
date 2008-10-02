@@ -23,15 +23,24 @@
 # <http://www.gnu.org/licenses/gpl-3.0.txt>
 # for a copy of the GPLv3 License.
 #
-# Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+# Modified October 2008 by Patrick Luby. NeoOffice is distributed under
 # GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
-.IF "$(GUI)" == "UNX" && "$(GUIBASE)"!="aqua" && "$(GUIBASE)"!="java"
-USE_BUILTIN_RASTERIZER=true
+# Reduction of exported symbols:
+CDEFS += -DVCL_DLLIMPLEMENTATION
+.IF "$(COMNAME)" == "gcc3" && "$(HAVE_GCC_VISIBILITY_FEATURE)" == "TRUE"
+CFLAGS += -fvisibility=hidden
+.ELIF "$(COMNAME)" == "sunpro5" && "$(CCNUMVER)" >= "00050005"
+CFLAGS += -xldscope=hidden
 .ENDIF
 
-.IF "$(USE_BUILTIN_RASTERIZER)" != ""
-ADDCDEFS += -DUSE_BUILTIN_RASTERIZER
-.ENDIF
+.IF "$(GUIBASE)"=="java"
+INCGUI += -I$(PRJ)$/aqua/inc
+.ENDIF  # "$(GUIBASE)"=="java"
+
+.IF "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
+OBJCXXFLAGS=-x objective-c++ -fobjc-exceptions
+CFLAGSCXX+=$(OBJCXXFLAGS)
+.ENDIF  # "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
