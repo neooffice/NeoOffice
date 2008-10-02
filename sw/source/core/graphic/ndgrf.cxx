@@ -1,142 +1,72 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified September 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified September 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
-
-#define ITEMID_BOXINFO      SID_ATTR_BORDER_INNER
-#ifndef _HINTIDS_HXX
 #include <hintids.hxx>
-#endif
-
-#ifndef _SV_SALBTYPE_HXX
 #include <vcl/salbtype.hxx>             // FRound
-#endif
-#ifndef _URLOBJ_HXX //autogen
 #include <tools/urlobj.hxx>
-#endif
-#ifndef _UNDO_HXX //autogen
 #include <svtools/undo.hxx>
-#endif
 #ifndef SVTOOLS_FSTATHELPER_HXX
 #include <svtools/fstathelper.hxx>
 #endif
-#ifndef _IMAP_HXX //autogen
 #include <svtools/imap.hxx>
-#endif
-#ifndef _FILTER_HXX //autogen
 #include <svtools/filter.hxx>
-#endif
 #include <sot/storage.hxx>
-#ifndef _SFXDOCINF_HXX //autogen
-#include <sfx2/docinf.hxx>
-#endif
-#ifndef _SVXLINKMGR_HXX
 #include <svx/linkmgr.hxx>
-#endif
-#ifndef _SVX_BOXITEM_HXX //autogen
 #include <svx/boxitem.hxx>
-#endif
-#ifndef _SVX_IMPGRF_HXX //autogen
 #include <svx/impgrf.hxx>
-#endif
-#ifndef _SOT_FORMATS_HXX
 #include <sot/formats.hxx>
-#endif
-
-#ifndef _FMTFSIZE_HXX
 #include <fmtfsize.hxx>
-#endif
-#ifndef _FMTURL_HXX
 #include <fmturl.hxx>
-#endif
-#ifndef _FRMFMT_HXX
 #include <frmfmt.hxx>
-#endif
-#ifndef _DOC_HXX
 #include <doc.hxx>
-#endif
-#ifndef _FRMATR_HXX
 #include <frmatr.hxx>
-#endif
-#ifndef _GRFATR_HXX
 #include <grfatr.hxx>
-#endif
-#ifndef _SWTYPES_HXX
 #include <swtypes.hxx>
-#endif
-#ifndef _NDGRF_HXX
 #include <ndgrf.hxx>
-#endif
-#ifndef _FMTCOL_HXX
 #include <fmtcol.hxx>
-#endif
-#ifndef _HINTS_HXX
 #include <hints.hxx>
-#endif
-#ifndef _SWBASLNK_HXX
 #include <swbaslnk.hxx>
-#endif
-#ifndef _PAGEFRM_HXX
 #include <pagefrm.hxx>
-#endif
-#ifndef _EDITSH_HXX
 #include <editsh.hxx>
-#endif
-#ifndef _PAM_HXX
 #include <pam.hxx>
-#endif
 
 #include <unotools/ucbstreamhelper.hxx>
-
-#ifndef _COM_SUN_STAR_EMBED_ELEMENTMODES_HPP_
 #include <com/sun/star/embed/ElementModes.hpp>
-#endif
-#ifndef _COM_SUN_STAR_EMBED_XTRANSACTEDOBJECT_HPP_
 #include <com/sun/star/embed/XTransactedObject.hpp>
-#endif
-#ifndef _LINK_HXX
 #include <tools/link.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _COM_SUN_STAR_IO_XSEEKABLE_HPP_
 #include <com/sun/star/io/XSeekable.hpp>
-#endif
+// --> OD 2007-03-28 #i73788#
+#include <retrieveinputstreamconsumer.hxx>
+// <--
 
 using namespace com::sun::star;
 
@@ -144,12 +74,16 @@ using namespace com::sun::star;
 // SwGrfNode
 // --------------------
 SwGrfNode::SwGrfNode(
-    const SwNodeIndex & rWhere,
-    const String& rGrfName, const String& rFltName,
-    const Graphic* pGraphic,
-    SwGrfFmtColl *pGrfColl,
-    SwAttrSet* pAutoAttr )
-	: SwNoTxtNode( rWhere, ND_GRFNODE, pGrfColl, pAutoAttr )
+        const SwNodeIndex & rWhere,
+        const String& rGrfName, const String& rFltName,
+        const Graphic* pGraphic,
+        SwGrfFmtColl *pGrfColl,
+        SwAttrSet* pAutoAttr ) :
+    SwNoTxtNode( rWhere, ND_GRFNODE, pGrfColl, pAutoAttr ),
+    // --> OD 2007-01-23 #i73788#
+    mbLinkedInputStreamReady( false ),
+    mbIsStreamReadOnly( sal_False )
+    // <--
 {
 	aGrfObj.SetSwapStreamHdl( LINK( this, SwGrfNode, SwapGraphic ) );
 	bInSwapIn = bChgTwipSize = bChgTwipSizeFromPixel = bLoadLowResGrf =
@@ -161,8 +95,12 @@ SwGrfNode::SwGrfNode(
 
 SwGrfNode::SwGrfNode( const SwNodeIndex & rWhere,
 				  		const GraphicObject& rGrfObj,
-                      SwGrfFmtColl *pGrfColl, SwAttrSet* pAutoAttr )
-	: SwNoTxtNode( rWhere, ND_GRFNODE, pGrfColl, pAutoAttr )
+                      SwGrfFmtColl *pGrfColl, SwAttrSet* pAutoAttr ) :
+    SwNoTxtNode( rWhere, ND_GRFNODE, pGrfColl, pAutoAttr ),
+    // --> OD 2007-01-23 #i73788#
+    mbLinkedInputStreamReady( false ),
+    mbIsStreamReadOnly( sal_False )
+    // <--
 {
 	aGrfObj = rGrfObj;
 	aGrfObj.SetSwapStreamHdl( LINK( this, SwGrfNode, SwapGraphic ) );
@@ -180,8 +118,12 @@ SwGrfNode::SwGrfNode( const SwNodeIndex & rWhere,
 SwGrfNode::SwGrfNode( const SwNodeIndex & rWhere,
                       const String& rGrfName, const String& rFltName,
                       SwGrfFmtColl *pGrfColl,
-                      SwAttrSet* pAutoAttr )
-	: SwNoTxtNode( rWhere, ND_GRFNODE, pGrfColl, pAutoAttr )
+                      SwAttrSet* pAutoAttr ) :
+    SwNoTxtNode( rWhere, ND_GRFNODE, pGrfColl, pAutoAttr ),
+    // --> OD 2007-01-23 #i73788#
+    mbLinkedInputStreamReady( false ),
+    mbIsStreamReadOnly( sal_False )
+    // <--
 {
 	aGrfObj.SetSwapStreamHdl( LINK( this, SwGrfNode, SwapGraphic ) );
 
@@ -380,6 +322,10 @@ BOOL SwGrfNode::ReRead(
 
 SwGrfNode::~SwGrfNode()
 {
+    // --> OD 2007-03-30 #i73788#
+    mpThreadConsumer.reset();
+    // <--
+
 	SwDoc* pDoc = GetDoc();
 	if( refLink.Is() )
 	{
@@ -409,7 +355,7 @@ SwGrfNode::~SwGrfNode()
 }
 
 
-SwCntntNode *SwGrfNode::SplitNode( const SwPosition &rPos )
+SwCntntNode *SwGrfNode::SplitCntntNode( const SwPosition & )
 {
 	return this;
 }
@@ -558,7 +504,7 @@ short SwGrfNode::SwapIn( BOOL bWaitForData )
 		if( 1 == nRet )
 		{
 			SwMsgPoolItem aMsg( RES_GRAPHIC_SWAPIN );
-			SwCntntNode::Modify( &aMsg, &aMsg );
+            Modify( &aMsg, &aMsg );
 		}
 	}
 	else
@@ -597,222 +543,6 @@ short SwGrfNode::SwapOut()
 	return 1;
 }
 
-// Wird nach einem SaveAs aufgerufen und setzt die StreamNamen um
-
-
-void SwGrfNode::SaveCompleted( BOOL bClear )
-{
-	if( aNewStrmName.Len() )
-	{
-		if( !bClear )		// der Name wird zum aktuellen
-			SetStreamName( aNewStrmName );
-		aNewStrmName.Erase();
-	}
-}
-
-
-// Falls die Grafik noch nicht im Doc-Storage existiert,
-// wird sie neu geschrieben; falls sie bereits drin ist,
-// wird nicht geschrieben. Wenn der Storage nicht dem
-// Doc-Storage entspricht, wird, falls aNewStrmName nicht
-// besetzt ist, in diesem Storage unter dem angegebenen
-// Streamnamen abgelegt (SaveAs). nach einem SaveAs wird
-// vom SW3-I/O-System noch SaveCompleted() aufgerufen,
-// da nun der Doc-Storage dem neuen Storage entspricht.
-// MIB 02/28/2001: This method is called only to store graphics
-// in the 3.1 to 5.0 formats. For the 6.0 format, graphics
-// are exported using the SvXMLGraphicObjectHelper class.
-
-
-BOOL SwGrfNode::StoreGraphics( SvStorage* pRoot )
-{
-    DBG_ERROR("Code removed!");
-    //TODO/LATER: seems that this code is for binary format only!
-    /*
-	if( !refLink.Is() )
-	{
-		BOOL bGraphic = TRUE; // Does the graphic stream (if it exists)
-							  // contain a streamed graphic (TRUE) or the
-							  // raw image data only (FALSE)
-		String aSrcStrmName, aSrcPicStgName;
-		if( HasStreamName() )
-			bGraphic = GetStreamStorageNames( aSrcStrmName, aSrcPicStgName );
-		SvStorage* pDocStg = GetDoc()->GetDocStorage();
-		if( !pRoot )
-			pRoot = pDocStg;
-		ASSERT( SOFFICE_FILEFORMAT_60 > pRoot->GetVersion(),
-				"SwGrfNode::StoreGraphic called for 6.0+ file format" );
-
-		String aDstPicStgName(
-				RTL_CONSTASCII_STRINGPARAM( "EmbeddedPictures" ) );
-		String aDstStrmName( aSrcStrmName );
-		if( pRoot != pDocStg || !bGraphic )
-		{
-			// If the stream does not contain a streamed graphic object,
-			// the graphic has to be stored again.
-			ASSERT( pRoot != pDocStg || aSrcStrmName.Len(),
-					"raw image data stream but no stream name" );
-			// Neuer Storage. Wenn die Grafik im DocStg drin ist,
-			// kann sie bequem per CopyTo() kopiert werden.
-			if( aSrcStrmName.Len() )
-			{
-				SvStorageRef refSrcPics = aSrcPicStgName.Len()
-					? pDocStg->OpenStorage( aSrcPicStgName,
-						STREAM_READ | STREAM_SHARE_DENYWRITE )
-					: pDocStg;
-
-				SvStorageStreamRef refStrm;
-
-				BOOL bWriteNew = pDocStg->GetVersion() != pRoot->GetVersion() ||
-								 !bGraphic;
-				if( !bWriteNew &&
-					SOFFICE_FILEFORMAT_40 <= pRoot->GetVersion() )
-				{
-					refStrm = refSrcPics->OpenStream( aSrcStrmName,
-									STREAM_READ | STREAM_SHARE_DENYWRITE );
-					if( SVSTREAM_OK == refStrm->GetError() )
-					{
-						// JP 21.06.98: pruefe ob der CompressMode uebereinstimmt
-						USHORT nCmprsMode =
-								Graphic::GetGraphicsCompressMode(*refStrm ) &
-								~(COMPRESSMODE_ZBITMAP|COMPRESSMODE_NATIVE );
-						USHORT nNewCmprsMode = 0;
-						if( GRAPHIC_BITMAP == aGrfObj.GetType() &&
-							GetDoc()->GetInfo()->IsSaveGraphicsCompressed() )
-							nNewCmprsMode |= COMPRESSMODE_ZBITMAP;
-						if( SOFFICE_FILEFORMAT_40 < pRoot->GetVersion() &&
-							GetDoc()->GetInfo()->IsSaveOriginalGraphics() )
-							nNewCmprsMode |= COMPRESSMODE_NATIVE;
-
-						if( nCmprsMode != nNewCmprsMode )
-						{
-							// der Kompressedmode stimmt nicht, also muss
-							// ggfs. die Grafik reingeswappt und ueber den
-							// unteren Teil neu geschrieben werden.
-							bWriteNew = TRUE;
-							refStrm->Seek( STREAM_SEEK_TO_BEGIN );
-						}
-					}
-				}
-
-				if( bWriteNew )
-				{
-					if( aGrfObj.IsSwappedOut() &&
-						SVSTREAM_OK == refSrcPics->GetError() )
-					{
-						if( !refStrm.Is() )
-							refStrm = refSrcPics->OpenStream( aSrcStrmName,
-									STREAM_READ | STREAM_SHARE_DENYWRITE );
-						if( SVSTREAM_OK == refStrm->GetError() )
-						{
-							refStrm->SetVersion( pDocStg->GetVersion() );
-							if( !(bGraphic ? aGrfObj.SwapIn( refStrm )
-							 			   : ImportGraphic( *refStrm ) ) )
-								return FALSE;
-						}
-					}
-					// If the graphic is restored within the same storage,
-					// its storage has to be removed.
-					if( pRoot == pDocStg )
-					{
-						refStrm.Clear();
-						DelStreamName();
-					}
-					aDstStrmName.Erase();
-				}
-				else
-				{
-					SvStorageRef refDstPics =
-						pRoot->OpenStorage( aDstPicStgName,
-							STREAM_READWRITE | STREAM_SHARE_DENYALL );
-					if( refDstPics->IsContained( aDstStrmName ) )
-						// nur neu erzeugen, wenn Name schon vorhanden ist!
-						aDstStrmName = Sw3Io::UniqueName( refDstPics, "Pic" );
-
-					if( refSrcPics->CopyTo( aSrcStrmName, refDstPics,
-											aDstStrmName )
-						&& refDstPics->Commit() )
-						aNewStrmName = aDstStrmName;
-					else
-						return FALSE;
-				}
-			}
-		}
-
-		if( !aDstStrmName.Len() )
-		{
-			ASSERT( pRoot, "Kein Storage gegeben" );
-			if( pRoot )
-			{
-				SvStorageRef refPics =
-					pRoot->OpenStorage( aDstPicStgName,
-						STREAM_READWRITE | STREAM_SHARE_DENYALL );
-				if( SVSTREAM_OK == refPics->GetError() )
-				{
-					aDstStrmName = Sw3Io::UniqueName( refPics, "Pic" );
-					SvStorageStreamRef refStrm =
-						refPics->OpenStream( aDstStrmName,
-						STREAM_READWRITE | STREAM_SHARE_DENYALL );
-					if( SVSTREAM_OK == refStrm->GetError() )
-					{
-						// HACK bis die Grafik als Portable markiert
-						// werden kann!!!
-						// Die Grafik kann in einer TempFile sein!
-						FASTBOOL bIsSwapOut = aGrfObj.IsSwappedOut();
-						if( bIsSwapOut && !aGrfObj.SwapIn() )
-							return FALSE;
-
-						refStrm->SetVersion( pRoot->GetVersion() );
-
-						//JP 04.05.98: laut ChangesMail vom KA und Bug 49617
-						//JP 21.06.98: laut ChangesMail vom KA, natives Save
-						USHORT nComprMode = refStrm->GetCompressMode();
-						if( SOFFICE_FILEFORMAT_40 <= refStrm->GetVersion() &&
-							GRAPHIC_BITMAP == aGrfObj.GetType() &&
-							GetDoc()->GetInfo()->IsSaveGraphicsCompressed() )
-							nComprMode |= COMPRESSMODE_ZBITMAP;
-						else
-							nComprMode &= ~COMPRESSMODE_ZBITMAP;
-
-						//JP 21.06.98: laut ChangesMail vom KA, natives Save
-						if( SOFFICE_FILEFORMAT_40 < refStrm->GetVersion() &&
-							GetDoc()->GetInfo()->IsSaveOriginalGraphics() )
-							nComprMode |= COMPRESSMODE_NATIVE;
-						else
-							nComprMode &= ~COMPRESSMODE_NATIVE;
-						refStrm->SetCompressMode( nComprMode );
-
-						BOOL bRes = FALSE;
-						if( pRoot == pDocStg )
-						{
-							if( aGrfObj.SwapOut( refStrm ) &&
-                                ( refStrm->Commit() | refPics->Commit() ))
-							{
-								SetStreamName( aDstStrmName );
-								bRes = TRUE;
-							}
-						}
-						else if( ((Graphic&)aGrfObj.GetGraphic()).
-												WriteEmbedded( *refStrm )
-                                && ( refStrm->Commit() | refPics->Commit() ))
-						{
-							if( bIsSwapOut )
-								aGrfObj.SwapOut();
-							aNewStrmName = aDstStrmName;
-							bRes = TRUE;
-						}
-						return bRes;
-					}
-				}
-			}
-			// Da fehlte doch was?
-			return FALSE;
-		}
-    }*/
-	// Schon drin im Storage oder Linked
-	return TRUE;
-}
-
 
 BOOL SwGrfNode::GetFileFilterNms( String* pFileNm, String* pFilterNm ) const
 {
@@ -840,13 +570,6 @@ BOOL SwGrfNode::GetFileFilterNms( String* pFileNm, String* pFilterNm ) const
 	return bRet;
 }
 
-
-String SwGrfNode::GetStreamName() const
-{
-	if( aNewStrmName.Len() )
-		return aNewStrmName;
-	return aGrfObj.GetUserData();
-}
 
 // Eine Grafik Undo-faehig machen. Falls sie sich bereits in
 // einem Storage befindet, muss sie geladen werden.
@@ -1028,7 +751,7 @@ void SwGrfNode::ScaleImageMap()
 	if( bScale )
 	{
 		aURL.GetMap()->Scale( aScaleX, aScaleY );
-		pFmt->SetAttr( aURL );
+        pFmt->SetFmtAttr( aURL );
 	}
 }
 
@@ -1099,7 +822,7 @@ uno::Reference< embed::XStorage > SwGrfNode::_GetDocSubstorageOrRoot( const Stri
     @author OD
 */
 SvStream* SwGrfNode::_GetStreamForEmbedGrf(
-            const ::com::sun::star::uno::Reference< ::com::sun::star::embed::XStorage >& _refPics,
+            const uno::Reference< embed::XStorage >& _refPics,
             String& _aStrmName ) const
 {
     SvStream* pStrm( 0L );
@@ -1365,9 +1088,9 @@ GraphicAttr& SwGrfNode::GetGraphicAttr( GraphicAttr& rGA,
 	{
 		switch( rMirror.GetValue() )
 		{
-		case RES_DONT_MIRROR_GRF: 	nMirror = BMP_MIRROR_HORZ; break;
-		case RES_MIRROR_GRF_VERT: 	nMirror = BMP_MIRROR_NONE; break;
-		case RES_MIRROR_GRF_HOR: 	nMirror = BMP_MIRROR_HORZ|BMP_MIRROR_VERT;
+        case RES_MIRROR_GRAPH_DONT:     nMirror = BMP_MIRROR_HORZ; break;
+        case RES_MIRROR_GRAPH_VERT:     nMirror = BMP_MIRROR_NONE; break;
+        case RES_MIRROR_GRAPH_HOR:  nMirror = BMP_MIRROR_HORZ|BMP_MIRROR_VERT;
 									break;
 		default: 					nMirror = BMP_MIRROR_VERT; break;
 		}
@@ -1375,10 +1098,10 @@ GraphicAttr& SwGrfNode::GetGraphicAttr( GraphicAttr& rGA,
 	else
 		switch( rMirror.GetValue() )
 		{
-		case RES_MIRROR_GRF_BOTH: 	nMirror = BMP_MIRROR_HORZ|BMP_MIRROR_VERT;
+        case RES_MIRROR_GRAPH_BOTH:     nMirror = BMP_MIRROR_HORZ|BMP_MIRROR_VERT;
 									break;
-		case RES_MIRROR_GRF_VERT:	nMirror = BMP_MIRROR_HORZ; break;
-		case RES_MIRROR_GRF_HOR:	nMirror = BMP_MIRROR_VERT; break;
+        case RES_MIRROR_GRAPH_VERT: nMirror = BMP_MIRROR_HORZ; break;
+        case RES_MIRROR_GRAPH_HOR:  nMirror = BMP_MIRROR_VERT; break;
 		}
 
 	rGA.SetMirrorFlags( nMirror );
@@ -1413,15 +1136,6 @@ BOOL SwGrfNode::IsTransparent() const
 	if( !bRet )	// ask the attribut
 		bRet = 0 != GetSwAttrSet().GetTransparencyGrf().GetValue();
 
-    /// OD 17.09.2002 #102099# - if return value is still FALSE and
-    ///     graphic is swapped out, assume that graphic is transparent.
-    ///     Thus, for safety reasons, paint errors are avoided, because the
-    ///     background is painted not only by the graphic node.
-    if ( !bRet && aGrfObj.IsSwappedOut() )
-    {
-        bRet = true;
-    }
-
 	return bRet;
 }
 
@@ -1446,3 +1160,90 @@ BOOL SwGrfNode::IsSelected() const
 	}
 	return bRet;
 }
+
+// --> OD 2006-12-22 #i73788#
+boost::weak_ptr< SwAsyncRetrieveInputStreamThreadConsumer > SwGrfNode::GetThreadConsumer()
+{
+    return mpThreadConsumer;
+}
+
+void SwGrfNode::TriggerAsyncRetrieveInputStream()
+{
+    if ( !IsLinkedFile() )
+    {
+        ASSERT( false,
+                "<SwGrfNode::TriggerAsyncLoad()> - Method is misused. Method call is only valid for graphic nodes, which refer a linked graphic file" );
+        return;
+    }
+
+    if ( mpThreadConsumer.get() == 0 )
+    {
+        mpThreadConsumer.reset( new SwAsyncRetrieveInputStreamThreadConsumer( *this ) );
+
+        String sGrfNm;
+        refLink->GetLinkManager()->GetDisplayNames( refLink, 0, &sGrfNm, 0, 0 );
+
+        mpThreadConsumer->CreateThread( sGrfNm );
+    }
+}
+
+bool SwGrfNode::IsLinkedInputStreamReady() const
+{
+    return mbLinkedInputStreamReady;
+}
+
+void SwGrfNode::ApplyInputStream(
+    com::sun::star::uno::Reference<com::sun::star::io::XInputStream> xInputStream,
+    const sal_Bool bIsStreamReadOnly )
+{
+    if ( IsLinkedFile() )
+    {
+        if ( xInputStream.is() )
+        {
+            mxInputStream = xInputStream;
+            mbIsStreamReadOnly = bIsStreamReadOnly;
+            mbLinkedInputStreamReady = true;
+            SwMsgPoolItem aMsgHint( RES_LINKED_GRAPHIC_STREAM_ARRIVED );
+            Modify( &aMsgHint, &aMsgHint );
+        }
+    }
+}
+
+void SwGrfNode::UpdateLinkWithInputStream()
+{
+    if ( IsLinkedFile() )
+    {
+        GetLink()->setStreamToLoadFrom( mxInputStream, mbIsStreamReadOnly );
+        GetLink()->Update();
+        SwMsgPoolItem aMsgHint( RES_GRAPHIC_ARRIVED );
+        Modify( &aMsgHint, &aMsgHint );
+
+        // --> OD 2008-06-18 #i88291#
+        mxInputStream.clear();
+        GetLink()->clearStreamToLoadFrom();
+        // <--
+        mbLinkedInputStreamReady = false;
+        mpThreadConsumer.reset();
+    }
+}
+// <--
+
+// --> OD 2008-07-21 #i90395#
+bool SwGrfNode::IsAsyncRetrieveInputStreamPossible() const
+{
+    bool bRet = false;
+
+    if ( IsLinkedFile() )
+    {
+        String sGrfNm;
+        refLink->GetLinkManager()->GetDisplayNames( refLink, 0, &sGrfNm, 0, 0 );
+        String sProtocol( RTL_CONSTASCII_STRINGPARAM( "vnd.sun.star.pkg:" ) );
+        if ( sGrfNm.CompareTo( sProtocol, sProtocol.Len() ) != 0 )
+        {
+            bRet = true;
+        }
+    }
+
+    return bRet;
+}
+// <--

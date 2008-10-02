@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -42,23 +35,14 @@
 #include <ctype.h>              // tolower
 #include <stdio.h>              // sscanf()
 
-#ifndef _SOLAR_H
+#include <sal/types.h>
 #include <tools/solar.h>
-#endif
 
-#ifndef SVTOOLS_URIHELPER_HXX
+#include <com/sun/star/ucb/XCommandEnvironment.hpp>
 #include <svtools/urihelper.hxx>
-#endif
-#ifndef _ZFORLIST_HXX
 #include <svtools/zforlist.hxx>
-#endif
-#ifndef _ZFORMAT_HXX
 #include <svtools/zformat.hxx>
-#endif
-
-#ifndef _LINKMGR_HXX //autogen
 #include <sfx2/linkmgr.hxx>
-#endif
 
 #ifndef _UCBHELPER_CONTENT_HXX_
 #include <ucbhelper/content.hxx>
@@ -66,132 +50,51 @@
 #ifndef _UCBHELPER_CONTENTBROKER_HXX_
 #include <ucbhelper/contentbroker.hxx>
 #endif
-#ifndef _UCBHELPER_COMMANDENVIRONMENT_HXX
 #include <ucbhelper/commandenvironment.hxx>
-#endif
 
 #ifndef _COM_SUN_STAR_I18N_SCRIPTTYPE_HDL_
 #include <com/sun/star/i18n/ScriptType.hdl>
 #endif
-
-#ifndef _HINTIDS_HXX
 #include <hintids.hxx>
-#endif
-
-#ifndef _SVX_FONTITEM_HXX //autogen
 #include <svx/fontitem.hxx>
-#endif
-#ifndef _SVX_FHGTITEM_HXX //autogen
 #include <svx/fhgtitem.hxx>
-#endif
-#ifndef _SVX_LANGITEM_HXX //autogen
 #include <svx/langitem.hxx>
-#endif
-
-#ifndef _FMTFLD_HXX //autogen
 #include <fmtfld.hxx>
-#endif
-#ifndef _FMTHBSH_HXX //autogen
 #include <fmthbsh.hxx>
-#endif
-#ifndef _FMTANCHR_HXX //autogen
 #include <fmtanchr.hxx>
-#endif
-#ifndef _PAM_HXX
 #include <pam.hxx>              // fuer SwPam
-#endif
-#ifndef _DOC_HXX
 #include <doc.hxx>
-#endif
-#ifndef _CHARATR_HXX
 #include <charatr.hxx>          // class SwFmtFld
-#endif
-#ifndef _FLDDAT_HXX
 #include <flddat.hxx>           // class SwDateTimeField
-#endif
-#ifndef _DOCUFLD_HXX
 #include <docufld.hxx>          // class SwPageNumberField
-#endif
-#ifndef _REFFLD_HXX
 #include <reffld.hxx>           // class SwGetRefField
-#endif
-#ifndef _BOOKMRK_HXX            // class SwBookmark
 #include <bookmrk.hxx>
-#endif
-#ifndef _EXPFLD_HXX
 #include <expfld.hxx>           // class SwSetExpField
-#endif
-#ifndef _DBFLD_HXX
 #include <dbfld.hxx>            // class SwDBField
-#endif
-#ifndef _USRFLD_HXX
 #include <usrfld.hxx>
-#endif
-#ifndef _TOX_HXX
 #include <tox.hxx>
-#endif
-#ifndef _SECTION_HXX
 #include <section.hxx>          // class SwSection
-#endif
-#ifndef _NDTXT_HXX
 #include <ndtxt.hxx>
-#endif
-#ifndef _FMTINFMT_HXX
 #include <fmtinfmt.hxx>
-#endif
-#ifndef _CHPFLD_HXX
 #include <chpfld.hxx>
-#endif
-#ifndef _FTNIDX_HXX
 #include <ftnidx.hxx>
-#endif
-#ifndef _TXTFTN_HXX
 #include <txtftn.hxx>
-#endif
-#ifndef _VIEWSH_HXX
 #include <viewsh.hxx>
-#endif
-#ifndef _SHELLRES_HXX
 #include <shellres.hxx>
-#endif
-#ifndef _FMTRUBY_HXX
 #include <fmtruby.hxx>
-#endif
-#ifndef _CHARFMT_HXX
 #include <charfmt.hxx>
-#endif
-#ifndef _TXTATR_HXX
 #include <txtatr.hxx>
-#endif
-#ifndef _BREAKIT_HXX
 #include <breakit.hxx>
-#endif
-#ifndef _FMTCLDS_HXX
 #include <fmtclds.hxx>
-#endif
-#ifndef _PAGEDESC_HXX
 #include <pagedesc.hxx>
-#endif
-#ifndef _SWSTYLENAMEMAPPER_HXX
 #include <SwStyleNameMapper.hxx>
-#endif
 
 
-#ifndef _WW8SCAN_HXX
 #include "ww8scan.hxx"          // WW8FieldDesc
-#endif
-#ifndef _WW8PAR_HXX
 #include "ww8par.hxx"
-#endif
-#ifndef _WW8PAR2_HXX
 #include "ww8par2.hxx"
-#endif
-#ifndef SW_WRITERHELPER
 #include "writerhelper.hxx"
-#endif
-#ifndef WW_FIELDS_HXX
 #include "fields.hxx"
-#endif
 
 #include <algorithm> // #i24377#
 
@@ -199,8 +102,11 @@
 
 #define WW8_TOX_LEVEL_DELIM     ':'
 
+using namespace ::com::sun::star;
 using namespace sw::util;
 using namespace std; // #i24377#
+using namespace nsSwDocInfoSubType;
+
 
 class _ReadFieldParams
 {
@@ -416,7 +322,7 @@ long SwWW8ImplReader::Read_Book(WW8PLCFManResult*)
     if (pB->GetIsEnd())
     {
         pReffedStck->SetAttr(*pPaM->GetPoint(), RES_FLTR_BOOKMARK, true,
-            pB->GetHandle());
+            pB->GetHandle(), (eB & BOOK_FIELD)!=0);
         return 0;
     }
 
@@ -521,6 +427,7 @@ void SwWW8ImplReader::ConvertFFileName( String& rName, const String& rOrg )
 {
     rName = rOrg;
     rName.SearchAndReplaceAllAscii( "\\\\", String( '\\' ));
+    rName.SearchAndReplaceAllAscii( "%20", String( ' ' ));
 
     // ggfs. anhaengende Anfuehrungszeichen entfernen
     if( rName.Len() &&  '"' == rName.GetChar( rName.Len()-1 ))
@@ -529,7 +436,7 @@ void SwWW8ImplReader::ConvertFFileName( String& rName, const String& rOrg )
     //#82900# Need the more sophisticated url converter. cmc
     if (rName.Len())
         rName = URIHelper::SmartRel2Abs(
-            INetURLObject(sBaseURL), rName, URIHelper::GetMaybeFileHdl());
+            INetURLObject(sBaseURL), rName, Link(), false);
 }
 
 // ConvertUFNneme uebersetzt FeldParameter-Namen u. ae. in den
@@ -670,7 +577,15 @@ String GetWordDefaultDateStringAsUS(SvNumberFormatter* pFormatter, USHORT nLang)
     aFormat.ConvertLanguage(*pFormatter, nLang, LANGUAGE_ENGLISH_US);
 
     String sParams(aFormat.GetFormatstring());
-    sParams.SearchAndReplace(CREATE_CONST_ASC("YY"), CREATE_CONST_ASC("YYYY"));
+    // --> OD 2007-02-09 #i36594#
+    // Fix provided by mloiseleur@openoffice.org.
+    // A default date can have already 4 year digits, in some case
+    const xub_StrLen pos = sParams.Search( CREATE_CONST_ASC("YYYY") );
+    if ( pos == STRING_NOTFOUND )
+    {
+        sParams.SearchAndReplace(CREATE_CONST_ASC("YY"), CREATE_CONST_ASC("YYYY"));
+    }
+    // <--
     return sParams;
 }
 
@@ -685,7 +600,7 @@ short SwWW8ImplReader::GetTimeDatePara(String& rStr, sal_uInt32& rFormat,
             bRTL = true;
     }
     RES_CHRATR eLang = bRTL ? RES_CHRATR_CTL_LANGUAGE : RES_CHRATR_LANGUAGE;
-    const SvxLanguageItem *pLang = (SvxLanguageItem*)GetFmtAttr(eLang);
+    const SvxLanguageItem *pLang = (SvxLanguageItem*)GetFmtAttr( static_cast< USHORT >(eLang));
     ASSERT(pLang, "impossible");
     rLang = pLang ? pLang->GetValue() : LANGUAGE_ENGLISH_US;
 
@@ -768,6 +683,12 @@ sal_uInt16 SwWW8ImplReader::End_Field()
         nRet = maFieldStack.back().mnFieldId;
         switch (nRet)
         {
+	    case 8: // TOX_INDEX
+	    case 13: // TOX_CONTENT
+	    { // tox hack!!!!
+		pPaM->Move(fnMoveForward);
+	    }
+
             case 88:
                 pCtrlStck->SetAttr(*pPaM->GetPoint(),RES_TXTATR_INETFMT);
             break;
@@ -788,6 +709,9 @@ bool AcceptableNestedField(sal_uInt16 nFieldCode)
 {
     switch (nFieldCode)
     {
+	case 8:
+	case 13: // HACK allow recursive field in TOC...
+
         case 36:
         case 68:
         case 79:
@@ -952,7 +876,8 @@ long SwWW8ImplReader::Read_Field(WW8PLCFManResult* pRes)
         mycFieldIter aEnd = maFieldStack.end();
         for(mycFieldIter aIter = maFieldStack.begin(); aIter != aEnd; ++aIter)
         {
-            if (bNested = !AcceptableNestedField(aIter->mnFieldId))
+            bNested = !AcceptableNestedField(aIter->mnFieldId);
+            if (bNested)
                 break;
         }
     }
@@ -968,7 +893,7 @@ long SwWW8ImplReader::Read_Field(WW8PLCFManResult* pRes)
     if (bNested)
         return 0;
 
-    USHORT n = ( aF.nId <= eMax ) ? aF.nId : eMax; // alle > 91 werden 92
+    USHORT n = ( aF.nId <= eMax ) ? aF.nId : static_cast< USHORT >(eMax); // alle > 91 werden 92
     USHORT nI = n / 32;                     // # des UINT32
     ULONG nMask = 1 << ( n % 32 );          // Maske fuer Bits
 
@@ -1006,7 +931,9 @@ long SwWW8ImplReader::Read_Field(WW8PLCFManResult* pRes)
         pStrm->Seek( nOldPos );
 
         //#124725# field codes which contain '/' or '.' are not displayed in WinWord
-        if (aStr.Search('.') != STRING_NOTFOUND || aStr.Search('/') != STRING_NOTFOUND)
+        if (!aStr.EqualsAscii(" ADDIN", 0, 6) &&
+            (aStr.Search('.') != STRING_NOTFOUND ||
+             aStr.Search('/') != STRING_NOTFOUND))
 			return aF.nLen;
 		else
 			return aF.nLen - aF.nLRes - 1;  // so viele ueberlesen, das Resultfeld
@@ -1149,10 +1076,10 @@ void SwWW8ImplReader::InsertTagField( const USHORT nId, const String& rTagText )
     {                                                   // normal tagggen
 
         SwFieldType* pFT = rDoc.InsertFldType(
-                                SwSetExpFieldType( &rDoc, aName, GSE_STRING ) );
+                                SwSetExpFieldType( &rDoc, aName, nsSwGetSetExpType::GSE_STRING ) );
         SwSetExpField aFld( (SwSetExpFieldType*)pFT, rTagText );                            // SUB_INVISIBLE
-        USHORT nSubType = ( SwFltGetFlag( nFieldFlags, SwFltControlStack::TAGS_VISIBLE ) ) ? 0 : SUB_INVISIBLE;
-        aFld.SetSubType(nSubType|GSE_STRING);
+        USHORT nSubType = ( SwFltGetFlag( nFieldFlags, SwFltControlStack::TAGS_VISIBLE ) ) ? 0 : nsSwExtendedSubType::SUB_INVISIBLE;
+        aFld.SetSubType(nSubType | nsSwGetSetExpType::GSE_STRING);
 
         rDoc.Insert( *pPaM, SwFmtFld( aFld ), 0 );
     }
@@ -1340,7 +1267,7 @@ SwFltStackEntry *SwWW8FltRefStack::RefToVar(const SwField* pFld,
         if (aResult != aFieldVarNames.end())
         {
             SwGetExpField aFld( (SwGetExpFieldType*)
-                pDoc->GetSysFldType(RES_GETEXPFLD), rName, GSE_STRING, 0);
+                pDoc->GetSysFldType(RES_GETEXPFLD), rName, nsSwGetSetExpType::GSE_STRING, 0);
             delete pEntry->pAttr;
             SwFmtFld aTmp(aFld);
             pEntry->pAttr = aTmp.Clone();
@@ -1410,9 +1337,9 @@ eF_ResT SwWW8ImplReader::Read_F_InputVar( WW8FieldDesc* pF, String& rStr )
     long nNo = MapBookmarkVariables(pF, sOrigName, aResult);
 
     SwSetExpFieldType* pFT = (SwSetExpFieldType*)rDoc.InsertFldType(
-        SwSetExpFieldType(&rDoc, sOrigName, GSE_STRING));
+        SwSetExpFieldType(&rDoc, sOrigName, nsSwGetSetExpType::GSE_STRING));
     SwSetExpField aFld(pFT, aResult);
-    aFld.SetSubType(SUB_INVISIBLE|GSE_STRING);
+    aFld.SetSubType(nsSwExtendedSubType::SUB_INVISIBLE | nsSwGetSetExpType::GSE_STRING);
     aFld.SetInputFlag(true);
     aFld.SetPromptText( aQ );
 
@@ -1426,7 +1353,7 @@ eF_ResT SwWW8ImplReader::Read_F_InputVar( WW8FieldDesc* pF, String& rStr )
 eF_ResT SwWW8ImplReader::Read_F_ANumber( WW8FieldDesc*, String& rStr )
 {
     if( !pNumFldType ){     // 1. Mal
-        SwSetExpFieldType aT( &rDoc, CREATE_CONST_ASC("AutoNr"), GSE_SEQ );
+        SwSetExpFieldType aT( &rDoc, CREATE_CONST_ASC("AutoNr"), nsSwGetSetExpType::GSE_SEQ );
         pNumFldType = rDoc.InsertFldType( aT );
     }
     SwSetExpField aFld( (SwSetExpFieldType*)pNumFldType, aEmptyStr,
@@ -1500,7 +1427,7 @@ eF_ResT SwWW8ImplReader::Read_F_Seq( WW8FieldDesc*, String& rStr )
         return FLD_TAGIGN;
 
     SwSetExpFieldType* pFT = (SwSetExpFieldType*)rDoc.InsertFldType(
-                        SwSetExpFieldType( &rDoc, aSequenceName, GSE_SEQ ) );
+                        SwSetExpFieldType( &rDoc, aSequenceName, nsSwGetSetExpType::GSE_SEQ ) );
     SwSetExpField aFld( pFT, aEmptyStr, eNumFormat );
 
     if (sStart.Len())
@@ -1521,6 +1448,25 @@ eF_ResT SwWW8ImplReader::Read_F_DocInfo( WW8FieldDesc* pF, String& rStr )
 
     if( 85 == pF->nId )
     {
+        String aDocProperty;
+        _ReadFieldParams aReadParam( rStr );
+        long nRet;
+        while( -1 != ( nRet = aReadParam.SkipToNextToken() ))
+        {
+            switch( nRet )
+            {
+                case -2:
+                    if( !aDocProperty.Len() )
+                        aDocProperty = aReadParam.GetResult();
+                    break;
+                case '*':
+                    //Skip over MERGEFORMAT
+                    aReadParam.SkipToNextToken();
+                    break;
+            }
+        }
+        aDocProperty.EraseAllChars('"');
+
         /*
         There are up to 26 fields that may be meant by 'DocumentProperty'.
         Which of them is to be inserted here ?
@@ -1528,116 +1474,93 @@ eF_ResT SwWW8ImplReader::Read_F_DocInfo( WW8FieldDesc* pF, String& rStr )
         method that compares the given Parameter String with the four
         possible name sets (english, german, french, spanish)
         */
-        String aStr( rStr );
-        xub_StrLen nPos1 = aStr.Search( '"' );
-        if( (STRING_NOTFOUND != nPos1) && (nPos1+1 < aStr.Len()) )
+
+		static const sal_Char* aName10 = "\x0F"; // SW field code
+		static const sal_Char* aName11 // German
+			= "TITEL";
+		static const sal_Char* aName12 // French
+			= "TITRE";
+		static const sal_Char* aName13 // English
+			= "TITLE";
+		static const sal_Char* aName14 // Spanish
+			= "TITRO";
+		static const sal_Char* aName20 = "\x15"; // SW filed code
+		static const sal_Char* aName21 // German
+			= "ERSTELLDATUM";
+		static const sal_Char* aName22 // French
+			= "CR\xC9\xC9";
+		static const sal_Char* aName23 // English
+			= "CREATED";
+		static const sal_Char* aName24 // Spanish
+			= "CREADO";
+		static const sal_Char* aName30 = "\x16"; // SW filed code
+		static const sal_Char* aName31 // German
+			= "ZULETZTGESPEICHERTZEIT";
+		static const sal_Char* aName32 // French
+			= "DERNIERENREGISTREMENT";
+		static const sal_Char* aName33 // English
+			= "SAVED";
+		static const sal_Char* aName34 // Spanish
+			= "MODIFICADO";
+		static const sal_Char* aName40 = "\x17"; // SW filed code
+		static const sal_Char* aName41 // German
+			= "ZULETZTGEDRUCKT";
+		static const sal_Char* aName42 // French
+			= "DERNI\xC8" "REIMPRESSION";
+		static const sal_Char* aName43 // English
+			= "LASTPRINTED";
+		static const sal_Char* aName44 // Spanish
+			= "HUPS PUPS";
+		static const sal_Char* aName50 = "\x18"; // SW filed code
+		static const sal_Char* aName51 // German
+			= "\xDC" "BERARBEITUNGSNUMMER";
+		static const sal_Char* aName52 // French
+			= "NUM\xC9" "RODEREVISION";
+		static const sal_Char* aName53 // English
+			= "REVISIONNUMBER";
+		static const sal_Char* aName54 // Spanish
+			= "SNUBBEL BUBBEL";
+		static const USHORT nFldCnt  = 5;
+
+		// additional fields are to be coded soon!   :-)
+
+		static const USHORT nLangCnt = 4;
+		static const sal_Char *aNameSet_26[nFldCnt][nLangCnt+1] =
+		{
+			{aName10, aName11, aName12, aName13, aName14},
+			{aName20, aName21, aName22, aName23, aName24},
+			{aName30, aName31, aName32, aName33, aName34},
+			{aName40, aName41, aName42, aName43, aName44},
+			{aName50, aName51, aName52, aName53, aName54}
+		};
+
+		bool bFldFound= false;
+		USHORT nFIdx;
+		for(USHORT nLIdx=1; !bFldFound && (nLangCnt > nLIdx); ++nLIdx)
+		{
+			for(nFIdx = 0;  !bFldFound && (nFldCnt  > nFIdx); ++nFIdx)
+			{
+				if( aDocProperty.Equals( String( aNameSet_26[nFIdx][nLIdx],
+					RTL_TEXTENCODING_MS_1252 ) ) )
+				{
+					bFldFound = true;
+					pF->nId   = aNameSet_26[nFIdx][0][0];
+				}
+			}
+		}
+
+        if( !bFldFound )
         {
-            xub_StrLen nPos2 = aStr.SearchAndReplace( '"', '\0', nPos1+1 );
-            if (STRING_NOTFOUND != nPos2)
-            {
-                aStr.Erase(0, nPos1+1);
-                static const sal_Char* aName10 = "\x0F"; // SW field code
-                static const sal_Char* aName11 // German
-                    = "TITEL";
-                static const sal_Char* aName12 // French
-                    = "TITRE";
-                static const sal_Char* aName13 // English
-                    = "TITLE";
-                static const sal_Char* aName14 // Spanish
-                    = "TITRO";
-                static const sal_Char* aName20 = "\x15"; // SW filed code
-                static const sal_Char* aName21 // German
-                    = "ERSTELLDATUM";
-                static const sal_Char* aName22 // French
-                    = "CR\xC9\xC9";
-                static const sal_Char* aName23 // English
-                    = "CREATED";
-                static const sal_Char* aName24 // Spanish
-                    = "CREADO";
-                static const sal_Char* aName30 = "\x16"; // SW filed code
-                static const sal_Char* aName31 // German
-                    = "ZULETZTGESPEICHERTZEIT";
-                static const sal_Char* aName32 // French
-                    = "DERNIERENREGISTREMENT";
-                static const sal_Char* aName33 // English
-                    = "SAVED";
-                static const sal_Char* aName34 // Spanish
-                    = "MODIFICADO";
-                static const sal_Char* aName40 = "\x17"; // SW filed code
-                static const sal_Char* aName41 // German
-                    = "ZULETZTGEDRUCKT";
-                static const sal_Char* aName42 // French
-                    = "DERNI\xC8" "REIMPRESSION";
-                static const sal_Char* aName43 // English
-                    = "LASTPRINTED";
-                static const sal_Char* aName44 // Spanish
-                    = "HUPS PUPS";
-                static const sal_Char* aName50 = "\x18"; // SW filed code
-                static const sal_Char* aName51 // German
-                    = "\xDC" "BERARBEITUNGSNUMMER";
-                static const sal_Char* aName52 // French
-                    = "NUM\xC9" "RODEREVISION";
-                static const sal_Char* aName53 // English
-                    = "REVISIONNUMBER";
-                static const sal_Char* aName54 // Spanish
-                    = "SNUBBEL BUBBEL";
-                static const USHORT nFldCnt  = 5;
-
-                // additional fields are to be coded soon!   :-)
-
-                static const USHORT nLangCnt = 4;
-                static const sal_Char *aNameSet_26[nFldCnt][nLangCnt+1] =
-                {
-                    {aName10, aName11, aName12, aName13, aName14},
-                    {aName20, aName21, aName22, aName23, aName24},
-                    {aName30, aName31, aName32, aName33, aName34},
-                    {aName40, aName41, aName42, aName43, aName44},
-                    {aName50, aName51, aName52, aName53, aName54}
-                };
-                bool bFldFound= false;
-                USHORT nFIdx;
-                for(USHORT nLIdx=1; !bFldFound && (nLangCnt > nLIdx); ++nLIdx)
-                {
-                    for(nFIdx = 0;  !bFldFound && (nFldCnt  > nFIdx); ++nFIdx)
-                    {
-                        if( aStr.Equals( String( aNameSet_26[nFIdx][nLIdx],
-                            RTL_TEXTENCODING_MS_1252 ) ) )
-                        {
-                            bFldFound = true;
-                            pF->nId   = aNameSet_26[nFIdx][0][0];
-                        }
-                    }
-                }
-                if( !bFldFound )
-                    return FLD_TEXT; // Error: give up
-            }
-        }
-        else
-        {
-            // MM Create a user field
-            String aDocProperty;
-            _ReadFieldParams aReadParam( aStr );
-            long nRet;
-            while( -1 != ( nRet = aReadParam.SkipToNextToken() ))
-            {
-                switch( nRet )
-                {
-                    case -2:
-                        if( !aDocProperty.Len() )
-                            aDocProperty = aReadParam.GetResult();
-                        break;
-                    case '*':
-                        //Skip over MERGEFORMAT
-                        aReadParam.SkipToNextToken();
-                        break;
-                }
-            }
-
+/*
 			SwUserFieldType aTmp( &rDoc, aDocProperty );
             aTmp.SetContent(GetFieldResult( pF ));
 			SwUserField aUFld( (SwUserFieldType*)rDoc.InsertFldType( aTmp ));
 			aUFld.ChangeFormat( UF_STRING );
 			rDoc.Insert( *pPaM, SwFmtFld( aUFld ), 0);
+*/
+			SwDocInfoField aFld( (SwDocInfoFieldType*)
+                rDoc.GetSysFldType( RES_DOCINFOFLD ), DI_CUSTOM|nReg, aDocProperty, GetFieldResult( pF ) );
+		    rDoc.Insert(*pPaM, SwFmtFld(aFld), 0);
 
 			return FLD_OK;
         }
@@ -1714,7 +1637,7 @@ eF_ResT SwWW8ImplReader::Read_F_DocInfo( WW8FieldDesc* pF, String& rStr )
     }
 
     SwDocInfoField aFld( (SwDocInfoFieldType*)
-        rDoc.GetSysFldType( RES_DOCINFOFLD ), nSub|nReg, nFormat );
+        rDoc.GetSysFldType( RES_DOCINFOFLD ), nSub|nReg, String(), nFormat );
     if (bDateTime)
         ForceFieldLanguage(aFld, nLang);
     rDoc.Insert(*pPaM, SwFmtFld(aFld), 0);
@@ -1729,7 +1652,7 @@ eF_ResT SwWW8ImplReader::Read_F_Author( WW8FieldDesc*, String& )
         // (#56149)
     SwDocInfoField aFld( (SwDocInfoFieldType*)
                      rDoc.GetSysFldType( RES_DOCINFOFLD ),
-                     DI_CREATE|DI_SUB_AUTHOR );
+                     DI_CREATE|DI_SUB_AUTHOR, String() );
     rDoc.Insert( *pPaM, SwFmtFld( aFld ), 0 );
     return FLD_OK;
 }
@@ -1925,13 +1848,13 @@ eF_ResT SwWW8ImplReader::Read_F_Symbol( WW8FieldDesc*, String& rStr )
         if (aName.Len())                           // Font Name set ?
         {
             SvxFontItem aFont(FAMILY_DONTKNOW, aName, aEmptyStr,
-                PITCH_DONTKNOW, RTL_TEXTENCODING_SYMBOL);
+                PITCH_DONTKNOW, RTL_TEXTENCODING_SYMBOL, RES_CHRATR_FONT);
             NewAttr(aFont);                       // new Font
         }
 
         if (nSize > 0)  //#i20118#
         {
-            SvxFontHeightItem aSz(nSize);
+            SvxFontHeightItem aSz(nSize, 100, RES_CHRATR_FONTSIZE);
             NewAttr(aSz);
         }
 
@@ -2001,9 +1924,9 @@ eF_ResT SwWW8ImplReader::Read_F_Set( WW8FieldDesc* pF, String& rStr )
     long nNo = MapBookmarkVariables(pF,sOrigName,sVal);
 
     SwFieldType* pFT = rDoc.InsertFldType( SwSetExpFieldType( &rDoc, sOrigName,
-        GSE_STRING ) );
+        nsSwGetSetExpType::GSE_STRING ) );
     SwSetExpField aFld( (SwSetExpFieldType*)pFT, sVal, ULONG_MAX );
-    aFld.SetSubType(SUB_INVISIBLE|GSE_STRING);
+    aFld.SetSubType(nsSwExtendedSubType::SUB_INVISIBLE | nsSwGetSetExpType::GSE_STRING);
 
     rDoc.Insert( *pPaM, SwFmtFld( aFld ), 0 );
 
@@ -2160,7 +2083,7 @@ eF_ResT SwWW8ImplReader::Read_F_PgRef( WW8FieldDesc*, String& rStr )
 }
 
 // "MACROSCHALTFL"ACHE"
-eF_ResT SwWW8ImplReader::Read_F_Macro( WW8FieldDesc*, String& rStr )
+eF_ResT SwWW8ImplReader::Read_F_Macro( WW8FieldDesc*, String& rStr)
 {
     String aName;
     String aVText;
@@ -2168,6 +2091,9 @@ eF_ResT SwWW8ImplReader::Read_F_Macro( WW8FieldDesc*, String& rStr )
     bool bNewVText = true;
     bool bBracket  = false;
     _ReadFieldParams aReadParam( rStr );
+
+    xub_StrLen nOffset = 0;
+
     while( -1 != ( nRet = aReadParam.SkipToNextToken() ))
     {
         switch( nRet )
@@ -2177,6 +2103,8 @@ eF_ResT SwWW8ImplReader::Read_F_Macro( WW8FieldDesc*, String& rStr )
                 aName = aReadParam.GetResult();
             else if( !aVText.Len() || bBracket )
             {
+                nOffset = aReadParam.GetTokenSttPtr() + 1;
+
                 if( bBracket )
                     aVText += ' ';
                 aVText += aReadParam.GetResult();
@@ -2200,7 +2128,29 @@ eF_ResT SwWW8ImplReader::Read_F_Macro( WW8FieldDesc*, String& rStr )
     SwMacroField aFld( (SwMacroFieldType*)
                     rDoc.GetSysFldType( RES_MACROFLD ), aName, aVText );
     rDoc.Insert( *pPaM, SwFmtFld( aFld ), 0 );
+
+
+    WW8_CP nOldCp = pPlcxMan->Where();
+    WW8_CP nCp = nOldCp + nOffset;
+
+    SwPaM aPaM(*pPaM);
+    aPaM.SetMark();
+    aPaM.Move(fnMoveBackward);
+    aPaM.Exchange();
+
+    mpPostProcessAttrsInfo = new WW8PostProcessAttrsInfo(nCp, nCp, aPaM);
+
     return FLD_OK;
+}
+
+WW8PostProcessAttrsInfo::WW8PostProcessAttrsInfo(WW8_CP nCpStart, WW8_CP nCpEnd,
+                                                 SwPaM & rPaM)
+: mbCopy(false),
+  mnCpStart(nCpStart),
+  mnCpEnd(nCpEnd),
+  mPaM(*rPaM.GetPoint(), *rPaM.GetMark()),
+  mItemSet(rPaM.GetDoc()->GetAttrPool(), RES_CHRATR_BEGIN, RES_PARATR_END - 1)
+{
 }
 
 bool CanUseRemoteLink(const String &rGrfName)
@@ -2208,9 +2158,9 @@ bool CanUseRemoteLink(const String &rGrfName)
     bool bUseRemote = false;
     try
     {
-        ::ucb::Content aCnt(rGrfName,
-            ::com::sun::star::uno::Reference<
-            ::com::sun::star::ucb::XCommandEnvironment >() );
+        ::ucbhelper::Content aCnt(rGrfName,
+            uno::Reference<
+            ucb::XCommandEnvironment >() );
         rtl::OUString   aTitle;
 
         aCnt.getPropertyValue(rtl::OUString::createFromAscii("Title" ))
@@ -2271,7 +2221,7 @@ eF_ResT SwWW8ImplReader::Read_F_IncludePicture( WW8FieldDesc*, String& rStr )
         SfxItemSet aFlySet( rDoc.GetAttrPool(), RES_FRMATR_BEGIN,
             RES_FRMATR_END-1 );
         aFlySet.Put( SwFmtAnchor( FLY_IN_CNTNT ) );
-        aFlySet.Put( SwFmtVertOrient( 0, VERT_TOP, FRAME ));
+        aFlySet.Put( SwFmtVertOrient( 0, text::VertOrientation::TOP, text::RelOrientation::FRAME ));
         pFlyFmtOfJustInsertedGraphic = rDoc.Insert( *pPaM,
                                                     aGrfName,
                                                     aEmptyStr,
@@ -2293,7 +2243,7 @@ String wwSectionNamer::UniqueName()
 }
 
 // "EINFUEGENTEXT"
-eF_ResT SwWW8ImplReader::Read_F_IncludeText( WW8FieldDesc* pF, String& rStr )
+eF_ResT SwWW8ImplReader::Read_F_IncludeText( WW8FieldDesc* /*pF*/, String& rStr )
 {
     String aPara;
     String aBook;
@@ -2378,10 +2328,10 @@ eF_ResT SwWW8ImplReader::Read_F_DBField( WW8FieldDesc* pF, String& rStr )
     SwFieldType* pFT = rDoc.InsertFldType( aD );
     SwDBField aFld( (SwDBFieldType*)pFT );
     aFld.SetFieldCode( rStr );
-    
+
     String aResult;
     pSBase->WW8ReadString( *pStrm, aResult, pPlcxMan->GetCpOfs()+
-                           pF->nSRes, pF->nLRes, eTextCharSet );    
+                           pF->nSRes, pF->nLRes, eTextCharSet );
 
     aFld.InitContent(aResult);
 
@@ -2582,7 +2532,7 @@ void SwWW8ImplReader::Read_SubF_Ruby( _ReadFieldParams& rReadParam)
         if (pBreakIt->xBreak.is())
             nScript = pBreakIt->xBreak->getScriptType(sRuby, 0);
         else
-            nScript = com::sun::star::i18n::ScriptType::ASIAN;
+            nScript = i18n::ScriptType::ASIAN;
 
         //Check to see if we already have a ruby charstyle that this fits
         std::vector<const SwCharFmt*>::const_iterator aEnd =
@@ -2614,13 +2564,13 @@ void SwWW8ImplReader::Read_SubF_Ruby( _ReadFieldParams& rReadParam)
             SwStyleNameMapper::FillUIName(RES_POOLCHR_RUBYTEXT,aNm);
             aNm+=String::CreateFromInt32(aRubyCharFmts.size()+1);
             pFmt = rDoc.MakeCharFmt(aNm,(SwCharFmt*)rDoc.GetDfltCharFmt());
-            SvxFontHeightItem aHeightItem(nFontSize*10);
+            SvxFontHeightItem aHeightItem(nFontSize*10, 100, RES_CHRATR_FONTSIZE);
             SvxFontItem aFontItem(FAMILY_DONTKNOW,sFontName,
-                aEmptyStr,PITCH_DONTKNOW,RTL_TEXTENCODING_DONTKNOW);
+                aEmptyStr,PITCH_DONTKNOW,RTL_TEXTENCODING_DONTKNOW, RES_CHRATR_FONT);
             aHeightItem.SetWhich(GetWhichOfScript(RES_CHRATR_FONTSIZE,nScript));
             aFontItem.SetWhich(GetWhichOfScript(RES_CHRATR_FONT,nScript));
-            pFmt->SetAttr(aHeightItem);
-            pFmt->SetAttr(aFontItem);
+            pFmt->SetFmtAttr(aHeightItem);
+            pFmt->SetFmtAttr(aFontItem);
             aRubyCharFmts.push_back(pFmt);
             pCharFmt = pFmt;
         }
@@ -2640,7 +2590,7 @@ void SwWW8ImplReader::Read_SubF_Ruby( _ReadFieldParams& rReadParam)
 //        Verzeichnis-Felder
 //-----------------------------------------
 
-void lcl_toxMatchACSwitch(  SwWW8ImplReader& rReader,
+void lcl_toxMatchACSwitch(  SwWW8ImplReader& /*rReader*/,
                             SwDoc& rDoc,
                             SwTOXBase& rBase,
                             _ReadFieldParams& rParam,
@@ -2815,7 +2765,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
             break;
     }
 
-    USHORT nCreateOf = (eTox == TOX_CONTENT) ? TOX_OUTLINELEVEL : TOX_MARK;
+    USHORT nCreateOf = (eTox == TOX_CONTENT) ? nsSwTOXElement::TOX_OUTLINELEVEL : nsSwTOXElement::TOX_MARK;
 
     USHORT nIndexCols = 1;
 
@@ -2826,7 +2776,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
     switch( eTox ){
     case TOX_INDEX:
         {
-            USHORT eOptions = TOI_SAME_ENTRY | TOI_CASE_SENSITIVE;
+            USHORT eOptions = nsSwTOIOptions::TOI_SAME_ENTRY | nsSwTOIOptions::TOI_CASE_SENSITIVE;
 
             // TOX_OUTLINELEVEL setzen wir genau dann, wenn
             // die Parameter \o in 1 bis 9 liegen
@@ -2915,7 +2865,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
                     break;
                 case 'h':
                     {
-                        eOptions |= TOI_ALPHA_DELIMITTER;
+                        eOptions |= nsSwTOIOptions::TOI_ALPHA_DELIMITTER;
                     }
                     break;
                 }
@@ -2956,11 +2906,11 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
                             nVal = aOrigForm.GetFormMax()-1;
                         if( nMaxLevel < nVal )
                             nMaxLevel = nVal;
-                        eCreateFrom |= TOX_OUTLINELEVEL;
+                        eCreateFrom |= nsSwTOXElement::TOX_OUTLINELEVEL;
                     }
                     break;
                 case 'f':
-                    eCreateFrom |= TOX_MARK;
+                    eCreateFrom |= nsSwTOXElement::TOX_MARK;
                     break;
                 case 'l':
                     {
@@ -2969,14 +2919,14 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
                         {
                             if( nMaxLevel < nVal )
                                 nMaxLevel = nVal;
-                            eCreateFrom |= TOX_MARK;
+                            eCreateFrom |= nsSwTOXElement::TOX_MARK;
                         }
                     }
                     break;
                 case 't': // paragraphs using special styles shall
                           // provide the TOX's content
                     lcl_toxMatchTSwitch(*this, *pBase, aReadParam);
-                    eCreateFrom |= TOX_TEMPLATE;
+                    eCreateFrom |= nsSwTOXElement::TOX_TEMPLATE;
                     break;
                 case 'p':
                     {
@@ -3109,7 +3059,6 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
                 for(USHORT nLevel = 1; nLevel <= nEnd; ++nLevel)
                 {
                     SwFormTokens aPattern = aForm.GetPattern(nLevel);
-                    SwFormTokens::iterator aIt = aPattern.begin();
 
                     aPattern.insert(aPattern.begin(), aLinkStart);
                     aPattern.push_back(aLinkEnd);
@@ -3132,11 +3081,11 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
                     {
                         //If we would be created from outlines, either explictly or by default
                         //then see if we need extra styles added to the outlines
-                        USHORT eEffectivelyFrom = eCreateFrom ? eCreateFrom : TOX_OUTLINELEVEL;
-                        if (eEffectivelyFrom & TOX_OUTLINELEVEL)
+                        USHORT eEffectivelyFrom = eCreateFrom ? eCreateFrom : nsSwTOXElement::TOX_OUTLINELEVEL;
+                        if (eEffectivelyFrom & nsSwTOXElement::TOX_OUTLINELEVEL)
                         {
                             if (AddExtraOutlinesAsExtraStyles(*pBase))
-                                eCreateFrom |= (TOX_TEMPLATE | TOX_OUTLINELEVEL);
+                                eCreateFrom |= (nsSwTOXElement::TOX_TEMPLATE | nsSwTOXElement::TOX_OUTLINELEVEL);
 
                             // --> FME 2004-12-16 #i19683# Insert a text token " " between the
                             // number and entry token. In an ideal world we could handle the
@@ -3185,7 +3134,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
                 case TOX_ILLUSTRATIONS:
                     {
                         if( !eCreateFrom )
-                            eCreateFrom = TOX_SEQUENCE;
+                            eCreateFrom = nsSwTOXElement::TOX_SEQUENCE;
                         pBase->SetCreate( eCreateFrom );
 
                         /*
@@ -3236,7 +3185,8 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
     } // ToxBase fertig
 
     // Update fuer TOX anstossen
-    rDoc.SetUpdateTOX(true);
+    //rDoc.SetUpdateTOX(true);
+    rDoc.SetUpdatePgNumOfTOX( true );
 
     // #i21237#
     // propagate tab stops from paragraph styles used in TOX to
@@ -3275,12 +3225,14 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
 
     rDoc.InsertTableOf(*pPaM->GetPoint(), *aFltTOX.GetBase());
 
+    pPaM->Move(fnMoveBackward); // move into TOC section...
+
     //inserting a toc inserts a section before this point, so adjust pos
     //for future page/section segment insertion
     SwPaM aRegion(*pPaM);
     aRegion.Move(fnMoveBackward);
     ASSERT(rDoc.GetCurTOX(*aRegion.GetPoint()), "Misunderstood how toc works");
-    if (SwTOXBase* pBase = (SwTOXBase*)rDoc.GetCurTOX(*aRegion.GetPoint()))
+    if (SwTOXBase* pBase2 = (SwTOXBase*)rDoc.GetCurTOX(*aRegion.GetPoint()))
     {
 		if(nIndexCols>1)
 		{
@@ -3289,7 +3241,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
 			SwFmtCol aCol;
 			aCol.Init( nIndexCols, 708, USHRT_MAX );
 			aSet.Put( aCol );
-			pBase->SetAttrSet( aSet );
+			pBase2->SetAttrSet( aSet );
 		}
 
         maSectionManager.PrependedInlineNode(*pPaM->GetPoint(),
@@ -3301,10 +3253,11 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
 
     if (!maApos.back()) //a para end in apo doesn't count
         bWasParaEnd = true;
-    return FLD_OK;
+//    return FLD_OK;
+    return FLD_TEXT; // HACK so now import the TOC stored in the DOC stream...
 }
 
-eF_ResT SwWW8ImplReader::Read_F_Shape(WW8FieldDesc* pF, String& rStr)
+eF_ResT SwWW8ImplReader::Read_F_Shape(WW8FieldDesc* /*pF*/, String& /*rStr*/)
 {
     /*
     #i3958# 0x8 followed by 0x1 where the shape is the 0x8 and its anchoring
@@ -3314,7 +3267,7 @@ eF_ResT SwWW8ImplReader::Read_F_Shape(WW8FieldDesc* pF, String& rStr)
     return FLD_TEXT;
  }
 
-eF_ResT SwWW8ImplReader::Read_F_Hyperlink( WW8FieldDesc* pF, String& rStr )
+eF_ResT SwWW8ImplReader::Read_F_Hyperlink( WW8FieldDesc* /*pF*/, String& rStr )
 {
     String sURL, sTarget, sMark;
     bool bDataImport = false;

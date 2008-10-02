@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified November 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified November 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,58 +32,25 @@
 
 
 #include "cmdid.h"
-#include "uiparam.hxx"
 #include "hintids.hxx"
-
-#ifndef _SVX_SIZEITEM_HXX //autogen
 #include <svx/sizeitem.hxx>
-#endif
-#ifndef _SVX_BRSHITEM_HXX //autogen
 #include <svx/brshitem.hxx>
-#endif
-#ifndef _SFXAPP_HXX //autogen
 #include <sfx2/app.hxx>
-#endif
-#ifndef _SFXREQUEST_HXX //autogen
 #include <sfx2/request.hxx>
-#endif
-#ifndef _SFXOBJFACE_HXX //autogen
 #include <sfx2/objface.hxx>
-#endif
-#ifndef _SFX_BINDINGS_HXX //autogen
 #include <sfx2/bindings.hxx>
-#endif
-#ifndef _SFXSTRITEM_HXX //autogen
 #include <svtools/stritem.hxx>
-#endif
-#ifndef _SFXENUMITEM_HXX //autogen
 #include <svtools/eitem.hxx>
-#endif
-#ifndef _URLOBJ_HXX //autogen
 #include <tools/urlobj.hxx>
-#endif
-#ifndef _SFX_WHITER_HXX //autogen
 #include <svtools/whiter.hxx>
-#endif
-#ifndef _SFXINTITEM_HXX //autogen
 #include <svtools/intitem.hxx>
-#endif
-#ifndef _SHL_HXX //autogen
 #include <tools/shl.hxx>
-#endif
-#ifndef _SVX_SRCHITEM_HXX //autogen
 #include <svx/srchitem.hxx>
-#endif
 
 // --> FME 2005-01-04 #i35572#
-#ifndef _NUMRULE_HXX
 #include <numrule.hxx>
-#endif
 // <--
-
-#ifndef _FMTORNT_HXX //autogen
 #include <fmtornt.hxx>
-#endif
 #include "wrtsh.hxx"
 #include "swmodule.hxx"
 #include "frmatr.hxx"
@@ -107,6 +67,7 @@
 #include "itemdef.hxx"
 #include "swslots.hxx"
 
+#include <IDocumentOutlineNodes.hxx>
 
 SFX_IMPL_INTERFACE(SwListShell, SwBaseShell, SW_RES(STR_SHELLNAME_LIST))
 {
@@ -130,25 +91,26 @@ void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bUp )
 
         if ( bMove )
         {
-            const sal_uInt16 nActLevel = rSh.GetOutlineLevel( nActPos );
+            const IDocumentOutlineNodes* pIDoc( rSh.getIDocumentOutlineNodesAccess() );
+            const sal_uInt16 nActLevel = static_cast<sal_uInt16>(pIDoc->getOutlineLevel( nActPos ));
             sal_uInt16 nActEndPos = nActPos + 1;
             sal_Int16 nDir = 0;
 
             if ( !bUp )
             {
                 // Move down with subpoints:
-                while ( nActEndPos < rSh.GetOutlineCnt() &&
-                        rSh.GetOutlineLevel( nActEndPos ) > nActLevel )
+                while ( nActEndPos < pIDoc->getOutlineNodesCount() &&
+                        pIDoc->getOutlineLevel( nActEndPos ) > nActLevel )
                     ++nActEndPos;
 
-                if ( nActEndPos < rSh.GetOutlineCnt() )
+                if ( nActEndPos < pIDoc->getOutlineNodesCount() )
                 {
                     // The current subpoint which should be moved
                     // starts at nActPos and ends at nActEndPos - 1
                     --nActEndPos;
                     sal_uInt16 nDest = nActEndPos + 2;
-                    while ( nDest < rSh.GetOutlineCnt() &&
-                            rSh.GetOutlineLevel( nDest ) > nActLevel )
+                    while ( nDest < pIDoc->getOutlineNodesCount() &&
+                            pIDoc->getOutlineLevel( nDest ) > nActLevel )
                         ++nDest;
 
                     nDir = nDest - 1 - nActEndPos;
@@ -161,7 +123,7 @@ void lcl_OutlineUpDownWithSubPoints( SwWrtShell& rSh, bool bMove, bool bUp )
                 {
                     --nActEndPos;
                     sal_uInt16 nDest = nActPos - 1;
-                    while ( nDest > 0 && rSh.GetOutlineLevel( nDest ) > nActLevel )
+                    while ( nDest > 0 && pIDoc->getOutlineLevel( nDest ) > nActLevel )
                         --nDest;
 
                     nDir = nDest - nActPos;
@@ -201,11 +163,19 @@ void SwListShell::Execute(SfxRequest &rReq)
 	switch (nSlot)
 	{
 		case FN_NUM_BULLET_DOWN:
+        case FN_NUM_BULLET_UP:
+#ifdef USE_JAVA
+			// Fix bug 2741 by detecting the strange case where GetView()
+			// returns NULL
+			if ( (const SwView *)&GetView() )
+#endif	// USE_JAVA
             {
                 SfxViewFrame * pFrame = GetView().GetViewFrame();
 
                 rReq.Done();
-                rSh.NumUpDown();
+                rSh.NumUpDown( ( nSlot == FN_NUM_BULLET_DOWN )
+                               ? TRUE
+                               : FALSE );
                 pFrame->GetBindings().Invalidate( SID_TABLE_CELL );	// StatusZeile updaten!
             }
 			break;
@@ -267,17 +237,6 @@ void SwListShell::Execute(SfxRequest &rReq)
             rReq.Done();
 			break;
 
-		case FN_NUM_BULLET_UP:
-			rSh.NumUpDown(FALSE);
-#ifdef USE_JAVA
-			// Fix bug 2741 by detecting the strange case where GetView()
-			// returns NULL
-			if ( (const SwView *)&GetView() )
-#endif	// USE_JAVA
-			GetView().GetViewFrame()->GetBindings().Invalidate( SID_TABLE_CELL );	// StatusZeile updaten!
-            rReq.Done();
-			break;
-
 		case FN_NUM_OR_NONUM:
 		{
 			BOOL bApi = rReq.IsAPI();
@@ -300,12 +259,8 @@ void SwListShell::GetState(SfxItemSet &rSet)
 {
 	SfxWhichIter aIter( rSet );
 	USHORT nWhich = aIter.FirstWhich();
-    BOOL bHasChildren;
     SwWrtShell& rSh = GetShell();
-    BYTE nCurrentNumLevel = rSh.GetNumLevel( &bHasChildren );
-    BOOL bNoNumbering = nCurrentNumLevel == NO_NUMBERING;
-    BOOL bNoNumLevel = ! IsNum(nCurrentNumLevel);
-    nCurrentNumLevel = GetRealLevel(nCurrentNumLevel);
+    BYTE nCurrentNumLevel = rSh.GetNumLevel();
 	while ( nWhich )
 	{
 		switch( nWhich )
@@ -337,8 +292,8 @@ void SwListShell::GetState(SfxItemSet &rSet)
 }
 
 
-SwListShell::SwListShell(SwView &rView) :
-	SwBaseShell(rView)
+SwListShell::SwListShell(SwView &_rView) :
+    SwBaseShell(_rView)
 {
 	SetName(String::CreateFromAscii("List"));
 	SetHelpId(SW_LISTSHELL);

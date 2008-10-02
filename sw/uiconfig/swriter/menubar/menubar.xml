@@ -47,6 +47,8 @@
 				</menu:menupopup>
 			</menu:menu>
 			<menu:menuseparator/>
+			<menu:menuitem menu:id=".uno:WebHtml"/>
+			<menu:menuseparator/>
 			<menu:menuitem menu:id=".uno:PrintPreview"/>
 			<menu:menuitem menu:id=".uno:Print"/>
 			<menu:menuitem menu:id=".uno:PrinterSetup"/>
@@ -65,7 +67,13 @@
 			<menu:menuitem menu:id=".uno:Paste"/>
 			<menu:menuitem menu:id=".uno:PasteSpecial"/>
 			<menu:menuitem menu:id=".uno:SelectTextMode"/>
-			<menu:menuitem menu:id=".uno:SelectAll"/>
+                        <menu:menu menu:id=".uno:SelectionModeMenu">
+                                <menu:menupopup>
+                                        <menu:menuitem menu:id=".uno:SelectionModeDefault"/>
+                                        <menu:menuitem menu:id=".uno:SelectionModeBlock"/>
+                                </menu:menupopup>
+                        </menu:menu>
+                        <menu:menuitem menu:id=".uno:SelectAll"/>
 			<menu:menuseparator/>
 			<menu:menu menu:id=".uno:ChangesMenu">
 				<menu:menupopup>
@@ -112,6 +120,7 @@
             <menu:menuitem menu:id=".uno:Fieldnames"/>
             <menu:menuitem menu:id=".uno:ControlCodes"/>
             <menu:menuitem menu:id=".uno:ShowHiddenParagraphs"/>
+            <menu:menuitem menu:id=".uno:ShowAnnotations"/>
             <menu:menuseparator/>
             <menu:menuitem menu:id=".uno:ViewDataSourceBrowser"/>
             <menu:menuseparator/>
@@ -190,7 +199,6 @@
 					<menu:menuitem menu:id=".uno:InsertPlugin"/>
 					<menu:menuitem menu:id=".uno:InsertSound"/>
 					<menu:menuitem menu:id=".uno:InsertVideo"/>
-					<menu:menuitem menu:id=".uno:InsertApplet"/>
 					<menu:menuitem menu:id=".uno:InsertObjectStarMath"/>
 					<menu:menuitem menu:id=".uno:InsertObjectChart"/>
 				</menu:menupopup>
@@ -271,8 +279,8 @@
             <menu:menu menu:id=".uno:ArrangeMenu">
                 <menu:menupopup>
                     <menu:menuitem menu:id=".uno:BringToFront"/>
-                    <menu:menuitem menu:id=".uno:ObjectBackOne"/>
                     <menu:menuitem menu:id=".uno:ObjectForwardOne"/>
+                    <menu:menuitem menu:id=".uno:ObjectBackOne"/>
                     <menu:menuitem menu:id=".uno:SendToBack"/>
                     <menu:menuseparator/>
                     <menu:menuitem menu:id=".uno:SetObjectToForeground"/>
@@ -370,13 +378,19 @@
     </menu:menu>
     <menu:menu menu:id=".uno:ToolsMenu">
 		<menu:menupopup>
-        	<menu:menuitem menu:id=".uno:SpellDialog"/>
+                <menu:menuitem menu:id=".uno:SpellingAndGrammarDialog"/>
             <menu:menu menu:id=".uno:LanguageMenu">
                 <menu:menupopup>
-                    <menu:menuitem menu:id=".uno:HangulHanjaConversion"/>
+                    <menu:menuitem menu:id=".uno:SetLanguageSelectionMenu"/>
+					<menu:menuitem menu:id=".uno:SetLanguageParagraphMenu"/>
+                    <menu:menuitem menu:id=".uno:SetLanguageAllTextMenu"/>
+					<menu:menuseparator/>
+					<menu:menuitem menu:id=".uno:HangulHanjaConversion"/>
                     <menu:menuitem menu:id=".uno:ChineseConversion"/>
                     <menu:menuitem menu:id=".uno:ThesaurusDialog"/>
                     <menu:menuitem menu:id=".uno:Hyphenate"/>
+                    <menu:menuseparator/>
+                    <menu:menuitem menu:id=".uno:MoreDictionaries"/>
                 </menu:menupopup>
             </menu:menu>
             <menu:menuitem menu:id=".uno:WordCountDialog"/>

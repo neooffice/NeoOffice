@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -44,295 +37,117 @@
  */
 
 
-#define ITEMID_BOXINFO      SID_ATTR_BORDER_INNER
-#ifndef _HINTIDS_HXX
 #include <hintids.hxx>
-#endif
 
 #ifndef _APP_HXX //autogen
 #include <vcl/svapp.hxx>
 #endif
-#ifndef _SV_SALBTYPE_HXX
 #include <vcl/salbtype.hxx>
-#endif
-#ifndef _ZFORMAT_HXX
 #include <svtools/zformat.hxx>
-#endif
-#ifndef _SFXITEMITER_HXX //autogen
 #include <svtools/itemiter.hxx>
-#endif
-#ifndef _SVX_FONTITEM_HXX
 #include <svx/fontitem.hxx>
-#endif
 #ifndef _SVX_TSTPITEM_HXX //autogen
 #include <svx/tstpitem.hxx>
 #endif
-#ifndef _SVX_ADJITEM_HXX //autogen
 #include <svx/adjitem.hxx>
-#endif
-#ifndef _SVX_SPLTITEM_HXX //autogen
 #include <svx/spltitem.hxx>
-#endif
-#ifndef _SVX_WIDWITEM_HXX //autogen
 #include <svx/widwitem.hxx>
-#endif
-#ifndef _SVX_LSPCITEM_HXX //autogen
 #include <svx/lspcitem.hxx>
-#endif
-#ifndef _SVX_KEEPITEM_HXX //autogen
 #include <svx/keepitem.hxx>
-#endif
-#ifndef _SVX_SHADITEM_HXX //autogen
 #include <svx/shaditem.hxx>
-#endif
-#ifndef _SVX_BRSHITEM_HXX //autogen
 #include <svx/brshitem.hxx>
-#endif
-#ifndef _SVX_POSTITEM_HXX //autogen
 #include <svx/postitem.hxx>
-#endif
-#ifndef _SVX_WGHTITEM_HXX //autogen
 #include <svx/wghtitem.hxx>
-#endif
-#ifndef _SVX_KERNITEM_HXX //autogen
 #include <svx/kernitem.hxx>
-#endif
-#ifndef _SVX_CRSDITEM_HXX //autogen
 #include <svx/crsditem.hxx>
-#endif
-#ifndef _SVX_CMAPITEM_HXX //autogen
 #include <svx/cmapitem.hxx>
-#endif
-#ifndef _SVX_WRLMITEM_HXX //autogen
 #include <svx/wrlmitem.hxx>
-#endif
-#ifndef _SVX_UDLNITEM_HXX //autogen
 #include <svx/udlnitem.hxx>
-#endif
-#ifndef _SVX_LANGITEM_HXX //autogen
 #include <svx/langitem.hxx>
-#endif
-#ifndef _SVX_ESCPITEM_HXX //autogen
 #include <svx/escpitem.hxx>
-#endif
-#ifndef _SVX_FHGTITEM_HXX //autogen
 #include <svx/fhgtitem.hxx>
-#endif
-#ifndef _SVX_COLRITEM_HXX //autogen
 #include <svx/colritem.hxx>
-#endif
-#ifndef _SVX_HYZNITEM_HXX //autogen
 #include <svx/hyznitem.hxx>
-#endif
-#ifndef _SVX_BRKITEM_HXX //autogen
 #include <svx/brkitem.hxx>
-#endif
-#ifndef _SVX_LRSPITEM_HXX //autogen
 #include <svx/lrspitem.hxx>
-#endif
-#ifndef _SVX_ULSPITEM_HXX //autogen
 #include <svx/ulspitem.hxx>
-#endif
-#ifndef _SVX_BOXITEM_HXX //autogen
 #include <svx/boxitem.hxx>
-#endif
-#ifndef _SVX_ITEM_HXX //autogen
 #include <svx/cntritem.hxx>
-#endif
-#ifndef _SVX_SHDDITEM_HXX //autogen
 #include <svx/shdditem.hxx>
-#endif
-#ifndef _SVX_AKRNITEM_HXX //autogen wg. SvxAutoKernItem
 #include <svx/akrnitem.hxx>
-#endif
-#ifndef _SVX_PBINITEM_HXX //autogen wg. SvxPaperBinItem
 #include <svx/pbinitem.hxx>
-#endif
 #ifndef _SVX_EMPHITEM_HXX
 #include <svx/emphitem.hxx>
 #endif
-#ifndef _SVX_TWOLINESITEM_HXX
 #include <svx/twolinesitem.hxx>
-#endif
-#ifndef _SVX_CHARSCALEITEM_HXX
 #include <svx/charscaleitem.hxx>
-#endif
-#ifndef _SVX_CHARROTATEITEM_HXX
 #include <svx/charrotateitem.hxx>
-#endif
-#ifndef _SVX_CHARRELIEFITEM_HXX
 #include <svx/charreliefitem.hxx>
-#endif
-#ifndef _SVX_PARAVERTALIGNITEM_HXX
 #include <svx/paravertalignitem.hxx>
-#endif
-#ifndef _SVX_PGRDITEM_HXX
 #include <svx/pgrditem.hxx>
-#endif
-#ifndef _SVX_FRMDIRITEM_HXX
 #include <svx/frmdiritem.hxx>
-#endif
-#ifndef _SVX_BLNKITEM_HXX
 #include <svx/blnkitem.hxx>
-#endif
-#ifndef _SVX_CHARHIDDENITEM_HXX
 #include <svx/charhiddenitem.hxx>
-#endif
-
-#ifndef _FMTFLD_HXX //autogen
 #include <fmtfld.hxx>
-#endif
-#ifndef _FCHRFMT_HXX //autogen
 #include <fchrfmt.hxx>
-#endif
-#ifndef _FMTFSIZE_HXX //autogen
 #include <fmtfsize.hxx>
-#endif
-#ifndef _FMTPDSC_HXX //autogen
 #include <fmtpdsc.hxx>
-#endif
-#ifndef _FMTORNT_HXX //autogen
 #include <fmtornt.hxx>
-#endif
-#ifndef _FMTANCHR_HXX //autogen
 #include <fmtanchr.hxx>
-#endif
-#ifndef _FMTCLDS_HXX //autogen
 #include <fmtclds.hxx>
-#endif
-#ifndef _FMTSRND_HXX //autogen
 #include <fmtsrnd.hxx>
-#endif
-#ifndef _FMTFTN_HXX //autogen
 #include <fmtftn.hxx>
-#endif
-#ifndef _FMTFLCNT_HXX //autogen
 #include <fmtflcnt.hxx>
-#endif
-#ifndef _FRMATR_HXX
 #include <frmatr.hxx>
-#endif
-#ifndef _FMTINFMT_HXX //autogen wg. SwFmtINetFmt
+#include <swtable.hxx>
 #include <fmtinfmt.hxx>
-#endif
-#ifndef _TXTFLD_HXX //autogen wg. SwTxtFld
 #include <txtfld.hxx>
-#endif
-#ifndef _TXTFTN_HXX //autogen wg. SwTxtFtn
 #include <txtftn.hxx>
-#endif
-#ifndef _POOLFMT_HXX
 #include <poolfmt.hxx>
-#endif
-#ifndef _DOC_HXX
 #include <doc.hxx>          // Doc fuer Fussnoten
-#endif
-#ifndef _PAM_HXX
 #include <pam.hxx>
-#endif
-#ifndef _PARATR_HXX
 #include <paratr.hxx>
-#endif
-#ifndef _FLDBAS_HXX
 #include <fldbas.hxx>       // fuer SwField ...
-#endif
-#ifndef _DOCUFLD_HXX
 #include <docufld.hxx>       // fuer SwField ...
-#endif
-#ifndef _EXPFLD_HXX
 #include <expfld.hxx>
-#endif
-#ifndef _PAGEDESC_HXX
 #include <pagedesc.hxx>     // fuer SwPageDesc...
-#endif
-#ifndef _FLDDAT_HXX
 #include <flddat.hxx>       // fuer Datum-Felder
-#endif
-#ifndef _NDTXT_HXX
 #include <ndtxt.hxx>        // fuer Numrules
-#endif
-#ifndef _FMTHBSH_HXX //autogen
 #include <fmthbsh.hxx>
-#endif
-#ifndef _SWRECT_HXX //autogen
 #include <swrect.hxx>
-#endif
-#ifndef _REFFLD_HXX //autogen wg. SwGetRefField
 #include <reffld.hxx>
-#endif
-#ifndef _FTNINFO_HXX
 #include <ftninfo.hxx>
-#endif
-#ifndef _CHARFMT_HXX
 #include <charfmt.hxx>
-#endif
-#ifndef _SECTION_HXX
 #include <section.hxx>
-#endif
-#ifndef SW_LINEINFO_HXX
 #include <lineinfo.hxx>
-#endif
-#ifndef SW_FMTLINE_HXX
 #include <fmtline.hxx>
-#endif
-#ifndef _TOX_HXX
 #include <tox.hxx>
-#endif
-#ifndef _FMTFTNTX_HXX
 #include <fmtftntx.hxx>
-#endif
-#ifndef _BREAKIT_HXX
 #include <breakit.hxx>
-#endif
 #ifndef _COM_SUN_STAR_I18N_SCRIPTTYPE_HDL_
 #include <com/sun/star/i18n/ScriptType.hdl>
 #endif
-#ifndef _UNOTOOLS_LOCALEDATAWRAPPER_HXX
 #include <unotools/localedatawrapper.hxx>
-#endif
-#ifndef SW_TGRDITEM_HXX
 #include <tgrditem.hxx>
-#endif
-#ifndef _FLDDROPDOWN_HXX
 #include <flddropdown.hxx>
-#endif
-#ifndef _CHPFLD_HXX
 #include <chpfld.hxx>
-#endif
-#ifndef _FMTHDFT_HXX
 #include <fmthdft.hxx>
-#endif
 
 #if OSL_DEBUG_LEVEL > 1
-# ifndef _FMTCNTNT_HXX
 #  include <fmtcntnt.hxx>
-# endif
 #endif
-
-#ifndef SW_WRITERHELPER
 #include "writerhelper.hxx"
-#endif
-#ifndef SW_WRITERWORDGLUE
 #include "writerwordglue.hxx"
-#endif
-
-#ifndef _WRTWW8_HXX
 #include "wrtww8.hxx"
-#endif
-#ifndef _WW8PAR_HXX
 #include "ww8par.hxx"
-#endif
-#ifndef WW_FIELDS_HXX
 #include "fields.hxx"
-#endif
-
-#ifndef _SV_OUTDEV_HXX
 #include <vcl/outdev.hxx>
-#endif
-
-#ifndef INCLUDED_I18NPOOL_MSLANGID_HXX
 #include <i18npool/mslangid.hxx>
-#endif
+
+using namespace ::com::sun::star;
+using namespace nsFieldFlags;
+using namespace nsSwDocInfoSubType;
+
 
 /*
  * um nicht immer wieder nach einem Update festzustellen, das irgendwelche
@@ -344,7 +159,7 @@
  * gepflegt werden: rtf\rtfatr.cxx, sw6\sw6atr.cxx, w4w\w4watr.cxx
 */
 
-#if !defined(MSC) && !defined(UNX) && !defined(PPC) && !defined(CSET) && !defined(__MWERKS__) && !defined(WTC)
+#if !defined(MSC) && !defined(UNX) && !defined(PPC) && !defined(CSET) && !defined(__MWERKS__) && !defined(WTC) && !defined(__MINGW32__) && !defined(OS2)
 
 #define ATTRFNTAB_SIZE 130
 #if ATTRFNTAB_SIZE != POOLATTR_END - POOLATTR_BEGIN
@@ -377,7 +192,7 @@ In addition WW7- has only one character language identifier while WW8+ has two
 bool SwWW8Writer::CollapseScriptsforWordOk(USHORT nScript, USHORT nWhich)
 {
     bool bRet = true;
-    if (nScript == com::sun::star::i18n::ScriptType::ASIAN)
+    if (nScript == i18n::ScriptType::ASIAN)
     {
         //for asian in ww8, there is only one fontsize
         //and one fontstyle (posture/weight) for ww6
@@ -402,7 +217,7 @@ bool SwWW8Writer::CollapseScriptsforWordOk(USHORT nScript, USHORT nWhich)
                 break;
         }
     }
-    else if (nScript == com::sun::star::i18n::ScriptType::COMPLEX)
+    else if (nScript == i18n::ScriptType::COMPLEX)
     {
         //Complex is ok in ww8, but for ww6 there is only
         //one font, one fontsize, one fontsize (weight/posture)
@@ -498,10 +313,10 @@ void SwWW8Writer::Out_SfxItemSet(const SfxItemSet& rSet, bool bPapFmt,
             //No explicit adjust set ?
             if (SFX_ITEM_SET != rSet.GetItemState(RES_PARATR_ADJUST, false))
             {
-                if ((pItem = rSet.GetItem(RES_PARATR_ADJUST)))
+                if (0 != (pItem = rSet.GetItem(RES_PARATR_ADJUST)))
                 {
                     // then set the adjust used by the parent format
-                    pOut = aWW8AttrFnTab[RES_PARATR_ADJUST - RES_CHRATR_BEGIN];
+                    pOut = aWW8AttrFnTab[ static_cast< USHORT >(RES_PARATR_ADJUST) - RES_CHRATR_BEGIN];
                     (*pOut)( *this, *pItem );
                 }
             }
@@ -510,7 +325,7 @@ void SwWW8Writer::Out_SfxItemSet(const SfxItemSet& rSet, bool bPapFmt,
         if (bPapFmt && SFX_ITEM_SET == rSet.GetItemState(RES_PARATR_NUMRULE,
             false, &pItem))
         {
-            pOut = aWW8AttrFnTab[ RES_PARATR_NUMRULE - RES_CHRATR_BEGIN ];
+            pOut = aWW8AttrFnTab[ static_cast< USHORT >(RES_PARATR_NUMRULE) - RES_CHRATR_BEGIN ];
             (*pOut)( *this, *pItem );
             // switch off the numerbering?
             if( !((SwNumRuleItem*)pItem)->GetValue().Len() && SFX_ITEM_SET
@@ -518,7 +333,7 @@ void SwWW8Writer::Out_SfxItemSet(const SfxItemSet& rSet, bool bPapFmt,
                 == rSet.GetItemState( RES_LR_SPACE, true, &pItem ) )
             {
                 // the set the LR-Space of the parentformat!
-                pOut = aWW8AttrFnTab[ RES_LR_SPACE - RES_CHRATR_BEGIN ];
+                pOut = aWW8AttrFnTab[ static_cast< USHORT >(RES_LR_SPACE) - RES_CHRATR_BEGIN ];
                 (*pOut)( *this, *pItem );
             }
         }
@@ -593,9 +408,9 @@ bool SwWW8Writer::FmtHdFtContainsChapterField(const SwFrmFmt &rFmt) const
     bool bRet = false;
 
     const SwFrmFmt *pFmt = 0;
-    if (pFmt = rFmt.GetHeader().GetHeaderFmt())
+    if (0 != (pFmt = rFmt.GetHeader().GetHeaderFmt()))
         bRet = CntntContainsChapterField(pFmt->GetCntnt());
-    if (!bRet && (pFmt = rFmt.GetFooter().GetFooterFmt()))
+    if (!bRet && 0 != (pFmt = rFmt.GetFooter().GetFooterFmt()))
         bRet = CntntContainsChapterField(pFmt->GetCntnt());
 
     return bRet;
@@ -658,6 +473,7 @@ void SwWW8Writer::Out_SfxBreakItems(const SfxItemSet *pSet, const SwNode& rNd)
     //style) is different to the current one, in which case plump for a
     //section.
     bool bBreakSet = false;
+
     if (pSet && pSet->Count())
     {
         if (SFX_ITEM_SET == pSet->GetItemState(RES_PAGEDESC, false, &pItem)
@@ -670,20 +486,56 @@ void SwWW8Writer::Out_SfxBreakItems(const SfxItemSet *pSet, const SwNode& rNd)
         }
         else if (SFX_ITEM_SET == pSet->GetItemState(RES_BREAK, false, &pItem))
         {
+            // --> FME 2007-05-30 #146867# Word does not like hard break attributes in some table cells
+            bool bRemoveHardBreakInsideTable = false;
+            if ( bOutTable )
+            {
+                const SwTableNode* pTableNode = rNd.FindTableNode();
+                if ( pTableNode )
+                {
+                    const SwTableBox* pBox = rNd.GetTblBox();
+                    const SwTableLine* pLine = pBox ? pBox->GetUpper() : 0;
+                    // but only for non-complex tables
+                    if ( pLine && !pLine->GetUpper() )
+                    {
+                        // check if box is not first in that line:
+                        if ( 0 < pLine->GetTabBoxes().GetPos( pBox ) && pBox->GetSttNd() )
+                        {
+                            bRemoveHardBreakInsideTable = true;
+                        }
+                    }
+                }
+            }
+            // <--
+
             bBreakSet = true;
-            ASSERT(pAktPageDesc, "should not be possible");
-            /*
-             If because of this pagebreak the page desc following the page
-             break is the follow style of the current page desc then output a
-             section break using that style instead.  At least in those cases
-             we end up with the same style in word and writer, nothing can be
-             done when it happens when we get a new pagedesc because we
-             overflow from the first page style.
-            */
-            if (pAktPageDesc)
-                bNewPageDesc = SetAktPageDescFromNode(rNd);
-            if (!bNewPageDesc)
-                OutWW8_SwFmtBreak( *this, *pItem );
+
+            if ( !bRemoveHardBreakInsideTable )
+            {
+                ASSERT(pAktPageDesc, "should not be possible");
+                /*
+                 If because of this pagebreak the page desc following the page
+                 break is the follow style of the current page desc then output a
+                 section break using that style instead.  At least in those cases
+                 we end up with the same style in word and writer, nothing can be
+                 done when it happens when we get a new pagedesc because we
+                 overflow from the first page style.
+                */
+                if (pAktPageDesc)
+                {
+                    // --> OD 2007-05-30 #i76301#
+                    // assure that there is a page break before set at the node.
+                    const SvxFmtBreakItem* pBreak = dynamic_cast<const SvxFmtBreakItem*>(pItem);
+                    if ( pBreak &&
+                         pBreak->GetBreak() == SVX_BREAK_PAGE_BEFORE )
+                    {
+                        bNewPageDesc = SetAktPageDescFromNode(rNd);
+                    }
+                    // <--
+                }
+                if (!bNewPageDesc)
+                    OutWW8_SwFmtBreak( *this, *pItem );
+            }
         }
     }
 
@@ -703,6 +555,14 @@ void SwWW8Writer::Out_SfxBreakItems(const SfxItemSet *pSet, const SwNode& rNd)
                 ItemGet<SvxFmtBreakItem>(*pNd, RES_BREAK);
             if (rBreak.GetBreak() == SVX_BREAK_PAGE_BEFORE)
                 bHackInBreak = true;
+            else
+            {   // Even a pagedesc item is set, the break item can be set 'NONE',
+                // but a pagedesc item is an implicit page break before...
+                const SwFmtPageDesc &rPageDesc =
+                    ItemGet<SwFmtPageDesc>( *pNd, RES_PAGEDESC );
+                if( rPageDesc.GetRegisteredIn() )
+                    bHackInBreak = true;
+            }
         }
     }
 
@@ -715,37 +575,110 @@ void SwWW8Writer::Out_SfxBreakItems(const SfxItemSet *pSet, const SwNode& rNd)
 
     if (bNewPageDesc && pAktPageDesc)
     {
-        // Die PageDescs werden beim Auftreten von PageDesc-Attributen nur in
-        // WW8Writer::pSepx mit der entsprechenden Position eingetragen.  Das
-        // Aufbauen und die Ausgabe der am PageDesc haengenden Attribute und
-        // Kopf/Fusszeilen passiert nach dem Haupttext und seinen Attributen.
+        // --> OD 2007-05-29 #i76300#
+        // code moved code to method <SwWW8Writer::PrepareNewPageDesc(..)>
+//        // Die PageDescs werden beim Auftreten von PageDesc-Attributen nur in
+//        // WW8Writer::pSepx mit der entsprechenden Position eingetragen.  Das
+//        // Aufbauen und die Ausgabe der am PageDesc haengenden Attribute und
+//        // Kopf/Fusszeilen passiert nach dem Haupttext und seinen Attributen.
 
-        ULONG nFcPos = ReplaceCr(0x0c); // Page/Section-Break
+//        ULONG nFcPos = ReplaceCr(0x0c); // Page/Section-Break
 
-        const SwSectionFmt *pFmt = 0;
-        const SwSectionNode* pSect = rNd.FindSectionNode();
-        if (pSect && CONTENT_SECTION == pSect->GetSection().GetType())
-            pFmt = pSect->GetSection().GetFmt();
+//        const SwSectionFmt *pFmt = 0;
+//        const SwSectionNode* pSect = rNd.FindSectionNode();
+//        if (pSect && CONTENT_SECTION == pSect->GetSection().GetType())
+//            pFmt = pSect->GetSection().GetFmt();
 
-        // tatsaechlich wird hier NOCH NICHTS ausgegeben, sondern
-        // nur die Merk-Arrays aCps, aSects entsprechend ergaenzt
-        if (nFcPos)
-        {
-            const SwFmtLineNumber *pNItem = 0;
-            if (pSet)
-                pNItem = &(ItemGet<SwFmtLineNumber>(*pSet,RES_LINENUMBER));
-            else if (const SwCntntNode *pNd = rNd.GetCntntNode())
-                pNItem = &(ItemGet<SwFmtLineNumber>(*pNd,RES_LINENUMBER));
-            ULONG nLnNm = pNItem ? pNItem->GetStartValue() : 0;
+//        // tatsaechlich wird hier NOCH NICHTS ausgegeben, sondern
+//        // nur die Merk-Arrays aCps, aSects entsprechend ergaenzt
+//        if (nFcPos)
+//        {
+//            const SwFmtLineNumber *pNItem = 0;
+//            if (pSet)
+//                pNItem = &(ItemGet<SwFmtLineNumber>(*pSet,RES_LINENUMBER));
+//            else if (const SwCntntNode *pNd = rNd.GetCntntNode())
+//                pNItem = &(ItemGet<SwFmtLineNumber>(*pNd,RES_LINENUMBER));
+//            ULONG nLnNm = pNItem ? pNItem->GetStartValue() : 0;
 
-            if (pPgDesc)
-                pSepx->AppendSep(Fc2Cp(nFcPos), *pPgDesc, rNd, pFmt, nLnNm);
-            else
-                pSepx->AppendSep(Fc2Cp(nFcPos), pAktPageDesc, rNd, pFmt, nLnNm);
-        }
+//            if (pPgDesc)
+//                pSepx->AppendSep(Fc2Cp(nFcPos), *pPgDesc, rNd, pFmt, nLnNm);
+//            else
+//                pSepx->AppendSep(Fc2Cp(nFcPos), pAktPageDesc, rNd, pFmt, nLnNm);
+//        }
+        PrepareNewPageDesc( pSet, rNd, pPgDesc, pAktPageDesc );
     }
     bBreakBefore = false;
 }
+
+// --> OD 2007-05-29 #i76300#
+bool SwWW8Writer::Out_FollowPageDesc( const SfxItemSet* pSet,
+                                      const SwTxtNode* pNd )
+{
+    bool bRet = false;
+
+    if ( pNd &&
+         pAktPageDesc &&
+         pAktPageDesc != pAktPageDesc->GetFollow() )
+    {
+        PrepareNewPageDesc( pSet, *pNd, 0, pAktPageDesc->GetFollow() );
+        bRet = true;
+    }
+
+    return bRet;
+}
+
+// initial version by extracting corresponding code from method <SwWW8Writer::Out_SfxBreakItems(..)>
+void SwWW8Writer::PrepareNewPageDesc( const SfxItemSet*pSet,
+                                      const SwNode& rNd,
+                                      const SwFmtPageDesc* pNewPgDescFmt,
+                                      const SwPageDesc* pNewPgDesc )
+{
+    // Die PageDescs werden beim Auftreten von PageDesc-Attributen nur in
+    // WW8Writer::pSepx mit der entsprechenden Position eingetragen.  Das
+    // Aufbauen und die Ausgabe der am PageDesc haengenden Attribute und
+    // Kopf/Fusszeilen passiert nach dem Haupttext und seinen Attributen.
+
+    ULONG nFcPos = ReplaceCr(0x0c); // Page/Section-Break
+
+    const SwSectionFmt* pFmt = 0;
+    const SwSectionNode* pSect = rNd.FindSectionNode();
+    if ( pSect &&
+         CONTENT_SECTION == pSect->GetSection().GetType() )
+    {
+        pFmt = pSect->GetSection().GetFmt();
+    }
+
+    // tatsaechlich wird hier NOCH NICHTS ausgegeben, sondern
+    // nur die Merk-Arrays aCps, aSects entsprechend ergaenzt
+    if ( nFcPos )
+    {
+        const SwFmtLineNumber* pNItem = 0;
+        if ( pSet )
+        {
+            pNItem = &(ItemGet<SwFmtLineNumber>(*pSet,RES_LINENUMBER));
+        }
+        else if (const SwCntntNode *pNd = rNd.GetCntntNode())
+        {
+            pNItem = &(ItemGet<SwFmtLineNumber>(*pNd,RES_LINENUMBER));
+        }
+        const ULONG nLnNm = pNItem ? pNItem->GetStartValue() : 0;
+
+        if ( pNewPgDescFmt )
+        {
+            pSepx->AppendSep(Fc2Cp(nFcPos), *pNewPgDescFmt, rNd, pFmt, nLnNm);
+        }
+        else if ( pNewPgDesc )
+        {
+            pSepx->AppendSep(Fc2Cp(nFcPos), pNewPgDesc, rNd, pFmt, nLnNm);
+        }
+        else
+        {
+            ASSERT( false, "<SwWW8Writer::PrepareNewPageDesc(..)> - misusage: neither page desc format nor page desc provided." );
+        }
+    }
+}
+// <--
+
 
 void SwWW8Writer::CorrTabStopInSet(SfxItemSet& rSet, USHORT nAbsLeft)
 {
@@ -813,7 +746,12 @@ void SwWW8Writer::ExportOutlineNumbering(BYTE nLvl, const SwNumFmt &rNFmt,
     else
     {
         Out_SwNumLvl( nLvl );
-        if (rNFmt.GetAbsLSpace())
+        // --> OD 2008-06-03 #i86652#
+//        if (rNFmt.GetAbsLSpace())
+        if ( rNFmt.GetPositionAndSpaceMode() ==
+                                   SvxNumberFormat::LABEL_WIDTH_AND_POSITION  &&
+             rNFmt.GetAbsLSpace() )
+        // <--
         {
             SwNumFmt aNumFmt(rNFmt);
             const SvxLRSpaceItem& rLR =
@@ -829,8 +767,11 @@ void SwWW8Writer::ExportOutlineNumbering(BYTE nLvl, const SwNumFmt &rNFmt,
     }
 }
 
-void SwWW8Writer::DisallowInheritingOutlineNumbering(const SwFmt &rFmt)
+// --> OD 2007-06-04 #i77805#
+bool SwWW8Writer::DisallowInheritingOutlineNumbering(const SwFmt &rFmt)
 {
+    bool bRet( false );
+
     //If there is no numbering on this fmt, but its parent was outline
     //numbered, then in writer this is no inheritied, but in word it would
     //be, so we must export "no numbering" and "body level" to make word
@@ -848,12 +789,17 @@ void SwWW8Writer::DisallowInheritingOutlineNumbering(const SwFmt &rFmt)
                     pO->Insert(BYTE(9), pO->Count());
                     SwWW8Writer::InsUInt16(*pO, 0x460b);
                     SwWW8Writer::InsUInt16(*pO, 0);
+
+                    bRet = true;
                 }
                 /*whats the winword 6 way to do this ?*/
             }
         }
     }
+
+    return bRet;
 }
+// <--
 
 void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
     bool bFlyFmt)
@@ -877,7 +823,12 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
                 if (bStyDef)
                     ExportOutlineNumbering(nLvl, rNFmt, rFmt);
 
-                if (rNFmt.GetAbsLSpace())
+                // --> OD 2008-06-03 #i86652#
+//                if (rNFmt.GetAbsLSpace())
+                if ( rNFmt.GetPositionAndSpaceMode() ==
+                                           SvxNumberFormat::LABEL_WIDTH_AND_POSITION  &&
+                     rNFmt.GetAbsLSpace() )
+                // <--
                 {
                     SfxItemSet aSet( rFmt.GetAttrSet() );
                     SvxLRSpaceItem aLR(
@@ -889,7 +840,7 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
                     aSet.Put( aLR );
                     SwWW8Writer::CorrTabStopInSet( aSet, rNFmt.GetAbsLSpace() );
                     Out_SfxItemSet( aSet, bPapFmt, bChpFmt,
-                        com::sun::star::i18n::ScriptType::LATIN);
+                        i18n::ScriptType::LATIN);
                     bCallOutSet = false;
                 }
             }
@@ -897,8 +848,20 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
             {
                 //otherwise we might have to remove outline numbering from
                 //what gets exported if the parent style was outline numbered
-                if (bStyDef)
-                    DisallowInheritingOutlineNumbering(rFmt);
+                // --> OD 2007-06-04 #i77805#
+                // If inherited outline numbering is suppress, the left/right
+                // margins has to be exported explicitly.
+                if ( bStyDef && DisallowInheritingOutlineNumbering(rFmt) )
+                {
+                    SfxItemSet aSet( rFmt.GetAttrSet() );
+                    SvxLRSpaceItem aLR(
+                        ItemGet<SvxLRSpaceItem>(aSet, RES_LR_SPACE));
+                    aSet.Put( aLR );
+                    Out_SfxItemSet( aSet, bPapFmt, bChpFmt,
+                        com::sun::star::i18n::ScriptType::LATIN);
+                    bCallOutSet = false;
+                }
+                // <--
             }
         }
         break;
@@ -912,11 +875,11 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
 
             if (mpParentFrame)
             {
-                const SwFrmFmt &rFmt = mpParentFrame->GetFrmFmt();
+                const SwFrmFmt &rFrmFmt = mpParentFrame->GetFrmFmt();
 
                 SfxItemSet aSet(pDoc->GetAttrPool(), RES_FRMATR_BEGIN,
                     RES_FRMATR_END-1);
-                aSet.Set(rFmt.GetAttrSet());
+                aSet.Set(rFrmFmt.GetAttrSet());
 
                 // Fly als Zeichen werden bei uns zu Absatz-gebundenen
                 // jetzt den Abstand vom Absatz-Rand setzen
@@ -924,7 +887,7 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
                 {
                     aSet.Put(SwFmtHoriOrient(pFlyOffset->X()));
                     aSet.Put(SwFmtVertOrient(pFlyOffset->Y()));
-                    SwFmtAnchor aAnchor(rFmt.GetAnchor());
+                    SwFmtAnchor aAnchor(rFrmFmt.GetAnchor());
                     aAnchor.SetType(eNewAnchorType);
                     aSet.Put(aAnchor);
                 }
@@ -935,7 +898,7 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
                 bOutFlyFrmAttrs = true;
                 //script doesn't matter if not exporting chp
                 Out_SfxItemSet(aSet, true, false,
-                    com::sun::star::i18n::ScriptType::LATIN);
+                    i18n::ScriptType::LATIN);
                 bOutFlyFrmAttrs = false;
 
                 bCallOutSet = false;
@@ -949,7 +912,7 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
 
     if( bCallOutSet )
         Out_SfxItemSet( rFmt.GetAttrSet(), bPapFmt, bChpFmt,
-            com::sun::star::i18n::ScriptType::LATIN);
+            i18n::ScriptType::LATIN);
     pOutFmtNode = pOldMod;
 }
 
@@ -1570,10 +1533,10 @@ BYTE SwWW8Writer::TransCol( const Color& rCol )
                 COL_RED,        COL_BROWN,      COL_GRAY,       COL_LIGHTGRAY
             };
 
-            for( int i = 0; i < 16; ++i )
+            for( USHORT i = 0; i < 16; ++i )
                 pBmpPal->operator[]( i ) = Color( aColArr[ i ] );
         }
-        nCol = pBmpPal->GetBestIndex( rCol ) + 1;
+        nCol = static_cast< BYTE >(pBmpPal->GetBestIndex( rCol ) + 1);
         break;
     }
     return nCol;
@@ -1731,20 +1694,29 @@ static void InsertSpecialChar( SwWW8Writer& rWrt, BYTE c, String* _pLinkStr = 0L
         rStrm.Seek( nCurrPos );
 
         // write attributes of hyperlink character 0x01
-        SwWW8Writer::InsUInt16( aItems, 0x0802 );
+        SwWW8Writer::InsUInt16( aItems, 0x0802 ); //sprmCFFldVanish
         aItems.Insert( (BYTE)0x81, aItems.Count() );
         SwWW8Writer::InsUInt16( aItems, 0x6a03 );
         SwWW8Writer::InsUInt32( aItems, nLinkPosInDataStrm );
         SwWW8Writer::InsUInt16( aItems, 0x0806 );
         aItems.Insert( (BYTE)0x01, aItems.Count() );
     }
-    // <--
-    // fSpec-Attribut true
+
+    //Technically we should probably Remove all attribs
+    //here for the 0x13, 0x14, 0x15, but our import
+    //is slightly lacking
+    //aItems.Remove(0, aItems.Count());
+    // fSpec-Attribute true
     if( rWrt.bWrtWW8 )
-        SwWW8Writer::InsUInt16( aItems, 0x855 );
+    {
+        SwWW8Writer::InsUInt16( aItems, 0x855 ); //sprmCFSpec
+        aItems.Insert( 1, aItems.Count() );
+    }
     else
-        aItems.Insert( 117, aItems.Count() );
-    aItems.Insert( 1, aItems.Count() );
+    {
+        aItems.Insert( 117, aItems.Count() ); //sprmCFSpec
+        aItems.Insert( 1, aItems.Count() );
+    }
 
     rWrt.pChpPlc->AppendFkpEntry(rWrt.Strm().Tell(), aItems.Count(),
         aItems.GetData());
@@ -1760,11 +1732,9 @@ String lcl_GetExpandedField(const SwField &rFld)
     return sRet;
 }
 
-void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
-    const String& rFldCmd, BYTE nMode)
+WW8_WrPlcFld* SwWW8Writer::CurrentFieldPlc() const
 {
-    bool bUnicode = IsUnicode();
-    WW8_WrPlcFld* pFldP;
+    WW8_WrPlcFld* pFldP = NULL;
     switch (nTxtTyp)
     {
         case TXT_MAINTEXT:
@@ -1787,8 +1757,15 @@ void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
             break;
         default:
             ASSERT( !this, "was ist das fuer ein SubDoc-Type?" );
-            return;
     }
+    return pFldP;
+}
+
+void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
+    const String& rFldCmd, BYTE nMode)
+{
+    bool bUnicode = IsUnicode();
+    WW8_WrPlcFld* pFldP = CurrentFieldPlc();
 
     if (WRITEFIELD_START & nMode)
     {
@@ -1796,7 +1773,7 @@ void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
         //#i3958#, Needed to make this field work correctly in Word 2000
         if (eFldType == ww::eSHAPE)
             aFld13[0] |= 0x80;
-        aFld13[1] = eFldType;                           // Typ nachtragen
+        aFld13[1] = static_cast< BYTE >(eFldType);  // Typ nachtragen
         pFldP->Append( Fc2Cp( Strm().Tell() ), aFld13 );
         InsertSpecialChar( *this, 0x13 );
     }
@@ -1811,9 +1788,23 @@ void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
         }
         // --> OD 2005-06-08 #i43956# - write hyperlink character including
         // attributes and corresponding binary data for certain reference fields.
-        if ( pFld && pFld->GetTyp()->Which() == RES_GETREFFLD &&
-             ( eFldType == ww::ePAGEREF || eFldType == ww::eREF ||
-               eFldType == ww::eNOTEREF || eFldType == ww::eFOOTREF ) )
+        bool bHandleBookmark = false;
+
+        if (pFld)
+        {
+            if (pFld->GetTyp()->Which() == RES_GETREFFLD &&
+                ( eFldType == ww::ePAGEREF || eFldType == ww::eREF ||
+                  eFldType == ww::eNOTEREF || eFldType == ww::eFOOTREF ))
+                bHandleBookmark = true;
+
+#if 0
+            if (pFld->GetTyp()->Which() == RES_INPUTFLD &&
+                eFldType == ww::eFORMTEXT)
+                bHandleBookmark = true;
+#endif
+        }
+
+        if ( bHandleBookmark )
         {
             // retrieve reference destionation - the name of the bookmark
             String aLinkStr;
@@ -1829,6 +1820,10 @@ void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
             {
                 aLinkStr = GetBookmarkName( nSubType, 0, rRFld.GetSeqNo() );
             }
+            else if ( nSubType == REF_SEQUENCEFLD )
+            {
+                aLinkStr = pFld->GetPar2();
+            }
             // insert hyperlink character including attributes and data.
             InsertSpecialChar( *this, 0x01, &aLinkStr );
         }
@@ -1838,6 +1833,7 @@ void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
     {
         static const BYTE aFld14[2] = { 0x14, 0xff };
         pFldP->Append( Fc2Cp( Strm().Tell() ), aFld14 );
+        pFldP->ResultAdded();
         InsertSpecialChar( *this, 0x14 );
     }
     if (WRITEFIELD_END & nMode)
@@ -1856,11 +1852,55 @@ void SwWW8Writer::OutField(const SwField* pFld, ww::eField eFldType,
                 SwWW8Writer::WriteString8(Strm(), sOut, false,
                     RTL_TEXTENCODING_MS_1252);
             }
+
+            if (pFld)
+            {
+                if (pFld->GetTyp()->Which() == RES_INPUTFLD &&
+                    eFldType == ww::eFORMTEXT)
+                {
+                    BYTE aArr[12];
+                    BYTE *pArr = aArr;
+
+                    if( bWrtWW8 )
+                    {
+                        Set_UInt16(pArr, 0x6a03); //sprmCPicLocation
+                        Set_UInt32(pArr, 0x0);
+
+                        Set_UInt16( pArr, 0x855 );//sprmCFSpec
+                        Set_UInt8( pArr, 1 );
+
+                        Set_UInt16( pArr, 0x875 );//sprmCFNoProof
+                        Set_UInt8(pArr, 1);
+                    }
+                    else
+                    {
+                        Set_UInt8(pArr, 0x68); //sprmCPicLocation
+                        Set_UInt32(pArr, 0x0);
+
+                        Set_UInt8( pArr, 117 ); //sprmCFSpec
+                        Set_UInt8( pArr, 1 );
+                    }
+                    pChpPlc->AppendFkpEntry( pStrm->Tell(), static_cast< short >(pArr - aArr), aArr );
+                }
+            }
         }
     }
     if (WRITEFIELD_CLOSE & nMode)
     {
-        static const BYTE aFld15[2] = { 0x15, 0x80 };
+        BYTE aFld15[2] = { 0x15, 0x80 };
+
+        if (pFld)
+        {
+            if (pFld->GetTyp()->Which() == RES_INPUTFLD &&
+                eFldType == ww::eFORMTEXT)
+            {
+                USHORT nSubType = pFld->GetSubType();
+
+                if (nSubType == REF_SEQUENCEFLD)
+                    aFld15[0] |= (0x4 << 5);
+            }
+        }
+
         pFldP->Append( Fc2Cp( Strm().Tell() ), aFld15 );
         InsertSpecialChar( *this, 0x15 );
     }
@@ -1949,6 +1989,7 @@ int lcl_CheckForm( const SwForm& rForm, BYTE nLvl, String& rText )
 
 bool lcl_IsHyperlinked(const SwForm& rForm, USHORT nTOXLvl)
 {
+	bool bRes = false;
     for (USHORT nI = 1; nI < nTOXLvl; ++nI)
     {
         // #i21237#
@@ -1968,13 +2009,15 @@ bool lcl_IsHyperlinked(const SwForm& rForm, USHORT nTOXLvl)
                 {
                 case TOKEN_LINK_START:
                 case TOKEN_LINK_END:
-                    return true;
-                    break;
+                    bRes = true;
+				break;
+				default:
+					;
                 }
             }
         }
     }
-    return false;
+    return bRes;
 }
 
 void SwWW8Writer::StartTOX( const SwSection& rSect )
@@ -1994,7 +2037,7 @@ void SwWW8Writer::StartTOX( const SwSection& rSect )
             if (pTOX->GetTOXForm().IsCommaSeparated())
                 sStr.APPEND_CONST_ASC("\\r ");
 
-            if (TOI_ALPHA_DELIMITTER & pTOX->GetOptions())
+            if (nsSwTOIOptions::TOI_ALPHA_DELIMITTER & pTOX->GetOptions())
                 sStr.APPEND_CONST_ASC("\\h \"A\" ");
 
             {
@@ -2054,7 +2097,7 @@ void SwWW8Writer::StartTOX( const SwSection& rSect )
                 if( !nTOXLvl )
                     ++nTOXLvl;
 
-                if( TOX_MARK & pTOX->GetCreateType() )
+                if( nsSwTOXElement::TOX_MARK & pTOX->GetCreateType() )
                 {
                     sStr.APPEND_CONST_ASC( "\\f " );
 
@@ -2066,12 +2109,12 @@ void SwWW8Writer::StartTOX( const SwSection& rSect )
                     }
                 }
 
-                if( TOX_OUTLINELEVEL & pTOX->GetCreateType() )
+                if( nsSwTOXElement::TOX_OUTLINELEVEL & pTOX->GetCreateType() )
                 {
                     // Search over all the outline styles used and figure out
                     // what is the minimum outline level we need to display
                     // (ignoring headline styles 1-9)
-                    BYTE nLvl, nMinLvl = 0;
+                    BYTE nLvl = 0, nMinLvl = 0;
                     const SwTxtFmtColls& rColls = *pDoc->GetTxtFmtColls();
                     const SwTxtFmtColl* pColl;
                     for( n = rColls.Count(); n; )
@@ -2087,7 +2130,7 @@ void SwWW8Writer::StartTOX( const SwSection& rSect )
 
                     // If we are using the default heading styles then use nTOXLvl
                     if(!nMinLvl)
-                        nLvl = nTOXLvl;
+                        nLvl = static_cast< BYTE >(nTOXLvl);
                     else
                         nLvl = nMinLvl < nTOXLvl ? nMinLvl : (BYTE)nTOXLvl;
                             nMinLvl = nLvl;
@@ -2132,7 +2175,7 @@ void SwWW8Writer::StartTOX( const SwSection& rSect )
                     }
                 }
 
-                if( TOX_TEMPLATE & pTOX->GetCreateType() )
+                if( nsSwTOXElement::TOX_TEMPLATE & pTOX->GetCreateType() )
                     for( n = 0; n < nTOXLvl; ++n )
                     {
                         const String& rStyles = pTOX->GetStyleNames( n );
@@ -2170,12 +2213,12 @@ void SwWW8Writer::StartTOX( const SwSection& rSect )
                     {
                         String aTxt;
                         int nRet = ::lcl_CheckForm( pTOX->GetTOXForm(),
-                                                    n+1, aTxt );
+                                                    static_cast< BYTE >(n+1), aTxt );
                         if( 1 == nRet )
                         {
                             bOnlyText = false;
                             if( MAXLEVEL == nNoPgStt )
-                                nNoPgStt = n+1;
+                                nNoPgStt = static_cast< BYTE >(n+1);
                         }
                         else
                         {
@@ -2255,7 +2298,7 @@ bool SwWW8Writer::GetNumberFmt(const SwField& rFld, String& rStr)
     const SvNumberformat* pNumFmt = pNFmtr->GetEntry( nFmtIdx );
     if( pNumFmt )
     {
-        USHORT nLng = rFld.GetLanguage();
+        //USHORT nLng = rFld.GetLanguage();
         LocaleDataWrapper aLocDat( pNFmtr->GetServiceManager(),
             MsLangId::convertLanguageToLocale( LANGUAGE_ENGLISH_US ) );
 
@@ -2318,18 +2361,18 @@ void SwWW8Writer::WritePostItBegin( WW8Bytes* pOut )
 
     // sprmCFSpec true
     if( bWrtWW8 )
-        Set_UInt16( pArr, 0x855 );
+        Set_UInt16( pArr, 0x855 ); //sprmCFSpec
     else
-        Set_UInt8( pArr, 117 );
+        Set_UInt8( pArr, 117 ); //sprmCFSpec
     Set_UInt8( pArr, 1 );
 
     pChpPlc->AppendFkpEntry( Strm().Tell() );
     WriteChar( 0x05 );              // Annotation reference
 
     if( pOut )
-        pOut->Insert( aArr, pArr - aArr, pOut->Count() );
+        pOut->Insert( aArr, static_cast< USHORT >(pArr - aArr), pOut->Count() );
     else
-        pChpPlc->AppendFkpEntry( Strm().Tell(), pArr - aArr, aArr );
+        pChpPlc->AppendFkpEntry( Strm().Tell(), static_cast< short >(pArr - aArr), aArr );
 }
 
 String FieldString(ww::eField eIndex)
@@ -2387,7 +2430,7 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
     switch (pFld->GetTyp()->Which())
     {
     case RES_GETEXPFLD:
-        if (nSubType == GSE_STRING)
+        if (nSubType == nsSwGetSetExpType::GSE_STRING)
         {
             const SwGetExpField *pGet=(const SwGetExpField*)(pFld);
             OutWW8_RefField(rWW8Wrt, *pGet, pGet->GetFormula());
@@ -2396,7 +2439,7 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
             bWriteExpand = true;
         break;
     case RES_SETEXPFLD:
-        if (GSE_SEQ == nSubType)
+        if (nsSwGetSetExpType::GSE_SEQ == nSubType)
         {
             sStr = FieldString(ww::eSEQ);
             sStr.APPEND_CONST_ASC("\"");
@@ -2406,7 +2449,7 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
             ::WW8_GetNumberPara( sStr, *pFld );
             rWW8Wrt.OutField(pFld, ww::eSEQ, sStr);
         }
-        else if (nSubType & GSE_STRING)
+        else if (nSubType & nsSwGetSetExpType::GSE_STRING)
         {
             bool bShowAsWell = false;
             ww::eField eFieldNo;
@@ -2431,7 +2474,7 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
                 sStr += rVar;
                 sStr.APPEND_CONST_ASC("\" ");
                 eFieldNo = ww::eSET;
-                bShowAsWell = (nSubType & SUB_INVISIBLE) ? false : true;
+                bShowAsWell = (nSubType & nsSwExtendedSubType::SUB_INVISIBLE) ? false : true;
             }
 
             ULONG nFrom = rWW8Wrt.Fc2Cp(rWrt.Strm().Tell());
@@ -2614,7 +2657,10 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
             }
 
             if (eFld != ww::eNONE)
+            {
+                sStr = FieldString(eFld);
                 rWW8Wrt.OutField(pFld, eFld, sStr);
+            }
             else
                 bWriteExpand = true;
         }
@@ -2629,11 +2675,23 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
         }
         break;
     case RES_INPUTFLD:
-        sStr = FieldString(ww::eFILLIN);
-        sStr.ASSIGN_CONST_ASC("\"");
-        sStr += pFld->GetPar2();
-        sStr += '\"';
-        rWW8Wrt.OutField(pFld, ww::eFILLIN, sStr);
+        {
+            const SwInputField * pInputField =
+                dynamic_cast<const SwInputField *>(pFld);
+
+            if (pInputField->isFormField())
+                rWW8Wrt.DoFormText(pInputField);
+            else
+            {
+                sStr = FieldString(ww::eFILLIN);
+
+                sStr.ASSIGN_CONST_ASC("\"");
+                sStr += pFld->GetPar2();
+                sStr += '\"';
+
+                rWW8Wrt.OutField(pFld, ww::eFILLIN, sStr);
+            }
+        }
         break;
     case RES_GETREFFLD:
         {
@@ -2718,7 +2776,7 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
         if( pBreakIt->xBreak.is() )
             nScript = pBreakIt->xBreak->getScriptType( pFld->GetPar1(), 0);
         else
-            nScript = com::sun::star::i18n::ScriptType::ASIAN;
+            nScript = i18n::ScriptType::ASIAN;
 
         long nHeight = ((SvxFontHeightItem&)(((SwWW8Writer&)rWrt).GetItem(
             GetWhichOfScript(RES_CHRATR_FONTSIZE,nScript)))).GetHeight();;
@@ -2749,10 +2807,13 @@ static Writer& OutWW8_SwField( Writer& rWrt, const SfxPoolItem& rHt )
     case RES_DROPDOWN:
         if (rWW8Wrt.bWrtWW8)
         {
-            const SwDropDownField& rFld = *(SwDropDownField*)pFld;
-            com::sun::star::uno::Sequence<rtl::OUString> aItems =
-                rFld.GetItemSequence();
-            rWW8Wrt.DoComboBox(rFld.GetName(), rFld.GetSelectedItem(), aItems);
+            const SwDropDownField& rFld2 = *(SwDropDownField*)pFld;
+            uno::Sequence<rtl::OUString> aItems =
+                rFld2.GetItemSequence();
+            rWW8Wrt.DoComboBox(rFld2.GetName(),
+                               rFld2.GetHelp(),
+                               rFld2.GetToolTip(),
+                               rFld2.GetSelectedItem(), aItems);
         }
         else
             bWriteExpand = true;
@@ -3043,13 +3104,13 @@ static bool lcl_IsAtTxtEnd(const SwFmtFtn& rFtn)
     bool bRet = true;
     if( rFtn.GetTxtFtn() )
     {
-        USHORT nWh = rFtn.IsEndNote() ? RES_END_AT_TXTEND
-                                      : RES_FTN_AT_TXTEND;
+        USHORT nWh = static_cast< USHORT >(rFtn.IsEndNote() ? RES_END_AT_TXTEND
+                                      : RES_FTN_AT_TXTEND);
         const SwSectionNode* pSectNd = rFtn.GetTxtFtn()->GetTxtNode().
                                                         FindSectionNode();
         while( pSectNd && FTNEND_ATPGORDOCEND ==
                 ((const SwFmtFtnAtTxtEnd&)pSectNd->GetSection().GetFmt()->
-                GetAttr( nWh, true)).GetValue() )
+                GetFmtAttr( nWh, true)).GetValue() )
             pSectNd = pSectNd->StartOfSectionNode()->FindSectionNode();
 
         if (!pSectNd)
@@ -3191,13 +3252,13 @@ static Writer& OutWW8_SwNumRuleItem( Writer& rWrt, const SfxPoolItem& rHt )
                 {
                     pTxtNd = (SwTxtNode*)rWW8Wrt.pOutFmtNode;
 
-					if( pTxtNd->IsCounted())
+                    if( pTxtNd->IsCountedInList())
                     {
-						nLvl = pTxtNd->GetLevel();
+                        nLvl = static_cast< BYTE >(pTxtNd->GetActualListLevel());
 
-                        if (pTxtNd->IsRestart())
+                        if (pTxtNd->IsListRestart())
                         {
-                            USHORT nStartWith = pTxtNd->GetStart();
+                            USHORT nStartWith = static_cast< USHORT >(pTxtNd->GetActualListStartValue());
                             nNumId = rWW8Wrt.DupNumRuleWithLvlStart(pRule,nLvl,nStartWith);
                             if (USHRT_MAX != nNumId)
                                 ++nNumId;
@@ -3365,7 +3426,7 @@ ULONG SwWW8Writer::ReplaceCr( BYTE nChar )
                 nUCode = 0x0;
             }
             //And the para is not of len 0, then replace this cr with the mark
-            if (nUCode == 0x0d)
+            if( nChar == 0x0e || nUCode == 0x0d )
                 bReplaced = false;
             else
             {
@@ -3391,6 +3452,7 @@ ULONG SwWW8Writer::ReplaceCr( BYTE nChar )
         WriteChar(nChar);
         pPiece->SetParaBreak();
         pPapPlc->AppendFkpEntry(rStrm.Tell());
+        pChpPlc->AppendFkpEntry(rStrm.Tell());
         nRetPos = rStrm.Tell();
     }
 #ifdef PRODUCT
@@ -3430,7 +3492,7 @@ static Writer& OutWW8_SwFmtPageDesc(Writer& rWrt, const SfxPoolItem& rHt)
         const SwFmtPageDesc &rPgDesc = (const SwFmtPageDesc&)rHt;
         const SwTxtFmtColl* pC = (SwTxtFmtColl*)rWW8Wrt.pOutFmtNode;
         if ((SFX_ITEM_SET != pC->GetItemState(RES_BREAK, false)) && rPgDesc.GetRegisteredIn())
-            OutWW8_SwFmtBreak(rWrt, SvxFmtBreakItem(SVX_BREAK_PAGE_BEFORE));
+            OutWW8_SwFmtBreak(rWrt, SvxFmtBreakItem(SVX_BREAK_PAGE_BEFORE, RES_BREAK));
     }
     return rWrt;
 }
@@ -3468,8 +3530,15 @@ static Writer& OutWW8_SwFmtBreak( Writer& rWrt, const SfxPoolItem& rHt )
     }
     else if (!rWW8Wrt.mpParentFrame)
     {
+        static const BYTE cColBreak = 0xe;
+        static const BYTE cPageBreak = 0xc;
+
         BYTE nC = 0;
         bool bBefore = false;
+        // --> OD 2007-05-29 #i76300#
+        // Note: Can only be <true>, if <bBefore> equals <false>.
+        bool bCheckForFollowPageDesc = false;
+        // <--
 
         switch( rBreak.GetBreak() )
         {
@@ -3494,23 +3563,57 @@ static Writer& OutWW8_SwFmtBreak( Writer& rWrt, const SfxPoolItem& rHt )
             if (rWW8Wrt.pSepx &&
                 rWW8Wrt.pSepx->CurrentNoColumns(*rWW8Wrt.pDoc) > 1)
             {
-                nC = 0xe;
+                nC = cColBreak;
             }
             break;
 
         case SVX_BREAK_PAGE_BEFORE:                         // PageBreak
-            bBefore = true;
-            // no break;
+            // From now on(fix for #i77900#) we prefer to save a page break as
+            // paragraph attribute, this has to be done after the export of the
+            // paragraph ( => !rWW8Wrt.bBreakBefore )
+            if( !rWW8Wrt.bBreakBefore )
+            {
+                // sprmPPageBreakBefore/sprmPFPageBreakBefore
+                if( rWW8Wrt.bWrtWW8 )
+                    rWW8Wrt.InsUInt16( 0x2407 );
+                else
+                    rWW8Wrt.pO->Insert( 9, rWW8Wrt.pO->Count() );
+                rWW8Wrt.pO->Insert( (BYTE)1, rWW8Wrt.pO->Count() );
+            }
+            break;
         case SVX_BREAK_PAGE_AFTER:
         case SVX_BREAK_PAGE_BOTH:
-            nC = 0xc;
+            nC = cPageBreak;
+            // --> OD 2007-05-29 #i76300#
+            // check for follow page description, if current writing attributes
+            // of a paragraph.
+            if ( dynamic_cast<const SwTxtNode*>(rWW8Wrt.pOutFmtNode) &&
+                 rWW8Wrt.GetCurItemSet() )
+            {
+                bCheckForFollowPageDesc = true;
+            }
+            // <--
             break;
         default:
             break;
         }
 
-        if( (bBefore == rWW8Wrt.bBreakBefore ) && nC )  // #49917#
-            rWW8Wrt.ReplaceCr( nC );
+        if ( (bBefore == rWW8Wrt.bBreakBefore ) && nC )  // #49917#
+        {
+            // --> OD 2007-05-29 #i76300#
+            bool bFollowPageDescWritten( false );
+            if ( bCheckForFollowPageDesc && !bBefore )
+            {
+                bFollowPageDescWritten =
+                    rWW8Wrt.Out_FollowPageDesc( rWW8Wrt.GetCurItemSet(),
+                            dynamic_cast<const SwTxtNode*>(rWW8Wrt.pOutFmtNode) );
+            }
+            if ( !bFollowPageDescWritten )
+            {
+                rWW8Wrt.ReplaceCr( nC );
+            }
+            // <--
+        }
     }
     return rWrt;
 }
@@ -3540,7 +3643,7 @@ static Writer& OutWW8_SwTextGrid( Writer& rWrt, const SfxPoolItem& rHt )
 					}
 					else
 					{
-						nGridType = 1; 
+						nGridType = 1;
 					}
 				}
                 break;
@@ -3554,21 +3657,21 @@ static Writer& OutWW8_SwTextGrid( Writer& rWrt, const SfxPoolItem& rHt )
 	   	sal_uInt32 nPageCharSize = ItemGet<SvxFontHeightItem>(*(rWrtWW8.pStyles->GetSwFmt()),
                 RES_CHRATR_CJK_FONTSIZE).GetHeight();
 
-		INT32 nCharWidth = rItem.GetBaseWidth() - nPageCharSize;	   
+		INT32 nCharWidth = rItem.GetBaseWidth() - nPageCharSize;
 	   	INT32 nFraction = 0;
 	   	nFraction = nCharWidth%20;
 	   	if( nCharWidth < 0 )
 			nFraction = 20 + nFraction;
 	  	nFraction = ((nFraction)*0xFFF)/20;
 	   	nFraction = (nFraction & 0x00000FFF);
-   
+
 	   	INT32 nMain = 0;
 	   	nMain = nCharWidth/20;
 	   	if( nCharWidth < 0 )
 			nMain -= 1;
 	   	nMain = nMain * 0x1000;
 	   	nMain = (nMain & 0xFFFFF000);
-   
+
 	   	UINT32 nCharSpace = nFraction + nMain;
 	   	rWrtWW8.InsUInt16(0x7030);
 	   	rWrtWW8.InsUInt32(nCharSpace);
@@ -3636,8 +3739,8 @@ static Writer& OutWW8_SwFmtLRSpace( Writer& rWrt, const SfxPoolItem& rHt )
         }
         else
             nLDist = nRDist = 0;
-        nLDist += (USHORT)rLR.GetLeft();
-        nRDist += (USHORT)rLR.GetRight();
+        nLDist = nLDist + (USHORT)rLR.GetLeft();
+        nRDist = nRDist + (USHORT)rLR.GetRight();
 
         // sprmSDxaLeft
         if( rWW8Wrt.bWrtWW8 )
@@ -3807,19 +3910,19 @@ Writer& OutWW8_SwFmtVertOrient( Writer& rWrt, const SfxPoolItem& rHt )
         short nPos;
         switch( rFlyVert.GetVertOrient() )
         {
-        case VERT_NONE:
+        case text::VertOrientation::NONE:
             nPos = (short)rFlyVert.GetPos();
             break;
-        case VERT_CENTER:
-        case VERT_LINE_CENTER:
+        case text::VertOrientation::CENTER:
+        case text::VertOrientation::LINE_CENTER:
             nPos = -8;
             break;
-        case VERT_BOTTOM:
-        case VERT_LINE_BOTTOM:
+        case text::VertOrientation::BOTTOM:
+        case text::VertOrientation::LINE_BOTTOM:
             nPos = -12;
             break;
-        case VERT_TOP:
-        case VERT_LINE_TOP:
+        case text::VertOrientation::TOP:
+        case text::VertOrientation::LINE_TOP:
         default:
             nPos = -4;
             break;
@@ -3853,19 +3956,19 @@ Writer& OutWW8_SwFmtHoriOrient( Writer& rWrt, const SfxPoolItem& rHt )
         short nPos;
         switch( rFlyHori.GetHoriOrient() )
         {
-        case HORI_NONE:    {
+        case text::HoriOrientation::NONE:    {
                                 nPos = (short)rFlyHori.GetPos();
                                 if( !nPos )
                                     nPos = 1;   // WW: 0 ist reserviert
                            }
                            break;
 
-        case HORI_LEFT:    nPos = rFlyHori.IsPosToggle() ? -12 : 0;
+        case text::HoriOrientation::LEFT:    nPos = rFlyHori.IsPosToggle() ? -12 : 0;
                            break;
-        case HORI_RIGHT:   nPos = rFlyHori.IsPosToggle() ? -16 : -8;
+        case text::HoriOrientation::RIGHT:   nPos = rFlyHori.IsPosToggle() ? -16 : -8;
                            break;
-        case HORI_CENTER:
-        case HORI_FULL:                         // FULL nur fuer Tabellen
+        case text::HoriOrientation::CENTER:
+        case text::HoriOrientation::FULL:                         // FULL nur fuer Tabellen
         default:           nPos = -4; break;
         }
 
@@ -4092,7 +4195,7 @@ void SwWW8Writer::Out_SwFmtBox(const SvxBoxItem& rBox, bool bShadow)
         BOX_LINE_TOP, BOX_LINE_LEFT, BOX_LINE_BOTTOM, BOX_LINE_RIGHT
     };
     const USHORT* pBrd = aBorders;
-    for( int i = 0; i < 4; ++i, ++pBrd )
+    for( USHORT i = 0; i < 4; ++i, ++pBrd )
     {
         const SvxBorderLine* pLn = rBox.GetLine( *pBrd );
         Out_BorderLine( *pO, pLn, rBox.GetDistance( *pBrd ), nOffset+i,
@@ -4165,9 +4268,40 @@ static Writer& OutWW8_SwFmtCol( Writer& rWrt, const SfxPoolItem& rHt )
     {
         // dann besorge mal die Seitenbreite ohne Raender !!
 
-        SwTwips nLeft, nRight, nPageSize;
-        nPageSize = rWW8Wrt.CurrentPageWidth(nLeft, nRight);
-        nPageSize -= (nLeft + nRight);
+		const SwFrmFmt* pFmt = rWW8Wrt.pAktPageDesc ? &rWW8Wrt.pAktPageDesc->GetMaster() : &const_cast<const SwDoc *>(rWW8Wrt.pDoc)->GetPageDesc(0).GetMaster();
+		const SvxFrameDirectionItem &frameDirection = pFmt->GetFrmDir();
+		SwTwips nPageSize;
+		if (frameDirection.GetValue() == FRMDIR_VERT_TOP_RIGHT || frameDirection.GetValue() == FRMDIR_VERT_TOP_LEFT)
+		{
+			const SvxULSpaceItem &rUL = pFmt->GetULSpace();
+			nPageSize = pFmt->GetFrmSize().GetHeight();
+			nPageSize -= rUL.GetUpper() + rUL.GetLower();
+
+			const SwFmtHeader *header = dynamic_cast<const SwFmtHeader *>(pFmt->GetAttrSet().GetItem(RES_HEADER));
+			if (header)
+			{
+				const SwFrmFmt *headerFmt = header->GetHeaderFmt();
+				if (headerFmt)
+				{
+					nPageSize -= headerFmt->GetFrmSize().GetHeight();
+				}
+			}
+			const SwFmtFooter *footer = dynamic_cast<const SwFmtFooter *>(pFmt->GetAttrSet().GetItem(RES_FOOTER));
+			if (footer)
+			{
+				const SwFrmFmt *footerFmt = footer->GetFooterFmt();
+				if (footerFmt)
+				{
+					nPageSize -= footerFmt->GetFrmSize().GetHeight();
+				}
+			}
+		}
+		else
+		{
+			const SvxLRSpaceItem &rLR = pFmt->GetLRSpace();
+			nPageSize = pFmt->GetFrmSize().GetWidth();
+			nPageSize -= rLR.GetLeft() + rLR.GetRight();
+		}
 
         // CColumns
         if( rWW8Wrt.bWrtWW8 )
@@ -4322,7 +4456,7 @@ static Writer& OutWW8_SvxLineSpacing( Writer& rWrt, const SfxPoolItem& rHt )
                     // die MaxLineHeight heran?
                     nSpace = (short)rAttr.GetInterLineSpace();
                     sal_uInt16 nScript =
-                        com::sun::star::i18n::ScriptType::LATIN;
+                        i18n::ScriptType::LATIN;
                     const SwAttrSet *pSet = 0;
                     if (rWrtWW8.pOutFmtNode && rWrtWW8.pOutFmtNode->ISA(SwFmt))
                     {
@@ -4344,7 +4478,7 @@ static Writer& OutWW8_SvxLineSpacing( Writer& rWrt, const SfxPoolItem& rHt )
                     ASSERT(pSet, "No attrset for lineheight :-(");
                     if (pSet)
                     {
-                        nSpace += (short)(AttrSetToLineHeight(*rWrtWW8.pDoc,
+                        nSpace = nSpace + (short)(AttrSetToLineHeight(*rWrtWW8.pDoc,
                             *pSet, *Application::GetDefaultDevice(), nScript));
                     }
                 }
@@ -4427,7 +4561,8 @@ static Writer& OutWW8_SvxAdjust(Writer& rWrt, const SfxPoolItem& rHt)
                         ItemGet<SvxFrameDirectionItem>(*pC, RES_FRAMEDIR);
                     nDirection = rItem.GetValue();
                 }
-                if (nDirection == FRMDIR_HORI_RIGHT_TOP)
+                if ((nDirection == FRMDIR_HORI_RIGHT_TOP)
+                 || (nDirection == FRMDIR_ENVIRONMENT &&  Application::GetSettings().GetLayoutRTL()))
                     bBiDiSwap=true;
             }
 
@@ -4881,11 +5016,13 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_PARATR_FORBIDDEN_RULES */    OutWW8_SfxBoolItem,
 /* RES_PARATR_VERTALIGN */          OutWW8_SvxParaVertAlignItem,
 /* RES_PARATR_SNAPTOGRID*/          OutWW8_SvxParaGridItem,
-/* RES_PARATR_DUMMY4 */             0, // Dummy:
-/* RES_PARATR_DUMMY5 */             0, // Dummy:
-/* RES_PARATR_DUMMY6 */             0, // Dummy:
-/* RES_PARATR_DUMMY7 */             0, // Dummy:
-/* RES_PARATR_DUMMY8 */             0, // Dummy:
+/* RES_PARATR_CONNECT_TO_BORDER */  0, // new
+
+/* RES_PARATR_LIST_ID */            0, // new
+/* RES_PARATR_LIST_LEVEL */         0, // new
+/* RES_PARATR_LIST_ISRESTART */     0, // new
+/* RES_PARATR_LIST_RESTARTVALUE */  0, // new
+/* RES_PARATR_LIST_ISCOUNTED */     0, // new
 
 /* RES_FILL_ORDER   */              0, // OutW4W_SwFillOrder,
 /* RES_FRM_SIZE */                  OutWW8_SwFrmSize,
