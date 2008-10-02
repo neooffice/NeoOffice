@@ -361,8 +361,7 @@ build.neo_patches: build.oo_all \
 	build.neo_rhino_patch \
 	build.neo_sal_patch \
 	build.neo_sc_patch \
-	build.neo_sfx2_patch \
-	build.neo_shell_patch \
+	build.neo_shell_patch build.neo_sfx2_patch \
 	build.neo_store_patch \
 	build.neo_svtools_patch \
 	build.neo_svx_patch \
