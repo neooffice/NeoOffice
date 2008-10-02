@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified January 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified January 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,22 +32,13 @@
 
 #include "localebackend.hxx"
 #include "localelayer.hxx"
-
-#ifndef _COM_SUN_STAR_CONFIGURATION_BACKEND_COMPONENTCHANGEEVENT_HPP_
 #include <com/sun/star/configuration/backend/ComponentChangeEvent.hpp>
-#endif
-
-#ifndef _UNO_CURRENT_CONTEXT_HXX_
 #include <uno/current_context.hxx>
-#endif
-
-#ifndef _OSL_TIME_H_
 #include <osl/time.h>
-#endif
 
 #include <stdio.h>
 
-#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD)
+#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
 
 #include <rtl/ustrbuf.hxx>
 #include <locale.h>
@@ -188,7 +172,6 @@ namespace /* private */
 				subs = CFStringCreateArrayBySeparatingStrings(NULL, sref, CFSTR("-"));
 			}
 #endif	// USE_JAVA
-				
 			CFArrayGuard subsGuard(subs);
 				
 			if (subs != NULL)
@@ -300,7 +283,7 @@ LocaleBackend* LocaleBackend::createInstance(
 
 rtl::OUString LocaleBackend::getLocale(void)
 {
-#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD)
+#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
     return ImplGetLocale(LC_CTYPE);
 #elif defined (MACOSX)
 	return ImplGetLocale("AppleLocale");
@@ -313,7 +296,7 @@ rtl::OUString LocaleBackend::getLocale(void)
 
 rtl::OUString LocaleBackend::getUILocale(void)
 {
-#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD)
+#if defined(LINUX) || defined(SOLARIS) || defined(IRIX) || defined(NETBSD) || defined(FREEBSD) || defined(OS2)
     return ImplGetLocale(LC_MESSAGES);
 #elif defined(MACOSX)
 	return ImplGetLocale("AppleLanguages");

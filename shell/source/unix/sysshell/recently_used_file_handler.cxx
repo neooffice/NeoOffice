@@ -1,101 +1,52 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_shell.hxx"
  
-#ifndef _SYSTEMSHELL_HXX_
 #include "systemshell.hxx"
-#endif
-
-#ifndef _OSL_PROCESS_H_
 #include "osl/process.h"
-#endif 
-
-#ifndef _RTL_USTRING_HXX_
 #include "rtl/ustring.hxx"
-#endif
-
-#ifndef _RTL_STRING_HXX_
 #include "rtl/string.hxx"
-#endif
-
-#ifndef _RTL_STRBUF_HXX_
 #include "rtl/strbuf.hxx"
-#endif
 
 #include "osl/thread.h"
-
-#ifndef INCLUDED_RECENTLY_USED_FILE_HXX
 #include "recently_used_file.hxx"
-#endif
 
 #include "internal/xml_parser.hxx"
 #include "internal/i_xml_parser_event_handler.hxx"
-
-#include <comphelper/processfactory.hxx>
-
-#ifndef _COM_SUN_STAR_URI_XEXTERNALURIREFERENCETRANSLATOR_HPP_
-#include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_URI_EXTERNALURIREFERENCETRANSLATOR_HPP_
-#include <com/sun/star/uri/ExternalUriReferenceTranslator.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_UNO_XCOMPONENTCONTEXT_HPP_
-#include <com/sun/star/uno/XComponentContext.hpp>
-#endif
-
-#ifndef _CPPUHELPER_WEAK_HXX_
-#include <cppuhelper/weak.hxx>
-#endif
-
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_BEANS_XPROPERTYSET_Hpp_
-#include <com/sun/star/beans/XPropertySet.hpp>
-#endif
 
 #include <map>
 #include <vector>
 #include <algorithm>
 #include <functional>
+#include <string.h>
 
 #ifdef USE_JAVA
 
@@ -110,8 +61,6 @@
 #include "recently_used_file_handler_cocoa.h"
 
 #endif	// USE_JAVA
-
-using namespace ::com::sun::star;
 
 namespace /* private */ {
     
@@ -331,6 +280,10 @@ namespace /* private */ {
 
         virtual void end_element(const string_t& /*raw_name*/, const string_t& local_name)
         {
+            // check for end tags w/o start tag
+            if( local_name != TAG_RECENT_FILES && NULL == item_ )
+                return; // will result in an XML parser error anyway
+            
             if (named_command_map_.find(local_name) != named_command_map_.end())
                 (item_->*named_command_map_[local_name])(current_element_);
             else
@@ -582,33 +535,9 @@ namespace /* private */ {
                 </RecentFiles>
 */
 
-const rtl::OUString DEFAULT_CONTEXT = rtl::OUString::createFromAscii("DefaultContext");
-
-// We need to re-encode file urls because osl_getFileURLFromSystemPath converts
-// to UTF-8 before encoding non ascii characters, which is not what other apps expect.
-static rtl::OUString translateToExternalUrl(const rtl::OUString& internalUrl)
-{
-	rtl::OUString extUrl;
-		
-	uno::Reference< lang::XMultiServiceFactory > sm = comphelper::getProcessServiceFactory();
-	if (sm.is())
-	{
-		uno::Reference< beans::XPropertySet > pset;
-		sm->queryInterface( getCppuType( &pset )) >>= pset;
-		if (pset.is())
-		{
-			uno::Reference< uno::XComponentContext > context;
-			pset->getPropertyValue(DEFAULT_CONTEXT) >>= context;
-			if (context.is())
-				extUrl = uri::ExternalUriReferenceTranslator::create(context)->translateToExternal(internalUrl);
-		}
-	}
-	return extUrl;
-}
-
 extern "C" void add_to_recently_used_file_list(const rtl::OUString& file_url, const rtl::OUString& mime_type)
 {
-#if defined USE_JAVA
+#ifdef USE_JAVA
 	CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, file_url.getStr(), file_url.getLength(), kCFAllocatorNull );
 	if ( aString )
 	{
@@ -622,10 +551,8 @@ extern "C" void add_to_recently_used_file_list(const rtl::OUString& file_url, co
         recently_used_item_list_t item_list;
         cleanup_guard guard(item_list);	
 	
-        rtl::OUString externalUrl = translateToExternalUrl(file_url);
-	
         read_recently_used_items(ruf, item_list);	
-        recently_used_item_list_add(item_list, externalUrl.getLength() ? externalUrl : file_url, mime_type);
+        recently_used_item_list_add(item_list, file_url, mime_type);
         write_recently_used_items(ruf, item_list);                                
     }
     catch(const char* ex)

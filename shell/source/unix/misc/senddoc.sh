@@ -1,5 +1,12 @@
 #!/bin/sh
 URI_ENCODE="`dirname $0`/uri-encode"
+FOPTS=""
+
+# linux file utility needs -L option to resolve symlinks
+if [ "`uname -s`" = "Linux" ]
+then
+  FOPTS="-L"
+fi
 
 # tries to locate the executable specified 
 # as first parameter in the user's path.
@@ -24,7 +31,7 @@ run_mozilla() {
 		moz=$1
 	fi
 
-	if file "$moz" | grep "script" > /dev/null && grep "[NM]PL" "$moz" > /dev/null; then
+	if file $FOPTS "$moz" | grep "script" > /dev/null && grep "[NM]PL" "$moz" > /dev/null; then
 		"$moz" -remote 'ping()' 2>/dev/null >/dev/null
 		if [ $? -eq 2 ]; then
 			"$1" -compose "$2" &
@@ -35,55 +42,6 @@ run_mozilla() {
 		"$1" -compose "$2" &
 	fi
 }
-
-# restore search path for dynamic loader to system defaults to
-# avoid version clashes of mozilla libraries shipped with OOo
-case `uname -s` in
-	AIX)
-		LIBPATH=$SYSTEM_LIBPATH
-		if [ -z "$LIBPATH" ]; then
-			unset LIBPATH SYSTEM_LIBPATH
-		else
-			export LIBPATH; unset SYSTEM_LIBPATH
-		fi
-		;;
-
-	Darwin)
-		DYLD_LIBRARY_PATH=$SYSTEM_DYLD_LIBRARY_PATH
-		if [ -z "$DYLD_LIBRARY_PATH" ]; then
-			unset DYLD_LIBRARY_PATH SYSTEM_DYLD_LIBRARY_PATH
-		else
-			export DYLD_LIBRARY_PATH; unset SYSTEM_DYLD_LIBRARY_PATH
-		fi
-		;;
-
-	HP-UX)
-		SHLIB_PATH=$SYSTEM_SHLIB_PATH
-		if [ -z "$SHLIB_PATH" ]; then
-			unset SHLIB_PATH SYSTEM_SHLIB_PATH
-		else
-			export SHLIB_PATH; unset SYSTEM_SHLIB_PATH
-		fi
-		;;
-
-	IRIX*)
-		LD_LIBRARYN32_PATH=$SYSTEM_LD_LIBRARYN32_PATH
-		if [ -z "$LD_LIBRARYN32_PATH" ]; then
-			unset LD_LIBRARYN32_PATH SYSTEM_LD_LIBRARYN32_PATH
-		else
-			export LD_LIBRARYN32_PATH; unset $SYSTEM_LD_LIBRARYN32_PATH
-		fi
-		;;
-
-	*)
-		LD_LIBRARY_PATH=$SYSTEM_LD_LIBRARY_PATH
-		if [ -z "$LD_LIBRARY_PATH" ]; then
-			unset LD_LIBRARY_PATH SYSTEM_LD_LIBRARY_PATH
-		else
-			export LD_LIBRARY_PATH; unset SYSTEM_LD_LIBRARY_PATH
-		fi
-		;;
-esac
 
 if [ "$1" = "--mailclient" ]; then
 	shift
@@ -124,7 +82,7 @@ fi
 # autodetect mail client from executable name
 case `basename "$MAILER" | sed 's/-.*$//'` in
 
-	mozilla | netscape | seamonkey | thunderbird)
+	iceape | mozilla | netscape | seamonkey | icedove | thunderbird)
 	
 		while [ "$1" != "" ]; do
 			case $1 in
@@ -149,7 +107,7 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 					shift
 					;;
 				--attach)
-					ATTACH=${ATTACH:-}${ATTACH:+,}`echo file://$2 | ${URI_ENCODE}`
+					ATTACH=${ATTACH:-}${ATTACH:+,}`echo "file://$2" | ${URI_ENCODE}`
 					shift
 					;;
 				*)
@@ -219,6 +177,57 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 			${ATTACH:+--attach} ${ATTACH:+"${ATTACH}"} ${TO:+"${TO}"}
 		;;
 		
+	mutt)
+	
+		while [ "$1" != "" ]; do
+			case $1 in
+				--from)
+					FROM="$2"
+					shift
+					;;
+				--to)
+					TO="${TO:-}${TO:+,}$2"
+					shift
+					;;
+				--cc)
+					CC="${CC:-}${CC:+,}$2"
+					shift
+					;;
+				--bcc)
+					BCC="${BCC:-}${BCC:+,}$2"
+					shift
+					;;
+				--subject)
+					SUBJECT="$2"
+					shift
+					;;
+				--body)
+					TEMPLATE="`basename $0`.mutt.XXXXXXXX"
+					BODY=`mktemp -q -t ${TEMPLATE}`
+					echo "$2" > $BODY
+					shift
+					;;
+				--attach)
+					ATTACH="$2"
+					shift
+					;;
+				*)
+					;;
+			esac
+			shift;
+		done
+		
+		x-terminal-emulator -e ${MAILER} \
+			${FROM:+-e} ${FROM:+"set from=\"${FROM}\""} \
+			${CC:+-c} ${CC:+"${CC}"} \
+			${BCC:+-b} ${BCC:+"${BCC}"} \
+			${SUBJECT:+-s} ${SUBJECT:+"${SUBJECT}"} \
+			${BODY:+-i} ${BODY:+"${BODY}"} \
+			${ATTACH:+-a} ${ATTACH:+"${ATTACH}"} \
+			${TO:+"${TO}"} &
+		rm -f $BODY
+		;;
+		
 	evolution)
 	
 		while [ "$1" != "" ]; do
@@ -232,23 +241,23 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 					shift
 					;;
 				--cc)
-					MAILTO="${MAILTO:-}${MAILTO:+&}cc=`echo $2| ${URI_ENCODE}`"
+					MAILTO="${MAILTO:-}${MAILTO:+&}cc="`echo "$2" | ${URI_ENCODE}`
 					shift
 					;;
 				--bcc)
-					MAILTO="${MAILTO:-}${MAILTO:+&}bcc=`echo $2| ${URI_ENCODE}`"
+					MAILTO="${MAILTO:-}${MAILTO:+&}bcc="`echo "$2" | ${URI_ENCODE}`
 					shift
 					;;
 				--subject)
-					MAILTO="${MAILTO:-}${MAILTO:+&}subject=`echo $2 | ${URI_ENCODE}`"
+					MAILTO="${MAILTO:-}${MAILTO:+&}subject"=`echo "$2" | ${URI_ENCODE}`
 					shift
 					;;
 				--body)
-					MAILTO="${MAILTO:-}${MAILTO:+&}body=`echo $2 | ${URI_ENCODE}`"
+					MAILTO="${MAILTO:-}${MAILTO:+&}body="`echo "$2" | ${URI_ENCODE}`
 					shift
 					;;
 				--attach)
-					MAILTO="${MAILTO:-}${MAILTO:+&}attach=`echo file://$2 | ${URI_ENCODE}`"
+					MAILTO="${MAILTO:-}${MAILTO:+&}attach="`echo "file://$2" | ${URI_ENCODE}`
 					shift
 					;;
 				*)
@@ -261,6 +270,48 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 		${MAILER} "${MAILTO}" &
 		;;
  
+	groupwise)
+	
+		while [ "$1" != "" ]; do
+			case $1 in
+				--to)
+					if [ "${TO}" != "" ]; then
+						MAILTO="${MAILTO:-}${MAILTO:+&}to=$2"
+					else
+						TO="$2"
+					fi
+					shift
+					;;
+				--cc)
+					MAILTO="${MAILTO:-}${MAILTO:+&}cc="`echo "$2" | ${URI_ENCODE}`
+					shift
+					;;
+				--bcc)
+					MAILTO="${MAILTO:-}${MAILTO:+&}bcc="`echo "$2" | ${URI_ENCODE}`
+					shift
+					;;
+				--subject)
+					MAILTO="${MAILTO:-}${MAILTO:+&}subject"=`echo "$2" | ${URI_ENCODE}`
+					shift
+					;;
+				--body)
+					MAILTO="${MAILTO:-}${MAILTO:+&}body="`echo "$2" | ${URI_ENCODE}`
+					shift
+					;;
+				--attach)
+					MAILTO="${MAILTO:-}${MAILTO:+&}attachment="`echo "file://$2" | ${URI_ENCODE}`
+					shift
+					;;
+				*)
+					;;
+			esac
+			shift;
+		done
+		
+		MAILTO="mailto:${TO}?${MAILTO}"
+		${MAILER} "${MAILTO}" &
+		;;
+
 	dtmail)
 	 
 		while [ "$1" != "" ]; do
@@ -282,7 +333,7 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 		${MAILER} ${TO:+-T} ${TO:-} ${ATTACH:+-a} ${ATTACH:+"${ATTACH}"}
 		;;
 
-	sylpheed)
+	sylpheed | claws)
 	 
 		while [ "$1" != "" ]; do
 			case $1 in
@@ -291,7 +342,7 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 					shift
 					;;
 				--attach)
-					ATTACH="${ATTACH:-}${ATTACH:+ } $2"
+					ATTACH="${ATTACH:-}${ATTACH:+ }$2"
 					shift
 					;;
 				*)
@@ -300,7 +351,7 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 			shift;
 		done
 		 
-		 ${MAILER} ${TO:+--compose} ${TO:-} ${ATTACH:+--attach} ${ATTACH:-}
+		 ${MAILER} ${TO:+--compose} "${TO:-}" ${ATTACH:+--attach} "${ATTACH:-}"
 		;;
 
 	Mail | Thunderbird | *.app )
@@ -335,23 +386,23 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 						shift
 						;;
 					--cc)
-						MAILTO="${MAILTO:-}${MAILTO:+&}cc=`echo $2| ${URI_ENCODE}`"
+						MAILTO="${MAILTO:-}${MAILTO:+&}cc="`echo "$2" | ${URI_ENCODE}`
 						shift
 						;;
 					--bcc)
-						MAILTO="${MAILTO:-}${MAILTO:+&}bcc=`echo $2| ${URI_ENCODE}`"
+						MAILTO="${MAILTO:-}${MAILTO:+&}bcc="`echo "$2" | ${URI_ENCODE}`
 						shift
 						;;
 					--subject)
-						MAILTO="${MAILTO:-}${MAILTO:+&}subject=`echo $2 | ${URI_ENCODE}`"
+						MAILTO="${MAILTO:-}${MAILTO:+&}subject="`echo "$2" | ${URI_ENCODE}`
 						shift
 						;;
 					--body)
-						MAILTO="${MAILTO:-}${MAILTO:+&}body=`echo $2 | ${URI_ENCODE}`"
+						MAILTO="${MAILTO:-}${MAILTO:+&}body="`echo "$2" | ${URI_ENCODE}`
 						shift
 						;;
 					--attach)
-						MAILTO="${MAILTO:-}${MAILTO:+&}attachment=`echo $2 | ${URI_ENCODE}`"
+						MAILTO="${MAILTO:-}${MAILTO:+&}attachment="`echo "$2" | ${URI_ENCODE}`
 						shift
 						;;
 					*)
