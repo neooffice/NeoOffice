@@ -1,53 +1,39 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sfx2.hxx"
 
-#ifdef OS2
-#include <vcl/sysdep.hxx>
-#endif
-
-#ifndef _COM_SUN_STAR_VIEW_PRINTABLESTATE_HPP_
+#include <com/sun/star/document/XDocumentProperties.hpp>
+#include <com/sun/star/document/XDocumentEventCompatibleHelper.hpp>
 #include <com/sun/star/view/PrintableState.hpp>
-#endif
-
-#ifndef _SFXITEMPOOL_HXX //autogen
 #include <svtools/itempool.hxx>
-#endif
 #ifndef _MSGBOX_HXX //autogen
 #include <vcl/msgbox.hxx>
 #endif
@@ -57,41 +43,31 @@
 #ifndef _SV_PRNSETUP_HXX //autogen
 #include <svtools/prnsetup.hxx>
 #endif
-#ifndef _SFXFLAGITEM_HXX //autogen
 #include <svtools/flagitem.hxx>
-#endif
-#ifndef _SFXSTRITEM_HXX //autogen
 #include <svtools/stritem.hxx>
-#endif
-#ifndef _SFXINTITEM_HXX //autogen
 #include <svtools/intitem.hxx>
-#endif
-#ifndef _SFXENUMITEM_HXX //autogen
 #include <svtools/eitem.hxx>
-#endif
-#ifndef _SFXAPP_HXX
-#include <app.hxx>
-#endif
+#include <sfx2/app.hxx>
 #include <svtools/useroptions.hxx>
 #include <svtools/printwarningoptions.hxx>
-#ifndef GCC
-#endif
+#include <tools/datetime.hxx>
 
-#include "viewsh.hxx"
+#include <sfx2/viewsh.hxx>
 #include "viewimp.hxx"
-#include "viewfrm.hxx"
-#include "prnmon.hxx"
+#include <sfx2/viewfrm.hxx>
+#include <sfx2/prnmon.hxx>
 #include "sfxresid.hxx"
-#include "request.hxx"
-#include "objsh.hxx"
+#include <sfx2/request.hxx>
+#include <sfx2/objsh.hxx>
 #include "sfxtypes.hxx"
-#include "docinf.hxx"
-#include "event.hxx"
-#include "docfile.hxx"
-#include "docfilt.hxx"
+#include <sfx2/event.hxx>
+#include <sfx2/docfile.hxx>
+#include <sfx2/docfilt.hxx>
 
 #include "view.hrc"
 #include "helpid.hrc"
+
+using namespace com::sun::star;
 
 TYPEINIT1(SfxPrintingHint, SfxHint);
 
@@ -135,7 +111,8 @@ class SfxDialogExecutor_Impl
 {
 private:
 	SfxViewShell*           _pViewSh;
-	PrintDialog*            _pParent;
+	PrintDialog*            _pPrintParent;
+    PrinterSetupDialog*     _pSetupParent;
 	SfxItemSet*             _pOptions;
 	sal_Bool                _bModified;
 	sal_Bool				_bHelpDisabled;
@@ -144,6 +121,7 @@ private:
 
 public:
 			SfxDialogExecutor_Impl( SfxViewShell* pViewSh, PrintDialog* pParent );
+			SfxDialogExecutor_Impl( SfxViewShell* pViewSh, PrinterSetupDialog* pParent );
 			~SfxDialogExecutor_Impl() { delete _pOptions; }
 
 	Link				GetLink() const { return LINK( this, SfxDialogExecutor_Impl, Execute); }
@@ -156,7 +134,20 @@ public:
 SfxDialogExecutor_Impl::SfxDialogExecutor_Impl( SfxViewShell* pViewSh, PrintDialog* pParent ) :
 
 	_pViewSh		( pViewSh ),
-	_pParent		( pParent ),
+	_pPrintParent	( pParent ),
+	_pSetupParent	( NULL ),
+	_pOptions		( NULL ),
+	_bModified		( sal_False ),
+	_bHelpDisabled	( sal_False )
+
+{
+}
+
+SfxDialogExecutor_Impl::SfxDialogExecutor_Impl( SfxViewShell* pViewSh, PrinterSetupDialog* pParent ) :
+
+	_pViewSh		( pViewSh ),
+	_pPrintParent	( NULL ),
+	_pSetupParent	( pParent ),
 	_pOptions		( NULL ),
 	_bModified		( sal_False ),
 	_bHelpDisabled	( sal_False )
@@ -170,14 +161,29 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 {
 	// Options lokal merken
 	if ( !_pOptions )
-		_pOptions = ( (SfxPrinter*)_pParent->GetPrinter() )->GetOptions().Clone();
+    {
+        DBG_ASSERT( _pPrintParent || _pSetupParent, "no dialog parent" );
+        if( _pPrintParent )
+            _pOptions = ( (SfxPrinter*)_pPrintParent->GetPrinter() )->GetOptions().Clone();
+        else if( _pSetupParent )
+            _pOptions = ( (SfxPrinter*)_pSetupParent->GetPrinter() )->GetOptions().Clone();
+    }
+
+    if ( _pOptions && _pPrintParent && _pPrintParent->IsSheetRangeAvailable() )
+    {
+        SfxItemState eState = _pOptions->GetItemState( SID_PRINT_SELECTEDSHEET );
+        if ( eState != SFX_ITEM_UNKNOWN )
+        {
+            PrintSheetRange eRange = _pPrintParent->GetCheckedSheetRange();
+            BOOL bValue = ( PRINTSHEETS_ALL != eRange );
+            _pOptions->Put( SfxBoolItem( SID_PRINT_SELECTEDSHEET, bValue ) );
+        }
+    }
 
 	// Dialog ausf"uhren
-#ifdef USE_JAVA
-	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( NULL, _pViewSh, _pOptions );
-#else	// USE_JAVA
-	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( _pParent, _pViewSh, _pOptions );
-#endif// USE_JAVA
+	SfxPrintOptionsDialog* pDlg = new SfxPrintOptionsDialog( _pPrintParent ? static_cast<Window*>(_pPrintParent)
+                                                                           : static_cast<Window*>(_pSetupParent),
+                                                             _pViewSh, _pOptions );
 	if ( _bHelpDisabled )
 		pDlg->DisableHelp();
 #ifdef USE_JAVA
@@ -189,6 +195,16 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 	{
 		delete _pOptions;
 		_pOptions = pDlg->GetOptions().Clone();
+
+        if ( _pOptions && _pPrintParent && _pPrintParent->IsSheetRangeAvailable() )
+        {
+            const SfxPoolItem* pItem;
+            if ( SFX_ITEM_SET == _pOptions->GetItemState( SID_PRINT_SELECTEDSHEET, FALSE , &pItem ) )
+            {
+                _pPrintParent->CheckSheetRange( ( (const SfxBoolItem*)pItem )->GetValue()
+                    ? PRINTSHEETS_SELECTED_SHEETS : PRINTSHEETS_ALL );
+            }
+        }
 	}
 	delete pDlg;
 
@@ -220,11 +236,6 @@ BOOL UseStandardPrinter_Impl( Window* /*pParent*/, SfxPrinter* pDocPrinter )
 	{
 		// Geht nicht mehr ohne OrigJobSetup!
 		String aTmp( SfxResId( STR_PRINTER_NOTAVAIL ) );
-#if SUPD<532
-		aTmp.SearchAndReplace( "$1",
-				pDocPrinter->GetOrigJobSetup().GetPrinterName() );
-		aTmp.SearchAndReplace( "$2", pDocPrinter->GetName() );
-#endif
 		QueryBox aBox( pParent, WB_OK_CANCEL | WB_DEF_OK, aTmp );
 		return RET_OK == aBox.Execute();
 	}
@@ -349,7 +360,7 @@ SfxPrinter* SfxViewShell::SetPrinter_Impl( SfxPrinter *pNewPrinter )
 // wird, wenn SID_PRINTDOCDIRECT auflaueft; bisher bekannte,
 // einzige Abhilfe ist in diesem Fall das Abschalten der Optimierungen
 // (KA 17.12.95)
-#ifdef WNT
+#ifdef _MSC_VER
 #pragma optimize ( "", off )
 #endif
 
@@ -405,6 +416,22 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 		case SID_SETUPPRINTER:
 	    case SID_PRINTER_NAME :
 		{
+            if( nId == SID_PRINTDOC )
+            {
+				SfxObjectShell* pDoc = GetObjectShell();
+                if( pDoc )
+                {
+                    uno::Reference< document::XDocumentEventCompatibleHelper > xVbaEventHelper( pDoc->GetModel(), uno::UNO_QUERY );
+                    if( xVbaEventHelper.is() )
+                    {
+                        if( xVbaEventHelper->processCompatibleEvent( nId ) )
+                        {
+                            rReq.SetReturnValue(SfxBoolItem(0,FALSE));
+                            return;
+                        }
+                    }
+                }
+            }
 	        // quiet mode (AppEvent, API call)
 			SFX_REQUEST_ARG(rReq, pSilentItem, SfxBoolItem, SID_SILENT, FALSE);
 			bSilent = pSilentItem && pSilentItem->GetValue();
@@ -536,8 +563,31 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				{
 	                // execute PrinterSetupDialog
 	                PrinterSetupDialog* pPrintSetupDlg = new PrinterSetupDialog( GetWindow() );
+
+                    if ( pImp->bHasPrintOptions )
+                    {
+                        // additional controls for dialog
+                        pExecutor = new SfxDialogExecutor_Impl( this, pPrintSetupDlg );
+                        if ( bPrintOnHelp )
+                            pExecutor->DisableHelp();
+                        pPrintSetupDlg->SetOptionsHdl( pExecutor->GetLink() );
+                    }
+
 					pPrintSetupDlg->SetPrinter( pDlgPrinter );
 					nDialogRet = pPrintSetupDlg->Execute();
+
+                    if ( pExecutor && pExecutor->GetOptions() )
+                    {
+                        if ( nDialogRet == RET_OK )
+                            // remark: have to be recorded if possible!
+                            pDlgPrinter->SetOptions( *pExecutor->GetOptions() );
+                        else
+                        {
+                            pPrinter->SetOptions( *pExecutor->GetOptions() );
+                            SetPrinter( pPrinter, SFX_PRINTER_OPTIONS );
+                        }
+                    }
+
 #ifdef USE_JAVA
                     // Force view to update the orientation and paper size set
                     // in the setup dialog. Note that these flags should only
@@ -546,6 +596,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                     if ( nDialogRet == RET_OK )
                         SetPrinter( pDlgPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
 #endif	// USE_JAVA
+
 	                DELETEZ( pPrintSetupDlg );
 
 	                // no recording of PrinterSetup except printer name (is printer dependent)
@@ -720,6 +771,15 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	        if ( SID_PRINTDOCDIRECT == nId )
 	        {
 				SfxObjectShell* pDoc = GetObjectShell();
+                uno::Reference< document::XDocumentEventCompatibleHelper > xVbaEventHelper( pDoc->GetModel(), uno::UNO_QUERY );
+                if( xVbaEventHelper.is() )
+                {
+                    if( xVbaEventHelper->processCompatibleEvent( nId ) )
+                    {
+                        rReq.SetReturnValue(SfxBoolItem(0,FALSE));
+                        return;
+                    }
+                }
 				bool bDetectHidden = ( !bSilent && pDoc );
 				if ( bDetectHidden && pDoc->QueryHiddenInformation( WhenPrinting, NULL ) != RET_YES )
 					return;
@@ -757,6 +817,8 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					return;
 	            }
 #endif	// USE_JAVA
+                
+                pPrinter->SetNextJobIsQuick();
 	        }
 
 	        // if "Collate" was checked, the SfxPrinter must handle the CopyCount itself,
@@ -771,18 +833,23 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	        pPrinter->SetPageQueueSize( 1 );
 
 	        // refresh document info
+            using namespace ::com::sun::star;
 	        SfxObjectShell *pObjSh = GetObjectShell();
-			SfxDocumentInfo *pInfo = &pObjSh->GetDocInfo();
-			SfxStamp aOldStamp = pInfo->GetPrinted();
-			String aUserName = SvtUserOptions().GetFullName();
-			if ( !pInfo->IsUseUserData() )
-				aUserName.Erase();
+            uno::Reference<document::XDocumentProperties> xDocProps(
+                pObjSh->getDocProperties());
+			::rtl::OUString aLastPrintedBy = xDocProps->getPrintedBy();
+			util::DateTime aLastPrinted = xDocProps->getPrintDate();
 
 			// Let the document stay nonmodified during the printing if the configuration says to do so
 			SfxPrintGuard_Impl aGuard( pObjSh );
 
-	        pInfo->SetPrinted( aUserName );
-	        pObjSh->Broadcast( SfxDocumentInfoHint( pInfo ) );
+	        xDocProps->setPrintedBy( GetObjectShell()->IsUseUserData()
+                ? ::rtl::OUString( SvtUserOptions().GetFullName() )
+                : ::rtl::OUString() );
+            ::DateTime now;
+            xDocProps->setPrintDate( util::DateTime(
+                now.Get100Sec(), now.GetSec(), now.GetMin(), now.GetHour(),
+                now.GetDay(), now.GetMonth(), now.GetYear() ) );
 
 			GetObjectShell()->Broadcast( SfxPrintingHint( -1, pPrintDlg, pPrinter ) );
 #ifdef USE_JAVA
@@ -796,8 +863,6 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 #endif	// USE_JAVA
 			if ( nError == PRINTER_OK )
 			{
-	            pObjSh->FlushDocInfo();
-
 				Invalidate( SID_PRINTDOC );
 				Invalidate( SID_PRINTDOCDIRECT );
 				Invalidate( SID_SETUPPRINTER );
@@ -816,8 +881,8 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 			else
 			{
 	            // printing not succesful, reset DocInfo
-	            pInfo->SetPrinted(aOldStamp);
-				pObjSh->Broadcast( SfxDocumentInfoHint( pInfo ) );
+                xDocProps->setPrintedBy(aLastPrintedBy);
+                xDocProps->setPrintDate(aLastPrinted);
 
 				if ( nError != PRINTER_ABORT )
 				{
@@ -838,7 +903,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 }
 
 // Optimierungen wieder einschalten
-#ifdef WNT
+#ifdef _MSC_VER
 #pragma optimize ( "", on )
 #endif
 
@@ -854,7 +919,7 @@ PrintDialog* SfxViewShell::CreatePrintDialog( Window* pParent )
 */
 
 {
-	PrintDialog *pDlg = new PrintDialog( pParent );
+    PrintDialog *pDlg = new PrintDialog( pParent, false );
 	pDlg->SetFirstPage( 1 );
 	pDlg->SetLastPage( 9999 );
 	pDlg->EnableCollate();
@@ -948,7 +1013,7 @@ SfxPrinter* SfxViewShell::GetPrinter( BOOL /*bCreate*/ )
 
 //--------------------------------------------------------------------
 
-USHORT SfxViewShell::SetPrinter( SfxPrinter* /*pNewPrinter*/, USHORT /*nDiffFlags*/ )
+USHORT SfxViewShell::SetPrinter( SfxPrinter* /*pNewPrinter*/, USHORT /*nDiffFlags*/, bool )
 {
 	return 0;
 }

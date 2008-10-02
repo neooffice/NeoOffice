@@ -36,33 +36,30 @@
 #import <Cocoa/Cocoa.h>
 #import "topfrm_cocoa.h"
 
-// Undefine this to disable the Command-click feature in the window titlebar
-#define ALLOW_SET_REPRESENTED_FILENAME
-
 @interface DoSetRepresentedFilename : NSObject
 {
 	NSString *thePath;
-	WindowRef theRef;
+	NSView *theView;
 }
-+ (id)createWithPath:(NSString *)path winRef:(WindowRef)r;
-- (id)initWithPath:(NSString *)path winRef:(WindowRef)r;
++ (id)createWithPath:(NSString *)path view:(NSView *)r;
+- (id)initWithPath:(NSString *)path view:(NSView *)r;
 - (void)setFilename:(id)pObject;
 @end
 
 @implementation DoSetRepresentedFilename
 
-+ (id)createWithPath:(NSString *)path winRef:(WindowRef)r
++ (id)createWithPath:(NSString *)path view:(NSView *)r
 {
-	DoSetRepresentedFilename *pRet = [[DoSetRepresentedFilename alloc] initWithPath:path winRef:r];
+	DoSetRepresentedFilename *pRet = [[DoSetRepresentedFilename alloc] initWithPath:path view:r];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithPath:(NSString *)path winRef:(WindowRef)r
+- (id)initWithPath:(NSString *)path view:(NSView *)r
 {
 	[super init];
 
-	theRef=r;
+	theView=r;
 	thePath=path;
 
 	return(self);
@@ -70,36 +67,27 @@
 
 - (void)setFilename:(id)ignore
 {
-	NSEnumerator *windowIter=[[NSApp windows] objectEnumerator];
-	NSWindow *theWin;
-	while((theWin=(NSWindow *)[windowIter nextObject])!=nil)
-	{
-		if([theWin windowRef]==theRef)
-		{
-			[theWin setRepresentedFilename: thePath];
-			break;
-		}
-	}
+	NSWindow *theWin = [theView window];
+	if (theWin)
+		[theWin setRepresentedFilename: thePath];
 }
 
 @end
 
 /**
- * Set the represented filename on a WindowRef that has been extracted from
+ * Set the represented filename on an NSView that has been extracted from
  * a Cocoa window.
  */
-void DoCocoaSetRepresentedFilename( unsigned long winRef, CFStringRef path )
+void DoCocoaSetRepresentedFilename( void *pView, CFStringRef path )
 {
-#ifdef ALLOW_SET_REPRESENTED_FILENAME
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( winRef )
+	if ( pView )
 	{
-		DoSetRepresentedFilename *pDoSetRepresentedFilename = [DoSetRepresentedFilename createWithPath:(NSString *)path winRef:(WindowRef)winRef];
+		DoSetRepresentedFilename *pDoSetRepresentedFilename = [DoSetRepresentedFilename createWithPath:(NSString *)path view:(NSView *)pView];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pDoSetRepresentedFilename performSelectorOnMainThread:@selector(setFilename:) withObject:pDoSetRepresentedFilename waitUntilDone:YES modes:pModes];
 	}
 
 	[pPool release];
-#endif	// ALLOW_SET_REPRESENTED_FILENAME
 }

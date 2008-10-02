@@ -44,7 +44,7 @@
 extern "C" {
 #endif
 
-void DoCocoaSetRepresentedFilename( unsigned long winRef, CFStringRef path );
+void DoCocoaSetRepresentedFilename( void *pView, CFStringRef path );
 
 #ifdef __cplusplus
 }

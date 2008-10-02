@@ -1,240 +1,112 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified August 2008 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified August 2008 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sfx2.hxx"
-
-#ifndef _FILEDLGHELPER_HXX
-#include "filedlghelper.hxx"
-#endif
-
-#ifndef _SAL_TYPES_H_
+#include <sfx2/filedlghelper.hxx>
 #include <sal/types.h>
-#endif
-
-#ifndef  _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
 #include <com/sun/star/lang/XInitialization.hpp>
-#endif
-
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_COMMONFILEPICKERELEMENTIDS_HPP_
 #include <com/sun/star/ui/dialogs/CommonFilePickerElementIds.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_EXECUTABLEDIALOGRESULTS_HPP_
 #include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_EXTENDEDFILEPICKERELEMENTIDS_HPP_
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_FILEPREVIEWIMAGEFORMATS_HPP_
 #include <com/sun/star/ui/dialogs/FilePreviewImageFormats.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UI_DIALOGS_CONTROLACTIONS_HPP_
 #include <com/sun/star/ui/dialogs/ControlActions.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_TEMPLATEDESCRIPTION_HPP_
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERCONTROLACCESS_HPP_
+#include <com/sun/star/ui/dialogs/XControlInformation.hpp>
 #include <com/sun/star/ui/dialogs/XFilePickerControlAccess.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKERNOTIFIER_HPP_
 #include <com/sun/star/ui/dialogs/XFilePickerNotifier.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPREVIEW_HPP_
 #include <com/sun/star/ui/dialogs/XFilePreview.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILTERMANAGER_HPP_
 #include <com/sun/star/ui/dialogs/XFilterManager.hpp>
-#endif
-#ifndef _COM_SUN_STAR_UI_DIALOGS_XFILTERGROUPMANAGER_HPP_
 #include <com/sun/star/ui/dialogs/XFilterGroupManager.hpp>
-#endif
 #ifndef _COM_SUN_STAR_UI_DIALOGS_XFOLDERPICKER_HDL_
 #include <com/sun/star/ui/dialogs/XFolderPicker.hpp>
 #endif
-#ifndef _COM_SUN_STAR_UI_DIALOGS_XASYNCHRONOUSEXECUTABLEDIALOG_HPP_
+#include <com/sun/star/ui/dialogs/XFilePicker2.hpp>
 #include <com/sun/star/ui/dialogs/XAsynchronousExecutableDialog.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSERVICEINFO_HPP_
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#endif
-#ifndef _COM_SUN_STAR_BEANS_XPROPERTYSET_HPP_
 #include <com/sun/star/beans/XPropertySet.hpp>
-#endif
-#ifndef _COM_SUN_STAR_BEANS_NAMEDVALUE_HPP_
 #include <com/sun/star/beans/NamedValue.hpp>
-#endif
-#ifndef _COM_SUN_STAR_EMBED_ELEMENTMODES_HPP_
 #include <com/sun/star/embed/ElementModes.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_CONTAINER_XENUMERATION_HPP_
 #include <com/sun/star/container/XEnumeration.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_CONTAINER_XCONTAINERQUERY_HPP_
 #include <com/sun/star/container/XContainerQuery.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UCB_INTERACTIVEAUGMENTEDIOEXCEPTION_HPP_
 #include <com/sun/star/ucb/InteractiveAugmentedIOException.hpp>
-#endif
-
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
-#ifndef _COMPHELPER_TYPES_HXX_
 #include <comphelper/types.hxx>
-#endif
-
-#ifndef _URLOBJ_HXX
+#include <comphelper/sequenceashashmap.hxx>
 #include <tools/urlobj.hxx>
-#endif
-#ifndef _SV_HELP_HXX
 #include <vcl/help.hxx>
-#endif
-
-#ifndef _UNTOOLS_UCBSTREAMHELPER_HXX
 #include <unotools/ucbstreamhelper.hxx>
-#endif
-#ifndef _UNOTOOLS_UCBHELPER_HXX
 #include <unotools/ucbhelper.hxx>
-#endif
-#ifndef _UNOTOOLS_LOCALFILEHELPER_HXX
 #include <unotools/localfilehelper.hxx>
-#endif
-#ifndef _VOS_THREAD_HXX_
 #include <vos/thread.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
-#endif
-#ifndef _VOS_SECURITY_HXX_
 #include <vos/security.hxx>
-#endif
-
-#ifndef _SV_CVTGRF_HXX
 #include <vcl/cvtgrf.hxx>
-#endif
-#ifndef _SV_MSGBOX_HXX
 #include <vcl/msgbox.hxx>
-#endif
-#ifndef _SV_MNEMONIC_HXX
 #include <vcl/mnemonic.hxx>
-#endif
-
-#ifndef INCLUDED_SVTOOLS_PATHOPTIONS_HXX
 #include <svtools/pathoptions.hxx>
-#endif
-#ifndef INCLUDED_SVTOOLS_SECURITYOPTIONS_HXX
 #include <svtools/securityoptions.hxx>
-#endif
-#ifndef _SFXITEMSET_HXX
 #include <svtools/itemset.hxx>
-#endif
-#ifndef _SFXENUMITEM_HXX
 #include <svtools/eitem.hxx>
-#endif
-#ifndef _SFXINTITEM_HXX
 #include <svtools/intitem.hxx>
-#endif
-#ifndef _SFXSTRITEM_HXX
 #include <svtools/stritem.hxx>
-#endif
-#ifndef _FILTER_HXX
 #include <svtools/filter.hxx>
-#endif
-#ifndef INCLUDED_SVTOOLS_VIEWOPTIONS_HXX
 #include <svtools/viewoptions.hxx>
-#endif
-#ifndef INCLUDED_SVTOOLS_MODULEOPTIONS_HXX
 #include <svtools/moduleoptions.hxx>
-#endif
 #ifndef _SVT_HELPID_HRC
 #include <svtools/helpid.hrc>
 #endif
-#ifndef _PICKERHELPER_HXX
 #include <svtools/pickerhelper.hxx>
-#endif
-#ifndef _UCBHELPER_CONTENT_HXX
 #include <ucbhelper/content.hxx>
-#endif
-#ifndef _COMPHELPER_STORAGEHELPER_HXX
 #include <comphelper/storagehelper.hxx>
-#endif
-#ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/helper/vclunohelper.hxx>
-#endif
-
-#ifndef _SFXAPP_HXX
-#include "app.hxx"
-#endif
-#ifndef _SFXDOCFILE_HXX
-#include "docfile.hxx"
-#endif
-#ifndef _SFX_OBJFAC_HXX
-#include "docfac.hxx"
-#endif
-#ifndef _SFX_OPENFLAG_HXX
+#include <sfx2/app.hxx>
+#include <sfx2/docfile.hxx>
+#include <sfx2/docfac.hxx>
 #include "openflag.hxx"
-#endif
-#ifndef _SFX_PASSWD_HXX
-#include "passwd.hxx"
-#endif
-#ifndef _SFX_SFXRESID_HXX
+#include <sfx2/passwd.hxx>
 #include "sfxresid.hxx"
-#endif
-#ifndef _SFXSIDS_HRC
-#include "sfxsids.hrc"
-#endif
+#include <sfx2/sfxsids.hrc>
 #ifndef _SFX_FILEDLGHELPER_HRC
 #include "filedlghelper.hrc"
 #endif
-#ifndef SFX2_FILTERGROUPING_HXX
 #include "filtergrouping.hxx"
-#endif
 #ifndef SFX2_REQUEST_HXX
-#include "request.hxx"
+#include <sfx2/request.hxx>
 #endif
-#ifndef _SFX_FILEDLGIMPL_HXX
 #include "filedlgimpl.hxx"
-#endif
 
 #include <sfxlocal.hrc>
 
 //-----------------------------------------------------------------------------
 
-using namespace ::com::sun;
+using namespace ::com::sun::star;
 using namespace ::com::sun::star::container;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::ui::dialogs;
@@ -456,7 +328,7 @@ void FileDialogHelper_Impl::dispose()
 	if ( mxFileDlg.is() )
 	{
 		// remove the event listener
-		Reference< XFilePickerNotifier > xNotifier( mxFileDlg, UNO_QUERY );
+		uno::Reference< XFilePickerNotifier > xNotifier( mxFileDlg, UNO_QUERY );
 		if ( xNotifier.is() )
 			xNotifier->removeFilePickerListener( this );
 
@@ -469,7 +341,7 @@ void FileDialogHelper_Impl::dispose()
 String FileDialogHelper_Impl::getCurrentFilterUIName() const
 {
 	String aFilterName;
-	Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
+	uno::Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
 
 	if( xFltMgr.is() )
 	{
@@ -527,7 +399,7 @@ sal_Bool FileDialogHelper_Impl::updateExtendedControl( sal_Int16 _nExtendedContr
 {
 	sal_Bool bIsEnabled = sal_False;
 
-	Reference < XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+	uno::Reference < XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
 	if ( xCtrlAccess.is() )
 	{
 		try
@@ -611,7 +483,7 @@ void FileDialogHelper_Impl::updateFilterOptionsBox()
 
 void FileDialogHelper_Impl::updateExportButton()
 {
-	Reference < XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+	uno::Reference < XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
 	if ( xCtrlAccess.is() )
 	{
 		OUString sEllipses( RTL_CONSTASCII_USTRINGPARAM( "..." ) );
@@ -652,14 +524,30 @@ void FileDialogHelper_Impl::updateSelectionBox()
 	if ( !mbExport )
 		return;
 
-	const SfxFilter* pFilter = getCurentSfxFilter();
+    // Does the selection box exist?
+    bool bSelectionBoxFound = false;
+    uno::Reference< XControlInformation > xCtrlInfo( mxFileDlg, UNO_QUERY );
+    if ( xCtrlInfo.is() )
+    {
+        Sequence< ::rtl::OUString > aCtrlList = xCtrlInfo->getSupportedControls();
+        sal_uInt32 nCount = aCtrlList.getLength();
+        for ( sal_uInt32 nCtrl = 0; nCtrl < nCount; ++nCtrl )
+            if ( aCtrlList[ nCtrl ].equalsAscii("SelectionBox") )
+            {
+                bSelectionBoxFound = true;
+                break;
+            }
+    }
 
-	updateExtendedControl(
-		ExtendedFilePickerElementIds::CHECKBOX_SELECTION,
-		( mbSelectionEnabled && pFilter && ( pFilter->GetFilterFlags() & SFX_FILTER_SUPPORTSSELECTION ) != 0 ) );
-
-	Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
-	xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_SELECTION, 0, makeAny( (sal_Bool)mbSelection ) );
+    if ( bSelectionBoxFound )
+    {
+        const SfxFilter* pFilter = getCurentSfxFilter();
+        updateExtendedControl(
+            ExtendedFilePickerElementIds::CHECKBOX_SELECTION,
+            ( mbSelectionEnabled && pFilter && ( pFilter->GetFilterFlags() & SFX_FILTER_SUPPORTSSELECTION ) != 0 ) );
+        uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+        xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_SELECTION, 0, makeAny( (sal_Bool)mbSelection ) );
+    }
 }
 
 // ------------------------------------------------------------------------
@@ -667,6 +555,11 @@ struct CheckPasswordCapability
 {
 	sal_Bool operator() ( const SfxFilter* _pFilter )
 	{
+        if (_pFilter->GetFilterName().EqualsAscii("MS Excel 97"))
+            // temporary hack to enable password protection for Excel 97.  Is
+            // there a better way to enable password protection of a filter?
+            return true;
+
         return  _pFilter && _pFilter->IsOwnFormat()
 			&&	_pFilter->UsesStorage()
 #ifdef USE_JAVA
@@ -695,21 +588,21 @@ void FileDialogHelper_Impl::enablePasswordBox( sal_Bool bInit )
 		// in case of inintialization previous state is not interesting
 		if( mbIsPwdEnabled )
 		{
-			Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+			uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
 			if( mbPwdCheckBoxState )
 				xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( sal_True ) );
 		}
 	}
 	else if( !bWasEnabled && mbIsPwdEnabled )
 	{
-		Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+		uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
 		if( mbPwdCheckBoxState )
 			xCtrlAccess->setValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0, makeAny( sal_True ) );
 	}
 	else if( bWasEnabled && !mbIsPwdEnabled )
 	{
 		// remember user settings until checkbox is enabled
-		Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+		uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
 		Any aValue = xCtrlAccess->getValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0 );
 		sal_Bool bPassWord = sal_False;
 		mbPwdCheckBoxState = ( aValue >>= bPassWord ) && bPassWord;
@@ -722,7 +615,7 @@ void FileDialogHelper_Impl::updatePreviewState( sal_Bool _bUpdatePreviewWindow )
 {
 	if ( mbHasPreview )
 	{
-		Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+		uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
 
 		// check, wether or not we have to display a preview
 		if ( xCtrlAccess.is() )
@@ -739,7 +632,7 @@ void FileDialogHelper_Impl::updatePreviewState( sal_Bool _bUpdatePreviewWindow )
 					// #97633
 					// setShowState has currently no effect for the
 					// OpenOffice FilePicker (see svtools/source/filepicker/iodlg.cxx)
-					Reference< XFilePreview > xFilePreview( mxFileDlg, UNO_QUERY );
+					uno::Reference< XFilePreview > xFilePreview( mxFileDlg, UNO_QUERY );
 					if ( xFilePreview.is() )
 						xFilePreview->setShowState( mbShowPreview );
 
@@ -770,15 +663,15 @@ void FileDialogHelper_Impl::updateVersions()
 		{
 			try
 			{
-				star::uno::Reference< star::embed::XStorage > xStorage = ::comphelper::OStorageHelper::GetStorageFromURL(
+				uno::Reference< embed::XStorage > xStorage = ::comphelper::OStorageHelper::GetStorageFromURL(
 																aObj.GetMainURL( INetURLObject::NO_DECODE ),
-																star::embed::ElementModes::READ );
+																embed::ElementModes::READ );
 
 				DBG_ASSERT( xStorage.is(), "The method must return the storage or throw an exception!" );
 				if ( !xStorage.is() )
-					throw star::uno::RuntimeException();
+					throw uno::RuntimeException();
 
-				star::uno::Sequence < star::util::RevisionTag > xVersions = SfxMedium::GetVersionList( xStorage );
+				uno::Sequence < util::RevisionTag > xVersions = SfxMedium::GetVersionList( xStorage );
 
                 aEntries.realloc( xVersions.getLength() + 1 );
                 aEntries[0] = OUString( String ( SfxResId( STR_SFX_FILEDLG_ACTUALVERSION ) ) );
@@ -798,13 +691,13 @@ void FileDialogHelper_Impl::updateVersions()
 //REMOVE						}
 //REMOVE					}
 			}
-			catch( star::uno::Exception& )
+			catch( uno::Exception& )
 			{
 			}
 		}
 	}
 
-	Reference < XFilePickerControlAccess > xDlg( mxFileDlg, UNO_QUERY );
+	uno::Reference < XFilePickerControlAccess > xDlg( mxFileDlg, UNO_QUERY );
 	Any aValue;
 
 	try
@@ -858,7 +751,7 @@ IMPL_LINK( FileDialogHelper_Impl, TimeOutHdl_Impl, Timer*, EMPTYARG )
 	maGraphic.Clear();
 
 	Any aAny;
-	Reference < XFilePreview > xFilePicker( mxFileDlg, UNO_QUERY );
+	uno::Reference < XFilePreview > xFilePicker( mxFileDlg, UNO_QUERY );
 
 	if ( ! xFilePicker.is() )
 		return 0;
@@ -997,11 +890,11 @@ ErrCode FileDialogHelper_Impl::getGraphic( Graphic& rGraphic ) const
 }
 
 // ------------------------------------------------------------------------
-sal_Bool lcl_isSystemFilePicker( const Reference< XFilePicker >& _rxFP )
+sal_Bool lcl_isSystemFilePicker( const uno::Reference< XFilePicker >& _rxFP )
 {
 	try
 	{
-		Reference< XServiceInfo > xSI( _rxFP, UNO_QUERY );
+		uno::Reference< XServiceInfo > xSI( _rxFP, UNO_QUERY );
 		if ( xSI.is() && xSI->supportsService( DEFINE_CONST_OUSTRING( "com.sun.star.ui.dialogs.SystemFilePicker" ) ) )
 			return sal_True;
 	}
@@ -1016,13 +909,20 @@ sal_Bool lcl_isSystemFilePicker( const Reference< XFilePicker >& _rxFP )
 // -----------		FileDialogHelper_Impl		---------------------------
 // ------------------------------------------------------------------------
 
-FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_Int16 nDialogType, sal_Int64 nFlags, Window* _pPreferredParentWindow )
+FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_Int16 nDialogType, sal_Int64 nFlags, sal_Int16 nDialog, Window* _pPreferredParentWindow, const String& sStandardDir )
 	:m_nDialogType			( nDialogType )
 	,meContext				( FileDialogHelper::UNKNOWN_CONTEXT )
 {
-	OUString aService( RTL_CONSTASCII_USTRINGPARAM( FILE_OPEN_SERVICE_NAME ) );
+	const char* pServiceName=0;
+	if ( nDialog == SFX2_IMPL_DIALOG_SYSTEM )
+		pServiceName = FILE_OPEN_SERVICE_NAME_OOO;
+	else if ( nDialog == SFX2_IMPL_DIALOG_OOO )
+		pServiceName = FILE_OPEN_SERVICE_NAME_OOO;
+	else
+		pServiceName = FILE_OPEN_SERVICE_NAME;
+	OUString aService = ::rtl::OUString::createFromAscii( pServiceName );
 
-	Reference< XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
+	uno::Reference< XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
 
 	// create the file open dialog
 	// the flags can be SFXWB_INSERT or SFXWB_MULTISELECTION
@@ -1062,8 +962,8 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 	mxFileDlg = mxFileDlg.query( xFactory->createInstance( aService ) );
 	mbSystemPicker = lcl_isSystemFilePicker( mxFileDlg );
 
-	Reference< XFilePickerNotifier > xNotifier( mxFileDlg, UNO_QUERY );
-	Reference< XInitialization > xInit( mxFileDlg, UNO_QUERY );
+	uno::Reference< XFilePickerNotifier > xNotifier( mxFileDlg, UNO_QUERY );
+	uno::Reference< XInitialization > xInit( mxFileDlg, UNO_QUERY );
 
 	if ( ! mxFileDlg.is() || ! xNotifier.is() )
 	{
@@ -1101,7 +1001,7 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 				m_bHaveFilterOptions = sal_True;
 				if( xFactory.is() )
 				{
-					mxFilterCFG = Reference< XNameAccess >(
+					mxFilterCFG = uno::Reference< XNameAccess >(
 						xFactory->createInstance( DEFINE_CONST_OUSTRING( "com.sun.star.document.FilterFactory" ) ),
 						UNO_QUERY );
 				}
@@ -1116,7 +1016,7 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 				mbIsSaveDlg = sal_True;
 				if ( mbExport && !mxFilterCFG.is() && xFactory.is() )
 				{
-					mxFilterCFG = Reference< XNameAccess >(
+					mxFilterCFG = uno::Reference< XNameAccess >(
 						xFactory->createInstance( DEFINE_CONST_OUSTRING( "com.sun.star.document.FilterFactory" ) ),
 						UNO_QUERY );
 				}
@@ -1166,8 +1066,12 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 				DBG_ERRORFILE( "FileDialogHelper::ctor with unknown type" );
 				break;
 		}
+		
+		
 
-		Sequence < Any > aInitArguments( mbSystemPicker || !mpPreferredParentWindow ? 1 : 2 );
+		//Sequence < Any > aInitArguments( mbSystemPicker || !mpPreferredParentWindow ? 1 : 3 );
+		Sequence < Any > aInitArguments( !mpPreferredParentWindow ? 2 : 3 );
+
 		// This is a hack. We currently know that the internal file picker implementation
 		// supports the extended arguments as specified below.
         // TODO:
@@ -1184,11 +1088,19 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 									makeAny( nTemplateDescription )
 								);
 
+			::rtl::OUString sStandardDirTemp = ::rtl::OUString( sStandardDir );
+			
+			aInitArguments[1] <<= NamedValue(
+									::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StandardDir" ) ),
+									makeAny( sStandardDirTemp )
+								);
 			if ( mpPreferredParentWindow )
-				aInitArguments[1] <<= NamedValue(
+				aInitArguments[2] <<= NamedValue(
 										::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "ParentWindow" ) ),
 										makeAny( VCLUnoHelper::GetInterface( mpPreferredParentWindow ) )
 									);
+
+			
 		}
 
 		try
@@ -1211,13 +1123,20 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 
 	// Export dialog
 	if ( mbExport )
+	{
 		mxFileDlg->setTitle( OUString( String( SfxResId( STR_SFX_EXPLORERFILE_EXPORT ) ) ) );
+		try {
+                com::sun::star::uno::Reference < XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY_THROW );
+				xCtrlAccess->enableControl( ExtendedFilePickerElementIds::LISTBOX_FILTER_SELECTOR, sal_True );
+		}
+		catch( const Exception & ) { }
+	}
 
 	// the "insert file" dialog needs another title
 	if ( mbInsert )
 	{
 		mxFileDlg->setTitle( OUString( String( SfxResId( STR_SFX_EXPLORERFILE_INSERT ) ) ) );
-		Reference < XFilePickerControlAccess > xExtDlg( mxFileDlg, UNO_QUERY );
+		uno::Reference < XFilePickerControlAccess > xExtDlg( mxFileDlg, UNO_QUERY );
 		if ( xExtDlg.is() )
 		{
 			try
@@ -1245,7 +1164,7 @@ FileDialogHelper_Impl::~FileDialogHelper_Impl()
 
 	if ( mbDeleteMatcher )
 		delete mpMatcher;
-
+    
 	maPreViewTimer.SetTimeoutHdl( Link() );
 
 	::comphelper::disposeComponent( mxFileDlg );
@@ -1255,12 +1174,12 @@ FileDialogHelper_Impl::~FileDialogHelper_Impl()
 
 class PickerThread_Impl : public ::vos::OThread
 {
-	Reference < XFilePicker > mxPicker;
+	uno::Reference < XFilePicker > mxPicker;
 	::vos::OMutex			maMutex;
 	virtual void SAL_CALL	run();
 	sal_Int16				mnRet;
 public:
-							PickerThread_Impl( const Reference < XFilePicker >& rPicker )
+							PickerThread_Impl( const uno::Reference < XFilePicker >& rPicker )
 							: mxPicker( rPicker ), mnRet(nMagic) {}
 
 	sal_Int16				GetReturnValue()
@@ -1296,7 +1215,7 @@ void FileDialogHelper_Impl::setControlHelpIds( const sal_Int16* _pControlId, con
 	{
 		const ::rtl::OUString sHelpIdPrefix( RTL_CONSTASCII_USTRINGPARAM( "HID:" ) );
 		// the ids for the single controls
-		Reference< XFilePickerControlAccess > xControlAccess( mxFileDlg, UNO_QUERY );
+		uno::Reference< XFilePickerControlAccess > xControlAccess( mxFileDlg, UNO_QUERY );
 		if ( xControlAccess.is() )
 		{
 			while ( *_pControlId )
@@ -1345,9 +1264,20 @@ void FileDialogHelper_Impl::preExecute()
 	implInitializeFileName( );
 	// #106079# / 2002-12-09 / fs@openoffice.org
 
+#if !(defined(MACOSX) && defined(QUARTZ)) && !defined(WNT)
 	// allow for dialog implementations which need to be executed before they return valid values for
 	// current filter and such
-	mnPostUserEventId = Application::PostUserEvent( LINK( this, FileDialogHelper_Impl, InitControls ) );
+
+	// On Vista (at least SP1) it's the same as on MacOSX, the modal dialog won't let message pass
+	// through before it returns from execution
+    mnPostUserEventId = Application::PostUserEvent( LINK( this, FileDialogHelper_Impl, InitControls ) );
+#else
+	// However, the Mac OS X implementation's pickers run modally in execute and so the event doesn't
+	// get through in time... so we call the methods directly
+    enablePasswordBox( sal_True );
+	updateFilterOptionsBox( );
+	updateSelectionBox( );
+#endif
 }
 
 // ------------------------------------------------------------------------
@@ -1374,7 +1304,7 @@ void FileDialogHelper_Impl::implInitializeFileName( )
 			{
 				sal_Bool bAutoExtChecked = sal_False;
 
-				Reference < XFilePickerControlAccess > xControlAccess( mxFileDlg, UNO_QUERY );
+				uno::Reference < XFilePickerControlAccess > xControlAccess( mxFileDlg, UNO_QUERY );
 				if	(	xControlAccess.is()
 					&&	(	xControlAccess->getValue( ExtendedFilePickerElementIds::CHECKBOX_AUTOEXTENSION, 0 )
 						>>=	bAutoExtChecked
@@ -1403,6 +1333,10 @@ sal_Int16 FileDialogHelper_Impl::implDoExecute()
 
 	sal_Int16 nRet = ExecutableDialogResults::CANCEL;
 
+//On MacOSX the native file picker has to run in the primordial thread because of drawing issues
+//On Linux the native gtk file picker, when backed by gnome-vfs2, needs to be run in the same
+//primordial thread as the ucb gnome-vfs2 provider was initialized in.
+#ifdef WNT
 	if ( mbSystemPicker )
 	{
 		PickerThread_Impl* pThread = new PickerThread_Impl( mxFileDlg );
@@ -1414,6 +1348,7 @@ sal_Int16 FileDialogHelper_Impl::implDoExecute()
 		delete pThread;
 	}
 	else
+#endif
 	{
 		try
 		{
@@ -1444,7 +1379,7 @@ void FileDialogHelper_Impl::implStartExecute()
     {
         try
         {
-            Reference< XAsynchronousExecutableDialog > xAsyncDlg( mxFileDlg, UNO_QUERY );
+            uno::Reference< XAsynchronousExecutableDialog > xAsyncDlg( mxFileDlg, UNO_QUERY );
             if ( xAsyncDlg.is() )
                 xAsyncDlg->startExecuteModal( this );
         }
@@ -1456,6 +1391,118 @@ void FileDialogHelper_Impl::implStartExecute()
 }
 
 // ------------------------------------------------------------------------
+String FileDialogHelper_Impl::implEnsureURLExtension(const String& sURL,
+													 const String& /*sExtension*/)
+{
+    return sURL;
+    /*
+	// This feature must be active for file save/export only !
+	if (
+		(! mbIsSaveDlg) &&
+		(! mbExport   )
+		)
+		return sURL;
+
+	// no extension available (because "ALL *.*" was selected) ?
+	// Nod idea what else should happen here .-)
+	if (sExtension.Len() < 1)
+		return sURL;
+
+	// Some FilePicker implementations already add the right extension ...
+	// or might be the user used the right one already ...
+	// Dont create duplicate extension.
+	INetURLObject aURL(sURL);
+	if (aURL.getExtension().equals(sExtension))
+		return sURL;
+
+	// Ignore any other extension set by the user.
+	// Make sure suitable extension is used always.
+	// e.g. "test.bla.odt" for "ODT"
+	::rtl::OUStringBuffer sNewURL(256);
+	sNewURL.append     (sURL      );
+	sNewURL.appendAscii("."       );
+	sNewURL.append     (sExtension);
+	return sNewURL.makeStringAndClear();
+    */
+}
+
+// ------------------------------------------------------------------------
+void lcl_saveLastURLs(SvStringsDtor*&                                    rpURLList ,
+                      ::comphelper::SequenceAsVector< ::rtl::OUString >& lLastURLs )
+{
+    lLastURLs.clear();
+    USHORT c = rpURLList->Count();
+    USHORT i = 0;
+    for (i=0; i<c; ++i)
+        lLastURLs.push_back(*(rpURLList->GetObject(i)));
+}
+
+// ------------------------------------------------------------------------
+void FileDialogHelper_Impl::implGetAndCacheFiles(const uno::Reference< XInterface >& xPicker  ,
+													   SvStringsDtor*&               rpURLList,
+												 const SfxFilter*                    pFilter  )
+{
+    rpURLList = NULL;
+
+	String sExtension;
+	if (pFilter)
+	{
+		sExtension = pFilter->GetDefaultExtension ();
+		sExtension.EraseAllChars( '*' );
+		sExtension.EraseAllChars( '.' );
+	}
+
+    // a) the new way (optional!)
+    uno::Reference< XFilePicker2 > xPickNew(xPicker, UNO_QUERY);
+    if (xPickNew.is())
+    {
+                             rpURLList = new SvStringsDtor;
+        Sequence< OUString > lFiles    = xPickNew->getSelectedFiles();
+        ::sal_Int32          nFiles    = lFiles.getLength();
+        for (::sal_Int32 i = 0; i < nFiles; i++)
+        {
+			String* pURL = new String(implEnsureURLExtension(lFiles[i], sExtension));
+            rpURLList->Insert( pURL, rpURLList->Count() );
+        }
+    }
+
+    // b) the olde way ... non optional.
+    else
+    {
+        uno::Reference< XFilePicker > xPickOld(xPicker, UNO_QUERY_THROW);
+        Sequence< OUString > lFiles = xPickOld->getFiles();
+        ::sal_Int32          nFiles = lFiles.getLength();
+        if ( nFiles == 1 )
+        {
+                    rpURLList = new SvStringsDtor;
+			String* pURL      = new String(implEnsureURLExtension(lFiles[0], sExtension));
+            rpURLList->Insert( pURL, 0 );
+        }
+        else
+        if ( nFiles > 1 )
+        {
+            rpURLList = new SvStringsDtor;
+        
+            INetURLObject aPath( lFiles[0] );
+            aPath.setFinalSlash();
+
+            for (::sal_Int32 i = 1; i < nFiles; i++)
+            {
+                if (i == 1)
+                    aPath.Append( lFiles[i] );
+                else
+                    aPath.setName( lFiles[i] );
+
+                String* pURL = new String(implEnsureURLExtension(aPath.GetMainURL( INetURLObject::NO_DECODE ), sExtension) );
+                rpURLList->Insert( pURL, rpURLList->Count() );
+            }
+        }
+    }
+
+	lcl_saveLastURLs(rpURLList, mlLastURLs);
+}
+
+// ------------------------------------------------------------------------
 ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
 										SfxItemSet *&	rpSet,
 										String& 		rFilter )
@@ -1464,7 +1511,7 @@ ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
     // changing this would surely break code
     // rpSet is in/out parameter, usually just a media-descriptor that can be changed by dialog
 
-	Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
+	uno::Reference< XFilePickerControlAccess > xCtrlAccess( mxFileDlg, UNO_QUERY );
 
 	// retrieves parameters from rpSet
 	// for now only Password is used
@@ -1505,6 +1552,9 @@ ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
 		if( !rpSet )
 			rpSet = new SfxAllItemSet( SFX_APP()->GetPool() );
 
+		// set the filter
+		getRealFilter( rFilter );
+
 		// check, wether or not we have to display a password box
 		if ( mbHasPassword && mbIsPwdEnabled && xCtrlAccess.is() )
 		{
@@ -1514,9 +1564,16 @@ ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
 				sal_Bool bPassWord = sal_False;
 				if ( ( aValue >>= bPassWord ) && bPassWord )
 				{
-					// ask for the password
+					// ask for a password
 					SfxPasswordDialog aPasswordDlg( NULL );
 					aPasswordDlg.ShowExtras( SHOWEXTRAS_CONFIRM );
+                    if ( rFilter.EqualsAscii("MS Excel 97") )
+                    {
+                        // Excel allows 1-15 length password.
+                        aPasswordDlg.SetMinLen(1);
+                        aPasswordDlg.SetMaxLen(15);
+                    }
+
 					short nRet = aPasswordDlg.Execute();
 					if ( RET_OK == nRet )
 					{
@@ -1529,6 +1586,9 @@ ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
 			}
 			catch( IllegalArgumentException ){}
 		}
+
+        // the item should remain only if it was set by the dialog
+        rpSet->ClearItem( SID_SELECTION );
 
 		if( mbExport )
 		{
@@ -1580,44 +1640,13 @@ ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
 			catch( IllegalArgumentException ){}
 		}
 
-		// set the filter
-		getRealFilter( rFilter );
-
 		// fill the rpURLList
-		Sequence < OUString > aPathSeq = mxFileDlg->getFiles();
-
-		if ( aPathSeq.getLength() )
-		{
-			rpURLList = new SvStringsDtor;
-
-			if ( aPathSeq.getLength() == 1 )
-			{
-				OUString aFileURL( aPathSeq[0] );
-
-				String* pURL = new String( aFileURL );
-				rpURLList->Insert( pURL, 0 );
-			}
-			else
-			{
-				INetURLObject aPath( aPathSeq[0] );
-				aPath.setFinalSlash();
-
-				for ( USHORT i = 1; i < aPathSeq.getLength(); ++i )
-				{
-					if ( i == 1 )
-						aPath.Append( aPathSeq[i] );
-					else
-						aPath.setName( aPathSeq[i] );
-
-					String* pURL = new String( aPath.GetMainURL( INetURLObject::NO_DECODE ) );
-					rpURLList->Insert( pURL, rpURLList->Count() );
-				}
-			}
-			SaveLastUsedFilter();
-			return ERRCODE_NONE;
-		}
-		else
+		implGetAndCacheFiles(mxFileDlg, rpURLList, getCurentSfxFilter());
+		if ( rpURLList == NULL )
 			return ERRCODE_ABORT;
+        
+        SaveLastUsedFilter();
+        return ERRCODE_NONE;
 	}
 	else
 		return ERRCODE_ABORT;
@@ -1689,9 +1718,11 @@ void FileDialogHelper_Impl::displayFolder( const ::rtl::OUString& _rPath )
 		// nothing to do
 		return;
 
+	/*
 	if ( !::utl::UCBContentHelper::IsFolder( _rPath ) )
 		// only valid folders accepted here
 		return;
+	*/
 
 	maPath = _rPath;
 	if ( mxFileDlg.is() )
@@ -1739,7 +1770,7 @@ void FileDialogHelper_Impl::setFilter( const OUString& rFilter )
 			maCurFilter = pFilter->GetUIName();
 	}
 
-	Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
+	uno::Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
 
 	if ( maCurFilter.getLength() && xFltMgr.is() )
 	{
@@ -1754,7 +1785,7 @@ void FileDialogHelper_Impl::setFilter( const OUString& rFilter )
 // ------------------------------------------------------------------------
 void FileDialogHelper_Impl::createMatcher( const String& rFactory )
 {
-	mpMatcher = new SfxFilterMatcher( rFactory );
+	mpMatcher = new SfxFilterMatcher( SfxObjectShell::GetServiceNameFromFactory(rFactory) );
 	mbDeleteMatcher = sal_True;
 }
 
@@ -1764,7 +1795,7 @@ void FileDialogHelper_Impl::addFilters( sal_Int64 nFlags,
 										SfxFilterFlags nMust,
 										SfxFilterFlags nDont )
 {
-	Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
+	uno::Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
 
 	if ( ! xFltMgr.is() )
 		return;
@@ -1782,8 +1813,8 @@ void FileDialogHelper_Impl::addFilters( sal_Int64 nFlags,
         mbDeleteMatcher = sal_True;
     }
 
-    Reference< XMultiServiceFactory > xSMGR = ::comphelper::getProcessServiceFactory();
-    Reference< XContainerQuery > xFilterCont(
+    uno::Reference< XMultiServiceFactory > xSMGR = ::comphelper::getProcessServiceFactory();
+    uno::Reference< XContainerQuery > xFilterCont(
         xSMGR->createInstance(::rtl::OUString::createFromAscii("com.sun.star.document.FilterFactory")),
         UNO_QUERY);
     if ( ! xFilterCont.is() )
@@ -1795,20 +1826,14 @@ void FileDialogHelper_Impl::addFilters( sal_Int64 nFlags,
 	// create the list of filters
     ::rtl::OUStringBuffer sQuery(256);
     sQuery.appendAscii("getSortedFilterList()");
-	if ( rFactory.Len() )
-    {
-        // translate short to long name
-        SvtModuleOptions::EFactory eFactory = SvtModuleOptions::ClassifyFactoryByShortName(rFactory);
-        ::rtl::OUString            sFactory = SvtModuleOptions().GetFactoryName(eFactory);
-        sQuery.appendAscii(":module=");
-        sQuery.append     (sFactory  );
-    }
+    sQuery.appendAscii(":module="										);
+    sQuery.append     (rFactory											); // use long name here !
     sQuery.appendAscii(":iflags="                                       );
     sQuery.append     (::rtl::OUString::valueOf((sal_Int32)m_nMustFlags));
     sQuery.appendAscii(":eflags="                                       );
     sQuery.append     (::rtl::OUString::valueOf((sal_Int32)m_nDontFlags));
 
-    Reference< XEnumeration > xResult = xFilterCont->createSubSetEnumerationByQuery(sQuery.makeStringAndClear());
+    uno::Reference< XEnumeration > xResult = xFilterCont->createSubSetEnumerationByQuery(sQuery.makeStringAndClear());
     TSortedFilterList         aIter   (xResult);
 
     // no matcher any longer used ...
@@ -1832,7 +1857,7 @@ void FileDialogHelper_Impl::addFilters( sal_Int64 nFlags,
 void FileDialogHelper_Impl::addFilter( const OUString& rFilterName,
 									   const OUString& rExtension )
 {
-	Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
+	uno::Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
 
 	if ( ! xFltMgr.is() )
 		return;
@@ -1857,7 +1882,7 @@ void FileDialogHelper_Impl::addFilter( const OUString& rFilterName,
 // ------------------------------------------------------------------------
 void FileDialogHelper_Impl::addGraphicFilter()
 {
-	Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
+	uno::Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
 
 	if ( ! xFltMgr.is() )
 		return;
@@ -1943,7 +1968,7 @@ void FileDialogHelper_Impl::addGraphicFilter()
 
 void FileDialogHelper_Impl::saveConfig()
 {
-	Reference < XFilePickerControlAccess > xDlg( mxFileDlg, UNO_QUERY );
+	uno::Reference < XFilePickerControlAccess > xDlg( mxFileDlg, UNO_QUERY );
 	Any aValue;
 
 	if ( ! xDlg.is() )
@@ -1956,11 +1981,7 @@ void FileDialogHelper_Impl::saveConfig()
 
 		try
 		{
-			aValue = xDlg->getValue( ExtendedFilePickerElementIds::CHECKBOX_LINK, 0 );
 			sal_Bool bValue = sal_False;
-			aValue >>= bValue;
-			aUserData.SetToken( 0, ' ', String::CreateFromInt32( (sal_Int32) bValue ) );
-
 			aValue = xDlg->getValue( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW, 0 );
 			bValue = sal_False;
 			aValue >>= bValue;
@@ -2046,7 +2067,7 @@ namespace
 			sPathCheck += '.';
 			try
 			{
-				::ucb::Content aContent( sPathCheck, Reference< ::com::sun::star::ucb::XCommandEnvironment >() );
+				::ucbhelper::Content aContent( sPathCheck, uno::Reference< ucb::XCommandEnvironment >() );
 				bValid = aContent.isFolder();
 			}
 			catch( Exception& ) {}
@@ -2062,7 +2083,7 @@ namespace
 // ------------------------------------------------------------------------
 void FileDialogHelper_Impl::loadConfig()
 {
-	Reference < XFilePickerControlAccess > xDlg( mxFileDlg, UNO_QUERY );
+	uno::Reference < XFilePickerControlAccess > xDlg( mxFileDlg, UNO_QUERY );
 	Any aValue;
 
 	if ( ! xDlg.is() )
@@ -2085,15 +2106,13 @@ void FileDialogHelper_Impl::loadConfig()
 		{
 			try
 			{
-				// respect the last "insert as link" state
-				sal_Bool bLink = (sal_Bool) aUserData.GetToken( 0, ' ' ).ToInt32();
-				aValue <<= bLink;
-				xDlg->setValue( ExtendedFilePickerElementIds::CHECKBOX_LINK, 0, aValue );
-
 				// respect the last "show preview" state
 				sal_Bool bShowPreview = (sal_Bool) aUserData.GetToken( 1, ' ' ).ToInt32();
-				aValue <<= bShowPreview;
-				xDlg->setValue( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW, 0, aValue );
+                if  ( !xDlg->getValue( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW, 0 ).hasValue() )
+                {
+				    aValue <<= bShowPreview;
+				    xDlg->setValue( ExtendedFilePickerElementIds::CHECKBOX_PREVIEW, 0, aValue );
+                }
 
 				if ( !maPath.getLength() )
 					displayFolder( getInitPath( aUserData, 2 ) );
@@ -2155,7 +2174,7 @@ void FileDialogHelper_Impl::setDefaultValues()
 	// when no filter is set, we set the curentFilter to <all>
 	if ( !maCurFilter.getLength() && maSelectFilter.getLength() )
 	{
-		Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
+		uno::Reference< XFilterManager > xFltMgr( mxFileDlg, UNO_QUERY );
 		try
 		{
 			xFltMgr->setCurrentFilter( maSelectFilter );
@@ -2266,7 +2285,36 @@ FileDialogHelper::FileDialogHelper(
 	mxImp = mpImp;
 
 	// create the list of filters
-	mpImp->addFilters( nFlags, rFact, nMust, nDont );
+	mpImp->addFilters( nFlags, SfxObjectShell::GetServiceNameFromFactory(rFact), nMust, nDont );
+}
+
+FileDialogHelper::FileDialogHelper(
+    sal_Int64 nFlags,
+    const String& rFact,
+	sal_Int16 nDialog,
+    SfxFilterFlags nMust,
+    SfxFilterFlags nDont,
+	const String& rStandardDir)
+{
+	mpImp = new FileDialogHelper_Impl( this, getDialogType( nFlags ), nFlags, nDialog, NULL , rStandardDir );
+	mxImp = mpImp;
+
+	// create the list of filters
+	mpImp->addFilters( nFlags, SfxObjectShell::GetServiceNameFromFactory(rFact), nMust, nDont );
+}
+
+FileDialogHelper::FileDialogHelper(
+    sal_Int64 nFlags,
+    const String& rFact,
+	sal_Int16 nDialog,
+    SfxFilterFlags nMust,
+    SfxFilterFlags nDont )
+{
+	mpImp = new FileDialogHelper_Impl( this, getDialogType( nFlags ), nFlags, nDialog );
+	mxImp = mpImp;
+
+	// create the list of filters
+	mpImp->addFilters( nFlags, SfxObjectShell::GetServiceNameFromFactory(rFact), nMust, nDont );
 }
 
 // ------------------------------------------------------------------------
@@ -2290,7 +2338,24 @@ FileDialogHelper::FileDialogHelper(
 	mxImp = mpImp;
 
 	// create the list of filters
-	mpImp->addFilters( nFlags, rFact, nMust, nDont );
+	mpImp->addFilters( nFlags, SfxObjectShell::GetServiceNameFromFactory(rFact), nMust, nDont );
+}
+
+// ------------------------------------------------------------------------
+FileDialogHelper::FileDialogHelper(
+    sal_Int16 nDialogType,
+    sal_Int64 nFlags,
+    const String& rFact,
+	sal_Int16 nDialog,
+    SfxFilterFlags nMust,
+    SfxFilterFlags nDont,
+	const String& rStandardDir )
+{
+	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, nDialog, NULL, rStandardDir );
+	mxImp = mpImp;
+
+	// create the list of filters
+	mpImp->addFilters( nFlags, SfxObjectShell::GetServiceNameFromFactory(rFact), nMust, nDont );
 }
 
 // ------------------------------------------------------------------------
@@ -2299,8 +2364,37 @@ FileDialogHelper::FileDialogHelper(
     sal_Int64 nFlags,
     Window* _pPreferredParent )
 {
-	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, _pPreferredParent );
+	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, SFX2_IMPL_DIALOG_CONFIG, _pPreferredParent );
 	mxImp = mpImp;
+}
+
+// ------------------------------------------------------------------------
+FileDialogHelper::FileDialogHelper(
+    sal_Int16 nDialogType,
+    sal_Int64 nFlags,
+	const ::rtl::OUString& aFilterUIName,
+	const ::rtl::OUString& aExtName,
+	const ::rtl::OUString& rStandardDir,
+    Window* _pPreferredParent )
+{
+	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, SFX2_IMPL_DIALOG_CONFIG, _pPreferredParent,rStandardDir );
+	mxImp = mpImp;
+
+	// the wildcard here is expected in form "*.extension"
+	::rtl::OUString aWildcard;
+	if ( aExtName.indexOf( (sal_Unicode)'*' ) != 0 )
+	{
+		if ( aExtName.getLength() && aExtName.indexOf( (sal_Unicode)'.' ) != 0 )
+			aWildcard = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "*." ) );
+		else
+			aWildcard = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "*" ) );
+	}
+
+	aWildcard += aExtName;
+
+	::rtl::OUString aUIString =
+		::sfx2::addExtension( aFilterUIName, aWildcard, ( WB_OPEN == ( nFlags & WB_OPEN ) ), *mpImp );
+	AddFilter( aUIString, aWildcard );
 }
 
 // ------------------------------------------------------------------------
@@ -2313,7 +2407,7 @@ FileDialogHelper::~FileDialogHelper()
 // ------------------------------------------------------------------------
 void FileDialogHelper::CreateMatcher( const String& rFactory )
 {
-	mpImp->createMatcher( rFactory );
+	mpImp->createMatcher( SfxObjectShell::GetServiceNameFromFactory(rFactory) );
 }
 
 // ------------------------------------------------------------------------
@@ -2344,15 +2438,16 @@ IMPL_LINK( FileDialogHelper, ExecuteSystemFilePicker, void*, EMPTYARG )
 }
 
 // ------------------------------------------------------------------------
-ErrCode FileDialogHelper::Execute( const String&   rPath,
-								   SvStringsDtor*& rpURLList,
+// rDirPath has to be a directory
+ErrCode FileDialogHelper::Execute( SvStringsDtor*& rpURLList,
 								   SfxItemSet *&   rpSet,
-								   String&		   rFilter )
+								   String&		   rFilter,
+								   const String&   rDirPath )
 {
-	SetDisplayDirectory( rPath );
-
+	SetDisplayFolder( rDirPath );
 	return mpImp->execute( rpURLList, rpSet, rFilter );
 }
+
 
 // ------------------------------------------------------------------------
 ErrCode FileDialogHelper::Execute()
@@ -2420,6 +2515,9 @@ String FileDialogHelper::GetPath() const
 {
 	OUString aPath;
 
+    if ( mpImp->mlLastURLs.size() > 0)
+        return mpImp->mlLastURLs[0];
+
 	if ( mpImp->mxFileDlg.is() )
 	{
 		Sequence < OUString > aPathSeq = mpImp->mxFileDlg->getFiles();
@@ -2436,6 +2534,9 @@ String FileDialogHelper::GetPath() const
 // ------------------------------------------------------------------------
 Sequence < OUString > FileDialogHelper::GetMPath() const
 {
+    if ( mpImp->mlLastURLs.size() > 0)
+        return mpImp->mlLastURLs.getAsConstList();
+    
 	if ( mpImp->mxFileDlg.is() )
 		return mpImp->mxFileDlg->getFiles();
 	else
@@ -2468,8 +2569,8 @@ static int impl_isFolder( const OUString& rPath )
 {
 	try
 	{
-		::ucb::Content aContent(
-			rPath, star::uno::Reference< star::ucb::XCommandEnvironment >() );
+		::ucbhelper::Content aContent(
+			rPath, uno::Reference< ucb::XCommandEnvironment >() );
 		if ( aContent.isFolder() )
 			return 1;
 
@@ -2547,7 +2648,7 @@ void FileDialogHelper::SetCurrentFilter( const String& rFilter )
 }
 
 // ------------------------------------------------------------------------
-Reference < XFilePicker > FileDialogHelper::GetFilePicker() const
+uno::Reference < XFilePicker > FileDialogHelper::GetFilePicker() const
 {
 	return mpImp->mxFileDlg;
 }
@@ -2626,16 +2727,18 @@ ErrCode FileOpenDialog_Impl( sal_Int64 nFlags,
                              SvStringsDtor *& rpURLList,
                              String& rFilter,
                              SfxItemSet *& rpSet,
-                             const String* pPath )
+                             const String* pPath,
+							 sal_Int16 nDialog,
+							 const String& rStandardDir )
 {
 	ErrCode nRet;
-	FileDialogHelper aDialog( nFlags, rFact );
+	FileDialogHelper aDialog( nFlags, rFact, nDialog, 0, 0, rStandardDir );
 
     String aPath;
     if ( pPath )
         aPath = *pPath;
 
-    nRet = aDialog.Execute( aPath, rpURLList, rpSet, rFilter );
+    nRet = aDialog.Execute( rpURLList, rpSet, rFilter, aPath );
 	DBG_ASSERT( rFilter.SearchAscii(": ") == STRING_NOTFOUND, "Old filter name used!");
 
 	return nRet;

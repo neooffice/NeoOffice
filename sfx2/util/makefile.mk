@@ -1,36 +1,30 @@
 #*************************************************************************
 #
-#   $RCSfile$
+# Copyright 2008 by Sun Microsystems, Inc.
 #
-#   $Revision$
+# $RCSfile$
 #
-#   last change: $Author$ $Date$
+# $Revision$
 #
-#   The Contents of this file are made available subject to
-#   the terms of GNU General Public License Version 2.1.
+# This file is part of NeoOffice.
 #
+# NeoOffice is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3
+# only, as published by the Free Software Foundation.
 #
-#     GNU General Public License Version 2.1
-#     =============================================
-#     Copyright 2005 by Sun Microsystems, Inc.
-#     901 San Antonio Road, Palo Alto, CA 94303, USA
+# NeoOffice is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
 #
-#     This library is free software; you can redistribute it and/or
-#     modify it under the terms of the GNU General Public
-#     License version 2.1, as published by the Free Software Foundation.
+# You should have received a copy of the GNU General Public License
+# version 3 along with NeoOffice.  If not, see
+# <http://www.gnu.org/licenses/gpl-3.0.txt>
+# for a copy of the GPLv3 License.
 #
-#     This library is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#     General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public
-#     License along with this library; if not, write to the Free Software
-#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#     MA  02111-1307  USA
-#
-#     Modified December 2005 by Patrick Luby. NeoOffice is distributed under
-#     GPL only under modification term 3 of the LGPL.
+# Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
@@ -54,10 +48,6 @@ SOLARLIB:=-L$(PRJ)$/..$/shell$/$(INPATH)$/slb $(SOLARLIB)
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
-.IF "$(GUIBASE)"=="java"
-CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
-.ENDIF		# "$(GUIBASE)"=="java"
-
 # --- Allgemein ----------------------------------------------------
 
 LIB1TARGET= $(SLB)$/$(TARGET).lib
@@ -76,7 +66,7 @@ LIB1FILES=  $(SLB)$/appl.lib		\
             $(SLB)$/config.lib
 
 HELPIDFILES=\
-			..\inc\sfxsids.hrc	\
+			..\inc\sfx2\sfxsids.hrc	\
 			..\source\inc\helpid.hrc
 
 .IF "$(GUI)"!="UNX"
@@ -84,9 +74,9 @@ LIB2TARGET= $(LB)$/$(TARGET).lib
 LIB2FILES=  $(LB)$/isfx.lib
 .ENDIF
 
-SHL1TARGET= sfx$(UPD)$(DLLPOSTFIX)
+SHL1TARGET= sfx$(DLLPOSTFIX)
 SHL1IMPLIB= isfx
-SHL1USE_EXPORTS=ordinal
+SHL1USE_EXPORTS=name
 
 SHL1STDLIBS+=\
         $(FWELIB) \
@@ -100,6 +90,7 @@ SHL1STDLIBS+=\
         $(UNOTOOLSLIB) \
 		$(TOOLSLIB) \
 		$(I18NISOLANGLIB) \
+		$(SAXLIB) \
 		$(SYSSHELLLIB) \
 		$(COMPHELPERLIB) \
         $(UCBHELPERLIB) \
@@ -112,18 +103,20 @@ SHL1STDLIBS+=\
 .IF "$(GUI)"=="WNT"
 
 SHL1STDLIBS+=\
-		uwinapi.lib \
-		advapi32.lib \
-		shell32.lib \
-		gdi32.lib \
-		ole32.lib \
-		uuid.lib
-
+		$(UWINAPILIB) \
+		$(ADVAPI32LIB) \
+		$(SHELL32LIB) \
+		$(GDI32LIB) \
+		$(OLE32LIB) \
+		$(UUIDLIB)
+.ELSE # WNT
+.IF "$(OS)" == "MACOSX"
+SHL1STDLIBS+= -framework Cocoa
+.ENDIF # MACOSX
 .ENDIF # WNT
 
-.IF "$(GUI)"!="MAC"
-SHL1DEPN += $(shell $(FIND) $(SLO) -type f -name "*.OBJ" -print)
-.ENDIF
+
+SHL1DEPN += $(shell @$(FIND) $(SLO) -type f -name "*.OBJ" -print)
 
 SHL1LIBS=   $(LIB1TARGET)
 
@@ -156,7 +149,7 @@ PKGCONFIG_MODULES=gtk+-2.0
 .INCLUDE: pkg_config.mk
 CFLAGS+=$(PKGCONFIG_CFLAGS)
 
-SHL3TARGET=qstart_gtk$(UPD)$(DLLPOSTFIX)
+SHL3TARGET=qstart_gtk$(DLLPOSTFIX)
 SHL3LIBS=$(SLB)$/quickstart.lib
 SHL3DEPN=$(SHL1IMPLIBN) $(SHL1TARGETN)
 # libs for gtk plugin

@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified June 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified June 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -38,74 +31,44 @@
 #include "precompiled_sfx2.hxx"
 
 #include <tools/debug.hxx>
-
-#ifndef _SFXENUMITEM_HXX //autogen
 #include <svtools/eitem.hxx>
-#endif
-#ifndef _SFXSTRITEM_HXX //autogen
 #include <svtools/stritem.hxx>
-#endif
 #include <svtools/intitem.hxx>
 #include <svtools/itemset.hxx>
 #include <svtools/visitem.hxx>
 #include <svtools/javacontext.hxx>
-#ifndef _SFXITEMPOOL_HXX
 #include <svtools/itempool.hxx>
-#endif
 #include <tools/urlobj.hxx>
-
-#ifndef _COM_SUN_STAR_UTIL_XURLTRANSFORMER_HPP_
 #include <com/sun/star/util/XURLTransformer.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XCONTROLLER_HPP_
 #include <com/sun/star/frame/XController.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XFRAMEACTIONLISTENER_HPP_
 #include <com/sun/star/frame/XFrameActionListener.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XCOMPONENTLOADER_HPP_
 #include <com/sun/star/frame/XComponentLoader.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XFRAME_HPP_
 #include <com/sun/star/frame/XFrame.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_FRAMEACTIONEVENT_HPP_
 #include <com/sun/star/frame/FrameActionEvent.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_FRAMEACTION_HPP_
 #include <com/sun/star/frame/FrameAction.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_STATUS_ITEMSTATUS_HPP_
 #include <com/sun/star/frame/status/ItemStatus.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_STATUS_ITEMSTATE_HPP_
 #include <com/sun/star/frame/status/ItemState.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_DISPATCHRESULTSTATE_HPP_
 #include <com/sun/star/frame/DispatchResultState.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_STATUS_VISIBILITY_HPP_
 #include <com/sun/star/frame/status/Visibility.hpp>
-#endif
 #include <comphelper/processfactory.hxx>
 #include <comphelper/sequence.hxx>
 #include <vos/mutex.hxx>
 #include <uno/current_context.hxx>
 #include <vcl/svapp.hxx>
 
-#include "app.hxx"
-#include "unoctitm.hxx"
-#include "viewfrm.hxx"
-#include "frame.hxx"
-#include "ctrlitem.hxx"
-#include "sfxuno.hxx"
-#include "bindings.hxx"
-#include "dispatch.hxx"
-#include "sfxsids.hrc"
-#include "request.hxx"
+#include <sfx2/app.hxx>
+#include <sfx2/unoctitm.hxx>
+#include <sfx2/viewfrm.hxx>
+#include <sfx2/frame.hxx>
+#include <sfx2/ctrlitem.hxx>
+#include <sfx2/sfxuno.hxx>
+#include <sfx2/bindings.hxx>
+#include <sfx2/dispatch.hxx>
+#include <sfx2/sfxsids.hrc>
+#include <sfx2/request.hxx>
 #include "statcach.hxx"
-#include "msgpool.hxx"
-#include "objsh.hxx"
+#include <sfx2/msgpool.hxx>
+#include <sfx2/objsh.hxx>
 
 namespace css = ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -889,8 +852,7 @@ void SAL_CALL SfxDispatchController_Impl::dispatch( const ::com::sun::star::util
                 // may have already been deleted
                 const SfxSlot *pSlot = 0;
                 pShell = 0;
-                if ( pDispatcher->GetShellAndSlot_Impl( GetId(), &pShell, &pSlot, sal_False,
-                        SFX_CALLMODE_MODAL==(nCall&SFX_CALLMODE_MODAL), FALSE ) )
+                if ( pDispatcher->GetShellAndSlot_Impl( GetId(), &pShell, &pSlot, sal_False, SFX_CALLMODE_MODAL==(nCall&SFX_CALLMODE_MODAL), FALSE ) && pShell )
 #else	// USE_JAVA
                 if ( pShell )
 #endif	// USE_JAVA
