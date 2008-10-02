@@ -18,7 +18,7 @@
  * (a copy is included in the LICENSE file that accompanied this code).
  *
  * You should have received a copy of the GNU General Public License
- * version 3 along with OpenOffice.org.  If not, see
+ * version 3 along with NeoOffice.  If not, see
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
