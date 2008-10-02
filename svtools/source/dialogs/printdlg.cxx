@@ -1,102 +1,73 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
-
-#ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 #ifndef _SV_APP_HXX
 #include <vcl/svapp.hxx>
 #endif
 #ifndef _VCL_PRINT_HXX
 #include <vcl/print.hxx>
 #endif
-#ifndef _SV_MSGBOX_HXX
 #include <vcl/msgbox.hxx>
-#endif
-#ifndef _SV_JOBSET_HXX
 #include <vcl/jobset.hxx>
-#endif
 #include <tools/urlobj.hxx>
 
 #include "printdlg.hrc"
-#include <prnsetup.hxx>
-#include <printdlg.hxx>
-#include <svtdata.hxx>
+#include "controldims.hrc"
+#include <svtools/prnsetup.hxx>
+#include <svtools/printdlg.hxx>
+#include <svtools/svtdata.hxx>
 #include <filedlg.hxx>
-
-#ifndef _PICKERHELPER_HXX
 #include "pickerhelper.hxx"
-#endif
 #ifndef _SVT_HELPID_HRC
-#include "helpid.hrc"
+#include <svtools/helpid.hrc>
 #endif
-
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_TEMPLATEDESCRIPTION_HPP_
 #include <com/sun/star/ui/dialogs/TemplateDescription.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_EXECUTABLEDIALOGRESULTS_HPP_
 #include <com/sun/star/ui/dialogs/ExecutableDialogResults.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILEPICKER_HPP_
 #include <com/sun/star/ui/dialogs/XFilePicker.hpp>
-#endif
-#ifndef  _COM_SUN_STAR_UI_DIALOGS_XFILTERMANAGER_HPP_
 #include <com/sun/star/ui/dialogs/XFilterManager.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
 
-using namespace com::sun::star::uno;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::ui::dialogs;
-using namespace rtl;
+using rtl::OUString;
+using namespace com::sun::star;
 
 struct SvtPrinterImpl
 {
-	Printer*	m_pTempPrinter;
-	sal_Bool	m_bHelpDisabled;
+    Printer*        m_pTempPrinter;
+    sal_Bool        m_bHelpDisabled;
+    PrintSheetRange m_eSheetRange;
 
-	SvtPrinterImpl() : m_pTempPrinter( NULL ), m_bHelpDisabled( sal_False ) {}
+    SvtPrinterImpl() :
+        m_pTempPrinter( NULL ), m_bHelpDisabled( sal_False ), m_eSheetRange( PRINTSHEETS_ALL ) {}
 	~SvtPrinterImpl() { delete m_pTempPrinter; }
 };
 
@@ -104,7 +75,7 @@ struct SvtPrinterImpl
 
 // =======================================================================
 
-PrintDialog::PrintDialog( Window* pWindow ) :
+PrintDialog::PrintDialog( Window* pWindow, bool bWithSheetsAndCells ) :
 	ModalDialog 	( pWindow, SvtResId( DLG_SVT_PRNDLG_PRINTDLG ) ),
 	maFlPrinter		( this, SvtResId( FL_PRINTER ) ),
 	maFtName		( this, SvtResId( FT_NAME ) ),
@@ -121,26 +92,31 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	maCbxFilePrint	( this, SvtResId( CBX_FILEPRINT ) ),
 	maFiPrintFile	( this, SvtResId( FI_PRINTFILE ) ),
 	maFiFaxNo		( this, SvtResId( FI_FAXNO ) ),
-	maEdtFaxNo		( this, SvtResId( EDT_FAXNO ) ),    
-	maBtnBrowse_nomore 	( this, SvtResId( BTN_BROWSE ) ),
-	maFlPrintRange 	( this, SvtResId( FL_PRINTRANGE ) ),
-	maRbtAll		( this, SvtResId( RBT_ALL ) ),
-	maRbtPages		( this, SvtResId( RBT_PAGES ) ),
-	maRbtSelection	( this, SvtResId( RBT_SELECTION ) ),
-	maEdtPages		( this, SvtResId( EDT_PAGES ) ),
-	maFlCopies 		( this, SvtResId( FL_COPIES ) ),
-	maFtCopies		( this, SvtResId( FT_COPIES ) ),
-	maNumCopies 	( this, SvtResId( NUM_COPIES ) ),
-	maImgCollate	( this, SvtResId( IMG_COLLATE ) ),
-	maImgNotCollate ( this, SvtResId( IMG_NOT_COLLATE ) ),
-	maCbxCollate	( this, SvtResId( CBX_COLLATE ) ),
-	maBtnOptions	( this, SvtResId( BTN_OPTIONS ) ),
-	maBtnOK 		( this, SvtResId( BTN_OK ) ),
-	maBtnCancel 	( this, SvtResId( BTN_CANCEL ) ),
-	maBtnHelp		( this, SvtResId( BTN_HELP ) ),
-    maFlSepCopiesRange( this, SvtResId( FL_SEPCOPIESRANGE ) ),
-    maFlSepButtonLine( this, SvtResId( FL_SEPBUTTONLINE ) ),
-    maAllFilterStr	( SvtResId( STR_ALLFILTER ) )
+	maEdtFaxNo		( this, SvtResId( EDT_FAXNO ) ),
+    maFlPrint       ( this, SvtResId( FL_PRINT ) ),
+    maRbtAllSheets  ( this, SvtResId( RBT_ALL_SHEETS ) ),
+    maRbtSelectedSheets ( this, SvtResId( RBT_SELECTED_SHEETS ) ),
+    maRbtSelectedCells  ( this, SvtResId( RBT_SELECTED_CELLS ) ),
+    maFlPrintRange      ( this, SvtResId( FL_PRINTRANGE ) ),
+    maRbtAll            ( this, SvtResId( RBT_ALL ) ),
+    maRbtPages          ( this, SvtResId( RBT_PAGES ) ),
+    maRbtSelection      ( this, SvtResId( RBT_SELECTION ) ),
+    maEdtPages          ( this, SvtResId( EDT_PAGES ) ),
+    maFlSepCopiesRange  ( this, SvtResId( FL_SEPCOPIESRANGE ) ),
+    maFlCopies          ( this, SvtResId( FL_COPIES ) ),
+    maFtCopies          ( this, SvtResId( FT_COPIES ) ),
+    maNumCopies         ( this, SvtResId( NUM_COPIES ) ),
+    maImgCollate        ( this, SvtResId( IMG_COLLATE ) ),
+    maImgNotCollate     ( this, SvtResId( IMG_NOT_COLLATE ) ),
+    maCbxCollate        ( this, SvtResId( CBX_COLLATE ) ),
+    maFlSepButtonLine   ( this, SvtResId( FL_SEPBUTTONLINE ) ),
+    maBtnOptions        ( this, SvtResId( BTN_OPTIONS ) ),
+    maBtnOK             ( this, SvtResId( BTN_OK ) ),
+    maBtnCancel         ( this, SvtResId( BTN_CANCEL ) ),
+    maBtnHelp           ( this, SvtResId( BTN_HELP ) ),
+    mbWithSheetsAndCells( bWithSheetsAndCells ),
+    maAllFilterStr      (       SvtResId( STR_ALLFILTER ) )
+
 {
 	FreeResource();
 
@@ -156,8 +132,8 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	mbSelection 	= FALSE;
 	mbFromTo		= FALSE;
 	mbRange 		= FALSE;
-	mbCollate		= FALSE;
-	mbCollateCheck	= FALSE;
+    mbCollate       = TRUE;
+    mbCollateCheck  = TRUE;
 	mbOptions		= FALSE;
 
 	maStatusTimer.SetTimeout( IMPL_PRINTDLG_STATUS_UPDATE );
@@ -171,7 +147,7 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 	maCbxFilePrint.SetClickHdl( aLink );
 	maRbtAll.SetClickHdl( aLink );
 	maRbtPages.SetClickHdl( aLink );
-	maRbtSelection.SetClickHdl( aLink );
+    maRbtSelection.SetClickHdl( aLink );
 	maEdtPages.SetModifyHdl( aLink );
 	maNumCopies.SetModifyHdl( aLink );
 	maCbxCollate.SetClickHdl( aLink );
@@ -181,6 +157,8 @@ PrintDialog::PrintDialog( Window* pWindow ) :
 
 	maRbtAll.Check();
     ImplSetImages();
+
+    maNumCopies.GrabFocus();
 }
 
 // -----------------------------------------------------------------------
@@ -229,22 +207,34 @@ void PrintDialog::ImplSetInfo()
 	}
 
 #ifdef UNX
-	if( pInfo && pInfo->GetLocation().EqualsAscii( "fax_queue" ) )
-	{
+    if( pInfo && pInfo->GetLocation().EqualsAscii( "fax_queue" ) )
+    {
 		maFiPrintFile.Show( FALSE );
 		maCbxFilePrint.Show( FALSE );
-		maBtnBrowse_nomore.Show( FALSE );
 		maFiFaxNo.Show( TRUE );
 		maEdtFaxNo.Show( TRUE );
 		Printer* pPrinter = TEMPPRINTER() ? TEMPPRINTER() : mpPrinter;
 		maEdtFaxNo.SetText( pPrinter->GetJobValue( String::CreateFromAscii( "FAX#" ) ) );
-	}
+
+        Size aFTSize = maFiFaxNo.GetSizePixel();
+        long nTextWidth = maFiFaxNo.GetCtrlTextWidth( maFiFaxNo.GetText() ) + 10;
+        if ( aFTSize.Width() < nTextWidth )
+        {
+            long nDelta = nTextWidth - aFTSize.Width();
+            aFTSize.Width() = aFTSize.Width() + nDelta;
+            maFiFaxNo.SetSizePixel( aFTSize );
+            Size aEdtSize = maEdtFaxNo.GetSizePixel();
+            aEdtSize.Width() = aEdtSize.Width() - nDelta;
+            Point aEdtPos = maEdtFaxNo.GetPosPixel();
+            aEdtPos.X() = aEdtPos.X() + nDelta;
+            maEdtFaxNo.SetPosSizePixel( aEdtPos, aEdtSize );
+        }
+    }
 	else
 #endif
 	{
 		maFiPrintFile.Show( TRUE );
 		maCbxFilePrint.Show( TRUE );
-		maBtnBrowse_nomore.Show( FALSE );
 		maFiFaxNo.Show( FALSE );
 		maEdtFaxNo.Show( FALSE );
 	}
@@ -296,7 +286,7 @@ void PrintDialog::ImplInitControls()
 	else
 		maRbtSelection.Enable( FALSE );
 
-	// Seiten
+    // Seiten
 	if ( mbRange )
 	{
 		maRbtPages.Enable();
@@ -319,7 +309,7 @@ void PrintDialog::ImplInitControls()
 	}
 
 	// Anzahl Kopien
-	maNumCopies.SetValue( mnCopyCount );
+    maNumCopies.SetValue( mnCopyCount );
 
 	// Sortierung
 	maCbxCollate.Enable( mbCollate );
@@ -328,6 +318,48 @@ void PrintDialog::ImplInitControls()
 	// Zusaetze-Button
 	if ( mbOptions )
 		maBtnOptions.Show();
+
+    if ( !mbWithSheetsAndCells )
+    {
+        Size aMarginSize =
+            LogicToPixel( Size( RSC_SP_CTRL_GROUP_X, RSC_SP_CTRL_GROUP_Y ), MAP_APPFONT );
+        long nTempPos = maImgCollate.GetPosPixel().Y() +
+            maImgCollate.GetSizePixel().Height() +  aMarginSize.Height();
+        long nDelta1 = maFlPrintRange.GetPosPixel().Y() - maFlPrint.GetPosPixel().Y();
+        long nDelta2 = maFlSepButtonLine.GetPosPixel().Y() - nTempPos;
+
+        maFlPrint.Hide();
+        maRbtAllSheets.Hide();
+        maRbtSelectedSheets.Hide();
+        maRbtSelectedCells.Hide();
+        maRbtSelection.Show();
+
+        Size aNewSize = GetSizePixel();
+        aNewSize.Height() -= nDelta2;
+        SetSizePixel( aNewSize );
+        aNewSize = maFlSepCopiesRange.GetSizePixel();
+        aNewSize.Height() -= nDelta2;
+        maFlSepCopiesRange.SetSizePixel( aNewSize );
+
+        long nDelta = nDelta1;
+        Window* pControls[] = { &maFlPrintRange, &maRbtAll,
+                                &maRbtPages, &maEdtPages, &maRbtSelection, NULL,
+                                &maFlSepButtonLine, &maBtnOptions, &maBtnOK,
+                                &maBtnCancel, &maBtnHelp };
+        Window** pCtrl = pControls;
+        const sal_Int32 nCount = sizeof( pControls ) / sizeof( pControls[0] );
+        for ( sal_Int32 i = 0; i < nCount; ++i, ++pCtrl )
+        {
+            if ( NULL == *pCtrl )
+            {
+                nDelta = nDelta2;
+                continue;
+            }
+            Point aNewPos = (*pCtrl)->GetPosPixel();
+            aNewPos.Y() -= nDelta;
+            (*pCtrl)->SetPosPixel( aNewPos );
+        }
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -336,8 +368,8 @@ void PrintDialog::ImplFillDialogData()
 {
 	if ( maRbtAll.IsChecked() )
 		meCheckRange = PRINTDIALOG_ALL;
-	else if( maRbtSelection.IsChecked() )
-		meCheckRange = PRINTDIALOG_SELECTION;
+    else if( maRbtSelection.IsChecked() )
+        meCheckRange = PRINTDIALOG_SELECTION;
 	else
 	{
 		meCheckRange = PRINTDIALOG_RANGE;
@@ -391,20 +423,19 @@ IMPL_LINK( PrintDialog, ImplChangePrinterHdl, void*, EMPTYARG )
 
 bool PrintDialog::ImplGetFilename()
 {
-    Reference< XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
-    static OUString aOldFile;
+    uno::Reference< lang::XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory() );
+    static ::rtl::OUString aOldFile;
     if( xFactory.is() )
     {
-        Sequence< Any > aTempl( 1 );
-        aTempl.getArray()[0] <<= TemplateDescription::FILESAVE_AUTOEXTENSION;
-        
-        Reference< XFilePicker > xFilePicker( xFactory->
-                                              createInstanceWithArguments( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.ui.dialogs.FilePicker" ) ),
-                                                                           aTempl ),
-                                              UNO_QUERY );
+        uno::Sequence< uno::Any > aTempl( 1 );
+        aTempl.getArray()[0] <<= ui::dialogs::TemplateDescription::FILESAVE_AUTOEXTENSION;
+        uno::Reference< ui::dialogs::XFilePicker > xFilePicker(
+            xFactory->createInstanceWithArguments(
+                ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.ui.dialogs.FilePicker" ) ),
+                aTempl ), uno::UNO_QUERY );
         DBG_ASSERT( xFilePicker.is(), "could not get FilePicker service" );
 
-        Reference< XFilterManager > xFilterMgr( xFilePicker, UNO_QUERY );
+        uno::Reference< ui::dialogs::XFilterManager > xFilterMgr( xFilePicker, uno::UNO_QUERY );
         if( xFilePicker.is() && xFilterMgr.is() )
         {
             try
@@ -421,18 +452,18 @@ bool PrintDialog::ImplGetFilename()
                         bPDF = false;
                 }
                 if( bPS )
-                    xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "PostScript" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.ps" ) ) );
+                    xFilterMgr->appendFilter( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "PostScript" ) ), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "*.ps" ) ) );
                 if( bPDF )
-                    xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "Portable Document Format" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.pdf" ) ) );
+                    xFilterMgr->appendFilter( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Portable Document Format" ) ), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "*.pdf" ) ) );
 #elif defined WNT
-                xFilterMgr->appendFilter( OUString( RTL_CONSTASCII_USTRINGPARAM( "*.PRN" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "*.prn" ) ) );
+                xFilterMgr->appendFilter( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "*.PRN" ) ), ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "*.prn" ) ) );
 #endif
                 // add arbitrary files
-                xFilterMgr->appendFilter( maAllFilterStr, OUString( RTL_CONSTASCII_USTRINGPARAM( "*.*" ) ) );
+                xFilterMgr->appendFilter( maAllFilterStr, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "*.*" ) ) );
             }
-            catch( IllegalArgumentException rExc )
+            catch( lang::IllegalArgumentException rExc )
             {
-                DBG_ASSERT( 0, "caught IllegalArgumentException when registering filter\n" );
+                DBG_ERRORFILE( "caught IllegalArgumentException when registering filter\n" );
             }
 
             if( aOldFile.getLength() )
@@ -443,9 +474,9 @@ bool PrintDialog::ImplGetFilename()
                 xFilePicker->setDisplayDirectory( aUrl.GetMainURL( INetURLObject::DECODE_TO_IURI ) );
             }
 
-            if( xFilePicker->execute() == ExecutableDialogResults::OK )
+            if( xFilePicker->execute() == ui::dialogs::ExecutableDialogResults::OK )
             {
-                Sequence< OUString > aPathSeq( xFilePicker->getFiles() );
+                uno::Sequence< ::rtl::OUString > aPathSeq( xFilePicker->getFiles() );
 				INetURLObject aObj( aPathSeq[0] );
 				maFiPrintFile.SetText( aOldFile = aObj.PathToFileName() );
                 return true;
@@ -483,7 +514,7 @@ bool PrintDialog::ImplGetFilename()
 IMPL_LINK( PrintDialog, ImplModifyControlHdl, void*, p )
 {
 	// Radiobuttons (Umfang)
-	if ( !p || (p == &maRbtAll) || (p == &maRbtPages) || (p == &maRbtSelection) )
+    if ( !p || (p == &maRbtAll) || (p == &maRbtPages) || (p == &maRbtSelection) )
 	{
 		BOOL bCheck = maRbtPages.IsChecked();
 		maEdtPages.Enable( bCheck );
@@ -509,12 +540,13 @@ IMPL_LINK( PrintDialog, ImplModifyControlHdl, void*, p )
 	{
 		if ( p )
 			bNumCopies = TRUE;
-		BOOL bCopies = maNumCopies.GetValue() > 1;
-		maCbxCollate.Enable( bCopies && mbCollate );
+        //BOOL bCopies = maNumCopies.GetValue() > 1;
+        maCbxCollate.Enable( mbCollate );
 
-		if ( !bCopies )
+        /*if ( !bCopies )
 			maCbxCollate.Check( FALSE );
-		else if ( mbCollateCheck )
+        else*/
+        if ( mbCollateCheck )
 			maCbxCollate.Check( TRUE );
 	}
 
@@ -572,6 +604,117 @@ long PrintDialog::OK()
 
 // -----------------------------------------------------------------------
 
+void PrintDialog::EnableSheetRange( bool bEnable, PrintSheetRange eRange )
+{
+    if ( mbWithSheetsAndCells )
+    {
+        switch ( eRange )
+        {
+            case PRINTSHEETS_ALL :
+                maRbtAllSheets.Enable( bEnable != false );
+                break;
+            case PRINTSHEETS_SELECTED_SHEETS :
+                maRbtSelectedSheets.Enable( bEnable != false );
+                break;
+            case PRINTSHEETS_SELECTED_CELLS :
+                maRbtSelectedCells.Enable( bEnable != false );
+                break;
+            default:
+                DBG_ERRORFILE( "PrintDialog::EnableSheetRange(): invalid range" );
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+
+bool PrintDialog::IsSheetRangeEnabled( PrintSheetRange eRange ) const
+{
+    if ( !mbWithSheetsAndCells )
+        return false;
+
+    bool bRet = false;
+    switch ( eRange )
+    {
+        case PRINTSHEETS_ALL :
+            bRet = maRbtAllSheets.IsEnabled() != FALSE;
+            break;
+        case PRINTSHEETS_SELECTED_SHEETS :
+            bRet = maRbtSelectedSheets.IsEnabled() != FALSE;
+            break;
+        case PRINTSHEETS_SELECTED_CELLS :
+            bRet = maRbtSelectedCells.IsEnabled() != FALSE;
+            break;
+        default:
+            DBG_ERRORFILE( "PrintDialog::IsSheetRangeEnabled(): invalid range" );
+    }
+    return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+void PrintDialog::CheckSheetRange( PrintSheetRange eRange )
+{
+    if ( mbWithSheetsAndCells )
+    {
+        switch ( eRange )
+        {
+            case PRINTSHEETS_ALL :
+                maRbtAllSheets.Check();
+                break;
+            case PRINTSHEETS_SELECTED_SHEETS :
+                maRbtSelectedSheets.Check();
+                break;
+            case PRINTSHEETS_SELECTED_CELLS :
+                maRbtSelectedCells.Check();
+                break;
+            default:
+                DBG_ERRORFILE( "PrintDialog::CheckSheetRange(): invalid range" );
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+
+PrintSheetRange PrintDialog::GetCheckedSheetRange() const
+{
+    PrintSheetRange eRange = PRINTSHEETS_ALL;
+    if ( mbWithSheetsAndCells )
+    {
+        if ( maRbtSelectedSheets.IsChecked() )
+            eRange = PRINTSHEETS_SELECTED_SHEETS;
+        else if ( maRbtSelectedCells.IsChecked() )
+            eRange = PRINTSHEETS_SELECTED_CELLS;
+    }
+    return eRange;
+}
+
+// -----------------------------------------------------------------------
+
+bool PrintDialog::IsSheetRangeChecked( PrintSheetRange eRange ) const
+{
+    if ( !mbWithSheetsAndCells )
+        return false;
+
+    bool bRet = false;
+    switch ( eRange )
+    {
+        case PRINTSHEETS_ALL :
+            bRet = maRbtAllSheets.IsChecked() != FALSE;
+            break;
+        case PRINTSHEETS_SELECTED_SHEETS :
+            bRet = maRbtSelectedSheets.IsChecked() != FALSE;
+            break;
+        case PRINTSHEETS_SELECTED_CELLS :
+            bRet = maRbtSelectedCells.IsChecked() != FALSE;
+            break;
+        default:
+            DBG_ERRORFILE( "PrintDialog::IsSheetRangeChecked(): invalid range" );
+    }
+    return bRet;
+}
+
+// -----------------------------------------------------------------------
+
 long PrintDialog::Notify( NotifyEvent& rNEvt )
 {
 	if ( (rNEvt.GetType() == EVENT_GETFOCUS) && IsReallyVisible() )
@@ -617,6 +760,11 @@ short PrintDialog::Execute()
 		return FALSE;
 	}
     
+    // check if the printer brings up its own dialog
+    // in that case leave the work to that dialog
+    if( mpPrinter->GetCapabilities( PRINTER_CAPABILITIES_EXTERNALDIALOG ) )
+        return TRUE;
+
     Printer::updatePrinters();
 
 	// Controls initialisieren
@@ -649,7 +797,7 @@ short PrintDialog::Execute()
 		mpPrinter->EndJob();
 	}
 #else	// USE_JAVA
-	// Dialog starten
+    // Dialog starten
 	short nRet = ModalDialog::Execute();
 #endif	// USE_JAVA
 

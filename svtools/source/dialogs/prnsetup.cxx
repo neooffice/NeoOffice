@@ -1,45 +1,35 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
-
-#ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 #ifndef _VCL_PRINT_HXX
 #include <vcl/print.hxx>
 #endif
@@ -47,9 +37,9 @@
 #ifndef GCC
 #endif
 
-#include <svtdata.hxx>
+#include <svtools/svtdata.hxx>
 #include "prnsetup.hrc"
-#include <prnsetup.hxx>
+#include <svtools/prnsetup.hxx>
 
 // =======================================================================
 
@@ -253,6 +243,7 @@ PrinterSetupDialog::PrinterSetupDialog( Window* pWindow ) :
 	maFtName		( this, SvtResId( FT_NAME ) ),
 	maLbName		( this, SvtResId( LB_NAMES ) ),
 	maBtnProperties ( this, SvtResId( BTN_PROPERTIES ) ),
+	maBtnOptions    ( this, SvtResId( BTN_OPTIONS ) ),
 	maFtStatus		( this, SvtResId( FT_STATUS ) ),
 	maFiStatus		( this, SvtResId( FI_STATUS ) ),
 	maFtType		( this, SvtResId( FT_TYPE ) ),
@@ -267,6 +258,9 @@ PrinterSetupDialog::PrinterSetupDialog( Window* pWindow ) :
 	maBtnHelp		( this, SvtResId( BTN_HELP ) )
 {
 	FreeResource();
+    
+    // show options button only if link is set
+    maBtnOptions.Hide();
 
 	mpPrinter		= NULL;
 	mpTempPrinter	= NULL;
@@ -286,6 +280,17 @@ PrinterSetupDialog::~PrinterSetupDialog()
 }
 
 // -----------------------------------------------------------------------
+
+void PrinterSetupDialog::SetOptionsHdl( const Link& rLink )
+{
+    maBtnOptions.SetClickHdl( rLink );
+    maBtnOptions.Show( rLink.IsSet() );
+}
+
+const Link& PrinterSetupDialog::GetOptionsHdl() const
+{
+    return maBtnOptions.GetClickHdl();
+}
 
 void PrinterSetupDialog::ImplSetInfo()
 {

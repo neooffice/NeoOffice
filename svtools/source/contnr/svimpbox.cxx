@@ -1,87 +1,73 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svtools.hxx"
-
-#ifndef _SV_SVAPP_HXX //autogen
 #include <vcl/svapp.hxx>
-#endif
+#include <vcl/salnativewidgets.hxx>
 
 #ifndef _HELP_HXX
 #include <vcl/help.hxx>
 #endif
-#ifndef _TABBAR_HXX
 #include <tabbar.hxx>
-#endif
-
-#ifdef USE_JAVA
-#ifndef _SV_NATIVEWIDGETS_HXX
-#include <vcl/salnativewidgets.hxx>
-#endif
-#endif	// USE_JAVA
 
 #ifndef _STACK_
 #include <stack>
 #endif
 
 #define _SVTREEBX_CXX
-#include <svtreebx.hxx>
-#ifndef _SVLBOX_HXX
-#include <svlbox.hxx>
-#endif
-#ifndef _SVIMPLBOX_HXX
+#include <svtools/svtreebx.hxx>
+#include <svtools/svlbox.hxx>
 #include <svimpbox.hxx>
-#endif
-#ifndef INCLUDED_RTL_INSTANCE_HXX
 #include <rtl/instance.hxx>
-#endif
-
-#ifndef _SVTOOLS_SVTDATA_HXX
-#include "svtdata.hxx"
-#endif
+#include <svtools/svtdata.hxx>
 
 #ifndef _SVTOOLS_HRC
-#include "svtools.hrc"
+#include <svtools/svtools.hrc>
 #endif
 
 // #102891# --------------------
 #ifndef _UNOTOOLS_PROCESSFACTORY_HXX
 #include <comphelper/processfactory.hxx>
 #endif
+
+#ifdef USE_JAVA
+
+#include <map>
+
+#ifndef _SV_NATIVEWIDGETS_HXX
+#include <vcl/salnativewidgets.hxx>
+#endif
+
+static ::std::map< SvImpLBox*, SvImpLBox* > aInShowCursorMap;
+
+#endif	// USE_JAVA
 
 #define NODE_BMP_TABDIST_NOTVALID 	-2000000
 #define FIRST_ENTRY_TAB				1
@@ -92,14 +78,6 @@ Image*	SvImpLBox::s_pDefExpanded		= NULL;
 Image*	SvImpLBox::s_pDefCollapsedHC	= NULL;
 Image*	SvImpLBox::s_pDefExpandedHC		= NULL;
 sal_Int32 SvImpLBox::s_nImageRefCount	= 0;
-
-#ifdef USE_JAVA
-
-#include <map>
-
-static ::std::map< SvImpLBox*, SvImpLBox* > aInShowCursorMap;
-
-#endif	// USE_JAVA
 
 SvImpLBox::SvImpLBox( SvTreeListBox* pLBView, SvLBoxTreeList* pLBTree, WinBits nWinStyle) :
 
@@ -656,6 +634,24 @@ void SvImpLBox::RecalcFocusRect()
 		pView->ShowFocus( aRect );
 		pView->SetClipRegion( aOldClip );
 	}
+
+#ifdef USE_JAVA
+	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
+	{
+		::std::map< SvImpLBox*, SvImpLBox* >::const_iterator it = aInShowCursorMap.find( this );
+		if ( it == aInShowCursorMap.end() )
+		{
+			aInShowCursorMap[ this ] = this;
+			// Fix bug 2642 by only invalidating the cursor
+			if ( pCursor )
+				InvalidateEntry( GetEntryLine( pCursor ) );
+			// Fix bug 1660 by only updating if we are in a paint event
+			if ( pView->IsInPaint() )
+				pView->Update();
+			aInShowCursorMap.erase( this );
+		}
+	}
+#endif	// USE_JAVA
 }
 
 //
@@ -742,24 +738,6 @@ void SvImpLBox::ShowCursor( BOOL bShow )
 		pView->ShowFocus( aRect );
 		pView->SetClipRegion( aOldClip );
 	}
-
-#ifdef USE_JAVA
-	if( pView->IsNativeControlSupported( CTRL_DISCLOSUREBTN, PART_ENTIRE_CONTROL ) )
-	{
-		::std::map< SvImpLBox*, SvImpLBox* >::const_iterator it = aInShowCursorMap.find( this );
-		if ( it == aInShowCursorMap.end() )
-		{
-			aInShowCursorMap[ this ] = this;
-			// Fix bug 2642 by only invalidating the cursor
-			if ( pCursor )
-				InvalidateEntry( GetEntryLine( pCursor ) );
-			// Fix bug 1660 by only updating if we are in a paint event
-			if ( pView->IsInPaint() )
-				pView->Update();
-			aInShowCursorMap.erase( this );
-		}
-	}
-#endif	// USE_JAVA
 }
 
 
@@ -1019,26 +997,15 @@ void SvImpLBox::Paint( const Rectangle& rRect )
 		pEntry = (SvLBoxEntry*)(pView->NextVisible( pEntry ));
 	}
 
-	if( !pCursor && ( ( nExtendedWinBits & EWB_NO_AUTO_CURENTRY ) == 0 ) )
+    if ( !pCursor && ( ( nExtendedWinBits & EWB_NO_AUTO_CURENTRY ) == 0 ) )
 	{
-		if( aSelEng.GetSelectionMode()==SINGLE_SELECTION )
-		{
-			if( nWinBits & WB_NOINITIALSELECTION )
-			{
-				// nicht selektieren
-				SetCursor( pStartEntry, TRUE );
-			}
-			else
-				SetCursor( pStartEntry );
-		}
-		else
-			// nicht selektieren
-			SetCursor( pStartEntry, TRUE );
-		//OV, 16.7.97, warum HideFocus?? (siehe Bugid 41404)
-		//pView->HideFocus();
+        // do not select if multiselection or explicit set
+        BOOL bNotSelect = ( aSelEng.GetSelectionMode() == MULTIPLE_SELECTION )
+                || ( ( nWinBits & WB_NOINITIALSELECTION ) == WB_NOINITIALSELECTION );
+        SetCursor( pStartEntry, bNotSelect );
 	}
-	nFlags &= (~F_DESEL_ALL);
 
+    nFlags &= (~F_DESEL_ALL);
 	pView->SetClipRegion();
 	Rectangle aRect;
 	if( !(nFlags & F_PAINTED) )
@@ -1135,6 +1102,22 @@ void SvImpLBox::DrawNet()
 	if( pView->GetVisibleCount() < 2 && !pStartEntry->HasChildsOnDemand() &&
 		!pStartEntry->HasChilds() )
 		return;
+
+    //for platforms who don't have nets, DrawNativeControl does nothing and return true
+    //so that SvImpLBox::DrawNet() doesn't draw anything too
+ 	if(pView->IsNativeControlSupported( CTRL_LISTNET, PART_ENTIRE_CONTROL)) {
+        ImplControlValue	aControlValue;
+        Point aTemp(0,0);   // temporary needed for g++ 3.3.5
+        Region			  aCtrlRegion( Rectangle(aTemp, Size( 0, 0 )) );
+        ControlState		nState = CTRL_STATE_ENABLED;
+            if( pView->DrawNativeControl( CTRL_LISTNET, PART_ENTIRE_CONTROL,
+					aCtrlRegion, nState, aControlValue, rtl::OUString() ) )
+            {
+                return;
+            }
+
+    }
+
 	long nEntryHeight = pView->GetEntryHeight();
 	long nEntryHeightDIV2 = nEntryHeight / 2;
 	if( nEntryHeightDIV2 && !(nEntryHeight & 0x0001))
@@ -2202,18 +2185,14 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
 			&& pEntry == pView->FirstSelected() && NULL == pView->NextSelected( pEntry ) )
 				// #i8234# FirstSelected() and NextSelected() ensures, that inplace editing is only triggered, when only one entry is selected
 			nFlags |= F_START_EDITTIMER;
-#ifndef MAC
 		if ( !pView->IsSelected( pEntry ) )
 			nFlags &= ~F_START_EDITTIMER;
-#endif
 	}
 
 
 	if( (rMEvt.GetClicks() % 2) == 0 )
 	{
-//#ifdef MAC
 		nFlags &= (~F_START_EDITTIMER);
-//#endif
 		pView->pHdlEntry = pEntry;
 		if( pView->DoubleClickHdl() )
 		{
@@ -2257,7 +2236,6 @@ void SvImpLBox::MouseButtonDown( const MouseEvent& rMEvt )
 		if( ButtonDownCheckCtrl(rMEvt, pEntry, nY) == TRUE)
 			return;
 		// Inplace-Editing?
-//#ifndef MAC
 #if 0
 		if( rMEvt.IsMod2() && pView->IsInplaceEditingEnabled() )
 		{

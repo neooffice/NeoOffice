@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -38,10 +31,7 @@
 #include "precompiled_svtools.hxx"
 
 #define _SVTREEBX_CXX
-
-#ifndef _SV_SVAPP_HXX //autogen wg. Application
 #include <vcl/svapp.hxx>
-#endif
 #ifndef GCC
 #endif
 
@@ -49,30 +39,21 @@ class TabBar;
 
 // #102891# -----------------------
 
-#include <svlbox.hxx>
-#include <svlbitm.hxx>
-#include <svtreebx.hxx>
-#ifndef _SVIMPLBOX_HXX
+#include <svtools/svlbox.hxx>
+#include <svtools/svlbitm.hxx>
+#include <svtools/svtreebx.hxx>
 #include <svimpbox.hxx>
-#endif
-#ifndef _SVTOOLS_ACCESSIBLELISTBOX_HXX_
-#include "accessiblelistbox.hxx"
-#endif
-#ifndef _UTL_ACCESSIBLESTATESETHELPER_HXX_
 #include <unotools/accessiblestatesethelper.hxx>
-#endif
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLESTATETYPE_HPP_
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_XWINDOWPEER_HPP_
 #include <com/sun/star/awt/XWindowPeer.hpp>
-#endif
+
 #ifdef USE_JAVA
+
 #ifndef _SV_NATIVEWIDGETS_HXX
 #include <vcl/salnativewidgets.hxx>
 #endif
-#endif	// USE_JAVA
 
+#endif	// USE_JAVA
 
 using namespace ::com::sun::star::accessibility;
 
@@ -1050,6 +1031,7 @@ BOOL SvTreeListBox::Expand( SvLBoxEntry* pParent )
 			bExpanded = TRUE;
 			SvListView::Expand( pParent );
 			pImp->EntryExpanded( pParent );
+			pHdlEntry = pParent;
 			ExpandedHdl();
 		}
 		nFlags = pParent->GetFlags();
@@ -1080,6 +1062,7 @@ BOOL SvTreeListBox::Collapse( SvLBoxEntry* pParent )
 		pImp->CollapsingEntry( pParent );
 		SvListView::Collapse( pParent );
 		pImp->EntryCollapsed( pParent );
+		pHdlEntry = pParent;
 		ExpandedHdl();
 	}
 	return bCollapsed;
@@ -1601,18 +1584,21 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
 	aEntryPos.X() *= -1; // Umrechnung Dokumentkoord.
 	long nMaxRight = nWidth + aEntryPos.X() - 1;
 
-	Font aBackupFont( GetFont() );
+	Color aBackupTextColor( GetTextColor() );
+    Font aBackupFont( GetFont() );
 	Color aBackupColor = GetFillColor();
 
-	int bCurFontIsSel = FALSE;
+	bool bCurFontIsSel = false;
 	BOOL bInUse = pEntry->HasInUseEmphasis();
 	// wenn eine ClipRegion von aussen gesetzt wird, dann
 	// diese nicht zuruecksetzen
 	BOOL bResetClipRegion = !bHasClipRegion;
 	BOOL bHideSelection = ((nWindowStyle & WB_HIDESELECTION) && !HasFocus())!=0;
 	const StyleSettings& rSettings = GetSettings().GetStyleSettings();
-	Font aHiliteFont( GetFont() );
-	aHiliteFont.SetColor( rSettings.GetHighlightTextColor() );
+
+    Font aHighlightFont( GetFont() );
+    const Color aHighlightTextColor( rSettings.GetHighlightTextColor() );
+    aHighlightFont.SetColor( aHighlightTextColor );
 
 	Size aRectSize( 0, nTempEntryHeight );
 
@@ -1685,10 +1671,11 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
                          aWallpaper.GetColor().IsBright() != rSettings.GetDeactiveColor().IsBright() )
                         aNewWallColor = rSettings.GetDeactiveColor();
 					// set font color to highlight
-                    if ( !bCurFontIsSel && nItemType == SV_ITEM_ID_LBOXSTRING )
+                    if ( !bCurFontIsSel )
 					{
-						Control::SetFont( aHiliteFont );
-						bCurFontIsSel = TRUE;
+						SetTextColor( aHighlightTextColor );
+                        SetFont( aHighlightFont );
+						bCurFontIsSel = true;
 					}
 				}
                 aWallpaper.SetColor( aNewWallColor );
@@ -1697,10 +1684,11 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
 			{
 				if( bInUse && nItemType == SV_ITEM_ID_LBOXCONTEXTBMP )
 					aWallpaper.SetColor( rSettings.GetFieldColor() );
-				else if( bCurFontIsSel && nItemType == SV_ITEM_ID_LBOXSTRING )
+				else if( bCurFontIsSel )
 				{
-					bCurFontIsSel = FALSE;
-					Control::SetFont( aBackupFont );
+					bCurFontIsSel = false;
+                    SetTextColor( aBackupTextColor );
+                    SetFont( aBackupFont );
 				}
 			}
 
@@ -1779,7 +1767,10 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
 	}
 
 	if( bCurFontIsSel )
-		Control::SetFont( aBackupFont );
+    {
+		SetTextColor( aBackupTextColor );
+        SetFont( aBackupFont );
+    }
 
 	USHORT nFirstDynTabPos;
 	SvLBoxTab* pFirstDynamicTab = GetFirstDynamicTab( nFirstDynTabPos );
@@ -1872,7 +1863,37 @@ long SvTreeListBox::PaintEntry1(SvLBoxEntry* pEntry,long nLine,USHORT nTabFlags,
 				USHORT nStyle = 0;
 				if ( !IsEnabled() )
 					nStyle |= IMAGE_DRAW_DISABLE;
-				DrawImage( aPos, *pImg ,nStyle);
+						
+				//native
+				BOOL bNativeOK = FALSE;
+				if ( IsNativeControlSupported( CTRL_LISTNODE, PART_ENTIRE_CONTROL) )
+				{
+					ImplControlValue	aControlValue;
+					Region			  aCtrlRegion( Rectangle(aPos,  pImg->GetSizePixel() ) );
+					ControlState		nState = 0;
+					
+					if ( IsEnabled() )	nState |= CTRL_STATE_ENABLED;
+
+					if ( IsExpanded(pEntry) )
+						aControlValue.setTristateVal( BUTTONVALUE_ON );//expanded node
+					else
+					{
+						if( (!pEntry->HasChilds()) && pEntry->HasChildsOnDemand() &&
+							(!(pEntry->GetFlags() & SV_ENTRYFLAG_HAD_CHILDREN)) &&
+							pImp->GetDontKnowNodeBmp().GetSizePixel().Width() )
+							aControlValue.setTristateVal( BUTTONVALUE_DONTKNOW );//dont know
+						else
+							aControlValue.setTristateVal( BUTTONVALUE_OFF );//collapsed node
+					}
+
+					bNativeOK = DrawNativeControl( CTRL_LISTNODE, PART_ENTIRE_CONTROL,
+											aCtrlRegion, nState, aControlValue, rtl::OUString() );
+				}
+				
+				if( !bNativeOK) {
+				//non native
+					DrawImage( aPos, *pImg ,nStyle);
+				}
 #ifdef USE_JAVA
 				}
 #endif	// USE_JAVA
@@ -2639,7 +2660,7 @@ void SvTreeListBox::EnableList( bool _bEnable )
 		{
 			// need to be done here to get the vclxwindow later on in the accessbile
 			::com::sun::star::uno::Reference< ::com::sun::star::awt::XWindowPeer > xTemp(GetComponentInterface());
-            xAccessible = new svt::AccessibleListBox( *this, xAccParent );
+            xAccessible = pImp->m_aFactoryAccess.getFactory().createAccessibleTreeListBox( *this, xAccParent );
 		}
 	}
     return xAccessible;
