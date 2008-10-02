@@ -601,6 +601,11 @@ extern "C" void java_init_systray()
 	[pPool release];
 }
 
-extern "C" void java_destroy_systray()
+extern "C" void java_shutdown_systray()
 {
+}
+
+bool ShutdownIcon::IsQuickstarterInstalled()
+{
+	return true;
 }
