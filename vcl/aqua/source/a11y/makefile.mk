@@ -43,7 +43,8 @@ ENABLE_EXCEPTIONS=TRUE
 
 # --- Files --------------------------------------------------------
 
-.IF "$(GUIBASE)"!="aqua" && "$(GUIBASE)"!="java"
+# TODO: Get a11y files to build when "$(GUIBASE)"!="java"
+.IF "$(GUIBASE)"!="aqua"
 
 dummy:
     @echo "Nothing to build for GUIBASE $(GUIBASE)"
