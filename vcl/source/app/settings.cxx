@@ -1,100 +1,57 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified June 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified June 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _DEBUG_HXX
-#include <tools/debug.hxx>
-#endif
-#ifndef INCLUDED_I18NPOOL_MSLANGID_HXX
-#include <i18npool/mslangid.hxx>
-#endif
-
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_SETTINGS_HXX
-#include <settings.hxx>
-#endif
-
-#ifndef _VCL_I18NHELP_HXX
-#include <i18nhelp.hxx>
-#endif
-
-#ifndef _VCL_FONTCFG_HXX
-#include <fontcfg.hxx>
-#endif
-#ifndef VCL_INC_CONFIGSETTINGS_HXX
-#include <configsettings.hxx>
-#endif
-
-#include <unohelp.hxx>
-#ifndef _UNOTOOLS_LOCALEDATAWRAPPER_HXX
-#include <unotools/localedatawrapper.hxx>
-#endif
-#ifndef _UNOTOOLS_COLLATORWRAPPER_HXX
-#include <unotools/collatorwrapper.hxx>
-#endif
-#ifndef _UNOTOOLS_CONFIGNODE_HXX_
-#include <unotools/confignode.hxx>
-#endif
-
-#if defined( UNX ) && ! defined( USE_JAVA )
-#include <prex.h>
-#include <postx.h>
-#include <dtint.hxx>
-#include <stdio.h>
-#endif
+#include "tools/debug.hxx"
+#include "i18npool/mslangid.hxx"
+#include "vcl/svapp.hxx"
+#include "vcl/svdata.hxx"
+#include "vcl/event.hxx"
+#include "vcl/settings.hxx"
+#include "vcl/i18nhelp.hxx"
+#include "vcl/fontcfg.hxx"
+#include "vcl/configsettings.hxx"
+#include "vcl/gradient.hxx"
+#include "vcl/unohelp.hxx"
+#include "unotools/localedatawrapper.hxx"
+#include "unotools/collatorwrapper.hxx"
+#include "unotools/configmgr.hxx"
+#include "unotools/confignode.hxx"
 
 #ifdef WNT
-#include <tools/prewin.h>
+#include "tools/prewin.h"
 #include <windows.h>
-#include <tools/postwin.h>
+#include "tools/postwin.h"
 #endif
 
 using namespace rtl;
-
-
 
 // =======================================================================
 
@@ -507,7 +464,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maHelpColor( rData.maHelpColor ),
     maHelpTextColor( rData.maHelpTextColor ),
     maHighlightColor( rData.maHighlightColor ),
-    maHighlightLinkColor( rData.maLinkColor ),
+    maHighlightLinkColor( rData.maHighlightLinkColor ),
     maHighlightTextColor( rData.maHighlightTextColor ),
     maInfoTextColor( rData.maInfoTextColor ),
     maLabelTextColor( rData.maLabelTextColor ),
@@ -523,7 +480,7 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maMonoColor( rData.maMonoColor ),
     maRadioCheckTextColor( rData.maRadioCheckTextColor ),
     maShadowColor( rData.maShadowColor ),
-    maVisitedLinkColor( rData.maLinkColor ),
+    maVisitedLinkColor( rData.maVisitedLinkColor ),
     maWindowColor( rData.maWindowColor ),
     maWindowTextColor( rData.maWindowTextColor ),
     maWorkspaceColor( rData.maWorkspaceColor ),
@@ -539,7 +496,8 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maPushButtonFont( rData.maPushButtonFont ),
     maFieldFont( rData.maFieldFont ),
     maIconFont( rData.maIconFont ),
-    maGroupFont( rData.maGroupFont )
+    maGroupFont( rData.maGroupFont ),
+    maWorkspaceGradient( rData.maWorkspaceGradient )
 {
     mnRefCount                  = 1;
     mnBorderSize                = rData.mnBorderSize;
@@ -644,7 +602,7 @@ void ImplStyleData::SetStandardStyles()
     maHelpColor                 = Color( 0xFF, 0xFF, 0xE0 );
     maHelpTextColor             = Color( COL_BLACK );
     maLinkColor                 = Color( COL_BLUE );
-    maVisitedLinkColor          = Color( COL_RED );
+    maVisitedLinkColor          = Color( 0x00, 0x00, 0xCC );
     maHighlightLinkColor        = Color( COL_LIGHTBLUE );
 	maFontColor					= Color( COL_BLACK );
 
@@ -665,6 +623,9 @@ void ImplStyleData::SetStandardStyles()
 	mnUseFlatMenues 			= 0;
 	mnUseImagesInMenus			= (USHORT)TRUE;
 	mnSkipDisabledInMenus		= (USHORT)FALSE;
+    
+    Gradient aGrad( GRADIENT_LINEAR, DEFAULT_WORKSPACE_GRADIENT_START_COLOR, DEFAULT_WORKSPACE_GRADIENT_END_COLOR );
+    maWorkspaceGradient = Wallpaper( aGrad );
 }
 
 // -----------------------------------------------------------------------
@@ -738,6 +699,7 @@ void StyleSettings::Set3DColors( const Color& rColor )
 		case STYLE_SYMBOLS_INDUSTRIAL: return ::rtl::OUString::createFromAscii( "industrial" );
 		case STYLE_SYMBOLS_CRYSTAL:    return ::rtl::OUString::createFromAscii( "crystal" );
 		case STYLE_SYMBOLS_TANGO:      return ::rtl::OUString::createFromAscii( "tango" );
+		case STYLE_SYMBOLS_CLASSIC:    return ::rtl::OUString::createFromAscii( "classic" );
 	}
 
 	return ::rtl::OUString::createFromAscii( "auto" );
@@ -757,6 +719,8 @@ ULONG StyleSettings::ImplNameToSymbolsStyle( const ::rtl::OUString &rName ) cons
 		return STYLE_SYMBOLS_CRYSTAL;
 	else if ( rName == ::rtl::OUString::createFromAscii( "tango" ) )
 		return STYLE_SYMBOLS_TANGO;
+	else if ( rName == ::rtl::OUString::createFromAscii( "classic" ) )
+		return STYLE_SYMBOLS_CLASSIC;
 
 	return STYLE_SYMBOLS_AUTO;
 }
@@ -775,9 +739,17 @@ void StyleSettings::SetPreferredSymbolsStyleName( const ::rtl::OUString &rName )
 	{
 		::rtl::OUString rNameLowCase( rName.toAsciiLowerCase() );
 
-		for( sal_Int32 n = 0; n <= STYLE_SYMBOLS_THEMES_MAX; n++ )
+		for( sal_uInt32 n = 0; n <= STYLE_SYMBOLS_THEMES_MAX; n++ )
 			if ( rNameLowCase.indexOf( ImplSymbolsStyleToName( n ) ) != -1 )
-				SetPreferredSymbolsStyle( n );
+			{
+				if (n == STYLE_SYMBOLS_INDUSTRIAL)
+					// The Industrial OOo icon theme is too old.
+					// The OOo Tango icon theme is closer to the current GNOME Industrial theme rules.
+					SetPreferredSymbolsStyle( STYLE_SYMBOLS_TANGO );
+				else
+					SetPreferredSymbolsStyle( n );
+				return;
+			}
 	}
 }
 
@@ -792,24 +764,17 @@ ULONG StyleSettings::GetCurrentSymbolsStyle() const
 	{
 		// the preferred style can be read from the desktop setting by the desktop native widgets modules
 		ULONG nPreferredStyle = GetPreferredSymbolsStyle();
-		
+
 		if ( nPreferredStyle == STYLE_SYMBOLS_AUTO )
 		{
-		
+
 			// use a hardcoded desktop-specific fallback if no preferred style has been detected
 			static bool sbFallbackDesktopChecked = false;
 			static ULONG snFallbackDesktopStyle = STYLE_SYMBOLS_DEFAULT;
 
 			if ( !sbFallbackDesktopChecked )
 			{
-				const ::rtl::OUString &rDesktopEnvironment = Application::GetDesktopEnvironment();
-
-				if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "gnome" ) ||
-				    rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "windows" ) )
-					snFallbackDesktopStyle = STYLE_SYMBOLS_TANGO;
-				else if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "kde" ) )
-					snFallbackDesktopStyle = STYLE_SYMBOLS_CRYSTAL;
-
+                snFallbackDesktopStyle = GetAutoSymbolsStyle();
 				sbFallbackDesktopChecked = true;
 			}
 
@@ -820,6 +785,40 @@ ULONG StyleSettings::GetCurrentSymbolsStyle() const
 	}
 
 	return nStyle;
+}
+
+// -----------------------------------------------------------------------
+
+ULONG StyleSettings::GetAutoSymbolsStyle() const
+{
+    const ::rtl::OUString&      rDesktopEnvironment = Application::GetDesktopEnvironment();
+    ULONG                       nRet = STYLE_SYMBOLS_DEFAULT;
+    bool                        bCont = true;
+
+    try
+    {
+        const ::com::sun::star::uno::Any aAny( ::utl::ConfigManager::GetDirectConfigProperty( ::utl::ConfigManager::OPENSOURCECONTEXT ) );
+        sal_Int32 nValue( 0 );
+
+        aAny >>= nValue;
+
+        if( 0 == nValue )
+            bCont = false;
+    }
+    catch ( ::com::sun::star::uno::Exception& )
+    {
+    }
+
+    if( bCont )
+    {
+        if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "gnome" ) ||
+	     rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "windows" ) )
+            nRet = STYLE_SYMBOLS_TANGO;
+        else if( rDesktopEnvironment.equalsIgnoreAsciiCaseAscii( "kde" ) )
+            nRet = STYLE_SYMBOLS_CRYSTAL;
+    }
+
+    return nRet;
 }
 
 // -----------------------------------------------------------------------
@@ -1176,14 +1175,14 @@ BOOL MiscSettings::GetDisablePrinting() const
                       rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "DisablePrinting" ) ) );
         mpData->mnDisablePrinting = aEnable.equalsIgnoreAsciiCaseAscii( "true" ) ? 1 : 0;
     }
-    
+
     return (BOOL)mpData->mnDisablePrinting;
 }
 // -----------------------------------------------------------------------
 
 BOOL MiscSettings::GetEnableATToolSupport() const
 {
-    
+
 #ifdef WNT
     if( mpData->mnEnableATT == (USHORT)~0 )
     {
@@ -1237,7 +1236,7 @@ BOOL MiscSettings::GetEnableATToolSupport() const
             mpData->mnEnableATT = 1;
         }
     }
-    
+
     return (BOOL)mpData->mnEnableATT;
 }
 
@@ -1320,98 +1319,6 @@ void MiscSettings::SetEnableLocalizedDecimalSep( BOOL bEnable )
 BOOL MiscSettings::GetEnableLocalizedDecimalSep() const
 {
     return mpData->mbEnableLocalizedDecimalSep;
-}
-
-
-
-// =======================================================================
-
-ImplSoundData::ImplSoundData()
-{
-    mnRefCount                  = 1;
-    mnOptions                   = 0;
-}
-
-// -----------------------------------------------------------------------
-
-ImplSoundData::ImplSoundData( const ImplSoundData& rData )
-{
-    mnRefCount                  = 1;
-    mnOptions                   = rData.mnOptions;
-}
-
-// -----------------------------------------------------------------------
-
-SoundSettings::SoundSettings()
-{
-    mpData = new ImplSoundData();
-}
-
-// -----------------------------------------------------------------------
-
-SoundSettings::SoundSettings( const SoundSettings& rSet )
-{
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "SoundSettings: RefCount overflow" );
-
-    // shared Instance Daten uebernehmen und Referenzcounter erhoehen
-    mpData = rSet.mpData;
-    mpData->mnRefCount++;
-}
-
-// -----------------------------------------------------------------------
-
-SoundSettings::~SoundSettings()
-{
-    // Daten loeschen, wenn letzte Referenz
-    if ( mpData->mnRefCount == 1 )
-        delete mpData;
-    else
-        mpData->mnRefCount--;
-}
-
-// -----------------------------------------------------------------------
-
-const SoundSettings& SoundSettings::operator =( const SoundSettings& rSet )
-{
-    DBG_ASSERT( rSet.mpData->mnRefCount < 0xFFFFFFFE, "SoundSettings: RefCount overflow" );
-
-    // Zuerst Referenzcounter erhoehen, damit man sich selbst zuweisen kann
-    rSet.mpData->mnRefCount++;
-
-    // Daten loeschen, wenn letzte Referenz
-    if ( mpData->mnRefCount == 1 )
-        delete mpData;
-    else
-        mpData->mnRefCount--;
-
-    mpData = rSet.mpData;
-
-    return *this;
-}
-
-// -----------------------------------------------------------------------
-
-void SoundSettings::CopyData()
-{
-    // Falls noch andere Referenzen bestehen, dann kopieren
-    if ( mpData->mnRefCount != 1 )
-    {
-        mpData->mnRefCount--;
-        mpData = new ImplSoundData( *mpData );
-    }
-}
-
-// -----------------------------------------------------------------------
-
-BOOL SoundSettings::operator ==( const SoundSettings& rSet ) const
-{
-    if ( mpData == rSet.mpData )
-        return TRUE;
-
-    if ( (mpData->mnOptions             == rSet.mpData->mnOptions) )
-        return TRUE;
-    else
-        return FALSE;
 }
 
 // =======================================================================
@@ -1636,7 +1543,6 @@ ImplAllSettingsData::ImplAllSettingsData( const ImplAllSettingsData& rData ) :
     maKeyboardSettings( rData.maKeyboardSettings ),
     maStyleSettings( rData.maStyleSettings ),
     maMiscSettings( rData.maMiscSettings ),
-    maSoundSettings( rData.maSoundSettings ),
     maNotificationSettings( rData.maNotificationSettings ),
     maHelpSettings( rData.maHelpSettings ),
     maLocale( rData.maLocale ),
@@ -1806,16 +1712,6 @@ ULONG AllSettings::Update( ULONG nFlags, const AllSettings& rSet )
         }
     }
 
-    if ( nFlags & SETTINGS_SOUND )
-    {
-        if ( mpData->maSoundSettings != rSet.mpData->maSoundSettings )
-        {
-            CopyData();
-            mpData->maSoundSettings = rSet.mpData->maSoundSettings;
-            nChangeFlags |= SETTINGS_SOUND;
-        }
-    }
-
     if ( nFlags & SETTINGS_NOTIFICATION )
     {
         if ( mpData->maNotificationSettings != rSet.mpData->maNotificationSettings )
@@ -1887,9 +1783,6 @@ ULONG AllSettings::GetChangeFlags( const AllSettings& rSet ) const
     if ( mpData->maMiscSettings != rSet.mpData->maMiscSettings )
         nChangeFlags |= SETTINGS_MISC;
 
-    if ( mpData->maSoundSettings != rSet.mpData->maSoundSettings )
-        nChangeFlags |= SETTINGS_SOUND;
-
     if ( mpData->maNotificationSettings != rSet.mpData->maNotificationSettings )
         nChangeFlags |= SETTINGS_NOTIFICATION;
 
@@ -1920,7 +1813,6 @@ BOOL AllSettings::operator ==( const AllSettings& rSet ) const
          (mpData->maKeyboardSettings        == rSet.mpData->maKeyboardSettings)     &&
          (mpData->maStyleSettings           == rSet.mpData->maStyleSettings)        &&
          (mpData->maMiscSettings            == rSet.mpData->maMiscSettings)         &&
-         (mpData->maSoundSettings           == rSet.mpData->maSoundSettings)        &&
          (mpData->maNotificationSettings    == rSet.mpData->maNotificationSettings) &&
          (mpData->maHelpSettings            == rSet.mpData->maHelpSettings)         &&
          (mpData->mnSystemUpdate            == rSet.mpData->mnSystemUpdate)         &&
@@ -2035,7 +1927,7 @@ void AllSettings::SetUILanguage( LanguageType eLang  )
 BOOL AllSettings::GetLayoutRTL() const
 {
     static const char* pEnv = getenv("SAL_RTL_ENABLED" );
-    static int  nUIMirroring = -1;   // -1: undef, 0: auto, 1: on 2: off 
+    static int  nUIMirroring = -1;   // -1: undef, 0: auto, 1: on 2: off
 
     // environment always overrides
     if( pEnv )
@@ -2049,7 +1941,7 @@ BOOL AllSettings::GetLayoutRTL() const
         nUIMirroring = 2; // mirroring is not compatible with Aqua controls
 #else	// USE_JAVA
         nUIMirroring = 0; // ask configuration only once
-        utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory( 
+        utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory(
             vcl::unohelper::GetMultiServiceFactory(),
             OUString::createFromAscii( "org.openoffice.Office.Common/I18N/CTL" ) );    // note: case sensisitive !
         if ( aNode.isValid() )

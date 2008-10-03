@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,43 +32,22 @@
 
 
 
-#include <unohelp.hxx>
-
-#ifndef _COM_SUN_STAR_LANG_XSINGLESERVICEFACTORY_HPP_
+#include <vcl/unohelp.hxx>
 #include <com/sun/star/lang/XSingleServiceFactory.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
 
 #ifndef _COM_SUN_STAR_TEXT_XBREAKITERATOR_HPP_
 #include <com/sun/star/i18n/XBreakIterator.hpp>
 #endif
-
-#ifndef _COM_SUN_STAR_I18N_XCHARACTERCLASSIFICATION_HPP_
 #include <com/sun/star/i18n/XCharacterClassification.hpp>
-#endif
 
 #ifndef _COM_SUN_STAR_UTIL_XCOLLATOR_HPP_
 #include <com/sun/star/i18n/XCollator.hpp>
 #endif
-
-#ifndef _COM_SUN_STAR_AWT_XEXTENDEDTOOLKIT_HPP_
 #include <com/sun/star/awt/XExtendedToolkit.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLEEVENTOBJECT_HPP_
 #include <com/sun/star/accessibility/AccessibleEventObject.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLESTATETYPE_HPP_
 #include <com/sun/star/accessibility/AccessibleStateType.hpp>
-#endif
 
 
 #include <com/sun/star/registry/XImplementationRegistration.hpp>
@@ -85,8 +57,8 @@
 #include <tools/tempfile.hxx>
 #include <osl/file.hxx>
 
-#include <svdata.hxx>
-#include <svapp.hxx>
+#include <vcl/svdata.hxx>
+#include <vcl/svapp.hxx>
 
 using namespace ::com::sun::star;
 using namespace ::rtl;
@@ -105,15 +77,17 @@ static VCLRegServiceInfo aVCLComponentsArray[] =
 	{"i18n", sal_True},
     {"i18npool", sal_True},
 #ifdef UNX
+#ifdef MACOSX
 #ifdef USE_JAVA
 	{"dtransjava", sal_True},
-#elif defined MACOSX && defined QUARTZ
+#else	// USE_JAVA
 	{"dtransaqua", sal_True},
+#endif	// USE_JAVA
 #else
 	{"dtransX11", sal_True},
 #endif
 #endif
-#ifdef WNT
+#if defined(WNT) || defined(OS2)
 	{"sysdtrans", sal_False},
 #endif
 	{"dtrans", sal_False},
@@ -137,30 +111,38 @@ uno::Reference< lang::XMultiServiceFactory > vcl::unohelper::GetMultiServiceFact
 		osl::FileBase::getSystemPathFromFileURL( aTempFile.GetName(), aTempFileName );
 		pSVData->maAppData.mpMSFTempFileName = new String(aTempFileName);
 
-		pSVData->maAppData.mxMSF = ::cppu::createRegistryServiceFactory( aTempFileName, rtl::OUString(), sal_False );
-
-
-		uno::Reference < registry::XImplementationRegistration > xReg(
-			pSVData->maAppData.mxMSF->createInstance( OUString::createFromAscii( "com.sun.star.registry.ImplementationRegistration" )), uno::UNO_QUERY );
-
-		sal_Int32 nCompCount = 0;
-
-		while ( aVCLComponentsArray[ nCompCount ].pLibName )
-		{
-			OUString aComponentPathString = CreateLibraryName( aVCLComponentsArray[ nCompCount ].pLibName,  aVCLComponentsArray[ nCompCount ].bHasSUPD );
-			if (aComponentPathString.getLength() )
-			{
-				try
-				{
-					xReg->registerImplementation(
-						OUString::createFromAscii( "com.sun.star.loader.SharedLibrary" ),aComponentPathString, NULL );
-				}
-				catch( ::com::sun::star::uno::Exception & )
-				{
-				}
-			}
-			nCompCount++;
-		}
+        try
+        {
+            pSVData->maAppData.mxMSF = ::cppu::createRegistryServiceFactory( aTempFileName, rtl::OUString(), sal_False );
+            uno::Reference < registry::XImplementationRegistration > xReg(
+                pSVData->maAppData.mxMSF->createInstance( OUString::createFromAscii( "com.sun.star.registry.ImplementationRegistration" )), uno::UNO_QUERY );
+    
+            if( xReg.is() )
+            {
+                sal_Int32 nCompCount = 0;
+                while ( aVCLComponentsArray[ nCompCount ].pLibName )
+                {
+                    OUString aComponentPathString = CreateLibraryName( aVCLComponentsArray[ nCompCount ].pLibName,  aVCLComponentsArray[ nCompCount ].bHasSUPD );
+                    if (aComponentPathString.getLength() )
+                    {
+                        try
+                        {
+                            xReg->registerImplementation(
+                                OUString::createFromAscii( "com.sun.star.loader.SharedLibrary" ),aComponentPathString, NULL );
+                        }
+                        catch( ::com::sun::star::uno::Exception & )
+                        {
+                        }
+                    }
+                    nCompCount++;
+                }
+            }
+        }
+        catch( ::com::sun::star::uno::Exception & )
+        {
+            delete pSVData->maAppData.mpMSFTempFileName;
+            pSVData->maAppData.mpMSFTempFileName = NULL;
+        }
 	}
 	return pSVData->maAppData.mxMSF;
 }
@@ -217,16 +199,14 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 ::rtl::OUString vcl::unohelper::CreateLibraryName( const sal_Char* pModName, BOOL bSUPD )
 {
 	// create variable library name suffixes
-	OUString aSUPDString( OUString::valueOf( (sal_Int32)SUPD, 10 ));
 	OUString aDLLSuffix = OUString::createFromAscii( STRING(DLLPOSTFIX) );
 
 	OUString aLibName;
 
-#ifdef WNT
+#if defined( WNT) || defined(OS2)
 	aLibName = OUString::createFromAscii( pModName );
 	if ( bSUPD )
 	{
-		aLibName += aSUPDString;
 		aLibName += aDLLSuffix;
 	}
 	aLibName += rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dll" ));
@@ -235,7 +215,6 @@ uno::Reference < i18n::XCollator > vcl::unohelper::CreateCollator()
 	aLibName += OUString::createFromAscii( pModName );
 	if ( bSUPD )
 	{
-		aLibName += aSUPDString;
 		aLibName += aDLLSuffix;
 	}
 #ifdef MACOSX

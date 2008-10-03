@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified May 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified May 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -55,105 +48,53 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
-#endif
-#ifndef _SV_SALSOUND_HXX
-#include <salsound.hxx>
-#endif
-#ifndef _SV_SALOGL_HXX
-#include <salogl.hxx>
-#endif
-#ifndef _SV_SALWTYPE_HXX
-#include <salwtype.hxx>
-#endif
+#include <vcl/salinst.hxx>
+#include <vcl/salogl.hxx>
+#include <vcl/salwtype.hxx>
 #ifndef _VOS_SIGNAL_HXX
 #include <vos/signal.hxx>
 #endif
 #ifndef _VOS_SOCKET_HXX
 #include <vos/socket.hxx>
 #endif
-#ifndef _TOOLS_H
 #include <tools/tools.h>
-#endif
-#ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 #ifndef _UNIQID_HXX
 #include <tools/unqid.hxx>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_DBGGUI_HXX
-#include <dbggui.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_WRKWIN_HXX
-#include <wrkwin.hxx>
-#endif
-#ifndef _SV_CVTGRF_HXX
-#include <cvtgrf.hxx>
-#endif
-#ifndef _SV_IMAGE_HXX
-#include <image.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/dbggui.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/cvtgrf.hxx>
+#include <vcl/image.hxx>
 #ifndef _SV_RESMGR_HXX
 #include <tools/resmgr.hxx>
 #endif
-#ifndef _SV_ACCMGR_HXX
-#include <accmgr.hxx>
-#endif
-#ifndef _SV_IDLEMGR_HXX
-#include <idlemgr.hxx>
-#endif
-#ifndef _SV_OUTDEV_H
-#include <outdev.h>
-#endif
-#ifndef _SV_OUTFONT_HXX
-#include <outfont.hxx>
-#endif
-#ifndef _SV_PRINT_H
-#include <print.h>
-#endif
-#ifndef _SV_SETTINGS_HXX
-#include <settings.hxx>
-#endif
-#ifndef _VCL_UNOWRAP_HXX
-#include <unowrap.hxx>
-#endif
-#ifndef _SV_SALSYS_HXX
-#include <salsys.hxx>
-#endif
-#ifndef _SV_SALTIMER_HXX
-#include <saltimer.hxx>
-#endif
-#ifndef _SV_SALIMESTATUS_HXX
-#include <salimestatus.hxx>
-#endif
-#ifndef _SV_IMPIMAGETREE_HXX
-#include <impimagetree.hxx>
-#endif
-#ifndef _VCL_XCONNECTION_HXX
-#include <xconnection.hxx>
-#endif
+#include <vcl/accmgr.hxx>
+#include <vcl/idlemgr.hxx>
+#include <vcl/outdev.h>
+#include <vcl/outfont.hxx>
+#include <vcl/print.h>
+#include <vcl/settings.hxx>
+#include <vcl/unowrap.hxx>
+#include <vcl/salsys.hxx>
+#include <vcl/saltimer.hxx>
+#include <vcl/salimestatus.hxx>
+#include <vcl/impimagetree.hxx>
+#include <vcl/xconnection.hxx>
 
 #include <vos/process.hxx>
 #include <osl/file.hxx>
-
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
-
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XCOMPONENT_HPP_
 #include <com/sun/star/lang/XComponent.hpp>
-#endif
 #include <rtl/logfile.hxx>
+
+#if OSL_DEBUG_LEVEL > 0
+#include <typeinfo>
+#include <rtl/strbuf.hxx>
+#endif
 
 #ifdef USE_JAVA
 
@@ -176,15 +117,10 @@ using namespace ::rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 
-#include <fontcfg.hxx>
-#include <configsettings.hxx>
-
-#ifndef _CPPUHELPER_IMPLBASE1_HXX_
+#include <vcl/fontcfg.hxx>
+#include <vcl/configsettings.hxx>
 #include <cppuhelper/implbase1.hxx>
-#endif
-#ifndef _UNO_CURRENT_CONTEXT_HXX_
 #include <uno/current_context.hxx>
-#endif
 
 
 #ifdef USE_JAVA
@@ -285,6 +221,9 @@ public:
 #ifdef USE_JAVA
 			GetAppSalData()->mbInSignalHandler = true;
 #endif	// USE_JAVA
+        
+            ::vos::OGuard aLock(&Application::GetSolarMutex());
+        
             // Timer nicht mehr anhalten, da ansonsten die UAE-Box
             // auch nicht mehr gepaintet wird
             ImplSVData* pSVData = ImplGetSVData();
@@ -524,10 +463,36 @@ BOOL InitVCL( const ::com::sun::star::uno::Reference< ::com::sun::star::lang::XM
 
 void DeInitVCL()
 {
-    DBG_ASSERT( Application::GetTopWindowCount()==0, "DeInitVCL: some windows are still alive!" );
-
     ImplSVData* pSVData = ImplGetSVData();
     pSVData->mbDeInit = TRUE;
+
+    // give ime status a chance to destroy its own windows
+	delete pSVData->mpImeStatus;
+	pSVData->mpImeStatus = NULL;
+
+    #if OSL_DEBUG_LEVEL > 0
+    rtl::OStringBuffer aBuf( 256 );
+    aBuf.append( "DeInitVCL: some top Windows are still alive\n" );
+    long nTopWindowCount = Application::GetTopWindowCount();
+    long nBadTopWindows = nTopWindowCount;
+    for( long i = 0; i < nTopWindowCount; i++ )
+    {
+        Window* pWin = Application::GetTopWindow( i );
+        // default window will be destroyed further down
+        // but may still be useful during deinit up to that point
+        if( pWin == pSVData->mpDefaultWin )
+            nBadTopWindows--;
+        else
+        {
+            aBuf.append( "text = \"" );
+            aBuf.append( rtl::OUStringToOString( pWin->GetText(), osl_getThreadTextEncoding() ) );
+            aBuf.append( "\" type = \"" );
+            aBuf.append( typeid(*pWin).name() );
+            aBuf.append( "\"\n" );
+        }
+    }
+    DBG_ASSERT( nBadTopWindows==0, aBuf.getStr() );
+    #endif
 
     ImplImageTree::cleanup();
 
@@ -597,6 +562,13 @@ void DeInitVCL()
         pSVData->mpDefaultWin = NULL;
     }
 
+	// #114285# Moved here from ImplDeInitSVData...
+    if ( pSVData->mpUnoWrapper )
+    {
+        pSVData->mpUnoWrapper->Destroy();
+        pSVData->mpUnoWrapper = NULL;
+    }
+
     pSVData->maAppData.mxMSF.clear();
 
     if( pSVData->mpApp )
@@ -651,13 +623,6 @@ void DeInitVCL()
     if ( pSVData->maAppData.mpFirstEventHook )
         ImplFreeEventHookData();
 
-	// #114285# Moved here from ImplDeInitSVData...
-    if ( pSVData->mpUnoWrapper )
-    {
-        pSVData->mpUnoWrapper->Destroy();
-        pSVData->mpUnoWrapper = NULL;
-    }
-
     ImplDeletePrnQueueList();
     delete pSVData->maGDIData.mpScreenFontList;
     pSVData->maGDIData.mpScreenFontList = NULL;
@@ -675,8 +640,6 @@ void DeInitVCL()
 
 	// destroy all Sal interfaces before destorying the instance
 	// and thereby unloading the plugin
-	delete pSVData->mpImeStatus;
-	pSVData->mpImeStatus = NULL;
 	delete pSVData->mpSalSystem;
 	pSVData->mpSalSystem = NULL;
 	delete pSVData->mpSalTimer;
