@@ -1,62 +1,46 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 #ifndef _SV_SALPRN_HXX
 #define _SV_SALPRN_HXX
 
-#ifndef _STRING_HXX
 #include <tools/string.hxx>
-#endif
-
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif
-#ifndef _VCL_DLLAPI_H
-#include "dllapi.h"
-#endif
-
-#ifndef _SV_PRNTYPES_HXX
-#include <prntypes.hxx>
-#endif
+#include <vcl/sv.h>
+#include <vcl/dllapi.h>
+#include <vcl/prntypes.hxx>
 
 #include <vector>
 
 class SalGraphics;
 class SalFrame;
 struct ImplJobSetup;
+class ImplQPrinter;
 
 // -----------------------
 // - SalPrinterQueueInfo -
@@ -76,7 +60,6 @@ struct VCL_DLLPUBLIC SalPrinterQueueInfo
 							~SalPrinterQueueInfo();
 };
 
-
 // ------------------
 // - SalInfoPrinter -
 // ------------------
@@ -86,8 +69,9 @@ class VCL_DLLPUBLIC SalInfoPrinter
 public:
     std::vector< vcl::PaperInfo  >		m_aPaperFormats;	// all printer supported formats
     bool								m_bPapersInit;		// set to true after InitPaperFormats
-    
-    SalInfoPrinter() {}
+    bool                                m_bCompatMetrics;
+
+    SalInfoPrinter() : m_bPapersInit( false ), m_bCompatMetrics( false ) {}
     virtual ~SalInfoPrinter();
 
 	// SalGraphics or NULL, but two Graphics for all SalFrames
@@ -119,7 +103,6 @@ public:
     virtual DuplexMode          GetDuplexMode( const ImplJobSetup* pSetupData ) = 0;
 };
 
-
 // --------------
 // - SalPrinter -
 // --------------
@@ -139,6 +122,14 @@ public: 					// public for Sal Implementation
 #else	// USE_JAVA
                                               ImplJobSetup* pSetupData ) = 0;
 #endif	// USE_JAVA
+
+    // implement for pull model print systems only,
+    // default implementations (see salvtables.cxx) just returns FALSE
+    virtual BOOL                    StartJob( const String* pFileName,
+                                              const String& rAppName,
+                                              ImplJobSetup* pSetupData,
+                                              ImplQPrinter* pQPrinter );
+
 	virtual BOOL					EndJob() = 0;
 	virtual BOOL					AbortJob() = 0;
 	virtual SalGraphics*			StartPage( ImplJobSetup* pSetupData, BOOL bNewJobData ) = 0;
@@ -147,6 +138,7 @@ public: 					// public for Sal Implementation
 #ifdef USE_JAVA
 	virtual XubString				GetPageRange() = 0;
 #endif	// USE_JAVA
+    
 };
 
 #endif // _SV_SALPRN_HXX

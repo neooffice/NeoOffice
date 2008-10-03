@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -39,18 +32,10 @@
 
 #ifdef __cplusplus
 
-#ifndef _STRING_HXX
 #include <tools/string.hxx>
-#endif
 #endif // __cplusplus
-
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif
-
-#ifndef _VCL_DLLAPI_H
-#include "dllapi.h"
-#endif
+#include <vcl/sv.h>
+#include <vcl/dllapi.h>
 
 #ifdef __cplusplus
 
@@ -61,7 +46,6 @@ struct ImplJobSetup;
 class SalGraphics;
 class SalFrame;
 class SalObject;
-class SalSound;
 class SalOpenGL;
 class SalMenu;
 class SalMenuItem;
@@ -96,7 +80,7 @@ private:
     void*						m_pErrorInst;
     Callback					m_pEventCallback;
     Callback					m_pErrorCallback;
-    
+
 public:
     SalInstance() :
             m_pEventInst( NULL ),
@@ -113,7 +97,7 @@ public:
     virtual void				DestroyFrame( SalFrame* pFrame ) = 0;
 
     // Object (System Child Window)
-    virtual SalObject*			CreateObject( SalFrame* pParent, SystemWindowData* pWindowData ) = 0;
+    virtual SalObject*			CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, BOOL bShow = TRUE ) = 0;
     virtual void				DestroyObject( SalObject* pObject ) = 0;
 
     // VirtualDevice
@@ -140,8 +124,6 @@ public:
     virtual void				DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo ) = 0;
     virtual String             GetDefaultPrinter() = 0;
 
-    // SalSound
-    virtual SalSound*			CreateSalSound() = 0;
     // SalTimer
     virtual SalTimer*			CreateSalTimer() = 0;
     // SalOpenGL

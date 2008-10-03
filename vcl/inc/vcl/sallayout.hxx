@@ -1,45 +1,36 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified May 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified May 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 #ifndef _SV_SALLAYOUT_HXX
 #define _SV_SALLAYOUT_HXX
 
-#ifndef _SV_GEN_HXX
 #include <tools/gen.hxx>
-#endif
 
 #include <vector>
 namespace basegfx {
@@ -53,12 +44,10 @@ typedef unsigned short LanguageType;
 
 #include <vector>
 #include <list>
+#include <vcl/dllapi.h>
 
-#ifndef _VCL_DLLAPI_H
-#include "dllapi.h"
-#endif
-
-typedef sal_uInt32 sal_UCS4;	// TODO: this should be moved to rtl
+// for typedef sal_UCS4
+#include <vcl/vclenum.hxx>
 
 class SalGraphics;
 class ImplFontData;
@@ -104,6 +93,7 @@ public:
     bool    GetRun( int* nMinRunPos, int* nEndRunPos, bool* bRTL ) const;
     bool    GetNextPos( int* nCharPos, bool* bRTL );
     bool    PosIsInRun( int nCharPos ) const;
+    bool    PosIsInAnyRun( int nCharPos ) const;
 };
 
 // -----------------
@@ -156,13 +146,16 @@ protected:
 // helper functions often used with ImplLayoutArgs
 int GetVerticalFlags( sal_UCS4 );
 sal_UCS4 GetVerticalChar( sal_UCS4 );
-VCL_DLLPUBLIC sal_UCS4 GetMirroredChar( sal_UCS4 );
+// #i80090# GetMirroredChar also needed outside vcl, moved to svapp.hxx
+// VCL_DLLPUBLIC sal_UCS4 GetMirroredChar( sal_UCS4 );
 sal_UCS4 GetLocalizedChar( sal_UCS4, LanguageType );
 VCL_DLLPUBLIC const char* GetAutofallback( sal_UCS4 ) ;
 
 // -------------
 // - SalLayout -
 // -------------
+
+typedef sal_uInt32 sal_GlyphId;
 
 // Glyph Flags
 #define GF_NONE     0x00000000
@@ -192,7 +185,9 @@ class VCL_DLLPUBLIC SalLayout
 public:
     // used by upper layers
     Point&          DrawBase()                              { return maDrawBase; }
+    const Point&    DrawBase() const                        { return maDrawBase; }
     Point&          DrawOffset()                            { return maDrawOffset; }
+    const Point&    DrawOffset() const                      { return maDrawOffset; }
     Point           GetDrawPosition( const Point& rRelative = Point(0,0) ) const;
 
     virtual bool    LayoutText( ImplLayoutArgs& ) = 0;  // first step of layouting
@@ -202,6 +197,8 @@ public:
 
     int             GetUnitsPerPixel() const                { return mnUnitsPerPixel; }
     int             GetOrientation() const                  { return mnOrientation; }
+    
+    virtual const ImplFontData* GetFallbackFontData( sal_GlyphId ) const;
 
     // methods using string indexing
     virtual int     GetTextBreak( long nMaxWidth, long nCharExtra=0, int nFactor=1 ) const = 0;
@@ -210,12 +207,12 @@ public:
     virtual void    GetCaretPositions( int nArraySize, sal_Int32* pCaretXArray ) const = 0;
 
     // methods using glyph indexing
-    virtual int     GetNextGlyphs( int nLen, sal_Int32* pGlyphIdxAry, Point& rPos, int&,
+    virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdAry, Point& rPos, int&,
                         sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL ) const = 0;
     virtual bool    GetOutline( SalGraphics&, ::basegfx::B2DPolyPolygonVector& ) const;
     virtual bool    GetBoundRect( SalGraphics&, Rectangle& ) const;
 
-    virtual bool    IsSpacingGlyph( long nGlyphIndex ) const;
+    virtual bool    IsSpacingGlyph( sal_GlyphId ) const;
 
     // reference counting
     void            Reference() const;
@@ -271,21 +268,23 @@ public:
     virtual int     GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor ) const;
     virtual long    FillDXArray( sal_Int32* pDXArray ) const;
     virtual void    GetCaretPositions( int nArraySize, sal_Int32* pCaretXArray ) const;
-    virtual int     GetNextGlyphs( int nLen, sal_Int32* pGlyphIdxAry, Point& rPos,
+    virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos,
                         int&, sal_Int32* pGlyphAdvAry, int* pCharPosAry ) const;
     virtual bool    GetOutline( SalGraphics&, ::basegfx::B2DPolyPolygonVector& ) const;
     virtual bool    GetBoundRect( SalGraphics&, Rectangle& ) const;
 
     // used only by OutputDevice::ImplLayout, TODO: make friend
-                    MultiSalLayout( SalLayout& rBaseLayout );   // transfer ownership
-    virtual bool    AddFallback( SalLayout& rFallback,          // transfer ownership
-                         ImplLayoutRuns& rRuns, ImplFontData* pFallbackFont );
+                    MultiSalLayout( SalLayout& rBaseLayout,
+                         const ImplFontData* pBaseFont = NULL );
+    virtual bool    AddFallback( SalLayout& rFallbackLayout,
+                         ImplLayoutRuns&, const ImplFontData* pFallbackFont );
     virtual bool    LayoutText( ImplLayoutArgs& );
     virtual void    AdjustLayout( ImplLayoutArgs& );
     virtual void    InitFont() const;
 
-    ImplFontData*	 GetFallbackFontData( int nFallbackLevel ) const
-    { return mpFallbackFonts[ nFallbackLevel ]; }
+    virtual const ImplFontData* GetFallbackFontData( sal_GlyphId ) const;
+
+    void SetInComplete(bool bInComplete = true);
 
 #ifdef USE_JAVA
     SalLayout*		 GetLayout( int nFallbackLevel ) const
@@ -307,9 +306,10 @@ private:
 
 private:
     SalLayout*      mpLayouts[ MAX_FALLBACK ];
-    ImplFontData*	mpFallbackFonts[ MAX_FALLBACK ];
+    const ImplFontData* mpFallbackFonts[ MAX_FALLBACK ];
     ImplLayoutRuns  maFallbackRuns[ MAX_FALLBACK ];
     int             mnLevel;
+    bool            mbInComplete;
 };
 
 // --------------------
@@ -322,13 +322,13 @@ struct GlyphItem
     int     mnCharPos;      // index in string
     int     mnOrigWidth;    // original glyph width
     int     mnNewWidth;     // width after adjustments
-    long    mnGlyphIndex;
+    sal_GlyphId mnGlyphIndex;
     Point   maLinearPos;    // absolute position of non rotated string
 
 public:
             GlyphItem() {}
 
-            GlyphItem( int nCharPos, long nGlyphIndex, const Point& rLinearPos,
+            GlyphItem( int nCharPos, sal_GlyphId nGlyphIndex, const Point& rLinearPos,
                 long nFlags, int nOrigWidth )
             :   mnFlags(nFlags), mnCharPos(nCharPos),
                 mnOrigWidth(nOrigWidth), mnNewWidth(nOrigWidth),
@@ -374,7 +374,7 @@ public:
     virtual void    GetCaretPositions( int nArraySize, sal_Int32* pCaretXArray ) const;
 
     // used by display layers
-    virtual int     GetNextGlyphs( int nLen, sal_Int32* pGlyphIdxAry, Point& rPos, int&,
+    virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos, int&,
                         sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL ) const;
 
 protected:

@@ -1,73 +1,43 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 #ifndef _SV_MENU_HXX
 #define _SV_MENU_HXX
 
-#ifndef _SV_SV_H
-#include <sv.h>
-#endif
-
-#ifndef _VCL_DLLAPI_H
-#include "dllapi.h"
-#endif
-
-#ifndef _TOOLS_RC_HXX
+#include <vcl/sv.h>
+#include <vcl/dllapi.h>
 #include <tools/rc.hxx>
-#endif
-
-#ifndef _TOOLS_RESID_HXX
 #include <tools/resid.hxx>
-#endif
-
-#ifndef _SV_BITMAPEX_HXX
-#include <bitmapex.hxx>
-#endif
-
-#ifndef _TOOLS_COLOR_HXX
+#include <vcl/bitmapex.hxx>
 #include <tools/color.hxx>
-#endif
-
-#ifndef _VCL_VCLEVENT_HXX
-#include <vclevent.hxx>
-#endif
-
-#ifndef _COM_SUN_STAR_UNO_REFERENCE_HXX_
+#include <vcl/vclevent.hxx>
 #include <com/sun/star/uno/Reference.hxx>
-#endif
 
 struct MenuItemData;
 class Point;
@@ -123,6 +93,8 @@ typedef USHORT MenuItemBits;
 #define MIB_ABOUT				((MenuItemBits)0x0008)
 #define MIB_HELP				((MenuItemBits)0x0010)
 #define MIB_POPUPSELECT 		((MenuItemBits)0x0020)
+// not in rsc/vclsrc.hxx because only a prelimitary solution
+#define MIB_NOSELECT 		    ((MenuItemBits)0x0040)
 
 #define MENU_FLAG_NOAUTOMNEMONICS		0x0001
 #define MENU_FLAG_HIDEDISABLEDENTRIES	0x0002
@@ -197,6 +169,7 @@ protected:
 	SAL_DLLPRIVATE Menu*			ImplFindMenu( USHORT nId );
 	SAL_DLLPRIVATE Size				ImplCalcSize( Window* pWin );
 	SAL_DLLPRIVATE BOOL				ImplIsVisible( USHORT nPos ) const;
+    SAL_DLLPRIVATE BOOL             ImplIsSelectable( USHORT nPos ) const;
 	SAL_DLLPRIVATE USHORT			ImplGetVisibleItemCount() const;
 	SAL_DLLPRIVATE USHORT			ImplGetFirstVisible() const;
 	SAL_DLLPRIVATE USHORT			ImplGetPrevVisible( USHORT nPos ) const;
@@ -216,16 +189,16 @@ protected:
     // return value is Max( rCheckHeight, rRadioHeight ) 
     SAL_DLLPRIVATE long             ImplGetNativeCheckAndRadioSize( Window*, long& rCheckHeight, long& rRadioHeight, long &rMaxWidth ) const;
 
-#if _SOLAR__PRIVATE
 public:
     SAL_DLLPRIVATE void				ImplKillLayoutData() const;
     SAL_DLLPRIVATE Menu*            ImplGetStartedFrom() const;
-#endif
 
 						    Menu();
                             Menu( BOOL bMenuBar );
 	SAL_DLLPRIVATE Window*  ImplGetWindow() const { return pWindow; }
 
+    
+    SAL_DLLPRIVATE void ImplSelectWithStart( Menu* pStartMenu = NULL );
 public:
 	virtual 			~Menu();
 
@@ -419,7 +392,7 @@ class VCL_DLLPUBLIC MenuBar : public Menu
 	BOOL				mbHideBtnVisible;
 	BOOL				mbDisplayable;
 
-#if _SOLAR__PRIVATE
+//#if 0 // _SOLAR__PRIVATE
 	friend class Application;
 	friend class Menu;
 	friend class MenuBarWindow;
@@ -429,7 +402,7 @@ class VCL_DLLPUBLIC MenuBar : public Menu
 	SAL_DLLPRIVATE static Window*	ImplCreate( Window* pParent, Window* pWindow, MenuBar* pMenu );
 	SAL_DLLPRIVATE static void 		ImplDestroy( MenuBar* pMenu, BOOL bDelete );
 	SAL_DLLPRIVATE BOOL				ImplHandleKeyEvent( const KeyEvent& rKEvent, BOOL bFromMenu = TRUE );
-#endif
+//#endif
 
 public:
 						MenuBar();
@@ -452,6 +425,7 @@ public:
     BOOL                HandleMenuDeActivateEvent( Menu *pMenu ) const;
     BOOL                HandleMenuHighlightEvent( Menu *pMenu, USHORT nEventId ) const;
     BOOL                HandleMenuCommandEvent( Menu *pMenu, USHORT nEventId ) const;
+    BOOL                HandleMenuButtonEvent( Menu *pMenu, USHORT nEventId ) const;
 
 	void				SetCloserHdl( const Link& rLink )			{ maCloserHdl = rLink; }
 	const Link& 		GetCloserHdl() const						{ return maCloserHdl; }
@@ -476,6 +450,10 @@ public:
     // add an arbitrary button to the menubar (will appear next to closer)
     // passed link will be call with a MenuBarButtonCallbackArg on press
     USHORT              AddMenuBarButton( const Image&, const Link&, USHORT nPos = 0 );
+    // add an arbitrary button to the menubar (will appear next to closer)
+    // passed link will be call with a MenuBarButtonCallbackArg on press
+    // passed string will be set as tooltip
+    USHORT              AddMenuBarButton( const Image&, const Link&, const String&, USHORT nPos = 0 );
     // set the highlight link for additional button with ID nId
     // highlight link will be called with a MenuBarButtonHighlightArg
     // the bHighlight member of that struct shall contain the new state
@@ -530,6 +508,7 @@ public:
 	// Fuer das TestTool
 	void				EndExecute( USHORT nSelect = 0 );
 	void				SelectEntry( USHORT nId );
+    void                SetSelectedEntry( USHORT nId ); // for use by native submenu only
 
 	static BOOL 		IsInExecute();
 	static PopupMenu*	GetActivePopupMenu();

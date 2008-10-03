@@ -1,52 +1,39 @@
 /*************************************************************************
+/*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 #ifndef _SV_LSTBOX_HXX
 #define _SV_LSTBOX_HXX
 
-#ifndef _VCL_DLLAPI_H
-#include "dllapi.h"
-#endif
-
-#ifndef _SV_CTRL_HXX
-#include <ctrl.hxx>
-#endif
-#ifndef _SV_LSTBOX_H
-#include <lstbox.h>
-#endif
+#include <vcl/dllapi.h>
+#include <vcl/ctrl.hxx>
+#include <vcl/lstbox.h>
 
 class Image;
 class ImplListBox;
@@ -71,7 +58,7 @@ private:
 	Link						maSelectHdl;
 	Link						maDoubleClickHdl;
 
-#if _SOLAR__PRIVATE
+//#if 0 // _SOLAR__PRIVATE
 private:
 	SAL_DLLPRIVATE void    ImplInitListBoxData();
 
@@ -89,7 +76,7 @@ protected:
 	SAL_DLLPRIVATE void    ImplInit( Window* pParent, WinBits nStyle );
 	SAL_DLLPRIVATE WinBits ImplInitStyle( WinBits nStyle );
 	SAL_DLLPRIVATE void    ImplLoadRes( const ResId& rResId );
-#endif
+//#endif
 	BOOL			    IsDropDownBox() const { return mpFloatWin ? TRUE : FALSE; }
 
 protected:
@@ -134,7 +121,6 @@ public:
 
     void                EnableDDAutoWidth( BOOL b );
     BOOL                IsDDAutoWidthEnabled() const;
-
 
 	virtual USHORT	    InsertEntry( const XubString& rStr, USHORT nPos = LISTBOX_APPEND );
 	virtual USHORT	    InsertEntry( const Image& rImage, USHORT nPos = LISTBOX_APPEND );
@@ -219,6 +205,7 @@ public:
 	const Link& 	GetDoubleClickHdl() const				{ return maDoubleClickHdl; }
 
 	Size			CalcMinimumSize() const;
+    virtual Size    GetOptimalSize(WindowSizeType eType) const;
 	Size			CalcAdjustedSize( const Size& rPrefSize ) const;
 	Size			CalcSize( USHORT nColumns, USHORT nLines ) const;
 	void			GetMaxVisColumnsAndLines( USHORT& rnCols, USHORT& rnLines ) const;
@@ -257,7 +244,6 @@ public:
     const ImplBtn*  GetImplBtn() const { return mpBtn; }
 #endif  // USE_JAVA
 };
-
 
 // ----------------
 // - MultiListBox -
