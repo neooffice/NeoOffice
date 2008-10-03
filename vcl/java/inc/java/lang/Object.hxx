@@ -46,7 +46,7 @@
 #include <osl/diagnose.h>
 #endif
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif
 
 namespace vcl {

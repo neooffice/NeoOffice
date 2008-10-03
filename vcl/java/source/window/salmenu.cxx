@@ -48,7 +48,7 @@
 #include <salframe.h>
 #endif
 #ifndef _SV_WINDOW_HXX
-#include <window.hxx>
+#include <vcl/window.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
@@ -236,7 +236,7 @@ void JavaSalMenu::SetAccelerator( unsigned nPos, SalMenuItem* pSalMenuItem, cons
 		// in the application menu. Also, fix bug 2886 by not allowing any
 		// shortcuts with a space as Java will disable a tab and the shortcut
 		// be unusable.
-		if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsControlMod() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
+		if ( rKeyCode.IsMod1() && !rKeyCode.IsMod2() && !rKeyCode.IsMod3() && ! ( rKeyCode.GetCode() == KEY_H && !rKeyCode.IsShift() ) && rKeyCode.GetCode() != KEY_Q && rKeyCode.GetCode() != KEY_COMMA && rKeyCode.GetCode() != KEY_SPACE )
 			pJavaSalMenuItem->mpVCLMenuItemData->setKeyboardShortcut( rKeyCode.GetCode(), rKeyCode.IsShift() );
 	}
 }
@@ -371,9 +371,7 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	}
 
 	// Post the SALEVENT_MENUACTIVATE event
-	SalMenuEvent *pActivateEvent = new SalMenuEvent();
-	pActivateEvent->mnId = 0;
-	pActivateEvent->mpMenu = pVCLMenu;
+	SalMenuEvent *pActivateEvent = new SalMenuEvent( 0, pVCLMenu );
 	com_sun_star_vcl_VCLEvent aActivateEvent( SALEVENT_MENUACTIVATE, pFrame, pActivateEvent );
 	aActivateEvent.dispatch();
 
@@ -390,9 +388,7 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	}
 
 	// Post the SALEVENT_MENUDEACTIVATE event
-	SalMenuEvent *pDeactivateEvent = new SalMenuEvent();
-	pDeactivateEvent->mnId = 0;
-	pDeactivateEvent->mpMenu = pVCLMenu;
+	SalMenuEvent *pDeactivateEvent = new SalMenuEvent( 0, pVCLMenu );
 	com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, pFrame, pDeactivateEvent );
 	aDeactivateEvent.dispatch();
 #endif	// !NO_NATIVE_MENUS

@@ -61,7 +61,7 @@ JavaSalObject::JavaSalObject( SalFrame *pParent )
 
 	// Set window value now as the avmedia module needs access to it before
 	// it is actually shown
-	maSysData.aWindow = (long)mpChildView;
+	maSysData.pView = (NSView *)mpChildView;
 }
 
 // -----------------------------------------------------------------------

@@ -42,7 +42,7 @@
 #include <salgdi.h>
 #endif
 #ifndef _SV_SALPTYPE_HXX
-#include <salptype.hxx>
+#include <vcl/salptype.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>

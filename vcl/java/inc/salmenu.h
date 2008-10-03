@@ -37,13 +37,13 @@
 #define _SV_SALMENU_H
 
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif
 #ifndef _SV_IMAGE_H
-#include <image.h>
+#include <vcl/image.h>
 #endif
 #ifndef _SV_SALMENU_HXX
-#include <salmenu.hxx>
+#include <vcl/salmenu.hxx>
 #endif
 
 class JavaSalFrame;

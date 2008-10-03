@@ -39,16 +39,16 @@
 #include <hash_map>
 
 #ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
+#include <vcl/salgdi.hxx>
 #endif
 #ifndef _SV_OUTFONT_HXX
-#include <outfont.hxx>
+#include <vcl/outfont.hxx>
 #endif
 #ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
+#include <vcl/sallayout.hxx>
 #endif
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif 
 
 #include <premac.h>
@@ -120,7 +120,7 @@ public:
 	virtual					~JavaSalGraphics();
 
 	virtual BOOL			unionClipRegion( long nX, long nY, long nWidth, long nHeight );
-	virtual BOOL			unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry, sal_Int32 nOffsetX, sal_Int32 nOffsetY );
+	virtual bool			unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPoly );
 	virtual void			drawPixel( long nX, long nY );
 	virtual void			drawPixel( long nX, long nY, SalColor nSalColor );
 	virtual void			drawLine( long nX1, long nY1, long nX2, long nY2 );
@@ -128,6 +128,8 @@ public:
 	virtual void			drawPolyLine( ULONG nPoints, const SalPoint* pPtAry );
 	virtual void			drawPolygon( ULONG nPoints, const SalPoint* pPtAry );
 	virtual void			drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry );
+	virtual bool			drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency );
+	virtual bool			drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths );
 	virtual sal_Bool		drawPolyLineBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry );
 	virtual sal_Bool		drawPolygonBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry );
 	virtual sal_Bool		drawPolyPolygonBezier( ULONG nPoly, const ULONG* pPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry );
@@ -164,12 +166,13 @@ public:
 	virtual void			GetDevFontList( ImplDevFontList* );
 	virtual void			GetDevFontSubstList( OutputDevice* );
 	virtual bool			AddTempDevFont( ImplDevFontList*, const String& rFileURL, const String& rFontName );
-	virtual BOOL			CreateFontSubset( const rtl::OUString& rToFile, ImplFontData* pFont, sal_Int32* pGlyphIDs, sal_uInt8* pEncoding, sal_Int32* pWidths, int nGlyphs, FontSubsetInfo& rInfo );
-	virtual const std::map< sal_Unicode, sal_Int32 >*	GetFontEncodingVector( ImplFontData* pFont, const std::map< sal_Unicode, rtl::OString >** ppNonEncoded );
-	virtual const void*		GetEmbedFontData( ImplFontData* pFont, const sal_Unicode* pUnicodes, sal_Int32* pWidths, FontSubsetInfo& rInfo, long* pDataLen );
+	virtual BOOL			CreateFontSubset( const rtl::OUString& rToFile, const ImplFontData* pFont, sal_Int32* pGlyphIDs, sal_uInt8* pEncoding, sal_Int32* pWidths, int nGlyphs, FontSubsetInfo& rInfo );
+	virtual const Ucs2SIntMap*	GetFontEncodingVector( const ImplFontData*, const Ucs2OStrMap** ppNonEncoded );
+	virtual const void*		GetEmbedFontData( const ImplFontData* pFont, const sal_Ucs* pUnicodes, sal_Int32* pWidths, FontSubsetInfo& rInfo, long* pDataLen );
 	virtual void			FreeEmbedFontData( const void* pData, long nDataLen );
+	virtual void			GetGlyphWidths( const ImplFontData* pFont, bool bVertical, Int32Vector& rWidths, Ucs2UIntMap& rUnicodeEnc );
 	virtual BOOL			GetGlyphBoundRect( long nIndex, Rectangle& );
-	virtual BOOL			GetGlyphOutline( long nIndex, basegfx::B2DPolyPolygon& );
+	virtual BOOL			GetGlyphOutline( long nIndex, basegfx::B2DPolyPolygon& rPolyPoly );
 	virtual SalLayout*		GetTextLayout( ImplLayoutArgs&, int nFallbackLevel );
 	virtual void			DrawServerFontLayout( const ServerFontLayout& );
 	virtual BOOL			IsNativeControlSupported( ControlType nType, ControlPart nPart );
@@ -177,12 +180,15 @@ public:
 	virtual BOOL			drawNativeControl( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& rCaption );
 	virtual BOOL			drawNativeControlText( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& rCaption );
 	virtual BOOL			getNativeControlRegion( ControlType nType, ControlPart nPart, const Region& rControlRegion, ControlState nState, const ImplControlValue& aValue, SalControlHandle& rControlHandle, const rtl::OUString& rCaption, Region &rNativeBoundingRegion, Region &rNativeContentRegion );
-    virtual BOOL			getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor );
+	virtual BOOL			getNativeControlTextColor( ControlType nType, ControlPart nPart, ControlState nState, const ImplControlValue& aValue, SalColor& textColor );
 	virtual bool			drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap, const SalBitmap& rAlphaBitmap );
 	virtual bool			drawAlphaRect( long nX, long nY, long nWidth, long nHeight, sal_uInt8 nTransparency );
+	virtual bool			supportsOperation( OutDevSupportType ) const;
+	virtual SystemGraphicsData	GetGraphicsData() const;
 
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
+	BOOL					unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry, sal_Int32 nOffsetX, sal_Int32 nOffsetY );
 };
 
 #endif // _SV_SALGDI_H

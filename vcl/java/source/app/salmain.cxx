@@ -45,7 +45,7 @@
 #include "sal/main.h"
 #endif
 #ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
+#include <vcl/salinst.hxx>
 #endif
 #ifndef _FSYS_HXX
 #include <tools/fsys.hxx>

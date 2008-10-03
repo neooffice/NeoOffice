@@ -37,13 +37,13 @@
 #define _SV_SALINST_H
 
 #ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
+#include <vcl/salinst.hxx>
 #endif
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif
 #ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _OSL_CONDITN_HXX
 #include <osl/conditn.hxx>
@@ -89,7 +89,7 @@ public:
 	virtual SalFrame*		CreateChildFrame( SystemParentData* pParent, ULONG nStyle );
 	virtual SalFrame*		CreateFrame( SalFrame* pParent, ULONG nStyle );
 	virtual void			DestroyFrame( SalFrame* pFrame );
-	virtual SalObject*		CreateObject( SalFrame* pParent, SystemWindowData* pWindowData );
+	virtual SalObject*		CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, BOOL bShow = TRUE );
 	virtual void			DestroyObject( SalObject* pObject );
 	virtual SalVirtualDevice*	CreateVirtualDevice( SalGraphics* pGraphics, long nDX, long nDY, USHORT nBitCount, const SystemGraphicsData *pData = NULL );
 	virtual void			DestroyVirtualDevice( SalVirtualDevice* pDevice );
@@ -102,7 +102,6 @@ public:
 	virtual void			GetPrinterQueueState( SalPrinterQueueInfo* pInfo );
 	virtual void			DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo );
 	virtual String			GetDefaultPrinter();
-	virtual SalSound*		CreateSalSound();
 	virtual SalTimer*		CreateSalTimer();
 	virtual SalOpenGL*		CreateSalOpenGL( SalGraphics* pGraphics );
 	virtual SalI18NImeStatus*	CreateI18NImeStatus();

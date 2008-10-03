@@ -39,16 +39,16 @@
 #include <list>
 
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif
 #ifndef _SV_SYSDATA_HXX 
-#include <sysdata.hxx>
+#include <vcl/sysdata.hxx>
 #endif
 #ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#include <vcl/salframe.hxx>
 #endif
 #ifndef _SV_SALGEOM_HXX
-#include <salgeom.hxx>
+#include <vcl/salgeom.hxx>
 #endif
 
 namespace vcl
@@ -145,6 +145,9 @@ public:
 	virtual void			BeginSetClipRegion( ULONG nRects );
 	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight );
 	virtual void			EndSetClipRegion();
+	virtual SalFrame::SalIndicatorState	GetIndicatorState();
+	virtual void			SimulateKeyPress( USHORT nKeyCode );
+	virtual void			SetScreenNumber( unsigned int nScreen );
 };
 
 // Note: this must not be static as the symbol will be loaded by the framework

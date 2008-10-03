@@ -43,7 +43,7 @@
 #include <tools/gen.hxx>
 #endif
 #ifndef _SV_PRNTYPES_HXX
-#include <prntypes.hxx>
+#include <vcl/prntypes.hxx>
 #endif
 
 namespace vcl {

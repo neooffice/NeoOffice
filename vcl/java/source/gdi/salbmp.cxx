@@ -42,13 +42,13 @@
 #include <saldata.hxx>
 #endif
 #ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
+#include <vcl/salgdi.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 #ifndef _SV_BMPACC_HXX
-#include <bmpacc.hxx>
+#include <vcl/bmpacc.hxx>
 #endif
 
 using namespace vcl;
@@ -534,16 +534,8 @@ void JavaSalBitmap::ReleaseBuffer( BitmapBuffer* pBuffer, bool bReadOnly )
 
 bool JavaSalBitmap::GetSystemData( BitmapSystemData& rData )
 {
-	if ( !mpBuffer )
-		mpBuffer = AcquireBuffer( false );
-
-	if ( mpBuffer )
-	{
-		rData.aPixmap = (void *)mpBuffer;
-		return true;
-	}
-	else
-	{
-		return false;
-	}
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalBitmap::GetSystemData not implemented\n" );
+#endif
+	return false;
 }

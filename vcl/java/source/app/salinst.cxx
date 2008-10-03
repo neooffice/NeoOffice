@@ -54,7 +54,7 @@
 #include <salgdi.h>
 #endif
 #ifndef _SV_SALIMESTATUS_HXX
-#include <salimestatus.hxx>
+#include <vcl/salimestatus.hxx>
 #endif
 #ifndef _SALJAVA_H
 #include <saljava.h>
@@ -69,10 +69,7 @@
 #include <salogl.h>
 #endif
 #ifndef _SV_SALPTYPE_HXX
-#include <salptype.hxx>
-#endif
-#ifndef _SV_SALSOUND_H
-#include <salsound.h>
+#include <vcl/salptype.hxx>
 #endif
 #ifndef _SV_SALSYS_H
 #include <salsys.h>
@@ -84,25 +81,25 @@
 #include <salvd.h>
 #endif
 #ifndef _SV_SALBTYPE_HXX
-#include <salbtype.hxx>
+#include <vcl/salbtype.hxx>
 #endif
 #ifndef _SV_SALPRN_H
 #include <salprn.h>
 #endif
 #ifndef _SV_SALTIMER_HXX
-#include <saltimer.hxx>
+#include <vcl/saltimer.hxx>
 #endif
 #ifndef _VCL_APPTYPES_HXX
-#include <apptypes.hxx>
+#include <vcl/apptypes.hxx>
 #endif
 #ifndef _SV_PRINT_H
-#include <print.h>
+#include <vcl/print.h>
 #endif
 #ifndef _SV_JOBSET_H
-#include <jobset.h>
+#include <vcl/jobset.h>
 #endif
 #ifndef _SV_FLOATWIN_HXX
-#include <floatwin.hxx>
+#include <vcl/floatwin.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
@@ -652,8 +649,7 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 		return NULL;
 	}
 	pFrame->mpVCLFrame = pVCLFrame;
-	pFrame->maSysData.aWindow = 0;
-	pFrame->maSysData.pSalFrame = pFrame;
+	pFrame->maSysData.pView = NULL;
 
 	// Set initial parent
 	pFrame->SetParent( pParent );
@@ -747,9 +743,11 @@ void JavaSalInstance::DestroyFrame( SalFrame* pFrame )
 
 // -----------------------------------------------------------------------
 
-SalObject* JavaSalInstance::CreateObject( SalFrame* pParent, SystemWindowData* pWindowData )
+SalObject* JavaSalInstance::CreateObject( SalFrame* pParent, SystemWindowData* pWindowData, BOOL bShow )
 {
-	return new JavaSalObject( pParent );
+	JavaSalObject *pObject = new JavaSalObject( pParent );
+	pObject->Show( bShow );
+	return pObject;
 }
 
 // -----------------------------------------------------------------------
@@ -910,13 +908,6 @@ void JavaSalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
 {
 	if ( pDevice )
 		delete pDevice;
-}
-
-// -----------------------------------------------------------------------
-
-SalSound* JavaSalInstance::CreateSalSound()
-{
-    return new JavaSalSound();
 }
 
 // -----------------------------------------------------------------------

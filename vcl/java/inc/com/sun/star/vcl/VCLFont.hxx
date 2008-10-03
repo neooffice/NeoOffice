@@ -42,7 +42,7 @@
 #include <java/lang/Object.hxx>
 #endif
 #ifndef _VCL_VCLENUM_HXX
-#include <vclenum.hxx>
+#include <vcl/vclenum.hxx>
 #endif
 
 namespace vcl {

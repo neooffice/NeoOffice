@@ -37,13 +37,13 @@
 #define _SV_SALPRN_H
 
 #ifndef _SV_SALPRN_HXX
-#include <salprn.hxx>
+#include <vcl/salprn.hxx>
 #endif
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif
 #ifndef _SV_PRNTYPES_HXX
-#include <prntypes.hxx>
+#include <vcl/prntypes.hxx>
 #endif
 
 namespace vcl

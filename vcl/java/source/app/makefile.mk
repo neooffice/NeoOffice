@@ -61,7 +61,6 @@ SLOFILES= \
 	$(SLO)$/salinfo.obj \
 	$(SLO)$/salinst.obj \
 	$(SLO)$/salinst_cocoa.obj \
-	$(SLO)$/salsound.obj
 
 SRC1FILES=salinst.src
 SRS1NAME=$(TARGET)

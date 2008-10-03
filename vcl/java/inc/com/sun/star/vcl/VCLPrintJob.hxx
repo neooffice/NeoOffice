@@ -40,7 +40,7 @@
 #include <java/lang/Object.hxx>
 #endif
 #ifndef _SV_JOBSET_H
-#include <jobset.h>
+#include <vcl/jobset.h>
 #endif
 
 namespace vcl {

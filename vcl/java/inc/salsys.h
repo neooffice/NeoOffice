@@ -37,10 +37,10 @@
 #define _SV_SALSYS_H
 
 #ifndef _SV_SALSYS_HXX
-#include <salsys.hxx>
+#include <vcl/salsys.hxx>
 #endif 
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif 
 
 // -----------------

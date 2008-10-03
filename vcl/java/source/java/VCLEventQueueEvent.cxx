@@ -51,19 +51,19 @@
 #include <salframe.h>
 #endif
 #ifndef _SV_EVENT_HXX
-#include <event.hxx>
+#include <vcl/event.hxx>
 #endif
 #ifndef _SV_SALMENU_H
 #include <salmenu.h>
 #endif
 #ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _SV_CTRL_HXX
-#include <ctrl.hxx>
+#include <vcl/ctrl.hxx>
 #endif
 #ifndef _SV_FLOATWIN_HXX
-#include <floatwin.hxx>
+#include <vcl/floatwin.hxx>
 #endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
@@ -334,7 +334,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		{
 			if ( pFrame == *it )
 			{
-				bFound = pFrame->GetInstance();
+				if ( pFrame->GetWindow() )
+					bFound = true;
 				break;
 			}
 		}
@@ -737,11 +738,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				{
 					// Get paint region
 					const Rectangle &aUpdateRect = getUpdateRect();
-					pPaintEvent = new SalPaintEvent();
-					pPaintEvent->mnBoundX = aUpdateRect.nLeft;
-					pPaintEvent->mnBoundY = aUpdateRect.nTop;
-					pPaintEvent->mnBoundWidth = aUpdateRect.GetWidth();
-					pPaintEvent->mnBoundHeight = aUpdateRect.GetHeight();
+					pPaintEvent = new SalPaintEvent( aUpdateRect.nLeft, aUpdateRect.nTop, aUpdateRect.GetWidth(), aUpdateRect.GetHeight() );
 				}
 				// Adjust position for RTL layout
 				if ( Application::GetSettings().GetLayoutRTL() )
@@ -807,11 +804,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
 			{
 				if ( !pMenuEvent )
-				{
-					pMenuEvent = new SalMenuEvent();
-					pMenuEvent->mnId = getMenuID();
-					pMenuEvent->mpMenu = (void *)getMenuCookie();
-				}
+					pMenuEvent = new SalMenuEvent( getMenuID(), getMenuCookie() );
 				// Pass all menu selections received by a utility window to
 				// its parent window
 				if ( nID == SALEVENT_MENUCOMMAND )

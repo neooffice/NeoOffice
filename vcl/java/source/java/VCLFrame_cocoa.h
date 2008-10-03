@@ -49,7 +49,7 @@ typedef void* id;
 BEGIN_C
 #endif
 id CWindow_getNSWindow( id pCWindow );
-WindowRef CWindow_getWindowRef( id pCWindow );
+id CWindow_getNSWindowContentView( id pCWindow );
 int CWindow_makeFloatingWindow( id pCWindow );
 void CWindow_updateLocation( id pCWindow );
 #ifdef __cplusplus

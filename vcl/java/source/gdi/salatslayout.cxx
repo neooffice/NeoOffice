@@ -53,10 +53,13 @@
 #include <salgdi.h>
 #endif
 #ifndef _SV_OUTFONT_HXX
-#include <outfont.hxx>
+#include <vcl/outfont.hxx>
 #endif
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
+#endif
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -1570,7 +1573,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 {
 	int nMaxGlyphs = 256;
-	sal_Int32 aGlyphArray[ nMaxGlyphs ];
+	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
 	sal_Int32 aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 
@@ -1718,7 +1721,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		return bRet;
 
 	int nMaxGlyphs( 1 );
-	sal_Int32 aGlyphArray[ nMaxGlyphs ];
+	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
 	sal_Int32 aDXArray[ nMaxGlyphs ];
 	int aCharPosArray[ nMaxGlyphs ];
 

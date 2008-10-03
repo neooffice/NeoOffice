@@ -69,7 +69,7 @@ public:
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
 	void*				getNativeWindow();
-	void*				getNativeWindowRef();
+	void*				getNativeWindowContentView();
 	java_lang_Object*	getPeer();
 	ULONG				getState();
 	void				removeChild( JavaSalFrame *_par0 );

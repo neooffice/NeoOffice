@@ -40,7 +40,7 @@
 #include <java/lang/Object.hxx>
 #endif
 #ifndef _SV_SALGTYPE_HXX
-#include <salgtype.hxx>
+#include <vcl/salgtype.hxx>
 #endif
 #ifndef _SV_GEN_HXX
 #include <tools/gen.hxx>

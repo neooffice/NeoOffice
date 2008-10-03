@@ -39,10 +39,10 @@
 #include <salinst.h>
 #endif
 #ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _VCL_UNOHELP_HXX
-#include <unohelp.hxx>
+#include <vcl/unohelp.hxx>
 #endif
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>

@@ -1137,7 +1137,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, sal_GlyphId *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;

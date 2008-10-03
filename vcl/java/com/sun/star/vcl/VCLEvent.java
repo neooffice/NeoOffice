@@ -852,9 +852,19 @@ public final class VCLEvent extends AWTEvent {
 	public final static int SALEVENT_INPUTLANGUAGECHANGE = 40;
 
 	/**
+	 * SALEVENT_SHOWDIALOG constant.
+	 */
+	public final static int SALEVENT_SHOWDIALOG = 41;
+
+	/**
+	 * SALEVENT_MENUBUTTONCOMMAND constant.
+	 */
+	public final static int SALEVENT_MENUBUTTONCOMMAND = 42;
+
+	/**
 	 * SALEVENT_COUNT constant.
 	 */
-	public final static int SALEVENT_COUNT = 40;
+	public final static int SALEVENT_COUNT = 42;
 
 	/**
 	 * SALEVENT_OPENDOCUMENT constant.

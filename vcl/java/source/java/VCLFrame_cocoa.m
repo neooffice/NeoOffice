@@ -43,9 +43,11 @@
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;
+	NSView*				mpView;
 	NSWindow*			mpWindow;
 }
 + (id)createWithCWindow:(id)pCWindow;
+- (NSView *)contentView;
 - (void)getNSWindow:(id)pObject;
 - (id)initWithCWindow:(id)pCWindow;
 - (NSWindow *)window;
@@ -60,56 +62,18 @@
 	return pRet;
 }
 
+- (NSView *)contentView
+{
+	return mpView;
+}
+
 - (void)getNSWindow:(id)pObject
 {
 	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
-		mpWindow = (NSWindow *)[mpCWindow getNSWindow];
-}
-
-- (id)initWithCWindow:(id)pCWindow
-{
-	[super init];
-
-	mpCWindow = pCWindow;
-	mpWindow = nil;
-
-	return self;
-}
-
-- (NSWindow *)window
-{
-	return mpWindow;
-}
-
-@end
-
-@interface GetWindowRef : NSObject
-{
-	id					mpCWindow;
-	WindowRef			maWindow;
-}
-+ (id)createWithCWindow:(id)pCWindow;
-- (void)getWindowRef:(id)pObject;
-- (id)initWithCWindow:(id)pCWindow;
-- (WindowRef)windowRef;
-@end
-
-@implementation GetWindowRef
-
-+ (id)createWithCWindow:(id)pCWindow
-{
-	GetWindowRef *pRet = [[GetWindowRef alloc] initWithCWindow:pCWindow];
-	[pRet autorelease];
-	return pRet;
-}
-
-- (void)getWindowRef:(id)pObject
-{
-	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
 	{
-		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
-		if ( pWindow )
-			maWindow = [pWindow windowRef];
+		mpWindow = (NSWindow *)[mpCWindow getNSWindow];
+		if ( mpWindow )
+			mpView = [mpWindow contentView];
 	}
 }
 
@@ -118,14 +82,15 @@
 	[super init];
 
 	mpCWindow = pCWindow;
-	maWindow = nil;
+	mpView = nil;
+	mpWindow = nil;
 
 	return self;
 }
 
-- (WindowRef)windowRef
+- (NSWindow *)window
 {
-	return maWindow;
+	return mpWindow;
 }
 
 @end
@@ -246,7 +211,7 @@
 
 id CWindow_getNSWindow( id pCWindow )
 {
-	NSWindow *pNSWindow = nil;
+	NSWindow *pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -255,31 +220,31 @@ id CWindow_getNSWindow( id pCWindow )
 		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
-		pNSWindow = [pGetNSWindow window];
+		pRet = [pGetNSWindow window];
 	}
 
 	[pPool release];
 
-	return pNSWindow;
+	return pRet;
 }
 
-WindowRef CWindow_getWindowRef( id pCWindow )
+id CWindow_getNSWindowContentView( id pCWindow )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	WindowRef aWindow = nil;
+	NSView *pRet = nil;
 
 	if ( pCWindow )
 	{
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		GetWindowRef *pGetWindowRef = [GetWindowRef createWithCWindow:pCWindow];
-		[pGetWindowRef performSelectorOnMainThread:@selector(getWindowRef:) withObject:pGetWindowRef waitUntilDone:YES modes:pModes];
-		aWindow = [pGetWindowRef windowRef];
+		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
+		pRet = [pGetNSWindow contentView];
 	}
 
 	[pPool release];
 
-	return aWindow;
+	return pRet;
 }
 
 int CWindow_makeFloatingWindow( id pCWindow )

@@ -51,7 +51,7 @@
 #include <salframe.h>
 #endif
 #ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
@@ -594,7 +594,7 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLFrame::getNativeWindowRef()
+void *com_sun_star_vcl_VCLFrame::getNativeWindowContentView()
 {
 	void *out = NULL;
 	VCLThreadAttach t;
@@ -631,9 +631,9 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindowRef()
 					if ( mIDGetModelPtr )
 					{
 						if ( bReturnsInt )
-							out = (void *)CWindow_getWindowRef( (void *)t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getNSWindowContentView( (void *)t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr ) );
 						else
-							out = (void *)CWindow_getWindowRef( (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
+							out = (void *)CWindow_getNSWindowContentView( (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr ) );
 					}
 				}
 			}

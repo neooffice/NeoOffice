@@ -42,7 +42,10 @@
 #include <salbmp.h>
 #endif
 #ifndef _SV_SALWTYPE_HXX
-#include <salwtype.hxx>
+#include <vcl/salwtype.hxx>
+#endif
+#ifndef _SV_SYSDATA_HXX
+#include <vcl/sysdata.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 #include <com/sun/star/vcl/VCLBitmap.hxx>
@@ -54,7 +57,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
 #ifndef _SV_BMPACC_HXX
-#include <bmpacc.hxx>
+#include <vcl/bmpacc.hxx>
 #endif
 
 using namespace vcl;
@@ -920,4 +923,32 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 	}
 
 	return true;
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalGraphics::supportsOperation( OutDevSupportType eType ) const
+{
+	bool bRet = false;
+
+	switch( eType )
+	{
+		case OutDevSupport_TransparentRect:
+			bRet = true;
+			break;
+		default:
+			break;
+	}
+
+	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+SystemGraphicsData JavaSalGraphics::GetGraphicsData() const
+{
+	SystemGraphicsData aRes;
+	aRes.nSize = sizeof( SystemGraphicsData );
+	aRes.rCGContext = NULL;
+	return aRes; 
 }

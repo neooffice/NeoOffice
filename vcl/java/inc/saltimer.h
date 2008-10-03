@@ -37,10 +37,10 @@
 #define _SV_SALTIMER_H
 
 #ifndef _SV_SALTIMER_HXX
-#include <saltimer.hxx>
+#include <vcl/saltimer.hxx>
 #endif 
 #ifndef _SV_SV_H
-#include <sv.h>
+#include <vcl/sv.h>
 #endif 
 
 // ----------------

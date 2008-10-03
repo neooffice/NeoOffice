@@ -48,13 +48,13 @@
 #include <salinst.h>
 #endif
 #ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
+#include <vcl/sallayout.hxx>
 #endif
 #ifndef _SV_IMPFONT_HXX
-#include <impfont.hxx>
+#include <vcl/impfont.hxx>
 #endif
 #ifndef _SV_OUTDEV_H
-#include <outdev.h>
+#include <vcl/outdev.h>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
@@ -456,7 +456,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( !pFont || !pFont->mpFontData )
 		return SAL_SETFONT_BADFONT;
 
-	JavaImplFontData *pFontData = dynamic_cast<JavaImplFontData *>( pFont->mpFontData );
+	const JavaImplFontData *pFontData = dynamic_cast<const JavaImplFontData *>( pFont->mpFontData );
 	if ( !pFontData )
 		return SAL_SETFONT_BADFONT;
 
@@ -492,7 +492,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 	if ( nFallbackLevel || bAddBold || bAddItalic )
 	{
-		JavaImplFontData *pOldFontData = pFontData;
+		const JavaImplFontData *pOldFontData = pFontData;
 		sal_IntPtr nOldNativeFont = pOldFontData->GetFontId();
 
 		// Remove any bold or italic variants so that we don't get drifting to
@@ -504,7 +504,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				pFontData = pfit->second;
 		}
 
-		JavaImplFontData *pPlainFontData = pFontData;
+		const JavaImplFontData *pPlainFontData = pFontData;
 		sal_IntPtr nPlainNativeFont = pPlainFontData->GetFontId();
 
 		// Fix bug 3031 by caching the bold, italic, and bold italic variants
@@ -819,7 +819,7 @@ bool JavaSalGraphics::AddTempDevFont( ImplDevFontList* pList, const String& rFil
 // -----------------------------------------------------------------------
 
 BOOL JavaSalGraphics::CreateFontSubset( const rtl::OUString& rToFile,
-                                    ImplFontData* pFont, long* pGlyphIDs,
+                                    const ImplFontData* pFont, long* pGlyphIDs,
                                     sal_uInt8* pEncoding, sal_Int32* pWidths,
                                     int nGlyphs, FontSubsetInfo& rInfo )
 {
@@ -831,8 +831,8 @@ BOOL JavaSalGraphics::CreateFontSubset( const rtl::OUString& rToFile,
 
 // -----------------------------------------------------------------------
 
-const void* JavaSalGraphics::GetEmbedFontData( ImplFontData* pFont,
-                                           const sal_Unicode* pUnicodes,
+const void* JavaSalGraphics::GetEmbedFontData( const ImplFontData* pFont,
+                                           const sal_Ucs* pUnicodes,
                                            sal_Int32* pWidths,
                                            FontSubsetInfo& rInfo,
                                            long* pDataLen )
@@ -854,15 +854,24 @@ void JavaSalGraphics::FreeEmbedFontData( const void* pData, long nLen )
 
 // -----------------------------------------------------------------------
 
-const std::map< sal_Unicode, sal_Int32 >* JavaSalGraphics::GetFontEncodingVector(
-                ImplFontData* pFont,
-                const std::map< sal_Unicode, rtl::OString >** pNonEncoded )
+void JavaSalGraphics::GetGlyphWidths( const ImplFontData* pFont, bool bVertical, Int32Vector& rWidths, Ucs2UIntMap& rUnicodeEnc )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalGraphics::GetGlyphWidths not implemented\n" );
+#endif
+	rWidths.clear();
+	rUnicodeEnc.clear();
+}
+
+// -----------------------------------------------------------------------
+
+const Ucs2SIntMap* JavaSalGraphics::GetFontEncodingVector( const ImplFontData*, const Ucs2OStrMap** ppNonEncoded )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::GetFontEncodingVector not implemented\n" );
 #endif
-	if ( pNonEncoded )
-		*pNonEncoded = NULL;
+	if ( ppNonEncoded )
+		*ppNonEncoded = NULL;
 	return NULL;
 }
 

@@ -54,13 +54,13 @@
 #include <salsys.h>
 #endif
 #ifndef _SV_SETTINGS_HXX
-#include <settings.hxx>
+#include <vcl/settings.hxx>
 #endif
 #ifndef _SV_STATUS_HXX
-#include <status.hxx>
+#include <vcl/status.hxx>
 #endif
 #ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
@@ -75,7 +75,7 @@
 #include <com/sun/star/vcl/VCLScreen.hxx>
 #endif
 #ifndef _SV_DIALOG_HXX
-#include <dialog.hxx>
+#include <vcl/dialog.hxx>
 #endif
 
 #include <premac.h>
@@ -348,8 +348,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		mbInShow = TRUE;
 
-		// Get native window since it won't be created until first shown
-		maSysData.aWindow = (long)mpVCLFrame->getNativeWindowRef();
+		// Get native window's content view since it won't be created until
+		// first shown
+		maSysData.pView = (NSView *)mpVCLFrame->getNativeWindowContentView();
 		mbCenter = FALSE;
 
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );
@@ -384,7 +385,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		aEvent.dispatch();
 
 		// Remove the native window since it is destroyed when hidden
-		maSysData.aWindow = 0;
+		maSysData.pView = NULL;
 
 		// Unset focus but don't set focus to another frame as it will cause
 		// menu shortcuts to be disabled if we go into show only menus mode
@@ -440,7 +441,7 @@ void JavaSalFrame::SetMinClientSize( long nWidth, long nHeight )
 void JavaSalFrame::SetPosSize( long nX, long nY, long nWidth, long nHeight,
 							USHORT nFlags )
 {
-	if ( mnStyle & SAL_FRAME_STYLE_CHILD )
+	if ( mnStyle & SAL_FRAME_STYLE_SYSTEMCHILD )
 		return;
 
 	mbInSetPosSize = TRUE;
@@ -1041,7 +1042,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 			Show( FALSE );
 
 		// Fix bug 1310 by creating a new native window with the new parent
-		maSysData.aWindow = 0;
+		maSysData.pView = NULL;
 		com_sun_star_vcl_VCLFrame *pOldVCLFrame = mpVCLFrame;
 		com_sun_star_vcl_VCLGraphics *pOldVCLGraphics = mpGraphics->mpVCLGraphics;
 
@@ -1121,16 +1122,12 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 			Menu *pVCLMenu = mpMenuBar->mpParentVCLMenu;
 
 			// Post the SALEVENT_MENUACTIVATE event
-			SalMenuEvent *pActivateEvent = new SalMenuEvent();
-			pActivateEvent->mnId = 0;
-			pActivateEvent->mpMenu = pVCLMenu;
+			SalMenuEvent *pActivateEvent = new SalMenuEvent( 0, pVCLMenu );
 			com_sun_star_vcl_VCLEvent aActivateEvent( SALEVENT_MENUACTIVATE, this, pActivateEvent );
 			aActivateEvent.dispatch();
 
 			// Post the SALEVENT_MENUDEACTIVATE event
-			SalMenuEvent *pDeactivateEvent = new SalMenuEvent();
-			pDeactivateEvent->mnId = 0;
-			pDeactivateEvent->mpMenu = pVCLMenu;
+			SalMenuEvent *pDeactivateEvent = new SalMenuEvent( 0, pVCLMenu );
 			com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pDeactivateEvent );
 			aDeactivateEvent.dispatch();
  
@@ -1150,16 +1147,12 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 					Menu *pVCLSubMenu = pSalMenuItem->mpSalSubmenu->mpParentVCLMenu;
 
 					// Post the SALEVENT_MENUACTIVATE event
-					SalMenuEvent *pSubActivateEvent = new SalMenuEvent();
-					pSubActivateEvent->mnId = 0;
-					pSubActivateEvent->mpMenu = pVCLSubMenu;
+					SalMenuEvent *pSubActivateEvent = new SalMenuEvent( 0, pVCLSubMenu );
 					com_sun_star_vcl_VCLEvent aSubActivateEvent( SALEVENT_MENUACTIVATE, this, pSubActivateEvent );
 					pSalData->mpEventQueue->postCachedEvent( &aSubActivateEvent );
 
 					// Post the SALEVENT_MENUDEACTIVATE event
-					SalMenuEvent *pSubDeactivateEvent = new SalMenuEvent();
-					pSubDeactivateEvent->mnId = 0;
-					pSubDeactivateEvent->mpMenu = pVCLSubMenu;
+					SalMenuEvent *pSubDeactivateEvent = new SalMenuEvent( 0, pVCLSubMenu );
 					com_sun_star_vcl_VCLEvent aSubDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pSubDeactivateEvent );
 					pSalData->mpEventQueue->postCachedEvent( &aSubDeactivateEvent );
 				}

@@ -57,7 +57,7 @@
 #include <java/lang/Class.hxx>
 #endif
 #ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _STRING_HXX
 #include <tools/string.hxx>

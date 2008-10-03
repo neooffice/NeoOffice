@@ -184,50 +184,9 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 
 // -----------------------------------------------------------------------
 
-BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry, sal_Int32 nOffsetX, sal_Int32 nOffsetY )
+bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPoly )
 {
-	BOOL bRet = FALSE;
-
-	if ( mpPrinter )
-	{
-		for ( ULONG i = 0; i < nPoly; i++ )
-		{
-			// CGMutablePathRef aPolyPath = CGPathCreateMutable();
-			CGMutablePathRef aPolyPath = NULL;
-			if ( !aPolyPath )
-				continue;
-
-			ULONG nCount = pPoints[ i ];
-			if ( nCount )
-			{
-				CGPathMoveToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ 0 ].mnX + nOffsetX ), (float)( pPtAry[ i ][ 0 ].mnY + nOffsetY ) );
-				for ( ULONG j = 1; j < nCount; j++ )
-					CGPathAddLineToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ j ].mnX + nOffsetX ), (float)( pPtAry[ i ][ j ].mnY + nOffsetY ) );
-				CGPathCloseSubpath( aPolyPath );
-			}
-				
-			CGRect aBounds = CGPathGetBoundingBox( aPolyPath );
-			if ( aBounds.size.width > 0 && aBounds.size.height > 0 )
-			{
-				if ( !maNativeClipPath )
-					maNativeClipPath = CGPathCreateMutable();
-
-				if ( maNativeClipPath )
-				{
-					CGPathAddPath( maNativeClipPath, NULL, aPolyPath );
-					bRet = TRUE;
-				}
-			}
-
-			CFRelease( aPolyPath );
-		}
-	}
-	else
-	{
-		bRet = mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False, nOffsetX, nOffsetY );
-	}
-
-	return bRet;
+	return false;
 }
 
 // -----------------------------------------------------------------------
@@ -371,6 +330,26 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 
 // -----------------------------------------------------------------------
 
+bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalGraphics::drawPolyPolygon not implemented\n" );
+#endif
+	return false;
+}
+
+// -----------------------------------------------------------------------
+
+bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPolyPoly, const ::basegfx::B2DVector& rLineWidths )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalGraphics::drawPolyLine not implemented\n" );
+#endif
+	return false;
+}
+
+// -----------------------------------------------------------------------
+
 sal_Bool JavaSalGraphics::drawPolyLineBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry )
 {
 	return sal_False;
@@ -486,4 +465,52 @@ void JavaSalGraphics::setFillTransparency( sal_uInt8 nTransparency )
 	// already transparent.
 	if ( mnFillColor )
 		SetFillColor( mnFillColor & 0x00ffffff );
+}
+
+// -----------------------------------------------------------------------
+
+BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry, sal_Int32 nOffsetX, sal_Int32 nOffsetY )
+{
+	BOOL bRet = FALSE;
+
+	if ( mpPrinter )
+	{
+		for ( ULONG i = 0; i < nPoly; i++ )
+		{
+			// CGMutablePathRef aPolyPath = CGPathCreateMutable();
+			CGMutablePathRef aPolyPath = NULL;
+			if ( !aPolyPath )
+				continue;
+
+			ULONG nCount = pPoints[ i ];
+			if ( nCount )
+			{
+				CGPathMoveToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ 0 ].mnX + nOffsetX ), (float)( pPtAry[ i ][ 0 ].mnY + nOffsetY ) );
+				for ( ULONG j = 1; j < nCount; j++ )
+					CGPathAddLineToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ j ].mnX + nOffsetX ), (float)( pPtAry[ i ][ j ].mnY + nOffsetY ) );
+				CGPathCloseSubpath( aPolyPath );
+			}
+				
+			CGRect aBounds = CGPathGetBoundingBox( aPolyPath );
+			if ( aBounds.size.width > 0 && aBounds.size.height > 0 )
+			{
+				if ( !maNativeClipPath )
+					maNativeClipPath = CGPathCreateMutable();
+
+				if ( maNativeClipPath )
+				{
+					CGPathAddPath( maNativeClipPath, NULL, aPolyPath );
+					bRet = TRUE;
+				}
+			}
+
+			CFRelease( aPolyPath );
+		}
+	}
+	else
+	{
+		bRet = mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False, nOffsetX, nOffsetY );
+	}
+
+	return bRet;
 }
