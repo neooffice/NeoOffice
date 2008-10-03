@@ -1656,6 +1656,12 @@ public final class VCLEvent extends AWTEvent {
 					case KeyEvent.VK_DECIMAL:
 						keyCode = VCLEvent.KEY_DECIMAL;
 						break;
+					case KeyEvent.VK_DEAD_TILDE:
+						keyCode = VCLEvent.KEY_TILDE;
+						break;
+					case KeyEvent.VK_BACK_QUOTE:
+						keyCode = VCLEvent.KEY_QUOTELEFT;
+						break;
 					default:
 						keyCode = 0;
 						break;
@@ -2341,6 +2347,12 @@ public final class VCLEvent extends AWTEvent {
 				break;
 			case VCLEvent.KEY_DECIMAL:
 				outCode = KeyEvent.VK_DECIMAL;
+				break;
+			case VCLEvent.KEY_TILDE:
+				outCode = KeyEvent.VK_DEAD_TILDE;
+				break;
+			case VCLEvent.KEY_QUOTELEFT:
+				outCode = KeyEvent.VK_BACK_QUOTE;
 				break;
 			case VCLEvent.KEY_F25:
 			case VCLEvent.KEY_F26:
