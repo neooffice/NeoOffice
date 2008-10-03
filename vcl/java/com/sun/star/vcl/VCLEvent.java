@@ -592,6 +592,16 @@ public final class VCLEvent extends AWTEvent {
 	public final static int KEY_DECIMAL = VCLEvent.KEYGROUP_MISC + 29;
 
 	/**
+	 * KEY_TILDE constant.
+	 */
+	public final static int KEY_TILDE = VCLEvent.KEYGROUP_MISC + 30;
+
+	/**
+	 * KEY_QUOTELEFT constant.
+	 */
+	public final static int KEY_QUOTELEFT = VCLEvent.KEYGROUP_MISC + 31;
+
+	/**
 	 * KEY_CODE constant.
 	 */
 	public final static int KEY_CODE = 0x0FFF;
