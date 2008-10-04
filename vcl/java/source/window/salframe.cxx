@@ -1247,3 +1247,33 @@ void JavaSalFrame::EndSetClipRegion()
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->endSetClipRegion( sal_True );
 }
+
+// -----------------------------------------------------------------------
+
+SalFrame::SalIndicatorState JavaSalFrame::GetIndicatorState()
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::GetIndicatorState not implemented\n" );
+#endif
+	SalIndicatorState aState;
+	aState.mnState = 0;
+	return aState;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SimulateKeyPress( USHORT nKeyCode )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::SimulateKeyPress not implemented\n" );
+#endif
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::SetScreenNumber( unsigned int nScreen )
+{
+#ifdef DEBUG
+	fprintf( stderr, "JavaSalFrame::GetIndicatorState not implemented\n" );
+#endif
+}
