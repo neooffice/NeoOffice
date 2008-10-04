@@ -55,7 +55,9 @@ SHL1STDLIBS = \
     $(SALLIB)
 
 .IF "$(GUIBASE)"=="java"
-SHL1STDLIBS += -framework SystemConfiguration
+SHL1STDLIBS += \
+	-framework CoreFoundation \
+	-framework SystemConfiguration
 .ENDIF		# "$(GUIBASE)"=="java"
 
 SHL1DEPN=
