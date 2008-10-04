@@ -1,48 +1,38 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _RTL_MEMORY_H_
 #include <rtl/memory.h>
-#endif
-#include <bmpacc.hxx>
-#include <salbtype.hxx>
-#include <bmpfast.hxx>
+#include <vcl/bmpacc.hxx>
+#include <vcl/salbtype.hxx>
+#include <vcl/bmpfast.hxx>
 
 // -----------
 // - Defines -
@@ -383,11 +373,25 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
 	pDstBuffer->mnScanlineSize = AlignedWidth4Bytes( pDstBuffer->mnBitCount * pDstBuffer->mnWidth );
 #ifdef USE_JAVA
 	if ( pDstBits )
+	{
 		pDstBuffer->mpBits = pDstBits;
+	}
 	else
-		pDstBuffer->mpBits = new BYTE[ pDstBuffer->mnScanlineSize * pDstBuffer->mnHeight ];
-#else	// USE_JAVA
-	pDstBuffer->mpBits = new BYTE[ pDstBuffer->mnScanlineSize * pDstBuffer->mnHeight ];
+	{
+#endif	// USE_JAVA
+    try
+    {
+        pDstBuffer->mpBits = new BYTE[ pDstBuffer->mnScanlineSize * pDstBuffer->mnHeight ];
+    }
+    catch( const std::bad_alloc& )
+    {
+        // memory exception, clean up
+        pDstBuffer->mpBits = NULL;
+        delete pDstBuffer;
+        return NULL;
+    }
+#ifdef USE_JAVA
+	}
 #endif	// USE_JAVA
 
 	// do we need a destination palette or color mask?
@@ -418,12 +422,32 @@ BitmapBuffer* StretchAndConvert( const BitmapBuffer& rSrcBuffer, const SalTwoRec
     const long      nSrcX = rTwoRect.mnSrcX, nSrcY = rTwoRect.mnSrcY;
     const long      nSrcDX = rTwoRect.mnSrcWidth, nSrcDY = rTwoRect.mnSrcHeight;
     const long      nDstDX = rTwoRect.mnDestWidth, nDstDY = rTwoRect.mnDestHeight;
-    Scanline*       pSrcScan = new Scanline[ rSrcBuffer.mnHeight ];
-    Scanline*       pDstScan = new Scanline[ nDstDY ];
-    long*           pMapX = new long[ nDstDX ];
-    long*           pMapY = new long[ nDstDY ];
+    Scanline*       pSrcScan = NULL;
+    Scanline*       pDstScan = NULL;
+    long*           pMapX = NULL;
+    long*           pMapY = NULL;
     long            nTmp, nOffset;
 
+    try
+    {
+        pSrcScan = new Scanline[ rSrcBuffer.mnHeight ];
+        pDstScan = new Scanline[ nDstDY ];
+        pMapX = new long[ nDstDX ];
+        pMapY = new long[ nDstDY ];
+    }
+    catch( const std::bad_alloc& )
+    {
+        // memory exception, clean up
+        // remark: the buffer ptr causing the exception
+        // is still NULL here
+        delete pSrcScan;
+        delete pDstScan;
+        delete pMapX;
+        delete pMapY;
+        delete pDstBuffer;
+        return NULL;
+    }
+    
     // horizontal mapping table
 	if( nDstDX != nSrcDX )
 	{

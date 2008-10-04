@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -46,25 +39,11 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
-
-#ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
-#endif
-
-#ifndef _BGFX_POLYGON_B2DPOLYPOLYGON_HXX
+#include <vcl/salgdi.hxx>
+#include <vcl/sallayout.hxx>
 #include <basegfx/polygon/b2dpolypolygon.hxx>
-#endif
-#ifndef _BGFX_MATRIX_B2DHOMMATRIX_HXX
 #include <basegfx/matrix/b2dhommatrix.hxx>
-#endif
-
-#ifndef INCLUDED_I18NPOOL_LANG_H
 #include <i18npool/lang.h>
-#endif
 
 #ifndef _TL_DEBUG_HXX
 #include <tools/debug.hxx>
@@ -165,7 +144,7 @@ sal_UCS4 GetVerticalChar( sal_UCS4 )
 
 // -----------------------------------------------------------------------
 
-sal_UCS4 GetMirroredChar( sal_UCS4 nChar )
+VCL_DLLPUBLIC sal_UCS4 GetMirroredChar( sal_UCS4 nChar )
 {
     nChar = u_charMirror( nChar );
     return nChar;
@@ -460,6 +439,27 @@ bool ImplLayoutRuns::PosIsInRun( int nCharPos ) const
         return false;
     return true;
 }
+
+bool ImplLayoutRuns::PosIsInAnyRun( int nCharPos ) const
+{
+    bool bRet = false;
+    int nRunIndex = mnRunIndex;
+
+    ImplLayoutRuns *pThis = const_cast<ImplLayoutRuns*>(this);
+
+    pThis->ResetPos();
+
+    for (size_t i = 0; i < maRuns.size(); i+=2)
+    {
+        if( (bRet = PosIsInRun( nCharPos )) == true )
+            break;
+        pThis->NextRun();
+    }
+
+    pThis->mnRunIndex = nRunIndex;
+    return bRet;
+}
+
 
 // -----------------------------------------------------------------------
 
@@ -787,7 +787,7 @@ Point SalLayout::GetDrawPosition( const Point& rRelative ) const
 // If the range doesn't match in 0x3000 and 0x30FB, please change
 // also ImplCalcKerning.
 
-int SalLayout::CalcAsianKerning( sal_UCS4 c, bool bLeft, bool bVertical )
+int SalLayout::CalcAsianKerning( sal_UCS4 c, bool bLeft, bool /*TODO:? bVertical*/ )
 {
     // http://www.asahi-net.or.jp/~sd5a-ucd/freetexts/jis/x4051/1995/appendix.html
     static signed char nTable[0x30] =
@@ -798,20 +798,32 @@ int SalLayout::CalcAsianKerning( sal_UCS4 c, bool bLeft, bool bVertical )
     };
 
     int nResult = 0;
-    if( c>=0x3000 && c<0x3030 )
+    if( (c >= 0x3000) && (c < 0x3030) )
         nResult = nTable[ c - 0x3000 ];
     else switch( c )
     {
+#if 0 // TODO: enable it for real-fixed-width fonts?
         case ':': case ';': case '!':
             if( !bVertical )
                 nResult = bLeft ? -1 : +1;  // 25% left and right
             break;
+#endif
         case 0x30FB:
             nResult = bLeft ? -1 : +1;      // 25% left/right/top/bottom
+            break;
+        case 0x2019: case 0x201D:
+        case 0xFF01: case 0xFF09: case 0xFF0C:
+        case 0xFF1A: case 0xFF1B:
+            nResult = -2;
+            break;
+        case 0x2018: case 0x201C:
+        case 0xFF08:
+            nResult = +2;
             break;
         default:
             break;
     }
+
     return nResult;
 }
 
@@ -827,7 +839,7 @@ bool SalLayout::GetOutline( SalGraphics& rSalGraphics,
     ::basegfx::B2DPolyPolygon aGlyphOutline;
     for( int nStart = 0;;)
     {
-        sal_Int32 nLGlyph;
+        sal_GlyphId nLGlyph;
         if( !GetNextGlyphs( 1, &nLGlyph, aPos, nStart ) )
             break;
 
@@ -864,7 +876,7 @@ bool SalLayout::GetBoundRect( SalGraphics& rSalGraphics, Rectangle& rRect ) cons
     Rectangle aRectangle;
     for( int nStart = 0;;)
     {
-        sal_Int32 nLGlyph;
+        sal_GlyphId nLGlyph;
         if( !GetNextGlyphs( 1, &nLGlyph, aPos, nStart ) )
             break;
 
@@ -883,7 +895,7 @@ bool SalLayout::GetBoundRect( SalGraphics& rSalGraphics, Rectangle& rRect ) cons
 
 // -----------------------------------------------------------------------
 
-bool SalLayout::IsSpacingGlyph( long nGlyph ) const
+bool SalLayout::IsSpacingGlyph( sal_GlyphId nGlyph ) const
 {
     bool bRet = false;
     if( nGlyph & GF_ISCHAR )
@@ -905,13 +917,23 @@ bool SalLayout::IsSpacingGlyph( long nGlyph ) const
     return bRet;
 }
 
+// -----------------------------------------------------------------------
+
+const ImplFontData* SalLayout::GetFallbackFontData( sal_GlyphId /*nGlyphId*/ ) const
+{
+#if 0
+    int nFallbackLevel = (nGlyphId & GF_FONTMASK) >> GF_FONTSHIFT
+    assert( nFallbackLevel == 0 );
+#endif
+    return NULL;
+}
+
 // =======================================================================
 
 GenericSalLayout::GenericSalLayout()
 :   mpGlyphItems(0),
     mnGlyphCount(0),
     mnGlyphCapacity(0)
-
 {}
 
 // -----------------------------------------------------------------------
@@ -1274,15 +1296,23 @@ void GenericSalLayout::ApplyAsianKerning( const sal_Unicode* pStr, int nLength )
     GlyphItem* pGEnd = mpGlyphItems + mnGlyphCount;
     for( GlyphItem* pG = mpGlyphItems; pG < pGEnd; ++pG )
     {
-        int n = pG->mnCharPos;
-        if( (n < nLength - 1)
-        &&  (0x3000 == (0xFF00 & pStr[n]))
-        &&  (0x3000 == (0xFF00 & pStr[n+1])) )
+        const int n = pG->mnCharPos;
+        if( n < nLength - 1)
         {
-            const bool bVertical = false;
-            long nKernFirst = +CalcAsianKerning( pStr[n], true, bVertical );
-            long nKernNext  = -CalcAsianKerning( pStr[n+1], false, bVertical );
+            // ignore code ranges that are not affected by asian punctuation compression
+            const sal_Unicode cHere = pStr[n];
+            if( (0x3000 != (cHere & 0xFF00)) && (0x2010 != (cHere & 0xFFF0)) || (0xFF00 != (cHere & 0xFF00)) ) 
+                continue;
+            const sal_Unicode cNext = pStr[n+1];
+            if( (0x3000 != (cNext & 0xFF00)) && (0x2010 != (cNext & 0xFFF0)) || (0xFF00 != (cNext & 0xFF00)) ) 
+                continue;
 
+            // calculate compression values
+            const bool bVertical = false;
+            long nKernFirst = +CalcAsianKerning( cHere, true, bVertical );
+            long nKernNext  = -CalcAsianKerning( cNext, false, bVertical );
+
+            // apply punctuation compression to logical glyph widths
             long nDelta = (nKernFirst < nKernNext) ? nKernFirst : nKernNext;
             if( nDelta<0 && nKernFirst!=0 && nKernNext!=0 )
             {
@@ -1294,6 +1324,7 @@ void GenericSalLayout::ApplyAsianKerning( const sal_Unicode* pStr, int nLength )
             }
         }
 
+        // adjust the glyph positions to the new glyph widths
         if( pG+1 != pGEnd )
             pG->maLinearPos.X() += nOffset;
     }
@@ -1455,7 +1486,7 @@ int GenericSalLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor
 
 // -----------------------------------------------------------------------
 
-int GenericSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphs, Point& rPos,
+int GenericSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos,
     int& nStart, sal_Int32* pGlyphAdvAry, int* pCharPosAry ) const
 {
     const GlyphItem* pG = mpGlyphItems + nStart;
@@ -1566,7 +1597,7 @@ void GenericSalLayout::DropGlyph( int nStart )
 
 void GenericSalLayout::Simplify( bool bIsBase )
 {
-    long nDropMarker = bIsBase ? GF_DROPPED : 0;
+    const sal_GlyphId nDropMarker = bIsBase ? GF_DROPPED : 0;
 
     // remove dropped glyphs inplace
     GlyphItem* pGDst = mpGlyphItems;
@@ -1612,9 +1643,9 @@ void GenericSalLayout::SortGlyphItems()
     }
 }
 
-// -----------------------------------------------------------------------
-
 #ifdef USE_JAVA
+
+// -----------------------------------------------------------------------
 
 void GenericSalLayout::SetGlyphCapacity( int nGlyphCapacity )
 {
@@ -1636,13 +1667,21 @@ void GenericSalLayout::SetGlyphCapacity( int nGlyphCapacity )
 
 // =======================================================================
 
-MultiSalLayout::MultiSalLayout( SalLayout& rBaseLayout )
-:   SalLayout(),
-    mnLevel( 1 )
+MultiSalLayout::MultiSalLayout( SalLayout& rBaseLayout, const ImplFontData* pBaseFont )
+:   SalLayout()
+,   mnLevel( 1 )
+,   mbInComplete( false )
 {
     //maFallbackRuns[0].Clear();
+    mpFallbackFonts[ 0 ] = pBaseFont;
     mpLayouts[ 0 ]  = &rBaseLayout;
     mnUnitsPerPixel = rBaseLayout.GetUnitsPerPixel();
+}
+
+void MultiSalLayout::SetInComplete(bool bInComplete)
+{
+    mbInComplete = bInComplete;
+    maFallbackRuns[mnLevel-1] = ImplLayoutRuns();
 }
 
 // -----------------------------------------------------------------------
@@ -1656,7 +1695,7 @@ MultiSalLayout::~MultiSalLayout()
 // -----------------------------------------------------------------------
 
 bool MultiSalLayout::AddFallback( SalLayout& rFallback,
-    ImplLayoutRuns& rFallbackRuns, ImplFontData* pFallbackFont )
+    ImplLayoutRuns& rFallbackRuns, const ImplFontData* pFallbackFont )
 {
     if( mnLevel >= MAX_FALLBACK )
         return false;
@@ -1674,7 +1713,8 @@ bool MultiSalLayout::LayoutText( ImplLayoutArgs& rArgs )
 {
     if( mnLevel <= 1 )
         return false;
-    maFallbackRuns[ mnLevel-1 ] = rArgs.maRuns;
+    if (!mbInComplete)
+        maFallbackRuns[ mnLevel-1 ] = rArgs.maRuns;
     return true;
 }
 
@@ -1760,8 +1800,8 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 #ifdef USE_JAVA
     const ImplLayoutRuns& rLastLevelRuns = maFallbackRuns[ mnLevel-1 ];
 #endif	// USE_JAVA
-    
-    sal_Int32 nDummy;
+
+    sal_GlyphId nDummy;
     Point aPos;
     int nLevel = 0, n;
     for( n = 0; n < mnLevel; ++n )
@@ -1776,7 +1816,12 @@ void MultiSalLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 
         // remove unused parts of component
         if( n > 0 )
-            mpLayouts[n]->Simplify( false );
+        {
+            if (mbInComplete && (n == mnLevel-1))
+                mpLayouts[n]->Simplify( true );
+            else
+                mpLayouts[n]->Simplify( false );
+        }
 
         // prepare merging components
         nStartNew[ nLevel ] = nStartOld[ nLevel ] = 0;
@@ -2017,6 +2062,14 @@ void MultiSalLayout::InitFont() const
 
 // -----------------------------------------------------------------------
 
+const ImplFontData* MultiSalLayout::GetFallbackFontData( sal_GlyphId nGlyphId ) const
+{
+    int nFallbackLevel = (nGlyphId & GF_FONTMASK) >> GF_FONTSHIFT;
+    return mpFallbackFonts[ nFallbackLevel ];
+}
+
+// -----------------------------------------------------------------------
+
 void MultiSalLayout::DrawText( SalGraphics& rGraphics ) const
 {
     for( int i = mnLevel; --i >= 0; )
@@ -2146,7 +2199,7 @@ void MultiSalLayout::GetCaretPositions( int nMaxIndex, sal_Int32* pCaretXArray )
 
 // -----------------------------------------------------------------------
 
-int MultiSalLayout::GetNextGlyphs( int nLen, sal_Int32* pGlyphIdxAry, Point& rPos,
+int MultiSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos,
     int& nStart, sal_Int32* pGlyphAdvAry, int* pCharPosAry ) const
 {
     // for multi-level fallback only single glyphs should be used

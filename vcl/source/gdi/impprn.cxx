@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -38,26 +31,16 @@
 #include "precompiled_vcl.hxx"
 
 #define _SPOOLPRINTER_EXT
+#include "tools/queue.hxx"
+#include "vcl/svapp.hxx"
+#include "vcl/metaact.hxx"
+#include "vcl/gdimtf.hxx"
+#include "vcl/timer.hxx"
+#include "vcl/impprn.hxx"
+#include "vcl/jobset.h"
 
-#ifndef _QUEUE_HXX
-#include <tools/queue.hxx>
-#endif
-
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_METAACT_HXX
-#include <metaact.hxx>
-#endif
-#ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
-#endif
-#ifndef _SV_TIMER_HXX
-#include <timer.hxx>
-#endif
-#ifndef _SV_IMPPRN_HXX
-#include <impprn.hxx>
-#endif
+#include "vcl/svdata.hxx"
+#include "vcl/salprn.hxx"
 
 #ifdef USE_JAVA
 
@@ -90,33 +73,30 @@ struct QueuePage
 // =======================================================================
 
 ImplQPrinter::ImplQPrinter( Printer* pParent ) :
-	Printer( pParent->GetName() )
+	Printer( pParent->GetName() ),
+    mpParent( pParent ),
+    mbAborted( false ),
+    mbUserCopy( false ),
+    mbDestroyAllowed( true ),
+    mbDestroyed( false ),
+    mnMaxBmpDPIX( mnDPIX ),
+    mnMaxBmpDPIY( mnDPIY ),
+    mnCurCopyCount( 0 )
 {
 	SetSelfAsQueuePrinter( TRUE );
 	SetPrinterProps( pParent );
 	SetPageQueueSize( 0 );
-	mpParent		= pParent;
 	mnCopyCount 	= pParent->mnCopyCount;
 	mbCollateCopy	= pParent->mbCollateCopy;
-	mpQueue 		= new Queue( mpParent->GetPageQueueSize() );
-	mbAborted		= FALSE;
-	mbUserCopy		= FALSE;
-	mbDestroyAllowed= TRUE;
-	mbDestroyed		= FALSE;
 }
 
 // -----------------------------------------------------------------------
 
 ImplQPrinter::~ImplQPrinter()
 {
-	QueuePage* pQueuePage = (QueuePage*)mpQueue->Get();
-	while ( pQueuePage )
-	{
-		delete pQueuePage;
-		pQueuePage = (QueuePage*)mpQueue->Get();
-	}
-
-	delete mpQueue;
+    for( std::vector< QueuePage* >::iterator it = maQueue.begin();
+         it != maQueue.end(); ++it )
+        delete (*it);
 }
 
 // -----------------------------------------------------------------------------
@@ -174,6 +154,16 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 				{
                     // execute action here to avoid DPI processing of bitmap;
                     pAct->Execute( this );
+
+#ifdef VERBOSE_DEBUG
+                    Push();
+                    SetLineColor(COL_RED);
+                    SetFillColor();
+                    DrawRect( Rectangle(
+                                  static_cast<MetaBmpScaleAction*>(pAct)->GetPoint(),
+                                  static_cast<MetaBmpScaleAction*>(pAct)->GetSize()) );
+                    Pop();
+#endif
 
 					// seek to end of this comment
 					do
@@ -315,9 +305,120 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 #ifndef USE_JAVA
 		// The JVM has locked the native event loop so avoid invoking any
 		// pending events or timers
-		Application::Reschedule();
+        if( ! ImplGetSVData()->maGDIData.mbPrinterPullModel )
+            Application::Reschedule();
 #endif	// !USE_JAVA
 	}
+}
+
+// -----------------------------------------------------------------------
+
+void ImplQPrinter::PrePrintPage( QueuePage* pPage )
+{
+    mnRestoreDrawMode = GetDrawMode();
+#ifdef USE_JAVA
+    // Prevent downscaling of images if reduce bitmaps is turned off
+	// by setting the max resolution to negative
+    mnMaxBmpDPIX = -1;
+    mnMaxBmpDPIY = -1;
+#else	// USE_JAVA
+    mnMaxBmpDPIX = mnDPIX;
+    mnMaxBmpDPIY = mnDPIY;
+#endif	// USE_JAVA
+
+    const PrinterOptions&   rPrinterOptions = GetPrinterOptions();
+
+    if( rPrinterOptions.IsReduceBitmaps() )
+    {
+        // calculate maximum resolution for bitmap graphics
+        if( PRINTER_BITMAP_OPTIMAL == rPrinterOptions.GetReducedBitmapMode() )
+        {
+#ifdef USE_JAVA
+            mnMaxBmpDPIX = Max( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
+            mnMaxBmpDPIY = Max( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
+#else	// USE_JAVA
+            mnMaxBmpDPIX = Min( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
+            mnMaxBmpDPIY = Min( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
+#endif	// USE_JAVA
+        }
+        else if( PRINTER_BITMAP_NORMAL == rPrinterOptions.GetReducedBitmapMode() )
+        {
+#ifdef USE_JAVA
+            mnMaxBmpDPIX = Max( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
+            mnMaxBmpDPIY = Max( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
+#else	// USE_JAVA
+            mnMaxBmpDPIX = Min( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
+            mnMaxBmpDPIY = Min( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
+#endif	// USE_JAVA
+        }
+        else
+        {
+#ifdef USE_JAVA
+            mnMaxBmpDPIX = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIX );
+            mnMaxBmpDPIY = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIY );
+#else	// USE_JAVA
+            mnMaxBmpDPIX = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIX );
+            mnMaxBmpDPIY = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIY );
+#endif	// USE_JAVA
+        }
+    }
+
+    // convert to greysacles
+    if( rPrinterOptions.IsConvertToGreyscales() )
+    {
+        SetDrawMode( GetDrawMode() | ( DRAWMODE_GRAYLINE | DRAWMODE_GRAYFILL | DRAWMODE_GRAYTEXT | 
+                                       DRAWMODE_GRAYBITMAP | DRAWMODE_GRAYGRADIENT ) );
+    }
+
+    // disable transparency output
+    if( rPrinterOptions.IsReduceTransparency() && ( PRINTER_TRANSPARENCY_NONE == rPrinterOptions.GetReducedTransparencyMode() ) )
+    {
+        SetDrawMode( GetDrawMode() | DRAWMODE_NOTRANSPARENCY );
+    }
+
+    maCurPageMetaFile = GDIMetaFile();
+    GetPreparedMetaFile( *pPage->mpMtf, maCurPageMetaFile, mnMaxBmpDPIX, mnMaxBmpDPIY );
+}
+
+void ImplQPrinter::PostPrintPage()
+{
+    SetDrawMode( mnRestoreDrawMode );
+}
+
+// -----------------------------------------------------------------------
+
+void ImplQPrinter::PrintPage( unsigned int nPage )
+{
+    if( nPage >= maQueue.size() )
+        return;
+    mnCurCopyCount = (mbUserCopy && !mbCollateCopy) ? mnCopyCount : 1;
+    QueuePage* pActPage = maQueue[nPage];
+    PrePrintPage( pActPage );
+    if ( pActPage->mpSetup )
+        SetJobSetup( *pActPage->mpSetup );
+
+    StartPage();
+    ImplPrintMtf( maCurPageMetaFile, mnMaxBmpDPIX, mnMaxBmpDPIY );
+    EndPage();
+    
+    mnCurCopyCount--;
+    if( mnCurCopyCount == 0 )
+        PostPrintPage();
+}
+
+// -----------------------------------------------------------------------
+
+ImplJobSetup* ImplQPrinter::GetPageSetup( unsigned int nPage ) const
+{
+    return nPage >= maQueue.size() ? NULL :
+    ( maQueue[nPage]->mpSetup ? maQueue[nPage]->mpSetup->ImplGetData() : NULL );
+}
+
+// -----------------------------------------------------------------------
+ULONG ImplQPrinter::GetPrintPageCount() const
+{
+    ULONG nPageCount = maQueue.size() * ((mbUserCopy && !mbCollateCopy) ? mnCopyCount : 1);
+    return nPageCount;
 }
 
 // -----------------------------------------------------------------------
@@ -330,16 +431,17 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 	// we need to print all pages in one run. Otherwise, other operations such
 	// as showing or hiding a window will deadlock waiting for the JVM to
 	// unlock the native event loop.
-	while( IsPrinting() && !mpParent->IsJobActive() && mpQueue->Count() )
+	while( IsPrinting() && !mpParent->IsJobActive() && maQueue.size() )
 	{
 #else	// USE_JAVA
 	// Ist Drucken abgebrochen wurden?
-	if( !IsPrinting() || ( mpParent->IsJobActive() && ( mpQueue->Count() < (ULONG)mpParent->GetPageQueueSize() ) ) )
+	if( !IsPrinting() || ( mpParent->IsJobActive() && ( maQueue.size() < (ULONG)mpParent->GetPageQueueSize() ) ) )
 		return 0;
 #endif	// USE_JAVA
 
 	// Druck-Job zuende?
-	QueuePage* pActPage = (QueuePage*) mpQueue->Get();
+	QueuePage* pActPage = maQueue.front();
+    maQueue.erase( maQueue.begin() );
 	
     
     vcl::DeletionListener aDel( this );
@@ -361,71 +463,11 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 	}
 	else
 	{
-		GDIMetaFile		        aMtf;
-        const PrinterOptions&   rPrinterOptions = GetPrinterOptions();
-        const ULONG             nOldDrawMode = GetDrawMode();
-#ifdef USE_JAVA
-        // Prevent downscaling of images if reduce bitmaps is turned off
-		// by setting the max resolution to negative
-        long                    nMaxBmpDPIX = -1;
-        long                    nMaxBmpDPIY = -1;
-#else	// USE_JAVA
-        long                    nMaxBmpDPIX = mnDPIX;
-        long                    nMaxBmpDPIY = mnDPIY;
-#endif	// USE_JAVA
-		USHORT			        nCopyCount = 1;
-
-        if( rPrinterOptions.IsReduceBitmaps() )
-        {
-            // calculate maximum resolution for bitmap graphics
-            if( PRINTER_BITMAP_OPTIMAL == rPrinterOptions.GetReducedBitmapMode() )
-            {
-#ifdef USE_JAVA
-                nMaxBmpDPIX = Max( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIX );
-                nMaxBmpDPIY = Max( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIY );
-#else	// USE_JAVA
-                nMaxBmpDPIX = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIX );
-                nMaxBmpDPIY = Min( (long) OPTIMAL_BMP_RESOLUTION, nMaxBmpDPIY );
-#endif	// USE_JAVA
-            }
-            else if( PRINTER_BITMAP_NORMAL == rPrinterOptions.GetReducedBitmapMode() )
-            {
-#ifdef USE_JAVA
-                nMaxBmpDPIX = Max( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIX );
-                nMaxBmpDPIY = Max( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIY );
-#else	// USE_JAVA
-                nMaxBmpDPIX = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIX );
-                nMaxBmpDPIY = Min( (long) NORMAL_BMP_RESOLUTION, nMaxBmpDPIY );
-#endif	// USE_JAVA
-            }
-            else
-            {
-#ifdef USE_JAVA
-                nMaxBmpDPIX = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIX );
-                nMaxBmpDPIY = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIY );
-#else	// USE_JAVA
-                nMaxBmpDPIX = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIX );
-                nMaxBmpDPIY = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), nMaxBmpDPIY );
-#endif	// USE_JAVA
-            }
-        }
-
-        // convert to greysacles
-        if( rPrinterOptions.IsConvertToGreyscales() )
-        {
-            SetDrawMode( GetDrawMode() | ( DRAWMODE_GRAYLINE | DRAWMODE_GRAYFILL | DRAWMODE_GRAYTEXT | 
-                                           DRAWMODE_GRAYBITMAP | DRAWMODE_GRAYGRADIENT ) );
-        }
-
-        // disable transparency output
-		if( rPrinterOptions.IsReduceTransparency() && ( PRINTER_TRANSPARENCY_NONE == rPrinterOptions.GetReducedTransparencyMode() ) )
-		{
-			SetDrawMode( GetDrawMode() | DRAWMODE_NOTRANSPARENCY );
-		}
-
 		mbDestroyAllowed = FALSE;
-	    GetPreparedMetaFile( *pActPage->mpMtf, aMtf, nMaxBmpDPIX, nMaxBmpDPIY );
 		
+        PrePrintPage( pActPage );
+
+        USHORT nCopyCount = 1;
 		if( mbUserCopy && !mbCollateCopy )
 			nCopyCount = mnCopyCount;
 
@@ -443,7 +485,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 			if ( mbAborted )
 				break;
 
-			ImplPrintMtf( aMtf, nMaxBmpDPIX, nMaxBmpDPIY );
+			ImplPrintMtf( maCurPageMetaFile, mnMaxBmpDPIX, mnMaxBmpDPIY );
 
 			if( !mbAborted )
 				EndPage();
@@ -457,7 +499,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 #endif	// USE_JAVA
 		}
 
-        SetDrawMode( nOldDrawMode );
+        PostPrintPage();
 
 		delete pActPage;
 		mbDestroyAllowed = TRUE;
@@ -472,7 +514,6 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 			Destroy();
 #endif	// USE_JAVA
 	}
-
 #ifdef USE_JAVA
 	}
 #endif	// USE_JAVA
@@ -484,18 +525,101 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 
 void ImplQPrinter::StartQueuePrint()
 {
-	maTimer.SetTimeout( 50 );
-	maTimer.SetTimeoutHdl( LINK( this, ImplQPrinter, ImplPrintHdl ) );
-	maTimer.Start();
+    if( ! ImplGetSVData()->maGDIData.mbPrinterPullModel )
+    {
+        maTimer.SetTimeout( 50 );
+        maTimer.SetTimeoutHdl( LINK( this, ImplQPrinter, ImplPrintHdl ) );
+        maTimer.Start();
+    }
 }
 
 // -----------------------------------------------------------------------
 
 void ImplQPrinter::EndQueuePrint()
 {
-	QueuePage* pQueuePage	= new QueuePage;
-	pQueuePage->mbEndJob	= TRUE;
-	mpQueue->Put( pQueuePage );
+    if( ImplGetSVData()->maGDIData.mbPrinterPullModel )
+    {
+        DBG_ASSERT( mpPrinter, "no SalPrinter in ImplQPrinter" );
+        if( mpPrinter )
+        {
+            mpPrinter->StartJob( mbPrintFile ? &maPrintFile : NULL,
+                                 Application::GetDisplayName(),
+                                 maJobSetup.ImplGetConstData(),
+                                 this );
+            EndJob();
+            mpParent->ImplEndPrint();
+        }
+    }
+    else
+    {
+        QueuePage* pQueuePage	= new QueuePage;
+        pQueuePage->mbEndJob	= TRUE;
+        maQueue.push_back( pQueuePage );
+    }
+}
+
+// -----------------------------------------------------------------------
+
+bool ImplQPrinter::GetPaperRanges( std::vector< ULONG >& o_rRanges, bool i_bIncludeOrientationChanges ) const
+{
+    bool bRet = false;
+    
+    if( ImplGetSVData()->maGDIData.mbPrinterPullModel )
+    {
+        bRet = true;
+        o_rRanges.clear();
+        
+        if( ! maQueue.empty() )
+        {
+            ULONG nCurPage = 0;
+            
+            // get first job data
+            const ImplJobSetup* pLastFormat = NULL;
+            if( maQueue.front()->mpSetup )
+                pLastFormat = maQueue.front()->mpSetup->ImplGetConstData();
+            
+            // begin first range
+            o_rRanges.push_back( 0 );
+            for( std::vector< QueuePage* >::const_iterator it = maQueue.begin();
+                it != maQueue.end(); ++it, ++nCurPage )
+            {
+                const ImplJobSetup* pNewSetup = (*it)->mpSetup ? (*it)->mpSetup->ImplGetConstData() : NULL;
+                if( pNewSetup && pNewSetup != pLastFormat )
+                {
+                    bool bChange = false;
+                    if( pLastFormat == NULL )
+                    {
+                        bChange = true;
+                    }
+                    else if( ! i_bIncludeOrientationChanges &&
+                             pNewSetup->meOrientation != pLastFormat->meOrientation )
+                    {
+                        bChange = true;
+                    }
+                    else if( pNewSetup->mePaperFormat != pLastFormat->mePaperFormat ||
+                        ( pNewSetup->mePaperFormat == PAPER_USER &&
+                            ( pNewSetup->mnPaperWidth != pLastFormat->mnPaperWidth ||
+                              pNewSetup->mnPaperHeight != pLastFormat->mnPaperHeight ) ) )
+                    {
+                        bChange = true;
+                    }
+                    else if( pNewSetup->mnPaperBin != pLastFormat->mnPaperBin )
+                    {
+                        bChange = true;
+                    }
+                    if( bChange )
+                    {
+                        o_rRanges.push_back( nCurPage );
+                        pLastFormat = pNewSetup;
+                    }
+                }
+            }
+            
+            o_rRanges.push_back( nCurPage );
+        }
+    }
+    
+    return bRet;
 }
 
 // -----------------------------------------------------------------------
@@ -517,5 +641,5 @@ void ImplQPrinter::AddQueuePage( GDIMetaFile* pPage, USHORT nPage, BOOL bNewJobS
 	pQueuePage->mbEndJob	= FALSE;
 	if ( bNewJobSetup )
 		pQueuePage->mpSetup = new JobSetup( mpParent->GetJobSetup() );
-	mpQueue->Put( pQueuePage );
+    maQueue.push_back( pQueuePage );
 }
