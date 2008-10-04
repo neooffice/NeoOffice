@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -45,66 +38,27 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
-#endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
-#ifndef _SV_SALPTYPE_HXX
-#include <salptype.hxx>
-#endif
-#ifndef _SV_SALPRN_HXX
-#include <salprn.hxx>
-#endif
+#include <vcl/salinst.hxx>
+#include <vcl/salgdi.hxx>
+#include <vcl/salptype.hxx>
+#include <vcl/salprn.hxx>
 
-#include <unohelp.hxx>
-
-#ifndef _DEBUG_HXX
+#include <vcl/unohelp.hxx>
 #include <tools/debug.hxx>
-#endif
-#ifndef _STREAM_HXX
 #include <tools/stream.hxx>
-#endif
-#ifndef _VCOMPAT_HXX
 #include <tools/vcompat.hxx>
-#endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_WRKWIN_HXX
-#include <wrkwin.hxx>
-#endif
-#ifndef _SV_JOBSET_H
-#include <jobset.h>
-#endif
-#ifndef _SV_OUTDEV_H
-#include <outdev.h>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
-#endif
-#ifndef _SV_PRINT_H
-#include <print.h>
-#endif
-#ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
-#endif
-#ifndef _SV_METAACT_HXX
-#include <metaact.hxx>
-#endif
-#ifndef _SV_IMPPRN_HXX
-#include <impprn.hxx>
-#endif
-#ifndef _SV_PRINT_HXX
-#include <print.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/jobset.h>
+#include <vcl/outdev.h>
+#include <vcl/virdev.hxx>
+#include <vcl/window.hxx>
+#include <vcl/print.h>
+#include <vcl/gdimtf.hxx>
+#include <vcl/metaact.hxx>
+#include <vcl/impprn.hxx>
+#include <vcl/print.hxx>
 
 #include <comphelper/processfactory.hxx>
 
@@ -414,6 +368,7 @@ XubString Printer::GetDefaultPrinterName()
 
 void Printer::ImplInitData()
 {
+    mpPrinterData       = new ImplPrivatePrinterData();
 	mbDevOutput 		= FALSE;
 	meOutDevType		= OUTDEV_PRINTER;
 	mbDefPrinter		= FALSE;
@@ -670,6 +625,9 @@ Printer::~Printer()
 	DBG_ASSERT( !mpQPrinter, "Printer::~Printer() - QueuePrinter not destroyed" );
 	DBG_ASSERT( !mpQMtf, "Printer::~Printer() - QueueMetafile not destroyed" );
 
+    delete mpPrinterData;
+    mpPrinterData = NULL;
+    
     delete mpPrinterOptions;
 
 	ImplReleaseGraphics();
@@ -712,6 +670,27 @@ Printer::~Printer()
 		mpNext->mpPrev = mpPrev;
 	else
 		pSVData->maGDIData.mpLastPrinter = mpPrev;
+}
+
+// -----------------------------------------------------------------------
+void Printer::SetNextJobIsQuick()
+{
+    mpPrinterData->mbNextJobIsQuick = true;
+    if( mpQPrinter )
+        mpQPrinter->SetNextJobIsQuick();
+}
+
+// -----------------------------------------------------------------------
+void Printer::Compat_OldPrinterMetrics( bool bSet )
+{
+    // propagate flag
+    if( mpInfoPrinter )
+        mpInfoPrinter->m_bCompatMetrics = bSet;
+    if( mpQPrinter )
+        mpQPrinter->Compat_OldPrinterMetrics( bSet );
+
+    // get new font data
+    ImplUpdateFontData( TRUE );
 }
 
 // -----------------------------------------------------------------------
@@ -1375,6 +1354,31 @@ IMPL_LINK( Printer, ImplDestroyPrinterAsync, void*, pSalPrinter )
 
 // -----------------------------------------------------------------------
 
+void Printer::ImplUpdateQuickStatus()
+{
+    // remove possibly added "IsQuickJob"
+    if( mpPrinterData->mbNextJobIsQuick )
+    {
+        rtl::OUString aKey( RTL_CONSTASCII_USTRINGPARAM( "IsQuickJob" ) );
+        // const data means not really const, but change all references
+        // to refcounted job setup
+        ImplJobSetup* pImpSetup = maJobSetup.ImplGetConstData();
+        pImpSetup->maValueMap.erase( aKey );
+        mpPrinterData->mbNextJobIsQuick = false;
+    }
+}
+
+class QuickGuard
+{
+    Printer* mpPrinter;
+    public:
+    QuickGuard( Printer* pPrn ) : mpPrinter( pPrn ) {}
+    ~QuickGuard()
+    {
+        mpPrinter->ImplUpdateQuickStatus();
+    }
+};
+
 BOOL Printer::StartJob( const XubString& rJobName )
 {
 	mnError = PRINTER_OK;
@@ -1384,6 +1388,15 @@ BOOL Printer::StartJob( const XubString& rJobName )
 
 	if ( IsJobActive() || IsPrinting() )
 		return FALSE;
+    
+    if( mpPrinterData->mbNextJobIsQuick )
+    {
+        String aKey( RTL_CONSTASCII_USTRINGPARAM( "IsQuickJob" ) );
+        if( maJobSetup.GetValue( aKey ).Len() == 0 )
+            maJobSetup.SetValue( aKey, String( RTL_CONSTASCII_USTRINGPARAM( "true" ) ) );
+    }
+    
+    QuickGuard aQGuard( this );
 
 	ULONG	nCopies = mnCopyCount;
 	BOOL	bCollateCopy = mbCollateCopy;
@@ -1463,40 +1476,44 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		mbPrinting		        = TRUE;
 #endif	// !USE_JAVA
 
-		if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
-								   nCopies, bCollateCopy,
+        if( ! ImplGetSVData()->maGDIData.mbPrinterPullModel )
+        {
+            // in the pull model the job can only be started when
+            // we have collected all pages to be printed
+            if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
+                                       nCopies, bCollateCopy,
 #ifdef USE_JAVA
-								   maJobSetup.ImplGetConstData(), bFirstPass ) )
+								       maJobSetup.ImplGetConstData(), bFirstPass ) )
 #else	// USE_JAVA
-								   maJobSetup.ImplGetConstData() ) )
+                                       maJobSetup.ImplGetConstData() ) )
 #endif	// !USE_JAVA
-		{
-			mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
-			if ( !mnError )
-				mnError = PRINTER_GENERALERROR;
-			pSVData->mpDefInst->DestroyPrinter( mpPrinter );
+            {
+                mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
+                if ( !mnError )
+                    mnError = PRINTER_GENERALERROR;
+                pSVData->mpDefInst->DestroyPrinter( mpPrinter );
 #ifndef USE_JAVA
-            mbNewJobSetup	    = bSaveNewJobSetup;
-            maJobName		    = aSaveJobName;
-            mnCurPage		    = 0;
-            mnCurPrintPage	    = 0;
-            mbPrinting		    = FALSE;
+                mbNewJobSetup	    = bSaveNewJobSetup;
+                maJobName		    = aSaveJobName;
+                mnCurPage		    = 0;
+                mnCurPrintPage	    = 0;
+                mbPrinting		    = FALSE;
 #endif	// !USE_JAVA
-			mpPrinter = NULL;
-			return FALSE;
-		}
+                mpPrinter = NULL;
+                return FALSE;
+            }
+        }
 
 #ifdef USE_JAVA
 		if ( bFirstPass )
 			return TRUE;
 
-		mbNewJobSetup	= FALSE;
-		maJobName		= rJobName;
-		mnCurPage		= 1;
-		mnCurPrintPage	= 1;
-		mbPrinting		= TRUE;
+		mbNewJobSetup = FALSE;
+		maJobName = rJobName;
+		mnCurPage = 1;
+		mnCurPrintPage = 1;
+		mbPrinting = TRUE;
 #endif	// USE_JAVA
-
 		mbJobActive 	        = TRUE;
 		StartPrint();
 	}
@@ -1522,6 +1539,8 @@ BOOL Printer::StartJob( const XubString& rJobName )
 #else	// USE_JAVA
 		mpQPrinter = new ImplQPrinter( this );
 #endif	// USE_JAVA
+        if( mpInfoPrinter )
+            mpQPrinter->Compat_OldPrinterMetrics( mpInfoPrinter->m_bCompatMetrics );
 		mpQPrinter->SetDigitLanguage( GetDigitLanguage() );
 		mpQPrinter->SetUserCopy( bUserCopy );
         mpQPrinter->SetPrinterOptions( *mpPrinterOptions );
@@ -1578,7 +1597,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	mbJobActive		= TRUE;
 	mbPrinting		= TRUE;
 #endif	// USE_JAVA
-
+    
 	return TRUE;
 }
 
@@ -1677,7 +1696,6 @@ BOOL Printer::AbortJob()
 
 BOOL Printer::StartPage()
 {
-	BOOL bSuccess = TRUE;
 	if ( !IsJobActive() )
 		return FALSE;
 
@@ -1718,7 +1736,7 @@ BOOL Printer::StartPage()
 			}
 		}
 
-		return bSuccess;
+		return TRUE;
 	}
 
 	return FALSE;

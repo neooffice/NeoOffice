@@ -1,96 +1,59 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 #ifndef _VCL_PDFWRITER_IMPL_HXX
 #define _VCL_PDFWRITER_IMPL_HXX
 
-#ifndef _VCL_PDFWRITER_HXX
-#include <pdfwriter.hxx>
-#endif
+#include "vcl/pdfwriter.hxx"
+#include "rtl/ustring.hxx"
+#include "osl/file.h"
+#include "tools/gen.hxx"
+#include "tools/stream.hxx"
+#include "vcl/outdev.hxx"
+#include "vcl/bitmapex.hxx"
+#include "vcl/gradient.hxx"
+#include "vcl/hatch.hxx"
+#include "vcl/wall.hxx"
+#include "vcl/outdata.hxx"
+#include "rtl/strbuf.hxx"
+#include "rtl/cipher.h"
+#include "rtl/digest.h"
+#include "com/sun/star/util/XURLTransformer.hpp"
+#include "com/sun/star/lang/Locale.hpp"
 
-#ifndef _RTL_USTRING_HXX
-#include <rtl/ustring.hxx>
-#endif
-#ifndef _OSL_FILE_H
-#include <osl/file.h>
-#endif
-#ifndef _GEN_HXX
-#include <tools/gen.hxx>
-#endif
-#ifndef _STREAM_HXX
-#include <tools/stream.hxx>
-#endif
-#ifndef _SV_OUTDEV_HXX
-#include <outdev.hxx>
-#endif
-#ifndef _SV_BITMAPEX_HXX
-#include <bitmapex.hxx>
-#endif
-#ifndef _SV_GRADIENT_HXX
-#include <gradient.hxx>
-#endif
-#ifndef _SV_HATCH_HXX
-#include <hatch.hxx>
-#endif
-#ifndef _SV_WALL_HXX
-#include <wall.hxx>
-#endif
-#ifndef _SV_OUTDATA_HXX
-#include <outdata.hxx>
-#endif
-#ifndef _RTL_STRBUF_HXX
-#include <rtl/strbuf.hxx>
-#endif
-#ifndef _RTL_CIPHER_H_
-#include <rtl/cipher.h>
-#endif
-#ifndef _RTL_DIGEST_H_
-#include <rtl/digest.h>
-#endif
-#ifndef _COM_SUN_STAR_UTIL_XURLTRANSFORMER_HPP_
-#include <com/sun/star/util/XURLTransformer.hpp>
-#endif
+#include <vcl/sallayout.hxx>
+#include "pdffontcache.hxx"
 
 #include <vector>
 #include <map>
 #include <hash_map>
 #include <list>
 
-class SalLayout;
-class ImplLayoutArgs;
-class ImplFontData;
 class ImplFontSelectData;
 class ImplFontMetricData;
 struct FontSubsetInfo;
@@ -110,10 +73,13 @@ namespace vcl
 {
 
 class PDFSalLayout;
+class PDFStreamIf;
+class Matrix3;
 
 class PDFWriterImpl
 {
     friend class PDFSalLayout;
+    friend class PDFStreamIf;
 public:
     // definition of structs
     struct BuiltinFont
@@ -130,6 +96,8 @@ public:
 		FontWeight					m_eWeight;                   // Weight
 		FontItalic					m_eItalic;                   // Italic
         int							m_aWidths[256];				 // character metrics
+        
+        rtl::OString getNameObject() const;
     };
 
 
@@ -268,6 +236,7 @@ public:
     {
         sal_Int32                   m_nObject;
         Rectangle                   m_aRectangle;
+        Size                        m_aCellSize;
         SvtGraphicFill::Transform   m_aTransform;
         ResourceDict                m_aResources;
         SvMemoryStream*             m_pTilingStream;
@@ -305,14 +274,14 @@ public:
     // font subsets
     struct GlyphEmit
     {
+        sal_Ucs		m_aUnicode;
 #ifdef USE_JAVA
-        sal_uInt16		m_nSubsetGlyphID;
+        sal_uInt16	m_nSubsetGlyphID;
 #else	// USE_JAVA
-        sal_uInt8		m_nSubsetGlyphID;
+        sal_uInt8	m_nSubsetGlyphID;
 #endif	// USE_JAVA
-        sal_Unicode		m_aUnicode;
     };
-    typedef std::map< long, GlyphEmit > FontEmitMapping;
+    typedef std::map< sal_GlyphId, GlyphEmit > FontEmitMapping;
 #ifdef USE_JAVA
     struct PDFEmitObject
     {
@@ -354,36 +323,34 @@ public:
         sal_uInt8	m_nSubsetGlyphID;
 #endif	// USE_JAVA
     };
-    typedef std::map< long, Glyph > FontMapping;
-
+    typedef std::map< sal_GlyphId, Glyph > FontMapping;
     struct FontSubset
     {
         FontEmitList		m_aSubsets;
         FontMapping			m_aMapping;
     };
 #ifdef USE_JAVA
-    typedef std::map< long, FontSubset > FontSubsetData;
+    typedef std::map< sal_IntPtr, FontSubset > FontSubsetData;
 #else	// USE_JAVA
-    typedef std::map< ImplFontData*, FontSubset > FontSubsetData;
+    typedef std::map< const ImplFontData*, FontSubset > FontSubsetData;
 #endif	// USE_JAVA
-
     struct EmbedCode
     {
-        sal_Unicode			m_aUnicode;
+        sal_Ucs				m_aUnicode;
         rtl::OString		m_aName;
     };
     struct EmbedEncoding
     {
-        sal_Int32								m_nFontID;
-        std::vector< EmbedCode >				m_aEncVector;
-        std::map< sal_Unicode, sal_Int8 >		m_aCMap;
+        sal_Int32						m_nFontID;
+        std::vector< EmbedCode >		m_aEncVector;
+        std::map< sal_Ucs, sal_Int8 >	m_aCMap;
     };
     struct EmbedFont
     {
         sal_Int32						m_nNormalFontID;
         std::list< EmbedEncoding >		m_aExtendedEncodings;
     };
-    typedef std::map< ImplFontData*, EmbedFont > FontEmbedData;
+    typedef std::map< const ImplFontData*, EmbedFont > FontEmbedData;
 
     struct PDFDest
     {
@@ -392,6 +359,16 @@ public:
         Rectangle					m_aRect;
     };
 
+//--->i56629
+    struct PDFNamedDest
+    {
+        rtl::OUString               m_aDestName;
+        sal_Int32					m_nPage;
+        PDFWriter::DestAreaType		m_eType;
+        Rectangle					m_aRect;
+    };
+//<---
+ 
     struct PDFOutlineEntry
     {
         sal_Int32					m_nParentID;
@@ -489,7 +466,7 @@ public:
                   m_nDest( -1 )
         {}
     };
-
+    
     struct PDFStructureAttribute
     {
         PDFWriter::StructAttributeValue		eValue;
@@ -527,6 +504,7 @@ public:
     {
         sal_Int32											m_nObject;
         PDFWriter::StructElement							m_eType;
+        rtl::OString                                        m_aAlias;
         sal_Int32											m_nOwnElement; // index into structure vector
         sal_Int32											m_nParentElement; // index into structure vector
         sal_Int32											m_nFirstPageObject;
@@ -537,6 +515,7 @@ public:
         Rectangle											m_aBBox;
         rtl::OUString										m_aActualText;
         rtl::OUString										m_aAltText;
+        com::sun::star::lang::Locale                        m_aLocale;
 
         // m_aContents contains the element's marked content sequence
         // as pairs of (page nr, MCID)
@@ -552,6 +531,57 @@ public:
         }
 
     };
+    
+    struct PDFAddStream
+    {
+        rtl::OUString           m_aMimeType;
+        PDFOutputStream*        m_pStream;
+        sal_Int32               m_nStreamObject;
+        bool                    m_bCompress;
+        
+        PDFAddStream() : m_pStream( NULL ), m_nStreamObject( 0 ), m_bCompress( true ) {}
+    };
+    
+    
+    // helper structure for drawLayout and friends
+    struct PDFGlyph
+    {
+        Point       m_aPos;
+        sal_Int32   m_nNativeWidth;
+        sal_Int32   m_nGlyphId;
+        sal_Int32   m_nMappedFontId;
+        sal_uInt8   m_nMappedGlyphId;
+#ifdef USE_JAVA
+        sal_Int32   m_nMappedFontSubId;
+        bool        m_bIdentityGlyph;
+        int         m_nCharPos;
+        SalLayout*  m_pLayout;
+#endif	// USE_JAVA
+        
+        PDFGlyph( const Point& rPos,
+                  sal_Int32 nNativeWidth,
+                  sal_Int32 nGlyphId,
+                  sal_Int32 nFontId,
+#ifdef USE_JAVA
+                  sal_uInt8 nMappedGlyphId,
+                  sal_Int32 nFontSubId,
+                  bool bIdentityGlyph,
+                  int nCharPos,
+                  SalLayout *pLayout )
+#else	// USE_JAVA
+                  sal_uInt8 nMappedGlyphId )
+#endif	// USE_JAVA
+        : m_aPos( rPos ), m_nNativeWidth( nNativeWidth ), m_nGlyphId( nGlyphId ),
+          m_nMappedFontId( nFontId ), m_nMappedGlyphId( nMappedGlyphId )
+#ifdef USE_JAVA
+          , m_nMappedFontSubId( nFontSubId )
+          , m_bIdentityGlyph( bIdentityGlyph )
+          , m_nCharPos( nCharPos )
+          , m_pLayout( pLayout )
+#endif	// USE_JAVA
+        {}
+    };
+
 
     static const sal_Char* getStructureTag( PDFWriter::StructElement );
     static const sal_Char* getAttributeTag( PDFWriter::StructAttribute eAtr );
@@ -577,6 +607,11 @@ private:
     std::list< BitmapEmit >				m_aBitmaps;
     /* contains JPG streams until written to file     */
     std::list<JPGEmit>					m_aJPGs;
+    /*--->i56629 contains all named destinations ever set during the PDF creation,
+       destination id is always the destination's position in this vector
+     */
+    std::vector<PDFNamedDest>		    m_aNamedDests;
+    //<---
     /* contains all dests ever set during the PDF creation,
        dest id is always the dest's position in this vector
      */
@@ -611,6 +646,9 @@ private:
      */
     bool								m_bEmitStructure;
     bool								m_bNewMCID;
+    /* role map of struct tree root */
+    std::hash_map< rtl::OString, rtl::OString, rtl::OStringHash >
+                                        m_aRoleMap;
 
     /* contains all widgets used in the PDF
      */
@@ -630,8 +668,10 @@ private:
     std::list< TransparencyEmit >		m_aTransparentObjects;
     /*  contains all font subsets in use */
     FontSubsetData						m_aSubsets;
+    bool                                m_bEmbedStandardFonts;
     FontEmbedData						m_aEmbeddedFonts;
     sal_Int32							m_nNextFID;
+    PDFFontCache                        m_aFontCache;
 
     sal_Int32							m_nInheritedPageWidth;  // in inch/72
     sal_Int32							m_nInheritedPageHeight; // in inch/72
@@ -642,8 +682,7 @@ private:
     sal_Int32							m_nResourceDict;
     ResourceDict                        m_aGlobalResourceDict;
     sal_Int32                           m_nFontDictObject;
-    sal_Int32                           m_nZaDbObject;
-    sal_Int32                           m_nHelvRegObject;
+    std::map< sal_Int32, sal_Int32 >    m_aBuiltinFontToObjectMap;
 
     PDFWriter::PDFWriterContext			m_aContext;
     oslFileHandle						m_aFile;
@@ -657,6 +696,7 @@ private:
     {
         SvStream*		m_pStream;
         MapMode   		m_aMapMode;
+        Rectangle       m_aTargetRect;
         ResourceDict    m_aResourceDict;
     };
     std::list< StreamRedirect >			m_aOutputStreams;
@@ -747,6 +787,11 @@ private:
 
     ZCodec*									m_pCodec;
     SvMemoryStream*							m_pMemStream;
+    
+    std::vector< PDFAddStream >             m_aAdditionalStreams;
+    std::set< PDFWriter::ErrorCode >        m_aErrors;
+    
+    rtlDigest                               m_aDocDigest;
 
 /*
 variables for PDF security
@@ -788,6 +833,8 @@ i12626
 	rtl::OStringBuffer						m_aDocID;
 /* string to hold the PDF creation date */
 	rtl::OStringBuffer						m_aCreationDateString;
+/* string to hold the PDF creation date, for PDF/A metadata */
+	rtl::OStringBuffer						m_aCreationMetaDateString;
 /* the buffer where the data are encrypted, dynamically allocated */
 	sal_uInt8								*m_pEncryptionBuffer;
 /* size of the buffer */
@@ -873,13 +920,15 @@ i12626
 
     /* creates fonts and subsets that will be emitted later */
 #ifdef USE_JAVA
-    void registerGlyphs( int nGlyphs, sal_Int32* pGlyphs, sal_Unicode* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, ImplFontData* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, const ImplFontData* pFallbackFonts[] );
 #else	// USE_JAVA
-    void registerGlyphs( int nGlyphs, sal_Int32* pGlyphs, sal_Unicode* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, ImplFontData* pFallbackFonts[] );
+    void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, const ImplFontData* pFallbackFonts[] );
 #endif	// USE_JAVA
 
     /*  emits a text object according to the passed layout */
     /* TODO: remove rText as soon as SalLayout will change so that rText is not necessary anymore */
+    void drawVerticalGlyphs( const std::vector<PDFGlyph>& rGlyphs, rtl::OStringBuffer& rLine, const Point& rAlignOffset, const Matrix3& rRotScale, double fAngle, double fXScale, double fSkew, sal_Int32 nFontHeight );
+    void drawHorizontalGlyphs( const std::vector<PDFGlyph>& rGlyphs, rtl::OStringBuffer& rLine, const Point& rAlignOffset, double fAngle, double fXScale, double fSkew, sal_Int32 nFontHeight, sal_Int32 nPixelFontHeight );
     void drawLayout( SalLayout& rLayout, const String& rText, bool bTextLines );
     void drawRelief( SalLayout& rLayout, const String& rText, bool bTextLines );
     void drawShadow( SalLayout& rLayout, const String& rText, bool bTextLines );
@@ -915,13 +964,13 @@ i12626
     /* writes all gradient patterns */
     bool emitGradients();
     /* writes a builtin font object and returns its objectid (or 0 in case of failure ) */
-    sal_Int32 emitBuiltinFont( ImplFontData* pFont, sal_Int32 nObject = -1 );
+    sal_Int32 emitBuiltinFont( const ImplFontData*, sal_Int32 nObject = -1 );
     /* writes a type1 embedded font object and returns its mapping from font ids to object ids (or 0 in case of failure ) */
-    std::map< sal_Int32, sal_Int32 > emitEmbeddedFont( ImplFontData* pFont, EmbedFont& rEmbed );
+    std::map< sal_Int32, sal_Int32 > emitEmbeddedFont( const ImplFontData*, EmbedFont& );
     /* writes a font descriptor and returns its object id (or 0) */
-    sal_Int32 emitFontDescriptor( ImplFontData* pFont, FontSubsetInfo& rInfo, sal_Int32 nSubsetID, sal_Int32 nStream );
+    sal_Int32 emitFontDescriptor( const ImplFontData*, FontSubsetInfo&, sal_Int32 nSubsetID, sal_Int32 nStream );
     /* writes a ToUnicode cmap, returns the corresponding stream object */
-    sal_Int32 createToUnicodeCMap( sal_uInt8* pEncoding, sal_Unicode* pUnicodes, int nGlyphs );
+    sal_Int32 createToUnicodeCMap( sal_uInt8* pEncoding, sal_Ucs* pUnicodes, int nGlyphs );
 
     /* get resource dict object number */
     sal_Int32 getResourceDictObj()
@@ -937,23 +986,10 @@ i12626
             m_nFontDictObject = createObject();
         return m_nFontDictObject;
     }
-    /* get the object for HelvReg font */
-    sal_Int32 getHelvRegObject()
-    {
-        if( m_nHelvRegObject <= 0 )
-            m_nHelvRegObject = createObject();
-        return m_nHelvRegObject;
-    }
-    /* get the object for ZaDb font */
-    sal_Int32 getZaDbObject()
-    {
-        if( m_nZaDbObject <= 0 )
-            m_nZaDbObject = createObject();
-        return m_nZaDbObject;
-    }
     /* push resource into current (redirected) resource dict */
     void pushResource( ResourceKind eKind, const rtl::OString& rResource, sal_Int32 nObject );
 
+    void appendBuiltinFontsToDict( rtl::OStringBuffer& rDict ) const;
     /* writes a the font dictionary and emits all font objects
      * returns object id of font directory (or 0 on error)
      */
@@ -978,6 +1014,8 @@ i12626
     bool emitAnnotations();
     // writes the dest dict for the catalog
     sal_Int32 emitDestDict();
+    //write the named destination stuff
+    sal_Int32 emitNamedDestinations();//i56629
     // writes outline dict and tree
     sal_Int32 emitOutline();
     // puts the attribute objects of a structure element into the returned string,
@@ -991,6 +1029,8 @@ i12626
     bool emitCatalog();
     // writes xref and trailer
     bool emitTrailer();
+    // emit additional streams collected; also create there object numbers
+    bool emitAdditionalStreams();
     // emits info dict (if applicable)
     sal_Int32 emitInfoDict( );
     
@@ -1006,6 +1046,7 @@ i12626
     // default appearences for widgets
     sal_Int32 findRadioGroupWidget( const PDFWriter::RadioButtonWidget& rRadio );
     Font replaceFont( const Font& rControlFont, const Font& rAppSetFont );
+    sal_Int32 getBestBuiltinFont( const Font& rFont );
 
     // used for edit and listbox
     Font drawFieldBorder( PDFWidget&, const PDFWriter::AnyWidget&, const StyleSettings& );
@@ -1030,6 +1071,8 @@ i12626
     void beginCompression();
     void endCompression();
     void beginRedirect( SvStream* pStream, const Rectangle& );
+    // returns an empty rect if no redirection is happending
+    Rectangle getRedirectTargetRect() const;
     SvStream* endRedirect();
 
     void endPage();
@@ -1054,6 +1097,9 @@ i12626
 
     /* draws an emphasis mark */
     void drawEmphasisMark(  long nX, long nY, const PolyPolygon& rPolyPoly, BOOL bPolyLine, const Rectangle& rRect1, const Rectangle& rRect2 );
+
+    /* true if PDF/A-1a or PDF/A-1b is output */
+    sal_Bool        m_bIsPDF_A1;
 
 /*
 i12626
@@ -1083,7 +1129,7 @@ public:
     ImplDevFontList* filterDevFontList( ImplDevFontList* pFontList );
     /*  for OutputDevice: get layout for builtin fonts
      */
-    bool isBuiltinFont( ImplFontData* pFont ) const;
+    bool isBuiltinFont( const ImplFontData* ) const;
     SalLayout* GetTextLayout( ImplLayoutArgs& rArgs, ImplFontSelectData* pFont );
     void getFontMetric( ImplFontSelectData* pFont, ImplFontMetricData* pMetric ) const;
 
@@ -1095,10 +1141,14 @@ public:
     /* document structure */
     sal_Int32 newPage( sal_Int32 nPageWidth , sal_Int32 nPageHeight, PDFWriter::Orientation eOrientation );
     bool emit();
+    std::set< PDFWriter::ErrorCode > getErrors();
 
     PDFWriter::PDFVersion getVersion() const { return m_aContext.Version; }
     void setDocInfo( const PDFDocInfo& rInfo );
     const PDFDocInfo& getDocInfo() const { return m_aDocInfo; }
+    
+    void setDocumentLocale( const com::sun::star::lang::Locale& rLoc )
+    { m_aContext.DocumentLocale = rLoc; }
 
 
     /* graphics state */
@@ -1232,11 +1282,21 @@ public:
     void beginTransparencyGroup();
     void endTransparencyGroup( const Rectangle& rBoundingBox, sal_uInt32 nTransparentPercent );
     void endTransparencyGroup( const Rectangle& rBoundingBox, const Bitmap& rAlphaMask );
-    void beginPattern();
-    sal_Int32 endPattern( const Rectangle& rCell, const SvtGraphicFill::Transform& rTransform );
+    void beginPattern( const Rectangle& rCell );
+    sal_Int32 endPattern( const SvtGraphicFill::Transform& rTransform );
     void drawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill );
 
     void emitComment( const char* pComment );
+
+    //--->i56629 named destinations
+    sal_Int32 createNamedDest( const rtl::OUString& sDestName, const Rectangle& rRect, sal_Int32 nPageNr = -1, PDFWriter::DestAreaType eType = PDFWriter::XYZ );
+
+    //--->i59651
+    //emits output intent
+    sal_Int32   emitOutputIntent();
+
+    //emits the document metadata
+    sal_Int32   emitDocumentMetadata();
 
     // links
     sal_Int32 createLink( const Rectangle& rRect, sal_Int32 nPageNr = -1 );
@@ -1254,7 +1314,7 @@ public:
     // notes
     void createNote( const Rectangle& rRect, const PDFNote& rNote, sal_Int32 nPageNr = -1 );
     // structure elements
-    sal_Int32 beginStructureElement( PDFWriter::StructElement eType );
+    sal_Int32 beginStructureElement( PDFWriter::StructElement eType, const rtl::OUString& rAlias );
     void endStructureElement();
     bool setCurrentStructureElement( sal_Int32 nElement );
     sal_Int32 getCurrentStructureElement();
@@ -1272,6 +1332,9 @@ public:
     sal_Int32 createControl( const PDFWriter::AnyWidget& rControl, sal_Int32 nPageNr = -1 );
     void beginControlAppearance( sal_Int32 nControl );
     bool endControlAppearance( PDFWriter::WidgetState eState );
+    
+    // additional streams
+    void addStream( const String& rMimeType, PDFOutputStream* pStream, bool bCompress );
 
     // helper: eventually begin marked content sequence and
     // emit a comment in debug case
@@ -1298,3 +1361,5 @@ public:
 }
 
 #endif //_VCL_PDFEXPORT_HXX
+
+

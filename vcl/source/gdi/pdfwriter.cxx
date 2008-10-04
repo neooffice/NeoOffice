@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified May 2008 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified May 2008 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -38,16 +31,16 @@
 #include "precompiled_vcl.hxx"
 
 #include <pdfwriter_impl.hxx>
-#include <bitmapex.hxx>
-#include <image.hxx>
+#include <vcl/bitmapex.hxx>
+#include <vcl/image.hxx>
 
 #ifdef USE_JAVA
 
 #ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
+#include <vcl/gdimtf.hxx>
 #endif
 #ifndef _SV_METAACT_HXX
-#include <metaact.hxx>
+#include <vcl/metaact.hxx>
 #endif
 
 #define META_TEXTLINE_PDF_ACTION				META_TEXTLINE_ACTION
@@ -85,6 +78,8 @@
 #define META_ENDTRANSPARENCYGROUP_PDF_ACTION	(10031)
 #define META_ENDTRANSPARENCYGROUPMASK_PDF_ACTION	(10032)
 #define META_SETDOCINFO_PDF_ACTION				(10033)
+#define META_SETLOCALE_PDF_ACTION				(10034)
+#define META_CREATENAMEDDEST_PDF_ACTION			(10035)
 
 class SAL_DLLPRIVATE MetaTextLinePDFAction : public MetaTextLineAction
 {
@@ -473,22 +468,25 @@ public:
 
 class SAL_DLLPRIVATE MetaBeginPatternPDFAction : public MetaAction
 {
+private:
+	Rectangle			maCellRect;
+
 public:
-    					MetaBeginPatternPDFAction() : MetaAction( META_BEGINPATTERN_PDF_ACTION ) {}
+    					MetaBeginPatternPDFAction( const Rectangle& rCellRect ) : MetaAction( META_BEGINPATTERN_PDF_ACTION ), maCellRect( rCellRect ) {}
     virtual				~MetaBeginPatternPDFAction() {}
+
+    const Rectangle&	GetCellRect() const { return maCellRect; }
 };
 
 class SAL_DLLPRIVATE MetaEndPatternPDFAction : public MetaAction
 {
 private:
-    Rectangle			maRect;
     SvtGraphicFill::Transform	maTransform;
 
 public:
-    					MetaEndPatternPDFAction( const Rectangle& rRect, const SvtGraphicFill::Transform& rTransform ) : MetaAction( META_ENDPATTERN_PDF_ACTION ), maRect( rRect ), maTransform( rTransform ) {}
+    					MetaEndPatternPDFAction( const SvtGraphicFill::Transform& rTransform ) : MetaAction( META_ENDPATTERN_PDF_ACTION ), maTransform( rTransform ) {}
     virtual				~MetaEndPatternPDFAction() {}
 
-    const Rectangle&	GetRect() const { return maRect; }
     const SvtGraphicFill::Transform&	GetTransform() const { return maTransform; }
 };
 
@@ -553,6 +551,36 @@ public:
     virtual				~MetaSetDocInfoPDFAction() {}
 
     const ::vcl::PDFDocInfo&	GetDocInfo() const { return maDocInfo; }
+};
+
+class SAL_DLLPRIVATE MetaSetLocalePDFAction : public MetaAction
+{
+private:
+    com::sun::star::lang::Locale	maLocale;
+
+public:
+    					MetaSetLocalePDFAction( const com::sun::star::lang::Locale& rLoc ) : MetaAction( META_SETLOCALE_PDF_ACTION ), maLocale( rLoc ) {}
+    virtual				~MetaSetLocalePDFAction() {}
+
+    const com::sun::star::lang::Locale&	GetLocale() const { return maLocale; }
+};
+
+class SAL_DLLPRIVATE MetaCreateNamedDestPDFAction : public MetaAction
+{
+private:
+    rtl::OUString		maDestName;
+    Rectangle			maRect;
+    sal_Int32			mnPage;
+    ::vcl::PDFWriter::DestAreaType	meType;
+
+public:
+    					MetaCreateNamedDestPDFAction( const rtl::OUString& rDestName, const Rectangle& rRect, sal_Int32 nPage, ::vcl::PDFWriter::DestAreaType eType ) : MetaAction( META_CREATENAMEDDEST_PDF_ACTION ), maDestName( rDestName ), maRect( rRect ), mnPage( nPage ), meType( eType ) {}
+    virtual				~MetaCreateNamedDestPDFAction() {}
+
+    const rtl::OUString&	GetDestName() const { return maDestName; }
+    const Rectangle&	GetRect() const { return maRect; }
+    sal_Int32			GetPage() const { return mnPage; }
+    ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
 };
 
 #endif	// USE_JAVA
@@ -1063,14 +1091,15 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 
             case( META_BEGINPATTERN_PDF_ACTION ):
             {
-                aWriter.BeginPattern();
+                const MetaBeginPatternPDFAction* pA = (const MetaBeginPatternPDFAction*) pAction;
+                aWriter.BeginPattern( pA->GetCellRect() );
             }
             break;
 
             case( META_ENDPATTERN_PDF_ACTION ):
             {
                 const MetaEndPatternPDFAction* pA = (const MetaEndPatternPDFAction*) pAction;
-                aWriter.EndPattern( pA->GetRect(), pA->GetTransform() );
+                aWriter.EndPattern( pA->GetTransform() );
             }
             break;
 
@@ -1105,6 +1134,20 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             {
                 const MetaSetDocInfoPDFAction* pA = (const MetaSetDocInfoPDFAction*) pAction;
                 aWriter.SetDocInfo( pA->GetDocInfo() );
+            }
+            break;
+
+            case( META_SETLOCALE_PDF_ACTION ):
+            {
+                const MetaSetLocalePDFAction* pA = (const MetaSetLocalePDFAction*) pAction;
+                aWriter.SetDocumentLocale( pA->GetLocale() );
+            }
+            break;
+
+            case( META_CREATENAMEDDEST_PDF_ACTION ):
+            {
+                const MetaCreateNamedDestPDFAction* pA = (const MetaCreateNamedDestPDFAction*) pAction;
+                aWriter.CreateNamedDest( pA->GetDestName(), pA->GetRect(), pA->GetPage(), pA->GetType() );
             }
             break;
 
@@ -1203,6 +1246,15 @@ const PDFDocInfo& PDFWriter::GetDocInfo() const
     return ((PDFWriterImpl*)pImplementation)->getDocInfo();
 }
 
+void PDFWriter::SetDocumentLocale( const com::sun::star::lang::Locale& rLoc )
+{
+#ifdef USE_JAVA
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLocalePDFAction( rLoc ) );
+#endif	// USE_JAVA
+    ((PDFWriterImpl*)pImplementation)->setDocumentLocale( rLoc );
+}
+
 void PDFWriter::SetFont( const Font& rFont )
 {
 #ifdef USE_JAVA
@@ -1256,10 +1308,6 @@ void PDFWriter::DrawStretchText(
                                 xub_StrLen nIndex,
                                 xub_StrLen nLen )
 {
-#ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
-#endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawStretchText( rStartPt, nWidth, rStr, nIndex, nLen );
 }
 
@@ -1607,8 +1655,10 @@ void PDFWriter::SetMapMode( const MapMode& rMapMode )
 
 void PDFWriter::SetMapMode()
 {
+#ifdef USE_JAVA
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMapModeAction( ((PDFWriterImpl*)pImplementation)->getMapMode() ) );
+#endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setMapMode();
 }
 
@@ -1773,7 +1823,16 @@ sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
 #endif	// USE_JAVA
     return ((PDFWriterImpl*)pImplementation)->createLink( rRect, nPageNr );
 }
-
+//--->i56629
+sal_Int32 PDFWriter::CreateNamedDest( const rtl::OUString& sDestName, const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
+{
+#ifdef USE_JAVA
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateNamedDestPDFAction( sDestName, rRect, nPageNr, eType ) );
+#endif	// USE_JAVA
+    return ((PDFWriterImpl*)pImplementation)->createNamedDest( sDestName, rRect, nPageNr, eType );
+}
+//<---
 sal_Int32 PDFWriter::CreateDest( const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
 #ifdef USE_JAVA
@@ -1855,13 +1914,13 @@ void PDFWriter::CreateNote( const Rectangle& rRect, const PDFNote& rNote, sal_In
     ((PDFWriterImpl*)pImplementation)->createNote( rRect, rNote, nPageNr );
 }
 
-sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType )
+sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType, const rtl::OUString& rAlias )
 {
 #ifdef USE_JAVA
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginStructureElementPDFAction( eType ) );
 #endif	// USE_JAVA
-    return ((PDFWriterImpl*)pImplementation)->beginStructureElement( eType );
+    return ((PDFWriterImpl*)pImplementation)->beginStructureElement( eType, rAlias );
 }
 
 void PDFWriter::EndStructureElement()
@@ -1959,22 +2018,31 @@ sal_Int32 PDFWriter::CreateControl( const PDFWriter::AnyWidget& rControl, sal_In
     return ((PDFWriterImpl*)pImplementation)->createControl( rControl, nPageNr );
 }
 
-void PDFWriter::BeginPattern()
+PDFOutputStream::~PDFOutputStream()
 {
-#ifdef USE_JAVA
-    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginPatternPDFAction() );
-#endif	// USE_JAVA
-    ((PDFWriterImpl*)pImplementation)->beginPattern();
 }
 
-sal_Int32 PDFWriter::EndPattern( const Rectangle& rCellBounds, const SvtGraphicFill::Transform& rTransform )
+void PDFWriter::AddStream( const String& rMimeType, PDFOutputStream* pStream, bool bCompress )
+{
+    ((PDFWriterImpl*)pImplementation)->addStream( rMimeType, pStream, bCompress );
+}
+
+void PDFWriter::BeginPattern( const Rectangle& rCellRect )
 {
 #ifdef USE_JAVA
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndPatternPDFAction( rCellBounds, rTransform ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginPatternPDFAction( rCellRect ) );
 #endif	// USE_JAVA
-    return ((PDFWriterImpl*)pImplementation)->endPattern( rCellBounds, rTransform );
+    ((PDFWriterImpl*)pImplementation)->beginPattern( rCellRect );
+}
+
+sal_Int32 PDFWriter::EndPattern( const SvtGraphicFill::Transform& rTransform )
+{
+#ifdef USE_JAVA
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndPatternPDFAction( rTransform ) );
+#endif	// USE_JAVA
+    return ((PDFWriterImpl*)pImplementation)->endPattern( rTransform );
 }
 
 void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill )
@@ -1984,4 +2052,9 @@ void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPatter
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyPolygonPDFAction( rPolyPoly, nPattern, bEOFill ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawPolyPolygon( rPolyPoly, nPattern, bEOFill );
+}
+
+std::set< PDFWriter::ErrorCode > PDFWriter::GetErrors()
+{
+    return ((PDFWriterImpl*)pImplementation)->getErrors();
 }
