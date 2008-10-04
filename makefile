@@ -368,8 +368,7 @@ build.neo_patches: build.oo_all \
 	build.neo_sw_patch \
 	build.neo_vcl_patch \
 	build.neo_dtrans_patch \
-	build.neo_ucbhelper_patch \
-	build.neo_libwpd_patch build.neo_writerperfect_patch
+	build.neo_ucbhelper_patch
 	touch "$@"
 
 build.neo_odk_patches: \
