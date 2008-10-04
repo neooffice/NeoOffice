@@ -1,85 +1,58 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#include <math.h>
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
-#ifndef _DEBUG_HXX
+#include <vcl/salgdi.hxx>
 #include <tools/debug.hxx>
-#endif
-#ifndef _SV_OUTDEV_H
-#include <outdev.h>
-#endif
-#ifndef _SV_OUTDEV_HXX
-#include <outdev.hxx>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
-#ifndef _SV_BMPACC_HXX
-#include <bmpacc.hxx>
-#endif
-#ifndef _SV_METAACT_HXX
-#include <metaact.hxx>
-#endif
-#ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_WRKWIN_HXX
-#include <wrkwin.hxx>
-#endif
-#ifndef _SV_GRAPH_HXX
-#include <graph.hxx>
-#endif
-#ifndef _SV_WALL2_HXX
-#include <wall2.hxx>
-#endif
-#ifndef _COM_SUN_STAR_UNO_SEQUENCE_HXX_
+#include <vcl/outdev.h>
+#include <vcl/outdev.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/bmpacc.hxx>
+#include <vcl/metaact.hxx>
+#include <vcl/gdimtf.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/graph.hxx>
+#include <vcl/wall2.hxx>
 #include <com/sun/star/uno/Sequence.hxx>
-#endif
+
+#include <basegfx/vector/b2dvector.hxx>
+#include <basegfx/polygon/b2dpolygon.hxx>
+#include <basegfx/matrix/b2dhommatrix.hxx>
+
+#include <vcl/window.h>
+#include <vcl/svdata.hxx>
 
 #ifdef USE_JAVA
 
@@ -200,23 +173,90 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 	DBG_TRACE( "OutputDevice::DrawTransparent()" );
 	DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 
-	if( !mbFillColor || ( 0 == nTransparencePercent ) || ( mnDrawMode & ( DRAWMODE_NOTRANSPARENCY ) ) )
-		DrawPolyPolygon( rPolyPoly );
-	else if( 100 == nTransparencePercent )
+	// short circuit for drawing an opaque polygon
+	if( (nTransparencePercent < 1) || ((mnDrawMode & DRAWMODE_NOTRANSPARENCY) != 0) )
 	{
+		DrawPolyPolygon( rPolyPoly );
+		return;
+	}
+
+	// short circut for drawing an invisible polygon
+	if( !mbFillColor || (nTransparencePercent >= 100) )
+	{
+		// short circuit if the polygon border is invisible too
+		if( !mbLineColor )
+			return;
+
+		// DrawTransparent() assumes that the border is NOT to be drawn transparently???
 		Push( PUSH_FILLCOLOR );
 		SetFillColor();
 		DrawPolyPolygon( rPolyPoly );
 		Pop();
+		return;
 	}
-	else
-	{
-		if( mpMetaFile )
-			mpMetaFile->AddAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
 
-		if( !IsDeviceOutputNecessary() || ( !mbLineColor && !mbFillColor ) || ImplIsRecordLayout() )
+	// handle metafile recording
+	if( mpMetaFile )
+		mpMetaFile->AddAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
+
+    bool bDrawn = !IsDeviceOutputNecessary() || ImplIsRecordLayout();
+    if( bDrawn )
+		return;
+
+	// get the device graphics as drawing target
+	if( !mpGraphics )
+		if( !ImplGetGraphics() )
 			return;
 
+    // debug helper:
+    static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
+
+    // try hard to draw it directly, because the emulation layers are slower
+	if( !pDisableNative
+	&& mpGraphics->supportsOperation( OutDevSupport_B2DDraw ) )
+	{
+		// prepare the graphics device
+		if( mbInitClipRegion )
+			ImplInitClipRegion();
+        if( mbOutputClipped )
+			return;
+		if( mbInitLineColor )
+			ImplInitLineColor();
+		if( mbInitFillColor )
+			ImplInitFillColor();
+
+		// get the polygon in device coordinates
+		basegfx::B2DPolyPolygon aB2DPolyPolygon( rPolyPoly.getB2DPolyPolygon() );
+        aB2DPolyPolygon.setClosed( true );
+		const ::basegfx::B2DHomMatrix aTransform = ImplGetDeviceTransformation();
+		aB2DPolyPolygon.transform( aTransform );
+
+		// draw the transparent polygon
+		bDrawn = mpGraphics->DrawPolyPolygon( aB2DPolyPolygon, nTransparencePercent*0.01, this );
+
+		// DrawTransparent() assumes that the border is NOT to be drawn transparently???
+		if( mbLineColor )
+		{
+			// disable the fill color for now
+			mpGraphics->SetFillColor();
+			// draw the border line
+			const basegfx::B2DVector aLineWidths( 1, 1 );
+			const int nPolyCount = aB2DPolyPolygon.count();
+			for( int nPolyIdx = 0; nPolyIdx < nPolyCount; ++nPolyIdx )
+			{
+				const ::basegfx::B2DPolygon& rPolygon = aB2DPolyPolygon.getB2DPolygon( nPolyIdx );
+				mpGraphics->DrawPolyLine( rPolygon, aLineWidths, this );
+			}
+			// prepare to restore the fill color
+			mbInitFillColor = mbFillColor;
+		}
+	}
+
+	if( bDrawn )
+		return;
+
+	if( 1 )
+	{
         VirtualDevice* pOldAlphaVDev = mpAlphaVDev;
 
         // #110958# Disable alpha VDev, we perform the necessary
@@ -288,7 +328,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 		}
 		else
 		{
-			PolyPolygon 	aPolyPoly( LogicToPixel( rPolyPoly ) );
+ 			PolyPolygon 	aPolyPoly( LogicToPixel( rPolyPoly ) );
 			Rectangle		aPolyRect( aPolyPoly.GetBoundRect() );
 			Point			aPoint;
 			Rectangle		aDstRect( aPoint, GetOutputSizePixel() );
@@ -305,34 +345,36 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 
 			if( !aDstRect.IsEmpty() )
 			{
-                bool bDrawn = false;
-                static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
-
                 // #i66849# Added fast path for exactly rectangular
                 // polygons
-                if( !pDisableNative && aPolyPoly.IsRect() )
+                // #i83087# Naturally, system alpha blending cannot
+                // work with separate alpha VDev
+                if( !mpAlphaVDev && !pDisableNative && aPolyPoly.IsRect() )
                 {
                     // setup Graphics only here (other cases delegate
                     // to basic OutDev methods)
-                    if ( mbInitClipRegion )
-                        ImplInitClipRegion();        
-                    if ( mbInitLineColor )
-                        ImplInitLineColor();
-                    if ( mbInitFillColor )
-                        ImplInitFillColor();
+                    if( 1 )
+                    {
+                        if ( mbInitClipRegion )
+                            ImplInitClipRegion();        
+                        if ( mbInitLineColor )
+                            ImplInitLineColor();
+                        if ( mbInitFillColor )
+                            ImplInitFillColor();
+    
+                        Rectangle aLogicPolyRect( rPolyPoly.GetBoundRect() );
+                        Rectangle aPixelRect( ImplLogicToDevicePixel( aLogicPolyRect ) );
 
-                    Rectangle aLogicPolyRect( rPolyPoly.GetBoundRect() );
-                    Rectangle aPixelRect( ImplLogicToDevicePixel( aLogicPolyRect ) );
-
-                    if( !mbOutputClipped )
-                        bDrawn = mpGraphics->DrawAlphaRect( aPixelRect.Left(), aPixelRect.Top(), 
-                                                            aPixelRect.GetWidth(), aPixelRect.GetHeight(),
-                                                            sal::static_int_cast<sal_uInt8>(nTransparencePercent), 
-                                                            this );
-                    else
-                        bDrawn = true;
+                        if( !mbOutputClipped )
+                            bDrawn = mpGraphics->DrawAlphaRect( aPixelRect.Left(), aPixelRect.Top(), 
+                                                                aPixelRect.GetWidth(), aPixelRect.GetHeight(),
+                                                                sal::static_int_cast<sal_uInt8>(nTransparencePercent), 
+                                                                this );
+                        else
+                            bDrawn = true;
+                    }
                 }
-                
+
                 if( !bDrawn )
                 {
                     VirtualDevice	aVDev( *this, 1 );
@@ -993,8 +1035,26 @@ void OutputDevice::Erase()
 {
 	if ( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
 		return;
+    
+    BOOL bNativeOK = FALSE; 
+    if( meOutDevType == OUTDEV_WINDOW )
+    {
+        Window* pWindow = static_cast<Window*>(this);
+        ControlPart aCtrlPart = pWindow->ImplGetWindowImpl()->mnNativeBackground; 
+        if( aCtrlPart != 0 && ! pWindow->IsControlBackground() )
+        {
+            ImplControlValue    aControlValue;
+            Point               aGcc3WorkaroundTemporary;
+            Region              aCtrlRegion( Rectangle( aGcc3WorkaroundTemporary, GetOutputSizePixel() ) );
+            ControlState        nState = 0;
+            
+            if( pWindow->IsEnabled() ) 				nState |= CTRL_STATE_ENABLED;
+            bNativeOK = pWindow->DrawNativeControl( CTRL_WINDOW_BACKGROUND, aCtrlPart, aCtrlRegion,
+                                                    nState, aControlValue, rtl::OUString() );
+        }
+    }
 
-	if ( mbBackground )
+	if ( mbBackground && ! bNativeOK )
 	{
 		RasterOp eRasterOp = GetRasterOp();
 		if ( eRasterOp != ROP_OVERPAINT )

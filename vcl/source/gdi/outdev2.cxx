@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified August 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified August 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -40,69 +33,27 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#ifndef _SV_SALBMP_HXX
-#include <salbmp.hxx>
-#endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
-#ifndef _SV_IMPBMP_HXX
-#include <impbmp.hxx>
-#endif
-#ifndef _DEBUG_HXX
+#include <vcl/salbmp.hxx>
+#include <vcl/salgdi.hxx>
+#include <vcl/impbmp.hxx>
 #include <tools/debug.hxx>
-#endif
-#ifndef _SV_BITMAP_HXX
-#include <bitmap.hxx>
-#endif
-#ifndef _SV_BITMAPEX_HXX
-#include <bitmapex.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
-#endif
-#ifndef _SV_METAACT_HXX
-#include <metaact.hxx>
-#endif
-#ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
-#ifndef _SV_OUTDATA_HXX
-#include <outdata.hxx>
-#endif
-#ifndef _SV_OUTDEV_H
-#include <outdev.h>
-#endif
-#ifndef _SV_BMPACC_HXX
-#include <bmpacc.hxx>
-#endif
-#ifndef _SV_REGION_H
-#include <region.h>
-#endif
-#ifndef _SV_OUTDEV_HXX
-#include <outdev.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
-#ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
-#endif
-#ifndef _SV_IMAGE_H
-#include <image.h>
-#endif
-#ifndef _SV_IMAGE_HXX
-#include <image.hxx>
-#endif
-#ifndef _SV_BMPFAST_HXX
-#include <bmpfast.hxx>
-#endif
+#include <vcl/bitmap.hxx>
+#include <vcl/bitmapex.hxx>
+#include <vcl/window.hxx>
+#include <vcl/metaact.hxx>
+#include <vcl/gdimtf.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/outdata.hxx>
+#include <vcl/outdev.h>
+#include <vcl/bmpacc.hxx>
+#include <vcl/region.h>
+#include <vcl/outdev.hxx>
+#include <vcl/window.hxx>
+#include <vcl/window.h>
+#include <vcl/sallayout.hxx>
+#include <vcl/image.h>
+#include <vcl/image.hxx>
+#include <vcl/bmpfast.hxx>
 
 #define BAND_MAX_SIZE 512000
 
@@ -534,7 +485,7 @@ void OutputDevice::ImplDrawFrameDev( const Point& rPt, const Point& rDevPt, cons
 	if ( rRegion.IsNull() )
 		mpGraphics->ResetClipRegion();
 	else
-		ImplSelectClipRegion( mpGraphics, rRegion, this );
+		ImplSelectClipRegion( rRegion );
 
 	TwoRect aPosAry;
 	aPosAry.mnSrcX		 = rDevPt.X();
@@ -712,8 +663,74 @@ void OutputDevice::ImplDrawBitmap( const Point& rDestPt, const Size& rDestSize,
 		{
 			if ( nMirrFlags )
 				aBmp.Mirror( nMirrFlags );
+            
+            /* #i75264# (corrected with #i81576#)
+            * sometimes a bitmap is scaled to a ridiculous size and drawn
+            * to a quite normal VDev, so only a very small part of
+            * the scaled bitmap will be visible. However actually scaling
+            * the bitmap will use so much memory that we end with a crash.
+            * Workaround: since only a small part of the scaled bitmap will
+            * be actually drawn anyway (because of clipping on the device
+            * boundary), limit the destination and source rectangles so
+            * that the destination rectangle will overlap the device but only
+            * be reasonably (say factor 2) larger than the device itself.
+            */
+            if( aPosAry.mnDestWidth > 2048 || aPosAry.mnDestHeight > 2048 )
+            {
+                 if( meOutDevType == OUTDEV_WINDOW ||
+                     (meOutDevType == OUTDEV_VIRDEV && mpPDFWriter == 0 ) )
+                {
+                    // #i81576# do the following trick only if there is overlap at all
+                    // else the formulae don't work
+                    // theoretically in this case we wouldn't need to draw the bitmap at all
+                    // however there are some esoteric case where that is needed
+                    if( aPosAry.mnDestX + aPosAry.mnDestWidth >= 0
+                        && aPosAry.mnDestX < mnOutWidth
+                        && aPosAry.mnDestY + aPosAry.mnDestHeight >= 0
+                        && aPosAry.mnDestY < mnOutHeight )
+                    {
+                        // reduce scaling to something reasonable taking into account the output size
+                        if( aPosAry.mnDestWidth > 3*mnOutWidth && aPosAry.mnSrcWidth )
+                        {
+                            const double nScaleX = aPosAry.mnDestWidth/double(aPosAry.mnSrcWidth);
+    
+                            if( aPosAry.mnDestX + aPosAry.mnDestWidth > mnOutWidth )
+                            {
+                                aPosAry.mnDestWidth = Max(long(0),mnOutWidth-aPosAry.mnDestX);
+                            }
+                            if( aPosAry.mnDestX < 0 )
+                            {
+                                aPosAry.mnDestWidth += aPosAry.mnDestX;
+                                aPosAry.mnSrcX -= sal::static_int_cast<long>(aPosAry.mnDestX / nScaleX);
+                                aPosAry.mnDestX = 0;
+                            }
+    
+                            aPosAry.mnSrcWidth = sal::static_int_cast<long>(aPosAry.mnDestWidth / nScaleX);
+                        }
+    
+                        if( aPosAry.mnDestHeight > 3*mnOutHeight && aPosAry.mnSrcHeight != 0 )
+                        {
+                            const double nScaleY = aPosAry.mnDestHeight/double(aPosAry.mnSrcHeight);
+    
+                            if( aPosAry.mnDestY + aPosAry.mnDestHeight > mnOutHeight )
+                            {
+                                aPosAry.mnDestHeight = Max(long(0),mnOutHeight-aPosAry.mnDestY);
+                            }
+                            if( aPosAry.mnDestY < 0 )
+                            {
+                                aPosAry.mnDestHeight += aPosAry.mnDestY;
+                                aPosAry.mnSrcY -= sal::static_int_cast<long>(aPosAry.mnDestY / nScaleY);
+                                aPosAry.mnDestY = 0;
+                            }
+    
+                            aPosAry.mnSrcHeight = sal::static_int_cast<long>(aPosAry.mnDestHeight / nScaleY);
+                        }
+                    }
+                }
+            }
 
-			mpGraphics->DrawBitmap( &aPosAry, *aBmp.ImplGetImpBitmap()->ImplGetSalBitmap(), this );
+            if ( aPosAry.mnSrcWidth && aPosAry.mnSrcHeight && aPosAry.mnDestWidth && aPosAry.mnDestHeight )
+                mpGraphics->DrawBitmap( &aPosAry, *aBmp.ImplGetImpBitmap()->ImplGetSalBitmap(), this );
 		}
 	}
 }
@@ -1956,13 +1973,14 @@ void OutputDevice::ImplDrawAlpha( const Bitmap& rBmp, const AlphaMask& rAlpha,
 	if( !aDstRect.Intersection( Rectangle( aOutPt, aOutSz ) ).IsEmpty() )
 	{
         bool bNativeAlpha = false;
-#ifdef USE_JAVA
-        {
-#else	// USE_JAVA
+#ifndef USE_JAVA
         static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
-        if( !pDisableNative && !bHMirr && !bVMirr ) {
-#endif	// USE_JAVA
-	    Point aRelPt = aOutPt + Point( mnOutOffX, mnOutOffY );
+        // #i83087# Naturally, system alpha blending cannot work with
+        // separate alpha VDev
+        if( !mpAlphaVDev && !pDisableNative && !bHMirr && !bVMirr ) 
+#endif	// !USE_JAVA
+        {
+            Point aRelPt = aOutPt + Point( mnOutOffX, mnOutOffY );
             SalTwoRect aTR = {
                 rSrcPtPixel.X(), rSrcPtPixel.Y(),
                 rSrcSizePixel.Width(), rSrcSizePixel.Height(),

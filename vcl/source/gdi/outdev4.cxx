@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -42,50 +35,28 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
-#ifndef _DEBUG_HXX
+#include <vcl/salgdi.hxx>
 #include <tools/debug.hxx>
-#endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_GRADIENT_HXX
-#include <gradient.hxx>
-#endif
-#ifndef _SV_METAACT_HXX
-#include <metaact.hxx>
-#endif
-#ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
-#endif
-#ifndef _SV_OUTDATA_HXX
-#include <outdata.hxx>
-#endif
-#ifndef _TL_POLY_HXX
+#include <vcl/svdata.hxx>
+#include <vcl/gradient.hxx>
+#include <vcl/metaact.hxx>
+#include <vcl/gdimtf.hxx>
+#include <vcl/outdata.hxx>
 #include <tools/poly.hxx>
-#endif
-#ifndef _SV_SALBTYPE_HXX
-#include <salbtype.hxx>
-#endif
-#ifndef _LINE_HXX
+#include <vcl/salbtype.hxx>
 #include <tools/line.hxx>
-#endif
-#ifndef _SV_HATCH_HXX
-#include <hatch.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
-#ifndef _SV_OUTDEV_HXX
-#include <outdev.hxx>
-#endif
+#include <vcl/hatch.hxx>
+#include <vcl/window.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/outdev.hxx>
 
 #include "pdfwriter_impl.hxx"
+#include "vcl/window.h"
+#include "vcl/salframe.hxx"
+
+#include <basegfx/polygon/b2dpolygon.hxx>
+#include <basegfx/polygon/b2dpolypolygon.hxx>
+#include <basegfx/matrix/b2dhommatrix.hxx>
 
 // -----------
 // - Defines -
@@ -775,7 +746,7 @@ void OutputDevice::DrawGradient( const Rectangle& rRect,
 
 	if( !IsDeviceOutputNecessary() || ImplIsRecordLayout() )
 		return;
-
+    
 	// Rechteck in Pixel umrechnen
 	Rectangle aRect( ImplLogicToDevicePixel( rRect ) );
 	aRect.Justify();
@@ -843,6 +814,16 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 	DBG_TRACE( "OutputDevice::DrawGradient()" );
 	DBG_CHKTHIS( OutputDevice, ImplDbgCheckOutputDevice );
 	DBG_CHKOBJ( &rGradient, Gradient, NULL );
+
+	if( mbInitClipRegion )
+		ImplInitClipRegion();
+	
+	if( mbOutputClipped )
+		return;
+
+	if( !mpGraphics )
+		if( !ImplGetGraphics() )
+			return;
 
 	if( rPolyPoly.Count() && rPolyPoly[ 0 ].GetSize() && !( mnDrawMode & DRAWMODE_NOGRADIENT ) )
 	{
@@ -938,7 +919,7 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 			aGradient.SetEndColor( aEndCol );
 		}
 
-		if( OUTDEV_PRINTER == meOutDevType )
+        if( OUTDEV_PRINTER == meOutDevType || ImplGetSVData()->maGDIData.mbNoXORClipping )
 		{
 			const Rectangle	aBoundRect( rPolyPoly.GetBoundRect() );
 

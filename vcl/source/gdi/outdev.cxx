@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -41,83 +34,46 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
-#ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
-#endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
-#ifndef _SV_SALVD_HXX
-#include <salvd.hxx>
-#endif
-#ifndef _SV_SALPRN_HXX
-#include <salprn.hxx>
-#endif
-#ifndef _DEBUG_HXX
+#include <vcl/salgdi.hxx>
+#include <vcl/sallayout.hxx>
+#include <vcl/salframe.hxx>
+#include <vcl/salvd.hxx>
+#include <vcl/salprn.hxx>
 #include <tools/debug.hxx>
-#endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/svapp.hxx>
 #ifndef _POLY_HXX
 #include <tools/poly.hxx>
 #endif
-#ifndef _SV_REGION_HXX
-#include <region.hxx>
-#endif
-#ifndef _SV_REGION_H
-#include <region.h>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
-#endif
-#ifndef _SV_METAACT_HXX
-#include <metaact.hxx>
-#endif
-#ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
-#endif
-#ifndef _SV_OUTDATA_HXX
-#include <outdata.hxx>
-#endif
-#ifndef _SV_PRINT_HXX
-#include <print.hxx>
-#endif
-#ifndef _SV_SALOTYPE_HXX
-#include <salotype.hxx>
-#endif
-#ifndef _SV_OPENGL_HXX
-#include <opengl.hxx>
-#endif
-#ifndef _VCL_IMPLNCVT_HXX
+#include <vcl/region.hxx>
+#include <vcl/region.h>
+#include <vcl/virdev.hxx>
+#include <vcl/window.h>
+#include <vcl/window.hxx>
+#include <vcl/metaact.hxx>
+#include <vcl/gdimtf.hxx>
+#include <vcl/outdata.hxx>
+#include <vcl/print.hxx>
+#include <vcl/salotype.hxx>
+#include <vcl/opengl.hxx>
 #include <implncvt.hxx>
-#endif
-#ifndef _SV_OUTDEV3D_HXX
-#include <outdev3d.hxx>
-#endif
-#ifndef _SV_OUTDEV_H
-#include <outdev.h>
-#endif
-#ifndef _SV_OUTDEV_HXX
-#include <outdev.hxx>
-#endif
-#ifndef _VCL_UNOWRAP_HXX
-#include <unowrap.hxx>
-#endif
+#include <vcl/outdev3d.hxx>
+#include <vcl/outdev.h>
+#include <vcl/outdev.hxx>
+#include <vcl/unowrap.hxx>
+#include <vcl/sysdata.hxx>
+
+#include <basegfx/point/b2dpoint.hxx>
+#include <basegfx/vector/b2dvector.hxx>
+#include <basegfx/polygon/b2dpolygon.hxx>
+#include <basegfx/polygon/b2dpolypolygon.hxx>
+#include <basegfx/matrix/b2dhommatrix.hxx>
 
 #include <com/sun/star/awt/XGraphics.hpp>
+#include <com/sun/star/uno/Sequence.hxx>
+#include <com/sun/star/rendering/XCanvas.hpp>
+#include <com/sun/star/lang/XMultiServiceFactory.hpp>
+#include <vcl/unohelp.hxx>
 
 #ifdef USE_JAVA
 
@@ -127,9 +83,11 @@
 
 #endif	 // USE_JAVA
 
-DBG_NAME( OutputDevice );
-DBG_NAME( Polygon );
-DBG_NAME( PolyPolygon );
+using namespace ::com::sun::star;
+
+DBG_NAME( OutputDevice )
+DBG_NAME( Polygon )
+DBG_NAME( PolyPolygon )
 DBG_NAMEEX( Region )
 
 // -----------------------------------------------------------------------
@@ -226,11 +184,31 @@ static void ImplDeleteObjStack( ImplObjStack* pObjStack )
 // -----------------------------------------------------------------------
 
 
-BOOL OutputDevice::ImplSelectClipRegion( SalGraphics* pGraphics, const Region& rRegion, OutputDevice *pOutDev )
+bool OutputDevice::ImplSelectClipRegion( const Region& rRegion, SalGraphics* pGraphics )
 {
+	DBG_TESTSOLARMUTEX();
+
     // TODO(Q3): Change from static to plain method - everybody's
     // calling it with pOutDev=this!
-	DBG_TESTSOLARMUTEX();
+    // => done, but only with minimal changes for now => TODO
+	OutputDevice* const pOutDev = this;
+	if( !pGraphics )
+	{
+		if( !mpGraphics )
+			if( !ImplGetGraphics() )
+				return false;
+		pGraphics = mpGraphics;
+	}
+
+	if( rRegion.HasPolyPolygon()
+	&& pGraphics->supportsOperation( OutDevSupport_B2DClip ) )
+	{
+		const ::basegfx::B2DPolyPolygon& rB2DPolyPolygon = rRegion.GetB2DPolyPolygon();
+		pGraphics->BeginSetClipRegion( 0 );
+		pGraphics->UnionClipRegion( rB2DPolyPolygon, pOutDev );
+		pGraphics->EndSetClipRegion();
+		return true;
+	}
 
 	long				nX;
 	long				nY;
@@ -253,9 +231,11 @@ BOOL OutputDevice::ImplSelectClipRegion( SalGraphics* pGraphics, const Region& r
         // values is completely off the device.
         const long nOffX( pOutDev->mnOutOffX );
         const long nOffY( pOutDev->mnOutOffY );
-        Rectangle aDeviceBounds(nOffX, nOffY,
-                                nOffX+pOutDev->GetOutputWidthPixel()-1,
-                                nOffY+pOutDev->GetOutputHeightPixel()-1);
+        const long nDeviceWidth( pOutDev->GetOutputWidthPixel() );
+        const long nDeviceHeight( pOutDev->GetOutputHeightPixel() );
+        Rectangle aDeviceBounds( nOffX, nOffY,
+                                 nOffX+nDeviceWidth-1,
+                                 nOffY+nDeviceHeight-1 );
         while ( bRegionRect )
         {
             // #i59315# Limit coordinates passed to sal layer to actual
@@ -271,6 +251,17 @@ BOOL OutputDevice::ImplSelectClipRegion( SalGraphics* pGraphics, const Region& r
                                                   aTmpRect.Top(), 
                                                   aTmpRect.GetWidth(), 
                                                   aTmpRect.GetHeight(), 
+                                                  pOutDev ) )
+                {
+                    bClipRegion = FALSE;
+                }
+            }
+            else
+            {
+                // #i79850# Fake off-screen clip
+                if ( !pGraphics->UnionClipRegion( nDeviceWidth+1,
+                                                  nDeviceHeight+1,
+                                                  1, 1,
                                                   pOutDev ) )
                 {
                     bClipRegion = FALSE;
@@ -450,7 +441,9 @@ OutputDevice::OutputDevice() :
 	mnEmphasisAscent	= 0;
 	mnEmphasisDescent	= 0;
 	mnDrawMode			= 0;
-	mnTextLayoutMode	= 0;
+	mnTextLayoutMode        = TEXT_LAYOUT_DEFAULT;
+	if( Application::GetSettings().GetLayoutRTL() ) //#i84553# tip BiDi preference to RTL
+		mnTextLayoutMode = TEXT_LAYOUT_BIDI_RTL | TEXT_LAYOUT_TEXTORIGIN_LEFT;
 	meOutDevType		= OUTDEV_DONTKNOW;
     meOutDevViewType    = OUTDEV_VIEWTYPE_DONTKNOW;
 	mbMap				= FALSE;
@@ -559,6 +552,15 @@ OutputDevice::~OutputDevice()
     }
 
     delete mpAlphaVDev;
+}
+
+bool OutputDevice::supportsOperation( OutDevSupportType eType ) const
+{
+	if( !mpGraphics )
+		if( !ImplGetGraphics() )
+			return false;
+	const bool bHasSupport = mpGraphics->supportsOperation( eType );
+	return bHasSupport;
 }
 
 // -----------------------------------------------------------------------
@@ -909,7 +911,31 @@ void OutputDevice::ImplInitOutDevData()
 		mpOutDevData = new ImplOutDevData;
 		mpOutDevData->mpRotateDev = NULL;
         mpOutDevData->mpRecordLayout = NULL;
-        mpOutDevData->mpFirstFontSubstEntry = NULL;
+
+		// #i75163#
+		mpOutDevData->mpViewTransform = NULL;
+		mpOutDevData->mpInverseViewTransform = NULL;
+	}
+}
+
+// -----------------------------------------------------------------------
+
+// #i75163#
+void OutputDevice::ImplInvalidateViewTransform()
+{
+	if(mpOutDevData)
+	{
+		if(mpOutDevData->mpViewTransform)
+		{
+			delete mpOutDevData->mpViewTransform;
+			mpOutDevData->mpViewTransform = NULL;
+		}
+
+		if(mpOutDevData->mpInverseViewTransform)
+		{
+			delete mpOutDevData->mpInverseViewTransform;
+			mpOutDevData->mpInverseViewTransform = NULL;
+		}
 	}
 }
 
@@ -928,13 +954,10 @@ void OutputDevice::ImplDeInitOutDevData()
 	{
 		if ( mpOutDevData->mpRotateDev )
 			delete mpOutDevData->mpRotateDev;
-        ImplFontSubstEntry* pEntry = mpOutDevData->mpFirstFontSubstEntry;
-        while( pEntry )
-        {
-            ImplFontSubstEntry* pNext = pEntry->mpNext;
-            delete pEntry;
-            pEntry = pNext;
-        }
+
+		// #i75163#
+		ImplInvalidateViewTransform();
+
 		delete mpOutDevData;
 	}
 }
@@ -1016,7 +1039,7 @@ void OutputDevice::ImplInitClipRegion()
 		else
 		{
 			mbOutputClipped = FALSE;
-			ImplSelectClipRegion( mpGraphics, aRegion, this );
+			ImplSelectClipRegion( aRegion );
 		}
 		mbClipRegionSet = TRUE;
 	}
@@ -1029,9 +1052,9 @@ void OutputDevice::ImplInitClipRegion()
 			else
 			{
 				mbOutputClipped = FALSE;
-				ImplSelectClipRegion( mpGraphics,
+				ImplSelectClipRegion(
                                       // #102532# Respect output offset also for clip region
-                                      ImplPixelToDevicePixel( maRegion ), this );
+                                      ImplPixelToDevicePixel( maRegion ) );
 			}
 
 			mbClipRegionSet = TRUE;
@@ -1435,6 +1458,73 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 		if(!(ImplGetGraphics()))
 			return;
 
+#ifndef USE_JAVA
+	if( mpGraphics->supportsOperation( OutDevSupport_B2DClip ) )
+	{
+#if 0
+		::basegfx::B2DPolyPolygon aB2DPolyPolygon = rPolyPolygon.getB2DPolyPolygon();
+#else
+		 // getB2DPolyPolygon() "optimizes away" some points
+		 // which prevents reliable undoing of the "triangle thingy" parameter
+		 // so the toolspoly -> b2dpoly conversion has to be done manually
+		::basegfx::B2DPolyPolygon aB2DPolyPolygon;
+		for( USHORT nPolyIdx = 0; nPolyIdx < rPolyPolygon.Count(); ++nPolyIdx )
+		{
+			const Polygon& rPolygon = rPolyPolygon[ nPolyIdx ];
+			::basegfx::B2DPolygon aB2DPoly;
+  			for( USHORT nPointIdx = 0; nPointIdx < rPolygon.GetSize(); ++nPointIdx )
+  			{
+  				const Point& rPoint = rPolygon[ nPointIdx ];
+  				const ::basegfx::B2DPoint aB2DPoint( rPoint.X(), rPoint.Y() );
+  				aB2DPoly.append( aB2DPoint );
+  			}
+  			aB2DPolyPolygon.append( aB2DPoly );
+		}
+#endif
+
+		const ::basegfx::B2DHomMatrix aTransform = ImplGetDeviceTransformation();
+		aB2DPolyPolygon.transform( aTransform );
+
+		// the rPolyPolygon argument is a "triangle thingy"
+		// so convert it to a normal polypolyon first
+		::basegfx::B2DPolyPolygon aPolyTriangle;
+		const int nPolyCount = aB2DPolyPolygon.count();
+		for( int nPolyIdx = 0; nPolyIdx < nPolyCount; ++nPolyIdx )
+		{
+			const ::basegfx::B2DPolygon rPolygon = aB2DPolyPolygon.getB2DPolygon( nPolyIdx );
+			const int nPointCount = rPolygon.count();
+			for( int nPointIdx = 0; nPointIdx+2 < nPointCount; nPointIdx +=3 )
+			{
+				::basegfx::B2DPolygon aTriangle;
+				aTriangle.append( rPolygon.getB2DPoint( nPointIdx+0 ) );
+				aTriangle.append( rPolygon.getB2DPoint( nPointIdx+1 ) );
+				aTriangle.append( rPolygon.getB2DPoint( nPointIdx+2 ) );
+				aPolyTriangle.append( aTriangle );
+			}
+		}
+
+		// now set the clip region with the real polypolygon
+		mpGraphics->BeginSetClipRegion( 0 );
+		mpGraphics->UnionClipRegion( aPolyTriangle, this );
+		mpGraphics->EndSetClipRegion();
+
+		// and mark the clip status as ready
+		mbOutputClipped = FALSE;
+		mbClipRegion = TRUE;
+		mbClipRegionSet = TRUE;
+		mbInitClipRegion = FALSE;
+		return;
+	}
+#endif	// !USE_JAVA
+
+	sal_Int32 offset_x = 0;
+	sal_Int32 offset_y = 0;
+	if ( GetOutDevType() == OUTDEV_WINDOW )
+	{
+		offset_x = mnOutOffX+mnOutOffOrigX;
+		offset_y = mnOutOffY+mnOutOffOrigY;
+	}
+
 	// first of all we need to know the upper limit
 	// of the amount of possible clipping regions.
 	sal_Int32 maxy = SAL_MIN_INT32;
@@ -1658,14 +1748,6 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 	// the amount of regions.
 	container.Consolidate();
 #endif	// !USE_JAVA
-
-	sal_Int32 offset_x = 0;
-	sal_Int32 offset_y = 0;
-	if ( GetOutDevType() == OUTDEV_WINDOW )
-	{
-		offset_x = mnOutOffX+mnOutOffOrigX;
-		offset_y = mnOutOffY+mnOutOffOrigY;
-	}
 
 #ifdef USE_JAVA
 	mpGraphics->BeginSetClipRegion( 1 );
@@ -2353,10 +2435,8 @@ void OutputDevice::DrawPolyLine( const Polygon& rPoly )
 
 	// we need a graphics
 	if ( !mpGraphics )
-	{
 		if ( !ImplGetGraphics() )
 			return;
-	}
 
 	if ( mbInitClipRegion )
 		ImplInitClipRegion();
@@ -2365,6 +2445,18 @@ void OutputDevice::DrawPolyLine( const Polygon& rPoly )
 
 	if ( mbInitLineColor )
 		ImplInitLineColor();
+
+	// use b2dpolygon drawing if possible
+	if( (mnAntialiasing & ANTIALIASING_ENABLE_B2DDRAW) != 0
+	&& mpGraphics->supportsOperation( OutDevSupport_B2DDraw ) )
+	{
+		::basegfx::B2DPolygon aB2DPolyLine = rPoly.getB2DPolygon();
+		const ::basegfx::B2DHomMatrix aTransform = ImplGetDeviceTransformation();
+		aB2DPolyLine.transform( aTransform );
+        const ::basegfx::B2DVector aB2DLineWidth( 1.0, 1.0 );
+		if( mpGraphics->DrawPolyLine( aB2DPolyLine, aB2DLineWidth, this ) )
+			return;
+	}
 
 	Polygon aPoly = ImplLogicToDevicePixel( rPoly );
     const SalPoint* pPtAry = (const SalPoint*)aPoly.GetConstPointAry();
@@ -2488,10 +2580,8 @@ void OutputDevice::DrawPolygon( const Polygon& rPoly )
 
 	// we need a graphics
 	if ( !mpGraphics )
-	{
 		if ( !ImplGetGraphics() )
 			return;
-	}
 
 	if ( mbInitClipRegion )
 		ImplInitClipRegion();
@@ -2502,6 +2592,17 @@ void OutputDevice::DrawPolygon( const Polygon& rPoly )
 		ImplInitLineColor();
 	if ( mbInitFillColor )
 		ImplInitFillColor();
+
+	// use b2dpolygon drawing if possible
+	if( (mnAntialiasing & ANTIALIASING_ENABLE_B2DDRAW) != 0
+	&& mpGraphics->supportsOperation( OutDevSupport_B2DDraw ) )
+	{
+		::basegfx::B2DPolyPolygon aB2DPolyPolygon( rPoly.getB2DPolygon() );
+		const ::basegfx::B2DHomMatrix aTransform = ImplGetDeviceTransformation();
+		aB2DPolyPolygon.transform( aTransform );
+		if( mpGraphics->DrawPolyPolygon( aB2DPolyPolygon, 0.0, this ) )
+			return;
+	}
 
 	Polygon aPoly = ImplLogicToDevicePixel( rPoly );
 	const SalPoint* pPtAry = (const SalPoint*)aPoly.GetConstPointAry();
@@ -2543,10 +2644,8 @@ void OutputDevice::DrawPolyPolygon( const PolyPolygon& rPolyPoly )
 
 	// we need a graphics
 	if ( !mpGraphics )
-	{
 		if ( !ImplGetGraphics() )
 			return;
-	}
 
 	if ( mbInitClipRegion )
 		ImplInitClipRegion();
@@ -2557,6 +2656,17 @@ void OutputDevice::DrawPolyPolygon( const PolyPolygon& rPolyPoly )
 		ImplInitLineColor();
 	if ( mbInitFillColor )
 		ImplInitFillColor();
+
+	// use b2dpolygon drawing if possible
+	if( (mnAntialiasing & ANTIALIASING_ENABLE_B2DDRAW) != 0
+	&& mpGraphics->supportsOperation( OutDevSupport_B2DDraw ) )
+	{
+		::basegfx::B2DPolyPolygon aB2DPolyPolygon = rPolyPoly.getB2DPolyPolygon();
+		const ::basegfx::B2DHomMatrix aTransform = ImplGetDeviceTransformation();
+		aB2DPolyPolygon.transform( aTransform );
+		if( mpGraphics->DrawPolyPolygon( aB2DPolyPolygon, 0.0, this ) )
+			return;
+	}
 
 	if ( nPoly == 1 )
 	{
@@ -2861,3 +2971,69 @@ OpenGL* OutputDevice::GetOpenGL()
 	UnoWrapperBase* pWrapper = Application::GetUnoWrapper();
 	return pWrapper ? pWrapper->CreateGraphics( this ) : ::com::sun::star::uno::Reference< ::com::sun::star::awt::XGraphics >();
 }
+
+// -----------------------------------------------------------------------
+
+SystemGraphicsData OutputDevice::GetSystemGfxData() const
+{
+	if ( !mpGraphics )
+	{
+		if ( !ImplGetGraphics() )
+			return SystemGraphicsData();
+	}
+
+    return mpGraphics->GetGraphicsData();
+}
+
+// -----------------------------------------------------------------------
+
+::com::sun::star::uno::Any OutputDevice::GetSystemGfxDataAny() const
+{
+    ::com::sun::star::uno::Any aRet;
+    const SystemGraphicsData aSysData = GetSystemGfxData();
+    ::com::sun::star::uno::Sequence< sal_Int8 > aSeq( (sal_Int8*)&aSysData, 
+                                                      aSysData.nSize );
+
+    return uno::makeAny(aSeq);
+}
+
+// -----------------------------------------------------------------------
+
+::com::sun::star::uno::Reference< ::com::sun::star::rendering::XCanvas > OutputDevice::GetCanvas() const
+{
+    uno::Sequence< uno::Any > aArg(6);
+
+    aArg[ 0 ] = uno::makeAny( reinterpret_cast<sal_Int64>(this) );
+    aArg[ 2 ] = uno::makeAny( ::com::sun::star::awt::Rectangle( mnOutOffX, mnOutOffY, mnOutWidth, mnOutHeight ) );
+    aArg[ 3 ] = uno::makeAny( sal_False );
+    aArg[ 5 ] = GetSystemGfxDataAny();
+
+    uno::Reference<lang::XMultiServiceFactory> xFactory = vcl::unohelper::GetMultiServiceFactory();
+
+    uno::Reference<rendering::XCanvas> xCanvas;
+
+    // Create canvas instance with window handle
+    // =========================================
+    if ( xFactory.is() )
+    {
+        static uno::Reference<lang::XMultiServiceFactory> xCanvasFactory(
+            xFactory->createInstance(
+                OUString( RTL_CONSTASCII_USTRINGPARAM(
+                              "com.sun.star."
+                              "rendering.CanvasFactory") ) ), 
+            uno::UNO_QUERY );
+        if(xCanvasFactory.is()) 
+        {
+            xCanvas.set(
+                xCanvasFactory->createInstanceWithArguments(
+                    OUString( RTL_CONSTASCII_USTRINGPARAM(
+                                  "com.sun.star.rendering.Canvas" )),
+                    aArg ),
+                uno::UNO_QUERY );
+        }
+    }
+
+    return xCanvas;
+}
+
+// -----------------------------------------------------------------------
