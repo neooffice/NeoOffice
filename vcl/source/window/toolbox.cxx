@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified August 2008 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -42,75 +35,31 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-
-#ifndef _RTL_LOGFILE_HXX_
 #include <rtl/logfile.hxx>
-#endif
-
-#ifndef _LIST_HXX
 #include <tools/list.hxx>
-#endif
-#ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_ACCEL_HXX
-#include <accel.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_HELP_HXX
-#include <help.hxx>
-#endif
-#ifndef _SV_SOUND_HXX
-#include <sound.hxx>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
-#ifndef _SV_SPIN_H
-#include <spin.h>
-#endif
-#ifndef _SV_TOOLBOX_HXX
-#include <toolbox.hxx>
-#endif
-#ifndef _SV_TOOLBOX_H
-#include <toolbox.h>
-#endif
-#ifndef _SV_BITMAP_HXX
-#include <bitmap.hxx>
-#endif
-#ifndef _TL_POLY_HXX
+#include <vcl/svdata.hxx>
+#include <vcl/event.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/accel.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/help.hxx>
+#include <vcl/sound.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/spin.h>
+#include <vcl/toolbox.hxx>
+#include <vcl/toolbox.h>
+#include <vcl/bitmap.hxx>
 #include <tools/poly.hxx>
-#endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
-#ifndef _SV_MNEMONIC_HXX
-#include <mnemonic.hxx>
-#endif
-#ifndef _SV_GRADIENT_HXX
-#include <gradient.hxx>
-#endif
-#ifndef _SV_MENU_HXX
-#include <menu.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
+#include <vcl/salframe.hxx>
+#include <vcl/mnemonic.hxx>
+#include <vcl/gradient.hxx>
+#include <vcl/menu.hxx>
+#include <vcl/window.h>
 
 // =======================================================================
 
@@ -1083,8 +1032,13 @@ USHORT ToolBox::ImplCalcLines( ToolBox* pThis, long nToolSize )
         nLineHeight += TB_LINESPACING;
         nToolSize += TB_LINESPACING;
     }
-
-    return (USHORT)(nToolSize/nLineHeight);
+    
+    // #i91917# always report at least one line
+    long nLines = nToolSize/nLineHeight;
+    if( nLines < 1 )
+        nLines = 1;
+    
+    return static_cast<USHORT>(nLines);
 }
 
 // -----------------------------------------------------------------------
@@ -1755,6 +1709,10 @@ void ToolBox::ImplInitSettings( BOOL bFont,
 
 void ToolBox::ImplLoadRes( const ResId& rResId )
 {
+    ResMgr* pMgr = rResId.GetResMgr();
+    if( ! pMgr )
+        return;
+    
     DockingWindow::ImplLoadRes( rResId );
 
     ULONG              nObjMask;
@@ -1787,7 +1745,7 @@ void ToolBox::ImplLoadRes( const ResId& rResId )
 
     if ( nObjMask & RSC_TOOLBOX_ITEMIMAGELIST )
     {
-        maImageList = ImageList( ResId( (RSHEADER_TYPE*)GetClassRes() ) );
+        maImageList = ImageList( ResId( (RSHEADER_TYPE*)GetClassRes(), *pMgr ) );
         IncrementRes( GetObjSizeRes( (RSHEADER_TYPE*)GetClassRes() ) );
     }
 
@@ -1798,7 +1756,7 @@ void ToolBox::ImplLoadRes( const ResId& rResId )
         // Item hinzufuegen
         for ( ULONG i = 0; i < nEle; i++ )
         {
-            InsertItem( ResId( (RSHEADER_TYPE *)GetClassRes() ) );
+            InsertItem( ResId( (RSHEADER_TYPE *)GetClassRes(), *pMgr ) );
             IncrementRes( GetObjSizeRes( (RSHEADER_TYPE *)GetClassRes() ) );
         }
     }
@@ -1903,6 +1861,13 @@ static void ImplAddButtonBorder( long &rWidth, long& rHeight, USHORT aOutStyle, 
     {
         rWidth += SMALLBUTTON_HSIZE;
         rHeight += SMALLBUTTON_VSIZE;
+    }
+
+    if( bNativeButtons )
+    {
+        // give more border space for rounded buttons
+        rWidth += 2;
+        rHeight += 4;
     }
 
 #ifndef USE_JAVA
@@ -2911,6 +2876,7 @@ IMPL_LINK( ToolBox, ImplDropdownLongClickHdl, ToolBox*, EMPTYARG )
         (mpData->m_aItems[ mnCurPos ].mnBits & TIB_DROPDOWN)
         )
     {
+        mpData->mbDropDownByKeyboard = FALSE;
         GetDropdownClickHdl().Call( this );
 
         // do not reset data if the dropdown handler opened a floating window
@@ -3914,12 +3880,14 @@ void ToolBox::ImplFloatControl( BOOL bStart, FloatingWindow* pFloatWindow )
 
         // if focus is still in this toolbox, then the floater was opened by keyboard
         // draw current item with highlight and keep old state
+        BOOL bWasKeyboardActivate = mpData->mbDropDownByKeyboard;
 
+        
         if ( mnCurPos != TOOLBOX_ITEM_NOTFOUND )
-            ImplDrawItem( mnCurPos, HasFocus() ? 2 : 0 );
+            ImplDrawItem( mnCurPos, bWasKeyboardActivate ? 2 : 0 );
         Deactivate();
 
-        if( !HasFocus() )
+        if( !bWasKeyboardActivate )
         {
             mnCurPos = TOOLBOX_ITEM_NOTFOUND;
             mnCurItemId = 0;
@@ -4317,7 +4285,6 @@ void ToolBox::MouseMove( const MouseEvent& rMEvt )
         }
     }
 
-
     if ( bDrawHotSpot && ( ((eStyle == POINTER_ARROW) && (mnOutStyle & TOOLBOX_STYLE_HANDPOINTER)) ||
          (mnOutStyle & TOOLBOX_STYLE_FLAT) || !mnOutStyle ) )
     {
@@ -4521,6 +4488,7 @@ void ToolBox::MouseButtonDown( const MouseEvent& rMEvt )
                         // dropdownonly always triggers the dropdown handler, over the whole button area
 
                         // the drop down arrow should not trigger the item action
+                        mpData->mbDropDownByKeyboard = FALSE;
                         GetDropdownClickHdl().Call( this );
 
                         // do not reset data if the dropdown handler opened a floating window
@@ -4939,7 +4907,7 @@ long ToolBox::Notify( NotifyEvent& rNEvt )
                 BOOL bNoTabCycling = ( ( ImplGetParent()->GetStyle() & (WB_DIALOGCONTROL | WB_NODIALOGCONTROL) ) == WB_DIALOGCONTROL &&
                     ImplGetParent()->GetChildCount() != 1 );
 
-                if( bNoTabCycling )
+                if( bNoTabCycling &&  ! (GetStyle() & WB_FORCETABCYCLE) )
                     return DockingWindow::Notify( rNEvt );
                 else if( ImplChangeHighlightUpDn( aKeyCode.IsShift() ? TRUE : FALSE , bNoTabCycling ) )
                     return FALSE;
@@ -5690,6 +5658,7 @@ BOOL ToolBox::ImplOpenItem( KeyCode aKeyCode )
 		mbIsKeyEvent = TRUE;
 		Activate();
 
+        mpData->mbDropDownByKeyboard = TRUE;
         GetDropdownClickHdl().Call( this );
 
 		mbIsKeyEvent = FALSE;
@@ -5986,6 +5955,14 @@ USHORT ToolBox::ImplFindItemPos( const ImplToolItem* pItem, const std::vector< I
     return TOOLBOX_ITEM_NOTFOUND;
 }
 
+void ToolBox::ChangeHighlight( USHORT nPos )
+{
+    if ( nPos < GetItemCount() ) {
+        ImplGrabFocus( 0 );
+        ImplChangeHighlight ( ImplGetItem ( GetItemId ( (USHORT) nPos ) ), FALSE );
+    }
+}
+
 void ToolBox::ImplChangeHighlight( ImplToolItem* pItem, BOOL bNoGrabFocus )
 {
     // avoid recursion due to focus change
@@ -5995,16 +5972,18 @@ void ToolBox::ImplChangeHighlight( ImplToolItem* pItem, BOOL bNoGrabFocus )
     mbChangingHighlight = TRUE;
 
 	ImplToolItem* pOldItem = NULL;
-    USHORT        oldPos = 0;
 
     if ( mnHighItemId )
     {
         ImplHideFocus();
         USHORT nPos = GetItemPos( mnHighItemId );
+	    pOldItem = ImplGetItem( mnHighItemId );
+        // #i89962# ImplDrawItem can cause Invalidate/Update
+        // which will in turn ImplShowFocus again
+        // set mnHighItemId to 0 already to prevent this hen/egg problem
+        mnHighItemId = 0;
         ImplDrawItem( nPos, FALSE );
         ImplCallEventListeners( VCLEVENT_TOOLBOX_HIGHLIGHTOFF, reinterpret_cast< void* >( nPos ) );
-	    pOldItem = ImplGetItem( mnHighItemId );
-        oldPos = ToolBox::ImplFindItemPos( pOldItem, mpData->m_aItems );
     }
 
     if( !bNoGrabFocus && pItem != pOldItem && pOldItem && pOldItem->mpWindow )

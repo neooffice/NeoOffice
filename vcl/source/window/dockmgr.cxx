@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2007 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2007 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -40,44 +33,22 @@
 #ifndef _SV_SVSYS_HXX
 #include <svsys.h>
 #endif
-#ifndef _TOOLS_TIME_HXX
 #include <tools/time.hxx>
-#endif
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_BRDWIN_HXX
-#include <brdwin.hxx>
-#endif
-#ifndef _SV_FLOATWIN_HXX
-#include <floatwin.hxx>
-#endif
-#ifndef _SV_DOCKWIN_HXX
-#include <dockwin.hxx>
-#endif
-#ifndef _SV_TOOLBOX_HXX
-#include <toolbox.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_TIMER_HXX
-#include <timer.hxx>
-#endif
-#ifndef _SV_LINEINFO_HXX
-#include <lineinfo.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
-#include <unowrap.hxx>
-#include <salframe.hxx>
+#include <vcl/event.hxx>
+#include <vcl/brdwin.hxx>
+#include <vcl/floatwin.hxx>
+#include <vcl/dockwin.hxx>
+#include <vcl/toolbox.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/svdata.hxx>
+#include <vcl/timer.hxx>
+#include <vcl/lineinfo.hxx>
+#include <vcl/window.h>
+#include <vcl/unowrap.hxx>
+#include <vcl/salframe.hxx>
 
 
 // =======================================================================

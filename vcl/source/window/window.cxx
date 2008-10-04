@@ -1,207 +1,103 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 #ifndef _SV_SVSYS_HXX
-#include <svsys.h>
+#include "svsys.h"
 #endif
-#ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
-#endif
-#ifndef _SV_SALOBJ_HXX
-#include <salobj.hxx>
-#endif
-#ifndef _SV_SALINST_HXX
-#include <salinst.hxx>
-#endif
-#ifndef _SV_SALGTYPE_HXX
-#include <salgtype.hxx>
-#endif
-#ifndef _SV_SALGDI_HXX
-#include <salgdi.hxx>
-#endif
-#ifndef _SV_SALCTRLHANDLE_HXX
-#include <salctrlhandle.hxx>
-#endif
+#include "vcl/salframe.hxx"
+#include "vcl/salobj.hxx"
+#include "vcl/salinst.hxx"
+#include "vcl/salgtype.hxx"
+#include "vcl/salgdi.hxx"
+#include "vcl/salctrlhandle.hxx"
 
-#include <unohelp.hxx>
-
-#ifndef _TOOLS_TIME_HXX
-#include <tools/time.hxx>
-#endif
-#ifndef _DEBUG_HXX
-#include <tools/debug.hxx>
-#endif
+#include "vcl/unohelp.hxx"
+#include "tools/time.hxx"
+#include "tools/debug.hxx"
 #ifndef _SV_RC_H
-#include <tools/rc.h>
+#include "tools/rc.h"
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_WINDATA_HXX
-#include <windata.hxx>
-#endif
-#ifndef _SV_DBGGUI_HXX
-#include <dbggui.hxx>
-#endif
-#ifndef _SV_OUTFONT_HXX
-#include <outfont.hxx>
-#endif
-#ifndef _SV_OUTDEV_H
-#include <outdev.h>
-#endif
-#ifndef _SV_REGION_H
-#include <region.h>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_HELP_HXX
-#include <help.hxx>
-#endif
-#ifndef _SV_CURSOR_HXX
-#include <cursor.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <window.hxx>
-#endif
-#ifndef _SV_SYSWIN_HXX
-#include <syswin.hxx>
-#endif
-#ifndef _SV_SYSCHILD_HXX
-#include <syschild.hxx>
-#endif
-#ifndef _SV_BRDWIN_HXX
-#include <brdwin.hxx>
-#endif
-#ifndef _SV_HELPWIN_HXX
-#include <helpwin.hxx>
-#endif
-#ifndef _SV_DOCKWIN_HXX
-#include <dockwin.hxx>
-#endif
-#ifndef _SV_MENU_HXX
-#include <menu.hxx>
-#endif
-#ifndef _SV_WRKWIN_HXX
-#include <wrkwin.hxx>
-#endif
-#ifndef _SV_WALL_HXX
-#include <wall.hxx>
-#endif
-#ifndef _SV_TOOLBOX_H
-#include <toolbox.h>
-#endif
-#ifndef _VCL_FONTCFG_HXX
-#include <fontcfg.hxx>
-#endif
-#include <sysdata.hxx>
-#ifndef _SV_SALLAYOUT_HXX
-#include <sallayout.hxx>
-#endif
-#ifndef _SV_BUTTON_HXX
-#include <button.hxx> // Button::GetStandardText
-#endif
-#ifndef _SV_TASKPANELIST_HXX
-#include <taskpanelist.hxx>
-#endif
-#include <com/sun/star/awt/XWindowPeer.hpp>
+#include "vcl/svdata.hxx"
+#include "vcl/windata.hxx"
+#include "vcl/dbggui.hxx"
+#include "vcl/outfont.hxx"
+#include "vcl/outdev.h"
+#include "vcl/region.h"
+#include "vcl/event.hxx"
+#include "vcl/help.hxx"
+#include "vcl/cursor.hxx"
+#include "vcl/svapp.hxx"
+#include "vcl/window.h"
+#include "vcl/window.hxx"
+#include "vcl/syswin.hxx"
+#include "vcl/syschild.hxx"
+#include "vcl/brdwin.hxx"
+#include "vcl/helpwin.hxx"
+#include "vcl/dockwin.hxx"
+#include "vcl/menu.hxx"
+#include "vcl/wrkwin.hxx"
+#include "vcl/wall.hxx"
+#include "vcl/gradient.hxx"
+#include "vcl/toolbox.h"
+#include "vcl/fontcfg.hxx"
+#include "vcl/sysdata.hxx"
+#include "vcl/sallayout.hxx"
+#include "vcl/button.hxx" // Button::GetStandardText
+#include "vcl/taskpanelist.hxx"
+#include "com/sun/star/awt/XWindowPeer.hpp"
+#include "com/sun/star/rendering/XCanvas.hpp"
+#include "com/sun/star/rendering/XSpriteCanvas.hpp"
+#include "com/sun/star/awt/XWindow.hpp"
+#include "comphelper/processfactory.hxx"
+#include "com/sun/star/datatransfer/dnd/XDragSource.hpp"
+#include "com/sun/star/datatransfer/dnd/XDropTarget.hpp"
+#include "com/sun/star/datatransfer/clipboard/XClipboard.hpp"
+#include "com/sun/star/awt/XTopWindow.hpp"
+#include "com/sun/star/awt/XDisplayConnection.hpp"
+#include "com/sun/star/lang/XInitialization.hpp"
+#include "com/sun/star/lang/XComponent.hpp"
+#include "com/sun/star/lang/XServiceName.hpp"
+#include "com/sun/star/accessibility/XAccessible.hpp"
+#include "com/sun/star/accessibility/AccessibleRole.hpp"
 
-#ifndef _COM_SUN_STAR_RENDERING_XCANVAS_HPP_
-#include <com/sun/star/rendering/XCanvas.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_XWINDOW_HPP_
-#include <com/sun/star/awt/XWindow.hpp>
-#endif
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
-#include <comphelper/processfactory.hxx>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDRAGSOURCE_HPP_
-#include <com/sun/star/datatransfer/dnd/XDragSource.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDROPTARGET_HPP_
-#include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HPP_
-#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_XTOPWINDOW_HPP_
-#include <com/sun/star/awt/XTopWindow.hpp>
-#endif
-#ifndef _COM_SUN_STAR_AWT_XDISPLAYCONNECTION_HPP_
-#include <com/sun/star/awt/XDisplayConnection.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XINITIALIZATION_HPP_
-#include <com/sun/star/lang/XInitialization.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XCOMPONENT_HPP_
-#include <com/sun/star/lang/XComponent.hpp>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XSERVICENAME_HPP_
-#include <com/sun/star/lang/XServiceName.hpp>
-#endif
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_XACCESSIBLE_HPP_
-#include <com/sun/star/accessibility/XAccessible.hpp>
-#endif
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLEROLE_HPP_
-#include <com/sun/star/accessibility/AccessibleRole.hpp>
-#endif
+#include "vcl/dialog.hxx"
+#include "vcl/unowrap.hxx"
+#include "dndlcon.hxx"
+#include "dndevdis.hxx"
+#include "vcl/impbmpconv.hxx"
+#include "unotools/confignode.hxx"
+#include "vcl/gdimtf.hxx"
 
-#include <unowrap.hxx>
-#include <dndlcon.hxx>
-#include <dndevdis.hxx>
-#include <impbmpconv.hxx>
-
-#ifndef _UNOTOOLS_CONFIGNODE_HXX_
-#include <unotools/confignode.hxx>
-#endif
-
-#ifndef _SV_GDIMTF_HXX
-#include <gdimtf.hxx>
-#endif
-
-#include <pdfextoutdevdata.hxx>
-#include "lazydelete.hxx"
+#include "vcl/pdfextoutdevdata.hxx"
+#include "vcl/lazydelete.hxx"
 
 using namespace rtl;
 using namespace ::com::sun::star::uno;
@@ -338,6 +234,30 @@ void Window::ImplInitAppFontData( Window* pWindow )
     pSVData->maGDIData.mnAppFontX = nTextWidth * 10 / 8;
     pSVData->maGDIData.mnAppFontY = nTextHeight * 10;
 
+    // FIXME: this is currently only on aqua, check with other
+    // platforms
+    if( pSVData->maNWFData.mbNoFocusRects )
+    {
+        // try to find out wether there is a large correction
+        // of control sizes, if yes, make app font scalings larger
+        // so dialog positioning is not completely off
+        ImplControlValue aControlValue;
+        Region aCtrlRegion( (const Rectangle&)Rectangle( Point(), Size( nTextWidth < 10 ? 10 : nTextWidth, nTextHeight < 10 ? 10 : nTextHeight ) ) );
+        Region aBoundingRgn( aCtrlRegion );
+        Region aContentRgn( aCtrlRegion );
+        if( pWindow->GetNativeControlRegion( CTRL_EDITBOX, PART_ENTIRE_CONTROL, aCtrlRegion,
+                                             CTRL_STATE_ENABLED, aControlValue, rtl::OUString(),
+                                             aBoundingRgn, aContentRgn ) )
+        {
+            Rectangle aContentRect( aContentRgn.GetBoundRect() );
+            // comment: the magical +6 is for the extra border in bordered
+            // (which is the standard) edit fields
+            if( aContentRect.GetHeight() - nTextHeight > (nTextHeight+4)/4 )
+                pSVData->maGDIData.mnAppFontY = (aContentRect.GetHeight()-4) * 10;
+        }
+    }
+
+
     pSVData->maGDIData.mnRealAppFontX = pSVData->maGDIData.mnAppFontX;
     if ( pSVData->maAppData.mnDialogScaleX )
         pSVData->maGDIData.mnAppFontX += (pSVData->maGDIData.mnAppFontX*pSVData->maAppData.mnDialogScaleX)/100;
@@ -347,6 +267,9 @@ void Window::ImplInitAppFontData( Window* pWindow )
 
 bool Window::ImplCheckUIFont( const Font& rFont )
 {
+    if( ImplGetSVData()->maGDIData.mbNativeFontConfig )
+        return true;
+
     String aTestText;
     aTestText.Append( Button::GetStandardText( BUTTON_OK ) );
     aTestText.Append( Button::GetStandardText( BUTTON_CANCEL ) );
@@ -514,6 +437,15 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
     aFont.SetHeight( defFontheight );
     aStyleSettings.SetGroupFont( aFont );
 
+    // set workspace gradient to black in dark themes
+    if( aStyleSettings.GetWindowColor().IsDark() )
+        aStyleSettings.SetWorkspaceGradient( Wallpaper( Color( COL_BLACK ) ) );
+    else
+    {
+        Gradient aGrad( GRADIENT_LINEAR, DEFAULT_WORKSPACE_GRADIENT_START_COLOR, DEFAULT_WORKSPACE_GRADIENT_END_COLOR );
+        aStyleSettings.SetWorkspaceGradient( Wallpaper( aGrad ) );
+    }
+
     rSettings.SetStyleSettings( aStyleSettings );
 
 
@@ -679,6 +611,7 @@ void Window::ImplInitWindowData( WindowType nType )
     mpWindowImpl->mnActivateMode      = 0;            // Wird bei System/Overlap-Windows umgesetzt
     mpWindowImpl->mnDlgCtrlFlags      = 0;            // DialogControl-Flags
     mpWindowImpl->mnLockCount         = 0;            // LockCount
+    mpWindowImpl->meAlwaysInputMode   = AlwaysInputNone; // neither AlwaysEnableInput nor AlwaysDisableInput called
     mpWindowImpl->mbFrame             = FALSE;        // TRUE: Window is a frame window
     mpWindowImpl->mbBorderWin         = FALSE;        // TRUE: Window is a border window
     mpWindowImpl->mbOverlapWin        = FALSE;        // TRUE: Window is a overlap window
@@ -695,7 +628,6 @@ void Window::ImplInitWindowData( WindowType nType )
     mpWindowImpl->mbOverlapVisible    = FALSE;        // TRUE: Hide called for visible window from ImplHideAllOverlapWindow()
     mpWindowImpl->mbDisabled          = FALSE;        // TRUE: Enable( FALSE ) called
     mpWindowImpl->mbInputDisabled     = FALSE;        // TRUE: EnableInput( FALSE ) called
-    mpWindowImpl->mbAlwaysEnableInput = FALSE;        // TRUE: AlwaysEnableInput( TRUE ) called
     mpWindowImpl->mbDropDisabled      = FALSE;        // TRUE: Drop is enabled
     mpWindowImpl->mbNoUpdate          = FALSE;        // TRUE: SetUpdateMode( FALSE ) called
     mpWindowImpl->mbNoParentUpdate    = FALSE;        // TRUE: SetParentUpdateMode( FALSE ) called
@@ -730,6 +662,10 @@ void Window::ImplInitWindowData( WindowType nType )
     mpWindowImpl->mbMouseTransparent  = FALSE;        // TRUE: Window is transparent for Mouse
     mpWindowImpl->mbDlgCtrlStart      = FALSE;        // TRUE: Ab hier eigenes Dialog-Control
     mpWindowImpl->mbFocusVisible      = FALSE;        // TRUE: Focus Visible
+    mpWindowImpl->mbUseNativeFocus    = FALSE;
+    mpWindowImpl->mbNativeFocusVisible= FALSE;        // TRUE: native Focus Visible
+    mpWindowImpl->mbInShowFocus       = FALSE;        // prevent recursion
+    mpWindowImpl->mbInHideFocus       = FALSE;        // prevent recursion
     mpWindowImpl->mbTrackVisible      = FALSE;        // TRUE: Tracking Visible
     mpWindowImpl->mbControlForeground = FALSE;        // TRUE: Foreground-Property set
     mpWindowImpl->mbControlBackground = FALSE;        // TRUE: Background-Property set
@@ -745,6 +681,10 @@ void Window::ImplInitWindowData( WindowType nType )
     mpWindowImpl->mbSuppressAccessibilityEvents = FALSE; // TRUE: do not send any accessibility events
     mpWindowImpl->mbDrawSelectionBackground = FALSE;    // TRUE: draws transparent window background to indicate (toolbox) selection
     mpWindowImpl->mbIsInTaskPaneList = FALSE;           // TRUE: window was added to the taskpanelist in the topmost system window
+    mpWindowImpl->mnNativeBackground  = 0;              // initialize later, depends on type
+    mpWindowImpl->mbCallHandlersDuringInputDisabled = FALSE; // TRUE: call event handlers even if input is disabled
+    mpWindowImpl->mbDisableAccessibleLabelForRelation = FALSE; // TRUE: do not set LabelFor relation on accessible objects
+    mpWindowImpl->mbDisableAccessibleLabeledByRelation = FALSE; // TRUE: do not set LabeledBy relation on accessible objects
 
     mbEnableRTL         = TRUE;         // TRUE: this outdev will be mirrored if RTL window layout (UI mirroring) is globally active
 }
@@ -766,17 +706,33 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
     Window*     pRealParent = pParent;
 
     // 3D-Look vererben
-    if ( !mpWindowImpl->mbOverlapWin && (pParent->GetStyle() & WB_3DLOOK) )
+    if ( !mpWindowImpl->mbOverlapWin && pParent && (pParent->GetStyle() & WB_3DLOOK) )
         nStyle |= WB_3DLOOK;
 
-    // Wenn wir einen Border haben, muessen wir ein BorderWindow anlegen
-    if ( !mpWindowImpl->mbFrame && !mpWindowImpl->mbBorderWin && !mpWindowImpl->mpBorderWindow && (nStyle & WB_BORDER) )
+    // create border window if necessary
+    if ( !mpWindowImpl->mbFrame && !mpWindowImpl->mbBorderWin && !mpWindowImpl->mpBorderWindow
+         && (nStyle & (WB_BORDER | WB_SYSTEMCHILDWINDOW) ) )
     {
-        ImplBorderWindow* pBorderWin = new ImplBorderWindow( pParent, nStyle & (WB_BORDER | WB_DIALOGCONTROL | WB_NODIALOGCONTROL) );
+        USHORT nBorderTypeStyle = 0;
+        if( (nStyle & WB_SYSTEMCHILDWINDOW) )
+        {
+            // handle WB_SYSTEMCHILDWINDOW
+            // these should be analogous to a top level frame; meaning they
+            // should have a border window with style BORDERWINDOW_STYLE_FRAME
+            // which controls their size
+            nBorderTypeStyle |= BORDERWINDOW_STYLE_FRAME;
+            nStyle |= WB_BORDER;
+        }
+        ImplBorderWindow* pBorderWin = new ImplBorderWindow( pParent, nStyle & (WB_BORDER | WB_DIALOGCONTROL | WB_NODIALOGCONTROL), nBorderTypeStyle );
         ((Window*)pBorderWin)->mpWindowImpl->mpClientWindow = this;
         pBorderWin->GetBorder( mpWindowImpl->mnLeftBorder, mpWindowImpl->mnTopBorder, mpWindowImpl->mnRightBorder, mpWindowImpl->mnBottomBorder );
         mpWindowImpl->mpBorderWindow  = pBorderWin;
         pParent = mpWindowImpl->mpBorderWindow;
+    }
+    else if( !mpWindowImpl->mbFrame && ! pParent )
+    {
+        mpWindowImpl->mbOverlapWin  = TRUE;
+        mpWindowImpl->mbFrame = TRUE;
     }
 
     // insert window in list
@@ -829,6 +785,9 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
         if( nStyle & WB_NOSHADOW )
             nFrameStyle |= SAL_FRAME_STYLE_NOSHADOW;
 
+        if( nStyle & WB_SYSTEMCHILDWINDOW )
+            nFrameStyle |= SAL_FRAME_STYLE_SYSTEMCHILD;
+
         switch (mpWindowImpl->mnType)
         {
             case WINDOW_DIALOG:
@@ -850,7 +809,7 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
             pParentFrame = pParent->mpWindowImpl->mpFrame;
         SalFrame* pFrame;
         if ( pSystemParentData )
-            pFrame = pSVData->mpDefInst->CreateChildFrame( pSystemParentData, nFrameStyle | SAL_FRAME_STYLE_CHILD );
+            pFrame = pSVData->mpDefInst->CreateChildFrame( pSystemParentData, nFrameStyle | SAL_FRAME_STYLE_PLUG );
         else
             pFrame = pSVData->mpDefInst->CreateFrame( pParentFrame, nFrameStyle );
         if ( !pFrame )
@@ -977,7 +936,7 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
             {
                 mpWindowImpl->mbDisabled          = pParent->mpWindowImpl->mbDisabled;
                 mpWindowImpl->mbInputDisabled     = pParent->mpWindowImpl->mbInputDisabled;
-                mpWindowImpl->mbAlwaysEnableInput = pParent->mpWindowImpl->mbAlwaysEnableInput;
+                mpWindowImpl->meAlwaysInputMode   = pParent->mpWindowImpl->meAlwaysInputMode;
             }
 
             OutputDevice::SetSettings( pParent->GetSettings() );
@@ -1197,14 +1156,13 @@ void Window::ImplCallMove()
 
 // -----------------------------------------------------------------------
 
-static ULONG ImplAutoHelpID()
+static ULONG ImplAutoHelpID( ResMgr* pResMgr )
 {
     if ( !Application::IsAutoHelpIdEnabled() )
         return 0;
 
     ULONG nHID = 0;
 
-    ResMgr *pResMgr = Resource::GetResManager();
     DBG_ASSERT( pResMgr, "No res mgr for auto help id" );
     if( ! pResMgr )
         return 0;
@@ -1223,20 +1181,20 @@ WinBits Window::ImplInitRes( const ResId& rResId )
     char* pRes = (char*)GetClassRes();
     pRes += 8;
     sal_uInt32 nStyle = (sal_uInt32)GetLongRes( (void*)pRes );
-    ((ResId&)rResId).aWinBits = nStyle;
+    rResId.SetWinBits( nStyle );
     return nStyle;
 }
 
 // -----------------------------------------------------------------------
 
-void Window::ImplLoadRes( const ResId& /*rResId*/ )
+void Window::ImplLoadRes( const ResId& rResId )
 {
     // newer move this line after IncrementRes
     char* pRes = (char*)GetClassRes();
     pRes += 12;
     sal_uInt32 nHelpId = (sal_uInt32)GetLongRes( (void*)pRes );
     if ( !nHelpId )
-        nHelpId = ImplAutoHelpID();
+        nHelpId = ImplAutoHelpID( rResId.GetResMgr() );
     SetHelpId( nHelpId );
 
     ULONG nObjMask = ReadLongRes();
@@ -1311,6 +1269,12 @@ void Window::ImplLoadRes( const ResId& /*rResId*/ )
         SetData( (void*)ReadLongRes() );
     if ( nObjMask & WINDOW_UNIQUEID )
         SetUniqueId( (ULONG)ReadLongRes() );
+
+    if ( nObjMask & WINDOW_BORDER_STYLE )
+    {
+        USHORT nBorderStyle = (USHORT)ReadLongRes();
+        SetBorderStyle( nBorderStyle );
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -1512,7 +1476,7 @@ PointerStyle Window::ImplGetMousePointer() const
     PointerStyle    ePointerStyle;
     BOOL            bWait = FALSE;
 
-    if ( IsEnabled() && IsInputEnabled() )
+    if ( IsEnabled() && IsInputEnabled() && ! IsInModalMode() )
         ePointerStyle = GetPointer().GetStyle();
     else
         ePointerStyle = POINTER_ARROW;
@@ -2982,7 +2946,7 @@ void Window::ImplScroll( const Rectangle& rRect,
                 ImplReMirror( aRegion );
             }
 
-            ImplSelectClipRegion( pGraphics, aRegion, this );
+            ImplSelectClipRegion( aRegion, pGraphics );
             pGraphics->CopyArea( rRect.Left()+nHorzScroll, rRect.Top()+nVertScroll,
                                  rRect.Left(), rRect.Top(),
                                  rRect.GetWidth(), rRect.GetHeight(),
@@ -3019,34 +2983,29 @@ void Window::ImplScroll( const Rectangle& rRect,
 
     if ( bScrollChilds )
     {
-        Rectangle aDestRect( rRect );
         Window* pWindow = mpWindowImpl->mpFirstChild;
         while ( pWindow )
         {
-            Rectangle aWinRect( Point( pWindow->mnOutOffX, pWindow->mnOutOffY ),
-                                Size( pWindow->mnOutWidth, pWindow->mnOutHeight ) );
-            if ( aDestRect.IsOver( aWinRect ) )
-            {
-                pWindow->mpWindowImpl->mnX        += nHorzScroll;
-                pWindow->mpWindowImpl->maPos.X()  += nHorzScroll;
-                pWindow->mpWindowImpl->mnY        += nVertScroll;
-                pWindow->mpWindowImpl->maPos.Y()  += nVertScroll;
-                if ( pWindow->ImplUpdatePos() )
-                    pWindow->ImplUpdateSysObjPos();
-                if ( pWindow->IsReallyVisible() )
-                    pWindow->ImplSetClipFlag();
-                if ( pWindow->mpWindowImpl->mpClientWindow )
-                    pWindow->mpWindowImpl->mpClientWindow->mpWindowImpl->maPos = pWindow->mpWindowImpl->maPos;
+            pWindow->mpWindowImpl->mnX        += nHorzScroll;
+            pWindow->mpWindowImpl->maPos.X()  += nHorzScroll;
+            pWindow->mpWindowImpl->mnY        += nVertScroll;
+            pWindow->mpWindowImpl->maPos.Y()  += nVertScroll;
+            if ( pWindow->ImplUpdatePos() )
+                pWindow->ImplUpdateSysObjPos();
+            if ( pWindow->IsReallyVisible() )
+                pWindow->ImplSetClipFlag();
+            if ( pWindow->mpWindowImpl->mpClientWindow )
+                pWindow->mpWindowImpl->mpClientWindow->mpWindowImpl->maPos = pWindow->mpWindowImpl->maPos;
 
-                if ( pWindow->IsVisible() )
-                {
-                    pWindow->ImplCallMove();
-                }
-                else
-                {
-                    pWindow->mpWindowImpl->mbCallMove = TRUE;
-                }
+            if ( pWindow->IsVisible() )
+            {
+                pWindow->ImplCallMove();
             }
+            else
+            {
+                pWindow->mpWindowImpl->mbCallMove = TRUE;
+            }
+
             pWindow = pWindow->mpWindowImpl->mpNext;
         }
     }
@@ -3439,7 +3398,7 @@ void Window::ImplPosSizeWindow( long nX, long nY,
                             SalGraphics* pGraphics = ImplGetFrameGraphics();
                             if ( pGraphics )
                             {
-                                BOOL bSelectClipRegion = ImplSelectClipRegion( pGraphics, aRegion, this );
+                                const bool bSelectClipRegion = ImplSelectClipRegion( aRegion, pGraphics );
                                 if ( bSelectClipRegion )
                                 {
                                     pGraphics->CopyArea( mnOutOffX, mnOutOffY,
@@ -3597,11 +3556,11 @@ void Window::ImplToTop( USHORT nFlags )
 			{
 				USHORT nSysFlags = 0;
 				if ( nFlags & TOTOP_RESTOREWHENMIN )
-					nSysFlags = SAL_FRAME_TOTOP_RESTOREWHENMIN;
+					nSysFlags |= SAL_FRAME_TOTOP_RESTOREWHENMIN;
 				if ( nFlags & TOTOP_FOREGROUNDTASK )
-					nSysFlags = SAL_FRAME_TOTOP_FOREGROUNDTASK;
+					nSysFlags |= SAL_FRAME_TOTOP_FOREGROUNDTASK;
                 if ( nFlags & TOTOP_GRABFOCUSONLY )
-                    nSysFlags = SAL_FRAME_TOTOP_GRABFOCUS_ONLY;
+                    nSysFlags |= SAL_FRAME_TOTOP_GRABFOCUS_ONLY;
 				mpWindowImpl->mpFrame->ToTop( nSysFlags );
 			}
         }
@@ -3828,7 +3787,13 @@ void Window::ImplGenerateMouseMove()
 IMPL_LINK( Window, ImplGenerateMouseMoveHdl, void*, EMPTYARG )
 {
     mpWindowImpl->mpFrameData->mnMouseMoveId = 0;
-    ImplCallMouseMove( mpWindowImpl->mpFrameData->mnMouseCode );
+    Window* pCaptureWin = ImplGetSVData()->maWinData.mpCaptureWin;
+    if( ! pCaptureWin ||
+        (pCaptureWin->mpWindowImpl && pCaptureWin->mpWindowImpl->mpFrame == mpWindowImpl->mpFrame)
+    )
+    {
+        ImplCallMouseMove( mpWindowImpl->mpFrameData->mnMouseCode );
+    }
     return 0;
 }
 
@@ -3930,21 +3895,22 @@ void Window::ImplGrabFocus( USHORT nFlags )
     // => prepare for the worst
     ImplDelData aDogTag( this );
 
-    // Es soll immer das Client-Fenster den Focus bekommen. Falls
-    // wir mal auch Border-Fenstern den Focus geben wollen,
-    // muessten wir bei allen GrabFocus()-Aufrufen in VCL dafuer
-    // sorgen, das es an der Stelle gemacht wird. Dies wuerde
-    // beispielsweise bei ToTop() der Fall sein.
+    // Currently the client window should always get the focus
+    // Should the border window at some point be focusable
+    // we need to change all GrabFocus() instances in VCL,
+    // e.g. in ToTop()
 
     if ( mpWindowImpl->mpClientWindow )
     {
-        // Wegen nicht ganz durchdachtem Konzept muessen wir hier
-        // leider noch einen Hack einbauen, damit wenn Dialoge
-        // geschlossen werden der Focus wieder auf das richtige
-        // Fenster zurueckgesetzt wird
+        // For a lack of design we need a little hack here to
+        // ensure that dialogs on close pass the focus back to
+        // the correct window
         if ( mpWindowImpl->mpLastFocusWindow && (mpWindowImpl->mpLastFocusWindow != this) &&
              !(mpWindowImpl->mnDlgCtrlFlags & WINDOW_DLGCTRL_WANTFOCUS) &&
-             mpWindowImpl->mpLastFocusWindow->IsEnabled() && mpWindowImpl->mpLastFocusWindow->IsInputEnabled() )
+             mpWindowImpl->mpLastFocusWindow->IsEnabled() &&
+             mpWindowImpl->mpLastFocusWindow->IsInputEnabled() &&
+             ! mpWindowImpl->mpLastFocusWindow->IsInModalMode()
+             )
             mpWindowImpl->mpLastFocusWindow->GrabFocus();
         else
             mpWindowImpl->mpClientWindow->GrabFocus();
@@ -3952,21 +3918,23 @@ void Window::ImplGrabFocus( USHORT nFlags )
     }
     else if ( mpWindowImpl->mbFrame )
     {
-        // Wegen nicht ganz durchdachtem Konzept muessen wir hier
-        // leider noch einen Hack einbauen, damit wenn Dialoge
-        // geschlossen werden der Focus wieder auf das richtige
-        // Fenster zurueckgesetzt wird
+        // For a lack of design we need a little hack here to
+        // ensure that dialogs on close pass the focus back to
+        // the correct window
         if ( mpWindowImpl->mpLastFocusWindow && (mpWindowImpl->mpLastFocusWindow != this) &&
              !(mpWindowImpl->mnDlgCtrlFlags & WINDOW_DLGCTRL_WANTFOCUS) &&
-             mpWindowImpl->mpLastFocusWindow->IsEnabled() && mpWindowImpl->mpLastFocusWindow->IsInputEnabled() )
+             mpWindowImpl->mpLastFocusWindow->IsEnabled() &&
+             mpWindowImpl->mpLastFocusWindow->IsInputEnabled() &&
+             ! mpWindowImpl->mpLastFocusWindow->IsInModalMode()
+             )
         {
             mpWindowImpl->mpLastFocusWindow->GrabFocus();
             return;
         }
     }
 
-    // If the Windows is disabled, then we doesn't change the focus
-    if ( !IsEnabled() || !IsInputEnabled() )
+    // If the Window is disabled, then we don't change the focus
+    if ( !IsEnabled() || !IsInputEnabled() || IsInModalMode() )
         return;
 
     // we only need to set the focus if it is not already set
@@ -4259,7 +4227,12 @@ void Window::ImplNewInputContext()
             else
                 aSize.Height() = (12*pFocusWin->mnDPIY)/72;
         }
-        pFontEntry = pFocusWin->mpFontCache->Get( pFocusWin->mpFontList, rFont, aSize, pFocusWin->mpOutDevData ? pFocusWin->mpOutDevData->mpFirstFontSubstEntry : NULL );
+        // TODO: No display device uses ImplDirectFontSubstitution thingy, right? => remove it
+        ImplDirectFontSubstitution* pFontSubst = NULL;
+        //if( pFocusWin->mpOutDevData )
+        //    pFontSubst = &pFocusWin->mpOutDevData->maDevFontSubst;
+        pFontEntry = pFocusWin->mpFontCache->GetFontEntry( pFocusWin->mpFontList,
+                         rFont, aSize, static_cast<float>(aSize.Height()), pFontSubst );
         if ( pFontEntry )
             aNewContext.mpFont = &pFontEntry->maFontSelData;
     }
@@ -4311,9 +4284,13 @@ Window::Window( Window* pParent, const ResId& rResId )
 Window::~Window()
 {
     vcl::LazyDeletor<Window>::Undelete( this );
-    
+
     DBG_DTOR( Window, ImplDbgCheckWindow );
     DBG_ASSERT( !mpWindowImpl->mbInDtor, "~Window - already in DTOR!" );
+
+
+    // remove Key and Mouse events issued by Application::PostKey/MouseEvent
+    Application::RemoveMouseAndKeyEvents( this );
 
     // Dispose of the canvas implementation (which, currently, has an
     // own wrapper window as a child to this one.
@@ -4362,8 +4339,6 @@ Window::~Window()
             // deregister drop target listener
             if( mpWindowImpl->mpFrameData->mxDropTargetListener.is() )
             {
-                OSL_TRACE( "removing drop target listener" );
-
                 Reference< XDragGestureRecognizer > xDragGestureRecognizer =
                     Reference< XDragGestureRecognizer > (mpWindowImpl->mpFrameData->mxDragSource, UNO_QUERY);
                 if( xDragGestureRecognizer.is() )
@@ -4408,7 +4383,7 @@ Window::~Window()
     ImplSVData* pSVData = ImplGetSVData();
 
     if ( pSVData->maHelpData.mpHelpWin && (pSVData->maHelpData.mpHelpWin->GetParent() == this) )
-        ImplDestroyHelpWindow();
+        ImplDestroyHelpWindow( true );
 
     DBG_ASSERT( pSVData->maWinData.mpTrackWin != this,
                 "Window::~Window(): Window is in TrackingMode" );
@@ -4611,7 +4586,7 @@ Window::~Window()
             else if ( ImplIsOverlapWindow() )
                 pParent = mpWindowImpl->mpOverlapWindow;
 
-            if ( pParent && pParent->IsEnabled() && pParent->IsInputEnabled() )
+            if ( pParent && pParent->IsEnabled() && pParent->IsInputEnabled() && ! pParent->IsInModalMode() )
                 pParent->GrabFocus();
             else
                 mpWindowImpl->mpFrameWindow->GrabFocus();
@@ -4741,6 +4716,7 @@ Window::~Window()
         delete mpWindowImpl->mpChildClipRegion;
 
     delete mpWindowImpl->mpAccessibleInfos;
+    delete mpWindowImpl->mpControlFont;
 
     // should be the last statements
     delete mpWindowImpl; mpWindowImpl = NULL;
@@ -4749,7 +4725,19 @@ Window::~Window()
 // -----------------------------------------------------------------------
 void Window::doLazyDelete()
 {
+    if( dynamic_cast<SystemWindow*>(this) )
+        SetParent( ImplGetDefaultWindow() );
     vcl::LazyDeletor<Window>::Delete( this );
+}
+
+USHORT Window::GetIndicatorState() const
+{
+    return mpWindowImpl->mpFrame->GetIndicatorState().mnState;
+}
+
+void Window::SimulateKeyPress( USHORT nKeyCode ) const
+{
+    mpWindowImpl->mpFrame->SimulateKeyPress(nKeyCode);
 }
 
 // -----------------------------------------------------------------------
@@ -4934,18 +4922,30 @@ void Window::RequestHelp( const HelpEvent& rHEvt )
     }
     else
     {
-        ULONG nStartHelpId = GetHelpId();
+		SmartId aSmartId = GetSmartHelpId();
 
-        if ( !nStartHelpId && ImplGetParent() )
+        ULONG nNumHelpId = 0;
+		String aStrHelpId;
+		if( aSmartId.HasString() )
+			aStrHelpId = aSmartId.GetStr();
+		if( aSmartId.HasNumeric() )
+			nNumHelpId = aSmartId.GetNum();
+
+        if ( !nNumHelpId && aStrHelpId.Len() == 0 && ImplGetParent() )
             ImplGetParent()->RequestHelp( rHEvt );
         else
         {
-            if ( !nStartHelpId )
-                nStartHelpId = HELP_INDEX;
+            if ( !nNumHelpId && aStrHelpId.Len() == 0 )
+                nNumHelpId = OOO_HELP_INDEX;
 
             Help* pHelp = Application::GetHelp();
             if ( pHelp )
-                pHelp->Start( nStartHelpId, this );
+			{
+				if( aStrHelpId.Len() > 0 )
+					pHelp->Start( aStrHelpId, this );
+				else
+					pHelp->Start( nNumHelpId, this );
+			}
         }
     }
 }
@@ -5538,6 +5538,8 @@ void Window::SetExtendedStyle( WinBits nExtendedStyle )
             SalExtStyle nExt = 0;
             if( (nExtendedStyle & WB_EXT_DOCUMENT) )
                 nExt |= SAL_FRAME_EXT_STYLE_DOCUMENT;
+            if( (nExtendedStyle & WB_EXT_DOCMODIFIED) )
+                nExt |= SAL_FRAME_EXT_STYLE_DOCMODIFIED;
 
             pWindow->ImplGetFrame()->SetExtendedFrameStyle( nExt );
         }
@@ -5567,10 +5569,38 @@ void Window::SetBorderStyle( USHORT nBorderStyle )
 
     if ( mpWindowImpl->mpBorderWindow )
     {
-        if ( mpWindowImpl->mpBorderWindow->GetType() == WINDOW_BORDERWINDOW )
-             ((ImplBorderWindow*)mpWindowImpl->mpBorderWindow)->SetBorderStyle( nBorderStyle );
+        if( nBorderStyle == WINDOW_BORDER_REMOVEBORDER &&
+            ! mpWindowImpl->mpBorderWindow->mpWindowImpl->mbFrame &&
+            mpWindowImpl->mpBorderWindow->mpWindowImpl->mpParent
+            )
+        {
+            // this is a little awkward: some controls (e.g. svtools ProgressBar)
+            // cannot avoid getting constructed with WB_BORDER but want to disable
+            // borders in case of NWF drawing. So they need a method to remove their border window
+            Window* pBorderWin = mpWindowImpl->mpBorderWindow;
+            // remove us as border window's client
+            pBorderWin->mpWindowImpl->mpClientWindow = NULL;
+            mpWindowImpl->mpBorderWindow = NULL;
+            mpWindowImpl->mpRealParent = pBorderWin->mpWindowImpl->mpParent;
+            // reparent us above the border window
+            SetParent( pBorderWin->mpWindowImpl->mpParent );
+            // set us to the position and size of our previous border
+            Point aBorderPos( pBorderWin->GetPosPixel() );
+            Size aBorderSize( pBorderWin->GetSizePixel() );
+            SetPosSizePixel( aBorderPos.X(), aBorderPos.Y(), aBorderSize.Width(), aBorderSize.Height() );
+            // release border window
+            delete pBorderWin;
+
+            // set new style bits
+            SetStyle( GetStyle() & (~WB_BORDER) );
+        }
         else
-            mpWindowImpl->mpBorderWindow->SetBorderStyle( nBorderStyle );
+        {
+            if ( mpWindowImpl->mpBorderWindow->GetType() == WINDOW_BORDERWINDOW )
+                 ((ImplBorderWindow*)mpWindowImpl->mpBorderWindow)->SetBorderStyle( nBorderStyle );
+            else
+                mpWindowImpl->mpBorderWindow->SetBorderStyle( nBorderStyle );
+        }
     }
 }
 
@@ -5797,6 +5827,20 @@ void Window::UpdateSettings( const AllSettings& rSettings, BOOL bChild )
 
     // AppFont-Aufloesung und DPI-Aufloesung neu berechnen
     ImplInitResolutionSettings();
+
+    /* #i73785#
+    *  do not overwrite a NoWheelActionWithoutFocus with false
+    *  this looks kind of a hack, but NoWheelActionWithoutFocus
+    *  is always a local change, not a system property,
+    *  so we can spare all our users the hassel of reacting on
+    *  this in their respective DataChanged.
+    */
+    if( aOldSettings.GetMouseSettings().GetNoWheelActionWithoutFocus() )
+    {
+        MouseSettings aSet( maSettings.GetMouseSettings() );
+        aSet.SetNoWheelActionWithoutFocus( TRUE );
+        maSettings.SetMouseSettings( aSet );
+    }
 
     if( (nChangeFlags & SETTINGS_STYLE) && IsBackground() )
     {
@@ -6146,6 +6190,10 @@ void Window::SetParent( Window* pNewParent )
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
     DBG_ASSERT( pNewParent, "Window::SetParent(): pParent == NULL" );
+    DBG_ASSERT( pNewParent != this, "someone tried to reparent a window to itself" );
+
+    if( pNewParent == this )
+        return;
 
     // check if the taskpanelist would change and move the window pointer accordingly
     SystemWindow *pSysWin = ImplGetLastSystemWindow(this);
@@ -6163,9 +6211,6 @@ void Window::SetParent( Window* pNewParent )
 
     ImplSetFrameParent( pNewParent );
 
-    if ( mpWindowImpl->mbFrame )
-        return;
-
     if ( mpWindowImpl->mpBorderWindow )
     {
         mpWindowImpl->mpRealParent = pNewParent;
@@ -6175,6 +6220,9 @@ void Window::SetParent( Window* pNewParent )
 
     if ( mpWindowImpl->mpParent == pNewParent )
         return;
+
+    if ( mpWindowImpl->mbFrame )
+        mpWindowImpl->mpFrame->SetParent( pNewParent->mpWindowImpl->mpFrame );
 
     BOOL bVisible = IsVisible();
     Show( FALSE, SHOW_NOFOCUSCHANGE );
@@ -6359,7 +6407,10 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
                 // Focus umsetzen
                 if ( !(nFlags & SHOW_NOFOCUSCHANGE) && HasChildPathFocus() )
                 {
-                    if ( mpWindowImpl->mpOverlapWindow->IsEnabled() && mpWindowImpl->mpOverlapWindow->IsInputEnabled() )
+                    if ( mpWindowImpl->mpOverlapWindow->IsEnabled() &&
+                         mpWindowImpl->mpOverlapWindow->IsInputEnabled() &&
+                         ! mpWindowImpl->mpOverlapWindow->IsInModalMode()
+                         )
                         mpWindowImpl->mpOverlapWindow->GrabFocus();
                 }
             }
@@ -6627,6 +6678,27 @@ void Window::Enable( bool bEnable, bool bChild )
 
 // -----------------------------------------------------------------------
 
+void Window::SetCallHandlersOnInputDisabled( bool bCall )
+{
+    mpWindowImpl->mbCallHandlersDuringInputDisabled = bCall ? TRUE : FALSE;
+
+    Window* pChild = mpWindowImpl->mpFirstChild;
+    while ( pChild )
+    {
+        pChild->SetCallHandlersOnInputDisabled( bCall );
+        pChild = pChild->mpWindowImpl->mpNext;
+    }
+}
+
+// -----------------------------------------------------------------------
+
+bool Window::IsCallHandlersOnInputDisabled() const
+{
+    return mpWindowImpl->mbCallHandlersDuringInputDisabled ? true : false;
+}
+
+// -----------------------------------------------------------------------
+
 void Window::EnableInput( BOOL bEnable, BOOL bChild )
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
@@ -6640,7 +6712,8 @@ void Window::EnableInput( BOOL bEnable, BOOL bChild )
             ((ImplBorderWindow*)mpWindowImpl->mpBorderWindow)->mpMenuBarWindow->EnableInput( bEnable, TRUE );
     }
 
-    if ( !mpWindowImpl->mbAlwaysEnableInput || bEnable )
+    if ( (! bEnable && mpWindowImpl->meAlwaysInputMode != AlwaysInputEnabled) ||
+         (  bEnable && mpWindowImpl->meAlwaysInputMode != AlwaysInputDisabled) )
     {
         // Wenn ein Fenster disablte wird, wird automatisch der
         // Tracking-Modus beendet oder der Capture geklaut
@@ -6768,12 +6841,16 @@ void Window::AlwaysEnableInput( BOOL bAlways, BOOL bChild )
     if ( mpWindowImpl->mpBorderWindow )
         mpWindowImpl->mpBorderWindow->AlwaysEnableInput( bAlways, FALSE );
 
-    if ( mpWindowImpl->mbAlwaysEnableInput != bAlways )
+    if( bAlways && mpWindowImpl->meAlwaysInputMode != AlwaysInputEnabled )
     {
-        mpWindowImpl->mbAlwaysEnableInput = bAlways;
+        mpWindowImpl->meAlwaysInputMode = AlwaysInputEnabled;
 
         if ( bAlways )
             EnableInput( TRUE, FALSE );
+    }
+    else if( ! bAlways && mpWindowImpl->meAlwaysInputMode == AlwaysInputEnabled )
+    {
+        mpWindowImpl->meAlwaysInputMode = AlwaysInputNone;
     }
 
     if ( bChild || mpWindowImpl->mbChildNotify )
@@ -6782,6 +6859,38 @@ void Window::AlwaysEnableInput( BOOL bAlways, BOOL bChild )
         while ( pChild )
         {
             pChild->AlwaysEnableInput( bAlways, bChild );
+            pChild = pChild->mpWindowImpl->mpNext;
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+
+void Window::AlwaysDisableInput( BOOL bAlways, BOOL bChild )
+{
+    DBG_CHKTHIS( Window, ImplDbgCheckWindow );
+
+    if ( mpWindowImpl->mpBorderWindow )
+        mpWindowImpl->mpBorderWindow->AlwaysDisableInput( bAlways, FALSE );
+
+    if( bAlways && mpWindowImpl->meAlwaysInputMode != AlwaysInputDisabled )
+    {
+        mpWindowImpl->meAlwaysInputMode = AlwaysInputDisabled;
+
+        if ( bAlways )
+            EnableInput( FALSE, FALSE );
+    }
+    else if( ! bAlways && mpWindowImpl->meAlwaysInputMode == AlwaysInputDisabled )
+    {
+        mpWindowImpl->meAlwaysInputMode = AlwaysInputNone;
+    }
+
+    if ( bChild || mpWindowImpl->mbChildNotify )
+    {
+        Window* pChild = mpWindowImpl->mpFirstChild;
+        while ( pChild )
+        {
+            pChild->AlwaysDisableInput( bAlways, bChild );
             pChild = pChild->mpWindowImpl->mpNext;
         }
     }
@@ -7065,6 +7174,11 @@ void Window::SetPosSizePixel( long nX, long nY,
         if( nFlags & WINDOW_POSSIZE_X )
         {
             nSysFlags |= SAL_FRAME_POSSIZE_X;
+            if( pWindow->GetParent() && (pWindow->GetStyle() & WB_SYSTEMCHILDWINDOW) )
+			{
+                Window* pParent = pWindow->GetParent();
+                nX += pParent->mnOutOffX;
+			}
             if( GetParent() && GetParent()->ImplHasMirroredGraphics() && !GetParent()->IsRTLEnabled() )
             {
                 // --- RTL --- (re-mirror at parent window)
@@ -7100,7 +7214,14 @@ void Window::SetPosSizePixel( long nX, long nY,
             }
         }
         if( nFlags & WINDOW_POSSIZE_Y )
+		{
             nSysFlags |= SAL_FRAME_POSSIZE_Y;
+            if( pWindow->GetParent() && (pWindow->GetStyle() & WB_SYSTEMCHILDWINDOW) )
+			{
+                Window* pParent = pWindow->GetParent();
+                nY += pParent->mnOutOffY;
+			}
+		}
 
         if( nSysFlags & (SAL_FRAME_POSSIZE_WIDTH|SAL_FRAME_POSSIZE_HEIGHT) )
         {
@@ -7523,7 +7644,9 @@ void Window::Update()
 void Window::Flush()
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
-    mpWindowImpl->mpFrame->Flush();
+
+    const Rectangle aWinRect( Point( mnOutOffX, mnOutOffY ), Size( mnOutWidth, mnOutHeight ) );
+    mpWindowImpl->mpFrame->Flush( aWinRect );
 }
 
 // -----------------------------------------------------------------------
@@ -7925,13 +8048,28 @@ const XubString& Window::GetHelpText() const
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
 
-    if ( !mpWindowImpl->maHelpText.Len() && mpWindowImpl->mnHelpId )
+	SmartId aSmartId = GetSmartHelpId();
+
+    ULONG nNumHelpId = 0;
+	String aStrHelpId;
+	if( aSmartId.HasString() )
+		aStrHelpId = aSmartId.GetStr();
+	if( aSmartId.HasNumeric() )
+		nNumHelpId = aSmartId.GetNum();
+	bool bStrHelpId = (aStrHelpId.Len() > 0);
+
+    if ( !mpWindowImpl->maHelpText.Len() && (nNumHelpId || bStrHelpId) )
     {
         if ( !IsDialog() && (mpWindowImpl->mnType != WINDOW_TABPAGE) && (mpWindowImpl->mnType != WINDOW_FLOATINGWINDOW) )
         {
             Help* pHelp = Application::GetHelp();
             if ( pHelp )
-                ((Window*)this)->mpWindowImpl->maHelpText = pHelp->GetHelpText( GetHelpId(), this );
+			{
+				if( bStrHelpId )
+	                ((Window*)this)->mpWindowImpl->maHelpText = pHelp->GetHelpText( aStrHelpId, this );
+				else
+	                ((Window*)this)->mpWindowImpl->maHelpText = pHelp->GetHelpText( nNumHelpId, this );
+			}
         }
     }
 
@@ -8268,7 +8406,6 @@ Reference< XDropTarget > Window::GetDropTarget()
 
                     try
                     {
-//                        OSL_TRACE( "adding droptarget listener" );
                         mpWindowImpl->mpFrameData->mxDropTarget->addDropTargetListener( mpWindowImpl->mpFrameData->mxDropTargetListener );
 
                         // register also as drag gesture listener if directly supported by drag source
@@ -8336,6 +8473,13 @@ Reference< XDragSource > Window::GetDragSource()
                         aDragSourceAL[ 1 ] = makeAny( (sal_uInt32) this );
                         aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) GetSystemData() );
                         aDropTargetAL[ 1 ] = makeAny( (sal_uInt32) this );
+#elif defined QUARTZ
+			/* FIXME: Mac OS X specific dnd interface does not exist! *
+			 * Using Windows based dnd as a temporary solution        */
+                        aDragSourceSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.OleDragSource" );
+                        aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.OleDropTarget" );
+                        aDragSourceAL[ 1 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->pView) ) );
+                        aDropTargetAL[ 0 ] = makeAny( static_cast<sal_uInt64>( reinterpret_cast<sal_IntPtr>(pEnvData->pView) ) );
 #elif defined UNX
                         aDropTargetAL.realloc( 3 );
                         aDragSourceAL.realloc( 3 );
@@ -8415,7 +8559,7 @@ Reference< XClipboard > Window::GetClipboard()
                 {
                     mpWindowImpl->mpFrameData->mxClipboard = Reference< XClipboard >( xFactory->createInstance( OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.SystemClipboard" ) ), UNO_QUERY );
 
-#ifdef UNX          // unix clipboard needs to be initialized
+#if defined(UNX) && !defined(QUARTZ)          // unix clipboard needs to be initialized
                     if( mpWindowImpl->mpFrameData->mxClipboard.is() )
                     {
                         Reference< XInitialization > xInit = Reference< XInitialization >( mpWindowImpl->mpFrameData->mxClipboard, UNO_QUERY );
@@ -8464,7 +8608,7 @@ Reference< XClipboard > Window::GetPrimarySelection()
 
                 if( xFactory.is() )
                 {
-#	ifdef UNX
+#if defined(UNX) && !defined(QUARTZ)
                     Sequence< Any > aArgumentList( 3 );
                   	aArgumentList[ 0 ] = makeAny( Application::GetDisplayConnection() );
                     aArgumentList[ 1 ] = makeAny( OUString::createFromAscii( "PRIMARY" ) );
@@ -8476,7 +8620,7 @@ Reference< XClipboard > Window::GetPrimarySelection()
 					static Reference< XClipboard >	s_xSelection;
 
 					if ( !s_xSelection.is() )
-						s_xSelection = Reference< XClipboard >( xFactory->createInstance( OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.GenericClipboard" ) ), UNO_QUERY );
+ 						s_xSelection = Reference< XClipboard >( xFactory->createInstance( OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.GenericClipboard" ) ), UNO_QUERY );
 
                     mpWindowImpl->mpFrameData->mxSelection = s_xSelection;
 #	endif
@@ -9140,7 +9284,20 @@ void Window::DrawSelectionBackground( const Rectangle& rRect, USHORT highlight, 
 	}
     else
     {
-        if( bChecked || highlight == 1 )
+        if( bChecked && highlight == 2 )
+		{
+			if( bDark )
+			    aSelectionFillCol = COL_LIGHTGRAY;
+            else if ( bBright )
+            {
+			    aSelectionFillCol = COL_BLACK;
+                SetLineColor( COL_BLACK );
+                nPercent = 0;
+            }
+            else
+                nPercent = 20;          // selected, pressed or checked ( very dark )
+		}
+        else if( bChecked || highlight == 1 )
 		{
 			if( bDark )
 			    aSelectionFillCol = COL_GRAY;
@@ -9274,11 +9431,31 @@ BOOL Window::IsInModalMode() const
 }
 void Window::ImplIncModalCount()
 {
-    mpWindowImpl->mpFrameWindow->mpWindowImpl->mpFrameData->mnModalMode++;
+    Window* pFrameWindow = mpWindowImpl->mpFrameWindow;
+    Window* pParent = pFrameWindow;
+    while( pFrameWindow )
+    {
+        pFrameWindow->mpWindowImpl->mpFrameData->mnModalMode++;
+        while( pParent && pParent->mpWindowImpl->mpFrameWindow == pFrameWindow )
+        {
+            pParent = pParent->GetParent();
+        }
+        pFrameWindow = pParent ? pParent->mpWindowImpl->mpFrameWindow : NULL;
+    }
 }
 void Window::ImplDecModalCount()
 {
-    mpWindowImpl->mpFrameWindow->mpWindowImpl->mpFrameData->mnModalMode--;
+    Window* pFrameWindow = mpWindowImpl->mpFrameWindow;
+    Window* pParent = pFrameWindow;
+    while( pFrameWindow )
+    {
+        pFrameWindow->mpWindowImpl->mpFrameData->mnModalMode--;
+        while( pParent && pParent->mpWindowImpl->mpFrameWindow == pFrameWindow )
+        {
+            pParent = pParent->GetParent();
+        }
+        pFrameWindow = pParent ? pParent->mpWindowImpl->mpFrameWindow : NULL;
+    }
 }
 BOOL Window::ImplIsInTaskPaneList()
 {
@@ -9367,16 +9544,18 @@ BOOL Window::IsNativeWidgetEnabled() const
 {
 #ifdef USE_JAVA
 	return TRUE;
-#else
+#else	// USE_JAVA
     return ImplGetWinData()->mbEnableNativeWidget;
-#endif
+#endif	// USE_JAVA
 }
 
 #ifdef WNT // see #140456#
 #include <salframe.h>
 #endif
 
-Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSize, bool bFullscreen ) const
+Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSize,
+                                                       bool        bFullscreen,
+                                                       bool        bSpriteCanvas ) const
 {
     // try to retrieve hard reference from weak member
     Reference< rendering::XCanvas > xCanvas( mpWindowImpl->mxCanvas );
@@ -9385,17 +9564,13 @@ Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSi
     if( xCanvas.is() )
         return xCanvas;
 
-
-    Sequence< Any > aArg( 5 );
+    Sequence< Any > aArg(6);
 
     // Feed any with operating system's window handle
     // ==============================================
 
     // common: first any is VCL pointer to window (for VCL canvas)
     aArg[ 0 ] = makeAny( reinterpret_cast<sal_Int64>(this) );
-
-    // Fetch system data structure
-    const SystemEnvData* pSysData;
 
     // TODO(Q1): Make GetSystemData method virtual
 
@@ -9404,27 +9579,15 @@ Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSi
     // method is unfortunately not virtual
     const SystemChildWindow* pSysChild = dynamic_cast< const SystemChildWindow* >( this );
     if( pSysChild )
-        pSysData = pSysChild->GetSystemData();
+    {
+        aArg[ 1 ] = pSysChild->GetSystemDataAny();
+        aArg[ 5 ] = pSysChild->GetSystemGfxDataAny();
+    }
     else
-        pSysData = GetSystemData();
-
-#if defined( WIN ) || defined( WNT )
-    // take HWND for Windows
-    if( pSysData )
-        aArg[ 1 ] = makeAny( reinterpret_cast<sal_Int32>(pSysData->hWnd) );
-#elif defined( UNX )
-    // take XLIB window for X11, and fake a motif widget ID from
-    // that.
-
-    // feed the motif widget ID to canvas
-    //aArg[ 0 ] = makeAny( vcl::createMotifHandle( mpWindowImpl->mpFrame->maFrameData.GetWindow() ) );
-
-    // feed the X11 window handle to canvas
-    if( pSysData )
-        aArg[ 1 ] = makeAny( static_cast<sal_Int32>(pSysData->aWindow) );
-#else
-# error Please forward window handle to canvas for your OS
-#endif
+    {
+        aArg[ 1 ] = GetSystemDataAny();
+        aArg[ 5 ] = GetSystemGfxDataAny();
+    }
 
     if( bFullscreen )
         aArg[ 2 ] = makeAny( ::com::sun::star::awt::Rectangle( 0, 0,
@@ -9434,7 +9597,7 @@ Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSi
         aArg[ 2 ] = makeAny( ::com::sun::star::awt::Rectangle( mnOutOffX, mnOutOffY, mnOutWidth, mnOutHeight ) );
 
     aArg[ 3 ] = makeAny( mpWindowImpl->mbAlwaysOnTop ? sal_True : sal_False );
-    aArg[ 4 ] = makeAny( Reference< awt::XWindow >( 
+    aArg[ 4 ] = makeAny( Reference< awt::XWindow >(
                              const_cast<Window*>(this)->GetComponentInterface(),
                              uno::UNO_QUERY ));
 
@@ -9444,36 +9607,45 @@ Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSi
     // =========================================
     if ( xFactory.is() )
     {
-        Reference<lang::XMultiServiceFactory> xCanvasFactory(
+        static Reference<lang::XMultiServiceFactory> xCanvasFactory(
             xFactory->createInstance(
                 OUString( RTL_CONSTASCII_USTRINGPARAM(
                               "com.sun.star."
                               "rendering.CanvasFactory") ) ), UNO_QUERY );
-        if(xCanvasFactory.is()) 
+        if(xCanvasFactory.is())
         {
-            xCanvas.set( xCanvasFactory->createInstanceWithArguments(
-                             OUString() /* no preference */, 
-                             aArg ),
-                         UNO_QUERY );
-
-#ifdef WNT 
+#ifdef WNT
             // see #140456# - if we're running on a multiscreen setup,
-            // avoid DX5 canvas (as it cannot cope with surfaces
-            // spanning multiple displays)
+            // request special, multi-screen safe sprite canvas
+            // implementation (not DX5 canvas, as it cannot cope with
+            // surfaces spanning multiple displays). Note: canvas
+            // (without sprite) stays the same)
 			const sal_uInt32 nDisplay = static_cast< WinSalFrame* >( mpWindowImpl->mpFrame )->mnDisplay;
 			if( (nDisplay >= Application::GetScreenCount()) )
             {
-                Reference<lang::XServiceName> xServiceName(xCanvas, UNO_QUERY);
-                if( xServiceName.is() && 
-                    xServiceName->getServiceName().endsWithIgnoreAsciiCaseAsciiL( 
-                        RTL_CONSTASCII_STRINGPARAM("DXCanvas")) )
-                {
-                    // oops - got DX5 canvas. fallback to VCL canvas instead.
-                    xCanvas.set( xCanvasFactory->createInstanceWithArguments(
-                                     OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.rendering.VCLCanvas" )),
-                                     aArg ),
-                                 UNO_QUERY );
-                }
+                xCanvas.set( xCanvasFactory->createInstanceWithArguments(
+                                 bSpriteCanvas ?
+                                 OUString( RTL_CONSTASCII_USTRINGPARAM(
+                                               "com.sun.star.rendering.SpriteCanvas.MultiScreen" )) :
+                                 OUString( RTL_CONSTASCII_USTRINGPARAM(
+                                               "com.sun.star.rendering.Canvas" )),
+                                 aArg ),
+                             UNO_QUERY );
+
+            }
+            else
+            {
+#endif
+                xCanvas.set( xCanvasFactory->createInstanceWithArguments(
+                                 bSpriteCanvas ?
+                                 OUString( RTL_CONSTASCII_USTRINGPARAM(
+                                               "com.sun.star.rendering.SpriteCanvas" )) :
+                                 OUString( RTL_CONSTASCII_USTRINGPARAM(
+                                               "com.sun.star.rendering.Canvas" )),
+                                 aArg ),
+                             UNO_QUERY );
+
+#ifdef WNT
             }
 #endif
 
@@ -9485,14 +9657,23 @@ Reference< rendering::XCanvas > Window::ImplGetCanvas( const Size& rFullscreenSi
     return xCanvas;
 }
 
-Reference< ::com::sun::star::rendering::XCanvas > Window::GetCanvas() const
+Reference< rendering::XCanvas > Window::GetCanvas() const
 {
-    return ImplGetCanvas( Size(), false );
+    return ImplGetCanvas( Size(), false, false );
 }
 
-Reference< ::com::sun::star::rendering::XCanvas > Window::GetFullscreenCanvas( const Size& rFullscreenSize ) const
+Reference< rendering::XSpriteCanvas > Window::GetSpriteCanvas() const
 {
-    return ImplGetCanvas( rFullscreenSize, true );
+    Reference< rendering::XSpriteCanvas > xSpriteCanvas(
+        ImplGetCanvas( Size(), false, true ), uno::UNO_QUERY );
+    return xSpriteCanvas;
+}
+
+Reference< ::com::sun::star::rendering::XSpriteCanvas > Window::GetFullscreenSpriteCanvas( const Size& rFullscreenSize ) const
+{
+    Reference< rendering::XSpriteCanvas > xSpriteCanvas(
+        ImplGetCanvas( rFullscreenSize, true, true ), uno::UNO_QUERY );
+    return xSpriteCanvas;
 }
 
 void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev, const Region* pOuterClip )
@@ -9642,13 +9823,7 @@ void Window::PaintToDevice( OutputDevice* pDev, const Point& rPos, const Size& /
     mpWindowImpl->mbVisible = TRUE;
 
     if( mpWindowImpl->mpBorderWindow )
-    {
-        sal_Int32 nDeltaX = GetOutOffXPixel() - mpWindowImpl->mpBorderWindow->GetOutOffXPixel();
-        sal_Int32 nDeltaY = GetOutOffYPixel() - mpWindowImpl->mpBorderWindow->GetOutOffYPixel();
-        aMF.Move( nDeltaX, nDeltaY );
         mpWindowImpl->mpBorderWindow->ImplPaintToMetaFile( &aMF, pDev );
-        aMF.Move( -nDeltaX, -nDeltaY );
-    }
     else
         ImplPaintToMetaFile( &aMF, pDev );
 

@@ -1,73 +1,48 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified May 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified May 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _LIST_HXX
 #include <tools/list.hxx>
-#endif
-#ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_HELP_HXX
-#include <help.hxx>
-#endif
-#ifndef _SV_STATUS_HXX
-#include <status.hxx>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/event.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/help.hxx>
+#include <vcl/status.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/window.h>
 
 #ifdef USE_JAVA
 
@@ -76,7 +51,6 @@
 #endif
 
 #endif	// USE_JAVA
-
 
 // =======================================================================
 
@@ -285,8 +259,16 @@ void StatusBar::ImplInitSettings( BOOL bFont,
 			aColor = rStyleSettings.GetFaceColor();
 		else
 			aColor = rStyleSettings.GetWindowColor();
-		SetBackground( aColor );
-		mpImplData->mpVirDev->SetBackground( GetBackground() );
+        SetBackground( aColor );
+        mpImplData->mpVirDev->SetBackground( GetBackground() );
+        
+        // NWF background
+        if( ! IsControlBackground() &&
+              IsNativeControlSupported( CTRL_WINDOW_BACKGROUND, PART_BACKGROUND_WINDOW ) )
+        {
+            ImplGetWindowImpl()->mnNativeBackground = PART_BACKGROUND_WINDOW;
+            EnableChildTransparentMode( TRUE );
+        }
 	}
 }
 
@@ -478,8 +460,10 @@ void StatusBar::ImplDrawItem( BOOL bOffScreen, USHORT nPos, BOOL bDrawText, BOOL
 		if ( bOffScreen )
 		{
 			mbInUserDraw = TRUE;
+            mpImplData->mpVirDev->EnableRTL( IsRTLEnabled() );
 			UserDrawEvent aODEvt( mpImplData->mpVirDev, Rectangle( Point(), aTextRectSize ), pItem->mnId );
 			UserDraw( aODEvt );
+            mpImplData->mpVirDev->EnableRTL( FALSE );
 			mbInUserDraw = FALSE;
 		}
 		else
@@ -516,8 +500,55 @@ void StatusBar::ImplDrawItem( BOOL bOffScreen, USHORT nPos, BOOL bDrawText, BOOL
 
 void DrawProgress( Window* pWindow, const Point& rPos,
 				   long nOffset, long nPrgsWidth, long nPrgsHeight,
-				   USHORT nPercent1, USHORT nPercent2, USHORT nPercentCount )
+				   USHORT nPercent1, USHORT nPercent2, USHORT nPercentCount,
+                   const Rectangle& rFramePosSize
+                   )
 {
+    if( pWindow->IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL ) )
+    {
+        bool bNeedErase = ImplGetSVData()->maNWFData.mbProgressNeedsErase;
+        
+        long nFullWidth = (nPrgsWidth + nOffset) * (10000 / nPercentCount);
+        long nPerc = (nPercent2 > 10000) ? 10000 : nPercent2;
+        ImplControlValue aValue( nFullWidth * (long)nPerc / 10000 );
+        Rectangle aDrawRect( rPos, Size( nFullWidth, nPrgsHeight ) );
+        Region aControlRegion( aDrawRect );
+        if( bNeedErase )
+        {
+            Window* pEraseWindow = pWindow;
+            while( pEraseWindow->IsPaintTransparent()                         &&
+                   ! pEraseWindow->ImplGetWindowImpl()->mbFrame )
+            {
+                pEraseWindow = pEraseWindow->ImplGetWindowImpl()->mpParent;
+            }
+            if( pEraseWindow == pWindow )
+                // restore background of pWindow
+                pEraseWindow->Erase( rFramePosSize );
+            else
+            {
+                // restore transparent background
+                Point aTL( pWindow->OutputToAbsoluteScreenPixel( rFramePosSize.TopLeft() ) );
+                aTL = pEraseWindow->AbsoluteScreenToOutputPixel( aTL );
+                Rectangle aRect( aTL, rFramePosSize.GetSize() );
+                pEraseWindow->Invalidate( aRect, INVALIDATE_NOCHILDREN     |
+                                                 INVALIDATE_NOCLIPCHILDREN |
+                                                 INVALIDATE_TRANSPARENT );
+                pEraseWindow->Update();
+            }
+            pWindow->Push( PUSH_CLIPREGION );
+            pWindow->IntersectClipRegion( rFramePosSize );
+        }
+        BOOL bNativeOK = pWindow->DrawNativeControl( CTRL_PROGRESS, PART_ENTIRE_CONTROL, aControlRegion,
+                                                     CTRL_STATE_ENABLED, aValue, rtl::OUString() );
+        if( bNeedErase )
+            pWindow->Pop();
+        if( bNativeOK )
+        {
+            pWindow->Flush();
+            return;
+        }
+    }
+    
 	// Werte vorberechnen
 	USHORT nPerc1 = nPercent1 / nPercentCount;
 	USHORT nPerc2 = nPercent2 / nPercentCount;
@@ -588,14 +619,18 @@ void DrawProgress( Window* pWindow, const Point& rPos,
 void StatusBar::ImplDrawProgress( BOOL bPaint,
 								  USHORT nPercent1, USHORT nPercent2 )
 {
-	// Wenn Paint, dann muss auch Text und Frame gemalt werden
+    bool bNative = IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL );
+	// bPaint: draw text also, else only update progress
 	if ( bPaint )
 	{
 		DrawText( maPrgsTxtPos, maPrgsTxt );
-		DecorationView aDecoView( this );
-		aDecoView.DrawFrame( maPrgsFrameRect, FRAME_DRAW_IN );
+        if( ! bNative )
+        {
+            DecorationView aDecoView( this );
+            aDecoView.DrawFrame( maPrgsFrameRect, FRAME_DRAW_IN );
+        }
 	}
-	
+
 #ifdef USE_JAVA
 	if ( IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL ) )
 	{
@@ -621,33 +656,38 @@ void StatusBar::ImplDrawProgress( BOOL bPaint,
 
 	Point aPos( maPrgsFrameRect.Left()+STATUSBAR_PRGS_OFFSET,
 				maPrgsFrameRect.Top()+STATUSBAR_PRGS_OFFSET );
-	DrawProgress( this, aPos, mnPrgsSize/2, mnPrgsSize, mnPrgsSize,
-				  nPercent1*100, nPercent2*100, mnPercentCount );
+    long nPrgsHeight = mnPrgsSize;
+    if( bNative )
+    {
+        aPos = maPrgsFrameRect.TopLeft();
+        nPrgsHeight = maPrgsFrameRect.GetHeight();
+    }
+	DrawProgress( this, aPos, mnPrgsSize/2, mnPrgsSize, nPrgsHeight,
+				  nPercent1*100, nPercent2*100, mnPercentCount, maPrgsFrameRect );
 }
 
 // -----------------------------------------------------------------------
 
 void StatusBar::ImplCalcProgressRect()
 {
-	// Groessen berechnen
+	// calculate text size
 	Size aPrgsTxtSize( GetTextWidth( maPrgsTxt ), GetTextHeight() );
 	maPrgsTxtPos.X()	= STATUSBAR_OFFSET_X+1;
-	maPrgsTxtPos.Y()	= mnTextY;
-
-	// Progress-Frame berechnen
+    
+	// calculate progress frame
 	maPrgsFrameRect.Left()		= maPrgsTxtPos.X()+aPrgsTxtSize.Width()+STATUSBAR_OFFSET;
 	maPrgsFrameRect.Top()		= mnItemY;
 	maPrgsFrameRect.Bottom()	= mnCalcHeight - STATUSBAR_OFFSET_Y;
     if( IsTopBorder() )
         maPrgsFrameRect.Bottom()+=2;
 
-	// Dabei die Breite des Fensters berechnen
+	// calculate size of progress rects
 	mnPrgsSize = maPrgsFrameRect.Bottom()-maPrgsFrameRect.Top()-(STATUSBAR_PRGS_OFFSET*2);
 	USHORT nMaxPercent = STATUSBAR_PRGS_COUNT;
 
 	long nMaxWidth = mnDX-STATUSBAR_OFFSET-1;
 
-	// Wenn es zu viele Percent-Rects sind, verkuerzen wir
+	// make smaller if there are too many rects
 	while ( maPrgsFrameRect.Left()+ImplCalcProgessWidth( nMaxPercent, mnPrgsSize ) > nMaxWidth )
 	{
 		nMaxPercent--;
@@ -655,8 +695,33 @@ void StatusBar::ImplCalcProgressRect()
 			break;
 	}
 	maPrgsFrameRect.Right() = maPrgsFrameRect.Left() + ImplCalcProgessWidth( nMaxPercent, mnPrgsSize );
-	// Fuer die weitere Berechnung brauchen wir den Teiler
+
+	// save the divisor for later
 	mnPercentCount = 10000 / nMaxPercent;
+    BOOL bNativeOK = FALSE;
+    if( IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL ) )
+    {
+        ImplControlValue aValue;
+        Region aControlRegion( Rectangle( (const Point&)Point(), maPrgsFrameRect.GetSize() ) );
+        Region aNativeControlRegion, aNativeContentRegion;
+        if( (bNativeOK = GetNativeControlRegion( CTRL_PROGRESS, PART_ENTIRE_CONTROL, aControlRegion,
+                                                 CTRL_STATE_ENABLED, aValue, rtl::OUString(),
+                                                 aNativeControlRegion, aNativeContentRegion ) ) != FALSE )
+        {
+            long nProgressHeight = aNativeControlRegion.GetBoundRect().GetHeight();
+            if( nProgressHeight > maPrgsFrameRect.GetHeight() )
+            {
+                long nDelta = nProgressHeight - maPrgsFrameRect.GetHeight();
+                maPrgsFrameRect.Top() -= (nDelta - nDelta/2);
+                maPrgsFrameRect.Bottom() += nDelta/2;
+            }
+            maPrgsTxtPos.Y() = maPrgsFrameRect.Top() + (nProgressHeight - GetTextHeight())/2;
+        }
+    }
+    if( ! bNativeOK )
+        maPrgsTxtPos.Y()	= mnTextY;
+
+
 }
 
 // -----------------------------------------------------------------------
@@ -770,10 +835,12 @@ void StatusBar::Resize()
 	if ( IsBottomBorder() )
 		mnCalcHeight -= 2;
 
+    mnItemY = STATUSBAR_OFFSET_Y;
+    if( IsTopBorder() )
+        mnItemY += 2;
     mnTextY = (mnCalcHeight-GetTextHeight())/2;
     if( IsTopBorder() )
         mnTextY += 2;
-    mnItemY = mnTextY - 1;
 
 	// Formatierung neu ausloesen
 	mbFormat = TRUE;
@@ -1540,7 +1607,9 @@ void StatusBar::SetProgressValue( USHORT nNewPercent )
 	DBG_ASSERT( mbProgressMode, "StatusBar::SetProgressValue(): no progrss mode" );
 	DBG_ASSERTWARNING( nNewPercent <= 100, "StatusBar::SetProgressValue(): nPercent > 100" );
 
-	if ( mbProgressMode && IsReallyVisible() )
+	if ( mbProgressMode
+	&&   IsReallyVisible()
+	&&   (!mnPercent || (mnPercent != nNewPercent)) )
 	{
 #ifdef USE_JAVA
 		// Always force the window out of backing window mode if we are
@@ -1651,8 +1720,29 @@ Size StatusBar::CalcWindowSizePixel() const
 		nOffset = pItem->mnOffset;
 		i++;
 	}
+    
+    long nMinHeight = GetTextHeight();
+    const long nBarTextOffset = STATUSBAR_OFFSET_TEXTY*2;
+    long nProgressHeight = nMinHeight + nBarTextOffset;
+    // FIXME: IsNativeControlSupported and GetNativeControlRegion should be const ?
+    StatusBar* pThis = const_cast<StatusBar*>( this );
+    if( pThis->IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL ) )
+    {
+        ImplControlValue aValue;
+        Region aControlRegion( Rectangle( (const Point&)Point(), Size( nCalcWidth, nMinHeight ) ) );
+        Region aNativeControlRegion, aNativeContentRegion;
+        if( pThis->GetNativeControlRegion( CTRL_PROGRESS, PART_ENTIRE_CONTROL, aControlRegion,
+                                           CTRL_STATE_ENABLED, aValue, rtl::OUString(),
+                                           aNativeControlRegion, aNativeContentRegion ) )
+        {
+            nProgressHeight = aNativeControlRegion.GetBoundRect().GetHeight();
+        }
+    }
 
-	nCalcHeight = GetTextHeight()+(STATUSBAR_OFFSET_TEXTY*2);
+	nCalcHeight = nMinHeight+nBarTextOffset;
+    if( nCalcHeight < nProgressHeight+2 )
+        nCalcHeight = nProgressHeight+2;
+    
     // add border
     if( IsTopBorder() )
         nCalcHeight += 2;

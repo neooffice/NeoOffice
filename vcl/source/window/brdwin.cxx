@@ -1,101 +1,64 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified June 2006 by Edward H. Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified June 2006 by Edward H. Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 #ifndef _SV_SVIDS_HRC
-#include <svids.hrc>
+#include <vcl/svids.hrc>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_SYSWIN_HXX
-#include <syswin.hxx>
-#endif
-#ifndef _SV_DOCKWIN_HXX
-#include <dockwin.hxx>
-#endif
-#ifndef _SV_FLOATWIN_HXX
-#include <floatwin.hxx>
-#endif
-#ifndef _SV_BITMAP_HXX
-#include <bitmap.hxx>
-#endif
-#ifndef _SV_GRADIENT_HXX
-#include <gradient.hxx>
-#endif
-#ifndef _SV_IMAGE_HXX
-#include <image.hxx>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
-#ifndef _SV_HELP_HXX
-#include <help.hxx>
-#endif
-#ifndef _SV_EDIT_HXX
-#include <edit.hxx>
-#endif
-#ifndef _SV_BRDWIN_HXX
-#include <brdwin.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
-#ifndef _SV_METRIC_HXX
-#include <metric.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/event.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/syswin.hxx>
+#include <vcl/dockwin.hxx>
+#include <vcl/floatwin.hxx>
+#include <vcl/bitmap.hxx>
+#include <vcl/gradient.hxx>
+#include <vcl/image.hxx>
+#include <vcl/virdev.hxx>
+#include <vcl/help.hxx>
+#include <vcl/edit.hxx>
+#include <vcl/brdwin.hxx>
+#include <vcl/window.h>
+#include <vcl/metric.hxx>
 #include <tools/debug.hxx>
 
 #ifdef USE_JAVA
 
 #ifndef _SV_COMBOBOX_HXX
-#include <combobox.hxx>
+#include <vcl/combobox.hxx>
 #endif
 #ifndef _SV_ILSTBOX_HXX
-#include <ilstbox.hxx>
+#include <vcl/ilstbox.hxx>
 #endif
 #ifndef _SV_LSTBOX_HXX
-#include <lstbox.hxx>
+#include <vcl/lstbox.hxx>
 #endif
 
 #endif	// USE_JAVA
@@ -106,81 +69,6 @@ using namespace ::com::sun::star::uno;
 #define MIN_CAPTION_HEIGHT 18
 
 // =======================================================================
-
-#ifdef USE_JAVA
-static void ImplGetNativeControlData( Window *pCtrl, ControlType& nCtrlType, ControlPart& nCtrlPart )
-{
-	nCtrlType = 0;
-	nCtrlPart = PART_ENTIRE_CONTROL;
-
-	if ( pCtrl )
-	{
-		switch ( pCtrl->GetType() )
-		{
-			case WINDOW_MULTILINEEDIT:
-				nCtrlType = CTRL_MULTILINE_EDITBOX;
-				break;
-			case WINDOW_EDIT:
-			case WINDOW_PATTERNFIELD:
-			case WINDOW_METRICFIELD:
-			case WINDOW_CURRENCYFIELD:
-			case WINDOW_DATEFIELD:
-			case WINDOW_TIMEFIELD:
-			case WINDOW_LONGCURRENCYFIELD:
-			case WINDOW_NUMERICFIELD:
-			case WINDOW_SPINFIELD:
-				if( pCtrl->GetStyle() & WB_SPIN )
-					nCtrlType = CTRL_SPINBOX;
-				else
-					nCtrlType = CTRL_EDITBOX;
-				break;
-			case WINDOW_LISTBOX:
-			case WINDOW_MULTILISTBOX:
-			case WINDOW_TREELISTBOX:
-				if( pCtrl->GetStyle() & WB_DROPDOWN )
-				{
-					// popup menu
-					nCtrlType = CTRL_LISTBOX;
-					nCtrlPart = PART_ENTIRE_CONTROL;
-				}
-				else
-				{
-					// scrollable list
-					nCtrlType = CTRL_LISTVIEWBOX;
-					nCtrlPart = PART_ENTIRE_CONTROL;
-				}
-				break;
-			case WINDOW_LISTBOXWINDOW:
-				nCtrlType = CTRL_LISTBOX;
-				nCtrlPart = PART_WINDOW;
-				break;
-			case WINDOW_COMBOBOX:
-			case WINDOW_PATTERNBOX:			
-			case WINDOW_NUMERICBOX:			
-			case WINDOW_METRICBOX:			
-			case WINDOW_CURRENCYBOX:
-			case WINDOW_DATEBOX:		
-			case WINDOW_TIMEBOX:			
-			case WINDOW_LONGCURRENCYBOX:
-				if( pCtrl->GetStyle() & WB_DROPDOWN )
-				{
-					nCtrlType = CTRL_COMBOBOX;
-					nCtrlPart = PART_ENTIRE_CONTROL;
-				}
-				else
-				{
-					nCtrlType = CTRL_LISTBOX;
-					nCtrlPart = PART_WINDOW;
-				}
-				break;
-			default:
-				break;
-		}
-	}
-}
-#endif	// USE_JAVA
-
-// -----------------------------------------------------------------------
 
 static void ImplGetPinImage( USHORT nStyle, BOOL bPinIn, Image& rImage )
 {
@@ -194,7 +82,7 @@ static void ImplGetPinImage( USHORT nStyle, BOOL bPinIn, Image& rImage )
 		{
 			Color aMaskColor( 0x00, 0x00, 0xFF );
 			pSVData->maCtrlData.mpPinImgList->InsertFromHorizontalBitmap
-				( ResId( SV_RESID_BITMAP_PIN, ImplGetResMgr() ), 4,
+				( ResId( SV_RESID_BITMAP_PIN, *pResMgr ), 4,
 				  &aMaskColor, NULL, NULL, 0);
 		}
 	}
@@ -1129,7 +1017,7 @@ String ImplBorderWindowView::ImplRequestHelp( ImplBorderFrameData* pData,
 	}
 
     if( nHelpId && ImplGetResMgr() )
-	    aHelpStr = String( ResId( nHelpId, ImplGetResMgr() ) );
+	    aHelpStr = String( ResId( nHelpId, *ImplGetResMgr() ) );
 
     return aHelpStr;
 }
@@ -1215,6 +1103,7 @@ void ImplSmallBorderWindowView::Init( OutputDevice* pDev, long nWidth, long nHei
 	mpOutDev	= pDev;
 	mnWidth 	= nWidth;
 	mnHeight	= nHeight;
+    mbNWFBorder = false;
 
 	USHORT nBorderStyle = mpBorderWindow->GetBorderStyle();
 	if ( nBorderStyle & WINDOW_BORDER_NOBORDER )
@@ -1226,23 +1115,124 @@ void ImplSmallBorderWindowView::Init( OutputDevice* pDev, long nWidth, long nHei
 	}
 	else
 	{
-		USHORT nStyle = FRAME_DRAW_NODRAW;
-		// Wenn Border umgesetzt wurde oder BorderWindow ein Frame-Fenster
-		// ist, dann Border nach aussen
-		if ( (nBorderStyle & WINDOW_BORDER_DOUBLEOUT) || mpBorderWindow->mbSmallOutBorder )
-			nStyle |= FRAME_DRAW_DOUBLEOUT;
-		else
-			nStyle |= FRAME_DRAW_DOUBLEIN;
-		if ( nBorderStyle & WINDOW_BORDER_MONO )
-			nStyle |= FRAME_DRAW_MONO;
-
-		DecorationView	aDecoView( mpOutDev );
-		Rectangle		aRect( 0, 0, 10, 10 );
-		Rectangle		aCalcRect = aDecoView.DrawFrame( aRect, nStyle );
-		mnLeftBorder	= aCalcRect.Left();
-		mnTopBorder 	= aCalcRect.Top();
-		mnRightBorder	= aRect.Right()-aCalcRect.Right();
-		mnBottomBorder	= aRect.Bottom()-aCalcRect.Bottom();
+        // FIXME: this is currently only on aqua, check with other
+        // platforms
+        if( ImplGetSVData()->maNWFData.mbNoFocusRects )
+        {
+            // for native widget drawing we must find out what
+            // control this border belongs to
+            Window *pWin = NULL, *pCtrl = NULL;
+            if( mpOutDev->GetOutDevType() == OUTDEV_WINDOW )
+                pWin = (Window*) mpOutDev;
+        
+            ControlType aCtrlType = 0;
+            if( pWin && (pCtrl = mpBorderWindow->GetWindow( WINDOW_CLIENT )) != NULL )
+            {
+                switch( pCtrl->GetType() )
+                {
+                    case WINDOW_LISTBOX:
+                        if( pCtrl->GetStyle() & WB_DROPDOWN )
+                        {
+                            aCtrlType = CTRL_LISTBOX;
+                            mbNWFBorder = true;
+                        }
+                        break;
+                    case WINDOW_COMBOBOX:
+                        if( pCtrl->GetStyle() & WB_DROPDOWN )
+                        {
+                            aCtrlType = CTRL_COMBOBOX;
+                            mbNWFBorder = true;
+                        }
+                        break;
+                    case WINDOW_MULTILINEEDIT:
+                        aCtrlType = CTRL_MULTILINE_EDITBOX;
+                        mbNWFBorder = true;
+                        break;
+                    case WINDOW_EDIT:
+                    case WINDOW_PATTERNFIELD:
+                    case WINDOW_METRICFIELD:
+                    case WINDOW_CURRENCYFIELD:
+                    case WINDOW_DATEFIELD:
+                    case WINDOW_TIMEFIELD:
+                    case WINDOW_LONGCURRENCYFIELD:
+                    case WINDOW_NUMERICFIELD:
+                    case WINDOW_SPINFIELD:
+                        mbNWFBorder = true;
+                        aCtrlType = (pCtrl->GetStyle() & WB_SPIN) ? CTRL_SPINBOX : CTRL_EDITBOX;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            if( mbNWFBorder )
+            {
+                ImplControlValue aControlValue;
+                Region aCtrlRegion( Rectangle( (const Point&)Point(), Size( mnWidth < 10 ? 10 : mnWidth, mnHeight < 10 ? 10 : mnHeight ) ) );
+                Region aBoundingRgn( aCtrlRegion );
+                Region aContentRgn( aCtrlRegion );
+                if( pWin->GetNativeControlRegion( aCtrlType, PART_ENTIRE_CONTROL, aCtrlRegion,
+                                                  CTRL_STATE_ENABLED, aControlValue, rtl::OUString(),
+                                                  aBoundingRgn, aContentRgn ) )
+                {
+                    Rectangle aBounds( aBoundingRgn.GetBoundRect() );
+                    Rectangle aContent( aContentRgn.GetBoundRect() );
+                    mnLeftBorder    = aContent.Left() - aBounds.Left();
+                    mnRightBorder   = aBounds.Right() - aContent.Right();
+                    mnTopBorder     = aContent.Top() - aBounds.Top();
+                    mnBottomBorder  = aBounds.Bottom() - aContent.Bottom();
+                    if( mnWidth && mnHeight )
+                    {
+    
+                        mpBorderWindow->SetPaintTransparent( TRUE );
+                        mpBorderWindow->SetBackground();
+                        pCtrl->SetPaintTransparent( TRUE );
+                        
+                        Window* pCompoundParent = NULL;
+                        if( pWin->GetParent() && pWin->GetParent()->IsCompoundControl() )
+                            pCompoundParent = pWin->GetParent();
+                        
+                        if( pCompoundParent )
+                            pCompoundParent->SetPaintTransparent( TRUE );
+    
+                        if( mnWidth < aBounds.GetWidth() || mnHeight < aBounds.GetHeight() )
+                        {
+                            if( ! pCompoundParent ) // compound controls have to fix themselves
+                            {
+                                Point aPos( mpBorderWindow->GetPosPixel() );
+                                if( mnWidth < aBounds.GetWidth() )
+                                    aPos.X() -= (aBounds.GetWidth() - mnWidth) / 2;
+                                if( mnHeight < aBounds.GetHeight() )
+                                    aPos.Y() -= (aBounds.GetHeight() - mnHeight) / 2;
+                                mpBorderWindow->SetPosSizePixel( aPos, aBounds.GetSize() );
+                            }
+                        }
+                    }
+                }
+                else
+                    mbNWFBorder = false;
+            }
+        }
+        
+        if( ! mbNWFBorder )
+        {
+            USHORT nStyle = FRAME_DRAW_NODRAW;
+            // Wenn Border umgesetzt wurde oder BorderWindow ein Frame-Fenster
+            // ist, dann Border nach aussen
+            if ( (nBorderStyle & WINDOW_BORDER_DOUBLEOUT) || mpBorderWindow->mbSmallOutBorder )
+                nStyle |= FRAME_DRAW_DOUBLEOUT;
+            else
+                nStyle |= FRAME_DRAW_DOUBLEIN;
+            if ( nBorderStyle & WINDOW_BORDER_MONO )
+                nStyle |= FRAME_DRAW_MONO;
+    
+            DecorationView	aDecoView( mpOutDev );
+            Rectangle		aRect( 0, 0, 10, 10 );
+            Rectangle		aCalcRect = aDecoView.DrawFrame( aRect, nStyle );
+            mnLeftBorder	= aCalcRect.Left();
+            mnTopBorder 	= aCalcRect.Top();
+            mnRightBorder	= aRect.Right()-aCalcRect.Right();
+            mnBottomBorder	= aRect.Bottom()-aCalcRect.Bottom();
+        }
 	}
 }
 
@@ -1284,9 +1274,6 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 
     if( pWin && (pCtrl = mpBorderWindow->GetWindow( WINDOW_CLIENT )) != NULL )
     {
-#ifdef USE_JAVA
-        ImplGetNativeControlData( pCtrl, aCtrlType, aCtrlPart );
-#else	// USE_JAVA
         switch( pCtrl->GetType() )
         {
             case WINDOW_MULTILINEEDIT:
@@ -1310,11 +1297,26 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
             case WINDOW_LISTBOX:
             case WINDOW_MULTILISTBOX:
             case WINDOW_TREELISTBOX:
+#ifdef USE_JAVA
+				if( pCtrl->GetStyle() & WB_DROPDOWN )
+				{
+					// popup menu
+					aCtrlType = CTRL_LISTBOX;
+					aCtrlPart = PART_ENTIRE_CONTROL;
+				}
+				else
+				{
+					// scrollable list
+					aCtrlType = CTRL_LISTVIEWBOX;
+					aCtrlPart = PART_ENTIRE_CONTROL;
+				}
+#else	// USE_JAVA
                 aCtrlType = CTRL_LISTBOX;
                 if( pCtrl->GetStyle() & WB_DROPDOWN )
                     aCtrlPart = PART_ENTIRE_CONTROL;
                 else
                     aCtrlPart = PART_WINDOW;
+#endif	// USE_JAVA
                 break;
 
             case WINDOW_LISTBOXWINDOW:
@@ -1345,9 +1347,8 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
             default:
                 break;
         }
-#endif	// USE_JAVA
     }
-
+    
     if ( aCtrlType && pCtrl->IsNativeControlSupported(aCtrlType, aCtrlPart) )
     {
         ImplControlValue aControlValue;
@@ -1357,6 +1358,16 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
             nState &= ~CTRL_STATE_ENABLED;
         if ( pWin->HasFocus() )
             nState |= CTRL_STATE_FOCUSED;
+        else if( mbNWFBorder )
+        {
+            // FIXME: this is curently only on aqua, see if other platforms can profit
+
+            // FIXME: for aqua focus rings all controls need to support GetNativeControlRegion
+            // for the dropdown style
+            if( pCtrl->HasFocus() || pCtrl->HasChildPathFocus() )
+                nState |= CTRL_STATE_FOCUSED;
+        }
+        
 #ifdef USE_JAVA
 		if ( ( aCtrlType == CTRL_EDITBOX ) && ( ! ( nState & CTRL_STATE_FOCUSED ) ) )
 		{
@@ -1366,7 +1377,8 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 			if ( pCtrl->HasFocus() )
 				nState |= CTRL_STATE_FOCUSED;
 		}
-#endif
+#endif	// USE_JAVA
+
         BOOL bMouseOver = FALSE;
         Window *pCtrlChild = pCtrl->GetWindow( WINDOW_FIRSTCHILD );
         while( pCtrlChild && (bMouseOver = pCtrlChild->IsMouseOver()) == FALSE )
@@ -1397,6 +1409,14 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
 
         Point aPoint;
         Region aCtrlRegion( Rectangle( aPoint, Size( mnWidth, mnHeight ) ) );
+        
+        Region aBoundingRgn( Rectangle( aPoint, Size( mnWidth, mnHeight ) ) );
+        Region aContentRgn=aCtrlRegion;
+        if(pWin->GetNativeControlRegion( aCtrlType, aCtrlPart, aCtrlRegion,
+            nState, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn )) {
+                        aCtrlRegion=aContentRgn;
+        }
+        
         bNativeOK = pWin->DrawNativeControl( aCtrlType, aCtrlPart, aCtrlRegion, nState,
                 aControlValue, rtl::OUString() );
 
@@ -1879,7 +1899,7 @@ void ImplBorderWindow::ImplInit( Window* pParent,
 {
 	// Alle WindowBits entfernen, die wir nicht haben wollen
 	WinBits nOrgStyle = nStyle;
-	WinBits nTestStyle = (WB_MOVEABLE | WB_SIZEABLE | WB_ROLLABLE | WB_PINABLE | WB_CLOSEABLE | WB_STANDALONE | WB_DIALOGCONTROL | WB_NODIALOGCONTROL | WB_SYSTEMFLOATWIN | WB_INTROWIN | WB_DEFAULTWIN | WB_TOOLTIPWIN | WB_NOSHADOW | WB_OWNERDRAWDECORATION);
+	WinBits nTestStyle = (WB_MOVEABLE | WB_SIZEABLE | WB_ROLLABLE | WB_PINABLE | WB_CLOSEABLE | WB_STANDALONE | WB_DIALOGCONTROL | WB_NODIALOGCONTROL | WB_SYSTEMFLOATWIN | WB_INTROWIN | WB_DEFAULTWIN | WB_TOOLTIPWIN | WB_NOSHADOW | WB_OWNERDRAWDECORATION | WB_SYSTEMCHILDWINDOW );
 	if ( nTypeStyle & BORDERWINDOW_STYLE_APP )
 		nTestStyle |= WB_APP;
 	nStyle &= nTestStyle;
@@ -1888,7 +1908,13 @@ void ImplBorderWindow::ImplInit( Window* pParent,
 	mbSmallOutBorder	= FALSE;
 	if ( nTypeStyle & BORDERWINDOW_STYLE_FRAME )
 	{
-        if( nStyle & WB_OWNERDRAWDECORATION )
+        if( (nStyle & WB_SYSTEMCHILDWINDOW) )
+        {
+            mpWindowImpl->mbOverlapWin  = TRUE;
+            mpWindowImpl->mbFrame       = TRUE;
+            mbFrameBorder               = FALSE;
+        }
+        else if( (nStyle & WB_OWNERDRAWDECORATION) )
         {
 		    mpWindowImpl->mbOverlapWin	= TRUE;
 		    mpWindowImpl->mbFrame 		= TRUE;

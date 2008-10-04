@@ -1,88 +1,55 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified February 2006 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified February 2006 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_BRDWIN_HXX
-#include <brdwin.hxx>
-#endif
-#ifndef _SV_WRKWIN_HXX
-#include <wrkwin.hxx>
-#endif
-#ifndef _SV_BUTTON_HXX
-#include <button.hxx>
-#endif
-#ifndef _SV_MNEMONIC_HXX
-#include <mnemonic.hxx>
-#endif
-#ifndef _SV_DIALOG_HXX
-#include <dialog.hxx>
-#endif
-
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/window.h>
+#include <vcl/event.hxx>
+#include <vcl/brdwin.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/button.hxx>
+#include <vcl/mnemonic.hxx>
+#include <vcl/dialog.hxx>
+#include <vcl/decoview.hxx>
 
 #ifdef DBG_UTIL
-#ifndef _SV_MSGBOX_HXX
-#include <msgbox.hxx>
-#endif
+#include <vcl/msgbox.hxx>
 #endif
 
-#include <unowrap.hxx>
+#include <vcl/unowrap.hxx>
 
 #ifdef USE_JAVA
 
@@ -90,7 +57,7 @@
 #include <saldata.hxx>
 #endif
 #ifndef _SV_SALFRAME_HXX
-#include <salframe.hxx>
+#include <vcl/salframe.hxx>
 #endif
 
 #endif	// USE_JAVA
@@ -330,7 +297,7 @@ void Dialog::ImplInit( Window* pParent, WinBits nStyle )
 
         // If Parent is disabled, then we search for a modal dialog
         // in this frame
-        if ( pParent && !pParent->IsInputEnabled() )
+        if ( pParent && (!pParent->IsInputEnabled() || pParent->IsInModalMode()) )
         {
             ImplSVData* pSVData = ImplGetSVData();
             Dialog*     pExeDlg = pSVData->maWinData.mpLastExecuteDlg;
@@ -339,7 +306,7 @@ void Dialog::ImplInit( Window* pParent, WinBits nStyle )
                 // Nur wenn er sichtbar und enabled ist
                 if ( pParent->ImplGetFirstOverlapWindow()->IsWindowOrChild( pExeDlg, TRUE ) &&
                      pExeDlg->IsReallyVisible() &&
-                     pExeDlg->IsEnabled() && pExeDlg->IsInputEnabled() )
+                     pExeDlg->IsEnabled() && pExeDlg->IsInputEnabled() && !pExeDlg->IsInModalMode() )
                 {
                     pParent = pExeDlg;
                     break;
@@ -413,11 +380,19 @@ void Dialog::ImplInit( Window* pParent, WinBits nStyle )
 
 void Dialog::ImplInitSettings()
 {
-    // Wir haben graue Dialoge
+    // user override
     if ( IsControlBackground() )
         SetBackground( GetControlBackground() );
+    // NWF background
+    else if( IsNativeControlSupported( CTRL_WINDOW_BACKGROUND, PART_BACKGROUND_DIALOG ) )
+    {
+        mpWindowImpl->mnNativeBackground = PART_BACKGROUND_DIALOG;
+        EnableChildTransparentMode( TRUE );
+    }
+    // fallback to settings color
     else
         SetBackground( GetSettings().GetStyleSettings().GetDialogColor() );
+
 }
 
 // -----------------------------------------------------------------------
@@ -511,7 +486,7 @@ long Dialog::Notify( NotifyEvent& rNEvt )
             // make sure the dialog is still modal
             // changing focus between application frames may
             // have re-enabled input for our parent
-            if( mbInExecute )
+            if( mbInExecute && mbModalMode )
             {
                 // do not change modal counter (pSVData->maAppData.mnModalDialog)
                 SetModalInputMode( FALSE );
@@ -660,7 +635,10 @@ BOOL Dialog::ImplStartExecuteModal()
         DBG_ASSERT( pParent->IsReallyVisible(),
                     "Dialog::StartExecuteModal() - Parent not visible" );
         DBG_ASSERT( pParent->IsInputEnabled(),
-                    "Dialog::StartExecuteModal() - Parent already disabled, use another parent to ensure modality!" );
+                    "Dialog::StartExecuteModal() - Parent input disabled, use another parent to ensure modality!" );
+        DBG_ASSERT( ! pParent->IsInModalMode(),
+                    "Dialog::StartExecuteModal() - Parent already modally disabled, use another parent to ensure modality!" );
+            
     }
 #endif
 
@@ -694,6 +672,10 @@ BOOL Dialog::ImplStartExecuteModal()
     SetModalInputMode( TRUE );
     mbOldSaveBack = IsSaveBackgroundEnabled();
     EnableSaveBackground();
+    
+    // FIXME: no layouting, workaround some clipping issues
+    ImplAdjustNWFSizes();
+    
     Show();
 
 #ifdef USE_JAVA
@@ -701,6 +683,7 @@ BOOL Dialog::ImplStartExecuteModal()
 	mpWindowImpl->mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 #endif	// USE_JAVA
 
+    pSVData->maAppData.mnModalMode++;
     pSVData->maAppData.mnModalMode++;
     return TRUE;
 }
@@ -722,37 +705,30 @@ short Dialog::Execute()
 
     ImplDelData aDelData;
     ImplAddDel( &aDelData );
+    
+#ifdef DBG_UTIL
     ImplDelData aParentDelData;
-
-    //DBG_ASSERT( mpDialogParent, "Dialog::Execute() - no Parent: cannot set modal count!" );
     Window* pDialogParent = mpDialogParent;
     if( pDialogParent )
-    {
-        pDialogParent->ImplIncModalCount();        // #106303# support frame based modal count
         pDialogParent->ImplAddDel( &aParentDelData );
-    }
+#endif
 
-    // Solange Yielden, bis EndDialog aufgerufen wird, oder der Dialog
-    // zerstoert wird (sollte nicht sein und ist nur vorsichtsmassnahme)
+    // Yield util EndDialog is called or dialog gets destroyed
+    // (the latter should not happen, but better safe than sorry
     while ( !aDelData.IsDelete() && mbInExecute )
         Application::Yield();
 
     ImplEndExecuteModal();
 
+#ifdef DBG_UTIL
     if( pDialogParent  )
     {
         if( ! aParentDelData.IsDelete() )
-        {
-            pDialogParent->ImplDecModalCount();        // #106303# support frame based modal count
             pDialogParent->ImplRemoveDel( &aParentDelData );
-        }
-#ifdef DBG_UTIL
         else
-        {
             DBG_ERROR( "Dialog::Execute() - Parent of dialog destroyed in Execute()" );
-        }
-#endif
     }
+#endif
     if ( !aDelData.IsDelete() )
         ImplRemoveDel( &aDelData );
 #ifdef DBG_UTIL
@@ -894,19 +870,10 @@ void Dialog::SetModalInputMode( BOOL bModal )
         if ( pParent )
         {
             // #103716# dialogs should always be modal to the whole frame window
-            mpDialogParent = pParent->mpWindowImpl->mpFrameWindow;
-
             // #115933# disable the whole frame hierarchie, useful if our parent
             // is a modeless dialog
-            Window *pFrame = mpDialogParent;
-            while( pFrame )
-            {
-                pFrame->EnableInput( FALSE, TRUE, TRUE, this );
-                if( pFrame->GetParent() )
-                    pFrame = pFrame->GetParent()->mpWindowImpl->mpFrameWindow;
-                else
-                    pFrame = NULL;
-            }
+            mpDialogParent = pParent->mpWindowImpl->mpFrameWindow;
+            mpDialogParent->ImplIncModalCount();
         }
 
     }
@@ -919,16 +886,7 @@ void Dialog::SetModalInputMode( BOOL bModal )
             // #115933# re-enable the whole frame hierarchie again (see above)
             // note that code in getfocus assures that we do not accidentally enable
             // windows that were disabled before
-            Window *pFrame = mpDialogParent;
-            while( pFrame )
-            {
-                pFrame->EnableInput( TRUE, TRUE, TRUE, this );
-                if( pFrame->GetParent() )
-                    pFrame = pFrame->GetParent()->mpWindowImpl->mpFrameWindow;
-                else
-                    pFrame = NULL;
-            }
-
+            mpDialogParent->ImplDecModalCount();
         }
 
         // Enable the prev Modal Dialog
@@ -1011,23 +969,33 @@ void Dialog::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULO
 {
     Point aPos = pDev->LogicToPixel( rPos );
     Size aSize = pDev->LogicToPixel( rSize );
-
-    ImplInitSettings();
-
+    
+    Wallpaper aWallpaper = GetBackground();
+    if ( !aWallpaper.IsBitmap() )
+        ImplInitSettings();
+    
     pDev->Push();
     pDev->SetMapMode();
     pDev->SetLineColor();
-    pDev->SetFillColor( GetBackground().GetColor() );
+    
+    if ( aWallpaper.IsBitmap() )
+        pDev->DrawBitmapEx( aPos, aSize, aWallpaper.GetBitmap() );
+    else
+    {
+        pDev->SetFillColor( aWallpaper.GetColor() );
+        pDev->DrawRect( Rectangle( aPos, aSize ) );
+    }
 
-    pDev->DrawRect( Rectangle( aPos, aSize ) );
+    if (!( GetStyle() & WB_NOBORDER ))
+	{
+		ImplBorderWindow aImplWin( this, WB_BORDER|WB_STDWORK, BORDERWINDOW_STYLE_OVERLAP );
+		aImplWin.SetText( GetText() );
+		aImplWin.SetPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height() );
+		aImplWin.SetDisplayActive( TRUE );
+		aImplWin.InitView();
 
-    ImplBorderWindow aImplWin( this, WB_BORDER|WB_STDWORK, BORDERWINDOW_STYLE_OVERLAP );
-    aImplWin.SetText( GetText() );
-    aImplWin.SetPosSizePixel( aPos.X(), aPos.Y(), aSize.Width(), aSize.Height() );
-    aImplWin.SetDisplayActive( TRUE );
-    aImplWin.InitView();
-
-    aImplWin.Draw( Rectangle( aPos, aSize ), pDev, aPos );
+		aImplWin.Draw( Rectangle( aPos, aSize ), pDev, aPos );
+	}
 
     pDev->Pop();
 }

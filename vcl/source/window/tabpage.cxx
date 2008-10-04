@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -42,25 +35,13 @@
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_TABPAGE_HXX
-#include <tabpage.hxx>
-#endif
-#ifndef _SV_TABCTRL_HXX
-#include <tabctrl.hxx>
-#endif
-
-#ifndef _COM_SUN_STAR_ACCESSIBILITY_XACCESSIBLE_HPP_
+#include <vcl/svdata.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/event.hxx>
+#include <vcl/tabpage.hxx>
+#include <vcl/tabctrl.hxx>
+#include <vcl/bitmapex.hxx>
 #include <com/sun/star/accessibility/XAccessible.hpp>
-#endif
 
 
 
@@ -110,7 +91,7 @@ void TabPage::ImplInit( Window* pParent, WinBits nStyle )
 			}
 		}
 	}
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -214,6 +195,34 @@ void TabPage::Paint( const Rectangle& )
         DrawNativeControl( CTRL_TAB_BODY, part, aCtrlRegion, nState,
                 aControlValue, rtl::OUString() );
     }
+}
+
+// -----------------------------------------------------------------------
+void TabPage::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULONG )
+{
+    Point aPos = pDev->LogicToPixel( rPos );
+    Size aSize = pDev->LogicToPixel( rSize );
+
+    Wallpaper aWallpaper = GetBackground();
+    if ( !aWallpaper.IsBitmap() )
+        ImplInitSettings();
+    
+    pDev->Push();
+    pDev->SetMapMode();
+    pDev->SetLineColor();
+
+    if ( aWallpaper.IsBitmap() )
+        pDev->DrawBitmapEx( aPos, aSize, aWallpaper.GetBitmap() );
+    else
+    {
+        if( aWallpaper.GetColor() == COL_AUTO )
+            pDev->SetFillColor( GetSettings().GetStyleSettings().GetDialogColor() );
+        else
+            pDev->SetFillColor( aWallpaper.GetColor() );
+        pDev->DrawRect( Rectangle( aPos, aSize ) );
+    }
+
+    pDev->Pop();
 }
 
 // -----------------------------------------------------------------------

@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified September 2008 by Patrick Luby. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified September 2008 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -38,44 +31,22 @@
 #include "precompiled_vcl.hxx"
 
 #ifndef _SV_SVIDS_HRC
-#include <svids.hrc>
+#include <vcl/svids.hrc>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_METRIC_HXX
-#include <metric.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_WRKWIN_HXX
-#include <wrkwin.hxx>
-#endif
-#ifndef _SV_FIXED_HXX
-#include <fixed.hxx>
-#endif
-#ifndef _SV_SOUND_HXX
-#include <sound.hxx>
-#endif
-#ifndef _SV_BRDWIN_HXX
-#include <brdwin.hxx>
-#endif
-#ifndef _SV_MSGBOX_HXX
-#include <msgbox.hxx>
-#endif
-#ifndef _SV_BUTTON_HXX
-#include <button.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/metric.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/wrkwin.hxx>
+#include <vcl/fixed.hxx>
+#include <vcl/sound.hxx>
+#include <vcl/brdwin.hxx>
+#include <vcl/msgbox.hxx>
+#include <vcl/button.hxx>
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_MNEMONIC_HXX
-#include <mnemonic.hxx>
-#endif
-#ifndef _SV_WINDOW_H
-#include <window.h>
-#endif
+#include <vcl/mnemonic.hxx>
+#include <vcl/window.h>
 
 
 
@@ -91,10 +62,10 @@ static void ImplInitMsgBoxImageList()
 		pSVData->maWinData.mpMsgBoxImgList = new ImageList(4);
         if( pResMgr )
         {
-			Color aNonAlphaMask( 0xC0, 0xC0, 0xC0 );
-			pSVData->maWinData.mpMsgBoxImgList->InsertFromHorizontalBitmap
-					( ResId( SV_RESID_BITMAP_MSGBOX, ImplGetResMgr() ), 4, &aNonAlphaMask );
-		}
+            Color aNonAlphaMask( 0xC0, 0xC0, 0xC0 );
+            pSVData->maWinData.mpMsgBoxImgList->InsertFromHorizontalBitmap
+                ( ResId( SV_RESID_BITMAP_MSGBOX, *pResMgr ), 4, &aNonAlphaMask );
+	}
 	}
 }
 
@@ -494,7 +465,7 @@ void MessBox::SetDefaultCheckBoxText()
 {
     ResMgr* pResMgr = ImplGetResMgr();
     if( pResMgr )
-        maCheckBoxText = XubString( ResId( SV_STDTEXT_DONTHINTAGAIN, pResMgr ) );
+        maCheckBoxText = XubString( ResId( SV_STDTEXT_DONTHINTAGAIN, *pResMgr ) );
 }
 
 // -----------------------------------------------------------------------
@@ -591,7 +562,7 @@ void WarningBox::SetDefaultCheckBoxText()
 {
     ResMgr* pResMgr = ImplGetResMgr();
     if( pResMgr )
-        maCheckBoxText = XubString( ResId( SV_STDTEXT_DONTWARNAGAIN, pResMgr ) );
+        maCheckBoxText = XubString( ResId( SV_STDTEXT_DONTWARNAGAIN, *pResMgr ) );
 }
 
 // -----------------------------------------------------------------------
@@ -673,7 +644,7 @@ void QueryBox::SetDefaultCheckBoxText()
 {
     ResMgr* pResMgr = ImplGetResMgr();
     if( pResMgr )
-        maCheckBoxText = XubString( ResId( SV_STDTEXT_DONTASKAGAIN, pResMgr ) );
+        maCheckBoxText = XubString( ResId( SV_STDTEXT_DONTASKAGAIN, *pResMgr ) );
 }
 
 // -----------------------------------------------------------------------
@@ -682,4 +653,15 @@ Image QueryBox::GetStandardImage()
 {
 	ImplInitMsgBoxImageList();
 	return ImplGetSVData()->maWinData.mpMsgBoxImgList->GetImage( 2 );
+}
+
+Size MessBox::GetOptimalSize(WindowSizeType eType) const
+{
+    switch( eType ) {
+    case WINDOWSIZE_MINIMUM:
+        // FIXME: base me on the font size ?
+        return Size( 250, 100 );
+    default:
+        return Window::GetOptimalSize( eType );
+    }
 }

@@ -229,11 +229,6 @@ LIB1FILES+= \
             $(SLB)$/sala11y.lib
 .ENDIF
 
-.IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+= -framework ApplicationServices
-LIB1FILES+=$(SLB)$/sala11y.lib
-.ENDIF
-
 .IF "$(USE_BUILTIN_RASTERIZER)"!=""
     LIB1FILES +=    $(SLB)$/glyphs.lib
     SHL1STDLIBS+=   $(FREETYPELIB)  $(PSPLIB)
@@ -466,6 +461,8 @@ SHL7STDLIBS= \
 JARCLASSDIRS = com
 JARTARGET = $(TARGET).jar
 JARCOMPRESS = TRUE
+
+.ENDIF # "$(GUIBASE)"=="java"
 
 .ENDIF
 
