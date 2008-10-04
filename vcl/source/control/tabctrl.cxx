@@ -1,76 +1,52 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified May 2006 by Edward H. Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified May 2006 by Edward H. Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
+#include <vcl/svdata.hxx>
 #ifndef _SV_APP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
-#ifndef _SV_HELP_HXX
-#include <help.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_MENU_HXX
-#include <menu.hxx>
-#endif
-#ifndef _SV_BUTTON_HXX
-#include <button.hxx>
-#endif
-#ifndef _SV_TABPAGE_HXX
-#include <tabpage.hxx>
-#endif
-#ifndef _SV_TABCTRL_HXX
-#include <tabctrl.hxx>
-#endif
-#ifndef _VCL_CONTROLLAYOUT_HXX
-#include <controllayout.hxx>
-#endif
+#include <vcl/help.hxx>
+#include <vcl/event.hxx>
+#include <vcl/menu.hxx>
+#include <vcl/button.hxx>
+#include <vcl/tabpage.hxx>
+#include <vcl/tabctrl.hxx>
+#include <vcl/controllayout.hxx>
+
+#include <vcl/window.h>
 
 #include <hash_map>
 #include <vector>
@@ -227,6 +203,7 @@ void TabControl::ImplInitSettings( BOOL bFont,
             SetParentClipMode( PARENTCLIPMODE_NOCLIP );
             SetPaintTransparent( TRUE );
             SetBackground();
+            ImplGetWindowImpl()->mbUseNativeFocus = ImplGetSVData()->maNWFData.mbNoFocusRects;
         }
         else
         {
@@ -293,7 +270,7 @@ void TabControl::ImplLoadRes( const ResId& rResId )
         // Item hinzufuegen
         for( ULONG i = 0; i < nEle; i++ )
         {
-            InsertPage( ResId( (RSHEADER_TYPE *)GetClassRes() ) );
+            InsertPage( ResId( (RSHEADER_TYPE *)GetClassRes(), *rResId.GetResMgr() ) );
             IncrementRes( GetObjSizeRes( (RSHEADER_TYPE *)GetClassRes() ) );
         }
     }
@@ -413,10 +390,24 @@ void TabControl::ImplPosScrollBtns()
 
 // -----------------------------------------------------------------------
 
-Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth ) const
-{
+Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth ) 
+{    
     pItem->maFormatText = pItem->maText;
     Size aSize( GetCtrlTextWidth( pItem->maFormatText ), GetTextHeight() );
+    
+#ifndef USE_JAVA
+    Region aCtrlRegion(  Rectangle( (const Point&)Point( 0, 0 ), aSize ) );
+    Region aBoundingRgn, aContentRgn;
+    const ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
+    if(GetNativeControlRegion( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, aCtrlRegion,
+                                           CTRL_STATE_ENABLED, aControlValue, rtl::OUString(),
+                                           aBoundingRgn, aContentRgn ) )
+    {
+            Rectangle aCont(aContentRgn.GetBoundRect());
+            return aCont.GetSize(); 
+    }
+#endif	// !USE_JAVA
+    
     aSize.Width()  += TAB_TABOFFSET_X*2;
     aSize.Height() += TAB_TABOFFSET_Y*2;
 #ifdef USE_JAVA
@@ -516,7 +507,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
         Font aFont( GetFont() );
         Font aLightFont = aFont;
         aFont.SetTransparent( TRUE );
-        aFont.SetWeight( WEIGHT_BOLD );
+        aFont.SetWeight( (!ImplGetSVData()->maNWFData.mbNoBoldTabFocus) ? WEIGHT_BOLD : WEIGHT_LIGHT );
         aLightFont.SetTransparent( TRUE );
         aLightFont.SetWeight( WEIGHT_LIGHT );
 
@@ -550,7 +541,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
             USHORT          nLines = 0;
             USHORT          nCurLine = 0;
             long            nLineWidthAry[100];
-            USHORT          nLinePosAry[100];
+            USHORT          nLinePosAry[101];
 
             nLineWidthAry[0] = 0;
             nLinePosAry[0] = 0;
@@ -603,14 +594,13 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
                 {
 #ifdef USE_JAVA
 					nLineHeightAry[i] = nIH*(nLines-i) + GetItemsOffset().Y();
-					i++;
 #else	// USE_JAVA
                     if ( i <= nCurLine )
                         nLineHeightAry[i] = nIH*(nLines-(nCurLine-i)) + GetItemsOffset().Y();
                     else
                         nLineHeightAry[i] = nIH*(i-nCurLine-1) + GetItemsOffset().Y();
-                    i++;
 #endif	// USE_JAVA
+                    i++;
                 }
 
                 i = 0;
@@ -625,8 +615,17 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
                             break;
 
                         nIDX = 0;
-                        nDX = (nWidth-nOffsetX-nLineWidthAry[n]) / (nLinePosAry[n+1]-i);
-                        nModDX = (nWidth-nOffsetX-nLineWidthAry[n]) % (nLinePosAry[n+1]-i);
+                        if( nLinePosAry[n+1]-i > 0 )
+                        {
+                            nDX = (nWidth-nOffsetX-nLineWidthAry[n]) / (nLinePosAry[n+1]-i);
+                            nModDX = (nWidth-nOffsetX-nLineWidthAry[n]) % (nLinePosAry[n+1]-i);
+                        }
+                        else
+                        {
+                            // FIXME: this is a bad case of tabctrl way too small
+                            nDX = 0;
+                            nModDX = 0;
+                        }
                         n++;
                     }
 
@@ -651,6 +650,24 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
                     i++;
                 }
             }
+            else {//only one line
+                if(ImplGetSVData()->maNWFData.mbCenteredTabs) {
+                    pItem = mpItemList->First();
+                    int nRightSpace=nMaxWidth;//space left on the right by the tabs
+                    while ( pItem )
+                    {
+                        nRightSpace-=pItem->maRect.Right()-pItem->maRect.Left();
+                        pItem = mpItemList->Next();
+                    }
+                    pItem = mpItemList->First();
+                    while ( pItem )
+                    {
+                        pItem->maRect.Left()+=(int) (nRightSpace/2);
+                        pItem->maRect.Right()+=(int) (nRightSpace/2);
+                        pItem = mpItemList->Next();
+                    }
+                }
+            }
 
 #ifdef USE_JAVA
 			{
@@ -672,7 +689,7 @@ Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight
 			}
 #endif	// USE_JAVA
         }
-
+        
         mnLastWidth     = nWidth;
         mnLastHeight    = nHeight;
         mbFormat        = FALSE;
@@ -843,7 +860,7 @@ void TabControl::ImplShowFocus()
 
     Font aOldFont( GetFont() );
     Font aFont( aOldFont );
-    aFont.SetWeight( WEIGHT_BOLD );
+    aFont.SetWeight( (!ImplGetSVData()->maNWFData.mbNoBoldTabFocus) ? WEIGHT_BOLD : WEIGHT_LIGHT );
     SetFont( aFont );
 
     USHORT          nCurPos     = GetPagePos( mnCurPageId );
@@ -912,7 +929,8 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     if ( pItem->mnId == mnCurPageId )
     {
         nOff2 = 2;
-        nOff3 = 1;
+        if( ! ImplGetSVData()->maNWFData.mbNoActiveTabTextRaise )
+            nOff3 = 1;
     }
     else
 #endif	// !USE_JAVA
@@ -985,7 +1003,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
 			if ( GetNativeControlTextColor( CTRL_TAB_ITEM, PART_ENTIRE_CONTROL, nState, aControlValue, aTextColor ) )
 				SetTextColor( aTextColor );
 		}
-#endif
+#endif	// USE_JAVA
     }
 
     if( ! bLayout && !bNativeOK )
@@ -1046,6 +1064,7 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     // we set the font attributes always before drawing to be re-entrant (DrawNativeControl may trigger additional paints)
     Font aFont( GetFont() );
     aFont.SetTransparent( TRUE );
+    aFont.SetWeight( ((bIsCurrentItem) && (!ImplGetSVData()->maNWFData.mbNoBoldTabFocus)) ? WEIGHT_BOLD : WEIGHT_LIGHT );
 #ifdef USE_JAVA
 	// tab highlighting is sufficient for indicating active tab, leave text
 	// alone
@@ -1167,7 +1186,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
     }
 
     BOOL bNativeOK = FALSE;
-    if( (bNativeOK = IsNativeControlSupported( CTRL_TAB_PANE, PART_ENTIRE_CONTROL) ) == TRUE )
+    if( ! bLayout && (bNativeOK = IsNativeControlSupported( CTRL_TAB_PANE, PART_ENTIRE_CONTROL) ) == TRUE )
     {
         const ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
 
@@ -1333,7 +1352,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
             ImplDrawItem( pCurItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, TRUE );
 		}
 #else	// USE_JAVA
-            ImplDrawItem( pCurItem, aCurRect, bLayout, (pCurItem==pFirstTab), (pItem==pLastTab), TRUE );
+            ImplDrawItem( pCurItem, aCurRect, bLayout, (pCurItem==pFirstTab), (pCurItem==pLastTab), TRUE );
 #endif	// USE_JAVA
     }
 

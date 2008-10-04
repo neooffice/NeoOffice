@@ -1,67 +1,44 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified May 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified May 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_SOUND_HXX
-#include <sound.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_SCRBAR_HXX
-#include <scrbar.hxx>
-#endif
-#ifndef _SV_TIMER_HXX
-#include <timer.hxx>
-#endif
+#include "vcl/event.hxx"
+#include "vcl/sound.hxx"
+#include "vcl/decoview.hxx"
+#include "vcl/scrbar.hxx"
+#include "vcl/timer.hxx"
+#include "vcl/svdata.hxx"
 
-#ifndef _RTL_STRING_HXX_
-#include <rtl/string.hxx>
-#endif
-
-#ifndef _SV_RC_H
-#include <tools/rc.h>
-#endif
-
-
+#include "rtl/string.hxx"
+#include "tools/rc.h"
 
 #ifdef USE_JAVA
 
@@ -71,10 +48,10 @@
 #include <saldata.hxx>
 #endif
 #ifndef _SV_IMAGE_HXX
-#include <image.hxx>
+#include <vcl/image.hxx>
 #endif
 #ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
+#include <vcl/svapp.hxx>
 #endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
@@ -93,7 +70,25 @@ using namespace vos;
 
 #endif	// USE_JAVA
 
+
 using namespace rtl;
+
+/*  #i77549#
+    HACK: for scrollbars in case of thumb rect, page up and page down rect we
+    abuse the HitTestNativeControl interface. All theming engines but aqua
+    are actually able to draw the thumb according to our internal representation.
+    However aqua draws a little outside. The canonical way would be to enhance the
+    HitTestNativeControl passing a ScrollbarValue additionally so all necessary
+    information is available in the call.
+    .    
+    However since there is only this one small exception we will deviate a little and
+    instead pass the respective rect as control region to allow for a small correction.
+    
+    So all places using HitTestNativeControl on PART_THUMB_HORZ, PART_THUMB_VERT,
+    PART_TRACK_HORZ_LEFT, PART_TRACK_HORZ_RIGHT, PART_TRACK_VERT_UPPER, PART_TRACK_VERT_LOWER
+    do not use the control rectangle as region but the actuall part rectangle, making
+    only small deviations feasible.
+*/
 
 // =======================================================================
 
@@ -240,6 +235,7 @@ struct ImplScrollBarData
 {
 	AutoTimer		maTimer;			// Timer
     BOOL            mbHide;
+	Rectangle		maTrackRect; // TODO: move to ScrollBar class when binary incompatibility of ScrollBar class is no longer problematic
 #ifdef USE_JAVA
     BOOL            mbHasEntireControlRect;
     Rectangle       maEntireControlRect;
@@ -267,6 +263,13 @@ void ScrollBar::ImplInit( Window* pParent, WinBits nStyle )
     meDDScrollType      = SCROLL_DONTKNOW;
     mbCalcSize          = TRUE;
     mbFullDrag          = 0;
+
+    if( !mpData )  // TODO: remove when maTrackRect is no longer in mpData
+    {
+	    mpData = new ImplScrollBarData;
+		mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
+        mpData->mbHide = FALSE;
+    }
 
     ImplInitStyle( nStyle );
     Control::ImplInit( pParent, nStyle, NULL );
@@ -362,11 +365,12 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
     mnStateFlags  &= ~SCRBAR_STATE_BTN1_DISABLE;
     mnStateFlags  &= ~SCRBAR_STATE_BTN2_DISABLE;
 
+	Rectangle& maTrackRect = mpData->maTrackRect; // TODO: remove when maTrackRect is no longer in mpData
     if ( mnThumbPixRange )
     {
         if ( GetStyle() & WB_HORZ )
         {
-            maThumbRect.Left()      = maBtn1Rect.Right()+1+mnThumbPixPos;
+            maThumbRect.Left()      = maTrackRect.Left()+mnThumbPixPos;
             maThumbRect.Right()     = maThumbRect.Left()+mnThumbPixSize-1;
             if ( !mnThumbPixPos )
                 maPage1Rect.Right()     = RECT_EMPTY;
@@ -377,12 +381,12 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
             else
             {
                 maPage2Rect.Left()      = maThumbRect.Right()+1;
-                maPage2Rect.Right()     = maBtn2Rect.Left()-1;
+                maPage2Rect.Right()     = maTrackRect.Right();
             }
         }
         else
         {
-            maThumbRect.Top()       = maBtn1Rect.Bottom()+1+mnThumbPixPos;
+            maThumbRect.Top()       = maTrackRect.Top()+mnThumbPixPos;
             maThumbRect.Bottom()    = maThumbRect.Top()+mnThumbPixSize-1;
             if ( !mnThumbPixPos )
                 maPage1Rect.Bottom()    = RECT_EMPTY;
@@ -393,7 +397,7 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
             else
             {
                 maPage2Rect.Top()       = maThumbRect.Bottom()+1;
-                maPage2Rect.Bottom()    = maBtn2Rect.Top()-1;
+                maPage2Rect.Bottom()    = maTrackRect.Bottom();
             }
         }
     }
@@ -402,24 +406,24 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
         Size aScrBarSize = GetOutputSizePixel();
         if ( GetStyle() & WB_HORZ )
         {
-            if ( aScrBarSize.Width() > maBtn1Rect.getWidth() + maBtn2Rect.getWidth() )
+            const long nSpace = maTrackRect.Right() - maTrackRect.Left();
+            if ( nSpace > 0 )
             {
-                long nSpace = aScrBarSize.Width() - maBtn1Rect.getWidth() - maBtn2Rect.getWidth();
-                maPage1Rect.Left()   = maBtn1Rect.Right()+1;
-                maPage2Rect.Right()  = maBtn1Rect.Right()+(nSpace/2);
-                maPage2Rect.Left()   = maBtn1Rect.Right()+1+(nSpace/2);
-                maPage2Rect.Right()  = maBtn2Rect.Left()-1;
+                maPage1Rect.Left()   = maTrackRect.Left();
+                maPage1Rect.Right()  = maTrackRect.Left() + (nSpace/2);
+                maPage2Rect.Left()   = maPage1Rect.Right() + 1;
+                maPage2Rect.Right()  = maTrackRect.Right();
             }
         }
         else
         {
-            if ( aScrBarSize.Height() > maBtn1Rect.getHeight() + maBtn2Rect.getHeight() )
+            const long nSpace = maTrackRect.Bottom() - maTrackRect.Top();
+            if ( nSpace > 0 )
             {
-                long nSpace = aScrBarSize.Height() - maBtn1Rect.getHeight() - maBtn2Rect.getHeight();
-                maPage1Rect.Top()    = maBtn1Rect.Bottom()+1;
-                maPage1Rect.Bottom() = maBtn1Rect.Bottom()+(nSpace/2);
-                maPage2Rect.Top()    = maBtn1Rect.Bottom()+1+(nSpace/2);
-                maPage2Rect.Bottom() = maBtn2Rect.Top()-1;
+                maPage1Rect.Top()    = maTrackRect.Top();
+                maPage1Rect.Bottom() = maTrackRect.Top() + (nSpace/2);
+                maPage2Rect.Top()    = maPage1Rect.Bottom() + 1;
+                maPage2Rect.Bottom() = maTrackRect.Bottom();
             }
         }
     }
@@ -453,9 +457,10 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
     }
 }
 
+#ifdef USE_JAVA
+
 // -----------------------------------------------------------------------
 
-#ifdef USE_JAVA
 void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
 {
 	USHORT      nOldStateFlags  = mnStateFlags;
@@ -551,6 +556,7 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
         ImplDraw( nDraw, this );
     }
 }
+
 #endif	// USE_JAVA
 
 // -----------------------------------------------------------------------
@@ -591,15 +597,14 @@ long ScrollBar::ImplCalcThumbPosPix( long nPos )
 
 void ScrollBar::ImplCalc( BOOL bUpdate )
 {
-    Size aSize = GetOutputSizePixel();
-    long nMinThumbSize = GetSettings().GetStyleSettings().GetMinThumbSize();;
+    const Size aSize = GetOutputSizePixel();
+    const long nMinThumbSize = GetSettings().GetStyleSettings().GetMinThumbSize();;
 
+	Rectangle& maTrackRect = mpData->maTrackRect;  // TODO: remove when maTrackRect is no longer in mpData
     if ( mbCalcSize )
     {
-        Size aBtnSize;
-        Point aPoint( 0, 0 );
-        Region aControlRegion( Rectangle( aPoint, aSize ) );
-        Region aBtn1Region, aBtn2Region, aBoundingRegion;
+        const Region aControlRegion( Rectangle( (const Point&)Point(0,0), aSize ) );
+        Region aBtn1Region, aBtn2Region, aTrackRegion, aBoundingRegion;
 
         if ( GetStyle() & WB_HORZ )
         {
@@ -613,27 +618,31 @@ void ScrollBar::ImplCalc( BOOL bUpdate )
             }
             else
             {
-                aBtnSize            = Size( aSize.Height(), aSize.Height() );
+                Size aBtnSize( aSize.Height(), aSize.Height() );
                 maBtn2Rect.Top()    = maBtn1Rect.Top();
                 maBtn2Rect.Left()   = aSize.Width()-aSize.Height();
                 maBtn1Rect.SetSize( aBtnSize );
                 maBtn2Rect.SetSize( aBtnSize );
             }
-            // Check if available space is big enough for thumb ( min thumb size = ScrBar width/height )
-            if ( aSize.Width() > maBtn1Rect.getWidth() + maBtn2Rect.getWidth() + nMinThumbSize )
-                mnThumbPixRange = aSize.Width() - maBtn1Rect.getWidth() - maBtn2Rect.getWidth() - 1;
-            else
-                mnThumbPixRange = 0;
 
-            if ( aSize.Width() > maBtn1Rect.getWidth() + maBtn2Rect.getWidth() )
+            if ( GetNativeControlRegion( CTRL_SCROLLBAR, PART_TRACK_HORZ_AREA,
+	                 aControlRegion, 0, ImplControlValue(), rtl::OUString(), aBoundingRegion, aTrackRegion ) )
+                maTrackRect = aTrackRegion.GetBoundRect();
+            else
+                maTrackRect = Rectangle( maBtn1Rect.TopRight(), maBtn2Rect.BottomLeft() );
+
+            // Check if available space is big enough for thumb ( min thumb size = ScrBar width/height )
+            mnThumbPixRange = maTrackRect.Right() - maTrackRect.Left();
+            if( mnThumbPixRange > 0 )
             {
-                maPage1Rect.Left()      = maBtn1Rect.Right()+1;
-                maPage1Rect.Bottom()    = maBtn1Rect.Bottom();
-                maPage2Rect.Bottom()    = maBtn1Rect.Bottom();
-                maThumbRect.Bottom()    = maBtn1Rect.Bottom();
+                maPage1Rect.Left()      = maTrackRect.Left();
+                maPage1Rect.Bottom()	=
+                maPage2Rect.Bottom()	=
+                maThumbRect.Bottom()    = maTrackRect.Bottom();
             }
             else
             {
+                mnThumbPixRange = 0;
                 maPage1Rect.SetEmpty();
                 maPage2Rect.SetEmpty();
             }
@@ -650,28 +659,31 @@ void ScrollBar::ImplCalc( BOOL bUpdate )
             }
             else
             {
-                aBtnSize            = Size( aSize.Width(), aSize.Width() );
+                const Size aBtnSize( aSize.Width(), aSize.Width() );
                 maBtn2Rect.Left()   = maBtn1Rect.Left();
                 maBtn2Rect.Top()    = aSize.Height()-aSize.Width();
                 maBtn1Rect.SetSize( aBtnSize );
                 maBtn2Rect.SetSize( aBtnSize );
             }
 
-            // Check if available space is big enough for thumb
-            if ( aSize.Height() > maBtn1Rect.getHeight() + maBtn2Rect.getHeight() + nMinThumbSize )
-                mnThumbPixRange = aSize.Height() - maBtn1Rect.getHeight() - maBtn2Rect.getHeight() - 1;
-            else
-                mnThumbPixRange = 0;
+            if ( GetNativeControlRegion( CTRL_SCROLLBAR, PART_TRACK_VERT_AREA,
+	                 aControlRegion, 0, ImplControlValue(), rtl::OUString(), aBoundingRegion, aTrackRegion ) )
+                maTrackRect = aTrackRegion.GetBoundRect();
+			else
+				maTrackRect = Rectangle( maBtn1Rect.BottomLeft()+Point(0,1), maBtn2Rect.TopRight() );
 
-            if ( aSize.Height() > maBtn1Rect.getHeight() + maBtn2Rect.getHeight() )
+            // Check if available space is big enough for thumb
+            mnThumbPixRange = maTrackRect.Bottom() - maTrackRect.Top();
+            if( mnThumbPixRange > 0 )
             {
-                maPage1Rect.Top()       = maBtn1Rect.Bottom()+1;
-                maPage1Rect.Right()     = maBtn1Rect.Right();
-                maPage2Rect.Right()     = maBtn1Rect.Right();
-                maThumbRect.Right()     = maBtn1Rect.Right();
+                maPage1Rect.Top()       = maTrackRect.Top();
+                maPage1Rect.Right()		=
+                maPage2Rect.Right()		=
+                maThumbRect.Right()     = maTrackRect.Right();
             }
             else
-            {
+			{
+                mnThumbPixRange = 0;
                 maPage1Rect.SetEmpty();
                 maPage2Rect.SetEmpty();
             }
@@ -759,6 +771,7 @@ void ScrollBar::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, 
     maBtn1Rect+=aPos;
     maBtn2Rect+=aPos;
     maThumbRect+=aPos;
+    mpData->maTrackRect+=aPos; // TODO: update when maTrackRect is no longer in mpData
     maPage1Rect+=aPos;
     maPage2Rect+=aPos;
 
@@ -787,7 +800,6 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
         // Draw the entire background if the control supports it
         if( IsNativeControlSupported(CTRL_SCROLLBAR, bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT) )
         {
-            Region  		aCtrlRegion;
             ControlState		nState = ( IsEnabled() ? CTRL_STATE_ENABLED : 0 ) | ( HasFocus() ? CTRL_STATE_FOCUSED : 0 );
             ScrollbarValue	scrValue;
 
@@ -802,7 +814,6 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 #ifdef USE_JAVA
            	                    ((mnStateFlags & SCRBAR_STATE_BTN1_INSIDE) ? CTRL_STATE_SELECTED : 0) |
 #endif	// USE_JAVA
-
 								((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? CTRL_STATE_ENABLED : 0);
             scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0) |
 #ifdef USE_JAVA
@@ -833,6 +844,8 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 
             aControlValue.setOptionalVal( (void *)(&scrValue) );
 
+#if 1
+            Region aCtrlRegion;
 #ifdef USE_JAVA
 			if( mpData && mpData->mbHasEntireControlRect )
 			{
@@ -852,7 +865,9 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 #ifdef USE_JAVA
 			}
 #endif	// USE_JAVA
-
+#else
+			const Region aCtrlRegion( Rectangle( Point(0,0), GetOutputSizePixel() ) );
+#endif
             bNativeOK = DrawNativeControl( CTRL_SCROLLBAR, (bHorz ? PART_DRAW_BACKGROUND_HORZ : PART_DRAW_BACKGROUND_VERT),
                             aCtrlRegion, nState, aControlValue, rtl::OUString() );
         }
@@ -903,7 +918,6 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
                 nState1 = (nState2 &= ~CTRL_STATE_ENABLED);
             else
                 nState1 = (nState2 |= CTRL_STATE_ENABLED);
-
 
             nState1 |= ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? CTRL_STATE_PRESSED : 0);
             nState2 |= ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0);
@@ -1251,7 +1265,11 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             break;
 
         case SCROLL_PAGEUP:
-            if ( maPage1Rect.IsInside( rMousePos ) )
+            // HitTestNativeControl, see remark at top of file
+            if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT: PART_TRACK_VERT_UPPER,
+                                       Region( maPage1Rect ), rMousePos, bIsInside )?
+                    bIsInside:
+                    maPage1Rect.IsInside( rMousePos ) )
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_PAGE1_DOWN;
@@ -1261,7 +1279,11 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             break;
 
         case SCROLL_PAGEDOWN:
-            if ( maPage2Rect.IsInside( rMousePos ) )
+            // HitTestNativeControl, see remark at top of file
+            if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_RIGHT: PART_TRACK_VERT_LOWER,
+                                       Region( maPage2Rect ), rMousePos, bIsInside )?
+                    bIsInside:
+                    maPage2Rect.IsInside( rMousePos ) )
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_PAGE2_DOWN;
@@ -1366,62 +1388,76 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                 else
 #endif	// USE_JAVA
                 meScrollType    = SCROLL_LINEDOWN;
+                meScrollType    = SCROLL_LINEDOWN;
                 mnDragDraw      = SCRBAR_DRAW_BTN2;
-            }
-            else
-                Sound::Beep( SOUND_DISABLE, this );
-        }
-        else if ( maThumbRect.IsInside( rMousePos ) || rMEvt.IsMiddle() )
-        {
-            if( mpData )
-            {
-                mpData->mbHide = TRUE;  // disable focus blinking
-                if( HasFocus() )
-                    ImplDraw( SCRBAR_DRAW_THUMB, this ); // paint without focus
-            }
-
-            if ( mnVisibleSize < mnMaxRange-mnMinRange )
-            {
-                nTrackFlags     = 0;
-                meScrollType    = SCROLL_DRAG;
-                mnDragDraw      = SCRBAR_DRAW_THUMB;
-                
-                // calculate mouse offset
-                if( rMEvt.IsMiddle() )
-                {
-                    bDragToMouse = TRUE;
-                    if ( GetStyle() & WB_HORZ )
-                        mnMouseOff = maThumbRect.GetWidth()/2;
-                    else
-                        mnMouseOff = maThumbRect.GetHeight()/2;
-                }
-                else
-                {
-                    if ( GetStyle() & WB_HORZ )
-                        mnMouseOff = rMousePos.X()-maThumbRect.Left();
-                    else
-                        mnMouseOff = rMousePos.Y()-maThumbRect.Top();
-                }
-
-                mnStateFlags |= SCRBAR_STATE_THUMB_DOWN;
-                ImplDraw( mnDragDraw, this );
             }
             else
                 Sound::Beep( SOUND_DISABLE, this );
         }
         else
         {
-            nTrackFlags = STARTTRACK_BUTTONREPEAT;
-
-            if ( maPage1Rect.IsInside( rMousePos ) )
+            bool bThumbHit = HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_THUMB_HORZ : PART_THUMB_VERT,
+                                                   Region( maThumbRect ), rMousePos, bIsInside )
+                             ? bIsInside : maThumbRect.IsInside( rMousePos );
+            bool bDragHandling = rMEvt.IsMiddle() || bThumbHit || ImplGetSVData()->maNWFData.mbScrollbarJumpPage;
+            if( bDragHandling )
             {
-                meScrollType    = SCROLL_PAGEUP;
-                mnDragDraw      = SCRBAR_DRAW_PAGE1;
+                if( mpData )
+                {
+                    mpData->mbHide = TRUE;  // disable focus blinking
+                    if( HasFocus() )
+                        ImplDraw( SCRBAR_DRAW_THUMB, this ); // paint without focus
+                }
+    
+                if ( mnVisibleSize < mnMaxRange-mnMinRange )
+                {
+                    nTrackFlags     = 0;
+                    meScrollType    = SCROLL_DRAG;
+                    mnDragDraw      = SCRBAR_DRAW_THUMB;
+                    
+                    // calculate mouse offset
+                    if( rMEvt.IsMiddle() || (ImplGetSVData()->maNWFData.mbScrollbarJumpPage && !bThumbHit) )
+                    {
+                        bDragToMouse = TRUE;
+                        if ( GetStyle() & WB_HORZ )
+                            mnMouseOff = maThumbRect.GetWidth()/2;
+                        else
+                            mnMouseOff = maThumbRect.GetHeight()/2;
+                    }
+                    else
+                    {
+                        if ( GetStyle() & WB_HORZ )
+                            mnMouseOff = rMousePos.X()-maThumbRect.Left();
+                        else
+                            mnMouseOff = rMousePos.Y()-maThumbRect.Top();
+                    }
+    
+                    mnStateFlags |= SCRBAR_STATE_THUMB_DOWN;
+                    ImplDraw( mnDragDraw, this );
+                }
+                else
+                    Sound::Beep( SOUND_DISABLE, this );
             }
-            else
+            else if( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_AREA : PART_TRACK_VERT_AREA,
+                                           aControlRegion, rMousePos, bIsInside )?
+                bIsInside : TRUE )
             {
-                meScrollType    = SCROLL_PAGEDOWN;
-                mnDragDraw      = SCRBAR_DRAW_PAGE2;
+                nTrackFlags = STARTTRACK_BUTTONREPEAT;
+    
+                // HitTestNativeControl, see remark at top of file
+                if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
+                                           Region( maPage1Rect ), rMousePos, bIsInside )?
+                    bIsInside:                
+                    maPage1Rect.IsInside( rMousePos ) )
+                {
+                    meScrollType    = SCROLL_PAGEUP;
+                    mnDragDraw      = SCRBAR_DRAW_PAGE1;
+                }
+                else
+                {
+                    meScrollType    = SCROLL_PAGEDOWN;
+                    mnDragDraw      = SCRBAR_DRAW_PAGE2;
+                }
             }
         }
 
@@ -1490,7 +1526,6 @@ void ScrollBar::Tracking( const TrackingEvent& rTEvt )
 
         if( mpData )
             mpData->mbHide = FALSE; // re-enable focus blinking
-
     }
     else
     {
@@ -1617,9 +1652,10 @@ void ScrollBar::GetFocus()
     Control::GetFocus();
 }
 
+#ifdef USE_JAVA
+
 // -----------------------------------------------------------------------
 
-#ifdef USE_JAVA
 void ScrollBar::ImplNewImplScrollBarData()
 {
 	mpData = new ImplScrollBarData;
@@ -1627,6 +1663,7 @@ void ScrollBar::ImplNewImplScrollBarData()
 	mpData->mbHide = FALSE;
 	mpData->mbHasEntireControlRect = FALSE;
 }
+
 #endif	// USE_JAVA
 
 // -----------------------------------------------------------------------
@@ -1717,11 +1754,23 @@ Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
             bIsInside:
             maBtn2Rect.IsInside( rPt ) )
         return &maBtn2Rect;
-    else if( maPage1Rect.IsInside( rPt ) )
+    // HitTestNativeControl, see remark at top of file
+    else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
+                Region( maPage1Rect ), rPt, bIsInside)?
+            bIsInside:
+            maPage1Rect.IsInside( rPt ) )
         return &maPage1Rect;
-    else if( maPage2Rect.IsInside( rPt ) )
+    // HitTestNativeControl, see remark at top of file
+    else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_LOWER,
+                Region( maPage2Rect ), rPt, bIsInside)?
+            bIsInside:
+            maPage2Rect.IsInside( rPt ) )
         return &maPage2Rect;
-    else if( maThumbRect.IsInside( rPt ) )
+    // HitTestNativeControl, see remark at top of file
+    else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_THUMB_HORZ : PART_THUMB_VERT,
+                Region( maThumbRect ), rPt, bIsInside)?
+             bIsInside:
+             maThumbRect.IsInside( rPt ) )
         return &maThumbRect;
     else
         return NULL;

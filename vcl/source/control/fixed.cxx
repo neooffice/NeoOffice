@@ -1,58 +1,41 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_FIXED_HXX
-#include <fixed.hxx>
-#endif
-#ifndef _VCL_CONTROLLAYOUT_HXX
-#include <controllayout.hxx>
-#endif
+#include <vcl/decoview.hxx>
+#include <vcl/event.hxx>
+#include <vcl/fixed.hxx>
+#include <vcl/controllayout.hxx>
+#include <vcl/window.h>
 
 #include <tools/rc.h>
-
-
 
 // =======================================================================
 
@@ -182,6 +165,7 @@ void FixedText::ImplInitSettings( BOOL bFont,
 				SetBackground( pParent->GetBackground() );
 		}
 	}
+
 #ifdef USE_JAVA
 	if ( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
 	{
@@ -235,6 +219,22 @@ FixedText::FixedText( Window* pParent, const ResId& rResId ) :
 
 // -----------------------------------------------------------------------
 
+FixedText::FixedText( Window* pParent, const ResId& rResId, bool bDisableAccessibleLabelForRelation ) :
+    Control( WINDOW_FIXEDTEXT )
+{
+    rResId.SetRT( RSC_TEXT );
+    WinBits nStyle = ImplInitRes( rResId );
+    ImplInit( pParent, nStyle );
+    ImplLoadRes( rResId );
+    if ( bDisableAccessibleLabelForRelation )
+        ImplGetWindowImpl()->mbDisableAccessibleLabelForRelation = TRUE;
+
+    if ( !(nStyle & WB_HIDE) )
+        Show();
+}
+
+// -----------------------------------------------------------------------
+
 USHORT FixedText::ImplGetTextStyle( WinBits nWinStyle )
 {
 	USHORT nTextStyle = TEXT_DRAW_MNEMONIC | TEXT_DRAW_ENDELLIPSIS;
@@ -277,7 +277,7 @@ void FixedText::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 
     if ( nWinStyle & WB_EXTRAOFFSET )
         aPos.X() += 2;
-    
+
 	if ( nWinStyle & WB_PATHELLIPSIS )
 	{
 		nTextStyle &= ~(TEXT_DRAW_ENDELLIPSIS | TEXT_DRAW_MULTILINE | TEXT_DRAW_WORDBREAK);
@@ -439,25 +439,41 @@ void FixedText::DataChanged( const DataChangedEvent& rDCEvt )
 
 // -----------------------------------------------------------------------
 
-Size FixedText::CalcMinimumSize( long nMaxWidth ) const
+Size FixedText::CalcMinimumTextSize( Control const *pControl, long nMaxWidth )
 {
-	USHORT nStyle = ImplGetTextStyle( GetStyle() );
-	if ( !( GetStyle() & WB_NOLABEL ) )
+	USHORT nStyle = ImplGetTextStyle( pControl->GetStyle() );
+	if ( !( pControl->GetStyle() & WB_NOLABEL ) )
 		nStyle |= TEXT_DRAW_MNEMONIC;
 
-	Size aSize = GetTextRect( Rectangle( Point(), Size( (nMaxWidth ? nMaxWidth : 0x7fffffff), 0x7fffffff ) ),
-							  GetText(), nStyle ).GetSize();
+	Size aSize = pControl->GetTextRect( Rectangle( Point(), Size( (nMaxWidth ? nMaxWidth : 0x7fffffff), 0x7fffffff ) ),
+									   pControl->GetText(), nStyle ).GetSize();
 
-    if ( GetStyle() & WB_EXTRAOFFSET )
+    if ( pControl->GetStyle() & WB_EXTRAOFFSET )
         aSize.Width() += 2;
-    
+
 	// GetTextRect verkraftet keinen leeren String:
 	if ( aSize.Width() < 0 )
 		aSize.Width() = 0;
 	if ( aSize.Height() <= 0 )
-		aSize.Height() = GetTextHeight();
+		aSize.Height() = pControl->GetTextHeight();
 
-	return CalcWindowSize( aSize );
+	return aSize;
+}
+
+Size FixedText::CalcMinimumSize( long nMaxWidth ) const
+{
+	return CalcWindowSize( CalcMinimumTextSize ( this, nMaxWidth ) );
+}
+// -----------------------------------------------------------------------
+
+Size FixedText::GetOptimalSize(WindowSizeType eType) const
+{
+    switch (eType) {
+    case WINDOWSIZE_MINIMUM:
+        return CalcMinimumSize();
+    default:
+        return Control::GetOptimalSize( eType );
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -465,9 +481,8 @@ Size FixedText::CalcMinimumSize( long nMaxWidth ) const
 void  FixedText::FillLayoutData() const
 {
     mpLayoutData = new vcl::ControlLayoutData();
-	ImplDraw( const_cast<FixedText*>(this), 0, Point(), GetOutputSizePixel(), true );
+    ImplDraw( const_cast<FixedText*>(this), 0, Point(), GetOutputSizePixel(), true );
 }
-
 
 // =======================================================================
 
@@ -566,7 +581,6 @@ void FixedLine::ImplDraw( bool bLayout )
 		        const ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
 
 				ControlState nState = CTRL_STATE_ENABLED;
-				int part = PART_ENTIRE_CONTROL;
 				if ( !IsEnabled() )
 					nState &= ~CTRL_STATE_ENABLED;
 				if ( HasFocus() )
@@ -595,7 +609,7 @@ void FixedLine::ImplDraw( bool bLayout )
 #endif	// USE_JAVA
             long nX = 0;
             long nY = 0;
-            
+
             if ( nWinStyle & WB_VERT )
             {
                 nX = (aOutSize.Width()-1)/2;
@@ -606,7 +620,7 @@ void FixedLine::ImplDraw( bool bLayout )
                 nY = (aOutSize.Height()-1)/2;
                 DrawLine( Point( 0, nY ), Point( aOutSize.Width()-1, nY ) );
             }
-            
+
             if ( !(rStyleSettings.GetOptions() & STYLE_OPTION_MONO) )
             {
                 SetLineColor( rStyleSettings.GetLightColor() );
@@ -644,7 +658,6 @@ void FixedLine::ImplDraw( bool bLayout )
 		        const ImplControlValue aControlValue( BUTTONVALUE_DONTKNOW, rtl::OUString(), 0 );
 
 				ControlState nState = CTRL_STATE_ENABLED;
-				int part = PART_ENTIRE_CONTROL;
 				if ( !IsEnabled() )
 					nState &= ~CTRL_STATE_ENABLED;
 				if ( HasFocus() )
@@ -781,6 +794,18 @@ void FixedLine::DataChanged( const DataChangedEvent& rDCEvt )
 	}
 }
 
+// -----------------------------------------------------------------------
+
+Size FixedLine::GetOptimalSize(WindowSizeType eType) const
+{
+    switch (eType) {
+    case WINDOWSIZE_MINIMUM:
+        return CalcWindowSize( FixedText::CalcMinimumTextSize ( this ) );
+    default:
+        return Control::GetOptimalSize( eType );
+    }
+}
+
 // =======================================================================
 
 void FixedBitmap::ImplInit( Window* pParent, WinBits nStyle )
@@ -834,7 +859,7 @@ void FixedBitmap::ImplLoadRes( const ResId& rResId )
 
 	if ( RSC_FIXEDBITMAP_BITMAP & nObjMask )
 	{
-		maBitmap = Bitmap( ResId( (RSHEADER_TYPE*)GetClassRes() ) );
+		maBitmap = Bitmap( ResId( (RSHEADER_TYPE*)GetClassRes(), *rResId.GetResMgr() ) );
 		IncrementRes( GetObjSizeRes( (RSHEADER_TYPE*)GetClassRes() ) );
 	}
 }
@@ -1070,6 +1095,7 @@ void FixedImage::ImplInitSettings()
 		else
 			SetBackground( pParent->GetBackground() );
 	}
+
 #ifdef USE_JAVA
 	if ( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
 	{
@@ -1107,7 +1133,7 @@ void FixedImage::ImplLoadRes( const ResId& rResId )
 
 	if ( RSC_FIXEDIMAGE_IMAGE & nObjMask )
 	{
-		maImage = Image( ResId( (RSHEADER_TYPE*)GetClassRes() ) );
+		maImage = Image( ResId( (RSHEADER_TYPE*)GetClassRes(), *rResId.GetResMgr() ) );
 		IncrementRes( GetObjSizeRes( (RSHEADER_TYPE*)GetClassRes() ) );
 	}
 }

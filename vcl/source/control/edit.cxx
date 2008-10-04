@@ -1,36 +1,29 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified June 2006 by Edward H. Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified June 2006 by Edward H. Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -40,101 +33,46 @@
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_CURSOR_HXX
-#include <cursor.hxx>
-#endif
-#ifndef _SV_VIRDEV_HXX
-#include <virdev.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/event.hxx>
+#include <vcl/cursor.hxx>
+#include <vcl/virdev.hxx>
 #ifndef _SV_SVIDS_HRC
-#include <svids.hrc>
+#include <vcl/svids.hrc>
 #endif
-#ifndef _SV_MENU_HXX
-#include <menu.hxx>
-#endif
-#ifndef _VCL_CMDEVT_H
-#include <cmdevt.h>
-#endif
-#ifndef _SV_SUBEDIT_HXX
-#include <subedit.hxx>
-#endif
-#ifndef _SV_EDIT_HXX
-#include <edit.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX 
-#include <svapp.hxx>
-#endif
-#ifndef _VCL_CONTROLLAYOUT_HXX
-#include <controllayout.hxx>
-#endif
+#include <vcl/menu.hxx>
+#include <vcl/cmdevt.h>
+#include <vcl/subedit.hxx>
+#include <vcl/edit.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/controllayout.hxx>
+#include <vcl/msgbox.hxx>
+#include <vcl/window.h>
 
 #include <vos/mutex.hxx>
 
 
-#ifndef _COM_SUN_STAR_I18N_XBREAKITERATOR_HPP_
 #include <com/sun/star/i18n/XBreakIterator.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_I18N_CHARACTERITERATORMODE_HPP_
 #include <com/sun/star/i18n/CharacterIteratorMode.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_I18N_WORDTYPE_HPP_
 #include <com/sun/star/i18n/WordType.hpp>
-#endif
-
-#ifndef _CPPUHELPER_WEAK_HXX_
 #include <cppuhelper/weak.hxx>
-#endif
-
-#ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HPP_
 #include <com/sun/star/datatransfer/XTransferable.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HPP_
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
 
 #ifndef _COM_SUN_STAR_DATATRANSFER_DND_DNDCONSTANS_HPP_
 #include <com/sun/star/datatransfer/dnd/DNDConstants.hpp>
 #endif
-
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDRAGGESTURERECOGNIZER_HPP_
 #include <com/sun/star/datatransfer/dnd/XDragGestureRecognizer.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_DATATRANSFER_DND_XDROPTARGET_HPP_
 #include <com/sun/star/datatransfer/dnd/XDropTarget.hpp>
-#endif
 
 #ifndef _COM_SUN_STAR_I18N_XEXTENDEDINPUTSEQUENCECHECKER_HDL_
 #include <com/sun/star/i18n/XExtendedInputSequenceChecker.hpp>
 #endif
-
-#ifndef _COM_SUN_STAR_I18N_INPUTSEQUENCECHECKMODE_HPP_
 #include <com/sun/star/i18n/InputSequenceCheckMode.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_I18N_SCRIPTTYPE_HPP_
 #include <com/sun/star/i18n/ScriptType.hpp>
-#endif
-
-#ifndef _COM_SUN_STAR_CONTAINER_XNAMEACCESS_HPP_
 #include <com/sun/star/container/XNameAccess.hpp>
-#endif
 
 #include <com/sun/star/uno/Any.hxx>
 
@@ -145,11 +83,8 @@
 #include <sot/formats.hxx>
 #include <rtl/memory.h>
 
-#include <unohelp.hxx>
-
-#ifndef _VCL_UNOHELP2_HXX
-#include <unohelp2.hxx>
-#endif
+#include <vcl/unohelp.hxx>
+#include <vcl/unohelp2.hxx>
 
 
 
@@ -276,18 +211,37 @@ Edit::Edit( Window* pParent, WinBits nStyle ) :
 // -----------------------------------------------------------------------
 
 Edit::Edit( Window* pParent, const ResId& rResId ) :
-	Control( WINDOW_EDIT )
+    Control( WINDOW_EDIT )
 {
-	ImplInitEditData();
-	rResId.SetRT( RSC_EDIT );
-	WinBits nStyle = ImplInitRes( rResId );
-	ImplInit( pParent, nStyle );
-	ImplLoadRes( rResId );
+    ImplInitEditData();
+    rResId.SetRT( RSC_EDIT );
+    WinBits nStyle = ImplInitRes( rResId );
+    ImplInit( pParent, nStyle );
+    ImplLoadRes( rResId );
 
     // Derived MultiLineEdit takes care to call Show only after MultiLineEdit
     // ctor has already started:
-	if ( !(nStyle & WB_HIDE) && rResId.GetRT() != RSC_MULTILINEEDIT )
-		Show();
+    if ( !(nStyle & WB_HIDE) && rResId.GetRT() != RSC_MULTILINEEDIT )
+        Show();
+}
+
+// -----------------------------------------------------------------------
+
+Edit::Edit( Window* pParent, const ResId& rResId, bool bDisableAccessibleLabeledByRelation ) :
+    Control( WINDOW_EDIT )
+{
+    ImplInitEditData();
+    rResId.SetRT( RSC_EDIT );
+    WinBits nStyle = ImplInitRes( rResId );
+    ImplInit( pParent, nStyle );
+    ImplLoadRes( rResId );
+    if ( bDisableAccessibleLabeledByRelation )
+        ImplGetWindowImpl()->mbDisableAccessibleLabeledByRelation = TRUE;
+
+    // Derived MultiLineEdit takes care to call Show only after MultiLineEdit
+    // ctor has already started:
+    if ( !(nStyle & WB_HIDE) && rResId.GetRT() != RSC_MULTILINEEDIT )
+        Show();
 }
 
 // -----------------------------------------------------------------------
@@ -319,7 +273,7 @@ Edit::~Edit()
             uno::Reference< datatransfer::dnd::XDropTargetListener> xDTL( mxDnDListener, uno::UNO_QUERY );
             GetDropTarget()->removeDropTargetListener( xDTL );
         }
-        
+
         uno::Reference< lang::XEventListener> xEL( mxDnDListener, uno::UNO_QUERY );
         xEL->disposing( lang::EventObject() );  // #95154# #96585# Empty Source means it's the Client
     }
@@ -393,17 +347,6 @@ void Edit::ImplInit( Window* pParent, WinBits nStyle )
     else if ( nStyle & WB_CENTER )
         mnAlign = EDIT_ALIGN_CENTER;
 
-    const StyleSettings& rStyleSettings = GetSettings().GetStyleSettings();
-    if ( ImplUseNativeBorder(nStyle) )
-    {
-        SetBackground();
-        SetFillColor();
-    }
-    else
-    {
-        SetBackground( Wallpaper( rStyleSettings.GetFieldColor() ) );
-        SetFillColor( rStyleSettings.GetFieldColor() );
-    }
     SetCursor( new Cursor );
 
     SetPointer( Pointer( POINTER_TEXT ) );
@@ -440,7 +383,9 @@ BOOL Edit::IsCharInput( const KeyEvent& rKeyEvent )
 	// In the future we must use new Unicode functions for this
 	xub_Unicode cCharCode = rKeyEvent.GetCharCode();
 	return ((cCharCode >= 32) && (cCharCode != 127) &&
-			!rKeyEvent.GetKeyCode().IsControlMod());
+            !rKeyEvent.GetKeyCode().IsMod3() &&
+            !rKeyEvent.GetKeyCode().IsMod2() &&
+            !rKeyEvent.GetKeyCode().IsMod1() );
 }
 
 // -----------------------------------------------------------------------
@@ -476,7 +421,7 @@ void Edit::ImplInitSettings( BOOL bFont, BOOL bForeground, BOOL bBackground )
 
 	if ( bBackground )
 	{
-		if ( ImplUseNativeBorder( GetStyle() ) )
+		if ( ImplUseNativeBorder( GetStyle() ) || IsPaintTransparent() )
 		{
 			// Transparent background
 			SetBackground();
@@ -527,6 +472,21 @@ XubString Edit::ImplGetText() const
 	}
 	else
 		return maText;
+}
+
+// -----------------------------------------------------------------------
+
+void Edit::ImplInvalidateOrRepaint( xub_StrLen nStart, xub_StrLen nEnd )
+{
+    if( IsPaintTransparent() )
+    {
+        Invalidate();
+        // FIXME: this is currently only on aqua
+        if( ImplGetSVData()->maNWFData.mbNoFocusRects )
+            Update();
+    }
+    else
+        ImplRepaint( nStart, nEnd );
 }
 
 // -----------------------------------------------------------------------
@@ -588,11 +548,22 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
 	else
 		SetTextColor( rStyleSettings.GetDisableColor() );
 
-	// Set background color of the normal text
-	if ( ImplUseNativeBorder( GetStyle() ) )
-		SetTextFillColor();
-	else
-		SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
+    // Set background color of the normal text
+    if( (GetStyle() & WB_FORCECTRLBACKGROUND) != 0 && IsControlBackground() )
+    {
+        // check if we need to set ControlBackground even in NWF case
+        Push( PUSH_FILLCOLOR | PUSH_LINECOLOR );
+        SetLineColor();
+        SetFillColor( GetControlBackground() );
+        DrawRect( Rectangle( aPos, Size( GetOutputSizePixel().Width() - 2*mnXOffset, nTH ) ) );
+        Pop();
+
+        SetTextFillColor( GetControlBackground() );
+    }
+    else if( IsPaintTransparent() || ImplUseNativeBorder( GetStyle() ) )
+        SetTextFillColor();
+    else
+        SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
 
 	BOOL bDrawSelection = maSelection.Len() && ( HasFocus() || ( GetStyle() & WB_NOHIDESELECTION ) || mbActivePopup );
 
@@ -627,7 +598,7 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
                 i >= mpIMEInfos->nPos && i < (mpIMEInfos->nPos+mpIMEInfos->nLen ) &&
                 ( mpIMEInfos->pAttribs[i-mpIMEInfos->nPos] & EXTTEXTINPUT_ATTR_HIGHLIGHT) )
                 bHighlight = true;
-            
+
             if( bHighlight )
                 aHiglightClipRegion.Union( aRect );
             else
@@ -637,11 +608,21 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
         Color aNormalTextColor = GetTextColor();
         SetClipRegion( aNormalClipRegion );
 
-	    // Set background color when part of the text is selected
-	    if ( ImplUseNativeBorder( GetStyle() ) )
-		    SetTextFillColor();
-	    else
-		    SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
+        if( IsPaintTransparent() )
+            SetTextFillColor();
+        else
+        {
+            // Set background color when part of the text is selected
+            if ( ImplUseNativeBorder( GetStyle() ) )
+            {
+                if( (GetStyle() & WB_FORCECTRLBACKGROUND) != 0 && IsControlBackground() )
+                    SetTextFillColor( GetControlBackground() );
+                else
+                    SetTextFillColor();
+            }
+            else
+                SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
+        }
 		DrawText( aPos, aText, nStart, nEnd - nStart );
 
         // draw highlighted text
@@ -659,7 +640,10 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
                 if( n == 0 )
                 {
                     SetTextColor( aNormalTextColor );
-                    SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
+                    if( IsPaintTransparent() )
+                        SetTextFillColor();
+                    else
+                        SetTextFillColor( IsControlBackground() ? GetControlBackground() : rStyleSettings.GetFieldColor() );
                     aRegion = aNormalClipRegion;
                 }
                 else
@@ -668,7 +652,7 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
                     SetTextFillColor( rStyleSettings.GetHighlightColor() );
                     aRegion = aHiglightClipRegion;
                 }
-                
+
                 for( i = 0; i < mpIMEInfos->nLen; )
                 {
                     USHORT nAttr = mpIMEInfos->pAttribs[i];
@@ -701,7 +685,7 @@ void Edit::ImplRepaint( xub_StrLen nStart, xub_StrLen nEnd, bool bLayout )
                             SetTextLineColor( Color( COL_LIGHTGRAY ) );
                         }
                         SetFont( aFont );
-                        
+
                         if ( nAttr & EXTTEXTINPUT_ATTR_REDTEXT )
                             SetTextColor( Color( COL_RED ) );
                         else if ( nAttr & EXTTEXTINPUT_ATTR_HALFTONETEXT )
@@ -843,15 +827,39 @@ Reference < i18n::XExtendedInputSequenceChecker > Edit::ImplGetInputSequenceChec
 
 // -----------------------------------------------------------------------
 
+void Edit::ShowTruncationWarning( Window* pParent )
+{
+    ResMgr* pResMgr = ImplGetResMgr();
+    if( pResMgr )
+    {
+        WarningBox aBox( pParent, ResId( SV_EDIT_WARNING_BOX, *pResMgr ) );
+        aBox.Execute();
+    }
+}
+
+// -----------------------------------------------------------------------
+
+void Edit::ImplTruncateToMaxLen( rtl::OUString& rStr, sal_uInt32 nSelectionLen ) const
+{
+    const sal_uInt32 nMaxLen = mnMaxTextLen < 65534 ? mnMaxTextLen : 65534;
+    sal_uInt32 nLenAfter = static_cast<sal_uInt32>(maText.Len()) + rStr.getLength() - nSelectionLen;
+    if ( nLenAfter > nMaxLen )
+	{
+        sal_uInt32 nErasePos = nMaxLen - static_cast<sal_uInt32>(maText.Len()) + nSelectionLen;
+        rStr = rStr.copy( 0, nErasePos );
+        ShowTruncationWarning( const_cast<Edit*>(this) );
+    }
+}
+
+// -----------------------------------------------------------------------
+
 void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_Bool bIsUserInput )
 {
 	Selection aSelection( maSelection );
 	aSelection.Justify();
 
-	XubString aNewText( ImplGetValidString( rStr ) );
-
-	if ( (maText.Len() + aNewText.Len() - aSelection.Len()) > mnMaxTextLen )
-		return;
+	rtl::OUString aNewText( ImplGetValidString( rStr ) );
+    ImplTruncateToMaxLen( aNewText, aSelection.Len() );
 
     delete mpLayoutData, mpLayoutData = NULL;
 
@@ -881,7 +889,7 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
         sal_Bool bIsInputSequenceChecking			= sal_False;
         //
         // get access to the configuration of this office module
-		try 
+		try
 		{
 			Reference< lang::XMultiServiceFactory > xMSF = ::comphelper::getProcessServiceFactory();
 			Reference< container::XNameAccess > xModuleCfg( ::comphelper::ConfigurationHelper::openConfig(
@@ -910,7 +918,7 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
         uno::Reference < i18n::XBreakIterator > xBI( ImplGetBreakIterator(), UNO_QUERY );
         bIsInputSequenceChecking = rStr.Len() == 1 &&
                 bCTLFontEnabled &&
-                bCTLSequenceChecking && 
+                bCTLSequenceChecking &&
                 aSelection.Min() > 0 && /* first char needs not to be checked */
                 xBI.is() && i18n::ScriptType::COMPLEX == xBI->getScriptType( rStr, 0 );
 
@@ -920,10 +928,10 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
         {
             sal_Unicode cChar = rStr.GetChar(0);
             xub_StrLen nTmpPos = static_cast< xub_StrLen >( aSelection.Min() );
-            sal_Int16 nCheckMode = bCTLSequenceCheckingRestricted ? 
+            sal_Int16 nCheckMode = bCTLSequenceCheckingRestricted ?
                     i18n::InputSequenceCheckMode::STRICT : i18n::InputSequenceCheckMode::BASIC;
 
-            // the text that needs to be checked is only the one 
+            // the text that needs to be checked is only the one
             // before the current cursor position
             rtl::OUString aOldText( maText.Copy(0, nTmpPos) );
             rtl::OUString aTmpText( aOldText );
@@ -966,12 +974,12 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
         // at this point now we will insert the non-empty text 'normally' some lines below...
     }
 
-	if ( aNewText.Len() )
-		maText.Insert( aNewText, (xub_StrLen)aSelection.Min() );
+	if ( aNewText.getLength() )
+		maText.Insert( String( aNewText ), (xub_StrLen)aSelection.Min() );
 
 	if ( !pNewSel )
 	{
-		maSelection.Min() = aSelection.Min() + aNewText.Len();
+		maSelection.Min() = aSelection.Min() + aNewText.getLength();
 		maSelection.Max() = maSelection.Min();
 	}
 	else
@@ -1069,6 +1077,8 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 		}
 		else
 			ImplInsertText( rText, pNewSelection );
+
+        ImplCallEventListeners( VCLEVENT_EDIT_MODIFY );
 	}
 }
 
@@ -1082,12 +1092,12 @@ int Edit::ImplGetNativeControlType()
     switch( pControl->GetType() )
     {
         case WINDOW_COMBOBOX:
-        case WINDOW_PATTERNBOX:			
-        case WINDOW_NUMERICBOX:			
-        case WINDOW_METRICBOX:			
+        case WINDOW_PATTERNBOX:
+        case WINDOW_NUMERICBOX:
+        case WINDOW_METRICBOX:
         case WINDOW_CURRENCYBOX:
-        case WINDOW_DATEBOX:		
-        case WINDOW_TIMEBOX:			
+        case WINDOW_DATEBOX:
+        case WINDOW_TIMEBOX:
         case WINDOW_LONGCURRENCYBOX:
             nCtrl = CTRL_COMBOBOX;
             break;
@@ -1135,7 +1145,7 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 	aRect.Left() = nXStart;
 	aRect.Right() = nXEnd;
 
-    if( ImplUseNativeBorder( GetStyle() ) )
+    if( ImplUseNativeBorder( GetStyle() ) || IsPaintTransparent() )
     {
         // draw the inner part by painting the whole control using its border window
         Window *pControl = this;
@@ -1145,13 +1155,14 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
             // we have no border, use parent
             pControl = mbIsSubEdit ? GetParent() : this;
             pBorder = pControl->GetWindow( WINDOW_BORDER );
+            if( pBorder == this )
+                pBorder = GetParent();
         }
-        
+
         if( pBorder )
         {
             // set proper clipping region to not overdraw the whole control
             Region aClipRgn = GetPaintRegion();
-            
 #ifdef USE_JAVA
 			if ( ( ImplGetNativeControlType() == CTRL_SPINBOX ) && ( aClipRgn.IsNull() ) )
 			{
@@ -1170,6 +1181,7 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 				}
 			}
 #endif	// USE_JAVA
+
             if( !aClipRgn.IsNull() )
             {
 #ifdef USE_JAVA
@@ -1190,6 +1202,7 @@ void Edit::ImplClearBackground( long nXStart, long nXEnd )
 					}
 				}
 #endif	// USE_JAVA
+
                 // transform clipping region to border window's coordinate system
                 if( IsRTLEnabled() != pBorder->IsRTLEnabled() && Application::GetSettings().GetLayoutRTL() )
                 {
@@ -1252,7 +1265,7 @@ void Edit::ImplShowCursor( BOOL bOnlyIfVisible )
             pDXBuffer = new sal_Int32[2*(aText.Len()+1)];
             pDX = pDXBuffer;
         }
-        
+
         GetCaretPositions( aText, pDX, 0, aText.Len() );
 
         if( maSelection.Max() < aText.Len() )
@@ -1298,7 +1311,7 @@ void Edit::ImplShowCursor( BOOL bOnlyIfVisible )
 			nCursorPosX--;
 
 		if ( mnXOffset != nOldXOffset )
-			ImplRepaint();
+			ImplInvalidateOrRepaint();
 	}
 
 	long nTextHeight = GetTextHeight();
@@ -1334,7 +1347,9 @@ void Edit::ImplAlign()
         }
         else
         {
-            if ( mnXOffset < nMinXOffset )
+            if( nTextWidth < nOutWidth )
+                mnXOffset = nMinXOffset;
+            else if ( mnXOffset < nMinXOffset )
                 mnXOffset = nMinXOffset;
         }
 	}
@@ -1352,7 +1367,7 @@ void Edit::ImplAlign()
 void Edit::ImplAlignAndPaint()
 {
 	ImplAlign();
-	ImplRepaint( 0, STRING_LEN );
+	ImplInvalidateOrRepaint( 0, STRING_LEN );
 	ImplShowCursor();
 }
 
@@ -1400,7 +1415,7 @@ xub_StrLen Edit::ImplGetCharPos( const Point& rWindowPos ) const
         for( int i = 1; i < aText.Len(); i++ )
         {
             long nNewDiff = Abs( pDX[2*i]-nX );
-            
+
             if( nNewDiff < nDiff )
             {
                 nIndex = sal::static_int_cast<xub_StrLen>(i);
@@ -1464,7 +1479,7 @@ void Edit::ImplPaste( uno::Reference< datatransfer::clipboard::XClipboard >& rxC
         uno::Reference< datatransfer::XTransferable > xDataObj;
 
 		const sal_uInt32 nRef = Application::ReleaseSolarMutex();
-		
+
         try
 		{
             xDataObj = rxClipboard->getContents();
@@ -1484,6 +1499,7 @@ void Edit::ImplPaste( uno::Reference< datatransfer::clipboard::XClipboard >& rxC
 				uno::Any aData = xDataObj->getTransferData( aFlavor );
 				::rtl::OUString aText;
 				aData >>= aText;
+                ImplTruncateToMaxLen( aText, maSelection.Len() );
 				ReplaceSelected( aText );
 			}
             catch( const ::com::sun::star::uno::Exception& )
@@ -1547,7 +1563,7 @@ void Edit::MouseButtonUp( const MouseEvent& rMEvt )
 		ImplSetCursorPos( nChar, FALSE );
 		mbClickedInSelection = FALSE;
 	}
-    else if ( rMEvt.IsMiddle() && !mbReadOnly && 
+    else if ( rMEvt.IsMiddle() && !mbReadOnly &&
               ( GetSettings().GetMouseSettings().GetMiddleButtonAction() == MOUSE_MIDDLE_PASTESELECTION ) )
     {
         ::com::sun::star::uno::Reference<com::sun::star::datatransfer::clipboard::XClipboard> aSelection(Window::GetPrimarySelection());
@@ -1581,6 +1597,9 @@ void Edit::Tracking( const TrackingEvent& rTEvt )
 			ImplSetCursorPos( nChar, TRUE );
 		}
 	}
+
+    if ( mpUpdateDataTimer && !mbIsSubEdit && mpUpdateDataTimer->IsActive() )
+        mpUpdateDataTimer->Start();//do not update while the user is still travelling in the control
 }
 
 // -----------------------------------------------------------------------
@@ -1822,6 +1841,9 @@ BOOL Edit::ImplHandleKeyEvent( const KeyEvent& rKEvt )
 
 void Edit::KeyInput( const KeyEvent& rKEvt )
 {
+    if ( mpUpdateDataTimer && !mbIsSubEdit && mpUpdateDataTimer->IsActive() )
+        mpUpdateDataTimer->Start();//do not update while the user is still travelling in the control
+
 	if ( mpSubEdit || !ImplHandleKeyEvent( rKEvt ) )
 		Control::KeyInput( rKEvt );
 }
@@ -1948,6 +1970,19 @@ void Edit::Draw( OutputDevice* pDev, const Point& rPos, const Size& rSize, ULONG
 
 // -----------------------------------------------------------------------
 
+void Edit::ImplInvalidateOutermostBorder( Window* pWin )
+{
+    // allow control to show focused state
+    Window *pInvalWin = pWin, *pBorder = pWin;
+    while( ( pBorder = pInvalWin->GetWindow( WINDOW_BORDER ) ) != pInvalWin && pBorder &&
+           pInvalWin->ImplGetFrame() == pBorder->ImplGetFrame() )
+    {
+        pInvalWin = pBorder;
+    }
+
+    pInvalWin->Invalidate( INVALIDATE_CHILDREN | INVALIDATE_UPDATE );
+}
+
 void Edit::GetFocus()
 {
 	if ( mpSubEdit )
@@ -1972,7 +2007,7 @@ void Edit::GetFocus()
 			}
 			if ( mbIsSubEdit )
 				((Edit*)GetParent())->ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
-			else			
+			else
 				ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
 		}
 
@@ -1991,13 +2026,22 @@ void Edit::GetFocus()
 			}
 		}
 #endif	// USE_JAVA
+
 		ImplShowCursor();
 
-		if ( maSelection.Len() )
+        // FIXME: this is currently only on aqua
+        // check for other platforms that need similar handling
+        if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
+            IsNativeWidgetEnabled() &&
+            IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
+        {
+            ImplInvalidateOutermostBorder( mbIsSubEdit ? GetParent() : this );
+        }
+		else if ( maSelection.Len() )
 		{
 			// Selektion malen
 			if ( !HasPaintEvent() )
-				ImplRepaint();
+				ImplInvalidateOrRepaint();
 			else
 				Invalidate();
 		}
@@ -2022,10 +2066,26 @@ Window* Edit::GetPreferredKeyInputWindow()
 
 void Edit::LoseFocus()
 {
+    if ( mpUpdateDataTimer && !mbIsSubEdit && mpUpdateDataTimer->IsActive() )
+    {
+        //notify an update latest when the focus is lost
+        mpUpdateDataTimer->Stop();
+        mpUpdateDataTimer->Timeout();
+    }
+
 	if ( !mpSubEdit )
 	{
+        // FIXME: this is currently only on aqua
+        // check for other platforms that need similar handling
+        if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
+            IsNativeWidgetEnabled() &&
+            IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
+        {
+            ImplInvalidateOutermostBorder( mbIsSubEdit ? GetParent() : this );
+        }
+
 		if ( !mbActivePopup && !( GetStyle() & WB_NOHIDESELECTION ) && maSelection.Len() )
-			ImplRepaint();	  // Selektion malen
+			ImplInvalidateOrRepaint();	  // Selektion malen
 	}
 
 	Control::LoseFocus();
@@ -2205,7 +2265,7 @@ void Edit::Command( const CommandEvent& rCEvt )
 		// Font wieder ohne Attribute einstellen, wird jetzt im Repaint nicht
 		// mehr neu initialisiert
 		ImplInitSettings( TRUE, FALSE, FALSE );
-		
+
 		SetInsertMode( bInsertMode );
 
 		ImplModified();
@@ -2263,7 +2323,7 @@ void Edit::Command( const CommandEvent& rCEvt )
 		xub_StrLen nCursorPos = mpIMEInfos->nPos + pData->GetCursorPos();
 		SetSelection( Selection( nCursorPos, nCursorPos ) );
 		SetInsertMode( !pData->IsCursorOverwrite() );
-		
+
 		if ( pData->IsCursorVisible() )
 			GetCursor()->Show();
 		else
@@ -2274,7 +2334,7 @@ void Edit::Command( const CommandEvent& rCEvt )
 		if ( mpIMEInfos )
 		{
 			xub_StrLen nCursorPos = (USHORT)GetSelection().Max();
-			SetCursorRect( NULL, GetTextWidth( 
+			SetCursorRect( NULL, GetTextWidth(
 				maText, nCursorPos, mpIMEInfos->nPos+mpIMEInfos->nLen-nCursorPos ) );
 		}
 		else
@@ -2299,13 +2359,15 @@ void Edit::StateChanged( StateChangedType nType )
 			if ( !mpSubEdit )
 				ImplShowCursor( FALSE );
 		}
+        // update background (eventual SetPaintTransparent)
+        ImplInitSettings( FALSE, FALSE, TRUE );
 	}
 	else if ( nType == STATE_CHANGE_ENABLE )
 	{
 		if ( !mpSubEdit )
 		{
 			// Es aendert sich nur die Textfarbe...
-			ImplRepaint( 0, 0xFFFF );
+			ImplInvalidateOrRepaint( 0, 0xFFFF );
 		}
 	}
 	else if ( nType == STATE_CHANGE_STYLE )
@@ -2436,6 +2498,15 @@ void Edit::Modify()
 
         // #i13677# notify edit listeners about caret position change
         ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
+
+        // FIXME: this is currently only on aqua
+        // check for other platforms that need similar handling
+        if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
+            IsNativeWidgetEnabled() &&
+            IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
+        {
+            ImplInvalidateOutermostBorder( this );
+        }
 	}
 }
 
@@ -2584,8 +2655,8 @@ void Edit::ImplSetSelection( const Selection& rSelection, BOOL bPaint )
                 delete mpLayoutData, mpLayoutData = NULL;
 				maSelection = aNew;
 
-				if ( bPaint && ( aOld.Len() || aNew.Len() ) )
-                    ImplRepaint( 0, maText.Len() );
+				if ( bPaint && ( aOld.Len() || aNew.Len() || IsPaintTransparent() ) )
+                    ImplInvalidateOrRepaint( 0, maText.Len() );
 				ImplShowCursor();
 				if ( mbIsSubEdit )
 					((Edit*)GetParent())->ImplCallEventListeners( VCLEVENT_EDIT_SELECTIONCHANGED );
@@ -2763,9 +2834,20 @@ void Edit::SetSubEdit( Edit* pEdit )
 
 Size Edit::CalcMinimumSize() const
 {
-	Size aSz( GetTextWidth( GetText() ), GetTextHeight() );
-	aSz = CalcWindowSize( aSz );
-	return aSz;
+	Size aSize ( GetTextWidth( GetText() ), GetTextHeight() );
+	return CalcWindowSize( aSize );
+}
+
+// -----------------------------------------------------------------------
+
+Size Edit::GetOptimalSize(WindowSizeType eType) const
+{
+    switch (eType) {
+    case WINDOWSIZE_MINIMUM:
+        return CalcMinimumSize();
+    default:
+        return Control::GetOptimalSize( eType );
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -2818,8 +2900,8 @@ PopupMenu* Edit::CreatePopupMenu()
     ResMgr* pResMgr = ImplGetResMgr();
     if( ! pResMgr )
         return new PopupMenu();
-    
-	PopupMenu* pPopup = new PopupMenu( ResId( SV_RESID_MENU_EDIT, pResMgr ) );
+
+	PopupMenu* pPopup = new PopupMenu( ResId( SV_RESID_MENU_EDIT, *pResMgr ) );
 	pPopup->SetAccelKey( SV_MENU_EDIT_UNDO, KeyCode( KEYFUNC_UNDO ) );
 	pPopup->SetAccelKey( SV_MENU_EDIT_CUT, KeyCode( KEYFUNC_CUT ) );
 	pPopup->SetAccelKey( SV_MENU_EDIT_COPY, KeyCode( KEYFUNC_COPY ) );
@@ -2859,7 +2941,7 @@ void Edit::dragGestureRecognized( const ::com::sun::star::datatransfer::dnd::Dra
 			mpDDInfo->bStarterOfDD = TRUE;
             mpDDInfo->aDndStartSel = aSel;
 
-			
+
 			if ( IsTracking() )
 				EndTracking();	// Vor D&D Tracking ausschalten
 
@@ -2950,7 +3032,7 @@ void Edit::drop( const ::com::sun::star::datatransfer::dnd::DropTargetDropEvent&
 }
 
 void Edit::dragEnter( const ::com::sun::star::datatransfer::dnd::DropTargetDragEnterEvent& ) throw (::com::sun::star::uno::RuntimeException)
-{  
+{
     if ( !mpDDInfo )
     {
 		mpDDInfo = new DDInfo;

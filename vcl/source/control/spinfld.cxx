@@ -1,60 +1,42 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#ifndef _SV_RC_H
-#include <tools/rc.h>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_SPIN_H
-#include <spin.h>
-#endif
-#ifndef _SV_SPINFLD_HXX
-#include <spinfld.hxx>
-#endif
-#ifndef _VCL_CONTROLLAYOUT_HXX
-#include <controllayout.hxx>
-#endif
+#include "tools/rc.h"
+#include "vcl/event.hxx"
+#include "vcl/decoview.hxx"
+#include "vcl/spin.h"
+#include "vcl/spinfld.hxx"
+#include "vcl/controllayout.hxx"
+#include "vcl/svdata.hxx"
 
 // =======================================================================
 
@@ -144,6 +126,14 @@ BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonVa
 
             Point aPt;
             Size aSize( pBorder->GetOutputSizePixel() );    // the size of the border window, i.e., the whole control
+            Region aBound, aContent;
+            Region aNatRgn( Rectangle( aPt, aSize ) );
+            if( pBorder->GetNativeControlRegion(CTRL_SPINBOX, PART_ENTIRE_CONTROL,
+                    aNatRgn, 0, aControlValue, rtl::OUString(), aBound, aContent) )
+            {
+                aSize = aContent.GetBoundRect().GetSize();
+            }
+            
             Region aRgn( Rectangle( aPt, aSize ) );
 #ifdef USE_JAVA
             bNativeOK = pBorder->DrawNativeControl( CTRL_SPINBOX, PART_ENTIRE_CONTROL, aRgn, ( ( pWin->IsEnabled() ) ? CTRL_STATE_ENABLED : 0 ),
@@ -157,7 +147,7 @@ BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonVa
         }
     }
 #ifdef USE_JAVA
-	// on OS X, render spinfields with dropdowns as combo boxes
+	// on Mac OS X, render spinfields with dropdowns as combo boxes
 	else if( (pWin->GetStyle() & WB_DROPDOWN) && pWin->IsNativeControlSupported(CTRL_COMBOBOX, PART_ENTIRE_CONTROL) )
 	{
 		Window *pBorder = pWin->GetWindow( WINDOW_BORDER );
@@ -201,7 +191,6 @@ BOOL ImplDrawNativeSpinbuttons( Window *pWin, const SpinbuttonValue& rSpinbutton
 }
 
 #ifdef USE_JAVA
-
 static void ImplDrawSpinButton( OutputDevice* pOutDev,
 						 const Rectangle& rUpperRect,
 						 const Rectangle& rLowerRect,
@@ -1248,19 +1237,30 @@ long SpinField::PreNotify( NotifyEvent& rNEvt )
 					else
 					{
 #endif	// USE_JAVA
-
-                    Region aRgn( GetActiveClipRegion() );
-                    if( pLastRect )
+                    // FIXME: this is currently only on aqua
+                    // check for other platforms that need similar handling
+                    if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
+                        IsNativeWidgetEnabled() &&
+                        IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
                     {
-                        SetClipRegion( *pLastRect );
-                        Paint( *pLastRect );
-                        SetClipRegion( aRgn );
+                        ImplInvalidateOutermostBorder( this );
                     }
-                    if( pRect )
+                    else
                     {
-                        SetClipRegion( *pRect );
-                        Paint( *pRect );
-                        SetClipRegion( aRgn );
+                        // paint directly
+                        Region aRgn( GetActiveClipRegion() );
+                        if( pLastRect )
+                        {
+                            SetClipRegion( *pLastRect );
+                            Paint( *pLastRect );
+                            SetClipRegion( aRgn );
+                        }
+                        if( pRect )
+                        {
+                            SetClipRegion( *pRect );
+                            Paint( *pRect );
+                            SetClipRegion( aRgn );
+                        }
                     }
 #ifdef USE_JAVA
 					}
@@ -1297,9 +1297,21 @@ Size SpinField::CalcMinimumSize() const
 	if ( GetStyle() & WB_DROPDOWN )
 		aSz.Width() += GetSettings().GetStyleSettings().GetScrollBarSize();
 	if ( GetStyle() & WB_SPIN )
-		aSz.Width() += GetSettings().GetStyleSettings().GetSpinSize();
+		aSz.Width() += maUpperRect.GetWidth();
 
 	return aSz;
+}
+
+// -----------------------------------------------------------------------
+
+Size SpinField::GetOptimalSize(WindowSizeType eType) const
+{
+    switch (eType) {
+    case WINDOWSIZE_MINIMUM:
+        return CalcMinimumSize();
+    default:
+        return Edit::GetOptimalSize( eType );
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -1331,6 +1343,7 @@ IMPL_LINK( SpinField, ImplTimeout, Timer*, pTimer )
 			Up();
 		else
 			Down();
+
 #ifdef USE_JAVA
 		if ( IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
 		{

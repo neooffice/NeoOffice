@@ -1,79 +1,46 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _TOOLS_DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
-
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <svapp.hxx>
-#endif
-#ifndef _SV_SETTINGS_HXX
-#include <settings.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_SCRBAR_HXX
-#include <scrbar.hxx>
-#endif
-#ifndef _SV_HELP_HXX
-#include <help.hxx>
-#endif
-#ifndef _SV_LSTBOX_H
-#include <lstbox.h>
-#endif
-#ifndef _SV_ILSTBOX_HXX
-#include <ilstbox.hxx>
-#endif
-#ifndef _VCL_I18NHELP_HXX
-#include <i18nhelp.hxx>
-#endif
-#ifndef _VCL_CONTROLLAYOUT_HXX
-#include <controllayout.hxx>
-#endif
-#ifndef _VCL_UNOHELP_HXX
-#include <unohelp.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/settings.hxx>
+#include <vcl/event.hxx>
+#include <vcl/scrbar.hxx>
+#include <vcl/help.hxx>
+#include <vcl/lstbox.h>
+#include <vcl/ilstbox.hxx>
+#include <vcl/i18nhelp.hxx>
+#include <vcl/controllayout.hxx>
+#include <vcl/unohelp.hxx>
 #ifndef _COM_SUN_STAR_UTIL_XCOLLATOR_HPP_
 #include <com/sun/star/i18n/XCollator.hpp>
 #endif
@@ -82,17 +49,20 @@
 #include <com/sun/star/accessibility/XAccessible.hpp>
 #endif
 
+#ifndef _COM_SUN_STAR_ACCESSIBILITY_ACCESSIBLEROLE_HPP_
+#include <com/sun/star/accessibility/AccessibleRole.hpp>
+#endif
+
 #ifdef USE_JAVA
 
 #ifndef _SV_LSTBOX_HXX
-#include <lstbox.hxx>
+#include <vcl/lstbox.hxx>
 #endif
 #ifndef _SV_COMBOBOX_HXX
-#include <combobox.hxx>
+#include <vcl/combobox.hxx>
 #endif
 
 #endif	// USE_JAVA
-
 
 using namespace ::com::sun::star;
 
@@ -1339,12 +1309,12 @@ BOOL ImplListBoxWindow::ProcessKeyInput( const KeyEvent& rKEvt )
 	KeyCode aKeyCode = rKEvt.GetKeyCode();
 
 	BOOL bShift = aKeyCode.IsShift();
-	BOOL bCtrl	= aKeyCode.IsMod1();
+	BOOL bCtrl	= aKeyCode.IsMod1() || aKeyCode.IsMod3();
 	BOOL bMod2 = aKeyCode.IsMod2();
 	BOOL bDone = FALSE;
 
 	switch( aKeyCode.GetCode() )
-	{
+	{		
 		case KEY_UP:
 		{
 			if ( IsReadOnly() )
@@ -1555,12 +1525,34 @@ BOOL ImplListBoxWindow::ProcessKeyInput( const KeyEvent& rKEvt )
 		}
 		break;
 
+		case KEY_A:
+		{
+			if( bCtrl && mbMulti )
+			{
+                // paint only once
+                BOOL bUpdates = IsUpdateMode();
+                SetUpdateMode( FALSE );
+
+                USHORT nEntryCount = mpEntryList->GetEntryCount();                
+                for( USHORT i = 0; i < nEntryCount; i++ )
+                    SelectEntry( i, TRUE );
+                
+                // restore update mode
+                SetUpdateMode( bUpdates );
+                Invalidate();
+                
+                maSearchStr.Erase();
+                
+				bDone = TRUE;
+                break;
+			}
+		}
+        // fall through intentional
 		default:
 		{
 			xub_Unicode c = rKEvt.GetCharCode();
 
-			if ( !IsReadOnly() && (c >= 32) && (c != 127) &&
-				 !rKEvt.GetKeyCode().IsControlMod() )
+			if ( !IsReadOnly() && (c >= 32) && (c != 127) && !rKEvt.GetKeyCode().IsMod2() )
 			{
 				maSearchStr += c;
 				XubString aTmpSearch( maSearchStr );
@@ -2765,7 +2757,6 @@ void ImplWin::DrawEntry( BOOL bDrawImage, BOOL bDrawText, BOOL bDrawTextAtImageP
 {
 	long nBorder = 1;
 	Size aOutSz = GetOutputSizePixel();
-
 #ifdef USE_JAVA
 	nBorder = 6;
 #endif	// USE_JAVA
@@ -2864,7 +2855,17 @@ void ImplWin::Resize()
 void ImplWin::GetFocus()
 {
 	ShowFocus( maFocusRect );
-	Invalidate();
+    if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
+        IsNativeWidgetEnabled() &&
+        IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+    {
+        Window* pWin = GetParent()->GetWindow( WINDOW_BORDER );
+        if( ! pWin )
+            pWin = GetParent();
+        pWin->Invalidate();
+    }
+    else
+        Invalidate();
 	Control::GetFocus();
 }
 
@@ -2873,7 +2874,17 @@ void ImplWin::GetFocus()
 void ImplWin::LoseFocus()
 {
 	HideFocus();
-	Invalidate();
+    if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
+        IsNativeWidgetEnabled() &&
+        IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
+    {
+        Window* pWin = GetParent()->GetWindow( WINDOW_BORDER );
+        if( ! pWin )
+            pWin = GetParent();
+        pWin->Invalidate();
+    }
+    else
+        Invalidate();
 	Control::LoseFocus();
 }
 
@@ -2917,15 +2928,18 @@ ImplListBoxFloatingWindow::ImplListBoxFloatingWindow( Window* pParent ) :
     mnPopupModeStartSaveSelection = LISTBOX_ENTRY_NOTFOUND;
 
 	EnableSaveBackground();
-}
+    
+    Window * pBorderWindow = ImplGetBorderWindow();
+    if( pBorderWindow )
+    {
+        SetAccessibleRole(accessibility::AccessibleRole::PANEL);
+        pBorderWindow->SetAccessibleRole(accessibility::AccessibleRole::WINDOW);
+    }
+    else
+    {
+        SetAccessibleRole(accessibility::AccessibleRole::WINDOW);
+    }
 
-// -----------------------------------------------------------------------
-
-uno::Reference< ::com::sun::star::accessibility::XAccessible > ImplListBoxFloatingWindow::CreateAccessible()
-{
-	// Hide Accessible for this Window, because it's a top window we don't want to see as a top window.
-	// Must be handled in the ListBox/ComboBox Accessibility Implementation
-	return NULL;
 }
 
 // -----------------------------------------------------------------------
@@ -3091,6 +3105,17 @@ void ImplListBoxFloatingWindow::StartFloat( BOOL bStartTracking )
 #endif	// USE_JAVA
 		Point aPos = GetParent()->GetPosPixel();
 		aPos = GetParent()->GetParent()->OutputToScreenPixel( aPos );
+        // FIXME: this ugly hack is for Mac/Aqua
+        // should be replaced by a real mechanism to place the float rectangle
+        if( ImplGetSVData()->maNWFData.mbNoFocusRects &&
+            GetParent()->IsNativeWidgetEnabled() )
+        {
+            sal_Int32 nLeft = 4, nTop = 4, nRight = 4, nBottom = 4;
+            aPos.X() += nLeft;
+            aPos.Y() += nTop;
+            aSz.Width() -= nLeft + nRight;
+            aSz.Height() -= nTop + nBottom;
+        }
 		Rectangle aRect( aPos, aSz );
 
         // check if the control's parent is un-mirrored which is the case for form controls in a mirrored UI

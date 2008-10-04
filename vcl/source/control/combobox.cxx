@@ -1,79 +1,49 @@
 /*************************************************************************
  *
- *  $RCSfile$
+ * Copyright 2008 by Sun Microsystems, Inc.
  *
- *  $Revision$
+ * $RCSfile$
+ * $Revision$
  *
- *  last change: $Author$ $Date$
+ * This file is part of NeoOffice.
  *
- *  The Contents of this file are made available subject to
- *  the terms of GNU General Public License Version 2.1.
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
  *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
  *
- *    GNU General Public License Version 2.1
- *    =============================================
- *    Copyright 2005 by Sun Microsystems, Inc.
- *    901 San Antonio Road, Palo Alto, CA 94303, USA
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
  *
- *    This library is free software; you can redistribute it and/or
- *    modify it under the terms of the GNU General Public
- *    License version 2.1, as published by the Free Software Foundation.
- *
- *    This library is distributed in the hope that it will be useful,
- *    but WITHOUT ANY WARRANTY; without even the implied warranty of
- *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
- *    General Public License for more details.
- *
- *    You should have received a copy of the GNU General Public
- *    License along with this library; if not, write to the Free Software
- *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
- *    MA  02111-1307  USA
- *
- *    Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
- *    GPL only under modification term 3 of the LGPL.
+ * Modified July 2006 by Edward Peterlin. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
-
-#ifndef _TOOLS_TABLE_HXX
 #include <tools/table.hxx>
-#endif
-#ifndef _DEBUG_HXX
 #include <tools/debug.hxx>
-#endif
 
 #ifndef _SV_RC_H
 #include <tools/rc.h>
 #endif
-#ifndef _SV_SVDATA_HXX
-#include <svdata.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <decoview.hxx>
-#endif
-#ifndef _SV_ILSTBOX_HXX
-#include <ilstbox.hxx>
-#endif
-#ifndef _SV_LSTBOX_H
-#include <lstbox.h>
-#endif
-#ifndef _SV_BUTTON_HXX
-#include <button.hxx>
-#endif
-#ifndef _SV_SUBEDIT_HXX
-#include <subedit.hxx>
-#endif
-#ifndef _SV_EVENT_HXX
-#include <event.hxx>
-#endif
-#ifndef _SV_COMBOBOX_HXX
-#include <combobox.hxx>
-#endif
-#ifndef _VCL_CONTROLLAYOUT_HXX
-#include <controllayout.hxx>
-#endif
+#include <vcl/svdata.hxx>
+#include <vcl/decoview.hxx>
+#include <vcl/ilstbox.hxx>
+#include <vcl/lstbox.h>
+#include <vcl/button.hxx>
+#include <vcl/subedit.hxx>
+#include <vcl/event.hxx>
+#include <vcl/combobox.hxx>
+#include <vcl/controllayout.hxx>
 
 
 
@@ -123,7 +93,7 @@ ComboBox::ComboBox( Window* pParent, WinBits nStyle ) :
         SetParentClipMode( PARENTCLIPMODE_NOCLIP );        SetPaintTransparent( TRUE ); 
         SetBackground();
     } 
-#endif
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
@@ -146,7 +116,7 @@ ComboBox::ComboBox( Window* pParent, const ResId& rResId ) :
         SetPaintTransparent( TRUE ); 
         SetBackground();
     } 
-#endif
+#endif	// USE_JAVA
 
 	if ( !(nStyle & WB_HIDE ) )
 		Show();
@@ -193,6 +163,25 @@ void ComboBox::ImplCalcEditHeight()
 	mnDDHeight = (USHORT)(mpSubEdit->GetTextHeight() + nTop + nBottom + 4);
 	if ( !IsDropDownBox() )
 		mnDDHeight += 4;
+
+    // FIXME: currently only on aqua; see if we can use this on other platforms
+    if( ImplGetSVData()->maNWFData.mbNoFocusRects )
+    {
+        Region aCtrlRegion( Rectangle( (const Point&)Point(), Size( 10, 10 ) ) );
+        Region aBoundRegion, aContentRegion;
+        ImplControlValue aControlValue;
+        ControlType aType = IsDropDownBox() ? CTRL_COMBOBOX : CTRL_EDITBOX;
+        if( GetNativeControlRegion( aType, PART_ENTIRE_CONTROL,
+                                    aCtrlRegion,
+                                    CTRL_STATE_ENABLED,
+                                    aControlValue, rtl::OUString(),
+                                    aBoundRegion, aContentRegion ) )
+        {
+			const long nNCHeight = aBoundRegion.GetBoundRect().GetHeight();
+            if( mnDDHeight < nNCHeight )
+                mnDDHeight = sal::static_int_cast<USHORT>( nNCHeight );
+        }
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -399,10 +388,9 @@ IMPL_LINK( ComboBox, ImplAutocompleteHdl, Edit*, pEdit )
 	Selection			aSel = pEdit->GetSelection();
 	AutocompleteAction	eAction = pEdit->GetAutocompleteAction();
 
-	// Wenn keine Selection vorhanden ist, wird bei Tab/Shift+Tab auch
-	// keine AutoCompletion durchgefuehrt, da man ansonsten nicht in
-	// das naechste Feld kommt und der Text wieder mit etwas AutoExpandiert
-	// wird, was man nicht haben moechte.
+    /* If there is no current selection do not auto complete on
+       Tab/Shift-Tab since then we would not cycle to the next field.
+    */
 	if ( aSel.Len() ||
 		 ((eAction != AUTOCOMPLETE_TABFORWARD) && (eAction != AUTOCOMPLETE_TABBACKWARD)) )
 	{
@@ -421,18 +409,23 @@ IMPL_LINK( ComboBox, ImplAutocompleteHdl, Edit*, pEdit )
 			bForward = FALSE;
 			nStart = nStart ? nStart - 1 : mpImplLB->GetEntryList()->GetEntryCount()-1;
 		}
-        BOOL bLazy = mbMatchCase ? FALSE : TRUE;
-		// 1. Try match full from current position
-        USHORT nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, nStart, bForward, FALSE );
-		if ( nPos == LISTBOX_ENTRY_NOTFOUND )
-			// 2. Match full, but from start
-			nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, bForward ? 0 : (mpImplLB->GetEntryList()->GetEntryCount()-1), bForward, FALSE );
-        if ( ( nPos == LISTBOX_ENTRY_NOTFOUND ) && bLazy )
-			// 3. Try match lazy from current position
+        
+        USHORT nPos = LISTBOX_ENTRY_NOTFOUND;
+        if( ! mbMatchCase )
+        {
+			// Try match case insensitive from current position
 			nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, nStart, bForward, TRUE );
-		if ( ( nPos == LISTBOX_ENTRY_NOTFOUND ) && bLazy )
-			// 4. Try match lazy, but from start
-			nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, bForward ? 0 : (mpImplLB->GetEntryList()->GetEntryCount()-1), bForward, bLazy );
+            if ( nPos == LISTBOX_ENTRY_NOTFOUND )
+                // Try match case insensitive, but from start
+                nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, bForward ? 0 : (mpImplLB->GetEntryList()->GetEntryCount()-1), bForward, TRUE );
+        }
+            
+		if ( nPos == LISTBOX_ENTRY_NOTFOUND )
+            // Try match full from current position
+            nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, nStart, bForward, FALSE );
+		if ( nPos == LISTBOX_ENTRY_NOTFOUND )
+			//  Match full, but from start
+			nPos = mpImplLB->GetEntryList()->FindMatchingEntry( aStartText, bForward ? 0 : (mpImplLB->GetEntryList()->GetEntryCount()-1), bForward, FALSE );
 
 		if ( nPos != LISTBOX_ENTRY_NOTFOUND )
 		{
@@ -935,6 +928,8 @@ long ComboBox::Notify( NotifyEvent& rNEvt )
 
 void ComboBox::SetText( const XubString& rStr )
 {
+    ImplCallEventListeners( VCLEVENT_COMBOBOX_SETTEXT );
+
 	Edit::SetText( rStr );
 	ImplUpdateFloatSelection();
 }
@@ -943,6 +938,8 @@ void ComboBox::SetText( const XubString& rStr )
 
 void ComboBox::SetText( const XubString& rStr, const Selection& rNewSelection )
 {
+    ImplCallEventListeners( VCLEVENT_COMBOBOX_SETTEXT );
+
 	Edit::SetText( rStr, rNewSelection );
 	ImplUpdateFloatSelection();
 }
@@ -1120,6 +1117,18 @@ BOOL ComboBox::IsMultiSelectionEnabled() const
 long ComboBox::CalcWindowSizePixel( USHORT nLines ) const
 {
 	return mpImplLB->GetEntryHeight() * nLines;
+}
+
+// -----------------------------------------------------------------------
+
+Size ComboBox::GetOptimalSize(WindowSizeType eType) const
+{
+    switch (eType) {
+    case WINDOWSIZE_MINIMUM:
+        return CalcMinimumSize();
+    default:
+        return Edit::GetOptimalSize( eType );
+    }
 }
 
 // -----------------------------------------------------------------------
