@@ -1,33 +1,30 @@
 #*************************************************************************
 #
-#   $RCSfile$
+# Copyright 2008 by Sun Microsystems, Inc.
 #
-#   $Revision$
+# $RCSfile$
 #
-#   last change: $Author$ $Date$
+# $Revision$
 #
-#   The Contents of this file are made available subject to
-#   the terms of GNU General Public License Version 2.1.
+# This file is part of NeoOffice.
 #
+# NeoOffice is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 3
+# only, as published by the Free Software Foundation.
 #
-#     GNU General Public License Version 2.1
-#     =============================================
-#     Copyright 2005 by Sun Microsystems, Inc.
-#     901 San Antonio Road, Palo Alto, CA 94303, USA
+# NeoOffice is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License version 3 for more details
+# (a copy is included in the LICENSE file that accompanied this code).
 #
-#     This library is free software; you can redistribute it and/or
-#     modify it under the terms of the GNU General Public
-#     License version 2.1, as published by the Free Software Foundation.
+# You should have received a copy of the GNU General Public License
+# version 3 along with NeoOffice.  If not, see
+# <http://www.gnu.org/licenses/gpl-3.0.txt>
+# for a copy of the GPLv3 License.
 #
-#     This library is distributed in the hope that it will be useful,
-#     but WITHOUT ANY WARRANTY; without even the implied warranty of
-#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-#     General Public License for more details.
-#
-#     You should have received a copy of the GNU General Public
-#     License along with this library; if not, write to the Free Software
-#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-#     MA  02111-1307  USA
+# Modified December 2006 by Patrick Luby. NeoOffice is distributed under
+# GPL only under modification term 2 of the LGPL.
 #
 #*************************************************************************
 
@@ -45,15 +42,17 @@ TARGET=		ucbhelper
 
 LIB1TARGET=	$(SLB)$/$(TARGET).lib
 LIB1FILES=	$(SLB)$/client.lib \
-		$(SLB)$/provider.lib
+			$(SLB)$/provider.lib
 
 SHL1TARGET=	$(TARGET)$(UCBHELPER_MAJOR)$(COMID)
+.IF "$(GUI)" == "OS2"
+SHL1TARGET=	ucbh$(UCBHELPER_MAJOR)
+.ENDIF
 SHL1STDLIBS = \
     $(CPPUHELPERLIB) \
     $(CPPULIB) \
     $(SALHELPERLIB) \
-    $(SALLIB) \
-    $(VOSLIB)
+    $(SALLIB)
 
 .IF "$(GUIBASE)"=="java"
 SHL1STDLIBS += -framework SystemConfiguration
@@ -61,7 +60,7 @@ SHL1STDLIBS += -framework SystemConfiguration
 
 SHL1DEPN=
 SHL1IMPLIB=	i$(TARGET)
-SHL1USE_EXPORTS=ordinal
+SHL1USE_EXPORTS=name
 SHL1LIBS=	$(LIB1TARGET)
 SHL1DEF=	$(MISC)$/$(SHL1TARGET).def
 
@@ -79,5 +78,5 @@ DEF1DES=	Universal Content Broker - Helpers
 $(MISC)$/$(SHL1TARGET).flt : ucbhelper.flt
 	@echo ------------------------------
 	@echo Making: $@
-	@+$(TYPE) ucbhelper.flt > $@
+	@$(TYPE) ucbhelper.flt > $@
 
