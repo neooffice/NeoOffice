@@ -1,5 +1,5 @@
 "16" = "One or more BSD commands were not found on this machine. You must install the \"BSD Subsystem\" package that is in the following folder on disk 1 of your Mac OS X installation CD:\n\n\"/Welcome to Mac OS X/Optional Installs\"";
-"17" = "The $(PRODUCT_NAME) application can only be installed on Mac OS X 10.3 or higher.";
+"17" = "The $(PRODUCT_NAME) application can only be installed on Mac OS X 10.4 or higher.";
 "18" = "The $(PRODUCT_NAME) application can only be installed on a PowerPC machine and it cannot be installed on an Intel-based machine.";
 "19" = "The $(PRODUCT_NAME) application can only be installed on an Intel-based machine and it cannot be installed on a PowerPC machine.";
 "20" = "The $(PRODUCT_NAME) installer could not determine whether or not this is a PowerPC or an Intel-based machine.";
