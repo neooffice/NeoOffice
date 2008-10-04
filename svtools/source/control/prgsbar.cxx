@@ -164,7 +164,7 @@ void ProgressBar::ImplInitSettings( BOOL bFont,
 void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 {
 #ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL ) )
+	if ( IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL ) )
 	{
 		ProgressbarValue aProgressbarValue;
 		aProgressbarValue.mdPercentComplete = (double)nNewPerc;
@@ -181,7 +181,7 @@ void ProgressBar::ImplDrawProgress( USHORT nOldPerc, USHORT nNewPerc )
 
 		Rectangle aCtrlRect( Point( 0, 0 ), GetSizePixel() );
 		Region aCtrlRegion( aCtrlRect );
-		BOOL bOK = DrawNativeControl( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
+		BOOL bOK = DrawNativeControl( CTRL_PROGRESS, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
 		if ( bOK )
 			return;
 	}

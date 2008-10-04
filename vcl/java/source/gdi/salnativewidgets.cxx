@@ -1697,7 +1697,7 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 				isSupported = TRUE;
 			break;
 
-		case CTRL_PROGRESSBAR:
+		case CTRL_PROGRESS:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
@@ -1916,7 +1916,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			}
 			break;
 
-		case CTRL_PROGRESSBAR:
+		case CTRL_PROGRESS:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
@@ -2426,7 +2426,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			}
 			break;
 
-		case CTRL_PROGRESSBAR:
+		case CTRL_PROGRESS:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle controlRect = rRealControlRegion.GetBoundRect();

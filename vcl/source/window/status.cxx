@@ -597,7 +597,7 @@ void StatusBar::ImplDrawProgress( BOOL bPaint,
 	}
 	
 #ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL ) )
+	if ( IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL ) )
 	{
 		ProgressbarValue aProgressbarValue;
 		aProgressbarValue.mdPercentComplete = (double)nPercent2;
@@ -613,7 +613,7 @@ void StatusBar::ImplDrawProgress( BOOL bPaint,
 		SetFillColor( GetBackground().GetColor() );
 
 		Region aCtrlRegion( maPrgsFrameRect );
-		BOOL bOK = DrawNativeControl( CTRL_PROGRESSBAR, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
+		BOOL bOK = DrawNativeControl( CTRL_PROGRESS, PART_ENTIRE_CONTROL, aCtrlRegion, nState, aControlValue, rtl::OUString() );
 		if ( bOK )
 			return;
 	}
