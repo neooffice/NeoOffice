@@ -230,10 +230,7 @@ LIB1FILES+= \
 .ENDIF
 
 .IF "$(GUIBASE)" == "java"
-SHL1STDLIBS+= \
-	-framework ApplicationServices
-	-framework AudioToolbox
-	-framework AudioUnit
+SHL1STDLIBS+= -framework ApplicationServices
 LIB1FILES+=$(SLB)$/sala11y.lib
 .ENDIF
 
