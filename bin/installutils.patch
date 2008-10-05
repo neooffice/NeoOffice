@@ -135,7 +135,6 @@ update_installation() {
 	chmod -Rf a+r,a-w "$2/Contents" || return 1
 	chmod -f 775 "$2/Contents" || return 1
 	chmod -Rf ug+w "$2/Contents/Resources" || return 1
-	chmod -Rf ug+w "$2/Contents/share/dict/ooo" || return 1
 
 	chmod -Rf u+w "$2/Contents/presets" || exit 1
 	chmod -Rf u+w "$2/Contents/share" || exit 1

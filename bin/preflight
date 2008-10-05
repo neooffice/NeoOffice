@@ -50,11 +50,6 @@ fi
 
 if [ -d "$2/Contents" ] ; then
 
-	# Save dictionary files for postflight scripts
-	if [ -d "$2/Contents/share/dict/ooo" -a ! -e "$2/ooo" ]; then
-		mv -f "$2/Contents/share/dict/ooo" "$2" || exit 1
-	fi
-
 	# Save jar files for postflight scripts
 	if [ -d "$2/Contents/MacOS/classes" -a ! -e "$2/classes" ]; then
 		mv -f "$2/Contents/MacOS/classes" "$2" || exit 1
