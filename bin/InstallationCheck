@@ -52,8 +52,8 @@ if [ -x "/usr/bin/sw_vers" ] ; then
 	# Return 96 + 17 if it is a bad version
 	version=`/usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $2 }'`
 	case "$version" in
-		10.[013]) exit 113;;
-		10.[013].*) exit 113;;
+		10.[0123]) exit 113;;
+		10.[0123].*) exit 113;;
 	esac
 fi
 
@@ -76,6 +76,7 @@ for i in `find -L "/System/Library/Frameworks/JavaVM.framework/Versions" -type d
 		case `basename "$i"` in
 			1.4.[23]*) javafound="$i" ; break;;
 			1.5.*) javafound="$i" ; break;;
+			1.6.*) javafound="$i" ; break;;
 		esac
 	fi
 done

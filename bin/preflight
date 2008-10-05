@@ -51,13 +51,13 @@ fi
 if [ -d "$2/Contents" ] ; then
 
 	# Save jar files for postflight scripts
-	if [ -d "$2/Contents/MacOS/classes" -a ! -e "$2/classes" ]; then
-		mv -f "$2/Contents/MacOS/classes" "$2" || exit 1
+	if [ -d "$2/Contents/basis-link/program/classes" -a ! -e "$2/classes" ]; then
+		mv -f "$2/Contents/basis-link/program/classes" "$2" || exit 1
 	fi
 
 	# Save font files for postflight scripts
-	if [ -d "$2/Contents/share/fonts/truetype" -a ! -e "$2/truetype" ]; then
-		mv -f "$2/Contents/share/fonts/truetype" "$2" || exit 1
+	if [ -d "$2/Contents/basis-link/share/fonts/truetype" -a ! -e "$2/truetype" ]; then
+		mv -f "$2/Contents/basis-link/share/fonts/truetype" "$2" || exit 1
 	fi
 
 	scriptdir=`dirname "$0"`
@@ -67,18 +67,18 @@ if [ -d "$2/Contents" ] ; then
 
 		if check_installation "$2" ; then
 			# Save help files for postflight scripts
-			if [ -d "$2/Contents/help" -a ! -e "$2/help" ]; then
-				mv -f "$2/Contents/help" "$2" || exit 1
+			if [ -d "$2/Contents/basis-link/help" -a ! -e "$2/help" ]; then
+				mv -f "$2/Contents/basis-link/help" "$2" || exit 1
 			fi
 
 			# Save resource files for postflight scripts
-			if [ -d "$2/Contents/MacOS/resource" -a ! -e "$2/resource" ]; then
-				mv -f "$2/Contents/MacOS/resource" "$2" || exit 1
+			if [ -d "$2/Contents/basis-link/program/resource" -a ! -e "$2/resource" ]; then
+				mv -f "$2/Contents/basis-link/program/resource" "$2" || exit 1
 			fi
 
 			# Save localization files
-			if [ -d "$2/Contents/share" -a ! -e "$2/share" ]; then
-				mv -f "$2/Contents/share" "$2" || exit 1
+			if [ -d "$2/Contents/basis-link/share" -a ! -e "$2/share" ]; then
+				mv -f "$2/Contents/basis-link/share" "$2" || exit 1
 			fi
 		else
 			if [ -e "$2/help" ]; then

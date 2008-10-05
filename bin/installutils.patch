@@ -136,15 +136,12 @@ update_installation() {
 	chmod -f 775 "$2/Contents" || return 1
 	chmod -Rf ug+w "$2/Contents/Resources" || return 1
 
-	chmod -Rf u+w "$2/Contents/presets" || exit 1
-	chmod -Rf u+w "$2/Contents/share" || exit 1
+	chmod -Rf u+w "$2/Contents/basis-link/presets" || exit 1
+	chmod -Rf u+w "$2/Contents/basis-link/share" || exit 1
 
 	# Touch shared libraries to fix bug 280
-	for i in `cd "$2/Contents/MacOS" ; find . -type f -name "*.dylib*"`; do
-		touch -f "$2/Contents/MacOS/$i"   
-	done
-	for i in `cd "$2/Contents/MacOS" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do
-		touch -f "$2/Contents/MacOS/$i"   
+	for i in `cd "$2/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do
+		touch -f "$2/Contents/$i"   
 	done
 
 	sudo_user=
