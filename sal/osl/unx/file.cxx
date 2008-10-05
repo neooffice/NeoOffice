@@ -353,7 +353,7 @@ static int adjustLockFlags(const char * path, int flags)
     // that does not exist yet by stating the path's parent directory
     else if ( flags & O_CREAT )
     {
-        const char *dirpath = dirname( path );
+        const char *dirpath = dirname( (char *)path );
         if ( dirpath )
             flags = adjustLockFlags( dirpath, flags & ~O_CREAT ) | O_CREAT;
     }
