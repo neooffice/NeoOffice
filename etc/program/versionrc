@@ -1,16 +1,20 @@
 [Version]
 AllLanguages=en-US
 BuildVersion=
-buildid=300m7(Build:9354)
+# buildid must be set to nothing to prevent OOo build tag from appearing in the
+# Help :: About dialog
+buildid=
 ExtensionUpdateURL=http://updateext.services.openoffice.org/ProductUpdateService/check.Update
 OOOBaseVersion=3.0
 # ProductBuildid must be set to zero as the UpdateURL will always return 1 if
 # there is a newer version
 ProductBuildid=0
-ProductMajor=300
-ProductMinor=7
+# These 4 settings must be set to nothing to prevent OOo build tag from
+# appearing in the Help :: About dialog
+ProductMajor=
+ProductMinor=
 ProductPatch=
-ProductSource=OOO300
+ProductSource=
 UpdateID=OpenOffice.org_3_en-US
 # Custom UpdateURL
 UpdateURL=$(PRODUCT_UPDATE_CHECK_URL)?product=$(PRODUCT_NAME) $(PRODUCT_VERSION)&patch=$(PRODUCT_PATCH_VERSION)&os=${_OS}&arch=${_ARCH}
