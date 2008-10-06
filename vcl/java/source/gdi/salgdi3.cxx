@@ -150,6 +150,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						const OUString aSung( OUString::createFromAscii( "Sung" ) );
 						const OUString aSymbol( OUString::createFromAscii( "Symbol" ) );
 						const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
+						const OUString aNeo3Symbol( OUString::createFromAscii( "Neo3Symbol" ) );
 						const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
 						const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
 						const OUString aTimes( OUString::createFromAscii( "Times" ) );
@@ -226,16 +227,16 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !aDisplayName.getLength() || aDisplayName.toChar() == (sal_Unicode)'.' )
 								continue;
 
-							if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol )
+							if ( aDisplayName == aOpenSymbol || aDisplayName == aStarSymbol || aDisplayName == aNeoSymbol )
 							{
-								// Don't allow Sun's symbol fonts to override
-								// our symbol font
+								// Don't allow Sun's symbol fonts our older
+								// NeoOffice fonts to override our symbol font
 								continue;
 							}
-							else if ( aDisplayName == aNeoSymbol )
+							else if ( aDisplayName == aNeo3Symbol )
 							{
 								aDisplayName = OUString( aOpenSymbol );
-								aMapName += aFontSeparator + aSymbol + aFontSeparator + aNeoSymbol;
+								aMapName += aFontSeparator + aSymbol + aFontSeparator + aNeo3Symbol;
 							}
 							else if ( aDisplayName == aLastResort )
 							{
