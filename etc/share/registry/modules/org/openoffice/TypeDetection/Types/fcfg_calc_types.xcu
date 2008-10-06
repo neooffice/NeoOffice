@@ -57,7 +57,7 @@
 	<node oor:name="calc_MS_Excel_40" oor:op="replace" >
 		<prop oor:name="DetectService"><value>com.sun.star.comp.calc.FormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>xls xlw</value></prop>
+		<prop oor:name="Extensions"><value>xls xlw xlc xlm</value></prop>
 		<prop oor:name="MediaType"><value>application/vnd.ms-excel</value></prop>
 		<prop oor:name="Preferred"><value>false</value></prop>
 		<prop oor:name="PreferredFilter"><value>MS Excel 4.0</value></prop>
@@ -83,7 +83,7 @@
 	<node oor:name="calc_MS_Excel_5095" oor:op="replace" >
 		<prop oor:name="DetectService"><value>com.sun.star.comp.calc.FormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>xls xlw</value></prop>
+		<prop oor:name="Extensions"><value>xls xlc xlm xlw</value></prop>
 		<prop oor:name="MediaType"><value>application/vnd.ms-excel</value></prop>
 		<prop oor:name="Preferred"><value>false</value></prop>
 		<prop oor:name="PreferredFilter"><value>MS Excel 5.0/95</value></prop>
@@ -109,7 +109,7 @@
 	<node oor:name="calc_MS_Excel_95" oor:op="replace" >
 		<prop oor:name="DetectService"><value>com.sun.star.comp.calc.FormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>xls xlw</value></prop>
+		<prop oor:name="Extensions"><value>xls xlc xlm xlw</value></prop>
 		<prop oor:name="MediaType"><value>application/vnd.ms-excel</value></prop>
 		<prop oor:name="Preferred"><value>false</value></prop>
 		<prop oor:name="PreferredFilter"><value>MS Excel 95</value></prop>
@@ -135,7 +135,7 @@
 	<node oor:name="calc_MS_Excel_97" oor:op="replace" >
 		<prop oor:name="DetectService"><value>com.sun.star.comp.calc.FormatDetector</value></prop>
 		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>xls xlw</value></prop>
+		<prop oor:name="Extensions"><value>xls xlc xlm xlw</value></prop>
 		<prop oor:name="MediaType"><value>application/vnd.ms-excel</value></prop>
 		<prop oor:name="Preferred"><value>false</value></prop>
 		<prop oor:name="PreferredFilter"><value>MS Excel 97</value></prop>
@@ -182,97 +182,6 @@
 			<value>SYLK</value>
 		</prop>
 		<prop oor:name="ClipboardFormat"/>
-	</node>
-
-	<node oor:name="calc_StarCalc_10" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.comp.calc.FormatDetector</value></prop>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>sdc</value></prop>
-		<prop oor:name="MediaType"/>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>StarCalc 1.0</value></prop>
-		<prop oor:name="UIName">
-			<value>StarCalc 1.0</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"/>
-	</node>
-
-	<node oor:name="calc_StarCalc_30" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>sdc</value></prop>
-		<prop oor:name="MediaType"><value>application/x-starcalc</value></prop>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>StarCalc 3.0</value></prop>
-		<prop oor:name="UIName">
-			<value>StarCalc 3.0</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>StarCalcDocument</value></prop>
-	</node>
-
-	<node oor:name="calc_StarCalc_30_VorlageTemplate" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>vor</value></prop>
-		<prop oor:name="MediaType"/>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>StarCalc 3.0 Vorlage/Template</value></prop>
-		<prop oor:name="UIName">
-			<value>StarCalc 3.0 Template</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>StarCalcDocument</value></prop>
-	</node>
-
-	<node oor:name="calc_StarCalc_40" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>sdc</value></prop>
-		<prop oor:name="MediaType"><value>application/x-starcalc</value></prop>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>StarCalc 4.0</value></prop>
-		<prop oor:name="UIName">
-			<value>StarCalc 4.0</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>StarCalc 4.0</value></prop>
-	</node>
-
-	<node oor:name="calc_StarCalc_40_VorlageTemplate" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>vor</value></prop>
-		<prop oor:name="MediaType"/>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>StarCalc 4.0 Vorlage/Template</value></prop>
-		<prop oor:name="UIName">
-			<value>StarCalc 4.0 Template</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>StarCalc 4.0</value></prop>
-	</node>
-
-	<node oor:name="calc_StarCalc_50" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>sdc</value></prop>
-		<prop oor:name="MediaType"><value>application/vnd.stardivision.calc</value></prop>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>StarCalc 5.0</value></prop>
-		<prop oor:name="UIName">
-			<value>StarCalc 5.0</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>StarCalc 5.0</value></prop>
-	</node>
-
-	<node oor:name="calc_StarCalc_50_VorlageTemplate" oor:op="replace" >
-		<prop oor:name="DetectService"><value>com.sun.star.comp.sfx2.BinaryFormatDetector</value></prop>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>vor</value></prop>
-		<prop oor:name="MediaType"/>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>StarCalc 5.0 Vorlage/Template</value></prop>
-		<prop oor:name="UIName">
-			<value>StarCalc 5.0 Template</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>StarCalc 5.0</value></prop>
 	</node>
 
 	<node oor:name="calc_StarOffice_XML_Calc" oor:op="replace" >
@@ -379,17 +288,50 @@
 		<prop oor:name="ClipboardFormat"><value>doctype:Workbook</value></prop>
 	</node>
 
-	<node oor:name="MOOXSTYPE" oor:op="replace">
-		<prop oor:name="URLPattern"><value>*.xlsx</value></prop>
-		<prop oor:name="Extensions"><value>xlsx</value></prop>
-		<prop oor:name="MediaType"><value>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</value></prop>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>MOOXS</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">Microsoft Excel 2007 Document</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>Microsoft Excel 2007 Document</value></prop>
-	</node>
+<node oor:name="MS Excel 2007 XML" oor:op="replace" >
+	<prop oor:name="DetectService"><value>com.sun.star.comp.oox.FormatDetector</value></prop>
+	<prop oor:name="URLPattern"/>
+	<prop oor:name="Extensions"><value>xlsm xlsx</value></prop>
+	<prop oor:name="MediaType"/>
+	<prop oor:name="Preferred"><value>false</value></prop>
+	<prop oor:name="PreferredFilter"><value>Calc MS Excel 2007 XML</value></prop>
+	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft Excel 2007 XML</value></prop>
+	<prop oor:name="ClipboardFormat"/>
+</node>
+
+<node oor:name="MS Excel 2007 XML Template" oor:op="replace" >
+	<prop oor:name="DetectService"><value>com.sun.star.comp.oox.FormatDetector</value></prop>
+	<prop oor:name="URLPattern"/>
+	<prop oor:name="Extensions"><value>xltm xltx</value></prop>
+	<prop oor:name="MediaType"/>
+	<prop oor:name="Preferred"><value>false</value></prop>
+	<prop oor:name="PreferredFilter"><value>Calc MS Excel 2007 XML Template</value></prop>
+	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft Excel 2007 XML Template</value></prop>
+	<prop oor:name="ClipboardFormat"/>
+</node>
+
+<node oor:name="MS Excel 2007 Binary" oor:op="replace" >
+	<prop oor:name="DetectService"><value>com.sun.star.comp.oox.FormatDetector</value></prop>
+	<prop oor:name="URLPattern"/>
+	<prop oor:name="Extensions"><value>xlsb</value></prop>
+	<prop oor:name="MediaType"/>
+	<prop oor:name="Preferred"><value>false</value></prop>
+	<prop oor:name="PreferredFilter"><value>Calc MS Excel 2007 Binary</value></prop>
+	<prop oor:name="UIName"><value xml:lang="x-default">Microsoft Excel 2007 Binary</value></prop>
+	<prop oor:name="ClipboardFormat"/>
+</node>
+
+<node oor:name="MOOXSTYPE" oor:op="replace">
+	<prop oor:name="URLPattern"><value>*.xlsx</value></prop>
+	<prop oor:name="Extensions"><value>xlsx</value></prop>
+	<prop oor:name="MediaType"><value>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</value></prop>
+	<prop oor:name="Preferred"><value>false</value></prop>
+	<prop oor:name="PreferredFilter"><value>MOOXS</value></prop>
+	<prop oor:name="UIName">
+		<value xml:lang="x-default">Microsoft Excel 2007 Document</value>
+	</prop>
+	<prop oor:name="ClipboardFormat"><value>Microsoft Excel 2007 Document</value></prop>
+</node>
 
 	</node>
 </oor:component-data>

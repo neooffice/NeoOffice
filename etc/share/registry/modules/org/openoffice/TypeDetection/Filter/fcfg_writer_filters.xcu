@@ -136,19 +136,19 @@
 		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
 	</node>
 
-	<node oor:name="MS Word 97" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN PREFERRED</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"/>
-		<prop oor:name="UserData"><value>CWW8</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">Microsoft Word 97/2000/XP</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>0</value></prop>
-		<prop oor:name="Type"><value>writer_MS_Word_97</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
+    <node oor:name="MS Word 97" oor:op="replace">
+        <prop oor:name="Flags"><value>IMPORT EXPORT ALIEN PREFERRED</value></prop>
+        <prop oor:name="UIComponent"/>
+        <prop oor:name="FilterService"/>
+        <prop oor:name="UserData"><value>CWW8</value></prop>
+        <prop oor:name="UIName">
+            <value xml:lang="x-default">Microsoft Word 97/2000/XP</value>
+        </prop>
+        <prop oor:name="FileFormatVersion"><value>0</value></prop>
+        <prop oor:name="Type"><value>writer_MS_Word_97</value></prop>
+        <prop oor:name="TemplateName"/>
+        <prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
+    </node>
 
 	<node oor:name="MS Word 97 Vorlage" oor:op="replace">
 		<prop oor:name="Flags"><value>IMPORT TEMPLATE TEMPLATEPATH ALIEN</value></prop>
@@ -182,123 +182,6 @@
 		<prop oor:name="UserData"><value>CXML</value></prop>
 		<prop oor:name="FileFormatVersion"><value>6200</value></prop>
 		<prop oor:name="Type"><value>writer_StarOffice_XML_Writer</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 1.0" oor:op="replace">
-        <prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-        <prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>SWG1</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">StarWriter 1.0</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>0</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_10</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 2.0" oor:op="replace">
-        <prop oor:name="Flags"><value>IMPORT TEMPLATE ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-        <prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>SWG</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">StarWriter 2.0</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>0</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_20</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 3.0" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE OWN ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>CSW3</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">StarWriter 3.0</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>3450</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_30</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 3.0 Vorlage/Template" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE TEMPLATEPATH OWN ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>CSW3V</value></prop>
-		<prop oor:name="FileFormatVersion"><value>3450</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_30_VorlageTemplate</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 4.0" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE OWN ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>CSW4</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">StarWriter 4.0</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>3580</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_40</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 4.0 Vorlage/Template" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE TEMPLATEPATH OWN ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>CSW4V</value></prop>
-		<prop oor:name="FileFormatVersion"><value>3580</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_40_VorlageTemplate</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 5.0" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE OWN ALIEN 3RDPARTYFILTER PREFERRED</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>CSW5</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">StarWriter 5.0</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>5050</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_50</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter 5.0 Vorlage/Template" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE TEMPLATEPATH OWN ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>CSW5V</value></prop>
-		<prop oor:name="FileFormatVersion"><value>5050</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_50_VorlageTemplate</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="StarWriter DOS" oor:op="replace">
-        <prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-        <prop oor:name="FilterService"><value>com.sun.star.comp.office.BF_MigrateFilter</value></prop>
-		<prop oor:name="UserData"><value>SW6</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">StarWriter DOS</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>0</value></prop>
-		<prop oor:name="Type"><value>writer_StarWriter_DOS</value></prop>
 		<prop oor:name="TemplateName"/>
 		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
 	</node>
@@ -381,31 +264,6 @@
 		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
 	</node>
 
-	<node oor:name="writer_JustSystem_Ichitaro_10" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.comp.jsimport.IchitaroImportFilter</value></prop>
-		<prop oor:name="UserData"><value></value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">Ichitaro 8/9/10/11</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>0</value></prop>
-		<prop oor:name="Type"><value>writer_JustSystem_Ichitaro_10</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="writer_JustSystem_Ichitaro_10_template" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.comp.jsimport.IchitaroImportFilter</value></prop>
-		<prop oor:name="UserData"><value></value></prop>
-		<prop oor:name="FileFormatVersion"><value>0</value></prop>
-		<prop oor:name="Type"><value>writer_JustSystem_Ichitaro_10_template</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
 	<node oor:name="writer_MIZI_Hwp_97" oor:op="replace">
 		<prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER</value></prop>
 		<prop oor:name="UIComponent"/>
@@ -427,20 +285,6 @@
 		<prop oor:name="UserData"><value>CXMLV</value></prop>
 		<prop oor:name="FileFormatVersion"><value>6200</value></prop>
 		<prop oor:name="Type"><value>writer_StarOffice_XML_Writer_Template</value></prop>
-		<prop oor:name="TemplateName"/>
-		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
-	</node>
-
-	<node oor:name="writer_WPSSystem_WPS2000_10" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER</value></prop>
-		<prop oor:name="UIComponent"/>
-		<prop oor:name="FilterService"><value>com.sun.comp.WPSimport.IWPSImportFilter</value></prop>
-		<prop oor:name="UserData"><value></value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">WPS 2000/Office 1.0</value>
-		</prop>
-		<prop oor:name="FileFormatVersion"><value>0</value></prop>
-		<prop oor:name="Type"><value>writer_WPSSystem_WPS2000_10</value></prop>
 		<prop oor:name="TemplateName"/>
 		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
 	</node>
@@ -481,6 +325,32 @@
 		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
 	</node>
 
+        <node oor:name="MediaWiki" oor:op="replace">
+		<prop oor:name="FileFormatVersion"><value>0</value></prop>
+                <prop oor:name="Type"><value>MediaWiki</value></prop>
+		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
+		<prop oor:name="UIComponent"/>
+                <prop oor:name="UserData"><value oor:separator=",">com.sun.star.documentconversion.XSLTFilter,,,com.sun.star.comp.Writer.XMLOasisExporter,,../share/xslt/wiki/odt2mediawiki.xsl</value></prop>
+		<prop oor:name="FilterService"><value>com.sun.star.comp.Writer.XmlFilterAdaptor</value></prop>
+		<prop oor:name="UIName">
+                        <value xml:lang="x-default">MediaWiki</value>
+		</prop>
+		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
+	</node>
+
+        <node oor:name="MediaWiki_Web" oor:op="replace">
+		<prop oor:name="FileFormatVersion"><value>0</value></prop>
+                <prop oor:name="Type"><value>MediaWiki</value></prop>
+                <prop oor:name="DocumentService"><value>com.sun.star.text.WebDocument</value></prop>
+		<prop oor:name="UIComponent"/>
+                <prop oor:name="UserData"><value oor:separator=",">com.sun.star.documentconversion.XSLTFilter,,,com.sun.star.comp.Writer.XMLOasisExporter,,../share/xslt/wiki/odt2mediawiki.xsl</value></prop>
+		<prop oor:name="FilterService"><value>com.sun.star.comp.Writer.XmlFilterAdaptor</value></prop>
+		<prop oor:name="UIName">
+                        <value xml:lang="x-default">MediaWiki</value>
+		</prop>
+		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
+	</node>
+
 	<node oor:name="MS Word 2003 XML" oor:op="replace">
 		<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 		<prop oor:name="UIComponent"/>
@@ -491,6 +361,34 @@
 		<prop oor:name="TemplateName"/>
 		<prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
 	</node>
+
+    <node oor:name="MS Word 2007 XML" oor:op="replace">
+        <prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER</value></prop>
+        <prop oor:name="UIComponent"/>
+        <prop oor:name="FilterService"><value>com.sun.star.comp.Writer.WriterFilter</value></prop>
+        <prop oor:name="UserData"><value>OXML</value></prop>
+        <prop oor:name="UIName">
+            <value xml:lang="x-default">Microsoft Word 2007 XML</value>
+        </prop>
+        <prop oor:name="FileFormatVersion"><value>0</value></prop>
+        <prop oor:name="Type"><value>writer_MS_Word_2007</value></prop>
+        <prop oor:name="TemplateName"/>
+        <prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
+    </node>
+
+    <node oor:name="MS Word 2007 XML Template" oor:op="replace">
+        <prop oor:name="Flags"><value>IMPORT ALIEN 3RDPARTYFILTER TEMPLATE TEMPLATEPATH</value></prop>
+        <prop oor:name="UIComponent"/>
+        <prop oor:name="FilterService"><value>com.sun.star.comp.Writer.WriterFilter</value></prop>
+        <prop oor:name="UserData"><value>OXML</value></prop>
+        <prop oor:name="UIName">
+            <value xml:lang="x-default">Microsoft Word 2007 XML Template</value>
+        </prop>
+        <prop oor:name="FileFormatVersion"><value>0</value></prop>
+        <prop oor:name="Type"><value>writer_MS_Word_2007_Template</value></prop>
+        <prop oor:name="TemplateName"/>
+        <prop oor:name="DocumentService"><value>com.sun.star.text.TextDocument</value></prop>
+    </node>
 
 	<node oor:name="LaTeX_Writer" oor:op="replace">
 		<prop oor:name="FileFormatVersion"><value>0</value></prop>
@@ -519,7 +417,7 @@
 		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 	</node>
 	<node oor:name="MOOX" oor:op="replace">
-		<prop oor:name="Flags"><value>IMPORT EXPORT TEMPLATE ALIEN PREFERRED</value></prop>
+		<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
 		<prop oor:name="UIComponent"/>
 		<prop oor:name="FilterService"/>
 		<prop oor:name="UserData"><value>CXML,Preprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /DOCX2ODT /I %SOURCE% /O %TARGET%&gt;,Postprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /ODT2DOCX /I %SOURCE% /O %TARGET%&gt;</value></prop>
