@@ -1,14 +1,15 @@
 [Bootstrap]
-UNO_SHARED_PACKAGES_CACHE=${$ORIGIN/unorc:UNO_SHARED_PACKAGES_CACHE}
-UNO_USER_PACKAGES_CACHE=${$ORIGIN/unorc:UNO_USER_PACKAGES_CACHE}
-URE_BIN_DIR=$ORIGIN/../ure-link/bin
-URE_MORE_JAVA_CLASSPATH_URLS=
-URE_OVERRIDE_JAVA_JFW_SHARED_DATA=${BRAND_BASE_DIR}/share/config/javasettings_${_OS}_${_ARCH}.xml
-URE_OVERRIDE_JAVA_JFW_USER_DATA=${${BRAND_BASE_DIR}/program/bootstraprc:UserInstallation}/user/config/javasettings_${_OS}_${_ARCH}.xml
-URE_LIB_DIR=$ORIGIN/../ure-link/lib
-# Add vcl.jar to classpath
-URE_MORE_JAVA_TYPES=$ORIGIN/classes/vcl.jar $ORIGIN/classes/unoil.jar $ORIGIN/classes/ScriptFramework.jar ${${$ORIGIN/unorc:PKG_UserUnoFile}:UNO_JAVA_CLASSPATH} ${${$ORIGIN/unorc:PKG_SharedUnoFile}:UNO_JAVA_CLASSPATH}
-URE_MORE_SERVICES=${${$ORIGIN/unorc:PKG_UserUnoFile}:UNO_SERVICES} ${${$ORIGIN/unorc:PKG_SharedUnoFile}:UNO_SERVICES} $ORIGIN/services.rdb
-URE_MORE_TYPES=$ORIGIN/offapi.rdb $ORIGIN/oovbaapi.rdb ${${$ORIGIN/unorc:PKG_SharedUnoFile}:UNO_TYPES} ${${$ORIGIN/unorc:PKG_UserUnoFile}:UNO_TYPES}
+BRAND_BASE_DIR=${ORIGIN}/..
+OOO_BASE_DIR=${BRAND_BASE_DIR}/basis-link
+UNO_SHARED_PACKAGES_CACHE=${${OOO_BASE_DIR}/program/fundamentalbasisrc:UNO_SHARED_PACKAGES_CACHE}
+UNO_USER_PACKAGES_CACHE=${${OOO_BASE_DIR}/program/fundamentalbasisrc:UNO_USER_PACKAGES_CACHE}
+URE_BIN_DIR=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_BIN_DIR}
+URE_MORE_JAVA_CLASSPATH_URLS=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_MORE_JAVA_CLASSPATH_URLS}
+URE_OVERRIDE_JAVA_JFW_SHARED_DATA=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_OVERRIDE_JAVA_JFW_SHARED_DATA}
+URE_OVERRIDE_JAVA_JFW_USER_DATA=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_OVERRIDE_JAVA_JFW_USER_DATA}
+URE_LIB_DIR=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_LIB_DIR}
+URE_MORE_JAVA_TYPES=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_MORE_JAVA_TYPES}
+URE_MORE_SERVICES=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_MORE_SERVICES}
+URE_MORE_TYPES=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_MORE_TYPES}
 # Disable display of Java icon in Dock
-JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=0
+JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1
