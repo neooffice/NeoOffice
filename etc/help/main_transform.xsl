@@ -29,37 +29,32 @@
 
 <!--
 
-    $RCSfile$
+  DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+  
+  Copyright 2008 by Sun Microsystems, Inc.
  
-    $Revision$
+  OpenOffice.org - a multi-platform office productivity suite
  
-    last change: $Author$ $Date$
+  $RCSfile$
  
-    The Contents of this file are made available subject to
-    the terms of GNU General Public License Version 2.1.
+  $Revision$
  
+  This file is part of OpenOffice.org.
  
-      GNU General Public License Version 2.1
-      =============================================
-      Copyright 2005 by Sun Microsystems, Inc.
-      901 San Antonio Road, Palo Alto, CA 94303, USA
+  OpenOffice.org is free software: you can redistribute it and/or modify
+  it under the terms of the GNU Lesser General Public License version 3
+  only, as published by the Free Software Foundation.
  
-      This library is free software; you can redistribute it and/or
-      modify it under the terms of the GNU General Public
-      License version 2.1, as published by the Free Software Foundation.
+  OpenOffice.org is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU Lesser General Public License version 3 for more details
+  (a copy is included in the LICENSE file that accompanied this code).
  
-      This library is distributed in the hope that it will be useful,
-      but WITHOUT ANY WARRANTY; without even the implied warranty of
-      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-      General Public License for more details.
- 
-      You should have received a copy of the GNU General Public
-      License along with this library; if not, write to the Free Software
-      Foundation, Inc., 59 Temple Place, Suite 330, Boston,
-      MA  02111-1307  USA
-
-      Modified January 2006 by Patrick Luby. NeoOffice is distributed under
-      GPL only under modification term 3 of the LGPL.
+  You should have received a copy of the GNU Lesser General Public License
+  version 3 along with OpenOffice.org.  If not, see
+  <http://www.openoffice.org/license.html>
+  for a copy of the LGPLv3 License.
  
 -->
 
@@ -128,7 +123,7 @@
 <xsl:param name="distrib">
 	<!-- Always use "OpenSource" -->
 	<xsl:value-of select="'OpenSource'"/>
-<!--
+    <!--
 	<xsl:choose>
 		<xsl:when test="starts-with($productname,'OpenOffice')">
 			<xsl:value-of select="'OpenSource'"/>
@@ -137,7 +132,7 @@
 			<xsl:value-of select="'COMMERCIAL'"/>
 		</xsl:otherwise>
 	</xsl:choose>
--->
+    -->
 </xsl:param>
 <xsl:param name="Language" select="'en-US'"/>
 <xsl:variable name="lang" select="$Language"/>
@@ -575,9 +570,9 @@
 		
 		<!-- Replace as many OpenOffice.org references as we can -->
 		<xsl:when test="contains($string,$brand5)">
-			<xsl:variable name="newstr">
+			    <xsl:variable name="newstr">
                 <xsl:value-of select="substring-before($string,$brand5)"/>
-                <xsl:value-of select="$productname"/>
+                <xsl:value-of select="$pversion"/>
                 <xsl:value-of select="substring-after($string,$brand5)"/>
            </xsl:variable>
 			<xsl:call-template name="brand">
@@ -648,9 +643,7 @@
 <xsl:variable name="archive"><xsl:value-of select="concat(substring-before(substring-after(@href,'text/'),'/'),'/')"/></xsl:variable>
 <xsl:variable name="dbpostfix"><xsl:call-template name="createDBpostfix"><xsl:with-param name="archive" select="$archive"/></xsl:call-template></xsl:variable>
 	<xsl:choose>
-<!--
-  Fix bug 1120 by replacing the OOo support URL
--->
+        <!-- Fix bug 1120 by replacing the OOo support URL -->
 		<xsl:when test="@href='$(OO_SUPPORT_URL)' and text()='$(OO_SUPPORT_URL_TEXT)'">
 			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
 		</xsl:when>
@@ -984,7 +977,7 @@
 	<xsl:param name="archive"/>
 	<xsl:variable name="newDB">
 		<xsl:choose>
-			<xsl:when test="(substring($archive,1,6) = 'shared') or (substring($archive,1,6) = 'schart')"><xsl:value-of select="$Database"/></xsl:when>
+			<xsl:when test="(substring($archive,1,6) = 'shared')"><xsl:value-of select="$Database"/></xsl:when>
 			<xsl:otherwise><xsl:value-of select="substring-before($archive,'/')"/></xsl:otherwise>
 		</xsl:choose>
 	</xsl:variable>
