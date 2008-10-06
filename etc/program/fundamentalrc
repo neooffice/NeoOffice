@@ -11,5 +11,4 @@ URE_LIB_DIR=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_LIB_DIR}
 URE_MORE_JAVA_TYPES=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_MORE_JAVA_TYPES}
 URE_MORE_SERVICES=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_MORE_SERVICES}
 URE_MORE_TYPES=${${OOO_BASE_DIR}/program/fundamentalbasisrc:URE_MORE_TYPES}
-# Disable display of Java icon in Dock
 JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1
