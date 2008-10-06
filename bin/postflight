@@ -163,8 +163,8 @@ if [ -d "$2" ]; then
 	chmod -Rf ug+w "$2/Contents/Resources" || exit 1
 
 	# Fix bug 1584 by marking certain directories writable for root user
-	chmod -Rf u+w "$2/Contents/presets" || exit 1
-	chmod -Rf u+w "$2/Contents/share" || exit 1
+	chmod -Rf u+w "$2/Contents/basis-link/presets" || exit 1
+	chmod -Rf u+w "$2/Contents/basis-link/share" || exit 1
 
 	# Touch shared libraries to fix bug 280
 	for i in `cd "$2/Contents" ; find . -type f -name "*.dylib*" ; find . -type f -name "*.bin" ; find . -type f -name "*.jar"`; do
