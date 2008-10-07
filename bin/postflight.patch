@@ -43,7 +43,9 @@ umask 022
 if [ -d "$2" ]; then
 
 	# Fix Apple installer bug described in bug 1373
-	if [ "$2" = "/" -o "$2" = "$3" -o `cd "$2" ; pwd` = "/" -o `cd "$2" ; pwd` = "$3" -o "$INSTALLER_TEMP" = "/" -o "$INSTALLER_TEMP" = "$3" -o `cd "$INSTALLER_TEMP" ; pwd` = "/" -o `cd "$INSTALLER_TEMP" ; pwd` = "$3" ]; then
+	REAL_2=`cd "$2" ; pwd`
+	REAL_INSTALLER_TEMP=`cd "$INSTALLER_TEMP" ; pwd`
+	if [ "$2" = "/" -o "$2" = "$3" -o "$REAL_2" = "/" -o "$REAL_2" = "$3" -o "$INSTALLER_TEMP" = "/" -o "$INSTALLER_TEMP" = "$3" -o "$REAL_INSTALLER_TEMP" = "/" -o "$REAL_INSTALLER_TEMP" = "$3" ]; then
 		exit 1;
 	fi
 
