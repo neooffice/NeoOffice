@@ -101,10 +101,6 @@
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
-#include <string.h>
-#include <string>
-#include <strstream>
-
 #define SERVICENAME "org.neooffice.ImageCapture"
 #define IMPLNAME	"org.neooffice.XImageCapture"
 

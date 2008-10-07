@@ -107,9 +107,6 @@
 
 #define kRemoteControlFrameworkName	"@executable_path/../Frameworks/RemoteControl.framework/Versions/A/RemoteControl"
 
-#include <string>
-#include <strstream>
-
 #define SERVICENAME "org.neooffice.RemoteControl"
 #define IMPLNAME	"org.neooffice.XRemoteControl"
 

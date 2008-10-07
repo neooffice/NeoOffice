@@ -98,9 +98,6 @@
 
 #define kMediaBrowserFrameworkName	"@executable_path/../Frameworks/iMediaBrowser.framework/Versions/A/iMediaBrowser"
 
-#include <string>
-#include <strstream>
-
 #define SERVICENAME "org.neooffice.MediaBrowser"
 #define IMPLNAME	"org.neooffice.XMediaBrowser"
 
