@@ -1,33 +1,25 @@
 Index: patches/dev300/apply
 ===================================================================
---- patches/dev300/apply	(revision 14020)
+--- patches/dev300/apply	(revision 14238)
 +++ patches/dev300/apply	(working copy)
 @@ -10,6 +10,7 @@
  OLDEST_SUPPORTED=dev300-m28 ooo300-m0
  
  # -------- Functional sub-sets --------
-+# Disable LayoutDialogs to avoid build breakage
++# Disable because we want to allow user to decide which filter to use
  Common : PreprocessPatches, BuildBits, TemporaryHacks, FixesNotForUpstream, \
  	 Fixes, DefaultSettings, Features, VCL, Misc, \
  	 Icons, Branding, CalcFixes, WriterFixes, EasterEgg, \
-@@ -17,13 +18,14 @@
+@@ -17,7 +18,7 @@
  	 Layout, VBABits, VBAObjects, CalcErrors, Store, CJK, GCJ, Lwp, \
  	 OOXML, SVGImport, AutoCorrectCapsLock, UnitTesting, \
- 	 PopupRemoval, LinkWarningDlg, RadioButtons, InternalCairo, \
--	 FedoraCommonFixes, InternalMesaHeaders, LayoutDialogs, UnusedMethodsRemoval
-+	 FedoraCommonFixes, InternalMesaHeaders, UnusedMethodsRemoval
+ 	 CalcDataPilotDrillDown, PopupRemoval, LinkWarningDlg, RadioButtons, InternalCairo, \
+-	 FedoraCommonFixes, InternalMesaHeaders, LayoutDialogs
++	 FedoraCommonFixes, InternalMesaHeaders
  
  LinuxCommon : Common, Defaults, TangoIcons, FontConfigTemporaryHacks, \
  	      FedoraLinuxOnlyFixes, LinuxOnly, SystemBits, \
- 	      msaccess, OpenGLTransitions, \
- 	      Fpickers, Mono, AddressBooks, QuickStarter
--MacOSXCommon : Common, Defaults, TangoIcons, SystemBits
-+# Add Binfilter to avoid build breakage in binfilter module
-+MacOSXCommon : Common, Defaults, TangoIcons, SystemBits, Binfilter
- Win32Common : Common, Defaults, TangoIcons, \
- 	      Win32Only, NotDebian
- # Experimental sections
-@@ -414,7 +416,8 @@
+@@ -422,7 +423,8 @@
  printing-bugfix-254573.diff, n#254573, rodo
  
  # use basic (advanced) shapes for rectangle/ellipse on draw/impress's toolbars. make shapes wrap words by default, n#171052, rodo
@@ -37,7 +29,7 @@ Index: patches/dev300/apply
  svx-shapes-default-word-wrap-enable.diff, n#171052, rodo
  svx-honour-customshape-capabilities.diff, n#395372, thorsten
  
-@@ -454,7 +457,8 @@
+@@ -462,7 +464,8 @@
  xmlsecurity-verify-usages.diff, i#76871, pmladek
  
  # fix that allows OOo to work with a standard (unpatched) libjpeg,
@@ -47,7 +39,7 @@ Index: patches/dev300/apply
  
  # handle hyperlinks to files better
  sw-hyperlinks-relative.diff, n#405712, i#91522, jholesov
-@@ -643,7 +647,8 @@
+@@ -643,7 +646,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -57,7 +49,7 @@ Index: patches/dev300/apply
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -787,7 +792,8 @@
+@@ -796,7 +800,8 @@
  
  [ Misc ]
  # Insert symbol defaults to the Symbol font - not a random one
@@ -67,17 +59,17 @@ Index: patches/dev300/apply
  # Address data source ordering x#62860
  addrbk-datasrc-ordering.diff, michael
  # Changed the default option in the Templates and Documents dialog.
-@@ -1645,7 +1651,8 @@
+@@ -1700,7 +1705,8 @@
  sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
  sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
  # hack to ignore writerfilter if odf-converter is present
 -odf-converter-ignore-writerfilter.diff, n#348471, jholesov
 +# Disable because we want to allow user to decide which filter to use
 +# odf-converter-ignore-writerfilter.diff, n#348471, jholesov
- sw-accept-reject-redline.diff, n#249775, Amelia Wang
  
  
-@@ -1682,7 +1689,8 @@
+ [ msaccess ]
+@@ -1736,7 +1742,8 @@
  
  writerfilter-source-dmapper-domainmapper-debug.diff
  
@@ -87,23 +79,3 @@ Index: patches/dev300/apply
  
  [ CalcFixes ]
  
-@@ -1981,10 +1989,6 @@
- 
- # fix lpsolve build for OSX
- macosx-lpsolve-makefile.diff
--# fixes build with gcc-3.3; required for MacOSX build
--# it is usable only until anyone uses the disabled code => MacOSXOnly
--# we will move to gcc-4.x, so it does not make sense to push it upstream
--buildfix-boost-gcc33.diff
- 
- [ PardusOnly ]
- pardus-default-ExternalMailer.diff
-@@ -2591,7 +2594,7 @@
- 
- [ Fixes <= dev300-m30 <= ooo300-m3 ]
- win32-mergemodule-pm-m30.diff, i#93065, tml
--[ Fixes > dev300-m30 > ooo300-m3 ]
-+[ Fixes > dev300-m30 > ooo300-m3 < ooo300-m7 ]
- win32-mergemodule-pm.diff, tml
- 
- [ Fixes ]

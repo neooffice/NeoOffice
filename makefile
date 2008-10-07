@@ -117,11 +117,11 @@ PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice3 Extensions3
-OO_TAG:=-rOOO300_m7
-OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/tags/OOO_BUILD_3_0_0_4
+OO_TAG:=-rOOO300_m9
+OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/branches/ooo-build-3-0
 OOO-BUILD_PACKAGE:=ooo-build
 OOO-BUILD_TAG:=
-OOO-BUILD_APPLY_TAG:=OOO300_m7
+OOO-BUILD_APPLY_TAG:=OOO300_m9
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 LIBWPD_SOURCE_URL=http://download.go-oo.org/libwpd/libwpd-0.8.14.tar.gz
 LIBWPG_SOURCE_URL=http://download.go-oo.org/SRC680/libwpg-0.1.3.tar.gz
@@ -200,7 +200,6 @@ build.oo_patches: \
 	build.oo_filter_patch \
 	build.oo_framework_patch \
 	build.oo_i18npool_patch \
-	build.oo_instsetoo_native_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \
 	build.oo_moz_patch \
@@ -244,15 +243,14 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	touch "$@"
 
 build.ooo-build_patches: build.ooo-build_checkout \
-	build.ooo-build_gstreamer-slideshow.diff_patch \
-	build.ooo-build_pdfimport-no-license.diff_patch \
+	build.ooo-build_svtools-field-patch.diff_patch \
 	build.ooo-build_apply_patch
 	touch "$@"
 
 build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout
 	-( cd "$(BUILD_HOME)/ooo-build" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/ooo-build" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	rm -f "$(BUILD_HOME)/ooo-build/patches/apply.pl" ; sed 's#@GNUPATCH@#patch#g' "$(BUILD_HOME)/ooo-build/patches/apply.pl.in" > "$(BUILD_HOME)/ooo-build/patches/apply.pl" ; chmod a+x "$(BUILD_HOME)/ooo-build/patches/apply.pl" ; "$(BUILD_HOME)/ooo-build/patches/apply.pl" --tag="$(OOO-BUILD_APPLY_TAG)" --distro=MacOSX "$(PWD)/$(BUILD_HOME)/ooo-build/patches/dev300" "$(PWD)/$(BUILD_HOME)"
+	rm -f "$(BUILD_HOME)/ooo-build/patches/apply.pl" ; sed 's#@GNUPATCH@#patch#g' "$(BUILD_HOME)/ooo-build/patches/apply.pl.in" > "$(BUILD_HOME)/ooo-build/patches/apply.pl" ; chmod a+x "$(BUILD_HOME)/ooo-build/patches/apply.pl" ; "$(BUILD_HOME)/ooo-build/patches/apply.pl" --tag="$(OOO-BUILD_APPLY_TAG)" --distro=GoOoMacOSX "$(PWD)/$(BUILD_HOME)/ooo-build/patches/dev300" "$(PWD)/$(BUILD_HOME)"
 	cp "$(BUILD_HOME)/ooo-build/src/go-oo-team.png" "$(BUILD_HOME)/default_images/sw/res"
 	cp "$(BUILD_HOME)/ooo-build/src/evolocal.odb" "$(BUILD_HOME)/extras/source/database"
 	mkdir -p "$(BUILD_HOME)/lpsolve/download" ; cd "$(BUILD_HOME)/lpsolve/download" ; curl -L -O "$(LPSOLVE_SOURCE_URL)"

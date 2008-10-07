@@ -34,13 +34,10 @@ retrieving revision 1.9
 diff -u -r1.9 salnativewidgets.hxx
 --- inc/vcl/salnativewidgets.hxx	19 Jun 2006 19:07:59 -0000	1.9
 +++ inc/vcl/salnativewidgets.hxx	7 Jan 2007 02:17:52 -0000
-@@ -138,6 +138,18 @@
+@@ -138,6 +138,15 @@
  #define CTRL_LISTNET            171
  
  
-+// progress bars
-+#define CTRL_PROGRESSBAR		200
-+
 +// hierarchical tree control expand/collapse handle
 +#define CTRL_DISCLOSUREBTN		230
 +
@@ -53,7 +50,7 @@ diff -u -r1.9 salnativewidgets.hxx
  /* Control Parts:
   *
   *   Uniquely identify a part of a control,
-@@ -163,6 +175,7 @@
+@@ -163,6 +172,7 @@
  #define PART_MENU_ITEM              250
  #define PART_MENU_ITEM_CHECK_MARK   251
  #define PART_MENU_ITEM_RADIO_MARK   252
@@ -61,7 +58,7 @@ diff -u -r1.9 salnativewidgets.hxx
  
  /** The edit field part of a control, e.g. of the combo box.
  
-@@ -340,6 +353,79 @@
+@@ -340,6 +350,79 @@
      int             maTopDockingAreaHeight;
  };
  
