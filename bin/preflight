@@ -80,6 +80,11 @@ if [ -d "$2/Contents" ] ; then
 			if [ -d "$2/Contents/basis-link/share" -a ! -e "$2/share" ]; then
 				mv -f "$2/Contents/basis-link/share" "$2" || exit 1
 			fi
+
+			# Save uno_packages files
+			if [ -d "$2/Contents/share/uno_packages" -a ! -e "$2/uno_packages" ]; then
+				mv -f "$2/Contents/share/uno_packages" "$2" || exit 1
+			fi
 		else
 			if [ -e "$2/help" ]; then
 				rm -Rf "$2/help" || exit 1
@@ -91,6 +96,10 @@ if [ -d "$2/Contents" ] ; then
 
 			if [ -e "$2/share" ]; then
 				rm -Rf "$2/share" || exit 1
+			fi
+
+			if [ -e "$2/uno_packages" ]; then
+				rm -Rf "$2/uno_packages" || exit 1
 			fi
 		fi
 
