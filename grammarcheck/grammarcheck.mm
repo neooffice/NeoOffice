@@ -99,9 +99,6 @@
 #import <Carbon/Carbon.h>
 #include "postmac.h"
 
-#include <string>
-#include <strstream>
-
 // Redefine Cocoa YES and NO defines types for convenience
 #ifdef YES
 #undef YES
