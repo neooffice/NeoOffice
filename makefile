@@ -389,8 +389,6 @@ build.package_shared:
 # Remove OOo system plugins
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Frameworks"
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Library"
-# Remove OOo and ooo-build fonts as some of them cause crashing on Mac OS X
-	rm -Rf "$(INSTALL_HOME)/package/Contents/basis-link/share/fonts/truetype/"*.ttf
 # Install OOo .oxt files
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)" -type f -name "*.oxt"` ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --force --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; done'
 # Regroup the OOo language packs
