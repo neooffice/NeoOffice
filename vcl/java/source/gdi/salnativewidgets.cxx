@@ -63,9 +63,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
-#ifndef _SV_JAVA_TOOLS_HXX
-#include <java/tools.hxx>
-#endif
 
 #ifdef __cplusplus
 #include <premac.h>
@@ -84,64 +81,19 @@ using namespace rtl;
 
 #define COMBOBOX_BUTTON_WIDTH			22
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
-#define CONTROL_TAB_PANE_TOP_OFFSET		( ( vcl::IsRunningPanther() ) ? 1 : 12 )
+#define CONTROL_TAB_PANE_TOP_OFFSET		12
 #define EDITBOX_TRIMWIDTH				3
 #define LISTVIEWFRAME_TRIMWIDTH			1
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
 #define SCROLLBAR_ARROW_TRIMX			13
-#define SCROLLBAR_ARROW_TRIMY			( ( vcl::IsRunningPanther() ) ? 13 : 14 )
+#define SCROLLBAR_ARROW_TRIMY			14
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
 #define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
-#define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	( ( vcl::IsRunningPanther() ) ? 12 : 13 )
+#define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
-#define TABITEM_HEIGHT_SLOP				( ( vcl::IsRunningPanther() ) ? 0 : 4 )
-
-#if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
-// constants and structures for 10.3
-#define kThemeScrollBarMedium 0
-#define kThemeIndeterminateBarLarge kThemeLargeIndeterminateBar
-#define kThemeProgressBarLarge kThemeLargeProgressBar
-
-struct HIThemeTabDrawInfo104 {
-  UInt32              version;
-  ThemeTabStyle       style;
-  ThemeTabDirection   direction;
-  HIThemeTabSize      size;
-  HIThemeTabAdornment  adornment;             /* various tab attributes */
-  UInt32      kind;
-  UInt32  position;
-};
-
-#define kHIThemeTabKindNormal 0
-#define kHIThemeTabPositionFirst 0
-#define kHIThemeTabPositionMiddle 1
-#define kHIThemeTabPositionLast 2
-#define kHIThemeTabPositionOnly 3
-
-#define kHIThemeTabAdornmentTrailingSeparator (1 << 4)
-
-typedef UInt32 HIThemeTabKind;
-typedef UInt32 HIThemeTabPaneAdornment;
-
-struct HIThemeTabPaneDrawInfo104 {
-  UInt32              version;
-  ThemeDrawState      state;
-  ThemeTabDirection   direction;
-  HIThemeTabSize      size;
-  HIThemeTabKind      kind;
-  HIThemeTabPaneAdornment  adornment;
-};
-
-#define kThemeDisclosureTriangle	kThemeDisclosureButton
-
-#define kThemeAdornmentHeaderButtonNoSortArrow	((ThemeButtonAdornment)(1 << 12))
-
-#else if ( BUILD_OS_MAJOR >= 10 ) && ( BUILD_OS_MINOR > 3 )
-typedef HIThemeTabDrawInfo HIThemeTabDrawInfo104;
-typedef HIThemeTabPaneDrawInfo HIThemeTabPaneDrawInfo104;
-#endif
+#define TABITEM_HEIGHT_SLOP				4
 
 struct VCLBitmapBuffer : BitmapBuffer
 {
@@ -518,15 +470,19 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
  * @param bounds			drawing bounds of the progress bar
  * @param pProgressbarValue	optional value providing progress bar specific
  *							info
+ * @param bSmall			TRUE to use small progress bar otherwise use large
  * @return TRUE on success, FALSE on failure
  */
-static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, ControlState nState, Rectangle bounds, ProgressbarValue *pProgressbarValue )
+static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, ControlState nState, Rectangle bounds, ProgressbarValue *pProgressbarValue, BOOL bSmall )
 {
 	static UInt8 phase = 0x1;
 
 	memset( pTrackDrawInfo, 0, sizeof( HIThemeTrackDrawInfo ) );
 	pTrackDrawInfo->version = 0;
-	pTrackDrawInfo->kind = ( ( pProgressbarValue && pProgressbarValue->mbIndeterminate ) ? kThemeIndeterminateBarLarge : kThemeProgressBarLarge );
+	if ( bSmall )
+		pTrackDrawInfo->kind = ( ( pProgressbarValue && pProgressbarValue->mbIndeterminate ) ? kThemeIndeterminateBarMedium : kThemeProgressBarMedium );
+	else
+		pTrackDrawInfo->kind = ( ( pProgressbarValue && pProgressbarValue->mbIndeterminate ) ? kThemeIndeterminateBarLarge : kThemeProgressBarLarge );
 	pTrackDrawInfo->bounds.origin.x = 0;
 	pTrackDrawInfo->bounds.origin.y = 0;
 	pTrackDrawInfo->bounds.size.width = bounds.GetWidth();
@@ -560,9 +516,9 @@ static BOOL InitProgressbarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, Cont
  * 							the tab's position
  * @return TRUE on success, FALSE on failure
  */
-static BOOL InitTabDrawInfo( HIThemeTabDrawInfo104 *pTabDrawInfo, ControlState nState, TabitemValue *pTabValue )
+static BOOL InitTabDrawInfo( HIThemeTabDrawInfo *pTabDrawInfo, ControlState nState, TabitemValue *pTabValue )
 {
-	memset( pTabDrawInfo, 0, sizeof( HIThemeTabDrawInfo104 ) );
+	memset( pTabDrawInfo, 0, sizeof( HIThemeTabDrawInfo ) );
 	pTabDrawInfo->version = 1;
 	if( nState & CTRL_STATE_SELECTED )
 		pTabDrawInfo->style = kThemeTabFront;
@@ -609,9 +565,9 @@ static BOOL InitTabDrawInfo( HIThemeTabDrawInfo104 *pTabDrawInfo, ControlState n
  * @param nState			overall control state of the tab item.
  * @return TRUE on success, FALSE on failure
  */
-static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo104 *pTabPaneDrawInfo, ControlState nState )
+static BOOL InitTabPaneDrawInfo( HIThemeTabPaneDrawInfo *pTabPaneDrawInfo, ControlState nState )
 {
-	memset( pTabPaneDrawInfo, 0, sizeof( HIThemeTabPaneDrawInfo104 ) );
+	memset( pTabPaneDrawInfo, 0, sizeof( HIThemeTabPaneDrawInfo ) );
 	pTabPaneDrawInfo->version = 1;
 	pTabPaneDrawInfo->direction = kThemeTabNorth;
 	pTabPaneDrawInfo->size = kHIThemeTabSizeNormal;
@@ -1124,9 +1080,10 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
  * @param nState			overall control state
  * @param pValue			value providing the percentage completion and other
  *							progressbar state
+ * @param bSmall			TRUE to use small progress bar otherwise use large
  * @return TRUE if drawing successful, FALSE if not
  */
-static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue )
+static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue, BOOL bSmall )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedProgressbarBuffer;
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
@@ -1141,7 +1098,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 			pBits[ i ] = pGraphics->mnFillColor;
 
 		HIThemeTrackDrawInfo aTrackDrawInfo;
-		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue );
+		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue, bSmall );
 
 		HIRect destRect;
 		destRect.origin.x = 0;
@@ -1185,7 +1142,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
-		HIThemeTabDrawInfo104 pTabDrawInfo;
+		HIThemeTabDrawInfo pTabDrawInfo;
 		InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
 
 		HIRect destRect;
@@ -1227,7 +1184,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
-		HIThemeTabPaneDrawInfo104 pTabPaneDrawInfo;
+		HIThemeTabPaneDrawInfo pTabPaneDrawInfo;
 		InitTabPaneDrawInfo( &pTabPaneDrawInfo, nState );
 
 		HIRect destRect;
@@ -1698,6 +1655,7 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 
 		case CTRL_PROGRESS:
+		case CTRL_INTROPROGRESS:
 			if( nPart == PART_ENTIRE_CONTROL )
 				isSupported = TRUE;
 			break;
@@ -1917,11 +1875,23 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			break;
 
 		case CTRL_PROGRESS:
+		case CTRL_INTROPROGRESS:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
+				ProgressbarValue aProgressbarValue;
 				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
-				bOK = DrawNativeProgressbar( this, ctrlRect, nState, pValue );
+				if ( pValue )
+				{
+					aProgressbarValue.mbIndeterminate = pValue->mbIndeterminate;
+					aProgressbarValue.mdPercentComplete = pValue->mdPercentComplete;
+				}
+				else
+				{
+					aProgressbarValue.mdPercentComplete = (double)( aValue.getNumericVal() * 100 / ctrlRect.GetWidth() );
+				}
+
+				bOK = DrawNativeProgressbar( this, ctrlRect, nState, &aProgressbarValue, nType == CTRL_INTROPROGRESS ? TRUE : FALSE );
 			}
 			break;
 
@@ -2427,14 +2397,25 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			break;
 
 		case CTRL_PROGRESS:
+		case CTRL_INTROPROGRESS:
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle controlRect = rRealControlRegion.GetBoundRect();
 
+				ProgressbarValue aProgressbarValue;
 				ProgressbarValue *pValue = static_cast<ProgressbarValue *> ( aValue.getOptionalVal() );
+				if ( pValue )
+				{
+					aProgressbarValue.mbIndeterminate = pValue->mbIndeterminate;
+					aProgressbarValue.mdPercentComplete = pValue->mdPercentComplete;
+				}
+				else
+				{
+					aProgressbarValue.mdPercentComplete = (double)( aValue.getNumericVal() * 100 / controlRect.GetWidth() );
+				}
 
 				HIThemeTrackDrawInfo pTrackDrawInfo;
-				InitProgressbarTrackInfo( &pTrackDrawInfo, nState, controlRect, pValue );
+				InitProgressbarTrackInfo( &pTrackDrawInfo, nState, controlRect, &aProgressbarValue, nType == CTRL_INTROPROGRESS ? TRUE : FALSE );
 
 				HIRect bounds;
 				HIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
@@ -2455,7 +2436,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				TabitemValue *pValue = static_cast<TabitemValue *> ( aValue.getOptionalVal() );
 
-				HIThemeTabDrawInfo104 pTabDrawInfo;
+				HIThemeTabDrawInfo pTabDrawInfo;
 				InitTabDrawInfo( &pTabDrawInfo, nState, pValue );
 
 				HIRect proposedBounds;
