@@ -22,7 +22,7 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * Modified January 2007 by Patrick Luby. NeoOffice is distributed under
+ * Modified October 2008 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
@@ -83,12 +83,6 @@ SplashScreen::SplashScreen(const Reference< XMultiServiceFactory >& rSMgr)
 	_rFactory = rSMgr;
 
     loadConfig();
-
-#ifdef USE_JAVA
-    _pProgressBar = new ProgressBar( this );
-    _pProgressBar->SetPaintTransparent( TRUE );
-    _barheight = _pProgressBar->GetOutputSizePixel().Height();
-#endif	// USE_JAVA
 }
 
 SplashScreen::~SplashScreen()
@@ -97,10 +91,6 @@ SplashScreen::~SplashScreen()
 		LINK( this, SplashScreen, AppEventListenerHdl ) );
 	Hide();
 
-#ifdef USE_JAVA
-    if ( _pProgressBar )
-        delete _pProgressBar;
-#endif	// USE_JAVA
 }
 
 void SAL_CALL SplashScreen::start(const OUString&, sal_Int32 nRange)
@@ -113,10 +103,6 @@ void SAL_CALL SplashScreen::start(const OUString&, sal_Int32 nRange)
         if ( _eBitmapMode == BM_FULLSCREEN )
             ShowFullScreenMode( TRUE );
         Show();
-#ifdef USE_JAVA
-        if ( _pProgressBar )
-            _pProgressBar->Show();
-#endif	// USE_JAVA
         Paint(Rectangle());
         Flush();
     }
@@ -131,10 +117,6 @@ void SAL_CALL SplashScreen::end()
         if ( _eBitmapMode == BM_FULLSCREEN )
             EndFullScreenMode();
         Hide();
-#ifdef USE_JAVA
-        if ( _pProgressBar )
-            _pProgressBar->Hide();
-#endif	// USE_JAVA
     }
     _bProgressEnd = sal_True;
 }
@@ -148,10 +130,6 @@ void SAL_CALL SplashScreen::reset()
         if ( _eBitmapMode == BM_FULLSCREEN )
             ShowFullScreenMode( TRUE );
         Show();
-#ifdef USE_JAVA
-        if ( _pProgressBar )
-            _pProgressBar->Show();
-#endif	// USE_JAVA
         updateStatus();
     }
 }
@@ -163,10 +141,6 @@ void SAL_CALL SplashScreen::setText(const OUString&)
         if ( _eBitmapMode == BM_FULLSCREEN )
             ShowFullScreenMode( TRUE );
         Show();
-#ifdef USE_JAVA
-        if ( _pProgressBar )
-            _pProgressBar->Show();
-#endif	// USE_JAVA
         Flush();
     }
 }
@@ -182,10 +156,6 @@ void SAL_CALL SplashScreen::setValue(sal_Int32 nValue)
         if ( _eBitmapMode == BM_FULLSCREEN )
             ShowFullScreenMode( TRUE );
         Show();
-#ifdef USE_JAVA
-        if ( _pProgressBar )
-            _pProgressBar->Show();
-#endif	// USE_JAVA
         if (nValue >= _iMax) _iProgress = _iMax;
 	else _iProgress = nValue;
 	updateStatus();
@@ -236,11 +206,6 @@ SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::sta
                 if ( _fHeight >= 0.0 )
                     _barheight = sal_Int32( double( aSize.Width() ) * _fHeight );
             }   
-
-#ifdef USE_JAVA
-            if ( _pProgressBar && _barheight > 8 )
-                _tly -= _barheight - 8;
-#endif	// USE_JAVA
         }
         else
         {
@@ -253,11 +218,6 @@ SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::sta
                 _tlx = _xoffset;           // top-left x
                 _tly = _height - _yoffset; // top-left y
             }
-
-#ifdef USE_JAVA
-            if ( _pProgressBar && _barheight > 6 )
-                _tly -= _barheight - 6;
-#endif	// USE_JAVA
         }
 
         if ( sal::static_int_cast< ColorData >(NOT_LOADED) ==
@@ -273,11 +233,6 @@ SplashScreen::initialize( const ::com::sun::star::uno::Sequence< ::com::sun::sta
             else
                 _cProgressBarColor = Color( COL_BLUE );
         }
-
-#ifdef USE_JAVA
-        if ( _pProgressBar )
-            _pProgressBar->SetPosSizePixel( Point( _tlx, _tly ), Size( _barwidth, _barheight ) );
-#endif	// USE_JAVA
 
         Application::AddEventListener(
 		    LINK( this, SplashScreen, AppEventListenerHdl ) );
@@ -649,7 +604,11 @@ void SplashScreen::Paint( const Rectangle&)
               aDrawRect.Bottom() += (nProgressHeight - _barheight)/2;
               aControlRegion = Region( aDrawRect );
         }
-        
+       
+#ifdef USE_JAVA 
+        SetFillColor();
+#endif	// USE_JAVA 
+
         if( (bNativeOK = DrawNativeControl( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL, aControlRegion,
                                                      CTRL_STATE_ENABLED, aValue, rtl::OUString() )) != FALSE ) 
         {
@@ -661,11 +620,7 @@ void SplashScreen::Paint( const Rectangle&)
 	if (_bPaintBitmap)
 		_vdev.DrawBitmap( Point(), _aIntroBmp );
 
-#ifdef USE_JAVA
-    if (!_pProgressBar && _bPaintProgress) {
-#else	// USE_JAVA
 	if (_bPaintProgress) {
-#endif	// USE_JAVA
 		// draw progress...
 		long length = (_iProgress * _barwidth / _iMax) - (2 * _barspace);
 		if (length < 0) length = 0;
@@ -685,42 +640,6 @@ void SplashScreen::Paint( const Rectangle&)
     Size bSize =  _vdev.GetOutputSizePixel();
     //_vdev.Flush();
     //_vdev.DrawOutDev(Point(), GetOutputSize(), Point(), GetOutputSize(), *((IntroWindow*)this) );
-
-#ifdef USE_JAVA
-    if ( _pProgressBar )
-    {
-        // HACK: clip out the top pixel as it will be merely background color
-        Rectangle aClipRect( Point( _pProgressBar->GetPosPixel().X(), _pProgressBar->GetPosPixel().Y() + 1 ), Size( _pProgressBar->GetSizePixel().Width(), _pProgressBar->GetSizePixel().Height() - 1 ) );
-        if ( _bPaintProgress )
-        {
-            Rectangle aProgressBarClip( Point( 0, 1 ), aClipRect.GetSize() );
-            _pProgressBar->SetClipRegion( Region( aProgressBarClip ) );
-            _pProgressBar->SetValue( _iProgress );
-        }
-
-        // Copy top to screen
-        Rectangle aCurrentClip( Point( 0, 0 ), Size( GetSizePixel().Width(), aClipRect.Top() + 2 ) );
-        SetClipRegion( aCurrentClip );
-        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-
-        // Copy bottom to screen
-        aCurrentClip = Rectangle( Point( 0, aClipRect.Top() + aClipRect.GetHeight() - 2 ), Size( GetSizePixel().Width(), GetSizePixel().Height() - aClipRect.Top() - aClipRect.GetHeight() + 2 ) );
-        SetClipRegion( aCurrentClip );
-        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-        // Copy left to screen
-        aCurrentClip = Rectangle( Point( 0, aClipRect.Top() ), Size( aClipRect.Left() + 3, aClipRect.GetHeight() ) );
-        SetClipRegion( aCurrentClip );
-        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-
-        // Copy right to screen
-        aCurrentClip = Rectangle( Point( aClipRect.Left() + aClipRect.GetWidth() - 2, aClipRect.Top() ), Size( GetSizePixel().Width() - aClipRect.Left() - aClipRect.GetWidth() + 2, aClipRect.GetHeight() ) );
-        SetClipRegion( aCurrentClip );
-        DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
-
-        SetClipRegion();
-    }
-    else
-#endif	// USE_JAVA
     DrawOutDev(Point(), GetOutputSizePixel(), Point(), _vdev.GetOutputSizePixel(), _vdev );
 	//Flush();
 }
