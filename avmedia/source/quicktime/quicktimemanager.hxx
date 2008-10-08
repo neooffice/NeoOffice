@@ -49,6 +49,8 @@
 #include <com/sun/star/media/XManager.hpp>
 #endif
 
+#define AVMEDIA_QUICKTIME_MANAGER_SERVICENAME "com.sun.star.media.Manager_QuickTime"
+
 // -----------
 // - Manager -
 // -----------

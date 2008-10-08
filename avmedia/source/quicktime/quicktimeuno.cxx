@@ -33,7 +33,6 @@
  *
  ************************************************************************/
 
-#include "mediamisc.hxx"
 #include "quicktimemanager.hxx"
 
 #ifndef _CPPUHELPER_FACTORY_HXX_
@@ -68,7 +67,7 @@ extern "C" sal_Bool SAL_CALL component_writeInfo( void* pServiceManager, void* p
 	{
 		try
 		{
-			Reference< XRegistryKey > xNewKey1( static_cast< XRegistryKey* >( pRegistryKey )->createKey( ::rtl::OUString::createFromAscii( "/" AVMEDIA_MANAGER_SERVICE_NAME "/UNO/SERVICES/" AVMEDIA_MANAGER_SERVICE_NAME ) ) );
+			Reference< XRegistryKey > xNewKey1( static_cast< XRegistryKey* >( pRegistryKey )->createKey( ::rtl::OUString::createFromAscii( "/" AVMEDIA_QUICKTIME_MANAGER_SERVICENAME "/UNO/SERVICES/" AVMEDIA_QUICKTIME_MANAGER_SERVICENAME ) ) );
 			bRet = sal_True;
 		}
 		catch( InvalidRegistryException& )
@@ -87,11 +86,11 @@ extern "C" void* SAL_CALL component_getFactory( const sal_Char* pImplName, void*
 	Reference< XSingleServiceFactory > xFactory;
 	void *pRet = 0;
 
-	if( rtl_str_compare( pImplName, AVMEDIA_MANAGER_SERVICE_NAME ) == 0 )
+	if( rtl_str_compare( pImplName, AVMEDIA_QUICKTIME_MANAGER_SERVICENAME ) == 0 )
 	{
-		const ::rtl::OUString aServiceName( ::rtl::OUString::createFromAscii( AVMEDIA_MANAGER_SERVICE_NAME ) );
+		const ::rtl::OUString aServiceName( ::rtl::OUString::createFromAscii( AVMEDIA_QUICKTIME_MANAGER_SERVICENAME ) );
 
-		xFactory = Reference< XSingleServiceFactory >( ::cppu::createSingleFactory( reinterpret_cast< XMultiServiceFactory* >( pServiceManager ), ::rtl::OUString::createFromAscii( AVMEDIA_MANAGER_SERVICE_NAME ), create_MediaPlayer, Sequence< ::rtl::OUString >( &aServiceName, 1 ) ) );
+		xFactory = Reference< XSingleServiceFactory >( ::cppu::createSingleFactory( reinterpret_cast< XMultiServiceFactory* >( pServiceManager ), ::rtl::OUString::createFromAscii( AVMEDIA_QUICKTIME_MANAGER_SERVICENAME ), create_MediaPlayer, Sequence< ::rtl::OUString >( &aServiceName, 1 ) ) );
 	}
 
 	if( xFactory.is() )
