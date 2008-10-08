@@ -555,7 +555,7 @@ struct CheckPasswordCapability
 {
 	sal_Bool operator() ( const SfxFilter* _pFilter )
 	{
-        if (_pFilter->GetFilterName().EqualsAscii("MS Excel 97"))
+        if (_pFilter && _pFilter->GetFilterName().EqualsAscii("MS Excel 97"))
             // temporary hack to enable password protection for Excel 97.  Is
             // there a better way to enable password protection of a filter?
             return true;
