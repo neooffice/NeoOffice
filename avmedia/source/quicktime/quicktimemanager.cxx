@@ -39,7 +39,7 @@
 #include <tools/urlobj.hxx>
 
 #define AVMEDIA_QUICKTIME_MANAGER_IMPLEMENTATIONNAME "com.sun.star.comp.avmedia.Manager_QuickTime"
-#define AVMEDIA_QUICKTIME_MANAGER_SERVICENAME "com.sun.star.media.Manager"
+#define AVMEDIA_QUICKTIME_MANAGER_SERVICENAME "com.sun.star.media.Manager_QuickTime"
 
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::media;
