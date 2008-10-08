@@ -391,7 +391,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
         bSuccess = implts_closeFrame();
     else
     if (bEstablishBackingMode)
-    #if defined QUARTZ
+    #if defined QUARTZ && !defined USE_JAVA
     {
         // on mac close down, quickstarter keeps the process alive
         // however if someone has shut down the quickstarter
