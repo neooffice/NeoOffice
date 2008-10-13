@@ -288,10 +288,11 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 
 			if ( pTarget )
 			{
-				UInt16 nCount = 0;
+				// Fix bug 3263 by not checking count if we are the drag owner
+				UInt16 nCount = 1;
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( CountDragItems( aDrag, &nCount ) == noErr && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				if ( ( pTrackDragOwner || CountDragItems( aDrag, &nCount ) == noErr ) && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
 					ImplUpdateCurrentAction( aDrag );
 
@@ -352,10 +353,11 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 
 			if ( pTarget )
 			{
-				UInt16 nCount = 0;
+				// Fix bug 3263 by not checking count if we are the drag owner
+				UInt16 nCount = 1;
 				MacOSPoint aPoint;
 				Rect aRect;
-				if ( CountDragItems( aDrag, &nCount ) == noErr && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
+				if ( ( pTrackDragOwner || CountDragItems( aDrag, &nCount ) == noErr ) && nCount && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aWindow, kWindowContentRgn, &aRect ) == noErr )
 				{
 					sal_Int32 nX = (sal_Int32)( aPoint.h - aRect.left );
 					sal_Int32 nY = (sal_Int32)( aPoint.v - aRect.top );
