@@ -707,7 +707,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Fix bug 3045 by setting the event ID to the actual changes
 				// that have occurred. This also fixes the autodocking of
 				// native utility windows problem described in bug 3035.
-				if ( bPosChanged || bSizeChanged )
+				// Fix bug 3252 by always dispatching events when showing
+				// a frame.
+				if ( pFrame->mbInShow || bPosChanged || bSizeChanged )
 				{
 					if ( bPosChanged && bSizeChanged )
 						nID = SALEVENT_MOVERESIZE;
