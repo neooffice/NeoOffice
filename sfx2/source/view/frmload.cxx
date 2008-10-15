@@ -495,15 +495,12 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const css::uno::Sequence< css::bean
     	css::uno::Reference< css::frame::XLoadable > xLoadable = css::uno::Reference< css::frame::XLoadable >( pDoc->GetModel(), css::uno::UNO_QUERY );
 		css::uno::Sequence < css::beans::PropertyValue > aLoadArgs;
 		TransformItems( SID_OPENDOC, aSet, aLoadArgs );
+#ifdef USE_JAVA
+		bInLoad = sal_True;
+#endif	// USE_JAVA
 		try
 		{
-#ifdef USE_JAVA
-			bInLoad = sal_True;
-#endif	// USE_JAVA
 			xLoadable->load( aLoadArgs );
-#ifdef USE_JAVA
-			bInLoad = sal_False;
-#endif	// USE_JAVA
 
 			SfxMedium* pDocMedium = pDoc->GetMedium();
 			BOOL bHidden = FALSE;
@@ -562,6 +559,9 @@ sal_Bool SAL_CALL SfxFrameLoader_Impl::load( const css::uno::Sequence< css::bean
 		{
             bDisaster = sal_True;
 		}
+#ifdef USE_JAVA
+		bInLoad = sal_False;
+#endif	// USE_JAVA
 
         if ( bDisaster )
         {
