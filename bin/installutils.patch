@@ -58,7 +58,12 @@ check_installation() {
 	# Check for matching build machine
 	grep '$(BUILD_MACHINE)' "$1/Contents/Info.plist" >/dev/null 2>&1
 	if [ "$?" != "0" ] ; then
-		return 1;
+		# One of the test patches was missing ".local" in the hostname
+		$hostname=`echo '$(BUILD_MACHINE)' | sed 's#\.local##'`
+		grep "$hostname" "$1/Contents/Info.plist" >/dev/null 2>&1
+		if [ "$?" != "0" ] ; then
+			return 1;
+		fi
 	fi
 
 	if [ -f "$1/Contents/MacOS/bootstraprc" ] ; then
