@@ -79,6 +79,9 @@ SplashScreen::SplashScreen(const Reference< XMultiServiceFactory >& rSMgr)
     , _fHeight(-1.0)
     , _xoffset(12)
 	, _yoffset(18)
+#ifdef USE_JAVA
+	, _iLastProgressPainted(-1)
+#endif	// USE_JAVA
 {
 	_rFactory = rSMgr;
 
@@ -112,6 +115,9 @@ void SAL_CALL SplashScreen::end()
 	throw (RuntimeException)
 {
     _iProgress = _iMax;
+#ifdef USE_JAVA
+    _iLastProgressPainted = -1;
+#endif	// USE_JAVA
     if (_bVisible )
     {
         if ( _eBitmapMode == BM_FULLSCREEN )
@@ -588,6 +594,12 @@ void SplashScreen::Paint( const Rectangle&)
     // in case of native controls we need to draw directly to the window
     if( IsNativeControlSupported( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL ) )
     {
+#ifdef USE_JAVA
+        // Elminate unnecessary repainting
+        if( _iLastProgressPainted == _iProgress )
+    		return;
+#endif	// USE_JAVA
+
         DrawBitmap( Point(), _aIntroBmp );
         
         ImplControlValue aValue( _iProgress * _barwidth / _iMax);
@@ -612,6 +624,9 @@ void SplashScreen::Paint( const Rectangle&)
         if( (bNativeOK = DrawNativeControl( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL, aControlRegion,
                                                      CTRL_STATE_ENABLED, aValue, rtl::OUString() )) != FALSE ) 
         {
+#ifdef USE_JAVA
+            _iLastProgressPainted = _iProgress;
+#endif	// USE_JAVA
             return;
         }
     }
