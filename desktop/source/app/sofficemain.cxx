@@ -117,7 +117,9 @@ extern "C" int soffice_main( int argc, char **argv )
     // Assign command's directory to PATH environment variable
     OString aPath( getenv( "PATH" ) );
     OString aStandardPath( aCmdPath );
-    aStandardPath += OString( ":/bin:/sbin:/usr/bin:/usr/sbin:" );
+    aStandardPath += OString( "/../basis-link/program:" );
+    aStandardPath += OString( aCmdPath );
+    aStandardPath += OString( "/../basis-link/ure-link/bin:/bin:/sbin:/usr/bin:/usr/sbin:" );
     if ( aPath.compareTo( aStandardPath, aStandardPath.getLength() ) )
     {
         OString aTmpPath( "PATH=" );
@@ -154,6 +156,9 @@ extern "C" int soffice_main( int argc, char **argv )
     }
 
     OString aStandardLibPath( aCmdPath );
+    aStandardLibPath += OString( "/../basis-link/program:" );
+    aStandardLibPath += OString( aCmdPath );
+    aStandardLibPath += OString( "/../basis-link/ure-link/lib:/usr/lib:/usr/local/lib:" );
     aStandardLibPath += OString( ":/usr/lib:/usr/local/lib:" );
     if ( aHomePath.getLength() )
     {
@@ -257,40 +262,6 @@ extern "C" int soffice_main( int argc, char **argv )
 	// so the value must be set to "yes" to actually disable shared memory.
 	aTmpPath = OString( "MONO_DISABLE_SHM=yes" );
 	putenv( (char *)aTmpPath.getStr() );
-
-    // We need to fork and exec javaldx to properly create preferences the
-    // first time or else some preferences won't be imported
-    OUString aUserInstallPath;
-    ::utl::Bootstrap::PathStatus aLocateResult = ::utl::Bootstrap::locateUserInstallation( aUserInstallPath );
-    if ( aLocateResult != ::utl::Bootstrap::PATH_EXISTS )
-    {
-        OString aJavaldxPath( aCmdPath );
-        aJavaldxPath += OString( "/javaldx" );
-        char *pJavaldxPath = (char *)aJavaldxPath.getStr();
-        if ( !access( pJavaldxPath, R_OK | X_OK ) )
-        {
-            char *pJavaldxArgs[ 2 ];
-            pJavaldxArgs[ 0 ] = pJavaldxPath;
-            pJavaldxArgs[ 1 ] = NULL;
-
-            // Execute the javaldx command in child process
-            pid_t pid = fork();
-            if ( !pid )
-            {
-                close( 0 );
-                close( 1 );
-                execvp( pJavaldxPath, pJavaldxArgs );
-                _exit( 1 );
-            }
-            else if ( pid > 0 )
-            {
-                // Invoke waitpid to prevent zombie processes
-                int status;
-                while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-                    usleep( 10 );
-            }
-        }
-    }
 #else	// USE_JAVA
 extern "C" int soffice_main()
 {
