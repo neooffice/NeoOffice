@@ -137,6 +137,7 @@ update_installation() {
 	chmod -f 775 "$2/Contents" || return 1
 	chmod -Rf ug+w "$2/Contents/Resources" || return 1
 
+	# Fix bug 1584 by marking certain directories writable for root user
 	chmod -Rf u+w "$2/Contents/basis-link/presets" || exit 1
 	chmod -Rf u+w "$2/Contents/basis-link/share" || exit 1
 

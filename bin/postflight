@@ -89,7 +89,7 @@ if [ -d "$2" ]; then
 			fi
 		done
 		chown -Rf root:admin "$2/Contents/basis-link/help" || exit 1
-		chmod -Rf u-w,u+r "$2/Contents/basis-link/help" || exit 1
+		chmod -Rf a+r,a-w "$2/Contents/basis-link/help" || exit 1
 		rm -Rf "$2/help" || exit 1
 	fi
 
@@ -101,7 +101,7 @@ if [ -d "$2" ]; then
 			fi
 		done
 		chown -Rf root:admin "$2/Contents/basis-link/program/classes" || exit 1
-		chmod -Rf u-w,u+r "$2/Contents/basis-link/program/classes" || exit 1
+		chmod -Rf a+r,a-w "$2/Contents/basis-link/program/classes" || exit 1
 		rm -Rf "$2/classes" || exit 1
 	fi
 
@@ -113,7 +113,7 @@ if [ -d "$2" ]; then
 			fi
 		done
 		chown -Rf root:admin "$2/Contents/basis-link/program/resource" || exit 1
-		chmod -Rf u-w,u+r "$2/Contents/basis-link/program/resource" || exit 1
+		chmod -Rf a+r,a-w "$2/Contents/basis-link/program/resource" || exit 1
 		rm -Rf "$2/resource" || exit 1
 	fi
 
@@ -128,7 +128,7 @@ if [ -d "$2" ]; then
 			fi
 		done
 		chown -Rf root:admin "$2/Contents/basis-link/share" || exit 1
-		chmod -Rf u-w,u+r "$2/Contents/basis-link/share" || exit 1
+		chmod -Rf a+r,a-w "$2/Contents/basis-link/share" || exit 1
 		rm -Rf "$2/share" || exit 1
 	fi
 
@@ -144,7 +144,7 @@ if [ -d "$2" ]; then
 			fi
 		done
 		chown -Rf root:admin "$2/Contents/basis-link/share/fonts/truetype" || exit 1
-		chmod -Rf u-w,u+r "$2/Contents/basis-link/share/fonts/truetype" || exit 1
+		chmod -Rf a+r,a-w "$2/Contents/basis-link/share/fonts/truetype" || exit 1
 		rm -Rf "$2/truetype" || exit 1
 	fi
 
