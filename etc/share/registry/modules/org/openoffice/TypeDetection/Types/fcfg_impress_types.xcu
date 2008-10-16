@@ -155,13 +155,13 @@
 </node>
 
 <node oor:name="MOOXPTYPE" oor:op="replace">
-	<prop oor:name="URLPattern"><value>*.pptx</value></prop>
+	<prop oor:name="URLPattern"/>
 	<prop oor:name="Extensions"><value>pptx</value></prop>
 	<prop oor:name="MediaType"><value>application/vnd.openxmlformats-officedocument.presentationml.presentation</value></prop>
 	<prop oor:name="Preferred"><value>false</value></prop>
 	<prop oor:name="PreferredFilter"><value>MOOXP</value></prop>
 	<prop oor:name="UIName">
-		<value xml:lang="x-default">Microsoft PowerPoint 2007 Document</value>
+		<value xml:lang="x-default">Microsoft PowerPoint 2007 XML</value>
 	</prop>
 	<prop oor:name="ClipboardFormat"><value>Impress 8</value></prop>
 </node>

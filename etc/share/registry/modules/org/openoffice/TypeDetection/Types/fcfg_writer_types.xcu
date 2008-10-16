@@ -406,7 +406,7 @@
 	</node>
 
 	<node oor:name="MOOXTYPE" oor:op="replace">
-		<prop oor:name="URLPattern"><value>*.docx</value></prop>
+		<prop oor:name="URLPattern"/>
 		<prop oor:name="Extensions"><value>docx</value></prop>
 		<prop oor:name="MediaType"><value>application/vnd.openxmlformats-officedocument.wordprocessingml.document</value></prop>
 		<prop oor:name="Preferred"><value>false</value></prop>
@@ -414,7 +414,7 @@
 		<prop oor:name="UIName">
 			<value xml:lang="x-default">Microsoft Word 2007 Document</value>
 		</prop>
-		<prop oor:name="ClipboardFormat"><value>Microsoft Word 2007 Document</value></prop>
+		<prop oor:name="ClipboardFormat"><value>Microsoft Word 2007 XML</value></prop>
 	</node>
 
 	</node>

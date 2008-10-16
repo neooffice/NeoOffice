@@ -322,16 +322,16 @@
 </node>
 
 <node oor:name="MOOXS" oor:op="replace">
-	<prop oor:name="Flags"><value>EXPORT ALIEN 3RDPARTYFILTER</value></prop>
+	<prop oor:name="Flags"><value>IMPORT EXPORT OWN ALIEN</value></prop>
 	<prop oor:name="UIComponent"/>
 	<prop oor:name="FilterService"/>
-	<prop oor:name="UserData"><value>CXML,Preprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /XLSX2ODS /I %SOURCE% /O %TARGET%&gt;,Postprocess=&lt;vnd.sun.star.expand:$ORIGIN/OdfConverter /ODS2XLSX /I %SOURCE% /O %TARGET%&gt;</value></prop>
+	<prop oor:name="UserData"><value>CXML,Preprocess=&lt;vnd.sun.star.expand:$OOO_BASE_DIR/../MacOS/OdfConverter /XLSX2ODS /I %SOURCE% /O %TARGET%&gt;,Postprocess=&lt;vnd.sun.star.expand:$OOO_BASE_DIR/../MacOS/OdfConverter /ODS2XLSX /I %SOURCE% /O %TARGET%&gt;</value></prop>
 	<prop oor:name="FileFormatVersion"><value>6800</value></prop>
 	<prop oor:name="Type"><value>MOOXSTYPE</value></prop>
 	<prop oor:name="TemplateName"/>
 	<prop oor:name="DocumentService"><value>com.sun.star.sheet.SpreadsheetDocument</value></prop>
 	<prop oor:name="UIName">
-		<value xml:lang="x-default">Microsoft Excel 2007 Document</value>
+		<value xml:lang="x-default">Microsoft Excel 2007 XML</value>
 	</prop>
 </node>
 
