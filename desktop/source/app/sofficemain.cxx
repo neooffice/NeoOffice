@@ -114,6 +114,9 @@ extern "C" int soffice_main( int argc, char **argv )
         aCmdPath = OUStringToOString( OUString( aCmdDirEntry.GetPath().GetFull().GetBuffer() ), RTL_TEXTENCODING_UTF8 );
     }
 
+    // Unset the CLASSPATH environment variable
+    unsetenv( "CLASSPATH" );
+
     // Assign command's directory to PATH environment variable
     OString aPath( getenv( "PATH" ) );
     OString aStandardPath( aCmdPath );
