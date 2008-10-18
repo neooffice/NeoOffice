@@ -6844,9 +6844,11 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             if ( rGlyphs[nPos].m_bIdentityGlyph )
                 appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
             appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
+            if ( rGlyphs[nPos].m_bIdentityGlyph )
+                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
+            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
 #else	// USE_JAVA
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aUnkernedLine );
-#endif	// USE_JAVA
             // check for adjustment
             double fTheoreticalGlyphWidth = rGlyphs[nPos].m_aPos.X() - rGlyphs[nPos-1].m_aPos.X();
             fTheoreticalGlyphWidth = 1000.0 * fTheoreticalGlyphWidth / fXScale / double(nPixelFontHeight);
@@ -6858,11 +6860,6 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aKernedLine.append( nAdjustment );
                 aKernedLine.append( "<" );
             }
-#ifdef USE_JAVA
-            if ( rGlyphs[nPos].m_bIdentityGlyph )
-                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
-            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
-#else	// USE_JAVA
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aKernedLine );
 #endif	// USE_JAVA
         }
