@@ -6372,9 +6372,15 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
     const ImplFontData* pDevFont = m_pReferenceDevice->mpFontEntry->maFontSelData.mpFontData;
     for( int i = 0; i < nGlyphs; i++ )
     {
+#ifdef USE_JAVA
+        const int nFontGlyphId = pGlyphs[i] & GF_IDXMASK;
+        if( ! nFontGlyphId )
+            continue;
+#else	// USE_JAVA
         if( ! pGlyphs[i] )
             continue;
         const int nFontGlyphId = pGlyphs[i] & (GF_IDXMASK | GF_ISCHAR | GF_GSUB);
+#endif	// USE_JAVA
 
         const ImplFontData* pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
 
@@ -6435,8 +6441,8 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                 sal_uInt16 nNewId = 0;
 #else	// USE_JAVA
                 sal_uInt8 nNewId = sal::static_int_cast<sal_uInt8>(rSubset.m_aSubsets.back().m_aMapping.size()+1);
-                pMappedGlyphs[i] = nNewId;
 #endif	// USE_JAVA
+                pMappedGlyphs[i] = nNewId;
 
                 // add new glyph to emitted font subset
                 GlyphEmit& rNewGlyphEmit = rSubset.m_aSubsets.back().m_aMapping[ nFontGlyphId ];
@@ -6816,6 +6822,10 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         // set up correct font
         rLine.append( "/F" );
         rLine.append( rGlyphs[nBeginRun].m_nMappedFontId );
+#ifdef USE_JAVA
+        rLine.append( '.' );
+        rLine.append( rGlyphs[nBeginRun].m_nMappedFontSubId );
+#endif	// USE_JAVA
         rLine.append( ' ' );
         m_aPages.back().appendMappedLength( nFontHeight, rLine, true );
         rLine.append( " Tf" );
@@ -7033,14 +7043,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             pFallbackFonts[i] = rLayout.GetFallbackFontData( pGlyphs[i] );
 
             if( (pGlyphs[i] & GF_ISCHAR) )
-#ifdef USE_JAVA
-            {
-                pGlyphs[i] &= ( GF_FLAGMASK & ~GF_ISCHAR );
-#endif	// USE_JAVA
                 pUnicodes[i] = static_cast<sal_Ucs>(pGlyphs[i] & GF_IDXMASK);
-#ifdef USE_JAVA
-            }
-#endif	// USE_JAVA
             else if( pCharPosAry[i] >= nMinCharPos && pCharPosAry[i] <= nMaxCharPos )
             {
                 pUnicodes[i] = rText.GetChar( sal::static_int_cast<xub_StrLen>(pCharPosAry[i]) );
