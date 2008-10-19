@@ -171,9 +171,9 @@ update_installation() {
 	fi
 
 	if [ ! -z "$lsregister" ] ; then
-		"$lsregister" $lsregisterargs s,d,u "$2"
+		"$lsregister" $lsregisterargs "$2"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" -i -- -c "$lsregister lsregisterargs \"$2\""
+			sudo -H -u "$sudouser" -i -- -c "$lsregister $lsregisterargs \"$2\""
 		fi
 	fi
 
