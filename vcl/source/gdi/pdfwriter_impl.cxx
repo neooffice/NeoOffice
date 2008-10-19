@@ -6373,9 +6373,9 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
     for( int i = 0; i < nGlyphs; i++ )
     {
 #ifdef USE_JAVA
-        const int nFontGlyphId = pGlyphs[i] & GF_IDXMASK;
-        if( ! nFontGlyphId )
+        if( ! pGlyphs[i] || pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) )
             continue;
+        const int nFontGlyphId = pGlyphs[i] & GF_IDXMASK;
 #else	// USE_JAVA
         if( ! pGlyphs[i] )
             continue;

@@ -80,6 +80,7 @@
 #define META_SETDOCINFO_PDF_ACTION				(10033)
 #define META_SETLOCALE_PDF_ACTION				(10034)
 #define META_CREATENAMEDDEST_PDF_ACTION			(10035)
+#define META_ADDSTREAM_PDF_ACTION				(10036)
 
 class SAL_DLLPRIVATE MetaTextLinePDFAction : public MetaTextLineAction
 {
@@ -581,6 +582,22 @@ public:
     const Rectangle&	GetRect() const { return maRect; }
     sal_Int32			GetPage() const { return mnPage; }
     ::vcl::PDFWriter::DestAreaType	GetType() const { return meType; }
+};
+
+class SAL_DLLPRIVATE MetaAddStreamPDFAction : public MetaAction
+{
+private:
+	String				maMimeType;
+	::vcl::PDFOutputStream*	mpStream;
+	bool				mbCompress;
+
+public:
+    					MetaAddStreamPDFAction( const String& rMimeType, ::vcl::PDFOutputStream *pStream, bool bCompress ) : MetaAction( META_ADDSTREAM_PDF_ACTION ), maMimeType( rMimeType ), mpStream( pStream ), mbCompress( bCompress ) {}
+    virtual				~MetaAddStreamPDFAction() {}
+
+    const String&		GetMimeType() const { return maMimeType; }
+    ::vcl::PDFOutputStream*	GetPDFOutputStream() const { return mpStream; }
+    bool				IsCompress() const { return mbCompress; }
 };
 
 #endif	// USE_JAVA
@@ -1151,6 +1168,13 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             }
             break;
 
+            case( META_ADDSTREAM_PDF_ACTION ):
+            {
+                const MetaAddStreamPDFAction* pA = (const MetaAddStreamPDFAction*) pAction;
+                aWriter.AddStream( pA->GetMimeType(), pA->GetPDFOutputStream(), pA->IsCompress() );
+            }
+            break;
+
             default:
                 DBG_ERROR( "PDFWriterImpl::emit: unsupported MetaAction #" );
             break;
@@ -1308,6 +1332,10 @@ void PDFWriter::DrawStretchText(
                                 xub_StrLen nIndex,
                                 xub_StrLen nLen )
 {
+#ifdef USE_JAVA
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
+#endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->drawStretchText( rStartPt, nWidth, rStr, nIndex, nLen );
 }
 
@@ -2024,6 +2052,10 @@ PDFOutputStream::~PDFOutputStream()
 
 void PDFWriter::AddStream( const String& rMimeType, PDFOutputStream* pStream, bool bCompress )
 {
+#ifdef USE_JAVA
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaAddStreamPDFAction( rMimeType, pStream, bCompress ) );
+#endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->addStream( rMimeType, pStream, bCompress );
 }
 
