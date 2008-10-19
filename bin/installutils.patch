@@ -59,7 +59,7 @@ check_installation() {
 	grep '$(BUILD_MACHINE)' "$1/Contents/Info.plist" >/dev/null 2>&1
 	if [ "$?" != "0" ] ; then
 		# One of the test patches was missing ".local" in the hostname
-		$hostname=`echo '$(BUILD_MACHINE)' | sed 's#\.local##'`
+		hostname=`echo '$(BUILD_MACHINE)' | sed 's#\.local##'`
 		grep "$hostname" "$1/Contents/Info.plist" >/dev/null 2>&1
 		if [ "$?" != "0" ] ; then
 			return 1;
