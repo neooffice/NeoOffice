@@ -46,11 +46,11 @@ UNIXVERSIONNAMES=UDK
 
 # --- Settings -----------------------------------------------------
 
-.INCLUDE :  settings.mk
-
 .IF "$(OS)" == "MACOSX"
-CDEFS+=-g -O0
+debug=true
 .ENDIF
+
+.INCLUDE :  settings.mk
 
 # --- Files --------------------------------------------------------
 
