@@ -178,15 +178,17 @@ if [ -d "$2" ]; then
 	lsregister="/System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
 	if [ ! -x "$lsregister" ] ; then
 		lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
-		if [ ! -x "$lsregister" ] ; then
+		if [ -x "$lsregister" ] ; then
+			lsregisterargs="-f -r -all s,d,u"
+		else
 			lsregister=
 		fi
 	fi
 
 	if [ ! -z "$lsregister" ] ; then
-		"$lsregister" -f "$2"
+		"$lsregister" $lsregisterargs "$2"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" -i -- -c "$lsregister -f \"$2\""
+			sudo -H -u "$sudouser" -i -- -c "$lsregister $lsregisterargs \"$2\""
 		fi
 	fi
 
@@ -205,6 +207,9 @@ if [ -d "$2" ]; then
 	# Register the QuickLook plugin
 	if [ -x "/usr/bin/qlmanage" ] ; then
 		/usr/bin/qlmanage -r
+		if [ ! -z "$sudouser" ] ; then
+			sudo -H -u "$sudouser" -i -- -c "/usr/bin/qlmanage -r"
+		fi
 	fi
 
 fi
