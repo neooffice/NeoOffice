@@ -193,13 +193,12 @@ extern "C" int soffice_main( int argc, char **argv )
     }
 
     // Restart if necessary since most library path changes don't have any
-    // effect after the application has already started on most platforms.
-    // We have to set SAL_NO_FORCE_SYSALLOC to some value in order to turn
-    // on OOo's custom memory manager which is, apparently, required for
-    // XML export to work but it cannot be used before we invoke execv().
+    // effect after the application has already started on most platforms
     if ( bRestart )
     {
-        OString aPageinPath( aCmdPath );
+        OString aPageinDirPath( aCmdPath );
+		aPageinDirPath += OString( "../basis-link/program" );
+        OString aPageinPath( aPageinDirPath );
         aPageinPath += OString( "/pagein" );
         char *pPageinPath = (char *)aPageinPath.getStr();
         if ( !access( pPageinPath, R_OK | X_OK ) )
@@ -208,7 +207,7 @@ extern "C" int soffice_main( int argc, char **argv )
             char *pPageinArgs[ argc + 3 ];
             pPageinArgs[ nCurrentArg++ ] = pPageinPath;
             OString aPageinSearchArg( "-L" );
-            aPageinSearchArg += aCmdPath;
+            aPageinSearchArg += aPageinDirPath;
             pPageinArgs[ nCurrentArg++ ] = (char *)aPageinSearchArg.getStr();
             for ( int i = 1; i < argc; i++ )
             {
