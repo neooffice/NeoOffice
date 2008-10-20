@@ -46,11 +46,12 @@ UNIXVERSIONNAMES=UDK
 
 # --- Settings -----------------------------------------------------
 
-.IF "$(OS)" == "MACOSX"
-debug=true
-.ENDIF
-
 .INCLUDE :  settings.mk
+
+.IF "$(OS)" == "MACOSX"
+# Fix crashing on startup when launching by opening a file in the Finder
+CDEFS+=-g -O0
+.ENDIF
 
 # --- Files --------------------------------------------------------
 
