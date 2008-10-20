@@ -38,10 +38,7 @@
 #ifdef USE_JAVA
 
 #include <errno.h>
-#include <ifaddrs.h>
-#include <netdb.h>
 #include <stdio.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
 #include <unistd.h>
