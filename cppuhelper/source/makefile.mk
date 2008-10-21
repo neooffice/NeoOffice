@@ -46,12 +46,13 @@ UNIXVERSIONNAMES=UDK
 
 # --- Settings -----------------------------------------------------
 
-.INCLUDE :  settings.mk
-
 .IF "$(OS)" == "MACOSX"
-# Fix crashing on startup when launching by opening a file in the Finder
-CDEFS+=-g -O0
+# Fix crashing on startup when launching by opening a file in the Finder. Set
+# debug to true to prevent crashing of uno.bin when adding an extension.
+debug=true;
 .ENDIF
+
+.INCLUDE :  settings.mk
 
 # --- Files --------------------------------------------------------
 
