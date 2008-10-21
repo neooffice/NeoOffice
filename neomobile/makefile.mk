@@ -91,8 +91,7 @@ makeoxt :
 	zip -r $(BIN)$/$(PRJNAME).oxt META-INF $(PRJNAME) uiIntegration.xcu Images -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
 # Change install names to avoid library loading issues
-	sh -c -e 'for i in `otool -L "$(LB)$/$(TARGET)$(DLLPOST)" | awk "{ print \\$$1 }" | grep "^@loader_path\/"` ; do install_name_tool -change "$${i}" `echo "$${i}" | sed "s#^@loader_path/\.\./ure-link/lib/#@loader_path/../../../../../../basis-link/ure-link/lib/#" | sed "s#^@loader_path/lib#@loader_path/../../../../../../basis-link/program/lib#"` "$(LB)$/$(TARGET)$(DLLPOST)" ; done'
-	$(PERL) $(SOLARENV)$/bin$/macosx-change-install-names.pl extshl OOO "$(LB)$/$(TARGET)$(DLLPOST)"
+	sh -c -e 'install_name_tool -id "$(LB)$/$(TARGET)$(DLLPOST)" "$(LB)$/$(TARGET)$(DLLPOST)" ; for i in `otool -L "$(LB)$/$(TARGET)$(DLLPOST)" | awk "{ print \\$$1 }" | grep "^@loader_path\/"` ; do install_name_tool -change "$${i}" `echo "$${i}" | sed "s#^@loader_path/\.\./ure-link/lib/#@executable_path/urelibs/#" | sed "s#^@loader_path/#@executable_path/../basis-link/program/#"` "$(LB)$/$(TARGET)$(DLLPOST)" ; done'
 .IF "$(debug)" == ""
 # Use stripped library if not in debug mode
 	$(RM) $(BIN)$/stripped
