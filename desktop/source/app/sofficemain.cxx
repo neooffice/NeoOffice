@@ -117,8 +117,10 @@ extern "C" int soffice_main( int argc, char **argv )
     // Assign command's directory to PATH environment variable
     OString aPath( getenv( "PATH" ) );
     OString aStandardPath( aCmdPath );
+    aStandardPath += OString( ":" );
+    aStandardPath += aCmdPath;
     aStandardPath += OString( "/../basis-link/program:" );
-    aStandardPath += OString( aCmdPath );
+    aStandardPath += aCmdPath;
     aStandardPath += OString( "/../basis-link/ure-link/bin:/bin:/sbin:/usr/bin:/usr/sbin:" );
     if ( aPath.compareTo( aStandardPath, aStandardPath.getLength() ) )
     {
@@ -156,8 +158,10 @@ extern "C" int soffice_main( int argc, char **argv )
     }
 
     OString aStandardLibPath( aCmdPath );
+    aStandardLibPath += OString( ":" );
+    aStandardLibPath += aCmdPath;
     aStandardLibPath += OString( "/../basis-link/program:" );
-    aStandardLibPath += OString( aCmdPath );
+    aStandardLibPath += aCmdPath;
     aStandardLibPath += OString( "/../basis-link/ure-link/lib:/usr/lib:/usr/local/lib:" );
     aStandardLibPath += OString( ":/usr/lib:/usr/local/lib:" );
     if ( aHomePath.getLength() )
