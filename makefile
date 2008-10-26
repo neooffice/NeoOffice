@@ -191,9 +191,13 @@ build.remotecontrol_checkout:
 
 build.oo_patches: \
 	build.oo_config_office_patch \
+	build.oo_cppu_patch \
+	build.oo_cppuhelper_patch \
+	build.oo_cpputools_patch \
 	build.oo_external_patch \
 	build.oo_filter_patch \
 	build.oo_framework_patch \
+	build.oo_i18npool_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \
 	build.oo_moz_patch \
