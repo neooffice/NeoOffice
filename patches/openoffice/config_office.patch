@@ -1,0 +1,11 @@
+--- configure.in	2008-10-26 12:01:30.000000000 -0700
++++ configure.in	2008-10-26 11:57:25.000000000 -0700
+@@ -2542,7 +2542,7 @@
+       LDFLAGS=$sharedlink_ldflags_save
+    fi
+ 
+-   if test "$HAVE_GCC_VISIBILITY_FEATURE" = "TRUE"; then
++   if test "$_os" != "Darwin" -a test "$HAVE_GCC_VISIBILITY_FEATURE" = "TRUE"; then
+       AC_MSG_CHECKING([if gcc has a visibility bug with class-level attributes (GCC bug 26905)])
+       cat >visibility.cxx <<_ACEOF
+ #pragma GCC visibility push(hidden)
