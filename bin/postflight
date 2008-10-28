@@ -135,12 +135,13 @@ if [ -d "$2" ]; then
 	# Put back user's custom font files
 	if [ -d "$2/truetype" ]; then
 		for i in `cd "$2/truetype" ; find . -maxdepth 1`; do
-			# Keep old fonts as they may have been loaded by the ATS server
+			# Keep old fonts as they may have been loaded by the ATS server but
+			# fix bug 3273 by putting back only those fonts are duplicates
 			if [ ! -d "$2/Contents/basis-link/share/fonts/truetype/$i" ]; then
 				if [ -e "$2/Contents/basis-link/share/fonts/truetype/$i" ]; then
 					rm -f "$2/Contents/basis-link/share/fonts/truetype/$i"
+					mv -f "$2/truetype/$i" "$2/Contents/basis-link/share/fonts/truetype" || exit 1
 				fi
-				mv -f "$2/truetype/$i" "$2/Contents/basis-link/share/fonts/truetype" || exit 1
 			fi
 		done
 		chown -Rf root:admin "$2/Contents/basis-link/share/fonts/truetype" || exit 1
@@ -155,6 +156,7 @@ if [ -d "$2" ]; then
 	chmod -Rf a+r,a-w "$2/Contents" || exit 1
 	chmod -f 775 "$2/Contents" || exit 1
 	chmod -Rf ug+w "$2/Contents/Resources" || exit 1
+	chmod -Rf ug+w "$2/Contents/share/uno_packages" || exit 1
 
 	# Fix bug 1584 by marking certain directories writable for root user
 	chmod -Rf u+w "$2/Contents/basis-link/presets" || exit 1
