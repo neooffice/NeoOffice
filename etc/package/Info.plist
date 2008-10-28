@@ -299,11 +299,33 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>oxt</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>generic.icns</string>
+			<key>CFBundleTypeMIMETypes</key>
+			<array>
+				<string>application/vnd.openofficeorg.extension</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>$(PRODUCT_NAME) Extension</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSIsAppleDefaultForType</key>
+			<true/>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
 				<string>bmp</string>
 				<string>cgm</string>
 				<string>dxf</string>
 				<string>emf</string>
+				<string>eps</string>
 				<string>gif</string>
+				<string>jfif</string>
+				<string>jif</string>
+				<string>jpe</string>
 				<string>jpeg</string>
 				<string>jpg</string>
 				<string>met</string>
@@ -312,11 +334,14 @@
 				<string>pict</string>
 				<string>pcd</string>
 				<string>pcx</string>
+				<string>pdf</string>
 				<string>pgm</string>
 				<string>psd</string>
 				<string>png</string>
 				<string>ppm</string>
 				<string>ras</string>
+				<string>sgf</string>
+				<string>sgv</string>
 				<string>svm</string>
 				<string>tga</string>
 				<string>tif</string>
@@ -607,6 +632,7 @@
 		<dict>
 			<key>CFBundleTypeExtensions</key>
 			<array>
+				<string>123</string>
 				<string>slk</string>
 				<string>sylk</string>
 				<string>wk1</string>
