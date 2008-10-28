@@ -45,6 +45,7 @@
 	id					mpCWindow;
 	NSView*				mpView;
 	NSWindow*			mpWindow;
+	WindowRef			maWindowRef;
 }
 + (id)createWithCWindow:(id)pCWindow;
 - (NSView *)contentView;
@@ -73,7 +74,13 @@
 	{
 		mpWindow = (NSWindow *)[mpCWindow getNSWindow];
 		if ( mpWindow )
+		{
 			mpView = [mpWindow contentView];
+
+			// Create the NSWindow's WindowRef as we need it in the dtrans
+			// module and it will not created until we make the following call
+			maWindowRef = [mpWindow windowRef];
+		}
 	}
 }
 
@@ -84,6 +91,7 @@
 	mpCWindow = pCWindow;
 	mpView = nil;
 	mpWindow = nil;
+	maWindowRef = nil;
 
 	return self;
 }
