@@ -241,11 +241,7 @@ IMPL_FORMAT_GETPIXEL_NOMASK( _32BIT_TC_ABGR )
 
 IMPL_FORMAT_SETPIXEL_NOMASK( _32BIT_TC_ABGR )
 {
-#ifdef USE_JAVA
-	*( pScanline = pScanline + ( nX << 2 ) )++ = 0xFF;
-#else	// USE_JAVA
 	*( pScanline = pScanline + ( nX << 2 ) )++ = 0;
-#endif	// USE_JAVA
 	*pScanline++ = rBitmapColor.GetBlue();
 	*pScanline++ = rBitmapColor.GetGreen();
 	*pScanline = rBitmapColor.GetRed();
@@ -268,7 +264,11 @@ IMPL_FORMAT_GETPIXEL_NOMASK( _32BIT_TC_ARGB )
 
 IMPL_FORMAT_SETPIXEL_NOMASK( _32BIT_TC_ARGB )
 {
+#ifdef USE_JAVA
+	*( pScanline = pScanline + ( nX << 2 ) )++ = 0xFF;
+#else	// USE_JAVA
 	*( pScanline = pScanline + ( nX << 2 ) )++ = 0;
+#endif	// USE_JAVA
 	*pScanline++ = rBitmapColor.GetRed();
 	*pScanline++ = rBitmapColor.GetGreen();
 	*pScanline = rBitmapColor.GetBlue();
