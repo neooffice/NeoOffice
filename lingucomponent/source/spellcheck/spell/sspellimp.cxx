@@ -163,7 +163,11 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
     // this routine should return the locales supported by the installed
     // dictionaries.
 
+#ifdef USE_JAVA
+    if (!numdict && !maLocales)
+#else	// USE_JAVA
     if (!numdict) 
+#endif	// USE_JAVA
     {
         SvtLinguConfig aLinguCfg;
 
@@ -276,11 +280,8 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
             aDNames = NULL;
             aSuppLocales.realloc(0);
         }
-    }    
 
 #ifdef USE_JAVA
-	if ( !maLocales )
-	{
 		::std::list< Locale > aAppLocalesList;
 		CFMutableArrayRef aAppLocales = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
 		if ( aAppLocales )
@@ -516,8 +517,8 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
 		if ( aAppLocales )
 			CFRelease( aAppLocales );
-	}
 #endif	// USE_JAVA
+    }    
 
 	return aSuppLocales;
 }
@@ -1020,7 +1021,11 @@ OUString SAL_CALL
 		throw(RuntimeException)
 {
 	MutexGuard	aGuard( GetLinguMutex() );
+#ifdef PRODUCT_NAME
+	return A2OU( PRODUCT_NAME " Mac OS X Spellchecker with Hunspell" );
+#else	// PRODUCT_NAME
 	return A2OU( "Hunspell SpellChecker" );
+#endif	// PRODUCT_NAME
 }
 
 
