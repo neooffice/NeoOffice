@@ -56,6 +56,9 @@
 #ifndef _SV_OUTDEV_H
 #include <vcl/outdev.h>
 #endif
+#ifndef _VCL_UNOHELP_HXX
+#include <vcl/unohelp.hxx>
+#endif
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #endif
@@ -77,13 +80,6 @@
 #include <postmac.h>
 
 #include "salgdi3_cocoa.h"
-
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
 
 typedef void NativeShutdownCancelledHandler_Type();
 
@@ -720,9 +716,7 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 		// Load libsfx and invoke the native shutdown cancelled handler
 		if ( !pShutdownCancelledHandler )
 		{
-			OUString aLibName = OUString::createFromAscii( "libsfx" );
-			aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-			aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+			OUString aLibName = ::vcl::unohelper::CreateLibraryName( "sfx", TRUE );
 			if ( aShutdownCancelledHandlerModule.load( aLibName ) )
 				pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
 		}

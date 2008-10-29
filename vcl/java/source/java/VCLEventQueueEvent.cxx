@@ -65,16 +65,12 @@
 #ifndef _SV_FLOATWIN_HXX
 #include <vcl/floatwin.hxx>
 #endif
+#ifndef _VCL_UNOHELP_HXX
+#include <vcl/unohelp.hxx>
+#endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
-
-#ifndef DLLPOSTFIX
-#error DLLPOSTFIX must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
 
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
@@ -257,9 +253,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// Load libsfx and invoke the native shutdown cancelled handler
 				if ( !pShutdownCancelledHandler )
 				{
-					OUString aLibName = OUString::createFromAscii( "libsfx" );
-					aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-					aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+					OUString aLibName = ::vcl::unohelper::CreateLibraryName( "sfx", TRUE );
 					if ( aShutdownCancelledHandlerModule.load( aLibName ) )
 						pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
 				}
@@ -294,9 +288,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Load libsfx and invoke the native preferences handler
 			if ( !pAboutHandler )
 			{
-				OUString aLibName = OUString::createFromAscii( "libsfx" );
-				aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+				OUString aLibName = ::vcl::unohelper::CreateLibraryName( "sfx", TRUE );
 				if ( aAboutHandlerModule.load( aLibName ) )
 					pAboutHandler = (NativeAboutMenuHandler_Type *)aAboutHandlerModule.getSymbol( OUString::createFromAscii( "NativeAboutMenuHandler" ) );
 			}
@@ -311,9 +303,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			// Load libofa and invoke the native preferences handler
 			if ( !pPreferencesHandler )
 			{
-				OUString aLibName = OUString::createFromAscii( "libsfx" );
-				aLibName += OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-				aLibName += OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+				OUString aLibName = ::vcl::unohelper::CreateLibraryName( "sfx", TRUE );
 				if ( aPreferencesHandlerModule.load( aLibName ) )
 					pPreferencesHandler = (NativePreferencesMenuHandler_Type *)aPreferencesHandlerModule.getSymbol( OUString::createFromAscii( "NativePreferencesMenuHandler" ) );
 			}

@@ -42,8 +42,6 @@ TARGET=saljava
 
 .INCLUDE :  settings.mk
 
-CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
-
 # --- Files --------------------------------------------------------
 
 .IF "$(GUIBASE)"!="java"
