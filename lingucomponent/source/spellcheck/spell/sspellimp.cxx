@@ -236,7 +236,11 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 	std::vector<dictentry *> postupdict;
 
 
+#ifdef USE_JAVA
+	if (!numdict && !maLocales) {
+#else	// USE_JAVA
 	if (!numdict) {
+#endif	// USE_JAVA
 
             // invoke a dictionary manager to get the user dictionary list
             OUString usrlst = aPathOpt.GetUserDictionaryPath() + A2OU("/dictionary.lst");
@@ -392,11 +396,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
                   sdMgr = NULL;
             }
 
-        }
-
 #ifdef USE_JAVA
-	if ( !maLocales )
-	{
 		::std::list< Locale > aAppLocalesList;
 		CFMutableArrayRef aAppLocales = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
 		if ( aAppLocales )
@@ -632,8 +632,8 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
 		if ( aAppLocales )
 			CFRelease( aAppLocales );
-	}
 #endif	// USE_JAVA
+        }
 
 	return aSuppLocales;
 }
