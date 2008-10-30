@@ -9244,6 +9244,14 @@ BOOL Window::IsScrollable() const
 
 BOOL Window::IsTopWindow() const
 {
+#ifdef USE_JAVA
+    // Fix bug 3236 by always marking floating windows as not top level windows
+    // since stripping off the WB_OWNERDRAWDECORATION window bits on floating
+    // windows would cause such windows to be treated as top level windows
+    if ( mpWindowImpl->mnType == WINDOW_FLOATINGWINDOW )
+        return FALSE;
+#endif	// USE_JAVA
+
     if ( mpWindowImpl->mbInDtor )
         return FALSE;
 
