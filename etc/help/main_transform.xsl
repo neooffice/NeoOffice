@@ -568,7 +568,7 @@
 		<xsl:when test="contains($string,$brand5)">
 			    <xsl:variable name="newstr">
                 <xsl:value-of select="substring-before($string,$brand5)"/>
-                <xsl:value-of select="$pversion"/>
+                <xsl:value-of select="$productname"/>
                 <xsl:value-of select="substring-after($string,$brand5)"/>
            </xsl:variable>
 			<xsl:call-template name="brand">
@@ -639,9 +639,17 @@
 <xsl:variable name="archive"><xsl:value-of select="concat(substring-before(substring-after(@href,'text/'),'/'),'/')"/></xsl:variable>
 <xsl:variable name="dbpostfix"><xsl:call-template name="createDBpostfix"><xsl:with-param name="archive" select="$archive"/></xsl:call-template></xsl:variable>
 	<xsl:choose>
-        <!-- Fix bug 1120 by replacing the OOo support URL -->
+		<!-- Fix bug 1120 by replacing the OOo support URL -->
 		<xsl:when test="@href='$(OO_SUPPORT_URL)' and text()='$(OO_SUPPORT_URL_TEXT)'">
 			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
+		</xsl:when>
+		<!-- Replace the OOo download URL -->
+		<xsl:when test="@href='$(OO_DOWNLOAD_URL)' and text()='$(OO_DOWNLOAD_URL_TEXT)'">
+			<a href="$(PRODUCT_DOWNLOAD_URL)">$(PRODUCT_DOWNLOAD_URL_TEXT)</a>
+		</xsl:when>
+		<!-- Replace the OOo documentation URL -->
+		<xsl:when test="@href='$(OO_DOCUMENTATION_URL)' and text()='$(OO_DOCUMENTATION_URL_TEXT)'">
+			<a href="$(PRODUCT_DOCUMENTATION_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
 		</xsl:when>
 		<xsl:when test="contains(@href,'#')">
 			<xsl:variable name="anchor"><xsl:value-of select="concat('#',substring-after(@href,'#'))"/></xsl:variable>
@@ -979,5 +987,15 @@
 	</xsl:variable>
 	<xsl:value-of select="concat($am,'DbPAR=',$newDB)"/>
 </xsl:template>
+
+<!-- Remove OpenOffice.org support text -->
+<xsl:template match="paragraph[@id='par_id9173253']" />
+<xsl:template match="paragraph[@id='par_id3149140']" />
+<xsl:template match="paragraph[@id='par_id3149140']" />
+<xsl:template match="paragraph[@id='par_id3154230']" />
+<xsl:template match="paragraph[@id='hd_id26327']" />
+<xsl:template match="paragraph[@id='par_id1318380']" />
+<xsl:template match="paragraph[@id='hd_id2611386']" />
+<xsl:template match="paragraph[@id='par_id3166335']" />
 
 </xsl:stylesheet>
