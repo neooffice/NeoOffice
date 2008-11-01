@@ -48,7 +48,7 @@
 
 - (id)init
 {
-	if (self = [super initWithContentsOfFile:[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Contents/share/gallery"]])
+	if (self = [super initWithContentsOfFile:[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Contents/basis-link/share/gallery"]])
 	{
 		
 	}

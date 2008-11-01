@@ -88,7 +88,7 @@ static NSImage *sDRMIcon = nil;
 
 - (id)init
 {
-	return [self initWithContentsOfFile:[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Contents/share/gallery"]];
+	return [self initWithContentsOfFile:[[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"Contents/basis-link/share/gallery"]];
 }
 
 - (void)dealloc
