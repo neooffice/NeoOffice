@@ -370,34 +370,33 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 		try
 		{
-			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			Reference< XDesktop > rDesktop(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop"))), UNO_QUERY_THROW);
 			
-			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+			Reference< XDispatchHelper > rDispatchHelper(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.DispatchHelper"))), UNO_QUERY_THROW); 
 			
-			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
-			Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
-			
-			Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY );
-			
-			if(xDocInfoSupplier.is())
+			Reference< XFrame > rFrame=rDesktop->getCurrentFrame(); 
+			if (rFrame.is())
 			{
-				Reference< XDocumentInfo > docInfo = xDocInfoSupplier->getDocumentInfo();
+				Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY_THROW );
 				
-				try
+				Reference< XDocumentInfo > docInfo = xDocInfoSupplier->getDocumentInfo();
+				if (docInfo.is())
 				{
-					Reference< XPropertyContainer > propContainer( docInfo, UNO_QUERY );
-					propContainer->addProperty(key, 0, Any(value));
+					try
+					{
+						Reference< XPropertyContainer > propContainer( docInfo, UNO_QUERY_THROW );
+						propContainer->addProperty(key, 0, Any(value));
+						return(true);
+					}
+					catch (PropertyExistException e)
+					{
+						Reference< XPropertySet > bagOfMe( docInfo, UNO_QUERY );
+						if (bagOfMe.is())
+							bagOfMe->setPropertyValue(key, Any(value));
+					}
+					
 					return(true);
 				}
-				catch (PropertyExistException e)
-				{
-					Reference< XPropertySet > bagOfMe( docInfo, UNO_QUERY );
-					bagOfMe->setPropertyValue(key, Any(value));
-				}
-				
-				return(true);
 			}
 		}
 		catch (...)
@@ -413,21 +412,17 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 		try
 		{
-			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			Reference< XDesktop > rDesktop(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop"))), UNO_QUERY_THROW);
+
+			Reference< XDispatchHelper > rDispatchHelper(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.DispatchHelper"))), UNO_QUERY_THROW ); 
 			
-			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
-			
-			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
-			Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
-			
-			Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY );
-			
-			if(xDocInfoSupplier.is())
+			Reference< XFrame > rFrame=rDesktop->getCurrentFrame(); 
+			if (rFrame.is())
 			{
+				Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY_THROW );
+				
 				Reference< XDocumentInfo > docInfo = xDocInfoSupplier->getDocumentInfo();
-				Reference< XPropertySet > bagOfMe( docInfo, UNO_QUERY );
+				Reference< XPropertySet > bagOfMe( docInfo, UNO_QUERY_THROW );
 				
 				rtl::OUString res;
 				bagOfMe->getPropertyValue(key) >>= res;
