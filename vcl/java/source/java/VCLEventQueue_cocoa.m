@@ -391,6 +391,10 @@ static VCLResponder *pSharedResponder = nil;
 
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 
+@interface NSEvent (GestureEvents)
+-(float)magnification;
+@end
+
 @interface VCLWindow (CocoaAppWindow)
 - (jobject)peer;
 @end
@@ -704,7 +708,7 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
 	}
 	// Handle scroll wheel and magnify
-	else if ( ( nType == NSScrollWheel || nType == 30 ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	else if ( ( nType == NSScrollWheel || ( nType == 30 && [pEvent respondsToSelector:@selector(magnification)] ) ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		// Post flipped coordinates 
 		NSRect aFrame = [self frame];
@@ -721,7 +725,7 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 			// the Command key pressed to force the OOo code to zoom
 			nModifiers |= NSCommandKeyMask;
 			fDeltaX = 0;
-			fDeltaY = [pEvent deltaZ];
+			fDeltaY = [pEvent magnification];
 		}
 		else
 		{
