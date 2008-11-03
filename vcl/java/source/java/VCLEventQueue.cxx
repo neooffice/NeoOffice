@@ -181,7 +181,7 @@ CFStringRef VCLEventQueue_getTextSelection()
 					}
 				}
 			}
-        }
+		}
 
 		rSolarMutex.release();
 	}
@@ -272,7 +272,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-        VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUsePartialKeyEntryFix, !IsRunningPanther() );
+		VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUsePartialKeyEntryFix, !IsRunningPanther() );
 
 		// Load our AWTFont replacement class
 		OUString aVCLJavaLibName;
