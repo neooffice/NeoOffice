@@ -297,6 +297,8 @@ static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
 - (void)interpretKeyEvents:(NSArray *)pEvents;
+- (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
+- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
 
 // The QuickTime content view hack implemented in [VCLWindow setContentView:]
@@ -387,7 +389,7 @@ static VCLResponder *pSharedResponder = nil;
 
 @end
 
-static NSMutableArray *pNeedRestoreModalWindows = NULL;
+static NSMutableArray *pNeedRestoreModalWindows = nil;
 
 @interface VCLWindow (CocoaAppWindow)
 - (jobject)peer;
@@ -802,6 +804,8 @@ static NSMutableArray *pNeedRestoreModalWindows = NULL;
 
 @end
 
+static CFStringRef aSelection = nil;
+
 @implementation VCLView
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
@@ -853,6 +857,49 @@ static NSMutableArray *pNeedRestoreModalWindows = NULL;
 	}
 
 	[super interpretKeyEvents:pEvents];
+}
+
+- (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
+{
+	return NO;
+}
+
+- (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
+{
+	if ( pSendType && [pSendType isEqual:NSStringPboardType] )
+	{
+		if ( aSelection )
+		{
+			CFRelease( aSelection );
+			aSelection = nil;
+		}
+
+		aSelection = VCLEventQueue_getTextSelection();
+		if ( aSelection )
+			return self;
+	}
+
+	return [super validRequestorForSendType:pSendType returnType:pReturnType];
+}
+
+- (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
+{
+	BOOL bRet = NO;
+
+	if ( aSelection && pPasteboard && pTypes && [pTypes containsObject:NSStringPboardType] )
+	{
+		NSArray *pTypesDeclared = [NSArray arrayWithObject:NSStringPboardType];
+		if ( pTypesDeclared )
+		{
+			[pPasteboard declareTypes:pTypesDeclared owner:nil];
+			bRet = [pPasteboard setString:(NSString *)aSelection forType:NSStringPboardType];
+		}
+
+		CFRelease( aSelection );
+		aSelection = nil;
+	}
+
+	return bRet;
 }
 
 @end

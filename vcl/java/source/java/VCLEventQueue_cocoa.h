@@ -38,7 +38,12 @@
 
 #include <jni.h>
 
+#ifdef __cplusplus 
+#include <premac.h>
+#endif
+#include <Carbon/Carbon.h>
 #ifdef __cplusplus
+#include <postmac.h>
 typedef void* id;
 #else
 @interface NSWindow (VCLWindow)
@@ -68,9 +73,9 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+CFStringRef VCLEventQueue_getTextSelection();
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );
 void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession );
-BOOL NSApplication_hasDelegate();
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();
 void NSFontManager_acquire();

@@ -53,11 +53,35 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
+#include <comphelper/processfactory.hxx>
+#endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
 #endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
+#endif
+#ifndef _COM_SUN_STAR_CONTAINER_XINDEXACCESS_HDL_
+#include <com/sun/star/container/XIndexAccess.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XCONTROLLER_HDL_
+#include <com/sun/star/frame/XController.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HDL_
+#include <com/sun/star/frame/XDesktop.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XFRAME_HDL_
+#include <com/sun/star/frame/XFrame.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XMODEL_HDL_
+#include <com/sun/star/frame/XModel.hpp>
+#endif
+#ifndef _COM_SUN_STAR_TEXT_XTEXTRANGE_HDL_
+#include <com/sun/star/text/XTextRange.hpp>
+#endif
+#ifndef _COM_SUN_STAR_TEXT_XTEXTTABLECURSOR_HDL_
+#include <com/sun/star/text/XTextTableCursor.hpp>
 #endif
 
 #include <premac.h>
@@ -68,6 +92,11 @@
 
 static ::vos::OModule aAWTFontModule;
 
+using namespace com::sun::star::container;
+using namespace com::sun::star::frame;
+using namespace com::sun::star::lang;
+using namespace com::sun::star::text;
+using namespace com::sun::star::uno;
 using namespace vcl;
 using namespace vos;
 
@@ -101,6 +130,81 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 }
 
 // ============================================================================
+
+CFStringRef VCLEventQueue_getTextSelection()
+{
+	CFStringRef aRet = NULL;
+
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			Reference< XDesktop > xDesktop( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+			if ( xDesktop.is() )
+			{
+				Reference< XFrame > xFrame = xDesktop->getCurrentFrame();
+				if ( xFrame.is() )
+				{
+					Reference< XController > xController = xFrame->getController();
+					if ( xController.is() )
+					{
+						Reference< XModel > xModel = xController->getModel();
+						if ( xModel.is() )
+						{
+							Reference< XInterface > xSelection = xModel->getCurrentSelection();
+
+							Reference< XIndexAccess > xIndexAccess( xSelection, UNO_QUERY );
+							Reference< XTextRange > xTextRange( xSelection, UNO_QUERY );
+							Reference< XTextTableCursor > xTextTableCursor( xSelection, UNO_QUERY );
+							if ( xIndexAccess.is() )
+							{
+								OUString aText;
+								sal_Int32 nCount = xIndexAccess->getCount();
+								for ( sal_Int32 i = 0; i < nCount; i++ )
+								{
+									Any aValue = xIndexAccess->getByIndex( i );
+									if ( aValue.getValueType().equals( getCppuType( ( Reference< XTextRange >* )0 ) ) )
+									{
+										Reference< XTextRange > aCurrentTextRange;
+										aValue >>= aCurrentTextRange;
+										if ( aCurrentTextRange.is() )
+											aText += aCurrentTextRange->getString();
+									}
+								}
+
+								if ( aText.getLength() )
+									aRet = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+							}
+							else if ( xTextRange.is() )
+							{
+								OUString aText( xTextRange->getString() );
+								if ( aText.getLength() )
+									aRet = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+							}
+							else if ( xTextTableCursor.is() )
+							{
+								xTextTableCursor->gotoStart( sal_False );
+								if ( xTextTableCursor->mergeRange() )
+								{
+									// TODO: find matching text ranges
+								}
+							}
+						}
+					}
+				}
+			}
+        }
+
+		rSolarMutex.release();
+	}
+
+	return aRet;
+}
+
+// ----------------------------------------------------------------------------
 
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown )
 {
