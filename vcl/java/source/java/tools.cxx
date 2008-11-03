@@ -130,7 +130,7 @@ bool vcl::IsFullKeyboardAccessEnabled( )
 		{
 			int prefVal;
 			if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
-				isFullAccessEnabled = ( prefVal > 0 );
+				isFullAccessEnabled = ( prefVal % 2 ? true : false );
 			CFRelease( keyboardNavigationPref );
 		}
 		initializedOnce = true;
