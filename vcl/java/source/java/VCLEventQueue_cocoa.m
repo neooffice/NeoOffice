@@ -870,7 +870,7 @@ static CFStringRef aSelection = nil;
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
-	if ( pSendType && [pSendType isEqual:NSStringPboardType] )
+	if ( !pReturnType && pSendType && [pSendType isEqual:NSStringPboardType] )
 	{
 		if ( aSelection )
 		{
