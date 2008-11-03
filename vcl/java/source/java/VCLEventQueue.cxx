@@ -53,8 +53,14 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <window.hxx>
+#endif
 #ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
+#endif
+#ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
+#include <toolkit/helper/vclunohelper.hxx>
 #endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
@@ -62,26 +68,20 @@
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
-#ifndef _COM_SUN_STAR_CONTAINER_XINDEXACCESS_HDL_
-#include <com/sun/star/container/XIndexAccess.hpp>
+#ifndef _COM_SUN_STAR_AWT_XWINDOW_HDL_
+#include <com/sun/star/awt/XWindow.hpp>
 #endif
-#ifndef _COM_SUN_STAR_FRAME_XCONTROLLER_HDL_
-#include <com/sun/star/frame/XController.hpp>
+#ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HDL_
+#include <com/sun/star/datatransfer/XTransferable.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HDL_
+#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 #endif
 #ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HDL_
 #include <com/sun/star/frame/XDesktop.hpp>
 #endif
 #ifndef _COM_SUN_STAR_FRAME_XFRAME_HDL_
 #include <com/sun/star/frame/XFrame.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XMODEL_HDL_
-#include <com/sun/star/frame/XModel.hpp>
-#endif
-#ifndef _COM_SUN_STAR_TEXT_XTEXTRANGE_HDL_
-#include <com/sun/star/text/XTextRange.hpp>
-#endif
-#ifndef _COM_SUN_STAR_TEXT_XTEXTTABLECURSOR_HDL_
-#include <com/sun/star/text/XTextTableCursor.hpp>
 #endif
 
 #include <premac.h>
@@ -92,10 +92,10 @@
 
 static ::vos::OModule aAWTFontModule;
 
-using namespace com::sun::star::container;
+using namespace com::sun::star::awt;
+using namespace com::sun::star::datatransfer;
+using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::frame;
-using namespace com::sun::star::lang;
-using namespace com::sun::star::text;
 using namespace com::sun::star::uno;
 using namespace vcl;
 using namespace vos;
@@ -148,48 +148,33 @@ CFStringRef VCLEventQueue_getTextSelection()
 				Reference< XFrame > xFrame = xDesktop->getCurrentFrame();
 				if ( xFrame.is() )
 				{
-					Reference< XController > xController = xFrame->getController();
-					if ( xController.is() )
+					Reference< XWindow > xWindow = xFrame->getComponentWindow();
+					if ( xWindow.is() )
 					{
-						Reference< XModel > xModel = xController->getModel();
-						if ( xModel.is() )
+						Window *pWindow = VCLUnoHelper::GetWindow( xWindow );
+						if ( pWindow )
 						{
-							Reference< XInterface > xSelection = xModel->getCurrentSelection();
-
-							Reference< XIndexAccess > xIndexAccess( xSelection, UNO_QUERY );
-							Reference< XTextRange > xTextRange( xSelection, UNO_QUERY );
-							Reference< XTextTableCursor > xTextTableCursor( xSelection, UNO_QUERY );
-							if ( xIndexAccess.is() )
+							Reference< XClipboard > xClipboard = pWindow->GetPrimarySelection();
+							if ( xClipboard.is() )
 							{
-								OUString aText;
-								sal_Int32 nCount = xIndexAccess->getCount();
-								for ( sal_Int32 i = 0; i < nCount; i++ )
+								Reference< XTransferable > xTransferable = xClipboard->getContents();
+								if ( xTransferable.is() )
 								{
-									Any aValue = xIndexAccess->getByIndex( i );
-									if ( aValue.getValueType().equals( getCppuType( ( Reference< XTextRange >* )0 ) ) )
+									DataFlavor aFlavor;
+									Type aType( getCppuType( ( OUString* )0 ) );
+									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
+									aFlavor.DataType = aType;
+									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 									{
-										Reference< XTextRange > aCurrentTextRange;
-										aValue >>= aCurrentTextRange;
-										if ( aCurrentTextRange.is() )
-											aText += aCurrentTextRange->getString();
+										Any aValue = xTransferable->getTransferData( aFlavor );
+										if ( aValue.getValueType().equals( aType ) )
+										{
+											OUString aText;
+											aValue >>= aText;
+											if ( aText.getLength() )
+												aRet = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+										}
 									}
-								}
-
-								if ( aText.getLength() )
-									aRet = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
-							}
-							else if ( xTextRange.is() )
-							{
-								OUString aText( xTextRange->getString() );
-								if ( aText.getLength() )
-									aRet = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
-							}
-							else if ( xTextTableCursor.is() )
-							{
-								xTextTableCursor->gotoStart( sal_False );
-								if ( xTextTableCursor->mergeRange() )
-								{
-									// TODO: find matching text ranges
 								}
 							}
 						}
