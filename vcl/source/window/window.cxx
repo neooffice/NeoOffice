@@ -8608,7 +8608,7 @@ Reference< XClipboard > Window::GetPrimarySelection()
 
                 if( xFactory.is() )
                 {
-#if defined(UNX) && !defined(QUARTZ)
+#if defined(UNX) && (!defined(QUARTZ) || defined(USE_JAVA))
                     Sequence< Any > aArgumentList( 3 );
                   	aArgumentList[ 0 ] = makeAny( Application::GetDisplayConnection() );
                     aArgumentList[ 1 ] = makeAny( OUString::createFromAscii( "PRIMARY" ) );
