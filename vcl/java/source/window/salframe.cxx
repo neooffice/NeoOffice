@@ -348,6 +348,16 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	{
 		mbInShow = TRUE;
 
+		// Fix bug 3228 by setting the OOo modal dialogs to the native modal
+		// window level
+		ImplSVData *pSVData = ImplGetSVData();
+		if ( pSVData->maWinData.mpLastExecuteDlg )
+		{
+			SystemWindow *pSystemWindow = pSVData->maWinData.mpLastExecuteDlg->GetSystemWindow();
+			if ( pSystemWindow && pSystemWindow->ImplGetFrame() == this )
+				mpVCLFrame->makeModal();
+		}
+
 		// Get native window's content view since it won't be created until
 		// first shown
 		maSysData.pView = (NSView *)mpVCLFrame->getNativeWindowContentView();

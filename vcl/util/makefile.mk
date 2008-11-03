@@ -186,6 +186,10 @@ SHL1USE_EXPORTS=ordinal
     SHL1STDLIBS+=   $(FREETYPELIB)
 .ENDIF # USE_BUILTIN_RASTERIZER
 
+.IF "$(GUIBASE)"=="java"
+SHL1STDLIBS+= $(TKLIB)
+.ENDIF
+
 .IF "$(OS)"=="MACOSX"
 SHL1STDLIBS += -framework CoreFoundation
 .IF "$(GUIBASE)"=="unx"

@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import "VCLEventQueue_cocoa.h"
 #import "VCLFrame_cocoa.h"
 
 @interface NSObject (CWindow)
@@ -173,6 +174,51 @@
 
 @end
 
+@interface MakeModalWindow : NSObject
+{
+	id					mpCWindow;
+}
++ (id)createWithCWindow:(id)pCWindow;
+- (id)initWithCWindow:(id)pCWindow;
+- (void)makeModalWindow:(id)pObject;
+@end
+
+@implementation MakeModalWindow
+
++ (id)createWithCWindow:(id)pCWindow
+{
+	MakeModalWindow *pRet = [[MakeModalWindow alloc] initWithCWindow:pCWindow];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+
+	return self;
+}
+
+- (void)makeModalWindow:(id)pObject
+{
+	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+	{
+		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
+		if ( pWindow && [pWindow styleMask] & NSTitledWindowMask && [pWindow respondsToSelector:@selector(_setModalWindowLevel)] )
+		{
+			[pWindow _setModalWindowLevel];
+
+			// Run VCLWindow selector to ensure that the window level is set
+			// correctly if the application is not active
+			[VCLWindow clearModalWindowLevel];
+		}
+	}
+}
+
+@end
+
 @interface UpdateLocation : NSObject
 {
 	id					mpCWindow;
@@ -272,6 +318,20 @@ int CWindow_makeFloatingWindow( id pCWindow )
 	[pPool release];
 
 	return nRet;
+}
+
+void CWindow_makeModalWindow( id pCWindow )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pCWindow )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		MakeModalWindow *pMakeModalWindow = [MakeModalWindow createWithCWindow:pCWindow];
+		[pMakeModalWindow performSelectorOnMainThread:@selector(makeModalWindow:) withObject:pMakeModalWindow waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
 }
 
 void CWindow_updateLocation( id pCWindow )

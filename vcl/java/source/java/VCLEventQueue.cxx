@@ -56,11 +56,35 @@
 #ifndef _VCL_UNOHELP_HXX
 #include <vcl/unohelp.hxx>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <vcl/window.hxx>
+#endif
+#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
+#include <comphelper/processfactory.hxx>
+#endif
+#ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
+#include <toolkit/helper/vclunohelper.hxx>
+#endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
 #endif
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
+#endif
+#ifndef _COM_SUN_STAR_AWT_XWINDOW_HDL_
+#include <com/sun/star/awt/XWindow.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HDL_
+#include <com/sun/star/datatransfer/XTransferable.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HDL_
+#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HDL_
+#include <com/sun/star/frame/XDesktop.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XFRAME_HDL_
+#include <com/sun/star/frame/XFrame.hpp>
 #endif
 
 #include <premac.h>
@@ -71,6 +95,11 @@
 
 static ::vos::OModule aAWTFontModule;
 
+using namespace com::sun::star::awt;
+using namespace com::sun::star::datatransfer;
+using namespace com::sun::star::datatransfer::clipboard;
+using namespace com::sun::star::frame;
+using namespace com::sun::star::uno;
 using namespace vcl;
 using namespace vos;
 
@@ -104,6 +133,66 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 }
 
 // ============================================================================
+
+CFStringRef VCLEventQueue_getTextSelection()
+{
+	CFStringRef aRet = NULL;
+
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			Reference< XDesktop > xDesktop( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+			if ( xDesktop.is() )
+			{
+				Reference< XFrame > xFrame = xDesktop->getCurrentFrame();
+				if ( xFrame.is() )
+				{
+					Reference< XWindow > xWindow = xFrame->getComponentWindow();
+					if ( xWindow.is() )
+					{
+						Window *pWindow = VCLUnoHelper::GetWindow( xWindow );
+						if ( pWindow )
+						{
+							Reference< XClipboard > xClipboard = pWindow->GetPrimarySelection();
+							if ( xClipboard.is() )
+							{
+								Reference< XTransferable > xTransferable = xClipboard->getContents();
+								if ( xTransferable.is() )
+								{
+									DataFlavor aFlavor;
+									Type aType( getCppuType( ( OUString* )0 ) );
+									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
+									aFlavor.DataType = aType;
+									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
+									{
+										Any aValue = xTransferable->getTransferData( aFlavor );
+										if ( aValue.getValueType().equals( aType ) )
+										{
+											OUString aText;
+											aValue >>= aText;
+											if ( aText.getLength() )
+												aRet = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		rSolarMutex.release();
+	}
+
+	return aRet;
+}
+
+// ----------------------------------------------------------------------------
 
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown )
 {
