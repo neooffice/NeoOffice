@@ -59,6 +59,9 @@
 #ifndef _SV_SVAPP_HXX
 #include <svapp.hxx>
 #endif
+#ifndef _SV_WINDOW_HXX
+#include <window.hxx>
+#endif
 #ifndef _STRING_HXX
 #include <tools/string.hxx>
 #endif
@@ -264,7 +267,15 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 	{
 		SalData *pSalData = GetSalData();
 
-		JavaSalFrame *pFocusFrame = pSalData->mpFocusFrame;
+		JavaSalFrame *pFocusFrame = NULL;
+
+		// Get the active document window
+		Window *pWindow = Application::GetActiveTopWindow();
+		if ( pWindow )
+			pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+
+		if ( !pFocusFrame )
+			pFocusFrame = pSalData->mpFocusFrame;
 
 		// Fix bug 1106 If the focus frame is not set or is not visible, find
 		// the first visible non-floating frame
