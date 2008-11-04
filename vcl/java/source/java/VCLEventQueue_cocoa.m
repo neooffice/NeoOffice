@@ -648,7 +648,12 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 		NSResponder *pResponder = [self firstResponder];
 		if ( pChars && pResponder )
 		{
-			if ( [pChars isEqualToString:@"c"] && [pResponder respondsToSelector:@selector(copy:)] )
+			if ( [pChars isEqualToString:@"a"] && [pResponder respondsToSelector:@selector(copy:)] )
+			{
+				[pResponder selectAll:self];
+				bRet = YES;
+			}
+			else if ( [pChars isEqualToString:@"c"] && [pResponder respondsToSelector:@selector(copy:)] )
 			{
 				[pResponder copy:self];
 				bRet = YES;
@@ -722,10 +727,15 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 		if ( nType == 30 )
 		{
 			// Magnify events need to be converted to vertical scrolls with
-			// the Command key pressed to force the OOo code to zoom
+			// the Command key pressed to force the OOo code to zoom.
+			// Fix bug 3284 by reducing the amount of magnification.
 			nModifiers |= NSCommandKeyMask;
 			fDeltaX = 0;
-			fDeltaY = [pEvent magnification];
+			fDeltaY = [pEvent magnification] / 4;
+
+			// Attempt to reduce complaints about accidental magnification
+			if ( fDeltaY > -0.5 && fDeltaY < 0.5 )
+				fDeltaY = 0;
 		}
 		else
 		{
