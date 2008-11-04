@@ -648,7 +648,12 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 		NSResponder *pResponder = [self firstResponder];
 		if ( pChars && pResponder )
 		{
-			if ( [pChars isEqualToString:@"c"] && [pResponder respondsToSelector:@selector(copy:)] )
+			if ( [pChars isEqualToString:@"a"] && [pResponder respondsToSelector:@selector(copy:)] )
+			{
+				[pResponder selectAll:self];
+				bRet = YES;
+			}
+			else if ( [pChars isEqualToString:@"c"] && [pResponder respondsToSelector:@selector(copy:)] )
 			{
 				[pResponder copy:self];
 				bRet = YES;
