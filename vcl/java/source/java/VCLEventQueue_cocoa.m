@@ -722,15 +722,21 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 		if ( nType == 30 )
 		{
 			// Magnify events need to be converted to vertical scrolls with
-			// the Command key pressed to force the OOo code to zoom
+			// the Command key pressed to force the OOo code to zoom.
+			// Fix bug 3284 by reducing the amount of magnification.
 			nModifiers |= NSCommandKeyMask;
 			fDeltaX = 0;
-			fDeltaY = [pEvent magnification];
+			fDeltaY = [pEvent magnification] / 4;
+
+			// Attempt to reduce complaints about accidental magnification
+			if ( fDeltaY > -0.5 && fDeltaY < 0.5 )
+				fDeltaY = 0;
 		}
 		else
 		{
 			fDeltaX = [pEvent deltaX];
 			fDeltaY = [pEvent deltaY];
+			fDeltaY *= 4;
 		}
 
 		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
