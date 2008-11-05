@@ -62,12 +62,7 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENU_HXX
 #include <com/sun/star/vcl/VCLMenu.hxx>
 #endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HPP_
-#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-#endif
 
-using namespace com::sun::star::datatransfer::clipboard;
-using namespace com::sun::star::uno;
 using namespace vcl;
 
 //=============================================================================
@@ -362,12 +357,12 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	if ( pMenu->mbIsMenuBarMenu )
 	{
 		Window *pWindow = pVCLMenu->GetWindow();
-		if ( pWindow )
-		{
-			Reference< XClipboard > aClipboard = pWindow->GetClipboard();
-			if ( aClipboard.is() )
-				aClipboard->getContents();
-		}
+		if ( !pWindow )
+			return;
+
+		JavaSalFrame *pFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+		if ( !pFrame || !pFrame->mbVisible )
+			return;
 	}
 
 	// Post the SALEVENT_MENUACTIVATE event
