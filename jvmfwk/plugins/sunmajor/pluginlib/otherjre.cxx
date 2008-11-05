@@ -159,16 +159,27 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
     // If we are running Leopard, don't allow loading of any JVM earlier than
     // Java 1.5.0
     static bool initializedOnce = false;
+    static bool isLaterThanLeopard = false;
     static bool isLeopard = false;
     if ( ! initializedOnce )
     {
         long res = 0;
         Gestalt( gestaltSystemVersion, &res );
-        isLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x5 ) );
+        if ( ( ( res >> 8 ) & 0x00FF ) == 0x10 )
+		{
+        	if ( ( ( res >> 4 ) & 0x000F ) > 0x5 )
+        		isLaterThanLeopard = true;
+        	else if ( ( ( res >> 4 ) & 0x000F ) == 0x5 )
+        		isLeopard = true;
+		}
         initializedOnce = true;
     }
 
-    if ( isLeopard && version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.5.0" ) ) )
+    // Only run Java 1.5.x on Leopard as Java 1.4.x is crashy and Java 1.6.x
+	// will hang
+    if ( isLaterThanLeopard && version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.6.0" ) ) )
+        return -1;
+    else if ( isLeopard && ( version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.5.0" ) ) || version1 > SunVersion( ::rtl::OUString::createFromAscii( "1.5.999" ) ) ) )
         return -1;
 
     SunVersion version2(sSecond);
