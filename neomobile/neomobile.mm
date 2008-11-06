@@ -101,6 +101,7 @@
 #include <string>
 #include <strstream>
 #include "neomobilewebview.h"
+#include <unistd.h>
 
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
@@ -160,6 +161,9 @@ public:
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
 		SAL_CALL saveAsOpenDocument( const rtl::OUString& url ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
 		throw (::com::sun::star::uno::RuntimeException);
 };
 
@@ -589,5 +593,47 @@ static NeoMobileWebView *pSharedWebView = nil;
 	{
 	}
 
+	return(false);
+}
+
+/**
+ * Zip the contents of a directory into new selfcontained zip file.
+ *
+ * @param dirPath	absolute path to the directory whose contents should be
+ *					compressed.  Trailing path separator is optional.
+ * @param zipFilePath	absolute path to the output ZIP file.  This should
+ *						include the ".zip" suffix.  If not present, the
+ *						suffix will be added.
+ * @return true if the zip operation succeeded, false on error.
+ */
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		OString asciiDirPath;
+		if(!dirPath.convertToString(&asciiDirPath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
+			return(false);
+		
+		OString asciiZipFilePath;
+		if(!zipFilePath.convertToString(&asciiZipFilePath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
+			return(false);
+			
+		char oldWD[2048];
+		
+		getcwd(oldWD, sizeof(oldWD));
+		chdir(asciiDirPath.getStr());
+		std::string zipCmd("/usr/bin/zip \"");
+		zipCmd+=asciiZipFilePath.getStr();
+		zipCmd+="\" *";
+		short outVal=system(zipCmd.c_str());
+		chdir(oldWD);
+		return((outVal==0));
+	}
+	catch (...)
+	{
+	}
+	
 	return(false);
 }
