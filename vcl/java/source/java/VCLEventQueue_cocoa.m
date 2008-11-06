@@ -732,10 +732,6 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 			nModifiers |= NSCommandKeyMask;
 			fDeltaX = 0;
 			fDeltaY = [pEvent magnification] / 4;
-
-			// Attempt to reduce complaints about accidental magnification
-			if ( fDeltaY > -0.5 && fDeltaY < 0.5 )
-				fDeltaY = 0;
 		}
 		else
 		{
