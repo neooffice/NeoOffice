@@ -351,9 +351,6 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
 	OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
 
-	// Force the clipboard service to update itself before we update the
-	// menus as if the native clipboard was cleared when we last checked, we
-	// won't be notified when another application puts content.
 	if ( pMenu->mbIsMenuBarMenu )
 	{
 		Window *pWindow = pVCLMenu->GetWindow();
