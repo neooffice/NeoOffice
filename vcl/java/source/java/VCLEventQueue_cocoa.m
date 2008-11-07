@@ -814,7 +814,8 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 
 @end
 
-static CFStringRef aSelection = nil;
+static CFStringRef aTextSelection = nil;
+static CFDataRef aRTFSelection = nil;
 
 @implementation VCLView
 
@@ -876,17 +877,32 @@ static CFStringRef aSelection = nil;
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
-	if ( !pReturnType && pSendType && [pSendType isEqual:NSStringPboardType] )
+	if ( !pReturnType && pSendType )
 	{
-		if ( aSelection )
+		if ( [pSendType isEqual:NSRTFPboardType] )
 		{
-			CFRelease( aSelection );
-			aSelection = nil;
-		}
+			if ( aRTFSelection )
+			{
+				CFRelease( aRTFSelection );
+				aRTFSelection = nil;
+			}
 
-		aSelection = VCLEventQueue_getTextSelection();
-		if ( aSelection )
-			return self;
+			VCLEventQueue_getTextSelection( NULL, &aRTFSelection );
+			if ( aRTFSelection )
+				return self;
+		}
+		else if ( [pSendType isEqual:NSStringPboardType] )
+		{
+			if ( aTextSelection )
+			{
+				CFRelease( aTextSelection );
+				aTextSelection = nil;
+			}
+
+			VCLEventQueue_getTextSelection( &aTextSelection, NULL );
+			if ( aTextSelection )
+				return self;
+		}
 	}
 
 	return [super validRequestorForSendType:pSendType returnType:pReturnType];
@@ -896,17 +912,37 @@ static CFStringRef aSelection = nil;
 {
 	BOOL bRet = NO;
 
-	if ( aSelection && pPasteboard && pTypes && [pTypes containsObject:NSStringPboardType] )
+	if ( pPasteboard && pTypes )
 	{
-		NSArray *pTypesDeclared = [NSArray arrayWithObject:NSStringPboardType];
+		NSMutableArray *pTypesDeclared = [NSMutableArray arrayWithCapacity:2];
 		if ( pTypesDeclared )
 		{
+			if ( aRTFSelection && [pTypes containsObject:NSRTFPboardType] )
+				[pTypesDeclared addObject:NSRTFPboardType];
+			if ( aTextSelection && [pTypes containsObject:NSStringPboardType] )
+				[pTypesDeclared addObject:NSStringPboardType];
+
 			[pPasteboard declareTypes:pTypesDeclared owner:nil];
-			bRet = [pPasteboard setString:(NSString *)aSelection forType:NSStringPboardType];
+			if ( [pTypesDeclared count] )
+			{
+				if ( aRTFSelection && [pTypesDeclared containsObject:NSRTFPboardType] && [pPasteboard setData:(NSData *)aRTFSelection forType:NSRTFPboardType] )
+					bRet = YES;
+				if ( aTextSelection && [pTypesDeclared containsObject:NSStringPboardType] && [pPasteboard setString:(NSString *)aTextSelection forType:NSStringPboardType] )
+					bRet = YES;
+			}
 		}
 
-		CFRelease( aSelection );
-		aSelection = nil;
+		if ( aTextSelection )
+		{
+			CFRelease( aTextSelection );
+			aTextSelection = nil;
+		}
+
+		if ( aRTFSelection )
+		{
+			CFRelease( aRTFSelection );
+			aRTFSelection = nil;
+		}
 	}
 
 	return bRet;
