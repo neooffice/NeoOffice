@@ -391,10 +391,6 @@ static VCLResponder *pSharedResponder = nil;
 
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 
-@interface NSEvent (GestureEvents)
--(float)magnification;
-@end
-
 @interface VCLWindow (CocoaAppWindow)
 - (jobject)peer;
 @end
@@ -713,7 +709,7 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
 	}
 	// Handle scroll wheel and magnify
-	else if ( ( nType == NSScrollWheel || ( nType == 30 && [pEvent respondsToSelector:@selector(magnification)] ) ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	else if ( ( nType == NSScrollWheel || nType == 30 ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		// Post flipped coordinates 
 		NSRect aFrame = [self frame];
@@ -731,7 +727,7 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 			// Fix bug 3284 by reducing the amount of magnification.
 			nModifiers |= NSCommandKeyMask;
 			fDeltaX = 0;
-			fDeltaY = [pEvent magnification] / 4;
+			fDeltaY = [pEvent deltaY] / 4;
 		}
 		else
 		{
