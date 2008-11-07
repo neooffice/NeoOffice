@@ -369,8 +369,8 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 		if ( !pWindow )
 			return;
 
-		JavaSalFrame *pFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-		if ( !pFrame || !pFrame->mbVisible )
+		JavaSalFrame *pSalFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+		if ( !pSalFrame || !pSalFrame->mbVisible )
 			return;
 
 		if ( GetCurrentEventLoop() == GetMainEventLoop() )
