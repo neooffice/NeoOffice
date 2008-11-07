@@ -62,7 +62,16 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENU_HXX
 #include <com/sun/star/vcl/VCLMenu.hxx>
 #endif
+#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HPP_
+#include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
+#endif
 
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+using namespace com::sun::star::datatransfer::clipboard;
+using namespace com::sun::star::uno;
 using namespace vcl;
 
 //=============================================================================
@@ -351,6 +360,9 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
 	OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
 
+	// Force the clipboard service to update itself before we update the
+	// menus as if the native clipboard was cleared when we last checked, we
+	// won't be notified when another application puts content.
 	if ( pMenu->mbIsMenuBarMenu )
 	{
 		Window *pWindow = pVCLMenu->GetWindow();
@@ -360,6 +372,13 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 		JavaSalFrame *pFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
 		if ( !pFrame || !pFrame->mbVisible )
 			return;
+
+		if ( GetCurrentEventLoop() == GetMainEventLoop() )
+		{
+			Reference< XClipboard > aClipboard = pWindow->GetClipboard();
+			if ( aClipboard.is() )
+				aClipboard->getContents();
+		}
 	}
 
 	// Post the SALEVENT_MENUACTIVATE event

@@ -358,6 +358,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 				mpVCLFrame->makeModal();
 		}
 
+		// Update the menubar's top level menus
+		SetMenu( mpMenuBar );
+
 		// Get native window's content view since it won't be created until
 		// first shown
 		maSysData.pView = (NSView *)mpVCLFrame->getNativeWindowContentView();
