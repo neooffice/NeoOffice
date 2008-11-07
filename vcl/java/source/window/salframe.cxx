@@ -358,8 +358,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 				mpVCLFrame->makeModal();
 		}
 
-		// Update the menubar's top level menus
-		SetMenu( mpMenuBar );
+		UpdateMenusForFrame( this, NULL );
 
 		// Get native window's content view since it won't be created until
 		// first shown
