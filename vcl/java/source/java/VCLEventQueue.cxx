@@ -131,9 +131,22 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 
 // ============================================================================
 
-CFStringRef VCLEventQueue_getTextSelection()
+void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRTFSelection )
 {
-	CFStringRef aRet = NULL;
+	if ( !pTextSelection && !pRTFSelection )
+		return;
+
+	if ( pTextSelection && *pTextSelection )
+	{
+		CFRelease( *pTextSelection );
+		*pTextSelection = NULL;
+	}
+
+	if ( pRTFSelection && *pRTFSelection )
+	{
+		CFRelease( *pRTFSelection );
+		*pRTFSelection = NULL;
+	}
 
 	if ( !Application::IsShutDown() )
 	{
@@ -161,18 +174,44 @@ CFStringRef VCLEventQueue_getTextSelection()
 								if ( xTransferable.is() )
 								{
 									DataFlavor aFlavor;
-									Type aType( getCppuType( ( OUString* )0 ) );
-									aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
-									aFlavor.DataType = aType;
-									if ( xTransferable->isDataFlavorSupported( aFlavor ) )
+
+									// Handle string selection
+									if ( pTextSelection )
 									{
-										Any aValue = xTransferable->getTransferData( aFlavor );
-										if ( aValue.getValueType().equals( aType ) )
+										Type aType( getCppuType( ( OUString* )0 ) );
+										aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
+										aFlavor.DataType = aType;
+										if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 										{
-											OUString aText;
-											aValue >>= aText;
-											if ( aText.getLength() )
-												aRet = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+											Any aValue = xTransferable->getTransferData( aFlavor );
+											if ( aValue.getValueType().equals( aType ) )
+											{
+												OUString aText;
+												aValue >>= aText;
+												if ( aText.getLength() )
+													*pTextSelection = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
+											}
+										}
+									}
+
+									// Handle RTF selection
+									if ( pRTFSelection )
+									{
+										Type aType( getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ) );
+										aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/richtext" ) );
+										aFlavor.DataType = aType;
+										if ( xTransferable->isDataFlavorSupported( aFlavor ) )
+										{
+											Any aValue = xTransferable->getTransferData( aFlavor );
+											if ( aValue.getValueType().equals( aType ) )
+											{
+												Sequence< sal_Int8 > aData;
+												aValue >>= aData;
+												if ( aData.getLength() )
+												{
+													*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
+												}
+											}
 										}
 									}
 								}
@@ -185,8 +224,6 @@ CFStringRef VCLEventQueue_getTextSelection()
 
 		rSolarMutex.release();
 	}
-
-	return aRet;
 }
 
 // ----------------------------------------------------------------------------

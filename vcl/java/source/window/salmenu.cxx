@@ -66,6 +66,10 @@
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
 #endif
 
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::uno;
 using namespace vcl;
@@ -362,7 +366,14 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	if ( pMenu->mbIsMenuBarMenu )
 	{
 		Window *pWindow = pVCLMenu->GetWindow();
-		if ( pWindow )
+		if ( !pWindow )
+			return;
+
+		JavaSalFrame *pSalFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+		if ( !pSalFrame || !pSalFrame->mbVisible )
+			return;
+
+		if ( GetCurrentEventLoop() == GetMainEventLoop() )
 		{
 			Reference< XClipboard > aClipboard = pWindow->GetClipboard();
 			if ( aClipboard.is() )

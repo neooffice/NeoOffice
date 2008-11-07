@@ -73,7 +73,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-CFStringRef VCLEventQueue_getTextSelection();
+void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );
 void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession );
 BOOL NSApplication_hasDelegate();
