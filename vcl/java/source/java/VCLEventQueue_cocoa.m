@@ -727,7 +727,7 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 			// Fix bug 3284 by reducing the amount of magnification.
 			nModifiers |= NSCommandKeyMask;
 			fDeltaX = 0;
-			fDeltaY = [pEvent deltaY] / 8;
+			fDeltaY = [pEvent deltaY] / 4;
 		}
 		else
 		{
