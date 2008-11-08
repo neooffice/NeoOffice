@@ -92,6 +92,7 @@
 #include <com/sun/star/task/XJob.hpp>
 #include <comphelper/processfactory.hxx>
 #include <com/sun/star/document/XDocumentInfoSupplier.hpp>
+#include <com/sun/star/frame/XStorable.hpp>
 
 #include "premac.h"
 #import <Carbon/Carbon.h>
@@ -100,6 +101,7 @@
 #include <string>
 #include <strstream>
 #include "neomobilewebview.h"
+#include <unistd.h>
 
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
@@ -150,6 +152,18 @@ public:
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
 		SAL_CALL getPropertyValue( const rtl::OUString& key ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL saveAsPDF( const rtl::OUString& url ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL saveAsHTML( const rtl::OUString& url ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL saveAsOpenDocument( const rtl::OUString& url ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
 		throw (::com::sun::star::uno::RuntimeException);
 };
 
@@ -434,4 +448,187 @@ static NeoMobileWebView *pSharedWebView = nil;
 		}
 		
 	return(OUString::createFromAscii(""));
+}
+
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsPDF( const rtl::OUString& url ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		Sequence< PropertyValue > lProperties(2);
+		
+		lProperties[0].Name=OUString::createFromAscii("FilterName");
+		
+		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("writer_pdf_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("calc_pdf_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.drawing.DrawingDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("draw_pdf_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("impress_pdf_Export");
+		else
+			return(false);
+		
+		lProperties[1].Name=OUString::createFromAscii("Overwrite");
+		lProperties[1].Value <<= (::sal_Bool)true;
+		
+		Reference< XStorable > xStore(rModel, UNO_QUERY);
+		xStore->storeToURL(url, lProperties);
+		
+		return(true);
+	}
+	catch (...)
+	{
+	}
+
+	return(false);
+}
+
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsHTML( const rtl::OUString& url ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		Sequence< PropertyValue > lProperties(2);
+		
+		lProperties[0].Name=OUString::createFromAscii("FilterName");
+		
+		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("HTML (StarWriter)");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("HTML (StarCalc)");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.drawing.DrawingDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("draw_html_Export");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("impress_html_Export");
+		else
+			return(false);
+		
+		lProperties[1].Name=OUString::createFromAscii("Overwrite");
+		lProperties[1].Value <<= (::sal_Bool)true;
+		
+		Reference< XStorable > xStore(rModel, UNO_QUERY);
+		xStore->storeToURL(url, lProperties);
+		
+		return(true);
+	}
+	catch (...)
+	{
+	}
+
+	return(false);
+}
+
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsOpenDocument( const rtl::OUString& url ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		Sequence< PropertyValue > lProperties(2);
+		
+		lProperties[0].Name=OUString::createFromAscii("FilterName");
+		
+		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("writer8");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("calc8");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.drawing.DrawingDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("draw8");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("impress8");
+		else
+			return(false);
+		
+		lProperties[1].Name=OUString::createFromAscii("Overwrite");
+		lProperties[1].Value <<= (::sal_Bool)true;
+		
+		Reference< XStorable > xStore(rModel, UNO_QUERY);
+		xStore->storeToURL(url, lProperties);
+		
+		return(true);
+	}
+	catch (...)
+	{
+	}
+
+	return(false);
+}
+
+/**
+ * Zip the contents of a directory into new selfcontained zip file.
+ *
+ * @param dirPath	absolute path to the directory whose contents should be
+ *					compressed.  Trailing path separator is optional.
+ * @param zipFilePath	absolute path to the output ZIP file.  This should
+ *						include the ".zip" suffix.  If not present, the
+ *						suffix will be added.
+ * @return true if the zip operation succeeded, false on error.
+ */
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		OString asciiDirPath;
+		if(!dirPath.convertToString(&asciiDirPath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
+			return(false);
+		
+		OString asciiZipFilePath;
+		if(!zipFilePath.convertToString(&asciiZipFilePath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
+			return(false);
+			
+		char oldWD[2048];
+		
+		getcwd(oldWD, sizeof(oldWD));
+		chdir(asciiDirPath.getStr());
+		std::string zipCmd("/usr/bin/zip \"");
+		zipCmd+=asciiZipFilePath.getStr();
+		zipCmd+="\" *";
+		short outVal=system(zipCmd.c_str());
+		chdir(oldWD);
+		return((outVal==0));
+	}
+	catch (...)
+	{
+	}
+	
+	return(false);
 }
