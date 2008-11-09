@@ -2279,6 +2279,51 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 						}
 						break;
+					
+					case PART_TRACK_HORZ_AREA:
+					case PART_TRACK_VERT_AREA:
+						// [ed] 11/9/08 3.0 has new controls to obtain the
+						// entire track area.  This includes page up area,
+						// page down area, and thumb area.
+						
+						{
+							HIRect upBounds;
+							HIRect downBounds;
+							HIRect thumbBounds;
+							
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &thumbBounds );
+							if( ! thumbBounds.size.width && ! thumbBounds.size.height )
+							{
+								// disabled control or other invalid settings.  Set to the entire
+								// track.
+	
+								HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								break;
+							}
+							
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &downBounds );
+							if( ! downBounds.size.width && ! downBounds.size.height )
+							{
+								// disabled control or other invalid settings.  Set to the entire
+								// track.
+	
+								HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								break;
+							}
+							
+							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &upBounds );
+							if( ! upBounds.size.width && ! upBounds.size.height )
+							{
+								// disabled control or other invalid settings.  Set to the entire
+								// track.
+	
+								HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+							}
+							
+							bounds=CGRectUnion(upBounds, thumbBounds);
+							bounds=CGRectUnion(bounds, downBounds);
+						}
+						break;
 				}
 
 				// Fix bug 2031 by incrementing the scrollbar width slightly

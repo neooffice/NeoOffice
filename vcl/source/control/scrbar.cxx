@@ -518,7 +518,7 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
 
 	aControlValue.setOptionalVal( (void *)(&scrValue) );
 		
-	Region aEntireCtrlRegion, aPage1Region, aPage2Region, aThumbRegion, aBoundingRegion;
+	Region aEntireCtrlRegion, aPage1Region, aPage2Region, aThumbRegion, aBoundingRegion, aTrackRegion;
 	
 	if( ! mpData )
 		ImplNewImplScrollBarData();
@@ -527,6 +527,11 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
 	{
 		mpData->mbHasEntireControlRect = TRUE;
 		mpData->maEntireControlRect = aEntireCtrlRegion.GetBoundRect();
+	}
+	
+	if( GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_AREA : PART_TRACK_VERT_AREA ), aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aTrackRegion ) )
+	{
+		mpData->maTrackRect = aTrackRegion.GetBoundRect();
 	}
 	
 	GetNativeControlRegion( CTRL_SCROLLBAR, ( ( bHorz ) ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER ), aControlRegion, 0, aControlValue, rtl::OUString(), aBoundingRegion, aPage1Region );
