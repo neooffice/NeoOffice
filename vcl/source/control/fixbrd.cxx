@@ -141,8 +141,6 @@ void FixedBorder::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 		nBorderStyle |= FRAME_DRAW_MONO;
 
 #ifdef USE_JAVA
-    /*
-#endif	// USE_JAVA
     // seems only to be used in tools->options around a tabpage (ie, no tabcontrol!)
     // as tabpages that are not embedded in a tabcontrol should not be drawn natively
     // the fixedborder must also not be drawn (reason was, that it looks too ugly, dialogs must be redesigned)
@@ -157,8 +155,6 @@ void FixedBorder::ImplDraw( OutputDevice* pDev, ULONG nDrawFlags,
 	     						aControlValue, rtl::OUString() );
     }
     else
-#ifdef USE_JAVA
-    */
 #endif	// USE_JAVA
     {
 	    DecorationView	aDecoView( pDev );
