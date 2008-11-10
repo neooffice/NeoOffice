@@ -1640,17 +1640,17 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 
 		case CTRL_SCROLLBAR:
-			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_DRAW_BACKGROUND_HORZ ) || ( nPart == PART_DRAW_BACKGROUND_VERT ) )
+			if( ( nPart == PART_ENTIRE_CONTROL ) || nPart == PART_DRAW_BACKGROUND_HORZ || nPart == PART_DRAW_BACKGROUND_VERT )
 				isSupported = TRUE;
 			break;
 
 		case CTRL_SPINBOX:
-			if( nPart == PART_ENTIRE_CONTROL || ( nPart == HAS_BACKGROUND_TEXTURE ) )
+			if( nPart == PART_ENTIRE_CONTROL || nPart == PART_ALL_BUTTONS || nPart == HAS_BACKGROUND_TEXTURE )
 				isSupported = TRUE;
 			break;
 
 		case CTRL_SPINBUTTONS:
-			if( nPart == PART_ENTIRE_CONTROL )
+			if( nPart == PART_ENTIRE_CONTROL || nPart == PART_ALL_BUTTONS )
 				isSupported = TRUE;
 			break;
 
@@ -1857,7 +1857,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			break;
 
 		case CTRL_SPINBOX:
-			if( nPart == PART_ENTIRE_CONTROL )
+			if( ( nPart == PART_ENTIRE_CONTROL ) || ( nPart == PART_ALL_BUTTONS ) )
 			{
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 				SpinbuttonValue *pValue = static_cast<SpinbuttonValue *> ( aValue.getOptionalVal() );
@@ -2361,6 +2361,16 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				switch( nPart )
 				{
+					case PART_ENTIRE_CONTROL:
+						{
+							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + spinboxRect.GetHeight() - spinnerThemeHeight ) );
+							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
+							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeContentRegion = Region( rNativeBoundingRegion );
+							bReturn = TRUE;
+						}
+						break;
+
 					case PART_BUTTON_UP:
 						{
 							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + ( spinboxRect.GetHeight() / 2 ) - spinnerThemeHeight ) );
