@@ -2363,9 +2363,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				{
 					case PART_ENTIRE_CONTROL:
 						{
-							Point topLeft( (long)( spinboxRect.Right() - spinnerThemeWidth ), (long)( spinboxRect.Top() + spinboxRect.GetHeight() - spinnerThemeHeight ) );
-							Size boundsSize( (long)spinnerThemeWidth, (long)spinnerThemeHeight );
-							rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+							rNativeBoundingRegion = Region( spinboxRect );
 							rNativeContentRegion = Region( rNativeBoundingRegion );
 							bReturn = TRUE;
 						}
