@@ -2559,11 +2559,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if ( nPart == PART_ENTIRE_CONTROL )
 			{
 				// fill entire control area with edit box
-				Rectangle controlRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( controlRect );
-				Point contentTopLeft( controlRect.Left() + EDITBOX_TRIMWIDTH, controlRect.Top() + EDITBOX_TRIMWIDTH );
-				Size contentSize( controlRect.GetWidth() - 2*EDITBOX_TRIMWIDTH, controlRect.GetHeight() - 2*EDITBOX_TRIMWIDTH );
-				rNativeContentRegion = Region( Rectangle( contentTopLeft, contentSize ) );
+				rNativeContentRegion = Region( rRealControlRegion );
 
 				bReturn = TRUE;
 			}
