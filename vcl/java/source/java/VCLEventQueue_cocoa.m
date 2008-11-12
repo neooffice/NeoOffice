@@ -35,12 +35,14 @@
 
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
+#import <objc/objc-class.h>
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
+static NSString *pNSViewAWTString = @"NSViewAWT";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
@@ -810,10 +812,50 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 
 @end
 
+static BOOL bNSViewAWTInitialized = NO;
 static CFStringRef aTextSelection = nil;
 static CFDataRef aRTFSelection = nil;
 
 @implementation VCLView
+
+- (id)initWithFrame:(NSRect)aFrame
+{
+	// If the NSViewAWT class has its own services selectors, redirect them to
+	// VCLView's matching selectors
+	if ( !bNSViewAWTInitialized && [[self className] isEqualToString:pNSViewAWTString] )
+	{
+		bNSViewAWTInitialized = YES;
+
+		SEL aSelector = @selector(readSelectionFromPasteboard:);
+		Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(validRequestorForSendType:returnType:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(writeSelectionToPasteboard:types:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+	}
+
+	return [super initWithFrame:aFrame];
+}
 
 - (void)interpretKeyEvents:(NSArray *)pEvents
 {
