@@ -2103,9 +2103,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					{
 						case PART_ENTIRE_CONTROL:
 							{
-								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
-								Size boundsSize( (long)preferredRect.size.width, (long)preferredRect.size.height );
-								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+								// Fix clipping of edges by returning the
+								// passed in bounds
+								rNativeBoundingRegion = Region( comboBoxRect );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
 							}
