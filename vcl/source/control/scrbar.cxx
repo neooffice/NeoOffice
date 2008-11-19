@@ -1393,7 +1393,6 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                 else
 #endif	// USE_JAVA
                 meScrollType    = SCROLL_LINEDOWN;
-                meScrollType    = SCROLL_LINEDOWN;
                 mnDragDraw      = SCRBAR_DRAW_BTN2;
             }
             else
