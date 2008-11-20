@@ -9525,7 +9525,14 @@ void Window::EnableNativeWidget( BOOL bEnable )
     if( pNoNWF && *pNoNWF )
         bEnable = FALSE;
 
+#ifdef USE_JAVA
+    // Prevent repeated redrawing of native form controls in documents and
+    // crashing due to infinite recursion when
+    // ImplSVData.maNWFData.mbNoFocusRects is set to true
+    if( bEnable && bEnable != ImplGetWinData()->mbEnableNativeWidget )
+#else	// USE_JAVA
     if( bEnable != ImplGetWinData()->mbEnableNativeWidget )
+#endif	// USE_JAVA
     {
         ImplGetWinData()->mbEnableNativeWidget = bEnable;
 
