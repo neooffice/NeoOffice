@@ -50,8 +50,13 @@ if [ "$1" = "--mailclient" ]; then
 fi
 
 if [ `uname -s` = Darwin ]; then
+	MAILERCLASS="$MAILER"
+	if [ -z "$MAILERCLASS" -o ! -r "$HOME/Library/Preferences/$MAILERCLASS.plist" ]; then
+		MAILERCLASS=""
+	fi
+
 	MAILER=`echo "$MAILER" | sed 's/\.app\/.*$/\.app/' 2>/dev/null`
-	if [ -z "$MAILER" ]; then
+	if [ -z "$MAILER" -o ! -r "$MAILER" ]; then
 		MAILER=/Applications/Mail.app
 	fi
 
@@ -68,11 +73,17 @@ if [ `uname -s` = Darwin ]; then
 		shift;
 	done
 
-	if [ "$ATTACH" != "" ]; then
-		/usr/bin/open -a "$MAILER" "$ATTACH"
+	if [ ! -z "$ATTACH" ]; then
+		if [ ! -z "$MAILERCLASS" ]; then
+			/usr/bin/open -b "$MAILERCLASS" "$ATTACH"
+		else
+			/usr/bin/open -a Mail.app "$ATTACH"
+		fi
+
 		if [ "$?" != "0" ]; then
 			/usr/bin/open -a Mail.app "$ATTACH"
 		fi
+
 		exit "$?"
 	else
 		exit 0
