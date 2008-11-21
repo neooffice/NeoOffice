@@ -193,6 +193,51 @@ extern "C" int java_main( int argc, char **argv )
     // effect after the application has already started on most platforms
     if ( bRestart )
     {
+		OString aPageinPath( aCmdPath );
+		aPageinPath += OString( "/../basis-link/program/pagein" );
+		char *pPageinPath = (char *)aPageinPath.getStr();
+		if ( !access( pPageinPath, R_OK | X_OK ) )
+		{
+			int nCurrentArg = 0;
+			char *pPageinArgs[ argc + 3 ];
+			pPageinArgs[ nCurrentArg++ ] = pPageinPath;
+			OString aPageinSearchArg( "-L" );
+			aPageinSearchArg += aCmdPath;
+			aPageinSearchArg += OString( "/../basis-link/program" );
+			pPageinArgs[ nCurrentArg++ ] = (char *)aPageinSearchArg.getStr();
+			for ( int i = 1; i < argc; i++ )
+			{
+				if ( !strcmp( "-calc", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-calc";
+				else if ( !strcmp( "-draw", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-draw";
+				else if ( !strcmp( "-impress", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-impress";
+				else if ( !strcmp( "-writer", argv[ i ] ) )
+					pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+			}
+			if ( nCurrentArg == 1 )
+				pPageinArgs[ nCurrentArg++ ] = "@pagein-writer";
+			pPageinArgs[ nCurrentArg++ ] = "@pagein-common";
+			pPageinArgs[ nCurrentArg++ ] = NULL;
+
+			// Execute the pagein command in child process
+			pid_t pid = fork();
+			if ( !pid )
+			{
+				close( 0 );
+				execvp( pPageinPath, pPageinArgs );
+				_exit( 1 );
+			}
+			else if ( pid > 0 )
+			{
+				// Invoke waitpid to prevent zombie processes
+				int status;
+				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+					usleep( 10 );
+			}
+		}
+
         // Reexecute the parent process
         execv( pCmdPath, argv );
     }
