@@ -218,8 +218,7 @@ bool JavaSalFrame::IsFloatingFrame()
 
 bool JavaSalFrame::IsUtilityWindow()
 {
-	// Never show utility windows on Mac OS X 10.3.x
-	return ( !IsRunningPanther() && mnStyle & SAL_FRAME_STYLE_MOVEABLE && mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
+	return ( mnStyle & SAL_FRAME_STYLE_MOVEABLE && mnStyle & SAL_FRAME_STYLE_TOOLWINDOW && !IsFloatingFrame() );
 
 }
 

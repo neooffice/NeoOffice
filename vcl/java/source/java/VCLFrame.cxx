@@ -316,10 +316,10 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		args[3].l = pParent->mpVCLFrame->getJavaObject();
 	else
 		args[3].l = NULL;
-	args[4].z = jboolean( IsRunningPanther() || IsRunningTiger() );
+	args[4].z = jboolean( IsRunningTiger() );
 	args[5].z = jboolean( bShowOnlyMenus );
 	args[6].z = jboolean( bUtilityWindow );
-	args[7].z = jboolean( IsRunningPanther() || IsRunningTiger() ? JNI_TRUE : JNI_FALSE );
+	args[7].z = jboolean( IsRunningTiger() ? JNI_TRUE : JNI_FALSE );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );

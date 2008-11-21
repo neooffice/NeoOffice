@@ -51,7 +51,7 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight );
 void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo );
 id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape );
 CFStringRef VCLPrintInfo_getVCLPrintInfoDictionaryKey();
-void VCLPrintInfo_installVCLPrintClasses( BOOL bIsRunningPanther );
+void VCLPrintInfo_installVCLPrintClasses();
 #ifdef __cplusplus
 END_C
 #endif

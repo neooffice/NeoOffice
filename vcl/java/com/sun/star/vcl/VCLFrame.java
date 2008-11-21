@@ -1423,9 +1423,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private Insets insets = null;
 
 	/** 
-	 * The Panther or Tiger flag.
+	 * The Tiger flag.
 	 */
-	private boolean isPantherOrTiger = false;
+	private boolean isTiger = false;
 
 	/**
 	 * The last committed input method event.
@@ -1506,13 +1506,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *  <code>false</code> for normal frame behavior
 	 * @param u <code>true</code> if the frame should use a native utility
 	 *  window
-	 * @param pot <code>true</code> if we are running Panther or Tiger
+	 * @param t <code>true</code> if we are running Tiger
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u, boolean pot) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u, boolean t) {
 
 		queue = q;
 		frame = f;
-		isPantherOrTiger = pot;
+		isTiger = t;
 		showOnlyMenus = m;
 		style = s;
 		useInputMethodFix = b;
@@ -3432,7 +3432,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility && !frame.isPantherOrTiger)
+			if (frame.utility && !frame.isTiger)
 				b = true;
 
 			super.setFocusable(b);
@@ -3449,7 +3449,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility && !frame.isPantherOrTiger)
+			if (frame.utility && !frame.isTiger)
 				b = true;
 
 			super.setFocusableWindowState(b);
@@ -3522,8 +3522,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 						}
 					}
 
-					// On Mac OS X 10.3.x, we need to remove the menubar before
-					// replacing it
 					if (mb != null)
 						super.setMenuBar(null);
 					super.setMenuBar(mb);

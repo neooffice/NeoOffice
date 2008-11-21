@@ -68,8 +68,9 @@ namespace vcl {
 		return xOut;
 	}
 
-	bool					IsRunningPanther( );
 	bool					IsRunningTiger( );
+	bool					IsRunningLeopard( );
+	bool					IsRunningSnowLeopard( );
 	
 	bool					IsFullKeyboardAccessEnabled( );
 

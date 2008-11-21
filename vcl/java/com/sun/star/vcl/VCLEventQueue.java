@@ -321,10 +321,8 @@ public final class VCLEventQueue implements Runnable {
 
 	/**
 	 * Construct a VCLEventQueue and make it the system queue.
-	 *
-	 * @param isPanther <code>true</code> if we are running on Mac OS X 10.3.x
 	 */
-	public VCLEventQueue(boolean isPanther) {
+	public VCLEventQueue() {
 
 		// Create the list of queues
 		queueList[0] = new VCLEventQueue.Queue();
@@ -343,13 +341,10 @@ public final class VCLEventQueue implements Runnable {
 			t.printStackTrace();
 		}
 
-		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-
 		// Set keyboard focus manager
-		if (!isPanther) {
-			kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager(this));
-			kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
-		}
+		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
+		kfm.setCurrentKeyboardFocusManager(new NoEnqueueKeyboardFocusManager(this));
+		kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
 
 		// Set the keyboard focus manager so that Java's default focus
 		// switching key events are passed are not consumed

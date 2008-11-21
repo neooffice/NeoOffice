@@ -81,24 +81,6 @@ jstring vcl::StringToJavaString( JNIEnv *pEnv, const ::rtl::OUString& _rTemp )
 
 // ----------------------------------------------------------------------------
 
-bool vcl::IsRunningPanther( )
-{
-	static bool initializedOnce = false;
-	static bool isPanther = false;
-	
-	if ( ! initializedOnce )
-	{
-		long res = 0;
-		Gestalt( gestaltSystemVersion, &res );
-		isPanther = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x3 ) );
-		initializedOnce = true;
-	}
-	
-	return isPanther;
-}
-
-// ----------------------------------------------------------------------------
-
 bool vcl::IsRunningTiger( )
 {
 	static bool initializedOnce = false;
@@ -113,6 +95,42 @@ bool vcl::IsRunningTiger( )
 	}
 	
 	return isTiger;
+}
+
+// ----------------------------------------------------------------------------
+
+bool vcl::IsRunningLeopard( )
+{
+	static bool initializedOnce = false;
+	static bool isLeopard = false;
+	
+	if ( ! initializedOnce )
+	{
+		long res = 0;
+		Gestalt( gestaltSystemVersion, &res );
+		isLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x5 ) );
+		initializedOnce = true;
+	}
+	
+	return isLeopard;
+}
+
+// ----------------------------------------------------------------------------
+
+bool vcl::IsRunningSnowLeopard( )
+{
+	static bool initializedOnce = false;
+	static bool isSnowLeopard = false;
+	
+	if ( ! initializedOnce )
+	{
+		long res = 0;
+		Gestalt( gestaltSystemVersion, &res );
+		isSnowLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x6 ) );
+		initializedOnce = true;
+	}
+	
+	return isSnowLeopard;
 }
 
 // ----------------------------------------------------------------------------

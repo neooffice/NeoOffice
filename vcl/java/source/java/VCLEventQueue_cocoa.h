@@ -80,7 +80,7 @@ BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();
 void NSFontManager_acquire();
 void NSFontManager_release();
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix, BOOL bUseQuickTimeContentViewHack );
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix );
 #ifdef __cplusplus
 END_C
 #endif

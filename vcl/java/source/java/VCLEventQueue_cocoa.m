@@ -774,9 +774,7 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 	// graphics cards, QTMovieView will misplace the movie if the window's
 	// content view is flipped. Since Java replaces the default content view
 	// with a flipped view, we need to push their content view down a level
-	// and make the content view unflipped. Note that this approach causes
-	// Java to lose window events on 10.3.9 JVMs so don't allow use of this
-	// approach on Mac OS X 10.3.x.
+	// and make the content view unflipped.
 	if ( bUseQuickTimeContentViewHack )
 	{
 		NSView *pContentView = [self contentView];
@@ -994,36 +992,34 @@ static CFDataRef aRTFSelection = nil;
 	BOOL					mbUsePartialKeyEntryFix;
 	BOOL					mbUseQuickTimeContentViewHack;
 }
-+ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack;
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack;
++ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-+ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack
++ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
 {
-	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix useQuickTimeContentViewHack:bUseQuickTimeContentViewHack];
+	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix useQuickTimeContentViewHack:(BOOL)bUseQuickTimeContentViewHack
+- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
 {
 	[super init];
 
 	mbUseKeyEntryFix = bUseKeyEntryFix;
 	mbUsePartialKeyEntryFix = bUsePartialKeyEntryFix;
-	mbUseQuickTimeContentViewHack = bUseQuickTimeContentViewHack;
 
 	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
 	// or earlier
-	if ( mbUseQuickTimeContentViewHack )
-	{
-		long res = 0;
-		if ( Gestalt( gestaltQuickTime, &res ) == noErr && res >= 0x07500000 )
-			mbUseQuickTimeContentViewHack = NO;
-	}
+	long res = 0;
+	if ( Gestalt( gestaltQuickTime, &res ) == noErr && res >= 0x07500000 )
+		mbUseQuickTimeContentViewHack = NO;
+	else
+		mbUseQuickTimeContentViewHack = YES;
 
 	return self;
 }
@@ -1100,11 +1096,11 @@ void NSFontManager_release()
 	}
 }
 
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix, BOOL bUseQuickTimeContentViewHack )
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses installWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix useQuickTimeContentViewHack:bUseQuickTimeContentViewHack];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses installWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 

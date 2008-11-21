@@ -262,7 +262,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// are needed
 		BOOL bUseKeyEntryFix = FALSE;
 		BOOL bUsePartialKeyEntryFix = FALSE;
-		if ( IsRunningPanther() || IsRunningTiger() )
+		if ( IsRunningTiger() )
 		{
 			bUsePartialKeyEntryFix = TRUE;
 
@@ -312,11 +312,11 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-        VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUsePartialKeyEntryFix, !IsRunningPanther() );
+        VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUsePartialKeyEntryFix );
 
 		// Load our AWTFont replacement class
 		OUString aVCLJavaLibName;
-		if ( IsRunningPanther() || IsRunningTiger() )
+		if ( IsRunningTiger() )
 			aVCLJavaLibName = OUString::createFromAscii( "libvcljava1.dylib" );
 		else
 			aVCLJavaLibName = OUString::createFromAscii( "libvcljava2.dylib" );
@@ -416,14 +416,12 @@ com_sun_star_vcl_VCLEventQueue::com_sun_star_vcl_VCLEventQueue( jobject myObj ) 
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(Z)V";
+		char *cSignature = "()V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 
-	jvalue args[1];
-	args[0].z = jboolean( IsRunningPanther() );
-	jobject tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
+	jobject tempObj = t.pEnv->NewObject( getMyClass(), mID );
 	saveRef( tempObj );
 }
 
