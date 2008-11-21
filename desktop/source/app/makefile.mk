@@ -93,6 +93,11 @@ OBJFILES = \
     $(OBJ)$/copyright_ascii_sun.obj \
     $(OBJ)$/main.obj
 
+.IF "$(GUIBASE)" == "java"
+OBJFILES += \
+    $(OBJ)$/main_java.obj
+.ENDIF		# "$(GUIBASE)" == "java"
+
 SLOFILES = $(SHL1OBJS)
 
 SRS1NAME=	desktop

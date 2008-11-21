@@ -31,11 +31,15 @@
 
 #include "sal/main.h"
 
+#ifdef USE_JAVA
+#include "main_java.h"
+#else	// USE_JAVA
 #include "sofficemain.h"
+#endif	// USE_JAVA
 
 #ifdef USE_JAVA
 SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv ) {
-    return soffice_main( argc, argv );
+    return java_main( argc, argv );
 #else // USE_JAVA
 SAL_IMPLEMENT_MAIN() {
     return soffice_main();
