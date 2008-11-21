@@ -2715,11 +2715,9 @@ void Desktop::HandleAppEvent( const ApplicationEvent& rAppEvent )
                     xBackingComp->attachFrame(xBackingFrame);
                     xContainerWindow->setVisible(sal_True);
 
-#ifndef USE_JAVA
                     Window* pCompWindow = VCLUnoHelper::GetWindow(xBackingFrame->getComponentWindow());
                     if (pCompWindow)
                         pCompWindow->Update();
-#endif	// USE_JAVA
                 }
             }
         }
