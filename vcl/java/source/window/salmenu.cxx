@@ -342,7 +342,7 @@ void JavaSalInstance::DestroyMenuItem( SalMenuItem* pItem )
  * SALEVENT_MENUDEACTIVATE events to all of the VCL menu objects. This function
  * is normally called before the native menus are shown.
  */
-void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
+void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus )
 {
 #ifndef NO_NATIVE_MENUS
 	// Don't allow updating of menus while we are resetting the show only menus
@@ -365,6 +365,9 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	// won't be notified when another application puts content.
 	if ( pMenu->mbIsMenuBarMenu )
 	{
+		// Reset the frame's menu update list
+		pFrame->maUpdateMenuList.clear();
+
 		Window *pWindow = pVCLMenu->GetWindow();
 		if ( !pWindow )
 			return;
@@ -389,12 +392,14 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu )
 	USHORT nCount = pVCLMenu->GetItemCount();
 	for( USHORT i = 0; i < nCount; i++ )
 	{
+		// If this menu item has a submenu, fix that submenu up
 		JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
-		if ( pSalMenuItem )
+		if ( pSalMenuItem && pSalMenuItem->mpSalSubmenu )
 		{
-			// If this menu item has a submenu, fix that submenu up
-			if ( pSalMenuItem->mpSalSubmenu )
-				UpdateMenusForFrame( pFrame, pSalMenuItem->mpSalSubmenu );
+			if ( bUpdateSubmenus )
+				UpdateMenusForFrame( pFrame, pSalMenuItem->mpSalSubmenu, true );
+			else
+				pFrame->maUpdateMenuList.push_back( pSalMenuItem->mpSalSubmenu );
 		}
 	}
 

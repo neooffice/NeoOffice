@@ -312,6 +312,9 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	// the OOo code in an irrecoverable state.
 	if ( !bVisible )
 	{
+		// Reset the frame's menu update list
+		maUpdateMenuList.clear();
+
 		// Close any attached objects
 		::std::list< JavaSalObject* > aObjects( maObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
@@ -357,7 +360,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 				mpVCLFrame->makeModal();
 		}
 
-		UpdateMenusForFrame( this, NULL );
+		UpdateMenusForFrame( this, NULL, false );
 
 		// Get native window's content view since it won't be created until
 		// first shown
@@ -1123,50 +1126,9 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 	{
 		mpMenuBar = pJavaSalMenu;
 
-		// If the menu is being set while the window is showing, we need
-		// to update the new menus. Fix bug 2577 by only updating the menubar
-		// and not its submenus.
-		if ( mbVisible && mpMenuBar->mpParentVCLMenu )
-		{
-			Menu *pVCLMenu = mpMenuBar->mpParentVCLMenu;
-
-			// Post the SALEVENT_MENUACTIVATE event
-			SalMenuEvent *pActivateEvent = new SalMenuEvent( 0, pVCLMenu );
-			com_sun_star_vcl_VCLEvent aActivateEvent( SALEVENT_MENUACTIVATE, this, pActivateEvent );
-			aActivateEvent.dispatch();
-
-			// Post the SALEVENT_MENUDEACTIVATE event
-			SalMenuEvent *pDeactivateEvent = new SalMenuEvent( 0, pVCLMenu );
-			com_sun_star_vcl_VCLEvent aDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pDeactivateEvent );
-			aDeactivateEvent.dispatch();
- 
-			// Explicitly set the focus so that Java will repaint the menubar
-			if ( this == GetSalData()->mpFocusFrame )
-				mpVCLFrame->requestFocus();
-
-			SalData *pSalData = GetSalData();
-
-			// Post events to update menus asynchronously
-			USHORT nCount = pVCLMenu->GetItemCount();
-			for( USHORT i = 0; i < nCount; i++ )
-			{
-				JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
-				if ( pSalMenuItem && pSalMenuItem->mpSalSubmenu )
-				{
-					Menu *pVCLSubMenu = pSalMenuItem->mpSalSubmenu->mpParentVCLMenu;
-
-					// Post the SALEVENT_MENUACTIVATE event
-					SalMenuEvent *pSubActivateEvent = new SalMenuEvent( 0, pVCLSubMenu );
-					com_sun_star_vcl_VCLEvent aSubActivateEvent( SALEVENT_MENUACTIVATE, this, pSubActivateEvent );
-					pSalData->mpEventQueue->postCachedEvent( &aSubActivateEvent );
-
-					// Post the SALEVENT_MENUDEACTIVATE event
-					SalMenuEvent *pSubDeactivateEvent = new SalMenuEvent( 0, pVCLSubMenu );
-					com_sun_star_vcl_VCLEvent aSubDeactivateEvent( SALEVENT_MENUDEACTIVATE, this, pSubDeactivateEvent );
-					pSalData->mpEventQueue->postCachedEvent( &aSubDeactivateEvent );
-				}
-			}
-		}
+		// If the menu is being set, we need to update the new menus. Fix
+		// bug 2577 by only updating the menubar and not its submenus.
+		UpdateMenusForFrame( this, NULL, false );
 	}
 	else
 	{

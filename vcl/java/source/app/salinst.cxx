@@ -242,7 +242,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						JavaSalFrame *pFrame = pSalData->mpFocusFrame;
 						while ( pFrame && pFrame->mbVisible )
 						{
-							UpdateMenusForFrame( pFrame, NULL );
+							UpdateMenusForFrame( pFrame, NULL, true );
 							pFrame = pFrame->mpParent;
 						}
 					}
@@ -251,7 +251,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 						{
 							if ( (*it)->mbVisible )
-								UpdateMenusForFrame( *it, NULL );
+								UpdateMenusForFrame( *it, NULL, true );
 						}
 					}
 
@@ -511,7 +511,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		if ( pSalData->mnTimerInterval )
 		{
 			timeval aTimeout;
-
 			gettimeofday( &aTimeout, NULL );
 			if ( pSalData->maTimeout > aTimeout )
 			{
@@ -524,7 +523,19 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// by only doing so when the timeout is already set to a non-zero
 		// value.
 		if ( nTimeout < 10 )
+		{
 			nTimeout = 10;
+		}
+		else if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible && pSalData->mpFocusFrame->maUpdateMenuList.size() )
+		{
+			// Reduce noticeable pause when opening a new document by delaying
+			// update of submenus until next available timer timeout
+			nTimeout = 0;
+			JavaSalMenu *pMenu = pSalData->mpFocusFrame->maUpdateMenuList.front();
+			pSalData->mpFocusFrame->maUpdateMenuList.pop_front();
+			if ( pMenu )
+				UpdateMenusForFrame( pSalData->mpFocusFrame, pMenu, false );
+		}
 	}
 
 	// Dispatch any newly posted events

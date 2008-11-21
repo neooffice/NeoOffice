@@ -100,6 +100,6 @@ public:
 	virtual					~JavaSalMenuItem();
 };
 
-void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu );
+void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus );
 
 #endif // _SV_SALMENU_H

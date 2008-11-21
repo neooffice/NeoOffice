@@ -90,6 +90,7 @@ public:
 	::rtl::OUString			maTitle;
 	BOOL					mbShowOnlyMenus;
 	BOOL					mbInShowOnlyMenus;
+	::std::list< JavaSalMenu* >	maUpdateMenuList;
 
 							JavaSalFrame();
 	virtual					~JavaSalFrame();
