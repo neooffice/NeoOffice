@@ -2048,6 +2048,9 @@ public final class VCLGraphics {
 					VCLGraphics.button.setDefault(false);
 				ButtonModel m = VCLGraphics.button.getModel();
 				m.setSelected(pressed);
+				// Fix bug 3305 by setting the enabled state on both the Swing
+				// control and its model
+				VCLGraphics.button.setEnabled(enabled);
 				m.setEnabled(enabled);
 
 				VCLGraphics.button.setLabel(title);
@@ -2169,6 +2172,9 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				ButtonModel m = VCLGraphics.radioButton.getModel();
+				// Fix bug 3305 by setting the enabled state on both the Swing
+				// control and its model
+				VCLGraphics.radioButton.setEnabled(enabled);
 				m.setEnabled(enabled);
 				m.setPressed(pressed);
 				if (pressed)
@@ -2282,6 +2288,9 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				ButtonModel m = VCLGraphics.checkBoxButton.getModel();
+				// Fix bug 3305 by setting the enabled state on both the Swing
+				// control and its model
+				VCLGraphics.checkBoxButton.setEnabled(enabled);
 				m.setEnabled(enabled);
 				m.setPressed(pressed);
 				if (pressed)
