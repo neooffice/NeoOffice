@@ -1409,6 +1409,62 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
             else
                 Sound::Beep( SOUND_DISABLE, this );
         }
+#ifdef USE_JAVA
+        else
+        {
+            // Fix bug 3306 by updating scrollbar paging behavior
+            bool bScrollbarJumpPage = true;
+            CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollerPagingBehavior" ), kCFPreferencesCurrentApplication );
+            if( aPref )
+            {
+                if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
+                    bScrollbarJumpPage = false;
+                CFRelease( aPref );
+            }
+
+            bool bThumbHit = HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_THUMB_HORZ : PART_THUMB_VERT,
+                                                   Region( maThumbRect ), rMousePos, bIsInside )
+                             ? bIsInside : maThumbRect.IsInside( rMousePos );
+            bool bDragHandling = rMEvt.IsMiddle() || bThumbHit || bScrollbarJumpPage;
+            if( bDragHandling )
+            {
+                if( mpData )
+                {
+                    mpData->mbHide = TRUE;  // disable focus blinking
+                    if( HasFocus() )
+                        ImplDraw( SCRBAR_DRAW_THUMB, this ); // paint without focus
+                }
+    
+                if ( mnVisibleSize < mnMaxRange-mnMinRange )
+                {
+                    nTrackFlags     = 0;
+                    meScrollType    = SCROLL_DRAG;
+                    mnDragDraw      = SCRBAR_DRAW_THUMB;
+                    
+                    // calculate mouse offset
+                    if( rMEvt.IsMiddle() || (bScrollbarJumpPage && !bThumbHit) )
+                    {
+                        bDragToMouse = TRUE;
+                        if ( GetStyle() & WB_HORZ )
+                            mnMouseOff = maThumbRect.GetWidth()/2;
+                        else
+                            mnMouseOff = maThumbRect.GetHeight()/2;
+                    }
+                    else
+                    {
+                        if ( GetStyle() & WB_HORZ )
+                            mnMouseOff = rMousePos.X()-maThumbRect.Left();
+                        else
+                            mnMouseOff = rMousePos.Y()-maThumbRect.Top();
+                    }
+    
+                    mnStateFlags |= SCRBAR_STATE_THUMB_DOWN;
+                    ImplDraw( mnDragDraw, this );
+                }
+                else
+                    Sound::Beep( SOUND_DISABLE, this );
+            }
+#endif	// USE_JAVA
         else
         {
             nTrackFlags = STARTTRACK_BUTTONREPEAT;
@@ -1424,6 +1480,9 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                 mnDragDraw      = SCRBAR_DRAW_PAGE2;
             }
         }
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
 
         // Soll Tracking gestartet werden
         if ( meScrollType != SCROLL_DONTKNOW )
