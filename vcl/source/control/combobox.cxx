@@ -819,12 +819,6 @@ void ComboBox::StateChanged( StateChangedType nType )
 		SetStyle( ImplInitStyle( GetStyle() ) );
 		mpImplLB->GetMainWindow()->EnableSort( ( GetStyle() & WB_SORT ) ? TRUE : FALSE );
 	}
-
-#ifdef USE_JAVA
-	// Eliminate dark line left when drawing disabled comboboxes
-	if ( !IsEnabled() && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
-		GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
