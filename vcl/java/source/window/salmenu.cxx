@@ -346,8 +346,8 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 {
 #ifndef NO_NATIVE_MENUS
 	// Don't allow updating of menus while we are resetting the show only menus
-	// state
-	if ( pFrame->mbInShowOnlyMenus )
+	// state or when the frame is not visible
+	if ( !pFrame || !pFrame->mbVisible || pFrame->mbInShowOnlyMenus )
 		return;
 
 	if(!pMenu) {
@@ -358,25 +358,19 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	}
 
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
-	OSL_ENSURE(pVCLMenu, "Unknown VCL menu for SalMenu!");
+	if ( !pVCLMenu )
+		return;
 
 	// Force the clipboard service to update itself before we update the
 	// menus as if the native clipboard was cleared when we last checked, we
 	// won't be notified when another application puts content.
-	if ( pMenu->mbIsMenuBarMenu )
+	if ( pMenu->mbIsMenuBarMenu && GetCurrentEventLoop() == GetMainEventLoop() )
 	{
 		// Reset the frame's menu update list
 		pFrame->maUpdateMenuList.clear();
 
 		Window *pWindow = pVCLMenu->GetWindow();
-		if ( !pWindow )
-			return;
-
-		JavaSalFrame *pSalFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-		if ( !pSalFrame || !pSalFrame->mbVisible )
-			return;
-
-		if ( GetCurrentEventLoop() == GetMainEventLoop() )
+		if ( pWindow )
 		{
 			Reference< XClipboard > aClipboard = pWindow->GetClipboard();
 			if ( aClipboard.is() )
