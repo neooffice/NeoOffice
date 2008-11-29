@@ -390,6 +390,27 @@ static int adjustLockFlags(const char * path, int flags)
 
 #endif
 
+#ifdef USE_JAVA
+
+static int adjustFlockFlags(const char * path, int flags)
+{
+    // Fix bugs 3110 and 3308 by using LOCK_SH in place of LOCK_EX for SAMBA
+    // volumes as SAMBA will treat LOCK_EX as a Windows exclusive lock
+    if( flags & LOCK_EX )
+    {
+        struct statfs s;
+  
+        if( 0 <= statfs( path, &s ) && 0 == strncmp("smbfs", s.f_fstypename, 5) )
+        {
+            flags &= ~LOCK_EX;
+            flags |= LOCK_SH;
+        }    
+    }
+
+    return flags;
+}
+
+#endif	// USE_JAVA
 
 /*******************************************************************
  *	osl_openDirectory
@@ -845,12 +866,12 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                 {
                     bOK = true;
                 }
-                else if( 0 == flock( fd, LOCK_EX | LOCK_NB ) || errno == ENOTSUP )
+                else if( 0 == flock( fd, adjustFlockFlags( buffer, LOCK_EX | LOCK_NB ) ) || errno == ENOTSUP )
                 {
                     if( errno == ENOTSUP )
                     {
                         /* Try to get at least a read lock */
-                        if ( 0 == flock( fd, LOCK_SH | LOCK_NB ) || errno == ENOTSUP )
+                        if ( 0 == flock( fd, adjustFlockFlags( buffer, LOCK_SH | LOCK_NB ) ) || errno == ENOTSUP )
                             bOK = true;
                     }
                     else
