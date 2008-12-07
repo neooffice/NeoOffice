@@ -76,30 +76,6 @@ static const __store_errcode_mapping_st __store_errcode_map[] =
 	{ ENOSPC,    store_E_OutOfSpace       },
 };
 
-#ifdef USE_JAVA
-
-#include <sys/mount.h>
-
-inline int adjustFlockFlags(const char * path, int flags)
-{
-    // Fix bugs 3110 and 3308 by using LOCK_SH in place of LOCK_EX for SAMBA
-    // volumes as SAMBA will treat LOCK_EX as a Windows exclusive lock
-    if( flags & LOCK_EX )
-    {
-        struct statfs s;
-  
-        if( 0 <= statfs( path, &s ) && 0 == strncmp("smbfs", s.f_fstypename, 5) )
-        {
-            flags &= ~LOCK_EX;
-            flags |= LOCK_SH;
-        }    
-    }
-
-    return flags;
-}
-
-#endif	// USE_JAVA
-
 /*
  * __store_errno.
  */
@@ -200,7 +176,7 @@ inline storeError __store_fopen (
 #ifdef USE_JAVA 
 	// Mac OS X will return ENOTSUP for mounted file systems so ignore the
 	// error for read locks
-	if (::flock( rhFile, adjustFlockFlags( pszName, ( nMode & store_File_OpenWrite ? LOCK_EX : LOCK_SH ) | LOCK_NB ) ) != 0 && errno != ENOTSUP)
+	if (::flock (rhFile, ( nMode & store_File_OpenWrite ? LOCK_EX : LOCK_SH ) | LOCK_NB) != 0 && errno != ENOTSUP)
 #else	// USE_JAVA
 	struct flock lock;
 
