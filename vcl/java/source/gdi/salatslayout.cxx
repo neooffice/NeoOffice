@@ -464,20 +464,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-	// Set the font fallbacks list
-	if ( ImplATSLayoutData::maFontFallbacks )
-	{
-		nTags[0] = kATSULineFontFallbacksTag;
-		nBytes[0] = sizeof( ATSUFontFallbacks );
-		nVals[0] = &ImplATSLayoutData::maFontFallbacks;
-
-		if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) != noErr )
-		{
-			Destroy();
-			return;
-		}
-	}
-
 	// Fix bug 2919 by still producing a valid text layout even if no glyphs
 	// can be retrieved. Also, fix bug 3063 by not holding onto the
 	// ATSLayoutRecord and, instead, making our own private copy.
@@ -625,6 +611,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 	// Find positions that require fallback fonts
+	bool bUseFontFallbacksList = false;
 	UniCharArrayOffset nCurrentPos = 0;
 	UniCharCount nOffset;
 	ATSUFontID nFontID;
@@ -633,7 +620,36 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		OSStatus nErr = ATSUMatchFontsToText( maLayout, nCurrentPos, kATSUToTextEnd, &nFontID, &nCurrentPos, &nOffset );
 		if ( nErr == kATSUFontsNotMatched )
 		{
-			nCurrentPos += nOffset;
+			// Fix problem rendering Cherokee characters without causing bug
+			// bug 3031 to reoccur by setting the font fallbacks list and
+			// restarting the matching process
+			if ( !bUseFontFallbacksList && ImplATSLayoutData::maFontFallbacks )
+			{
+				nTags[0] = kATSULineFontFallbacksTag;
+				nBytes[0] = sizeof( ATSUFontFallbacks );
+				nVals[0] = &ImplATSLayoutData::maFontFallbacks;
+
+				if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) == noErr )
+				{
+					bUseFontFallbacksList = true;
+					nCurrentPos = 0;
+					if ( mpFallbackFont )
+					{
+						rtl_freeMemory( mpNeedFallback );
+						mpNeedFallback = NULL;
+						delete mpFallbackFont;
+						mpFallbackFont = NULL;
+					}
+				}
+				else
+				{
+					nCurrentPos += nOffset;
+				}
+			}
+			else
+			{
+				nCurrentPos += nOffset;
+			}
 		}
 		else if ( nErr == kATSUFontsMatched )
 		{
