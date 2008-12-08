@@ -620,39 +620,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	ATSUFontID nFontID;
 	for ( ; ; )
 	{
+		bool bNeedFontFallbackList = false;
 		OSStatus nErr = ATSUMatchFontsToText( maLayout, nCurrentPos, kATSUToTextEnd, &nFontID, &nCurrentPos, &nOffset );
 		if ( nErr == kATSUFontsNotMatched )
 		{
-			// Fix problem rendering Cherokee characters without causing bug
-			// bug 3031 to reoccur by setting the font fallbacks list and
-			// restarting the matching process
-			if ( !bUseFontFallbacksList && ImplATSLayoutData::maFontFallbacks )
-			{
-				nTags[0] = kATSULineFontFallbacksTag;
-				nBytes[0] = sizeof( ATSUFontFallbacks );
-				nVals[0] = &ImplATSLayoutData::maFontFallbacks;
-
-				if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) == noErr )
-				{
-					bUseFontFallbacksList = true;
-					nCurrentPos = 0;
-					if ( mpFallbackFont )
-					{
-						rtl_freeMemory( mpNeedFallback );
-						mpNeedFallback = NULL;
-						delete mpFallbackFont;
-						mpFallbackFont = NULL;
-					}
-				}
-				else
-				{
-					nCurrentPos += nOffset;
-				}
-			}
-			else
-			{
-				nCurrentPos += nOffset;
-			}
+			bNeedFontFallbackList = true;
+			nCurrentPos += nOffset;
 		}
 		else if ( nErr == kATSUFontsMatched )
 		{
@@ -674,11 +647,39 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
 					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+				else
+					bNeedFontFallbackList = true;
 			}
 		}
 		else
 		{
 			break;
+		}
+
+		// Fix problem rendering Cherokee characters without causing bug
+		// bug 3031 to reoccur by setting the font fallbacks list and
+		// restarting the matching process
+		if ( bNeedFontFallbackList && !bUseFontFallbacksList && ImplATSLayoutData::maFontFallbacks )
+		{
+			nTags[0] = kATSULineFontFallbacksTag;
+			nBytes[0] = sizeof( ATSUFontFallbacks );
+			nVals[0] = &ImplATSLayoutData::maFontFallbacks;
+
+			if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) == noErr )
+			{
+				bUseFontFallbacksList = true;
+				nCurrentPos = 0;
+				if ( mpNeedFallback )
+				{
+					rtl_freeMemory( mpNeedFallback );
+					mpNeedFallback = NULL;
+				}
+				if ( mpFallbackFont )
+				{
+					delete mpFallbackFont;
+					mpFallbackFont = NULL;
+				}
+			}
 		}
 	}
 
