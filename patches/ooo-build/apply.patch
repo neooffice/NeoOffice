@@ -1,6 +1,6 @@
 Index: patches/dev300/apply
 ===================================================================
---- patches/dev300/apply	(revision 14772)
+--- patches/dev300/apply	(revision 14786)
 +++ patches/dev300/apply	(working copy)
 @@ -382,7 +382,8 @@
  printing-bugfix-254573.diff, n#254573, rodo
@@ -12,7 +12,7 @@ Index: patches/dev300/apply
  svx-shapes-default-word-wrap-enable.diff, n#171052, rodo
  svx-honour-customshape-capabilities.diff, n#395372, thorsten
  
-@@ -425,7 +426,8 @@
+@@ -428,7 +429,8 @@
  
  [ LinuxOnly ]
  # fix that allows OOo to work with a standard (unpatched) libjpeg,
@@ -22,7 +22,7 @@ Index: patches/dev300/apply
  
  [ Fixes ]
  # handle hyperlinks to files better
-@@ -616,7 +618,8 @@
+@@ -619,7 +621,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -32,7 +32,7 @@ Index: patches/dev300/apply
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -768,7 +771,8 @@
+@@ -771,7 +774,8 @@
  
  [ Misc ]
  # Insert symbol defaults to the Symbol font - not a random one
@@ -42,7 +42,7 @@ Index: patches/dev300/apply
  # Address data source ordering x#62860
  addrbk-datasrc-ordering.diff, michael
  # Changed the default option in the Templates and Documents dialog.
-@@ -786,7 +790,8 @@
+@@ -789,7 +793,8 @@
  desktop-cmdhelp-stdout.diff, kohei
  
  # always enable file save even when the document is not modified.
@@ -52,7 +52,17 @@ Index: patches/dev300/apply
  
  # Adjust scroll speed while extending selection beyoud visible sheet area.
  scroll-accel-sc.diff, n#375909, i#71362, kohei
-@@ -1620,7 +1625,8 @@
+@@ -1203,7 +1208,8 @@
+ 
+ [ BuildBits ]
+ 
+-pyuno-rpath-ooodir.diff
++# Disable because the patch does not exist at the time of our date tag
++# pyuno-rpath-ooodir.diff
+ system-python-ure-bootstrap.diff, deb#501028, i#90701
+ 
+ no-latex-filter-without-writer2latex.diff, i#93520
+@@ -1633,7 +1639,8 @@
  sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
  sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
  # hack to ignore writerfilter if odf-converter is present
@@ -62,7 +72,7 @@ Index: patches/dev300/apply
  
  
  [ msaccess ]
-@@ -1656,7 +1662,8 @@
+@@ -1669,7 +1676,8 @@
  
  writerfilter-source-dmapper-domainmapper-debug.diff
  
