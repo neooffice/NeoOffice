@@ -52,16 +52,18 @@ Index: patches/dev300/apply
  
  # Adjust scroll speed while extending selection beyoud visible sheet area.
  scroll-accel-sc.diff, n#375909, i#71362, kohei
-@@ -1203,7 +1208,8 @@
+@@ -1203,8 +1208,9 @@
  
  [ BuildBits ]
  
 -pyuno-rpath-ooodir.diff
-+# Disable because the patch does not exist at the time of our date tag
+-system-python-ure-bootstrap.diff, deb#501028, i#90701
++# Disable because these patch does not exist at the time of our date tag
 +# pyuno-rpath-ooodir.diff
- system-python-ure-bootstrap.diff, deb#501028, i#90701
++# system-python-ure-bootstrap.diff, deb#501028, i#90701
  
  no-latex-filter-without-writer2latex.diff, i#93520
+ 
 @@ -1633,7 +1639,8 @@
  sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
  sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
