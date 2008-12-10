@@ -98,8 +98,6 @@
 #import <Carbon/Carbon.h>
 #include "postmac.h"
 
-#include <string>
-#include <strstream>
 #include "neomobilewebview.h"
 #include <unistd.h>
 
@@ -619,10 +617,10 @@ static NeoMobileWebView *pSharedWebView = nil;
 		
 		getcwd(oldWD, sizeof(oldWD));
 		chdir(asciiDirPath.getStr());
-		std::string zipCmd("/usr/bin/zip \"");
-		zipCmd+=asciiZipFilePath.getStr();
-		zipCmd+="\" *";
-		short outVal=system(zipCmd.c_str());
+		OString zipCmd("/usr/bin/zip \"");
+		zipCmd+=asciiZipFilePath;
+		zipCmd+=OString("\" *");
+		short outVal=system(zipCmd.getStr());
 		chdir(oldWD);
 		return((outVal==0));
 	}
