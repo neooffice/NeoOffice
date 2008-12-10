@@ -125,15 +125,16 @@ PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
 OO_PACKAGES:=OpenOffice3 Extensions3
-OO_TAG:=-rOOO300_m9
-OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/branches/ooo-build-3-0
+OO_TAG:=-rOOO300_m12
+OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/branches/ooo-build-3-0-1
 OOO-BUILD_PACKAGE:=ooo-build
-OOO-BUILD_TAG:=--revision '{2008-10-08}'
-OOO-BUILD_APPLY_TAG:=OOO300_m9
+OOO-BUILD_TAG:=--revision '{2008-12-08}'
+OOO-BUILD_APPLY_TAG:=OOO300_m12
 LPSOLVE_SOURCE_URL=http://go-ooo.org/packages/SRC680/lp_solve_5.5.tar.gz
 LIBWPD_SOURCE_URL=http://download.go-oo.org/libwpd/libwpd-0.8.14.tar.gz
 LIBWPG_SOURCE_URL=http://download.go-oo.org/SRC680/libwpg-0.1.3.tar.gz
 LIBWPS_SOURCE_URL=http://download.go-oo.org/SRC680/libwps-0.1.2.tar.gz
+MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
 ODF-CONVERTER_SOURCE_URL=http://download.go-oo.org/tstnvl/odf-converter/SOURCES/odf-converter-2.0/odf-converter-2.0.tar.gz
 ODF-CONVERTER_PACKAGE=odf-converter-2.0
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
@@ -212,7 +213,6 @@ build.oo_patches: \
 	build.oo_solenv_patch \
 	build.oo_sw_patch \
 	build.oo_testshl2_patch \
-	build.oo_toolkit_patch \
 	build.oo_vcl_patch \
 	build.oo_vos_patch
 	touch "$@"
@@ -229,13 +229,8 @@ build.oo_external_patch: build.ooo-build_patches \
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
 	touch "$@"
 
-build.oo_moz_patch: build.ooo-build_patches \
-	$(OO_PATCHES_HOME)/MACOSXGCCUinc.zip \
-	$(OO_PATCHES_HOME)/MACOSXGCCUlib.zip \
-	$(OO_PATCHES_HOME)/MACOSXGCCUruntime.zip
-	cp "$(OO_PATCHES_HOME)/MACOSXGCCUinc.zip" "$(BUILD_HOME)/moz/zipped/MACOSXGCC$(CPUNAME)inc.zip"
-	cp "$(OO_PATCHES_HOME)/MACOSXGCCUlib.zip" "$(BUILD_HOME)/moz/zipped/MACOSXGCC$(CPUNAME)lib.zip"
-	cp "$(OO_PATCHES_HOME)/MACOSXGCCUruntime.zip" "$(BUILD_HOME)/moz/zipped/MACOSXGCC$(CPUNAME)runtime.zip"
+build.oo_moz_patch: build.ooo-build_patches
+	cd "$(BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
@@ -249,7 +244,6 @@ build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	touch "$@"
 
 build.ooo-build_patches: build.ooo-build_checkout \
-	build.ooo-build_svtools-field-patch.diff_patch \
 	build.ooo-build_apply_patch
 	touch "$@"
 
@@ -308,7 +302,7 @@ build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source bui
 	
 build.configure: build.oo_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
-	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) TMP=$(TMP) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --disable-build-mozilla --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --without-system-mdbtools --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-wiki-publisher --enable-ogltrans --enable-report-builder )
+	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) TMP=$(TMP) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --disable-binfilter --without-system-mdbtools --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-wiki-publisher --enable-ogltrans --enable-report-builder )
 	echo 'setenv LIBIDL_CONFIG "$(LIBIDL_CONFIG)"' >> "$(OO_ENV_AQUA)"
 	echo 'setenv PKG_CONFIG "$(PKG_CONFIG)"' >> "$(OO_ENV_AQUA)"
 	echo 'setenv TMP "$(TMP)"' >> "$(OO_ENV_AQUA)"

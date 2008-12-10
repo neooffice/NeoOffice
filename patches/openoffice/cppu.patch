@@ -10,7 +10,7 @@ diff -u -r1.6 makefile.mk
  .INCLUDE :  settings.mk
  
 +.IF "$(OS)" == "MACOSX"
-+CDEFS+=-g -O0
++CDEFS+=-O0
 +.ENDIF
 +
  # ------------------------------------------------------------------
@@ -28,7 +28,7 @@ diff -u -r1.5 makefile.mk
  .INCLUDE :  settings.mk
  
 +.IF "$(OS)" == "MACOSX"
-+CDEFS+=-g -O0
++CDEFS+=-O0
 +.ENDIF
 +
  # --- Files --------------------------------------------------------
@@ -46,7 +46,7 @@ diff -u -r1.9 makefile.mk
  .INCLUDE :  settings.mk
  
 +.IF "$(OS)" == "MACOSX"
-+CDEFS+=-g -O0
++CDEFS+=-O0
 +.ENDIF
 +
  # --- Files --------------------------------------------------------

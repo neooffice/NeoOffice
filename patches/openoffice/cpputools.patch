@@ -10,7 +10,7 @@ diff -u -r1.15 makefile.mk
  .INCLUDE :  settings.mk
  
 +.IF "$(OS)" == "MACOSX"
-+CDEFS+=-g -O0
++CDEFS+=-O0
 +.ENDIF
 +
  UNOUCRDEP=$(SOLARBINDIR)$/udkapi.rdb 

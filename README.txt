@@ -17,6 +17,8 @@ Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC a
    
    Xcode Tools v3.0
 
+   Important: you will need to select the X11SDK package during installation as this package is required to build OpenOffice.org moz module.
+   
 2. If you are building under Mac OS X 10.4 Tiger, make sure that you have set the compiler version to the correct version by executing the following command:
 
    sudo gcc_select 4.0

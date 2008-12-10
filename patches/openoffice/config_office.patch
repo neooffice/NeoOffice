@@ -9,3 +9,35 @@
        AC_MSG_CHECKING([if gcc has a visibility bug with class-level attributes (GCC bug 26905)])
        cat >visibility.cxx <<_ACEOF
  #pragma GCC visibility push(hidden)
+@@ -4237,11 +4237,6 @@
+    enable_build_mozilla=1
+    AC_MSG_RESULT([$MOZILLA_TOOLKIT])
+ fi
+-if test "$_os" = "Darwin" && test "$MOZILLA_TOOLKIT" != "gtk2"; then
+-   #only gtk2 toolkit supported - xlib or cocoa nees glib1 and libIDL1 - the latter is not
+-   #available using fink, mac (carbon) doesn't work because xcode installs conflicting headers
+-   AC_MSG_ERROR([Only gtk2 toolkit supported on Mac, sorry.])
+-fi
+ 
+ AC_SUBST(MOZILLA_TOOLKIT)
+ 
+@@ -4300,10 +4295,6 @@
+       else
+          AC_MSG_RESULT([ok])
+       fi
+-   elif test "$_os" = "Darwin"; then
+-      # only gtk2 supported - see above
+-      AC_MSG_NOTICE([checking whether mozilla can be built...])
+-      PKG_CHECK_MODULES(MOZGTK2, gtk+-2.0 >= 2.4 libIDL-2.0 >= 0.8, AC_MSG_NOTICE([OK - can build mozilla]), AC_MSG_ERROR([Prerequisites to build mozilla not met. Either use the precompiled mozilla binaries or install the missing packages]))
+    else
+       # Generic Unix/Linux section
+       if test "$MOZILLA_TOOLKIT" = "gtk2"; then
+@@ -4315,7 +4306,7 @@
+          if test -z "$MOZIDL"; then
+             AC_MSG_ERROR([libIDL >= 0.8.0 is needed when using GTK2 to build mozilla.])
+          fi 
+-      else
++      elif test "$MOZILLA_TOOLKIT" != "xlib"; then
+          PKG_CHECK_MODULES(MOZLIBREQ, gtk+ >= 1.2.3, MOZGTK="TRUE", MOZGTK="")
+          if test -z "$MOZGTK"; then
+             AC_MSG_ERROR([gtk 1.2 is needed when not using GTK2 to build mozilla.])
