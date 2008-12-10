@@ -33,7 +33,7 @@
 
 PRJ=.
 
-PRJNAME=NeoOfficeMobile
+PRJNAME=neomobile
 TARGET=neomobile.uno
 TARGETTYPE=CUI
 
