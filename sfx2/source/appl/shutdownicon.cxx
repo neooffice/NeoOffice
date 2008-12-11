@@ -51,6 +51,7 @@
 #include <com/sun/star/ui/dialogs/ControlActions.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/document/UpdateDocMode.hpp>
+#include <rtl/bootstrap.hxx>
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/fcontnr.hxx>
 #ifndef _UNOTOOLS_PROCESSFACTORY_HXX
@@ -81,6 +82,8 @@ using namespace ::com::sun::star::ui::dialogs;
 using namespace ::vos;
 using namespace ::rtl;
 using namespace ::sfx2;
+
+extern "C" { static void SAL_CALL thisModule() {} }
 
 class SfxNotificationListener_Impl : public cppu::WeakImplHelper1< XDispatchResultListener >
 {
@@ -146,7 +149,7 @@ bool ShutdownIcon::LoadModule( osl::Module **pModule,
 
 	oslGenericFunction pTmpInit = NULL;
 	oslGenericFunction pTmpDeInit = NULL;
-	if ( pPlugin->load( OUString (RTL_CONSTASCII_USTRINGPARAM( STRING( PLUGIN_NAME ) ) ) ) )
+	if ( pPlugin->loadRelative( &thisModule, OUString (RTL_CONSTASCII_USTRINGPARAM( STRING( PLUGIN_NAME ) ) ) ) )
 	{
 		pTmpInit = pPlugin->getFunctionSymbol(
 			OUString( RTL_CONSTASCII_USTRINGPARAM( "plugin_init_sys_tray" ) ) );
@@ -832,17 +835,19 @@ void ShutdownIcon::SetAutostart( bool bActivate )
 #else // UNX
 		getDotAutostart( true );
 
-		OUString aPath;
-		::utl::Bootstrap::locateBaseInstallation(aPath);
+		OUString aPath( RTL_CONSTASCII_USTRINGPARAM("${BRAND_BASE_DIR}/share/xdg/qstart.desktop" ) );
+		Bootstrap::expandMacros( aPath );
 
 		OUString aDesktopFile;
 		::osl::File::getSystemPathFromFileURL( aPath, aDesktopFile );
-		aDesktopFile += OUString( RTL_CONSTASCII_USTRINGPARAM( "/share/xdg/qstart.desktop" ) );
 
 		OString aDesktopFileUnx = OUStringToOString( aDesktopFile,
 													 osl_getThreadTextEncoding() );
 		OString aShortcutUnx = OUStringToOString( aShortcut,
 												  osl_getThreadTextEncoding() );
+		// call unlink just in case there is a broken link pointing to an older OOo that
+		// is not longer available on the system
+		unlink( aShortcutUnx );
 		symlink( aDesktopFileUnx, aShortcutUnx );
 
 		ShutdownIcon *pIcon = ShutdownIcon::createInstance();

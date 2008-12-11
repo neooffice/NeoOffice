@@ -31,6 +31,7 @@
 #include "precompiled_connectivity.hxx"
 
 #include "MNSProfileDiscover.hxx"
+#ifndef MINIMAL_PROFILEDISCOVER
 #include "MNSProfile.hxx"
 
 #include "pratom.h"
@@ -89,6 +90,7 @@
 
 // IID and CIDs of all the services needed
 static NS_DEFINE_CID(kCharsetConverterManagerCID, NS_ICHARSETCONVERTERMANAGER_CID);
+#endif
 
 // Registry Keys
 
@@ -106,7 +108,13 @@ namespace connectivity
 {
 	namespace mozab
 	{
-		ProfileStruct::ProfileStruct(MozillaProductType aProduct,::rtl::OUString aProfileName,nsILocalFile * aProfilePath)
+		ProfileStruct::ProfileStruct(MozillaProductType aProduct,::rtl::OUString aProfileName,
+#ifdef MINIMAL_PROFILEDISCOVER
+            const ::rtl::OUString& aProfilePath
+#else
+            nsILocalFile * aProfilePath
+#endif
+          )
 		{
 			product=aProduct;
 			profileName = aProfileName;
@@ -114,6 +122,9 @@ namespace connectivity
 		}
 		::rtl::OUString ProfileStruct::getProfilePath() 
 		{
+#ifdef MINIMAL_PROFILEDISCOVER
+			return profilePath;
+#else
 			if (profilePath)
 			{
 				nsAutoString path;
@@ -123,8 +134,8 @@ namespace connectivity
 			}
 			else
                 return ::rtl::OUString();
+#endif
 		}
-
 
 		ProfileAccess::~ProfileAccess()
 		{
@@ -133,20 +144,24 @@ namespace connectivity
 		{
 			LoadProductsInfo();
 		}
+
 		sal_Int32 ProfileAccess::LoadProductsInfo()
 		{
+#ifndef MINIMAL_PROFILEDISCOVER
 			//load mozilla profiles to m_ProductProfileList
 			LoadMozillaProfiles();
-			sal_Int32 index=MozillaProductType_Mozilla;
-			sal_Int32 count=m_ProductProfileList[index].mProfileList.size();
+#endif
+			sal_Int32 count=m_ProductProfileList[MozillaProductType_Mozilla].mProfileList.size();
 			
 			//load thunderbird profiles to m_ProductProfileList
 			count += LoadXPToolkitProfiles(MozillaProductType_Thunderbird);
+
 			//load firefox profiles to m_ProductProfileList
 			//firefox profile does not containt address book, but maybe others need them
 			count += LoadXPToolkitProfiles(MozillaProductType_Firefox);
 			return count;
 		}
+#ifndef MINIMAL_PROFILEDISCOVER
 		nsresult ProfileAccess::LoadMozillaProfiles()
 		{
 			sal_Int32 index=MozillaProductType_Mozilla;
@@ -250,13 +265,16 @@ namespace connectivity
 			}
 			return rv;
 		}
+#endif
 		//Thunderbird and firefox profiles are saved in profiles.ini
 		sal_Int32 ProfileAccess::LoadXPToolkitProfiles(MozillaProductType product)
 		{
 			sal_Int32 index=product;
 			ProductStruct &m_Product = m_ProductProfileList[index];
 
+#ifndef MINIMAL_PROFILEDISCOVER
 			nsresult rv;
+#endif
 			::rtl::OUString regDir = getRegistryDir(product);
             ::rtl::OUString profilesIni( regDir );
             profilesIni += ::rtl::OUString::createFromAscii( "profiles.ini" );
@@ -303,6 +321,7 @@ namespace connectivity
 						isRelative = sIsRelative.toInt32();
 					}
 					
+#ifndef MINIMAL_PROFILEDISCOVER
 					nsCOMPtr<nsILocalFile> rootDir;
 					rv = NS_NewLocalFile(EmptyString(), PR_TRUE,
 											getter_AddRefs(rootDir));
@@ -322,8 +341,15 @@ namespace connectivity
 						rv = rootDir->SetPersistentDescriptor(filePath);
 					}
 					if (NS_FAILED(rv)) continue;
+#endif
 
-					ProfileStruct*  profileItem     = new ProfileStruct(product,profileName,rootDir);
+					ProfileStruct*  profileItem     = new ProfileStruct(product,profileName,
+#ifdef MINIMAL_PROFILEDISCOVER
+							regDir + profilePath
+#else
+							rootDir
+#endif
+						);
 					m_Product.mProfileList[profileName] = profileItem;
 
 					sal_Int32 isDefault = 0;
@@ -339,6 +365,7 @@ namespace connectivity
 			}
 			return m_Product.mProfileList.size();
 		}
+
 		::rtl::OUString ProfileAccess::getProfilePath( ::com::sun::star::mozilla::MozillaProductType product, const ::rtl::OUString& profileName ) throw (::com::sun::star::uno::RuntimeException)
 		{
 			sal_Int32 index=product;
@@ -351,6 +378,7 @@ namespace connectivity
 			else
 				return m_Product.mProfileList[profileName]->getProfilePath();
 		}
+
 		::sal_Int32 ProfileAccess::getProfileCount( ::com::sun::star::mozilla::MozillaProductType product) throw (::com::sun::star::uno::RuntimeException)
 		{
 			sal_Int32 index=product;
@@ -374,6 +402,7 @@ namespace connectivity
 			
 			return m_Product.mProfileList.size();
 		}
+
 		::rtl::OUString ProfileAccess::getDefaultProfile( ::com::sun::star::mozilla::MozillaProductType product ) throw (::com::sun::star::uno::RuntimeException)
 		{
 			sal_Int32 index=product;
@@ -391,6 +420,7 @@ namespace connectivity
 			ProfileStruct * aProfile = (*m_Product.mProfileList.begin()).second;
 			return aProfile->getProfileName();
 		}
+#ifndef MINIMAL_PROFILEDISCOVER
 		nsresult ProfileAccess::isExistFileOrSymlink(nsILocalFile* aFile,PRBool *bExist)
 		{
 			nsresult rv;
@@ -449,9 +479,12 @@ namespace connectivity
 			return nExist;
 		}
 
-
+#endif
 		::sal_Bool ProfileAccess::isProfileLocked( ::com::sun::star::mozilla::MozillaProductType product, const ::rtl::OUString& profileName ) throw (::com::sun::star::uno::RuntimeException)
 		{
+#ifdef MINIMAL_PROFILEDISCOVER
+			return sal_True;
+#else
 			::rtl::OUString path = getProfilePath(product,profileName);
 			if (!path.getLength())
 				return sal_True;
@@ -475,7 +508,9 @@ namespace connectivity
 			if (rv)
 				return sal_True;
 			return sal_False;
+#endif
 		}
+
 		::sal_Bool ProfileAccess::getProfileExists( ::com::sun::star::mozilla::MozillaProductType product, const ::rtl::OUString& profileName ) throw (::com::sun::star::uno::RuntimeException)
 		{
 			sal_Int32 index=product;
@@ -487,7 +522,7 @@ namespace connectivity
 			else
 				return sal_True;
 		}
-
-
 	}
 }
+
+

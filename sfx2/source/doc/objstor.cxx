@@ -45,6 +45,9 @@
 #include <com/sun/star/document/FilterOptionsRequest.hpp>
 #include <com/sun/star/document/XInteractionFilterOptions.hpp>
 #include <com/sun/star/task/XInteractionHandler.hpp>
+#include <com/sun/star/task/XInteractionAskLater.hpp>
+#include <com/sun/star/task/FutureDocumentVersionProductUpdateRequest.hpp>
+#include <com/sun/star/task/InteractionClassification.hpp>
 #include <com/sun/star/lang/XInitialization.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/ui/dialogs/ExtendedFilePickerElementIds.hpp>
@@ -73,6 +76,7 @@
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/configurationhelper.hxx>
+#include <comphelper/interaction.hxx>
 #include <svtools/sfxecode.hxx>
 #include <svtools/securityoptions.hxx>
 #include <cppuhelper/weak.hxx>
@@ -85,6 +89,7 @@
 #include <svtools/useroptions.hxx>
 #include <svtools/pathoptions.hxx>
 #include <tools/urlobj.hxx>
+#include <tools/diagnose_ex.h>
 #include <unotools/localfilehelper.hxx>
 #include <unotools/ucbhelper.hxx>
 #include <unotools/tempfile.hxx>
@@ -131,7 +136,6 @@
 #include <sfx2/viewfrm.hxx>
 #include "graphhelp.hxx"
 #include "appbaslib.hxx"
-#include "newerverwarn.hxx"
 #include "appdata.hxx"
 
 #include "../appl/app.hrc"
@@ -866,10 +870,9 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
 
 	EnableSetModified( sal_False );
 
+    pMedium->LockOrigFileOnDemand( sal_True );
     if ( GetError() == ERRCODE_NONE && bOwnStorageFormat && ( !pFilter || !( pFilter->GetFilterFlags() & SFX_FILTER_STARONEFILTER ) ) )
 	{
-        pMedium->LockOrigFileOnDemand( sal_True );
-
 		uno::Reference< embed::XStorage > xStorage;
         if ( pMedium->GetError() == ERRCODE_NONE )
             xStorage = pMedium->GetStorage();
@@ -1109,8 +1112,8 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
             }
         }
 
-#if 0
-        if ( pMedium->GetInteractionHandler().is() && !SFX_APP()->Get_Impl()->bODFVersionWarningLater )
+        uno::Reference< XInteractionHandler > xHandler( pMedium->GetInteractionHandler() );
+        if ( xHandler.is() && !SFX_APP()->Get_Impl()->bODFVersionWarningLater )
         {
             // scan the generator string (within meta.xml)
             uno::Reference<document::XDocumentPropertiesSupplier> xDPS(
@@ -1137,15 +1140,40 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
                 {
                     double nVersion = sVersion.toDouble();
 					if ( nVersion > 1.20001 )
-                    {
                         // ODF version greater than 1.2 - added some decimal places to be safe against floating point conversion errors (hack)
-                        sfx2::NewerVersionWarningDialog aDlg( NULL, sVersion );
-                        aDlg.Execute();
+                    {
+
+                        ::rtl::OUString sDocumentURL( pMedium->GetOrigURL() );
+                        ::rtl::OUString aSystemFileURL;
+                        if ( osl::FileBase::getSystemPathFromFileURL( sDocumentURL, aSystemFileURL ) == osl::FileBase::E_None )
+                            sDocumentURL = aSystemFileURL;
+
+                        FutureDocumentVersionProductUpdateRequest aUpdateRequest;
+                        aUpdateRequest.Classification = InteractionClassification_QUERY;
+                        aUpdateRequest.DocumentURL = sDocumentURL;
+
+                        ::rtl::Reference< ::comphelper::OInteractionRequest > pRequest = new ::comphelper::OInteractionRequest( makeAny( aUpdateRequest ) );
+                        pRequest->addContinuation( new ::comphelper::OInteractionApprove );
+                        pRequest->addContinuation( new ::comphelper::OInteractionDisapprove );
+
+                        typedef ::comphelper::OInteraction< XInteractionAskLater > OInteractionAskLater;
+                        OInteractionAskLater* pLater = new OInteractionAskLater;
+                        pRequest->addContinuation( pLater );
+
+                        try
+                        {
+                            xHandler->handle( pRequest.get() );
+                        }
+                        catch( const Exception& )
+                        {
+                        	DBG_UNHANDLED_EXCEPTION();
+                        }
+                        if ( pLater->wasSelected() )
+                            SFX_APP()->Get_Impl()->bODFVersionWarningLater = true;
                     }
                 }
             }
         }
-#endif
     }
     else
         GetpApp()->HideStatusText();
@@ -1573,9 +1601,9 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 	if( rMedium.GetErrorCode() || pMedium->GetErrorCode() || GetErrorCode() )
 		return sal_False;
 
+    rMedium.LockOrigFileOnDemand( sal_False );
     if ( bStorageBasedTarget )
 	{
-        rMedium.LockOrigFileOnDemand( sal_False );
         if ( rMedium.GetErrorCode() )
             return sal_False;
 

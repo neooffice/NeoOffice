@@ -683,12 +683,6 @@ sal_uInt16 SwWW8ImplReader::End_Field()
         nRet = maFieldStack.back().mnFieldId;
         switch (nRet)
         {
-	    case 8: // TOX_INDEX
-	    case 13: // TOX_CONTENT
-	    { // tox hack!!!!
-		pPaM->Move(fnMoveForward);
-	    }
-
             case 88:
                 pCtrlStck->SetAttr(*pPaM->GetPoint(),RES_TXTATR_INETFMT);
             break;
@@ -709,9 +703,6 @@ bool AcceptableNestedField(sal_uInt16 nFieldCode)
 {
     switch (nFieldCode)
     {
-	case 8:
-	case 13: // HACK allow recursive field in TOC...
-
         case 36:
         case 68:
         case 79:
@@ -3185,8 +3176,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
     } // ToxBase fertig
 
     // Update fuer TOX anstossen
-    //rDoc.SetUpdateTOX(true);
-    rDoc.SetUpdatePgNumOfTOX( true );
+    rDoc.SetUpdateTOX(true);
 
     // #i21237#
     // propagate tab stops from paragraph styles used in TOX to
@@ -3225,8 +3215,6 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
 
     rDoc.InsertTableOf(*pPaM->GetPoint(), *aFltTOX.GetBase());
 
-    pPaM->Move(fnMoveBackward); // move into TOC section...
-
     //inserting a toc inserts a section before this point, so adjust pos
     //for future page/section segment insertion
     SwPaM aRegion(*pPaM);
@@ -3253,8 +3241,7 @@ eF_ResT SwWW8ImplReader::Read_F_Tox( WW8FieldDesc* pF, String& rStr )
 
     if (!maApos.back()) //a para end in apo doesn't count
         bWasParaEnd = true;
-//    return FLD_OK;
-    return FLD_TEXT; // HACK so now import the TOC stored in the DOC stream...
+    return FLD_OK;
 }
 
 eF_ResT SwWW8ImplReader::Read_F_Shape(WW8FieldDesc* /*pF*/, String& /*rStr*/)

@@ -149,17 +149,20 @@ AboutDialog::AboutDialog( Window* pParent, const ResId& rId, const String& rVerS
     while ( !bLoaded && ( nIndex >= 0 ) );
 
     // fallback to "about.bmp"
-    if ( !bLoaded ) {
+    if ( !bLoaded )
+    {
         bLoaded = impl_loadBitmap(
             rtl::OUString::createFromAscii( "$BRAND_BASE_DIR/program/edition" ),
             rtl::OUString::createFromAscii( "about.bmp" ), aAppLogo );
     }
-    if (!bLoaded) {
+
+    if ( !bLoaded )
+    {
         bLoaded = impl_loadBitmap(
             rtl::OUString::createFromAscii( "$BRAND_BASE_DIR/program" ),
             rtl::OUString::createFromAscii( "about.bmp" ), aAppLogo );
     }
- 
+
 	// Transparenter Font
 	Font aFont = GetFont();
     aFont.SetTransparent( TRUE );
@@ -168,15 +171,6 @@ AboutDialog::AboutDialog( Window* pParent, const ResId& rId, const String& rVerS
     // if necessary more info
     String sVersion = aVersionText.GetText();
     sVersion.SearchAndReplaceAscii( "$(VER)", Application::GetDisplayName() );
-	::rtl::OUString aDefault;
-	String sPatchLevel( utl::Bootstrap::getProductPatchLevel( aDefault ) );
-	if ( sPatchLevel.Len() > 0 )
-	{
-        sVersion.EraseTrailingChars();
-        sVersion += ' ';
-        sVersion += sPatchLevel;
-	}
-
     sVersion += '\n';
     sVersion += rVerStr;
     aVersionText.SetText( sVersion );

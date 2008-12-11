@@ -51,30 +51,40 @@ ENVCFLAGS+=/FR$(SLO)$/
 
 .INCLUDE : settings.mk
 
-.IF ("$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO"
-dummy:
-	@echo "		Not building the mozillasrc stuff in OpenOffice.org build"
-	@echo "		dependency to Mozilla developer snapshots not feasable at the moment"
-
-.ELSE
-
 .INCLUDE :  $(PRJ)$/version.mk
 
 
 #mozilla specific stuff.
 # --- Files -------------------------------------
 
-SLOFILES = \
-	$(SLO)$/MMozillaBootstrap.obj	\
-	$(SLO)$/MNSFolders.obj	\
-	$(SLO)$/MNSProfileDiscover.obj				\
+SLOFILES += \
+	$(SLO)$/MNSINIParser.obj \
+	$(SLO)$/MNSProfileDiscover.obj \
+	$(SLO)$/MMozillaBootstrap.obj \
+	$(SLO)$/MNSFolders.obj
+
+.IF ("$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO" || ( "$(OS)" == "MACOSX" && $(GUIBASE) != "java" )
+
+CDEFS+=-DMINIMAL_PROFILEDISCOVER
+
+SHL1TARGET=$(TARGET)
+SHL1OBJS=$(SLOFILES)
+SHL1DEF=$(MISC)$/$(SHL1TARGET).def
+
+SHL1STDLIBS=\
+        $(CPPULIB)       \
+        $(CPPUHELPERLIB) \
+        $(SALLIB)        \
+        $(COMPHELPERLIB)
+
+.ELSE
+SLOFILES += \
 	$(SLO)$/MNSInit.obj			            \
 	$(SLO)$/MNSProfileManager.obj	\
-	$(SLO)$/MNSINIParser.obj	\
 	$(SLO)$/MNSRunnable.obj	\
 	$(SLO)$/MNSProfile.obj					\
 	$(SLO)$/MNSProfileDirServiceProvider.obj
-
+.ENDIF
 
 .IF "$(GUI)"=="UNX"
 .IF "$(COMNAME)"=="sunpro5"
@@ -157,7 +167,6 @@ CFLAGSCXX += \
             -Wcast-align -Woverloaded-virtual -Wsynth \
             -Wno-long-long
 CDEFS     += -DTRACING
-.ENDIF
 .ENDIF
 
 .IF "$(GUIBASE)" == "java"
