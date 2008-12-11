@@ -1339,7 +1339,10 @@ public final class VCLEvent extends AWTEvent {
 
 		if (keyCode < 0) {
 			keyCode = 0;
-			if (source instanceof KeyEvent) {
+			if (source instanceof VCLEventQueue.CommandKeyEvent) {
+				keyCode = ((VCLEventQueue.CommandKeyEvent)source).getCommandKeyCode();
+			}
+			else if (source instanceof KeyEvent) {
 				switch (((KeyEvent)source).getKeyCode()) {
 					case KeyEvent.VK_UNDEFINED:
 						char keyChar = ((KeyEvent)source).getKeyChar();

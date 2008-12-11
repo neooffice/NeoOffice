@@ -38,6 +38,7 @@
 #import <objc/objc-class.h>
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
+#import "VCLResponder_cocoa.h"
 
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
@@ -219,86 +220,11 @@ static NSString *pCancelInputMethodText = @" ";
 - (void)paste:(id)pSender;
 @end
 
-@interface VCLResponder : NSResponder
-{
-	NSString*				mpLastText;
-	NSView*					mpView;
-}
-- (void)clearLastText;
-- (void)dealloc;
-- (void)doCommandBySelector:(SEL)aSelector;
-- (id)init;
-- (void)insertText:(NSString *)pString;
-- (void)interpretKeyEvents:(NSArray *)pEvents view:(NSView *)pView;
-- (NSString *)lastText;
-@end
-
-@implementation VCLResponder
-
-- (void)clearLastText
-{
-	if ( mpLastText )
-	{
-		[mpLastText release];
-		mpLastText = nil;
-	}
-}
-
-- (void)dealloc
-{
-	[self clearLastText];
-
-	[super dealloc];
-}
-
-- (void)doCommandBySelector:(SEL)aSelector
-{
-	// Fix bugs 2125 and 2167 by not overriding Java's handling of the cancel
-	// action
-}
-
-- (id)init
-{
-	[super init];
-
-	mpLastText = nil;
-	mpView = nil;
-
-	return self;
-}
-
-- (void)insertText:(NSString *)pString
-{
-	[self clearLastText];
-
-	mpLastText = pString;
-	if ( mpLastText )
-		[mpLastText retain];
-}
-
-- (void)interpretKeyEvents:(NSArray *)pEvents view:(NSView *)pView
-{
-	[self clearLastText];
-
-	mpView = pView;
-	[super interpretKeyEvents:pEvents];
-	mpView = nil;
-}
-
-- (NSString *)lastText
-{
-	return mpLastText;
-}
-
-@end
-
 static BOOL bUseKeyEntryFix = NO;
 static BOOL bUsePartialKeyEntryFix = NO;
 static BOOL bUseQuickTimeContentViewHack = NO;
-static VCLResponder *pSharedResponder = nil;
 
 @interface VCLView : NSView
-- (void)interpretKeyEvents:(NSArray *)pEvents;
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
@@ -392,6 +318,7 @@ static VCLResponder *pSharedResponder = nil;
 @end
 
 static NSMutableArray *pNeedRestoreModalWindows = nil;
+static VCLResponder *pSharedResponder = nil;
 
 @interface VCLWindow (CocoaAppWindow)
 - (jobject)peer;
@@ -614,7 +541,7 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 		// Fix crashing when using a menu shortcut by forcing cancellation of
 		// the input method
 		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] )
 		{
 			// Fix bug 2783 by not cancelling the input method if the command
 			// key is pressed, but instead, returning YES to cancel the menu
@@ -693,12 +620,66 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 
 - (void)sendEvent:(NSEvent *)pEvent
 {
-	[super sendEvent:pEvent];
-
 	if ( !pEvent )
 		return;
 
 	NSEventType nType = [pEvent type];
+
+	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
+	// character as the JVM only seems to process the first character
+	if ( nType == NSKeyDown && pSharedResponder && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	{
+		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
+
+		BOOL bNeedKeyEntryFix = bUseKeyEntryFix;
+		BOOL bHasMarkedText = NO;
+		NSResponder *pResponder = [self firstResponder];
+		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] )
+			bHasMarkedText = [pResponder hasMarkedText];
+
+		// Process any Cocoa commands but ignore when there is marked text
+		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
+		if ( nCommandKey && !bHasMarkedText )
+		{
+			VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers] );
+			return;
+		}
+
+		// We still need the key entry fix if there is marked text otherwise
+		// bug 1429 reoccurs
+		if ( bHasMarkedText && !bNeedKeyEntryFix && bUsePartialKeyEntryFix )
+			bNeedKeyEntryFix = YES;
+
+		if ( bNeedKeyEntryFix )
+		{
+			NSString *pText = [(VCLResponder *)pSharedResponder lastText];
+			if ( pText )
+			{
+				NSApplication *pApp = [NSApplication sharedApplication];
+				int nLen = [pText length];
+				if ( pApp && nLen > 1 )
+				{
+					unichar pChars[ nLen ];
+					[pText getCharacters:pChars];
+
+					int i = 1;
+					for ( ; i < nLen; i++ )
+					{
+						NSString *pChar = [NSString stringWithCharacters:&pChars[i] length:1];
+						if ( pChar )
+						{
+							NSEvent *pNewEvent = [NSEvent keyEventWithType:[pEvent type] location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:[pEvent isARepeat] keyCode:0];
+							if ( pNewEvent )
+								[pApp postEvent:pNewEvent atStart:YES];
+						}
+					}
+				}
+			}
+		}
+	}
+
+	[super sendEvent:pEvent];
+
 	if ( ( nType == NSLeftMouseDown || nType == NSLeftMouseUp ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		NSRect aFrame = [self frame];
@@ -853,57 +834,6 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	return [super initWithFrame:aFrame];
-}
-
-- (void)interpretKeyEvents:(NSArray *)pEvents
-{
-	// Fix bugs 1390 and 1619 by reprocessing any events with more than one
-	// character as the JVM only seems to process the first character
-	NSWindow *pWindow = [self window];
-	if ( pEvents && pWindow && [pWindow isVisible] && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
-	{
-		NSEvent *pEvent = [pEvents objectAtIndex:0];
-		if ( pEvent && pSharedResponder )
-		{
-			BOOL bNeedKeyEntryFix = bUseKeyEntryFix;
-
-			// We still need the key entry fix if there is marked text
-			// otherwise bug 1429 reoccurs
-			if ( !bNeedKeyEntryFix && bUsePartialKeyEntryFix && [self respondsToSelector:@selector(hasMarkedText)] )
-				bNeedKeyEntryFix = [self hasMarkedText];
-
-			if ( bNeedKeyEntryFix )
-			{
-				[pSharedResponder interpretKeyEvents:pEvents view:self];
-
-				NSString *pText = [(VCLResponder *)pSharedResponder lastText];
-				if ( pText )
-				{
-					NSApplication *pApp = [NSApplication sharedApplication];
-					int nLen = [pText length];
-					if ( pApp && nLen > 1 )
-					{
-						unichar pChars[ nLen ];
-						[pText getCharacters:pChars];
-
-						int i = 1;
-						for ( ; i < nLen; i++ )
-						{
-							NSString *pChar = [NSString stringWithCharacters:&pChars[i] length:1];
-							if ( pChar )
-							{
-								NSEvent *pNewEvent = [NSEvent keyEventWithType:[pEvent type] location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:[pEvent isARepeat] keyCode:0];
-								if ( pNewEvent )
-									[pApp postEvent:pNewEvent atStart:YES];
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	[super interpretKeyEvents:pEvents];
 }
 
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard

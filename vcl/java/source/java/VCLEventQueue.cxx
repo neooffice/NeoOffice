@@ -231,6 +231,14 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 
 // ----------------------------------------------------------------------------
 
+void VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers )
+{
+	if ( aPeer )
+		com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT, nModifiers & KEY_MOD1, nModifiers & KEY_MOD2, nModifiers & KEY_MOD3 );
+}
+
+// ----------------------------------------------------------------------------
+
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown )
 {
 	if ( aPeer )
@@ -312,7 +320,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-        VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUsePartialKeyEntryFix );
+		VCLEventQueue_installVCLEventQueueClasses( bUseKeyEntryFix, bUsePartialKeyEntryFix );
 
 		// Load our AWTFont replacement class
 		OUString aVCLJavaLibName;
@@ -347,6 +355,34 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short _par1, sal_Bool _par2, sal_Bool _par3, sal_Bool _par4, sal_Bool _par5 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Ljava/lang/Object;IZZZZ)V";
+			mID = t.pEnv->GetStaticMethodID( getMyClass(), "postCommandEvent", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[6];
+			args[0].l = _par0;
+			args[1].i = jint( _par1 );
+			args[2].z = jboolean( _par2 );
+			args[3].z = jboolean( _par3 );
+			args[4].z = jboolean( _par4 );
+			args[5].z = jboolean( _par5 );
+			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
+		}
+	}
 }
 
 // ----------------------------------------------------------------------------

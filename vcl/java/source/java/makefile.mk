@@ -73,6 +73,7 @@ SLOFILES = \
 	$(SLO)/VCLPageFormat_cocoa.obj \
 	$(SLO)/VCLPrintJob.obj \
 	$(SLO)/VCLPrintJob_cocoa.obj \
+	$(SLO)/VCLResponder_cocoa.obj \
 	$(SLO)/VCLScreen.obj \
 	$(SLO)/tools.obj
 

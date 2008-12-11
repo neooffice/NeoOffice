@@ -196,6 +196,41 @@ public final class VCLEventQueue implements Runnable {
 	}
 
 	/**
+	 * Post a custom command event.
+	 *
+	 * @param o the <code>Window</code> peer
+	 * @param keyCode the key code
+	 * @param shiftDown <code>true</code> if the Shift key is pressed
+	 * @param metaDown <code>true</code> if the Meta key is pressed
+	 * @param altDown <code>true</code> if the Alt key is pressed
+	 * @param controlDown <code>true</code> if the Control key is pressed
+	 */
+	public static void postCommandEvent(Object o, int keyCode, boolean shiftDown, boolean metaDown, boolean altDown, boolean controlDown) {
+
+		if (keyCode == 0)
+			return;
+
+		Window w = findWindow(o);
+		if (w == null || !w.isVisible())
+			return;
+
+		int modifiers = 0;
+		if (shiftDown)
+			modifiers |= InputEvent.SHIFT_DOWN_MASK;
+		if (metaDown)
+			modifiers |= InputEvent.META_DOWN_MASK;
+		if (altDown)
+			modifiers |= InputEvent.ALT_DOWN_MASK;
+		if (controlDown)
+			modifiers |= InputEvent.CTRL_DOWN_MASK;
+
+		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
+		eventQueue.postEvent(new CommandKeyEvent(w, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), modifiers, keyCode));
+		eventQueue.postEvent(new CommandKeyEvent(w, KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0, keyCode));
+
+	}
+
+	/**
 	 * Post a custom mouse wheel event.
 	 *
 	 * @param o the <code>Window</code> peer
@@ -948,9 +983,60 @@ public final class VCLEventQueue implements Runnable {
 	}
 
 	/**
-	 * The <code>NoEnqueueKeyboardFocusManager</code> is a subclass of
-	 * the <code>DefaultKeyboardFocusManager</code> class that does not enqueue
-	 * any key events.
+	 * The <code>CommandKeyEvent</code> is a subclass of the
+	 * <code>KeyEvent</code> class that Mac OS X key binding actions.
+	 */
+	static final class CommandKeyEvent extends KeyEvent {
+
+		/**
+		 * The command key code.
+		 */
+		private int commandKeyCode = 0;
+
+		/**
+		 * Construct a VCLEventQueue.CommandKeyEvent instance.
+		 *
+		 * @param source the <code>Component</code> that originated the event
+		 * @param id the integer that identifies the event
+		 * @param when a long that gives the time the event occurred
+		 * @param modifiers the modifier keys
+		 * @param keyCode the key code
+		 */
+		CommandKeyEvent(Component source, int id, long when, int modifiers, int keyCode) {
+
+			super(source, id, when, modifiers, 0, KeyEvent.CHAR_UNDEFINED);
+			commandKeyCode = keyCode;
+
+		}
+
+		/**
+		 * Returns the command key code.
+		 *
+		 * @return the command key code
+		 */
+		public int getCommandKeyCode() {
+
+			return commandKeyCode;
+
+		}
+
+		/**
+		 * Always returns <code>true</code>
+		 *
+		 * @return <code>true</code>
+		 */
+		public boolean isActionKey() {
+
+			return true;
+
+		}
+
+	}
+
+	/**
+	 * The <code>MultidirectionalMouseWheelEvent</code> is a subclass of
+	 * the <code>MouseWheelEvent</code> class that supports horizontal scroll
+	 * wheel events.
 	 */
 	static final class MultidirectionalMouseWheelEvent extends MouseWheelEvent {
 
