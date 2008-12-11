@@ -524,10 +524,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible && pSalData->mpFocusFrame->maUpdateMenuList.size() )
 		{
 			nTimeout = 0;
-			JavaSalMenu *pMenu = pSalData->mpFocusFrame->maUpdateMenuList.front();
-			pSalData->mpFocusFrame->maUpdateMenuList.pop_front();
-			if ( pMenu )
-				UpdateMenusForFrame( pSalData->mpFocusFrame, pMenu, false );
+			::std::list< JavaSalMenu* > aUpdateMenuList( pSalData->mpFocusFrame->maUpdateMenuList );
+			pSalData->mpFocusFrame->maUpdateMenuList.clear();
+			for ( ::std::list< JavaSalMenu* >::const_iterator it = aUpdateMenuList.begin(); it !=  aUpdateMenuList.end(); ++it )
+				UpdateMenusForFrame( pSalData->mpFocusFrame, *it, false );
 		}
 		// Wait a little bit to prevent excessive CPU usage. Fix bug 2588
 		// by only doing so when the timeout is already set to a non-zero

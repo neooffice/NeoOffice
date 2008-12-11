@@ -35,6 +35,8 @@
 
 #define _SV_SALMENU_CXX
 
+#include <list>
+
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
@@ -70,6 +72,8 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
+static ::std::list< JavaSalMenu* > aMenuList;
+
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::uno;
 using namespace vcl;
@@ -83,12 +87,14 @@ JavaSalMenu::JavaSalMenu()
 	mpParentFrame = NULL;
 	mbIsMenuBarMenu = FALSE;
 	mpParentVCLMenu = NULL;
+	aMenuList.push_back( this );
 }
 
 //-----------------------------------------------------------------------------
 
 JavaSalMenu::~JavaSalMenu()
 {
+	aMenuList.remove( this );
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		mpVCLMenuBar->dispose();
@@ -355,6 +361,23 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 		pMenu = pFrame->mpMenuBar;
 		if(!pMenu)
 			return;
+	}
+
+	// Check that menu has not been deleted
+	bool bFound = false;
+	for ( ::std::list< JavaSalMenu* >::const_iterator it = aMenuList.begin(); it != aMenuList.end(); ++it )
+	{
+		if ( *it == pMenu )
+		{
+			bFound = true;
+			break;
+		}
+	}
+
+	if ( !bFound )
+	{
+		pFrame->maUpdateMenuList.remove( pMenu );
+		return;
 	}
 
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
