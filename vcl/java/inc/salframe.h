@@ -87,6 +87,7 @@ public:
 	BOOL					mbInSetPosSize;
 	BOOL					mbInShow;
 	::std::list< JavaSalObject* >	maObjects;
+	::std::list< JavaSalObject* >	maVisibleObjects;
 	::rtl::OUString			maTitle;
 	BOOL					mbShowOnlyMenus;
 	BOOL					mbInShowOnlyMenus;
@@ -97,7 +98,7 @@ public:
 	void					AddObject( JavaSalObject *pObject );
 	bool					IsFloatingFrame();
 	bool					IsUtilityWindow();
-	void					RemoveObject( JavaSalObject *pObject );
+	void					RemoveObject( JavaSalObject *pObject, bool bDelete );
 	void					FlushAllObjects();
 
 	virtual SalGraphics*	GetGraphics();
