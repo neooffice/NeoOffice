@@ -95,7 +95,7 @@ NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
 
 # Product information
 OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=3.0.0
+OO_PRODUCT_VERSION=3.0.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 OO_SUPPORT_URL=http://support.openoffice.org
 OO_SUPPORT_URL_TEXT=support.openoffice.org
