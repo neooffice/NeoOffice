@@ -115,13 +115,13 @@ public final class VCLFont {
 	 *  to disable antialiasing
 	 * @param x the X axis scale factor
 	 */
-	VCLFont(Font f, int s, boolean a, double x) throws FontFormatException {
+	VCLFont(Font f, float s, boolean a, double x) throws FontFormatException {
 
 		antialiased = a;
 		scaleX = x;
 
 		// Cache font and font metrics
-		font = f.deriveFont((float)s);
+		font = f.deriveFont(s);
 
 	}
 
@@ -134,10 +134,12 @@ public final class VCLFont {
 	 *  to disable antialiasing
 	 * @param x the X axis scale factor
 	 */
-	public VCLFont(String n, int s, boolean a, double x) throws FontFormatException {
+	public VCLFont(String n, float s, boolean a, double x) throws FontFormatException {
 
 		antialiased = a;
-		font = new Font(n, Font.PLAIN, s);
+		font = new Font(n, Font.PLAIN, (int)s);
+		if ((float)s != font.getSize2D())
+			font = font.deriveFont(s);
 		scaleX = x;
 
 	}

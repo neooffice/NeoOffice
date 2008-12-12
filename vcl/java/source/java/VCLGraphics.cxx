@@ -450,7 +450,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jint _par6, jint _par7, jint _par8, jint _par9, jfloat _par10, jfloat _par11, jfloat _par12, jlong _par13, jboolean _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jfloat _par6, jint _par7, jint _par8, jint _par9, jfloat _par10, jfloat _par11, jfloat _par12, jlong _par13, jboolean _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
 {
 	// Mark the glyph data for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -763,7 +763,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].signature = "(JJFFFFJZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
 			pMethods[3].name = "drawGlyphBuffer0";
-			pMethods[3].signature = "(IIIJJIIIIIFFFJZFFFFF)V";
+			pMethods[3].signature = "(IIIJJIFIIIFFFJZFFFFF)V";
 			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0;
 			pMethods[4].name = "drawLine0";
 			pMethods[4].signature = "(FFFFIJZFFFFF)V";
@@ -1108,7 +1108,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIJJIIDIIIIIFJ)V";
+			char *cSignature = "(IIIJJIFDIIIIIFJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphBuffer", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1121,7 +1121,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 			args[3].j = jlong( _par3 );
 			args[4].j = jlong( _par4 );
 			args[5].i = jint( _par5->getNativeFont() );
-			args[6].i = jint( _par5->getSize() );
+			args[6].f = jfloat( _par5->getSize() );
 			args[7].d = jdouble( _par5->getScaleX() );
 			args[8].i = jint( _par6 );
 			args[9].i = jint( _par7 );

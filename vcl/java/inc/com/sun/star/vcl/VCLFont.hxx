@@ -56,7 +56,7 @@ class com_sun_star_vcl_VCLFont : public java_lang_Object
 	short				mnOrientation;
 	::rtl::OUString		maPSName;
 	double				mfScaleX;
-	long				mnSize;
+	float				mfSize;
 	sal_Bool			mbAntialiased;
 	sal_Bool			mbVertical;
 
@@ -66,7 +66,7 @@ protected:
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLFont( ::rtl::OUString aName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
+						com_sun_star_vcl_VCLFont( ::rtl::OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
 						com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont );
 
 	com_sun_star_vcl_VCLFont*	clone();
@@ -75,7 +75,7 @@ public:
 	short				getOrientation();
 	::rtl::OUString		getPSName();
 	double				getScaleX();
-	long				getSize();
+	float				getSize();
 	sal_Bool			isAntialiased();
 	sal_Bool			isVertical();
 };

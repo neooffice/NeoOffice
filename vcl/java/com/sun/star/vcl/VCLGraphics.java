@@ -453,7 +453,7 @@ public final class VCLGraphics {
 			t.printStackTrace();
 		}
 		try {
-			drawGlyphBufferMethod = VCLGraphics.class.getMethod("drawGlyphBuffer", new Class[]{ int.class, int.class, int.class, long.class, long.class, int.class, int.class, double.class, int.class, int.class, int.class, int.class, int.class, float.class, long.class });
+			drawGlyphBufferMethod = VCLGraphics.class.getMethod("drawGlyphBuffer", new Class[]{ int.class, int.class, int.class, long.class, long.class, int.class, float.class, double.class, int.class, int.class, int.class, int.class, int.class, float.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -1253,14 +1253,14 @@ public final class VCLGraphics {
 	 *  scale factor
 	 * @param nativeClipPath the native clip path
 	 */
-	public void drawGlyphBuffer(int x, int y, int count, long glyphs, long advances, int font, int fontSize, double fontScaleX, int color, int orientation, int glyphOrientation, int glyphTranslateX, int glyphTranslateY, float glyphScaleX, long nativeClipPath) {
+	public void drawGlyphBuffer(int x, int y, int count, long glyphs, long advances, int font, float fontSize, double fontScaleX, int color, int orientation, int glyphOrientation, int glyphTranslateX, int glyphTranslateY, float glyphScaleX, long nativeClipPath) {
 
 		// Only allow drawing of glyph buffer to printer
 		if (graphics == null)
 			return;
 
 		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphBufferMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(count), new Long(glyphs), new Long(advances), new Integer(font), new Integer(fontSize), new Double(fontScaleX), new Integer(color), new Integer(orientation), new Integer(glyphOrientation), new Integer(glyphTranslateX), new Integer(glyphTranslateY), new Float(glyphScaleX), new Long(nativeClipPath) });
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawGlyphBufferMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(count), new Long(glyphs), new Long(advances), new Integer(font), new Float(fontSize), new Double(fontScaleX), new Integer(color), new Integer(orientation), new Integer(glyphOrientation), new Integer(glyphTranslateX), new Integer(glyphTranslateY), new Float(glyphScaleX), new Long(nativeClipPath) });
 			pageQueue.postDrawingOperation(pqi);
 			return;
 		}
@@ -1328,7 +1328,7 @@ public final class VCLGraphics {
 	 * @param scaleX the horizontal scale factor
 	 * @param scaleY the vertical scale factor
 	 */
-	native void drawGlyphBuffer0(int x, int y, int count, long glyphs, long advances, int font, int fontSize, int color, int glyphTranslateX, int glyphTranslateY, float glyphRotateAngle, float glyphScaleX, float glyphScaleY, long nativeGlyphBuffer, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+	native void drawGlyphBuffer0(int x, int y, int count, long glyphs, long advances, int font, float fontSize, int color, int glyphTranslateX, int glyphTranslateY, float glyphRotateAngle, float glyphScaleX, float glyphScaleY, long nativeGlyphBuffer, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws the specified glyph codes using the specified font and color. Note

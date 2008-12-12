@@ -578,7 +578,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		maFallbackFonts.erase( ffit );
 	}
 
-	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mnHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mnHeight : 1.0 );
+	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mfExactHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mfExactHeight : 1.0 );
 
 	// Update the native font as Java may be using a different font
 	pFontData->mnATSUFontID = maFallbackFonts[ nFallbackLevel ]->getNativeFont();
@@ -628,7 +628,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
 	if ( mpVCLFont )
 	{
-		pMetric->mnWidth = mpVCLFont->getSize();
+		pMetric->mnWidth = (long)( mpVCLFont->getSize() + 0.5 );
 		pMetric->mnOrientation = mpVCLFont->getOrientation();
 	}
 	else

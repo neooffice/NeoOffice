@@ -73,7 +73,7 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, long nSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : java_lang_Object( (jobject)NULL ), maName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mnSize( nSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical )
+com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : java_lang_Object( (jobject)NULL ), maName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -81,14 +81,14 @@ com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, long nSize, 
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(Ljava/lang/String;IZD)V";
+		char *cSignature = "(Ljava/lang/String;FZD)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 
 	jvalue args[4];
 	args[0].l = StringToJavaString( t.pEnv, maName );
-	args[1].i = jint( mnSize );
+	args[1].f = jfloat( mfSize );
 	args[2].z = jboolean( mbAntialiased );
 	args[3].d = jdouble( mfScaleX );
 	jobject tempObj;
@@ -98,7 +98,7 @@ com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, long nSize, 
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont ) : java_lang_Object( (jobject)pVCLFont->getJavaObject() ), maName( pVCLFont->maName ), mnNativeFont( pVCLFont->mnNativeFont ), mnOrientation( pVCLFont->mnOrientation ), mfScaleX( pVCLFont->mfScaleX ), mnSize( pVCLFont->mnSize ), mbAntialiased( pVCLFont->mbAntialiased ), mbVertical( pVCLFont->mbVertical )
+com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont ) : java_lang_Object( (jobject)pVCLFont->getJavaObject() ), maName( pVCLFont->maName ), mnNativeFont( pVCLFont->mnNativeFont ), mnOrientation( pVCLFont->mnOrientation ), mfScaleX( pVCLFont->mfScaleX ), mfSize( pVCLFont->mfSize ), mbAntialiased( pVCLFont->mbAntialiased ), mbVertical( pVCLFont->mbVertical )
 {
 }
 
@@ -198,9 +198,9 @@ double com_sun_star_vcl_VCLFont::getScaleX()
 
 // ----------------------------------------------------------------------------
 
-long com_sun_star_vcl_VCLFont::getSize()
+float com_sun_star_vcl_VCLFont::getSize()
 {
-	return mnSize;
+	return mfSize;
 }
 
 // ----------------------------------------------------------------------------

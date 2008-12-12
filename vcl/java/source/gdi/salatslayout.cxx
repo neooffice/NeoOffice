@@ -80,7 +80,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 struct ImplATSLayoutDataHash {
 	int					mnLen;
 	ATSUFontID			mnFontID;
-	long				mnFontSize;
+	float				mfFontSize;
 	double				mfFontScaleX;
 	bool				mbAntialiased;
 	bool				mbRTL;
@@ -151,7 +151,7 @@ bool ImplATSLayoutDataHashEquality::operator()( const ImplATSLayoutDataHash *p1,
 {
 	return ( p1->mnLen == p2->mnLen &&
 		p1->mnFontID == p2->mnFontID &&
-		p1->mnFontSize == p2->mnFontSize &&
+		p1->mfFontSize == p2->mfFontSize &&
 		p1->mfFontScaleX == p2->mfFontScaleX &&
 		p1->mbAntialiased == p2->mbAntialiased &&
 		p1->mbRTL == p2->mbRTL &&
@@ -237,7 +237,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnLen = nEndCharPos - nMinCharPos;
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
-	pLayoutHash->mnFontSize = pVCLFont->getSize();
+	pLayoutHash->mfFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
 	pLayoutHash->mbAntialiased = pVCLFont->isAntialiased();
 	pLayoutHash->mbRTL = ( nFlags & SAL_LAYOUT_BIDI_RTL );
@@ -381,13 +381,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// 32K Fixed data type limit that the ATSTrapezoid struct uses so we
 	// preemptively limit font size to a size that is most likely to fit the
 	// within the 32K limit
-	long nSize = mpHash->mnFontSize;
-	long nAdjustedSize;
-	if ( mpHash->mnFontSize * mpHash->mnLen * 4 > 0x00007fff )
-		nAdjustedSize = 0x00007fff / ( mpHash->mnLen * 4 );
+	float fSize = mpHash->mfFontSize;
+	float fAdjustedSize;
+	if ( (long)( mpHash->mfFontSize * mpHash->mnLen * 4 ) > 0x00007fff )
+		fAdjustedSize = (float)( 0x00007fff / ( mpHash->mnLen * 4 ) );
 	else
-		nAdjustedSize = nSize;
-	Fixed fCurrentSize = Long2Fix( nAdjustedSize );
+		fAdjustedSize = fSize;
+	Fixed fCurrentSize = X2Fix( fAdjustedSize );
 	nTags[1] = kATSUSizeTag;
 	nBytes[1] = sizeof( Fixed );
 	nVals[1] = &fCurrentSize;
@@ -535,7 +535,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	memset( mpCharAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
-	mfFontScaleY = (float)nSize / nAdjustedSize;
+	mfFontScaleY = fSize / fAdjustedSize;
 	int nLastNonSpacingIndex = -1;
 	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
@@ -609,7 +609,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			ATSFontMetrics aFontMetrics;
 			ATSFontRef aFont = FMGetATSFontRefFromFont( mpHash->mnFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
-				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * nSize );
+				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize );
 		}
 	}
 
@@ -646,7 +646,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				SalData *pSalData = GetSalData();
 				::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.find( (sal_IntPtr)nFontID );
 				if ( it != pSalData->maNativeFontMapping.end() )
-					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mnFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+					mpFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpHash->mfFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 				else
 					bNeedFontFallbackList = true;
 			}
