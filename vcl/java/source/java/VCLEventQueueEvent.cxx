@@ -676,6 +676,17 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( !pPosSize )
 					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds() );
 
+				// Fix bug 3252 by always comparing the bounds against the
+				// work area
+				bool bForceResize = false;
+				if ( pFrame->mbInShow )
+				{
+					Rectangle aRect( *pPosSize );
+					pFrame->GetWorkArea( aRect );
+					if ( aRect == *pPosSize )
+						bForceResize = true;
+				}
+
 				bool bPosChanged = false;
 				int nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
 				if ( pFrame->maGeometry.nX != nX )
@@ -706,10 +717,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 				// Fix bug 3045 by setting the event ID to the actual changes
 				// that have occurred. This also fixes the autodocking of
-				// native utility windows problem described in bug 3035.
-				// Fix bug 3252 by always dispatching events when showing
-				// a frame.
-				if ( pFrame->mbInShow || bPosChanged || bSizeChanged )
+				// native utility windows problem described in bug 3035
+				if ( bForceResize || bPosChanged || bSizeChanged )
 				{
 					if ( bPosChanged && bSizeChanged )
 						nID = SALEVENT_MOVERESIZE;
