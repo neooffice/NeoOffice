@@ -201,12 +201,13 @@ JavaSalFrame::~JavaSalFrame()
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::AddObject( JavaSalObject *pObject )
+void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
 {
 	if ( pObject )
 	{
 		maObjects.push_back( pObject );
-		maVisibleObjects.remove( pObject );
+		if ( bVisible )
+			maVisibleObjects.remove( pObject );
 	}
 }
 
@@ -228,11 +229,11 @@ bool JavaSalFrame::IsUtilityWindow()
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::RemoveObject( JavaSalObject *pObject, bool bDelete )
+void JavaSalFrame::RemoveObject( JavaSalObject *pObject, bool bDeleted )
 {
 	if ( pObject )
 	{
-		if ( bDelete )
+		if ( bDeleted )
 			maObjects.remove( pObject );
 		maVisibleObjects.remove( pObject );
 	}

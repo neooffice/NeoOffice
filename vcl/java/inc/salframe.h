@@ -95,10 +95,10 @@ public:
 							JavaSalFrame();
 	virtual					~JavaSalFrame();
 
-	void					AddObject( JavaSalObject *pObject );
+	void					AddObject( JavaSalObject *pObject, bool bVisible );
 	bool					IsFloatingFrame();
 	bool					IsUtilityWindow();
-	void					RemoveObject( JavaSalObject *pObject, bool bDelete );
+	void					RemoveObject( JavaSalObject *pObject, bool bDeleted );
 	void					FlushAllObjects();
 
 	virtual SalGraphics*	GetGraphics();
