@@ -33,7 +33,7 @@ PRJNAME=connectivity
 TARGET=mozab
 TARGET2=$(TARGET)drv
 
-.IF ( "$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO" || ( "$(OS)" == "MACOSX" && $(GUIBASE) != "java" )
+.IF ( "$(SYSTEM_MOZILLA)" == "YES" && "$(WITH_MOZILLA)" == "YES") || "$(WITH_MOZILLA)" == "NO" || ( "$(OS)" == "MACOSX" && "$(GUIBASE)" != "java" )
 all: 
 	@echo "    Not building the mozilla address book driver"
 	@echo "    dependency to Mozilla developer snapshots not feasable at the moment"
