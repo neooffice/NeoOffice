@@ -79,7 +79,7 @@ void JavaSalObject::Destroy()
 
 	if ( mpParent )
 	{
-		mpParent->RemoveObject( this );
+		mpParent->RemoveObject( this, true );
 		mpParent = NULL;
 	}
 
@@ -162,7 +162,7 @@ void JavaSalObject::Show( BOOL bVisible )
 		pParentNSWindow = NULL;
 
 	if ( mpParent )
-		mpParent->RemoveObject( this );
+		mpParent->RemoveObject( this, false );
 
 	// Don't attach subview unless we are in the Flush() method
 	VCLChildView_show( mpChildView, pParentNSWindow, mbVisible && pParentNSWindow ? TRUE : FALSE );

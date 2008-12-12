@@ -177,7 +177,7 @@ JavaSalFrame::~JavaSalFrame()
 	StartPresentation( FALSE );
 	CaptureMouse( FALSE );
 
-	// Detach child objects
+	// Detach child objects. Fix bug 3038 unsetting each object's parent.
 	::std::list< JavaSalObject* > aObjects( maObjects );
 	for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
 		(*it)->Destroy();
@@ -204,7 +204,10 @@ JavaSalFrame::~JavaSalFrame()
 void JavaSalFrame::AddObject( JavaSalObject *pObject )
 {
 	if ( pObject )
+	{
 		maObjects.push_back( pObject );
+		maVisibleObjects.remove( pObject );
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -224,10 +227,14 @@ bool JavaSalFrame::IsUtilityWindow()
 
 // -----------------------------------------------------------------------
 
-void JavaSalFrame::RemoveObject( JavaSalObject *pObject )
+void JavaSalFrame::RemoveObject( JavaSalObject *pObject, bool bDelete )
 {
 	if ( pObject )
-		maObjects.remove( pObject );
+	{
+		if ( bDelete )
+			maObjects.remove( pObject );
+		maVisibleObjects.remove( pObject );
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -236,7 +243,7 @@ void JavaSalFrame::FlushAllObjects()
 {
 	if ( mbVisible )
 	{
-		::std::list< JavaSalObject* > aObjects( maObjects );
+		::std::list< JavaSalObject* > aObjects( maVisibleObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
 			(*it)->Flush();
 	}
@@ -316,7 +323,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		maUpdateMenuList.clear();
 
 		// Close any attached objects
-		::std::list< JavaSalObject* > aObjects( maObjects );
+		::std::list< JavaSalObject* > aObjects( maVisibleObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
 			(*it)->Show( FALSE );
 
@@ -379,7 +386,7 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		}
 
 		// Reattach visible objects
-		::std::list< JavaSalObject* > aReshowObjects( maObjects );
+		::std::list< JavaSalObject* > aReshowObjects( maVisibleObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aReshowObjects.begin(); it != aReshowObjects.end(); ++it )
 			(*it)->Show( TRUE );
 
@@ -1048,7 +1055,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 
 	if ( !bUtilityWindow )
 	{
-		::std::list< JavaSalObject* > aReshowObjects( maObjects );
+		::std::list< JavaSalObject* > aReshowObjects( maVisibleObjects );
 		bool bReshow = mbVisible;
 		if ( bReshow )
 			Show( FALSE );
