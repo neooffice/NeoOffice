@@ -62,6 +62,9 @@ JavaSalObject::JavaSalObject( SalFrame *pParent )
 	// Set window value now as the avmedia module needs access to it before
 	// it is actually shown
 	maSysData.pView = (NSView *)mpChildView;
+
+	if ( mpParent )
+		mpParent->AddObject( this, false );
 }
 
 // -----------------------------------------------------------------------
@@ -167,8 +170,8 @@ void JavaSalObject::Show( BOOL bVisible )
 	// Don't attach subview unless we are in the Flush() method
 	VCLChildView_show( mpChildView, pParentNSWindow, mbVisible && pParentNSWindow ? TRUE : FALSE );
 
-	if ( mbVisible && mpParent )
-		mpParent->AddObject( this );
+	if ( mpParent )
+		mpParent->AddObject( this, mbVisible );
 }
 
 // -----------------------------------------------------------------------
