@@ -22,17 +22,20 @@ Index: patches/dev300/apply
  
  [ Fixes ]
  # handle hyperlinks to files better
-@@ -520,8 +522,10 @@
+@@ -520,9 +522,11 @@
  # WebDAV locking implementation - the original version
  # This is forward-ported from ooo-build-2-4-1, because the version for
  # up-streaming still does not work as expected :-(
+-webdav-locking-from-ooo-build-2-4-1.diff
 +# Disable because Mac OS X handles webdav in the OS
- webdav-locking-from-ooo-build-2-4-1.diff
++# webdav-locking-from-ooo-build-2-4-1.diff
  # fix saving files on Novell teaming via WebDaV
+-webdav-locking-local-temp-file.diff, bnc#440514, kendy
 +# Disable because Mac OS X handles webdav in the OS
- webdav-locking-local-temp-file.diff, bnc#440514, kendy
++# webdav-locking-local-temp-file.diff, bnc#440514, kendy
  
  
+ [ GnomeVFS ]
 @@ -616,7 +620,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
