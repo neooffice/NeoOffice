@@ -458,6 +458,9 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 		// - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 		case SID_ABOUT:
 		{
+#ifdef USE_JAVA
+            String sBuildId;
+#else	// USE_JAVA
             const String sCWSSchema( String::CreateFromAscii( "[CWS:" ) );
             rtl::OUString sDefault;
             String sBuildId( utl::Bootstrap::getBuildIdData( sDefault ) );
@@ -520,6 +523,7 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
                 sBuildId.Insert( sal_Unicode( ' ' ), nPos );
             if ( ( nPos = sBuildId.Search( sal_Unicode( '[' ) ) ) != STRING_NOTFOUND )
                 sBuildId.Insert( sal_Unicode( ' ' ), nPos );
+#endif	// USE_JAVA
 
             // search for the resource of the about box
             ResId aDialogResId( RID_DEFAULTABOUT, *pAppData_Impl->pLabelResMgr );
