@@ -122,6 +122,21 @@ using namespace ::com::sun::star::awt;
 		[self performSelector:aSelector withObject:nil];
 }
 
+- (BOOL)ignoreTrackpadGestures
+{
+	BOOL bIgnoreTrackpadGestures = NO;
+
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "IgnoreTrackpadGestures" ), kCFPreferencesCurrentApplication );
+	if( aPref )
+	{
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+			bIgnoreTrackpadGestures = YES;
+		CFRelease( aPref );
+	}
+
+	return bIgnoreTrackpadGestures;
+}
+
 - (id)init
 {
 	[super init];
@@ -129,7 +144,6 @@ using namespace ::com::sun::star::awt;
 	mnLastCommandKey = 0;
 	mnLastModifiers = 0;
 	mpLastText = nil;
-	mbNoGestures = NO;
 
 	return self;
 }
@@ -292,20 +306,6 @@ using namespace ::com::sun::star::awt;
 - (void)pageUp:(id)pSender
 {
 	mnLastCommandKey = KEY_PAGEUP;
-}
-
-- (BOOL)noGestures
-{
-	mbNoGestures = NO;
-	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "NoGestures" ), kCFPreferencesCurrentApplication );
-	if( aPref )
-	{
-		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
-			mbNoGestures = YES;
-		CFRelease( aPref );
-	}
-
-	return mbNoGestures;
 }
 
 - (void)selectAll:(id)pSender

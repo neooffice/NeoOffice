@@ -55,6 +55,7 @@
 - (void)deleteWordBackward:(id)pSender;
 - (void)deleteWordForward:(id)pSender;
 - (void)doCommandBySelector:(SEL)aSelector;
+- (BOOL)ignoreTrackpadGestures;
 - (id)init;
 - (void)insertBacktab:(id)pSender;
 - (void)insertLineBreak:(id)pSender;
@@ -84,7 +85,6 @@
 - (void)moveWordForwardAndModifySelection:(id)pSender;
 - (void)moveWordLeft:(id)pSender;
 - (void)moveWordRight:(id)pSender;
-- (BOOL)noGestures;
 - (void)pageDown:(id)pSender;
 - (void)pageUp:(id)pSender;
 - (void)selectAll:(id)pSender;
