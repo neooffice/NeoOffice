@@ -119,22 +119,16 @@ bool vcl::IsRunningTiger( )
 
 bool vcl::IsFullKeyboardAccessEnabled( )
 {
-	static bool initializedOnce = false;
-	static bool isFullAccessEnabled = false;
-	
-	if ( ! initializedOnce )
+	bool isFullAccessEnabled = false;
+
+	CFPropertyListRef keyboardNavigationPref = CFPreferencesCopyAppValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesCurrentApplication );
+	if ( keyboardNavigationPref )
 	{
-		CFPropertyListRef keyboardNavigationPref = NULL;
-		keyboardNavigationPref = CFPreferencesCopyValue( CFSTR( "AppleKeyboardUIMode" ), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
-		if ( keyboardNavigationPref )
-		{
-			int prefVal;
-			if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
-				isFullAccessEnabled = ( prefVal % 2 ? true : false );
-			CFRelease( keyboardNavigationPref );
-		}
-		initializedOnce = true;
+		int prefVal;
+		if ( CFGetTypeID( keyboardNavigationPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)keyboardNavigationPref, kCFNumberIntType, &prefVal ) )
+			isFullAccessEnabled = ( prefVal % 2 ? true : false );
+		CFRelease( keyboardNavigationPref );
 	}
-	
+
 	return isFullAccessEnabled;
 }
