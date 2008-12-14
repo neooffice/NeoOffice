@@ -102,7 +102,7 @@ static OSStatus RelayoutScrollBars( EventHandlerCallRef inHandlerCallRef, EventR
 	{
 		// Check if double scrollbar arrows are enabled
 		bool bDoubleScrollbarArrows = false;
-		CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollBarVariant" ), kCFPreferencesAnyApplication );
+		CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollBarVariant" ), kCFPreferencesCurrentApplication );
 		if ( aPref )
 		{
 			if ( CFGetTypeID( aPref ) == CFStringGetTypeID() && CFStringCompare( (CFStringRef)aPref, CFSTR( "DoubleBoth" ), 0 ) == kCFCompareEqualTo )
