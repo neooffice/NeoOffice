@@ -41,6 +41,7 @@
 	short					mnLastCommandKey;
 	short					mnLastModifiers;
 	NSString*				mpLastText;
+	BOOL					mbNoGestures;
 }
 - (void)clearLastText;
 - (void)dealloc;
@@ -83,6 +84,7 @@
 - (void)moveWordForwardAndModifySelection:(id)pSender;
 - (void)moveWordLeft:(id)pSender;
 - (void)moveWordRight:(id)pSender;
+- (BOOL)noGestures;
 - (void)pageDown:(id)pSender;
 - (void)pageUp:(id)pSender;
 - (void)selectAll:(id)pSender;

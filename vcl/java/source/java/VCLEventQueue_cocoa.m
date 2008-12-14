@@ -692,7 +692,7 @@ static VCLResponder *pSharedResponder = nil;
 			VCLEventQueue_postWindowMoveSessionEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), nType == NSLeftMouseDown ? YES : NO );
 	}
 	// Handle scroll wheel and magnify
-	else if ( ( nType == NSScrollWheel || nType == 30 ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	else if ( ( nType == NSScrollWheel || ( nType == 30 && pSharedResponder && ![pSharedResponder noGestures] ) ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		// Post flipped coordinates 
 		NSRect aFrame = [self frame];
@@ -721,7 +721,7 @@ static VCLResponder *pSharedResponder = nil;
 		VCLEventQueue_postMouseWheelEvent( [self peer], (long)( aLocation.x - fLeftInset ), (long)( aFrame.size.height - aLocation.y - fTopInset ), Float32ToLong( fDeltaX ), Float32ToLong( fDeltaY ) * -1, nModifiers & NSShiftKeyMask ? YES : NO, nModifiers & NSCommandKeyMask ? YES : NO, nModifiers & NSAlternateKeyMask ? YES : NO, nModifiers & NSControlKeyMask ? YES : NO );
 	}
 	// Handle swipe
-	else if ( nType == 31 && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
+	else if ( nType == 31 && pSharedResponder && ![pSharedResponder noGestures] && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
 		float fDeltaX = [pEvent deltaX] * -1;
