@@ -129,6 +129,7 @@ bool vcl::IsFullKeyboardAccessEnabled( )
 			isFullAccessEnabled = ( prefVal % 2 ? true : false );
 		CFRelease( keyboardNavigationPref );
 	}
+fprintf(stderr, "Here: %i\n", isFullAccessEnabled);
 
 	return isFullAccessEnabled;
 }

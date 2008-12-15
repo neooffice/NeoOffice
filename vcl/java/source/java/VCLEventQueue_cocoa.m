@@ -1052,11 +1052,9 @@ static CFDataRef aRTFSelection = nil;
 	bUseKeyEntryFix = mbUseKeyEntryFix;
 	bUsePartialKeyEntryFix = mbUsePartialKeyEntryFix;
 	bUseQuickTimeContentViewHack = mbUseQuickTimeContentViewHack;
-	if ( bUseKeyEntryFix || bUsePartialKeyEntryFix )
-	{
-		// Do not retain as invoking alloc disables autorelease
-		pSharedResponder = [[VCLResponder alloc] init];
-	}
+
+	// Do not retain as invoking alloc disables autorelease
+	pSharedResponder = [[VCLResponder alloc] init];
 
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
