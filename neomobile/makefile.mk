@@ -86,7 +86,7 @@ makeoxt : ALLTAR
 
 .INCLUDE :  target.mk
 
-makeoxt :
+makeoxt : $(MISC)$/description.xml
 	$(RM) $(BIN)$/$(PRJNAME).oxt
 	zip -r $(BIN)$/$(PRJNAME).oxt META-INF NeoOfficeMobile uiIntegration.xcu Images -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
