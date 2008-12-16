@@ -84,8 +84,12 @@ makeoxt : ALLTAR
 
 .INCLUDE :  target.mk
 
-makeoxt :
+$(MISC)$/%.xml : %.xml
+	$(SED) 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' $< > $@
+
+makeoxt : $(MISC)$/description.xml
 	$(RM) $(BIN)$/$(PRJNAME).oxt
+	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $<
 	zip -r $(BIN)$/$(PRJNAME).oxt META-INF ImageCapture uiIntegration.xcu -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
 # Change install names to avoid library loading issues

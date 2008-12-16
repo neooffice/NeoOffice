@@ -1359,8 +1359,8 @@ Files misc/hsqldb/lib/hsqldb.jar and misc/build/hsqldb/lib/hsqldb.jar differ
          lf.setFile(f);
  
 +        // Some platforms like Mac OS X cannot lock mounted file systems
-+        // so test for such problems no so that we can fall back to the
-+        // this class' locking behavior.
++        // so test for such problems so that we can fall back to this
++        // class' locking behavior.
 +        if (!lf.tryLock()) {
 +            lf = new LockFile();
 +            lf.setFile(f);
