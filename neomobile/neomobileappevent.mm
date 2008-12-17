@@ -68,6 +68,7 @@
 
 #include "premac.h"
 #import <Foundation/Foundation.h>
+#import "NSDataAdditions.h"
 #include "postmac.h"
 
 
@@ -249,7 +250,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// post data.  for now, print to stderr
 			
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile start of post request\n");
-			fprintf(stderr, "%s", [postBody bytes]);
+			fprintf( stderr, "%s", (char *)[postBody bytes]);
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile end of post request\n");
 			
 			// free our autorelease pool
