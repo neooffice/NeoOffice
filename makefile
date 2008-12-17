@@ -421,10 +421,21 @@ endif
 	rm -Rf "$(INSTALL_HOME)/package/Contents/Resources"
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Resources"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/etc/package/ship.icns" "Resources"
-	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp"
 # Add additional ooo-build icons
 	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp/res/commandimagelist"
 	cd "$(INSTALL_HOME)/package/Contents/tmp" ; cp `find "$(PWD)/$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/src/icons" -name "*togglesheetgrid.png" -maxdepth 1` "res/commandimagelist"
+	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
+	cd "$(INSTALL_HOME)/package/Contents/tmp" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images.zip" .
+	cd "$(INSTALL_HOME)/package/Contents/tmp" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_classic.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_classic.zip" .
+	cd "$(INSTALL_HOME)/package/Contents/tmp" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_crystal.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_crystal.zip" .
+	cd "$(INSTALL_HOME)/package/Contents/tmp" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_hicontrast.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_hicontrast.zip" .
+	cd "$(INSTALL_HOME)/package/Contents/tmp" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_industrial.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_industrial.zip" .
+# Add special ooo-build icons for Tango
+	cd "$(INSTALL_HOME)/package/Contents/tmp" ; cp `find "$(PWD)/$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/src/icons/tango" -name "*togglesheetgrid.png" -maxdepth 1` "res/commandimagelist"
+	cd "$(INSTALL_HOME)/package/Contents/tmp" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_tango.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images_tango.zip" .
+	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
+	rm -Rf "$(INSTALL_HOME)/package/Contents/tmp"
+	mkdir -p "$(INSTALL_HOME)/package/Contents/tmp"
 	cd "$(INSTALL_HOME)/package/Contents/tmp" ; unzip "$(PWD)/etc/package/neo2toolbarv10.zip"
 	chmod -Rf u+rw "$(INSTALL_HOME)/package/Contents/tmp"
 	cd "$(INSTALL_HOME)/package/Contents/tmp/NeoOffice Toolbar & Preferences Icons 1.0/images" ; touch "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images.zip" ; find . -exec touch {} \; ; zip -ru "$(PWD)/$(INSTALL_HOME)/package/Contents/basis-link/share/config/images.zip" .
