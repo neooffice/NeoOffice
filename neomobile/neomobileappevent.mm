@@ -190,16 +190,67 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return 0;
 			}
 			
-			// upload files
+			// construct post data for uploading files to server
 			
-			// +++ FIXME
-			//
 			// Note that at this point the exported trio is in the following
 			// OUStrings:
 			//
 			//	PDF (as file:// URL) - pdfExportURL
 			//	HTML (as full absolute path) - htmlExportZipFile
 			//	OpenDocument (as file:// URL) - openDocExportURL
+			
+			// assemble the data for the multiple part mime form.  The
+			// mime form takes in the name part "pdf" for the pdf data,
+			// "html" for the zipfile, and the named section for the
+			// opendocument format section is named after the extension.
+			
+			NSMutableData *postBody = [NSMutableData data];
+			NSString *stringBoundary = [NSString stringWithString:@"0xKhTmLbOuNdArY"];
+			
+			[postBody appendData:[[NSString stringWithFormat:@"--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			OString pdfExportURLutf8;
+			pdfExportURL.convertToString(&pdfExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			
+			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"pdf\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"Content-Type: application/pdf\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+						
+			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+
+			OString htmlExportZipFileutf8;
+			htmlExportZipFile.convertToString(&htmlExportZipFileutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			
+			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"html\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"Content-Type: multipart/x-zip\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[[NSData dataWithContentsOfFile:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+
+			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			OString odfPartName;
+			docExtension.copy(1).convertToString(&odfPartName, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS); // extension with first period stripped off
+			
+			OString mimeType;
+			neoOfficeMobile->getMimeType().convertToString(&mimeType, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			
+			OString openDocExportURLutf8;
+			openDocExportURL.convertToString(&openDocExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			
+			[postBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: mimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+
+			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			// +++ FIXME
+			// post data.  for now, print to stderr
+			
+			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile start of post request\n");
+			fprintf(stderr, "%s", [postBody bytes]);
+			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile end of post request\n");
 			
 			// free our autorelease pool
 			

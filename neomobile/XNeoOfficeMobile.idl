@@ -49,6 +49,7 @@ module neooffice
 		boolean saveAsHTML( [in] string url );
 		boolean saveAsOpenDocument( [in] string url );
 		string getOpenDocumentExtension( );
+		string getMimeType( );
 		boolean zipDirectory( [in] string dirPath, [in] string outZipFile );
 	};
 	
