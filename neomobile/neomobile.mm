@@ -154,6 +154,9 @@ public:
 	virtual ::rtl::OUString
 		SAL_CALL getOpenDocumentExtension( ) 
 		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::rtl::OUString
+		SAL_CALL getMimeType( ) 
+		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
 		SAL_CALL saveAsPDF( const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
@@ -476,6 +479,41 @@ static NeoMobileWebView *pSharedWebView = nil;
 				return(OUString::createFromAscii(".odg"));
 			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 				return(OUString::createFromAscii(".odp"));
+			else
+				return(OUString::createFromAscii(""));
+		}
+		catch (...)
+		{
+		}
+		
+	return(OUString::createFromAscii(""));
+}
+
+::rtl::OUString
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getMimeType( void ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+		try
+		{
+			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			
+			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+			
+			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+			Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+			Reference< XModel > rModel=rFrame->getController()->getModel();
+						
+			Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+						if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+				return(OUString::createFromAscii("application/vnd.oasis.opendocument.text"));
+			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+				return(OUString::createFromAscii("application/vnd.oasis.opendocument.spreadsheet"));
+			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.drawing.DrawingDocument")))
+				return(OUString::createFromAscii("application/vnd.oasis.opendocument.graphics"));
+			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+				return(OUString::createFromAscii("application/vnd.oasis.opendocument.presentation"));
 			else
 				return(OUString::createFromAscii(""));
 		}
