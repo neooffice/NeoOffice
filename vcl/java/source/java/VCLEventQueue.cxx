@@ -234,7 +234,7 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 void VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers )
 {
 	if ( aPeer )
-		com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT, nModifiers & KEY_MOD1, nModifiers & KEY_MOD2, nModifiers & KEY_MOD3 );
+		com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT ? sal_True : sal_False, nModifiers & KEY_MOD1 ? sal_True : sal_False, nModifiers & KEY_MOD2 ? sal_True : sal_False, nModifiers & KEY_MOD3 ? sal_True : sal_False );
 }
 
 // ----------------------------------------------------------------------------
