@@ -496,8 +496,15 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
-
 			com_sun_star_vcl_VCLFrame::flushAllFrames();
+
+			// Reduce noticeable pause when opening a new document by delaying
+			// update of submenus until next available timer timeout
+			if ( pSalData->maNativeEventCondition.check() && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+			{
+				for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
+					UpdateMenusForFrame( pSalData->mpFocusFrame, pSalData->mpFocusFrame->maUpdateMenuList.front(), false );
+			}
 		}
 	}
 
@@ -516,26 +523,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			}
 		}
 
-		// Reduce noticeable pause when opening a new document by delaying
-		// update of submenus until next available timer timeout
-		if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible && pSalData->mpFocusFrame->maUpdateMenuList.size() )
-		{
-			nTimeout = 0;
-
-			for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
-			{
-				JavaSalMenu *pMenu = pSalData->mpFocusFrame->maUpdateMenuList.front();
-				pSalData->mpFocusFrame->maUpdateMenuList.pop_front();
-				UpdateMenusForFrame( pSalData->mpFocusFrame, pMenu, false );
-			}
-		}
 		// Wait a little bit to prevent excessive CPU usage. Fix bug 2588
 		// by only doing so when the timeout is already set to a non-zero
 		// value.
-		else if ( nTimeout < 10 )
-		{
+		if ( nTimeout < 10 )
 			nTimeout = 10;
-		}
 	}
 
 	// Dispatch any newly posted events

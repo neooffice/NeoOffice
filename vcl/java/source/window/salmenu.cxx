@@ -35,7 +35,7 @@
 
 #define _SV_SALMENU_CXX
 
-#include <list>
+#include <map>
 
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
@@ -72,7 +72,7 @@
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
-static ::std::list< JavaSalMenu* > aMenuList;
+static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
 
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::uno;
@@ -87,14 +87,15 @@ JavaSalMenu::JavaSalMenu()
 	mpParentFrame = NULL;
 	mbIsMenuBarMenu = FALSE;
 	mpParentVCLMenu = NULL;
-	aMenuList.push_back( this );
+	aMenuMap[ this ] = this;
 }
 
 //-----------------------------------------------------------------------------
 
 JavaSalMenu::~JavaSalMenu()
 {
-	aMenuList.remove( this );
+	aMenuMap.erase( this );
+
 	if( mbIsMenuBarMenu && mpVCLMenuBar )
 	{
 		mpVCLMenuBar->dispose();
@@ -363,22 +364,12 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 			return;
 	}
 
-	// Check that menu has not been deleted
-	bool bFound = false;
-	for ( ::std::list< JavaSalMenu* >::const_iterator it = aMenuList.begin(); it != aMenuList.end(); ++it )
-	{
-		if ( *it == pMenu )
-		{
-			bFound = true;
-			break;
-		}
-	}
+	pFrame->maUpdateMenuList.remove( pMenu );
 
-	if ( !bFound )
-	{
-		pFrame->maUpdateMenuList.remove( pMenu );
+	// Check that menu has not been deleted
+	::std::map< JavaSalMenu*, JavaSalMenu* >::const_iterator it = aMenuMap.find( pMenu );
+	if ( it == aMenuMap.end() )
 		return;
-	}
 
 	Menu *pVCLMenu = pMenu->mpParentVCLMenu;
 	if ( !pVCLMenu )
