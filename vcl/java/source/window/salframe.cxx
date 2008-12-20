@@ -982,6 +982,7 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	aStyleSettings.SetDialogColor( aBackColor );
 	aStyleSettings.SetDisableColor( aBackColor );
 	aStyleSettings.SetFaceColor( aBackColor );
+	aStyleSettings.SetLightBorderColor( aBackColor );
 	aStyleSettings.SetMenuColor( aBackColor );
 	aStyleSettings.SetMenuBarColor( aBackColor );
 	if( aBackColor == COL_LIGHTGRAY )
