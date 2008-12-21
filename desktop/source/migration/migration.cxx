@@ -328,19 +328,24 @@ install_info MigrationImpl::findInstallation()
 #ifdef PRODUCT_DIR_NAME
     // Use old installation if it exists
     OUString usAltInstall;
-    if (rtl::Bootstrap::get(OUString::createFromAscii("SYSUSERCONFIG"), usAltInstall))
+    osl::Security().getConfigDir( usAltInstall );
+    if ( usAltInstall.getLength() )
     {
-        OUString aProductPrefsDirName = OUString::createFromAscii( PRODUCT_DIR_NAME "-2.2" );
-        usAltInstall += OUString::createFromAscii("/Library/Preferences/");
-        usAltInstall += aProductPrefsDirName;
-        Directory dir(usAltInstall);
-        if (dir.open() == FileBase::E_None)
+        if ( usAltInstall[ usAltInstall.getLength() - 1 ] != '/' )
+            usAltInstall += OUString::createFromAscii( "/" );
+        usAltInstall += OUString::createFromAscii( PRODUCT_DIR_NAME "-2.2" );
+        try
         {
-            aInfo.productname = aProductPrefsDirName;
-            aInfo.userdata = usAltInstall;
-            return aInfo;
-        }
-    }
+       	    INetURLObject aObj( usAltInstall );
+       	    ::ucbhelper::Content aCnt( aObj.GetMainURL( INetURLObject::NO_DECODE ), uno::Reference< ucb::XCommandEnvironment > () );
+       	    aCnt.isDocument();
+       	    aInfo.userdata = aObj.GetMainURL( INetURLObject::NO_DECODE );
+            // Explicitly use the "OpenOffice.org 2" filter
+            aInfo.productname = OUString::createFromAscii( "OpenOffice.org 2" );
+ 	        return aInfo;
+       	}
+       	catch( uno::Exception& ){}
+   	}
 #else	// PRODUCT_DIR_NAME
     strings_v::const_iterator i_ver = m_vrVersions->begin();
 	uno::Reference < util::XStringSubstitution > xSubst( ::comphelper::getProcessServiceFactory()->createInstance(::rtl::OUString::createFromAscii("com.sun.star.util.PathSubstitution")), uno::UNO_QUERY );
