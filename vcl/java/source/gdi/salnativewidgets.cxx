@@ -51,6 +51,9 @@
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
+#ifndef _SV_DECOVIEW_HXX
+#include <vcl/decoview.hxx>
+#endif
 
 #ifndef _RTL_USTRING_H_
 #include <rtl/ustring.h>
@@ -1711,6 +1714,11 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 				isSupported = TRUE;
 			break;
 
+		case CTRL_FRAME:
+			if ( nPart == PART_BORDER )
+				isSupported = TRUE;
+			break;
+
 		default:
 			isSupported = FALSE;
 			break;
@@ -1981,6 +1989,25 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 			{
 				Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
 				bOK = DrawNativeBevelButton( this, ctrlRect, nState, aValue );
+			}
+			break;
+
+		case CTRL_FRAME:
+			if ( nPart == PART_BORDER )
+			{
+				USHORT nValue = (USHORT)aValue.getNumericVal();
+				if ( ! ( nValue & ( FRAME_DRAW_MENU | FRAME_DRAW_WINDOWBORDER ) ) )
+				{
+					Rectangle ctrlRect = rRealControlRegion.GetBoundRect();
+					ctrlRect.Left() -= LISTVIEWFRAME_TRIMWIDTH;
+					ctrlRect.Top() -= LISTVIEWFRAME_TRIMWIDTH;
+					if ( nValue & FRAME_DRAW_DOUBLEIN )
+					{
+						ctrlRect.Right() += LISTVIEWFRAME_TRIMWIDTH;
+						ctrlRect.Bottom() += LISTVIEWFRAME_TRIMWIDTH;
+					}
+					bOK = DrawNativeListBoxFrame( this, ctrlRect, CTRL_STATE_ENABLED );
+				}
 			}
 			break;
 	}
@@ -2608,6 +2635,27 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 
 				bReturn = TRUE;
+			}
+			break;
+
+		case CTRL_FRAME:
+			if ( nPart == PART_BORDER )
+			{
+				USHORT nValue = (USHORT)aValue.getNumericVal();
+				if ( ! ( nValue & ( FRAME_DRAW_MENU | FRAME_DRAW_WINDOWBORDER ) ) )
+				{
+					Rectangle controlRect = rRealControlRegion.GetBoundRect();
+					controlRect.Left() += LISTVIEWFRAME_TRIMWIDTH;
+					controlRect.Top() += LISTVIEWFRAME_TRIMWIDTH;
+					if ( nValue & FRAME_DRAW_DOUBLEIN )
+					{
+						controlRect.Right() -= LISTVIEWFRAME_TRIMWIDTH;
+						controlRect.Bottom() -= LISTVIEWFRAME_TRIMWIDTH;
+					}
+					rNativeBoundingRegion = Region( controlRect );
+					rNativeContentRegion = Region( rNativeBoundingRegion );
+					bReturn = TRUE;
+				}
 			}
 			break;
 	}
