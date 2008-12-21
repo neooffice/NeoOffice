@@ -1368,17 +1368,6 @@ void ImplSmallBorderWindowView::DrawWindow( USHORT nDrawFlags, OutputDevice*, co
                 nState |= CTRL_STATE_FOCUSED;
         }
         
-#ifdef USE_JAVA
-		if ( ( aCtrlType == CTRL_EDITBOX ) && ( ! ( nState & CTRL_STATE_FOCUSED ) ) )
-		{
-			// for edit boxes, we want to check to see if the edit itself
-			// has the focus.  The border window itself will never get focused
-			
-			if ( pCtrl->HasFocus() )
-				nState |= CTRL_STATE_FOCUSED;
-		}
-#endif	// USE_JAVA
-
         BOOL bMouseOver = FALSE;
         Window *pCtrlChild = pCtrl->GetWindow( WINDOW_FIRSTCHILD );
         while( pCtrlChild && (bMouseOver = pCtrlChild->IsMouseOver()) == FALSE )
