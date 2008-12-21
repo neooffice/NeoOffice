@@ -796,7 +796,7 @@ sal_Bool SAL_CALL osl_getConfigDir(oslSecurity Security, rtl_uString **pustrDire
     return bRet;
 }
 
-#if !defined MACOSX || defined USE_JAVA
+#ifndef MACOSX
 
 static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax)
 {
@@ -810,7 +810,7 @@ static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* ps
     return sal_True;
 }
 
-#else	/* !MACOSX || USE_JAVA */
+#else
 
 /*
  * FIXME: rewrite to use more flexible
@@ -818,8 +818,12 @@ static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* ps
  * as soon as we can bumb the baseline to Tiger (for NSApplicationSupportDirectory) and have
  * support for Objective-C in the build environment
  */
- 
+
+#ifdef USE_JAVA 
+#define MACOSX_CONFIG_DIR "/Library/Preferences"
+#else	/* USE_JAVA */
 #define MACOSX_CONFIG_DIR "/Library/Application Support"
+#endif	/* USE_JAVA */
 static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* pszDirectory, sal_uInt32 nMax)
 {
     if( osl_psz_getHomeDir(Security, pszDirectory, nMax - sizeof(MACOSX_CONFIG_DIR) + 1) )
@@ -831,7 +835,7 @@ static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* ps
     return sal_False;
 }
 
-#endif	/* !MACOSX || USE_JAVA */
+#endif
 
 sal_Bool SAL_CALL osl_isAdministrator(oslSecurity Security)
 {
