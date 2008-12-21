@@ -357,6 +357,9 @@ SalInstance* CreateSalInstance()
 	JavaSalInstance *pInst = new JavaSalInstance();
 	pSalData->mpFirstInstance = pInst;
 
+	// Set required Mac OS X NWF settings
+	ImplGetSVData()->maNWFData.mbNoFocusRects = true;
+
 	return pInst;
 }
 
