@@ -235,7 +235,7 @@ public final class VCLGraphics {
 	/**
 	 * The radio button component.
 	 */
-	private static JRadioButton radioButton = null;
+	private static DefaultableJRadioButton radioButton = null;
 
 	/**
 	 * The radio button x coordinate offset.
@@ -255,7 +255,7 @@ public final class VCLGraphics {
 	/**
 	 * The checkbox component.
 	 */
-	private static JCheckBox checkBoxButton = null;
+	private static DefaultableJCheckBox checkBoxButton = null;
 
 	/**
 	 * The checkbox x coordinate offset.
@@ -395,10 +395,10 @@ public final class VCLGraphics {
 		button = new DefaultableJButton();
 		button.setBackground(c);
 
-		radioButton = new JRadioButton();
+		radioButton = new DefaultableJRadioButton();
 		radioButton.setBackground(c);
 
-		checkBoxButton = new JCheckBox();
+		checkBoxButton = new DefaultableJCheckBox();
 		checkBoxButton.setBackground(c);
 
 		// Adjust offsets for Swing controls
@@ -2171,6 +2171,10 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
+				if (enabled && focused)
+					VCLGraphics.radioButton.setDefault(true);
+				else
+					VCLGraphics.radioButton.setDefault(false);
 				ButtonModel m = VCLGraphics.radioButton.getModel();
 				// Fix bug 3305 by setting the enabled state on
 				// both the Swing control and its model
@@ -2287,6 +2291,10 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics();
 		if (g != null) {
 			try {
+				if (enabled && focused)
+					VCLGraphics.checkBoxButton.setDefault(true);
+				else
+					VCLGraphics.checkBoxButton.setDefault(false);
 				ButtonModel m = VCLGraphics.checkBoxButton.getModel();
 				// Fix bug 3305 by setting the enabled state on
 				// both the Swing control and its model
@@ -3518,6 +3526,42 @@ public final class VCLGraphics {
 		}
 
 		void setDefault(boolean b) {
+
+			isDefault = b;
+
+		}
+
+	}
+
+	final static class DefaultableJCheckBox extends JCheckBox {
+
+		private boolean isDefault = false;
+
+		public boolean hasFocus() {
+
+			return isDefault;
+
+		}
+
+		public void setDefault(boolean b) {
+
+			isDefault = b;
+
+		}
+
+	}
+
+	final static class DefaultableJRadioButton extends JRadioButton {
+
+		private boolean isDefault = false;
+
+		public boolean hasFocus() {
+
+			return isDefault;
+
+		}
+
+		public void setDefault(boolean b) {
 
 			isDefault = b;
 
