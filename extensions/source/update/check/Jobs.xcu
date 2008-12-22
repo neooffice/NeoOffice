@@ -23,7 +23,7 @@
 					<value>false</value>
 				</prop>
 				<prop oor:name="DownloadSupported" oor:type="xs:boolean" oor:op="replace">
-					<value>true</value>
+					<value>false</value>
 				</prop>
 				<prop oor:name="DownloadPaused" oor:type="xs:boolean" oor:op="replace">
 					<value>false</value>
