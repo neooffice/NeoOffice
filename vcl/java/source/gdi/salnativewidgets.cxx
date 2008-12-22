@@ -84,8 +84,11 @@ using namespace rtl;
 
 #define COMBOBOX_BUTTON_WIDTH			22
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
+#define COMBOBOX_HEIGHT					28
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 #define EDITBOX_TRIMWIDTH				3
+#define EDITBOX_HEIGHT					24
+#define FOCUSRING_WIDTH					3
 #define LISTVIEWFRAME_TRIMWIDTH			1
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
@@ -800,10 +803,10 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
 		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH;
-		destRect.size.height = rDestBounds.GetHeight();
+		destRect.origin.x = FOCUSRING_WIDTH;
+		destRect.origin.y = FOCUSRING_WIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
+		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
 		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
@@ -853,10 +856,10 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		aButtonDrawInfo.kind = kThemePopupButton;
 
 		HIRect destRect;
-		destRect.origin.x = LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
-		destRect.origin.y = LISTBOX_BUTTON_VERT_TRIMWIDTH;
-		destRect.size.width = rDestBounds.GetWidth() - LISTBOX_BUTTON_HORIZ_TRIMWIDTH;
-		destRect.size.height = rDestBounds.GetHeight() - LISTBOX_BUTTON_VERT_TRIMWIDTH;
+		destRect.origin.x = LISTBOX_BUTTON_HORIZ_TRIMWIDTH + FOCUSRING_WIDTH;
+		destRect.origin.y = LISTBOX_BUTTON_VERT_TRIMWIDTH + FOCUSRING_WIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - LISTBOX_BUTTON_HORIZ_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
+		destRect.size.height = rDestBounds.GetHeight() - LISTBOX_BUTTON_VERT_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
 		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
@@ -939,12 +942,11 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 {
 	SInt32 spinnerThemeHeight;
 	BOOL bRet = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
-	if ( ! bRet )
-		return FALSE;
+	if ( !bRet )
+		return bRet;
 
 	SInt32 spinnerThemeWidth;
 	bRet = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
-
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
@@ -973,10 +975,10 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 			if( bRet )
 			{
 				HIRect editRect;
-				editRect.origin.x = 0;
-				editRect.origin.y = 0;
-				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width;
-				editRect.size.height = offscreenHeight;
+				editRect.origin.x = FOCUSRING_WIDTH;
+				editRect.origin.y = FOCUSRING_WIDTH;
+				editRect.size.width = rDestBounds.GetWidth() - arrowRect.size.width - ( FOCUSRING_WIDTH * 2 );
+				editRect.size.height = offscreenHeight - ( FOCUSRING_WIDTH * 2 );
 
 				// erase out our background first
 
@@ -2110,6 +2112,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_LISTBOX:
 			{
 				Rectangle comboBoxRect = rRealControlRegion.GetBoundRect();
+				long nHeightAdjust = ( COMBOBOX_HEIGHT - comboBoxRect.GetHeight() ) / 2;
+				if ( nHeightAdjust > 0 )
+				{
+					comboBoxRect.Top() -= nHeightAdjust;
+					comboBoxRect.Bottom() += nHeightAdjust;
+				}
 
 				HIThemeButtonDrawInfo aButtonDrawInfo;
 				InitButtonDrawInfo( &aButtonDrawInfo, nState );
@@ -2125,6 +2133,18 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					HIRect preferredRect;
 					HIShapeGetBounds( preferredShape, &preferredRect );
 					CFRelease( preferredShape );
+
+					// Vertically center the preferred bounds
+					float fHeightAdjust = ( preferredRect.size.height - destRect.size.height ) / 2;
+					if ( fHeightAdjust < 0 )
+					{
+						preferredRect.origin.y -= fHeightAdjust;
+					}
+					else
+					{
+						preferredRect.origin.y = destRect.origin.y;
+						preferredRect.size.height = destRect.size.height;
+					}
 
 					switch( nPart )
 					{
@@ -2150,8 +2170,13 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 						case PART_SUB_EDIT:
 							{
-								Point topLeft( (long)preferredRect.origin.x, (long)preferredRect.origin.y );
-								Size boundsSize( (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH, (long)preferredRect.size.height );
+								SInt32 editFramePadding;
+								bReturn = ( GetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding) == noErr );
+								if ( ! bReturn )
+									return bReturn;
+
+								Point topLeft( (long)preferredRect.origin.x + ( editFramePadding * 3 ), (long)preferredRect.origin.y + editFramePadding );
+								Size boundsSize( (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH  - ( editFramePadding * 4 ), (long)preferredRect.size.height - ( editFramePadding * 2 ) );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
@@ -2370,6 +2395,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_SPINBOX:
 			{
 				Rectangle spinboxRect = rRealControlRegion.GetBoundRect();
+				long nHeightAdjust = ( EDITBOX_HEIGHT - spinboxRect.GetHeight() ) / 2;
+				if ( nHeightAdjust > 0 )
+				{
+					spinboxRect.Top() -= nHeightAdjust;
+					spinboxRect.Bottom() += nHeightAdjust;
+				}
 
 				// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
 				// leave room for left edge adornments
@@ -2419,11 +2450,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case PART_SUB_EDIT:
 						{
 							SInt32 editFramePadding;
-							bReturn = ( GetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding ) == noErr );
+							bReturn = ( GetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding) == noErr );
 							if ( ! bReturn )
 								return bReturn;
 
-							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left() + editFramePadding, spinboxRect.Top() + editFramePadding ), Size( (long)(spinboxRect.GetWidth() - spinnerThemeWidth - 4 - (editFramePadding*2) ), spinboxRect.GetHeight() - (editFramePadding*2) ) ) );
+							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left() + ( editFramePadding * 2 ), spinboxRect.Top() + editFramePadding ), Size( (long)( spinboxRect.GetWidth() - spinnerThemeWidth - 4 - ( editFramePadding * 3 ) ), spinboxRect.GetHeight() - ( editFramePadding * 2 ) ) ) );
 							rNativeContentRegion = Region( rNativeBoundingRegion );
 							bReturn = TRUE;
 						}
