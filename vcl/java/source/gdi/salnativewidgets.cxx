@@ -86,7 +86,6 @@ using namespace rtl;
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
 #define COMBOBOX_HEIGHT					28
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
-#define EDITBOX_TRIMWIDTH				3
 #define EDITBOX_HEIGHT					24
 #define FOCUSRING_WIDTH					3
 #define LISTVIEWFRAME_TRIMWIDTH			1
@@ -1308,10 +1307,10 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		InitEditFieldDrawInfo( &pFrameInfo, nState );
 
 		HIRect destRect;
-		destRect.origin.x = EDITBOX_TRIMWIDTH;
-		destRect.origin.y = EDITBOX_TRIMWIDTH;
-		destRect.size.width = rDestBounds.GetWidth() - 2*EDITBOX_TRIMWIDTH;
-		destRect.size.height = rDestBounds.GetHeight() - 2*EDITBOX_TRIMWIDTH;
+		destRect.origin.x = FOCUSRING_WIDTH;
+		destRect.origin.y = FOCUSRING_WIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - 2*FOCUSRING_WIDTH;
+		destRect.size.height = rDestBounds.GetHeight() - 2*FOCUSRING_WIDTH;
 
 		// clear the active editing portion of the control
 		float whiteColor[] = { 1.0, 1.0, 1.0, 1.0 };
@@ -2082,7 +2081,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption ) );
+				Rectangle preferredRect = mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
+				preferredRect.Left() -= FOCUSRING_WIDTH;
+				preferredRect.Top() -= FOCUSRING_WIDTH;
+				preferredRect.Right() += FOCUSRING_WIDTH;
+				preferredRect.Bottom() += FOCUSRING_WIDTH;
+				rNativeBoundingRegion = Region( preferredRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
@@ -2092,7 +2096,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption ) );
+				Rectangle preferredRect = mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
+				preferredRect.Left() -= FOCUSRING_WIDTH;
+				preferredRect.Top() -= FOCUSRING_WIDTH;
+				preferredRect.Right() += FOCUSRING_WIDTH;
+				preferredRect.Bottom() += FOCUSRING_WIDTH;
+				rNativeBoundingRegion = Region( preferredRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
@@ -2102,7 +2111,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption ) );
+				Rectangle preferredRect = mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
+				preferredRect.Left() -= FOCUSRING_WIDTH;
+				preferredRect.Top() -= FOCUSRING_WIDTH;
+				preferredRect.Right() += FOCUSRING_WIDTH;
+				preferredRect.Bottom() += FOCUSRING_WIDTH;
+				rNativeBoundingRegion = Region( preferredRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}
@@ -2618,6 +2632,13 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				// fill entire control area with edit box
 				Rectangle controlRect = rRealControlRegion.GetBoundRect();
+				long nHeightAdjust = ( EDITBOX_HEIGHT - controlRect.GetHeight() ) / 2;
+				if ( nHeightAdjust > 0 )
+				{
+					controlRect.Top() -= nHeightAdjust;
+					controlRect.Bottom() += nHeightAdjust;
+				}
+
 				rNativeBoundingRegion = Region( controlRect );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 
