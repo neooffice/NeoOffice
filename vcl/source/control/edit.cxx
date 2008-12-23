@@ -449,7 +449,11 @@ long Edit::ImplGetExtraOffset() const
     // #94095# Use extra offset only when edit has a border
     long nExtraOffset = 0;
     if( ( GetStyle() & WB_BORDER ) || ( mbIsSubEdit && ( GetParent()->GetStyle() & WB_BORDER ) ) )
+#ifdef USE_JAVA
+        nExtraOffset = 4;
+#else	// USE_JAVA
         nExtraOffset = 2;
+#endif	// USE_JAVA
 
     return nExtraOffset;
 }

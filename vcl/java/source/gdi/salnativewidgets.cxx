@@ -2189,8 +2189,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 								if ( ! bReturn )
 									return bReturn;
 
-								Point topLeft( (long)preferredRect.origin.x + ( editFramePadding * 3 ), (long)preferredRect.origin.y + editFramePadding );
-								Size boundsSize( (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH  - ( editFramePadding * 4 ), (long)preferredRect.size.height - ( editFramePadding * 2 ) );
+								Point topLeft( (long)preferredRect.origin.x + editFramePadding, (long)preferredRect.origin.y + editFramePadding );
+								Size boundsSize( (long)preferredRect.size.width - COMBOBOX_BUTTON_WIDTH  - ( editFramePadding * 2 ), (long)preferredRect.size.height - ( editFramePadding * 2 ) );
 								rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 								rNativeContentRegion = Region( rNativeBoundingRegion );
 								bReturn = TRUE;
@@ -2468,7 +2468,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							if ( ! bReturn )
 								return bReturn;
 
-							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left() + ( editFramePadding * 2 ), spinboxRect.Top() + editFramePadding ), Size( (long)( spinboxRect.GetWidth() - spinnerThemeWidth - 4 - ( editFramePadding * 3 ) ), spinboxRect.GetHeight() - ( editFramePadding * 2 ) ) ) );
+							rNativeBoundingRegion = Region( Rectangle( Point( spinboxRect.Left() + editFramePadding, spinboxRect.Top() + editFramePadding ), Size( (long)( spinboxRect.GetWidth() - spinnerThemeWidth - 4 - ( editFramePadding * 2 ) ), spinboxRect.GetHeight() - ( editFramePadding * 2 ) ) ) );
 							rNativeContentRegion = Region( rNativeBoundingRegion );
 							bReturn = TRUE;
 						}
