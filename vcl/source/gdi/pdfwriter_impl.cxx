@@ -6352,7 +6352,6 @@ std::set< PDFWriter::ErrorCode > PDFWriterImpl::getErrors()
 #ifdef USE_JAVA
 void PDFWriterImpl::registerGlyphs( int nGlyphs,
                                     sal_GlyphId* pGlyphs,
-                                    sal_Int32* pGlyphWidths,
                                     sal_Ucs* pUnicodes,
                                     sal_uInt16* pMappedGlyphs,
                                     bool* pMappedIdentityGlyphs,
@@ -6397,15 +6396,19 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                 m_aEmbeddedFonts[ pCurrentFont ].m_nNormalFontID = nFontID;
             }
 
+#ifndef USE_JAVA
             pGlyphWidths[ i ] = 0;
+#endif	// !USE_JAVA
             pMappedGlyphs[ i ] = sal::static_int_cast<sal_Int8>( nFontGlyphId );
             pMappedFontObjects[ i ] = nFontID;
+#ifndef USE_JAVA
             const ImplPdfBuiltinFontData* pFD = GetPdfFontData( pCurrentFont );
             if( pFD )
             {
                 const BuiltinFont* pBuiltinFont = pFD->GetBuiltinFont();
                 pGlyphWidths[i] = pBuiltinFont->m_aWidths[ nFontGlyphId & 0x00ff ];
             }
+#endif	// !USE_JAVA
         }
         else if( pCurrentFont->mbSubsettable )
         {
@@ -6461,11 +6464,13 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
 #endif	// USE_JAVA
             }
             getReferenceDevice()->ImplGetGraphics();
+#ifndef USE_JAVA
             const bool bVertical = ((pGlyphs[i] & GF_ROTMASK) != 0);
             pGlyphWidths[i] = m_aFontCache.getGlyphWidth( pCurrentFont,
                                                           nFontGlyphId,
                                                           bVertical,
                                                           m_pReferenceDevice->mpGraphics );
+#endif	// !USE_JAVA
         }
         else if( pCurrentFont->IsEmbeddable() )
         {
@@ -6551,10 +6556,12 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
 
             pMappedGlyphs[ i ] = (sal_Int8)cChar;
             pMappedFontObjects[ i ] = nCurFontID;
+#ifndef USE_JAVA
             pGlyphWidths[ i ] = m_aFontCache.getGlyphWidth( pCurrentFont,
                                                             (pEncoding ? pUnicodes[i] : cChar) | GF_ISCHAR,
                                                             false,
                                                             m_pReferenceDevice->mpGraphics );
+#endif	// !USE_JAVA
         }
     }
 }
@@ -6844,15 +6851,16 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             if ( rGlyphs[nPos].m_bIdentityGlyph )
                 appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
             appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
-            if ( rGlyphs[nPos].m_bIdentityGlyph )
-                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
-            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
+            double fTheoreticalGlyphWidth = rGlyphs[nPos-1].m_nNativeWidth - rGlyphs[nPos].m_aPos.X() + rGlyphs[nPos-1].m_aPos.X();
+            fTheoreticalGlyphWidth = 1000.0 * fTheoreticalGlyphWidth / fXScale / double(nPixelFontHeight);
+            sal_Int32 nAdjustment = (sal_Int32)( fTheoreticalGlyphWidth + 0.5 );
 #else	// USE_JAVA
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aUnkernedLine );
             // check for adjustment
             double fTheoreticalGlyphWidth = rGlyphs[nPos].m_aPos.X() - rGlyphs[nPos-1].m_aPos.X();
             fTheoreticalGlyphWidth = 1000.0 * fTheoreticalGlyphWidth / fXScale / double(nPixelFontHeight);
             sal_Int32 nAdjustment = rGlyphs[nPos-1].m_nNativeWidth - sal_Int32(fTheoreticalGlyphWidth+0.5);
+#endif	// USE_JAVA
             if( nAdjustment != 0 )
             {
                 bNeedKern = true;
@@ -6860,6 +6868,11 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aKernedLine.append( nAdjustment );
                 aKernedLine.append( "<" );
             }
+#ifdef USE_JAVA
+            if ( rGlyphs[nPos].m_bIdentityGlyph )
+                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
+            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
+#else	// USE_JAVA
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aKernedLine );
 #endif	// USE_JAVA
         }
@@ -7033,7 +7046,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     aGlyphs.reserve( nMaxGlyphs );
     // first get all the glyphs and register them; coordinates still in Pixel
     Point aGNGlyphPos;
+#ifdef USE_JAVA
+    // Fix bug 3348 by fetching the native glyph width from the layout
+    while( (nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs, pGlyphs, aGNGlyphPos, nIndex, nAdvanceWidths, pCharPosAry, pGlyphWidths )) != 0 )
+#else	// USE_JAVA
     while( (nGlyphs = rLayout.GetNextGlyphs( nMaxGlyphs, pGlyphs, aGNGlyphPos, nIndex, nAdvanceWidths, pCharPosAry )) != 0 )
+#endif	// USE_JAVA
     {
         for( int i = 0; i < nGlyphs; i++ )
         {
@@ -7062,7 +7080,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         }
 
 #ifdef USE_JAVA
-        registerGlyphs( nGlyphs, pGlyphs, pGlyphWidths, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
+        registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
         if ( !isReplayWriter() )
             continue;
 #else	// USE_JAVA
@@ -7071,6 +7089,10 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
         for( int i = 0; i < nGlyphs; i++ )
         {
+#ifdef USE_JAVA
+            // Use the same units for glyph width as is used for position
+            pGlyphWidths[i] /= rLayout.GetUnitsPerPixel();
+#endif	// USE_JAVA
             aGlyphs.push_back( PDFGlyph( aGNGlyphPos,
                                          pGlyphWidths[i],
                                          pGlyphs[i],
