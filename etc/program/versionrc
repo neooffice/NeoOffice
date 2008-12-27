@@ -1,8 +1,6 @@
 [Version]
 AllLanguages=en-US
 BuildVersion=
-# buildid must be set to nothing to prevent OOo build tag from appearing in the
-# Help :: About dialog
 buildid=
 ExtensionUpdateURL=http://updateext.services.openoffice.org/ProductUpdateService/check.Update
 OOOBaseVersion=3.0

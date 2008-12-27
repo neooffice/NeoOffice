@@ -459,7 +459,8 @@ void SfxApplication::MiscExec_Impl( SfxRequest& rReq )
 		case SID_ABOUT:
 		{
 #ifdef USE_JAVA
-            String sBuildId;
+            rtl::OUString sDefault;
+            String sBuildId( utl::Bootstrap::getBuildIdData( sDefault ) );
 #else	// USE_JAVA
             const String sCWSSchema( String::CreateFromAscii( "[CWS:" ) );
             rtl::OUString sDefault;

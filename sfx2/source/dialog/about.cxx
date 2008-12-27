@@ -171,7 +171,9 @@ AboutDialog::AboutDialog( Window* pParent, const ResId& rId, const String& rVerS
     // if necessary more info
     String sVersion = aVersionText.GetText();
     sVersion.SearchAndReplaceAscii( "$(VER)", Application::GetDisplayName() );
+#ifndef USE_JAVA
     sVersion += '\n';
+#endif	// !USE_JAVA
     sVersion += rVerStr;
     aVersionText.SetText( sVersion );
 
