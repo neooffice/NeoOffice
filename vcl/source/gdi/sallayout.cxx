@@ -1523,6 +1523,11 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos
             *(pCharPosAry++) = pG->mnCharPos;
         if( pGlyphAdvAry )
             *pGlyphAdvAry = pG->mnNewWidth;
+#ifdef USE_JAVA
+        // Fix bug 3348 by passing the original width
+        if( pNativeGlyphAdvAry )
+            *(pNativeGlyphAdvAry++) = pG->mnOrigWidth;
+#endif	// USE_JAVA
 
         // break at end of glyph list
         if( ++nStart >= mnGlyphCount )
@@ -1532,11 +1537,6 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos
             break;
 
         long nGlyphAdvance = pG[1].maLinearPos.X() - pG->maLinearPos.X();
-#ifdef USE_JAVA
-        // Fix bug 3348 by passing the original width
-        if( pNativeGlyphAdvAry )
-            *(pNativeGlyphAdvAry++) = pG->mnOrigWidth;
-#endif	// USE_JAVA
         if( pGlyphAdvAry )
         {
             // override default advance width with correct value
