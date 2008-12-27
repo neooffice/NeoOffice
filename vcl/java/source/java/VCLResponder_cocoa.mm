@@ -42,6 +42,31 @@
 
 using namespace ::com::sun::star::awt;
 
+static short GetCurrentKeyModifiers()
+{
+	short nRet = 0;
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSEvent *pEvent = [pApp currentEvent];
+		if ( pEvent )
+		{
+			unsigned int nModifiers = [pEvent modifierFlags];
+			if ( nModifiers & NSShiftKeyMask )
+				nRet |= KEY_SHIFT;
+			if ( nModifiers & NSControlKeyMask )
+				nRet |= KEY_MOD1;
+			if ( nModifiers & NSAlternateKeyMask )
+				nRet |= KEY_MOD2;
+			if ( nModifiers & NSCommandKeyMask )
+				nRet |= KEY_MOD3;
+		}
+	}
+
+	return nRet;
+}
+
 @implementation VCLResponder
 
 - (void)clearLastText
@@ -162,7 +187,8 @@ using namespace ::com::sun::star::awt;
 - (void)insertNewline:(id)pSender
 {
 	mnLastCommandKey = KEY_RETURN;
-	mnLastModifiers = KEY_SHIFT;
+	// Fix bug 3350 by using the current event's key modifiers
+	mnLastModifiers = GetCurrentKeyModifiers();
 }
 
 - (void)insertParagraphSeparator:(id)pSender
