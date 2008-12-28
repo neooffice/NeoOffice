@@ -1,0 +1,21 @@
+Index: makefile.mk
+===================================================================
+RCS file: /cvs/external/moz/makefile.mk,v
+retrieving revision 1.14
+diff -u -r1.14 makefile.mk
+--- makefile.mk	11 Apr 2008 07:18:03 -0000	1.14
++++ makefile.mk	28 Dec 2008 22:13:44 -0000
+@@ -121,6 +121,13 @@
+ MOZILLA_CONFIGURE_FLAGS+= --enable-default-toolkit=$(DEFAULT_MOZILLA_TOOLKIT)
+ .ENDIF
+ 
++.IF "$(OS)"=="MACOSX"
++.IF "$(BUILD_OS_MINOR)"!="4"
++#10.5+ X11 includes and libraries cannot be located by autoconf
++MOZILLA_CONFIGURE_FLAGS+= --x-libraries=/usr/X11/lib --x-includes=/usr/include/X11
++.ENDIF
++.ENDIF
++
+ CONFIGURE_ACTION=sh -c "./configure $(MOZILLA_CONFIGURE_FLAGS)"
+ 
+ BUILD_DIR=

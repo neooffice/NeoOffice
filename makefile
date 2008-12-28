@@ -229,7 +229,9 @@ build.oo_external_patch: build.ooo-build_patches \
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
 	touch "$@"
 
-build.oo_moz_patch: build.ooo-build_patches
+build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
+	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cd "$(BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
 	touch "$@"
 
