@@ -82,15 +82,15 @@ using namespace rtl;
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
 
-#define COMBOBOX_BUTTON_WIDTH			22
+#define COMBOBOX_BUTTON_WIDTH			( IsRunningTiger() ? 22 : 25 )
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
 #define COMBOBOX_HEIGHT					28
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 #define EDITBOX_HEIGHT					24
 #define FOCUSRING_WIDTH					3
-#define LISTVIEWFRAME_TRIMWIDTH			1
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
-#define LISTBOX_BUTTON_VERT_TRIMWIDTH	2
+#define LISTBOX_BUTTON_VERT_TRIMWIDTH	( IsRunningTiger() ? 2 : 1 )
+#define LISTVIEWFRAME_TRIMWIDTH			1
 #define SCROLLBAR_ARROW_TRIMX			13
 #define SCROLLBAR_ARROW_TRIMY			14
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
