@@ -565,10 +565,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		USHORT nID = pEvent->getID();
 		size_t nFrames = pSalData->maFrameList.size();
 		pEvent->dispatch();
-		delete pEvent;
-
-		com_sun_star_vcl_VCLFrame::flushAllFrames();
-
 		switch ( nID )
 		{
 			case SALEVENT_CLOSE:
@@ -582,7 +578,15 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				// the painting timer runs.
 				OThread::yield();
 				break;
+			case SALEVENT_MOUSEMOVE:
+                // Make highlighting by dragging more responsive
+                if ( pEvent->getModifiers() & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT ) )
+					bContinue = false;
+				break;
 		}
+		delete pEvent;
+
+		com_sun_star_vcl_VCLFrame::flushAllFrames();
 
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed
