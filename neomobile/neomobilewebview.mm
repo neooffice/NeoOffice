@@ -33,7 +33,10 @@
 
 #include "neomobilewebview.h"
 #include "neomobileappevent.hxx"
+
+#include "premac.h"
 #include <objc/objc-class.h>
+#include "postmac.h"
 
 #ifndef _VOS_MUTEX_HXX
 #include <vos/mutex.hxx>
