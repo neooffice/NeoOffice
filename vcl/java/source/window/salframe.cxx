@@ -207,7 +207,7 @@ void JavaSalFrame::AddObject( JavaSalObject *pObject, bool bVisible )
 	{
 		maObjects.push_back( pObject );
 		if ( bVisible )
-			maVisibleObjects.remove( pObject );
+			maVisibleObjects.push_back( pObject );
 	}
 }
 
