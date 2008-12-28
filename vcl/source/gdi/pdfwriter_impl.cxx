@@ -7092,6 +7092,9 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 #ifdef USE_JAVA
             // Use the same units for glyph width as is used for position
             pGlyphWidths[i] /= rLayout.GetUnitsPerPixel();
+
+            // Do not allow invalid glyphs to be written to the PDF output
+            if( ! ( pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) ) )
 #endif	// USE_JAVA
             aGlyphs.push_back( PDFGlyph( aGNGlyphPos,
                                          pGlyphWidths[i],

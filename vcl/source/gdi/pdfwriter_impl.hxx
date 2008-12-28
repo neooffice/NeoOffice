@@ -550,12 +550,14 @@ public:
         sal_Int32   m_nNativeWidth;
         sal_Int32   m_nGlyphId;
         sal_Int32   m_nMappedFontId;
-        sal_uInt8   m_nMappedGlyphId;
 #ifdef USE_JAVA
+        sal_uInt16  m_nMappedGlyphId;
         sal_Int32   m_nMappedFontSubId;
         bool        m_bIdentityGlyph;
         int         m_nCharPos;
         SalLayout*  m_pLayout;
+#else	// USE_JAVA
+        sal_uInt8   m_nMappedGlyphId;
 #endif	// USE_JAVA
         
         PDFGlyph( const Point& rPos,
@@ -563,7 +565,7 @@ public:
                   sal_Int32 nGlyphId,
                   sal_Int32 nFontId,
 #ifdef USE_JAVA
-                  sal_uInt8 nMappedGlyphId,
+                  sal_uInt16 nMappedGlyphId,
                   sal_Int32 nFontSubId,
                   bool bIdentityGlyph,
                   int nCharPos,
