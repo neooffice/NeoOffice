@@ -1950,8 +1950,17 @@ public final class VCLGraphics {
 						clipList.add(destBounds);
 					}
 
-					if (xor)
-						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					if (xor) {
+						if (fill) {
+							// Fix problem where end of highlighted area gets
+							// unhighlighted when Command-A is pressed
+							g.setComposite(VCLGraphics.xorImageComposite);
+							VCLGraphics.xorImageComposite.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+						}
+						else {
+							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+						}
+					}
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
@@ -2646,7 +2655,8 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					g.setXORMode(Color.white);
+					g.setComposite(VCLGraphics.xorImageComposite);
+					VCLGraphics.xorImageComposite.setXORMode(Color.white);
 					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
