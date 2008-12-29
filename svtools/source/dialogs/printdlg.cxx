@@ -781,8 +781,6 @@ short PrintDialog::Execute()
 	short nRet = mpPrinter->StartJob( String() );
 	mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "" ) );
 	if ( nRet )
-		nRet = ClickOptionsHdl();
-	if ( nRet )
 	{
 		// Get and store the page range
 		String aRange( mpPrinter->GetJobValue( String::CreateFromAscii( "PAGERANGE" ) ) );
