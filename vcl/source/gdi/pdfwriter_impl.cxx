@@ -6841,8 +6841,17 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         OStringBuffer aKernedLine( 256 ), aUnkernedLine( 256 );
         aKernedLine.append( "[<" );
         aUnkernedLine.append( '<' );
+#ifdef USE_JAVA
+        if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
+            appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
+        appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
+        if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
+            appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
+        appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aKernedLine );
+#else	// USE_JAVA
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aKernedLine );
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aUnkernedLine );
+#endif	// USE_JAVA
 
         bool bNeedKern = false;
         for( sal_uInt32 nPos = nBeginRun+1; nPos < aRunEnds[nRun]; nPos++ )
@@ -11576,6 +11585,12 @@ bool PDFWriterImpl::endControlAppearance( PDFWriter::WidgetState eState )
 
 void PDFWriterImpl::addStream( const String& rMimeType, PDFOutputStream* pStream, bool bCompress )
 {
+#ifdef USE_JAVA
+    // Avoid deletion of streams in first pass
+    if ( !isReplayWriter() )
+        return;
+#endif	// USE_JAVA
+
     if( pStream )
     {
         m_aAdditionalStreams.push_back( PDFAddStream() );
