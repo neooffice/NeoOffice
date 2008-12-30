@@ -333,7 +333,20 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			pWindow = Application::GetNextTopLevelWindow( pWindow );
 
 		if ( pWindow )
-			Dialog::EndAllDialogs( pWindow );
+		{
+			// Fix bug 3356 by detecting if a modal dialog is a child frame
+			JavaSalFrame *pFrame = NULL;
+			Dialog *pDialog = ImplGetSVData()->maWinData.mpLastExecuteDlg;
+			if ( pDialog )
+			{
+				pFrame = (JavaSalFrame *)pDialog->ImplGetFrame();
+				while ( pFrame && pFrame != this )
+					pFrame = pFrame->mpParent;
+			}
+
+			if ( !pFrame )
+				Dialog::EndAllDialogs( pWindow );
+		}
 	}
 	// Fix bug 3153 by setting parent to the focus frame for dialogs that
 	// have a show only menus frame as their parent
