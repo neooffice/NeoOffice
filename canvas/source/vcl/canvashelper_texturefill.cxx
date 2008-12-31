@@ -713,6 +713,39 @@ namespace vclcanvas
                 }
             }
             else
+#if defined(QUARTZ) && !defined USE_JAVA // TODO: other ports should avoid the XOR-trick too (implementation vs. interface!)
+            {
+                const Region aPolyClipRegion( rPoly );
+
+                rOutDev.Push( PUSH_CLIPREGION );
+                rOutDev.SetClipRegion( aPolyClipRegion );
+
+                doGradientFill( rOutDev,
+                                rValues,
+                                rColor1,
+                                rColor2,
+                                aTextureTransform,
+                                aPolygonDeviceRectOrig,
+                                nStepCount,
+                                false );
+                rOutDev.Pop();
+
+                if( p2ndOutDev )
+                {
+                    p2ndOutDev->Push( PUSH_CLIPREGION );
+                    p2ndOutDev->SetClipRegion( aPolyClipRegion );
+                    doGradientFill( *p2ndOutDev,
+                                    rValues,
+                                    rColor1,
+                                    rColor2,
+                                    aTextureTransform,
+                                    aPolygonDeviceRectOrig,
+                                    nStepCount,
+                                    false );
+                    p2ndOutDev->Pop();
+                }
+            }
+#else // QUARTZ && !defined USE_JAVA  TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
             {
                 // output gradient the hard way: XORing out the polygon
 #ifdef USE_JAVA
@@ -831,9 +864,10 @@ namespace vclcanvas
                                     nStepCount,
                                     true );
                     p2ndOutDev->Pop();
-                }
 #endif	// USE_JAVA
+                }
             }
+#endif // QUARTZ && !defined USE_JAVA complex-clipping vs. XOR-trick
 
 #if defined(VERBOSE) && OSL_DEBUG_LEVEL > 0        
             {
@@ -1270,6 +1304,44 @@ namespace vclcanvas
                                                                        aOutputBmpEx );
                         }
                         else
+#if defined(QUARTZ) && !defined USE_JAVA // TODO: other ports should avoid the XOR-trick too (implementation vs. interface!)
+                        {
+                            const Region aPolyClipRegion( aPolyPoly );
+
+                            rOutDev.Push( PUSH_CLIPREGION );
+                            rOutDev.SetClipRegion( aPolyClipRegion );
+
+                            textureFill( rOutDev,
+                                         *pGrfObj,
+                                         aPt,
+                                         aIntegerNextTileX,
+                                         aIntegerNextTileY,
+                                         nTilesX,
+                                         nTilesY,
+                                         aSz,
+                                         aGrfAttr );
+                            rOutDev.Pop();
+
+                            if( mp2ndOutDev )
+                            {
+                                OutputDevice& r2ndOutDev( mp2ndOutDev->getOutDev() );
+                                r2ndOutDev.Push( PUSH_CLIPREGION );
+
+                                r2ndOutDev.SetClipRegion( aPolyClipRegion );
+                                textureFill( r2ndOutDev,
+                                             *pGrfObj,
+                                             aPt,
+                                             aIntegerNextTileX,
+                                             aIntegerNextTileY,
+                                             nTilesX,
+                                             nTilesY,
+                                             aSz,
+                                             aGrfAttr );
+                                r2ndOutDev.Pop();
+                            }
+                        }
+#else // TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
+#else // QUARTZ && !defined USE_JAVA  TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
                         {
                             // output via repeated XORing
                             rOutDev.Push( PUSH_RASTEROP );
@@ -1328,6 +1400,7 @@ namespace vclcanvas
                                 r2ndOutDev.Pop();
                             }
                         }
+#endif // QUARTZ && !defined USE_JAVA complex-clipping vs. XOR-trick
                     }
                 }
             }
