@@ -999,29 +999,12 @@ void Edit::ImplInsertText( const XubString& rStr, const Selection* pNewSel, sal_
 	mbInternModified = TRUE;
 
 #ifdef USE_JAVA
-	// modifying text with the border erase will result in spinner arrows
-	// being redrawn by the border win.  Add in an invalidate to redraw
-	// controls outside the edit area to avoid cheap whore effect.  Bug 1880
+	// Modifying text with the border erase will result in spinner arrows
+	// being redrawn by the border win. Fix bug 1880 by adding in an invalidate
+	// to redraw the parent to avoid cheap whore effect.
 	
-	if( ImplGetNativeControlType() == CTRL_SPINBOX )
-	{
-		Window *pBorder = GetWindow( WINDOW_BORDER );
-		if( pBorder == this )
-		{
-			// we have no border, use parent
-			pBorder = mbIsSubEdit ? GetParent() : this;
-		}
-
-		if( pBorder )
-		{
-			if ( pBorder != this )
-				pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-			else
-				pBorder->Invalidate();
-			if ( pBorder->IsInPaint() )
-				pBorder->Update();
-		}
-	}
+	if ( ImplGetNativeControlType() == CTRL_SPINBOX && IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+		ImplInvalidateOutermostBorder( GetParent() );
 #endif	// USE_JAVA
 }
 
@@ -1052,35 +1035,18 @@ void Edit::ImplSetText( const XubString& rText, const Selection* pNewSelection )
 				maSelection.Max() = 0;
 
 			Invalidate();
-
-#ifdef USE_JAVA
-			// modifying text with the border erase will result in spinner arrows
-			// being redrawn by the border win.  Add in an invalidate to redraw
-			// controls outside the edit area to avoid cheap whore effect.  Bug 1880
-			
-			if( ImplGetNativeControlType() == CTRL_SPINBOX )
-			{
-				Window *pBorder = GetWindow( WINDOW_BORDER );
-				if( pBorder == this )
-				{
-					// we have no border, use parent
-					pBorder = mbIsSubEdit ? GetParent() : this;
-				}
-
-				if( pBorder )
-				{
-					if ( pBorder != this )
-						pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-					else
-						pBorder->Invalidate();
-					if ( pBorder->IsInPaint() )
-						pBorder->Update();
-				}
-			}
-#endif	// USE_JAVA
 		}
 		else
 			ImplInsertText( rText, pNewSelection );
+
+#ifdef USE_JAVA
+		// Modifying text with the border erase will result in spinner arrows
+		// being redrawn by the border win. Fix bug 1880 by adding in an invalidate
+		// to redraw the parent to avoid cheap whore effect.
+
+		if ( ImplGetNativeControlType() == CTRL_SPINBOX && IsNativeControlSupported( CTRL_SPINBOX, PART_ENTIRE_CONTROL ) )
+			ImplInvalidateOutermostBorder( GetParent() );
+#endif	// USE_JAVA
 
         ImplCallEventListeners( VCLEVENT_EDIT_MODIFY );
 	}
@@ -2016,19 +1982,8 @@ void Edit::GetFocus()
 		}
 
 #ifdef USE_JAVA
-		if ( IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
-		{
-			Window* pBorder = GetWindow( WINDOW_BORDER );
-			if ( pBorder )
-			{
-				if ( pBorder != this )
-					pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-				else
-					pBorder->Invalidate();
-				if ( pBorder->IsInPaint() )
-					pBorder->Update();
-			}
-		}
+		if ( ImplGetNativeControlType() == CTRL_EDITBOX && IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
+			ImplInvalidateOutermostBorder( this );
 #endif	// USE_JAVA
 
 		ImplShowCursor();
@@ -2095,19 +2050,8 @@ void Edit::LoseFocus()
 	Control::LoseFocus();
 
 #ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
-	{
-		Window* pBorder = GetWindow( WINDOW_BORDER );
-		if ( pBorder )
-		{
-			if ( pBorder != this )
-				pBorder->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-			else
-				pBorder->Invalidate();
-			if ( pBorder->IsInPaint() )
-				pBorder->Update();
-		}
-	}
+	if ( ImplGetNativeControlType() == CTRL_EDITBOX && IsNativeControlSupported( CTRL_EDITBOX, PART_ENTIRE_CONTROL ) )
+		ImplInvalidateOutermostBorder( this );
 #endif	// USE_JAVA
 }
 
