@@ -39,6 +39,7 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 #import "VCLResponder_cocoa.h"
+#import "../app/salinst_cocoa.h"
 
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
@@ -561,6 +562,9 @@ static VCLResponder *pSharedResponder = nil;
 				return YES;
 			}
 		}
+
+		// Fix bug 3357 by updating native menus
+		VCLInstance_updateNativeMenus();
 	}
 
 	BOOL bRet = [super performKeyEquivalent:pEvent];

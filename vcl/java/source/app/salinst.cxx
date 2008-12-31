@@ -158,121 +158,126 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 	EventClass nClass = GetEventClass( aEvent );
 	EventKind nKind = GetEventKind( aEvent );
 
-	if ( !Application::IsShutDown() )
+	if ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking )
 	{
-		SalData *pSalData = GetSalData();
-
-		if ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking )
+		// Check if this a menubar event as we don't want to dispatch native
+		// popup menus in modal dialogs and make sure that this is not a
+		// duplicate menu opening event
+		UInt32 nContext;
+		if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking )
 		{
-			// Check if this a menubar event as we don't want to dispatch
-			// native popup menus in modal dialogs and make sure that this is
-			// not a duplicate menu opening event
-			UInt32 nContext;
-			if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking )
-			{
-				// Check if there is a native modal window as we will deadlock
-				// when a native modal window is showing
-				if ( NSApplication_getModalWindow() )
-					return userCanceledErr;
-
-				// Make sure that any events fetched from the queue while the
-				// application mutex was unlocked are already dispatched before
-				// we try to lock the mutex
-				TimeValue aDelay;
-				aDelay.Seconds = 0;
-				aDelay.Nanosec = 50;
-				while ( !Application::IsShutDown() )
-				{
-					if ( aEventQueueMutex.tryToAcquire() )
-					{
-						if ( Application::IsShutDown() )
-						{
-							aEventQueueMutex.release();
-							aEventQueueCondition.set();
-							return userCanceledErr;
-						}
-						else
-						{
-							break;
-						}
-					}
-
-					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-
-					// Wakeup the event queue by sending it a dummy event
-					aEventQueueCondition.reset();
-					com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-					pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
-					aEventQueueCondition.wait( &aDelay );
-					aEventQueueCondition.set();
-				}
-
-				IMutex& rSolarMutex = Application::GetSolarMutex();
-				rSolarMutex.acquire();
-				if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
-				{
-					aEventQueueMutex.release();
-					aEventQueueCondition.set();
-					return userCanceledErr;
-				}
-
-				pSalData->maNativeEventCondition.reset();
-
-				// Close all popups
-				ImplSVData *pSVData = ImplGetSVData();
-				if ( pSVData && pSVData->maWinData.mpFirstFloat )
-				{
-					static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
-					if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
-						pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
-				}
-
-				// Dispatch pending VCL events until the queue is clear
-				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
-					pSalData->mpFirstInstance->Yield( false, true );
-
-				bool bSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
-				if ( bSucceeded )
-				{
-					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
-					{
-						// Fix update problem in bug 1577 when the menubar is
-						// selected and the focus frame is a child of another
-						// frame
-						JavaSalFrame *pFrame = pSalData->mpFocusFrame;
-						while ( pFrame && pFrame->mbVisible )
-						{
-							UpdateMenusForFrame( pFrame, NULL, true );
-							pFrame = pFrame->mpParent;
-						}
-					}
-					else
-					{
-						for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-						{
-							if ( (*it)->mbVisible )
-								UpdateMenusForFrame( *it, NULL, true );
-						}
-					}
-
-					// We need to let any timers run that were added by any menu
-					// changes. Otherwise, some menus will be drawn in the state
-					// that they were in before we updated the menus.
-					ReceiveNextEvent( 0, NULL, 0, false, NULL );
-				}
-
-				rSolarMutex.release();
-				aEventQueueMutex.release();
-				aEventQueueCondition.set();
-
-				if ( !bSucceeded )
-					return userCanceledErr;
-			}
+			if ( !VCLInstance_updateNativeMenus() )
+				return userCanceledErr;
 		}
 	}
 
 	// Always execute the next registered handler
 	return CallNextEventHandler( aNextHandler, aEvent );
+}
+
+// ----------------------------------------------------------------------------
+
+BOOL VCLInstance_updateNativeMenus()
+{
+	BOOL bRet = FALSE;
+
+	// Check if there is a native modal window as we will deadlock when a
+	// native modal window is showing
+	if ( Application::IsShutDown() || NSApplication_getModalWindow() )
+		return bRet;
+
+	SalData *pSalData = GetSalData();
+
+	// Make sure that any events fetched from the queue while the application
+	// mutex was unlocked are already dispatched before we try to lock the mutex
+	TimeValue aDelay;
+	aDelay.Seconds = 0;
+	aDelay.Nanosec = 50;
+	while ( !Application::IsShutDown() )
+	{
+		if ( aEventQueueMutex.tryToAcquire() )
+		{
+			if ( Application::IsShutDown() )
+			{
+				aEventQueueMutex.release();
+				aEventQueueCondition.set();
+				return bRet;
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+
+		// Wakeup the event queue by sending it a dummy event
+		aEventQueueCondition.reset();
+		com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+		pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
+		aEventQueueCondition.wait( &aDelay );
+		aEventQueueCondition.set();
+	}
+
+	IMutex& rSolarMutex = Application::GetSolarMutex();
+	rSolarMutex.acquire();
+	if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
+	{
+		aEventQueueMutex.release();
+		aEventQueueCondition.set();
+		return bRet;
+	}
+
+	pSalData->maNativeEventCondition.reset();
+
+	// Close all popups
+	ImplSVData *pSVData = ImplGetSVData();
+	if ( pSVData && pSVData->maWinData.mpFirstFloat )
+	{
+		static const char* pEnv = getenv( "SAL_FLOATWIN_NOAPPFOCUSCLOSE" );
+		if ( !(pSVData->maWinData.mpFirstFloat->GetPopupModeFlags() & FLOATWIN_POPUPMODE_NOAPPFOCUSCLOSE) && !(pEnv && *pEnv) )
+			pSVData->maWinData.mpFirstFloat->EndPopupMode( FLOATWIN_POPUPMODEEND_CANCEL | FLOATWIN_POPUPMODEEND_CLOSEALL );
+	}
+
+	// Dispatch pending VCL events until the queue is clear
+	while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
+		pSalData->mpFirstInstance->Yield( false, true );
+
+	bRet = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
+	if ( bRet )
+	{
+		if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+		{
+			// Fix update problem in bug 1577 when the menubar is
+			// selected and the focus frame is a child of another
+			// frame
+			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
+			while ( pFrame && pFrame->mbVisible )
+			{
+				UpdateMenusForFrame( pFrame, NULL, true );
+				pFrame = pFrame->mpParent;
+			}
+		}
+		else
+		{
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible )
+					UpdateMenusForFrame( *it, NULL, true );
+			}
+		}
+
+		// We need to let any timers run that were added by any menu
+		// changes. Otherwise, some menus will be drawn in the state
+		// that they were in before we updated the menus.
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+	}
+
+	rSolarMutex.release();
+	aEventQueueMutex.release();
+	aEventQueueCondition.set();
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
