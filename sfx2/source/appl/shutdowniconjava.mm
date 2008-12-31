@@ -231,7 +231,7 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
-	if ( mbInTermination )
+	if ( mbInTermination || ( pApplication && [pApplication modalWindow] ) )
 		return NSTerminateCancel;
 
 	mbInTermination = YES;
