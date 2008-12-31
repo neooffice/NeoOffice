@@ -864,8 +864,8 @@ namespace vclcanvas
                                     nStepCount,
                                     true );
                     p2ndOutDev->Pop();
-#endif	// USE_JAVA
                 }
+#endif	// USE_JAVA
             }
 #endif // QUARTZ && !defined USE_JAVA complex-clipping vs. XOR-trick
 
@@ -1340,7 +1340,6 @@ namespace vclcanvas
                                 r2ndOutDev.Pop();
                             }
                         }
-#else // TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
 #else // QUARTZ && !defined USE_JAVA  TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
                         {
                             // output via repeated XORing
