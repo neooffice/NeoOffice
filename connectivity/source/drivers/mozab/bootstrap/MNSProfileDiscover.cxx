@@ -483,6 +483,8 @@ namespace connectivity
 		::sal_Bool ProfileAccess::isProfileLocked( ::com::sun::star::mozilla::MozillaProductType product, const ::rtl::OUString& profileName ) throw (::com::sun::star::uno::RuntimeException)
 		{
 #ifdef MINIMAL_PROFILEDISCOVER
+			(void)product;     // Avoid warning
+			(void)profileName; // Avoid warning
 			return sal_True;
 #else
 			::rtl::OUString path = getProfilePath(product,profileName);

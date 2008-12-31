@@ -1174,6 +1174,33 @@
          PermissionCollection pc = Policy.getPolicy().getPermissions(cs);
          return new ProtectionDomain(cs, pc);
      }
+--- misc/rhino1_5R5/toolsrc/build.xml	2008-12-03 20:20:21.000000000 +0100
++++ misc/build/rhino1_5R5/toolsrc/build.xml	2008-12-03 20:19:28.000000000 +0100
+@@ -6,6 +6,16 @@ Requires Ant version 1.2
+ -->
+ <project name="toolsrc" default="compile" basedir=".">
+ 
++  <!-- rhino.jar from OpenJDK breaks build -->
++  <path id="my.bootstrap.classpath">
++     <fileset dir="${java.home}/">
++       <include name="jre/lib/*.jar"/>
++       <include name="lib/*.jar"/>
++       <exclude name="jre/lib/rhino.jar"/>
++       <exclude name="lib/rhino.jar"/>
++     </fileset>
++  </path>
++
+   <target name="properties">
+     <property name="nest" value=".."/>
+     <property name="build.dir" value="./build"/>
+@@ -32,6 +42,7 @@ Requires Ant version 1.2
+            includes="org/**/*.java"
+            deprecation="on"
+            debug="${debug}">
++      <compilerarg value="-Xbootclasspath:${toString:my.bootstrap.classpath}"/>
+     </javac>
+     <copy todir="${nest}/${classes}">
+       <fileset dir="." includes="org/**/*.properties" />
 *** misc/rhino1_5R5/toolsrc/org/mozilla/javascript/tools/debugger/Main.java	Tue Mar 22 13:20:49 2005
 --- misc/build/rhino1_5R5/toolsrc/org/mozilla/javascript/tools/debugger/Main.java	Tue Jul  4 14:59:43 2006
 ***************

@@ -32,6 +32,7 @@ PRJ=..$/..$/..
 PRJNAME=extensions
 TARGET=plunx
 TARGETTYPE=CUI
+ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  ..$/util$/makefile.pmk
 
@@ -91,6 +92,19 @@ APP1STDLIBS+= -lXt -lXext -lX11
 APP1STDLIBS+= -lXt -lXext -lX11 -ldl
 .ENDIF
 .ENDIF
+
+.IF "$(ENABLE_GTK)" == "TRUE"
+# libs for gtk plugin
+APP1STDLIBS+=$(PKGCONFIG_LIBS:s/ -lpangoxft-1.0//)
+# hack for faked SO environment
+.IF "$(PKGCONFIG_ROOT)"!=""
+.IF "$(OS)" == "SOLARIS"
+# don't ask, it's ugly
+DIRECT :=-z nodefs $(DIRECT)
+.ENDIF
+.ENDIF          # "$(PKGCONFIG_ROOT)"!=""
+.ENDIF
+    
 
 APP1DEF=	$(MISC)$/$(TARGET).def
 

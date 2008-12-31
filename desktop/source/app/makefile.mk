@@ -43,6 +43,10 @@ ENABLE_EXCEPTIONS=TRUE
 CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
 .ENDIF
 
+.IF "$(GUIBASE)"=="aqua"
+CFLAGS+=-x objective-c++
+.ENDIF
+
 SHL1TARGET = sofficeapp
 SHL1OBJS = \
     $(SLO)$/app.obj \
