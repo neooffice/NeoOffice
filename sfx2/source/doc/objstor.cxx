@@ -1112,6 +1112,7 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
             }
         }
 
+#if 0
         uno::Reference< XInteractionHandler > xHandler( pMedium->GetInteractionHandler() );
         if ( xHandler.is() && !SFX_APP()->Get_Impl()->bODFVersionWarningLater )
         {
@@ -1174,6 +1175,7 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
                 }
             }
         }
+#endif
     }
     else
         GetpApp()->HideStatusText();

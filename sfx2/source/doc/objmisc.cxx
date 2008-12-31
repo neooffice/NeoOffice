@@ -1905,7 +1905,14 @@ void SfxHeaderAttributes_Impl::SetAttribute( const SvKeyValue& rKV )
             xDocProps->setAutoloadURL(
                 aObj.GetMainURL( INetURLObject::NO_DECODE ) );
 		}
-        xDocProps->setAutoloadSecs( nTime );
+        try
+        {
+            xDocProps->setAutoloadSecs( nTime );
+        }
+        catch (lang::IllegalArgumentException &)
+        {
+            // ignore
+        }
 	}
 	else if( rKV.GetKey().CompareIgnoreCaseToAscii( "expires" ) == COMPARE_EQUAL )
 	{
