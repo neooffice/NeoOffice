@@ -5217,6 +5217,30 @@ long OutputDevice::ImplGetTextLines( ImplMultiTextLineInfo& rLineInfo,
                         nBreakPos = nSoftBreak;
                     nLineWidth = GetTextWidth( rStr, nPos, nBreakPos-nPos );
                 }
+                else
+                {
+                    // fallback to something really simple
+                    USHORT nSpacePos = STRING_LEN;
+                    long nW = 0;
+                    do
+                    {
+                        nSpacePos = rStr.SearchBackward( sal_Unicode(' '), nSpacePos );
+                        if( nSpacePos != STRING_NOTFOUND )
+                        {
+                            if( nSpacePos > nPos )
+                                nSpacePos--;
+                            nW = GetTextWidth( rStr, nPos, nSpacePos-nPos );
+                        }
+                    } while( nW > nWidth );
+                    
+                    if( nSpacePos != STRING_NOTFOUND )
+                    {
+                        nBreakPos = nSpacePos;
+                        nLineWidth = GetTextWidth( rStr, nPos, nBreakPos-nPos );
+                        if( nBreakPos < rStr.Len()-1 )
+                            nBreakPos++;
+                    }
+                }
             }
 
             if ( nLineWidth > nMaxLineWidth )

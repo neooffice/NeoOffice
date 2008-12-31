@@ -466,6 +466,8 @@ ImplStyleData::ImplStyleData( const ImplStyleData& rData ) :
     maHighlightColor( rData.maHighlightColor ),
     maHighlightLinkColor( rData.maHighlightLinkColor ),
     maHighlightTextColor( rData.maHighlightTextColor ),
+    maActiveTabColor( rData.maActiveTabColor ),
+    maInactiveTabColor( rData.maInactiveTabColor ),
     maInfoTextColor( rData.maInfoTextColor ),
     maLabelTextColor( rData.maLabelTextColor ),
     maLightBorderColor( rData.maLightBorderColor ),
@@ -598,6 +600,8 @@ void ImplStyleData::SetStandardStyles()
     maMenuHighlightTextColor    = Color( COL_WHITE );
     maHighlightColor            = Color( COL_BLUE );
     maHighlightTextColor        = Color( COL_WHITE );
+    maActiveTabColor            = Color( COL_WHITE );
+    maInactiveTabColor          = Color( COL_LIGHTGRAY );
     maDisableColor              = Color( COL_GRAY );
     maHelpColor                 = Color( 0xFF, 0xFF, 0xE0 );
     maHelpTextColor             = Color( COL_BLACK );
@@ -1036,6 +1040,8 @@ BOOL StyleSettings::operator ==( const StyleSettings& rSet ) const
          (mpData->maMenuHighlightTextColor  == rSet.mpData->maMenuHighlightTextColor)   &&
          (mpData->maHighlightColor          == rSet.mpData->maHighlightColor)           &&
          (mpData->maHighlightTextColor      == rSet.mpData->maHighlightTextColor)       &&
+         (mpData->maActiveTabColor          == rSet.mpData->maActiveTabColor)           &&
+         (mpData->maInactiveTabColor        == rSet.mpData->maInactiveTabColor)         &&
          (mpData->maDisableColor            == rSet.mpData->maDisableColor)             &&
          (mpData->maHelpColor               == rSet.mpData->maHelpColor)                &&
          (mpData->maHelpTextColor           == rSet.mpData->maHelpTextColor)            &&

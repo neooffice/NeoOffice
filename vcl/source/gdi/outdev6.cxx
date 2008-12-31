@@ -1104,27 +1104,24 @@ void OutputDevice::DrawEPS( const Point& rPoint, const Size& rSize,
 		return;
 
 	Rectangle	aRect( ImplLogicToDevicePixel( Rectangle( rPoint, rSize ) ) );
-	BOOL		bDrawn = FALSE;
-
 	if( !aRect.IsEmpty() )
 	{
-		aRect.Justify();
+        // draw the real EPS graphics
+		bool bDrawn = FALSE;
+        if( rGfxLink.GetData() && rGfxLink.GetDataSize() )
+        {
+            if( !mpGraphics && !ImplGetGraphics() )
+                return;
 
-#ifndef USE_JAVA
-		if( GetOutDevType() == OUTDEV_PRINTER )
-#endif	// !USE_JAVA
-		{
-			if( !mpGraphics && !ImplGetGraphics() )
-				return;
+            if( mbInitClipRegion )
+                ImplInitClipRegion();
 
-			if( mbInitClipRegion )
-				ImplInitClipRegion();
+            aRect.Justify();
+            bDrawn = mpGraphics->DrawEPS( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(),
+                         (BYTE*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
+        }
 
-            if( rGfxLink.GetData() && rGfxLink.GetDataSize() )
-                bDrawn = mpGraphics->DrawEPS( aRect.Left(), aRect.Top(), aRect.GetWidth(), aRect.GetHeight(),
-                                              (BYTE*) rGfxLink.GetData(), rGfxLink.GetDataSize(), this );
-		}
-
+        // else draw the substitution graphics
 		if( !bDrawn && pSubst )
 		{
 			GDIMetaFile* pOldMetaFile = mpMetaFile;
