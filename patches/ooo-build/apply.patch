@@ -1,8 +1,8 @@
 Index: patches/dev300/apply
 ===================================================================
---- patches/dev300/apply	(revision 14772)
+--- patches/dev300/apply	(revision 14968)
 +++ patches/dev300/apply	(working copy)
-@@ -382,7 +382,8 @@
+@@ -378,7 +378,8 @@
  printing-bugfix-254573.diff, n#254573, rodo
  
  # use basic (advanced) shapes for rectangle/ellipse on draw/impress's toolbars. make shapes wrap words by default, n#171052, rodo
@@ -12,7 +12,7 @@ Index: patches/dev300/apply
  svx-shapes-default-word-wrap-enable.diff, n#171052, rodo
  svx-honour-customshape-capabilities.diff, n#395372, thorsten
  
-@@ -425,7 +426,8 @@
+@@ -424,7 +425,8 @@
  
  [ LinuxOnly ]
  # fix that allows OOo to work with a standard (unpatched) libjpeg,
@@ -20,9 +20,9 @@ Index: patches/dev300/apply
 +# Disable because it causes NeoOffice bug 2613
 +# jpegc.c.diff, i#80674, n#272574, flr
  
- [ Fixes ]
+ [ Fixes < ooo300-m13 ]
  # handle hyperlinks to files better
-@@ -616,7 +618,8 @@
+@@ -656,7 +658,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -32,7 +32,7 @@ Index: patches/dev300/apply
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -768,7 +771,8 @@
+@@ -818,7 +821,8 @@
  
  [ Misc ]
  # Insert symbol defaults to the Symbol font - not a random one
@@ -42,7 +42,7 @@ Index: patches/dev300/apply
  # Address data source ordering x#62860
  addrbk-datasrc-ordering.diff, michael
  # Changed the default option in the Templates and Documents dialog.
-@@ -786,7 +790,8 @@
+@@ -836,7 +840,8 @@
  desktop-cmdhelp-stdout.diff, kohei
  
  # always enable file save even when the document is not modified.
@@ -52,7 +52,19 @@ Index: patches/dev300/apply
  
  # Adjust scroll speed while extending selection beyoud visible sheet area.
  scroll-accel-sc.diff, n#375909, i#71362, kohei
-@@ -1620,7 +1625,8 @@
+@@ -1257,8 +1262,9 @@
+ 
+ [ BuildBits ]
+ 
+-pyuno-rpath-ooodir.diff
+-system-python-ure-bootstrap.diff, deb#501028, i#90701
++# Disable as these patches do not exist
++# pyuno-rpath-ooodir.diff
++# system-python-ure-bootstrap.diff, deb#501028, i#90701
+ 
+ no-latex-filter-without-writer2latex.diff, i#93520
+ 
+@@ -1699,7 +1705,8 @@
  sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
  sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
  # hack to ignore writerfilter if odf-converter is present
@@ -62,7 +74,7 @@ Index: patches/dev300/apply
  
  
  [ msaccess ]
-@@ -1656,7 +1662,8 @@
+@@ -1735,7 +1742,8 @@
  
  writerfilter-source-dmapper-domainmapper-debug.diff
  
@@ -71,4 +83,14 @@ Index: patches/dev300/apply
 +# buildfix-oox-depends-on-unotools.diff
  
  [ CalcFixes ]
+ 
+@@ -2438,7 +2446,8 @@
+ [ Fixes ]
+ fix-ppt-linespacing-import-export.diff, n#355302, rodo
+ sw-section-import-fix.diff, n#364533, freuter
+-sw-allow-negative-spacing.diff, n#364534, freuter
++# Disable because we want to preserve the existing NeoOffice behavior
++# sw-allow-negative-spacing.diff, n#364534, freuter
+ 
+ sd-slideshow-slideshowview-transformation-fix.diff, rodo
  
