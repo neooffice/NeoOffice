@@ -52,7 +52,17 @@ Index: patches/dev300/apply
  
  # Adjust scroll speed while extending selection beyoud visible sheet area.
  scroll-accel-sc.diff, n#375909, i#71362, kohei
-@@ -1257,8 +1262,9 @@
+@@ -1031,7 +1036,8 @@
+ build-ibm-java-enable.diff, i#93114, pmladek
+ 
+ # openjdk contains rhino.jar. breaks the build... 
+-buildfix-openjdk-6-no-rhino.diff 
++# Disable because it breaks the build on Mac OS X
++# buildfix-openjdk-6-no-rhino.diff 
+ 
+ # fixed build with IBM Java 1.6.0
+ bean-ibm-java.diff, i#93113, pmladek
+@@ -1257,8 +1263,9 @@
  
  [ BuildBits ]
  
@@ -64,7 +74,7 @@ Index: patches/dev300/apply
  
  no-latex-filter-without-writer2latex.diff, i#93520
  
-@@ -1699,7 +1705,8 @@
+@@ -1699,7 +1706,8 @@
  sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
  sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
  # hack to ignore writerfilter if odf-converter is present
@@ -74,7 +84,7 @@ Index: patches/dev300/apply
  
  
  [ msaccess ]
-@@ -1735,7 +1742,8 @@
+@@ -1735,7 +1743,8 @@
  
  writerfilter-source-dmapper-domainmapper-debug.diff
  
@@ -84,7 +94,7 @@ Index: patches/dev300/apply
  
  [ CalcFixes ]
  
-@@ -2438,7 +2446,8 @@
+@@ -2438,7 +2447,8 @@
  [ Fixes ]
  fix-ppt-linespacing-import-export.diff, n#355302, rodo
  sw-section-import-fix.diff, n#364533, freuter
