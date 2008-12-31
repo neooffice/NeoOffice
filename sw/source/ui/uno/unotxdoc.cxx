@@ -2828,12 +2828,15 @@ void SAL_CALL SwXTextDocument::render(
         // <--
 
         pVwSh->SetPDFExportOption( sal_False );
+        // #i96167# haggai: delete pViewOptionsAdjust here because it makes use
+        // of the shell, which might get destroyed in lcl_DisposeView!
+        delete pViewOptionAdjust;
+
         if( bLastPage && m_pHiddenViewFrame)
         {
             lcl_DisposeView( m_pHiddenViewFrame, pDocShell );
             m_pHiddenViewFrame = 0;
         }
-        delete pViewOptionAdjust;
     }
 }
 /* -----------------------------03.10.04 -------------------------------------
