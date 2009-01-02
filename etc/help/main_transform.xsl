@@ -640,16 +640,44 @@
 <xsl:variable name="dbpostfix"><xsl:call-template name="createDBpostfix"><xsl:with-param name="archive" select="$archive"/></xsl:call-template></xsl:variable>
 	<xsl:choose>
 		<!-- Fix bug 1120 by replacing the OOo support URL -->
-		<xsl:when test="@href='$(OO_SUPPORT_URL)' and text()='$(OO_SUPPORT_URL_TEXT)'">
+		<xsl:when test="@href and parent::paragraph[@id='par_id3150667']">
 			<a href="$(PRODUCT_SUPPORT_URL)">$(PRODUCT_SUPPORT_URL_TEXT)</a>
 		</xsl:when>
 		<!-- Replace the OOo download URL -->
-		<xsl:when test="@href='$(OO_DOWNLOAD_URL)' and text()='$(OO_DOWNLOAD_URL_TEXT)'">
+		<xsl:when test="@href and parent::paragraph[@id='par_id3028143']">
 			<a href="$(PRODUCT_DOWNLOAD_URL)">$(PRODUCT_DOWNLOAD_URL_TEXT)</a>
 		</xsl:when>
 		<!-- Replace the OOo documentation URL -->
-		<xsl:when test="@href='$(OO_DOCUMENTATION_URL)' and text()='$(OO_DOCUMENTATION_URL_TEXT)'">
+		<xsl:when test="@href and parent::paragraph[@id='par_id3497211']">
 			<a href="$(PRODUCT_DOCUMENTATION_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<!-- Replace the OOo command line options URL -->
+		<xsl:when test="@href and parent::paragraph[@id='par_id3150503']">
+			<a href="$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<!-- Replace the OOo spellchecking URLs -->
+		<xsl:when test="@href and parent::paragraph[@id='par_id6434522']">
+			<a href="http://neowiki.neooffice.org/index.php/Activating_Dictionaries_and_Configuring_Spellcheck">NeoOffice Wiki</a>
+			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<xsl:when test="@href and parent::paragraph[@id='par_id3552964']">
+			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<xsl:when test="@href and parent::paragraph[@id='par_id6434522']">
+			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<xsl:when test="@href and parent::paragraph[@id='par_id3552964']">
+			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<xsl:when test="@href and parent::paragraph[@id='par_id9625843']">
+			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<xsl:when test="@href and parent::paragraph[@id='par_id1683706']">
+			<a href="$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)">$(PRODUCT_DOCUMENTATION_URL_TEXT)</a>
+		</xsl:when>
+		<!-- Replace the OOo language pack URL -->
+		<xsl:when test="@href and parent::paragraph[@id='par_id2216559']">
+			<a href="$(PRODUCT_DOWNLOADLANGPACK_URL)">$(PRODUCT_DOWNLOADLANGPACK_URL)</a>
 		</xsl:when>
 		<xsl:when test="contains(@href,'#')">
 			<xsl:variable name="anchor"><xsl:value-of select="concat('#',substring-after(@href,'#'))"/></xsl:variable>
