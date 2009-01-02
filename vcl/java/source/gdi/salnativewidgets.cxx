@@ -412,8 +412,6 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		pTrackDrawInfo->enableState = kThemeTrackActive;
 	else
 		pTrackDrawInfo->enableState = kThemeTrackInactive;
-	if( pHITrackInfo )
-		pHITrackInfo->enableState = pTrackDrawInfo->enableState;
 	if( pScrollbarValue )
 	{
 		pTrackDrawInfo->min = pScrollbarValue->mnMin;
@@ -454,10 +452,14 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		pTrackDrawInfo->min = 0;
 		pTrackDrawInfo->max = 1;
 		pTrackDrawInfo->value = 0;
+		// Fix bug 3359 by disabling the scrollbar
+		pTrackDrawInfo->enableState = kThemeTrackNothingToScroll;
 		pTrackDrawInfo->trackInfo.scrollbar.viewsize = 0;
+		pTrackDrawInfo->trackInfo.scrollbar.pressState = 0;
 	}
 	if( pHITrackInfo )
 	{
+		pHITrackInfo->enableState = pTrackDrawInfo->enableState;
 		pHITrackInfo->pressState = pTrackDrawInfo->trackInfo.scrollbar.pressState;
 		pHITrackInfo->viewsize = pTrackDrawInfo->trackInfo.scrollbar.viewsize;
 	}
