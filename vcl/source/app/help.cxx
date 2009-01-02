@@ -469,7 +469,14 @@ void HelpTextWindow::Paint( const Rectangle& )
     if( ! bNativeOK )
     {
         Size aSz = GetOutputSizePixel();
+#ifdef USE_JAVA
+        Color aOldColor( GetLineColor() );
+        SetLineColor( ( COL_LIGHTGRAY ) );
+#endif	// USE_JAVA
         DrawRect( Rectangle( Point(), aSz ) );
+#ifdef USE_JAVA
+        SetLineColor( aOldColor );
+#endif	// USE_JAVA
         if ( mnHelpWinStyle == HELPWINSTYLE_BALLOON )
         {
             aSz.Width() -= 2;
