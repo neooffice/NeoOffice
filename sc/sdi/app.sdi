@@ -1,0 +1,104 @@
+/*************************************************************************
+ *
+ * Copyright 2008 by Sun Microsystems, Inc.
+ *
+ * $RCSfile$
+ * $Revision$
+ *
+ * This file is part of NeoOffice.
+ *
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
+ * only, as published by the Free Software Foundation.
+ *
+ * NeoOffice is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License version 3 for more details
+ * (a copy is included in the LICENSE file that accompanied this code).
+ *
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified January 2009 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
+ *
+ ************************************************************************/
+
+interface StarCalc
+[
+	uuid ( "AB3257C0-07D7-11CF-89CB-008029E4B0B1" )
+]
+{
+	FID_AUTOCOMPLETE	[ ExecMethod = Execute; StateMethod = GetState; ]
+	SID_DETECTIVE_AUTO	[ ExecMethod = Execute; StateMethod = GetState; ]
+	SID_PSZ_FUNCTION	[ ExecMethod = Execute; StateMethod = GetState; ]
+	FID_FOCUS_POSWND	[ ExecMethod = Execute; ]
+
+	SID_ATTR_METRIC		[ ExecMethod = Execute; StateMethod = GetState; ]
+
+	SID_AUTOSPELL_CHECK
+	[
+		ExecMethod = Execute ;
+		StateMethod = GetState ;
+		Export = FALSE;
+	]
+
+/* Disable entry that breaks build
+	SID_AUTOSPELL_MARKOFF
+	[
+		ExecMethod = Execute ;
+		StateMethod = GetState ;
+		Export = FALSE;
+	]
+*/
+
+	SID_ATTR_LANGUAGE
+	[
+		ExecMethod = Execute;
+		StateMethod = GetState;
+		Export = FALSE;
+	]
+	SID_ATTR_CHAR_CJK_LANGUAGE
+	[
+		ExecMethod = Execute;
+		StateMethod = GetState;
+		Export = FALSE;
+	]
+	SID_ATTR_CHAR_CTL_LANGUAGE
+	[
+		ExecMethod = Execute;
+		StateMethod = GetState;
+		Export = FALSE;
+	]
+
+	SID_CHOOSE_DESIGN	[ ExecMethod = Execute; ]
+	SID_EURO_CONVERTER	[ ExecMethod = Execute; ]
+
+
+	SID_OPEN_XML_FILTERSETTINGS [ ExecMethod = Execute; ]
+
+
+    SID_HANGUL_HANJA_CONVERSION [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_CHINESE_CONVERSION      [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_TRANSLITERATE_HALFWIDTH [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_TRANSLITERATE_FULLWIDTH [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_TRANSLITERATE_HIRAGANA  [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_TRANSLITERATE_KATAGANA  [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+
+    SID_INSERT_RLM              [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_INSERT_LRM              [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_INSERT_ZWSP             [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+    SID_INSERT_ZWNBSP           [ StateMethod = HideDisabledSlots; Export = FALSE; ]
+
+}
+
+
+shell ScModule
+{
+			import StarCalc[Automation];
+}
+
+
