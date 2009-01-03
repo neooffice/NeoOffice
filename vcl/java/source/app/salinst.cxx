@@ -364,6 +364,7 @@ SalInstance* CreateSalInstance()
 
 	// Set required Mac OS X NWF settings
 	ImplGetSVData()->maNWFData.mbNoFocusRects = true;
+	ImplGetSVData()->maNWFData.mbCheckBoxNeedsErase = true;
 
 	return pInst;
 }
