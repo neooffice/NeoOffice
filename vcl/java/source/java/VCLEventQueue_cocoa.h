@@ -77,6 +77,7 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 void VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers );
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );
 void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession );
+void VCLEventQueue_removeCachedEvents();
 BOOL NSApplication_hasDelegate();
 BOOL NSApplication_isActive();
 void NSFontManager_acquire();

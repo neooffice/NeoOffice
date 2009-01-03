@@ -253,6 +253,32 @@ void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, 
 		com_sun_star_vcl_VCLEventQueue::postWindowMoveSessionEvent( aPeer, nX, nY, bStartSession );
 }
 
+// ----------------------------------------------------------------------------
+
+void VCLEventQueue_removeCachedEvents()
+{
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			// Yield to give Java event dispatch thread a chance to finish
+			OThread::yield();
+
+			SalData *pSalData = GetSalData();
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible )
+					pSalData->mpEventQueue->removeCachedEvents( *it );
+			}
+		}
+
+		rSolarMutex.release();
+	}
+}
+
 // ============================================================================
 
 jclass com_sun_star_vcl_VCLEventQueue::theClass = NULL;
@@ -552,6 +578,29 @@ void com_sun_star_vcl_VCLEventQueue::postCachedEvent( const com_sun_star_vcl_VCL
 		{
 			jvalue args[1];
 			args[0].l = _par0->getJavaObject();
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLEventQueue::removeCachedEvents( const JavaSalFrame *_par0 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(J)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "removeCachedEvents", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[1];
+			args[0].j = jlong( _par0 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}

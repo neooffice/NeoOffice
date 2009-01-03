@@ -394,15 +394,26 @@ static VCLResponder *pSharedResponder = nil;
 
 	[super becomeKeyWindow];
 
-	// Fix bug 1819 by forcing cancellation of the input method
-	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( [self isVisible] )
 	{
-		NSResponder *pResponder = [self firstResponder];
-		if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+		if ( [[self className] isEqualToString:pCocoaAppWindowString] )
 		{
-			if ( [pResponder hasMarkedText] )
-				[pResponder insertText:pCancelInputMethodText];
-			[pResponder abandonInput];
+			// Fix bug 1819 by forcing cancellation of the input method
+			NSResponder *pResponder = [self firstResponder];
+			if ( pResponder && [pResponder respondsToSelector:@selector(abandonInput)] && [pResponder respondsToSelector:@selector(hasMarkedText)] && [pResponder respondsToSelector:@selector(insertText:)] )
+			{
+				if ( [pResponder hasMarkedText] )
+					[pResponder insertText:pCancelInputMethodText];
+				[pResponder abandonInput];
+			}
+		}
+		else
+		{
+			// Fix bug 3327 by removing any cached events when a non-Java
+			// window obtains focus
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp && [pApp modalWindow] == self )
+				VCLEventQueue_removeCachedEvents();
 		}
 	}
 }
