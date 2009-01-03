@@ -2432,10 +2432,12 @@ void RadioButton::ImplInvalidateOrDrawRadioButtonState()
         {
 #ifdef USE_JAVA
             Invalidate( maStateRect );
+            if ( IsInPaint() )
+                Update();
 #else	// USE_JAVA
             Invalidate();
-#endif	// USE_JAVA
             Update();
+#endif	// USE_JAVA
             return;
         }
     }
@@ -3746,10 +3748,12 @@ void CheckBox::ImplInvalidateOrDrawCheckBoxState()
         {
 #ifdef USE_JAVA
             Invalidate( maStateRect );
+            if ( IsInPaint() )
+                Update();
 #else	// USE_JAVA
             Invalidate();
-#endif	// USE_JAVA
             Update();
+#endif	// USE_JAVA
             return;
         }
     }
