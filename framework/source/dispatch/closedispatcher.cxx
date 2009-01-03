@@ -375,16 +375,16 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
                 FrameListAnalyzer aCheckBackingMode(xDesktop, css::uno::Reference< css::frame::XFrame >(), FrameListAnalyzer::E_BACKINGCOMPONENT);
                 if (!aCheckBackingMode.m_xBackingComponent.is())
                     bEstablishBackingMode = sal_True;
-                else if (eOperation == E_CLOSE_FRAME)
+                else
                     bCloseFrame = sal_True;
 #else	// USE_JAVA
                 if (eOperation == E_CLOSE_FRAME)
                     bTerminateApp = sal_True;
                 else if( SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SSTARTMODULE) )
                     bEstablishBackingMode = sal_True;
-#endif	// USE_JAVA
                 else
                     bTerminateApp = sal_True;
+#endif	// USE_JAVA
             }
         }
     }
