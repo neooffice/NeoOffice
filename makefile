@@ -140,8 +140,29 @@ LIBWPD_SOURCE_URL=http://download.go-oo.org/libwpd/libwpd-0.8.14.tar.gz
 LIBWPG_SOURCE_URL=http://download.go-oo.org/SRC680/libwpg-0.1.3.tar.gz
 LIBWPS_SOURCE_URL=http://download.go-oo.org/SRC680/libwps-0.1.2.tar.gz
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
-ODF-CONVERTER_SOURCE_URL=http://download.go-oo.org/tstnvl/odf-converter/SOURCES/odf-converter-2.0/odf-converter-2.0.tar.gz
-ODF-CONVERTER_PACKAGE=odf-converter-2.0
+ODF-CONVERTER_BASE_URL=http://download.go-oo.org/tstnvl/odf-converter/SOURCES/odf-converter-2.5-0
+ODF-CONVERTER_SOURCE=odf-converter-2.5.tar.gz
+ODF-CONVERTER_PACKAGE=odf-converter-2.5
+ODF-CONVERTER_PATCHES= \
+	odf-converter-1.0.3-broken-move.diff \
+	odf-converter-1.0.6-OoxMaximumCellTextPostProcessor.diff \
+	odf-converter-1.1-2oox-sections.diff \
+	odf-converter-1.1-ods-to-xlsx-seconds.diff \
+	odf-converter-1.1-ods-to-xlsx-style-numbering.diff \
+	odf-converter-1.1-pptx-odp-bullets-numbering.diff \
+	odf-converter-1.1-static-libgdiplus.diff \
+	odf-converter-1.1-unused-rows-columns-counting.diff \
+	odf-converter-1.1.1-no-range.diff \
+	odf-converter-1.99.2-msxsl-node-set.diff \
+	odf-converter-2.0-GetTableIndent-infonite-loop.diff \
+	odf-converter-2.0-live-with-wrong-image-size.diff \
+	odf-converter-2.0-transFileName.diff \
+	odf-converter-2.0-win32-stack-size.diff \
+	odf-converter-2.0-win32-unicode-argv.diff \
+	odf-converter-2.0-wordprocessing-dll-rename.diff \
+	odf-converter-2.5-missing-references.diff \
+	odf-converter-2.5-odfvalidator.diff \
+	../odf-converter-2.5-2/odf-converter-2.5-formula-prefix.diff
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
@@ -151,7 +172,7 @@ REMOTECONTROL_ZIP_URL=http://martinkahr.com/files/source/RemoteControlWrapper_R9
 REMOTECONTROL_ZIP_FILENAME=RemoteControlWrapper_R962.tgz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=
+NEO_TAG:=-rNeoOffice-3.0_Early_Access
 
 all: build.all
 
@@ -181,11 +202,9 @@ build.ooo-build_checkout: build.oo_checkout
 build.odf-converter_checkout:
 	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; curl -L "$(ODF-CONVERTER_SOURCE_URL)" | tar zxvf -
+	cd "$(BUILD_HOME)" ; curl -L "$(ODF-CONVERTER_BASE_URL)/$(ODF-CONVERTER_SOURCE)" | tar zxvf -
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(ODF-CONVERTER_PACKAGE)"
-# odf-converter engineers seem to not know that creating a file on Windows and
-# then checking it into cvs or svn from a Unix machine foobar's the newlines
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/source" ; sh -e -c 'for i in `find . -name "*.cs" -o -name "*.xsl"` ; do cat "$${i}" | tr -d "\015" > "../out" ; mv -f "../out" "$${i}" ; done'
+	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; sh -e -c 'for i in $(ODF-CONVERTER_PATCHES) ; do echo "Applying patch from $(ODF-CONVERTER_BASE_URL)/$${i}" ; curl -L "$(ODF-CONVERTER_BASE_URL)/$${i}" | patch -b -p0 -N -r "$(PWD)/patch.rej" ; done'
 	touch "$@"
 
 build.imedia_checkout:
@@ -588,6 +607,9 @@ build.patch_package_shared:
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#'  | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "MacOS/bootstraprc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' | sed 's# #%20#g' | sed 's#^buildid=.*$$#buildid=$(PRODUCT_PATCH_VERSION)#' > "MacOS/versionrc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do strip -S -x "$$i" ; done'
+# Integrate the odf-converter. Don't strip the binaries as it will break the
+# Mono libraries
+	cd "$(PATCH_INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; gnutar cvf - OdfConverter ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/MacOS" ; gnutar xvf - ) )
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents/Library/Spotlight" ; curl -L "$(NEOLIGHT_MDIMPORTER_URL)" | tar zxvf -
 #	Make Spotlight plugin ID unique for each build
