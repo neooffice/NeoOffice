@@ -1621,6 +1621,7 @@ long TabControl::PreNotify( NotifyEvent& rNEvt )
 
     if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
+#ifndef USE_JAVA
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
@@ -1658,6 +1659,7 @@ long TabControl::PreNotify( NotifyEvent& rNEvt )
                 }
             }
         }
+#endif	// !USE_JAVA
     }
 
     return nDone ? nDone : Control::PreNotify(rNEvt);
