@@ -72,7 +72,6 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 	if ( !pFrame )
 		return out;
 
-	IMutex& rSolarMutex = Application::GetSolarMutex();
 	if ( !Application::IsShutDown() )
 	{
 		static jmethodID mID = NULL;
@@ -88,39 +87,44 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *
 			OSL_ENSURE( mID, "Unknown method id!" );
 			if ( mID )
 			{
-				SalExtTextInputPosEvent aInputPosEvent;
-				memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
-
-				// Fix bug 2426 by checking the frame pointer before any use
-				SalData *pSalData = GetSalData();
-				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				IMutex& rSolarMutex = Application::GetSolarMutex();
+				rSolarMutex.acquire();
+				if ( !Application::IsShutDown() )
 				{
-					if ( *it == pFrame )
+					SalExtTextInputPosEvent aInputPosEvent;
+					memset( &aInputPosEvent, 0, sizeof( SalExtTextInputPosEvent ) );
+
+					// Fix bug 2426 by checking the frame pointer before any use
+					SalData *pSalData = GetSalData();
+					for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 					{
-						com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
-						aEvent.dispatch();
-						break;
+						if ( *it == pFrame )
+						{
+							com_sun_star_vcl_VCLEvent aEvent( SALEVENT_EXTTEXTINPUTPOS, pFrame, &aInputPosEvent );
+							aEvent.dispatch();
+							break;
+						}
 					}
+
+					jvalue args[4];
+					if ( aInputPosEvent.mbVertical )
+					{
+						args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth + 25 );
+						args[1].i = jint( aInputPosEvent.mnY - aInputPosEvent.mnHeight + 15 );
+					}
+					else
+					{
+						args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth );
+						args[1].i = jint( aInputPosEvent.mnY + 20 );
+					}
+					args[2].i = jint( aInputPosEvent.mnWidth );
+					args[3].i = jint( aInputPosEvent.mnHeight );
+					out = pEnv->NewObjectA( pointClass, mID, args );
 				}
 
-				jvalue args[4];
-				if ( aInputPosEvent.mbVertical )
-				{
-					args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth + 25 );
-					args[1].i = jint( aInputPosEvent.mnY - aInputPosEvent.mnHeight + 15 );
-				}
-				else
-				{
-					args[0].i = jint( aInputPosEvent.mnX + aInputPosEvent.mnWidth );
-					args[1].i = jint( aInputPosEvent.mnY + 20 );
-				}
-				args[2].i = jint( aInputPosEvent.mnWidth );
-				args[3].i = jint( aInputPosEvent.mnHeight );
-				out = pEnv->NewObjectA( pointClass, mID, args );
+				rSolarMutex.release();
 			}
 		}
-
-		rSolarMutex.release();
 	}
 
 	return out;
