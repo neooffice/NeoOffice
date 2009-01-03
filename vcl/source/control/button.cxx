@@ -1500,11 +1500,8 @@ void PushButton::ImplDrawPushButton( bool bLayout )
                                    (nState&CTRL_STATE_ROLLOVER) ? WINDOW_DRAW_ROLLOVER : 0,
                                    aInRect, bLayout );
 
-#ifndef USE_JAVA
-        // [ed] note : focus rect not used for neo native widgets
         if ( HasFocus() )
             ShowFocus( ImplGetFocusRect() );
-#endif	// !USE_JAVA
     }
 
     if ( bNativeOK == FALSE )
@@ -1872,10 +1869,7 @@ void PushButton::Resize()
 
 void PushButton::GetFocus()
 {
-#ifndef USE_JAVA
-    // [ed] Note : ShowFocus() not used for neo NWF
     ShowFocus( ImplGetFocusRect() );
-#endif	// !USE_JAVA
     SetInputContext( InputContext( GetFont() ) );
     Button::GetFocus();
 }
@@ -2436,7 +2430,11 @@ void RadioButton::ImplInvalidateOrDrawRadioButtonState()
     {
         if ( IsNativeControlSupported(CTRL_RADIOBUTTON, PART_ENTIRE_CONTROL) )
         {
+#ifdef USE_JAVA
+            Invalidate( maStateRect );
+#else	// USE_JAVA
             Invalidate();
+#endif	// USE_JAVA
             Update();
             return;
         }
@@ -2959,15 +2957,7 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             if ( !rTEvt.IsTrackingCanceled() )
                 ImplCallClick();
             else
-#ifdef USE_JAVA
-            {
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
-            }
-#else	// USE_JAVA
                 ImplInvalidateOrDrawRadioButtonState();
-#endif	// USE_JAVA
         }
     }
     else
@@ -2977,13 +2967,7 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
             {
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-#ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
-#else	// USE_JAVA
                 ImplInvalidateOrDrawRadioButtonState();
-#endif	// USE_JAVA
             }
         }
         else
@@ -2991,13 +2975,7 @@ void RadioButton::Tracking( const TrackingEvent& rTEvt )
             if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
             {
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-#ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
-#else	// USE_JAVA
                 ImplInvalidateOrDrawRadioButtonState();
-#endif	// USE_JAVA
             }
         }
     }
@@ -3239,6 +3217,7 @@ long RadioButton::PreNotify( NotifyEvent& rNEvt )
 
     if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
+#ifndef USE_JAVA
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
@@ -3250,16 +3229,11 @@ long RadioButton::PreNotify( NotifyEvent& rNEvt )
                      !maMouseRect.IsInside( GetPointerPosPixel()) ) ||
                      pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow() )
                 {
-#ifdef USE_JAVA
-                    GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                    if ( GetParent()->IsInPaint() )
-                        GetParent()->Update();
-#else	// USE_JAVA
                     Invalidate( maStateRect );
-#endif	// USE_JAVA
                 }
             }
         }
+#endif	 // USE_JAVA
     }
 
     return nDone ? nDone : Button::PreNotify(rNEvt);
@@ -3770,7 +3744,11 @@ void CheckBox::ImplInvalidateOrDrawCheckBoxState()
     {
         if ( IsNativeControlSupported(CTRL_CHECKBOX, PART_ENTIRE_CONTROL) )
         {
+#ifdef USE_JAVA
+            Invalidate( maStateRect );
+#else	// USE_JAVA
             Invalidate();
+#endif	// USE_JAVA
             Update();
             return;
         }
@@ -4051,15 +4029,7 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             if ( !rTEvt.IsTrackingCanceled() )
                 ImplCheck();
             else
-#ifdef USE_JAVA
-            {
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
-            }
-#else	// USE_JAVA
                 ImplInvalidateOrDrawCheckBoxState();
-#endif	// USE_JAVA
         }
     }
     else
@@ -4069,13 +4039,7 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             if ( !(ImplGetButtonState() & BUTTON_DRAW_PRESSED) )
             {
                 ImplGetButtonState() |= BUTTON_DRAW_PRESSED;
-#ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
-#else	// USE_JAVA
                 ImplInvalidateOrDrawCheckBoxState();
-#endif	// USE_JAVA
             }
         }
         else
@@ -4083,13 +4047,7 @@ void CheckBox::Tracking( const TrackingEvent& rTEvt )
             if ( ImplGetButtonState() & BUTTON_DRAW_PRESSED )
             {
                 ImplGetButtonState() &= ~BUTTON_DRAW_PRESSED;
-#ifdef USE_JAVA
-                GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                if ( GetParent()->IsInPaint() )
-                    GetParent()->Update();
-#else	// USE_JAVA
                 ImplInvalidateOrDrawCheckBoxState();
-#endif	// USE_JAVA
             }
         }
     }
@@ -4382,6 +4340,7 @@ long CheckBox::PreNotify( NotifyEvent& rNEvt )
 
     if( (rNEvt.GetType() == EVENT_MOUSEMOVE) && (pMouseEvt = rNEvt.GetMouseEvent()) != NULL )
     {
+#ifndef USE_JAVA
         if( !pMouseEvt->GetButtons() && !pMouseEvt->IsSynthetic() && !pMouseEvt->IsModifierChanged() )
         {
             // trigger redraw if mouse over state has changed
@@ -4393,16 +4352,11 @@ long CheckBox::PreNotify( NotifyEvent& rNEvt )
                      !maMouseRect.IsInside( GetPointerPosPixel()) ) ||
                     pMouseEvt->IsLeaveWindow() || pMouseEvt->IsEnterWindow() )
                 {
-#ifdef USE_JAVA
-                    GetParent()->Invalidate( Rectangle( GetPosPixel(), GetSizePixel() ) );
-                    if ( GetParent()->IsInPaint() )
-                        GetParent()->Update();
-#else	// USE_JAVA
                     Invalidate( maStateRect );
-#endif	// USE_JAVA
                 }
             }
         }
+#endif	 // USE_JAVA
     }
 
     return nDone ? nDone : Button::PreNotify(rNEvt);
@@ -4413,9 +4367,6 @@ long CheckBox::PreNotify( NotifyEvent& rNEvt )
 void CheckBox::Toggle()
 {
     ImplCallEventListenersAndHandler( VCLEVENT_CHECKBOX_TOGGLE, maToggleHdl, this );
-#ifdef USE_JAVA
-	Invalidate();
-#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
