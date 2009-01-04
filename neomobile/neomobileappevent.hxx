@@ -34,20 +34,28 @@
 #ifndef _NEOMOBILEAPPEVENT_HXX
 #define _NEOMOBILEAPPEVENT_HXX
 
+#include <premac.h>
+#include <Foundation/Foundation.h>
+#include <postmac.h>
+
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
 
 class NeoMobilExportFileAppEvent
 {
+	int						mnErrorCode;
 	bool					mbFinished;
+	NSData*					mpPostBody;
 	::rtl::OUString			maSaveUUID;
 
 public:
 							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID );
-	virtual					~NeoMobilExportFileAppEvent() {}
+	virtual					~NeoMobilExportFileAppEvent();
 							DECL_LINK( ExportFile, void* );
+	int						GetErrorCode() { return mnErrorCode; }
 	bool					IsFinished() { return mbFinished; }
+	NSData*					GetPostBody() { return mpPostBody; }
 };
 
 #endif	// _NEOMOBILEAPPEVENT_HXX

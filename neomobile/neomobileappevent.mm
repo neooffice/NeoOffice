@@ -66,10 +66,9 @@
 #include <comphelper/processfactory.hxx>
 
 
-#include "premac.h"
-#import <Foundation/Foundation.h>
+#import <premac.h>
 #import "NSDataAdditions.h"
-#include "postmac.h"
+#import <postmac.h>
 
 
 using namespace ::rtl;
@@ -82,9 +81,17 @@ using namespace ::org::neooffice;
 
 
 NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID ) :
+	mnErrorCode( 0 ),
 	mbFinished( false ),
+	mpPostBody( nil ),
 	maSaveUUID( aSaveUUID )
 {
+}
+
+NeoMobilExportFileAppEvent::~NeoMobilExportFileAppEvent()
+{
+	if ( mpPostBody )
+		[mpPostBody release];
 }
 
 IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
@@ -254,6 +261,10 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			fprintf( stderr, "%s", (char *)[postBody bytes]);
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile end of post request\n");
 			
+			// Save post body
+			[postBody retain];
+			mpPostBody = postBody;
+
 			// free our autorelease pool
 			
 			[pool release];
