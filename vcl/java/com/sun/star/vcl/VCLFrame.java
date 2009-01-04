@@ -714,16 +714,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		LinkedList windowList = new LinkedList();
 
 		Frame[] frames = Frame.getFrames();
-		for (int i = 0; i < frames.length; i++) {
-			Window[] windows = frames[i].getOwnedWindows();
-			for (int j = 0; j < windows.length; j++)
-				windowList.add(windows[j]);
-			windowList.add(frames[i]);
-		}
+		for (int i = 0; i < frames.length; i++)
+			windowList.addAll(getAllWindows(frames[i]));
 
 		Iterator iterator = windowList.iterator();
 		while (iterator.hasNext()) {
-			VCLFrame f = findFrame((Component)iterator.next());
+			VCLFrame f = findFrame((Window)iterator.next());
 			if (f != null) {
 				synchronized (f) {
 					f.enableFlushing(true);
@@ -731,6 +727,28 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				}
 			}
 		}
+
+	}
+
+	/**
+	 * Returns the list of all windows owned directly or indirectly by the
+	 * specified window.
+	 *
+	 * @return the list of all windows owned directly or indirectly by the
+	 * specified window
+	 */
+	static LinkedList getAllWindows(Window w) {
+
+		LinkedList l = new LinkedList();
+
+		if (w != null) {
+			l.add(w);
+			Window[] windows = w.getOwnedWindows();
+			for (int i = 0; i < windows.length; i++)
+				l.addAll(getAllWindows(windows[i]));
+		}
+		
+		return l;
 
 	}
 
@@ -2867,13 +2885,15 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// Set the cursor in all frames as the fix for bug 2370 exposes
 			// the fact that Java only shows the cursor for the current
 			// focus window
+			LinkedList windowList = new LinkedList();
+
 			Frame[] frames = Frame.getFrames();
-			for (int i = 0; i < frames.length; i++) {
-				Window[] windows = frames[i].getOwnedWindows();
-				for (int j = 0; j < windows.length; j++)
-					windows[j].setCursor(c);
-				frames[i].setCursor(c);
-			}
+			for (int i = 0; i < frames.length; i++)
+				windowList.addAll(getAllWindows(frames[i]));
+
+			Iterator iterator = windowList.iterator();
+			while (iterator.hasNext())
+				((Window)iterator.next()).setCursor(c);
 
 			Toolkit.getDefaultToolkit().sync();
 		}
