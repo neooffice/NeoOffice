@@ -60,6 +60,8 @@ import java.awt.event.WindowEvent;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
 
 /**
  * An class that subclass that intercepts Java events and caches them for
@@ -172,21 +174,17 @@ public final class VCLEventQueue implements Runnable {
 		if (o == null)
 			return w;
 
-		Frame[] frames = Frame.getFrames();
-		for (int i = 0; i < frames.length; i++) {
-			Window[] windows = frames[i].getOwnedWindows();
-			for (int j = 0; j < windows.length; j++) {
-				if (windows[j].getPeer() == o) {
-					w = windows[j];
-					break;
-				}
-			}
+		LinkedList windowList = new LinkedList();
 
-			if (w != null) {
-				break;
-			}
-			else if (frames[i].getPeer() == o) {
-				w = frames[i];
+		Frame[] frames = Frame.getFrames();
+		for (int i = 0; i < frames.length; i++)
+			windowList.addAll(VCLFrame.getAllWindows(frames[i]));
+
+		Iterator iterator = windowList.iterator();
+		while (iterator.hasNext()) {
+			Window currentWindow = (Window)iterator.next();
+			if (currentWindow.getPeer() == o) {
+				w = currentWindow;
 				break;
 			}
 		}
