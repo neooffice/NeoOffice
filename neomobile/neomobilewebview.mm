@@ -277,6 +277,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					NSMutableURLRequest *pURLRequest = [NSMutableURLRequest requestWithURL:pSaveURL];
 					if ( pURLRequest )
 					{
+						[pURLRequest setHTTPMethod:@"POST"];
 						[pURLRequest setHTTPBody:pPostBody];
 						[pWebFrame loadRequest:pURLRequest];
 					}
