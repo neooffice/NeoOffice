@@ -120,11 +120,10 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return 0;
 			}
 			
-			// embed the UUID within the current document
+			// embed the UUID within the current document.  This is saved 
+			// in the opendocument formatted export.
 			
-			// +++ FIXME
-			// need to pass in UUID
-			// use neoOfficeMobile->setPropertyValue() with appropriate key/value
+			neoOfficeMobile->setPropertyValue(OUString::createFromAscii("uuid"), maSaveUUID);
 			
 			// get a unique temporary base filename
 			
@@ -218,25 +217,31 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			[postBody appendData:[[NSString stringWithFormat:@"--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
+			// add PDF data
+			
 			OString pdfExportURLutf8;
 			pdfExportURL.convertToString(&pdfExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
 			
-			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"pdf\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"pdf\"; filename=\"unused.pdf\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[NSString stringWithString:@"Content-Type: application/pdf\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
 						
 			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
-
+			
+			// add HTML zip file data
+			
 			OString htmlExportZipFileutf8;
 			htmlExportZipFile.convertToString(&htmlExportZipFileutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
 			
-			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"html\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"html\"; filename=\"unused.zip\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[NSString stringWithString:@"Content-Type: multipart/x-zip\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[[NSData dataWithContentsOfFile:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
 
 			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			// add ODF data tagged with the appropriate mime type
 			
 			OString odfPartName;
 			docExtension.copy(1).convertToString(&odfPartName, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS); // extension with first period stripped off
@@ -247,15 +252,31 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			OString openDocExportURLutf8;
 			openDocExportURL.convertToString(&openDocExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
 			
-			[postBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"unused.%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()], [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: mimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[postBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
 
 			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
-			// +++ FIXME
-			// post data.  for now, print to stderr
+			// add UUID
+			
+			OString uuidUtf8;
+			maSaveUUID.convertToString(&uuidUtf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			
+			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"UUID\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithUTF8String: uuidUtf8.getStr()] dataUsingEncoding:NSUTF8StringEncoding]];		
+
+			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			// mark that data is binhexed
+			
+			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"base64\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[postBody appendData:[[NSString stringWithString:@"true"] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			// print post data to stderr
 			
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile start of post request\n");
 			fprintf( stderr, "%s", (char *)[postBody bytes]);
