@@ -1270,11 +1270,15 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             break;
 
         case SCROLL_PAGEUP:
+#ifdef USE_JAVA
+            if ( maPage1Rect.IsInside( rMousePos ) )
+#else	// USE_JAVA
             // HitTestNativeControl, see remark at top of file
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT: PART_TRACK_VERT_UPPER,
                                        Region( maPage1Rect ), rMousePos, bIsInside )?
                     bIsInside:
                     maPage1Rect.IsInside( rMousePos ) )
+#endif	// USE_JAVA
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_PAGE1_DOWN;
@@ -1284,11 +1288,15 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             break;
 
         case SCROLL_PAGEDOWN:
+#ifdef USE_JAVA
+            if ( maPage2Rect.IsInside( rMousePos ) )
+#else	// USE_JAVA
             // HitTestNativeControl, see remark at top of file
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_RIGHT: PART_TRACK_VERT_LOWER,
                                        Region( maPage2Rect ), rMousePos, bIsInside )?
                     bIsInside:
                     maPage2Rect.IsInside( rMousePos ) )
+#endif	// USE_JAVA
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_PAGE2_DOWN;
@@ -1455,17 +1463,25 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                 else
                     Sound::Beep( SOUND_DISABLE, this );
             }
+#ifdef USE_JAVA
+            else
+#else	// USE_JAVA
             else if( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_AREA : PART_TRACK_VERT_AREA,
                                            aControlRegion, rMousePos, bIsInside )?
                 bIsInside : TRUE )
+#endif	// USE_JAVA
             {
                 nTrackFlags = STARTTRACK_BUTTONREPEAT;
     
+#ifdef USE_JAVA
+                if ( maPage1Rect.IsInside( rMousePos ) )
+#else	// USE_JAVA
                 // HitTestNativeControl, see remark at top of file
                 if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
                                            Region( maPage1Rect ), rMousePos, bIsInside )?
                     bIsInside:                
                     maPage1Rect.IsInside( rMousePos ) )
+#endif	// USE_JAVA
                 {
                     meScrollType    = SCROLL_PAGEUP;
                     mnDragDraw      = SCRBAR_DRAW_PAGE1;
@@ -1771,23 +1787,35 @@ Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
             bIsInside:
             maBtn2Rect.IsInside( rPt ) )
         return &maBtn2Rect;
+#ifdef USE_JAVA
+    else if( maPage1Rect.IsInside( rPt ) )
+#else	// USE_JAVA
     // HitTestNativeControl, see remark at top of file
     else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
                 Region( maPage1Rect ), rPt, bIsInside)?
             bIsInside:
             maPage1Rect.IsInside( rPt ) )
+#endif	// USE_JAVA
         return &maPage1Rect;
+#ifdef USE_JAVA
+    else if( maPage2Rect.IsInside( rPt ) )
+#else	// USE_JAVA
     // HitTestNativeControl, see remark at top of file
     else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_LOWER,
                 Region( maPage2Rect ), rPt, bIsInside)?
             bIsInside:
             maPage2Rect.IsInside( rPt ) )
+#endif	// USE_JAVA
         return &maPage2Rect;
+#ifdef USE_JAVA
+    else if( maThumbRect.IsInside( rPt ) )
+#else	// USE_JAVA
     // HitTestNativeControl, see remark at top of file
     else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_THUMB_HORZ : PART_THUMB_VERT,
                 Region( maThumbRect ), rPt, bIsInside)?
              bIsInside:
              maThumbRect.IsInside( rPt ) )
+#endif	// USE_JAVA
         return &maThumbRect;
     else
         return NULL;
