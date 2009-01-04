@@ -41,10 +41,11 @@
 class NeoMobilExportFileAppEvent
 {
 	bool					mbFinished;
+	::rtl::OUString			maSaveUUID;
 
 public:
-							NeoMobilExportFileAppEvent();
-	virtual					~NeoMobilExportFileAppEvent() {};
+							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID );
+	virtual					~NeoMobilExportFileAppEvent() {}
 							DECL_LINK( ExportFile, void* );
 	bool					IsFinished() { return mbFinished; }
 };

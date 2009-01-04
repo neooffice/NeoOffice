@@ -42,6 +42,7 @@
 #include <vos/mutex.hxx>
 #endif
 
+using namespace rtl;
 using namespace vos;
 
 static const NSString *pTestBaseURLs[] = { @"https://neomobile-test.neooffice.org/", @"https://neomobile-test-primary.neooffice.org/", @"https://neomobile-test-backup.neooffice.org/" };
@@ -253,12 +254,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 	// Post a NeoMobilExportFileAppEvent and have the OOo code execute it
 	NSString *pSaveURIHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uri"];
-	if ( pSaveURIHeader )
+	NSString *pSaveUUIDHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uuid"];
+	if ( pSaveURIHeader && pSaveUUIDHeader )
 	{
 		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
 		if ( pSaveURL )
 		{
-			NeoMobilExportFileAppEvent aEvent;
+			NeoMobilExportFileAppEvent aEvent( OUString::createFromAscii( [pSaveUUIDHeader UTF8String] ) );
 
 			vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();

@@ -81,8 +81,9 @@ using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 
 
-NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent() :
-	mbFinished( false )
+NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID ) :
+	mbFinished( false ),
+	maSaveUUID( aSaveUUID )
 {
 }
 
