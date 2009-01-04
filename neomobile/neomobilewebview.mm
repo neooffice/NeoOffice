@@ -260,7 +260,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
 		if ( pSaveURL )
 		{
-			NeoMobilExportFileAppEvent aEvent( OUString::createFromAscii( [pSaveUUIDHeader UTF8String] ) );
+			NeoMobilExportFileAppEvent aEvent( OUString( [pSaveUUIDHeader UTF8String], [pSaveUUIDHeader length], RTL_TEXTENCODING_UTF8 ) );
 
 			vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 			rSolarMutex.acquire();

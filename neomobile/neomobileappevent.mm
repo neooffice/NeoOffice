@@ -136,7 +136,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			OUString docExtension=neoOfficeMobile->getOpenDocumentExtension();
 			
 			OUString openDocExportURL=OUString::createFromAscii("file://");
-			openDocExportURL+=OUString::createFromAscii([filePath UTF8String]);
+			openDocExportURL+=OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
 			openDocExportURL+=docExtension;
 			
 			if(!neoOfficeMobile->saveAsOpenDocument(openDocExportURL))
@@ -149,7 +149,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// perform a PDF export
 			
 			OUString pdfExportURL=OUString::createFromAscii("file://");
-			pdfExportURL+=OUString::createFromAscii([filePath UTF8String]);
+			pdfExportURL+=OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
 			pdfExportURL+=OUString::createFromAscii(".pdf");
 			
 			if(!neoOfficeMobile->saveAsPDF(pdfExportURL))
@@ -172,7 +172,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			}
 			
 			OUString htmlExportURL=OUString::createFromAscii("file://");
-			htmlExportURL+=OUString::createFromAscii([filePath UTF8String]);
+			htmlExportURL+=OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
 			htmlExportURL+=OUString::createFromAscii("/_nm_export.html");
 			
 			if(!neoOfficeMobile->saveAsHTML(htmlExportURL))
@@ -182,10 +182,10 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return 0;
 			}
 			
-			OUString htmlExportZipFile=OUString::createFromAscii([filePath UTF8String]);
+			OUString htmlExportZipFile([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
 			htmlExportZipFile+=OUString::createFromAscii(".zip");
 			
-			if(!neoOfficeMobile->zipDirectory(OUString::createFromAscii([filePath UTF8String]), htmlExportZipFile))
+			if(!neoOfficeMobile->zipDirectory(OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8), htmlExportZipFile))
 			{
 				[pool release];
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
