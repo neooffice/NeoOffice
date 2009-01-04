@@ -452,8 +452,10 @@ static BOOL InitScrollBarTrackInfo( HIThemeTrackDrawInfo *pTrackDrawInfo, HIScro
 		pTrackDrawInfo->min = 0;
 		pTrackDrawInfo->max = 1;
 		pTrackDrawInfo->value = 0;
-		// Fix bug 3359 by disabling the scrollbar
-		pTrackDrawInfo->enableState = kThemeTrackNothingToScroll;
+		// Fix bug 3359 by disabling the scrollbar. Note that we set it to
+		// disabled because the "nothing to scroll" setting will make the
+		// arrow buttons have NULL bounds.
+		pTrackDrawInfo->enableState = kThemeTrackDisabled;
 		pTrackDrawInfo->trackInfo.scrollbar.viewsize = 0;
 		pTrackDrawInfo->trackInfo.scrollbar.pressState = 0;
 	}
@@ -912,6 +914,10 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 
 		HIThemeTrackDrawInfo pTrackDrawInfo;
 		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
+
+		// Fix bug 3359 by drawing disabled scrollbar as nothing to scroll
+		if ( pTrackDrawInfo.enableState == kThemeTrackDisabled )
+			pTrackDrawInfo.enableState = kThemeTrackNothingToScroll;
 
 		bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
