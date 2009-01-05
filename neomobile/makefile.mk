@@ -45,6 +45,9 @@ ENABLE_EXCEPTIONS=TRUE
 
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
+# Do not allow optimization as it appears to cause random crashing
+CDEFS+=-O0
+
 # Don't put lib prefix on shared library
 DLLPRE=
 

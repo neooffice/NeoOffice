@@ -46,12 +46,12 @@ class NeoMobilExportFileAppEvent
 {
 	int						mnErrorCode;
 	bool					mbFinished;
-	NSData*					mpPostBody;
+	NSMutableData*			mpPostBody;
 	::rtl::OUString			maSaveUUID;
 
 public:
-							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID );
-	virtual					~NeoMobilExportFileAppEvent();
+							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID, NSMutableData *pPostBody );
+	virtual					~NeoMobilExportFileAppEvent() {};
 							DECL_LINK( ExportFile, void* );
 	int						GetErrorCode() { return mnErrorCode; }
 	bool					IsFinished() { return mbFinished; }
