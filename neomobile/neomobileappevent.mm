@@ -31,13 +31,10 @@
  *
  *************************************************************************/
 
+#include "neomobile.h"
 #include "neomobileappevent.hxx"
 #include <org/neooffice/XNeoOfficeMobile.hpp>
 #include <unistd.h>
-
-#ifndef _RTL_USTRING_HXX_
-#include <rtl/ustring.hxx>
-#endif
 
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
@@ -136,7 +133,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			OUString docExtension=neoOfficeMobile->getOpenDocumentExtension();
 			
 			OUString openDocExportURL=OUString::createFromAscii("file://");
-			openDocExportURL+=OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
+			openDocExportURL+=NSStringToOUString(filePath);
 			openDocExportURL+=docExtension;
 			
 			if(!neoOfficeMobile->saveAsOpenDocument(openDocExportURL))
@@ -149,7 +146,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// perform a PDF export
 			
 			OUString pdfExportURL=OUString::createFromAscii("file://");
-			pdfExportURL+=OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
+			pdfExportURL+=NSStringToOUString(filePath);
 			pdfExportURL+=OUString::createFromAscii(".pdf");
 			
 			if(!neoOfficeMobile->saveAsPDF(pdfExportURL))
@@ -172,7 +169,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			}
 			
 			OUString htmlExportURL=OUString::createFromAscii("file://");
-			htmlExportURL+=OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
+			htmlExportURL+=NSStringToOUString(filePath);
 			htmlExportURL+=OUString::createFromAscii("/_nm_export.html");
 			
 			if(!neoOfficeMobile->saveAsHTML(htmlExportURL))
@@ -182,10 +179,11 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return 0;
 			}
 			
-			OUString htmlExportZipFile([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8);
+			OUString htmlExportZipDir(NSStringToOUString(filePath));
+			OUString htmlExportZipFile(htmlExportZipDir);
 			htmlExportZipFile+=OUString::createFromAscii(".zip");
 			
-			if(!neoOfficeMobile->zipDirectory(OUString([filePath UTF8String], [filePath length], RTL_TEXTENCODING_UTF8), htmlExportZipFile))
+			if(!neoOfficeMobile->zipDirectory(htmlExportZipDir, htmlExportZipFile))
 			{
 				[pool release];
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
@@ -206,14 +204,13 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// "html" for the zipfile, and the named section for the
 			// opendocument format section is named after the extension.
 			
-			NSString *stringBoundary = [NSString stringWithString:@"neomobileupload"];
+			NSString *stringBoundary = @"neomobileupload";
 			
 			// add PDF data
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
-			OString pdfExportURLutf8;
-			pdfExportURL.convertToString(&pdfExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			OString pdfExportURLutf8 = OUStringToOString(pdfExportURL,RTL_TEXTENCODING_UTF8);
 			
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"pdf\"; filename=\"unused.pdf\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Type: image/pdf\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
@@ -225,8 +222,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
-			OString htmlExportZipFileutf8;
-			htmlExportZipFile.convertToString(&htmlExportZipFileutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			OString htmlExportZipFileutf8 = OUStringToOString(htmlExportZipFile,RTL_TEXTENCODING_UTF8);
 			
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"html\"; filename=\"unused.zip\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Type: application/zip\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
@@ -238,14 +234,11 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
-			OString odfPartName;
-			docExtension.copy(1).convertToString(&odfPartName, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS); // extension with first period stripped off
+			OString odfPartName = OUStringToOString(docExtension.copy(1),RTL_TEXTENCODING_UTF8); // extension with first period stripped off
 			
-			OString mimeType;
-			neoOfficeMobile->getMimeType().convertToString(&mimeType, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			OString mimeType = OUStringToOString(neoOfficeMobile->getMimeType(),RTL_TEXTENCODING_UTF8);
 			
-			OString openDocExportURLutf8;
-			openDocExportURL.convertToString(&openDocExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			OString openDocExportURLutf8 = OUStringToOString(openDocExportURL,RTL_TEXTENCODING_UTF8);
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"unused.%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()], [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
 			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: mimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
@@ -257,8 +250,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
-			OString uuidUtf8;
-			maSaveUUID.convertToString(&uuidUtf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			OString uuidUtf8 = OUStringToOString(maSaveUUID,RTL_TEXTENCODING_UTF8);
 			
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"UUID\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 						

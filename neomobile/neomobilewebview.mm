@@ -31,6 +31,7 @@
  *
  *************************************************************************/
 
+#include "neomobile.h"
 #include "neomobilewebview.h"
 #include "neomobileappevent.hxx"
 
@@ -264,7 +265,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			NSData *pPostBody = [NSMutableData dataWithLength:0];
 			if ( pURLRequest && pPostBody )
 			{
-				NeoMobilExportFileAppEvent aEvent( OUString( [pSaveUUIDHeader UTF8String], [pSaveUUIDHeader length], RTL_TEXTENCODING_UTF8 ), pPostBody );
+				NeoMobilExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pPostBody );
 
 				vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();

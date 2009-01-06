@@ -42,10 +42,6 @@
 
 #include <stdio.h>
 
-#ifndef _RTL_USTRING_HXX_
-#include <rtl/ustring.hxx>
-#endif
-
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
 #endif
@@ -117,6 +113,25 @@ using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::document;
 
 //========================================================================
+
+OUString NSStringToOUString( NSString *pString )
+{
+	if ( !pString )
+		return OUString();
+
+	unsigned int nLen = [pString length];
+	if ( !nLen )
+		return OUString();
+
+	sal_Unicode aBuf[ nLen + 1 ];
+	[pString getCharacters:aBuf];
+	aBuf[ nLen ] = 0;
+
+	return OUString( aBuf );
+}
+
+//========================================================================
+
 class MacOSXNeoOfficeMobileImpl
 	: public ::cppu::WeakImplHelper2<XServiceInfo, XNeoOfficeMobile>
 {
@@ -682,12 +697,12 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 	try
 	{
-		OString asciiDirPath;
-		if(!dirPath.convertToString(&asciiDirPath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
+		OString asciiDirPath = OUStringToOString(dirPath,RTL_TEXTENCODING_UTF8);
+		if (!asciiDirPath.getLength())
 			return(false);
 		
-		OString asciiZipFilePath;
-		if(!zipFilePath.convertToString(&asciiZipFilePath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
+		OString asciiZipFilePath = OUStringToOString(zipFilePath,RTL_TEXTENCODING_UTF8);
+		if (!asciiZipFilePath.getLength())
 			return(false);
 			
 		char oldWD[2048];
