@@ -45,9 +45,6 @@ ENABLE_EXCEPTIONS=TRUE
 
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
-# Do not allow optimization as it appears to cause random crashing
-CDEFS+=-O0
-
 # Don't put lib prefix on shared library
 DLLPRE=
 
@@ -68,8 +65,7 @@ UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
 SLOFILES= \
 	$(SLO)$/neomobile.obj \
 	$(SLO)$/neomobileappevent.obj \
-	$(SLO)$/neomobilewebview.obj \
-	$(SLO)$/NSDataAdditions.obj
+	$(SLO)$/neomobilewebview.obj
 
 SHL1TARGET=$(TARGET)
 SHL1OBJS=$(SLOFILES)

@@ -63,11 +63,6 @@
 #include <comphelper/processfactory.hxx>
 
 
-#import <premac.h>
-#import "NSDataAdditions.h"
-#import <postmac.h>
-
-
 using namespace ::rtl;
 using namespace ::osl;
 using namespace ::cppu;
@@ -100,14 +95,18 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			if(!rNeoOfficeMobile.is())
 			{
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to get NeoOfficeMobile service reference\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
 			Reference< XNeoOfficeMobile > neoOfficeMobile(rNeoOfficeMobile, UNO_QUERY);
 			if(!neoOfficeMobile.is())
 			{
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to cast NeoOfficeMobile reference to service\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
@@ -126,7 +125,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
 			}
 			
+#ifdef DEBUG
 			fprintf(stderr, "NeoMobilExportFileAppEvent::ExportFile exporting to '%s'\n", [filePath UTF8String]);
+#endif	// DEBUG
 			
 			// perform an opendocument export
 			
@@ -139,7 +140,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->saveAsOpenDocument(openDocExportURL))
 			{
 				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform OpenDocument export\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
@@ -152,7 +155,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->saveAsPDF(pdfExportURL))
 			{
 				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform PDF export\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
@@ -164,7 +169,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(![[NSFileManager defaultManager] createDirectoryAtPath: filePath attributes: nil])
 			{
 				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create export directory\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
@@ -175,7 +182,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->saveAsHTML(htmlExportURL))
 			{
 				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform HTML export\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
@@ -186,7 +195,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->zipDirectory(htmlExportZipDir, htmlExportZipFile))
 			{
 				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
@@ -214,9 +225,8 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"pdf\"; filename=\"unused.pdf\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Type: image/pdf\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[mpPostBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 						
-			[mpPostBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+			[mpPostBody appendData:[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]]]];
 						
 			// add HTML zip file data
 			
@@ -226,9 +236,8 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"html\"; filename=\"unused.zip\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 			[mpPostBody appendData:[[NSString stringWithString:@"Content-Type: application/zip\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[mpPostBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 						
-			[mpPostBody appendData:[[[NSData dataWithContentsOfFile:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+			[mpPostBody appendData:[NSData dataWithContentsOfFile:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()]]];
 
 			// add ODF data tagged with the appropriate mime type
 			
@@ -242,9 +251,8 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"unused.%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()], [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
 			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: mimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
-			[mpPostBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
 						
-			[mpPostBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+			[mpPostBody appendData:[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]]]];
 
 			// add UUID
 			
@@ -256,23 +264,17 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 						
 			[mpPostBody appendData:[[NSString stringWithUTF8String: uuidUtf8.getStr()] dataUsingEncoding:NSUTF8StringEncoding]];		
 
-			// mark that data is binhexed
-			
-			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
-			
-			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"base64\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-						
-			[mpPostBody appendData:[[NSString stringWithString:@"true"] dataUsingEncoding:NSUTF8StringEncoding]];
-			
 			// close out form
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
+#ifdef DEBUG
 			// print post data to stderr
 			
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile start of post request\n");
 			fprintf( stderr, "%s", (char *)[mpPostBody bytes]);
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile end of post request\n");
+#endif	// DEBUG
 			
 			// free our autorelease pool
 			
@@ -280,10 +282,11 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 		}
 		else
 		{
+#ifdef DEBUG
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile : I'm notn Main!\n");
+#endif	// DEBUG
 		}
 
-		fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile not implemented\n" );
 		mbFinished = true;
 	}
 
