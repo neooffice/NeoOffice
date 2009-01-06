@@ -31,7 +31,7 @@
  *
  *************************************************************************/
 
-#include "neomobile.h"
+#include "neomobile.hxx"
 #include "neomobileappevent.hxx"
 #include <org/neooffice/XNeoOfficeMobile.hpp>
 #include <unistd.h>

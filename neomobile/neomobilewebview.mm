@@ -31,7 +31,7 @@
  *
  *************************************************************************/
 
-#include "neomobile.h"
+#include "neomobile.hxx"
 #include "neomobilewebview.h"
 #include "neomobileappevent.hxx"
 
