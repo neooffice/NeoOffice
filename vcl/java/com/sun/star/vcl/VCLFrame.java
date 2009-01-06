@@ -2636,7 +2636,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @return <code>true</code> is the window was brought to the front else
 	 *  <code>false</code>
 	 */
-	public boolean requestFocus() {
+	public synchronized boolean requestFocus() {
 
 		if (window.isShowing() && !isFloatingWindow()) {
 			panel.requestFocusInWindow();
@@ -3033,7 +3033,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @return <code>true</code> is the window was brought to the front else
 	 *  <code>false</code>
 	 */
-	public boolean toFront() {
+	public synchronized boolean toFront() {
 
 		if (window.isShowing() && !isFloatingWindow()) {
 			window.toFront();
