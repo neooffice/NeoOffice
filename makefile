@@ -175,7 +175,7 @@ REMOTECONTROL_ZIP_URL=http://martinkahr.com/files/source/RemoteControlWrapper_R9
 REMOTECONTROL_ZIP_FILENAME=RemoteControlWrapper_R962.tgz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=-rNeoOffice-3.0_Early_Access
+NEO_TAG:=-rNeoOffice-3_0_Early_Access
 
 all: build.all
 
