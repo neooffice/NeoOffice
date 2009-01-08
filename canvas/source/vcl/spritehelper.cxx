@@ -165,7 +165,7 @@ namespace vclcanvas
 
 					// bitmasks are much faster than alphamasks on some platforms
 					// so convert to bitmask if useful
-#ifndef QUARTZ
+#if !defined QUARTZ || defined USE_JAVA
                     if( aMask.GetBitCount() != 1 )
                     {
                         OSL_ENSURE(false,
