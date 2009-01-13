@@ -1077,6 +1077,11 @@ void TabControl::ImplDrawItem( ImplTabItem* pItem, const Rectangle& rCurRect, bo
     Size aTabSize = aRect.GetSize();
     long nTextHeight = GetTextHeight();
     long nTextWidth = GetCtrlTextWidth( pItem->maFormatText );
+#ifdef USE_JAVA
+    // Prevent first tab item's text from being shifted too far left
+    if ( bFirstInGroup )
+        nTextWidth -= 4;
+#endif	// USE_JAVA
     DrawCtrlText( Point( aRect.Left()+((aTabSize.Width()-nTextWidth)/2)-nOff-nOff3,
                          aRect.Top()+((aTabSize.Height()-nTextHeight)/2)-nOff3 ),
                   pItem->maFormatText,
