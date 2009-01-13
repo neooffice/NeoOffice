@@ -51,6 +51,9 @@
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
+#ifndef _SV_SVAPP_HXX
+#include <vcl/svapp.hxx>
+#endif
 #ifndef _SV_DECOVIEW_HXX
 #include <vcl/decoview.hxx>
 #endif
@@ -86,7 +89,8 @@ using namespace rtl;
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
 #define COMBOBOX_HEIGHT					28
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
-#define EDITBOX_HEIGHT					24
+// Fix bug 3378 by reducing the editbox height for low screen resolutions
+#define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
 #define FOCUSRING_WIDTH					3
 #define LISTBOX_BUTTON_HORIZ_TRIMWIDTH	0
 #define LISTBOX_BUTTON_VERT_TRIMWIDTH	( IsRunningTiger() ? 2 : 1 )
