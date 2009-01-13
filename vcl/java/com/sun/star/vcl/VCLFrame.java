@@ -1551,7 +1551,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else if (w instanceof Frame)
 			window = new VCLFrame.NoPaintDialog(this, (Frame)w);
 		else
-			window = new VCLFrame.NoPaintFrame(this);
+			window = new VCLFrame.NoPaintFrame(this, queue);
 
 		// Process remaining style flags
 		if (showOnlyMenus)
@@ -1579,7 +1579,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		else if (utility) {
 			if (VCLFrame.utilityWindowInsets == null) {
-				Window uw = new VCLFrame.NoPaintFrame(this);
+				Window uw = new VCLFrame.NoPaintFrame(this, queue);
 				uw.addNotify();
 				VCLFrame.utilityWindowInsets = uw.getInsets();
 				uw.removeNotify();
@@ -3339,6 +3339,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		private Dimension minSize = null;
 
 		/**
+		 * The <code>VCLEventQueue</code>.
+		 */
+		private VCLEventQueue queue = null;
+
+		/**
 		 * The utility window top inset.
 		 */
 		private int utilityWindowTopInset = 0;
@@ -3348,9 +3353,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param f the <code>VCLFrame</code>
 		 */
-		NoPaintFrame(VCLFrame f) {
+		NoPaintFrame(VCLFrame f, VCLEventQueue q) {
 
 			frame = f;
+			queue = q;
 			initialize();
 
 		}
@@ -3502,8 +3508,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void setMenuBar(MenuBar mb) {
 
 			// Fix bug 3003 by only setting the menubar in the Java event
-			// dispatch thread
-			if (!EventQueue.isDispatchThread()) {
+			// dispatch thread. Fix bug 3379 by running on the current thread
+			// if it is the application's main thread.
+			if (!queue.isApplicationMainThread() && !EventQueue.isDispatchThread())	{
 				VCLFrame.SetMenuBarHandler handler = new VCLFrame.SetMenuBarHandler(this, mb);
 				Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
 				Thread.yield();
