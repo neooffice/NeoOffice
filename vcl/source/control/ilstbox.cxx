@@ -2033,7 +2033,12 @@ void ImplListBoxWindow::SetTopEntry( USHORT nTop )
     if( nTop > nLastEntry )
         nTop = nLastEntry;
     const ImplEntryType* pLast = mpEntryList->GetEntryPtr( nLastEntry );
+#ifdef USE_JAVA
+    // Backport fix for OOo bug 97710 from the OOO300_m15 tag
+    while( nTop > 0 && mpEntryList->GetAddedHeight( nLastEntry, nTop-1 ) + pLast->mnHeight <= nWHeight )
+#else	// USE_JAVA
     while( nTop > 0 && mpEntryList->GetAddedHeight( nLastEntry, nTop-1 ) + pLast->mnHeight < nWHeight )
+#endif	// USE_JAVA
         nTop--;
     
 	if ( nTop != mnTop )
