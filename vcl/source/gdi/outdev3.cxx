@@ -8093,7 +8093,33 @@ xub_StrLen OutputDevice::HasGlyphs( const Font& rTempFont, const String& rStr,
 
     // if fontmap is unknown assume it doesn't have the glyphs
     if( bRet == FALSE )
+#ifdef USE_JAVA
+    {
+        // Fix bug 3383 by laying out the text and testing for fallbacks
+        xub_StrLen nRet = nIndex;
+        String aStr( rStr );
+        ImplLayoutArgs aLayoutArgs = ImplPrepareLayoutArgs( aStr, nIndex, nEnd - nIndex, 0, NULL );
+
+        // get matching layout object for base font
+        SalLayout* pSalLayout = NULL;
+        if( mpPDFWriter )
+            pSalLayout = mpPDFWriter->GetTextLayout( aLayoutArgs, &mpFontEntry->maFontSelData );
+
+        if( !pSalLayout )
+            pSalLayout = mpGraphics->GetTextLayout( aLayoutArgs, 0 );
+
+        // If text layout has no fallbacks, then return STRING_LEN
+        if( pSalLayout && pSalLayout->LayoutText( aLayoutArgs ) && !aLayoutArgs.NeedFallback() )
+            nRet = STRING_LEN;
+
+        if( pSalLayout )
+            pSalLayout->Release();
+
+        return nRet;
+    }
+#else	// USE_JAVA
         return nIndex;
+#endif	// USE_JAVA
 
     const sal_Unicode* pStr = rStr.GetBuffer();
     for( pStr += nIndex; nIndex < nEnd; ++pStr, ++nIndex )
