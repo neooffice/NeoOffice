@@ -63,7 +63,7 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 	while read i ; do
 		check_installation "$i" && exit 0
 	done << !
-`( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -name "*.app" -prune 2>/dev/null ) | sort -u`
+`( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -maxdepth 4 -name "*.app" -prune 2>/dev/null ) | sort -u`
 !
 
 fi
