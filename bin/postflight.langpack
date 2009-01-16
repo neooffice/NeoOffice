@@ -79,7 +79,7 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 	while read i ; do
 		update_installation "$1" "$i" || exit 1
 	done << !
-`( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -name "*.app" -prune 2>/dev/null ) | sort -u`
+`( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -maxdepth 4 -name "*.app" -prune 2>/dev/null ) | sort -u`
 !
 
 fi
