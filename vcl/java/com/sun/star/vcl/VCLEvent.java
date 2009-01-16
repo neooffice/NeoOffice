@@ -1147,11 +1147,6 @@ public final class VCLEvent extends AWTEvent {
 					// events since one button mice have no right button
 					if ((modifiers & VCLEvent.KEY_MOD3) != 0)
 						modifiers = (modifiers & ~(VCLEvent.KEY_MOD3 | VCLEvent.MOUSE_LEFT)) | VCLEvent.MOUSE_RIGHT;
-
-					// Convert alt plus left button events to middle button
-					// events since one button mice have no middle button
-					if ((modifiers & VCLEvent.KEY_MOD2) != 0)
-						modifiers = (modifiers & ~(VCLEvent.KEY_MOD2 | VCLEvent.MOUSE_LEFT)) | VCLEvent.MOUSE_MIDDLE;
 				}
 			}
 		}
