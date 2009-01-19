@@ -559,10 +559,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		USHORT nID = pEvent->getID();
 		size_t nFrames = pSalData->maFrameList.size();
 		pEvent->dispatch();
-		delete pEvent;
-
-		com_sun_star_vcl_VCLFrame::flushAllFrames();
-
 		switch ( nID )
 		{
 			case SALEVENT_CLOSE:
@@ -576,7 +572,16 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				// the painting timer runs.
 				OThread::yield();
 				break;
+			case SALEVENT_KEYUP:
+				// Fix bug 3390 by letting any timers run when releasing
+				// a Command-key event
+				if ( pEvent->getModifiers() & KEY_MOD1 )
+				bContinue = false; 
+				break;
 		}
+		delete pEvent;
+
+		com_sun_star_vcl_VCLFrame::flushAllFrames();
 
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed
