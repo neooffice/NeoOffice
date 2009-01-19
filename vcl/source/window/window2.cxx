@@ -368,9 +368,10 @@ void Window::ShowFocus( const Rectangle& rRect )
     ImplWinData* pWinData = ImplGetWinData();
     
 #ifdef USE_JAVA
-    // Disable dotted focus rectangle for all native controls
-    if( ! ( ( ImplGetSVData()->maNWFData.mbNoFocusRects || mpWindowImpl->mbUseNativeFocus ) &&
-            IsNativeWidgetEnabled() ) )
+    // Disable dotted focus rectangle for all native controls. Also, ignore
+    // whether or not the native control is enabled as we do not want the
+    // dotted focus rectangle in form controls.
+    if( ! ( ImplGetSVData()->maNWFData.mbNoFocusRects || mpWindowImpl->mbUseNativeFocus ) )
 #else	// USE_JAVA
     // native themeing suggest not to use focus rects
     if( ! ( mpWindowImpl->mbUseNativeFocus &&
