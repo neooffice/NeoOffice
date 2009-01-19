@@ -2480,7 +2480,13 @@ if ( bNativeOK == FALSE )
             nStyle |= BUTTON_DRAW_DISABLED;
         if ( mbChecked )
             nStyle |= BUTTON_DRAW_CHECKED;
+#ifdef USE_JAVA
+        ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = !IsNativeWidgetEnabled();
+#endif	// USE_JAVA
         Image aImage = GetRadioImage( GetSettings(), nStyle );
+#ifdef USE_JAVA
+        ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = false;
+#endif	// USE_JAVA
         if ( IsZoom() )
             DrawImage( maStateRect.TopLeft(), maStateRect.GetSize(), aImage );
         else
@@ -3356,7 +3362,15 @@ Size RadioButton::ImplGetRadioImageSize() const
         }
     }
     if( bDefaultSize )
+#ifdef USE_JAVA
+    {
+        ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = !IsNativeWidgetEnabled();
+#endif	// USE_JAVA
         aSize = GetRadioImage( GetSettings(), 0 ).GetSizePixel();
+#ifdef USE_JAVA
+        ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = false;
+    }
+#endif	// USE_JAVA
     return aSize;
 }
 
@@ -3436,6 +3450,16 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         Size aBmpSize( pSVData->maCtrlData.mpRadioImgList->GetImageSize() );
         if ( nItems > 0 && aBmpSize.Width() > 0 && aBmpSize.Height() > 0 )
         {
+            // Cache the non-native images for use when native controls are
+            // disabled
+            if ( pSVData->maCtrlData.mpNonNativeRadioImgList )
+                delete pSVData->maCtrlData.mpNonNativeRadioImgList;
+            pSVData->maCtrlData.mpNonNativeRadioImgList = new ImageList();
+            if( pResMgr )
+                LoadThemedImageList( rStyleSettings,
+                    pSVData->maCtrlData.mpNonNativeRadioImgList,
+                    ResId( SV_RESID_BITMAP_RADIO+nStyle, *pResMgr ), 6 );
+
             SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
             if ( pSalVirDev )
             {
@@ -3556,6 +3580,11 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         else
             nId = 1;
     }
+#ifdef USE_JAVA
+    if ( pSVData->maCtrlData.mbUseNonNativeRadioImgList )
+        return pSVData->maCtrlData.mpNonNativeRadioImgList->GetImage( nId );
+    else
+#endif	// USE_JAVA
     return pSVData->maCtrlData.mpRadioImgList->GetImage( nId );
 }
 
@@ -3796,7 +3825,13 @@ void CheckBox::ImplDrawCheckBoxState()
             nStyle |= BUTTON_DRAW_DONTKNOW;
         else if ( meState == STATE_CHECK )
             nStyle |= BUTTON_DRAW_CHECKED;
+#ifdef USE_JAVA
+        ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = !IsNativeWidgetEnabled();
+#endif	// USE_JAVA
         Image aImage = GetCheckImage( GetSettings(), nStyle );
+#ifdef USE_JAVA
+        ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = false;
+#endif	// USE_JAVA
         if ( IsZoom() )
             DrawImage( maStateRect.TopLeft(), maStateRect.GetSize(), aImage );
         else
@@ -4428,7 +4463,15 @@ Size CheckBox::ImplGetCheckImageSize() const
         }
     }
     if( bDefaultSize ) 
+#ifdef USE_JAVA
+    {
+        ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = !IsNativeWidgetEnabled();
+#endif	// USE_JAVA
         aSize = GetCheckImage( GetSettings(), 0 ).GetSizePixel();
+        ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = false;
+#ifdef USE_JAVA
+    }
+#endif	// USE_JAVA
     return aSize;
 }
 
@@ -4467,6 +4510,16 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         Size aBmpSize( pSVData->maCtrlData.mpCheckImgList->GetImageSize() );
         if ( nItems > 0 && aBmpSize.Width() > 0 && aBmpSize.Height() > 0 )
         {
+            // Cache the non-native images for use when native controls are
+            // disabled
+            if ( pSVData->maCtrlData.mpNonNativeCheckImgList )
+                delete pSVData->maCtrlData.mpNonNativeCheckImgList;
+            pSVData->maCtrlData.mpNonNativeCheckImgList = new ImageList();
+            if( pResMgr )
+                LoadThemedImageList( rStyleSettings,
+                     pSVData->maCtrlData.mpNonNativeCheckImgList,
+                     ResId( SV_RESID_BITMAP_CHECK+nStyle, *pResMgr ), 9 );
+
             SalVirtualDevice *pSalVirDev = pSVData->mpDefInst->CreateVirtualDevice( NULL, aBmpSize.Width(), aBmpSize.Height(), 32 );
             if ( pSalVirDev )
             {
@@ -4623,6 +4676,11 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         else
             nId = 1;
     }
+#ifdef USE_JAVA
+    if ( pSVData->maCtrlData.mbUseNonNativeCheckImgList )
+        return pSVData->maCtrlData.mpNonNativeCheckImgList->GetImage( nId );
+    else
+#endif	// USE_JAVA
     return pSVData->maCtrlData.mpCheckImgList->GetImage( nId );
 }
 

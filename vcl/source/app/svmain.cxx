@@ -556,6 +556,18 @@ void DeInitVCL()
         delete pSVData->maCtrlData.mpSplitVArwImgList;
         pSVData->maCtrlData.mpSplitVArwImgList = NULL;
     }
+#ifdef USE_JAVA
+    if ( pSVData->maCtrlData.mpNonNativeCheckImgList )
+    {
+        delete pSVData->maCtrlData.mpNonNativeCheckImgList;
+        pSVData->maCtrlData.mpNonNativeCheckImgList = NULL;
+    }
+    if ( pSVData->maCtrlData.mpNonNativeRadioImgList )
+    {
+        delete pSVData->maCtrlData.mpNonNativeRadioImgList;
+        pSVData->maCtrlData.mpNonNativeRadioImgList = NULL;
+    }
+#endif	// USE_JAVA
     if ( pSVData->mpDefaultWin )
     {
         delete pSVData->mpDefaultWin;
