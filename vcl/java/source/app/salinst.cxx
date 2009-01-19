@@ -584,6 +584,12 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				// the painting timer runs.
 				OThread::yield();
 				break;
+			case SALEVENT_KEYUP:
+				// Fix bug 3390 by letting any timers run when releasing
+				// a Command-key event
+				if ( pEvent->getModifiers() & KEY_MOD1 )
+					bContinue = false;
+				break;
 			case SALEVENT_MOUSEMOVE:
                 // Make highlighting by dragging more responsive
                 if ( pEvent->getModifiers() & ( MOUSE_LEFT | MOUSE_MIDDLE | MOUSE_RIGHT ) )
