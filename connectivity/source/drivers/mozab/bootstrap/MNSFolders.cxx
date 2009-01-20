@@ -67,7 +67,12 @@ namespace
         ::osl::Security   aSecurity;
         ::rtl::OUString   aConfigPath;
 
+#ifdef USE_JAVA
+        // Fix bug 3393 by using the HOME directory
+        aSecurity.getHomeDir( aConfigPath );
+#else	// USE_JAVA
         aSecurity.getConfigDir( aConfigPath );
+#endif	// USE_JAVA
         return aConfigPath + ::rtl::OUString::createFromAscii( "/" );
     }
 
