@@ -71,6 +71,10 @@
 
 #include "updatehdl.hrc"
 
+#ifdef USE_JAVA
+#include <unotools/bootstrap.hxx>
+#endif	// USE_JAVA
+
 #define UNISTRING(s) rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(s))
 
 #define COMMAND_CLOSE       UNISTRING("close")
@@ -868,6 +872,16 @@ void UpdateHandler::setFullVersion( rtl::OUString& rString )
     sal_Int32 nVerIndex = rString.indexOf( aProductVersion );
     if ( nVerIndex != -1 )
     {
+#ifdef USE_JAVA
+        // Append the patch number onto the product version
+        rtl::OUString sDefault;
+        rtl::OUString sBuildId( utl::Bootstrap::getBuildIdData( sDefault ) );
+        if ( sBuildId.getLength() )
+        {
+            aProductFullVersion += rtl::OUString::createFromAscii( " " );
+            aProductFullVersion += sBuildId;
+        }
+#else	// USE_JAVA
         rtl::OUString aPackageVersion = UNISTRING( "${$OOO_BASE_DIR/program/" SAL_CONFIGFILE("version") ":OOOPackageVersion}" );
         rtl::Bootstrap::expandMacros( aPackageVersion );
 
@@ -905,6 +919,7 @@ void UpdateHandler::setFullVersion( rtl::OUString& rString )
                 aProductFullVersion = aProductFullVersion.replaceAt( nIndex+1, aProductFullVersion.getLength()-nIndex-1, aVersionMicro );
             }
         }
+#endif	// USE_JAVA
         rString = rString.replaceAt( nVerIndex, aProductVersion.getLength(), aProductFullVersion );
     }
 }
