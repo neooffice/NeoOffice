@@ -116,9 +116,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
 #endif
-#ifndef _SV_MENU_HXX
-#include <menu.hxx>
-#endif
 #ifndef _TOOLS_RESMGR_HXX
 #include <tools/resmgr.hxx>
 #endif
@@ -1040,18 +1037,18 @@ void SalYieldMutex::release()
 	{
 		if ( mnCount == 1 )
 			mnThreadId = 0;
-		if ( mnCount )
-		{
-			mnCount--;
-			OMutex::release();
 
-			// Notify main thread that it can grab the mutex
-			if ( !mnCount )
-			{
-				maMainThreadCondition.set();
-				OThread::yield();
-			}
-		}
+		if ( mnCount )
+			mnCount--;
+	}
+
+	OMutex::release();
+
+	// Notify main thread that it can grab the mutex
+	if ( !mnCount )
+	{
+		maMainThreadCondition.set();
+		OThread::yield();
 	}
 }
 
