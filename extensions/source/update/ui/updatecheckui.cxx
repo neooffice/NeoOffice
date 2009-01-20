@@ -757,8 +757,18 @@ IMPL_LINK( UpdateCheckUI, UserEventHdl, UpdateCheckUI*, EMPTYARG )
         {
             uno::Reference< frame::XDispatch > xDispatch = xDispatchProvider->queryDispatch( aURL, rtl::OUString(), 0 );
 
-            if( xDispatch.is() )
-                xDispatch->dispatch( aURL, uno::Sequence< beans::PropertyValue >() );
+            // Prevent deadlocking when the dispatch method tries to grab the
+            // application mutex on a separate thread
+            ULONG nCount = Application::ReleaseSolarMutex();
+            try
+            {
+                if( xDispatch.is() )
+                    xDispatch->dispatch( aURL, uno::Sequence< beans::PropertyValue >() );
+            }
+            catch( ... )
+            {
+            }
+            Application::AcquireSolarMutex( nCount );
         }
     }
     catch( ... )
