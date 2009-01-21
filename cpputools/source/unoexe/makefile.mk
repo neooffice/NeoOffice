@@ -38,8 +38,12 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
+.IF "$(GUIBASE)" == "java"
+CDEFS+=-g
+.ENDIF
+
 .IF "$(OS)" == "MACOSX"
-CDEFS+=-g -O0
+CDEFS+=-O0
 .ENDIF
 
 UNOUCRDEP=$(SOLARBINDIR)$/udkapi.rdb 
