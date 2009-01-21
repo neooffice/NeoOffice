@@ -414,6 +414,8 @@ sal_Bool com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short 
 			out = (sal_Bool)t.pEnv->CallStaticBooleanMethodA( getMyClass(), mID, args );
 		}
 	}
+
+	return out;
 }
 
 // ----------------------------------------------------------------------------
