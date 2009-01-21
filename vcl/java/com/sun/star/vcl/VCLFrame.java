@@ -1391,6 +1391,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	}
 
 	/**
+	 * The allow key bindings flag.
+	 */
+	private boolean allowKeyBindings = true;
+
+	/**
 	 * The bit count.
 	 */
 	private int bitCount = 0;
@@ -1894,6 +1899,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_LOSEFOCUS, this, 0));
+
+	}
+
+	/**
+	 * Returns whether or not the window to allow Mac OS x key bindings.
+	 *
+	 * @return <code>true</code> if Mac OS X key bindings are allows otherwise
+	 *  <code>false</code>
+	 */
+	public boolean getAllowKeyBindings() {
+
+		return allowKeyBindings;
 
 	}
 
@@ -2638,6 +2655,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		else {
 			return false;
 		}
+
+	}
+
+	/**
+	 * Set the window to allow Mac OS x key bindings.
+	 *
+	 * @param b <code>true</code> to allow Mac OS X key bindings and
+	 *  <code>false</code> to disallow key bindings
+	 */
+	public void setAllowKeyBindings(boolean b) {
+
+		allowKeyBindings = b;
 
 	}
 

@@ -202,15 +202,27 @@ public final class VCLEventQueue implements Runnable {
 	 * @param metaDown <code>true</code> if the Meta key is pressed
 	 * @param altDown <code>true</code> if the Alt key is pressed
 	 * @param controlDown <code>true</code> if the Control key is pressed
+	 * @return <code>true</code> if the event was posted otherwise
+	 *   <code>false</code>
 	 */
-	public static void postCommandEvent(Object o, int keyCode, boolean shiftDown, boolean metaDown, boolean altDown, boolean controlDown) {
+	public static boolean postCommandEvent(Object o, int keyCode, boolean shiftDown, boolean metaDown, boolean altDown, boolean controlDown) {
 
 		if (keyCode == 0)
-			return;
+			return false;
 
 		Window w = findWindow(o);
 		if (w == null || !w.isVisible())
-			return;
+			return false;
+
+		// Check if Mac OS X key bindings are allowed for this window
+		VCLFrame f = VCLFrame.findFrame(w);
+		if (f != null) {
+			// Allow the other application threads a chance to dispatch any
+			// pending events before we check the window
+			Thread.currentThread().yield();
+			if (!f.getAllowKeyBindings())
+				return false;
+		}
 
 		int modifiers = 0;
 		if (shiftDown)
@@ -225,6 +237,8 @@ public final class VCLEventQueue implements Runnable {
 		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
 		eventQueue.postEvent(new CommandKeyEvent(w, KeyEvent.KEY_PRESSED, System.currentTimeMillis(), modifiers, keyCode));
 		eventQueue.postEvent(new CommandKeyEvent(w, KeyEvent.KEY_RELEASED, System.currentTimeMillis(), 0, keyCode));
+
+		return true;
 
 	}
 

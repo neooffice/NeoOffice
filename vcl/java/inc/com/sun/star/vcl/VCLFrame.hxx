@@ -75,6 +75,7 @@ public:
 	void				makeModal();
 	void				removeChild( JavaSalFrame *_par0 );
 	sal_Bool			requestFocus();
+	void				setAllowKeyBindings( sal_Bool _par0 );
 	void				setBounds( long _par0, long _par1, long _par2, long _par3 );
 	void				setFullScreenMode( sal_Bool _par0 );
 	void				setMinClientSize( long _par0, long _par1 );

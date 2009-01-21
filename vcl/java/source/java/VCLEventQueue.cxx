@@ -231,10 +231,14 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 
 // ----------------------------------------------------------------------------
 
-void VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers )
+BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers )
 {
+	BOOL bRet = FALSE;
+
 	if ( aPeer )
-		com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT ? sal_True : sal_False, nModifiers & KEY_MOD1 ? sal_True : sal_False, nModifiers & KEY_MOD2 ? sal_True : sal_False, nModifiers & KEY_MOD3 ? sal_True : sal_False );
+		bRet = com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT ? sal_True : sal_False, nModifiers & KEY_MOD1 ? sal_True : sal_False, nModifiers & KEY_MOD2 ? sal_True : sal_False, nModifiers & KEY_MOD3 ? sal_True : sal_False );
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
@@ -385,15 +389,16 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short _par1, sal_Bool _par2, sal_Bool _par3, sal_Bool _par4, sal_Bool _par5 )
+sal_Bool com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short _par1, sal_Bool _par2, sal_Bool _par3, sal_Bool _par4, sal_Bool _par5 )
 {
 	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Ljava/lang/Object;IZZZZ)V";
+			char *cSignature = "(Ljava/lang/Object;IZZZZ)Z";
 			mID = t.pEnv->GetStaticMethodID( getMyClass(), "postCommandEvent", cSignature );	
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -406,7 +411,7 @@ void com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short _par
 			args[3].z = jboolean( _par3 );
 			args[4].z = jboolean( _par4 );
 			args[5].z = jboolean( _par5 );
-			t.pEnv->CallStaticVoidMethodA( getMyClass(), mID, args );
+			out = (sal_Bool)t.pEnv->CallStaticBooleanMethodA( getMyClass(), mID, args );
 		}
 	}
 }

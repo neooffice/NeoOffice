@@ -890,9 +890,11 @@ void JavaSalFrame::Sync()
 
 void JavaSalFrame::SetInputContext( SalInputContext* pContext )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalFrame::SetInputContext not implemented\n" );
-#endif
+	// Only allow Mac OS X key bindings when the OOo application code says so
+	if ( pContext && pContext->mnOptions & SAL_INPUTCONTEXT_TEXT )
+		mpVCLFrame->setAllowKeyBindings( sal_True );
+	else
+		mpVCLFrame->setAllowKeyBindings( sal_False );
 }
 
 // -----------------------------------------------------------------------

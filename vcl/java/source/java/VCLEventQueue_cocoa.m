@@ -660,11 +660,8 @@ static VCLResponder *pSharedResponder = nil;
 
 		// Process any Cocoa commands but ignore when there is marked text
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
-		if ( nCommandKey && !bHasMarkedText )
-		{
-			VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers] );
+		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers] ) )
 			return;
-		}
 
 		// We still need the key entry fix if there is marked text otherwise
 		// bug 1429 reoccurs
