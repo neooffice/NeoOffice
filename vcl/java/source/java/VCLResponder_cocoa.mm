@@ -142,8 +142,10 @@ static short GetCurrentKeyModifiers()
 
 - (void)doCommandBySelector:(SEL)aSelector
 {
-	// Do not invoke the superclass as it can trigger beeping
-	if ( [self respondsToSelector:aSelector] )
+	// Do not invoke the superclass as it can trigger beeping. Also, ignore any
+	// selectors when the Alt key is pressed as the OOo code will not process
+	// the key code when the Alt key is pressed.
+	if ( [self respondsToSelector:aSelector] && ! ( GetCurrentKeyModifiers() & KEY_MOD2 ) )
 		[self performSelector:aSelector withObject:nil];
 }
 
