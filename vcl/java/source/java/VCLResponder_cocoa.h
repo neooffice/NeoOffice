@@ -54,6 +54,7 @@
 - (void)deleteToEndOfParagraph:(id)pSender;
 - (void)deleteWordBackward:(id)pSender;
 - (void)deleteWordForward:(id)pSender;
+- (BOOL)disableServicesMenu;
 - (void)doCommandBySelector:(SEL)aSelector;
 - (BOOL)ignoreTrackpadGestures;
 - (id)init;

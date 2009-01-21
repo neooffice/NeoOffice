@@ -861,7 +861,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
-	if ( !pReturnType && pSendType )
+	if ( pSharedResponder && ![pSharedResponder disableServicesMenu] && !pReturnType && pSendType )
 	{
 		if ( [pSendType isEqual:NSRTFPboardType] )
 		{
@@ -889,7 +889,7 @@ static CFDataRef aRTFSelection = nil;
 		}
 	}
 
-	return [super validRequestorForSendType:pSendType returnType:pReturnType];
+	return nil;
 }
 
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes

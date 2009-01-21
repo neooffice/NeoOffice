@@ -140,6 +140,21 @@ static short GetCurrentKeyModifiers()
 	mnLastCommandKey = Key::DELETE_WORD_FORWARD;
 }
 
+- (BOOL)disableServicesMenu
+{
+	BOOL bDisableServicesMenu = NO;
+
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableServicesMenu" ), kCFPreferencesCurrentApplication );
+	if( aPref )
+	{
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+			bDisableServicesMenu = YES;
+		CFRelease( aPref );
+	}
+
+	return bDisableServicesMenu;
+}
+
 - (void)doCommandBySelector:(SEL)aSelector
 {
 	// Do not invoke the superclass as it can trigger beeping
