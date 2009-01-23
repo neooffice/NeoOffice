@@ -2101,6 +2101,14 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 		}
 	}
 
+#ifdef USE_JAVA
+	// Fix bug 3397 by adding back code that ooo-build removed in their OOo 3.0
+	// builds
+	if (bOk) {
+	    bOk = rMedium.Commit();
+	}
+#endif	// USE_JAVA
+
 	if (bOk && xNewTmpStorage.is()) {
 	    rMedium.SetStorage_Impl(xNewTmpStorage);
 	}
