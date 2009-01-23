@@ -119,9 +119,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 	[self setFrameLoadDelegate:self];
 	[self setUIDelegate:self];
-	NSURL *pURL = [NSURL URLWithString:@"/" relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
-	if ( pURL )
-		[[self mainFrame] loadRequest:[NSURLRequest requestWithURL:pURL]];
 
 	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 500) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
@@ -131,6 +128,16 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 
 	return self;
+}
+
+- (void)loadURI:(NSString *)pURI
+{
+	if ( !pURI )
+		pURI = @"/";
+
+	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
+	if ( pURL )
+		[[self mainFrame] loadRequest:[NSURLRequest requestWithURL:pURL]];
 }
 
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame

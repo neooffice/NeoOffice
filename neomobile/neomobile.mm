@@ -100,6 +100,9 @@
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
 
+static const NSString *pAboutURI = @"/mobile/";
+static const NSString *pOpenURI = @"/";
+
 using namespace ::rtl;
 using namespace ::osl;
 using namespace ::cppu;
@@ -155,10 +158,13 @@ public:
 
 	// XNeoOfficeMobile implementation
 	virtual ::sal_Bool 
+		SAL_CALL aboutNeoOfficeMobile( ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool 
 		SAL_CALL hasNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
-		SAL_CALL showNeoOfficeMobile( ) 
+		SAL_CALL openNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
 		SAL_CALL setPropertyValue( const rtl::OUString& key, const rtl::OUString& value ) 
@@ -326,16 +332,28 @@ static NeoMobileWebView *pSharedWebView = nil;
 
 @interface CreateWebViewImpl : NSObject
 {
+	const NSString*				mpURI;
 }
-- (id)init;
++ (id)createWithURI:(const NSString *)pURI;
+- (id)initWithURI:(const NSString *)pURI;
 - (void)showWebView:(id)obj;
 @end
 
 @implementation CreateWebViewImpl
 
-- (id)init
++ (id)createWithURI:(const NSString *)pURI
+{
+	CreateWebViewImpl *pRet = [[CreateWebViewImpl alloc] initWithURI:pURI];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithURI:(const NSString *)pURI
 {
 	self = [super init];
+
+	mpURI = pURI;
+
 	return(self);
 }
 
@@ -347,11 +365,39 @@ static NeoMobileWebView *pSharedWebView = nil;
 	if ( pSharedWebView )
 	{
 		NSWindow *pWindow = [pSharedWebView window];
-		if ( pWindow && ![pWindow isVisible] )
-			[pWindow orderFront:self];
+		if ( pWindow )
+		{
+			// Make sure window is visible
+			if ( ![pWindow isVisible] )
+				[pWindow orderFront:self];
+
+			// Load URI
+			[pSharedWebView loadURI:mpURI];
+		}
 	}
 }
 @end
+
+/**
+ * Show NeoMobile's "about" webpage
+ */
+::sal_Bool 
+		SAL_CALL MacOSXNeoOfficeMobileImpl::aboutNeoOfficeMobile( ) 
+		throw (::com::sun::star::uno::RuntimeException)
+{
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+	
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pAboutURI];
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	unsigned long nCount = Application::ReleaseSolarMutex();
+	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
+		
+	[pool release];
+	
+	return(true);
+}
 
 /**
  * Check if the we have full WebView support available
@@ -375,23 +421,21 @@ static NeoMobileWebView *pSharedWebView = nil;
 }
 
 /**
- * Construct a new media browser instance.
+ * Show main NeoMobile webpage
  */
 ::sal_Bool 
-		SAL_CALL MacOSXNeoOfficeMobileImpl::showNeoOfficeMobile( ) 
+		SAL_CALL MacOSXNeoOfficeMobileImpl::openNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	CreateWebViewImpl *imp=[[CreateWebViewImpl alloc] init];
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
 	Application::AcquireSolarMutex( nCount );
 		
-	[imp release];
-	
 	[pool release];
 	
 	return(true);

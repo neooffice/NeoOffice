@@ -41,8 +41,9 @@ module neooffice
 	 */
 	interface XNeoOfficeMobile : com::sun::star::uno::XInterface
 	{
+		boolean aboutNeoOfficeMobile( );
 		boolean hasNeoOfficeMobile( );
-		boolean showNeoOfficeMobile( );
+		boolean openNeoOfficeMobile( );
 		boolean setPropertyValue( [in] string key, [in] string value );
 		string getPropertyValue( [in] string key );
 		boolean saveAsPDF( [in] string url );
