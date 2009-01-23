@@ -200,24 +200,41 @@
 			if ( pBundle )
 				[pLocales addObjectsFromArray:[pBundle localizations]];
 
-			NSMutableArray *pRet = [NSMutableArray arrayWithCapacity:[pLocales count]];
-			if ( pRet )
+			NSMutableSet *pCanonicalLocales = [NSMutableSet setWithCapacity:[pLocales count]];
+			if ( pCanonicalLocales )
 			{
 				NSArray *pLocaleArray = [pLocales allObjects];
 				if ( pLocaleArray )
 				{
-					unsigned nCount = [pLocales count];
+					unsigned nCount = [pLocaleArray count];
 					unsigned i = 0;
 					for ( ; i < nCount; i++ )
 					{
-						NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
-						if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
-							[pRet addObject:pLocale];
+						CFStringRef aLocale = CFLocaleCreateCanonicalLocaleIdentifierFromString( NULL, (CFStringRef)[pLocaleArray objectAtIndex:i] );
+						if ( aLocale )
+							[pCanonicalLocales addObject:(NSString *)aLocale];
 					}
 				}
-			}
 
-			[pArgs setResult:pRet];
+				NSMutableArray *pRet = [NSMutableArray arrayWithCapacity:[pCanonicalLocales count]];
+				if ( pRet )
+				{
+					pLocaleArray = [pCanonicalLocales allObjects];
+					if ( pLocaleArray )
+					{
+						unsigned nCount = [pLocaleArray count];
+						unsigned i = 0;
+						for ( ; i < nCount; i++ )
+						{
+							NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
+							if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
+								[pRet addObject:pLocale];
+						}
+					}
+
+					[pArgs setResult:pRet];
+				}
+			}
 		}
 	}
 	@catch ( NSException *pExc )
