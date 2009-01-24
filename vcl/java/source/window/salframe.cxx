@@ -331,7 +331,19 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 			pWindow = Application::GetNextTopLevelWindow( pWindow );
 
 		if ( pWindow )
-			Dialog::EndAllDialogs( pWindow );
+		{
+			// Fix bug 3356 without causing bugs 2501 or 3398 by ending all
+			// dialogs whenever any of this frame's children are visible
+			::std::list< JavaSalFrame* > aChildren( maChildren );
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
+			{
+				if ( (*it)->mbVisible )
+				{
+					Dialog::EndAllDialogs( pWindow );
+					break;
+				}
+			}
+		}
 	}
 
 	// Fix bug 3153 by setting parent to the focus frame for dialogs that
