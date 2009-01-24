@@ -334,18 +334,17 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		if ( pWindow )
 		{
-			// Fix bug 3356 by detecting if a modal dialog is a child frame
-			JavaSalFrame *pFrame = NULL;
-			Dialog *pDialog = ImplGetSVData()->maWinData.mpLastExecuteDlg;
-			if ( pDialog )
+			// Fix bug 3356 without causing bugs 2501 or 3398 by ending all
+			// dialogs whenever any of this frame's children are visible
+			::std::list< JavaSalFrame* > aChildren( maChildren );
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = aChildren.begin(); it != aChildren.end(); ++it )
 			{
-				pFrame = (JavaSalFrame *)pDialog->ImplGetFrame();
-				while ( pFrame && pFrame != this )
-					pFrame = pFrame->mpParent;
+				if ( (*it)->mbVisible )
+				{
+					Dialog::EndAllDialogs( pWindow );
+					break;
+				}
 			}
-
-			if ( !pFrame )
-				Dialog::EndAllDialogs( pWindow );
 		}
 	}
 	// Fix bug 3153 by setting parent to the focus frame for dialogs that
