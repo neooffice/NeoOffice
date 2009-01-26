@@ -226,6 +226,7 @@ static NSString *pCancelInputMethodText = @" ";
 }
 - (void)clearLastText;
 - (void)dealloc;
+- (BOOL)disableServicesMenu;
 - (void)doCommandBySelector:(SEL)aSelector;
 - (BOOL)ignoreTrackpadGestures;
 - (id)init;
@@ -252,6 +253,21 @@ static NSString *pCancelInputMethodText = @" ";
 	[super dealloc];
 }
 
+- (BOOL)disableServicesMenu
+{
+	BOOL bDisableServicesMenu = NO;
+ 
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableServicesMenu" ), kCFPreferencesCurrentApplication );
+	if( aPref )
+	{
+		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+			bDisableServicesMenu = YES;
+		CFRelease( aPref );
+	}
+ 
+	return bDisableServicesMenu; 
+}
+
 - (void)doCommandBySelector:(SEL)aSelector
 {
 	// Fix bugs 2125 and 2167 by not overriding Java's handling of the cancel
@@ -272,6 +288,7 @@ static NSString *pCancelInputMethodText = @" ";
 
 	return bIgnoreTrackpadGestures;
 }
+
 - (id)init
 {
 	[super init];
