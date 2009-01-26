@@ -76,17 +76,14 @@ SHL1TARGET= $(TARGET)$(UPD)$(DLLPOSTFIX)
 SHL1STDLIBS= \
 		$(SALLIB)	\
 		$(TOOLSLIB)	\
+		$(TKLIB)	\
 		$(VCLLIB)	\
 		$(VOSLIB)	\
 		$(CPPULIB) 	\
 		$(CPPUHELPERLIB)	\
-		$(COMPHELPERLIB)
-
-.IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += \
-	-framework Carbon	\
-	-framework QuickTime
-.ENDIF
+		$(COMPHELPERLIB)	\
+		-framework Carbon	\
+		-framework QuickTime
 
 SHL1DEPN=
 SHL1IMPLIB=		i$(SHL1TARGET) 
@@ -101,11 +98,9 @@ APP1STDLIBS=\
 		$(CPPULIB)			\
 		$(CPPUHELPERLIB)	\
 		$(COMPHELPERLIB)	\
-		$(VCLLIB)
-
-.IF "$(OS)"=="MACOSX"
-APP1STDLIBS += -framework QuickTime
-.ENDIF
+		$(TKLIB)	\
+		$(VCLLIB)	\
+		-framework QuickTime
 
 .ENDIF		# "$(GUIBASE)"!="java"
 

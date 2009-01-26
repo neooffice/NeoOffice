@@ -190,23 +190,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 							if ( pArray && nLen )
 							{
 								// Replace line feeds with carriage returns
-								sal_Int32 j = 0;
-								for ( j = 0; j < nLen; j++ )
-								{
-									if ( pArray[ j ] == (sal_Unicode)'\n' )
-										pArray[ j ] = (sal_Unicode)'\r';
-								}
+								aString = aString.replace( (sal_Unicode)'\n', (sal_Unicode)'\r' );
 
-								if ( nType == 'RTF ' )
-								{
-									OString aEncodedString = OUStringToOString( aString, RTL_TEXTENCODING_ASCII_US );
-
-									if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-										nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, aEncodedString.getLength(), (const void *)aEncodedString.getStr() );
-									else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-										nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aEncodedString.getStr(), aEncodedString.getLength(), 0 );
-								}
-								else if ( nType == kQTFileTypeText )
+								if ( nType == kQTFileTypeText )
 								{
 									CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen, kCFAllocatorNull );
 									if ( aCFString )
@@ -439,15 +425,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				{
 					OUString aString;
 					sal_Int32 nLen = nSize;
-					if ( nRequestedType == 'RTF ' )
-					{
-						HLock( hData );
-						if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
-							nLen--;
-						aString = OUString( (sal_Char *)*hData, nLen, RTL_TEXTENCODING_ASCII_US );
-						HUnlock( hData );
-					}
-					else if ( nRequestedType == kQTFileTypeText )
+					if ( nRequestedType == kQTFileTypeText )
 					{
 						HLock( hData );
 						if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
@@ -479,14 +457,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					}
 
 					// Replace carriage returns with line feeds
-					sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
-					nLen = aString.getLength();
-					sal_Int32 j = 0;
-					for ( j = 0; j < nLen; j++ )
-					{
-						if ( pArray[ j ] == (sal_Unicode)'\r' )
-							pArray[ j ] = (sal_Unicode)'\n';
-					}
+					aString = aString.replace( (sal_Unicode)'\r', (sal_Unicode)'\n' );
 
 					out <<= aString;
 				}
@@ -571,10 +542,22 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					}
 					else
 					{
-						Sequence< sal_Int8 > aExportData( nSize );
 						HLock( hData );
-						memcpy( aExportData.getArray(), *hData, nSize );
+						sal_Int32 nLen = nSize;
+						if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
+							nLen--;
+						Sequence< sal_Int8 > aExportData( nLen );
+						memcpy( aExportData.getArray(), *hData, nLen );
 						HUnlock( hData );
+
+						// Replace carriage returns with line feeds
+						sal_Char *pArray = (sal_Char *)aExportData.getArray();
+						for ( int j = 0; j < nLen; j++ )
+						{
+							if ( pArray[ j ] == '\r' )
+								pArray[ j ] = '\n';
+						}
+
 						out <<= aExportData;
 					}
 				}
