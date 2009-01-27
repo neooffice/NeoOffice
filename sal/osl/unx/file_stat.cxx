@@ -61,7 +61,10 @@
 #endif
 
 #ifdef USE_JAVA
+
 #include <osl/thread.h>
+#include <sys/acl.h>
+
 #endif	// USE_JAVA
 
 namespace /* private */
@@ -322,12 +325,15 @@ oslFileError SAL_CALL osl_getFileStatus(oslDirectoryItem Item, oslFileStatus* pS
 #ifdef USE_JAVA
 		// Fix bug 3406 by using the access() function to access ACL permissions
 		rtl::OString real_file_path = rtl::OUStringToOString(file_path, osl_getThreadTextEncoding());
-		if (!access(real_file_path.getStr(), R_OK))
-			file_stat.st_mode |= S_IROTH;
-		if (!access(real_file_path.getStr(), W_OK))
-			file_stat.st_mode |= S_IWOTH;
-		if (!access(real_file_path.getStr(), X_OK))
-			file_stat.st_mode |= S_IXOTH;
+		if (acl_get_file(real_file_path.getStr(), ACL_TYPE_ACCESS))
+		{
+			if (!access(real_file_path.getStr(), R_OK))
+				file_stat.st_mode |= S_IROTH;
+			if (!access(real_file_path.getStr(), W_OK))
+				file_stat.st_mode |= S_IWOTH;
+			if (!access(real_file_path.getStr(), X_OK))
+				file_stat.st_mode |= S_IXOTH;
+		}
 #endif	// USE_JAVA
 
 		// we set all these attributes because it's cheap				
