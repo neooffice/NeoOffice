@@ -43,6 +43,9 @@
 #include <vos/mutex.hxx>
 #endif
 
+#include <map>
+#include <string>
+
 using namespace rtl;
 using namespace vos;
 
@@ -119,6 +122,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 	[self setFrameLoadDelegate:self];
 	[self setUIDelegate:self];
+	[self setDownloadDelegate:self];
+	[self setPolicyDelegate:self];
 
 	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 500) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
@@ -217,12 +222,24 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
 {
-	[self reloadFrameWithNextServer:pWebFrame];
+#ifdef DEBUG
+	NSLog( @"didFailLoadWithError: %@", pError);
+#endif
+	// NOTE: we don't want to trigger the server fallback if we are just
+	// processing a data download we've redirected from the web frame
+	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
+		[self reloadFrameWithNextServer:pWebFrame];
 }
 
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
 {
-	[self reloadFrameWithNextServer:pWebFrame];
+#ifdef DEBUG
+	NSLog( @"didFailProvisionalLoadWithError: %@", pError);
+#endif
+	// NOTE: we don't want to trigger the server fallback if we are just
+	// processing a data download we've redirected from the web frame
+	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
+		[self reloadFrameWithNextServer:pWebFrame];
 }
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
@@ -348,6 +365,77 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		bRet = YES;
 
 	return bRet;
+}
+
+- (void)download:(NSURLDownload *)download decideDestinationWithSuggestedFilename:(NSString *)filename
+{
+#ifdef DEBUG
+	fprintf( stderr, "Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+#endif
+	[download setDestination:[NSString stringWithFormat:@"/%@/%@", NSTemporaryDirectory(), filename] allowOverwrite:YES];
+}
+
+static std::map<NSURLDownload *, std::string> gDownloadPathMap;
+
+- (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
+{
+#ifdef DEBUG
+	fprintf( stderr, "Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+#endif
+	gDownloadPathMap[download]=[path cStringUsingEncoding:NSUTF8StringEncoding];
+}
+
+- (void)downloadDidBegin: (NSURLDownload *)download
+{
+#ifdef DEBUG
+	fprintf( stderr, "Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+#endif
+}
+
+- (void)downloadDidFinish: (NSURLDownload*)download
+{
+#ifdef DEBUG
+	fprintf( stderr, "Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+#endif
+	char outBuf[PATH_MAX];
+	if(gDownloadPathMap.count(download)>0)
+	{
+		sprintf(outBuf, "/usr/bin/open \"%s\"", gDownloadPathMap[download].c_str());
+		system(outBuf); // +++ REPLACE WITH APP EVENT
+		gDownloadPathMap.erase(download);
+	}
+}
+
+- (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
+{
+#ifdef DEBUG
+	NSLog( @"Download didFailWithError: %@", error );
+#endif
+	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
+}
+
+- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
+        request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
+{
+#ifdef DEBUG
+	fprintf( stderr, "NeoMobile Loading URL: %s\n", [[[request URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+#endif
+	[listener use];
+}
+
+- (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener
+{
+	if([type rangeOfString: @"vnd.oasis.opendocument"].location != NSNotFound)
+	{
+		[listener download];
+	}
+	else
+	{
+		if([WebView canShowMIMEType:type]==YES)
+			[listener use];
+		else
+			[listener ignore];
+	}
 }
 
 - (void)dealloc
