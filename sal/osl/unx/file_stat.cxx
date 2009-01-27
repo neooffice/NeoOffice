@@ -1,29 +1,36 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified December 2005 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified January 2009 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -41,20 +48,34 @@
 #ifndef _UNISTD_H
 #include <unistd.h>
 #endif
-#include <osl/file.h>
+
+#ifndef _DIRENT_H
 #include <dirent.h>
+#endif
+
+#ifndef _OSL_FILE_H_
+#include <osl/file.h>
+#endif
 
 #ifndef _ERRNO_H
 #include <errno.h>
 #endif
  
+#ifndef _RTL_STRING_HXX_
 #include <rtl/string.hxx>
+#endif
 
 #ifndef _OSL_UUNXAPI_H_
 #include "uunxapi.hxx"
 #endif
+
+#ifndef _OSL_FILE_PATH_HELPER_HXX_
 #include "file_path_helper.hxx"
+#endif
+
+#ifndef _FILE_ERROR_TRANSL_H_
 #include "file_error_transl.h"
+#endif
 
 #ifdef _DIRENT_HAVE_D_TYPE
 #include "file_impl.hxx"
