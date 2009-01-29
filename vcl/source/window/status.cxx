@@ -373,6 +373,19 @@ Rectangle StatusBar::ImplGetItemRectPos( USHORT nPos ) const
 			aRect.Bottom() = mnCalcHeight - STATUSBAR_OFFSET_Y;
             if( IsTopBorder() )
                 aRect.Bottom()+=2;
+
+#ifdef USE_JAVA
+            // Fix bug 3402 by detecting if the native grow box will intersect
+            // with this item
+            Region aControlRegion( aRect );
+            Region aNativeControlRegion, aNativeContentRegion;
+            if ( ((StatusBar *)this)->GetNativeControlRegion( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL, aControlRegion, CTRL_STATE_ENABLED, ImplControlValue(), rtl::OUString(), aNativeControlRegion, aNativeContentRegion ) )
+            {
+                Rectangle aCtrlRect = aNativeControlRegion.GetBoundRect();
+                if ( aRect.Right() > aCtrlRect.Right() )
+                    aRect.Right() = aCtrlRect.Right();
+            }
+#endif	// USE_JAVA
 		}
 	}
 
