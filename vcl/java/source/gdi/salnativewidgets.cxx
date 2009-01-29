@@ -1587,20 +1587,22 @@ static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, Con
 		if ( HIThemeGetGrowBoxBounds( &origin, &growBoxInfo, &bounds ) == noErr )
 		{
 			Rectangle boundingRect = aRegion.GetBoundRect();
-			if ( boundingRect.Left() + boundingRect.GetWidth() > pGraphics->mpFrame->maGeometry.nWidth - bounds.size.width && boundingRect.Top() + boundingRect.GetHeight() > pGraphics->mpFrame->maGeometry.nHeight - bounds.size.height )
+			long nExcessWidth = boundingRect.Right() - pGraphics->mpFrame->maGeometry.nWidth + (long)bounds.size.width + 1;
+			long nExcessHeight = boundingRect.Bottom() - pGraphics->mpFrame->maGeometry.nHeight + (long)bounds.size.height + 1;
+			if ( nExcessWidth > 0 && nExcessHeight > 0 )
 			{
 				if ( nType == CTRL_SCROLLBAR && boundingRect.GetHeight() > boundingRect.GetWidth() )
 				{
-					if ( boundingRect.GetHeight() - bounds.size.height > 0 )
-						boundingRect.setHeight( (long)( boundingRect.GetHeight() - bounds.size.height ) );
+					if ( boundingRect.GetHeight() - nExcessHeight > 0 )
+						boundingRect.Bottom() -= nExcessHeight;
 				}
-				else if ( boundingRect.GetWidth() - bounds.size.width > 0 )
+				else if ( nExcessWidth > 0 && boundingRect.GetWidth() - nExcessWidth > 0 )
 				{
-					boundingRect.setWidth( (long)( boundingRect.GetWidth() - bounds.size.width ) );
+					boundingRect.Right() -= nExcessWidth;
 				}
-				else if ( boundingRect.GetHeight() - bounds.size.height > 0 )
+				else if ( nExcessHeight > 0 && boundingRect.GetHeight() - nExcessHeight > 0 )
 				{
-					boundingRect.setHeight( (long)( boundingRect.GetHeight() - bounds.size.height ) );
+					boundingRect.Bottom() -= nExcessHeight;
 				}
 				aRegion = Region( boundingRect );
 			}
