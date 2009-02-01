@@ -390,15 +390,19 @@ short PrinterSetupDialog::Execute()
 	maStatusTimer.Start();
 
 #ifdef USE_JAVA
-	short nRet;
-	if ( mpTempPrinter )
-		nRet = mpTempPrinter->Setup();
-	else
-		nRet = mpPrinter->Setup();
+	short nRet = TRUE;
 
 	// Display options dialog if set
-	if ( nRet && maBtnOptions.GetClickHdl().IsSet() )
+    if ( maBtnOptions.GetClickHdl().IsSet() )
 		nRet = maBtnOptions.GetClickHdl().Call( this );
+
+	if ( nRet )
+	{
+		if ( mpTempPrinter )
+			nRet = mpTempPrinter->Setup();
+		else
+			nRet = mpPrinter->Setup();
+	}
 #else	// USE_JAVA
 	// Dialog starten
 	short nRet = ModalDialog::Execute();
