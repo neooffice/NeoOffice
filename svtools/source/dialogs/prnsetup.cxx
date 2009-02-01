@@ -394,7 +394,12 @@ short PrinterSetupDialog::Execute()
 
 	// Display options dialog if set
     if ( maBtnOptions.GetClickHdl().IsSet() )
+	{
+		// Copy printer properties or else certain printer options will be unset
+		if ( mpTempPrinter )
+			mpTempPrinter->SetPrinterProps( mpPrinter );
 		nRet = maBtnOptions.GetClickHdl().Call( this );
+	}
 
 	if ( nRet )
 	{
