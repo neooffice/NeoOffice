@@ -84,7 +84,6 @@
 #ifdef USE_JAVA
 
 #include <osl/thread.h>
-#include <sys/acl.h>
 
 #endif	// USE_JAVA
 
@@ -193,13 +192,36 @@ namespace /* private */
 	   We don't use access(...) because access follows links which
 	   may cause performance problems see #97133.
 	*/
+#ifdef USE_JAVA
+	inline void set_file_access_rights(const rtl::OUString& file_path, const struct stat& file_stat, oslFileStatus* pStat)
+#else	// USE_JAVA
 	inline void set_file_access_rights(const struct stat& file_stat, oslFileStatus* pStat)
+#endif	// USE_JAVA
 	{			  
+#ifdef USE_JAVA
+		// Fix bug 3406 by using the access() function to access ACL permissions
+		rtl::OString real_file_path = rtl::OUStringToOString(file_path, osl_getThreadTextEncoding());
+		bool is_owner = (getuid() == file_stat.st_uid);
+		bool is_in_group = is_in_process_grouplist(file_stat.st_gid);
+        if (!access(real_file_path.getStr(), R_OK))
+			((struct stat&)file_stat).st_mode |= (is_owner ? S_IRUSR : (is_in_group ? S_IRGRP : S_IROTH));
+        if (!access(real_file_path.getStr(), W_OK))
+			((struct stat&)file_stat).st_mode |= (is_owner ? S_IWUSR : (is_in_group ? S_IWGRP : S_IWOTH));
+        if (!access(real_file_path.getStr(), X_OK))
+			((struct stat&)file_stat).st_mode |= (is_owner ? S_IXUSR : (is_in_group ? S_IXGRP : S_IXOTH));
+
+		if (is_owner)
+#else	// USE_JAVA
 		if (getuid() == file_stat.st_uid)
+#endif	// USE_JAVA
 		{
 			set_file_access_rights(file_stat, S_IRUSR, S_IWUSR, S_IXUSR, pStat);			        	
 		}
+#ifdef USE_JAVA
+		else if (is_in_group)
+#else	// USE_JAVA
 		else if (is_in_process_grouplist(file_stat.st_gid))
+#endif	// USE_JAVA
 		{
 			set_file_access_rights(file_stat, S_IRGRP, S_IWGRP, S_IXGRP, pStat);
 		}
@@ -226,7 +248,11 @@ namespace /* private */
 		// we set the file access rights only on demand
 		// because it's potentially expensive		       
 		if (uFieldMask & osl_FileStatus_Mask_Attributes)                  			   		   
+#ifdef USE_JAVA
+		   	set_file_access_rights(file_path, file_stat, pStat);
+#else	// USE_JAVA
 		   	set_file_access_rights(file_stat, pStat);
+#endif	// USE_JAVA
 	}
 	
 	inline void set_file_access_time(const struct stat& file_stat, oslFileStatus* pStat)
@@ -343,20 +369,6 @@ oslFileError SAL_CALL osl_getFileStatus(oslDirectoryItem Item, oslFileStatus* pS
 	
 	if (bStatNeeded)
 	{
-#ifdef USE_JAVA
-		// Fix bug 3406 by using the access() function to access ACL permissions
-		rtl::OString real_file_path = rtl::OUStringToOString(file_path, osl_getThreadTextEncoding());
-		if (acl_get_file(real_file_path.getStr(), ACL_TYPE_ACCESS))
-		{
-			if (!access(real_file_path.getStr(), R_OK))
-				file_stat.st_mode |= S_IROTH;
-			if (!access(real_file_path.getStr(), W_OK))
-				file_stat.st_mode |= S_IWOTH;
-			if (!access(real_file_path.getStr(), X_OK))
-				file_stat.st_mode |= S_IXOTH;
-		}
-#endif	// USE_JAVA
-
 		// we set all these attributes because it's cheap				
 		set_file_type(file_stat, pStat);
 		set_file_access_time(file_stat, pStat);
