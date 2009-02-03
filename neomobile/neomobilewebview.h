@@ -53,6 +53,9 @@
 	unsigned				mnBaseURLEntry;
 	NSObject*				mpDelegate;
 	NSPanel*				mpPanel;
+	NSView*					mpcontentView;
+	NSButton*				mpcancelButton;
+	NSText*					mpstatusLabel;
 }
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName;
@@ -71,4 +74,5 @@
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
         request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener;
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener;
+- (void)cancelButtonPressed;
 @end

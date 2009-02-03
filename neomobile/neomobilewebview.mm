@@ -71,6 +71,19 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 
 static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
+@interface ZeroHeightDividerSplitView : NSSplitView
+- (float)dividerThickness;
+@end
+
+@implementation ZeroHeightDividerSplitView
+
+- (float)dividerThickness
+{
+	return 0;
+}
+
+@end
+
 @implementation NeoMobileWebView
 
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName
@@ -125,14 +138,61 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[self setDownloadDelegate:self];
 	[self setPolicyDelegate:self];
 
-	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 500) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 524) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
 	{
 		[mpPanel setFloatingPanel:YES];
-		[mpPanel setContentView:self];
+		
+		mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, 700, 524)];
+		[mpcontentView setAutoresizesSubviews:YES];
+		
+		//mpcontentView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 500)];		
+		
+		mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 24)];
+		[mpcancelButton setTitle:@"Cancel"];
+		[mpcancelButton setTarget:self];
+		[mpcancelButton setAction:@selector(cancelButtonPressed)];
+		[mpcancelButton setAutoresizingMask:(NSViewMaxXMargin)];
+		[mpcancelButton setEnabled:NO];
+		
+		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(100, 0, 600, 24)];
+		[mpstatusLabel setEditable:NO];
+		[mpstatusLabel setString:@"Sample status message"];
+		[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
+		
+		//ZeroHeightDividerSplitView *bottomView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 30)];
+		//[bottomView setVertical:YES];
+		
+		NSView *bottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, 700, 24)];
+		
+		//NSBox *bottomView=[[NSBox alloc] initWithFrame:NSMakeRect(0, 0, 700, 30)];
+		//[bottomView setBorderType:NSNoBorder];
+		
+		//[bottomView setAutoresizesSubviews:YES];
+		[bottomView setAutoresizesSubviews:YES];
+		
+		[bottomView setAutoresizingMask:(NSViewWidthSizable)];
+		
+		[bottomView addSubview:mpcancelButton];
+		[bottomView addSubview:mpstatusLabel];
+		
+		[mpcontentView addSubview:self];
+		
+		[self setFrame:NSMakeRect(0, 24, 700, 500)];
+		[self setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+		[mpcontentView addSubview:bottomView];
+		
+		[mpPanel setContentView:mpcontentView];
 	}
 
 	return self;
+}
+
+- (void)cancelButtonPressed
+{
+#ifdef DEBUG
+	fprintf(stderr, "NeoMobile Cancel Button Clicked\n");
+#endif
 }
 
 - (void)loadURI:(NSString *)pURI
@@ -225,6 +285,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	NSLog( @"didFailLoadWithError: %@", pError);
 #endif
+	[mpcancelButton setEnabled:NO];
+	
 	// NOTE: we don't want to trigger the server fallback if we are just
 	// processing a data download we've redirected from the web frame
 	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
@@ -236,6 +298,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	NSLog( @"didFailProvisionalLoadWithError: %@", pError);
 #endif
+	[mpcancelButton setEnabled:NO];
+	
 	// NOTE: we don't want to trigger the server fallback if we are just
 	// processing a data download we've redirected from the web frame
 	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
@@ -244,6 +308,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
 {
+	[mpcancelButton setEnabled:NO];
+	
 	if ( !pWebView || !pWebFrame )
 		return;
 
@@ -316,6 +382,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)webView:(WebView *)pWebView didStartProvisionalLoadForFrame:(WebFrame *)pFrame
 {
+	[mpcancelButton setEnabled:YES];
+	
 	if ( mnBaseURLEntry >= mnBaseURLCount )
 		mnBaseURLEntry = 0;
 
@@ -446,7 +514,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 
 	if ( mpPanel )
 		[mpPanel release];
-
+	
 	[super dealloc];
 }
 
