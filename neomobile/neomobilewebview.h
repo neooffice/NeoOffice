@@ -56,6 +56,7 @@
 	NSView*					mpcontentView;
 	NSButton*				mpcancelButton;
 	NSText*					mpstatusLabel;
+	NSURLDownload*			mpdownload;
 }
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName;

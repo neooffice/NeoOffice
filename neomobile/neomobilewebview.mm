@@ -138,6 +138,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[self setDownloadDelegate:self];
 	[self setPolicyDelegate:self];
 
+	mpdownload=nil;
+	
 	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 524) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
 	{
@@ -159,7 +161,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		
 		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(100, 0, 600, 24)];
 		[mpstatusLabel setEditable:NO];
-		[mpstatusLabel setString:@"Sample status message"];
+		[mpstatusLabel setString:@""];
 		[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
 		[mpstatusLabel setDrawsBackground:NO];
 		
@@ -196,6 +198,18 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	fprintf(stderr, "NeoMobile Cancel Button Clicked\n");
 #endif
+	if(mpdownload)
+	{
+		// a file download is in progress, cancel it
+		
+		[mpdownload cancel];
+	}
+	else
+	{
+		// regular webframe load
+		
+		[self stopLoading:self];
+	}
 }
 
 - (void)loadURI:(NSString *)pURI
@@ -287,13 +301,16 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 {
 #ifdef DEBUG
 	NSLog( @"didFailLoadWithError: %@", pError);
-#endif
-	[mpcancelButton setEnabled:NO];
-	
+#endif	
 	// NOTE: we don't want to trigger the server fallback if we are just
 	// processing a data download we've redirected from the web frame
 	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
+	{
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+
 		[self reloadFrameWithNextServer:pWebFrame];
+	}
 }
 
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
@@ -301,17 +318,21 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	NSLog( @"didFailProvisionalLoadWithError: %@", pError);
 #endif
-	[mpcancelButton setEnabled:NO];
-	
 	// NOTE: we don't want to trigger the server fallback if we are just
 	// processing a data download we've redirected from the web frame
 	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
+	{
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+
 		[self reloadFrameWithNextServer:pWebFrame];
+	}
 }
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
 {
 	[mpcancelButton setEnabled:NO];
+	[mpstatusLabel setString:@""];
 	
 	if ( !pWebView || !pWebFrame )
 		return;
@@ -386,6 +407,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 - (void)webView:(WebView *)pWebView didStartProvisionalLoadForFrame:(WebFrame *)pFrame
 {
 	[mpcancelButton setEnabled:YES];
+	[mpstatusLabel setString:@"Loading..."];
 	
 	if ( mnBaseURLEntry >= mnBaseURLCount )
 		mnBaseURLEntry = 0;
@@ -462,6 +484,10 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 #ifdef DEBUG
 	fprintf( stderr, "Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+	
+	mpdownload=download;
+	[mpcancelButton setEnabled:YES];
+	[mpstatusLabel setString:@"Downloading file..."];
 }
 
 - (void)downloadDidFinish: (NSURLDownload*)download
@@ -476,6 +502,10 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 		system(outBuf); // +++ REPLACE WITH APP EVENT
 		gDownloadPathMap.erase(download);
 	}
+	
+	mpdownload=nil;
+	[mpcancelButton setEnabled:NO];
+	[mpstatusLabel setString:@""];
 }
 
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
@@ -483,6 +513,9 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 #ifdef DEBUG
 	NSLog( @"Download didFailWithError: %@", error );
 #endif
+	mpdownload=nil;
+	[mpcancelButton setEnabled:NO];
+	[mpstatusLabel setString:@"Download failed!"];
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
 }
 
