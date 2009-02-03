@@ -133,6 +133,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( pPrefs )
 		[pPrefs setJavaScriptEnabled:YES];
 
+	[self setResourceLoadDelegate:self];
 	[self setFrameLoadDelegate:self];
 	[self setUIDelegate:self];
 	[self setDownloadDelegate:self];
@@ -408,25 +409,20 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 {
 	[mpcancelButton setEnabled:YES];
 	[mpstatusLabel setString:@"Loading..."];
-	
+}
+
+- (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
+{
 	if ( mnBaseURLEntry >= mnBaseURLCount )
 		mnBaseURLEntry = 0;
-
-	if ( !pFrame )
-		return;
-
-	WebDataSource *pDataSource = [pFrame provisionalDataSource];
-	if ( !pDataSource )
-		return;
-
-	NSMutableURLRequest *pRequest = [pDataSource request];
-	if ( !pRequest )
-		return;
 
 	// Always add a special header with the name and version of the application
 	// that this web view is running in
 	// TODO: set header value to applications's name and version
-	[pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
+	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
+		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
+
+	return pRequest;
 }
 
 - (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame
