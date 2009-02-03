@@ -154,6 +154,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[mpcancelButton setAction:@selector(cancelButtonPressed)];
 		[mpcancelButton setAutoresizingMask:(NSViewMaxXMargin)];
 		[mpcancelButton setEnabled:NO];
+		[mpcancelButton setButtonType:NSMomentaryPushInButton];
+		[mpcancelButton setBezelStyle:NSRoundedBezelStyle];
 		
 		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(100, 0, 600, 24)];
 		[mpstatusLabel setEditable:NO];
