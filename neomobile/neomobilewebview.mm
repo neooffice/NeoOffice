@@ -161,6 +161,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[mpstatusLabel setEditable:NO];
 		[mpstatusLabel setString:@"Sample status message"];
 		[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
+		[mpstatusLabel setDrawsBackground:NO];
 		
 		//ZeroHeightDividerSplitView *bottomView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 30)];
 		//[bottomView setVertical:YES];
