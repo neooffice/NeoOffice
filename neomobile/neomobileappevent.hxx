@@ -45,12 +45,13 @@
 class NeoMobilExportFileAppEvent
 {
 	int						mnErrorCode;
+	NSFileManager*			mpFileManager;
 	bool					mbFinished;
 	NSMutableData*			mpPostBody;
 	::rtl::OUString			maSaveUUID;
 
 public:
-							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID, NSMutableData *pPostBody );
+							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
 	virtual					~NeoMobilExportFileAppEvent() {};
 							DECL_LINK( ExportFile, void* );
 	int						GetErrorCode() { return mnErrorCode; }

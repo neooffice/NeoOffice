@@ -72,8 +72,9 @@ using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 
 
-NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSMutableData *pPostBody ) :
+NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody ) :
 	mnErrorCode( 0 ),
+	mpFileManager( pFileManager ),
 	mbFinished( false ),
 	mpPostBody( pPostBody ),
 	maSaveUUID( aSaveUUID )
@@ -166,7 +167,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// a single file.  We'll just use our file's base path
 			// as the temporary directory name.
 			
-			if(![[NSFileManager defaultManager] createDirectoryAtPath: filePath attributes: nil])
+			if(!mpFileManager || ![mpFileManager createDirectoryAtPath: filePath attributes: nil])
 			{
 				[pool release];
 #ifdef DEBUG

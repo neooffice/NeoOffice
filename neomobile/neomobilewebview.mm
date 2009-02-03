@@ -286,10 +286,11 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		if ( pSaveURL )
 		{
 			NSMutableURLRequest *pURLRequest = [NSMutableURLRequest requestWithURL:pSaveURL];
+			NSFileManager *pFileManager = [NSFileManager defaultManager];
 			NSData *pPostBody = [NSMutableData dataWithLength:0];
-			if ( pURLRequest && pPostBody )
+			if ( pURLRequest && pFileManager && pPostBody )
 			{
-				NeoMobilExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pPostBody );
+				NeoMobilExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
 
 				vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();
