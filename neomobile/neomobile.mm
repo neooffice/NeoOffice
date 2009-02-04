@@ -386,7 +386,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 		throw (::com::sun::star::uno::RuntimeException)
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
-	
+
 	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pAboutURI];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -396,7 +396,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 		
 	[pool release];
 	
-	return(true);
+	return(sal_True);
 }
 
 /**
@@ -414,10 +414,10 @@ static NeoMobileWebView *pSharedWebView = nil;
 	{
 		bool isPantherOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
 		if(!isPantherOrHigher)
-			return(false);
+			return(sal_False);
 	}
 	
-	return(true);
+	return(sal_True);
 }
 
 /**
@@ -438,7 +438,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 		
 	[pool release];
 	
-	return(true);
+	return(sal_True);
 }
 
 ::sal_Bool 
@@ -463,7 +463,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 					{
 						Reference< XPropertyContainer > propContainer( docInfo, UNO_QUERY_THROW );
 						propContainer->addProperty(key, 0, Any(value));
-						return(true);
+						return(sal_True);
 					}
 					catch (PropertyExistException e)
 					{
@@ -472,7 +472,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 							bagOfMe->setPropertyValue(key, Any(value));
 					}
 					
-					return(true);
+					return(sal_True);
 				}
 			}
 		}
@@ -480,7 +480,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 		{
 		}
 		
-		return(false);
+		return(sal_False);
 }
 
 ::rtl::OUString
@@ -614,21 +614,21 @@ static NeoMobileWebView *pSharedWebView = nil;
 		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 			lProperties[0].Value <<= OUString::createFromAscii("impress_pdf_Export");
 		else
-			return(false);
+			return(sal_False);
 		
 		lProperties[1].Name=OUString::createFromAscii("Overwrite");
-		lProperties[1].Value <<= (::sal_Bool)true;
+		lProperties[1].Value <<= sal_True;
 		
 		Reference< XStorable > xStore(rModel, UNO_QUERY);
 		xStore->storeToURL(url, lProperties);
 		
-		return(true);
+		return(sal_True);
 	}
 	catch (...)
 	{
 	}
 
-	return(false);
+	return(sal_False);
 }
 
 ::sal_Bool
@@ -661,21 +661,21 @@ static NeoMobileWebView *pSharedWebView = nil;
 		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 			lProperties[0].Value <<= OUString::createFromAscii("impress_html_Export");
 		else
-			return(false);
+			return(sal_False);
 		
 		lProperties[1].Name=OUString::createFromAscii("Overwrite");
-		lProperties[1].Value <<= (::sal_Bool)true;
+		lProperties[1].Value <<= sal_True;
 		
 		Reference< XStorable > xStore(rModel, UNO_QUERY);
 		xStore->storeToURL(url, lProperties);
 		
-		return(true);
+		return(sal_True);
 	}
 	catch (...)
 	{
 	}
 
-	return(false);
+	return(sal_False);
 }
 
 ::sal_Bool
@@ -708,21 +708,21 @@ static NeoMobileWebView *pSharedWebView = nil;
 		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 			lProperties[0].Value <<= OUString::createFromAscii("impress8");
 		else
-			return(false);
+			return(sal_False);
 		
 		lProperties[1].Name=OUString::createFromAscii("Overwrite");
-		lProperties[1].Value <<= (::sal_Bool)true;
+		lProperties[1].Value <<= sal_True;
 		
 		Reference< XStorable > xStore(rModel, UNO_QUERY);
 		xStore->storeToURL(url, lProperties);
 		
-		return(true);
+		return(sal_True);
 	}
 	catch (...)
 	{
 	}
 
-	return(false);
+	return(sal_False);
 }
 
 /**
@@ -733,7 +733,7 @@ static NeoMobileWebView *pSharedWebView = nil;
  * @param zipFilePath	absolute path to the output ZIP file.  This should
  *						include the ".zip" suffix.  If not present, the
  *						suffix will be added.
- * @return true if the zip operation succeeded, false on error.
+ * @return sal_True if the zip operation succeeded, sal_False on error.
  */
 ::sal_Bool
 	SAL_CALL MacOSXNeoOfficeMobileImpl::zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
@@ -743,11 +743,11 @@ static NeoMobileWebView *pSharedWebView = nil;
 	{
 		OString asciiDirPath = OUStringToOString(dirPath,RTL_TEXTENCODING_UTF8);
 		if (!asciiDirPath.getLength())
-			return(false);
+			return(sal_False);
 		
 		OString asciiZipFilePath = OUStringToOString(zipFilePath,RTL_TEXTENCODING_UTF8);
 		if (!asciiZipFilePath.getLength())
-			return(false);
+			return(sal_False);
 			
 		char oldWD[2048];
 		
@@ -764,5 +764,5 @@ static NeoMobileWebView *pSharedWebView = nil;
 	{
 	}
 	
-	return(false);
+	return(sal_False);
 }
