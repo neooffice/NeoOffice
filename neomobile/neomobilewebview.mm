@@ -160,6 +160,12 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[mpcancelButton setButtonType:NSMomentaryPushInButton];
 		[mpcancelButton setBezelStyle:NSRoundedBezelStyle];
 		
+		float fontSize=[NSFont systemFontSizeForControlSize:NSSmallControlSize];
+		NSCell *theCell = [mpcancelButton cell];
+		NSFont *theFont = [NSFont fontWithName:[[theCell font] fontName] size:fontSize];
+		[theCell setFont:theFont];
+		[theCell setControlSize:NSSmallControlSize];
+		
 		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(100, 0, 600, 24)];
 		[mpstatusLabel setEditable:NO];
 		[mpstatusLabel setString:@""];
