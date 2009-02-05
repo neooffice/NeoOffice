@@ -140,6 +140,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[self setPolicyDelegate:self];
 
 	mpdownload=nil;
+	mpexportEvent=NULL;
 	
 	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 524) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
@@ -212,7 +213,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		
 		[mpdownload cancel];
 	}
-	else
+	else if(mpexportEvent)
+	{
+		// a file export application event is being processed, set the flag
+		// to cancel it
+		
+		mpexportEvent->Cancel();
+	}
 	{
 		// regular webframe load
 		
@@ -395,14 +402,33 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 				if ( Application::IsInMain() )
 				{
+					[mpcancelButton setEnabled:YES];
+					[mpstatusLabel setString:@"Exporting file..."];
+					mpexportEvent=&aEvent;
+					
 					Application::PostUserEvent( LINK( &aEvent, NeoMobilExportFileAppEvent, ExportFile ) );
 					while ( !aEvent.IsFinished() && Application::IsInMain() )
 						Application::Reschedule();
-
-					[pURLRequest addValue: @"multipart/form-data; boundary=neomobileupload" forHTTPHeaderField: @"Content-Type"];
-					[pURLRequest setHTTPMethod:@"POST"];
-					[pURLRequest setHTTPBody:pPostBody];
-					[pWebFrame loadRequest:pURLRequest];
+					
+					[mpcancelButton setEnabled:NO];
+					[mpstatusLabel setString:@""];
+					mpexportEvent=NULL;
+					
+					if(aEvent.IsCanceled())
+					{
+						// go back to publish page
+						
+						[self goBack];
+					}
+					else
+					{
+						// start the upload
+						
+						[pURLRequest addValue: @"multipart/form-data; boundary=neomobileupload" forHTTPHeaderField: @"Content-Type"];
+						[pURLRequest setHTTPMethod:@"POST"];
+						[pURLRequest setHTTPBody:pPostBody];
+						[pWebFrame loadRequest:pURLRequest];
+					}
 				}
 
 				rSolarMutex.release();
@@ -415,7 +441,17 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 - (void)webView:(WebView *)pWebView didStartProvisionalLoadForFrame:(WebFrame *)pFrame
 {
 	[mpcancelButton setEnabled:YES];
-	[mpstatusLabel setString:@"Loading..."];
+	
+	WebDataSource *pDataSource = [pFrame provisionalDataSource];
+	
+	NSMutableURLRequest *pRequest = nil;
+	if ( pDataSource )
+		pRequest = [pDataSource request];
+	
+	if ( pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
+		[mpstatusLabel setString:@"Uploading file..."];
+	else
+		[mpstatusLabel setString:@"Loading..."];
 }
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource

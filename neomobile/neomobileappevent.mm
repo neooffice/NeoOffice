@@ -77,7 +77,8 @@ NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSFi
 	mpFileManager( pFileManager ),
 	mbFinished( false ),
 	mpPostBody( pPostBody ),
-	maSaveUUID( aSaveUUID )
+	maSaveUUID( aSaveUUID ),
+	mbCanceled( false )
 {
 }
 
@@ -120,11 +121,15 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 			
+			try
+			{
+			
 			NSString *basePath = NSTemporaryDirectory();
 			NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
 			while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
 				filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
 			}
+			OUString oufilePath(NSStringToOUString(filePath));
 			
 #ifdef DEBUG
 			fprintf(stderr, "NeoMobilExportFileAppEvent::ExportFile exporting to '%s'\n", [filePath UTF8String]);
@@ -135,7 +140,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			OUString docExtension=neoOfficeMobile->getOpenDocumentExtension();
 			
 			OUString openDocExportURL=OUString::createFromAscii("file://");
-			openDocExportURL+=NSStringToOUString(filePath);
+			openDocExportURL+=oufilePath;
 			openDocExportURL+=docExtension;
 			
 			if(!neoOfficeMobile->saveAsOpenDocument(openDocExportURL))
@@ -147,10 +152,13 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return 0;
 			}
 			
+			if ( mbCanceled )
+				throw this;
+			
 			// perform a PDF export
 			
 			OUString pdfExportURL=OUString::createFromAscii("file://");
-			pdfExportURL+=NSStringToOUString(filePath);
+			pdfExportURL+=oufilePath;
 			pdfExportURL+=OUString::createFromAscii(".pdf");
 			
 			if(!neoOfficeMobile->saveAsPDF(pdfExportURL))
@@ -161,6 +169,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #endif	// DEBUG
 				return 0;
 			}
+			
+			if ( mbCanceled )
+				throw this;
 			
 			// perform an HTML export.  Note that we need to do this in a
 			// temporary directory and then zip the directory contents into
@@ -177,7 +188,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			}
 			
 			OUString htmlExportURL=OUString::createFromAscii("file://");
-			htmlExportURL+=NSStringToOUString(filePath);
+			htmlExportURL+=oufilePath;
 			htmlExportURL+=OUString::createFromAscii("/_nm_export.html");
 			
 			if(!neoOfficeMobile->saveAsHTML(htmlExportURL))
@@ -189,7 +200,10 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return 0;
 			}
 			
-			OUString htmlExportZipDir(NSStringToOUString(filePath));
+			if ( mbCanceled )
+				throw this;
+			
+			OUString htmlExportZipDir(oufilePath);
 			OUString htmlExportZipFile(htmlExportZipDir);
 			htmlExportZipFile+=OUString::createFromAscii(".zip");
 			
@@ -201,6 +215,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #endif	// DEBUG
 				return 0;
 			}
+			
+			if ( mbCanceled )
+				throw this;
 			
 			// construct post data for uploading files to server
 			
@@ -278,6 +295,11 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #endif	// DEBUG
 			
 			// free our autorelease pool
+
+			}
+			catch (...)
+			{
+			}
 			
 			[pool release];
 		}
@@ -287,7 +309,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile : I'm notn Main!\n");
 #endif	// DEBUG
 		}
-
+		
 		mbFinished = true;
 	}
 

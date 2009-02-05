@@ -49,6 +49,7 @@ class NeoMobilExportFileAppEvent
 	bool					mbFinished;
 	NSMutableData*			mpPostBody;
 	::rtl::OUString			maSaveUUID;
+	bool					mbCanceled;
 
 public:
 							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
@@ -57,6 +58,8 @@ public:
 	int						GetErrorCode() { return mnErrorCode; }
 	bool					IsFinished() { return mbFinished; }
 	NSData*					GetPostBody() { return mpPostBody; }
+	void					Cancel() { mbCanceled=true; }
+	bool					IsCanceled() { return(mbCanceled); }
 };
 
 #endif	// _NEOMOBILEAPPEVENT_HXX

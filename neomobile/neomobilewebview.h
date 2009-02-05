@@ -46,6 +46,8 @@
 #define NO (MacOSBOOL)0
 #endif
 
+class NeoMobilExportFileAppEvent;
+
 @interface NeoMobileWebView : WebView
 {
 	NSArray*				mpBaseURLs;
@@ -57,6 +59,7 @@
 	NSButton*				mpcancelButton;
 	NSText*					mpstatusLabel;
 	NSURLDownload*			mpdownload;
+	NeoMobilExportFileAppEvent*	mpexportEvent;
 }
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName;
