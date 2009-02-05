@@ -212,6 +212,9 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		// a file download is in progress, cancel it
 		
 		[mpdownload cancel];
+		mpdownload=nil;
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@"Download canceled."];
 	}
 	else if(mpexportEvent)
 	{
