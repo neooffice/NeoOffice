@@ -129,6 +129,8 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
 				filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
 			}
+			[filePath retain];
+			
 			OUString oufilePath(NSStringToOUString(filePath));
 			
 #ifdef DEBUG
@@ -219,6 +221,10 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if ( mbCanceled )
 				throw this;
 			
+			// remove temporary directory used to create zip file
+			
+			[[NSFileManager defaultManager] removeFileAtPath:filePath handler:NULL];
+			
 			// construct post data for uploading files to server
 			
 			// Note that at this point the exported trio is in the following
@@ -293,6 +299,13 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			fprintf( stderr, "%s", (char *)[mpPostBody bytes]);
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile end of post request\n");
 #endif	// DEBUG
+			
+			// remove exported files on disk now that we've finished assembling
+			// our post in memory
+			
+			[[NSFileManager defaultManager] removeFileAtPath:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] handler:nil];
+			[[NSFileManager defaultManager] removeFileAtPath:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] handler:nil];
+			[[NSFileManager defaultManager] removeFileAtPath:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] handler:nil];
 			
 			// free our autorelease pool
 
