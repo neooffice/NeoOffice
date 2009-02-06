@@ -71,6 +71,68 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 
+@interface DoFileManagerOnMainThread : NSObject
+{
+	NSString *mpath;
+}
+- (id)init;
+- (void)dealloc;
+- (void)makeBasePath:(id)arg;
+- (NSString *)filePath;
+- (void)createDir:(NSString *)path;
+- (void)removeItem:(NSString *)path;
+@end
+
+@implementation DoFileManagerOnMainThread
+
+- (id)init
+{
+	[super init];
+	
+	mpath=nil;
+	return self;
+}
+
+- (void)dealloc
+{
+	if(mpath)
+	{
+		[mpath release];
+		mpath=nil;
+	}
+	
+	[super dealloc];
+}
+
+- (void)makeBasePath:(id)arg
+{
+#pragma unused(arg)
+
+	NSString *basePath = NSTemporaryDirectory();
+	NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
+	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
+	}
+	[filePath retain];
+	mpath=filePath;
+}
+
+- (NSString *)filePath
+{
+	return(mpath);
+}
+
+- (void)createDir:(NSString *)path
+{
+	[[NSFileManager defaultManager] createDirectoryAtPath: path attributes: nil];
+}
+
+- (void)removeItem:(NSString *)path
+{
+	[[NSFileManager defaultManager] removeFileAtPath:path handler:NULL];
+}
+
+@end
 
 NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody ) :
 	mnErrorCode( 0 ),
@@ -124,13 +186,11 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			try
 			{
 			
-			NSString *basePath = NSTemporaryDirectory();
-			NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
-			while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-				filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
-			}
-			[filePath retain];
+			DoFileManagerOnMainThread *fileMgr=[[[DoFileManagerOnMainThread alloc] init] autorelease];
 			
+			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES];
+			
+			NSString *filePath=[fileMgr filePath];
 			OUString oufilePath(NSStringToOUString(filePath));
 			
 #ifdef DEBUG
@@ -180,15 +240,8 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// a single file.  We'll just use our file's base path
 			// as the temporary directory name.
 			
-			if(!mpFileManager || ![mpFileManager createDirectoryAtPath: filePath attributes: nil])
-			{
-				[pool release];
-#ifdef DEBUG
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create export directory\n" );
-#endif	// DEBUG
-				return 0;
-			}
-			
+			[fileMgr performSelectorOnMainThread:@selector(createDir:) withObject:filePath waitUntilDone:YES];
+						
 			OUString htmlExportURL=OUString::createFromAscii("file://");
 			htmlExportURL+=oufilePath;
 			htmlExportURL+=OUString::createFromAscii("/_nm_export.html");
@@ -223,7 +276,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			// remove temporary directory used to create zip file
 			
-			[[NSFileManager defaultManager] removeFileAtPath:filePath handler:NULL];
+			[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES];
 			
 			// construct post data for uploading files to server
 			
@@ -303,9 +356,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// remove exported files on disk now that we've finished assembling
 			// our post in memory
 			
-			[[NSFileManager defaultManager] removeFileAtPath:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] handler:nil];
-			[[NSFileManager defaultManager] removeFileAtPath:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] handler:nil];
-			[[NSFileManager defaultManager] removeFileAtPath:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] handler:nil];
+			[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] waitUntilDone:YES];
+			[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] waitUntilDone:YES];
+			[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] waitUntilDone:YES];
 			
 			// free our autorelease pool
 
