@@ -170,10 +170,22 @@ Sub FindNextGrammarError
 		
 		hasMoreData = SentenceIter.gotoNextSentence(True)
 		If hasMoreData = False Then
+			hasMoreData = SentenceIter.gotoNextParagraph(True)
+			If hasMoreData And checkSelectionOnly Then
+				If Doc.Text.compareRegionStarts(selectionToCheck.getEnd(), SentenceIter.Start) &gt;= 0 Then
+					hasMoreData = False
+				End If
+			End If
+		End If
+		If hasMoreData = False Then
 			&apos; we have reached the final sentence.  Select from the current cursor
 			&apos; to the end of the document
 			
-			SentenceIter.gotoEnd(True)
+			If checkSelectionOnly Then
+				SentenceIter.gotoEnd(True)
+			Else
+				SentenceIter.gotoEndOfParagraph(True)
+			End If
 			lastSentenceProcessed = True
 		End If
 		
