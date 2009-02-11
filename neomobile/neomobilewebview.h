@@ -59,6 +59,8 @@ class NeoMobilExportFileAppEvent;
 	NSButton*				mpcancelButton;
 	NSText*					mpstatusLabel;
 	NSURLDownload*			mpdownload;
+	unsigned long long		mndownloadSize;
+	unsigned long long		mndownloadBytesReceived;
 	NeoMobilExportFileAppEvent*	mpexportEvent;
 }
 - (void)dealloc;
@@ -73,7 +75,9 @@ class NeoMobilExportFileAppEvent;
 - (void)webView:(WebView *)pWebView runJavaScriptAlertPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFame;
 - (MacOSBOOL)webView:(WebView *)pWebView runJavaScriptConfirmPanelWithMessage:(NSString *)pMessage initiatedByFrame:(WebFrame *)pWebFrame;
 - (void)download:(NSURLDownload *)download decideDestinationWithSuggestedFilename:(NSString *)filename;
+- (void)download: (NSURLDownload *)download didReceiveResponse:(NSURLResponse *) response;
 - (void)downloadDidBegin: (NSURLDownload *)download;
+- (void)download:(NSURLDownload *)download didReceiveDataOfLength:(unsigned long)length;
 - (void)downloadDidFinish: (NSURLDownload*)download;
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error;
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation

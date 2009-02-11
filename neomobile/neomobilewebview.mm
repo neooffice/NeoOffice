@@ -140,6 +140,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[self setPolicyDelegate:self];
 
 	mpdownload=nil;
+	mndownloadSize=0;
+	mndownloadBytesReceived=0;
 	mpexportEvent=NULL;
 	
 	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 524) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
@@ -516,6 +518,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 	
 	[download setDestination:filePath allowOverwrite:YES];
+	mndownloadSize=0;	// initialize only if we receive a response
 }
 
 static std::map<NSURLDownload *, std::string> gDownloadPathMap;
@@ -528,6 +531,16 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	gDownloadPathMap[download]=[path cStringUsingEncoding:NSUTF8StringEncoding];
 }
 
+- (void) download: (NSURLDownload *) download didReceiveResponse: (NSURLResponse *) response
+{
+#ifdef DEBUG
+	fprintf( stderr, "NeoMobile Download didReceiveResponse\n");
+#endif
+
+	mndownloadSize=[response expectedContentLength];
+	mndownloadBytesReceived=0;
+}
+
 - (void)downloadDidBegin: (NSURLDownload *)download
 {
 #ifdef DEBUG
@@ -536,7 +549,27 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	
 	mpdownload=download;
 	[mpcancelButton setEnabled:YES];
-	[mpstatusLabel setString:@"Downloading file..."];
+	[mpstatusLabel setString:@"Downloading file ... "];
+}
+
+- (void)download:(NSURLDownload *)download didReceiveDataOfLength:(unsigned long)length
+{
+#ifdef DEBUG
+	fprintf( stderr, "NeoMobile Download didReiveDataOfLength\n");
+#endif
+
+	mndownloadBytesReceived+=length;
+	
+	if(mndownloadSize > 0)
+	{
+		// we got a response from the server, so we can compute a percentage
+		[mpstatusLabel setString:[NSString stringWithFormat:@"Downloading file ... %d%% complete", (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
+	}
+	else
+	{
+		// no expected size received from the server, just show Kb download
+		[mpstatusLabel setString:[NSString stringWithFormat:@"Downloading file ... %ldK received", (long)(mndownloadBytesReceived/1024)]];
+	}
 }
 
 - (void)downloadDidFinish: (NSURLDownload*)download
