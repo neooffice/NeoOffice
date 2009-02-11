@@ -231,7 +231,9 @@ public final class VCLScreen {
 					}
 				}
 				catch (Throwable t) {
-					clearCachedDisplays0(ge);
+					synchronized (ge) {
+						clearCachedDisplays0(ge);
+					}
 				}
 			}
 
@@ -256,7 +258,9 @@ public final class VCLScreen {
 					}
 				}
 				catch (Throwable t) {
-					clearCachedDisplays0(ge);
+					synchronized (ge) {
+						clearCachedDisplays0(ge);
+					}
 				}
 			}
 
@@ -297,7 +301,9 @@ public final class VCLScreen {
 				}
 			}
 			catch (Throwable t) {
-				clearCachedDisplays0(ge);
+				synchronized (ge) {
+					clearCachedDisplays0(ge);
+				}
 			}
 		}
 
@@ -314,6 +320,10 @@ public final class VCLScreen {
 
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null) {
+			// Fix bug 3416 by forcing Java to refresh its screen list
+			synchronized (ge) {
+				clearCachedDisplays0(ge);
+			}
 			GraphicsDevice[] gd = ge.getScreenDevices();
 			if (gd != null && gd.length > 0)
 				return gd.length;
