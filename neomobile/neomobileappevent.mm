@@ -182,11 +182,12 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// get a unique temporary base filename
 			
 			NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+			DoFileManagerOnMainThread *fileMgr=nil;
 			
 			try
 			{
 			
-			DoFileManagerOnMainThread *fileMgr=[[[DoFileManagerOnMainThread alloc] init] autorelease];
+			fileMgr=[[DoFileManagerOnMainThread alloc] init];
 			
 			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES];
 			
@@ -367,6 +368,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			{
 			}
 			
+			if(fileMgr)
+				[fileMgr release];
+				
 			[pool release];
 		}
 		else
