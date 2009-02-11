@@ -251,8 +251,7 @@ build.oo_patches: \
 	build.oo_sw_patch \
 	build.oo_testshl2_patch \
 	build.oo_vcl_patch \
-	build.oo_vos_patch \
-	build.oo_xmloff_patch
+	build.oo_vos_patch
 	touch "$@"
 
 build.oo_odk_patches: build.oo_patches
@@ -410,7 +409,8 @@ build.neo_patches: build.oo_all \
 	build.neo_vcl_patch \
 	build.neo_dtrans_patch \
 	build.neo_ucbhelper_patch \
-	build.neo_libwpd_patch build.neo_writerperfect_patch
+	build.neo_libwpd_patch build.neo_writerperfect_patch \
+	build.neo_xmloff_patch
 	touch "$@"
 
 build.neo_odk_patches: \
