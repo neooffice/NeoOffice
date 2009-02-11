@@ -204,14 +204,16 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 										if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, NULL, 0, &nBufLen ) )
 										{
 											CFIndex nRealLen = nBufLen;
-											UInt8 aBuf[ nBufLen + 1 ];
-											if ( CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, aBuf, nBufLen, &nRealLen ) && nRealLen == nBufLen )
+											// Place on to heap, not stack.
+											UInt8 *aBuf = new UInt8[ nBufLen + 1 ];
+											if ( aBuf && CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, aBuf, nBufLen, &nRealLen ) && nRealLen == nBufLen )
 											{
 												aBuf[ nBufLen ] = '\0';
 												if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 													nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
 												else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 													nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
+												delete aBuf;
 											}
 										}
 
@@ -440,10 +442,13 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 							aRange.length = CFStringGetLength( aCFString );
 							// [ed 3/24/07 Place on to heap, not stack.  Bug #2171
 							UniChar *aBuf = new UniChar[ aRange.length ];
-							CFStringGetCharacters( aCFString, aRange, aBuf );
-							aString = OUString( (sal_Unicode *)aBuf, aRange.length );
-							CFRelease( aCFString );
-							delete[] aBuf;
+							if ( aBuf )
+							{
+								CFStringGetCharacters( aCFString, aRange, aBuf );
+								aString = OUString( (sal_Unicode *)aBuf, aRange.length );
+								CFRelease( aCFString );
+								delete[] aBuf;
+							}
 						}
 					}
 					else
