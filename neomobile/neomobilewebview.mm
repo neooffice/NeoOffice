@@ -577,10 +577,13 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 #ifdef DEBUG
 	fprintf( stderr, "Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	char outBuf[PATH_MAX];
+	char outBuf[2*PATH_MAX];
 	if(gDownloadPathMap.count(download)>0)
 	{
-		sprintf(outBuf, "/usr/bin/open \"%s\"", gDownloadPathMap[download].c_str());
+		sprintf(outBuf, "/usr/bin/open -a \"%s\" \"%s\"", [[[NSBundle mainBundle] bundlePath] cStringUsingEncoding:NSUTF8StringEncoding], gDownloadPathMap[download].c_str());
+#ifdef DEBUG
+		fprintf( stderr, "Opening using: %s\n", outBuf );
+#endif
 		system(outBuf); // +++ REPLACE WITH APP EVENT
 		gDownloadPathMap.erase(download);
 	}
