@@ -45,6 +45,7 @@
 
 #include <map>
 #include <string>
+#include "neomobilei18n.hxx"
 
 using namespace rtl;
 using namespace vos;
@@ -155,7 +156,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		//mpcontentView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 500)];		
 		
 		mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 24)];
-		[mpcancelButton setTitle:@"Cancel"];
+		[mpcancelButton setTitle:[NSString stringWithUTF8String:GetLocalizedString("Cancel").c_str()]];
 		[mpcancelButton setTarget:self];
 		[mpcancelButton setAction:@selector(cancelButtonPressed)];
 		[mpcancelButton setAutoresizingMask:(NSViewMaxXMargin)];
@@ -216,7 +217,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[mpdownload cancel];
 		mpdownload=nil;
 		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:@"Download canceled."];
+		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Download canceled.").c_str()]];
 	}
 	else if(mpexportEvent)
 	{
@@ -408,7 +409,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				if ( Application::IsInMain() )
 				{
 					[mpcancelButton setEnabled:YES];
-					[mpstatusLabel setString:@"Exporting file..."];
+					[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Exporting file...").c_str()]];
 					mpexportEvent=&aEvent;
 					
 					Application::PostUserEvent( LINK( &aEvent, NeoMobilExportFileAppEvent, ExportFile ) );
@@ -454,9 +455,9 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		pRequest = [pDataSource request];
 	
 	if ( pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
-		[mpstatusLabel setString:@"Uploading file..."];
+		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Uploading file...").c_str()]];
 	else
-		[mpstatusLabel setString:@"Loading..."];
+		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Loading...").c_str()]];
 }
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
@@ -549,7 +550,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	
 	mpdownload=download;
 	[mpcancelButton setEnabled:YES];
-	[mpstatusLabel setString:@"Downloading file ... "];
+	[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Downloading file ... ").c_str()]];
 }
 
 - (void)download:(NSURLDownload *)download didReceiveDataOfLength:(unsigned long)length
@@ -563,12 +564,12 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	if(mndownloadSize > 0)
 	{
 		// we got a response from the server, so we can compute a percentage
-		[mpstatusLabel setString:[NSString stringWithFormat:@"Downloading file ... %d%% complete", (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
+		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", [NSString stringWithUTF8String:GetLocalizedString("Downloading file ... ").c_str()], (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
 	}
 	else
 	{
 		// no expected size received from the server, just show Kb download
-		[mpstatusLabel setString:[NSString stringWithFormat:@"Downloading file ... %ldK received", (long)(mndownloadBytesReceived/1024)]];
+		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", [NSString stringWithUTF8String:GetLocalizedString("Downloading file ... ").c_str()], (long)(mndownloadBytesReceived/1024)]];
 	}
 }
 
@@ -600,7 +601,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 #endif
 	mpdownload=nil;
 	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:@"Download failed!"];
+	[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Download failed!").c_str()]];
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
 }
 
