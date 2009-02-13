@@ -219,6 +219,45 @@
 
 @end
 
+@interface MakeUnshadowedWindow : NSObject
+{
+	id					mpCWindow;
+}
++ (id)createWithCWindow:(id)pCWindow;
+- (id)initWithCWindow:(id)pCWindow;
+- (void)makeUnshadowedWindow:(id)pObject;
+@end
+
+@implementation MakeUnshadowedWindow
+
++ (id)createWithCWindow:(id)pCWindow
+{
+	MakeUnshadowedWindow *pRet = [[MakeUnshadowedWindow alloc] initWithCWindow:pCWindow];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithCWindow:(id)pCWindow
+{
+	[super init];
+
+	mpCWindow = pCWindow;
+
+	return self;
+}
+
+- (void)makeUnshadowedWindow:(id)pObject
+{
+	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
+	{
+		NSWindow *pWindow = (NSWindow *)[mpCWindow getNSWindow];
+		if ( pWindow && !([pWindow styleMask] & NSTitledWindowMask))
+			[pWindow setHasShadow:NO];
+	}
+}
+
+@end
+
 @interface UpdateLocation : NSObject
 {
 	id					mpCWindow;
@@ -329,6 +368,20 @@ void CWindow_makeModalWindow( id pCWindow )
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		MakeModalWindow *pMakeModalWindow = [MakeModalWindow createWithCWindow:pCWindow];
 		[pMakeModalWindow performSelectorOnMainThread:@selector(makeModalWindow:) withObject:pMakeModalWindow waitUntilDone:NO modes:pModes];
+	}
+
+	[pPool release];
+}
+
+void CWindow_makeUnshadowedWindow( id pCWindow )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pCWindow )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		MakeUnshadowedWindow *pMakeUnshadowedWindow = [MakeUnshadowedWindow createWithCWindow:pCWindow];
+		[pMakeUnshadowedWindow performSelectorOnMainThread:@selector(makeUnshadowedWindow:) withObject:pMakeUnshadowedWindow waitUntilDone:NO modes:pModes];
 	}
 
 	[pPool release];

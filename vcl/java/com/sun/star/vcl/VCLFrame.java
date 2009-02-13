@@ -2410,6 +2410,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	public native int makeFloatingWindow(ComponentPeer p);
 
 	/**
+	 * Force the native window to be unshadowed
+	 *
+	 * @param p the <code>ComponentPeer</code>
+	 */
+	public native void makeUnshadowedWindow(ComponentPeer p);
+
+	/**
 	 * Invoked when the mouse has been clicked on a component.
 	 *
 	 * @param e the <code>MouseEvent</code>
@@ -3225,9 +3232,16 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			super.addNotify();
 
-			// Make the native window a utility window if necessary
-			if (isUndecorated() && getOwner() != null)
-				frame.makeFloatingWindow(getPeer());
+			if (isUndecorated()) {
+				if (getOwner() != null) {
+					// Make the native window a utility window
+					frame.makeFloatingWindow(getPeer());
+				}
+				else {
+					// Make the native window unshadowed
+					frame.makeUnshadowedWindow(getPeer());
+				}
+			}
 
 		}
 
@@ -3389,9 +3403,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			super.addNotify();
 
-			// Make the native window a utility window if necessary
-			if (frame.utility || (isUndecorated() && getOwner() != null))
+			if (frame.utility || (isUndecorated() && getOwner() != null)) {
+				// Make the native window a utility window
 				utilityWindowTopInset = frame.makeFloatingWindow(getPeer());
+			}
+			else if (isUndecorated() && getOwner() == null) {
+				// Make the native window unshadowed
+				frame.makeUnshadowedWindow(getPeer());
+			}
 
 		}
 
