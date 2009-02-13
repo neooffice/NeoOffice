@@ -52,6 +52,7 @@ id CWindow_getNSWindow( id pCWindow );
 WindowRef CWindow_getWindowRef( id pCWindow );
 int CWindow_makeFloatingWindow( id pCWindow );
 void CWindow_makeModalWindow( id pCWindow );
+void CWindow_makeUnshadowedWindow( id pCWindow );
 void CWindow_updateLocation( id pCWindow );
 #ifdef __cplusplus
 END_C
