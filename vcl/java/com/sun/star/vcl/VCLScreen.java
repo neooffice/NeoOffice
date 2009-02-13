@@ -108,7 +108,7 @@ public final class VCLScreen {
 	static GraphicsDevice[] clearCachedDisplays() {
 
 		// Fix bug 3416 by forcing Java to refresh its screen list
-		GraphicsDevice [] gd = null;
+		GraphicsDevice[] gd = null;
 
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null) {
@@ -126,7 +126,7 @@ public final class VCLScreen {
 					displays.add(gd[0]);
 					for (int i = 1; i < gd.length; i++) {
 						Rectangle bounds = gd[i].getDefaultConfiguration().getBounds();
-						if (!bounds.equals(lastBounds)) {
+						if (bounds.width > 0 && bounds.height > 0 && !bounds.equals(lastBounds)) {
 							displays.add(gd[i]);
 							lastBounds = bounds;
 						}
