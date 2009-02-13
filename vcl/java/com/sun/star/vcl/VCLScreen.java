@@ -48,6 +48,7 @@ import java.awt.SystemColor;
 import java.awt.Toolkit;
 import java.awt.Window;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
 /** 
  * The Java class that implements the convenience methods for accessing
@@ -100,16 +101,47 @@ public final class VCLScreen {
 
 
 	/**
-	 * Clears the JVM's cached display list.
+	 * Clears, refreshes, and returns the JVM's cached display list.
+	 *
+	 * @return the cached display list
 	 */
-	public static void clearCachedDisplays() {
+	static GraphicsDevice[] clearCachedDisplays() {
+
+		// Fix bug 3416 by forcing Java to refresh its screen list
+		GraphicsDevice [] gd = null;
 
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
 		if (ge != null) {
 			synchronized (ge) {
+				// Clear the existing JVM cache
 				clearCachedDisplays0(ge);
+
+				gd = ge.getScreenDevices();
+
+				// On some machines, Java shows two monitors for every mirrored
+				// display so eliminate those duplicate monitors
+				if (gd != null && gd.length > 1) {
+					Rectangle lastBounds = gd[0].getDefaultConfiguration().getBounds();
+					ArrayList displays = new ArrayList(gd.length);
+					displays.add(gd[0]);
+					for (int i = 1; i < gd.length; i++) {
+						Rectangle bounds = gd[i].getDefaultConfiguration().getBounds();
+						if (!bounds.equals(lastBounds)) {
+							displays.add(gd[i]);
+							lastBounds = bounds;
+						}
+					}
+
+					if (gd.length != displays.size()) {
+						GraphicsDevice[] displayArray = new GraphicsDevice[displays.size()];
+						displays.toArray(displayArray);
+						gd = displayArray;
+					}
+				}
 			}
 		}
+
+		return gd;
 
 	}
 
@@ -153,10 +185,10 @@ public final class VCLScreen {
 	 */
 	public static int getDefaultScreenNumber() {
 
+		GraphicsDevice[] gd = clearCachedDisplays();
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		if (ge != null) {
+		if (gd != null && ge != null) {
 			GraphicsDevice dsd = ge.getDefaultScreenDevice();
-			GraphicsDevice[] gd = ge.getScreenDevices();
 			if (dsd != null && gd != null) {
 				for (int i = 0; i < gd.length; i++) {
 					if (dsd == gd[i])
@@ -206,8 +238,8 @@ public final class VCLScreen {
 	 */
 	public static Rectangle getScreenBounds(int x, int y, int width, int height, boolean fullScreenMode ) {
 
-		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		if (ge != null) {
+		GraphicsDevice[] gd = clearCachedDisplays();
+		if (gd != null) {
 			// Fix bug 2671 by setting width and height greater than 0
 			if (width <= 0)
 				width = 1;
@@ -216,7 +248,6 @@ public final class VCLScreen {
 
 			// Iterate through the screens and find the screen that the
 			// point is inside of
-			GraphicsDevice[] gd = ge.getScreenDevices();
 			for (int i = 0; i < gd.length; i++) {
 				try {
 					// Test if the point is inside the screen
@@ -230,11 +261,7 @@ public final class VCLScreen {
 						return r;
 					}
 				}
-				catch (Throwable t) {
-					synchronized (ge) {
-						clearCachedDisplays0(ge);
-					}
-				}
+				catch (Throwable t) {}
 			}
 
 			// Iterate through the screens and find the closest screen
@@ -257,11 +284,7 @@ public final class VCLScreen {
 						closestBounds = r;
 					}
 				}
-				catch (Throwable t) {
-					synchronized (ge) {
-						clearCachedDisplays0(ge);
-					}
-				}
+				catch (Throwable t) {}
 			}
 
 			if (closestBounds == null || closestBounds.isEmpty())
@@ -285,9 +308,8 @@ public final class VCLScreen {
 	 */
 	public static Rectangle getScreenBounds(int n, boolean b) {
 
-		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		if (ge != null && n >= 0) {
-			GraphicsDevice[] gd = ge.getScreenDevices();
+		GraphicsDevice[] gd = clearCachedDisplays();
+		if (gd != null && n >= 0) {
 			try {
 				Rectangle r = gd[n].getDefaultConfiguration().getBounds();
 				if (!r.isEmpty()) {
@@ -300,11 +322,7 @@ public final class VCLScreen {
 					return r;
 				}
 			}
-			catch (Throwable t) {
-				synchronized (ge) {
-					clearCachedDisplays0(ge);
-				}
-			}
+			catch (Throwable t) {}
 		}
 
 		return null;
@@ -318,14 +336,9 @@ public final class VCLScreen {
 	 */
 	public static int getScreenCount() {
 
-		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-		if (ge != null) {
-			// Fix bug 3416 by forcing Java to refresh its screen list
-			synchronized (ge) {
-				clearCachedDisplays0(ge);
-			}
-			GraphicsDevice[] gd = ge.getScreenDevices();
-			if (gd != null && gd.length > 0)
+		GraphicsDevice[] gd = clearCachedDisplays();
+		if (gd != null) {
+			if (gd != null && gd.length > 1)
 				return gd.length;
 		}
 
