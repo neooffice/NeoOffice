@@ -3237,7 +3237,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					// Make the native window a utility window
 					frame.makeFloatingWindow(getPeer());
 				}
-				else {
+				else if (isFocusable()) {
 					// Make the native window unshadowed
 					frame.makeUnshadowedWindow(getPeer());
 				}
@@ -3407,7 +3407,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				// Make the native window a utility window
 				utilityWindowTopInset = frame.makeFloatingWindow(getPeer());
 			}
-			else if (isUndecorated() && getOwner() == null) {
+			else if (isUndecorated() && isFocusable() && getOwner() == null) {
 				// Make the native window unshadowed
 				frame.makeUnshadowedWindow(getPeer());
 			}
