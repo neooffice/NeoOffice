@@ -751,7 +751,6 @@ void JavaSalFrame::StartPresentation( BOOL bStart )
 		pSalData->mpPresentationFrame = NULL;
 
 	// Adjust window size if in full screen mode
-	bool bRunTimer = true;
 	if ( mbFullScreen )
 	{
 		USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
@@ -760,30 +759,20 @@ void JavaSalFrame::StartPresentation( BOOL bStart )
 		GetWorkArea( aWorkArea );
 
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
-
-		JavaSalSystem *pSalSystem = (JavaSalSystem *)ImplGetSalSystem();
-		if ( pSalSystem )
-		{
-			Rectangle aBounds( mpVCLFrame->getBounds() );
-			Rectangle aScreenBounds( pSalSystem->GetDisplayScreenPosSizePixel( 0 ) );
-			if ( !aBounds.IsEmpty() && !aScreenBounds.IsEmpty() && aBounds.Intersection( aScreenBounds ).IsEmpty() )
-				bRunTimer = false;
-		}
 	}
 
 	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
 	// it on the main runloop thread.  Bug 484
-	if ( bRunTimer )
+	// Always run the timer to ensure that the remote control feature works
+    // when the presentation window is on a secondary screen
+	if ( !pSetSystemUIModeTimerUPP )
+		pSetSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
+	if ( pSetSystemUIModeTimerUPP )
 	{
-		if ( !pSetSystemUIModeTimerUPP )
-			pSetSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
-		if ( pSetSystemUIModeTimerUPP )
-		{
-			if ( GetCurrentEventLoop() != GetMainEventLoop() )
-				InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pSetSystemUIModeTimerUPP, (void *)( mbPresentation ? true : false ), NULL );
-			else
-				SetSystemUIModeTimerCallback( NULL, (void *)( mbPresentation ? true : false ) );
-		}
+		if ( GetCurrentEventLoop() != GetMainEventLoop() )
+			InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pSetSystemUIModeTimerUPP, (void *)( mbPresentation ? true : false ), NULL );
+		else
+			SetSystemUIModeTimerCallback( NULL, (void *)( mbPresentation ? true : false ) );
 	}
 }
 
