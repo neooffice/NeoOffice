@@ -75,7 +75,13 @@ static Reference< XJavaVM > xVM;
 
 extern "C" void SAL_DLLPUBLIC_EXPORT DetachCurrentThreadFromJVM()
 {
-	if ( xVM.is() && pJVM )
+	// Only detach if the thread is actually attached as detaching an unattached
+	// thread will cause the context class loader to be set to NULL for many
+	// threads which, in turn, will cause the exceptions in the Language Tool
+	// extension described in the following support topic:
+	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=7018
+	JNIEnv *pTmpEnv = NULL;
+	if ( xVM.is() && pJVM && pJVM->GetEnv( (void **)&pTmpEnv, JNI_VERSION_1_4 ) == JNI_OK )
 		pJVM->DetachCurrentThread();
 }
 
