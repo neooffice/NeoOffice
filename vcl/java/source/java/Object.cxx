@@ -80,8 +80,8 @@ extern "C" void SAL_DLLPUBLIC_EXPORT DetachCurrentThreadFromJVM()
 	// threads which, in turn, will cause the exceptions in the Language Tool
 	// extension described in the following support topic:
 	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=7018
-	JNIEnv *pTmpEnv = NULL;
-	if ( xVM.is() && pJVM && pJVM->GetEnv( (void **)&pTmpEnv, JNI_VERSION_1_4 ) == JNI_OK )
+	JNIEnv *pEnv = NULL;
+	if ( xVM.is() && pJVM && pJVM->AttachCurrentThread( (void**)&pEnv, NULL ) == JNI_OK && pEnv )
 		pJVM->DetachCurrentThread();
 }
 
