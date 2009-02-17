@@ -371,10 +371,6 @@ public final class VCLEventQueue implements Runnable {
 	 */
 	public VCLEventQueue() {
 
-		// Fix exception thrown by LanguageTool 0.9.6 extension when automatic
-		// spellchecking is turned off
-		Thread.currentThread().setContextClassLoader(ClassLoader.getSystemClassLoader());
-
 		// Create the list of queues
 		queueList[0] = new VCLEventQueue.Queue();
 		queueList[1] = new VCLEventQueue.Queue();
