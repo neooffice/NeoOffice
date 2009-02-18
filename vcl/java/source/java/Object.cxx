@@ -75,13 +75,9 @@ static Reference< XJavaVM > xVM;
 
 extern "C" void SAL_DLLPUBLIC_EXPORT DetachCurrentThreadFromJVM()
 {
-	// Only detach if the thread is actually attached as detaching an unattached
-	// thread will cause the context class loader to be set to NULL for many
-	// threads which, in turn, will cause the exceptions in the Language Tool
-	// extension described in the following support topic:
-	// http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&t=7018
+	// Only detach if the thread is actually attached
 	JNIEnv *pEnv = NULL;
-	if ( xVM.is() && pJVM && pJVM->AttachCurrentThread( (void**)&pEnv, NULL ) == JNI_OK && pEnv )
+	if ( xVM.is() && pJVM && pJVM->GetEnv( (void**)&pEnv, JNI_VERSION_1_4 ) == JNI_OK && pEnv )
 		pJVM->DetachCurrentThread();
 }
 
@@ -118,8 +114,9 @@ VCLThreadAttach::~VCLThreadAttach()
 
 void VCLThreadAttach::AttachThread()
 {
-	if ( !xVM.is() || !pJVM || pJVM->AttachCurrentThread( (void**)&pEnv, NULL ) != JNI_OK )
-		pEnv = NULL;
+	pEnv = NULL;
+	if ( xVM.is() && pJVM )
+		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
 }
 
 // ----------------------------------------------------------------------------
