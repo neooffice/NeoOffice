@@ -203,6 +203,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[mpcontentView addSubview:bottomView];
 		
 		[mpPanel setContentView:mpcontentView];
+		[mpPanel setDelegate:self];
 	}
 
 	return self;
@@ -606,6 +607,22 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Download failed!").c_str()]];
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
+}
+
+- (void)windowDidMove:(NSNotification *)notification
+{
+	NSWindow *window=[notification object];
+	if(window && (window==mpPanel))
+	{
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		
+		NSPoint windowPos=[window frame].origin;
+		
+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:@"nmXPos"];
+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:@"nmYPos"];
+		
+		[defaults synchronize];
+	}
 }
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation

@@ -360,8 +360,38 @@ static NeoMobileWebView *pSharedWebView = nil;
 - (void)showWebView:(id)obj
 {
 	if ( !pSharedWebView )
+	{
 		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil];
-
+		
+		// check for retained user position.  If not available, make relative to the
+		// primary frame.
+		
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		
+		NSPoint windowPos={0, 0};
+		
+		NSString *xPosStr=[defaults stringForKey:@"nmXPos"];
+		NSString *yPosStr=[defaults stringForKey:@"nmYPos"];
+		if(xPosStr && yPosStr)
+		{
+			windowPos.x=[xPosStr intValue];
+			windowPos.y=[yPosStr intValue];
+		}
+		else
+		{
+			NSWindow *keyWindow=[NSApp mainWindow];
+			if(keyWindow)
+			{
+				windowPos=[keyWindow frame].origin;
+				windowPos.x+=75;
+				windowPos.y+=75;
+			}
+		}
+		
+		if([pSharedWebView window])
+			[[pSharedWebView window] setFrameOrigin:windowPos];
+	}
+	
 	if ( pSharedWebView )
 	{
 		NSWindow *pWindow = [pSharedWebView window];
