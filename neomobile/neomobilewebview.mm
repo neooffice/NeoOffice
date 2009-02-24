@@ -144,13 +144,16 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	mndownloadSize=0;
 	mndownloadBytesReceived=0;
 	mpexportEvent=NULL;
-	
-	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, 700, 524) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+
+#define kNMDefaultBrowserWidth	430
+#define kNMDefaultBrowserHeight	620
+
+	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
 	{
 		[mpPanel setFloatingPanel:YES];
 		
-		mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, 700, 524)];
+		mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24)];
 		[mpcontentView setAutoresizesSubviews:YES];
 		
 		//mpcontentView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 500)];		
@@ -171,7 +174,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[theCell setFont:theFont];
 		[theCell setControlSize:NSSmallControlSize];
 		
-		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(100, 0, 600, 24)];
+		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(100, 0, kNMDefaultBrowserWidth-100, 24)];
 		[mpstatusLabel setEditable:NO];
 		[mpstatusLabel setString:@""];
 		[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
@@ -180,7 +183,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		//ZeroHeightDividerSplitView *bottomView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 30)];
 		//[bottomView setVertical:YES];
 		
-		NSView *bottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, 700, 24)];
+		NSView *bottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, 24)];
 		
 		//NSBox *bottomView=[[NSBox alloc] initWithFrame:NSMakeRect(0, 0, 700, 30)];
 		//[bottomView setBorderType:NSNoBorder];
@@ -195,8 +198,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		
 		[mpcontentView addSubview:self];
 		
-		[self setFrame:NSMakeRect(0, 24, 700, 500)];
-		[self setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+		[self setFrame:NSMakeRect(0, 24, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight)];
+		[self setAutoresizingMask:(NSViewHeightSizable)];
 		[mpcontentView addSubview:bottomView];
 		
 		[mpPanel setContentView:mpcontentView];
