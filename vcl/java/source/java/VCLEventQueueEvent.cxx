@@ -72,6 +72,8 @@
 #include <vos/module.hxx>
 #endif
 
+#include "VCLEventQueue_cocoa.h"
+
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
 typedef void NativeShutdownCancelledHandler_Type();
@@ -338,9 +340,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	if ( pSalData->mbInNativeModalSheet && pFrame != pSalData->mpNativeModalSheetFrame )
 	{
 		// We need to prevent dispatching of events other than system events
-		// like bounds change or paint events
+		// like bounds change or paint events. Fix bug 3429 by only forcing
+		// a focus change if there is not a native modal window showing.
 		bDeleteDataOnly = true;
-		pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+		if ( NSApplication_isActive() )
+			pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 
 	switch ( nID )
