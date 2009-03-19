@@ -1984,7 +1984,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *
      * @return the frame pointer for this component
 	 */
-	synchronized long getFrame() {
+	long getFrame() {
 
 		return frame;
 
