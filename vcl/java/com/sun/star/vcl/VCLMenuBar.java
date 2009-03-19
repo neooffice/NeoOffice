@@ -211,7 +211,10 @@ public final class VCLMenuBar extends Component {
 	 * objects can be destructed. Free any AWT objects and set references to
 	 * null to allow garbage collection to cleanup at a later time.
 	 */
-	public void dispose() {
+	public synchronized void dispose() {
+
+		if (disposed)
+			return;
 
 		synchronized (getTreeLock()) {
 			if (disposed)
@@ -241,7 +244,7 @@ public final class VCLMenuBar extends Component {
 	 *
 	 * @param f	VCLFrame with which the menubar is to be associated
 	 */
-	public void setFrame(VCLFrame f) {
+	public synchronized void setFrame(VCLFrame f) {
 
 		if(frame!=null)
 			frame.setMenuBar(null);
