@@ -52,6 +52,11 @@ if [ -d "$2" ]; then
 		exit 1;
 	fi
 
+	# Fix bug 3431 by deleting libxml2 from the installation
+	for i in `cd "$2/Contents/MacOS" ; find . -name "libxml2*"` ; do
+		rm -f "$2/Contents/MacOS/$i"
+	done
+
 	# Fix bug 2711 by updating plugin bundle IDs
 	mdimporter_file="$2/Contents/Library/Spotlight/neolight.mdimporter/Contents/Info.plist"
 	rm -f "$mdimporter_file.tmp"
