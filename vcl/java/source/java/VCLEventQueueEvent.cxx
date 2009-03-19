@@ -524,7 +524,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// window to its parent window
 				if ( pKeyEvent->mnCode & KEY_MOD1 )
 				{
-					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
+					// Fix bug 3432 by not sending Command-Shift-F10 to parent
+					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() && pKeyEvent->mnCode != ( KEY_MOD1 | KEY_SHIFT | KEY_F10 ) )
 						pFrame = pFrame->mpParent;
 				}
 				pFrame->CallCallback( nID, pKeyEvent );
