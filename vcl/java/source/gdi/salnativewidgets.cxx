@@ -2150,20 +2150,17 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				HIThemeButtonDrawInfo aButtonDrawInfo;
 				InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
-				HIShapeRef preferredShape;
+				HIRect preferredRect;
 				HIRect destRect;
 				destRect.origin.x = comboBoxRect.Left();
 				destRect.origin.y = comboBoxRect.Top();
 				destRect.size.width = comboBoxRect.GetWidth();
 				destRect.size.height = comboBoxRect.GetHeight();
-				if ( HIThemeGetButtonShape( &destRect, &aButtonDrawInfo, &preferredShape ) == noErr )
+				if ( HIThemeGetButtonBackgroundBounds( &destRect, &aButtonDrawInfo, &preferredRect ) == noErr )
 				{
-					HIRect preferredRect;
-					HIShapeGetBounds( preferredShape, &preferredRect );
-					CFRelease( preferredShape );
-
 					// Vertically center the preferred bounds
 					float fHeightAdjust = ( preferredRect.size.height - destRect.size.height ) / 2;
+					float fWidthAdjust = ( preferredRect.size.width - destRect.size.width ) / 2;
 					if ( fHeightAdjust < 0 )
 					{
 						preferredRect.origin.y -= fHeightAdjust;
@@ -2430,7 +2427,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					spinboxRect.Bottom() += nHeightAdjust;
 				}
 
-				// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
 				// leave room for left edge adornments
 
 				SInt32 spinnerThemeWidth;
@@ -2495,7 +2491,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				Rectangle spinboxRect = rRealControlRegion.GetBoundRect();
 
-				// note that HIThemeGetButtonShape won't clip the width to the actual recommended width of spinner arrows
 				// leave room for left edge adornments
 
 				SInt32 spinnerThemeWidth;
