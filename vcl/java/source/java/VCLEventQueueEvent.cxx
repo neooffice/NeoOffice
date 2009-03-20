@@ -69,6 +69,8 @@
 #include <vos/module.hxx>
 #endif
 
+#include "VCLEventQueue_cocoa.h"
+
 #ifndef DLLPOSTFIX
 #error DLLPOSTFIX must be defined in makefile.mk
 #endif
@@ -350,9 +352,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 	if ( pSalData->mbInNativeModalSheet && pFrame != pSalData->mpNativeModalSheetFrame )
 	{
 		// We need to prevent dispatching of events other than system events
-		// like bounds change or paint events
+		// like bounds change or paint events. Fix bug 3429 by only forcing
+		// a focus change if there is not a native modal window showing.
 		bDeleteDataOnly = true;
-		pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
+		if ( NSApplication_isActive() )
+			pSalData->mpNativeModalSheetFrame->ToTop( SAL_FRAME_TOTOP_RESTOREWHENMIN | SAL_FRAME_TOTOP_GRABFOCUS );
 	}
 
 	switch ( nID )
@@ -532,7 +536,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// window to its parent window
 				if ( pKeyEvent->mnCode & KEY_MOD1 )
 				{
-					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
+					// Fix bug 3432 by not sending Command-Shift-F10 to parent
+					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() && pKeyEvent->mnCode != ( KEY_MOD1 | KEY_SHIFT | KEY_F10 ) )
 						pFrame = pFrame->mpParent;
 				}
 				pFrame->CallCallback( nID, pKeyEvent );
