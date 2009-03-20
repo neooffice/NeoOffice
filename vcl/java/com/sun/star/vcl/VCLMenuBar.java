@@ -217,9 +217,6 @@ public final class VCLMenuBar extends Component {
 			return;
 
 		synchronized (getTreeLock()) {
-			if (disposed)
-				return;
-
 			removeMenuBar(this);
 
 			if(frame!=null) {
