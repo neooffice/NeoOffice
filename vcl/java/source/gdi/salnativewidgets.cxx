@@ -2160,7 +2160,6 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				{
 					// Vertically center the preferred bounds
 					float fHeightAdjust = ( preferredRect.size.height - destRect.size.height ) / 2;
-					float fWidthAdjust = ( preferredRect.size.width - destRect.size.width ) / 2;
 					if ( fHeightAdjust < 0 )
 					{
 						preferredRect.origin.y -= fHeightAdjust;
