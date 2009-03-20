@@ -376,8 +376,22 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pSVData->maWinData.mpLastExecuteDlg )
 		{
 			SystemWindow *pSystemWindow = pSVData->maWinData.mpLastExecuteDlg->GetSystemWindow();
-			if ( pSystemWindow && pSystemWindow->ImplGetFrame() == this )
-				mpVCLFrame->makeModal();
+			if ( pSystemWindow )
+			{
+				JavaSalFrame *pModalFrame = (JavaSalFrame *)pSystemWindow->ImplGetFrame();
+				if ( pModalFrame && pModalFrame->mbVisible )
+				{
+					while ( pModalFrame->mpParent && pModalFrame->mpParent->mbVisible )
+						pModalFrame = pModalFrame->mpParent;
+
+					JavaSalFrame *pFrame = this;
+					while ( pModalFrame != this && pFrame->mpParent && pFrame->mpParent->mbVisible )
+						pFrame = pFrame->mpParent;
+
+					if ( pModalFrame == pFrame )
+						mpVCLFrame->makeModal();
+				}
+			}
 		}
 
 		UpdateMenusForFrame( this, NULL, false );

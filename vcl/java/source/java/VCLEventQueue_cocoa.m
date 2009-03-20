@@ -413,7 +413,10 @@ static VCLResponder *pSharedResponder = nil;
 			// window obtains focus
 			NSApplication *pApp = [NSApplication sharedApplication];
 			if ( pApp && [pApp modalWindow] == self )
+			{
 				VCLEventQueue_removeCachedEvents();
+				[self orderFront:self];
+			}
 		}
 	}
 }
