@@ -3284,6 +3284,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		public void paint(Graphics g) {}
 
 		/**
+		 * Destroy the native dialog.
+		 */
+		public void removeNotify() {
+
+			// Allow native and Java dispatch threads to run before destroying
+			// the native dialog to avoid crashing when repeatedly performing
+			// step 6 in Writer's mail merge dialog when a non-utility child
+			// window is visible
+			Thread.yield();
+			super.removeNotify();
+
+		}
+
+		/**
 		 * Set the native dialog to show or hide in full screen mode.
 		 *
 		 * @param b <code>true</code> sets this dialog to full screen mode and
@@ -3461,6 +3475,20 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 * @param g the <code>Graphics</code>
 		 */
 		public void paint(Graphics g) {}
+
+		/**
+		 * Destroy the native frame.
+		 */
+		public void removeNotify() {
+
+			// Allow native and Java dispatch threads to run before destroying
+			// the native frame to avoid crashing when repeatedly performing
+			// step 6 in Writer's mail merge dialog when a non-utility child
+			// window is visible
+			Thread.yield();
+			super.removeNotify();
+
+		}
 
 		/**
 		 * Set whether this frame can become the focused component.
