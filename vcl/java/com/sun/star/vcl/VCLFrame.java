@@ -3521,18 +3521,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 */
 		public void setMenuBar(MenuBar mb) {
 
-			// Fix bug 3003 by only setting the menubar in the Java event
-			// dispatch thread
-			if (!EventQueue.isDispatchThread()) {
-				VCLFrame.SetMenuBarHandler handler = new VCLFrame.SetMenuBarHandler(this, mb);
-				Toolkit.getDefaultToolkit().getSystemEventQueue().invokeLater(handler);
-				Thread.yield();
-				return;
-			}
-
+			// Fix bug 3003 by setting the menubar while the AWT tree lock
+			// is synchronized
 			MenuBar oldMenuBar = getMenuBar();
-
 			boolean active = isActive();
+
 			synchronized (frame) {
 				if (active) {
 					frame.hiddenMenuBar = null;
@@ -3744,43 +3737,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 				VCLFrame.flushAllFrames();
 				flushAllFramesQueue.notifyAll();
 			}
-
-		}
-
-	}
-
-	/**
-	 * A class that handles flushing updates.
-	 */
-	final class SetMenuBarHandler implements Runnable {
-
-		/**
-		 * The menubar.
-		 */
-		private MenuBar menubar = null;
-
-		/**
-		 * The <code>Frame</code>.
-		 */
-		private Frame frame = null;
-
-		/**
-		 * Constructs a new
-		 * <code>VCLFrame.NoPaintFrame.SetMenuBarHandler</code> instance.
-		 *
-		 * @param f the <code>Frame</code>
-		 * @param m the <code>MenuBar</code>
-		 */
-		SetMenuBarHandler(Frame f, MenuBar m) {
-
-			frame = f;
-			menubar = m;
-
-		}
-
-		public void run() {
-
-			frame.setMenuBar(menubar);
 
 		}
 
