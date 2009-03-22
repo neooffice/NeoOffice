@@ -90,6 +90,40 @@
 #include <vcl/svapp.hxx>
 #endif
 
+#ifdef USE_JAVA
+
+#ifndef _OSL_MODULE_HXX_
+#include <osl/module.hxx>
+#endif
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+static bool IsX11Product()
+{
+    static bool bX11 = sal_False;
+    static ::osl::Module aVCLModule;
+
+    if ( !aVCLModule.is() )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+        aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		aVCLModule.load( aLibName );
+        if ( aVCLModule.is() && aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "XOpenDisplay" ) ) )
+            bX11 = true;
+    }
+
+    return bX11;
+}
+
+#endif	// USE_JAVA
+
 //_______________________________________________
 // namespace
 
@@ -329,7 +363,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
 
 #ifdef USE_JAVA
     // Do not close the backing window under any circumstances
-    if (aCheck1.m_bReferenceIsBacking)
+    if (!IsX11Product() && aCheck1.m_bReferenceIsBacking)
         bEstablishBackingMode = sal_True;
     else
 #endif	// USE_JAVA
@@ -397,7 +431,9 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
 #ifdef USE_JAVA
                 // Fix bug 3004 by not creating more than one backing window
                 FrameListAnalyzer aCheckBackingMode(xDesktop, css::uno::Reference< css::frame::XFrame >(), FrameListAnalyzer::E_BACKINGCOMPONENT);
-                if (!aCheckBackingMode.m_xBackingComponent.is())
+                if (IsX11Product() && eOperation == E_CLOSE_FRAME)
+                    bTerminateApp = sal_True;
+                else if (!aCheckBackingMode.m_xBackingComponent.is())
                     bEstablishBackingMode = sal_True;
 #else	// USE_JAVA
                 if (eOperation == E_CLOSE_FRAME)
