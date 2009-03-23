@@ -399,6 +399,11 @@ short PrinterSetupDialog::Execute()
 		if ( mpTempPrinter )
 			mpTempPrinter->SetPrinterProps( mpPrinter );
 		nRet = maBtnOptions.GetClickHdl().Call( this );
+
+		// Fix bug 3433 by forcing focus back to this dialog's parent window
+		Window *pParent = GetParent();
+		if ( pParent )
+			pParent->ToTop( TOTOP_FOREGROUNDTASK );
 	}
 
 	if ( nRet )
