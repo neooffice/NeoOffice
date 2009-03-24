@@ -98,13 +98,13 @@ OO_PRODUCT_NAME=OpenOffice.org
 OO_PRODUCT_VERSION=3.0.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 PRODUCT_VERSION_FAMILY=3.0
-PRODUCT_VERSION=3.0 Early Access 2
-PRODUCT_DIR_VERSION=3.0_Early_Access_2
-PREVIOUS_PRODUCT_VERSION=3.0 Early Access
+PRODUCT_VERSION=3.0
+PRODUCT_DIR_VERSION=3.0
+PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 1
-PRODUCT_DIR_PATCH_VERSION=Patch-1
+PRODUCT_PATCH_VERSION=Patch 0
+PRODUCT_DIR_PATCH_VERSION=Patch-0
 ifdef NEOMOBILE
 PRODUCT_DIR_PATCH_VERSION:=$(PRODUCT_DIR_PATCH_VERSION)-With-NeoMobile
 endif
@@ -177,12 +177,11 @@ IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
 REMOTECONTROL_PACKAGE=remotecontrol
-#!!! FIXME !!!
 REMOTECONTROL_ZIP_URL=http://martinkahr.com/files/source/RemoteControlWrapper_R962.tgz
 REMOTECONTROL_ZIP_FILENAME=RemoteControlWrapper_R962.tgz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=-rNeoOffice-3_0_Early_Access_2
+NEO_TAG:=-rNeoOffice-3_0
 
 all: build.all
 
@@ -687,8 +686,8 @@ build.package_%: $(INSTALL_HOME)/package_%
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
 	chmod -Rf u+w,a+r "$<"
 # Fix bug 3426 by including the legacy binfilter files
-	cd "</Contents" ; sh -c -e 'for i in `cd "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/bin" ; find . -name "*$(@:build.package_%=%).res" -maxdepth 1` ; do cp "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/bin/$${i}" "basis-link/program/resource/$${i}" ; done'
-	cd "$</Contents" ; cp "$(PWD)$/$(BUILD_HOME)/filter/$(UOUTPUTDIR)/misc/filters/ui/langpacks/$(@:build.package_%=%)/org/openoffice/TypeDetection/Filter.xcu" "basis-link/share/registry/res/$(@:build.package_%=%)/org/openoffice/TypeDetection/Filter.xcu"
+	cd "$</Contents" ; sh -c -e 'for i in `cd "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/bin" ; find . -name "*$(PRODUCT_LANG_PACK_LOCALE).res" -maxdepth 1` ; do cp "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/bin/$${i}" "basis-link/program/resource/$${i}" ; done'
+	cd "$</Contents" ; cp "$(PWD)/$(BUILD_HOME)/filter/$(UOUTPUTDIR)/misc/filters/ui/langpacks/$(PRODUCT_LANG_PACK_LOCALE)/org/openoffice/TypeDetection/Filter.xcu" "basis-link/share/registry/res/$(PRODUCT_LANG_PACK_LOCALE)/org/openoffice/TypeDetection/Filter.xcu"
 	cd "$</Contents" ; rm -Rf LICENSE* README* licenses/* share/readme/*
 	cd "$</Contents" ; cp "$(PWD)/etc/gpl.html" "share/readme/LICENSE_$(PRODUCT_LANG_PACK_LOCALE).html"
 	cd "$</Contents" ; cp "$(PWD)/etc/gpl.txt" "share/readme/LICENSE_$(PRODUCT_LANG_PACK_LOCALE)"
