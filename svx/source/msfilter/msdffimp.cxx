@@ -1,43 +1,60 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified March 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified March 2009 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_svx.hxx"
 /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil -*- */
+
+#ifndef _COM_SUN_STAR_EMBED_ASPECTS_HPP_
 #include <com/sun/star/embed/Aspects.hpp>
+#endif
 
 #include <math.h>
 #include <limits.h>
 #include <vector>
+
+#ifndef _OSL_ENDIAN_H_
 #include <osl/endian.h>
+#endif
+#ifndef _SOLAR_H
 #include <tools/solar.h>               // UINTXX
+#endif
+#ifndef INCLUDED_RTL_MATH_HXX
 #include <rtl/math.hxx>
+#endif
 
 #include <sot/clsids.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
@@ -50,134 +67,282 @@
 #include "viscache.hxx"
 
 // SvxItem-Mapping. Wird benoetigt um die SvxItem-Header erfolgreich zu includen
-#include <svx/eeitem.hxx>
+#ifndef _EEITEM_HXX //autogen
+#include <eeitem.hxx>
+#endif
 #ifndef _EDITDATA_HXX
-#include <svx/editdata.hxx>
+#include <editdata.hxx>
 #endif
 
 #include <svtools/urihelper.hxx>
 
 //      textitem.hxx        editdata.hxx
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#define ITEMID_COLOR        EE_CHAR_COLOR
+#define ITEMID_FONT         EE_CHAR_FONTINFO
+#define ITEMID_FONTHEIGHT   EE_CHAR_FONTHEIGHT
+#define ITEMID_FONTWIDTH    EE_CHAR_FONTWIDTH
+#define ITEMID_WEIGHT       EE_CHAR_WEIGHT
+#define ITEMID_UNDERLINE    EE_CHAR_UNDERLINE
+#define ITEMID_CROSSEDOUT   EE_CHAR_STRIKEOUT
+#define ITEMID_POSTURE      EE_CHAR_ITALIC
+#define ITEMID_CONTOUR      EE_CHAR_OUTLINE
+#define ITEMID_SHADOWED     EE_CHAR_SHADOW
+#define ITEMID_ESCAPEMENT   EE_CHAR_ESCAPEMENT
+#define ITEMID_AUTOKERN     EE_CHAR_PAIRKERNING
+#define ITEMID_WORDLINEMODE EE_CHAR_WLM
+#define ITEMID_CHARSCALE_W	EE_CHAR_FONTWIDTH
+#define ITEMID_KERNING		EE_CHAR_KERNING
 
 //      paraitem.hxx       editdata.hxx
+#define ITEMID_ADJUST      EE_PARA_JUST
+#define ITEMID_FIELD       EE_FEATURE_FIELD
 
-
+#ifndef _STREAM_HXX //autogen
 #include <tools/stream.hxx>
+#endif
+#ifndef _TOOLS_DEBUG_HXX //autogen
 #include <tools/debug.hxx>
+#endif
 #ifndef _TOOLS_ZCODEC_HXX
 #include <tools/zcodec.hxx>
 #endif
 #ifndef _UNOTOOLS_UCBSTREAMHELPER_HXX
 #include <unotools/ucbstreamhelper.hxx>
 #endif
+#ifndef _UNOTOOLS_LOCALFILEHELPER_HXX
 #include <unotools/localfilehelper.hxx>
-#include <svx/escherex.hxx>
+#endif
+#ifndef _SVX_ESCHEREX_HXX
+#include <escherex.hxx>
+#endif
 #ifndef _BGFX_RANGE_B2IRANGE_HXX
 #include <basegfx/range/b2drange.hxx>
 #endif
+#ifndef _COM_SUN_STAR_CONTAINER_XIDENTIFIERCONTAINER_HPP_
 #include <com/sun/star/container/XIdentifierContainer.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_XGLUEPOINTSSUPPLIER_HPP_
 #include <com/sun/star/drawing/XGluePointsSupplier.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_POSITION3D_HPP_
 #include <com/sun/star/drawing/Position3D.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_DIRECTION3D_HPP_
 #include <com/sun/star/drawing/Direction3D.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_GLUEPOINT2_HPP_
 #include <com/sun/star/drawing/GluePoint2.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_XSHAPES_HPP_
 #include <com/sun/star/drawing/XShapes.hpp>
-#include <svx/charscaleitem.hxx>
-#include <svx/kernitem.hxx>
+#endif
+#ifndef _SVX_CHARSCALEITEM_HXX
+#include <charscaleitem.hxx>
+#endif
+#ifndef _SVX_KERNITEM_HXX
+#include <kernitem.hxx>
+#endif
+#ifndef _FILTER_HXX //autogen
 #include <svtools/filter.hxx>
+#endif
+#ifndef _STRING_HXX //autogen
 #include <tools/string.hxx>
+#endif
 #ifndef _TOOLS_URLOBJ_HXX
 #include <tools/urlobj.hxx>
 #endif
+#ifndef _SV_VIRDEV_HXX //autogen
 #include <vcl/virdev.hxx>
+#endif
+#ifndef _SV_BMPACC_HXX
 #include <vcl/bmpacc.hxx>
+#endif
 #ifndef _SVSTOR_HXX //autogen
 #include <sot/storage.hxx>
 #endif
+
+#ifndef _SFX_OBJFAC_HXX
 #include <sfx2/docfac.hxx>
+#endif
+#ifndef _SFX_DOCFILT_HACK_HXX
 #include <sfx2/docfilt.hxx>
+#endif
+#ifndef _SFXDOCFILE_HXX
 #include <sfx2/docfile.hxx>
+#endif
+#ifndef _SFX_FCONTNR_HXX
 #include <sfx2/fcontnr.hxx>
+#endif
+#ifndef _SFXMODULE_HXX
 #include <sfx2/module.hxx>
+#endif
 //#ifndef _SFX_INTERNO_HXX
 //#include <sfx2/interno.hxx>
 //#endif
 
 #ifndef _SDGCPITM_HXX
+#ifndef ITEMID_GRF_CROP
+#define ITEMID_GRF_CROP	0
+#endif
+#include <sdgcpitm.hxx>
+#endif
 
-//#endif
-#include <svx/sdgcpitm.hxx>
+#ifndef _SDGMOITM_HXX
+#include <sdgmoitm.hxx>
 #endif
-#include <svx/sdgmoitm.hxx>
-#include <svx/tstpitem.hxx>
-#include <svx/fmmodel.hxx>
-#include <svx/svdmodel.hxx>
-#include <svx/svdobj.hxx>
-#include <svx/svdpage.hxx>
-#include <svx/svdogrp.hxx>
-#include <svx/svdograf.hxx>
-#include <svx/svdotext.hxx>
-#include <svx/svdorect.hxx>
+#ifndef _EEITEMID_HXX
+#include "eeitemid.hxx"
+#endif
+#ifndef _SVX_TSPTITEM_HXX
+#include "tstpitem.hxx"
+#endif
+#ifndef _SVX_FMMODEL_HXX
+#include "fmmodel.hxx"
+#endif
+#ifndef _SVDMODEL_HXX
+#include "svdmodel.hxx"
+#endif
+#ifndef _SVDOBJ_HXX
+#include "svdobj.hxx"
+#endif
+#ifndef _SVDPAGE_HXX
+#include "svdpage.hxx"
+#endif
+#ifndef _SVDOGRP_HXX
+#include "svdogrp.hxx"
+#endif
+#ifndef _SVDOGRAF_HXX
+#include "svdograf.hxx"
+#endif
+#ifndef _SVDOTEXT_HXX
+#include "svdotext.hxx"
+#endif
+#ifndef _SVDORECT_HXX
+#include "svdorect.hxx"
+#endif
 #ifndef _SVDOCAPT_HXX
-#include <svx/svdocapt.hxx>
+#include "svdocapt.hxx"
 #endif
-#include <svx/svdoedge.hxx>
-#include <svx/svdocirc.hxx>
-#include <svx/svdoutl.hxx>
-#include <svx/svdoole2.hxx>
-#include <svx/svdopath.hxx>
-#include <svx/frmdir.hxx>
-#include <svx/frmdiritem.hxx>
-#include <svx/svdtrans.hxx>
-#include <svx/sxenditm.hxx>
-#include <svx/sdgluitm.hxx>
-#include <svx/fhgtitem.hxx>
-#include <svx/wghtitem.hxx>
-#include <svx/postitem.hxx>
-#include <svx/udlnitem.hxx>
-#include <svx/crsditem.hxx>
-#include <svx/shdditem.hxx>
+
+#ifndef _SVDOEDGE_HXX
+#include "svdoedge.hxx"
+#endif
+
+#ifndef _SVDOCIRC_HXX
+#include "svdocirc.hxx"
+#endif
+#ifndef _SVDOUTL_HXX
+#include "svdoutl.hxx"
+#endif
+#ifndef _SVDOOLE2_HXX
+#include <svdoole2.hxx>
+#endif
+#ifndef _SVDOPATH_HXX
+#include <svdopath.hxx>
+#endif
+#ifndef _SVX_FRMDIR_HXX
+#include <frmdir.hxx>
+#endif
+#ifndef _SVX_FRMDIRITEM_HXX
+#include <frmdiritem.hxx>
+#endif
+#ifndef _SVDTRANS_HXX
+#include <svdtrans.hxx>
+#endif
+#ifndef _SXENDITM_HXX
+#include <sxenditm.hxx>
+#endif
+#ifndef _SDGLUITM_HXX
+#include <sdgluitm.hxx>
+#endif
+#ifndef _SVX_FHGTITEM_HXX //autogen
+#include <fhgtitem.hxx>
+#endif
+#ifndef _SVX_WGHTITEM_HXX //autogen
+#include <wghtitem.hxx>
+#endif
+#ifndef _SVX_POSTITEM_HXX //autogen
+#include <postitem.hxx>
+#endif
+#ifndef _SVX_UDLNITEM_HXX //autogen
+#include <udlnitem.hxx>
+#endif
+#ifndef _SVX_CRSDITEM_HXX //autogen
+#include <crsditem.hxx>
+#endif
+#ifndef _SVX_SHDDITEM_HXX //autogen
+#include <shdditem.hxx>
+#endif
+#ifndef _SVX_FONTITEM_HXX //autogen
 #include <fontitem.hxx>
-#include <svx/colritem.hxx>
-#include <svx/sxekitm.hxx>
+#endif
+#ifndef _SVX_COLRITEM_HXX //autogen
+#include <colritem.hxx>
+#endif
+#ifndef _SXEKITM_HXX
+#include <sxekitm.hxx>
+#endif
+
+#ifndef _SVX_BULITEM_HXX
 #include <bulitem.hxx>
-#include <svx/polysc3d.hxx>
-#include <svx/extrud3d.hxx>
+#endif
+#ifndef _E3D_POLYSC3D_HXX
+#include "polysc3d.hxx"
+#endif
+#ifndef _E3D_EXTRUD3D_HXX
+#include "extrud3d.hxx"
+#endif
+#ifndef _SVDITER_HXX
 #include "svditer.hxx"
-#include <svx/xpoly.hxx>
+#endif
+
+#ifndef _XPOLY_HXX
+#include "xpoly.hxx"
+#endif
+
+#ifndef _XATTR_HXX
 #include "xattr.hxx"
+#endif
 
 #ifndef _IMPGRF_HXX //autogen
 #include "impgrf.hxx"
 #endif
-#include <svx/msdffimp.hxx> // extern sichtbare Header-Datei
-#include <svx/outliner.hxx>
-#include <svx/outlobj.hxx>
-#include <svx/editobj.hxx>
-#include <svx/editeng.hxx>
+
+#ifndef _MSDFFIMP_HXX
+#include "msdffimp.hxx" // extern sichtbare Header-Datei
+#endif
+#include "outliner.hxx"
+#include "outlobj.hxx"
+#include "editobj.hxx"
+#include "editeng.hxx"
+#ifndef _MSASHAPE_HXX
 #include "msashape.hxx"
+#endif
+#ifndef _MSASHAPE3D_HXX
 #include "msashape3d.hxx"
+#endif
+#ifndef _GALLERY_HXX_
 #include "gallery.hxx"
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_SHADEMODE_HPP_
 #include <com/sun/star/drawing/ShadeMode.hpp>
+#endif
+#ifndef _SFXITEMPOOL_HXX
 #include <svtools/itempool.hxx>
+#endif
+#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#include <svx/svx3ditems.hxx>
-#include <svx/svdoashp.hxx>
-#include <svx/sdasaitm.hxx>
+#endif
+
+#ifndef _SVX3DITEMS_HXX
+#include <svx3ditems.hxx>
+#endif
+#ifndef _SVDOASHP_HXX
+#include "svdoashp.hxx"
+#endif
+#ifndef _SDASAITM_HXX
+#include <sdasaitm.hxx>
+#endif
 #ifndef _UCBHELPER_CONTENT_HXX_
 #include <ucbhelper/content.hxx>
 #endif
@@ -188,21 +353,46 @@
 #ifndef _VOS_NO_NAMESPACE
 using namespace vos;
 #endif
+
+#ifndef _ENHANCED_CUSTOMSHAPE_TYPE_NAMES_HXX
 #include "../customshapes/EnhancedCustomShapeTypeNames.hxx"
+#endif
+#ifndef _ENHANCEDCUSTOMSHAPEGEOMETRY_HXX
 #include "../customshapes/EnhancedCustomShapeGeometry.hxx"
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPEPARAMETERPAIR_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeParameterPair.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPEPARAMETERTYPE_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeParameterType.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPESEGMENT_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeSegment.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPEGLUEPOINTTYPE_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeGluePointType.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPESEGMENTCOMMAND_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeSegmentCommand.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPETEXTFRAME_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeTextFrame.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPEADJUSTMENTVALUE_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeAdjustmentValue.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DRAWING_ENHANCEDCUSTOMSHAPETEXTPATHMODE_HPP_
 #include <com/sun/star/drawing/EnhancedCustomShapeTextPathMode.hpp>
+#endif
 #ifndef __com_sun_star_beans_PropertyValues_hpp__
 #include <com/sun/star/beans/PropertyValues.hpp>
 #endif
+#ifndef _COM_SUN_STAR_DRAWING_PROJECTIONMODE_HPP_
 #include <com/sun/star/drawing/ProjectionMode.hpp>
+#endif
+#ifndef _ENHANCEDCUSTOMSHAPE2D_HXX
 #include "../customshapes/EnhancedCustomShape2d.hxx"
+#endif
 
 using namespace ::com::sun::star    ;
 using namespace ::com::sun::star::drawing;
@@ -2995,23 +3185,23 @@ void DffPropertyReader::ApplyAttributes( SvStream& rIn, SfxItemSet& rSet, const 
 		switch ( nRecType )
 		{
 			case DFF_Prop_gtextSize :
-                rSet.Put( SvxFontHeightItem( rManager.ScalePt( nContent ), 100, EE_CHAR_FONTHEIGHT ) );
+				rSet.Put( SvxFontHeightItem( rManager.ScalePt( nContent ) ) );
 			break;
 			// GeoText
 			case DFF_Prop_gtextFStrikethrough :
 			{
 				if ( nContent & 0x20 )
-                    rSet.Put( SvxWeightItem( nContent ? WEIGHT_BOLD : WEIGHT_NORMAL, EE_CHAR_WEIGHT ) );
+					rSet.Put( SvxWeightItem( nContent ? WEIGHT_BOLD : WEIGHT_NORMAL ) );
 				if ( nContent & 0x10 )
-                    rSet.Put( SvxPostureItem( nContent ? ITALIC_NORMAL : ITALIC_NONE, EE_CHAR_ITALIC ) );
+					rSet.Put( SvxPostureItem( nContent ? ITALIC_NORMAL : ITALIC_NONE ) );
 				if ( nContent & 0x08 )
-                    rSet.Put( SvxUnderlineItem( nContent ? UNDERLINE_SINGLE : UNDERLINE_NONE, EE_CHAR_UNDERLINE ) );
+					rSet.Put( SvxUnderlineItem( nContent ? UNDERLINE_SINGLE : UNDERLINE_NONE ) );
 				if ( nContent & 0x40 )
-                    rSet.Put(SvxShadowedItem( nContent != 0, EE_CHAR_SHADOW ) );
+					rSet.Put(SvxShadowedItem( nContent != 0 ) );
 //				if ( nContent & 0x02 )
 //					rSet.Put( SvxCaseMapItem( nContent ? SVX_CASEMAP_KAPITAELCHEN : SVX_CASEMAP_NOT_MAPPED ) );
 				if ( nContent & 0x01 )
-                    rSet.Put( SvxCrossedOutItem( nContent ? STRIKEOUT_SINGLE : STRIKEOUT_NONE, EE_CHAR_STRIKEOUT ) );
+					rSet.Put( SvxCrossedOutItem( nContent ? STRIKEOUT_SINGLE : STRIKEOUT_NONE ) );
 			}
 			break;
 
@@ -3537,7 +3727,7 @@ Color SvxMSDffManager::MSO_CLR_ToColor( sal_uInt32 nColorCode, sal_uInt16 nConte
 		nColorCode &= 0x00ffffff;
 
 	sal_uInt8 nUpper = (sal_uInt8)( nColorCode >> 24 );
-    if( nUpper & 0x19 )      // if( nUpper & 0x1f )
+	if( nUpper & 0x1b )		// if( nUpper & 0x1f )
 	{
 		if( ( nUpper & 0x08 ) || ( ( nUpper & 0x10 ) == 0 ) )
 		{
@@ -3788,6 +3978,7 @@ void SvxMSDffManager::ReadObjText( const String& rText, SdrObject* pObj ) const
 	{
         SdrOutliner& rOutliner = pText->ImpGetDrawOutliner();
 		rOutliner.Init( OUTLINERMODE_TEXTOBJECT );
+        rOutliner.SetMinDepth( 0 );
 
 		BOOL bOldUpdateMode = rOutliner.GetUpdateMode();
 		rOutliner.SetUpdateMode( FALSE );
@@ -3829,13 +4020,14 @@ void SvxMSDffManager::ReadObjText( const String& rText, SdrObject* pObj ) const
 
 			SfxItemSet aParagraphAttribs( rOutliner.GetEmptyItemSet() );
 			if ( !aSelection.nStartPos )
-				aParagraphAttribs.Put( SfxBoolItem( EE_PARA_BULLETSTATE, FALSE ) );
+				aParagraphAttribs.Put( SfxUInt16Item( EE_PARA_BULLETSTATE, FALSE ) );
 			aSelection.nStartPos = 0;
 			rOutliner.QuickSetAttribs( aParagraphAttribs, aSelection );
 			nParaIndex++;
 		}
 		OutlinerParaObject* pNewText = rOutliner.CreateParaObject();
         rOutliner.Clear();
+        rOutliner.SetMinDepth( 0 );
 		rOutliner.SetUpdateMode( bOldUpdateMode );
 		pText->SetOutlinerParaObject( pNewText );
 	}
@@ -3860,7 +4052,7 @@ FASTBOOL SvxMSDffManager::ReadObjText(SvStream& rSt, SdrObject* pObj) const
 //			UINT16 nIdent=pText->GetObjIdentifier();
 
 			SdrOutliner& rOutliner=pText->ImpGetDrawOutliner();
-//			sal_Int16 nMinDepth = rOutliner.GetMinDepth();
+			USHORT nMinDepth = rOutliner.GetMinDepth();
 			USHORT nOutlMode = rOutliner.GetMode();
 
 			{ // Wohl 'nen kleiner Bug der EditEngine, das die
@@ -3881,6 +4073,7 @@ FASTBOOL SvxMSDffManager::ReadObjText(SvStream& rSt, SdrObject* pObj) const
 				}
 			}
 			rOutliner.Init( OUTLINERMODE_TEXTOBJECT );
+			rOutliner.SetMinDepth(0);
 
 //			ULONG nFilePosMerker=rSt.Tell();
 			////////////////////////////////////
@@ -3912,7 +4105,7 @@ FASTBOOL SvxMSDffManager::ReadObjText(SvStream& rSt, SdrObject* pObj) const
 								UINT16 nDefaultTab = 2540; // PPT def: 1 Inch //rOutliner.GetDefTab();
 								UINT16 nMostrightTab = 0;
 								SfxItemSet aSet(rOutliner.GetEmptyItemSet());
-                                SvxTabStopItem aTabItem(0, 0, SVX_TAB_ADJUST_DEFAULT, EE_PARA_TABS);
+								SvxTabStopItem aTabItem(0, 0);
 
 								rSt >> nVal1;
 								rSt >> nVal2;
@@ -4009,6 +4202,7 @@ FASTBOOL SvxMSDffManager::ReadObjText(SvStream& rSt, SdrObject* pObj) const
 			}
 			OutlinerParaObject* pNewText=rOutliner.CreateParaObject();
 			rOutliner.Init( nOutlMode );
+			rOutliner.SetMinDepth(nMinDepth);
 			pText->NbcSetOutlinerParaObject(pNewText);
 		}
 		else
@@ -4100,10 +4294,8 @@ SdrObject* SvxMSDffManager::ImportFontWork( SvStream& rStCt, SfxItemSet& rSet, R
 			rSet.Put( SdrTextFitToSizeTypeItem( eFTS ) );
 			rSet.Put( SdrTextAutoGrowHeightItem( FALSE ) );
 			rSet.Put( SdrTextAutoGrowWidthItem( FALSE ) );
-            rSet.Put( SvxFontItem( FAMILY_DONTKNOW, aFontName, String(),
-                            PITCH_DONTKNOW, RTL_TEXTENCODING_DONTKNOW, EE_CHAR_FONTINFO ));
-
-            pNewObj->SetMergedItemSet(rSet);
+			rSet.Put( SvxFontItem( FAMILY_DONTKNOW, aFontName, String() ) );
+			pNewObj->SetMergedItemSet(rSet);
 
 			pRet = pNewObj->ConvertToPolyObj( FALSE, FALSE );
 			if( !pRet )
@@ -4111,7 +4303,7 @@ SdrObject* SvxMSDffManager::ImportFontWork( SvStream& rStCt, SfxItemSet& rSet, R
 			else
 			{
 				pRet->NbcSetSnapRect( rBoundRect );
-                SdrObject::Free( pNewObj );
+				delete pNewObj;
 			}
 			if( bTextRotate )
 			{
@@ -4733,12 +4925,11 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 
 							if ( SeekToContent( DFF_Prop_gtextFont, rSt ) )
 							{
-                                SvxFontItem aLatin(EE_CHAR_FONTINFO), aAsian(EE_CHAR_FONTINFO_CJK), aComplex(EE_CHAR_FONTINFO_CTL);
+								SvxFontItem aLatin, aAsian, aComplex;
 								GetDefaultFonts( aLatin, aAsian, aComplex );
 
 								MSDFFReadZString( rSt, aFontName, GetPropertyValue( DFF_Prop_gtextFont ), TRUE );
-                                aSet.Put( SvxFontItem( aLatin.GetFamily(), aFontName, aLatin.GetStyleName(),
-                                            PITCH_DONTKNOW, RTL_TEXTENCODING_DONTKNOW, EE_CHAR_FONTINFO ));
+								aSet.Put( SvxFontItem( aLatin.GetFamily(), aFontName, aLatin.GetStyleName() ) );
 								aSet.Put( SvxFontItem( aLatin.GetFamily(), aFontName, aLatin.GetStyleName(),
 											PITCH_DONTKNOW, RTL_TEXTENCODING_DONTKNOW, EE_CHAR_FONTINFO_CJK ) );
 								aSet.Put( SvxFontItem( aLatin.GetFamily(), aFontName, aLatin.GetStyleName(),
@@ -4747,10 +4938,10 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 
 							// SJ: applying fontattributes for Fontwork :
 							if ( IsHardAttribute( DFF_Prop_gtextFItalic ) )
-                                aSet.Put( SvxPostureItem( ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x0010 ) != 0 ? ITALIC_NORMAL : ITALIC_NONE, EE_CHAR_ITALIC ) );
+								aSet.Put( SvxPostureItem( ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x0010 ) != 0 ? ITALIC_NORMAL : ITALIC_NONE ) );
 
 							if ( IsHardAttribute( DFF_Prop_gtextFBold ) )
-                                aSet.Put( SvxWeightItem( ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x0020 ) != 0 ? WEIGHT_BOLD : WEIGHT_NORMAL, EE_CHAR_WEIGHT ) );
+								aSet.Put( SvxWeightItem( ( GetPropertyValue( DFF_Prop_gtextFStrikethrough, 0 ) & 0x0020 ) != 0 ? WEIGHT_BOLD : WEIGHT_NORMAL ) );
 
 							// SJ TODO: Vertical Writing is not correct, instead this should be
 							// replaced through "CharacterRotation" by 90°, therefore a new Item has to be
@@ -4809,6 +5000,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 								if ( pModel )
 									rOutliner.SetStyleSheetPool( (SfxStyleSheetPool*)pModel->GetStyleSheetPool() );
 								rOutliner.SetUpdateMode( FALSE );
+								rOutliner.SetMinDepth( 0 );
 								rOutliner.SetText( *pParaObj );
 								VirtualDevice aVirDev( 1 );
 								aVirDev.SetMapMode( MAP_100TH_MM );
@@ -4821,9 +5013,9 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 										BOOL bIsRTL = aVirDev.GetTextIsRTL( rOutliner.GetText( rOutliner.GetParagraph( i ) ), 0, STRING_LEN );
 										if ( bIsRTL )
 										{
-											SfxItemSet aSet2( rOutliner.GetParaAttribs( (USHORT)i ) );
+											SfxItemSet aSet2( rOutliner.GetParaAttribs( i ) );
 											aSet2.Put( SvxFrameDirectionItem( FRMDIR_HORI_RIGHT_TOP, EE_PARA_WRITINGDIR ) );
-											rOutliner.SetParaAttribs( (USHORT)i, aSet2 );
+											rOutliner.SetParaAttribs( i, aSet2, false );
 											bCreateNewParaObject = sal_True;
 										}
 									}
@@ -4835,6 +5027,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 									}
 								}
 						        rOutliner.Clear();
+								rOutliner.SetMinDepth( 0 );
 								rOutliner.SetUpdateMode( bOldUpdateMode );
 							}
 						}
@@ -5017,40 +5210,70 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 						pRet->SetSnapRect( aBoundRect );
 						EnhancedCustomShape2d aCustomShape2d( pRet );
 						aTextRect = aCustomShape2d.GetTextRect();
-
 						bIsCustomShape = TRUE;
-
-						if( bIsConnector )
+					}
+				}
+				else
+				{
+					SvxMSDffCustomShape aCustomShape( *this, rSt, aObjData, aBoundRect, nObjectRotation, mpTracer );
+					if ( !aCustomShape.IsEmpty() )
+					{
+						ApplyAttributes( rSt, aSet, aObjData.eShapeType, aObjData.nSpFlags );
+						pRet = aCustomShape.GetObject( pSdrModel, aSet, TRUE );
+						aTextRect = aCustomShape.GetTextRect();
+						bIsCustomShape = TRUE;
+					}
+				}
+				if ( !bIsCustomShape )
+				{
+					if ( aObjData.eShapeType == mso_sptTextBox )
+					{
+						if ( ( GetPropertyValue( DFF_Prop_fNoLineDrawDash ) & 8 )
+							|| ( GetPropertyValue( DFF_Prop_fNoFillHitTest ) & 0x10 ) )
 						{
-							if( nObjectRotation )
-							{
-								double a = nObjectRotation * nPi180;
-								pRet->NbcRotate( aBoundRect.Center(), nObjectRotation, sin( a ), cos( a ) );
-							}
-							// Horizontal gespiegelt?
-							if ( nSpFlags & SP_FFLIPH )
-							{
-								Rectangle aBndRect( pRet->GetSnapRect() );
-								Point aTop( ( aBndRect.Left() + aBndRect.Right() ) >> 1, aBndRect.Top() );
-								Point aBottom( aTop.X(), aTop.Y() + 1000 );
-								pRet->NbcMirror( aTop, aBottom );
-							}
-							// Vertikal gespiegelt?
-							if ( nSpFlags & SP_FFLIPV )
-							{
-								Rectangle aBndRect( pRet->GetSnapRect() );
-								Point aLeft( aBndRect.Left(), ( aBndRect.Top() + aBndRect.Bottom() ) >> 1 );
-								Point aRight( aLeft.X() + 1000, aLeft.Y() );
-								pRet->NbcMirror( aLeft, aRight );
-							}
-							basegfx::B2DPolyPolygon aPoly( SdrObjCustomShape::GetLineGeometry( (SdrObjCustomShape*)pRet, sal_True ) );
-                            SdrObject::Free( pRet );
+							pRet = new SdrRectObj( aBoundRect );  // SJ: changed the type from OBJ_TEXT to OBJ_RECT (#88277#)
+						}
+					}
+					else if ( ( ( aObjData.eShapeType >= mso_sptCallout1 ) && ( aObjData.eShapeType <= mso_sptAccentBorderCallout3 ) )
+								|| ( aObjData.eShapeType == mso_sptCallout90 )
+								|| ( aObjData.eShapeType == mso_sptAccentCallout90 )
+								|| ( aObjData.eShapeType == mso_sptBorderCallout90 )
+								|| ( aObjData.eShapeType == mso_sptAccentBorderCallout90 ) )
+					{
+						pRet = new SdrCaptionObj( aBoundRect );
+						INT32 nAdjust0 = GetPropertyValue( DFF_Prop_adjustValue, 0 );
+						INT32 nAdjust1 = GetPropertyValue( DFF_Prop_adjust2Value, 0 );
+						if( nAdjust0 | nAdjust1 )
+						{	// AdjustValues anwenden, nur welche ?!?
+							nAdjust0 = ( nAdjust0 * 100 ) / 850;
+							nAdjust1 = ( nAdjust1 * 100 ) / 1275;
+							Point aTailPos( nAdjust0 + aBoundRect.Left(), nAdjust1 + aBoundRect.Top() );
+							((SdrCaptionObj*)pRet)->NbcSetTailPos( aTailPos );
+						}
+					}
+					else if( ( aObjData.eShapeType >= mso_sptTextPlainText ) && ( aObjData.eShapeType <= mso_sptTextCanDown ) )	// FontWork
+					{
+						aObjData.bIsAutoText = TRUE;
+						if ( mbTracing )
+							mpTracer->Trace( rtl::OUString::createFromAscii( "escher1000" ), rtl::OUString::valueOf( (sal_Int32)aObjData.eShapeType ) );
+						pRet = ImportFontWork( rSt, aSet, aBoundRect );
+					}
+					else if ( aObjData.eShapeType == mso_sptLine )
+					{
+						basegfx::B2DPolygon aPoly;
+						aPoly.append(basegfx::B2DPoint(aBoundRect.Left(), aBoundRect.Top()));
+						aPoly.append(basegfx::B2DPoint(aBoundRect.Right(), aBoundRect.Bottom()));
+						pRet = new SdrPathObj(OBJ_LINE, basegfx::B2DPolyPolygon(aPoly));
+					}
+					else if( bIsConnector )
+					{
+						// Konnektoren
+						MSO_ConnectorStyle eConnectorStyle = (MSO_ConnectorStyle)GetPropertyValue( DFF_Prop_cxstyle, mso_cxstyleStraight );
 
-							pRet = new SdrEdgeObj();
+						pRet = new SdrEdgeObj();
+						if( pRet )
+						{
 							pRet->SetLogicRect(aBoundRect);
-
-							// Konnektoren
-							MSO_ConnectorStyle eConnectorStyle = (MSO_ConnectorStyle)GetPropertyValue( DFF_Prop_cxstyle, mso_cxstyleStraight );
 
 							((SdrEdgeObj*)pRet)->ConnectToNode(TRUE, NULL);
 							((SdrEdgeObj*)pRet)->ConnectToNode(FALSE, NULL);
@@ -5109,62 +5332,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 							aSet.Put( SdrEdgeNode1VertDistItem( n1VertDist ) );
 							aSet.Put( SdrEdgeNode2HorzDistItem( n2HorzDist ) );
 							aSet.Put( SdrEdgeNode2VertDistItem( n2VertDist ) );
-
-							((SdrEdgeObj*)pRet)->SetEdgeTrackPath( aPoly );
 						}
-					}
-				}
-				else
-				{
-					SvxMSDffCustomShape aCustomShape( *this, rSt, aObjData, aBoundRect, nObjectRotation, mpTracer );
-					if ( !aCustomShape.IsEmpty() )
-					{
-						ApplyAttributes( rSt, aSet, aObjData.eShapeType, aObjData.nSpFlags );
-						pRet = aCustomShape.GetObject( pSdrModel, aSet, TRUE );
-						aTextRect = aCustomShape.GetTextRect();
-						bIsCustomShape = TRUE;
-					}
-				}
-				if ( !bIsCustomShape )
-				{
-					if ( aObjData.eShapeType == mso_sptTextBox )
-					{
-						if ( ( GetPropertyValue( DFF_Prop_fNoLineDrawDash ) & 8 )
-							|| ( GetPropertyValue( DFF_Prop_fNoFillHitTest ) & 0x10 ) )
-						{
-							pRet = new SdrRectObj( aBoundRect );  // SJ: changed the type from OBJ_TEXT to OBJ_RECT (#88277#)
-						}
-					}
-					else if ( ( ( aObjData.eShapeType >= mso_sptCallout1 ) && ( aObjData.eShapeType <= mso_sptAccentBorderCallout3 ) )
-								|| ( aObjData.eShapeType == mso_sptCallout90 )
-								|| ( aObjData.eShapeType == mso_sptAccentCallout90 )
-								|| ( aObjData.eShapeType == mso_sptBorderCallout90 )
-								|| ( aObjData.eShapeType == mso_sptAccentBorderCallout90 ) )
-					{
-						pRet = new SdrCaptionObj( aBoundRect );
-						INT32 nAdjust0 = GetPropertyValue( DFF_Prop_adjustValue, 0 );
-						INT32 nAdjust1 = GetPropertyValue( DFF_Prop_adjust2Value, 0 );
-						if( nAdjust0 | nAdjust1 )
-						{	// AdjustValues anwenden, nur welche ?!?
-							nAdjust0 = ( nAdjust0 * 100 ) / 850;
-							nAdjust1 = ( nAdjust1 * 100 ) / 1275;
-							Point aTailPos( nAdjust0 + aBoundRect.Left(), nAdjust1 + aBoundRect.Top() );
-							((SdrCaptionObj*)pRet)->NbcSetTailPos( aTailPos );
-						}
-					}
-					else if( ( aObjData.eShapeType >= mso_sptTextPlainText ) && ( aObjData.eShapeType <= mso_sptTextCanDown ) )	// FontWork
-					{
-						aObjData.bIsAutoText = TRUE;
-						if ( mbTracing )
-							mpTracer->Trace( rtl::OUString::createFromAscii( "escher1000" ), rtl::OUString::valueOf( (sal_Int32)aObjData.eShapeType ) );
-						pRet = ImportFontWork( rSt, aSet, aBoundRect );
-					}
-					else if ( aObjData.eShapeType == mso_sptLine )
-					{
-						basegfx::B2DPolygon aPoly;
-						aPoly.append(basegfx::B2DPoint(aBoundRect.Left(), aBoundRect.Top()));
-						aPoly.append(basegfx::B2DPoint(aBoundRect.Right(), aBoundRect.Bottom()));
-						pRet = new SdrPathObj(OBJ_LINE, basegfx::B2DPolyPolygon(aPoly));
 					}
 					else if ( ( (int)aObjData.eShapeType > (int)mso_sptRectangle ) && ( (int)aObjData.eShapeType < (int)mso_sptHostControl ) )
 					{
@@ -5179,11 +5347,11 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 			}
 			if ( pRet )
 			{
-				if ( bIsConnector || !bIsCustomShape )
+				if ( !bIsCustomShape )
 				{
  					ApplyAttributes( rSt, aSet, aObjData.eShapeType, aObjData.nSpFlags );
 					if ( !GetPropertyValue( DFF_Prop_gtextSize, 0 ) )
-                        aSet.Put( SvxFontHeightItem( ScalePt( 24 << 16 ), 100, EE_CHAR_FONTHEIGHT ) );
+						aSet.Put( SvxFontHeightItem( ScalePt( 24 << 16 ) ) );
 					if ( aObjData.eShapeType == mso_sptTextBox )
 						aSet.Put( SdrTextMinFrameHeightItem( aBoundRect.GetHeight() ) );
 					pRet->SetModel( pSdrModel );
@@ -5214,7 +5382,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 						{
 							nSpFlags &= ~( SP_FFLIPV | SP_FFLIPH );
 							nObjectRotation = 0;
-                            SdrObject::Free( pRet );
+							delete pRet;
 							pRet = p3d;
 						}
 					}
@@ -5222,7 +5390,7 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 			}
 			if ( pRet )
 			{
-				if( nObjectRotation /* && !bIsConnector */ )
+				if( nObjectRotation && !bIsConnector )
 				{
 					double a = nObjectRotation * nPi180;
 					pRet->NbcRotate( aBoundRect.Center(), nObjectRotation, sin( a ), cos( a ) );
@@ -5484,7 +5652,7 @@ SdrObject* SvxMSDffManager::ProcessObj(SvStream& rSt,
 
             if (bTextFrame)
             {
-                SdrObject::Free( pObj );
+                delete pObj;
                 pObj = pOrgObj = 0;
             }
 
@@ -6178,23 +6346,14 @@ void SvxMSDffManager::CheckTxBxStoryChain()
 		{
 			pObj->bLastBoxInChain = FALSE;
 			// Gruppenwechsel ?
-            // --> OD 2008-07-28 #156763#
-            // the text id also contains an internal drawing container id
-            // to distinguish between text id of drawing objects in different
-            // drawing containers.
-//            if( nChain != (pObj->nTxBxComp & 0xFFFF0000) )
-            if( nChain != pObj->nTxBxComp )
-            // <--
-            {
+			if( nChain != (pObj->nTxBxComp & 0xFFFF0000) )
+			{
 				// voriger war letzter seiner Gruppe
 				if( nObj )
 					pOld->GetObject( nObj-1 )->bLastBoxInChain = TRUE;
 				// Merker und Hilfs-Flag zuruecksetzen
 				nObjMark = nObj;
-                // --> OD 2008-07-28 #156763#
-//                nChain   = pObj->nTxBxComp & 0xFFFF0000;
-                nChain = pObj->nTxBxComp;
-                // <--
+				nChain   = pObj->nTxBxComp & 0xFFFF0000;
 				bSetReplaceFALSE = !pObj->bReplaceByFly;
 			}
 			else
@@ -6216,9 +6375,6 @@ void SvxMSDffManager::CheckTxBxStoryChain()
 		// alle Shape-Info-Objekte in pShapeInfos umkopieren
 		// (aber nach nShapeId sortieren)
 		pObj->bSortByShapeId = TRUE;
-        // --> OD 2008-07-28 #156763#
-        pObj->nTxBxComp = pObj->nTxBxComp & 0xFFFF0000;
-        // <--
 		pShapeInfos->Insert( pObj );
 	}
 	// voriger war letzter seiner Gruppe
@@ -6259,16 +6415,13 @@ void SvxMSDffManager::GetCtrlData( long nOffsDgg_ )
 	// Fall A: erst Drawing Group Container, dann n Mal Drawing Container
 	if( DFF_msofbtDggContainer == nFbt )
 	{
-        GetDrawingGroupContainerData( rStCtrl, nLength );
+		GetDrawingGroupContainerData( rStCtrl, nLength );
 
 		 rStCtrl.Seek( STREAM_SEEK_TO_END );
 		UINT32 nMaxStrPos = rStCtrl.Tell();
 
 		nPos += nLength;
-        // --> OD 2008-07-28 #156763#
-        unsigned long nDrawingContainerId = 1;
-        // <--
-        do
+		do
 		{
 			rStCtrl.Seek( nPos );
 
@@ -6282,15 +6435,8 @@ void SvxMSDffManager::GetCtrlData( long nOffsDgg_ )
 						&& ( DFF_msofbtDgContainer == nFbt );
 			}
 			if( bOk )
-            {
-                // --> OD 2008-07-28 #156763#
-                GetDrawingContainerData( rStCtrl, nLength, nDrawingContainerId );
-                // <--
-            }
+				GetDrawingContainerData( rStCtrl, nLength );
 			nPos += DFF_COMMON_RECORD_HEADER_SIZE + nLength;
-            // --> OD 2008-07-28 #156763#
-            ++nDrawingContainerId;
-            // <--
 		}
 		while( nPos < nMaxStrPos && bOk );
 	}
@@ -6386,8 +6532,7 @@ void SvxMSDffManager::GetDrawingGroupContainerData( SvStream& rSt, ULONG nLenDgg
 // ab hier: Drawing Container  d.h. Seiten (Blatt, Dia) - weit gueltige Daten
 //                      =================               ======
 //
-void SvxMSDffManager::GetDrawingContainerData( SvStream& rSt, ULONG nLenDg,
-                                               const unsigned long nDrawingContainerId )
+void SvxMSDffManager::GetDrawingContainerData( SvStream& rSt, ULONG nLenDg )
 {
 	BYTE nVer;USHORT nInst;USHORT nFbt;UINT32 nLength;
 
@@ -6403,13 +6548,13 @@ void SvxMSDffManager::GetDrawingContainerData( SvStream& rSt, ULONG nLenDg,
 		// Patriarch gefunden (der oberste Shape Group Container) ?
 		if( DFF_msofbtSpgrContainer == nFbt )
 		{
-            if(!this->GetShapeGroupContainerData( rSt, nLength, TRUE, nDrawingContainerId )) return;
+			if(!this->GetShapeGroupContainerData( rSt, nLength, TRUE)) return;
 		}
 		else
 		// blanker Shape Container ? (ausserhalb vom Shape Group Container)
 		if( DFF_msofbtSpContainer == nFbt )
 		{
-            if(!this->GetShapeContainerData( rSt, nLength, ULONG_MAX, nDrawingContainerId )) return;
+			if(!this->GetShapeContainerData( rSt, nLength)) return;
 		}
 		else
 			rSt.SeekRel( nLength );
@@ -6420,8 +6565,7 @@ void SvxMSDffManager::GetDrawingContainerData( SvStream& rSt, ULONG nLenDg,
 
 BOOL SvxMSDffManager::GetShapeGroupContainerData( SvStream& rSt,
 												  ULONG nLenShapeGroupCont,
-                                                  BOOL bPatriarch,
-                                                  const unsigned long nDrawingContainerId )
+												  BOOL bPatriarch )
 {
 	BYTE nVer;USHORT nInst;USHORT nFbt;UINT32 nLength;
 	long nStartShapeGroupCont = rSt.Tell();
@@ -6443,7 +6587,7 @@ BOOL SvxMSDffManager::GetShapeGroupContainerData( SvStream& rSt,
 		if( DFF_msofbtSpContainer == nFbt )
 		{
 			ULONG nGroupOffs = bFirst ? nStartShapeGroupCont - DFF_COMMON_RECORD_HEADER_SIZE : ULONG_MAX;
-            if ( !this->GetShapeContainerData( rSt, nLength, nGroupOffs, nDrawingContainerId ) )
+			if ( !this->GetShapeContainerData( rSt, nLength, nGroupOffs ) )
 				return FALSE;
 			bFirst = FALSE;
 		}
@@ -6451,7 +6595,7 @@ BOOL SvxMSDffManager::GetShapeGroupContainerData( SvStream& rSt,
 		// eingeschachtelter Shape Group Container ?
 		if( DFF_msofbtSpgrContainer == nFbt )
 		{
-            if ( !this->GetShapeGroupContainerData( rSt, nLength, FALSE, nDrawingContainerId ) )
+			if ( !this->GetShapeGroupContainerData( rSt, nLength, FALSE ) )
 				return FALSE;
 		}
 		else
@@ -6464,10 +6608,7 @@ BOOL SvxMSDffManager::GetShapeGroupContainerData( SvStream& rSt,
 	return TRUE;
 }
 
-BOOL SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
-                                             ULONG nLenShapeCont,
-                                             ULONG nPosGroup,
-                                             const unsigned long nDrawingContainerId )
+BOOL SvxMSDffManager::GetShapeContainerData( SvStream& rSt, ULONG nLenShapeCont, ULONG nPosGroup )
 {
 	BYTE nVer;USHORT nInst;USHORT nFbt;UINT32 nLength;
 	long  nStartShapeCont = rSt.Tell();
@@ -6651,15 +6792,6 @@ BOOL SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
 		else if( ( DFF_msofbtClientTextbox == nFbt ) && ( 4 == nLength ) )	// Text-Box-Story-Eintrag gefunden
 		{
 			rSt >> aInfo.nTxBxComp;
-            // --> OD 2008-07-28 #156763#
-            // Add internal drawing container id to text id.
-            // Note: The text id uses the first two bytes, while the internal
-            // drawing container id used the second two bytes.
-            aInfo.nTxBxComp = ( aInfo.nTxBxComp & 0xFFFF0000 ) +
-                              nDrawingContainerId;
-            DBG_ASSERT( (aInfo.nTxBxComp & 0x0000FFFF) == nDrawingContainerId,
-                        "<SvxMSDffManager::GetShapeContainerData(..)> - internal drawing container Id could not be correctly merged into DFF_msofbtClientTextbox value." )
-            // <--
 		}
 		else
 		{
@@ -6842,7 +6974,7 @@ BOOL SvxMSDffManager::GetBLIPDirect( SvStream& rBLIPStream, Graphic& rData, Rect
 
 	// nachschauen, ob es sich auch wirklich um ein BLIP handelt
 	UINT32 nLength;
-	USHORT nInst, nFbt( 0 );
+	USHORT nInst, nFbt;
 	BYTE   nVer;
 	if( ReadCommonRecordHeader( rBLIPStream, nVer, nInst, nFbt, nLength) && ( 0xF018 <= nFbt ) && ( 0xF117 >= nFbt ) )
 	{
@@ -7396,47 +7528,6 @@ const char* GetInternalServerName_Impl( const SvGlobalName& aGlobName )
     return 0;
 }
 
-::rtl::OUString GetFilterNameFromClassID_Impl( const SvGlobalName& aGlobName )
-{
-	if ( aGlobName == SvGlobalName( SO3_SW_OLE_EMBED_CLASSID_60 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StarOffice XML (Writer)" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SW_OLE_EMBED_CLASSID_8 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "writer8" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SC_OLE_EMBED_CLASSID_60 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StarOffice XML (Calc)" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SC_OLE_EMBED_CLASSID_8 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "calc8" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SIMPRESS_OLE_EMBED_CLASSID_60 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StarOffice XML (Impress)" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SIMPRESS_OLE_EMBED_CLASSID_8 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "impress8" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SDRAW_OLE_EMBED_CLASSID_60 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StarOffice XML (Draw)" ) );
-
-    if ( aGlobName == SvGlobalName( SO3_SDRAW_OLE_EMBED_CLASSID_8 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "draw8" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SM_OLE_EMBED_CLASSID_60 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StarOffice XML (Math)" ) );
-
-    if ( aGlobName == SvGlobalName( SO3_SM_OLE_EMBED_CLASSID_8 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "math8" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SCH_OLE_EMBED_CLASSID_60 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StarOffice XML (Chart)" ) );
-
-	if ( aGlobName == SvGlobalName( SO3_SCH_OLE_EMBED_CLASSID_8 ) )
-        return ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "chart8" ) );
-
-    return ::rtl::OUString();
-}
-
 com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >  SvxMSDffManager::CheckForConvertToSOObj( UINT32 nConvertFlags,
                         SotStorage& rSrcStg, const uno::Reference < embed::XStorage >& rDestStorage,
                         const Graphic& rGrf,
@@ -7535,23 +7626,16 @@ com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >  SvxMS
             String aDstStgName(String::CreateFromAscii(RTL_CONSTASCII_STRINGPARAM(MSO_OLE_Obj)));
             aDstStgName += String::CreateFromInt32(nMSOleObjCntr);
 
-            ::rtl::OUString aFilterName;
-            if ( pFilter )
-                aFilterName = pFilter->GetName();
-            else
-                aFilterName = GetFilterNameFromClassID_Impl( aStgNm );
-
-            uno::Sequence < beans::PropertyValue > aMedium( aFilterName.getLength() ? 3 : 2);
+            uno::Sequence < beans::PropertyValue > aMedium( pFilter ? 3 : 2);
             aMedium[0].Name = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "InputStream" ) );
             uno::Reference < io::XInputStream > xStream = new ::utl::OSeekableInputStreamWrapper( *pStream );
             aMedium[0].Value <<= xStream;
             aMedium[1].Name = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "URL" ) );
             aMedium[1].Value <<= ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "private:stream" ) );
-
-            if ( aFilterName.getLength() )
+            if ( pFilter )
             {
                 aMedium[2].Name = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "FilterName" ) );
-                aMedium[2].Value <<= aFilterName;
+                aMedium[2].Value <<= ::rtl::OUString( pFilter->GetName() );
             }
 
             ::rtl::OUString aName( aDstStgName );
