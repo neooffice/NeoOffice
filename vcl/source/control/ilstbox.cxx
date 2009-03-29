@@ -3255,28 +3255,31 @@ void ImplListBoxFloatingWindow::StartFloat( BOOL bStartTracking )
         Size aSz = GetParent()->GetSizePixel();
 #ifdef USE_JAVA
 		// respect NWF preferred drawing bounds.  Bug #1769
-		if( dynamic_cast<ComboBox *>(GetParent()) && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
+		if ( GetParent()->IsNativeWidgetEnabled() )
 		{
-			ImplControlValue aControlValue;
-			Region aBoundingRgn, aContentRgn;
-			Rectangle aRect( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
-			Region aArea( aRect );
-			if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+			if( dynamic_cast<ComboBox *>(GetParent()) && IsNativeControlSupported( CTRL_COMBOBOX, PART_ENTIRE_CONTROL ) )
 			{
-				Rectangle preferredRect = aContentRgn.GetBoundRect();
-				aSz = Size( preferredRect.GetWidth(), preferredRect.GetHeight() );
+				ImplControlValue aControlValue;
+				Region aBoundingRgn, aContentRgn;
+				Rectangle aRect( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
+				Region aArea( aRect );
+				if ( GetNativeControlRegion( CTRL_COMBOBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+				{
+					Rectangle preferredRect = aContentRgn.GetBoundRect();
+					aSz = Size( preferredRect.GetWidth(), preferredRect.GetHeight() );
+				}
 			}
-		}
-		if( dynamic_cast<ListBox *>(GetParent()) && IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
-		{
-			ImplControlValue aControlValue;
-			Region aBoundingRgn, aContentRgn;
-			Rectangle aRect( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
-			Region aArea( aRect );
-			if ( GetNativeControlRegion( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+			if( dynamic_cast<ListBox *>(GetParent()) && IsNativeControlSupported( CTRL_LISTBOX, PART_ENTIRE_CONTROL ) )
 			{
-				Rectangle preferredRect = aContentRgn.GetBoundRect();
-				aSz = Size( preferredRect.GetWidth(), preferredRect.GetHeight() );
+				ImplControlValue aControlValue;
+				Region aBoundingRgn, aContentRgn;
+				Rectangle aRect( GetParent()->GetPosPixel(), GetParent()->GetSizePixel() );
+				Region aArea( aRect );
+				if ( GetNativeControlRegion( CTRL_LISTBOX, PART_ENTIRE_CONTROL, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+				{
+					Rectangle preferredRect = aContentRgn.GetBoundRect();
+					aSz = Size( preferredRect.GetWidth(), preferredRect.GetHeight() );
+				}
 			}
 		}
 #endif	// USE_JAVA
