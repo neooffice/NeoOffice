@@ -2867,10 +2867,21 @@ void ImplWin::ImplDraw( bool bLayout )
             if( HasFocus() )
             {
                 SetTextColor( rStyleSettings.GetHighlightTextColor() );
-#ifndef USE_JAVA
                 SetFillColor( rStyleSettings.GetHighlightColor() );
+#ifdef USE_JAVA
+                // Fix bug 3436 by using the OOo code when a native widget is
+                // disabled
+                if ( !GetParent()->IsNativeWidgetEnabled() )
+                {
+                    SetLineColor();
+                    Rectangle aFocusRect( maFocusRect );
+                    aFocusRect.Top()--;
+                    aFocusRect.Bottom()--;
+                    DrawRect( aFocusRect );
+                }
+#else	// USE_JAVA
                 DrawRect( maFocusRect );
-#endif	// !USE_JAVA
+#endif	// USE_JAVA
             }
             else
             {
@@ -3005,7 +3016,7 @@ void ImplWin::DrawEntry( BOOL bDrawImage, BOOL bDrawText, BOOL bDrawTextAtImageP
 void ImplWin::Resize()
 {
     Control::Resize();
-#if defined( USE_JAVA )
+#ifdef USE_JAVA
     maFocusRect.Top() = 2;
     maFocusRect.Left() = 4;
     maFocusRect.Bottom() = GetOutputSizePixel().Height() - 2;
