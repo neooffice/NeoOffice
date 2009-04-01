@@ -189,9 +189,6 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 							sal_Int32 nLen = aString.getLength();
 							if ( pArray && nLen )
 							{
-								// Replace line feeds with carriage returns
-								aString = aString.replace( (sal_Unicode)'\n', (sal_Unicode)'\r' );
-
 								if ( nType == kQTFileTypeText )
 								{
 									CFStringRef aCFString = CFStringCreateWithCharactersNoCopy( kCFAllocatorDefault, pArray, nLen, kCFAllocatorNull );
