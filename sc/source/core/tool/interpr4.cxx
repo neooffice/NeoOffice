@@ -1,30 +1,29 @@
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of OpenOffice.org.
+ * This file is part of NeoOffice.
  *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified April 2009 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -201,18 +200,19 @@ double ScInterpreter::GetValueCellValue( const ScAddress& rPos, const ScValueCel
 }
 
 
-double ScInterpreter::GetCellValue( const ScAddress& rPos, const ScBaseCell* pCell )
+double ScInterpreter::GetCellValue( const ScAddress& rPos, const ScBaseCell* pCell, 
+                                    bool bNoValueAsError, bool bBlankAsZero )
 {
     USHORT nErr = nGlobalError;
     nGlobalError = 0;
-    double nVal = GetCellValueOrZero( rPos, pCell );
-    if ( !nGlobalError || nGlobalError == errCellNoValue )
+    double nVal = GetCellValueOrZero( rPos, pCell, bBlankAsZero );
+    if ( !nGlobalError || (!bNoValueAsError && nGlobalError == errCellNoValue) )
         nGlobalError = nErr;
     return nVal;
 }
 
 
-double ScInterpreter::GetCellValueOrZero( const ScAddress& rPos, const ScBaseCell* pCell )
+double ScInterpreter::GetCellValueOrZero( const ScAddress& rPos, const ScBaseCell* pCell, bool bBlankAsZero )
 {
     double fValue;
     if (pCell)
@@ -262,7 +262,7 @@ double ScInterpreter::GetCellValueOrZero( const ScAddress& rPos, const ScBaseCel
             break;
             case  CELLTYPE_STRING:
             case  CELLTYPE_EDIT:
-#if 0
+#if 1 /* JEG : re-enable because compatibility is more important than consistency for this */
 // Xcl does it, but SUM(A1:A2) differs from A1+A2. No good.
             {
                 String aStr;
@@ -273,14 +273,15 @@ double ScInterpreter::GetCellValueOrZero( const ScAddress& rPos, const ScBaseCel
                 sal_uInt32 nFIndex = 0;                 // damit default Land/Spr.
                 if ( !pFormatter->IsNumberFormat( aStr, nFIndex, fValue ) )
                 {
-                    SetError(errNoValue);
+                    SetError(errCellNoValue);   /* CellNoValue is not really an error */
                     fValue = 0.0;
                 }
             }
             break;
 #endif
             default:
-                SetError(errCellNoValue);
+                if (!bBlankAsZero)
+                    SetError(errCellNoValue);
                 fValue = 0.0;
         }
     }
@@ -1569,7 +1570,7 @@ BOOL ScInterpreter::DoubleRefToPosSingleRef( const ScRange& rRange, ScAddress& r
 }
 
 
-double ScInterpreter::GetDouble()
+double ScInterpreter::GetDouble( bool bNoValueAsError, bool bBlankAsZero )
 {
     double nVal;
     switch( GetRawStackType() )
@@ -1593,7 +1594,12 @@ double ScInterpreter::GetDouble()
             ScAddress aAdr;
             PopSingleRef( aAdr );
             ScBaseCell* pCell = GetCell( aAdr );
+#ifdef USE_JAVA
+            // Fix bugs 3427 and 3440 by ignoring the two new Go-oo parameters
             nVal = GetCellValue( aAdr, pCell );
+#else	// USE_JAVA
+            nVal = GetCellValue( aAdr, pCell, bNoValueAsError, bBlankAsZero );
+#endif	// USE_JAVA
         }
         break;
         case svDoubleRef:
