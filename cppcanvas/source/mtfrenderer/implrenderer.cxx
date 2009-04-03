@@ -1751,7 +1751,11 @@ namespace cppcanvas
                         pushState( rStates, PUSH_ALL );
                         
                         rVDev.Push();
+#ifdef USE_JAVA
+                        // Fix bug 3441 by not changing the map mode
+#else	// USE_JAVA
                         rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
+#endif	// USE_JAVA
                         
                         const ::Point& rPos( rVDev.LogicToPixel( pAct->GetPoint() ) );
                         const ::Size&  rSize( rVDev.LogicToPixel( pAct->GetSize() ) );
