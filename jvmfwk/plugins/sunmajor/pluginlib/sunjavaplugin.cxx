@@ -60,12 +60,6 @@
 
 #include "osl/process.h"
 #include "rtl/strbuf.hxx"
-#include <sys/sysctl.h>
-#include <unistd.h>
-
-#include <premac.h> 
-#include <Carbon/Carbon.h>
-#include <postmac.h>
 
 #endif	// USE_JAVA
 
@@ -718,46 +712,6 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         //returns negative number on failure
         err= pCreateJavaVM(&pJavaVM, ppEnv, &vm_args);
         g_bInGetJavaVM = 0;
-
-#ifdef USE_JAVA
-        // The JVM's native drawing methods print many spurious error messages
-        // on Mac OS X 10.4 and higher which will flood the system log so we
-        // need to filter out the messages
-        int fd[2];
-		const char *pGrepCmd = "/usr/bin/grep";
-        if ( err == 0 && !access( pGrepCmd, R_OK | X_OK ) && !pipe(fd) )
-        {
-            pid_t pid = fork();
-            if (!pid)
-            {
-                // Child process executes grep -v
-                dup2(1, 2);
-                dup2(fd[0], 0);
-                close(fd[0]);
-                close(fd[1]);
-
-                long res = 0;
-                Gestalt( gestaltSystemVersion, &res );
-                if ( ( ( res >> 8 ) & 0x00FF ) == 0x10 && ( ( res >> 4 ) & 0x000F ) <= 0x4 )
-                    execlp( pGrepCmd, pGrepCmd, "-v", "^ERROR: ", NULL );
-                else
-                    execlp( pGrepCmd, pGrepCmd, "-v", "^<ERROR>: ", NULL );
-                exit(0);
-            }
-            else if (pid > 0)
-            {
-                // Parent process redirects stderr to pipe
-                dup2(fd[1], 2);
-                close(fd[0]);
-                close(fd[1]);
-            }
-            else
-            {
-                close(fd[0]);
-                close(fd[1]);
-            }
-        }
-#endif	// USE_JAVA
     }
     else
         // set err to a positive number, so as or recognize that an abort (longjmp)
