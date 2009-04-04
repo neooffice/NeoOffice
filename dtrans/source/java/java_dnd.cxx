@@ -77,6 +77,7 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
+static bool bInDragOver = false;
 
 // ========================================================================
 
@@ -306,7 +307,14 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 								pTarget->handleDragEnter( nX, nY, aDrag, i );
 							break;
 						case kDragTrackingInWindow:
-							pTarget->handleDragOver( nX, nY, aDrag );
+							// Fix crashing when dragging PDF file repeatedly
+							// over a Writer window
+							if ( !bInDragOver )
+							{
+								bInDragOver = true;
+								pTarget->handleDragOver( nX, nY, aDrag );
+								bInDragOver = false;
+							}
 							break;
 						case kDragTrackingLeaveWindow:
 							pTarget->handleDragExit( nX, nY, aDrag );
