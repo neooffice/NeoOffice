@@ -35,6 +35,9 @@
 
 #define _SV_JAVA_LANG_OBJECT_CXX
 
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_SALINST_H
 #include <salinst.h>
 #endif
@@ -59,6 +62,10 @@
 #ifndef _RTL_PROCESS_H_
 #include <rtl/process.h>
 #endif
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
 
 using namespace vcl;
 using namespace vos;
@@ -117,6 +124,25 @@ void VCLThreadAttach::AttachThread()
 	pEnv = NULL;
 	if ( xVM.is() && pJVM )
 		pJVM->AttachCurrentThread( (void**)&pEnv, NULL );
+
+	// Fix bug 3425 by manually dispatching any pending native timers and
+	// Java events
+	if ( pEnv && GetCurrentEventLoop() == GetMainEventLoop() )
+	{
+		static bool bInAttachThread = false;
+
+		if ( bInAttachThread )
+			return;
+		bInAttachThread = true;
+
+		// Prevent deadlocking when the Java event dispatch thread calls
+		// the performSelectorOnMainThread selector by waiting for any
+		// undispatched Java events to get dispatched and then allowing
+		// any pending native timers to run
+		GetSalData()->mpEventQueue->dispatchNextEvent();
+
+		bInAttachThread = false;
+	}
 }
 
 // ----------------------------------------------------------------------------
