@@ -274,7 +274,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	// Fix crashing when dragging PDF file repeatedly
 	// over a Writer window
 	if ( bInDragEvent )
-		return;
+		return noErr;
 	bInDragEvent = true;
 
 	if ( !Application::IsShutDown() )
