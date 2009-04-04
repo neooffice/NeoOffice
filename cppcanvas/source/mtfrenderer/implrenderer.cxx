@@ -1750,12 +1750,10 @@ namespace cppcanvas
                         // output rectangle 
                         pushState( rStates, PUSH_ALL );
                         
+#ifndef USE_JAVA
                         rVDev.Push();
-#ifdef USE_JAVA
-                        // Fix bug 3441 by not changing the map mode
-#else	// USE_JAVA
                         rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
-#endif	// USE_JAVA
+#endif	// !USE_JAVA
                         
                         const ::Point& rPos( rVDev.LogicToPixel( pAct->GetPoint() ) );
                         const ::Size&  rSize( rVDev.LogicToPixel( pAct->GetSize() ) );
@@ -1766,6 +1764,11 @@ namespace cppcanvas
                                                              (double)rSize.Height() / aMtfSizePix.Height() );
 
 #ifdef USE_JAVA
+                        // Fix bug 3441 by changing the map mode after the
+                        // transform calls
+                        rVDev.Push();
+                        rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
+
                         // Fix bug 2218 by rendering EPS to a bitmap
                         VirtualDevice aVDev;
                         if ( aVDev.SetOutputSizePixel( aMtfSizePix ) )
