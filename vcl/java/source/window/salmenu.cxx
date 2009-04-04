@@ -37,9 +37,6 @@
 
 #include <map>
 
-#ifndef _SV_SALDATA_HXX
-#include <saldata.hxx>
-#endif
 #ifndef _SV_SALINST_H
 #include <salinst.h>
 #endif
@@ -352,20 +349,6 @@ void JavaSalInstance::DestroyMenuItem( SalMenuItem* pItem )
 void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdateSubmenus )
 {
 #ifndef NO_NATIVE_MENUS
-	// Fix bug 3425 by manually dispatching any pending native timers and
-	// Java events
-	if ( GetCurrentEventLoop() == GetMainEventLoop() )
-	{
-		// Prevent deadlocking when the Java event dispatch thread calls
-		// the performSelectorOnMainThread selector by waiting for any
-		// undispatched Java events to get dispatched and then allowing
-		// any pending native timers to run
-		ULONG nCount = Application::ReleaseSolarMutex();
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		GetSalData()->mpEventQueue->dispatchNextEvent();
-		Application::AcquireSolarMutex( nCount );
-	}
-
 	// Don't allow updating of menus while we are resetting the show only menus
 	// state or when the frame is not visible
 	if ( !pFrame || !pFrame->mbVisible || pFrame->mbInShowOnlyMenus )

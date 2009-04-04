@@ -453,15 +453,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// tracking handler.
 		if ( pSalData->maNativeEventCondition.check() )
 			NSApplication_dispatchPendingEvents();
-
-		// Prevent deadlocking when the Java event dispatch thread calls
-		// the performSelectorOnMainThread selector by waiting for any
-		// undispatched Java events to get dispatched and then allowing
-		// any pending native timers to run
-		nCount = ReleaseYieldMutex();
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
-		pSalData->mpEventQueue->dispatchNextEvent();
-		AcquireYieldMutex( nCount );
 	}
 
 	com_sun_star_vcl_VCLEvent *pEvent;
