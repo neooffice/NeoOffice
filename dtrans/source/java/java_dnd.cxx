@@ -79,7 +79,7 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
-static bool bInDragOver = false;
+static bool bInDragEvent = false;
 
 // ========================================================================
 
@@ -273,6 +273,12 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	if ( !IsValidWindowPtr( aWindow ) )
 		return noErr;
 
+	// Fix crashing when dragging PDF file repeatedly
+	// over a Writer window
+	if ( bInDragEvent )
+		return noErr;
+	bInDragEvent = true;
+
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -309,14 +315,7 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 								pTarget->handleDragEnter( nX, nY, aDrag, i );
 							break;
 						case kDragTrackingInWindow:
-							// Fix crashing when dragging PDF file repeatedly
-							// over a Writer window
-							if ( !bInDragOver )
-							{
-								bInDragOver = true;
-								pTarget->handleDragOver( nX, nY, aDrag );
-								bInDragOver = false;
-							}
+							pTarget->handleDragOver( nX, nY, aDrag );
 							break;
 						case kDragTrackingLeaveWindow:
 							pTarget->handleDragExit( nX, nY, aDrag );
@@ -332,6 +331,8 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 			rSolarMutex.release();
 		}
 	}
+
+	bInDragEvent = false;
 
 	return noErr;
 }
