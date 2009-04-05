@@ -214,148 +214,13 @@ void disposeBridges(Reference<css::uno::XComponentContext> ctx)
 
 //##############################################################################
 #ifdef USE_JAVA
-extern "C" int unopkg_main( int argc, char **argv )
-{
-    char *pCmdPath = argv[ 0 ];
-
-  	// Fix bug 3182 by detecting incorrectly formatted HOME values
-  	OString aHomePath( getenv( "HOME" ) );
-  	if ( aHomePath.getLength() )
-  	{
-  		// Make path absolute
-  		if ( aHomePath.getStr()[0] != '/' )
-  			aHomePath = OString( "/" ) + aHomePath;
-  		// Trim any trailing '/' characters
-  		sal_Int32 i = aHomePath.getLength() - 1;
-  		while ( i && aHomePath.getStr()[ i ] == '/' )
-  			i--;
-  		aHomePath = aHomePath.copy( 0, i + 1 );
-  
-  		OString aTmpPath( "HOME=" );
-  		aTmpPath += aHomePath;
-  		putenv( (char *)aTmpPath.getStr() );
-  	}
-
-    // Make sure TMPDIR exists as a softlink to /private/tmp as it can be
-    // easily removed. In most cases, this call should fail, but we do it
-    // just to be sure.
-    symlink( "private/tmp", TMPDIR );
-
-    // If TMPDIR is not set, set it to /tmp
-    if ( !getenv( "TMPDIR" ) )
-        putenv( "TMPDIR=" TMPDIR );
-    if ( !getenv( "TMP" ) )
-        putenv( "TMP=" TMPDIR );
-    if ( !getenv( "TEMP" ) )
-        putenv( "TEMP=" TMPDIR );
-
-    // Get absolute path of command's directory
-    OString aCmdPath( pCmdPath );
-    if ( aCmdPath.getLength() )
-    {
-        DirEntry aCmdDirEntry( aCmdPath );
-        aCmdDirEntry.ToAbs();
-        aCmdPath = OUStringToOString( OUString( aCmdDirEntry.GetPath().GetFull().GetBuffer() ), RTL_TEXTENCODING_UTF8 );
-    }
-
-    // Unset the CLASSPATH environment variable
-    unsetenv( "CLASSPATH" );
-
-    // Assign command's directory to PATH environment variable
-    OString aPath( getenv( "PATH" ) );
-    OString aStandardPath( aCmdPath );
-    aStandardPath += OString( ":" );
-    aStandardPath += aCmdPath;
-    aStandardPath += OString( "/../basis-link/program:" );
-    aStandardPath += aCmdPath;
-    aStandardPath += OString( "/../basis-link/ure-link/bin:/bin:/sbin:/usr/bin:/usr/sbin:" );
-    if ( aPath.compareTo( aStandardPath, aStandardPath.getLength() ) )
-    {
-        OString aTmpPath( "PATH=" );
-        aTmpPath += aStandardPath;
-        if ( aPath.getLength() )
-        {
-            aTmpPath += OString( ":" );
-            aTmpPath += aPath;
-        }
-        putenv( (char *)aTmpPath.getStr() );
-    }
-
-    // Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
-    // unsetting DYLD_FRAMEWORK_PATH
-    bool bRestart = false;
-    OString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
-    // Always unset DYLD_FRAMEWORK_PATH
-    unsetenv( "DYLD_FRAMEWORK_PATH" );
-    if ( aFrameworkPath.getLength() )
-    {
-        OString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" ) );
-        if ( aFallbackFrameworkPath.getLength() )
-        {
-            aFrameworkPath += OString( ":" );
-            aFrameworkPath += aFallbackFrameworkPath;
-        }
-        if ( aFrameworkPath.getLength() )
-        {
-            OString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
-            aTmpPath += aFrameworkPath;
-            putenv( (char *)aTmpPath.getStr() );
-        }
-        bRestart = true;
-    }
-
-    OString aStandardLibPath( aCmdPath );
-    aStandardLibPath += OString( ":" );
-    aStandardLibPath += aCmdPath;
-    aStandardLibPath += OString( "/../basis-link/program:" );
-    aStandardLibPath += aCmdPath;
-    aStandardLibPath += OString( "/../basis-link/ure-link/lib:/usr/lib:/usr/local/lib:" );
-    aStandardLibPath += OString( ":/usr/lib:/usr/local/lib:" );
-    if ( aHomePath.getLength() )
-    {
-        aStandardLibPath += aHomePath;
-        aStandardLibPath += OString( "/lib:" );
-    }
-    OString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
-    OString aDyLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
-    OString aDyFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
-    // Always unset LD_LIBRARY_PATH and DYLD_LIBRARY_PATH
-    unsetenv( "LD_LIBRARY_PATH" );
-    unsetenv( "DYLD_LIBRARY_PATH" );
-    if ( aDyFallbackLibPath.compareTo( aStandardLibPath, aStandardLibPath.getLength() ) )
-    {
-        OString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
-        aTmpPath += aStandardLibPath;
-        if ( aLibPath.getLength() )
-        {
-            aTmpPath += OString( ":" );
-            aTmpPath += aLibPath;
-        }
-        if ( aDyLibPath.getLength() )
-        {
-            aTmpPath += OString( ":" );
-            aTmpPath += aDyLibPath;
-        }
-        putenv( (char *)aTmpPath.getStr() );
-        bRestart = true;
-    }
-
-    // Restart if necessary since most library path changes don't have any
-    // effect after the application has already started on most platforms
-    if ( bRestart )
-    {
-        // Reexecute the parent process
-        execv( pCmdPath, argv );
-        fprintf( stderr, "%s: execv() function failed with error %i\n", argv[ 0 ], errno );
-        _exit( 1 );
-    }
-
-    // File locking is enabled by default
-    putenv( "SAL_ENABLE_FILE_LOCKING=1" );
+// All references to main() need to be redefined to private_main()
+#define main private_main
+SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
 #else	// USE_JAVA
 extern "C" int unopkg_main()
-{
 #endif	// USE_JAVA
+{
     tools::extendApplicationEnvironment();
     DisposeGuard disposeGuard;
     rtl_TextEncoding textenc = osl_getThreadTextEncoding();
@@ -646,3 +511,150 @@ extern "C" int unopkg_main()
 }
 
 
+#ifdef USE_JAVA
+
+#undef main
+
+extern "C" int unopkg_main( int argc, char **argv )
+{
+    char *pCmdPath = argv[ 0 ];
+
+  	// Fix bug 3182 by detecting incorrectly formatted HOME values
+  	OString aHomePath( getenv( "HOME" ) );
+  	if ( aHomePath.getLength() )
+  	{
+  		// Make path absolute
+  		if ( aHomePath.getStr()[0] != '/' )
+  			aHomePath = OString( "/" ) + aHomePath;
+  		// Trim any trailing '/' characters
+  		sal_Int32 i = aHomePath.getLength() - 1;
+  		while ( i && aHomePath.getStr()[ i ] == '/' )
+  			i--;
+  		aHomePath = aHomePath.copy( 0, i + 1 );
+  
+  		OString aTmpPath( "HOME=" );
+  		aTmpPath += aHomePath;
+  		putenv( (char *)aTmpPath.getStr() );
+  	}
+
+    // Make sure TMPDIR exists as a softlink to /private/tmp as it can be
+    // easily removed. In most cases, this call should fail, but we do it
+    // just to be sure.
+    symlink( "private/tmp", TMPDIR );
+
+    // If TMPDIR is not set, set it to /tmp
+    if ( !getenv( "TMPDIR" ) )
+        putenv( "TMPDIR=" TMPDIR );
+    if ( !getenv( "TMP" ) )
+        putenv( "TMP=" TMPDIR );
+    if ( !getenv( "TEMP" ) )
+        putenv( "TEMP=" TMPDIR );
+
+    // Get absolute path of command's directory
+    OString aCmdPath( pCmdPath );
+    if ( aCmdPath.getLength() )
+    {
+        DirEntry aCmdDirEntry( aCmdPath );
+        aCmdDirEntry.ToAbs();
+        aCmdPath = OUStringToOString( OUString( aCmdDirEntry.GetPath().GetFull().GetBuffer() ), RTL_TEXTENCODING_UTF8 );
+    }
+
+    // Unset the CLASSPATH environment variable
+    unsetenv( "CLASSPATH" );
+
+    // Assign command's directory to PATH environment variable
+    OString aPath( getenv( "PATH" ) );
+    OString aStandardPath( aCmdPath );
+    aStandardPath += OString( ":" );
+    aStandardPath += aCmdPath;
+    aStandardPath += OString( "/../basis-link/program:" );
+    aStandardPath += aCmdPath;
+    aStandardPath += OString( "/../basis-link/ure-link/bin:/bin:/sbin:/usr/bin:/usr/sbin:" );
+    if ( aPath.compareTo( aStandardPath, aStandardPath.getLength() ) )
+    {
+        OString aTmpPath( "PATH=" );
+        aTmpPath += aStandardPath;
+        if ( aPath.getLength() )
+        {
+            aTmpPath += OString( ":" );
+            aTmpPath += aPath;
+        }
+        putenv( (char *)aTmpPath.getStr() );
+    }
+
+    // Fix bug 1198 and eliminate "libzip.jnilib not found" crashes by
+    // unsetting DYLD_FRAMEWORK_PATH
+    bool bRestart = false;
+    OString aFrameworkPath( getenv( "DYLD_FRAMEWORK_PATH" ) );
+    // Always unset DYLD_FRAMEWORK_PATH
+    unsetenv( "DYLD_FRAMEWORK_PATH" );
+    if ( aFrameworkPath.getLength() )
+    {
+        OString aFallbackFrameworkPath( getenv( "DYLD_FALLBACK_FRAMEWORK_PATH" ) );
+        if ( aFallbackFrameworkPath.getLength() )
+        {
+            aFrameworkPath += OString( ":" );
+            aFrameworkPath += aFallbackFrameworkPath;
+        }
+        if ( aFrameworkPath.getLength() )
+        {
+            OString aTmpPath( "DYLD_FALLBACK_FRAMEWORK_PATH=" );
+            aTmpPath += aFrameworkPath;
+            putenv( (char *)aTmpPath.getStr() );
+        }
+        bRestart = true;
+    }
+
+    OString aStandardLibPath( aCmdPath );
+    aStandardLibPath += OString( ":" );
+    aStandardLibPath += aCmdPath;
+    aStandardLibPath += OString( "/../basis-link/program:" );
+    aStandardLibPath += aCmdPath;
+    aStandardLibPath += OString( "/../basis-link/ure-link/lib:/usr/lib:/usr/local/lib:" );
+    aStandardLibPath += OString( ":/usr/lib:/usr/local/lib:" );
+    if ( aHomePath.getLength() )
+    {
+        aStandardLibPath += aHomePath;
+        aStandardLibPath += OString( "/lib:" );
+    }
+    OString aLibPath( getenv( "LD_LIBRARY_PATH" ) );
+    OString aDyLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
+    OString aDyFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
+    // Always unset LD_LIBRARY_PATH and DYLD_LIBRARY_PATH
+    unsetenv( "LD_LIBRARY_PATH" );
+    unsetenv( "DYLD_LIBRARY_PATH" );
+    if ( aDyFallbackLibPath.compareTo( aStandardLibPath, aStandardLibPath.getLength() ) )
+    {
+        OString aTmpPath( "DYLD_FALLBACK_LIBRARY_PATH=" );
+        aTmpPath += aStandardLibPath;
+        if ( aLibPath.getLength() )
+        {
+            aTmpPath += OString( ":" );
+            aTmpPath += aLibPath;
+        }
+        if ( aDyLibPath.getLength() )
+        {
+            aTmpPath += OString( ":" );
+            aTmpPath += aDyLibPath;
+        }
+        putenv( (char *)aTmpPath.getStr() );
+        bRestart = true;
+    }
+
+    // Restart if necessary since most library path changes don't have any
+    // effect after the application has already started on most platforms
+    if ( bRestart )
+    {
+        // Reexecute the parent process
+        execv( pCmdPath, argv );
+        fprintf( stderr, "%s: execv() function failed with error %i\n", argv[ 0 ], errno );
+        _exit( 1 );
+    }
+
+    // File locking is enabled by default
+    putenv( "SAL_ENABLE_FILE_LOCKING=1" );
+
+	return private_main( argc, argv );
+}
+
+#endif	// USE_JAVA

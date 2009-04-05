@@ -29,12 +29,14 @@
 
 #include "sal/config.h"
 
+#ifndef USE_JAVA
 #include "sal/main.h"
+#endif	// USE_JAVA
 
 #include "unopkg_main.h"
 
 #ifdef USE_JAVA
-SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv ) {
+int main( int argc, char **argv ) {
     return unopkg_main( argc, argv );
 #else // USE_JAVA
 SAL_IMPLEMENT_MAIN() {
