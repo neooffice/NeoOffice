@@ -179,7 +179,7 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
 	// will hang on anything before Snow Leopard
     if ( isLaterThanLeopard && version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.6.0" ) ) )
         return -1;
-    else if ( version1 > SunVersion( ::rtl::OUString::createFromAscii( "1.5.999" ) ) )
+    else if ( !isLaterThanLeopard && version1 > SunVersion( ::rtl::OUString::createFromAscii( "1.5.999" ) ) )
         return -1;
     else if ( isLeopard && version1 < SunVersion( ::rtl::OUString::createFromAscii( "1.5.0" ) ) )
         return -1;
