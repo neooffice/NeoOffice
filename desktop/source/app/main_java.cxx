@@ -43,6 +43,7 @@
 #include <errno.h>
 #include <stdio.h>
 
+#include "sal/main.h"
 #include <tools/fsys.hxx>
 #include <vos/module.hxx>
 
@@ -54,6 +55,22 @@ using namespace rtl;
 using namespace vos;
 
 // -=-= main() -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+// All references to main() need to be redefined to private_main()
+#define main private_main
+SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv ) {
+	// Dynamically load soffice_main symbol to improve startup speed
+	OModule aSofficeMainModule;
+	if ( aSofficeMainModule.load( OUString( RTL_CONSTASCII_USTRINGPARAM( "libsofficeapp.dylib" ) ) ) )
+	{
+		SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)aSofficeMainModule.getSymbol( OUString( RTL_CONSTASCII_USTRINGPARAM( "soffice_main" ) ) );
+		if ( pSofficeMain )
+			return pSofficeMain();
+	}
+
+    return 0;
+}
+#undef main
 
 extern "C" int java_main( int argc, char **argv )
 {
@@ -263,16 +280,7 @@ extern "C" int java_main( int argc, char **argv )
 	aTmpPath = OString( "MONO_DISABLE_SHM=yes" );
 	putenv( (char *)aTmpPath.getStr() );
 
-	// Dynamically load soffice_main symbol to improve startup speed
-	OModule aSofficeMainModule;
-	if ( aSofficeMainModule.load( OUString( RTL_CONSTASCII_USTRINGPARAM( "libsofficeapp.dylib" ) ) ) )
-	{
-		SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)aSofficeMainModule.getSymbol( OUString( RTL_CONSTASCII_USTRINGPARAM( "soffice_main" ) ) );
-		if ( pSofficeMain )
-			return pSofficeMain();
-	}
-
-    return 0;
+	return private_main( argc, argv );
 }
 
 #endif	// USE_JAVA

@@ -29,16 +29,16 @@
 
 #include "sal/config.h"
 
-#include "sal/main.h"
-
 #ifdef USE_JAVA
 #include "main_java.h"
 #else	// USE_JAVA
+#include "sal/main.h"
+
 #include "sofficemain.h"
 #endif	// USE_JAVA
 
 #ifdef USE_JAVA
-SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv ) {
+int main( int argc, char **argv ) {
     return java_main( argc, argv );
 #else // USE_JAVA
 SAL_IMPLEMENT_MAIN() {
