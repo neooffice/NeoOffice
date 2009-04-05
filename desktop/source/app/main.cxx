@@ -252,7 +252,7 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	// do any accidental damage
 	if ( getuid() == 0 )
 	{
-		fprintf( stderr, "%s: running as root user is not allowed\n", argv[ 0 ]  );
+		fprintf( stderr, "%s: running as root user is not allowed\n", argv[ 0 ] );
 		_exit( 1 );
 	}
 
@@ -415,6 +415,8 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 
 		// Reexecute the parent process
 		execv( pCmdPath, argv );
+        fprintf( stderr, "%s: execv() function failed with error %i\n", argv[ 0 ], errno );
+        _exit( 1 );
 	}
 
 	// File locking is enabled by default
