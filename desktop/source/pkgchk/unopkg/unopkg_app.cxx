@@ -56,6 +56,8 @@
 
 #ifdef USE_JAVA
 
+#include <errno.h>
+
 #ifndef _FSYS_HXX
 #include <tools/fsys.hxx>
 #endif
@@ -344,6 +346,8 @@ extern "C" int unopkg_main( int argc, char **argv )
     {
         // Reexecute the parent process
         execv( pCmdPath, argv );
+        fprintf( stderr, "%s: execv() function failed with error %i\n", argv[ 0 ], errno );
+        _exit( 1 );
     }
 
     // File locking is enabled by default
