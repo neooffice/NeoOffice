@@ -121,7 +121,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationActi
 
 JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread( JNIEnv *pEnv, jobject object )
 {
-	return ( GetCurrentEventLoop() == GetMainEventLoop() ? JNI_TRUE : JNI_FALSE );
+	jboolean bRet = JNI_FALSE;
+
+	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	{
+		bRet = JNI_TRUE;
+		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+	}
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
