@@ -240,12 +240,129 @@ BOOL SVMain();
 // -=-= main() -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 #ifdef USE_JAVA
+// All references to main() need to be redefined to private_main()
+#define main private_main
 SAL_IMPLEMENT_MAIN_WITH_ARGS(argc, argv)
 #else	// USE_JAVA
 SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 #endif	// USE_JAVA
 {
+	RTL_LOGFILE_PRODUCT_TRACE( "PERFORMANCE - enter Main()" );
+	UNLIMIT_DESCRIPTORS();
+
+	desktop::Desktop aDesktop;
+
 #ifdef USE_JAVA
+	pApp = &aDesktop;
+
+	// If this is an X11 product, we need to explicitly start the NSApplication
+	// event dispatching before SVMain() creates and runs the OOo code in a
+	// secondary thread
+	if ( ::desktop::IsX11Product() )
+	{
+		// Make sure the some display is set
+		OString aDisplay( getenv( "DISPLAY" ) );
+		if ( !aDisplay.getLength() )
+		{
+			putenv( "DISPLAY=:0" );
+			aDisplay = OString( getenv( "DISPLAY" ) );
+		}
+
+		// If the display is the localhost, make sure X11.app is running
+		if ( aDisplay.getLength() )
+		{
+			// Get destination host
+			OString aHost;
+			unsigned long nHost = 0;
+			sal_Int32 nIndex = aDisplay.indexOf( ':' );
+			if ( nIndex >= 0 )
+			{
+				aHost = aDisplay.copy( 0, nIndex );
+				if ( aHost.getLength() )
+				{
+					sethostent( 0 );
+					struct hostent *pEntry = gethostbyname( aHost.getStr() );
+					if ( pEntry && pEntry->h_addrtype == AF_INET && pEntry->h_addr_list && pEntry->h_addr_list[ 0 ] )
+					{
+						unsigned long *pINet = (unsigned long *)( pEntry->h_addr_list[ 0 ] );
+						nHost = ntohl( *pINet );
+					}
+					endhostent();
+				}
+			}
+
+			bool bLocalhost = false;
+
+			if ( !aHost.getLength() )
+			{
+				// No destination host name always implies localhost
+				bLocalhost = true;
+			}
+			else if ( !nHost && aHost.getLength() )
+			{
+				// If there is a destination host name but no IP address, check
+				// if the display is an actual file as it is almost certain to
+				// be starting with Leopard
+				struct stat aFileStat;
+				if ( stat( aHost.getStr(), &aFileStat ) >= 0 )
+					bLocalhost = true;
+			}
+			else if ( nHost )
+			{
+				// Check if the host leads back to the localhost
+				struct ifaddrs *pAddr = NULL;
+				if ( !getifaddrs( &pAddr ) )
+				{
+					struct ifaddrs *pCurrentAddr = pAddr;
+					while ( pCurrentAddr )
+					{
+						if ( pCurrentAddr->ifa_addr && pCurrentAddr->ifa_addr->sa_family == AF_INET )
+						{
+							unsigned long *pINet = (unsigned long *)( pCurrentAddr->ifa_addr->sa_data + 2 );
+							if ( ntohl( *pINet ) == nHost )
+							{
+								bLocalhost = true;
+								break;
+							}
+						}
+
+						pCurrentAddr = pCurrentAddr->ifa_next;
+					}
+
+					freeifaddrs( pAddr );
+				}
+			}
+
+			if ( bLocalhost )
+			{
+				// Invoke [NSApplication run] in a timer but only if we are
+				// connecting to localhost
+				CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
+				if ( aTimer )
+					CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
+			}
+		}
+	}
+#endif	// USE_JAVA
+
+    SVMain();
+
+#ifdef USE_JAVA
+	pApp = NULL;
+
+    // Force exit since some JVMs won't shutdown when only exit() is invoked
+    _exit( 0 );
+#else	// USE_JAVA
+    return 0;
+#endif	// USE_JAVA
+}
+
+#ifdef USE_JAVA
+
+#undef main
+
+extern "C" int main( int argc, char **argv )
+{
 	char *pCmdPath = argv[ 0 ];
 
 	// Don't allow running as root as we really cannot trust that we won't
@@ -476,114 +593,8 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 			}
 		}
 	}
-#endif	// USE_JAVA
 
-	RTL_LOGFILE_PRODUCT_TRACE( "PERFORMANCE - enter Main()" );
-	UNLIMIT_DESCRIPTORS();
-
-	desktop::Desktop aDesktop;
-
-#ifdef USE_JAVA
-	pApp = &aDesktop;
-
-	// If this is an X11 product, we need to explicitly start the NSApplication
-	// event dispatching before SVMain() creates and runs the OOo code in a
-	// secondary thread
-	if ( ::desktop::IsX11Product() )
-	{
-		// Make sure the some display is set
-		OString aDisplay( getenv( "DISPLAY" ) );
-		if ( !aDisplay.getLength() )
-		{
-			putenv( "DISPLAY=:0" );
-			aDisplay = OString( getenv( "DISPLAY" ) );
-		}
-
-		// If the display is the localhost, make sure X11.app is running
-		if ( aDisplay.getLength() )
-		{
-			// Get destination host
-			OString aHost;
-			unsigned long nHost = 0;
-			sal_Int32 nIndex = aDisplay.indexOf( ':' );
-			if ( nIndex >= 0 )
-			{
-				aHost = aDisplay.copy( 0, nIndex );
-				if ( aHost.getLength() )
-				{
-					sethostent( 0 );
-					struct hostent *pEntry = gethostbyname( aHost.getStr() );
-					if ( pEntry && pEntry->h_addrtype == AF_INET && pEntry->h_addr_list && pEntry->h_addr_list[ 0 ] )
-					{
-						unsigned long *pINet = (unsigned long *)( pEntry->h_addr_list[ 0 ] );
-						nHost = ntohl( *pINet );
-					}
-					endhostent();
-				}
-			}
-
-			bool bLocalhost = false;
-
-			if ( !aHost.getLength() )
-			{
-				// No destination host name always implies localhost
-				bLocalhost = true;
-			}
-			else if ( !nHost && aHost.getLength() )
-			{
-				// If there is a destination host name but no IP address, check
-				// if the display is an actual file as it is almost certain to
-				// be starting with Leopard
-				struct stat aFileStat;
-				if ( stat( aHost.getStr(), &aFileStat ) >= 0 )
-					bLocalhost = true;
-			}
-			else if ( nHost )
-			{
-				// Check if the host leads back to the localhost
-				struct ifaddrs *pAddr = NULL;
-				if ( !getifaddrs( &pAddr ) )
-				{
-					struct ifaddrs *pCurrentAddr = pAddr;
-					while ( pCurrentAddr )
-					{
-						if ( pCurrentAddr->ifa_addr && pCurrentAddr->ifa_addr->sa_family == AF_INET )
-						{
-							unsigned long *pINet = (unsigned long *)( pCurrentAddr->ifa_addr->sa_data + 2 );
-							if ( ntohl( *pINet ) == nHost )
-							{
-								bLocalhost = true;
-								break;
-							}
-						}
-
-						pCurrentAddr = pCurrentAddr->ifa_next;
-					}
-
-					freeifaddrs( pAddr );
-				}
-			}
-
-			if ( bLocalhost )
-			{
-				// Invoke [NSApplication run] in a timer but only if we are
-				// connecting to localhost
-				CFRunLoopTimerRef aTimer = CFRunLoopTimerCreate( NULL, CFAbsoluteTimeGetCurrent(), 0, 0, 0, NSApplication_run, NULL );
-				if ( aTimer )
-					CFRunLoopAddTimer( CFRunLoopGetCurrent(), aTimer, kCFRunLoopDefaultMode );
-			}
-		}
-	}
-#endif	// USE_JAVA
-
-    SVMain();
-
-#ifdef USE_JAVA
-	pApp = NULL;
-
-    // Force exit since some JVMs won't shutdown when only exit() is invoked
-    _exit( 0 );
-#else	// USE_JAVA
-    return 0;
-#endif	// USE_JAVA
+	return private_main( argc, argv );
 }
+
+#endif	// USE_JAVA
