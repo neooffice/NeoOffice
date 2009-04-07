@@ -1487,11 +1487,7 @@ int GenericSalLayout::GetTextBreak( long nMaxWidth, long nCharExtra, int nFactor
 // -----------------------------------------------------------------------
 
 int GenericSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos,
-#ifdef USE_JAVA
-    int& nStart, sal_Int32* pGlyphAdvAry, int* pCharPosAry, sal_Int32* pNativeGlyphAdvAry ) const
-#else	// USE_JAVA
     int& nStart, sal_Int32* pGlyphAdvAry, int* pCharPosAry ) const
-#endif	// USE_JAVA
 {
     const GlyphItem* pG = mpGlyphItems + nStart;
 
@@ -1523,11 +1519,6 @@ int GenericSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphs, Point& rPos
             *(pCharPosAry++) = pG->mnCharPos;
         if( pGlyphAdvAry )
             *pGlyphAdvAry = pG->mnNewWidth;
-#ifdef USE_JAVA
-        // Fix bug 3348 by passing the original width
-        if( pNativeGlyphAdvAry )
-            *(pNativeGlyphAdvAry++) = pG->mnOrigWidth;
-#endif	// USE_JAVA
 
         // break at end of glyph list
         if( ++nStart >= mnGlyphCount )
@@ -2209,11 +2200,7 @@ void MultiSalLayout::GetCaretPositions( int nMaxIndex, sal_Int32* pCaretXArray )
 // -----------------------------------------------------------------------
 
 int MultiSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos,
-#ifdef USE_JAVA
-    int& nStart, sal_Int32* pGlyphAdvAry, int* pCharPosAry, sal_Int32* pNativeGlyphAdvAry ) const
-#else	// USE_JAVA
     int& nStart, sal_Int32* pGlyphAdvAry, int* pCharPosAry ) const
-#endif	// USE_JAVA
 {
     // for multi-level fallback only single glyphs should be used
     if( mnLevel > 1 && nLen > 1 )
@@ -2227,11 +2214,7 @@ int MultiSalLayout::GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& r
         SalLayout& rLayout = *mpLayouts[ nLevel ];
         rLayout.InitFont();
         int nRetVal = rLayout.GetNextGlyphs( nLen, pGlyphIdxAry, rPos,
-#ifdef USE_JAVA
-            nStart, pGlyphAdvAry, pCharPosAry, pNativeGlyphAdvAry );
-#else	// USE_JAVA
             nStart, pGlyphAdvAry, pCharPosAry );
-#endif	// USE_JAVA
         if( nRetVal )
         {
             int nFontTag = nLevel << GF_FONTSHIFT;

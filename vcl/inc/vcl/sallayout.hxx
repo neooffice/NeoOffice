@@ -208,11 +208,7 @@ public:
 
     // methods using glyph indexing
     virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdAry, Point& rPos, int&,
-#ifdef USE_JAVA
-                        sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL, sal_Int32* pNativeGlyphAdvAry = NULL ) const = 0;
-#else	// USE_JAVA
                         sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL ) const = 0;
-#endif	// USE_JAVA
     virtual bool    GetOutline( SalGraphics&, ::basegfx::B2DPolyPolygonVector& ) const;
     virtual bool    GetBoundRect( SalGraphics&, Rectangle& ) const;
 
@@ -273,11 +269,7 @@ public:
     virtual long    FillDXArray( sal_Int32* pDXArray ) const;
     virtual void    GetCaretPositions( int nArraySize, sal_Int32* pCaretXArray ) const;
     virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos,
-#ifdef USE_JAVA
-                        int&, sal_Int32* pGlyphAdvAry, int* pCharPosAry, sal_Int32* pNativeGlyphAdvAry = NULL ) const;
-#else	// USE_JAVA
                         int&, sal_Int32* pGlyphAdvAry, int* pCharPosAry ) const;
-#endif	// USE_JAVA
     virtual bool    GetOutline( SalGraphics&, ::basegfx::B2DPolyPolygonVector& ) const;
     virtual bool    GetBoundRect( SalGraphics&, Rectangle& ) const;
 
@@ -383,11 +375,7 @@ public:
 
     // used by display layers
     virtual int     GetNextGlyphs( int nLen, sal_GlyphId* pGlyphIdxAry, Point& rPos, int&,
-#ifdef USE_JAVA
-                        sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL, sal_Int32* pNativeGlyphAdvAry = NULL ) const;
-#else	// USE_JAVA
                         sal_Int32* pGlyphAdvAry = NULL, int* pCharPosAry = NULL ) const;
-#endif	// USE_JAVA
 
 protected:
                     GenericSalLayout();
