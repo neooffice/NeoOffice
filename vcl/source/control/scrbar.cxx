@@ -63,8 +63,6 @@
 
 static ::std::list< ScrollBar* > gScrollBars;
 static EventHandlerUPP pRelayoutScrollBarHandler = NULL;
-static EventLoopTimerUPP pInitializeScrollBarPreferencesTimerUPP = NULL;
-static ::osl::Condition aInitializeScrollBarPreferencesCondition;
 
 using namespace vos;
 
@@ -138,16 +136,6 @@ static OSStatus RelayoutScrollBars( EventHandlerCallRef inHandlerCallRef, EventR
 
 // =======================================================================
 
-static void InitializeScrollBarPreferencesTimerCallback( EventLoopTimerRef aTimer, void *pData )
-{
-	RelayoutScrollBars( NULL, NULL, NULL );
-
-	// Release any waiting thread
-	aInitializeScrollBarPreferencesCondition.set();
-}
-
-// =======================================================================
-
 static void BeginTrackingScrollBar( ScrollBar *toTrack )
 {
 	if ( !toTrack || !toTrack->IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
@@ -164,26 +152,7 @@ static void BeginTrackingScrollBar( ScrollBar *toTrack )
 		}
 	}
 
-	if ( !pInitializeScrollBarPreferencesTimerUPP )
-	{
-		pInitializeScrollBarPreferencesTimerUPP = NewEventLoopTimerUPP( InitializeScrollBarPreferencesTimerCallback );
-		if ( pInitializeScrollBarPreferencesTimerUPP )
-		{
-			if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			{
-				aInitializeScrollBarPreferencesCondition.reset();
-				InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pInitializeScrollBarPreferencesTimerUPP, NULL, NULL );
-				ULONG nCount = Application::ReleaseSolarMutex();
-				aInitializeScrollBarPreferencesCondition.wait();
-				Application::AcquireSolarMutex( nCount );
-			}
-			else
-			{
-				InitializeScrollBarPreferencesTimerCallback( NULL, NULL );
-			}
-		}
-	}
-
+	RelayoutScrollBars( NULL, NULL, NULL );
 	gScrollBars.push_back( toTrack );
 }
 
