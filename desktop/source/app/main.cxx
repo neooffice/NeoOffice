@@ -250,6 +250,53 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS(EMPTYARG, EMPTYARG)
 	RTL_LOGFILE_PRODUCT_TRACE( "PERFORMANCE - enter Main()" );
 	UNLIMIT_DESCRIPTORS();
 
+#ifdef USE_JAVA
+	char *pCmdPath = argv[ 0 ];
+
+	// Get absolute path of command's directory
+	OString aCmdPath( pCmdPath );
+	if ( aCmdPath.getLength() )
+	{
+		DirEntry aCmdDirEntry( aCmdPath );
+		aCmdDirEntry.ToAbs();
+		aCmdPath = OUStringToOString( OUString( aCmdDirEntry.GetPath().GetFull().GetBuffer() ), RTL_TEXTENCODING_UTF8 );
+	}
+
+	// We need to fork and exec javaldx to properly create preferences the
+	// first time or else some preferences won't be imported
+	OUString aUserInstallPath;
+	::utl::Bootstrap::PathStatus aLocateResult = ::utl::Bootstrap::locateUserInstallation( aUserInstallPath );
+	if ( aLocateResult != ::utl::Bootstrap::PATH_EXISTS )
+	{
+		OString aJavaldxPath( aCmdPath );
+		aJavaldxPath += OString( "/javaldx" );
+		char *pJavaldxPath = (char *)aJavaldxPath.getStr();
+		if ( !access( pJavaldxPath, R_OK | X_OK ) )
+		{
+			char *pJavaldxArgs[ 2 ];
+			pJavaldxArgs[ 0 ] = pJavaldxPath;
+			pJavaldxArgs[ 1 ] = NULL;
+
+			// Execute the javaldx command in child process
+			pid_t pid = fork();
+			if ( !pid )
+			{
+				close( 0 );
+				close( 1 );
+				execvp( pJavaldxPath, pJavaldxArgs );
+				_exit( 1 );
+			}
+			else if ( pid > 0 )
+			{
+				// Invoke waitpid to prevent zombie processes
+				int status;
+				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
+					usleep( 10 );
+			}
+		}
+	}
+#endif	// USE_JAVA
+
 	desktop::Desktop aDesktop;
 
 #ifdef USE_JAVA
@@ -559,40 +606,6 @@ extern "C" int main( int argc, char **argv )
 	// so the value must be set to "yes" to actually disable shared memory.
 	aTmpPath = OString( "MONO_DISABLE_SHM=yes" );
 	putenv( (char *)aTmpPath.getStr() );
-
-	// We need to fork and exec javaldx to properly create preferences the
-	// first time or else some preferences won't be imported
-	OUString aUserInstallPath;
-	::utl::Bootstrap::PathStatus aLocateResult = ::utl::Bootstrap::locateUserInstallation( aUserInstallPath );
-	if ( aLocateResult != ::utl::Bootstrap::PATH_EXISTS )
-	{
-		OString aJavaldxPath( aCmdPath );
-		aJavaldxPath += OString( "/javaldx" );
-		char *pJavaldxPath = (char *)aJavaldxPath.getStr();
-		if ( !access( pJavaldxPath, R_OK | X_OK ) )
-		{
-			char *pJavaldxArgs[ 2 ];
-			pJavaldxArgs[ 0 ] = pJavaldxPath;
-			pJavaldxArgs[ 1 ] = NULL;
-
-			// Execute the javaldx command in child process
-			pid_t pid = fork();
-			if ( !pid )
-			{
-				close( 0 );
-				close( 1 );
-				execvp( pJavaldxPath, pJavaldxArgs );
-				_exit( 1 );
-			}
-			else if ( pid > 0 )
-			{
-				// Invoke waitpid to prevent zombie processes
-				int status;
-				while ( waitpid( pid, &status, 0 ) > 0 && EINTR == errno )
-					usleep( 10 );
-			}
-		}
-	}
 
 	return private_main( argc, argv );
 }
