@@ -219,7 +219,7 @@ public final class VCLEventQueue implements Runnable {
 		if (f != null) {
 			// Allow the other application threads a chance to dispatch any
 			// pending events before we check the window
-			Thread.currentThread().yield();
+			Thread.yield();
 			if (!f.getAllowKeyBindings())
 				return false;
 		}
@@ -453,6 +453,8 @@ public final class VCLEventQueue implements Runnable {
 			else if (isApplicationMainThread()) {
 				// Don't post or dispatch, just wait until there are no pending
 				// events
+				PaintEvent e = new PaintEvent(new Container(), PaintEvent.PAINT, new Rectangle());
+				eventQueue.postEvent(e);
 				AWTEvent nextEvent;
 				while ((nextEvent = eventQueue.peekEvent()) != null) {
 					runApplicationMainThreadTimers();
