@@ -889,9 +889,9 @@ public final class VCLMenuItemData extends Component {
 				Menu m = (Menu)mc;
 				m.remove(mi);
 			}
-
-			awtPeers.clear();
 		}
+
+		awtPeers.clear();
 
 	}
 
