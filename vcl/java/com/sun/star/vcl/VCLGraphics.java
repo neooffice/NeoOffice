@@ -2655,8 +2655,7 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
-					g.setComposite(VCLGraphics.xorImageComposite);
-					VCLGraphics.xorImageComposite.setXORMode(Color.white);
+					g.setXORMode(Color.white);
 					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
