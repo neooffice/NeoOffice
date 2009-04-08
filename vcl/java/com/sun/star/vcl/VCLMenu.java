@@ -99,13 +99,11 @@ public final class VCLMenu extends Component {
 	 */
 	public void insertItem(VCLMenuItemData newItem, short nPos) {
 
-		synchronized (getTreeLock()) {
-			if(nPos < 0)
-				nPos=menuData.getNumMenuItems();
+		if(nPos < 0)
+			nPos=menuData.getNumMenuItems();
 
-			if(menuData.addMenuItem(newItem, nPos))
-				menuData.refreshAWTPeersInParentMenus();
-		}
+		if(menuData.addMenuItem(newItem, nPos))
+			menuData.refreshAWTPeersInParentMenus();
 
 	}
 
@@ -128,11 +126,9 @@ public final class VCLMenu extends Component {
 	 */
 	public void checkItem(short nPos, boolean bCheck) {
 
-		synchronized (getTreeLock()) {
-			VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-			if(item.setChecked(bCheck))
-				item.refreshAWTPeersInParentMenus();
-		}
+		VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+		if(item.setChecked(bCheck))
+			item.refreshAWTPeersInParentMenus();
 
 	}
 
@@ -144,10 +140,8 @@ public final class VCLMenu extends Component {
 	 */
 	public void enableItem(short nPos, boolean bEnable) {
 
-		synchronized (getTreeLock()) {
-			VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-			item.setEnabled(bEnable);
-		}
+		VCLMenuItemData item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+		item.setEnabled(bEnable);
 
 	}
 
@@ -159,23 +153,21 @@ public final class VCLMenu extends Component {
 	 */
 	public void attachSubmenu(VCLMenuItemData newMenu, short nPos) {
 
-		synchronized (getTreeLock()) {
-			VCLMenuItemData item=null;
-			item=(VCLMenuItemData)menuData.getMenuItem(nPos);
-			if(item==null)
-				return;
+		VCLMenuItemData item=null;
+		item=(VCLMenuItemData)menuData.getMenuItem(nPos);
+		if(item==null)
+			return;
 
-			// no need to reassociate the menu if its item is already the
-			// delegate
-			if(item.getDelegate()==newMenu)
-				return;
+		// no need to reassociate the menu if its item is already the
+		// delegate
+		if(item.getDelegate()==newMenu)
+			return;
 
-			newMenu.setTitle(item.getTitle());
-			newMenu.setEnabled(item.getEnabled());
-			item.unregisterAllAWTPeers();
-			item.setDelegate(newMenu);
-			item.refreshAWTPeersInParentMenus();
-		}
+		newMenu.setTitle(item.getTitle());
+		newMenu.setEnabled(item.getEnabled());
+		item.unregisterAllAWTPeers();
+		item.setDelegate(newMenu);
+		item.refreshAWTPeersInParentMenus();
 
 	}
 
