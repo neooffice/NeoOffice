@@ -149,13 +149,11 @@ public final class VCLMenuBar extends Component {
 		Iterator menuBars=activeMenubars.iterator();
 		while(menuBars.hasNext()) {
 			VCLMenuBar mb=(VCLMenuBar)menuBars.next();
-			synchronized (mb.getTreeLock()) {
-				if(mb.menus!=null) {
-					Iterator e=mb.menus.iterator();
-					while(e.hasNext()) {
-						if(item==e.next())
-							return(true);
-					}
+			if(mb.menus!=null) {
+				Iterator e=mb.menus.iterator();
+				while(e.hasNext()) {
+					if(item==e.next())
+						return(true);
 				}
 			}
 		}
@@ -216,22 +214,20 @@ public final class VCLMenuBar extends Component {
 		if (disposed)
 			return;
 
-		synchronized (getTreeLock()) {
-			removeMenuBar(this);
+		removeMenuBar(this);
 
-			if(frame!=null) {
-				MenuBar mb = frame.getMenuBar();
-				if (mb != null && mb == awtMenuBar)
-					frame.setMenuBar(null);
-			}
-
-		 	awtMenuBar=null;
-			menus=null;
-			queue=null;
-			frame=null;
-
-			disposed = true;
+		if(frame!=null) {
+			MenuBar mb = frame.getMenuBar();
+			if (mb != null && mb == awtMenuBar)
+				frame.setMenuBar(null);
 		}
+
+	 	awtMenuBar=null;
+		menus=null;
+		queue=null;
+		frame=null;
+
+		disposed = true;
 
 	}
 	
@@ -296,46 +292,39 @@ public final class VCLMenuBar extends Component {
 	 */
 	public void addMenuItem(VCLMenuItemData menuItem, short nPos) {
 
-		synchronized (getTreeLock()) {
-			short items = (short)menus.size();
-			if(nPos < 0)
-				nPos=items;
+		short items = (short)menus.size();
+		if(nPos < 0)
+			nPos=items;
 
-			if (nPos >= items) {
+		if (nPos >= items) {
+			// If this object is not yet a menu, insert a dummy as a
+			// placeholder otherwise insert its peer.
+			menus.add(nPos, menuItem);
+			if(menuItem.isMenu())
+				awtMenuBar.add((Menu)menuItem.createAWTPeer());
+			else
+				awtMenuBar.add(new Menu(menuItem.getTitle()));
+		}
+		else {
+			MenuBar oldMenuBar = awtMenuBar;
+			removeMenuBar(this);
+			awtMenuBar = new MenuBar();
+			addNewMenuBar(this);
+
+			menus.add(nPos, menuItem);
+			items = (short)menus.size();
+			for(short i=0; i < items; i++) {
 				// If this object is not yet a menu, insert a dummy as a
 				// placeholder otherwise insert its peer.
-				menus.add(nPos, menuItem);
-				if(menuItem.isMenu())
-					awtMenuBar.add((Menu)menuItem.createAWTPeer());
+				VCLMenuItemData mi = (VCLMenuItemData)menus.get(i);
+				if(mi.isMenu())
+					awtMenuBar.add((Menu)mi.createAWTPeer());
 				else
-					awtMenuBar.add(new Menu(menuItem.getTitle()));
+					awtMenuBar.add(new Menu(mi.getTitle()));
 			}
-			else {
-				MenuBar oldMenuBar = awtMenuBar;
-				removeMenuBar(this);
-				awtMenuBar = new MenuBar();
-				addNewMenuBar(this);
 
-				if (frame != null) {
-					Window w = frame.getWindow();
-					if (w instanceof Frame) {
-						((Frame)w).setMenuBar(null);
-						((Frame)w).setMenuBar(awtMenuBar);
-					}
-				}
-
-				menus.add(nPos, menuItem);
-				items = (short)menus.size();
-				for(short i=0; i < items; i++) {
-					// If this object is not yet a menu, insert a dummy as a
-					// placeholder otherwise insert its peer.
-					VCLMenuItemData mi = (VCLMenuItemData)menus.get(i);
-					if(mi.isMenu())
-						awtMenuBar.add((Menu)mi.createAWTPeer());
-					else
-						awtMenuBar.add(new Menu(mi.getTitle()));
-				}
-			}
+			if(frame!=null)
+				frame.setMenuBar(awtMenuBar);
 		}
 	
 	}
@@ -347,13 +336,11 @@ public final class VCLMenuBar extends Component {
 	 */
 	public void removeMenu(short nPos) {
 
-		synchronized (getTreeLock()) {
-			if(nPos < 0)
-				nPos=(short)menus.size();
+		if(nPos < 0)
+			nPos=(short)menus.size();
 
-			menus.remove(nPos);
-			awtMenuBar.remove(nPos);
-		}
+		menus.remove(nPos);
+		awtMenuBar.remove(nPos);
 
 	}
 
@@ -367,45 +354,38 @@ public final class VCLMenuBar extends Component {
 	 */
 	public void changeMenu(VCLMenuItemData newMenu, short nPos) {
 
-		synchronized (getTreeLock()) {
-			if(nPos < 0)
-				nPos=(short)menus.size();
+		if(nPos < 0)
+			nPos=(short)menus.size();
 
-			VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
-			newMenu.setTitle(oldMenu.getTitle());
-			newMenu.setEnabled(oldMenu.getEnabled());
+		VCLMenuItemData oldMenu=(VCLMenuItemData)menus.get(nPos);
+		newMenu.setTitle(oldMenu.getTitle());
+		newMenu.setEnabled(oldMenu.getEnabled());
 
-			boolean reregistered = newMenu.reregisterAWTPeer(oldMenu, awtMenuBar);
+		boolean reregistered = newMenu.reregisterAWTPeer(oldMenu, awtMenuBar);
 
-			// let new menu provide contents, but retain reference
-			// to old menu in the actual menubar.  Bug #175
-			oldMenu.setDelegate(newMenu);
+		// let new menu provide contents, but retain reference
+		// to old menu in the actual menubar.  Bug #175
+		oldMenu.setDelegate(newMenu);
 
-			if (!reregistered) {
-				MenuBar oldMenuBar = awtMenuBar;
-				removeMenuBar(this);
-				awtMenuBar = new MenuBar();
-				addNewMenuBar(this);
+		if (!reregistered) {
+			MenuBar oldMenuBar = awtMenuBar;
+			removeMenuBar(this);
+			awtMenuBar = new MenuBar();
+			addNewMenuBar(this);
 
-				if (frame != null) {
-					Window w = frame.getWindow();
-					if (w instanceof Frame) {
-						((Frame)w).setMenuBar(null);
-						((Frame)w).setMenuBar(awtMenuBar);
-					}
-				}
-
-				short items = (short)menus.size();
-				for(short i=0; i < items; i++) {
-					// If this object is not yet a menu, insert a dummy as a
-					// placeholder otherwise insert its peer.
-					VCLMenuItemData mi = (VCLMenuItemData)menus.get(i);
-					if(mi.isMenu())
-						awtMenuBar.add((Menu)mi.createAWTPeer());
-					else
-						awtMenuBar.add(new Menu(mi.getTitle()));
-				}
+			short items = (short)menus.size();
+			for(short i=0; i < items; i++) {
+				// If this object is not yet a menu, insert a dummy as a
+				// placeholder otherwise insert its peer.
+				VCLMenuItemData mi = (VCLMenuItemData)menus.get(i);
+				if(mi.isMenu())
+					awtMenuBar.add((Menu)mi.createAWTPeer());
+				else
+					awtMenuBar.add(new Menu(mi.getTitle()));
 			}
+
+			if(frame!=null)
+				frame.setMenuBar(awtMenuBar);
 		}
 
 	}
@@ -417,18 +397,16 @@ public final class VCLMenuBar extends Component {
 	 */
 	public void enableMenu(short nPos, boolean enable) {
 
-		synchronized (getTreeLock()) {
-			if(nPos < menus.size()) {
-				VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);
-				menu.setEnabled(enable);
-				if(!menu.isMenu()) {
-					// we have a dummy item currently in the menubar that isn't
-					// being managed, so flip its state manually
-					if(enable)
-						awtMenuBar.getMenu(nPos).enable();
-					else
-						awtMenuBar.getMenu(nPos).disable();
-				}
+		if(nPos < menus.size()) {
+			VCLMenuItemData menu=(VCLMenuItemData)menus.get(nPos);
+			menu.setEnabled(enable);
+			if(!menu.isMenu()) {
+				// we have a dummy item currently in the menubar that isn't
+				// being managed, so flip its state manually
+				if(enable)
+					awtMenuBar.getMenu(nPos).enable();
+				else
+					awtMenuBar.getMenu(nPos).disable();
 			}
 		}
 
