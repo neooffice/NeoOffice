@@ -79,6 +79,8 @@ if [ `uname -s` = Darwin ]; then
 	if [ ! -z "$ATTACH" ]; then
 		if [ ! -z "$MAILERCLASS" ]; then
 			/usr/bin/open -b "$MAILERCLASS" "$ATTACH"
+		elif [ ! -z "$MAILER" ]; then
+			/usr/bin/open -a "$MAILER" "$ATTACH"
 		else
 			/usr/bin/open -a Mail.app "$ATTACH"
 		fi
