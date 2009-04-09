@@ -218,11 +218,6 @@ public final class VCLGraphics {
 	private static Method setPixelMethod = null;
 
 	/**
-	 * The image50 image.
-	 */
-	private static VCLImage image50 = null;
-
-	/**
 	 * The cached invert composite.
 	 */
 	private static InvertComposite invertComposite = new InvertComposite();
@@ -414,17 +409,6 @@ public final class VCLGraphics {
 			VCLGraphics.checkBoxButtonXOffset = -3;
 			VCLGraphics.checkBoxButtonYOffset = 0;
 		}
-
-		// Create the image50 image
-		int w = 2;
-		int h = 2;
-		VCLImage srcImage = new VCLImage(w, h, 1);
-		BufferedImage img = srcImage.getImage();
-		img.setRGB(0, 0, 0xff000000);
-		img.setRGB(1, 0, 0xffffffff);
-		img.setRGB(1, 1, 0xffffffff);
-		img.setRGB(1, 1, 0xff000000);
-		image50 = srcImage;
 
 		// Fix bug 3051 by setting the printer resolution to twips
 		printerResolution = new Dimension(1440, 1440);
@@ -2575,6 +2559,15 @@ public final class VCLGraphics {
 		if (graphics != null)
 			return;
 
+		if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
+			// Fix bug 3443 to drawing gray instead of the checkerboard pattern
+			boolean oldXor = xor;
+			setXORMode(true);
+			drawRect(x, y, width, height, 0xff000000, true, 0);
+			setXORMode(oldXor);
+			return;
+		}
+
 		if (width < 0) {
 			x += width;
 			width *= -1;
@@ -2634,31 +2627,6 @@ public final class VCLGraphics {
 				g.dispose();
 			}
 		}
-		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
-			Graphics2D g = getGraphics();
-			if (g != null) {
-				try {
-					g.setXORMode(Color.white);
-					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-					if (!userPolygonClip) {
-						Iterator clipRects = clipList.iterator();
-						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
-							g.fillRect(x, y, width, height);
-						}
-					}
-					else {
-						g.setClip(userClip);
-						g.fillRect(x, y, width, height);
-					}
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				g.dispose();
-			}
-
-		}
 		else {
 			Graphics2D g = getGraphics();
 			if (g != null) {
@@ -2698,6 +2666,15 @@ public final class VCLGraphics {
 
 		if (npoints == 0)
 			return;
+
+		if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
+			// Fix bug 3443 to drawing gray instead of the checkerboard pattern
+			boolean oldXor = xor;
+			setXORMode(true);
+			drawPolygon(npoints, xpoints, ypoints, 0xff000000, true, 0);
+			setXORMode(oldXor);
+			return;
+		}
 
 		Polygon polygon = new Polygon(xpoints, ypoints, npoints);
 		Rectangle destBounds = polygon.getBounds();
@@ -2749,30 +2726,6 @@ public final class VCLGraphics {
 					else {
 						g.setClip(userClip);
 						g.drawPolyline(xpoints, ypoints, npoints);
-					}
-				}
-				catch (Throwable t) {
-					t.printStackTrace();
-				}
-				g.dispose();
-			}
-		}
-		else if ((options & VCLGraphics.SAL_INVERT_50) == VCLGraphics.SAL_INVERT_50) {
-			Graphics2D g = getGraphics();
-			if (g != null) {
-				try {
-					g.setXORMode(Color.white);
-					g.setPaint(new TexturePaint(VCLGraphics.image50.getImage(), new Rectangle(0, 0, VCLGraphics.image50.getWidth(), VCLGraphics.image50.getHeight()).getBounds2D()));
-					if (!userPolygonClip) {
-						Iterator clipRects = clipList.iterator();
-						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
-							g.fillPolygon(polygon);
-						}
-					}
-					else {
-						g.setClip(userClip);
-						g.fillPolygon(polygon);
 					}
 				}
 				catch (Throwable t) {
