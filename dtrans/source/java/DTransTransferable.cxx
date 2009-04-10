@@ -212,8 +212,8 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 												// very old applications
 												for ( int j = 0; j < nBufLen; j++ )
 												{
-													if ( aBuf[ j ] == '\r' )
-														aBuf[ j ] = '\n';
+													if ( aBuf[ j ] == '\n' )
+														aBuf[ j ] = '\r';
 												}
 
 												if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
