@@ -206,6 +206,16 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 											if ( aBuf && CFStringGetBytes( aCFString, aRange, CFStringGetSystemEncoding(), '?', false, aBuf, nBufLen, &nRealLen ) && nRealLen == nBufLen )
 											{
 												aBuf[ nBufLen ] = '\0';
+
+												// Replace line feeds with
+												// carriage returns but for only
+												// very old applications
+												for ( int j = 0; j < nBufLen; j++ )
+												{
+													if ( aBuf[ j ] == '\r' )
+														aBuf[ j ] = '\n';
+												}
+
 												if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 													nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
 												else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
