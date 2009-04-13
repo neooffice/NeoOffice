@@ -456,11 +456,22 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	if ( !pFont || !pFont->mpFontData )
 		return SAL_SETFONT_BADFONT;
 
+	SalData *pSalData = GetSalData();
+
 	JavaImplFontData *pFontData = dynamic_cast<JavaImplFontData *>( pFont->mpFontData );
 	if ( !pFontData )
-		return SAL_SETFONT_BADFONT;
-
-	SalData *pSalData = GetSalData();
+	{
+		if ( pSalData->maJavaFontNameMapping.size() )
+		{
+			pFontData = pSalData->maJavaFontNameMapping.begin()->second;
+		}
+		else
+		{
+			// We should never get here as there should always be at least one
+			// font
+			return SAL_SETFONT_BADFONT;
+		}
+	}
 
 	if ( nFallbackLevel )
 	{
@@ -652,8 +663,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 				// (usually CJK fonts like Hiragino) so fix fix bugs 2827 and
 				// 2847 by adding combining the leading with descent
 				pMetric->mnAscent = (long)( ( aFontMetrics.ascent * pMetric->mnWidth ) + 0.5 );
-				if ( pMetric->mnAscent < 1 )
-					pMetric->mnAscent = 1;
 				// Fix bug 2881 by handling cases where font does not have
 				// negative descent
 				pMetric->mnDescent = (long)( ( ( aFontMetrics.leading + fabs( aFontMetrics.descent ) ) * pMetric->mnWidth ) + 0.5 );
@@ -665,6 +674,17 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 				pMetric->mnAscent = 0;
 				pMetric->mnDescent = 0;
 			}
+
+			// Fix bug 3446 by preventing abnormal values being returned
+			if ( pMetric->mnAscent < 1 )
+			{
+				pMetric->mnAscent = pMetric->mnWidth - pMetric->mnDescent;
+				if ( pMetric->mnAscent < 1 )
+				{
+					pMetric->mnAscent = pMetric->mnDescent;
+					pMetric->mnDescent = 0;
+				}
+ 			}
 		}
 
 		pMetric->mbDevice = mpFontData->mbDevice;
