@@ -53,6 +53,7 @@ public:
 		insert(value_type("Loading...", "Loading..."));
 		insert(value_type("Downloading file ... ","Downloading file ... "));
 		insert(value_type("Download failed!", "Download failed!"));
+		insert(value_type("NeoOffice Mobile", "NeoOffice Mobile"));
 	};
 };
 
