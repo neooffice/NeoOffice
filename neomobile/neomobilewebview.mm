@@ -199,7 +199,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[mpcontentView addSubview:self];
 		
 		[self setFrame:NSMakeRect(0, 24, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight)];
-		[self setAutoresizingMask:(NSViewHeightSizable)];
+		[self setAutoresizingMask:(NSViewHeightSizable | NSViewWidthSizable)];
 		[mpcontentView addSubview:bottomView];
 		
 		[mpPanel setContentView:mpcontentView];
