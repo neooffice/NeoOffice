@@ -50,7 +50,19 @@
 using namespace rtl;
 using namespace vos;
 
-static const NSString *pTestBaseURLs[] = { @"https://neomobile-test.neooffice.org/", @"https://neomobile-test-primary.neooffice.org/", @"https://neomobile-test-backup.neooffice.org/" };
+static const NSString *pTestBaseURLs[] = {
+	@"https://neomobile-test.neooffice.org/",
+	@"https://neomobile-test-primary.neooffice.org/",
+	@"https://neomobile-test-backup.neooffice.org/",
+	@"https://neomobile-test-backup2.neooffice.org/"
+};
+
+static const NSString *pProductionBaseURLs[] = {
+	@"https://neomobile.neooffice.org/",
+	@"https://neomobile-primary.neooffice.org/",
+	@"https://neomobile-backup.neooffice.org/",
+	@"https://neomobile-backup2.neooffice.org/"
+};
 
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
