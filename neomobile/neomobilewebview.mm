@@ -152,6 +152,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( mpPanel )
 	{
 		[mpPanel setFloatingPanel:YES];
+		[mpPanel setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 90)];
 		
 		mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24)];
 		[mpcontentView setAutoresizesSubviews:YES];
