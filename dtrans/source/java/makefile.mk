@@ -66,6 +66,7 @@ dummy:
 SLOFILES=\
 	$(SLO)$/DTransClipboard.obj \
 	$(SLO)$/DTransTransferable.obj \
+	$(SLO)$/HtmlFmtFlt.obj \
 	$(SLO)$/java_clipboard.obj \
 	$(SLO)$/java_dnd.obj \
 	$(SLO)$/java_dnd_cocoa.obj \

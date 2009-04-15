@@ -50,6 +50,8 @@
 #include <vos/mutex.hxx>
 #endif
 
+#include "HtmlFmtFlt.hxx"
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <QuickTime/QuickTime.h>
@@ -63,13 +65,14 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 7;
+static UInt32 nSupportedTypes = 8;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
 	// Mark 'furl' as text to ensure that it is the preferred flavor
 	'furl',
 	'RTF ',
+	'HTML',
 	'utxt',
 	kQTFileTypeText,
 	kQTFileTypePDF,
@@ -84,6 +87,7 @@ static bool aSupportedTextTypes[] = {
 	true,
 	true,
 	true,
+	true,
 	false,
 	false,
 	false
@@ -93,6 +97,7 @@ static bool aSupportedTextTypes[] = {
 static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "application/x-openoffice-file;windows_formatname=\"FileName\"" ),
 	OUString::createFromAscii( "text/richtext" ),
+	OUString::createFromAscii( "text/html" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "image/bmp" ),
@@ -102,6 +107,7 @@ static OUString aSupportedMimeTypes[] = {
 
 // List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
@@ -241,6 +247,11 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 						{
 							Sequence< sal_Int8 > aData;
 							aValue >>= aData;
+
+							// Add HTML Microsoft Office headers
+							if ( nType == 'HTML' )
+								aData = TextHtmlToHTMLFormat( aData );
+
 							sal_Int8 *pArray = aData.getArray();
 							sal_Int32 nLen = aData.getLength();
 							if ( pArray && nLen )
@@ -564,11 +575,18 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 						// Replace carriage returns with line feeds
 						sal_Char *pArray = (sal_Char *)aExportData.getArray();
-						for ( int j = 0; j < nLen; j++ )
+						if ( pArray )
 						{
-							if ( pArray[ j ] == '\r' )
-								pArray[ j ] = '\n';
+							for ( int j = 0; j < nLen; j++ )
+							{
+								if ( pArray[ j ] == '\r' )
+									pArray[ j ] = '\n';
+							}
 						}
+
+						// Strip out HTML Microsoft Office headers
+						if ( nRequestedType == 'HTML' && isHTMLFormat( aExportData ) )
+							aExportData = HTMLFormatToTextHtml( aExportData );
 
 						out <<= aExportData;
 					}
