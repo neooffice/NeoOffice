@@ -6799,6 +6799,9 @@ void PDFWriterImpl::drawHorizontalGlyphs(
     aRunEnds.push_back( rGlyphs.size() );
 
     // loop over runs of the same font
+#ifdef USE_JAVA
+    Point aStartPos;
+#endif	// USE_JAVA
     sal_uInt32 nBeginRun = 0;
     for( size_t nRun = 0; nRun < aRunEnds.size(); nRun++ )
     {
@@ -6807,6 +6810,10 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         // back transformation to current coordinate system
         aCurPos = m_pReferenceDevice->PixelToLogic( aCurPos );
         aCurPos += rAlignOffset;
+#ifdef USE_JAVA
+        if( nRun == 0 )
+            aStartPos = aCurPos;
+#endif	// USE_JAVA
         // the first run can be set with "Td" operator
         // subsequent use of that operator would move
         // the texline matrix relative to what was set before
@@ -6823,7 +6830,19 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aMat.skew( 0.0, fSkew );
             aMat.scale( fXScale, 1.0 );
             aMat.rotate( fAngle );
+#ifdef USE_JAVA
+            // Fix bug 3448 by properly scaling and rotating the position
+            Matrix3 aRotScale;
+            aRotScale.scale( fXScale, 1.0 );
+            if( fAngle != 0.0 )
+                aRotScale.rotate( -fAngle );
+
+            Point aDeltaPos = Point( aCurPos.X() - aStartPos.X(), aCurPos.Y() - aStartPos.Y() );
+            aDeltaPos = aRotScale.transform( aDeltaPos );
+            aMat.translate( aStartPos.X() + aDeltaPos.X(), aStartPos.Y() + aDeltaPos.Y() );
+#else	// USE_JAVA
             aMat.translate( aCurPos.X(), aCurPos.Y() );
+#endif	// USE_JAVA
             aMat.append( m_aPages.back(), rLine );
             rLine.append( " Tm\n" );
         }
