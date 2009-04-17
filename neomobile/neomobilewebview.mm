@@ -50,19 +50,28 @@
 using namespace rtl;
 using namespace vos;
 
-static const NSString *pTestBaseURLs[] = {
+// Always use the test URLs
+#define TEST
+
+#ifdef TEST
+static const NSString *pBaseURLs[] = {
+#ifndef DEBUG
 	@"https://neomobile-test.neooffice.org/",
+#endif	// !DEBUG
 	@"https://neomobile-test-primary.neooffice.org/",
 	@"https://neomobile-test-backup.neooffice.org/",
 	@"https://neomobile-test-backup2.neooffice.org/"
 };
-
-static const NSString *pProductionBaseURLs[] = {
+#else	// TEST
+static const NSString *pBaseURLs[] = {
+#ifndef DEBUG
 	@"https://neomobile.neooffice.org/",
+#endif	// !DEBUG
 	@"https://neomobile-primary.neooffice.org/",
 	@"https://neomobile-backup.neooffice.org/",
 	@"https://neomobile-backup2.neooffice.org/"
 };
+#endif	// TEST
 
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
@@ -131,7 +140,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[super initWithFrame:aFrame frameName:pFrameName groupName:pGroupName];
 
 	mnBaseURLEntry = 0;
-	mpBaseURLs = [NSArray arrayWithObjects:pTestBaseURLs count:sizeof( pTestBaseURLs ) / sizeof( NSString* )];
+	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:sizeof( pBaseURLs ) / sizeof( NSString* )];
 	if ( mpBaseURLs )
 	{
 		[mpBaseURLs retain];
@@ -404,6 +413,10 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			fprintf( stderr, "    %s: %s\n", [pKey cStringUsingEncoding:NSUTF8StringEncoding], pValue ? [pValue cStringUsingEncoding:NSUTF8StringEncoding] : "" );
 		}
 	}
+
+	NSData *pData = [pDataSource data];
+	if ( pData && [pData bytes] )
+		fprintf( stderr, "Content:\n%s\n\n", (const char *)[pData bytes] );
 #endif	// DEBUG
 
 	// Post a NeoMobilExportFileAppEvent and have the OOo code execute it
