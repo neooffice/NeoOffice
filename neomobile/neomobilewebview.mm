@@ -153,7 +153,10 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 	WebPreferences *pPrefs = [self preferences];
 	if ( pPrefs )
+	{
+		[pPrefs setPrivateBrowsingEnabled:YES];
 		[pPrefs setJavaScriptEnabled:YES];
+	}
 
 	[self setResourceLoadDelegate:self];
 	[self setFrameLoadDelegate:self];
