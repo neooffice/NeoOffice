@@ -1,30 +1,29 @@
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
  * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of OpenOffice.org.
+ * This file is part of NeoOffice.
  *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified April 2009 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -2520,10 +2519,18 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
         }
 
         SwTwips nSz = 0, nCalc;
+#ifdef USE_JAVA
+        nCalc = 0;
+#endif  // USE_JAVA
         SwWW8Writer::InsUInt16( aAt, (USHORT)nTblOffset );
 
         for (nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
         {
+#ifdef USE_JAVA
+            // Fix bug 3449 by testing array bounds
+            if (nBox < nColCnt)
+            {
+#endif  // USE_JAVA
             if( (nBox > 0 && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ])
                 || pBoxArr[nBox] == NULL)
                 continue;
@@ -2532,6 +2539,9 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
             const SwFmtFrmSize& rLSz = pBoxFmt->GetFrmSize();
             nSz += rLSz.GetWidth();
             nCalc = nSz;
+#ifdef USE_JAVA
+            }
+#endif  // USE_JAVA
             if( bRelBoxSize )
             {
                 nCalc *= nPageSize;
@@ -2543,6 +2553,11 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
 
         for (nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
         {
+#ifdef USE_JAVA
+            // Fix bug 3449 by testing array bounds
+            if (nBox < nColCnt)
+            {
+#endif  // USE_JAVA
             if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
                 continue;
             // rgf, erstmal alles 0 - WW8: 4, sonst 2 Byte
@@ -2574,9 +2589,15 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
                 }
                 SwWW8Writer::InsUInt16( aAt, nFlags );
             }
+#ifndef USE_JAVA
             ++nRealBox;
+#endif  // !USE_JAVA
             aAt.Insert( aNullBytes, 2, aAt.Count() );   // dummy
             rWW8Wrt.Out_SwFmtTableBox( aAt, rFmt.GetBox() ); // 8/16 Byte
+#ifdef USE_JAVA
+            }
+            ++nRealBox;
+#endif  // USE_JAVA
         }
 
         //Cell widths and heights
@@ -2595,6 +2616,11 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
             //Export non default border spacing
             for( nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
             {
+#ifdef USE_JAVA
+                // Fix bug 3449 by testing array bounds
+                if (nBox < nColCnt)
+                {
+#endif  // USE_JAVA
                 if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
                     continue;
                 const SwFrmFmt& rFmt = *pBoxArr[ nBox ]->GetBox()->GetFrmFmt();
@@ -2614,12 +2640,20 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
                         SwWW8Writer::InsUInt16(aAt, nDist);
                     }
                 }
+#ifdef USE_JAVA
+                }
+#endif  // USE_JAVA
                 ++nRealBox;
             }
 
             //Export any vertical direction cells
             for (nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
             {
+#ifdef USE_JAVA
+                // Fix bug 3449 by testing array bounds
+                if (nBox < nColCnt)
+                {
+#endif  // USE_JAVA
                 if( nBox && pBoxArr[nBox-1] == pBoxArr[nBox])
                     continue;
                 const SwFrmFmt& rFmt = *pBoxArr[ nBox ]->GetBox()->GetFrmFmt();
@@ -2632,6 +2666,9 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
                     aAt.Insert(BYTE(nBox + 1), aAt.Count());    //end range
                     SwWW8Writer::InsUInt16(aAt, 5); //Equals vertical writing
                 }
+#ifdef USE_JAVA
+                }
+#endif  // USE_JAVA
                 ++nRealBox;
             }
 
@@ -2662,6 +2699,11 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
             nBackg = 0;
             for( nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox )
             {
+#ifdef USE_JAVA
+                // Fix bug 3449 by testing array bounds
+                if (nBox < nColCnt)
+                {
+#endif  // USE_JAVA
                 if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
                     continue;
 
@@ -2670,6 +2712,9 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
                     SFX_ITEM_ON == pCell->GetBox()->GetFrmFmt()->
                     GetItemState( RES_BACKGROUND, false) )
                     nBackg = nRealBox + 1;
+#ifdef USE_JAVA
+                }
+#endif  // USE_JAVA
                 ++nRealBox;
             }
         }
@@ -2689,6 +2734,11 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
             const SfxPoolItem* pI;
             for( nBox = 0, nRealBox = 0; nRealBox < nBackg; ++nBox )
             {
+#ifdef USE_JAVA
+                // Fix bug 3449 by testing array bounds
+                if (nBox < nColCnt)
+                {
+#endif  // USE_JAVA
                 if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
                     continue;
 
@@ -2702,6 +2752,9 @@ Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
                 }
                 else
                     pColors[nRealBox] = COL_AUTO;
+#ifdef USE_JAVA
+                }
+#endif  // USE_JAVA
                 ++nRealBox;
             }
 
