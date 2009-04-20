@@ -79,7 +79,7 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
-static bool bInDragEvent = false;
+static JavaDropTarget *pLastDropTargetEntered = NULL;
 
 // ========================================================================
 
@@ -127,20 +127,6 @@ static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
 		nActions |= DNDConstants::ACTION_DEFAULT;
 
 	return nActions;
-}
-
-// ------------------------------------------------------------------------
-
-static void ImplSetDragDropAction( DragRef aDrag, sal_Int8 nActions )
-{
-	if ( nActions & DNDConstants::ACTION_MOVE )
-		SetDragDropAction( aDrag, kDragActionMove );
-	else if ( nActions & DNDConstants::ACTION_COPY )
-		SetDragDropAction( aDrag, kDragActionCopy );
-	else if ( nActions & DNDConstants::ACTION_LINK )
-		SetDragDropAction( aDrag, kDragActionAlias );
-	else
-		SetDragDropAction( aDrag, kDragActionNothing );
 }
 
 // ------------------------------------------------------------------------
@@ -273,12 +259,6 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 	if ( !IsValidWindowPtr( aWindow ) )
 		return noErr;
 
-	// Fix crashing when dragging PDF file repeatedly
-	// over a Writer window
-	if ( bInDragEvent )
-		return noErr;
-	bInDragEvent = true;
-
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -311,14 +291,25 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					switch ( nMessage )
 					{
 						case kDragTrackingEnterWindow:
+							pLastDropTargetEntered = pTarget;
 							for ( sal_uInt16 i = 1; i <= nCount; i++ )
 								pTarget->handleDragEnter( nX, nY, aDrag, i );
 							break;
 						case kDragTrackingInWindow:
-							pTarget->handleDragOver( nX, nY, aDrag );
+							// Fix bug 3450 by ignoring drag over events
+							if ( pLastDropTargetEntered != pTarget )
+							{
+								pLastDropTargetEntered = pTarget;
+								for ( sal_uInt16 i = 1; i <= nCount; i++ )
+									pTarget->handleDragEnter( nX, nY, aDrag, i );
+							}
 							break;
 						case kDragTrackingLeaveWindow:
-							pTarget->handleDragExit( nX, nY, aDrag );
+							if ( pLastDropTargetEntered == pTarget )
+							{
+								pTarget->handleDragExit( nX, nY, aDrag );
+								pLastDropTargetEntered = NULL;
+							}
 							break;
 						default:
 							break;
@@ -331,8 +322,6 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 			rSolarMutex.release();
 		}
 	}
-
-	bInDragEvent = false;
 
 	return noErr;
 }
@@ -375,19 +364,24 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 
 					ImplUpdateCurrentAction( aDrag );
 
-					for ( sal_uInt16 i = 1; i <= nCount; i++ )
+					if ( pLastDropTargetEntered == pTarget )
 					{
-						// Drag over to make sure that the OOo code does not
-						// ignore the drop
-						if ( i > 1 )
+						for ( sal_uInt16 i = 1; i <= nCount; i++ )
 						{
-							pTarget->handleDragExit( nX, nY, aDrag );
-							pTarget->handleDragEnter( nX, nY, aDrag, i );
+							// Drag over to make sure that the OOo code does not
+							// ignore the drop
+							if ( i > 1 )
+							{
+								pTarget->handleDragExit( nX, nY, aDrag );
+								pTarget->handleDragEnter( nX, nY, aDrag, i );
+							}
+
+							// Treat any subset that succeed as success
+							if ( pTarget->handleDrop( nX, nY, aDrag, i ) )
+								nRet = noErr;
 						}
 
-						// Treat any subset that succeed as success
-						if ( pTarget->handleDrop( nX, nY, aDrag, i ) )
-							nRet = noErr;
+						pLastDropTargetEntered = NULL;
 					}
 
 					if ( nRet == noErr )
@@ -576,7 +570,7 @@ void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) thr
 {
 	if ( arguments.getLength() > 1 )
 	{
-		sal_Int32 nPtr;
+		sal_Int32 nPtr = 0;
 		arguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
 			mpEnvData = (SystemEnvData *)nPtr;
@@ -752,6 +746,8 @@ void JavaDropTarget::disposing()
 	mpEnvData = NULL;
 	mpWindow = NULL;
 	aDropTargets.remove( this );
+	if ( pLastDropTargetEntered == this )
+		pLastDropTargetEntered = NULL;
 }
 
 // --------------------------------------------------------------------------
@@ -760,7 +756,7 @@ void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) thr
 {
 	if ( arguments.getLength() > 1 )
 	{
-		sal_Int32 nPtr;
+		sal_Int32 nPtr = 0;
 		arguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
 			mpEnvData = (SystemEnvData *)nPtr;
