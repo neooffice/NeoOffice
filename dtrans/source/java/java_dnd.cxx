@@ -77,7 +77,6 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 static bool bNoRejectCursor = true;
-static JavaDropTarget *pLastDropTargetEntered = NULL;
 
 // ========================================================================
 
@@ -289,25 +288,14 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					switch ( nMessage )
 					{
 						case kDragTrackingEnterWindow:
-							pLastDropTargetEntered = pTarget;
 							for ( sal_uInt16 i = 1; i <= nCount; i++ )
 								pTarget->handleDragEnter( nX, nY, aDrag, i );
 							break;
 						case kDragTrackingInWindow:
-							// Fix bug 3450 by ignoring drag over events
-							if ( pLastDropTargetEntered != pTarget )
-							{
-								pLastDropTargetEntered = pTarget;
-								for ( sal_uInt16 i = 1; i <= nCount; i++ )
-									pTarget->handleDragEnter( nX, nY, aDrag, i );
-							}
+							pTarget->handleDragOver( nX, nY, aDrag );
 							break;
 						case kDragTrackingLeaveWindow:
-							if ( pLastDropTargetEntered == pTarget )
-							{
-								pTarget->handleDragExit( nX, nY, aDrag );
-								pLastDropTargetEntered = NULL;
-							}
+							pTarget->handleDragExit( nX, nY, aDrag );
 							break;
 						default:
 							break;
@@ -362,24 +350,19 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 
 					ImplUpdateCurrentAction( aDrag );
 
-					if ( pLastDropTargetEntered == pTarget )
+					for ( sal_uInt16 i = 1; i <= nCount; i++ )
 					{
-						for ( sal_uInt16 i = 1; i <= nCount; i++ )
+						// Drag over to make sure that the OOo code does not
+						// ignore the drop
+						if ( i > 1 )
 						{
-							// Drag over to make sure that the OOo code does not
-							// ignore the drop
-							if ( i > 1 )
-							{
-								pTarget->handleDragExit( nX, nY, aDrag );
-								pTarget->handleDragEnter( nX, nY, aDrag, i );
-							}
-
-							// Treat any subset that succeed as success
-							if ( pTarget->handleDrop( nX, nY, aDrag, i ) )
-								nRet = noErr;
+							pTarget->handleDragExit( nX, nY, aDrag );
+							pTarget->handleDragEnter( nX, nY, aDrag, i );
 						}
 
-						pLastDropTargetEntered = NULL;
+						// Treat any subset that succeed as success
+						if ( pTarget->handleDrop( nX, nY, aDrag, i ) )
+							nRet = noErr;
 					}
 
 					if ( nRet == noErr )
@@ -742,8 +725,6 @@ void JavaDropTarget::disposing()
 	mpEnvData = NULL;
 	mpWindow = NULL;
 	aDropTargets.remove( this );
-	if ( pLastDropTargetEntered == this )
-		pLastDropTargetEntered = NULL;
 }
 
 // --------------------------------------------------------------------------

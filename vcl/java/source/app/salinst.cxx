@@ -200,7 +200,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						}
 					}
 
-					ReceiveNextEvent( 0, NULL, 0, false, NULL );
+					CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 
 					// Wakeup the event queue by sending it a dummy event
 					aEventQueueCondition.reset();
@@ -261,7 +261,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 					// We need to let any timers run that were added by any menu
 					// changes. Otherwise, some menus will be drawn in the state
 					// that they were in before we updated the menus.
-					ReceiveNextEvent( 0, NULL, 0, false, NULL );
+					CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 				}
 
 				rSolarMutex.release();
@@ -997,7 +997,7 @@ void SalYieldMutex::acquire()
 						release();
 					break;
 				}
-				ReceiveNextEvent( 0, NULL, 0, false, NULL );
+				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 
 				// Wait for other thread to release mutex
 				maMainThreadCondition.reset();

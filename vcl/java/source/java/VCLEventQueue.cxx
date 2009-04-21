@@ -123,7 +123,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMain
 	if ( GetCurrentEventLoop() == GetMainEventLoop() )
 	{
 		bRet = JNI_TRUE;
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 	}
 
 	return bRet;
@@ -134,7 +134,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMain
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers( JNIEnv *pEnv, jobject object )
 {
 	if ( GetCurrentEventLoop() == GetMainEventLoop() )
-		ReceiveNextEvent( 0, NULL, 0, false, NULL );
+		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 }
 
 // ============================================================================
