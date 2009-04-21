@@ -245,15 +245,11 @@ BOOL VCLInstance_updateNativeMenus()
 	{
 		if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 		{
-			// Fix update problem in bug 1577 when the menubar is
-			// selected and the focus frame is a child of another
-			// frame
-			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
-			while ( pFrame && pFrame->mbVisible )
-			{
-				UpdateMenusForFrame( pFrame, NULL, true );
-				pFrame = pFrame->mpParent;
-			}
+			// Fix bug 3451 by only updating the focus frame and not its
+			// parent frames as updating the parent frames is no longer
+			// necessary since child frames no longer display their parent's
+			// menus
+			UpdateMenusForFrame( pSalData->mpFocusFrame, NULL, true );
 		}
 		else
 		{
