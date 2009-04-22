@@ -645,6 +645,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * POINTER_PAINTBRUSH constant.
 	 */
 	public final static int POINTER_PAINTBRUSH = 93;
+
+	/**
+	 * MODIFIER_RELEASE_INTERVAL constant.
+	 */
+	public final static long MODIFIER_RELEASE_INTERVAL = 100;
 	
 	/**
 	 * The component to <code>VCLFrame</code> mapping.
@@ -1449,6 +1454,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The Tiger flag.
 	 */
 	private boolean isTiger = false;
+
+	/**
+	 * The last Meta modifier released time.
+	 */
+	private long lastMetaModifierReleasedTime = 0;
 
 	/**
 	 * The last committed input method event.
@@ -2314,6 +2324,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		int keyCode = e.getKeyCode();
 		int modifiers = e.getModifiersEx();
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_META) {
+			if (keyCode == KeyEvent.VK_META)
+				lastMetaModifierReleasedTime = 0;
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
@@ -2338,6 +2350,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		int keyCode = e.getKeyCode();
 		int modifiers = e.getModifiersEx();
 		if (keyCode == KeyEvent.VK_SHIFT || keyCode == KeyEvent.VK_CONTROL || keyCode == KeyEvent.VK_ALT || keyCode == KeyEvent.VK_META) {
+			if (keyCode == KeyEvent.VK_META)
+				lastMetaModifierReleasedTime = e.getWhen() + MODIFIER_RELEASE_INTERVAL;
 			VCLEvent keyModChangeEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYMODCHANGE, this, 0);
 			queue.postCachedEvent(keyModChangeEvent);
 		}
@@ -2491,8 +2505,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if ((remainingModifiers & InputEvent.BUTTON1_DOWN_MASK) == 0)
 			lastWindowDraggedEvent = null;
 
-		// Use adjusted modifiers
+		// Use adjusted modifiers. Fix bug 3453 by adding back any recently
+		// released modifiers.
 		int modifiers = queue.getLastAdjustedMouseModifiers();
+		if (lastMetaModifierReleasedTime >= e.getWhen())
+			modifiers |= InputEvent.META_DOWN_MASK;
 		e = new MouseEvent(e.getComponent(), e.getID(), e.getWhen(), e.getModifiers() | modifiers, e.getX(), e.getY(), e.getClickCount(), e.isPopupTrigger());
 
 		// The JVM can get confused when we click on a non-focused window. In
