@@ -31,7 +31,7 @@
 							<value/>
 						</prop>
 						<prop oor:name="Context" oor:type="xs:string">
-							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument;com.sun.star.text.WebDocument;com.sun.star.text.GlobalDocument;com.sun.star.formula.FormularProperties</value>
+							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument,com.sun.star.text.WebDocument,com.sun.star.text.GlobalDocument,com.sun.star.formula.FormulaProperties</value>
 						</prop>
 					</node>
 					<node oor:name="open" oor:op="replace">
@@ -48,7 +48,7 @@
 							<value/>
 						</prop>
 						<prop oor:name="Context" oor:type="xs:string">
-							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument;com.sun.star.text.WebDocument;com.sun.star.text.GlobalDocument;com.sun.star.formula.FormularProperties</value>
+							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument,com.sun.star.text.WebDocument,com.sun.star.text.GlobalDocument,com.sun.star.formula.FormulaProperties</value>
 						</prop>
 					</node>
 				</node>
