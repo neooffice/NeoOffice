@@ -435,8 +435,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	ULONG nCount;
 	SalData *pSalData = GetSalData();
 
+	bool bMainEventLoop = ( GetCurrentEventLoop() == GetMainEventLoop() );
+
 	// Fix bug 2575 by manually dispatching native events.
-	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( bMainEventLoop )
 	{
 		// Fix bug 2731 by not doing this when we are in the begin menubar
 		// tracking handler.
@@ -512,12 +514,12 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
  	// Fix bug 3455 by always acquiring the event queue mutex during the
  	// entire Java event dispatching process
- 	if ( GetCurrentEventLoop() != GetMainEventLoop() )
+	if ( !bMainEventLoop )
 	{
 		nCount = ReleaseYieldMutex();
-		aEventQueueMutex.acquire();
 		if ( !nCount )
 			nTimeout = 0;
+		aEventQueueMutex.acquire();
 	}
 	else
 	{
@@ -575,8 +577,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	if ( nCount )
 		AcquireYieldMutex( nCount );
 
-	aEventQueueMutex.release();
-	aEventQueueCondition.set();
+	if ( !bMainEventLoop )
+	{
+		aEventQueueMutex.release();
+		aEventQueueCondition.set();
+	}
 
 	// Update all objects
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
