@@ -253,11 +253,7 @@ BOOL VCLInstance_updateNativeMenus()
 		}
 		else
 		{
-			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
-			{
-				if ( (*it)->mbVisible )
-					UpdateMenusForFrame( *it, NULL, true );
-			}
+			bRet = FALSE;
 		}
 
 		// We need to let any timers run that were added by any menu
@@ -523,13 +519,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			nTimeout = 10;
 	}
 
-	// Dispatch any newly posted events
-	if ( nTimeout )
+	// Fix bug 3455 by always acquiring the event queue mutex during the
+	// entire Java event dispatching process
+	if ( GetCurrentEventLoop() != GetMainEventLoop() )
 	{
 		nCount = ReleaseYieldMutex();
-		if ( nCount )
-			aEventQueueMutex.acquire();
-		else
+		aEventQueueMutex.acquire();
+		if ( !nCount )
 			nTimeout = 0;
 	}
 	else
@@ -547,8 +543,6 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		if ( nCount )
 		{
 			AcquireYieldMutex( nCount );
-			aEventQueueMutex.release();
-			aEventQueueCondition.set();
 			nCount = 0;
 		}
 
@@ -591,11 +585,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	}
 
 	if ( nCount )
-	{
 		AcquireYieldMutex( nCount );
-		aEventQueueMutex.release();
-		aEventQueueCondition.set();
-	}
+
+	aEventQueueMutex.release();
+	aEventQueueCondition.set();
 
 	// Update all objects
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
