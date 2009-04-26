@@ -445,6 +445,15 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		if ( pSalData->maNativeEventCondition.check() )
 			NSApplication_dispatchPendingEvents();
 	}
+	else
+	{
+		// Fix bug 3455 by always acquiring the event queue mutex during the
+		// entire event dispatching process
+		nCount = ReleaseYieldMutex();
+		aEventQueueMutex.acquire();
+		if ( nCount )
+			AcquireYieldMutex( nCount );
+	}
 
 	com_sun_star_vcl_VCLEvent *pEvent;
 
@@ -453,6 +462,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	{
 		pEvent->dispatch();
 		delete pEvent;
+		if ( !bMainEventLoop )
+			aEventQueueMutex.release();
 		return;
 	}
 
@@ -464,14 +475,19 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		pSalData->maPendingDocumentEventsList.pop_front();
 		pEvent->dispatch();
 		delete pEvent;
+		if ( !bMainEventLoop )
+			aEventQueueMutex.release();
 		return;
 	}
 
-	if ( pSalData->maNativeEventCondition.check() )
+	if ( !bMainEventLoop && pSalData->maNativeEventCondition.check() )
 	{
+		aEventQueueMutex.release();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();
-		AcquireYieldMutex( nCount );
+		aEventQueueMutex.acquire();
+		if ( nCount )
+			AcquireYieldMutex( nCount );
 	}
 
 	// Check timer
@@ -491,7 +507,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( bWait && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
+	if ( !bMainEventLoop && bWait && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
 		if ( pSalData->mnTimerInterval )
 		{
@@ -512,14 +528,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			nTimeout = 10;
 	}
 
- 	// Fix bug 3455 by always acquiring the event queue mutex during the
- 	// entire Java event dispatching process
-	if ( !bMainEventLoop )
+	if ( nTimeout )
 	{
 		nCount = ReleaseYieldMutex();
 		if ( !nCount )
 			nTimeout = 0;
-		aEventQueueMutex.acquire();
 	}
 	else
 	{
