@@ -141,8 +141,7 @@ public:
 	virtual void			toggle() {}
 };
 
-static ::osl::Mutex aEventQueueMutex;
-static ::osl::Condition aEventQueueCondition;
+static SalYieldMutex aEventQueueMutex;
 
 using namespace rtl;
 using namespace vcl;
@@ -187,41 +186,13 @@ BOOL VCLInstance_updateNativeMenus()
 
 	// Make sure that any events fetched from the queue while the application
 	// mutex was unlocked are already dispatched before we try to lock the mutex
-	TimeValue aDelay;
-	aDelay.Seconds = 0;
-	aDelay.Nanosec = 50;
-	while ( !Application::IsShutDown() )
-	{
-		if ( aEventQueueMutex.tryToAcquire() )
-		{
-			if ( Application::IsShutDown() )
-			{
-				aEventQueueMutex.release();
-				aEventQueueCondition.set();
-				return bRet;
-			}
-			else
-			{
-				break;
-			}
-		}
-
-		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
-
-		// Wakeup the event queue by sending it a dummy event
-		aEventQueueCondition.reset();
-		com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-		pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
-		aEventQueueCondition.wait( &aDelay );
-		aEventQueueCondition.set();
-	}
+	aEventQueueMutex.acquire();
 
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
 	{
 		aEventQueueMutex.release();
-		aEventQueueCondition.set();
 		return bRet;
 	}
 
@@ -264,9 +235,40 @@ BOOL VCLInstance_updateNativeMenus()
 
 	rSolarMutex.release();
 	aEventQueueMutex.release();
-	aEventQueueCondition.set();
 
 	return bRet;
+}
+
+// -----------------------------------------------------------------------
+
+static ULONG ReleaseEventQueueMutex()
+{
+	if ( aEventQueueMutex.GetThreadId() == OThread::getCurrentIdentifier() )
+	{
+		ULONG nCount = aEventQueueMutex.GetAcquireCount();
+		ULONG n = nCount;
+		while ( n )
+		{
+			aEventQueueMutex.release();
+			n--;
+		}
+		return nCount;
+	}
+	else
+	{
+		return 0;
+	}
+}
+
+// -----------------------------------------------------------------------
+
+static void AcquireEventQueueMutex( ULONG nCount )
+{
+	while ( nCount )
+	{
+		aEventQueueMutex.acquire();
+		nCount--;
+	}
 }
 
 // ----------------------------------------------------------------------------
@@ -484,10 +486,11 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	if ( !bMainEventLoop && pSalData->maNativeEventCondition.check() )
 	{
-		aEventQueueMutex.release();
+		ULONG nEventQueueMutexCount = ReleaseEventQueueMutex();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();
-		aEventQueueMutex.acquire();
+		if ( nEventQueueMutexCount )
+			AcquireEventQueueMutex( nEventQueueMutexCount );
 		if ( nCount )
 			AcquireYieldMutex( nCount );
 	}
@@ -602,10 +605,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		AcquireYieldMutex( nCount );
 
 	if ( !bMainEventLoop )
-	{
 		aEventQueueMutex.release();
-		aEventQueueCondition.set();
-	}
 
 	// Update all objects
 	for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
