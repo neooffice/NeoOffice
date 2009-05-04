@@ -1275,6 +1275,13 @@ static long ImplHandleKey( Window* pWindow, USHORT nSVEvent,
             nRet = 0;
     }
 
+#ifdef USE_JAVA
+    // Fix crashing bug when Impress' Slide Pane is undocked and
+    // Command-Shift-F10 is pressed to dock it
+    if( !nRet && !pWindow->ImplGetWindowImpl() )
+        nRet = 1;
+#endif	// USE_JAVA
+
     // #105591# send keyinput to parent if we are a floating window and the key was not pocessed yet
     if( !nRet && pWindow->ImplGetWindowImpl()->mbFloatWin && pWindow->GetParent() && (pWindow->ImplGetWindowImpl()->mpFrame != pWindow->GetParent()->ImplGetWindowImpl()->mpFrame) )
     {

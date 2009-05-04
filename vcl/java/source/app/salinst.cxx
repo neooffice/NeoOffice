@@ -205,16 +205,23 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 					pSalData->mpFirstInstance->Yield( false, true );
 
-				bool bSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
+				// Fix bug 3451 by not updating menus when there is a modal
+				// dialog
+				bool bSucceeded = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet && !pSVData->maWinData.mpLastExecuteDlg );
 				if ( bSucceeded )
 				{
 					if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 					{
-						// Fix bug 3451 by only updating the focus frame and
-						// not its parent frames as updating the parent frames
-						// is no longer necessary since child frames no longer
-						// display their parent's menus
-						UpdateMenusForFrame( pSalData->mpFocusFrame, NULL );
+						// Fix update problem in bug 1577 when the menubar is
+						// selected and the focus frame is a child of another
+						// frame. Fix bug 3461 by updating parent frame's
+						// menu.
+						JavaSalFrame *pFrame = pSalData->mpFocusFrame;
+						while ( pFrame && pFrame->mbVisible )
+						{
+							UpdateMenusForFrame( pFrame, NULL );
+							pFrame = pFrame->mpParent;
+						}
 					}
 					else
 					{
