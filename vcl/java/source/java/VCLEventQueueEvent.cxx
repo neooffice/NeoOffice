@@ -521,11 +521,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					aEvent.dispatch();
 				}
 				// Pass all potential menu shortcuts received by a utility
-				// window to its parent window
-				if ( pKeyEvent->mnCode & KEY_MOD1 )
+				// window to its parent window. Fix bug 3432 by not sending
+				// Command-Shift-F10 to parent.
+				if ( pKeyEvent->mnCode & KEY_MOD1 && pKeyEvent->mnCode != ( KEY_MOD1 | KEY_SHIFT | KEY_F10 ) )
 				{
-					// Fix bug 3432 by not sending Command-Shift-F10 to parent
-					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() && pKeyEvent->mnCode != ( KEY_MOD1 | KEY_SHIFT | KEY_F10 ) )
+					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
 				}
 				pFrame->CallCallback( nID, pKeyEvent );
