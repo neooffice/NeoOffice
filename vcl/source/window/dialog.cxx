@@ -647,7 +647,7 @@ BOOL Dialog::ImplStartExecuteModal()
 	// it will deadlock. Also, fix bug 1108 by not running it if a native sheet
 	// is being displayed.
 	if ( GetAppSalData()->mbInSignalHandler || GetAppSalData()->mbInNativeModalSheet )
-		return 0;
+		return FALSE;
 #endif	// USE_JAVA
 
     ImplSVData* pSVData = ImplGetSVData();
@@ -683,7 +683,6 @@ BOOL Dialog::ImplStartExecuteModal()
 	mpWindowImpl->mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
 #endif	// USE_JAVA
 
-    pSVData->maAppData.mnModalMode++;
     pSVData->maAppData.mnModalMode++;
     return TRUE;
 }
