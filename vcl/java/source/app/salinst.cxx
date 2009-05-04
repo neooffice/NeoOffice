@@ -211,18 +211,17 @@ BOOL VCLInstance_updateNativeMenus()
 	while ( !Application::IsShutDown() && !pSalData->maNativeEventCondition.check() )
 		pSalData->mpFirstInstance->Yield( false, true );
 
-	bRet = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet );
+	// Fix bug 3451 by not updating menus when there is a modal dialog
+	bRet = ( !Application::IsShutDown() && !pSalData->mbInNativeModalSheet && !pSVData->maWinData.mpLastExecuteDlg );
 	if ( bRet )
 	{
 		if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
 		{
-			// Fix update problem in bug 1577 when the menubar is
-			// selected and the focus frame is a child of another
-			// frame. Fix bug 3451 by not updating parent frame's menu when
-			// there is a modal dialog. Fix bug 3461 by updating parent frame's
-			// menu is there is not a modal dialog.
+			// Fix update problem in bug 1577 when the menubar is selected and
+			// the focus frame is a child of another frame. Fix bug 3461 by
+			// updating parent frame's menu.
 			JavaSalFrame *pFrame = pSalData->mpFocusFrame;
-			while ( pFrame && pFrame->mbVisible && !pSVData->maWinData.mpLastExecuteDlg )
+			while ( pFrame && pFrame->mbVisible )
 			{
 				UpdateMenusForFrame( pFrame, NULL, true );
 				pFrame = pFrame->mpParent;
