@@ -1986,9 +1986,11 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		pPict->SeekRel(2); *pPict >> nUSHORT; nDataSize=4+nUSHORT;
 		break;
 
+#ifdef USE_JAVA
 	case 0x8200:   // Compressed QuickTime Image
 		nDataSize=ReadQuickTimeImage();
 		break;
+#endif	// USE_JAVA
 
 	default: // 0x00a2 bis 0xffff (zumeist Reserved)
 		if      (nOpcode<=0x00af) { *pPict >> nUSHORT; nDataSize=2+nUSHORT; }
