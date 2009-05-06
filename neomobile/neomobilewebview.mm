@@ -199,26 +199,21 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		NSFont *theFont = [NSFont fontWithName:[[theCell font] fontName] size:fontSize];
 		[theCell setFont:theFont];
 		[theCell setControlSize:NSSmallControlSize];
-		
-		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(100, 0, kNMDefaultBrowserWidth-100, 24)];
+
+		mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect([mpcancelButton bounds].size.width, 0, kNMDefaultBrowserWidth-[mpcancelButton bounds].size.width, [mpcancelButton bounds].size.height)];
 		[mpstatusLabel setEditable:NO];
 		[mpstatusLabel setString:@""];
 		[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
 		[mpstatusLabel setDrawsBackground:NO];
-		
-		//ZeroHeightDividerSplitView *bottomView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 30)];
-		//[bottomView setVertical:YES];
-		
-		NSView *bottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, 24)];
-		
-		//NSBox *bottomView=[[NSBox alloc] initWithFrame:NSMakeRect(0, 0, 700, 30)];
-		//[bottomView setBorderType:NSNoBorder];
-		
-		//[bottomView setAutoresizesSubviews:YES];
+
+		fontSize=[NSFont systemFontSize];
+		theFont = [NSFont fontWithName:[theFont fontName] size:fontSize];
+		[mpstatusLabel setFont:theFont];
+
+		NSView *bottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, [mpcancelButton bounds].size.height)];
 		[bottomView setAutoresizesSubviews:YES];
-		
 		[bottomView setAutoresizingMask:(NSViewWidthSizable)];
-		
+
 		[bottomView addSubview:mpcancelButton];
 		[bottomView addSubview:mpstatusLabel];
 		
