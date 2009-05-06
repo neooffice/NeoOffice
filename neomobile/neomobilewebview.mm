@@ -430,25 +430,34 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
 		if ( pSaveURL )
 		{
+			NSApplication *pApp = [NSApplication sharedApplication];
 			NSMutableURLRequest *pURLRequest = [NSMutableURLRequest requestWithURL:pSaveURL];
 			NSFileManager *pFileManager = [NSFileManager defaultManager];
 			NSData *pPostBody = [NSMutableData dataWithLength:0];
-			if ( pURLRequest && pFileManager && pPostBody )
+			if ( pApp && pURLRequest && pFileManager && pPostBody )
 			{
-				NeoMobilExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
-
-				vos::IMutex& rSolarMutex = Application::GetSolarMutex();
-				rSolarMutex.acquire();
-
 				if ( Application::IsInMain() )
 				{
+					NeoMobilExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
+					mpexportEvent=&aEvent;
+
 					[mpcancelButton setEnabled:YES];
 					[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Exporting file...").c_str()]];
-					mpexportEvent=&aEvent;
-					
+
+					vos::IMutex& rSolarMutex = Application::GetSolarMutex();
+					rSolarMutex.acquire();
+
 					Application::PostUserEvent( LINK( &aEvent, NeoMobilExportFileAppEvent, ExportFile ) );
-					while ( !aEvent.IsFinished() && Application::IsInMain() )
-						Application::Reschedule();
+					rSolarMutex.release();
+
+					// Dispatch any pending native events until event is
+					// dispatched or cancelled
+					while ( Application::IsInMain() && !aEvent.IsFinished() && !aEvent.IsCanceled() )
+					{
+						NSEvent *pEvent;
+						while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+							[pApp sendEvent:pEvent];
+					}
 					
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
@@ -470,9 +479,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 						[pWebFrame loadRequest:pURLRequest];
 					}
 				}
-
-				rSolarMutex.release();
-
 			}
 		}
 	}
