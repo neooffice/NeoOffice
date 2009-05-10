@@ -472,6 +472,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 						
 						[self loadURI:[NSString stringWithFormat: @"/uploads/clienterror?errorCode=3&uuid=%@", pSaveUUIDHeader]];
 					}
+					else if(aEvent.GetErrorCode()!=0)
+					{
+						// other error code;  pass along to the server for
+						// display
+						
+						[self loadURI:[NSString stringWithFormat: @"/uploads/clienterror?errorCode=%d&uuid=%@", aEvent.GetErrorCode(), pSaveUUIDHeader]];
+					}
 					else
 					{
 						// start the upload

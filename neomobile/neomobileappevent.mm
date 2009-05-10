@@ -229,6 +229,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform OpenDocument export\n" );
 #endif	// DEBUG
+				mnErrorCode=1;
 				throw this;
 			}
 			
@@ -248,6 +249,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform PDF export\n" );
 #endif	// DEBUG
+				mnErrorCode=1;
 				throw this;
 			}
 			
@@ -273,6 +275,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				// remove temporary directory used to create zip file
 			
 				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES];
+				mnErrorCode=1;
 				throw this;
 			}
 			
@@ -295,6 +298,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
 #endif	// DEBUG
+				mnErrorCode=1;
 				throw this;
 			}
 						
