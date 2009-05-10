@@ -458,11 +458,19 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					[mpstatusLabel setString:@""];
 					mpexportEvent=NULL;
 					
-					if(aEvent.IsCanceled())
+					if(aEvent.IsUnsupportedComponentType())
 					{
-						// go back to publish page
+						// display unsupported doc type error to user and
+						// pass UUID back to server.
 						
-						[self goBack];
+						[self loadURI:[NSString stringWithFormat: @"/uploads/clienterror?errorCode=4&uuid=%@", pSaveUUIDHeader]];						
+					}
+					else if(aEvent.IsCanceled())
+					{
+						// display canceled error to user and pass URI back to
+						// server
+						
+						[self loadURI:[NSString stringWithFormat: @"/uploads/clienterror?errorCode=3&uuid=%@", pSaveUUIDHeader]];
 					}
 					else
 					{

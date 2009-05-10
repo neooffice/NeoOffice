@@ -50,6 +50,7 @@ class NeoMobilExportFileAppEvent
 	NSMutableData*			mpPostBody;
 	::rtl::OUString			maSaveUUID;
 	bool					mbCanceled;
+	bool					mbUnsupportedComponentType;
 
 public:
 							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
@@ -60,6 +61,7 @@ public:
 	NSData*					GetPostBody() { return mpPostBody; }
 	void					Cancel() { mbCanceled=true; }
 	bool					IsCanceled() { return(mbCanceled); }
+	bool					IsUnsupportedComponentType() { return(mbUnsupportedComponentType); }
 };
 
 #endif	// _NEOMOBILEAPPEVENT_HXX

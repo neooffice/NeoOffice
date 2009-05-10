@@ -140,7 +140,8 @@ NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSFi
 	mbFinished( false ),
 	mpPostBody( pPostBody ),
 	maSaveUUID( aSaveUUID ),
-	mbCanceled( false )
+	mbCanceled( false ),
+	mbUnsupportedComponentType( false )
 {
 }
 
@@ -172,6 +173,17 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to cast NeoOfficeMobile reference to service\n" );
 #endif	// DEBUG
 				return 0;
+			}
+			
+			// check that we have a supported document type.  If not, return without
+			// attempting to assemble the post or perform an export.
+			
+			OString mimeType = OUStringToOString(neoOfficeMobile->getMimeType(),RTL_TEXTENCODING_UTF8);
+			if(!mimeType.getLength())
+			{
+				mbUnsupportedComponentType = true;
+				mbFinished = true;
+				return(0);
 			}
 			
 			// embed the UUID within the current document.  This is saved 
@@ -332,9 +344,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
 			OString odfPartName = OUStringToOString(docExtension.copy(1),RTL_TEXTENCODING_UTF8); // extension with first period stripped off
-			
-			OString mimeType = OUStringToOString(neoOfficeMobile->getMimeType(),RTL_TEXTENCODING_UTF8);
-						
+									
 			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"unused.%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()], [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
 			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: mimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
 						
