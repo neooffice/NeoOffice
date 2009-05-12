@@ -185,7 +185,9 @@ BOOL VCLInstance_updateNativeMenus()
 	SalData *pSalData = GetSalData();
 
 	// Make sure that any events fetched from the queue while the application
-	// mutex was unlocked are already dispatched before we try to lock the mutex
+	// mutex was unlocked are already dispatched before we try to lock the
+	// mutex. Fix bug 3467 by speeding up acquiring of the event queue mutex
+	// by releasing the application mutex if already acquired by this thread.
 	ULONG nCount = Application::ReleaseSolarMutex();
 	aEventQueueMutex.acquire();
 	Application::AcquireSolarMutex( nCount );
