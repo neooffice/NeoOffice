@@ -186,7 +186,9 @@ BOOL VCLInstance_updateNativeMenus()
 
 	// Make sure that any events fetched from the queue while the application
 	// mutex was unlocked are already dispatched before we try to lock the mutex
+	ULONG nCount = Application::ReleaseSolarMutex();
 	aEventQueueMutex.acquire();
+	Application::AcquireSolarMutex( nCount );
 
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
@@ -460,8 +462,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// entire event dispatching process
 		nCount = ReleaseYieldMutex();
 		aEventQueueMutex.acquire();
-		if ( nCount )
-			AcquireYieldMutex( nCount );
+		AcquireYieldMutex( nCount );
 	}
 
 	com_sun_star_vcl_VCLEvent *pEvent;
@@ -494,10 +495,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		ULONG nEventQueueMutexCount = ReleaseEventQueueMutex();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();
-		if ( nEventQueueMutexCount )
-			AcquireEventQueueMutex( nEventQueueMutexCount );
-		if ( nCount )
-			AcquireYieldMutex( nCount );
+		AcquireEventQueueMutex( nEventQueueMutexCount );
+		AcquireYieldMutex( nCount );
 	}
 
 	// Check timer
@@ -562,11 +561,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	{
 		nTimeout = 0;
 
-		if ( nCount )
-		{
-			AcquireYieldMutex( nCount );
-			nCount = 0;
-		}
+		AcquireYieldMutex( nCount );
+		nCount = 0;
 
 		USHORT nID = pEvent->getID();
 		size_t nFrames = pSalData->maFrameList.size();
@@ -606,8 +602,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			bContinue = false;
 	}
 
-	if ( nCount )
-		AcquireYieldMutex( nCount );
+	AcquireYieldMutex( nCount );
 
 	if ( !bMainEventLoop )
 		aEventQueueMutex.release();
@@ -1042,16 +1037,16 @@ void SalYieldMutex::release()
 
 		if ( mnCount )
 			mnCount--;
+
+		// Notify main thread that it can grab the mutex
+		if ( !mnCount && !maMainThreadCondition.check() )
+		{
+			maMainThreadCondition.set();
+			OThread::yield();
+		}
 	}
 
 	OMutex::release();
-
-	// Notify main thread that it can grab the mutex
-	if ( !mnCount )
-	{
-		maMainThreadCondition.set();
-		OThread::yield();
-	}
 }
 
 sal_Bool SalYieldMutex::tryToAcquire()
