@@ -179,8 +179,12 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 				// Make sure that any events fetched from the queue while the
 				// application mutex was unlocked are already dispatched before
-				// we try to lock the mutex
+				// we try to lock the mutex. Fix bug 3467 by speeding up
+				// acquiring of the event queue mutex by releasing the
+				// application mutex if already acquired by this thread.
+				ULONG nCount = Application::ReleaseSolarMutex();
 				aEventQueueMutex.acquire();
+				Application::AcquireSolarMutex( nCount );
 
 				IMutex& rSolarMutex = Application::GetSolarMutex();
 				rSolarMutex.acquire();
@@ -460,8 +464,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		// entire event dispatching process
 		nCount = ReleaseYieldMutex();
 		aEventQueueMutex.acquire();
-		if ( nCount )
-			AcquireYieldMutex( nCount );
+		AcquireYieldMutex( nCount );
 	}
 
 	com_sun_star_vcl_VCLEvent *pEvent;
@@ -494,10 +497,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		ULONG nEventQueueMutexCount = ReleaseEventQueueMutex();
 		nCount = ReleaseYieldMutex();
 		OThread::yield();
-		if ( nEventQueueMutexCount )
-			AcquireEventQueueMutex( nEventQueueMutexCount );
-		if ( nCount )
-			AcquireYieldMutex( nCount );
+		AcquireEventQueueMutex( nEventQueueMutexCount );
+		AcquireYieldMutex( nCount );
 	}
 
 	// Check timer
@@ -556,12 +557,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 	{
 		nTimeout = 0;
 
+		AcquireYieldMutex( nCount );
 		if ( nCount )
-		{
-			AcquireYieldMutex( nCount );
-			aEventQueueMutex.release();
 			nCount = 0;
-		}
 
 		USHORT nID = pEvent->getID();
 		size_t nFrames = pSalData->maFrameList.size();
@@ -596,8 +594,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			bContinue = false;
 	}
 
-	if ( nCount )
-		AcquireYieldMutex( nCount );
+	AcquireYieldMutex( nCount );
 
 	if ( !bMainEventLoop )
 		aEventQueueMutex.release();
@@ -1035,19 +1032,19 @@ void SalYieldMutex::release()
 	{
 		if ( mnCount == 1 )
 			mnThreadId = 0;
-		if ( mnCount )
-		{
-			mnCount--;
-			OMutex::release();
 
-			// Notify main thread that it can grab the mutex
-			if ( !mnCount )
-			{
-				maMainThreadCondition.set();
-				OThread::yield();
-			}
+		if ( mnCount )
+			mnCount--;
+
+		// Notify main thread that it can grab the mutex
+		if ( !mnCount && !maMainThreadCondition.check() )
+		{
+			maMainThreadCondition.set();
+			OThread::yield();
 		}
 	}
+
+	OMutex::release();
 }
 
 sal_Bool SalYieldMutex::tryToAcquire()
