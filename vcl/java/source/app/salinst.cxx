@@ -233,7 +233,16 @@ BOOL VCLInstance_updateNativeMenus()
 		}
 		else
 		{
-			bRet = FALSE;
+			// Fix inability to access menu when there is no backing window by
+			// only cancelling dislay of menus when there are visible windows
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible )
+				{
+					bRet = FALSE;
+					break;
+				}
+			}
 		}
 
 		// We need to let any timers run that were added by any menu
@@ -1015,9 +1024,13 @@ void SalYieldMutex::acquire()
 				}
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 
-				// Wait for other thread to release mutex
+				// Wait for other thread to release mutex. Post a dummy event
+				// to wakeup the VCL event thread.
 				maMainThreadCondition.reset();
-				maMainThreadCondition.wait( &aDelay );
+				com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+				pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
+				if ( !maMainThreadCondition.check() )
+					maMainThreadCondition.wait( &aDelay );
 				maMainThreadCondition.set();
 			}
 
