@@ -300,8 +300,17 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( !pURI )
 		return;
 
-	mnBaseURLEntry++;
-	if ( mnBaseURLEntry >= mnBaseURLCount )
+	NSURL *pRelativeURL = nil;
+	while ( !pRelativeURL && ++mnBaseURLEntry < mnBaseURLCount )
+	{
+		pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+
+		// Do not reload from the same IP address as the first host
+		if ( pRelativeURL && [[[NSHost hostWithName:[pURL host]] address] isEqualToString:[[NSHost hostWithName:[pRelativeURL host]] address]] )
+			pRelativeURL = nil;
+	}
+
+	if ( !pRelativeURL )
 	{
 		mnBaseURLEntry = 0;
 		return;
@@ -330,7 +339,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[pURI appendString:pFragment];
 	}
 
-	pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
+	pURL = [NSURL URLWithString:pURI relativeToURL:pRelativeURL];
 	if ( pURL )
 	{
 		NSMutableURLRequest *pNewRequest = [NSMutableURLRequest requestWithURL:pURL cachePolicy:[pRequest cachePolicy] timeoutInterval:[pRequest timeoutInterval]];
