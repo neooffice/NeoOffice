@@ -33,7 +33,6 @@
 
 #include "neomobile.hxx"
 #include "neomobilewebview.h"
-#include "neomobileappevent.hxx"
 
 #include "premac.h"
 #include <objc/objc-class.h>
@@ -300,8 +299,17 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( !pURI )
 		return;
 
-	mnBaseURLEntry++;
-	if ( mnBaseURLEntry >= mnBaseURLCount )
+	NSURL *pRelativeURL = nil;
+	while ( !pRelativeURL && ++mnBaseURLEntry < mnBaseURLCount )
+	{
+		pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+
+		// Do not reload from the same IP address as the first host
+		if ( pRelativeURL && [[[NSHost hostWithName:[pURL host]] address] isEqualToString:[[NSHost hostWithName:[pRelativeURL host]] address]] )
+			pRelativeURL = nil;
+	}
+
+	if ( !pRelativeURL )
 	{
 		mnBaseURLEntry = 0;
 		return;
@@ -330,7 +338,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[pURI appendString:pFragment];
 	}
 
-	pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
+	pURL = [NSURL URLWithString:pURI relativeToURL:pRelativeURL];
 	if ( pURL )
 	{
 		NSMutableURLRequest *pNewRequest = [NSMutableURLRequest requestWithURL:pURL cachePolicy:[pRequest cachePolicy] timeoutInterval:[pRequest timeoutInterval]];
@@ -424,7 +432,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		fprintf( stderr, "Content:\n%s\n\n", (const char *)[pData bytes] );
 #endif	// DEBUG
 
-	// Post a NeoMobilExportFileAppEvent and have the OOo code execute it
+	// Post a NeoMobileExportFileAppEvent and have the OOo code execute it
 	NSString *pSaveURIHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uri"];
 	NSString *pSaveUUIDHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uuid"];
 	if ( pSaveURIHeader && pSaveUUIDHeader )
@@ -440,7 +448,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			{
 				if ( Application::IsInMain() )
 				{
-					NeoMobilExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
+					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
 					mpexportEvent=&aEvent;
 
 					[mpcancelButton setEnabled:YES];
@@ -449,7 +457,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 					rSolarMutex.acquire();
 
-					Application::PostUserEvent( LINK( &aEvent, NeoMobilExportFileAppEvent, ExportFile ) );
+					Application::PostUserEvent( LINK( &aEvent, NeoMobileExportFileAppEvent, ExportFile ) );
 					rSolarMutex.release();
 
 					// Dispatch any pending native events until event is
@@ -463,7 +471,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
-					mpexportEvent=NULL;
 					
 					if(aEvent.IsUnsupportedComponentType())
 					{
@@ -495,6 +502,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 						[pURLRequest setHTTPBody:pPostBody];
 						[pWebFrame loadRequest:pURLRequest];
 					}
+					mpexportEvent=NULL;
 				}
 			}
 		}
@@ -511,7 +519,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( pDataSource )
 		pRequest = [pDataSource request];
 	
-	if ( pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
+	if ( mpexportEvent && pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
 		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Uploading file...").c_str()]];
 	else
 		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Loading...").c_str()]];
