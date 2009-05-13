@@ -442,8 +442,8 @@ static NeoMobileWebView *pSharedWebView = nil;
 	long res=0;
 	if(Gestalt(gestaltSystemVersion, &res)==noErr)
 	{
-		bool isPantherOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
-		if(!isPantherOrHigher)
+		bool isTigerOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
+		if(!isTigerOrHigher)
 			return(sal_False);
 	}
 	
