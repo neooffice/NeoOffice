@@ -471,7 +471,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
-					mpexportEvent=NULL;
 					
 					if(aEvent.IsUnsupportedComponentType())
 					{
@@ -503,6 +502,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 						[pURLRequest setHTTPBody:pPostBody];
 						[pWebFrame loadRequest:pURLRequest];
 					}
+					mpexportEvent=NULL;
 				}
 			}
 		}
@@ -519,7 +519,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( pDataSource )
 		pRequest = [pDataSource request];
 	
-	if ( pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
+	if ( mpexportEvent && pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
 		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Uploading file...").c_str()]];
 	else
 		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Loading...").c_str()]];
