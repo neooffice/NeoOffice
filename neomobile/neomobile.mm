@@ -42,10 +42,6 @@
 
 #include <stdio.h>
 
-#ifndef _RTL_USTRING_HXX_
-#include <rtl/ustring.hxx>
-#endif
-
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
 #endif
@@ -104,6 +100,9 @@
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
 
+static const NSString *pAboutURI = @"/mobile/";
+static const NSString *pOpenURI = @"/";
+
 using namespace ::rtl;
 using namespace ::osl;
 using namespace ::cppu;
@@ -117,6 +116,25 @@ using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::document;
 
 //========================================================================
+
+OUString NSStringToOUString( NSString *pString )
+{
+	if ( !pString )
+		return OUString();
+
+	unsigned int nLen = [pString length];
+	if ( !nLen )
+		return OUString();
+
+	sal_Unicode aBuf[ nLen + 1 ];
+	[pString getCharacters:aBuf];
+	aBuf[ nLen ] = 0;
+
+	return OUString( aBuf );
+}
+
+//========================================================================
+
 class MacOSXNeoOfficeMobileImpl
 	: public ::cppu::WeakImplHelper2<XServiceInfo, XNeoOfficeMobile>
 {
@@ -140,10 +158,13 @@ public:
 
 	// XNeoOfficeMobile implementation
 	virtual ::sal_Bool 
+		SAL_CALL aboutNeoOfficeMobile( ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool 
 		SAL_CALL hasNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
-		SAL_CALL showNeoOfficeMobile( ) 
+		SAL_CALL openNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
 		SAL_CALL setPropertyValue( const rtl::OUString& key, const rtl::OUString& value ) 
@@ -311,32 +332,102 @@ static NeoMobileWebView *pSharedWebView = nil;
 
 @interface CreateWebViewImpl : NSObject
 {
+	const NSString*				mpURI;
 }
-- (id)init;
++ (id)createWithURI:(const NSString *)pURI;
+- (id)initWithURI:(const NSString *)pURI;
 - (void)showWebView:(id)obj;
 @end
 
 @implementation CreateWebViewImpl
 
-- (id)init
++ (id)createWithURI:(const NSString *)pURI
+{
+	CreateWebViewImpl *pRet = [[CreateWebViewImpl alloc] initWithURI:pURI];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initWithURI:(const NSString *)pURI
 {
 	self = [super init];
+
+	mpURI = pURI;
+
 	return(self);
 }
 
 - (void)showWebView:(id)obj
 {
 	if ( !pSharedWebView )
+	{
 		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil];
-
+		
+		// check for retained user position.  If not available, make relative to the
+		// primary frame.
+		
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		
+		NSPoint windowPos={0, 0};
+		
+		NSString *xPosStr=[defaults stringForKey:@"nmXPos"];
+		NSString *yPosStr=[defaults stringForKey:@"nmYPos"];
+		if(xPosStr && yPosStr)
+		{
+			windowPos.x=[xPosStr intValue];
+			windowPos.y=[yPosStr intValue];
+		}
+		else
+		{
+			NSWindow *keyWindow=[NSApp mainWindow];
+			if(keyWindow)
+			{
+				windowPos=[keyWindow frame].origin;
+				windowPos.x+=75;
+				windowPos.y+=75;
+			}
+		}
+		
+		if([pSharedWebView window])
+			[[pSharedWebView window] setFrameOrigin:windowPos];
+	}
+	
 	if ( pSharedWebView )
 	{
 		NSWindow *pWindow = [pSharedWebView window];
-		if ( pWindow && ![pWindow isVisible] )
-			[pWindow orderFront:self];
+		if ( pWindow )
+		{
+			// Make sure window is visible
+			if ( ![pWindow isVisible] )
+				[pWindow orderFront:self];
+
+			// Load URI
+			[pSharedWebView loadURI:mpURI];
+		}
 	}
 }
 @end
+
+/**
+ * Show NeoMobile's "about" webpage
+ */
+::sal_Bool 
+		SAL_CALL MacOSXNeoOfficeMobileImpl::aboutNeoOfficeMobile( ) 
+		throw (::com::sun::star::uno::RuntimeException)
+{
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pAboutURI];
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	unsigned long nCount = Application::ReleaseSolarMutex();
+	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
+		
+	[pool release];
+	
+	return(sal_True);
+}
 
 /**
  * Check if the we have full WebView support available
@@ -351,35 +442,33 @@ static NeoMobileWebView *pSharedWebView = nil;
 	long res=0;
 	if(Gestalt(gestaltSystemVersion, &res)==noErr)
 	{
-		bool isPantherOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
-		if(!isPantherOrHigher)
-			return(false);
+		bool isTigerOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
+		if(!isTigerOrHigher)
+			return(sal_False);
 	}
 	
-	return(true);
+	return(sal_True);
 }
 
 /**
- * Construct a new media browser instance.
+ * Show main NeoMobile webpage
  */
 ::sal_Bool 
-		SAL_CALL MacOSXNeoOfficeMobileImpl::showNeoOfficeMobile( ) 
+		SAL_CALL MacOSXNeoOfficeMobileImpl::openNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	CreateWebViewImpl *imp=[[CreateWebViewImpl alloc] init];
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
 	Application::AcquireSolarMutex( nCount );
 		
-	[imp release];
-	
 	[pool release];
 	
-	return(true);
+	return(sal_True);
 }
 
 ::sal_Bool 
@@ -404,7 +493,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 					{
 						Reference< XPropertyContainer > propContainer( docInfo, UNO_QUERY_THROW );
 						propContainer->addProperty(key, 0, Any(value));
-						return(true);
+						return(sal_True);
 					}
 					catch (PropertyExistException e)
 					{
@@ -413,7 +502,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 							bagOfMe->setPropertyValue(key, Any(value));
 					}
 					
-					return(true);
+					return(sal_True);
 				}
 			}
 		}
@@ -421,7 +510,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 		{
 		}
 		
-		return(false);
+		return(sal_False);
 }
 
 ::rtl::OUString
@@ -555,21 +644,21 @@ static NeoMobileWebView *pSharedWebView = nil;
 		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 			lProperties[0].Value <<= OUString::createFromAscii("impress_pdf_Export");
 		else
-			return(false);
+			return(sal_False);
 		
 		lProperties[1].Name=OUString::createFromAscii("Overwrite");
-		lProperties[1].Value <<= (::sal_Bool)true;
+		lProperties[1].Value <<= sal_True;
 		
 		Reference< XStorable > xStore(rModel, UNO_QUERY);
 		xStore->storeToURL(url, lProperties);
 		
-		return(true);
+		return(sal_True);
 	}
 	catch (...)
 	{
 	}
 
-	return(false);
+	return(sal_False);
 }
 
 ::sal_Bool
@@ -602,21 +691,21 @@ static NeoMobileWebView *pSharedWebView = nil;
 		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 			lProperties[0].Value <<= OUString::createFromAscii("impress_html_Export");
 		else
-			return(false);
+			return(sal_False);
 		
 		lProperties[1].Name=OUString::createFromAscii("Overwrite");
-		lProperties[1].Value <<= (::sal_Bool)true;
+		lProperties[1].Value <<= sal_True;
 		
 		Reference< XStorable > xStore(rModel, UNO_QUERY);
 		xStore->storeToURL(url, lProperties);
 		
-		return(true);
+		return(sal_True);
 	}
 	catch (...)
 	{
 	}
 
-	return(false);
+	return(sal_False);
 }
 
 ::sal_Bool
@@ -649,21 +738,21 @@ static NeoMobileWebView *pSharedWebView = nil;
 		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 			lProperties[0].Value <<= OUString::createFromAscii("impress8");
 		else
-			return(false);
+			return(sal_False);
 		
 		lProperties[1].Name=OUString::createFromAscii("Overwrite");
-		lProperties[1].Value <<= (::sal_Bool)true;
+		lProperties[1].Value <<= sal_True;
 		
 		Reference< XStorable > xStore(rModel, UNO_QUERY);
 		xStore->storeToURL(url, lProperties);
 		
-		return(true);
+		return(sal_True);
 	}
 	catch (...)
 	{
 	}
 
-	return(false);
+	return(sal_False);
 }
 
 /**
@@ -674,7 +763,7 @@ static NeoMobileWebView *pSharedWebView = nil;
  * @param zipFilePath	absolute path to the output ZIP file.  This should
  *						include the ".zip" suffix.  If not present, the
  *						suffix will be added.
- * @return true if the zip operation succeeded, false on error.
+ * @return sal_True if the zip operation succeeded, sal_False on error.
  */
 ::sal_Bool
 	SAL_CALL MacOSXNeoOfficeMobileImpl::zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
@@ -682,13 +771,13 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 	try
 	{
-		OString asciiDirPath;
-		if(!dirPath.convertToString(&asciiDirPath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
-			return(false);
+		OString asciiDirPath = OUStringToOString(dirPath,RTL_TEXTENCODING_UTF8);
+		if (!asciiDirPath.getLength())
+			return(sal_False);
 		
-		OString asciiZipFilePath;
-		if(!zipFilePath.convertToString(&asciiZipFilePath, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS))
-			return(false);
+		OString asciiZipFilePath = OUStringToOString(zipFilePath,RTL_TEXTENCODING_UTF8);
+		if (!asciiZipFilePath.getLength())
+			return(sal_False);
 			
 		char oldWD[2048];
 		
@@ -705,5 +794,5 @@ static NeoMobileWebView *pSharedWebView = nil;
 	{
 	}
 	
-	return(false);
+	return(sal_False);
 }

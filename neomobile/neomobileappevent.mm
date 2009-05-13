@@ -31,13 +31,10 @@
  *
  *************************************************************************/
 
+#include "neomobile.hxx"
 #include "neomobileappevent.hxx"
 #include <org/neooffice/XNeoOfficeMobile.hpp>
 #include <unistd.h>
-
-#ifndef _RTL_USTRING_HXX_
-#include <rtl/ustring.hxx>
-#endif
 
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
@@ -66,12 +63,6 @@
 #include <comphelper/processfactory.hxx>
 
 
-#include "premac.h"
-#import <Foundation/Foundation.h>
-#import "NSDataAdditions.h"
-#include "postmac.h"
-
-
 using namespace ::rtl;
 using namespace ::osl;
 using namespace ::cppu;
@@ -80,15 +71,83 @@ using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
 using namespace ::org::neooffice;
 
+@interface DoFileManagerOnMainThread : NSObject
+{
+	NSString *mpath;
+}
+- (id)init;
+- (void)dealloc;
+- (void)makeBasePath:(id)arg;
+- (NSString *)filePath;
+- (void)createDir:(NSString *)path;
+- (void)removeItem:(NSString *)path;
+@end
 
-NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent() :
-	mbFinished( false )
+@implementation DoFileManagerOnMainThread
+
+- (id)init
+{
+	[super init];
+	
+	mpath=nil;
+	return self;
+}
+
+- (void)dealloc
+{
+	if(mpath)
+	{
+		[mpath release];
+		mpath=nil;
+	}
+	
+	[super dealloc];
+}
+
+- (void)makeBasePath:(id)arg
+{
+#pragma unused(arg)
+
+	NSString *basePath = NSTemporaryDirectory();
+	NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
+	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
+		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
+	}
+	[filePath retain];
+	mpath=filePath;
+}
+
+- (NSString *)filePath
+{
+	return(mpath);
+}
+
+- (void)createDir:(NSString *)path
+{
+	[[NSFileManager defaultManager] createDirectoryAtPath: path attributes: nil];
+}
+
+- (void)removeItem:(NSString *)path
+{
+	[[NSFileManager defaultManager] removeFileAtPath:path handler:NULL];
+}
+
+@end
+
+NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody ) :
+	mnErrorCode( 0 ),
+	mpFileManager( pFileManager ),
+	mbFinished( false ),
+	mpPostBody( pPostBody ),
+	maSaveUUID( aSaveUUID ),
+	mbCanceled( false ),
+	mbUnsupportedComponentType( false )
 {
 }
 
 IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 {
-	if ( !mbFinished )
+	if ( !mbFinished && mpPostBody )
 	{
 		if ( Application::IsInMain() )
 		{
@@ -101,96 +160,155 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			if(!rNeoOfficeMobile.is())
 			{
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to get NeoOfficeMobile service reference\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
 			Reference< XNeoOfficeMobile > neoOfficeMobile(rNeoOfficeMobile, UNO_QUERY);
 			if(!neoOfficeMobile.is())
 			{
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to cast NeoOfficeMobile reference to service\n" );
+#endif	// DEBUG
 				return 0;
 			}
 			
-			// embed the UUID within the current document
+			// check that we have a supported document type.  If not, return without
+			// attempting to assemble the post or perform an export.
 			
-			// +++ FIXME
-			// need to pass in UUID
-			// use neoOfficeMobile->setPropertyValue() with appropriate key/value
+			OString mimeType = OUStringToOString(neoOfficeMobile->getMimeType(),RTL_TEXTENCODING_UTF8);
+			if(!mimeType.getLength())
+			{
+				mbUnsupportedComponentType = true;
+				mbFinished = true;
+				return(0);
+			}
+			
+			// embed the UUID within the current document.  This is saved 
+			// in the opendocument formatted export.
+			
+			neoOfficeMobile->setPropertyValue(OUString::createFromAscii("uuid"), maSaveUUID);
 			
 			// get a unique temporary base filename
 			
 			NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+			DoFileManagerOnMainThread *fileMgr=nil;
 			
-			NSString *basePath = NSTemporaryDirectory();
-			NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
-			while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-				filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
-			}
+			OString pdfExportURLutf8;
+			OString openDocExportURLutf8;
+			OString htmlExportZipFileutf8;
 			
+			try
+			{
+			
+			fileMgr=[[DoFileManagerOnMainThread alloc] init];
+			
+			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES];
+			
+			NSString *filePath=[fileMgr filePath];
+			OUString oufilePath(NSStringToOUString(filePath));
+			
+#ifdef DEBUG
 			fprintf(stderr, "NeoMobilExportFileAppEvent::ExportFile exporting to '%s'\n", [filePath UTF8String]);
+#endif	// DEBUG
 			
 			// perform an opendocument export
 			
 			OUString docExtension=neoOfficeMobile->getOpenDocumentExtension();
 			
 			OUString openDocExportURL=OUString::createFromAscii("file://");
-			openDocExportURL+=OUString::createFromAscii([filePath UTF8String]);
+			openDocExportURL+=oufilePath;
 			openDocExportURL+=docExtension;
 			
+			openDocExportURLutf8 = OUStringToOString(openDocExportURL,RTL_TEXTENCODING_UTF8);
+
 			if(!neoOfficeMobile->saveAsOpenDocument(openDocExportURL))
 			{
-				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform OpenDocument export\n" );
-				return 0;
+#endif	// DEBUG
+				mnErrorCode=1;
+				throw this;
 			}
+			
+			if ( mbCanceled )
+				throw this;
 			
 			// perform a PDF export
 			
 			OUString pdfExportURL=OUString::createFromAscii("file://");
-			pdfExportURL+=OUString::createFromAscii([filePath UTF8String]);
+			pdfExportURL+=oufilePath;
 			pdfExportURL+=OUString::createFromAscii(".pdf");
 			
+			pdfExportURLutf8 = OUStringToOString(pdfExportURL,RTL_TEXTENCODING_UTF8);
+
 			if(!neoOfficeMobile->saveAsPDF(pdfExportURL))
 			{
-				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform PDF export\n" );
-				return 0;
+#endif	// DEBUG
+				mnErrorCode=1;
+				throw this;
 			}
+			
+			if ( mbCanceled )
+				throw this;
 			
 			// perform an HTML export.  Note that we need to do this in a
 			// temporary directory and then zip the directory contents into
 			// a single file.  We'll just use our file's base path
 			// as the temporary directory name.
 			
-			if(![[NSFileManager defaultManager] createDirectoryAtPath: filePath attributes: nil])
-			{
-				[pool release];
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create export directory\n" );
-				return 0;
-			}
-			
+			[fileMgr performSelectorOnMainThread:@selector(createDir:) withObject:filePath waitUntilDone:YES];
+						
 			OUString htmlExportURL=OUString::createFromAscii("file://");
-			htmlExportURL+=OUString::createFromAscii([filePath UTF8String]);
+			htmlExportURL+=oufilePath;
 			htmlExportURL+=OUString::createFromAscii("/_nm_export.html");
 			
 			if(!neoOfficeMobile->saveAsHTML(htmlExportURL))
 			{
-				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform HTML export\n" );
-				return 0;
+#endif	// DEBUG
+				// remove temporary directory used to create zip file
+			
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES];
+				mnErrorCode=1;
+				throw this;
 			}
 			
-			OUString htmlExportZipFile=OUString::createFromAscii([filePath UTF8String]);
+			if ( mbCanceled )
+			{
+				// remove temporary directory used to create zip file
+			
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES];
+				throw this;
+			}
+			
+			OUString htmlExportZipDir(oufilePath);
+			OUString htmlExportZipFile(htmlExportZipDir);
 			htmlExportZipFile+=OUString::createFromAscii(".zip");
 			
-			if(!neoOfficeMobile->zipDirectory(OUString::createFromAscii([filePath UTF8String]), htmlExportZipFile))
+			htmlExportZipFileutf8 = OUStringToOString(htmlExportZipFile,RTL_TEXTENCODING_UTF8);
+
+			if(!neoOfficeMobile->zipDirectory(htmlExportZipDir, htmlExportZipFile))
 			{
-				[pool release];
+#ifdef DEBUG
 				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
-				return 0;
+#endif	// DEBUG
+				mnErrorCode=1;
+				throw this;
 			}
+						
+			// remove temporary directory used to create zip file
 			
+			[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES];
+
+			if ( mbCanceled )
+				throw this;
+						
 			// construct post data for uploading files to server
 			
 			// Note that at this point the exported trio is in the following
@@ -205,64 +323,88 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// "html" for the zipfile, and the named section for the
 			// opendocument format section is named after the extension.
 			
-			NSMutableData *postBody = [NSMutableData data];
-			NSString *stringBoundary = [NSString stringWithString:@"0xKhTmLbOuNdArY"];
+			NSString *stringBoundary = @"neomobileupload";
 			
-			[postBody appendData:[[NSString stringWithFormat:@"--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			// add PDF data
 			
-			OString pdfExportURLutf8;
-			pdfExportURL.convertToString(&pdfExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
-			
-			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"pdf\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[NSString stringWithString:@"Content-Type: application/pdf\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+			[mpPostBody appendData:[[NSString stringWithFormat:@"--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 						
-			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"pdf\"; filename=\"unused.pdf\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[mpPostBody appendData:[[NSString stringWithString:@"Content-Type: image/pdf\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+						
+			[mpPostBody appendData:[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]]]];
+						
+			// add HTML zip file data
+			
+			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+						
+			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"html\"; filename=\"unused.zip\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+			[mpPostBody appendData:[[NSString stringWithString:@"Content-Type: application/zip\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+						
+			[mpPostBody appendData:[NSData dataWithContentsOfFile:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()]]];
 
-			OString htmlExportZipFileutf8;
-			htmlExportZipFile.convertToString(&htmlExportZipFileutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			// add ODF data tagged with the appropriate mime type
 			
-			[postBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"html\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[NSString stringWithString:@"Content-Type: multipart/x-zip\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[[NSData dataWithContentsOfFile:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+			OString odfPartName = OUStringToOString(docExtension.copy(1),RTL_TEXTENCODING_UTF8); // extension with first period stripped off
+									
+			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"unused.%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()], [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
+			[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: mimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
+						
+			[mpPostBody appendData:[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]]]];
 
-			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			// add UUID
 			
-			OString odfPartName;
-			docExtension.copy(1).convertToString(&odfPartName, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS); // extension with first period stripped off
+			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
 			
-			OString mimeType;
-			neoOfficeMobile->getMimeType().convertToString(&mimeType, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
+			OString uuidUtf8 = OUStringToOString(maSaveUUID,RTL_TEXTENCODING_UTF8);
 			
-			OString openDocExportURLutf8;
-			openDocExportURL.convertToString(&openDocExportURLutf8, RTL_TEXTENCODING_UTF8, OUSTRING_TO_OSTRING_CVTFLAGS);
-			
-			[postBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"\r\n\r\n", [NSString stringWithUTF8String: odfPartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: mimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[NSString stringWithString:@"Content-Transfer-Encoding: base64\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
-			[postBody appendData:[[[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]]] base64EncodingWithLineLength: 80] dataUsingEncoding:NSASCIIStringEncoding]];
+			[mpPostBody appendData:[[NSString stringWithString:@"Content-Disposition: form-data; name=\"UUID\"\r\n\r\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+						
+			[mpPostBody appendData:[[NSString stringWithUTF8String: uuidUtf8.getStr()] dataUsingEncoding:NSUTF8StringEncoding]];		
 
-			[postBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			// close out form
 			
-			// +++ FIXME
-			// post data.  for now, print to stderr
+			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@--\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+			
+#ifdef DEBUG
+			// print post data to stderr
 			
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile start of post request\n");
-			fprintf( stderr, "%s", (char *)[postBody bytes]);
+			fprintf( stderr, "%s", (char *)[mpPostBody bytes]);
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile end of post request\n");
+#endif	// DEBUG
+			
+			}
+			catch (...)
+			{
+			}
+					
+			// remove exported files on disk now that we've finished assembling
+			// our post in memory
+			
+			if(pdfExportURLutf8.getLength())
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] waitUntilDone:YES];
+			if(htmlExportZipFileutf8.getLength())
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] waitUntilDone:YES];
+			if(openDocExportURLutf8.getLength())
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] waitUntilDone:YES];
 			
 			// free our autorelease pool
-			
+
+			if(fileMgr)
+				[fileMgr release];
+				
 			[pool release];
 		}
 		else
 		{
+#ifdef DEBUG
 			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile : I'm notn Main!\n");
+#endif	// DEBUG
 		}
-
-		fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile not implemented\n" );
+		
 		mbFinished = true;
 	}
 

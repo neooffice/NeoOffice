@@ -34,19 +34,34 @@
 #ifndef _NEOMOBILEAPPEVENT_HXX
 #define _NEOMOBILEAPPEVENT_HXX
 
+#include <premac.h>
+#include <Foundation/Foundation.h>
+#include <postmac.h>
+
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
 
 class NeoMobilExportFileAppEvent
 {
+	int						mnErrorCode;
+	NSFileManager*			mpFileManager;
 	bool					mbFinished;
+	NSMutableData*			mpPostBody;
+	::rtl::OUString			maSaveUUID;
+	bool					mbCanceled;
+	bool					mbUnsupportedComponentType;
 
 public:
-							NeoMobilExportFileAppEvent();
+							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
 	virtual					~NeoMobilExportFileAppEvent() {};
 							DECL_LINK( ExportFile, void* );
+	int						GetErrorCode() { return mnErrorCode; }
 	bool					IsFinished() { return mbFinished; }
+	NSData*					GetPostBody() { return mpPostBody; }
+	void					Cancel() { mbCanceled=true; }
+	bool					IsCanceled() { return(mbCanceled); }
+	bool					IsUnsupportedComponentType() { return(mbUnsupportedComponentType); }
 };
 
 #endif	// _NEOMOBILEAPPEVENT_HXX

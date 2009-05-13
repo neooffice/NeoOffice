@@ -27,19 +27,25 @@ REM  License along with this library; if not, write to the Free Software
 REM  Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 REM  MA  02111-1307  USA
 
-Sub Main
+Sub AboutNeoOfficeMobile
 	Dim mbService as Object
 	mbService = CreateUnoService(&quot;org.neooffice.NeoOfficeMobile&quot;)
 	if IsNull(mbService) Then
 		MsgBox &quot;NeoOffice Mobile is not available for this operating system.&quot;, 0, &quot;NeoOffice Mobile&quot;
 		Exit Sub
 	End If
-	
-	If mbService.hasNeoOfficeMobile() = False Then
-		MsgBox &quot;Mac OS X 10.3 or higher is required to use NeoOfficeMobile.&quot;, 0, &quot;NeoOffice Mobile&quot;
+
+	mbService.aboutNeoOfficeMobile()
+End Sub
+
+Sub OpenNeoOfficeMobile
+	Dim mbService as Object
+	mbService = CreateUnoService(&quot;org.neooffice.NeoOfficeMobile&quot;)
+	if IsNull(mbService) Then
+		MsgBox &quot;NeoOffice Mobile is not available for this operating system.&quot;, 0, &quot;NeoOffice Mobile&quot;
 		Exit Sub
 	End If
-	
-	mbService.showNeoOfficeMobile()
+
+	mbService.openNeoOfficeMobile()
 End Sub
 </script:module>
