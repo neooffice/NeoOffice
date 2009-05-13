@@ -34,6 +34,10 @@ Sub AboutNeoOfficeMobile
 		MsgBox &quot;NeoOffice Mobile is not available for this operating system.&quot;, 0, &quot;NeoOffice Mobile&quot;
 		Exit Sub
 	End If
+	if mbService.hasNeoOfficeMobile() = False Then
+		MsgBox &quot;Mac OS X 10.4 or higher is required to use NeoOfficeMobile.&quot;, 0, &quot;NeoOffice Mobile&quot;
+		Exit Sub
+	End If
 
 	mbService.aboutNeoOfficeMobile()
 End Sub
@@ -43,6 +47,10 @@ Sub OpenNeoOfficeMobile
 	mbService = CreateUnoService(&quot;org.neooffice.NeoOfficeMobile&quot;)
 	if IsNull(mbService) Then
 		MsgBox &quot;NeoOffice Mobile is not available for this operating system.&quot;, 0, &quot;NeoOffice Mobile&quot;
+		Exit Sub
+	End If
+	if mbService.hasNeoOfficeMobile() = False Then
+		MsgBox &quot;Mac OS X 10.4 or higher is required to use NeoOfficeMobile.&quot;, 0, &quot;NeoOffice Mobile&quot;
 		Exit Sub
 	End If
 
