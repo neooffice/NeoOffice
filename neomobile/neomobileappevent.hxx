@@ -42,7 +42,7 @@
 #include <vcl/svapp.hxx>
 #endif
 
-class NeoMobilExportFileAppEvent
+class NeoMobileExportFileAppEvent
 {
 	int						mnErrorCode;
 	NSFileManager*			mpFileManager;
@@ -53,8 +53,8 @@ class NeoMobilExportFileAppEvent
 	bool					mbUnsupportedComponentType;
 
 public:
-							NeoMobilExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
-	virtual					~NeoMobilExportFileAppEvent() {};
+							NeoMobileExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
+	virtual					~NeoMobileExportFileAppEvent() {};
 							DECL_LINK( ExportFile, void* );
 	int						GetErrorCode() { return mnErrorCode; }
 	bool					IsFinished() { return mbFinished; }

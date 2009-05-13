@@ -134,7 +134,7 @@ using namespace ::org::neooffice;
 
 @end
 
-NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody ) :
+NeoMobileExportFileAppEvent::NeoMobileExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody ) :
 	mnErrorCode( 0 ),
 	mpFileManager( pFileManager ),
 	mbFinished( false ),
@@ -145,7 +145,7 @@ NeoMobilExportFileAppEvent::NeoMobilExportFileAppEvent( OUString aSaveUUID, NSFi
 {
 }
 
-IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
+IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 {
 	if ( !mbFinished && mpPostBody )
 	{
@@ -161,7 +161,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!rNeoOfficeMobile.is())
 			{
 #ifdef DEBUG
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to get NeoOfficeMobile service reference\n" );
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to get NeoOfficeMobile service reference\n" );
 #endif	// DEBUG
 				return 0;
 			}
@@ -170,7 +170,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile.is())
 			{
 #ifdef DEBUG
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to cast NeoOfficeMobile reference to service\n" );
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to cast NeoOfficeMobile reference to service\n" );
 #endif	// DEBUG
 				return 0;
 			}
@@ -211,7 +211,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			OUString oufilePath(NSStringToOUString(filePath));
 			
 #ifdef DEBUG
-			fprintf(stderr, "NeoMobilExportFileAppEvent::ExportFile exporting to '%s'\n", [filePath UTF8String]);
+			fprintf(stderr, "NeoMobileExportFileAppEvent::ExportFile exporting to '%s'\n", [filePath UTF8String]);
 #endif	// DEBUG
 			
 			// perform an opendocument export
@@ -227,7 +227,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->saveAsOpenDocument(openDocExportURL))
 			{
 #ifdef DEBUG
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform OpenDocument export\n" );
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform OpenDocument export\n" );
 #endif	// DEBUG
 				mnErrorCode=1;
 				throw this;
@@ -247,7 +247,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->saveAsPDF(pdfExportURL))
 			{
 #ifdef DEBUG
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform PDF export\n" );
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform PDF export\n" );
 #endif	// DEBUG
 				mnErrorCode=1;
 				throw this;
@@ -270,7 +270,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->saveAsHTML(htmlExportURL))
 			{
 #ifdef DEBUG
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to perform HTML export\n" );
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform HTML export\n" );
 #endif	// DEBUG
 				// remove temporary directory used to create zip file
 			
@@ -296,7 +296,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(!neoOfficeMobile->zipDirectory(htmlExportZipDir, htmlExportZipFile))
 			{
 #ifdef DEBUG
-				fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
 #endif	// DEBUG
 				mnErrorCode=1;
 				throw this;
@@ -371,9 +371,9 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #ifdef DEBUG
 			// print post data to stderr
 			
-			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile start of post request\n");
+			fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile start of post request\n");
 			fprintf( stderr, "%s", (char *)[mpPostBody bytes]);
-			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile end of post request\n");
+			fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile end of post request\n");
 #endif	// DEBUG
 			
 			}
@@ -401,7 +401,7 @@ IMPL_LINK( NeoMobilExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 		else
 		{
 #ifdef DEBUG
-			fprintf( stderr, "NeoMobilExportFileAppEvent::ExportFile : I'm notn Main!\n");
+			fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile : I'm notn Main!\n");
 #endif	// DEBUG
 		}
 		

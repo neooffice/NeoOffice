@@ -33,7 +33,6 @@
 
 #include "neomobile.hxx"
 #include "neomobilewebview.h"
-#include "neomobileappevent.hxx"
 
 #include "premac.h"
 #include <objc/objc-class.h>
@@ -433,7 +432,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		fprintf( stderr, "Content:\n%s\n\n", (const char *)[pData bytes] );
 #endif	// DEBUG
 
-	// Post a NeoMobilExportFileAppEvent and have the OOo code execute it
+	// Post a NeoMobileExportFileAppEvent and have the OOo code execute it
 	NSString *pSaveURIHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uri"];
 	NSString *pSaveUUIDHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uuid"];
 	if ( pSaveURIHeader && pSaveUUIDHeader )
@@ -449,7 +448,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			{
 				if ( Application::IsInMain() )
 				{
-					NeoMobilExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
+					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
 					mpexportEvent=&aEvent;
 
 					[mpcancelButton setEnabled:YES];
@@ -458,7 +457,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 					rSolarMutex.acquire();
 
-					Application::PostUserEvent( LINK( &aEvent, NeoMobilExportFileAppEvent, ExportFile ) );
+					Application::PostUserEvent( LINK( &aEvent, NeoMobileExportFileAppEvent, ExportFile ) );
 					rSolarMutex.release();
 
 					// Dispatch any pending native events until event is

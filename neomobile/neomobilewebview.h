@@ -35,6 +35,7 @@
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 #include "postmac.h"
+#include "neomobileappevent.hxx"
 
 // Redefine Cocoa YES and NO defines types for convenience
 #ifdef YES
@@ -45,8 +46,6 @@
 #undef NO
 #define NO (MacOSBOOL)0
 #endif
-
-class NeoMobilExportFileAppEvent;
 
 @interface NeoMobileWebView : WebView
 {
@@ -61,7 +60,7 @@ class NeoMobilExportFileAppEvent;
 	NSURLDownload*			mpdownload;
 	unsigned long long		mndownloadSize;
 	unsigned long long		mndownloadBytesReceived;
-	NeoMobilExportFileAppEvent*	mpexportEvent;
+	NeoMobileExportFileAppEvent*	mpexportEvent;
 }
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName;
