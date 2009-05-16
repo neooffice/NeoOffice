@@ -65,7 +65,7 @@
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName;
 - (void)loadURI:(NSString *)pURI;
-- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame;
+- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame;
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame;
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame;

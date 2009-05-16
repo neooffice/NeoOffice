@@ -157,6 +157,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[pPrefs setJavaScriptEnabled:YES];
 	}
 
+	[self setMaintainsBackForwardList:NO];
 	[self setResourceLoadDelegate:self];
 	[self setFrameLoadDelegate:self];
 	[self setUIDelegate:self];
@@ -234,27 +235,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	fprintf(stderr, "NeoMobile Cancel Button Clicked\n");
 #endif
-	if(mpdownload)
-	{
-		// a file download is in progress, cancel it
-		
-		[mpdownload cancel];
-		mpdownload=nil;
-		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Download canceled.").c_str()]];
-	}
-	else if(mpexportEvent)
-	{
-		// a file export application event is being processed, set the flag
-		// to cancel it
-		
-		mpexportEvent->Cancel();
-	}
-	{
-		// regular webframe load
-		
-		[self stopLoading:self];
-	}
+	[self stopLoading:self];
 }
 
 - (void)loadURI:(NSString *)pURI
@@ -274,8 +255,30 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 }
 
-- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame
+- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError
 {
+	int nErr = pError ? [pError code] : 0;
+
+	if ( !nErr || nErr == WebKitErrorFrameLoadInterruptedByPolicyChange )
+	{
+		// NOTE: we don't want to trigger the server fallback if we are just
+		// processing a data download we've redirected from the web frame
+		return;
+	}
+	else if ( nErr == -999 )
+	{
+		// Error code -999 indicates that the WebKit is doing the Back, Reload,
+		// or Forward actions so we don't trigger server fallback. These
+		// actions are incompatible with our export event code so cancel
+		// the current export event
+		if ( mpexportEvent )
+			mpexportEvent->Cancel();
+		return;
+	}
+
+	[mpcancelButton setEnabled:NO];
+	[mpstatusLabel setString:@""];
+
 	if ( !pWebFrame )
 		return;
 
@@ -358,20 +361,36 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 }
 
+- (void)stopLoading:(id)pSender
+{
+	if(mpdownload)
+	{
+		// a file download is in progress, cancel it
+		
+		[mpdownload cancel];
+		mpdownload=nil;
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Download canceled.").c_str()]];
+	}
+	else if(mpexportEvent)
+	{
+		// a file export application event is being processed, set the flag
+		// to cancel it but do not stop the loading as we want the export
+		// event to finish normally
+		
+		mpexportEvent->Cancel();
+		return;
+	}
+
+	[super stopLoading:pSender];
+}
+
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
 {
 #ifdef DEBUG
 	NSLog( @"didFailLoadWithError: %@", pError);
-#endif	
-	// NOTE: we don't want to trigger the server fallback if we are just
-	// processing a data download we've redirected from the web frame
-	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
-	{
-		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:@""];
-
-		[self reloadFrameWithNextServer:pWebFrame];
-	}
+#endif
+	[self reloadFrameWithNextServer:pWebFrame reason:pError];
 }
 
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
@@ -379,15 +398,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	NSLog( @"didFailProvisionalLoadWithError: %@", pError);
 #endif
-	// NOTE: we don't want to trigger the server fallback if we are just
-	// processing a data download we've redirected from the web frame
-	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
-	{
-		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:@""];
-
-		[self reloadFrameWithNextServer:pWebFrame];
-	}
+	[self reloadFrameWithNextServer:pWebFrame reason:pError];
 }
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
@@ -446,7 +457,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			NSData *pPostBody = [NSMutableData dataWithLength:0];
 			if ( pApp && pURLRequest && pFileManager && pPostBody )
 			{
-				if ( Application::IsInMain() )
+				if ( Application::IsInMain() && !mpexportEvent )
 				{
 					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
 					mpexportEvent=&aEvent;
@@ -471,7 +482,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
-					
+
 					if(aEvent.IsUnsupportedComponentType())
 					{
 						// display unsupported doc type error to user and
