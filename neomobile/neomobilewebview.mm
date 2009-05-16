@@ -385,6 +385,21 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[super stopLoading:pSender];
 }
 
+- (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener
+{
+	// Launch the URL with the /usr/bin/open command
+	if ( pRequest )
+	{
+		NSURL *pURL = [pRequest URL];
+		if ( pURL )
+			[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:[pURL absoluteString], nil]];
+	}
+
+	// Tell the listener to ignore the request
+	if ( pListener )
+		[pListener ignore];
+}
+
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
 {
 #ifdef DEBUG
