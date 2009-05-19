@@ -1988,10 +1988,13 @@ ImplFontEntry* ImplPdfBuiltinFontData::CreateFontInstance( ImplFontSelectData& r
 
 ImplDevFontList* PDFWriterImpl::filterDevFontList( ImplDevFontList* pFontList )
 {
+#ifdef USE_JAVA
+    // Fix bug 3481 by not using a separate font list
+    return pFontList;
+#else	// USE_JAVA
     DBG_ASSERT( m_aSubsets.size() == 0, "Fonts changing during PDF generation, document will be invalid" );
     ImplDevFontList* pFiltered = pFontList->Clone( true, true );
 
-#ifndef USE_JAVA
     // append the PDF builtin fonts
     if( !m_bIsPDF_A1 && !m_bEmbedStandardFonts)
         for( unsigned int i = 0; i < sizeof(m_aBuiltinFonts)/sizeof(m_aBuiltinFonts[0]); i++ )
@@ -1999,8 +2002,8 @@ ImplDevFontList* PDFWriterImpl::filterDevFontList( ImplDevFontList* pFontList )
             ImplFontData* pNewData = new ImplPdfBuiltinFontData( m_aBuiltinFonts[i] );
             pFiltered->Add( pNewData );
         }
-#endif	// !USE_JAVA
     return pFiltered;
+#endif	// USE_JAVA
 }
 
 bool PDFWriterImpl::isBuiltinFont( const ImplFontData* pFont ) const
