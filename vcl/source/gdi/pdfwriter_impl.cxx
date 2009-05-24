@@ -6399,10 +6399,12 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                 m_aEmbeddedFonts[ pCurrentFont ].m_nNormalFontID = nFontID;
             }
 
-#ifndef USE_JAVA
+#ifdef USE_JAVA
+            pMappedGlyphs[ i ] = sal::static_int_cast<sal_uInt16>( nFontGlyphId );
+#else	// USE_JAVA
             pGlyphWidths[ i ] = 0;
-#endif	// !USE_JAVA
             pMappedGlyphs[ i ] = sal::static_int_cast<sal_Int8>( nFontGlyphId );
+#endif	// USE_JAVA
             pMappedFontObjects[ i ] = nFontID;
 #ifndef USE_JAVA
             const ImplPdfBuiltinFontData* pFD = GetPdfFontData( pCurrentFont );
@@ -6792,6 +6794,7 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         // Fix bugs 3348 and 3442 by explicitly setting each glyph's position
 #else	// USE_JAVA
         if( rGlyphs[i].m_nMappedFontId != rGlyphs[i-1].m_nMappedFontId ||
+            rGlyphs[i].m_nMappedFontSubId != rGlyphs[i-1].m_nMappedFontSubId ||
             rGlyphs[i].m_aPos.Y() != rGlyphs[i-1].m_aPos.Y() )
 #endif	// USE_JAVA
         {
