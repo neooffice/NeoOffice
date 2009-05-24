@@ -6834,9 +6834,9 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             aMat.scale( fXScale, 1.0 );
             aMat.rotate( fAngle );
 #ifdef USE_JAVA
-            // Fix bug 3448 by properly scaling and rotating the position
+            // Fix bug 3448 by properly rotating the position. Fix bug 3484 by
+            // not applying the X scaling factor to the rotation matrix.
             Matrix3 aRotScale;
-            aRotScale.scale( fXScale, 1.0 );
             if( fAngle != 0.0 )
                 aRotScale.rotate( -fAngle );
 
