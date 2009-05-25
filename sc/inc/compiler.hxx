@@ -448,6 +448,7 @@ private:
     BOOL IsDoubleReference( const String& );
     BOOL IsMacro( const String& );
     BOOL IsNamedRange( const String& );
+    bool IsExternalNamedRange( const String& rSymbol );
     BOOL IsDBRange( const String& );
     BOOL IsColRowName( const String& );
     BOOL IsBoolean( const String& );

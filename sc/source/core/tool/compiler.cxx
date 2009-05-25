@@ -2689,6 +2689,43 @@ BOOL ScCompiler::IsNamedRange( const String& rUpperName )
         return FALSE;
 }
 
+bool ScCompiler::IsExternalNamedRange( const String& rSymbol )
+{
+    /* FIXME: This code currently (2008-12-02T15:41+0100 in CWS mooxlsc)
+     * correctly parses external named references in OOo, as required per RFE
+     * #i3740#, just that we can't store them in ODF yet. We will need an OASIS
+     * spec first. Until then don't pretend to support external names that
+     * wouldn't survive a save and reload cycle, return false instead. */
+
+#if 0
+    if (!pConv)
+        return false;
+
+    String aFile, aName;
+    if (!pConv->parseExternalName( rSymbol, aFile, aName, pDoc, &maExternalLinks))
+        return false;
+
+    ScRawToken aToken;
+    if (aFile.Len() > MAXSTRLEN || aName.Len() > MAXSTRLEN)
+        return false;
+
+    ScExternalRefManager* pRefMgr = pDoc->GetExternalRefManager();
+    pRefMgr->convertToAbsName(aFile);
+    sal_uInt16 nFileId = pRefMgr->getExternalFileId(aFile);
+    if (!pRefMgr->getRangeNameTokens(nFileId, aName).get())
+        // range name doesn't exist in the source document.
+        return false;
+    
+    const String* pRealName = pRefMgr->getRealRangeName(nFileId, aName);
+    aToken.SetExternalName(nFileId, pRealName ? *pRealName : aName);
+    pRawToken = aToken.Clone();
+    return true;
+#else
+    (void)rSymbol;
+    return false;
+#endif
+}
+
 BOOL ScCompiler::IsDBRange( const String& rName )
 {
     USHORT n;
@@ -3198,6 +3235,23 @@ void ScCompiler::AutoCorrectParsedSymbol()
     }
 }
 
+inline bool lcl_UpperAsciiOrI18n( String& rUpper, const String& rOrg, ScGrammar::Grammar eGrammar )
+{
+    if (ScGrammar::isODFF( eGrammar ))
+    {
+        // ODFF has a defined set of English function names, avoid i18n
+        // overhead.
+        rUpper = rOrg;
+        rUpper.ToUpperAscii();
+        return true;
+    }
+    else
+    {
+        rUpper = ScGlobal::pCharClass->upper( rOrg );
+        return false;
+    }
+}
+
 BOOL ScCompiler::NextNewToken( bool bAllowBooleans )
 {
     xub_StrLen nSpaces = NextSymbol();
@@ -3207,114 +3261,154 @@ BOOL ScCompiler::NextNewToken( bool bAllowBooleans )
              rtl::OUStringToOString( cSymbol, RTL_TEXTENCODING_UTF8 ).getStr(), nSpaces );
 #endif
 
-    ScRawToken aToken;
-    if( cSymbol[0] )
-    {
-        if( nSpaces )
-        {
-            aToken.SetOpCode( ocSpaces );
-            aToken.sbyte.cByte = (BYTE) ( nSpaces > 255 ? 255 : nSpaces );
-            if( !pArr->AddToken( aToken ) )
-            {
-                SetError(errCodeOverflow); return FALSE;
-            }
-        }
-        // Short cut for references when reading ODF to speedup things.
-        if (mnPredetectedReference)
-        {
-            String aStr( cSymbol);
-            if (!IsPredetectedReference( aStr))
-            {
-                /* TODO: it would be nice to generate a #REF! error here, which
-                 * would need an ocBad token with additional error value.
-                 * ScErrorToken wouldn't do because we want to preserve the
-                 * original string containing partial valid address
-                 * information. */
-                aToken.SetString( aStr.GetBuffer() );
-                aToken.NewOpCode( ocBad );
-                pRawToken = aToken.Clone();
-            }
-            return TRUE;
-        }
-        if ( (cSymbol[0] == '#' || cSymbol[0] == '$') && cSymbol[1] == 0 &&
-                !bAutoCorrect )
-        {   // #101100# special case to speed up broken [$]#REF documents
-            /* FIXME: ISERROR(#REF!) would be valid and TRUE and the formula to
-             * be processed as usual. That would need some special treatment,
-             * also in NextSymbol() because of possible combinations of
-             * #REF!.#REF!#REF! parts. In case of reading ODF that is all
-             * handled by IsPredetectedReference(), this case here remains for
-             * manual/API input. */
-            String aBad( aFormula.Copy( nSrcPos-1 ) );
-            eLastOp = pArr->AddBad( aBad )->GetOpCode();
-            return FALSE;
-        }
-        if( !IsString() )
-        {
-            BOOL bMayBeFuncName;
-            if ( cSymbol[0] < 128 )
-                bMayBeFuncName = CharClass::isAsciiAlpha( cSymbol[0] );
-            else
-            {
-                String aTmpStr( cSymbol[0] );
-                bMayBeFuncName = ScGlobal::pCharClass->isLetter( aTmpStr, 0 );
-            }
-            if ( bMayBeFuncName )
-            {   // a function name must be followed by a parenthesis
-                const sal_Unicode* p = aFormula.GetBuffer() + nSrcPos;
-                while( *p == ' ' )
-                    p++;
-                bMayBeFuncName = ( *p == '(' );
-            }
-            else
-                bMayBeFuncName = TRUE;      // operators and other opcodes
+    if (!cSymbol[0])
+        return false;
 
-            String aOrg( cSymbol ); // preserve file names in IsReference()
-            String aUpper( ScGlobal::pCharClass->upper( aOrg ) );
-#if 0
-            fprintf( stderr, "Token '%s'\n",
-                     rtl::OUStringToOString( aUpper, RTL_TEXTENCODING_UTF8 ).getStr() );
-#endif
-            // Column 'DM' ("Deutsche Mark", German currency) couldn't be
-            // referred to => IsReference() before IsValue().
-            // #42016# Italian ARCTAN.2 resulted in #REF! => IsOpcode() before
-            // IsReference().
-            // IsBoolean before isValue to catch inline bools without the kludge
-            //    for inline arrays.
-            if ( !(bMayBeFuncName && IsOpCode( aUpper ))
-              && !IsReference( aOrg )
-              && !(bAllowBooleans && IsBoolean( aUpper ))
-              && !IsValue( aUpper )
-              && !IsNamedRange( aUpper )
-              && !IsDBRange( aUpper )
-              && !IsColRowName( aUpper )
-              && !(bMayBeFuncName && IsMacro( aUpper ))
-              && !(bMayBeFuncName && IsOpCode2( aUpper )) )
-            {
-                if ( mbExtendedErrorDetection )
-                {
-                    // set an error and end compilation
-                    SetError( errNoName );
-                    return FALSE;
-                }
-                else
-                {
-                    // Provide single token information and continue. Do not set an
-                    // error, that would prematurely end compilation. Simple
-                    // unknown names are handled by the interpreter.
-                    ScGlobal::pCharClass->toLower( aUpper );
-                    aToken.SetString( aUpper.GetBuffer() );
-                    aToken.NewOpCode( ocBad );
-                    pRawToken = aToken.Clone();
-                    if ( bAutoCorrect )
-                        AutoCorrectParsedSymbol();
-                }
-            }
+    if( nSpaces )
+    {
+        ScRawToken aToken;
+        aToken.SetOpCode( ocSpaces );
+        aToken.sbyte.cByte = (BYTE) ( nSpaces > 255 ? 255 : nSpaces );
+        if( !pArr->AddToken( aToken ) )
+        {
+            SetError(errCodeOverflow);
+            return false;
         }
-        return TRUE;
+    }
+
+    // Short cut for references when reading ODF to speedup things.
+    if (mnPredetectedReference)
+    {
+        String aStr( cSymbol);
+        if (!IsPredetectedReference( aStr) && !IsExternalNamedRange( aStr))
+        {
+            /* TODO: it would be nice to generate a #REF! error here, which
+             * would need an ocBad token with additional error value.
+             * FormulaErrorToken wouldn't do because we want to preserve the
+             * original string containing partial valid address
+             * information. */
+            ScRawToken aToken;
+            aToken.SetString( aStr.GetBuffer() );
+            aToken.NewOpCode( ocBad );
+            pRawToken = aToken.Clone();
+        }
+        return true;
+    }   
+
+    if ( (cSymbol[0] == '#' || cSymbol[0] == '$') && cSymbol[1] == 0 &&
+            !bAutoCorrect )
+    {   // #101100# special case to speed up broken [$]#REF documents
+        /* FIXME: ISERROR(#REF!) would be valid and TRUE and the formula to
+         * be processed as usual. That would need some special treatment,
+         * also in NextSymbol() because of possible combinations of
+         * #REF!.#REF!#REF! parts. In case of reading ODF that is all
+         * handled by IsPredetectedReference(), this case here remains for
+         * manual/API input. */
+        String aBad( aFormula.Copy( nSrcPos-1 ) );
+        eLastOp = pArr->AddBad( aBad )->GetOpCode();
+        return false;
+    }
+
+    if( IsString() )
+        return true;
+
+    bool bMayBeFuncName;
+    bool bAsciiNonAlnum;    // operators, separators, ...
+    if ( cSymbol[0] < 128 )
+    {
+        bMayBeFuncName = CharClass::isAsciiAlpha( cSymbol[0] );
+        bAsciiNonAlnum = !bMayBeFuncName && !CharClass::isAsciiDigit( cSymbol[0] );
     }
     else
-        return FALSE;
+    {
+        String aTmpStr( cSymbol[0] );
+        bMayBeFuncName = ScGlobal::pCharClass->isLetter( aTmpStr, 0 );
+        bAsciiNonAlnum = false;
+    }
+    if ( bMayBeFuncName )
+    {
+        // a function name must be followed by a parenthesis
+        const sal_Unicode* p = aFormula.GetBuffer() + nSrcPos;
+        while( *p == ' ' )
+            p++;
+        bMayBeFuncName = ( *p == '(' );
+    }
+
+#if 0
+    fprintf( stderr, "Token '%s'\n",
+            rtl::OUStringToOString( aUpper, RTL_TEXTENCODING_UTF8 ).getStr() );
+#endif
+
+    // #42016# Italian ARCTAN.2 resulted in #REF! => IsOpcode() before
+    // IsReference().
+
+    const String aOrg( cSymbol );
+
+    if (bAsciiNonAlnum && IsOpCode( aOrg ))
+        return true;
+
+    String aUpper;
+    bool bAsciiUpper = false;
+    if (bMayBeFuncName)
+    {
+        bAsciiUpper = lcl_UpperAsciiOrI18n( aUpper, aOrg, meGrammar);
+        if (IsOpCode( aUpper ))
+            return true;
+    }
+
+    // Column 'DM' ("Deutsche Mark", German currency) couldn't be
+    // referred => IsReference() before IsValue().
+    // Preserve case of file names in external references.
+    if (IsReference( aOrg ))
+        return true;
+
+    if (!aUpper.Len())
+        bAsciiUpper = lcl_UpperAsciiOrI18n( aUpper, aOrg, meGrammar);
+
+    // IsBoolean() before IsValue() to catch inline bools without the kludge
+    //    for inline arrays.
+    if (bAllowBooleans && IsBoolean( aUpper ))
+        return true;
+
+    if (IsValue( aUpper ))
+        return true;
+
+    // User defined names and such do need i18n upper also in ODF.
+    if (bAsciiUpper)
+        aUpper = ScGlobal::pCharClass->upper( aOrg );
+
+    if (IsNamedRange( aUpper ))
+        return true; 
+    // Preserve case of file names in external references.
+    if (IsExternalNamedRange( aOrg ))
+        return true;
+    if (IsDBRange( aUpper ))
+        return true;
+    if (IsColRowName( aUpper ))
+        return true;
+    if (bMayBeFuncName && IsMacro( aUpper ))
+        return true;
+    if (bMayBeFuncName && IsOpCode2( aUpper ))
+        return true;
+    
+    if ( mbExtendedErrorDetection )
+    {   
+        // set an error and end compilation
+        SetError( errNoName );
+        return false;
+    }
+
+    // Provide single token information and continue. Do not set an error, that     
+    // would prematurely end compilation. Simple unknown names are handled by
+    // the interpreter.
+    ScGlobal::pCharClass->toLower( aUpper );
+    ScRawToken aToken;
+    aToken.SetString( aUpper.GetBuffer() );
+    aToken.NewOpCode( ocBad );
+    pRawToken = aToken.Clone();
+    if ( bAutoCorrect )
+        AutoCorrectParsedSymbol();
+    return true;
 }
 
 ScTokenArray* ScCompiler::CompileString( const String& rFormula )
