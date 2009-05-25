@@ -156,7 +156,13 @@ public class VCLApplicationListener implements ApplicationListener {
 			// and the process will exit.
 			while (!shutdownEvent.isShutdownCancelled()) {
 				queue.dispatchNextEvent();
-				Thread.yield();
+				try {
+					// Fix bug 3485 by sleeping a little while since, in most
+					// cases, the other threads are blocked and so this thread
+					// will consume excessive CPU
+					Thread.currentThread().sleep( 100 );
+				}
+				catch (Throwable t) {}
 			}
 		}
 
