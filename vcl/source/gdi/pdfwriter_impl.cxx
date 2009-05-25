@@ -12607,14 +12607,19 @@ void PDFWriterImpl::encodeGlyphs()
                                     for ( sal_Int32 j = 0; j < nTextLen; j++, pBuf++ )
                                     {
                                         sal_Int32 nOctalBufLen = aOctalBuf.getLength();
-                                        if ( nOctalBufLen && ( nOctalBufLen > 3 || *pBuf < '0' || *pBuf > '9' ) )
+										// Fix bug 3481 by limiting octal
+										// strings to only 3 digits
+                                        if ( nOctalBufLen && ( nOctalBufLen > 2 || *pBuf < '0' || *pBuf > '9' ) )
+										{
                                             aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
+                                        	nOctalBufLen = 0;
+										}
 
                                         if ( !bLastSlash && *pBuf == '\\' )
                                         {
                                             bLastSlash = true;
                                         }
-                                        else if ( *pBuf >= '0' && *pBuf <= '9' && ( bLastSlash || aOctalBuf.getLength() ) )
+                                        else if ( *pBuf >= '0' && *pBuf <= '9' && ( bLastSlash || nOctalBufLen ) )
                                         {
                                             bLastSlash = false;
                                             aOctalBuf.append( *pBuf );
