@@ -63,7 +63,7 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-static UInt32 nSupportedTypes = 7;
+static UInt32 nSupportedTypes = 8;
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
@@ -73,6 +73,7 @@ static FourCharCode aSupportedNativeTypes[] = {
 	'utxt',
 	kQTFileTypeText,
 	kQTFileTypePDF,
+	kQTFileTypePNG,
 	kQTFileTypeTIFF,
 	kQTFileTypePicture
 };
@@ -86,6 +87,7 @@ static bool aSupportedTextTypes[] = {
 	true,
 	false,
 	false,
+	false,
 	false
 };
 
@@ -97,6 +99,7 @@ static OUString aSupportedMimeTypes[] = {
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" ),
+	OUString::createFromAscii( "image/bmp" ),
 	OUString::createFromAscii( "image/bmp" )
 };
 
@@ -106,6 +109,7 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
 	getCppuType( ( OUString* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
@@ -478,7 +482,15 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					if ( !bRequestedTypeIsText )
 					{
 						// Convert to BMP format
-						if ( nRequestedType == kQTFileTypePicture )
+						if ( nRequestedType == kQTFileTypePNG )
+						{
+							HLock( hData );
+							Sequence< sal_Int8 > aExportData( nSize );
+							memcpy( aExportData.getArray(), *hData, nSize );
+							HUnlock( hData );
+							out <<= aExportData;
+						}
+						else if ( nRequestedType == kQTFileTypePicture )
 						{
 							ComponentInstance aExporter;
 							if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr )

@@ -1,29 +1,36 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified May 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified May 2009 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
@@ -34,10 +41,18 @@
 #ifndef _TOOLS_STREAM_HXX
 #include <tools/stream.hxx>
 #endif
-#include <vcl/salbtype.hxx>
-#include <vcl/bmpacc.hxx>
-#include <vcl/outdev.hxx>
-#include <vcl/bitmap.hxx>
+#ifndef _SV_SALBTYPE_HXX
+#include <salbtype.hxx>
+#endif
+#ifndef _SV_BMPACC_HXX
+#include <bmpacc.hxx>
+#endif
+#ifndef _SV_OUTDEV_HXX
+#include <outdev.hxx>
+#endif
+#ifndef _SV_BITMAP_HXX
+#include <bitmap.hxx>
+#endif
 
 #include <utility>
 
@@ -75,17 +90,17 @@ using namespace vcl;
 
 struct DIBInfoHeader
 {
-	sal_uInt32		nSize;
-	sal_Int32		nWidth;
-	sal_Int32		nHeight;
-	sal_uInt16		nPlanes;
-	sal_uInt16		nBitCount;
-	sal_uInt32		nCompression;
-	sal_uInt32		nSizeImage;
-	sal_Int32		nXPelsPerMeter;
-	sal_Int32		nYPelsPerMeter;
-	sal_uInt32		nColsUsed;
-	sal_uInt32		nColsImportant;
+	UINT32			nSize;
+	UINT32			nWidth;
+	INT32			nHeight;
+	UINT16			nPlanes;
+	UINT16			nBitCount;
+	UINT32			nCompression;
+	UINT32			nSizeImage;
+	UINT32			nXPelsPerMeter;
+	UINT32			nYPelsPerMeter;
+	UINT32			nColsUsed;
+	UINT32			nColsImportant;
 
 					DIBInfoHeader() :
 						nSize( 0UL ),
@@ -213,9 +228,8 @@ BOOL Bitmap::ImplReadDIB( SvStream& rIStm, Bitmap& rBmp, ULONG nOffset )
 	DIBInfoHeader	aHeader;
 	const ULONG 	nStmPos = rIStm.Tell();
 	BOOL			bRet = FALSE;
-	sal_Bool		bTopDown = sal_False;
 
-	if( ImplReadDIBInfoHeader( rIStm, aHeader, bTopDown ) && aHeader.nWidth && aHeader.nHeight && aHeader.nBitCount )
+	if( ImplReadDIBInfoHeader( rIStm, aHeader ) && aHeader.nWidth && aHeader.nHeight && aHeader.nBitCount )
 	{
 		const USHORT nBitCount( discretizeBitcount(aHeader.nBitCount) );
 
@@ -282,7 +296,7 @@ BOOL Bitmap::ImplReadDIB( SvStream& rIStm, Bitmap& rBmp, ULONG nOffset )
 				if( nOffset )
 					pIStm->SeekRel( nOffset - ( pIStm->Tell() - nStmPos ) );
 
-				bRet = ImplReadDIBBits( *pIStm, aHeader, *pAcc, bTopDown );
+				bRet = ImplReadDIBBits( *pIStm, aHeader, *pAcc );
 
 				if( bRet && aHeader.nXPelsPerMeter && aHeader.nYPelsPerMeter )
 				{
@@ -346,7 +360,7 @@ BOOL Bitmap::ImplReadDIBFileHeader( SvStream& rIStm, ULONG& rOffset )
 
 // ------------------------------------------------------------------
 
-BOOL Bitmap::ImplReadDIBInfoHeader( SvStream& rIStm, DIBInfoHeader& rHeader, sal_Bool& bTopDown )
+BOOL Bitmap::ImplReadDIBInfoHeader( SvStream& rIStm, DIBInfoHeader& rHeader )
 {
 	// BITMAPINFOHEADER or BITMAPCOREHEADER
 	rIStm >> rHeader.nSize;
@@ -354,12 +368,12 @@ BOOL Bitmap::ImplReadDIBInfoHeader( SvStream& rIStm, DIBInfoHeader& rHeader, sal
 	// BITMAPCOREHEADER
 	if ( rHeader.nSize == DIBCOREHEADERSIZE )
 	{
-		sal_Int16 nTmp16;
+		UINT16	nTmp16;
 
 		rIStm >> nTmp16; rHeader.nWidth = nTmp16;
 		rIStm >> nTmp16; rHeader.nHeight = nTmp16;
-		rIStm >> rHeader.nPlanes;
-		rIStm >> rHeader.nBitCount;
+		rIStm >> nTmp16; rHeader.nPlanes = nTmp16;
+		rIStm >> nTmp16; rHeader.nBitCount = nTmp16;
 	}
 	else
 	{
@@ -427,19 +441,9 @@ BOOL Bitmap::ImplReadDIBInfoHeader( SvStream& rIStm, DIBInfoHeader& rHeader, sal
 		if ( rHeader.nSize > DIBINFOHEADERSIZE )
 			rIStm.SeekRel( rHeader.nSize - DIBINFOHEADERSIZE );
 	}
-	if ( rHeader.nHeight < 0 )
-	{
-		bTopDown = sal_True;
-		rHeader.nHeight *= -1;
-	}
-	else
-		bTopDown = sal_False;
-
-	if ( rHeader.nWidth < 0 )
-		rIStm.SetError( SVSTREAM_FILEFORMAT_ERROR );
     
     // #144105# protect a little against damaged files
-    if( rHeader.nSizeImage > ( 16 * static_cast< sal_uInt32 >( rHeader.nWidth * rHeader.nHeight ) ) )
+    if( rHeader.nSizeImage > (16 * rHeader.nWidth * rHeader.nHeight) )
         rHeader.nSizeImage = 0;
 
 	return( ( rHeader.nPlanes == 1 ) && ( rIStm.GetError() == 0UL ) );
@@ -476,7 +480,7 @@ BOOL Bitmap::ImplReadDIBPalette( SvStream& rIStm, BitmapWriteAccess& rAcc, BOOL 
 
 // ------------------------------------------------------------------
 
-BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWriteAccess& rAcc, sal_Bool bTopDown )
+BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWriteAccess& rAcc )
 {
 	const ULONG nAlignedWidth = AlignedWidth4Bytes( rHeader.nWidth * rHeader.nBitCount );
 	UINT32		nRMask = 0;
@@ -494,13 +498,14 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 		case( BMP_FORMAT_4BIT_MSN_PAL ):
 		case( BMP_FORMAT_8BIT_PAL ):
 		case( BMP_FORMAT_24BIT_TC_BGR ):
-			bNative = ( ( rAcc.IsBottomUp() != bTopDown ) && !bRLE && !bTCMask && ( rAcc.GetScanlineSize() == nAlignedWidth ) );
+			bNative = ( rAcc.IsBottomUp() && !bRLE && !bTCMask && ( rAcc.GetScanlineSize() == nAlignedWidth ) );
 		break;
 
 		default:
 			bNative = FALSE;
 		break;
 	}
+
 	// Read data
 	if( bNative )
 	{
@@ -564,10 +569,6 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 			if( rHeader.nColsUsed && rHeader.nBitCount > 8 )
 				rIStm.SeekRel( rHeader.nColsUsed * ( ( rHeader.nSize != DIBCOREHEADERSIZE ) ? 4 : 3 ) );
 
-			const long nI = bTopDown ? 1 : -1;
-			long nY = bTopDown ? 0 : nHeight - 1;
-			long nCount = nHeight;
-	
 			switch( rHeader.nBitCount )
 			{
 				case( 1 ):
@@ -575,7 +576,7 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 					BYTE*	pTmp;
 					BYTE	cTmp;
 
-					for( ; nCount--; nY += nI )
+					for( long nY = nHeight - 1; nY >= 0L; nY-- )
 					{
 						rIStm.Read( pTmp = pBuf, nAlignedWidth );
 						cTmp = *pTmp++;
@@ -599,7 +600,7 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 					BYTE*	pTmp;
 					BYTE	cTmp;
 
-					for( ; nCount--; nY += nI )
+					for( long nY = nHeight - 1; nY >= 0L; nY-- )
 					{
 						rIStm.Read( pTmp = pBuf, nAlignedWidth );
 						cTmp = *pTmp++;
@@ -622,7 +623,7 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 				{
 					BYTE*	pTmp;
 
-					for( ; nCount--; nY += nI )
+					for( long nY = nHeight - 1; nY >= 0L; nY-- )
 					{
 						rIStm.Read( pTmp = pBuf, nAlignedWidth );
 
@@ -638,7 +639,7 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 					BitmapColor aColor;
 					UINT16* 	pTmp16;
 
-					for( ; nCount--; nY += nI )
+					for( long nY = abs(rHeader.nHeight) - 1L; nY >= 0L; nY-- )
 					{
 						rIStm.Read( (char*)( pTmp16 = (UINT16*) pBuf ), nAlignedWidth );
 
@@ -656,7 +657,7 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 					BitmapColor aPixelColor;
 					BYTE*		pTmp;
 
-					for( ; nCount--; nY += nI )
+					for( long nY = nHeight - 1; nY >= 0L; nY-- )
 					{
 						rIStm.Read( pTmp = pBuf, nAlignedWidth );
 
@@ -677,7 +678,7 @@ BOOL Bitmap::ImplReadDIBBits( SvStream& rIStm, DIBInfoHeader& rHeader, BitmapWri
 					BitmapColor aColor;
 					UINT32* 	pTmp32;
 
-					for( ; nCount--; nY += nI )
+					for( long nY = abs(rHeader.nHeight) - 1L; nY >= 0L; nY-- )
 					{
 						rIStm.Read( (char*)( pTmp32 = (UINT32*) pBuf ), nAlignedWidth );
 
@@ -800,24 +801,12 @@ BOOL Bitmap::ImplWriteDIB( SvStream& rOStm, BitmapReadAccess& rAcc, BOOL bCompre
 
 	if( maPrefSize.Width() && maPrefSize.Height() && ( maPrefMapMode != aMapPixel ) )
 	{
-        // #i48108# Try to recover xpels/ypels as previously stored on
-        // disk. The problem with just converting maPrefSize to 100th
-        // mm and then relating that to the bitmap pixel size is that
-        // MapMode is integer-based, and suffers from roundoffs,
-        // especially if maPrefSize is small. Trying to circumvent
-        // that by performing part of the math in floating point.
-		const Size aScale100000( 
-            OutputDevice::LogicToLogic( Size(100000L,
-                                             100000L), 
-                                        MAP_100TH_MM, 
-                                        maPrefMapMode ) );
-        const double fBmpWidthM((double)maPrefSize.Width() / aScale100000.Width() );
-        const double fBmpHeightM((double)maPrefSize.Height() / aScale100000.Height() );
-		if( fabs(fBmpWidthM) > 0.000000001 &&
-            fabs(fBmpHeightM) > 0.000000001 )
+		const Size aSize100( OutputDevice::LogicToLogic( maPrefSize, maPrefMapMode, MAP_100TH_MM ) );
+
+		if( aSize100.Width() && aSize100.Height() )
 		{
-			aHeader.nXPelsPerMeter = (UINT32)(rAcc.Width() / fBmpWidthM + .5);
-			aHeader.nYPelsPerMeter = (UINT32)(rAcc.Height() / fBmpHeightM + .5);
+			aHeader.nXPelsPerMeter = ( rAcc.Width() * 100000UL ) / aSize100.Width();
+			aHeader.nYPelsPerMeter = ( rAcc.Height() * 100000UL ) / aSize100.Height();
 		}
 	}
 
