@@ -160,6 +160,7 @@ BOOL Bitmap::Read( SvStream& rIStm, BOOL bFileHeader )
 	{
 		if( !rIStm.GetError() )
 			rIStm.SetError( SVSTREAM_GENERALERROR );
+
 		rIStm.Seek( nOldPos );
 
 #ifdef USE_JAVA
