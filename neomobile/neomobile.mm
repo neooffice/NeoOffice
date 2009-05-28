@@ -117,6 +117,12 @@ using namespace ::com::sun::star::document;
 
 //========================================================================
 
+const NSString *kNeoMobileXPosPref = @"nmXPos";
+const NSString *kNeoMobileYPosPref = @"nmYPos";
+const NSString *kNeoMobileVisiblePref = @"nmVisible";
+
+//========================================================================
+
 OUString NSStringToOUString( NSString *pString )
 {
 	if ( !pString )
@@ -386,8 +392,8 @@ static NeoMobileWebView *pSharedWebView = nil;
 		
 		NSPoint windowPos={0, 0};
 		
-		NSString *xPosStr=[defaults stringForKey:@"nmXPos"];
-		NSString *yPosStr=[defaults stringForKey:@"nmYPos"];
+		NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
+		NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
 		if(xPosStr && yPosStr)
 		{
 			windowPos.x=[xPosStr intValue];
@@ -419,7 +425,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 				[pWindow orderFront:self];
 
 				NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-				[defaults setBool:YES forKey:@"nmVisible"];
+				[defaults setBool:YES forKey:kNeoMobileVisiblePref];
 				[defaults synchronize];
 			}
 
@@ -432,7 +438,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 - (void)showWebViewOnlyIfVisible:(id)obj
 {
 	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-	if ( [defaults boolForKey:@"nmVisible"] )
+	if ( [defaults boolForKey:kNeoMobileVisiblePref] )
 		[self showWebView:obj];
 }
 @end

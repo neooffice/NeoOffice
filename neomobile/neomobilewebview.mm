@@ -701,13 +701,10 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	NSWindow *window=[notification object];
 	if(window && (window==mpPanel))
 	{
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		
 		NSPoint windowPos=[window frame].origin;
-		
-		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:@"nmXPos"];
-		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:@"nmYPos"];
-		
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kNeoMobileXPosPref];
+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kNeoMobileYPosPref];
 		[defaults synchronize];
 	}
 }
@@ -715,7 +712,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 - (void)windowWillClose:(NSNotification *)notification
 {
 	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-	[defaults setBool:NO forKey:@"nmVisible"];
+	[defaults setBool:NO forKey:kNeoMobileVisiblePref];
 	[defaults synchronize];
 }
 

@@ -42,6 +42,10 @@
 #include <rtl/ustring.hxx>
 #endif
 
+extern const NSString *kNeoMobileXPosPref;
+extern const NSString *kNeoMobileYPosPref;
+extern const NSString *kNeoMobileVisiblePref;
+
 ::rtl::OUString NSStringToOUString( NSString *pString );
 
 #endif	// _NEOMOBILE_HXX
