@@ -226,6 +226,7 @@ Sequence< OUString > SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceName
 
 //*************************************************************************
 Any SAL_CALL MacOSXNeoOfficeMobileImpl::execute( const Sequence< NamedValue >& rNamedVAlues )
+	throw (IllegalArgumentException, Exception)
 {
 	openNeoOfficeMobileOnlyIfVisible();
 
