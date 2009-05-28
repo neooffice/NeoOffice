@@ -712,6 +712,13 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	}
 }
 
+- (void)windowWillClose:(NSNotification *)notification
+{
+	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+	[defaults setBool:NO forKey:@"nmVisible"];
+	[defaults synchronize];
+}
+
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
         request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
 {
