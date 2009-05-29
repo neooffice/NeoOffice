@@ -34,14 +34,24 @@
 #ifndef _NEOMOBILEI18N_HXX
 #define _NEOMOBILEI18N_HXX
 
+#include <sal/types.h>
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
+
+#define NEOMOBILECANCEL "cancel"
+#define NEOMOBILEDOWNLOADCANCELED "download.canceled"
+#define NEOMOBILEDOWNLOADFAILED "download.failed"
+#define NEOMOBILEDOWNLOADINGFILE "downloading.file"
+#define NEOMOBILEEXPORTINGFILE "exporting.file"
+#define NEOMOBILELOADING "loading"
+#define NEOMOBILEPRODUCTNAME "product.name"
+#define NEOMOBILEUPLOADINGFILE "uploading.file"
 
 /**
  * Lookup a string and retrieve a translated string.  If no translation
  * is available, default to english.
  */
-NSString *GetLocalizedString( const NSString *key );
+NSString *GetLocalizedString( const sal_Char *key );
 
 #endif	// _NEOMOBILEI18N_HXX

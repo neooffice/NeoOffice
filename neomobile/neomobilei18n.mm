@@ -47,23 +47,23 @@ using namespace rtl;
 /**
  * Translated strings for en_US locale
  */
-const char *pEntries_en_US[] = {
-	"Cancel", "Cancel",
-	"Download canceled.", "Download canceled.",
-	"Exporting file...", "Exporting file...",
-	"Uploading file...", "Uploading file...",
-	"Loading...", "Loading...",
-	"Downloading file... ", "Downloading file... ",
-	"Download failed!", "Download failed!",
-	"NeoOffice Mobile", "NeoOffice Mobile",
+static const sal_Char *pEntries_en_US[] = {
+	NEOMOBILECANCEL, "Cancel",
+	NEOMOBILEDOWNLOADCANCELED, "Download canceled.",
+	NEOMOBILEDOWNLOADFAILED, "Download failed!",
+	NEOMOBILEDOWNLOADINGFILE, "Downloading file... ",
+	NEOMOBILEEXPORTINGFILE, "Exporting file...",
+	NEOMOBILELOADING, "Loading...",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEUPLOADINGFILE, "Uploading file...",
 	nil, nil
 };
 
 /**
  * Translated strings for fr locale
  */
-const char *pEntries_fr[] = {
-	"Cancel", "Annuler",
+static const sal_Char *pEntries_fr[] = {
+	NEOMOBILECANCEL, "Annuler",
 	nil, nil
 };
 
@@ -85,7 +85,7 @@ static OUString ImplGetLocaleString( Locale aLocale )
 	return aLocaleString;
 }
 
-static void InitializeLocale( OUString aLocale, const char **pEntries )
+static void InitializeLocale( OUString aLocale, const sal_Char **pEntries )
 {
 	if ( !aLocale.getLength() || !pEntries )
 		return;
@@ -112,9 +112,13 @@ static void InitializeLocale( OUString aLocale, const char **pEntries )
  * Lookup a string and retrieve a translated string.  If no translation
  * is available, default to "en-US".
  */
-NSString *GetLocalizedString( const NSString *key )
+NSString *GetLocalizedString( const sal_Char *key )
 {
-	if ( !key || ![key length] )
+	if ( !key || !strlen( key ) )
+		return @"";
+
+	NSString *pKey = [NSString stringWithUTF8String:key];
+	if ( !pKey )
 		return @"";
 
 	NSString *pRet = nil;
@@ -153,16 +157,16 @@ NSString *GetLocalizedString( const NSString *key )
 	}
 
 	if ( !pRet && pPrimaryLocaleDict )
-		pRet = (NSString *)[pPrimaryLocaleDict objectForKey:key];
+		pRet = (NSString *)[pPrimaryLocaleDict objectForKey:pKey];
 
 	if ( !pRet && pSecondaryLocaleDict )
-		pRet = (NSString *)[pSecondaryLocaleDict objectForKey:key];
+		pRet = (NSString *)[pSecondaryLocaleDict objectForKey:pKey];
 
 	if ( !pRet && pDefaultLocaleDict )
-		pRet = (NSString *)[pDefaultLocaleDict objectForKey:key];
+		pRet = (NSString *)[pDefaultLocaleDict objectForKey:pKey];
 
 	if ( !pRet )
-		pRet = key;
+		pRet = pKey;
 
 	return pRet;
 }

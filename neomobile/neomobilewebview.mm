@@ -177,7 +177,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	{
 		[mpPanel setFloatingPanel:YES];
 		[mpPanel setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 90)];
-		[mpPanel setTitle: GetLocalizedString(@"NeoOffice Mobile")];
+		[mpPanel setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 		
 		mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24)];
 		[mpcontentView setAutoresizesSubviews:YES];
@@ -185,7 +185,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		//mpcontentView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 500)];		
 		
 		mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 24)];
-		[mpcancelButton setTitle:GetLocalizedString(@"Cancel")];
+		[mpcancelButton setTitle:GetLocalizedString(NEOMOBILECANCEL)];
 		[mpcancelButton setTarget:self];
 		[mpcancelButton setAction:@selector(cancelButtonPressed)];
 		[mpcancelButton setAutoresizingMask:(NSViewMaxXMargin)];
@@ -370,7 +370,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[mpdownload cancel];
 		mpdownload=nil;
 		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:GetLocalizedString(@"Download canceled.")];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
 	}
 	else if(mpexportEvent)
 	{
@@ -478,7 +478,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					mpexportEvent=&aEvent;
 
 					[mpcancelButton setEnabled:YES];
-					[mpstatusLabel setString:GetLocalizedString(@"Exporting file...")];
+					[mpstatusLabel setString:GetLocalizedString(NEOMOBILEEXPORTINGFILE)];
 
 					vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 					rSolarMutex.acquire();
@@ -546,9 +546,9 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		pRequest = [pDataSource request];
 	
 	if ( mpexportEvent && pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
-		[mpstatusLabel setString:GetLocalizedString(@"Uploading file...")];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEUPLOADINGFILE)];
 	else
-		[mpstatusLabel setString:GetLocalizedString(@"Loading...")];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILELOADING)];
 }
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
@@ -590,7 +590,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( !pWindow || ![pWindow isVisible] )
 		return bRet;
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@""];
+	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:GetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:@""];
 	if ( pAlert && [pAlert runModal] == NSAlertDefaultReturn )
 		bRet = YES;
 
@@ -641,7 +641,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	
 	mpdownload=download;
 	[mpcancelButton setEnabled:YES];
-	[mpstatusLabel setString:GetLocalizedString(@"Downloading file... ")];
+	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
 }
 
 - (void)download:(NSURLDownload *)download didReceiveDataOfLength:(unsigned long)length
@@ -655,12 +655,12 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	if(mndownloadSize > 0)
 	{
 		// we got a response from the server, so we can compute a percentage
-		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", GetLocalizedString(@"Downloading file... "), (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
+		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
 	}
 	else
 	{
 		// no expected size received from the server, just show Kb download
-		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", GetLocalizedString(@"Downloading file... "), (long)(mndownloadBytesReceived/1024)]];
+		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (long)(mndownloadBytesReceived/1024)]];
 	}
 }
 
@@ -692,7 +692,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 #endif
 	mpdownload=nil;
 	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:GetLocalizedString(@"Download failed!")];
+	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
 }
 
