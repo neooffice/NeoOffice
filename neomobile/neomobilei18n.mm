@@ -32,57 +32,137 @@
  *************************************************************************/
 
 #include "neomobilei18n.hxx"
-#include "premac.h"
-#import <Cocoa/Cocoa.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include "postmac.h"
 #include <map>
+#include <vcl/svapp.hxx>
+
+static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
+static NSDictionary*pDefaultLocaleDict = nil;
+static NSDictionary*pPrimaryLocaleDict = nil;
+static NSDictionary*pSecondaryLocaleDict = nil;
+static NSDictionary*pTertiaryLocaleDict = nil;
+
+using namespace com::sun::star::lang;
+using namespace rtl;
 
 /**
- * Translated strings for US English
+ * Translated strings for en_US locale
  */
-class us_enStrings : public std::map<std::string, std::string> {
-public:
-	us_enStrings() : std::map<std::string, std::string>() {
-		// pairs are "key", "translation"
-		
-		insert(value_type("Cancel", "Cancel"));
-		insert(value_type("Download canceled.", "Download canceled."));
-		insert(value_type("Exporting file...", "Exporting file..."));
-		insert(value_type("Uploading file...", "Uploading file..."));
-		insert(value_type("Loading...", "Loading..."));
-		insert(value_type("Downloading file ... ","Downloading file ... "));
-		insert(value_type("Download failed!", "Download failed!"));
-		insert(value_type("NeoOffice Mobile", "NeoOffice Mobile"));
-	};
+const char *pEntries_en_US[] = {
+	"Cancel", "Cancel",
+	"Download canceled.", "Download canceled.",
+	"Exporting file...", "Exporting file...",
+	"Uploading file...", "Uploading file...",
+	"Loading...", "Loading...",
+	"Downloading file... ", "Downloading file... ",
+	"Download failed!", "Download failed!",
+	"NeoOffice Mobile", "NeoOffice Mobile",
+	nil, nil
 };
 
 /**
- * Lookup a string and retrieve a translated string.  If no translation
- * is available, default to english.
+ * Translated strings for fr locale
  */
-std::string GetLocalizedString(const char *src)
+const char *pEntries_fr[] = {
+	"Cancel", "Annuler",
+	nil, nil
+};
+
+static OUString aDelimiter = OUString::createFromAscii( "_" );
+
+static OUString ImplGetLocaleString( Locale aLocale )
 {
-	std::string toReturn(src);
-	
-	std::string myLocale;
-	
-	CFArrayRef languages=(CFArrayRef)CFPreferencesCopyValue(CFSTR("AppleLanguages"), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost);
-	if(languages)
+	OUString aLocaleString( aLocale.Language );
+	if ( aLocaleString.getLength() && aLocale.Country.getLength() )
 	{
-		myLocale=CFStringGetCStringPtr((CFStringRef)CFArrayGetValueAtIndex(languages, 0), kCFStringEncodingMacRoman);\
-		CFRelease(languages);
-	}
-	
-	if(!myLocale.empty())
-	{
-		if(myLocale=="en")
+		aLocaleString += aDelimiter;
+		aLocaleString += aLocale.Country;
+		if ( aLocale.Variant.getLength() )
 		{
-			us_enStrings trans;
-			if(trans.find(src)!=trans.end())
-				toReturn=trans[src];
+			aLocaleString += aDelimiter;
+			aLocaleString += aLocale.Variant;
 		}
 	}
-	
-	return(toReturn);
+	return aLocaleString;
+}
+
+static void InitializeLocale( OUString aLocale, const char **pEntries )
+{
+	if ( !aLocale.getLength() || !pEntries )
+		return;
+
+	::std::map< OUString, NSDictionary* >::const_iterator it = aLocalizationMap.find( aLocale );
+	if ( it != aLocalizationMap.end() )
+		return;
+
+	NSMutableDictionary *pDict = [NSMutableDictionary dictionaryWithCapacity:20];
+	if ( !pDict )
+		return;
+
+	// Ensure that the dictionary never gets released
+	[pDict retain];
+
+	// Iterate through entries until a nil entry is found
+	for ( size_t i = 0; pEntries[ i ] && pEntries[ i + 1 ]; i += 2 )
+		[pDict setObject:[NSString stringWithUTF8String:pEntries[ i + 1 ]] forKey:[NSString stringWithUTF8String:pEntries[ i ]]];
+
+	aLocalizationMap[ aLocale ] = pDict;
+}
+
+/**
+ * Lookup a string and retrieve a translated string.  If no translation
+ * is available, default to "en-US".
+ */
+NSString *GetLocalizedString( const NSString *key )
+{
+	if ( !key || ![key length] )
+		return @"";
+
+	NSString *pRet = nil;
+
+	if ( !aLocalizationMap.size() )
+	{
+		// Initialize dictionaries
+		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "en" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "US" ) ), OUString() ) ), pEntries_en_US );
+		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "fr" ) ), OUString(), OUString() ) ), pEntries_fr );
+
+		// Set locale dictionaries based on default locale
+		Locale aLocale( Application::GetSettings().GetUILocale() );
+
+		// Check if locale exists in our list of locales. Note that we ignore
+		// variant at this time as no variant-specific localizations are
+		// planned for this component yet.
+		OUString aDefaultLocale = ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "en" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "US" ) ), OUString() ) );
+		::std::map< OUString, NSDictionary* >::const_iterator it = aLocalizationMap.find( aDefaultLocale );
+		if ( it != aLocalizationMap.end() )
+			pDefaultLocaleDict = it->second;
+
+		OUString aPrimaryLocale = ImplGetLocaleString( aLocale );
+		it = aLocalizationMap.find( aPrimaryLocale );
+		if ( it != aLocalizationMap.end() && pDefaultLocaleDict != it->second )
+			pPrimaryLocaleDict = it->second;
+
+		OUString aSecondaryLocale = ImplGetLocaleString( Locale( aLocale.Language, aLocale.Country, OUString() ) );
+		it = aLocalizationMap.find( aSecondaryLocale );
+		if ( it != aLocalizationMap.end() && pDefaultLocaleDict != it->second && pPrimaryLocaleDict != it->second )
+			pSecondaryLocaleDict = it->second;
+
+		OUString aTertiaryLocale = ImplGetLocaleString( Locale( aLocale.Language, OUString(), OUString() ) );
+		it = aLocalizationMap.find( aTertiaryLocale );
+		if ( it != aLocalizationMap.end() && pDefaultLocaleDict != it->second && pPrimaryLocaleDict != it->second && pSecondaryLocaleDict != it->second )
+			pTertiaryLocaleDict = it->second;
+	}
+
+	if ( !pRet && pPrimaryLocaleDict )
+		pRet = (NSString *)[pPrimaryLocaleDict objectForKey:key];
+
+	if ( !pRet && pSecondaryLocaleDict )
+		pRet = (NSString *)[pSecondaryLocaleDict objectForKey:key];
+
+	if ( !pRet && pDefaultLocaleDict )
+		pRet = (NSString *)[pDefaultLocaleDict objectForKey:key];
+
+	if ( !pRet )
+		pRet = key;
+
+	return pRet;
 }

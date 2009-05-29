@@ -31,15 +31,17 @@
  *
  *************************************************************************/
 
-#ifndef neomobilei18n_h_
-#define neomobilei18n_h_
+#ifndef _NEOMOBILEI18N_HXX
+#define _NEOMOBILEI18N_HXX
 
-#include <string>
+#include <premac.h>
+#import <Cocoa/Cocoa.h>
+#include "postmac.h"
 
 /**
  * Lookup a string and retrieve a translated string.  If no translation
  * is available, default to english.
  */
-std::string GetLocalizedString(const char *src);
+NSString *GetLocalizedString( const NSString *key );
 
-#endif
+#endif	// _NEOMOBILEI18N_HXX
