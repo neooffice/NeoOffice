@@ -199,7 +199,8 @@ Sequence<OUString> SAL_CALL MacOSXMediaBrowserImpl::getSupportedServiceNames_Sta
 //*************************************************************************
 Any SAL_CALL MacOSXMediaBrowserImpl::execute( const Sequence< NamedValue >& rNamedValues ) throw (IllegalArgumentException, Exception)
 {
-	showMediaBrowserOnlyIfVisible();
+	if(hasMediaBrowser())
+		showMediaBrowserOnlyIfVisible();
 
 	return Any();
 }
