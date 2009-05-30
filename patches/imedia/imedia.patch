@@ -453,3 +453,98 @@ Index: iMediaBrowse.xcodeproj/project.pbxproj
  			};
  			name = Plugin;
  		};
+Index: iMediaBrowser.m
+===================================================================
+--- iMediaBrowser.m	(revision 677)
++++ iMediaBrowser.m	(working copy)
+@@ -57,6 +57,10 @@
+ static iMediaBrowser *_sharedMediaBrowser = nil;
+ static NSMutableArray *_browserClasses = nil;
+ 
++static NSString *kMediaBrowserXPosPref = @"iMBXPos";
++static NSString *kMediaBrowserYPosPref = @"iMBYPos";
++static NSString *kMediaBrowserVisiblePref = @"iMBVisible";
++
+ @interface iMediaBrowser (PrivateAPI)
+ - (void)setupInfoWindow;
+ + (NSArray *)findModulesInDirectory:(NSString*)scanDir withExtension:(NSString *)ext;
+@@ -618,7 +622,41 @@
+ 	}
+ 	else
+ 	{
++		NSWindow *window = [self window];
++		if(window)
++		{
++			// Check for retained user position. If not available, make relative
++			// to the key frame.
++			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++			NSPoint windowPos={0, 0};
++			NSString *xPosStr=[defaults stringForKey:kMediaBrowserXPosPref];
++			NSString *yPosStr=[defaults stringForKey:kMediaBrowserYPosPref];
++			if(xPosStr && yPosStr)
++			{
++				windowPos.x=[xPosStr intValue];
++				windowPos.y=[yPosStr intValue];
++			}
++			else
++			{
++				NSWindow *keyWindow=[NSApp mainWindow];
++				if(keyWindow)
++				{
++					windowPos=[keyWindow frame].origin;
++					windowPos.x+=75;
++					windowPos.y+=75;
++				}
++			}
++			[window setFrameOrigin:windowPos];
++		}
++
+ 		[super showWindow:sender];
++
++		if(window && [window isVisible])
++		{
++			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++			[defaults setBool:YES forKey:kMediaBrowserVisiblePref];
++			[defaults synchronize];
++		}
+ 	}
+ }
+ 
+@@ -708,9 +746,30 @@
+ 
+ #pragma mark -
+ #pragma mark Window Delegate Methods
++- (void)windowDidMove:(NSNotification *)aNotification
++{
++	NSWindow *window=[aNotification object];
++	if(window && (window==[self window]))
++	{
++		NSPoint windowPos=[window frame].origin;
++		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kMediaBrowserXPosPref]; 
++		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kMediaBrowserYPosPref];
++		[defaults synchronize];
++	}
++}
++
+ - (void)windowWillClose:(NSNotification *)aNotification
+ {
+ 	[mySelectedBrowser didDeactivate];
++
++	NSWindow *window=[aNotification object];
++	if(window && (window==[self window]))
++	{
++		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++		[defaults setBool:NO forKey:kMediaBrowserVisiblePref];
++		[defaults synchronize];
++	}
+ }
+ 
+ - (void)windowDidBecomeKey:(NSNotification *)aNotification
+@@ -1005,4 +1064,4 @@
+ 	return bundles;
+ }
+ 
+-@end
+\ No newline at end of file
++@end
