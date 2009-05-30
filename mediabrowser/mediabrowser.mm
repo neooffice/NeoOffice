@@ -79,11 +79,14 @@
 #ifndef _COM_SUN_STAR_REGISTRY_XREGISTRYKEY_HPP_
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #endif
+#ifndef _COM_SUN_STAR_TASK_XJOB_HPP_
+#include <com/sun/star/task/XJob.hpp>
+#endif
 #ifndef _ORG_NEOOFFICE_XGRAMMARCHECKER_HPP_
 #include <org/neooffice/XMediaBrowser.hpp>
 #endif
-#ifndef _CPPUHELPER_IMPLBASE_HXX_
-#include <cppuhelper/implbase2.hxx>
+#ifndef _CPPUHELPER_IMPLBASE3_HXX_
+#include <cppuhelper/implbase3.hxx>
 #endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
@@ -116,14 +119,16 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 using namespace ::rtl;
 using namespace ::osl;
 using namespace ::cppu;
-using namespace ::com::sun::star::uno;
+using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::registry;
+using namespace ::com::sun::star::task;
+using namespace ::com::sun::star::uno;
 using namespace ::org::neooffice;
 
 //========================================================================
 class MacOSXMediaBrowserImpl
-	: public ::cppu::WeakImplHelper2<XServiceInfo, XMediaBrowser>
+	: public ::cppu::WeakImplHelper3<XServiceInfo, XJob, XMediaBrowser>
 {
 	// to obtain other services if needed
 	Reference< XComponentContext > m_xServiceManager;
@@ -143,12 +148,18 @@ public:
     virtual Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw(RuntimeException);
     static Sequence< OUString > SAL_CALL getSupportedServiceNames_Static(  );
 
+	// XJob implementation
+	virtual Any SAL_CALL execute( const Sequence< NamedValue >& rNamedValues ) throw (IllegalArgumentException, Exception);
+
 	// XMediaBrowser implementation
 	virtual ::sal_Bool 
 		SAL_CALL hasMediaBrowser( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
 		SAL_CALL showMediaBrowser( ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool 
+		SAL_CALL showMediaBrowserOnlyIfVisible( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 };
 
@@ -185,7 +196,13 @@ Sequence<OUString> SAL_CALL MacOSXMediaBrowserImpl::getSupportedServiceNames_Sta
 	return Sequence< OUString >( &aName, 1 );
 }	
 
+//*************************************************************************
+Any SAL_CALL MacOSXMediaBrowserImpl::execute( const Sequence< NamedValue >& rNamedValues ) throw (IllegalArgumentException, Exception)
+{
+	showMediaBrowserOnlyIfVisible();
 
+	return Any();
+}
 
 
 /**
@@ -309,6 +326,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 - (id)init;
 - (void)makeBrowser:(id)obj;
+- (void)makeBrowserOnlyIfVisible:(id)obj;
 @end
 
 @implementation CreateBrowserImpl
@@ -326,6 +344,16 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	{
 		id mbInstance=[mbClass performSelector:@selector(sharedBrowser)];
 		[mbInstance performSelector:@selector(showWindow:) withObject:nil];
+	}
+}
+
+- (void)makeBrowserOnlyIfVisible:(id)obj
+{
+	Class mbClass=NSClassFromString(@"iMediaBrowser");
+	if(mbClass)
+	{
+		id mbInstance=[mbClass performSelector:@selector(sharedBrowser)];
+		[mbInstance performSelector:@selector(showWindowOnlyIfVisible:) withObject:nil];
 	}
 }
 @end
@@ -377,6 +405,30 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(makeBrowser:) withObject:imp waitUntilDone: 1 modes: pModes];
+	Application::AcquireSolarMutex( nCount );
+		
+	[imp release];
+	
+	[pool release];
+	
+	return(true);
+}
+
+/**
+ * Construct a new media browser instance only if the MediaBrowsers' visible
+ * CFPreference is set
+ */
+::sal_Bool 
+		SAL_CALL MacOSXMediaBrowserImpl::showMediaBrowserOnlyIfVisible( ) 
+		throw (::com::sun::star::uno::RuntimeException)
+{
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+	
+	CreateBrowserImpl *imp=[[CreateBrowserImpl alloc] init];
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	unsigned long nCount = Application::ReleaseSolarMutex();
+	[imp performSelectorOnMainThread:@selector(makeBrowserOnlyIfVisible:) withObject:imp waitUntilDone: 1 modes: pModes];
 	Application::AcquireSolarMutex( nCount );
 		
 	[imp release];
