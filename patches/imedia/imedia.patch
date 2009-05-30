@@ -468,7 +468,16 @@ Index: iMediaBrowser.m
  @interface iMediaBrowser (PrivateAPI)
  - (void)setupInfoWindow;
  + (NSArray *)findModulesInDirectory:(NSString*)scanDir withExtension:(NSString *)ext;
-@@ -618,7 +622,41 @@
+@@ -609,7 +613,7 @@
+     return [[iMediaConfiguration sharedConfiguration] prefersFilenamesInPhotoBasedBrowsers];
+ }
+ 
+-- (IBAction)showWindow:(id)sender;
++- (IBAction)showWindow:(id)sender
+ {
+ 	// If we are actually showing the back of the window, flip to the front.
+ 	if ([oInfoWindow isVisible])
+@@ -618,10 +622,51 @@
  	}
  	else
  	{
@@ -510,7 +519,17 @@ Index: iMediaBrowser.m
  	}
  }
  
-@@ -708,9 +746,30 @@
++- (IBAction)showWindowOnlyIfVisible:(id)sender
++{
++	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++	if([defaults boolForKey:kMediaBrowserVisiblePref])
++		[self showWindow:sender];
++}
++
+ - (BOOL)infoWindowIsVisible
+ {
+ 	return [oInfoWindow isVisible];
+@@ -708,9 +753,30 @@
  
  #pragma mark -
  #pragma mark Window Delegate Methods
@@ -541,7 +560,7 @@ Index: iMediaBrowser.m
  }
  
  - (void)windowDidBecomeKey:(NSNotification *)aNotification
-@@ -1005,4 +1064,4 @@
+@@ -1005,4 +1071,4 @@
  	return bundles;
  }
  

@@ -84,9 +84,12 @@ makeoxt : ALLTAR
 
 .INCLUDE :  target.mk
 
-makeoxt :
+$(MISC)$/%.xml : %.xml
+	$(SED) 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' $< > $@
+
+makeoxt : $(MISC)$/description.xml
 	$(RM) $(BIN)$/$(PRJNAME).oxt
-	zip -r $(BIN)$/$(PRJNAME).oxt META-INF MediaBrowser uiIntegration.xcu Images -x "*CVS*"
+	zip -r $(BIN)$/$(PRJNAME).oxt META-INF MediaBrowser uiIntegration.xcu uiJobs.xcu Images -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
 .IF "$(debug)" == ""
 # Use stripped library if not in debug mode

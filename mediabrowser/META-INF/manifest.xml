@@ -14,4 +14,7 @@
   <manifest:file-entry 
     manifest:media-type="application/vnd.sun.star.configuration-data"
     manifest:full-path="uiIntegration.xcu"/>
+  <manifest:file-entry 
+    manifest:media-type="application/vnd.sun.star.configuration-data"
+    manifest:full-path="uiJobs.xcu"/>
 </manifest:manifest>
