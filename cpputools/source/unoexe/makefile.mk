@@ -1,30 +1,36 @@
 #*************************************************************************
 #
-# Copyright 2008 by Sun Microsystems, Inc.
+#   $RCSfile$
 #
-# $RCSfile$
+#   $Revision$
 #
-# $Revision$
+#   last change: $Author$ $Date$
 #
-# This file is part of NeoOffice.
+#   The Contents of this file are made available subject to
+#   the terms of GNU General Public License Version 2.1.
 #
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
 #
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+#     GNU General Public License Version 2.1
+#     =============================================
+#     Copyright 2005 by Sun Microsystems, Inc.
+#     901 San Antonio Road, Palo Alto, CA 94303, USA
 #
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
+#     This library is free software; you can redistribute it and/or
+#     modify it under the terms of the GNU General Public
+#     License version 2.1, as published by the Free Software Foundation.
 #
-# Modified January 2009 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
+#     This library is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public
+#     License along with this library; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+#     MA  02111-1307  USA
+#
+#     Modified Mary 2009 by Patrick Luby. NeoOffice is distributed under
+#     GPL only under modification term 3 of the LGPL.
 #
 #*************************************************************************
 PRJ=..$/..
@@ -34,16 +40,18 @@ TARGET=uno
 LIBTARGET=NO
 ENABLE_EXCEPTIONS=TRUE
 
+.IF "$(OS)" == "LINUX"
+LINKFLAGSRUNPATH = -Wl,-rpath,\''$$ORIGIN/../lib:$$ORIGIN'\'
+.ELIF "$(OS)" == "SOLARIS"
+LINKFLAGSRUNPATH = -R\''$$ORIGIN/../lib:$$ORIGIN'\'
+.ENDIF
+
 # --- Settings -----------------------------------------------------
 
 .INCLUDE :  settings.mk
 
 .IF "$(GUIBASE)" == "java"
-CDEFS+=-g
-.ENDIF
-
-.IF "$(OS)" == "MACOSX"
-CDEFS+=-O0
+CDEFS+=-g -O0
 .ENDIF
 
 UNOUCRDEP=$(SOLARBINDIR)$/udkapi.rdb 
@@ -81,22 +89,15 @@ DEPOBJFILES=$(OBJ)$/unoexe.obj
 
 APP1TARGET=$(TARGET)
 APP1OBJS=$(DEPOBJFILES)  
-APP1RPATH=UREBIN
 
-# Include all relevant (see ure/source/README) dynamic libraries, so that C++
-# UNO components running in the uno executable have a defined environment
-# (stlport, unxlngi6 libstdc++.so.6, and wntmsci10 uwinapi.dll are already
-# included via APP1STDLIB, unxlngi6 libgcc_s.so.1 and wntmsci10 msvcr71.dll and
-# msvcp71.dll are magic---TODO):
+# Include all four UNO runtime libraries, so that C++ UNO components running in
+# the uno executable have a defined environment (stlport is already included via
+# APP1STDLIB):
 APP1STDLIBS= \
 	$(SALLIB)		\
     $(SALHELPERLIB) \
 	$(CPPULIB)		\
-	$(CPPUHELPERLIB)\
-    $(LIBXML2LIB)
-.IF "$(OS)" == "WNT"
-APP1STDLIBS += $(UNICOWSLIB)
-.ENDIF
+	$(CPPUHELPERLIB)
 
 .INCLUDE :  target.mk
 

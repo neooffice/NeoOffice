@@ -1,30 +1,36 @@
 #*************************************************************************
 #
-# Copyright 2008 by Sun Microsystems, Inc.
+#   $RCSfile$
 #
-# $RCSfile$
+#   $Revision$
 #
-# $Revision$
+#   last change: $Author$ $Date$
 #
-# This file is part of NeoOffice.
+#   The Contents of this file are made available subject to
+#   the terms of GNU General Public License Version 2.1.
 #
-# NeoOffice is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License version 3
-# only, as published by the Free Software Foundation.
 #
-# NeoOffice is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+#     GNU General Public License Version 2.1
+#     =============================================
+#     Copyright 2005 by Sun Microsystems, Inc.
+#     901 San Antonio Road, Palo Alto, CA 94303, USA
 #
-# You should have received a copy of the GNU General Public License
-# version 3 along with NeoOffice.  If not, see
-# <http://www.gnu.org/licenses/gpl-3.0.txt>
-# for a copy of the GPLv3 License.
+#     This library is free software; you can redistribute it and/or
+#     modify it under the terms of the GNU General Public
+#     License version 2.1, as published by the Free Software Foundation.
 #
-# Modified January 2009 by Patrick Luby. NeoOffice is distributed under
-# GPL only under modification term 2 of the LGPL.
+#     This library is distributed in the hope that it will be useful,
+#     but WITHOUT ANY WARRANTY; without even the implied warranty of
+#     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+#     General Public License for more details.
+#
+#     You should have received a copy of the GNU General Public
+#     License along with this library; if not, write to the Free Software
+#     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+#     MA  02111-1307  USA
+#
+#     Modified Mary 2009 by Patrick Luby. NeoOffice is distributed under
+#     GPL only under modification term 3 of the LGPL.
 #
 #*************************************************************************
 PRJ=..
@@ -40,7 +46,7 @@ USE_DEFFILE=TRUE
 # without "-L" (light) switch
 BOOTSTRAP_SERVICE=TRUE
 
-.IF "$(OS)" != "WNT" && "$(GUI)"!="OS2"
+.IF "$(OS)" != "WNT"
 UNIXVERSIONNAMES=UDK
 .ENDIF # WNT
 
@@ -49,11 +55,7 @@ UNIXVERSIONNAMES=UDK
 .INCLUDE :  settings.mk
 
 .IF "$(GUIBASE)" == "java"
-CDEFS+=-g
-.ENDIF
-
-.IF "$(OS)" == "MACOSX"
-CDEFS+=-O0
+CDEFS+=-g -O0
 .ENDIF
 
 # --- Files --------------------------------------------------------
@@ -62,8 +64,6 @@ UNOUCRRDB=$(SOLARBINDIR)$/udkapi.rdb
 UNOUCRDEP=$(UNOUCRRDB)
 UNOUCROUT=$(OUT)$/inc$/$(TARGET)
 INCPRE+=$(OUT)$/inc$/$(TARGET) $(OUT)$/inc$/private
-
-CPPUMAKERFLAGS= -C
 
 UNOTYPES= \
 		com.sun.star.beans.PropertyAttribute \
@@ -75,8 +75,6 @@ UNOTYPES= \
 		com.sun.star.bridge.UnoUrlResolver \
 		com.sun.star.bridge.XUnoUrlResolver \
 		com.sun.star.connection.SocketPermission \
-		com.sun.star.container.XElementAccess \
-		com.sun.star.container.XEnumerationAccess \
 		com.sun.star.container.XHierarchicalNameAccess \
 		com.sun.star.container.XNameAccess \
 		com.sun.star.container.XNameContainer \
@@ -153,16 +151,10 @@ SLOFILES= \
 		$(SLO)$/access_control.obj	\
 		$(SLO)$/macro_expander.obj \
 	        $(SLO)$/unourl.obj \
-		$(SLO)$/propertysetmixin.obj \
-        $(SLO)$/findsofficepath.obj
-
-OBJFILES = $(OBJ)$/findsofficepath.obj
+		$(SLO)$/propertysetmixin.obj
 
 .IF "$(GUI)" == "WNT"
 SHL1TARGET=$(TARGET)$(UDK_MAJOR)$(COMID)
-.ELIF "$(GUI)" == "OS2"
-SHL1TARGET=cppuh
-SHL1TARGET=cppuh$(UDK_MAJOR)
 .ELSE
 SHL1TARGET=uno_$(TARGET)$(COMID)
 .ENDIF
@@ -171,14 +163,10 @@ SHL1STDLIBS= \
 		$(SALLIB)		\
 		$(SALHELPERLIB)	\
 		$(CPPULIB)
-.IF "$(OS)" == "WNT"
-SHL1STDLIBS += $(ADVAPI32LIB)
-.ENDIF
 
 SHL1DEPN=
 SHL1IMPLIB=i$(TARGET)
 SHL1OBJS = $(SLOFILES)
-SHL1RPATH=URELIB
 
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 
@@ -188,10 +176,14 @@ DEF1NAME=$(SHL1TARGET)
 SHL1VERSIONMAP=msvc_win32_intel.map
 .ELIF "$(COMNAME)"=="sunpro5"
 SHL1VERSIONMAP=cc5_solaris_sparc.map
-.ELIF "$(GUI)$(COMNAME)"=="OS2gcc3"
-SHL1VERSIONMAP=gcc3os2.map
-.ELIF "$(COMNAME)"=="gcc3"
-SHL1VERSIONMAP=gcc3.map
+.ELIF "$(OS)$(CPU)$(COMNAME)"=="LINUXIgcc3"
+SHL1VERSIONMAP=gcc3_linux_intel.map
+.ELIF "$(OS)$(CPU)$(COMNAME)"=="FREEBSDIgcc3"
+SHL1VERSIONMAP=gcc3_linux_intel.map
+.ELIF "$(OS)$(CPU)$(COMNAME)"=="LINUXSgcc3"
+SHL1VERSIONMAP=gcc3_linux_intel.map
+.ELIF "$(OS)$(CPU)$(COMNAME)"=="MACOSXIgcc3"
+SHL1VERSIONMAP=gcc3_linux_intel.map
 .ENDIF
 
 # --- Targets ------------------------------------------------------
