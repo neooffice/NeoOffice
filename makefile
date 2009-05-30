@@ -155,7 +155,7 @@ ODF-CONVERTER_PACKAGE=odf-converter
 ODF-CONVERTER_TAG:=
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
 IMEDIA_PACKAGE=imedia-read-only
-IMEDIA_TAG:=--revision '{2008-08-27}'
+IMEDIA_TAG:=--revision '{2008-12-11}'
 REMOTECONTROL_PACKAGE=remotecontrol
 #!!! FIXME !!!
 REMOTECONTROL_ZIP_URL=http://martinkahr.com/files/source/RemoteControlWrapper_R962.tgz
