@@ -130,7 +130,7 @@ PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 X11_PRODUCT_UPDATE_CHECK_URL=$(X11_PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 X11_PRODUCT_COMPONENT_MODULES=
-PRODUCT_COMPONENT_PATCH_MODULES=grammarcheck imagecapture
+PRODUCT_COMPONENT_PATCH_MODULES=grammarcheck imagecapture mediabrowser
 ifdef NEOMOBILE
 PRODUCT_COMPONENT_PATCH_MODULES+=neomobile
 endif
