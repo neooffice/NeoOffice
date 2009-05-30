@@ -711,9 +711,13 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-	[defaults setBool:NO forKey:kNeoMobileVisiblePref];
-	[defaults synchronize];
+	NSWindow *window=[notification object];
+	if(window && (window==mpPanel))
+	{
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		[defaults setBool:NO forKey:kNeoMobileVisiblePref];
+		[defaults synchronize];
+	}
 }
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
