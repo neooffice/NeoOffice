@@ -49,9 +49,9 @@ using namespace rtl;
  */
 static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILECANCEL, "Cancel",
-	NEOMOBILEDOWNLOADCANCELED, "Download canceled.",
-	NEOMOBILEDOWNLOADFAILED, "Download failed!",
-	NEOMOBILEDOWNLOADINGFILE, "Downloading file... ",
+	NEOMOBILEDOWNLOADCANCELED, "Download canceled",
+	NEOMOBILEDOWNLOADFAILED, "Download failed",
+	NEOMOBILEDOWNLOADINGFILE, "Downloading file...",
 	NEOMOBILEEXPORTINGFILE, "Exporting file...",
 	NEOMOBILELOADING, "Loading...",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
