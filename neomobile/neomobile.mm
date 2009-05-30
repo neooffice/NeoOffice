@@ -75,20 +75,23 @@
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
-#include <com/sun/star/lang/Locale.hpp>
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 
-#include <com/sun/star/frame/XDispatchHelper.hpp>
-#include <com/sun/star/frame/XDispatchProvider.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
-#include <com/sun/star/frame/XDesktop.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyContainer.hpp>
-#include <cppuhelper/bootstrap.hxx>
+#include <com/sun/star/document/XDocumentInfoSupplier.hpp>
+#include <com/sun/star/frame/XDesktop.hpp>
+#include <com/sun/star/frame/XDispatchHelper.hpp>
+#include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
+#include <com/sun/star/frame/XStorable.hpp>
+#include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/task/XJob.hpp>
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/document/XDocumentInfoSupplier.hpp>
-#include <com/sun/star/frame/XStorable.hpp>
+#include <cppuhelper/bootstrap.hxx>
 
 #include "premac.h"
 #import <Carbon/Carbon.h>
@@ -99,6 +102,18 @@
 
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#define DOSTRING( x )           #x
+#define STRING( x )             DOSTRING( x )
+
+typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
+
+static ::vos::OModule aModule;
+static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
 static const NSString *pAboutURI = @"/mobile/";
 static const NSString *pOpenURI = @"/";
@@ -114,6 +129,7 @@ using namespace ::com::sun::star::beans;
 using namespace ::org::neooffice;
 using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::document;
+using namespace ::vos;
 
 //========================================================================
 
@@ -234,7 +250,8 @@ Sequence< OUString > SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceName
 Any SAL_CALL MacOSXNeoOfficeMobileImpl::execute( const Sequence< NamedValue >& rNamedVAlues )
 	throw (IllegalArgumentException, Exception)
 {
-	openNeoOfficeMobileOnlyIfVisible();
+	if(hasNeoOfficeMobile())
+		openNeoOfficeMobileOnlyIfVisible();
 
 	return Any();
 }
@@ -256,7 +273,24 @@ Sequence< OUString > SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceName
 Reference< XInterface > SAL_CALL MacOSXNeoOfficeMobileImpl_create(
 	const Reference< XComponentContext > & xContext )
 {
-	Reference< XTypeProvider > xRet = static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext));
+	Reference< XTypeProvider > xRet;
+
+	// Locate libvcl and invoke the ShowOnlyMenusForWindow function
+	if ( !pShowOnlyMenusForWindow )
+	{
+		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+#if SUPD == 680
+		aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+#endif	// SUPD == 680
+		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		if ( aModule.load( aLibName ) )
+			pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
+	}
+
+	if ( pShowOnlyMenusForWindow )
+		xRet = static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext));
+
 	return xRet;
 }
 
