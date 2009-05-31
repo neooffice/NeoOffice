@@ -135,6 +135,8 @@ using namespace ::vos;
 
 const NSString *kNeoMobileXPosPref = @"nmXPos";
 const NSString *kNeoMobileYPosPref = @"nmYPos";
+const NSString *kNeoMobileWidthPref = @"nmWidth";
+const NSString *kNeoMobileHeightPref = @"nmHeight";
 const NSString *kNeoMobileVisiblePref = @"nmVisible";
 
 //========================================================================
@@ -416,56 +418,55 @@ static NeoMobileWebView *pSharedWebView = nil;
 - (void)showWebView:(id)obj
 {
 	if ( !pSharedWebView )
-	{
 		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil];
-		
-		// check for retained user position.  If not available, make relative to the
-		// primary frame.
-		
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		
-		NSPoint windowPos={0, 0};
-		
-		NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
-		NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
-		if(xPosStr && yPosStr)
-		{
-			windowPos.x=[xPosStr intValue];
-			windowPos.y=[yPosStr intValue];
-		}
-		else
-		{
-			NSWindow *keyWindow=[NSApp mainWindow];
-			if(keyWindow)
-			{
-				windowPos=[keyWindow frame].origin;
-				windowPos.x+=75;
-				windowPos.y+=75;
-			}
-		}
-		
-		if([pSharedWebView window])
-			[[pSharedWebView window] setFrameOrigin:windowPos];
-	}
-	
-	if ( pSharedWebView )
+
+	if(pSharedWebView)
 	{
 		NSWindow *pWindow = [pSharedWebView window];
-		if ( pWindow )
+		if(pWindow && ![pWindow isVisible])
 		{
-			// Make sure window is visible
-			if ( ![pWindow isVisible] )
+			// Check for retained user position. If not available, make
+			// relative to the primary frame.
+			NSPoint windowPos={0, 0};
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
+			NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
+			if(xPosStr && yPosStr)
 			{
-				[pWindow orderFront:self];
+				windowPos.x=[xPosStr intValue];
+				windowPos.y=[yPosStr intValue];
+			}
+			else
+			{
+				NSWindow *keyWindow=[NSApp mainWindow];
+				if(keyWindow)
+				{
+					windowPos=[keyWindow frame].origin;
+					windowPos.x+=75;
+					windowPos.y+=75;
+				}
+			}
+			[pWindow setFrameOrigin:windowPos];
 
-				NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-				[defaults setBool:YES forKey:kNeoMobileVisiblePref];
-				[defaults synchronize];
+			NSString *widthStr=[defaults stringForKey:kNeoMobileWidthPref];
+			NSString *heightStr=[defaults stringForKey:kNeoMobileHeightPref];
+			if(widthStr && heightStr)
+			{
+				NSSize contentSize={0, 0};
+				contentSize.width=[widthStr intValue];
+				contentSize.height=[heightStr intValue];
+				[pWindow setContentSize:contentSize];
 			}
 
-			// Load URI
-			[pSharedWebView loadURI:mpURI];
+			// Make sure window is visible
+			[pWindow orderFront:self];
+
+			[defaults setBool:YES forKey:kNeoMobileVisiblePref];
+			[defaults synchronize];
 		}
+	
+		// Load URI
+		[pSharedWebView loadURI:mpURI];
 	}
 }
 

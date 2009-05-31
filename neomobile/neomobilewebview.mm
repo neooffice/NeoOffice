@@ -182,8 +182,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24)];
 		[mpcontentView setAutoresizesSubviews:YES];
 		
-		//mpcontentView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 500)];		
-		
 		mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 24)];
 		[mpcancelButton setTitle:GetLocalizedString(NEOMOBILECANCEL)];
 		[mpcancelButton setTarget:self];
@@ -706,6 +704,23 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kNeoMobileXPosPref];
 		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kNeoMobileYPosPref];
 		[defaults synchronize];
+	}
+}
+
+- (void)windowDidResize:(NSNotification *)notification
+{
+	NSWindow *window=[notification object];
+	if(window && (window==mpPanel))
+	{
+		NSView *pContentView = [window contentView];
+		if(pContentView)
+		{
+			NSSize contentSize=[pContentView frame].size;
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kNeoMobileWidthPref];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kNeoMobileHeightPref];
+			[defaults synchronize];
+		}
 	}
 }
 
