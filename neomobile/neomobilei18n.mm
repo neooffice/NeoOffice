@@ -64,7 +64,7 @@ static const sal_Char *pEntries_en_US[] = {
  * Translated strings for fr locale
  */
 static const sal_Char *pEntries_fr[] = {
-	NEOMOBILECANCEL, "Cancel",
+	NEOMOBILECANCEL, "Annuler",
 	NEOMOBILEDOWNLOADCANCELED, "Téléchargement annulé",
 	NEOMOBILEDOWNLOADFAILED, "Echec du téléchargement",
 	NEOMOBILEDOWNLOADINGFILE, "Téléchargement du fichier…",
