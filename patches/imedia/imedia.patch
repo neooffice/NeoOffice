@@ -457,18 +457,20 @@ Index: iMediaBrowser.m
 ===================================================================
 --- iMediaBrowser.m	(revision 677)
 +++ iMediaBrowser.m	(working copy)
-@@ -57,6 +57,10 @@
+@@ -57,6 +57,12 @@
  static iMediaBrowser *_sharedMediaBrowser = nil;
  static NSMutableArray *_browserClasses = nil;
  
 +static NSString *kMediaBrowserXPosPref = @"iMBXPos";
 +static NSString *kMediaBrowserYPosPref = @"iMBYPos";
++static NSString *kMediaBrowserWidthPref = @"iMBWidth";
++static NSString *kMediaBrowserHeightPref = @"iMBHeight";
 +static NSString *kMediaBrowserVisiblePref = @"iMBVisible";
 +
  @interface iMediaBrowser (PrivateAPI)
  - (void)setupInfoWindow;
  + (NSArray *)findModulesInDirectory:(NSString*)scanDir withExtension:(NSString *)ext;
-@@ -609,7 +613,7 @@
+@@ -609,7 +615,7 @@
      return [[iMediaConfiguration sharedConfiguration] prefersFilenamesInPhotoBasedBrowsers];
  }
  
@@ -477,12 +479,12 @@ Index: iMediaBrowser.m
  {
  	// If we are actually showing the back of the window, flip to the front.
  	if ([oInfoWindow isVisible])
-@@ -618,10 +622,51 @@
+@@ -618,10 +624,61 @@
  	}
  	else
  	{
 +		NSWindow *window = [self window];
-+		if(window)
++		if(window && ![window isVisible])
 +		{
 +			// Check for retained user position. If not available, make relative
 +			// to the key frame.
@@ -506,6 +508,16 @@ Index: iMediaBrowser.m
 +				}
 +			}
 +			[window setFrameOrigin:windowPos];
++
++			NSString *widthStr=[defaults stringForKey:kMediaBrowserWidthPref];
++			NSString *heightStr=[defaults stringForKey:kMediaBrowserHeightPref];
++			if(widthStr && heightStr)
++			{
++				NSSize contentSize={0, 0};
++				contentSize.width=[widthStr intValue];
++				contentSize.height=[heightStr intValue];
++				[window setContentSize:contentSize];
++			}
 +		}
 +
  		[super showWindow:sender];
@@ -529,7 +541,7 @@ Index: iMediaBrowser.m
  - (BOOL)infoWindowIsVisible
  {
  	return [oInfoWindow isVisible];
-@@ -708,9 +753,30 @@
+@@ -708,9 +765,43 @@
  
  #pragma mark -
  #pragma mark Window Delegate Methods
@@ -542,6 +554,19 @@ Index: iMediaBrowser.m
 +		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
 +		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kMediaBrowserXPosPref]; 
 +		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kMediaBrowserYPosPref];
++		[defaults synchronize];
++	}
++}
++
++- (void)windowDidResize:(NSNotification *)aNotification
++{
++	NSWindow *window=[aNotification object];
++	if(window && (window==[self window]))
++	{
++		NSSize contentSize=[window frame].size;
++		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++		[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kMediaBrowserWidthPref]; 
++		[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kMediaBrowserHeightPref];
 +		[defaults synchronize];
 +	}
 +}
@@ -560,7 +585,7 @@ Index: iMediaBrowser.m
  }
  
  - (void)windowDidBecomeKey:(NSNotification *)aNotification
-@@ -1005,4 +1071,4 @@
+@@ -1005,4 +1096,4 @@
  	return bundles;
  }
  
