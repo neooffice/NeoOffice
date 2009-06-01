@@ -541,7 +541,7 @@ Index: iMediaBrowser.m
  - (BOOL)infoWindowIsVisible
  {
  	return [oInfoWindow isVisible];
-@@ -708,9 +765,43 @@
+@@ -708,9 +765,47 @@
  
  #pragma mark -
  #pragma mark Window Delegate Methods
@@ -563,11 +563,15 @@ Index: iMediaBrowser.m
 +	NSWindow *window=[aNotification object];
 +	if(window && (window==[self window]))
 +	{
-+		NSSize contentSize=[window frame].size;
-+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kMediaBrowserWidthPref]; 
-+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kMediaBrowserHeightPref];
-+		[defaults synchronize];
++		NSView *pContentView=[window contentView];
++		if(pContentView)
++		{
++			NSSize contentSize=[pContentView frame].size;
++			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
++			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kMediaBrowserWidthPref]; 
++			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kMediaBrowserHeightPref];
++			[defaults synchronize];
++		}
 +	}
 +}
 +
@@ -585,7 +589,7 @@ Index: iMediaBrowser.m
  }
  
  - (void)windowDidBecomeKey:(NSNotification *)aNotification
-@@ -1005,4 +1096,4 @@
+@@ -1005,4 +1100,4 @@
  	return bundles;
  }
  
