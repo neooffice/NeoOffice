@@ -481,7 +481,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 				{
 					if ( !bRequestedTypeIsText )
 					{
-						// Convert to BMP format
+						// Convert to PNG format
 						if ( nRequestedType == kQTFileTypePNG )
 						{
 							HLock( hData );
@@ -493,7 +493,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 						else if ( nRequestedType == kQTFileTypePicture )
 						{
 							ComponentInstance aExporter;
-							if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr )
+							if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypePNG, &aExporter ) == noErr )
 							{
 								if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
 								{
@@ -531,7 +531,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 										if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
 										{
 											ComponentInstance aExporter;
-											if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypeBMP, &aExporter ) == noErr )
+											if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypePNG, &aExporter ) == noErr )
 											{
 												if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
 												{
