@@ -26,6 +26,7 @@
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">What is NeoOffice Mobile?</value>
+							<value xml:lang="fr">Qu'est-ce que NeoOffice Mobile ?</value>
 						</prop>
 						<prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
@@ -43,6 +44,7 @@
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">Open NeoOffice Mobile</value>
+							<value xml:lang="fr">Ouvrir NeoOffice Mobile</value>
 						</prop>
 						<prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>

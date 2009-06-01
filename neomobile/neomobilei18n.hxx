@@ -43,6 +43,7 @@
 #define NEOMOBILEDOWNLOADCANCELED "download.canceled"
 #define NEOMOBILEDOWNLOADFAILED "download.failed"
 #define NEOMOBILEDOWNLOADINGFILE "downloading.file"
+#define NEOMOBILEERROR "error"
 #define NEOMOBILEEXPORTINGFILE "exporting.file"
 #define NEOMOBILELOADING "loading"
 #define NEOMOBILEPRODUCTNAME "product.name"

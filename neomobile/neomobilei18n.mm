@@ -51,11 +51,12 @@ static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILECANCEL, "Cancel",
 	NEOMOBILEDOWNLOADCANCELED, "Download canceled",
 	NEOMOBILEDOWNLOADFAILED, "Download failed",
-	NEOMOBILEDOWNLOADINGFILE, "Downloading file...",
-	NEOMOBILEEXPORTINGFILE, "Exporting file...",
-	NEOMOBILELOADING, "Loading...",
+	NEOMOBILEDOWNLOADINGFILE, "Downloading file…",
+	NEOMOBILEERROR, "Error:",
+	NEOMOBILEEXPORTINGFILE, "Exporting file…",
+	NEOMOBILELOADING, "Loading…",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
-	NEOMOBILEUPLOADINGFILE, "Uploading file...",
+	NEOMOBILEUPLOADINGFILE, "Uploading file…",
 	nil, nil
 };
 
@@ -63,7 +64,15 @@ static const sal_Char *pEntries_en_US[] = {
  * Translated strings for fr locale
  */
 static const sal_Char *pEntries_fr[] = {
-	NEOMOBILECANCEL, "Annuler",
+	NEOMOBILECANCEL, "Cancel",
+	NEOMOBILEDOWNLOADCANCELED, "Téléchargement annulé",
+	NEOMOBILEDOWNLOADFAILED, "Echec du téléchargement",
+	NEOMOBILEDOWNLOADINGFILE, "Téléchargement du fichier…",
+	NEOMOBILEERROR, "Erreur :",
+	NEOMOBILEEXPORTINGFILE, "Exportation du fichier…",
+	NEOMOBILELOADING, "Chargement…",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEUPLOADINGFILE, "Envoi du fichier vers le serveur…",
 	nil, nil
 };
 
