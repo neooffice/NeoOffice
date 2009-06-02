@@ -421,6 +421,12 @@ IMutex* JavaSalInstance::GetYieldMutex()
 
 ULONG JavaSalInstance::ReleaseYieldMutex()
 {
+	// Never release the mutex in the main thread as it can cause crashing
+	// when dragging when the OOo code's VCL event dispatching thread runs
+	// while we are in the middle of a native drag event
+	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+		return 0;
+
 	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
 	if ( pYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() )
 	{
@@ -521,22 +527,21 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
 			com_sun_star_vcl_VCLFrame::flushAllFrames();
-
-			// Reduce noticeable pause when opening a new document by delaying
-			// update of submenus until next available timer timeout
-			if ( pSalData->maNativeEventCondition.check() && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
-			{
-				for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
-					UpdateMenusForFrame( pSalData->mpFocusFrame, pSalData->mpFocusFrame->maUpdateMenuList.front(), false );
-			}
 		}
 	}
 
 	// Determine timeout
 	ULONG nTimeout = 0;
-	if ( !bMainEventLoop && bWait && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
+	if ( !bMainEventLoop && pSalData->maNativeEventCondition.check() && !Application::IsShutDown() )
 	{
-		if ( pSalData->mnTimerInterval )
+		// Reduce noticeable pause when opening a new document by delaying
+		// update of submenus until next available timer timeout
+		if ( pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible && pSalData->mpFocusFrame->maUpdateMenuList.size() )
+		{
+			for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
+				UpdateMenusForFrame( pSalData->mpFocusFrame, pSalData->mpFocusFrame->maUpdateMenuList.front(), false );
+		}
+		else if ( bWait && pSalData->mnTimerInterval )
 		{
 			timeval aTimeout;
 			gettimeofday( &aTimeout, NULL );
@@ -545,13 +550,13 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 				aTimeout = pSalData->maTimeout - aTimeout;
 				nTimeout = aTimeout.tv_sec * 1000 + aTimeout.tv_usec / 1000;
 			}
-		}
 
-		// Wait a little bit to prevent excessive CPU usage. Fix bug 2588
-		// by only doing so when the timeout is already set to a non-zero
-		// value.
-		if ( nTimeout < 10 )
-			nTimeout = 10;
+			// Wait a little bit to prevent excessive CPU usage. Fix bug 2588
+			// by only doing so when the timeout is already set to a non-zero
+			// value.
+			if ( nTimeout < 10 )
+				nTimeout = 10;
+		}
 	}
 
 	if ( nTimeout )
