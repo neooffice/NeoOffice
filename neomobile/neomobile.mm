@@ -69,26 +69,29 @@
 #ifndef _ORG_NEOOFFICE_XGRAMMARCHECKER_HPP_
 #include <org/neooffice/XNeoOfficeMobile.hpp>
 #endif
-#ifndef _CPPUHELPER_IMPLBASE_HXX_
-#include <cppuhelper/implbase2.hxx>
+#ifndef _CPPUHELPER_IMPLBASE3_HXX_
+#include <cppuhelper/implbase3.hxx>
 #endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
-#include <com/sun/star/lang/Locale.hpp>
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 
-#include <com/sun/star/frame/XDispatchHelper.hpp>
-#include <com/sun/star/frame/XDispatchProvider.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
-#include <com/sun/star/frame/XDesktop.hpp>
 #include <com/sun/star/beans/PropertyValue.hpp>
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyContainer.hpp>
-#include <cppuhelper/bootstrap.hxx>
+#include <com/sun/star/document/XDocumentInfoSupplier.hpp>
+#include <com/sun/star/frame/XDesktop.hpp>
+#include <com/sun/star/frame/XDispatchHelper.hpp>
+#include <com/sun/star/frame/XDispatchProvider.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
+#include <com/sun/star/frame/XStorable.hpp>
+#include <com/sun/star/lang/Locale.hpp>
 #include <com/sun/star/task/XJob.hpp>
 #include <comphelper/processfactory.hxx>
-#include <com/sun/star/document/XDocumentInfoSupplier.hpp>
-#include <com/sun/star/frame/XStorable.hpp>
+#include <cppuhelper/bootstrap.hxx>
 
 #include "premac.h"
 #import <Carbon/Carbon.h>
@@ -99,6 +102,18 @@
 
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
+
+#ifndef DLLPOSTFIX
+#error DLLPOSTFIX must be defined in makefile.mk
+#endif
+
+#define DOSTRING( x )           #x
+#define STRING( x )             DOSTRING( x )
+
+typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
+
+static ::vos::OModule aModule;
+static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
 static const NSString *pAboutURI = @"/mobile/";
 static const NSString *pOpenURI = @"/";
@@ -114,6 +129,15 @@ using namespace ::com::sun::star::beans;
 using namespace ::org::neooffice;
 using namespace ::com::sun::star::task;
 using namespace ::com::sun::star::document;
+using namespace ::vos;
+
+//========================================================================
+
+const NSString *kNeoMobileXPosPref = @"nmXPos";
+const NSString *kNeoMobileYPosPref = @"nmYPos";
+const NSString *kNeoMobileWidthPref = @"nmWidth";
+const NSString *kNeoMobileHeightPref = @"nmHeight";
+const NSString *kNeoMobileVisiblePref = @"nmVisible";
 
 //========================================================================
 
@@ -136,7 +160,7 @@ OUString NSStringToOUString( NSString *pString )
 //========================================================================
 
 class MacOSXNeoOfficeMobileImpl
-	: public ::cppu::WeakImplHelper2<XServiceInfo, XNeoOfficeMobile>
+	: public ::cppu::WeakImplHelper3< XServiceInfo, XJob, XNeoOfficeMobile >
 {
 	// to obtain other services if needed
 	Reference< XComponentContext > m_xServiceManager;
@@ -156,6 +180,9 @@ public:
     virtual Sequence< OUString > SAL_CALL getSupportedServiceNames(  ) throw(RuntimeException);
     static Sequence< OUString > SAL_CALL getSupportedServiceNames_Static(  );
 
+    // XJob implementation
+    virtual Any SAL_CALL execute( const Sequence< NamedValue >& rNamedValues ) throw (IllegalArgumentException, Exception);
+
 	// XNeoOfficeMobile implementation
 	virtual ::sal_Bool 
 		SAL_CALL aboutNeoOfficeMobile( ) 
@@ -165,6 +192,9 @@ public:
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
 		SAL_CALL openNeoOfficeMobile( ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool 
+		SAL_CALL openNeoOfficeMobileOnlyIfVisible( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
 		SAL_CALL setPropertyValue( const rtl::OUString& key, const rtl::OUString& value ) 
@@ -212,14 +242,24 @@ sal_Bool SAL_CALL MacOSXNeoOfficeMobileImpl::supportsService( const OUString& Se
 }	
 
 //*************************************************************************
-Sequence<OUString> SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceNames(  ) 
+Sequence< OUString > SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceNames(  ) 
 	throw(RuntimeException)
 {
 	return getSupportedServiceNames_Static();
 }	
 
 //*************************************************************************
-Sequence<OUString> SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceNames_Static(  ) 
+Any SAL_CALL MacOSXNeoOfficeMobileImpl::execute( const Sequence< NamedValue >& rNamedVAlues )
+	throw (IllegalArgumentException, Exception)
+{
+	if(hasNeoOfficeMobile())
+		openNeoOfficeMobileOnlyIfVisible();
+
+	return Any();
+}
+
+//*************************************************************************
+Sequence< OUString > SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceNames_Static(  ) 
 {
 	OUString aName( RTL_CONSTASCII_USTRINGPARAM(SERVICENAME) );
 	return Sequence< OUString >( &aName, 1 );
@@ -235,7 +275,24 @@ Sequence<OUString> SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceNames_
 Reference< XInterface > SAL_CALL MacOSXNeoOfficeMobileImpl_create(
 	const Reference< XComponentContext > & xContext )
 {
-	Reference< XTypeProvider > xRet = static_cast<XTypeProvider *>(new MacOSXNeoOfficeMobileImpl(xContext));
+	Reference< XTypeProvider > xRet;
+
+	// Locate libvcl and invoke the ShowOnlyMenusForWindow function
+	if ( !pShowOnlyMenusForWindow )
+	{
+		::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
+#if SUPD == 680
+		aLibName += ::rtl::OUString::valueOf( (sal_Int32)SUPD, 10 );
+#endif	// SUPD == 680
+		aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+		aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+		if ( aModule.load( aLibName ) )
+			pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
+	}
+
+	if ( pShowOnlyMenusForWindow )
+		xRet = static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext));
+
 	return xRet;
 }
 
@@ -337,6 +394,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 + (id)createWithURI:(const NSString *)pURI;
 - (id)initWithURI:(const NSString *)pURI;
 - (void)showWebView:(id)obj;
+- (void)showWebViewOnlyIfVisible:(id)obj;
 @end
 
 @implementation CreateWebViewImpl
@@ -360,51 +418,63 @@ static NeoMobileWebView *pSharedWebView = nil;
 - (void)showWebView:(id)obj
 {
 	if ( !pSharedWebView )
-	{
 		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil];
-		
-		// check for retained user position.  If not available, make relative to the
-		// primary frame.
-		
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		
-		NSPoint windowPos={0, 0};
-		
-		NSString *xPosStr=[defaults stringForKey:@"nmXPos"];
-		NSString *yPosStr=[defaults stringForKey:@"nmYPos"];
-		if(xPosStr && yPosStr)
-		{
-			windowPos.x=[xPosStr intValue];
-			windowPos.y=[yPosStr intValue];
-		}
-		else
-		{
-			NSWindow *keyWindow=[NSApp mainWindow];
-			if(keyWindow)
-			{
-				windowPos=[keyWindow frame].origin;
-				windowPos.x+=75;
-				windowPos.y+=75;
-			}
-		}
-		
-		if([pSharedWebView window])
-			[[pSharedWebView window] setFrameOrigin:windowPos];
-	}
-	
-	if ( pSharedWebView )
+
+	if(pSharedWebView)
 	{
 		NSWindow *pWindow = [pSharedWebView window];
-		if ( pWindow )
+		if(pWindow && ![pWindow isVisible])
 		{
-			// Make sure window is visible
-			if ( ![pWindow isVisible] )
-				[pWindow orderFront:self];
+			// Check for retained user position. If not available, make
+			// relative to the primary frame.
+			NSPoint windowPos={0, 0};
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
+			NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
+			if(xPosStr && yPosStr)
+			{
+				windowPos.x=[xPosStr intValue];
+				windowPos.y=[yPosStr intValue];
+			}
+			else
+			{
+				NSWindow *keyWindow=[NSApp mainWindow];
+				if(keyWindow)
+				{
+					windowPos=[keyWindow frame].origin;
+					windowPos.x+=75;
+					windowPos.y+=75;
+				}
+			}
+			[pWindow setFrameOrigin:windowPos];
 
-			// Load URI
-			[pSharedWebView loadURI:mpURI];
+			NSString *widthStr=[defaults stringForKey:kNeoMobileWidthPref];
+			NSString *heightStr=[defaults stringForKey:kNeoMobileHeightPref];
+			if(widthStr && heightStr)
+			{
+				NSSize contentSize={0, 0};
+				contentSize.width=[widthStr intValue];
+				contentSize.height=[heightStr intValue];
+				[pWindow setContentSize:contentSize];
+			}
+
+			// Make sure window is visible
+			[pWindow orderFront:self];
+
+			[defaults setBool:YES forKey:kNeoMobileVisiblePref];
+			[defaults synchronize];
 		}
+	
+		// Load URI
+		[pSharedWebView loadURI:mpURI];
 	}
+}
+
+- (void)showWebViewOnlyIfVisible:(id)obj
+{
+	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+	if ( [defaults boolForKey:kNeoMobileVisiblePref] )
+		[self showWebView:obj];
 }
 @end
 
@@ -464,6 +534,27 @@ static NeoMobileWebView *pSharedWebView = nil;
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
+		
+	[pool release];
+	
+	return(sal_True);
+}
+
+/**
+ * Show main NeoMobile webpage only if the nmVisible CFPreference is set
+ */
+::sal_Bool 
+		SAL_CALL MacOSXNeoOfficeMobileImpl::openNeoOfficeMobileOnlyIfVisible( ) 
+		throw (::com::sun::star::uno::RuntimeException)
+{
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+	
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI];
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	unsigned long nCount = Application::ReleaseSolarMutex();
+	[imp performSelectorOnMainThread:@selector(showWebViewOnlyIfVisible:) withObject:imp waitUntilDone:YES modes:pModes];
 	Application::AcquireSolarMutex( nCount );
 		
 	[pool release];

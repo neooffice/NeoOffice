@@ -65,7 +65,8 @@
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName;
 - (void)loadURI:(NSString *)pURI;
-- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame;
+- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
+- (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame;
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame;
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame;
@@ -84,4 +85,6 @@
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener;
 - (void)cancelButtonPressed;
 - (void)windowDidMove:(NSNotification *)notification;
+- (void)windowDidResize:(NSNotification *)notification;
+- (void)windowWillClose:(NSNotification *)notification;
 @end

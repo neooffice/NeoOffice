@@ -157,6 +157,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[pPrefs setJavaScriptEnabled:YES];
 	}
 
+	[self setMaintainsBackForwardList:NO];
 	[self setResourceLoadDelegate:self];
 	[self setFrameLoadDelegate:self];
 	[self setUIDelegate:self];
@@ -176,15 +177,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	{
 		[mpPanel setFloatingPanel:YES];
 		[mpPanel setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 90)];
-		[mpPanel setTitle: [NSString stringWithUTF8String: GetLocalizedString("NeoOffice Mobile").c_str()]];
+		[mpPanel setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 		
 		mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24)];
 		[mpcontentView setAutoresizesSubviews:YES];
 		
-		//mpcontentView=[[ZeroHeightDividerSplitView alloc] initWithFrame:NSMakeRect(0, 0, 700, 500)];		
-		
 		mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, 24)];
-		[mpcancelButton setTitle:[NSString stringWithUTF8String:GetLocalizedString("Cancel").c_str()]];
+		[mpcancelButton setTitle:GetLocalizedString(NEOMOBILECANCEL)];
 		[mpcancelButton setTarget:self];
 		[mpcancelButton setAction:@selector(cancelButtonPressed)];
 		[mpcancelButton setAutoresizingMask:(NSViewMaxXMargin)];
@@ -234,27 +233,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	fprintf(stderr, "NeoMobile Cancel Button Clicked\n");
 #endif
-	if(mpdownload)
-	{
-		// a file download is in progress, cancel it
-		
-		[mpdownload cancel];
-		mpdownload=nil;
-		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Download canceled.").c_str()]];
-	}
-	else if(mpexportEvent)
-	{
-		// a file export application event is being processed, set the flag
-		// to cancel it
-		
-		mpexportEvent->Cancel();
-	}
-	{
-		// regular webframe load
-		
-		[self stopLoading:self];
-	}
+	[self stopLoading:self];
 }
 
 - (void)loadURI:(NSString *)pURI
@@ -274,8 +253,30 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 }
 
-- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame
+- (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError
 {
+	int nErr = pError ? [pError code] : 0;
+
+	if ( !nErr || nErr == WebKitErrorFrameLoadInterruptedByPolicyChange )
+	{
+		// NOTE: we don't want to trigger the server fallback if we are just
+		// processing a data download we've redirected from the web frame
+		return;
+	}
+	else if ( nErr == -999 )
+	{
+		// Error code -999 indicates that the WebKit is doing the Back, Reload,
+		// or Forward actions so we don't trigger server fallback. These
+		// actions are incompatible with our export event code so cancel
+		// the current export event
+		if ( mpexportEvent )
+			mpexportEvent->Cancel();
+		return;
+	}
+
+	[mpcancelButton setEnabled:NO];
+	[mpstatusLabel setString:@""];
+
 	if ( !pWebFrame )
 		return;
 
@@ -358,20 +359,51 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 }
 
+- (void)stopLoading:(id)pSender
+{
+	if(mpdownload)
+	{
+		// a file download is in progress, cancel it
+		
+		[mpdownload cancel];
+		mpdownload=nil;
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
+	}
+	else if(mpexportEvent)
+	{
+		// a file export application event is being processed, set the flag
+		// to cancel it but do not stop the loading as we want the export
+		// event to finish normally
+		
+		mpexportEvent->Cancel();
+		return;
+	}
+
+	[super stopLoading:pSender];
+}
+
+- (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener
+{
+	// Launch the URL with the /usr/bin/open command
+	if ( pRequest )
+	{
+		NSURL *pURL = [pRequest URL];
+		if ( pURL )
+			[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:[pURL absoluteString], nil]];
+	}
+
+	// Tell the listener to ignore the request
+	if ( pListener )
+		[pListener ignore];
+}
+
 - (void)webView:(WebView *)pWebView didFailLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
 {
 #ifdef DEBUG
 	NSLog( @"didFailLoadWithError: %@", pError);
-#endif	
-	// NOTE: we don't want to trigger the server fallback if we are just
-	// processing a data download we've redirected from the web frame
-	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
-	{
-		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:@""];
-
-		[self reloadFrameWithNextServer:pWebFrame];
-	}
+#endif
+	[self reloadFrameWithNextServer:pWebFrame reason:pError];
 }
 
 - (void)webView:(WebView *)pWebView didFailProvisionalLoadWithError:(NSError *)pError forFrame:(WebFrame *)pWebFrame
@@ -379,15 +411,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	NSLog( @"didFailProvisionalLoadWithError: %@", pError);
 #endif
-	// NOTE: we don't want to trigger the server fallback if we are just
-	// processing a data download we've redirected from the web frame
-	if([pError code]!=WebKitErrorFrameLoadInterruptedByPolicyChange)
-	{
-		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:@""];
-
-		[self reloadFrameWithNextServer:pWebFrame];
-	}
+	[self reloadFrameWithNextServer:pWebFrame reason:pError];
 }
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
@@ -446,13 +470,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			NSData *pPostBody = [NSMutableData dataWithLength:0];
 			if ( pApp && pURLRequest && pFileManager && pPostBody )
 			{
-				if ( Application::IsInMain() )
+				if ( Application::IsInMain() && !mpexportEvent )
 				{
 					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
 					mpexportEvent=&aEvent;
 
 					[mpcancelButton setEnabled:YES];
-					[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Exporting file...").c_str()]];
+					[mpstatusLabel setString:GetLocalizedString(NEOMOBILEEXPORTINGFILE)];
 
 					vos::IMutex& rSolarMutex = Application::GetSolarMutex();
 					rSolarMutex.acquire();
@@ -471,7 +495,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
-					
+
 					if(aEvent.IsUnsupportedComponentType())
 					{
 						// display unsupported doc type error to user and
@@ -520,9 +544,9 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		pRequest = [pDataSource request];
 	
 	if ( mpexportEvent && pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
-		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Uploading file...").c_str()]];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEUPLOADINGFILE)];
 	else
-		[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Loading...").c_str()]];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILELOADING)];
 }
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
@@ -564,7 +588,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( !pWindow || ![pWindow isVisible] )
 		return bRet;
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:@"Cancel" otherButton:nil informativeTextWithFormat:@""];
+	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:GetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:@""];
 	if ( pAlert && [pAlert runModal] == NSAlertDefaultReturn )
 		bRet = YES;
 
@@ -615,7 +639,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	
 	mpdownload=download;
 	[mpcancelButton setEnabled:YES];
-	[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Downloading file ... ").c_str()]];
+	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
 }
 
 - (void)download:(NSURLDownload *)download didReceiveDataOfLength:(unsigned long)length
@@ -629,12 +653,12 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	if(mndownloadSize > 0)
 	{
 		// we got a response from the server, so we can compute a percentage
-		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", [NSString stringWithUTF8String:GetLocalizedString("Downloading file ... ").c_str()], (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
+		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
 	}
 	else
 	{
 		// no expected size received from the server, just show Kb download
-		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", [NSString stringWithUTF8String:GetLocalizedString("Downloading file ... ").c_str()], (long)(mndownloadBytesReceived/1024)]];
+		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (long)(mndownloadBytesReceived/1024)]];
 	}
 }
 
@@ -666,7 +690,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 #endif
 	mpdownload=nil;
 	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:[NSString stringWithUTF8String:GetLocalizedString("Download failed!").c_str()]];
+	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
 }
 
@@ -675,13 +699,38 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	NSWindow *window=[notification object];
 	if(window && (window==mpPanel))
 	{
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		
 		NSPoint windowPos=[window frame].origin;
-		
-		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:@"nmXPos"];
-		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:@"nmYPos"];
-		
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kNeoMobileXPosPref];
+		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kNeoMobileYPosPref];
+		[defaults synchronize];
+	}
+}
+
+- (void)windowDidResize:(NSNotification *)notification
+{
+	NSWindow *window=[notification object];
+	if(window && (window==mpPanel))
+	{
+		NSView *pContentView = [window contentView];
+		if(pContentView)
+		{
+			NSSize contentSize=[pContentView frame].size;
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kNeoMobileWidthPref];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kNeoMobileHeightPref];
+			[defaults synchronize];
+		}
+	}
+}
+
+- (void)windowWillClose:(NSNotification *)notification
+{
+	NSWindow *window=[notification object];
+	if(window && (window==mpPanel))
+	{
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		[defaults setBool:NO forKey:kNeoMobileVisiblePref];
 		[defaults synchronize];
 	}
 }
