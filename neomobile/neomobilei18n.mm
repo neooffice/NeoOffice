@@ -76,6 +76,38 @@ static const sal_Char *pEntries_fr[] = {
 	nil, nil
 };
 
+/**
+ * Translated strings for nl locale
+ */
+static const sal_Char *pEntries_nl[] = {
+	NEOMOBILECANCEL, "Annuleren",
+	NEOMOBILEDOWNLOADCANCELED, "Ophalen geannuleerd",
+	NEOMOBILEDOWNLOADFAILED, "Ophalen mislukt",
+	NEOMOBILEDOWNLOADINGFILE, "Bestand ophalen…",
+	NEOMOBILEERROR, "Fout:",
+	NEOMOBILEEXPORTINGFILE, "Bestand exporteren…",
+	NEOMOBILELOADING, "Laden…",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEUPLOADINGFILE, "Bestand versturen…",
+	nil, nil
+};
+
+/**
+ * Translated strings for pt locale
+ */
+static const sal_Char *pEntries_pt[] = {
+	NEOMOBILECANCEL, "Cancelar ",
+	NEOMOBILEDOWNLOADCANCELED, "Transferência de arquivo cancelada",
+	NEOMOBILEDOWNLOADFAILED, "Falha na transferência de arquivo",
+	NEOMOBILEDOWNLOADINGFILE, "Transferindo arquivo…",
+	NEOMOBILEERROR, "Erro:",
+	NEOMOBILEEXPORTINGFILE, "Exportando arquivo…",
+	NEOMOBILELOADING, "Carregando…",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEUPLOADINGFILE, "Enviando arquivo…",
+	nil, nil
+};
+
 static OUString aDelimiter = OUString::createFromAscii( "_" );
 
 static OUString ImplGetLocaleString( Locale aLocale )
@@ -137,6 +169,8 @@ NSString *GetLocalizedString( const sal_Char *key )
 		// Initialize dictionaries
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "en" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "US" ) ), OUString() ) ), pEntries_en_US );
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "fr" ) ), OUString(), OUString() ) ), pEntries_fr );
+		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "nl" ) ), OUString(), OUString() ) ), pEntries_nl );
+		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "pt" ) ), OUString(), OUString() ) ), pEntries_pt );
 
 		// Set locale dictionaries based on default locale
 		Locale aLocale( Application::GetSettings().GetUILocale() );
@@ -170,6 +204,9 @@ NSString *GetLocalizedString( const sal_Char *key )
 
 	if ( !pRet && pSecondaryLocaleDict )
 		pRet = (NSString *)[pSecondaryLocaleDict objectForKey:pKey];
+
+	if ( !pRet && pTertiaryLocaleDict )
+		pRet = (NSString *)[pTertiaryLocaleDict objectForKey:pKey];
 
 	if ( !pRet && pDefaultLocaleDict )
 		pRet = (NSString *)[pDefaultLocaleDict objectForKey:pKey];
