@@ -114,7 +114,7 @@ struct ImplATSLayoutData {
 	ATSLayoutRecord*	mpGlyphDataArray;
 	int*				mpCharsToChars;
 	int*				mpCharsToGlyphs;
-	long*				mpCharAdvances;
+	long*				mpGlyphAdvances;
 	ATSUStyle			maVerticalFontStyle;
 	long				mnBaselineDelta;
 	bool				mbValid;
@@ -328,7 +328,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mpGlyphDataArray( NULL ),
 	mpCharsToChars( NULL ),
 	mpCharsToGlyphs( NULL ),
-	mpCharAdvances( NULL ),
+	mpGlyphAdvances( NULL ),
 	maVerticalFontStyle( NULL ),
 	mnBaselineDelta( 0 ),
 	mbValid( false )
@@ -527,13 +527,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 	// Cache glyph widths
-	nBufSize = mpHash->mnLen * sizeof( long );
-	mpCharAdvances = (long *)rtl_allocateMemory( nBufSize );
-	memset( mpCharAdvances, 0, nBufSize );
+	nBufSize = mnGlyphCount * sizeof( long );
+	mpGlyphAdvances = (long *)rtl_allocateMemory( nBufSize );
+	memset( mpGlyphAdvances, 0, nBufSize );
 
 	// Fix bug 448 by eliminating subpixel advances.
 	mfFontScaleY = (float)nSize / nAdjustedSize;
 	int nLastNonSpacingIndex = -1;
+	int nLastNonSpacingGlyph = -1;
 	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
@@ -541,11 +542,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		{
 			ATSTrapezoid aTrapezoid;
 			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY );
+				mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY );
 		}
 		else
 		{
-			mpCharAdvances[ nIndex ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY );
+			mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY );
 		}
 
 		// Make sure that ligature glyphs get all of the width and that their
@@ -554,39 +555,41 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		long nWidthAdjust = 0;
 		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
-			if ( nLastNonSpacingIndex >= 0 && nLastNonSpacingIndex != nIndex )
+			if ( nLastNonSpacingGlyph >= 0 && nLastNonSpacingGlyph != i && nLastNonSpacingIndex != nIndex )
 			{
-				mpCharAdvances[ nLastNonSpacingIndex ] += mpCharAdvances[ nIndex ] - 1;
-				if ( mpCharAdvances[ nLastNonSpacingIndex ] < 0 )
+				mpGlyphAdvances[ nLastNonSpacingGlyph ] += mpGlyphAdvances[ i ];
+				if ( mpGlyphAdvances[ nLastNonSpacingGlyph ] < 0 )
 				{
-					nWidthAdjust = mpCharAdvances[ nLastNonSpacingIndex ];
-					mpCharAdvances[ nLastNonSpacingIndex ] = 0;
+					nWidthAdjust = mpGlyphAdvances[ nLastNonSpacingGlyph ];
+					mpGlyphAdvances[ nLastNonSpacingGlyph ] = 0;
 				}
 
-				mpCharAdvances[ nIndex ] = 0;
+				mpGlyphAdvances[ i ] = 0;
 			}
 		}
 		else if ( pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
 			nLastNonSpacingIndex = -1;
+			nLastNonSpacingGlyph = -1;
 		}
 		else
 		{
 			nLastNonSpacingIndex = nIndex;
+			nLastNonSpacingGlyph = i;
 		}
 
-		if ( mpCharAdvances[ nIndex ] < 0 )
+		if ( mpGlyphAdvances[ i ] < 0 )
 		{
-			nWidthAdjust += mpCharAdvances[ nIndex ];
-			mpCharAdvances[ nIndex ] = 0;
+			nWidthAdjust += mpGlyphAdvances[ i ];
+			mpGlyphAdvances[ i ] = 0;
 		}
-		else if ( nWidthAdjust && mpCharAdvances[ nIndex ] > 0 )
+		else if ( nWidthAdjust && mpGlyphAdvances[ i ] > 0 )
 		{
-			mpCharAdvances[ nIndex ] += nWidthAdjust;
-			if ( mpCharAdvances[ nIndex ] < 0 )
+			mpGlyphAdvances[ i ] += nWidthAdjust;
+			if ( mpGlyphAdvances[ i ] < 0 )
 			{
-				nWidthAdjust = mpCharAdvances[ nIndex ];
-				mpCharAdvances[ nIndex ] = 0;
+				nWidthAdjust = mpGlyphAdvances[ i ];
+				mpGlyphAdvances[ i ] = 0;
 			}
 			else
 			{
@@ -752,10 +755,10 @@ void ImplATSLayoutData::Destroy()
 		mpCharsToGlyphs = NULL;
 	}
 
-	if ( mpCharAdvances )
+	if ( mpGlyphAdvances )
 	{
-		rtl_freeMemory( mpCharAdvances );
-		mpCharAdvances = NULL;
+		rtl_freeMemory( mpGlyphAdvances );
+		mpGlyphAdvances = NULL;
 	}
 
 	if ( maVerticalFontStyle )
@@ -925,7 +928,7 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
 
 	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData && mpKashidaLayoutData->mpGlyphDataArray )
-		KashidaJustify( mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID, mpKashidaLayoutData->mpCharAdvances[ mpKashidaLayoutData->mpHash->mnLen - 1 ] );
+		KashidaJustify( mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID, mpKashidaLayoutData->mpGlyphAdvances[ 0 ] );
 }
 
 // ----------------------------------------------------------------------------
@@ -1305,7 +1308,6 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		for ( ; bRunRTL ? nCharPos >= nMinCharPos : nCharPos < nEndCharPos; bRunRTL ? nCharPos-- : nCharPos++ )
 		{
 			bool bFirstGlyph = true;
-			long nCharWidth = 0;
 			int nIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinFallbackCharPos ];
 			if ( nIndex >= 0 )
 			{
@@ -1354,10 +1356,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					}
 				}
  
-				nCharWidth = pCurrentLayoutData->mpCharAdvances[ nIndex ];
-
 				for ( ItemCount i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && (int)( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
+					long nGlyphWidth = pCurrentLayoutData->mpGlyphAdvances[ i ];
+
 					sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 					if ( !nGlyph )
 					{
@@ -1456,7 +1458,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					// we know that there is a valid fallback font
 					else if ( !nGlyph && mnFallbackLevel < MAX_FALLBACK - 1 && ( pSymbolFallbackFont || pFallbackFont ) )
 					{
-						nCharWidth = 0;
+						nGlyphWidth = 0;
 						if ( bFirstGlyph )
 							nGlyph = nChar | GF_ISCHAR;
 						else
@@ -1491,22 +1493,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						}
 					}
 
-					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nCharWidth ) );
+					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nGlyphWidth ) );
 
-					if ( bFirstGlyph )
-					{
-						aPos.X() += nCharWidth;
-						nCharWidth = 0;
-						bFirstGlyph = false;
-						bRet = true;
-					}
+					aPos.X() += nGlyphWidth;
+					bFirstGlyph = false;
+					bRet = true;
 				}
 			}
 
 			if ( bFirstGlyph )
 			{
-				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0, nCharWidth ) );
-				aPos.X() += nCharWidth;
+				AppendGlyph( GlyphItem( nCharPos, 0x0020 | GF_ISCHAR, aPos, bRunRTL ? GlyphItem::IS_RTL_GLYPH : 0, 0 ) );
 				bRet = true;
 			}
 		}
@@ -1804,7 +1801,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		for ( ItemCount i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && (int)( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 		{
 			sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
-			if ( ( aGlyphArray[ 0 ] & (sal_Int32)GF_IDXMASK ) != nGlyph )
+			if ( (sal_Int32)( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
 				continue;
 
 			// Fix bug 2390 by ignoring the value of nErr passed by reference
