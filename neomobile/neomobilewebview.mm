@@ -38,9 +38,8 @@
 #include <objc/objc-class.h>
 #include "postmac.h"
 
-#ifndef _VOS_MUTEX_HXX
+#include <unotools/bootstrap.hxx>
 #include <vos/mutex.hxx>
-#endif
 
 #include <map>
 #include <string>
@@ -48,6 +47,7 @@
 
 using namespace rtl;
 using namespace vos;
+using namespace utl;
 
 // Always use the test URLs
 #define TEST
@@ -163,6 +163,23 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[self setUIDelegate:self];
 	[self setDownloadDelegate:self];
 	[self setPolicyDelegate:self];
+
+	// Set custom user agent
+	OUString aProductKey = Bootstrap::getProductKey();
+	if ( aProductKey.getLength() )
+	{
+#ifdef MACOSX
+#ifdef POWERPC
+		aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " (PPC" ) );
+#else	// POWERPC
+		aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " (Intel" ) );
+#endif	// POWERPC
+		aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " Mac OS X)" ) );
+#endif	// MACOSX
+		NSString *pUserAgent = [NSString stringWithCharacters:aProductKey.getStr() length:aProductKey.getLength()];
+		if ( pUserAgent && [pUserAgent length] )
+			[self setCustomUserAgent:pUserAgent];
+	}
 
 	mpdownload=nil;
 	mndownloadSize=0;
