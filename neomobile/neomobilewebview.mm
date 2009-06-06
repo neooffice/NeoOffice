@@ -395,6 +395,11 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		mpexportEvent->Cancel();
 		return;
 	}
+	else
+	{
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+	}
 
 	[super stopLoading:pSender];
 }
