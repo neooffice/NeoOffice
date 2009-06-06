@@ -42,7 +42,6 @@
 #include <vos/mutex.hxx>
 
 #include <map>
-#include <string>
 #include "neomobilei18n.hxx"
 
 using namespace rtl;
@@ -628,14 +627,14 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	mndownloadSize=0;	// initialize only if we receive a response
 }
 
-static std::map<NSURLDownload *, std::string> gDownloadPathMap;
+static std::map< NSURLDownload *, OString > gDownloadPathMap;
 
 - (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
 {
 #ifdef DEBUG
 	fprintf( stderr, "Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	gDownloadPathMap[download]=[path cStringUsingEncoding:NSUTF8StringEncoding];
+	gDownloadPathMap[download]=OString([path cStringUsingEncoding:NSUTF8StringEncoding]);
 }
 
 - (void) download: (NSURLDownload *) download didReceiveResponse: (NSURLResponse *) response
@@ -687,7 +686,7 @@ static std::map<NSURLDownload *, std::string> gDownloadPathMap;
 	char outBuf[2*PATH_MAX];
 	if(gDownloadPathMap.count(download)>0)
 	{
-		sprintf(outBuf, "/usr/bin/open -a \"%s\" \"%s\"", [[[NSBundle mainBundle] bundlePath] cStringUsingEncoding:NSUTF8StringEncoding], gDownloadPathMap[download].c_str());
+		sprintf(outBuf, "/usr/bin/open -a \"%s\" \"%s\"", [[[NSBundle mainBundle] bundlePath] cStringUsingEncoding:NSUTF8StringEncoding], gDownloadPathMap[download].getStr());
 #ifdef DEBUG
 		fprintf( stderr, "Opening using: %s\n", outBuf );
 #endif
