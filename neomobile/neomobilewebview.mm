@@ -618,19 +618,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)download:(NSURLDownload *)download decideDestinationWithSuggestedFilename:(NSString *)filename
 {
-	// WebKit will apply no encoding to the filename header bytes so convert
-	// to UTF-8
-	unsigned int len = [filename length];
-	if (len)
-	{
-		char filenameChars[len + 1];
-		unsigned int i = 0;
-		for (;i < len;i++)
-			filenameChars[i] = (char)([filename characterAtIndex:i] & 0x00ff);
-		filenameChars[i] = '\0';
-		filename = [NSString stringWithUTF8String:filenameChars];
-	}
-
 #ifdef DEBUG
 	fprintf( stderr, "Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
