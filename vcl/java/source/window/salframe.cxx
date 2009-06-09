@@ -1150,11 +1150,12 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 	JavaSalMenu *pJavaSalMenu = (JavaSalMenu *)pSalMenu;
 	if ( pJavaSalMenu && pJavaSalMenu->mbIsMenuBarMenu )
 	{
+		bool bUpdateAllMenus = ( mbVisible && mpMenuBar );
 		mpMenuBar = pJavaSalMenu;
 
 		// If the menu is being set, we need to update the new menus. Fix
 		// bug 2577 by only updating the menubar and not its submenus.
-		UpdateMenusForFrame( this, NULL, false );
+		UpdateMenusForFrame( this, NULL, bUpdateAllMenus );
 	}
 	else
 	{
