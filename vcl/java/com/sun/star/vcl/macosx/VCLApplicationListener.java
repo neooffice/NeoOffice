@@ -160,7 +160,7 @@ public class VCLApplicationListener implements ApplicationListener {
 					// Fix bug 3485 by sleeping a little while since, in most
 					// cases, the other threads are blocked and so this thread
 					// will consume excessive CPU
-					Thread.currentThread().sleep( 100 );
+					Thread.currentThread().sleep( 10 );
 				}
 				catch (Throwable t) {}
 			}
