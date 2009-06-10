@@ -347,6 +347,11 @@ public final class VCLEventQueue implements Runnable {
 	}
 
 	/**
+	 * The in dispatch event flag.
+	 */
+	private volatile boolean inDispatchEvent = false;
+
+	/**
 	 * The last adjusted mouse modifiers.
 	 */
 	private int lastAdjustedMouseModifiers = 0;
@@ -456,7 +461,7 @@ public final class VCLEventQueue implements Runnable {
 				PaintEvent e = new PaintEvent(new Container(), PaintEvent.PAINT, new Rectangle());
 				eventQueue.postEvent(e);
 				AWTEvent nextEvent;
-				while ((nextEvent = eventQueue.peekEvent()) != null) {
+				while (inDispatchEvent || (nextEvent = eventQueue.peekEvent()) != null) {
 					runApplicationMainThreadTimers();
 					Thread.yield();
 				}
@@ -824,7 +829,9 @@ public final class VCLEventQueue implements Runnable {
 					return;
 				}
 
+				inDispatchEvent = true;
 				super.dispatchEvent(event);
+				inDispatchEvent = false;
 
 				if (event instanceof ComponentEvent && event.getID() == ComponentEvent.COMPONENT_MOVED && toolkitGetPointerInfoMethod != null && pointerInfoGetLocationMethod != null) {
 					// Fix bug 2769 by creating synthetic mouse dragged events
