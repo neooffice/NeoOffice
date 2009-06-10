@@ -300,7 +300,7 @@ public final class VCLEventQueue implements Runnable {
 	/**
 	 * The in dispatch event flag.
 	 */
-	private boolean inDispatchEvent = false;
+	private volatile boolean inDispatchEvent = false;
 
 	/**
 	 * The last adjusted mouse modifiers.
