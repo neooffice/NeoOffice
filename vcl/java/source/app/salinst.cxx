@@ -1019,28 +1019,24 @@ void SalYieldMutex::acquire()
 		}
 		else if ( pSalData->mpEventQueue && GetCurrentEventLoop() == GetMainEventLoop() )
 		{
-			// We need to let any pending timers run so that we don't deadlock
+			// Wait for other thread to release mutex. Post a dummy event
+			// to wakeup the VCL event thread.
 			TimeValue aDelay;
 			aDelay.Seconds = 0;
 			aDelay.Nanosec = 50;
+			maMainThreadCondition.reset();
+			com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
+			if ( !maMainThreadCondition.check() )
+				maMainThreadCondition.wait( &aDelay );
+			maMainThreadCondition.set();
+
+			// We need to let any pending timers run so that we don't deadlock
 			while ( !Application::IsShutDown() )
 			{
-				if ( tryToAcquire() )
-				{
-					if ( Application::IsShutDown() )
-						release();
-					break;
-				}
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
-
-				// Wait for other thread to release mutex. Post a dummy event
-				// to wakeup the VCL event thread.
-				maMainThreadCondition.reset();
-				com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-				pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
-				if ( !maMainThreadCondition.check() )
-					maMainThreadCondition.wait( &aDelay );
-				maMainThreadCondition.set();
+				if ( tryToAcquire() )
+					break;
 			}
 
 			return;
