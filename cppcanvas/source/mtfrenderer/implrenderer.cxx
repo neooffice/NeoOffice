@@ -1551,6 +1551,11 @@ namespace cppcanvas
                         // metafile renders itself into the given
                         // output rectangle 
                         pushState( rStates, PUSH_ALL );
+#ifdef USE_JAVA
+                        // Change map mode before translating and scaling
+                        rVDev.Push();
+                        rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
+#endif	// USE_JAVA
                         
                         const ::Point& rPos( rVDev.LogicToPixel( pAct->GetPoint() ) );
                         const ::Size&  rSize( rVDev.LogicToPixel( pAct->GetSize() ) );
@@ -1560,9 +1565,6 @@ namespace cppcanvas
                         getState( rStates ).transform.scale( (double)rSize.Width() / aMtfSizePix.Width(),
                                                              (double)rSize.Height() / aMtfSizePix.Height() );
 
-                        rVDev.Push();
-                        rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
-                        
 #ifdef USE_JAVA
                         // Fix bug 2218 by rendering EPS to a bitmap
                         VirtualDevice aVDev;
@@ -1570,12 +1572,16 @@ namespace cppcanvas
                         {
                             aVDev.DrawEPS( Point(), aMtfSizePix, pAct->GetLink(), NULL );
                             BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(), aMtfSizePix );
-                            MetaBmpExAction *pBmpExAction = new MetaBmpExAction( Point(), aBmpEx );
+							// Fix bugs 3441 and 3489 by using an scale action
+                            MetaBmpExScaleAction *pBmpExScaleAction = new MetaBmpExScaleAction( pAct->GetPoint(), pAct->GetSize(), aBmpEx );
                             GDIMetaFile aTmpMtf;
-                            aTmpMtf.AddAction( pBmpExAction );
+                            aTmpMtf.AddAction( pBmpExScaleAction );
                             createActions( aTmpMtf, rFactoryParms, bSubsettableActions );
                         }
 #else	// USE_JAVA
+                        rVDev.Push();
+                        rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
+                        
                         createActions( const_cast<GDIMetaFile&>(pAct->GetSubstitute()),
                                        rFactoryParms,
                                        bSubsettableActions );

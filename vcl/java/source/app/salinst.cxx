@@ -147,6 +147,7 @@ public:
 	virtual void			toggle() {}
 };
 
+static bool bAllowReleaseYieldMutex = false;
 static SalYieldMutex aEventQueueMutex;
 
 using namespace rtl;
@@ -182,7 +183,9 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				// we try to lock the mutex. Fix bug 3467 by speeding up
 				// acquiring of the event queue mutex by releasing the
 				// application mutex if already acquired by this thread.
+				bAllowReleaseYieldMutex = true;
 				ULONG nCount = Application::ReleaseSolarMutex();
+				bAllowReleaseYieldMutex = false;
 				aEventQueueMutex.acquire();
 				Application::AcquireSolarMutex( nCount );
 
@@ -421,6 +424,12 @@ IMutex* JavaSalInstance::GetYieldMutex()
 
 ULONG JavaSalInstance::ReleaseYieldMutex()
 {
+	// Never release the mutex in the main thread as it can cause crashing
+	// when dragging when the OOo code's VCL event dispatching thread runs
+	// while we are in the middle of a native drag event
+	if ( !bAllowReleaseYieldMutex && GetCurrentEventLoop() == GetMainEventLoop() )
+		return 0;
+
 	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
 	if ( pYieldMutex->GetThreadId() == OThread::getCurrentIdentifier() )
 	{
@@ -1007,28 +1016,24 @@ void SalYieldMutex::acquire()
 		}
 		else if ( pSalData->mpEventQueue && GetCurrentEventLoop() == GetMainEventLoop() )
 		{
-			// We need to let any pending timers run so that we don't deadlock
+			// Wait for other thread to release mutex. Post a dummy event
+			// to wakeup the VCL event thread.
 			TimeValue aDelay;
 			aDelay.Seconds = 0;
 			aDelay.Nanosec = 50;
+			maMainThreadCondition.reset();
+			com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+			pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
+			if ( !maMainThreadCondition.check() )
+				maMainThreadCondition.wait( &aDelay );
+			maMainThreadCondition.set();
+
+			// We need to let any pending timers run so that we don't deadlock
 			while ( !Application::IsShutDown() )
 			{
-				if ( tryToAcquire() )
-				{
-					if ( Application::IsShutDown() )
-						release();
-					break;
-				}
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
-
-				// Wait for other thread to release mutex. Post a dummy event
-				// to wakeup the VCL event thread.
-				maMainThreadCondition.reset();
-				com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-				pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
-				if ( !maMainThreadCondition.check() )
-					maMainThreadCondition.wait( &aDelay );
-				maMainThreadCondition.set();
+				if ( tryToAcquire() )
+					break;
 			}
 
 			return;
