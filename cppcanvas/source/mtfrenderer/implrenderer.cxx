@@ -1750,10 +1750,8 @@ namespace cppcanvas
                         // output rectangle 
                         pushState( rStates, PUSH_ALL );
                         
-#ifndef USE_JAVA
                         rVDev.Push();
                         rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
-#endif	// !USE_JAVA
                         
                         const ::Point& rPos( rVDev.LogicToPixel( pAct->GetPoint() ) );
                         const ::Size&  rSize( rVDev.LogicToPixel( pAct->GetSize() ) );
@@ -1764,20 +1762,16 @@ namespace cppcanvas
                                                              (double)rSize.Height() / aMtfSizePix.Height() );
 
 #ifdef USE_JAVA
-                        // Fix bug 3441 by changing the map mode after the
-                        // transform calls
-                        rVDev.Push();
-                        rVDev.SetMapMode( rSubstitute.GetPrefMapMode() );
-
                         // Fix bug 2218 by rendering EPS to a bitmap
                         VirtualDevice aVDev;
                         if ( aVDev.SetOutputSizePixel( aMtfSizePix ) )
                         {
                             aVDev.DrawEPS( Point(), aMtfSizePix, pAct->GetLink(), NULL );
                             BitmapEx aBmpEx = aVDev.GetBitmapEx( Point(), aMtfSizePix );
-                            MetaBmpExAction *pBmpExAction = new MetaBmpExAction( Point(), aBmpEx );
+							// Fix bugs 3441 and 3489 by using an scale action
+                            MetaBmpExScaleAction *pBmpExScaleAction = new MetaBmpExScaleAction( pAct->GetPoint(), pAct->GetSize(), aBmpEx );
                             GDIMetaFile aTmpMtf;
-                            aTmpMtf.AddAction( pBmpExAction );
+                            aTmpMtf.AddAction( pBmpExScaleAction );
                             createActions( aTmpMtf, rFactoryParms, bSubsettableActions );
                         }
 #else	// USE_JAVA
