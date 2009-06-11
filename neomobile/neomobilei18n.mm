@@ -61,6 +61,22 @@ static const sal_Char *pEntries_en_US[] = {
 };
 
 /**
+ * Translated strings for es locale
+ */
+static const sal_Char *pEntries_es[] = {
+	NEOMOBILECANCEL, "Cancelar",
+	NEOMOBILEDOWNLOADCANCELED, "Descarga cancelada",
+	NEOMOBILEDOWNLOADFAILED, "Falló la descarga",
+	NEOMOBILEDOWNLOADINGFILE, "Descargando archivo…",
+	NEOMOBILEERROR, "Error:",
+	NEOMOBILEEXPORTINGFILE, "Exportando archivo…",
+	NEOMOBILELOADING, "Cargando…",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEUPLOADINGFILE, "Subiendo archivo…",
+	nil, nil
+};
+
+/**
  * Translated strings for fr locale
  */
 static const sal_Char *pEntries_fr[] = {
@@ -168,6 +184,7 @@ NSString *GetLocalizedString( const sal_Char *key )
 	{
 		// Initialize dictionaries
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "en" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "US" ) ), OUString() ) ), pEntries_en_US );
+		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "es" ) ), OUString(), OUString() ) ), pEntries_fr );
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "fr" ) ), OUString(), OUString() ) ), pEntries_fr );
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "nl" ) ), OUString(), OUString() ) ), pEntries_nl );
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "pt" ) ), OUString(), OUString() ) ), pEntries_pt );
