@@ -26,7 +26,7 @@
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">What is NeoOffice Mobile?</value>
-							<value xml:lang="es">Que es NeoOffice Mobile?</value>
+							<value xml:lang="es">¿Qué es NeoOffice Mobile?</value>
 							<value xml:lang="fr">Qu'est-ce que NeoOffice Mobile ?</value>
 							<value xml:lang="it">Che cose'è NeoOffice Mobile?</value>
 							<value xml:lang="nl">Wat is NeoOffice Mobile?</value>
