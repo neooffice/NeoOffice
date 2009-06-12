@@ -131,9 +131,11 @@ inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f -
 
 - (void)isApplicationActive:(id)pObject
 {
+	// Fix bug 3491 by returning YES only if there is no key window or
+	// the key window is a Java window
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
-		mbActive = ( [pApp isActive] && ![pApp modalWindow] );
+		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
 }
 
 @end
