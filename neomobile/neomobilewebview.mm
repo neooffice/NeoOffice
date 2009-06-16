@@ -631,7 +631,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
 	int i=0;
 	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [filename stringByDeletingPathExtension], (++i), [filename pathExtension]]];
+		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [decodedFilename stringByDeletingPathExtension], (++i), [decodedFilename pathExtension]]];
 	}
 	
 	[download setDestination:filePath allowOverwrite:YES];
