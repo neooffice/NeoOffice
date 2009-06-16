@@ -6436,6 +6436,26 @@ xub_StrLen OutputDevice::GetTextBreak( const String& rStr, long nTextWidth,
             nExtraPixelWidth = ImplLogicWidthToDevicePixel( nCharExtra );
         }
         nRetVal = sal::static_int_cast<xub_StrLen>(pSalLayout->GetTextBreak( nTextPixelWidth, nExtraPixelWidth, nSubPixelFactor ));
+#ifdef USE_JAVA
+        // Fix bug 3488 by not ending a break with trailing '#' characters
+        if ( nRetVal != STRING_LEN && nRetVal > nIndex && rStr.GetChar( nRetVal ) == 0x0023 )
+        {
+            xub_StrLen nOldRetVal = nRetVal;
+            nRetVal--;
+            while ( nRetVal >= nIndex && rStr.GetChar( nRetVal ) == 0x0023 )
+            {
+                if ( nRetVal > nIndex )
+                {
+                    nRetVal--;
+                }
+                else
+                {
+                    nRetVal = nOldRetVal;
+                    break;
+                }
+            }
+        }
+#endif	// USE_JAVA
 
         pSalLayout->Release();
     }
@@ -6477,6 +6497,26 @@ xub_StrLen OutputDevice::GetTextBreak( const String& rStr, long nTextWidth,
 
     // calculate un-hyphenated break position
     xub_StrLen nRetVal = sal::static_int_cast<xub_StrLen>(pSalLayout->GetTextBreak( nTextPixelWidth, nExtraPixelWidth, nSubPixelFactor ));
+#ifdef USE_JAVA
+    // Fix bug 3488 by not ending a break with trailing '#' characters
+    if ( nRetVal != STRING_LEN && nRetVal > nIndex && rStr.GetChar( nRetVal ) == 0x0023 )
+    {
+        xub_StrLen nOldRetVal = nRetVal;
+        nRetVal--;
+        while ( nRetVal >= nIndex && rStr.GetChar( nRetVal ) == 0x0023 )
+        {
+            if ( nRetVal > nIndex )
+            {
+                nRetVal--;
+            }
+            else
+            {
+                nRetVal = nOldRetVal;
+                break;
+            }
+        }
+    }
+#endif	// USE_JAVA
 
     // calculate hyphenated break position
     String aHyphenatorStr( &nHyphenatorChar, 1 );
