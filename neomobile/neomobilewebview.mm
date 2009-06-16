@@ -621,8 +621,14 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	fprintf( stderr, "Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+	// Fix broken WebKit handling of the Content-Disposition header by assuming
+	// that our server has URL encoded the file name
+	NSString *decodedFilename = [filename stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	if ( !decodedFilename )
+		decodedFilename = filename;
+
 	NSString *basePath = NSTemporaryDirectory();
-	NSString *filePath = [basePath stringByAppendingPathComponent:filename];
+	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
 	int i=0;
 	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
 		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [filename stringByDeletingPathExtension], (++i), [filename pathExtension]]];
