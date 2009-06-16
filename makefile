@@ -103,8 +103,8 @@ PRODUCT_DIR_VERSION=3.0
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 3
-PRODUCT_DIR_PATCH_VERSION=Patch-3
+PRODUCT_PATCH_VERSION=Patch 4
+PRODUCT_DIR_PATCH_VERSION=Patch-4
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
 PRODUCT_SUPPORT_URL=http://trinity.neooffice.org/modules.php?name=Forums
@@ -127,7 +127,9 @@ PRODUCT_DOCUMENTATION_SPELLCHECK_URL=http://neowiki.neooffice.org/index.php/Acti
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser remotecontrol
 PRODUCT_COMPONENT_PATCH_MODULES=mediabrowser
+ifdef NEOMOBILE
 PRODUCT_COMPONENT_PATCH_MODULES+=neomobile
+endif
 
 # CVS macros
 OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
