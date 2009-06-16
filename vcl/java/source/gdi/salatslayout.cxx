@@ -1449,10 +1449,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					// 0x0000ffff glyphs as spaces
 					if ( nGlyph >= 0x0000ffff )
 					{
-						if ( bFirstGlyph )
-							nGlyph = 0x0020 | GF_ISCHAR;
-						else
-							continue;
+						nGlyph = 0x0020 | GF_ISCHAR;
 					}
 					// Prevent display of zero glyphs in fallback levels where
 					// we know that there is a valid fallback font
