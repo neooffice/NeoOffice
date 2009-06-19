@@ -29,7 +29,7 @@
 #     Foundation, Inc., 59 Temple Place, Suite 330, Boston,
 #     MA  02111-1307  USA
 #
-#     Modified Mary 2009 by Patrick Luby. NeoOffice is distributed under
+#     Modified May 2009 by Patrick Luby. NeoOffice is distributed under
 #     GPL only under modification term 3 of the LGPL.
 #
 #*************************************************************************
