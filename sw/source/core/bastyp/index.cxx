@@ -89,12 +89,7 @@ void SwIndexReg::ChkArr()
 SwIndex::SwIndex( SwIndexReg* pArr, xub_StrLen nIdx )
 	: nIndex( nIdx ), pArray( pArr ), pNext( 0 ), pPrev( 0 )
 {
-#ifdef USE_JAVA
-	// Fix bug 3454 by handling unexpected NULL values
-	if( !pArray || !pArray->pLast )
-#else	// USE_JAVA
 	if( !pArray )
-#endif	// USE_JAVA
 	{
 		pArray = SwIndexReg::pEmptyIndexArray;
 		nIndex = 0;		// steht immer auf 0 !!!
@@ -102,6 +97,11 @@ SwIndex::SwIndex( SwIndexReg* pArr, xub_StrLen nIdx )
 
 	if( !pArray->pFirst )         // 1. Index ??
 		pArray->pFirst = pArray->pLast = this;
+#ifdef USE_JAVA
+	// Fix bug 3454 by handling unexpected NULL values
+	if( !pArray->pLast )
+		pArray->pLast = pArray->pFirst;
+#endif	// USE_JAVA
     else if( nIdx > ((pArray->pLast->nIndex - pArray->pFirst->nIndex) / 2) )
 		ChgValue( *pArray->pLast, nIdx );
 	else
@@ -306,6 +306,14 @@ SwIndex& SwIndex::Assign( SwIndexReg* pArr, xub_StrLen nIdx )
 			pArr->pFirst = pArr->pLast = this;
 			nIndex = nIdx;
 		}
+#ifdef USE_JAVA
+		// Fix bug 3454 by handling unexpected NULL values
+		if( !pArr->pLast )
+		{
+			pArr->pLast = pArr->pFirst;
+			nIndex = nIdx;
+		}
+#endif	// USE_JAVA
         else if( nIdx > ((pArr->pLast->nIndex - pArr->pFirst->nIndex) / 2) )
 			ChgValue( *pArr->pLast, nIdx );
 		else
