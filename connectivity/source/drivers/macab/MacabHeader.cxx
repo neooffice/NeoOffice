@@ -168,7 +168,12 @@ void MacabHeader::operator+= (const MacabHeader *r)
 {
 	::rtl::OUString nRet;
 
+#ifdef USE_JAVA
+	// Fix bug 3492 by detecting negative index values
+	if(i < size && i >= 0)
+#else	// USE_JAVA
 	if(i < size)
+#endif	// USE_JAVA
 	{
 		if(fields[i] == NULL || fields[i]->value == NULL || CFGetTypeID(fields[i]->value) != CFStringGetTypeID())
 			return ::rtl::OUString();
