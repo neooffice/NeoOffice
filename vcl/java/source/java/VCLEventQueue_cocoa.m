@@ -586,7 +586,7 @@ static VCLResponder *pSharedResponder = nil;
 		// shortcuts
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
 		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers] ) )
-			return NO;
+			return YES;
 
 		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
 		// this window as this window may get released while updating.
