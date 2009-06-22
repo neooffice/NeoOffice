@@ -551,10 +551,12 @@ static VCLResponder *pSharedResponder = nil;
 
 - (BOOL)performKeyEquivalent:(NSEvent *)pEvent
 {
-	BOOL bCommandKeyPressed = ( pEvent && ( [pEvent modifierFlags] & NSDeviceIndependentModifierFlagsMask ) == NSCommandKeyMask );
+	BOOL bCommandKeyPressed = ( pEvent && [pEvent modifierFlags] & NSCommandKeyMask );
 
 	if ( bCommandKeyPressed && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
+		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
+
 		// Fix crashing when using a menu shortcut by forcing cancellation of
 		// the input method
 		NSResponder *pResponder = [self firstResponder];
@@ -578,6 +580,13 @@ static VCLResponder *pSharedResponder = nil;
 				return YES;
 			}
 		}
+
+
+		// Fix bug 3496 by having any Cocoa commands take precedence over menu
+		// shortcuts
+		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
+		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers] ) )
+			return NO;
 
 		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
 		// this window as this window may get released while updating.
