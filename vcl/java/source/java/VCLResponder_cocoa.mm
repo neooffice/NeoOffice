@@ -286,7 +286,7 @@ static short GetCurrentKeyModifiers()
 
 - (void)moveToBeginningOfLine:(id)pSender
 {
-	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_PARAGRAPH;
+	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_LINE;
 }
 
 - (void)moveToBeginningOfParagraph:(id)pSender
