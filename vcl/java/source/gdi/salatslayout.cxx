@@ -68,6 +68,8 @@
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
 
+#define MAXEXTRACHARS 100
+
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
@@ -956,18 +958,23 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 	int nEndCharPos;
 	if ( !mnFallbackLevel )
 	{
-		// Fix bug 2841 by ensuring that we process only full runs
+		// Fix bug 2841 by ensuring that we process only full runs. Fix bug
+		// 3497 by limiting the amount of extra characters that we include.
 		bool bDeleteArgs = false;
 		nMinCharPos = rArgs.mnMinCharPos;
 		nEndCharPos = rArgs.mnEndCharPos;
-		while ( nMinCharPos && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos - 1 ] | GF_ISCHAR ) )
+		int nMaxPosChange = MAXEXTRACHARS;
+		while ( nMaxPosChange && nMinCharPos && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos - 1 ] | GF_ISCHAR ) )
 		{
 			nMinCharPos--;
+			nMaxPosChange--;
 			bDeleteArgs = true;
 		}
-		while ( nEndCharPos < rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos ] | GF_ISCHAR ) )
+		nMaxPosChange = MAXEXTRACHARS;
+		while ( nMaxPosChange && nEndCharPos < rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos ] | GF_ISCHAR ) )
 		{
 			nEndCharPos++;
+			nMaxPosChange--;
 			bDeleteArgs = true;
 		}
 
