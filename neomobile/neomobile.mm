@@ -165,13 +165,11 @@ class MacOSXNeoOfficeMobileImpl
 	// to obtain other services if needed
 	Reference< XComponentContext > m_xServiceManager;
 	
-	sal_Int32 m_nRefCount;
-	sal_Int32 m_nCount;
-	OUString m_aLocale;
+	bool m_bIsNeoOffice;
 	
 public:
-	MacOSXNeoOfficeMobileImpl( const Reference< XComponentContext > & xServiceManager )
-		: m_xServiceManager( xServiceManager ), m_nRefCount( 0 ) {}
+	MacOSXNeoOfficeMobileImpl( const Reference< XComponentContext > & xServiceManager, bool bIsNeoOffice )
+		: m_xServiceManager( xServiceManager ), m_bIsNeoOffice( bIsNeoOffice ) {}
 	virtual ~MacOSXNeoOfficeMobileImpl() {}
 
     // XServiceInfo	implementation
@@ -290,8 +288,12 @@ Reference< XInterface > SAL_CALL MacOSXNeoOfficeMobileImpl_create(
 			pShowOnlyMenusForWindow = (ShowOnlyMenusForWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "ShowOnlyMenusForWindow" ) );
 	}
 
+#if SUPD == 680
+	// Do not allow pre-OpenOffice.org 3.0 versions to run this extension
 	if ( pShowOnlyMenusForWindow )
-		xRet = static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext));
+#endif	// SUPD == 680
+	xRet = static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext, pShowOnlyMenusForWindow ? true : false));
+fprintf( stderr, "Here: %p %i\n", pShowOnlyMenusForWindow, xRet.is() );
 
 	return xRet;
 }
@@ -390,27 +392,29 @@ static NeoMobileWebView *pSharedWebView = nil;
 @interface CreateWebViewImpl : NSObject
 {
 	const NSString*				mpURI;
+	BOOL						mbIsNeoOffice;
 }
-+ (id)createWithURI:(const NSString *)pURI;
-- (id)initWithURI:(const NSString *)pURI;
++ (id)createWithURI:(const NSString *)pURI isNeoOffice:(BOOL)bIsNeoOffice;
+- (id)initWithURI:(const NSString *)pURI isNeoOffice:(BOOL)bIsNeoOffice;
 - (void)showWebView:(id)obj;
 - (void)showWebViewOnlyIfVisible:(id)obj;
 @end
 
 @implementation CreateWebViewImpl
 
-+ (id)createWithURI:(const NSString *)pURI
++ (id)createWithURI:(const NSString *)pURI isNeoOffice:(BOOL)bIsNeoOffice
 {
-	CreateWebViewImpl *pRet = [[CreateWebViewImpl alloc] initWithURI:pURI];
+	CreateWebViewImpl *pRet = [[CreateWebViewImpl alloc] initWithURI:pURI isNeoOffice:bIsNeoOffice];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithURI:(const NSString *)pURI
+- (id)initWithURI:(const NSString *)pURI isNeoOffice:(BOOL)bIsNeoOffice
 {
 	self = [super init];
 
 	mpURI = pURI;
+	mbIsNeoOffice = bIsNeoOffice;
 
 	return(self);
 }
@@ -418,7 +422,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 - (void)showWebView:(id)obj
 {
 	if ( !pSharedWebView )
-		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil];
+		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil isNeoOffice:mbIsNeoOffice];
 
 	if(pSharedWebView)
 	{
@@ -487,7 +491,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
-	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pAboutURI];
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pAboutURI isNeoOffice:m_bIsNeoOffice];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
@@ -529,7 +533,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI];
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI isNeoOffice:m_bIsNeoOffice];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
@@ -550,7 +554,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI];
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI isNeoOffice:m_bIsNeoOffice];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();

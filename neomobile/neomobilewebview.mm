@@ -106,8 +106,10 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 @implementation NeoMobileWebView
 
-- (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName
+- (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName isNeoOffice:(BOOL)bIsNeoOffice
 {
+	mbIsNeoOffice = bIsNeoOffice;
+
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
 		// Override [WebJavaScriptTextInputPanel windowDidLoad]
@@ -503,17 +505,28 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					rSolarMutex.acquire();
 
 					Application::PostUserEvent( LINK( &aEvent, NeoMobileExportFileAppEvent, ExportFile ) );
-					rSolarMutex.release();
+					if ( mbIsNeoOffice )
+						rSolarMutex.release();
 
 					// Dispatch any pending native events until event is
 					// dispatched or cancelled
 					while ( Application::IsInMain() && !aEvent.IsFinished() && !aEvent.IsCanceled() )
 					{
-						NSEvent *pEvent;
-						while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
-							[pApp sendEvent:pEvent];
+						if ( mbIsNeoOffice )
+						{
+							NSEvent *pEvent;
+							while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
+								[pApp sendEvent:pEvent];
+						}
+						else
+						{
+							Application::Reschedule();
+						}
 					}
 					
+					if ( !mbIsNeoOffice )
+						rSolarMutex.release();
+
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
 

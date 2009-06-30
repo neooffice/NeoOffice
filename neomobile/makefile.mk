@@ -96,8 +96,9 @@ makeoxt : $(MISC)$/description.xml
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $<
 	zip -r $(BIN)$/$(PRJNAME).oxt META-INF NeoOfficeMobile uiIntegration.xcu uiJobs.xcu Images -x "*CVS*"
 	zip $(ZIPFLAGS) $(PWD)$/$(BIN)$/$(PRJNAME).oxt $(UCR)$/$(TARGET).db -x "*CVS*"
-# Change install names to avoid library loading issues
-	sh -c -e 'install_name_tool -id "$(LB)$/$(TARGET)$(DLLPOST)" "$(LB)$/$(TARGET)$(DLLPOST)" ; for i in `otool -L "$(LB)$/$(TARGET)$(DLLPOST)" | awk "{ print \\$$1 }" | grep "^@loader_path\/"` ; do install_name_tool -change "$${i}" `echo "$${i}" | sed "s#^@loader_path/\.\./ure-link/lib/#@executable_path/urelibs/#" | sed "s#^@loader_path/#@executable_path/../basis-link/program/#"` "$(LB)$/$(TARGET)$(DLLPOST)" ; done'
+# Change install names to avoid library loading issues. Note: basis-link/program
+# directory is set to load in OOo's extension loader
+	sh -c -e 'install_name_tool -id "$(LB)$/$(TARGET)$(DLLPOST)" "$(LB)$/$(TARGET)$(DLLPOST)" ; for i in `otool -L "$(LB)$/$(TARGET)$(DLLPOST)" | awk "{ print \\$$1 }" | grep "^@loader_path\/"` ; do install_name_tool -change "$${i}" `echo "$${i}" | sed "s#^@loader_path/\.\./ure-link/lib/#@executable_path/urelibs/#" | sed "s#^@loader_path/lib#@loader_path/../../../../../../basis-link/program/lib#"` "$(LB)$/$(TARGET)$(DLLPOST)" ; done'
 .IF "$(debug)" == ""
 # Use stripped library if not in debug mode
 	$(RM) $(BIN)$/stripped
