@@ -293,7 +293,6 @@ Reference< XInterface > SAL_CALL MacOSXNeoOfficeMobileImpl_create(
 	if ( pShowOnlyMenusForWindow )
 #endif	// SUPD == 680
 	xRet = static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext, pShowOnlyMenusForWindow ? true : false));
-fprintf( stderr, "Here: %p %i\n", pShowOnlyMenusForWindow, xRet.is() );
 
 	return xRet;
 }
@@ -653,6 +652,18 @@ static NeoMobileWebView *pSharedWebView = nil;
 			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
 			Reference< XFrame > rFrame=Desktop->getCurrentFrame();
 			Reference< XModel > rModel=rFrame->getController()->getModel();
+
+			// Determine if this document is password protected
+			const OUString aPasswordPropName( RTL_CONSTASCII_USTRINGPARAM( "Password" ) );
+			Sequence< PropertyValue > aArgs = rModel->getArgs();
+			sal_uInt32 nLen = aArgs.getLength();
+			for ( sal_uInt32 i = 0; i < nLen; i++ )
+			{
+				if ( aArgs[ i ].Name == aPasswordPropName )
+				{
+					// TODO: show a native alert and if cancelled, return false
+				}
+			}
 						
 			Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
 			if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
