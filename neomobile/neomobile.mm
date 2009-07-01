@@ -207,6 +207,9 @@ public:
 		SAL_CALL getMimeType( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
+		SAL_CALL isPasswordProtected( )
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
 		SAL_CALL saveAsPDF( const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
@@ -293,7 +296,6 @@ Reference< XInterface > SAL_CALL MacOSXNeoOfficeMobileImpl_create(
 	if ( pShowOnlyMenusForWindow )
 #endif	// SUPD == 680
 	xRet = static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext, pShowOnlyMenusForWindow ? true : false));
-fprintf( stderr, "Here: %p %i\n", pShowOnlyMenusForWindow, xRet.is() );
 
 	return xRet;
 }
@@ -653,7 +655,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
 			Reference< XFrame > rFrame=Desktop->getCurrentFrame();
 			Reference< XModel > rModel=rFrame->getController()->getModel();
-						
+
 			Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
 			if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
 				return(OUString::createFromAscii(".odt"));
@@ -708,6 +710,38 @@ static NeoMobileWebView *pSharedWebView = nil;
 	return(OUString::createFromAscii(""));
 }
 
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::isPasswordProtected( void )
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		// Determine if this document is password protected
+		const OUString aPasswordPropName( RTL_CONSTASCII_USTRINGPARAM( "Password" ) );
+		Sequence< PropertyValue > aArgs = rModel->getArgs();
+		sal_uInt32 nLen = aArgs.getLength();
+		for ( sal_uInt32 i = 0; i < nLen; i++ )
+		{
+			if ( aArgs[ i ].Name == aPasswordPropName )
+				return (sal_True);
+		}
+	}
+	catch (...)
+	{
+	}
+
+	return(sal_False);
+}
 
 ::sal_Bool
 	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsPDF( const rtl::OUString& url ) 

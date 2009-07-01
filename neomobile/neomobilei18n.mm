@@ -55,8 +55,10 @@ static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exporting file…",
 	NEOMOBILELOADING, "Loading…",
+	NEOMOBILEPASSWORDPROTECTED, "This document will be uploaded without any password protection.\n\nDo you still want to upload this document?",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILEUPLOADINGFILE, "Uploading file…",
+	NEOMOBILEUPLOAD, "Upload",
 	nil, nil
 };
 
