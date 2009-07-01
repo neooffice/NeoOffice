@@ -55,8 +55,10 @@ static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exporting file…",
 	NEOMOBILELOADING, "Loading…",
+	NEOMOBILENO, "No",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILEUPLOADINGFILE, "Uploading file…",
+	NEOMOBILEYES, "Yes",
 	nil, nil
 };
 
