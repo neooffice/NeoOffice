@@ -55,9 +55,10 @@ static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exporting file…",
 	NEOMOBILELOADING, "Loading…",
-	NEOMOBILEPASSWORDPROTECTED, "This document will be uploaded without any password protection.\n\nDo you still want to upload this document?",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEUPLOADCONTINUE, "Do you still want to upload this document?",
 	NEOMOBILEUPLOADINGFILE, "Uploading file…",
+	NEOMOBILEUPLOADPASSWORDPROTECTED, "This document will be uploaded without any password protection",
 	NEOMOBILEUPLOAD, "Upload",
 	nil, nil
 };
@@ -90,7 +91,10 @@ static const sal_Char *pEntries_fr[] = {
 	NEOMOBILEEXPORTINGFILE, "Exportation du fichier…",
 	NEOMOBILELOADING, "Chargement…",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEUPLOADCONTINUE, "Souhaitez-vous quand-même envoyer ce document vers le serveur ?",
+	NEOMOBILEUPLOADPASSWORDPROTECTED, "Ce fichier sera enregistré sur le serveur sans protection par mot de passe",
 	NEOMOBILEUPLOADINGFILE, "Envoi du fichier vers le serveur…",
+	NEOMOBILEUPLOAD, "Envoyer",
 	nil, nil
 };
 

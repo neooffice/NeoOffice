@@ -98,7 +98,7 @@ using namespace ::org::neooffice;
 
 - (void)runModal:(id)arg;
 {
-	NSAlert *alert = [NSAlert alertWithMessageText:GetLocalizedString(NEOMOBILEPASSWORDPROTECTED) defaultButton:GetLocalizedString(NEOMOBILEUPLOAD) alternateButton:GetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:@""];
+	NSAlert *alert = [NSAlert alertWithMessageText:GetLocalizedString(NEOMOBILEUPLOADPASSWORDPROTECTED) defaultButton:GetLocalizedString(NEOMOBILEUPLOAD) alternateButton:GetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:GetLocalizedString(NEOMOBILEUPLOADCONTINUE)];
 	if(alert && [alert runModal] == NSAlertDefaultReturn)
 		mcancelled = NO;
 }
