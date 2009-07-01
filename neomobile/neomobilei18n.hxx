@@ -46,10 +46,10 @@
 #define NEOMOBILEERROR "error"
 #define NEOMOBILEEXPORTINGFILE "exporting.file"
 #define NEOMOBILELOADING "loading"
-#define NEOMOBILENO "no"
+#define NEOMOBILEPASSWORDPROTECTED "password.protected"
 #define NEOMOBILEPRODUCTNAME "product.name"
 #define NEOMOBILEUPLOADINGFILE "uploading.file"
-#define NEOMOBILEYES "yes"
+#define NEOMOBILEUPLOAD "upload"
 
 /**
  * Lookup a string and retrieve a translated string.  If no translation

@@ -46,6 +46,7 @@ module neooffice
 		boolean openNeoOfficeMobile( );
 		boolean setPropertyValue( [in] string key, [in] string value );
 		string getPropertyValue( [in] string key );
+		boolean isPasswordProtected( );
 		boolean saveAsPDF( [in] string url );
 		boolean saveAsHTML( [in] string url );
 		boolean saveAsOpenDocument( [in] string url );
