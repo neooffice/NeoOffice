@@ -75,6 +75,10 @@
 #include "X11productcheck.hxx"
 #endif
 
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
 #include "main_cocoa.h"
 
 #define TMPDIR "/tmp"
@@ -524,6 +528,69 @@ extern "C" int main( int argc, char **argv )
 		}
 		putenv( (char *)aTmpPath.getStr() );
 		bRestart = true;
+	}
+
+	// Use default launch options if there are no application arguments
+	if ( argc < 2 || ( argc == 2 && !strncmp( "-psn", argv[ 1 ], 4 ) ) )
+	{
+		CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DefaultLaunchOptions" ), kCFPreferencesCurrentApplication );
+		if ( aPref )
+		{
+			if ( CFGetTypeID( aPref ) == CFStringGetTypeID() )
+			{
+				char **pNewArgv = (char **)rtl_allocateMemory( sizeof( char** ) * ( argc + 2 ) );
+				memcpy( pNewArgv, argv, sizeof( char** ) * argc );
+
+				CFIndex nLen = CFStringGetLength( (CFStringRef)aPref );
+				CFRange aRange = CFRangeMake( 0, nLen );
+				sal_Unicode pBuffer[ nLen + 1 ];
+				CFStringGetCharacters( (CFStringRef)aPref, aRange, pBuffer );
+				pBuffer[ nLen ] = 0;
+				OUString aOption( pBuffer );
+				pNewArgv[ argc ] = (char *)OUStringToOString( aOption, RTL_TEXTENCODING_UTF8 ).getStr();
+				if ( pNewArgv[ argc ] )
+				{
+					pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
+					argc++;
+				}
+
+				pNewArgv[ argc ] = NULL;
+				argv = pNewArgv;
+				bRestart = true;
+			}
+			else if ( CFGetTypeID( aPref ) == CFArrayGetTypeID() )
+			{
+				CFIndex nArrayLen = CFArrayGetCount( (CFArrayRef)aPref );
+				char **pNewArgv = (char **)rtl_allocateMemory( sizeof( char** ) * ( argc + nArrayLen + 1 ) );
+				memcpy( pNewArgv, argv, sizeof( char** ) * argc );
+
+				for ( int i = 0; i < nArrayLen; i++ )
+				{
+					CFStringRef aElement = (CFStringRef)CFArrayGetValueAtIndex( (CFArrayRef)aPref, i );
+					if ( aElement )
+					{
+						CFIndex nLen = CFStringGetLength( aElement );
+						CFRange aRange = CFRangeMake( 0, nLen );
+						sal_Unicode pBuffer[ nLen + 1 ];
+						CFStringGetCharacters( aElement, aRange, pBuffer );
+						pBuffer[ nLen ] = 0;
+						OUString aOption( pBuffer );
+						pNewArgv[ argc ] = (char *)OUStringToOString( aOption, RTL_TEXTENCODING_UTF8 ).getStr();
+						if ( pNewArgv[ argc ] )
+						{
+							pNewArgv[ argc ] = strdup( pNewArgv[ argc ] );
+							argc++;
+						}
+					}
+				}
+
+				pNewArgv[ argc ] = NULL;
+				argv = pNewArgv;
+				bRestart = true;
+			}
+
+			CFRelease( aPref );
+		}
 	}
 
 	// Restart if necessary since most library path changes don't have any
