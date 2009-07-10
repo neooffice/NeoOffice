@@ -264,10 +264,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	{
 		NSMutableURLRequest *pRequest = [NSMutableURLRequest requestWithURL:pURL];
 		if ( pRequest )
-		{
-			[pRequest setTimeoutInterval:15];
 			[[self mainFrame] loadRequest:pRequest];
-		}
 	}
 }
 
