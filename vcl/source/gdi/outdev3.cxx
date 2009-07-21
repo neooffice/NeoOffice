@@ -3480,10 +3480,17 @@ bool OutputDevice::ImplNewFont() const
         return true;
 
     // we need a graphics
+#ifdef USE_JAVA
+    // Fix crashing when launching app with -nologo, -invisible, or -headless
+    // by invoking ImplInitFontList() before caching the graphics
+    ImplInitFontList();
+#endif	// USE_JAVA
     if ( !mpGraphics && !ImplGetGraphics() )
         return false;
     SalGraphics* pGraphics = mpGraphics;
+#ifndef USE_JAVA
     ImplInitFontList();
+#endif	// !USE_JAVA
 
     // convert to pixel height
     // TODO: replace integer based aSize completely with subpixel accurate type
