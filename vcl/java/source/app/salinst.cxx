@@ -149,6 +149,7 @@ public:
 
 static bool bAllowReleaseYieldMutex = false;
 static SalYieldMutex aEventQueueMutex;
+static ULONG nCurrentTimeout = 0;
 
 using namespace rtl;
 using namespace vcl;
@@ -569,12 +570,16 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		nCount = 0;
 	}
 
+	// Cache timeout for other threads
+	nCurrentTimeout = nTimeout;
+
 	// Dispatch any pending AWT events. Fix bug 2126 by always acting as if
 	// the bHandleAllCurrentEvents parameter is true
 	bool bContinue = true;
 	while ( bContinue && !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( nTimeout, TRUE ) ) != NULL )
 	{
 		nTimeout = 0;
+		nCurrentTimeout = 0;
 
 		AcquireYieldMutex( nCount );
 		if ( nCount )
@@ -612,6 +617,8 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		if ( bContinue && pSalData->maFrameList.size() != nFrames )
 			bContinue = false;
 	}
+
+	nCurrentTimeout = 0;
 
 	AcquireYieldMutex( nCount );
 
@@ -1016,21 +1023,25 @@ void SalYieldMutex::acquire()
 		}
 		else if ( pSalData->mpEventQueue && GetCurrentEventLoop() == GetMainEventLoop() )
 		{
-			// Wait for other thread to release mutex. Post a dummy event
-			// to wakeup the VCL event thread.
-			TimeValue aDelay;
-			aDelay.Seconds = 0;
-			aDelay.Nanosec = 50;
-			maMainThreadCondition.reset();
-			com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
-			pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
-			if ( !maMainThreadCondition.check() )
-				maMainThreadCondition.wait( &aDelay );
-			maMainThreadCondition.set();
-
-			// We need to let any pending timers run so that we don't deadlock
+			// Wait for other thread to release mutex
 			while ( !Application::IsShutDown() )
 			{
+				// Fix hanging in bug 3503 by posting a dummy event to wakeup
+				// the VCL event thread if the VCL event dispatch thread is in
+				// a potentially long wait
+				if ( nCurrentTimeout > 100 )
+				{
+					TimeValue aDelay;
+					aDelay.Seconds = 0;
+					aDelay.Nanosec = 50;
+					maMainThreadCondition.reset();
+					com_sun_star_vcl_VCLEvent aUserEvent( SALEVENT_USEREVENT, NULL, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aUserEvent );
+					if ( !maMainThreadCondition.check() )
+						maMainThreadCondition.wait( &aDelay );
+					maMainThreadCondition.set();
+				}
+
 				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 				if ( tryToAcquire() )
 					break;
