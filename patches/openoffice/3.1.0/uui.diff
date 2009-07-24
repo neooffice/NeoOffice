@@ -1,0 +1,2834 @@
+Index: uui/source/filechanged.src
+===================================================================
+--- uui/source/filechanged.src	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/filechanged.src	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,49 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#define __RSC
++
++#ifndef UUI_IDS_HRC
++#include <ids.hrc>
++#endif
++
++String STR_FILECHANGED_TITLE
++{
++    Text = "Document Has Been Changed by Others";
++};
++String STR_FILECHANGED_MSG
++{
++    Text [ en-US ] = "The file has been changed since it was opened for editing in %PRODUCTNAME. Saving your version of the document will overwrite changes made by others.\n\nDo you want to save anyway?\n\n";
++};
++String STR_FILECHANGED_SAVEANYWAY_BTN
++{
++    Text [ en-US ] = "~Save Anyway";
++};
++
+Index: uui/source/filechanged.hxx
+===================================================================
+--- uui/source/filechanged.hxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/filechanged.hxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,43 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef _UUI_FILECHANGED_HXX
++#define _UUI_FILECHANGED_HXX
++
++#include <vcl/msgbox.hxx>
++
++class FileChangedQueryBox : public MessBox
++{
++public:
++    FileChangedQueryBox( Window* pParent, ResMgr* pResMgr );
++    ~FileChangedQueryBox();
++};
++
++#endif
++
+Index: uui/source/iahndl.cxx
+===================================================================
+--- uui/source/iahndl.cxx	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/iahndl.cxx	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -48,6 +48,10 @@
+ #include "com/sun/star/document/NoSuchFilterRequest.hpp"
+ #include "com/sun/star/document/AmbigousFilterRequest.hpp"
+ #include "com/sun/star/document/LockedDocumentRequest.hpp"
++#include "com/sun/star/document/OwnLockOnDocumentRequest.hpp"
++#include "com/sun/star/document/LockedOnSavingRequest.hpp"
++#include "com/sun/star/document/ChangedByOthersRequest.hpp"
++#include "com/sun/star/document/LockFileIgnoreRequest.hpp"
+ #include "com/sun/star/document/XImporter.hpp"
+ #include "com/sun/star/document/XInteractionFilterOptions.hpp"
+ #include "com/sun/star/document/XInteractionFilterSelect.hpp"
+@@ -117,6 +121,10 @@
+ #include "unknownauthdlg.hxx"
+ #include "sslwarndlg.hxx"
+ #include "openlocked.hxx"
++#include "alreadyopen.hxx"
++#include "filechanged.hxx"
++#include "trylater.hxx"
++#include "lockfailed.hxx"
+ #include <comphelper/processfactory.hxx>
+ #include <svtools/zforlist.hxx>
+ using namespace com::sun;
+@@ -144,7 +152,7 @@
+     inline ErrorResource(ResId & rResId) SAL_THROW(()): Resource(rResId) {}
+ 
+     inline ~ErrorResource() SAL_THROW(()) { FreeResource(); }
+-    
++
+     bool getString(ErrCode nErrorCode, rtl::OUString * pString) const
+         SAL_THROW(());
+ };
+@@ -174,7 +182,7 @@
+     star::uno::Reference< star::ucb::XInteractionSupplyAuthentication > *
+         pSupplyAuthentication,
+     star::uno::Reference< star::task::XInteractionPassword > * pPassword,
+-    star::uno::Reference< star::ucb::XInteractionSupplyName > * 
++    star::uno::Reference< star::ucb::XInteractionSupplyName > *
+         pSupplyName,
+     star::uno::Reference< star::ucb::XInteractionReplaceExistingData > *
+     pReplaceExistingData)
+@@ -223,7 +231,7 @@
+         }
+         if (pPassword && !pPassword->is())
+         {
+-            *pPassword 
++            *pPassword
+                 = star::uno::Reference< star::task::XInteractionPassword >(
+                     rContinuations[i], star::uno::UNO_QUERY);
+             if (pPassword->is())
+@@ -240,7 +248,7 @@
+         if (pReplaceExistingData && !pReplaceExistingData->is())
+         {
+             *pReplaceExistingData
+-                = star::uno::Reference< 
++                = star::uno::Reference<
+                       star::ucb::XInteractionReplaceExistingData >(
+                     rContinuations[i], star::uno::UNO_QUERY);
+             if (pReplaceExistingData->is())
+@@ -282,13 +290,13 @@
+         }
+         ++i;
+     }
+-    
++
+     return aMessage;
+ }
+ 
+ 
+ bool
+-getStringRequestArgument(star::uno::Sequence< star::uno::Any > const & 
++getStringRequestArgument(star::uno::Sequence< star::uno::Any > const &
+ 			     rArguments,
+                          rtl::OUString const & rKey,
+                          rtl::OUString * pValue)
+@@ -368,7 +376,7 @@
+     if (rContinuations.getLength() != 1 )
+         return false;
+ 
+-    // user can only abort or approve, all other continuations are not 
++    // user can only abort or approve, all other continuations are not
+     // considered to be informational.
+     star::uno::Reference< star::task::XInteractionApprove > xApprove(
+         rContinuations[0], star::uno::UNO_QUERY);
+@@ -385,8 +393,8 @@
+ 
+ } /* namespace */
+ 
+-UUIInteractionHelper::UUIInteractionHelper(    
+-    star::uno::Reference< star::lang::XMultiServiceFactory > const & 
++UUIInteractionHelper::UUIInteractionHelper(
++    star::uno::Reference< star::lang::XMultiServiceFactory > const &
+         rServiceFactory,
+     star::uno::Sequence< star::uno::Any > const & rArguments)
+     SAL_THROW(()):
+@@ -395,8 +403,8 @@
+ {
+ }
+ 
+-UUIInteractionHelper::UUIInteractionHelper(    
+-    star::uno::Reference< star::lang::XMultiServiceFactory > const & 
++UUIInteractionHelper::UUIInteractionHelper(
++    star::uno::Reference< star::lang::XMultiServiceFactory > const &
+         rServiceFactory)
+     SAL_THROW(()):
+         m_xServiceFactory(rServiceFactory)
+@@ -410,7 +418,7 @@
+ class HandleData : public osl::Condition {
+ public:
+     HandleData(
+-        star::uno::Reference< star::task::XInteractionRequest > const & 
++        star::uno::Reference< star::task::XInteractionRequest > const &
+ 	    rRequest)
+         : osl::Condition(),
+           m_rRequest(rRequest)
+@@ -421,7 +429,7 @@
+ };
+ 
+ long UUIInteractionHelper::handlerequest(
+-    void* pHandleData,void* pInteractionHelper) 
++    void* pHandleData,void* pInteractionHelper)
+ {
+     HandleData* pHND = (HandleData*) pHandleData;
+     UUIInteractionHelper* pUUI = (UUIInteractionHelper*) pInteractionHelper;
+@@ -458,10 +466,10 @@
+ }
+ 
+ long UUIInteractionHelper::getstringfromrequest(
+-    void* pHandleData,void* pInteractionHelper) 
++    void* pHandleData,void* pInteractionHelper)
+ {
+     HandleData* pHND = (HandleData*) pHandleData;
+-    UUIInteractionHelper* pUUI = (UUIInteractionHelper*) pInteractionHelper;   
++    UUIInteractionHelper* pUUI = (UUIInteractionHelper*) pInteractionHelper;
+     pHND->m_aResult = pUUI->getStringFromRequest_impl(pHND->m_rRequest);
+     pHND->set();
+     return 0;
+@@ -522,7 +530,7 @@
+     {
+         ErrCode nErrorCode = ERRCODE_UUI_IO_MODULESIZEEXCEEDED;
+         std::vector< rtl::OUString > aArguments;
+-        star::uno::Sequence< rtl::OUString > sModules 
++        star::uno::Sequence< rtl::OUString > sModules
+             = aModSizeException.Names;
+         if ( sModules.getLength() )
+         {
+@@ -545,19 +553,19 @@
+                             rErrorString);
+         return;
+     }
+-    
++
+     star::ucb::NameClashException aNCException;
+     if (aAnyRequest >>= aNCException)
+     {
+         ErrCode nErrorCode = ERRCODE_UUI_IO_TARGETALREADYEXISTS;
+         std::vector< rtl::OUString > aArguments;
+-        
++
+         if( aNCException.Name.getLength() )
+         {
+             nErrorCode = ERRCODE_UUI_IO_ALREADYEXISTS;
+             aArguments.push_back( aNCException.Name );
+         }
+-        
++
+         handleErrorRequest( aNCException.Classification,
+                             nErrorCode,
+                             aArguments,
+@@ -567,20 +575,20 @@
+                             rErrorString);
+         return;
+     }
+-    
++
+     star::ucb::UnsupportedNameClashException aUORequest;
+     if (aAnyRequest >>= aUORequest)
+     {
+         ErrCode nErrorCode = ERRCODE_UUI_IO_UNSUPPORTEDOVERWRITE;
+         std::vector< rtl::OUString > aArguments;
+-        
++
+         star::uno::Reference< star::task::XInteractionApprove > xApprove;
+-        star::uno::Reference< 
++        star::uno::Reference<
+             star::task::XInteractionDisapprove > xDisapprove;
+         getContinuations(
+-            rRequest->getContinuations(), 
++            rRequest->getContinuations(),
+             &xApprove, &xDisapprove, 0, 0, 0, 0, 0, 0);
+-        
++
+         if( xApprove.is() && xDisapprove.is() )
+         {
+ 	    handleErrorRequest( star::task::InteractionClassification_QUERY,
+@@ -593,23 +601,23 @@
+         }
+         return;
+     }
+-    
++
+     star::document::BrokenPackageRequest aBrokenPackageRequest;
+     if (aAnyRequest >>= aBrokenPackageRequest)
+     {
+         std::vector< rtl::OUString > aArguments;
+-        
++
+         if( aBrokenPackageRequest.aName.getLength() )
+             aArguments.push_back( aBrokenPackageRequest.aName );
+-	    
+-        handleBrokenPackageRequest( aArguments, 
++
++        handleBrokenPackageRequest( aArguments,
+                                     rRequest->getContinuations(),
+                                     bObtainErrorStringOnly,
+                                     bHasErrorString,
+                                     rErrorString);
+         return;
+     }
+-	
++
+     star::ucb::InteractiveIOException aIoException;
+     if (aAnyRequest >>= aIoException)
+     {
+@@ -617,7 +625,7 @@
+         star::ucb::InteractiveAugmentedIOException aAugmentedIoException;
+         if (aAnyRequest >>= aAugmentedIoException)
+             aRequestArguments = aAugmentedIoException.Arguments;
+-        
++
+         ErrCode nErrorCode;
+         std::vector< rtl::OUString > aArguments;
+         static ErrCode const
+@@ -720,7 +728,7 @@
+                     nErrorCode = aErrorCode[aIoException.Code][0];
+                 break;
+             }
+-	    
++
+ 	    case star::ucb::IOErrorCode_DEVICE_NOT_READY:
+             {
+                 rtl::OUString aArgUri;
+@@ -754,7 +762,7 @@
+ 		    nErrorCode = aErrorCode[aIoException.Code][0];
+                 break;
+             }
+-	    
++
+ 	    case star::ucb::IOErrorCode_DIFFERENT_DEVICES:
+             {
+                 rtl::OUString aArgVolume;
+@@ -779,7 +787,7 @@
+                     nErrorCode = aErrorCode[aIoException.Code][0];
+                 break;
+ 	    }
+-	    
++
+ 	    case star::ucb::IOErrorCode_NOT_EXISTING:
+             {
+                 rtl::OUString aArgUri;
+@@ -806,7 +814,7 @@
+                     nErrorCode = aErrorCode[aIoException.Code][0];
+                 break;
+             }
+-	    
++
+ 	    default:
+             {
+                 rtl::OUString aArgUri;
+@@ -821,7 +829,7 @@
+                 break;
+             }
+         }
+-        
++
+         handleErrorRequest(aIoException.Classification,
+                            nErrorCode,
+                            aArguments,
+@@ -831,7 +839,7 @@
+                            rErrorString);
+         return;
+     }
+-    
++
+     star::ucb::InteractiveAppException aAppException;
+     if (aAnyRequest >>= aAppException)
+     {
+@@ -844,7 +852,7 @@
+                             bHasErrorString,
+                             rErrorString);
+     }
+-    
++
+     star::ucb::InteractiveNetworkException aNetworkException;
+     if (aAnyRequest >>= aNetworkException)
+     {
+@@ -880,7 +888,7 @@
+         }
+         else
+             nErrorCode = ERRCODE_INET_GENERAL;
+-        
++
+         handleErrorRequest(aNetworkException.Classification,
+                            nErrorCode,
+                            aArguments,
+@@ -890,7 +898,7 @@
+                            rErrorString);
+         return;
+     }
+-    
++
+     star::ucb::InteractiveCHAOSException aChaosException;
+     if (aAnyRequest >>= aChaosException)
+     {
+@@ -913,7 +921,7 @@
+                            rErrorString);
+         return;
+     }
+-    
++
+     star::ucb::InteractiveWrongMediumException aWrongMediumException;
+     if (aAnyRequest >>= aWrongMediumException)
+     {
+@@ -930,7 +938,7 @@
+                            rErrorString);
+         return;
+     }
+-    
++
+     star::java::WrongJavaVersionException aWrongJavaVersionException;
+     if (aAnyRequest >>= aWrongJavaVersionException)
+     {
+@@ -973,7 +981,7 @@
+                            rErrorString);
+         return;
+     }
+-    
++
+     star::sync2::BadPartnershipException aBadPartnershipException;
+     if (aAnyRequest >>= aBadPartnershipException)
+     {
+@@ -995,17 +1003,17 @@
+                            rErrorString);
+         return;
+     }
+-    
++
+     star::configuration::backend::MergeRecoveryRequest aMergeRecoveryRequest;
+     if (aAnyRequest >>= aMergeRecoveryRequest)
+     {
+         ErrCode nErrorCode = aMergeRecoveryRequest.IsRemovalRequest
+             ? ERRCODE_UUI_CONFIGURATION_BROKENDATA_WITHREMOVE
+             : ERRCODE_UUI_CONFIGURATION_BROKENDATA_NOREMOVE;
+-        
++
+         std::vector< rtl::OUString > aArguments;
+         aArguments.push_back(aMergeRecoveryRequest.ErrorLayerId);
+-        
++
+         handleErrorRequest(star::task::InteractionClassification_ERROR,
+                            nErrorCode,
+                            aArguments,
+@@ -1015,21 +1023,21 @@
+                            rErrorString);
+         return;
+     }
+-    
+-    star::configuration::backend::StratumCreationException 
++
++    star::configuration::backend::StratumCreationException
+         aStratumCreationException;
+-    
++
+     if (aAnyRequest >>= aStratumCreationException)
+     {
+         const ErrCode nErrorCode = ERRCODE_UUI_CONFIGURATION_BACKENDMISSING;
+-        
++
+         rtl::OUString aStratum = aStratumCreationException.StratumData;
+-        if (aStratum.getLength() == 0) 
++        if (aStratum.getLength() == 0)
+             aStratum = aStratumCreationException.StratumService;
+-        
++
+         std::vector< rtl::OUString > aArguments;
+         aArguments.push_back(aStratum);
+-        
++
+         handleErrorRequest(star::task::InteractionClassification_ERROR,
+                            nErrorCode,
+                            aArguments,
+@@ -1039,14 +1047,14 @@
+                            rErrorString);
+         return;
+     }
+-    
++
+     star::xforms::InvalidDataOnSubmitException aInvalidDataOnSubmitException;
+     if (aAnyRequest >>= aInvalidDataOnSubmitException)
+     {
+         const ErrCode nErrorCode = ERRCODE_UUI_INVALID_XFORMS_SUBMISSION_DATA;
+-        
++
+         std::vector< rtl::OUString > aArguments;
+-        
++
+         handleErrorRequest(star::task::InteractionClassification_QUERY,
+                            nErrorCode,
+                            aArguments,
+@@ -1061,7 +1069,7 @@
+     star::uno::Reference< star::task::XInteractionRequest > const & rRequest)
+ {
+     star::uno::Any aAnyRequest(rRequest->getRequest());
+-    
++
+     star::ucb::AuthenticationRequest aAuthenticationRequest;
+     if (aAnyRequest >>= aAuthenticationRequest)
+     {
+@@ -1086,7 +1094,7 @@
+ //                                      rRequest->getContinuations());
+ //        return;
+ //    }
+-    
++
+     star::task::MasterPasswordRequest aMasterPasswordRequest;
+     if (aAnyRequest >>= aMasterPasswordRequest)
+     {
+@@ -1094,7 +1102,7 @@
+                                     rRequest->getContinuations());
+         return;
+     }
+-    
++
+     star::task::DocumentPasswordRequest aDocumentPasswordRequest;
+     if (aAnyRequest >>= aDocumentPasswordRequest)
+     {
+@@ -1103,7 +1111,7 @@
+                               aDocumentPasswordRequest.Name);
+         return;
+     }
+-    
++
+     star::task::PasswordRequest aPasswordRequest;
+     if (aAnyRequest >>= aPasswordRequest)
+     {
+@@ -1111,7 +1119,7 @@
+                               rRequest->getContinuations());
+         return;
+     }
+-    
++
+     star::ucb::HandleCookiesRequest aCookiesRequest;
+     if (aAnyRequest >>= aCookiesRequest)
+     {
+@@ -1119,7 +1127,7 @@
+                              rRequest->getContinuations());
+         return;
+     }
+-    
++
+     star::document::NoSuchFilterRequest aNoSuchFilterRequest;
+     if (aAnyRequest >>= aNoSuchFilterRequest)
+     {
+@@ -1127,7 +1135,7 @@
+                                   rRequest->getContinuations());
+         return;
+     }
+-    
++
+     star::document::AmbigousFilterRequest aAmbigousFilterRequest;
+     if (aAnyRequest >>= aAmbigousFilterRequest)
+     {
+@@ -1135,7 +1143,7 @@
+                                     rRequest->getContinuations());
+         return;
+     }
+-    
++
+     star::document::FilterOptionsRequest aFilterOptionsRequest;
+     if (aAnyRequest >>= aFilterOptionsRequest)
+     {
+@@ -1147,20 +1155,56 @@
+     star::document::LockedDocumentRequest aLockedDocumentRequest;
+     if (aAnyRequest >>= aLockedDocumentRequest )
+     {
+-        handleLockedDocumentRequest( aLockedDocumentRequest,
+-                                 rRequest->getContinuations() );
++        handleLockedDocumentRequest( aLockedDocumentRequest.DocumentURL,
++                                     aLockedDocumentRequest.UserInfo,
++                                     rRequest->getContinuations(),
++                                     UUI_DOC_LOAD_LOCK );
+         return;
+     }
++
++    star::document::OwnLockOnDocumentRequest aOwnLockOnDocumentRequest;
++    if (aAnyRequest >>= aOwnLockOnDocumentRequest )
++    {
++        handleLockedDocumentRequest( aOwnLockOnDocumentRequest.DocumentURL,
++                                     aOwnLockOnDocumentRequest.TimeInfo,
++                                     rRequest->getContinuations(),
++                                     aOwnLockOnDocumentRequest.IsStoring ? UUI_DOC_OWN_SAVE_LOCK : UUI_DOC_OWN_LOAD_LOCK );
++        return;
++    }
++
++    star::document::LockedOnSavingRequest aLockedOnSavingRequest;
++    if (aAnyRequest >>= aLockedOnSavingRequest )
++    {
++        handleLockedDocumentRequest( aLockedOnSavingRequest.DocumentURL,
++                                     aLockedOnSavingRequest.UserInfo,
++                                     rRequest->getContinuations(),
++                                     UUI_DOC_SAVE_LOCK );
++        return;
++    }
++
++    star::document::ChangedByOthersRequest aChangedByOthersRequest;
++    if (aAnyRequest >>= aChangedByOthersRequest )
++    {
++        handleChangedByOthersRequest( rRequest->getContinuations() );
++        return;
++    }
++
++    star::document::LockFileIgnoreRequest aLockFileIgnoreRequest;
++    if (aAnyRequest >>= aLockFileIgnoreRequest )
++    {
++        handleLockFileIgnoreRequest( rRequest->getContinuations() );
++        return;
++    }
+ }
+ 
+-void UUIInteractionHelper::handleErrorHandlerRequests( 
++void UUIInteractionHelper::handleErrorHandlerRequests(
+     star::uno::Reference< star::task::XInteractionRequest > const & rRequest,
+     bool bObtainErrorStringOnly,
+     bool & bHasErrorString,
+     rtl::OUString & rErrorString)
+ {
+     star::uno::Any aAnyRequest(rRequest->getRequest());
+-    
++
+     star::task::ErrorCodeRequest aErrorCodeRequest;
+     if (aAnyRequest >>= aErrorCodeRequest)
+     {
+@@ -1181,7 +1225,7 @@
+         );
+         return;
+     }
+-    
++
+     star::task::ErrorCodeIOException aErrorCodeIOException;
+     if (aAnyRequest >>= aErrorCodeIOException)
+     {
+@@ -1212,14 +1256,14 @@
+         handleMessageboxRequests(rRequest, false, bDummy, aDummy);
+ 
+         ////////////////////////////////////////////////////////////
+-        // Use ErrorHandler::HandleError 
++        // Use ErrorHandler::HandleError
+         ////////////////////////////////////////////////////////////
+         handleErrorHandlerRequests(rRequest, false, bDummy, aDummy);
+ 
+         ////////////////////////////////////////////////////////////
+         // Display Special Dialog
+         ////////////////////////////////////////////////////////////
+-        handleDialogRequests(rRequest);       
++        handleDialogRequests(rRequest);
+     }
+     catch (std::bad_alloc const &)
+     {
+@@ -1313,8 +1357,8 @@
+ 
+         return sPart;
+ }
+- 
+ 
++
+ sal_Bool UUIInteractionHelper::executeUnknownAuthDialog( const cssu::Reference< dcss::security::XCertificate >& rXCert)
+     SAL_THROW((star::uno::RuntimeException))
+ {
+@@ -1326,9 +1370,9 @@
+             xManager(ResMgr::CreateResMgr(CREATEVERSIONRESMGR_NAME(uui)));
+         std::auto_ptr< UnknownAuthDialog >
+             xDialog(new UnknownAuthDialog( getParentProperty(),
+-										   rXCert,						
++										   rXCert,
+ 										   m_xServiceFactory,
+-										   xManager.get())); 
++										   xManager.get()));
+ 
+ 		// Get correct ressource string
+ 		rtl::OUString aMessage;
+@@ -1338,7 +1382,7 @@
+ 		//aArguments.push_back( rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("out of memory")) );
+ 
+         if (xManager.get())
+-		{    
++		{
+ 			ResId aResId(RID_UUI_ERRHDL, *xManager.get());
+ 			if (ErrorResource(aResId).getString(ERRCODE_UUI_UNKNOWNAUTH_UNTRUSTED, &aMessage))
+ 			{
+@@ -1357,7 +1401,7 @@
+     }
+ }
+ 
+-rtl::OUString 
++rtl::OUString
+ UUIInteractionHelper::getLocalizedDatTimeStr( ::com::sun::star::util::DateTime aDateTime )
+ {
+ 
+@@ -1365,7 +1409,7 @@
+ 	rtl::OUString aDateTimeStr;
+     Date  aDate;
+     Time  aTime;
+-        
++
+     aDate = Date( aDateTime.Day, aDateTime.Month, aDateTime.Year );
+     aTime = Time( aDateTime.Hours, aDateTime.Minutes, aDateTime.Seconds );
+ 
+@@ -1386,8 +1430,8 @@
+ 	return aDateTimeStr;
+ }
+ 
+-sal_Bool UUIInteractionHelper::executeSSLWarnDialog( const cssu::Reference< dcss::security::XCertificate >& rXCert, 
+-													 sal_Int32 const & failure, 
++sal_Bool UUIInteractionHelper::executeSSLWarnDialog( const cssu::Reference< dcss::security::XCertificate >& rXCert,
++													 sal_Int32 const & failure,
+ 													 const rtl::OUString & hostName )
+     SAL_THROW((star::uno::RuntimeException))
+ {
+@@ -1399,9 +1443,9 @@
+             xManager(ResMgr::CreateResMgr(CREATEVERSIONRESMGR_NAME(uui)));
+         std::auto_ptr< SSLWarnDialog >
+             xDialog(new SSLWarnDialog( getParentProperty(),
+-										   rXCert,						
++										   rXCert,
+ 										   m_xServiceFactory,
+-										   xManager.get())); 
++										   xManager.get()));
+ 
+ 		// Get correct ressource string
+ 		rtl::OUString aMessage_1;
+@@ -1422,13 +1466,13 @@
+ 			case SSLWARN_TYPE_INVALID:
+ 				break;
+ 		}
+-		
+ 
+-        
++
++
+ 		//aArguments.push_back( rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("out of memory")) );
+ 
+         if (xManager.get())
+-		{    
++		{
+ 			ResId aResId(RID_UUI_ERRHDL, *xManager.get());
+ 			if (ErrorResource(aResId).getString( ERRCODE_AREA_UUI_UNKNOWNAUTH + failure + DESCRIPTION_1, &aMessage_1))
+ 			{
+@@ -1441,8 +1485,8 @@
+ 			xDialog->SetText( aTitle );
+ 		}
+ 
+-		
+ 
++
+         return static_cast<sal_Bool> (xDialog->Execute());
+     }
+     catch (std::bad_alloc const &)
+@@ -1540,8 +1584,8 @@
+         	std::auto_ptr< MasterPasswordCreateDialog >
+             		xDialog(new MasterPasswordCreateDialog(
+                             getParentProperty(), xManager.get()));
+-        	rInfo.SetResult(xDialog->Execute() 
+-				== RET_OK ? ERRCODE_BUTTON_OK 
++        	rInfo.SetResult(xDialog->Execute()
++				== RET_OK ? ERRCODE_BUTTON_OK
+ 				          : ERRCODE_BUTTON_CANCEL);
+         	aMaster = rtl::OUStringToOString(xDialog->GetMasterPassword(),
+ 						 RTL_TEXTENCODING_UTF8);
+@@ -1551,8 +1595,8 @@
+         	std::auto_ptr< MasterPasswordDialog >
+             		xDialog(new MasterPasswordDialog(
+                             getParentProperty(), nMode, xManager.get()));
+-        	rInfo.SetResult(xDialog->Execute() 
+-				== RET_OK ? ERRCODE_BUTTON_OK 
++        	rInfo.SetResult(xDialog->Execute()
++				== RET_OK ? ERRCODE_BUTTON_OK
+                                           : ERRCODE_BUTTON_CANCEL);
+         	aMaster = rtl::OUStringToOString(xDialog->GetMasterPassword(),
+ 						 RTL_TEXTENCODING_UTF8);
+@@ -1603,7 +1647,7 @@
+ 	    std::auto_ptr< PasswordCreateDialog >
+ 		xDialog(new PasswordCreateDialog(
+                             getParentProperty(), xManager.get()));
+-	    
++
+ 	    ::rtl::OUString aTitle( xDialog->GetText() );
+ 	    if( aDocName.getLength() )
+ 	    {
+@@ -1612,7 +1656,7 @@
+ 		aTitle += ::rtl::OUString::createFromAscii( "]" );
+ 		xDialog->SetText( aTitle );
+ 	    }
+-	    
++
+ 	    rInfo.SetResult(xDialog->Execute() == RET_OK ? ERRCODE_BUTTON_OK :
+ 			    ERRCODE_BUTTON_CANCEL);
+ 	    rInfo.SetPassword( xDialog->GetPassword() );
+@@ -1622,7 +1666,7 @@
+ 	    std::auto_ptr< PasswordDialog >
+ 		xDialog(new PasswordDialog(
+                             getParentProperty(), nMode, xManager.get()));
+-	    
++
+ 	    ::rtl::OUString aTitle( xDialog->GetText() );
+ 	    if( aDocName.getLength() )
+ 	    {
+@@ -1677,7 +1721,7 @@
+     try
+     {
+         vos::OGuard aGuard(Application::GetSolarMutex());
+-	
++
+         std::auto_ptr< ResMgr >
+             xManager(ResMgr::CreateResMgr(CREATEVERSIONRESMGR_NAME(uui)));
+ 
+@@ -1729,13 +1773,13 @@
+ 					nButtonMask,
+                                     aText.makeStringAndClear()));
+ 		break;
+-		
++
+ 	    case star::task::InteractionClassification_WARNING:
+ 		xBox.reset(new WarningBox(getParentProperty(),
+                                       nButtonMask,
+ 					  aText.makeStringAndClear()));
+ 		break;
+-		
++
+ 	    case star::task::InteractionClassification_INFO:
+ 		if ((nButtonMask & 0x01F00000) == WB_DEF_OK)
+                     //TODO! missing win bit button mask define (want to ignore
+@@ -1747,13 +1791,13 @@
+ 					    nButtonMask,
+ 					    aText.makeStringAndClear()));
+             break;
+-	    
++
+ 	    case star::task::InteractionClassification_QUERY:
+ 		xBox.reset(new QueryBox(getParentProperty(),
+ 					nButtonMask,
+ 					aText.makeStringAndClear()));
+ 		break;
+-		
++
+ 	    default:
+ 		OSL_ASSERT(false);
+ 		break;
+@@ -1785,7 +1829,7 @@
+ 	    aResult = ERRCODE_BUTTON_RETRY;
+ 	    break;
+     }
+-    
++
+     return aResult;
+ }
+ 
+@@ -1798,9 +1842,9 @@
+ {
+ 
+     vos::OGuard aGuard(Application::GetSolarMutex());
+-    
++
+     MessBox xBox( getParentProperty(), nButtonMask, rTitle, rMessage );
+-    
++
+     USHORT aResult = xBox.Execute();
+     switch( aResult )
+     {
+@@ -1820,7 +1864,7 @@
+ 	    aResult = ERRCODE_BUTTON_RETRY;
+ 	    break;
+     }
+-    
++
+     return aResult;
+ }
+ star::uno::Reference< star::task::XInteractionHandler >
+@@ -1865,7 +1909,7 @@
+     star::uno::Reference< star::ucb::XInteractionSupplyAuthentication >
+         xSupplyAuthentication;
+     getContinuations(
+-        rContinuations, 
++        rContinuations,
+         0, 0, &xRetry, &xAbort, &xSupplyAuthentication, 0, 0, 0 );
+     bool bRemember;
+     bool bRememberPersistent;
+@@ -2019,7 +2063,7 @@
+             }
+             else if (xSupplyAuthentication->canSetAccount())
+                 xSupplyAuthentication->setAccount(aInfo.GetAccount());
+-            
++
+             xSupplyAuthentication->select();
+ 	    }
+ 	    // Empty user name can not be valid:
+@@ -2054,12 +2098,12 @@
+             {} // user did not enter master password
+ 	    }
+ 	    break;
+-	    
++
+ 	case ERRCODE_BUTTON_RETRY:
+ 	    if (xRetry.is())
+             xRetry->select();
+ 	    break;
+-	    
++
+ 	default:
+ 	    if (xAbort.is())
+             xAbort->select();
+@@ -2072,16 +2116,16 @@
+ {
+ 	if (hostName.equalsIgnoreAsciiCase( certHostName ))
+ 		return sal_True;
+-	
+-	
+ 
++
++
+ 	if ( 0 == certHostName.indexOf( rtl::OUString::createFromAscii( "*" ) ) && hostName.getLength() >= certHostName.getLength()  )
+ 	{
+ 		rtl::OUString cmpStr = certHostName.copy( 1 );
+ 
+ 		if ( hostName.matchIgnoreAsciiCase( cmpStr, hostName.getLength( ) -  cmpStr.getLength()) )
+ 			return sal_True;
+-		
++
+ 	}
+ 
+     return sal_False;
+@@ -2100,15 +2144,15 @@
+ 
+     star::uno::Reference< star::task::XInteractionApprove > xApprove;
+     star::uno::Reference< star::task::XInteractionAbort > xAbort;
+-	
++
+ 	getContinuations(
+         rContinuations, &xApprove, 0, 0, &xAbort, 0, 0, 0, 0);
+ 
+ 	sal_Int32 failures = rRequest.CertificateValidity;
+ 
+ 	sal_Bool trustCert = sal_True;
+-	
+-	
++
++
+ 	if ( ((failures & csss::CertificateValidity::UNTRUSTED) == csss::CertificateValidity::UNTRUSTED ) ||
+ 		 ((failures & csss::CertificateValidity::ISSUER_UNTRUSTED) == csss::CertificateValidity::ISSUER_UNTRUSTED) ||
+ 		 ((failures & csss::CertificateValidity::ROOT_UNTRUSTED) == csss::CertificateValidity::ROOT_UNTRUSTED) )
+@@ -2117,7 +2161,7 @@
+ 			trustCert = sal_True;
+ 		else
+ 			trustCert = sal_False;
+-	}	
++	}
+ 
+ 	if ( (!isDomainMatch( rRequest.HostName, GetContentPart( rRequest.Certificate.get()->getSubjectName()) )) &&
+ 		  trustCert  )
+@@ -2161,13 +2205,13 @@
+ 	}
+ 
+ 	/*
+-	
++
+ 	switch (executeMessageBox( rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("Dialog1")), rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("Dummy dialog")), WB_YES_NO | WB_DEF_YES ))
+ 	{
+ 	case ERRCODE_BUTTON_YES:
+ 		if (xApprove.is())
+ 			xApprove->select();
+-		break;	    
++		break;
+ 	default:
+ 		if (xAbort.is())
+ 			xAbort->select();
+@@ -2187,7 +2231,7 @@
+     rtl::OUString & /*rProposedNewName*/)
+ {
+     // @@@ Todo DV: execute overwrite-rename dialog, deliver result
+-    OSL_ENSURE( false, 
++    OSL_ENSURE( false,
+                 "executeNameClashResolveDialog not yet implemented!" );
+     return ABORT;
+ }
+@@ -2199,7 +2243,7 @@
+     rtl::OUString & /*rProposedNewName*/)
+ {
+     // @@@ Todo DV: execute rename-only dialog, deliver result
+-    OSL_ENSURE( false, 
++    OSL_ENSURE( false,
+                 "executeSimpleNameClashResolveDialog not yet implemented!" );
+     return ABORT;
+ }
+@@ -2213,22 +2257,22 @@
+     star::task::XInteractionContinuation > > const & rContinuations)
+   SAL_THROW((star::uno::RuntimeException))
+ {
+-    OSL_ENSURE( 
+-        rRequest.TargetFolderURL.getLength() > 0, 
++    OSL_ENSURE(
++        rRequest.TargetFolderURL.getLength() > 0,
+         "NameClashResolveRequest must not contain empty TargetFolderURL" );
+ 
+-    OSL_ENSURE( 
+-        rRequest.ClashingName.getLength() > 0, 
++    OSL_ENSURE(
++        rRequest.ClashingName.getLength() > 0,
+         "NameClashResolveRequest must not contain empty ClashingName" );
+ 
+-    star::uno::Reference< star::task::XInteractionAbort > 
++    star::uno::Reference< star::task::XInteractionAbort >
+         xAbort;
+-    star::uno::Reference< star::ucb::XInteractionSupplyName > 
++    star::uno::Reference< star::ucb::XInteractionSupplyName >
+         xSupplyName;
+-    star::uno::Reference< star::ucb::XInteractionReplaceExistingData > 
++    star::uno::Reference< star::ucb::XInteractionReplaceExistingData >
+         xReplaceExistingData;
+     getContinuations(
+-        rContinuations, 
++        rContinuations,
+         0, 0, 0, &xAbort, 0, 0, &xSupplyName, &xReplaceExistingData);
+ 
+     OSL_ENSURE( xAbort.is(),
+@@ -2262,7 +2306,7 @@
+         break;
+ 
+     case OVERWRITE:
+-        OSL_ENSURE( 
++        OSL_ENSURE(
+             xReplaceExistingData.is(),
+             "Invalid NameClashResolveDialogResult: OVERWRITE - "
+             "No ReplaceExistingData continuation available!" );
+@@ -2289,7 +2333,7 @@
+     star::uno::Reference< star::ucb::XInteractionSupplyAuthentication >
+         xSupplyAuthentication;
+     getContinuations(
+-        rContinuations, 
++        rContinuations,
+         0, 0, &xRetry, &xAbort, &xSupplyAuthentication, 0, 0, 0);
+     LoginErrorInfo aInfo;
+ 
+@@ -2306,12 +2350,12 @@
+ 		xSupplyAuthentication->select();
+ 	    }
+ 	    break;
+-	    
++
+ 	case ERRCODE_BUTTON_RETRY:
+ 	    if (xRetry.is())
+ 		xRetry->select();
+ 	    break;
+-	    
++
+ 	default:
+ 	    if (xAbort.is())
+ 		xAbort->select();
+@@ -2347,12 +2391,12 @@
+ 		xPassword->select();
+ 	    }
+ 	    break;
+-	    
++
+ 	case ERRCODE_BUTTON_RETRY:
+ 	    if (xRetry.is())
+ 		xRetry->select();
+ 	    break;
+-	    
++
+ 	default:
+ 	    if (xAbort.is())
+             xAbort->select();
+@@ -2394,15 +2438,15 @@
+ 		    case star::ucb::CookiePolicy_CONFIRM:
+ 			xCookie->m_nPolicy = CNTHTTP_COOKIE_POLICY_INTERACTIVE;
+ 			break;
+-			
++
+ 		    case star::ucb::CookiePolicy_ACCEPT:
+ 			xCookie->m_nPolicy = CNTHTTP_COOKIE_POLICY_ACCEPTED;
+ 			break;
+-			
++
+ 		    case star::ucb::CookiePolicy_IGNORE:
+ 			xCookie->m_nPolicy = CNTHTTP_COOKIE_POLICY_BANNED;
+ 			break;
+-			
++
+ 		    default:
+ 			OSL_ASSERT(false);
+ 			break;
+@@ -2438,12 +2482,12 @@
+ 		    xCookieHandling->
+ 			setGeneralPolicy(star::ucb::CookiePolicy_CONFIRM);
+ 		    break;
+-		    
++
+ 		case CNTHTTP_COOKIE_POLICY_ACCEPTED:
+ 		    xCookieHandling->
+ 			setGeneralPolicy(star::ucb::CookiePolicy_ACCEPT);
+ 		    break;
+-		    
++
+ 		case CNTHTTP_COOKIE_POLICY_BANNED:
+ 		    xCookieHandling->
+ 			setGeneralPolicy(star::ucb::CookiePolicy_IGNORE);
+@@ -2460,7 +2504,7 @@
+ 			    xCookieHandling->
+                             setSpecificPolicy(rRequest.Cookies[j], true);
+ 			    break;
+-			    
++
+ 			case CNTHTTP_COOKIE_POLICY_BANNED:
+ 			    xCookieHandling->
+ 				setSpecificPolicy(rRequest.Cookies[j], false);
+@@ -2473,31 +2517,31 @@
+ }
+ 
+ void
+-UUIInteractionHelper::handleNoSuchFilterRequest( 
++UUIInteractionHelper::handleNoSuchFilterRequest(
+     star::document::NoSuchFilterRequest const & rRequest,
+-    star::uno::Sequence< 
+-        star::uno::Reference< star::task::XInteractionContinuation > > const & 
+-            rContinuations ) 
++    star::uno::Sequence<
++        star::uno::Reference< star::task::XInteractionContinuation > > const &
++            rContinuations )
+     SAL_THROW((star::uno::RuntimeException))
+ {
+     star::uno::Reference< star::task::XInteractionAbort > xAbort;
+-    star::uno::Reference< 
++    star::uno::Reference<
+ 	star::document::XInteractionFilterSelect > xFilterTransport;
+ 
+     sal_Int32 nCount = rContinuations.getLength();
+     for( sal_Int32 nStep=0; nStep<nCount; ++nStep )
+     {
+         if( ! xAbort.is() )
+-            xAbort = star::uno::Reference< star::task::XInteractionAbort >( 
++            xAbort = star::uno::Reference< star::task::XInteractionAbort >(
+ 		rContinuations[nStep], star::uno::UNO_QUERY );
+ 
+         if( ! xFilterTransport.is() )
+-            xFilterTransport = star::uno::Reference< 
+-		star::document::XInteractionFilterSelect >( 
++            xFilterTransport = star::uno::Reference<
++		star::document::XInteractionFilterSelect >(
+ 		    rContinuations[nStep], star::uno::UNO_QUERY );
+     }
+ 
+-    // check neccessary ressources - if they doesn't exist - abort or 
++    // check neccessary ressources - if they doesn't exist - abort or
+     // break this operation
+     if (!xAbort.is())
+         return;
+@@ -2508,10 +2552,10 @@
+         return;
+     }
+ 
+-    star::uno::Reference< star::container::XContainerQuery > 
+-	xFilterContainer( m_xServiceFactory->createInstance( 
++    star::uno::Reference< star::container::XContainerQuery >
++	xFilterContainer( m_xServiceFactory->createInstance(
+ 			      ::rtl::OUString::createFromAscii(
+-				  "com.sun.star.document.FilterFactory") ), 
++				  "com.sun.star.document.FilterFactory") ),
+ 			  star::uno::UNO_QUERY );
+     if (!xFilterContainer.is())
+     {
+@@ -2522,19 +2566,19 @@
+     uui::FilterNameList lNames;
+ 
+     // Note: We look for all filters here which match the following criteria:
+-    //          - they are import filters as minimum (of course they can 
++    //          - they are import filters as minimum (of course they can
+     //            support export too)
+-    //          - we don't show any filter which are flaged as "don't show it 
++    //          - we don't show any filter which are flaged as "don't show it
+     //            at the UI" or "they are not installed"
+-    //          - we ignore filters, which have not set any valid 
++    //          - we ignore filters, which have not set any valid
+     //            DocumentService (e.g. our pure graphic filters)
+     //          - we show it sorted by her UIName's
+-    //          - We don't use the order flag or prefer default filters. 
+-    //            (Because this list shows all filters and the user should 
++    //          - We don't use the order flag or prefer default filters.
++    //            (Because this list shows all filters and the user should
+     //            find his filter vry easy by his UIName ...)
+-    //          - We use "_query_all" here ... but we filter graphic filters 
++    //          - We use "_query_all" here ... but we filter graphic filters
+     //            out by using DocumentService property later!
+-    star::uno::Reference< star::container::XEnumeration > xFilters 
++    star::uno::Reference< star::container::XEnumeration > xFilters
+ 	= xFilterContainer->createSubSetEnumerationByQuery(
+ 	    ::rtl::OUString::createFromAscii(
+ 		"_query_all:sort_prop=uiname:iflags=1:eflags=143360"));
+@@ -2559,12 +2603,12 @@
+             lNames.push_back( aPair );
+         }
+         catch(const star::uno::RuntimeException&)
+-	{ 
+-	    throw; 
++	{
++	    throw;
+ 	}
+         catch(const star::uno::Exception&)
+-	{ 
+-	    continue; 
++	{
++	    continue;
+ 	}
+     }
+ 
+@@ -2602,19 +2646,19 @@
+     SAL_THROW((star::uno::RuntimeException))
+ {
+     star::uno::Reference< star::task::XInteractionAbort > xAbort;
+-    star::uno::Reference< 
++    star::uno::Reference<
+ 	star::document::XInteractionFilterSelect > xFilterTransport;
+ 
+     sal_Int32 nCount = rContinuations.getLength();
+     for( sal_Int32 nStep=0; nStep<nCount; ++nStep )
+     {
+         if( ! xAbort.is() )
+-            xAbort = star::uno::Reference< star::task::XInteractionAbort >( 
++            xAbort = star::uno::Reference< star::task::XInteractionAbort >(
+ 		rContinuations[nStep], star::uno::UNO_QUERY );
+ 
+         if( ! xFilterTransport.is() )
+-            xFilterTransport = star::uno::Reference< 
+-		star::document::XInteractionFilterSelect >( 
++            xFilterTransport = star::uno::Reference<
++		star::document::XInteractionFilterSelect >(
+ 		    rContinuations[nStep], star::uno::UNO_QUERY );
+     }
+ 
+@@ -2622,10 +2666,10 @@
+ 
+     if( m_xServiceFactory.is() == sal_True )
+     {
+-        star::uno::Reference< star::container::XNameContainer > 
+-	    xFilterContainer( m_xServiceFactory->createInstance( 
++        star::uno::Reference< star::container::XNameContainer >
++	    xFilterContainer( m_xServiceFactory->createInstance(
+ 				  ::rtl::OUString::createFromAscii(
+-				      "com.sun.star.document.FilterFactory") ), 
++				      "com.sun.star.document.FilterFactory") ),
+ 			      star::uno::UNO_QUERY );
+         if( xFilterContainer.is() == sal_True )
+         {
+@@ -2636,7 +2680,7 @@
+ 
+             try
+             {
+-                aPackedSet 
++                aPackedSet
+ 		    = xFilterContainer->getByName( rRequest.SelectedFilter );
+             }
+             catch(const ::com::sun::star::container::NoSuchElementException&)
+@@ -2659,7 +2703,7 @@
+ 
+             try
+             {
+-                aPackedSet 
++                aPackedSet
+ 		    = xFilterContainer->getByName( rRequest.DetectedFilter );
+             }
+             catch(const ::com::sun::star::container::NoSuchElementException&)
+@@ -2728,23 +2772,23 @@
+     {
+ 	star::uno::Reference< star::task::XInteractionAbort > xAbort;
+ 	star::uno::Reference< star::task::XInteractionApprove > xApprove;
+-	
++
+ 	sal_Int32 nCount = rContinuations.getLength();
+ 	for( sal_Int32 nStep=0; nStep<nCount; ++nStep )
+ 	{
+ 	    if( ! xAbort.is() )
+-		xAbort 
+-		    = star::uno::Reference< star::task::XInteractionAbort >( 
++		xAbort
++		    = star::uno::Reference< star::task::XInteractionAbort >(
+ 			rContinuations[nStep], star::uno::UNO_QUERY );
+-	    
++
+ 	    if( ! xApprove.is() )
+-		xApprove 
+-		    = star::uno::Reference< star::task::XInteractionApprove >( 
++		xApprove
++		    = star::uno::Reference< star::task::XInteractionApprove >(
+ 			rContinuations[nStep], star::uno::UNO_QUERY );
+ 	}
+ 
+-    // Note: It's important to convert the transported long to the 
+-    // required  unsigned long value. Otherwhise using as flag field 
++    // Note: It's important to convert the transported long to the
++    // required  unsigned long value. Otherwhise using as flag field
+     // can fail ...
+     ErrCode  nError   = (ErrCode)nErrorCode;
+     sal_Bool bWarning = !ERRCODE_TOERROR(nError);
+@@ -2763,7 +2807,7 @@
+         try
+         {
+             star::uno::Any aProductNameAny =
+-                ::utl::ConfigManager::GetConfigManager()->GetDirectConfigProperty( 
++                ::utl::ConfigManager::GetConfigManager()->GetDirectConfigProperty(
+                     ::utl::ConfigManager::PRODUCTNAME );
+             aProductNameAny >>= aTitle;
+         } catch( star::uno::Exception& )
+@@ -2796,13 +2840,13 @@
+ {
+ 	star::uno::Reference< star::task::XInteractionAbort > xAbort;
+ 	star::uno::Reference< star::task::XInteractionApprove > xApprove;
+-	
++
+ 	sal_Int32 nCount = rContinuations.getLength();
+ 	for( sal_Int32 nStep=0; nStep<nCount; ++nStep )
+ 	{
+ 	    if( !xAbort.is() )
+ 		    xAbort = star::uno::Reference< star::task::XInteractionAbort >( rContinuations[nStep], star::uno::UNO_QUERY );
+-	    
++
+ 	    if( !xApprove.is() )
+ 		    xApprove = star::uno::Reference< star::task::XInteractionApprove >( rContinuations[nStep], star::uno::UNO_QUERY );
+ 	}
+@@ -2842,19 +2886,19 @@
+     SAL_THROW((com::sun::star::uno::RuntimeException))
+ {
+     star::uno::Reference< star::task::XInteractionAbort > xAbort;
+-    star::uno::Reference< 
++    star::uno::Reference<
+ 	star::document::XInteractionFilterOptions > xFilterOptions;
+ 
+     sal_Int32 nCount = rContinuations.getLength();
+     for( sal_Int32 nStep=0; nStep<nCount; ++nStep )
+     {
+         if( ! xAbort.is() )
+-            xAbort = star::uno::Reference< star::task::XInteractionAbort >( 
++            xAbort = star::uno::Reference< star::task::XInteractionAbort >(
+ 		rContinuations[nStep], star::uno::UNO_QUERY );
+ 
+         if( ! xFilterOptions.is() )
+-            xFilterOptions = star::uno::Reference< 
+-		star::document::XInteractionFilterOptions >( 
++            xFilterOptions = star::uno::Reference<
++		star::document::XInteractionFilterOptions >(
+ 		    rContinuations[nStep], star::uno::UNO_QUERY );
+     }
+ 
+@@ -2862,8 +2906,8 @@
+     if( m_xServiceFactory.is() )
+     {
+ 	xFilterCFG = star::uno::Reference< star::container::XNameAccess >(
+-	    m_xServiceFactory->createInstance( 
+-		::rtl::OUString::createFromAscii( 
++	    m_xServiceFactory->createInstance(
++		::rtl::OUString::createFromAscii(
+ 		    "com.sun.star.document.FilterFactory" ) ),
+ 	    star::uno::UNO_QUERY );
+     }
+@@ -2876,7 +2920,7 @@
+ 	    for( sal_Int32 ind = 0; ind < nPropCount; ++ind )
+ 	    {
+ 		rtl::OUString tmp = rRequest.rProperties[ind].Name;
+-		if( rRequest.rProperties[ind].Name.equals( 
++		if( rRequest.rProperties[ind].Name.equals(
+ 			::rtl::OUString::createFromAscii("FilterName")) )
+ 		{
+ 		    rRequest.rProperties[ind].Value >>= aFilterName;
+@@ -2888,52 +2932,52 @@
+ 	    if ( xFilterCFG->getByName( aFilterName ) >>= aProps )
+ 	    {
+ 		sal_Int32 nPropertyCount = aProps.getLength();
+-		for( sal_Int32 nProperty=0; 
+-		     nProperty < nPropertyCount; 
++		for( sal_Int32 nProperty=0;
++		     nProperty < nPropertyCount;
+ 		     ++nProperty )
+-		    if( aProps[nProperty].Name.equals( 
++		    if( aProps[nProperty].Name.equals(
+ 			    ::rtl::OUString::createFromAscii("UIComponent")) )
+ 		    {
+ 			::rtl::OUString aServiceName;
+ 			aProps[nProperty].Value >>= aServiceName;
+ 			if( aServiceName.getLength() )
+ 			{
+-			    star::uno::Reference< 
+-				star::ui::dialogs::XExecutableDialog > 
++			    star::uno::Reference<
++				star::ui::dialogs::XExecutableDialog >
+ 				xFilterDialog(
+-				    m_xServiceFactory->createInstance( 
++				    m_xServiceFactory->createInstance(
+ 					aServiceName ),
+ 				    star::uno::UNO_QUERY );
+-			    star::uno::Reference< 
+-				star::beans::XPropertyAccess > 
++			    star::uno::Reference<
++				star::beans::XPropertyAccess >
+ 				xFilterProperties(
+ 				    xFilterDialog,
+ 				    star::uno::UNO_QUERY );
+-			    
++
+ 			    if( xFilterDialog.is() && xFilterProperties.is() )
+ 			    {
+-				star::uno::Reference< 
++				star::uno::Reference<
+ 				    star::document::XImporter > xImporter(
+ 					xFilterDialog,
+ 					star::uno::UNO_QUERY );
+ 				if( xImporter.is() )
+-				    xImporter->setTargetDocument( 
+-					star::uno::Reference< 
++				    xImporter->setTargetDocument(
++					star::uno::Reference<
+ 					star::lang::XComponent >(
+ 					    rRequest.rModel,
+ 					    star::uno::UNO_QUERY ) );
+-				
+-				xFilterProperties->setPropertyValues( 
++
++				xFilterProperties->setPropertyValues(
+ 				    rRequest.rProperties );
+ 
+ 				if( xFilterDialog->execute() )
+ 				{
+-				    xFilterOptions->setFilterOptions( 
++				    xFilterOptions->setFilterOptions(
+ 					xFilterProperties
+ 					    ->getPropertyValues() );
+ 				    xFilterOptions->select();
+ 				    return;
+-				    
++
+ 				}
+ 			    }
+ 			}
+@@ -2949,7 +2993,7 @@
+ 	{
+ 	}
+     }
+-    
++
+     xAbort->select();
+ }
+ 
+@@ -3012,11 +3056,11 @@
+     }
+     else
+     {
+-        //TODO! It can happen that the buttons calculated below do not match 
+-        // the error text from the resource (e.g., some text that is not a 
+-        // question, but YES and NO buttons).  Some error texts have 
+-        // ExtraData that specifies a set of buttons, but that data is not 
+-        // really useful, because a single error text may well make sense 
++        //TODO! It can happen that the buttons calculated below do not match
++        // the error text from the resource (e.g., some text that is not a
++        // question, but YES and NO buttons).  Some error texts have
++        // ExtraData that specifies a set of buttons, but that data is not
++        // really useful, because a single error text may well make sense
+         // both with only an OK button and with RETRY and CANCEL buttons.
+ 
+         star::uno::Reference< star::task::XInteractionApprove > xApprove;
+@@ -3024,29 +3068,29 @@
+         star::uno::Reference< star::task::XInteractionRetry > xRetry;
+         star::uno::Reference< star::task::XInteractionAbort > xAbort;
+         getContinuations(
+-            rContinuations, 
++            rContinuations,
+             &xApprove, &xDisapprove, &xRetry, &xAbort, 0, 0, 0, 0);
+-        
++
+         // The following mapping uses the bit mask
+         //     Approve = 8,
+         //     Disapprove = 4,
+         //     Retry = 2,
+         //     Abort = 1
+         //
+-        // The mapping has five properties on which the code to select the 
++        // The mapping has five properties on which the code to select the
+         // correct continuation relies:
+-        // 1  The OK button is mapped to Approve if that is available, 
++        // 1  The OK button is mapped to Approve if that is available,
+         //    otherwise to Abort if that is available, otherwise to none.
+         // 2  The CANCEL button is always mapped to Abort.
+         // 3  The RETRY button is always mapped to Retry.
+         // 4  The NO button is always mapped to Disapprove.
+         // 5  The YES button is always mapped to Approve.
+         //
+-        // Because the WinBits button combinations are quite restricted, not 
++        // Because the WinBits button combinations are quite restricted, not
+         // every request can be served here.
+         //
+-        // Finally, it seems to be better to leave default button 
+-        // determination to VCL (the favouring of CANCEL as default button 
++        // Finally, it seems to be better to leave default button
++        // determination to VCL (the favouring of CANCEL as default button
+         // seems to not always be what the user wants)...
+         WinBits const aButtonMask[16]
+             = { 0,
+@@ -3066,14 +3110,14 @@
+                 // Approve, Disapprove, Abort
+                 0,
+                 0 };
+-        
++
+         WinBits nButtonMask = aButtonMask[(xApprove.is() ? 8 : 0)
+                                           | (xDisapprove.is() ? 4 : 0)
+                                           | (xRetry.is() ? 2 : 0)
+                                           | (xAbort.is() ? 1 : 0)];
+         if (nButtonMask == 0)
+             return;
+-        
++
+         //TODO! remove this backwards compatibility?
+         rtl::OUString aContext(getContextProperty());
+         if (aContext.getLength() == 0 && nErrorCode != 0)
+@@ -3099,32 +3143,32 @@
+             else if (xAbort.is())
+                 xAbort->select();
+             break;
+-            
++
+         case ERRCODE_BUTTON_CANCEL:
+             OSL_ENSURE(xAbort.is(), "unexpected situation");
+             if (xAbort.is())
+                 xAbort->select();
+             break;
+-            
++
+         case ERRCODE_BUTTON_RETRY:
+             OSL_ENSURE(xRetry.is(), "unexpected situation");
+             if (xRetry.is())
+                 xRetry->select();
+             break;
+-            
++
+         case ERRCODE_BUTTON_NO:
+             OSL_ENSURE(xDisapprove.is(), "unexpected situation");
+             if (xDisapprove.is())
+                 xDisapprove->select();
+             break;
+-            
++
+         case ERRCODE_BUTTON_YES:
+             OSL_ENSURE(xApprove.is(), "unexpected situation");
+             if (xApprove.is())
+                 xApprove->select();
+             break;
+         }
+-        
++
+     }
+ }
+ 
+@@ -3194,16 +3238,16 @@
+             return;
+ 
+         star::uno::Any aProductNameAny =
+-            ::utl::ConfigManager::GetConfigManager()->GetDirectConfigProperty( 
++            ::utl::ConfigManager::GetConfigManager()->GetDirectConfigProperty(
+                 ::utl::ConfigManager::PRODUCTNAME );
+         star::uno::Any aProductVersionAny =
+-            ::utl::ConfigManager::GetConfigManager()->GetDirectConfigProperty( 
++            ::utl::ConfigManager::GetConfigManager()->GetDirectConfigProperty(
+                 ::utl::ConfigManager::PRODUCTVERSION );
+         ::rtl::OUString aProductName, aProductVersion;
+         if ( !( aProductNameAny >>= aProductName ) )
+-            aProductName 
++            aProductName
+                 = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("StarOffice") );
+-        
++
+         ::rtl::OUString aTitle( aProductName );
+         if( aProductVersionAny >>= aProductVersion )
+         {
+@@ -3218,13 +3262,13 @@
+             if (xAbort.is())
+                 xAbort->select();
+             break;
+-            
++
+         case ERRCODE_BUTTON_NO:
+             OSL_ENSURE(xDisapprove.is(), "unexpected situation");
+             if (xDisapprove.is())
+                 xDisapprove->select();
+             break;
+-            
++
+         case ERRCODE_BUTTON_YES:
+             OSL_ENSURE(xApprove.is(), "unexpected situation");
+             if (xApprove.is())
+@@ -3236,10 +3280,12 @@
+ 
+ void
+ UUIInteractionHelper::handleLockedDocumentRequest(
+-    star::document::LockedDocumentRequest const & aRequest,
++    const ::rtl::OUString& aDocumentURL,
++    const ::rtl::OUString& aInfo,
+     star::uno::Sequence< star::uno::Reference<
+         star::task::XInteractionContinuation > > const &
+-            rContinuations )
++            rContinuations,
++    sal_uInt16 nMode )
+     SAL_THROW((star::uno::RuntimeException))
+ {
+     star::uno::Reference< star::task::XInteractionApprove > xApprove;
+@@ -3259,22 +3305,49 @@
+     	if (!xManager.get())
+             return;
+ 
+-        ::rtl::OUString aMessage = String( ResId( STR_OPENLOCKED_MSG, *xManager.get() ) );
++        ::rtl::OUString aMessage;
+         std::vector< rtl::OUString > aArguments;
+-        aArguments.push_back( aRequest.DocumentURL );
+-        aArguments.push_back( aRequest.UserInfo.getLength()
+-                                ? aRequest.UserInfo
+-                                : ::rtl::OUString( String( ResId( STR_OPENLOCKED_UNKNOWNUSER, *xManager.get() ) ) ) );
++        aArguments.push_back( aDocumentURL );
+ 
+-        aMessage = replaceMessageWithArguments( aMessage, aArguments );
++        sal_Int32 nResult = RET_CANCEL;
++        if ( nMode == UUI_DOC_LOAD_LOCK )
++        {
++            aArguments.push_back( aInfo.getLength()
++                                ? aInfo
++                                : ::rtl::OUString( String( ResId( STR_UNKNOWNUSER, *xManager.get() ) ) ) );
++            aMessage = String( ResId( STR_OPENLOCKED_MSG, *xManager.get() ) );
++            aMessage = replaceMessageWithArguments( aMessage, aArguments );
+ 
+-        std::auto_ptr< OpenLockedQueryBox >
+-                xDialog(new OpenLockedQueryBox(
+-                        getParentProperty(), xManager.get(), aMessage ) );
+-        sal_Int32 nResult = xDialog->Execute();
+-        if ( nResult == RET_YES ) // open the document readonly
++            std::auto_ptr< OpenLockedQueryBox > xDialog(new OpenLockedQueryBox(
++                            getParentProperty(), xManager.get(), aMessage ) );
++            nResult = xDialog->Execute();
++        }
++        else if ( nMode == UUI_DOC_SAVE_LOCK )
++        {
++            aArguments.push_back( aInfo.getLength()
++                                ? aInfo
++                                : ::rtl::OUString( String( ResId( STR_UNKNOWNUSER, *xManager.get() ) ) ) );
++            aMessage = String( ResId( STR_TRYLATER_MSG, *xManager.get() ) );
++            aMessage = replaceMessageWithArguments( aMessage, aArguments );
++
++            std::auto_ptr< TryLaterQueryBox > xDialog(new TryLaterQueryBox(
++                            getParentProperty(), xManager.get(), aMessage ) );
++            nResult = xDialog->Execute();
++        }
++        else if ( nMode == UUI_DOC_OWN_LOAD_LOCK || nMode == UUI_DOC_OWN_SAVE_LOCK )
++        {
++            aArguments.push_back( aInfo );
++            aMessage = String( ResId( nMode == UUI_DOC_OWN_SAVE_LOCK ? STR_ALREADYOPEN_SAVE_MSG : STR_ALREADYOPEN_MSG, *xManager.get() ) );
++            aMessage = replaceMessageWithArguments( aMessage, aArguments );
++
++            std::auto_ptr< AlreadyOpenQueryBox > xDialog(new AlreadyOpenQueryBox(
++                            getParentProperty(), xManager.get(), aMessage, nMode == UUI_DOC_OWN_SAVE_LOCK ) );
++            nResult = xDialog->Execute();
++        }
++
++        if ( nResult == RET_YES ) 
+             xApprove->select();
+-        else if ( nResult == RET_NO ) // open the copy of the document
++        else if ( nResult == RET_NO ) 
+             xDisapprove->select();
+         else
+             xAbort->select();
+@@ -3287,3 +3360,84 @@
+     }
+ }
+ 
++void
++UUIInteractionHelper::handleChangedByOthersRequest(
++    star::uno::Sequence< star::uno::Reference<
++        star::task::XInteractionContinuation > > const &
++            rContinuations )
++    SAL_THROW((star::uno::RuntimeException))
++{
++    star::uno::Reference< star::task::XInteractionApprove > xApprove;
++    star::uno::Reference< star::task::XInteractionAbort > xAbort;
++    getContinuations(
++        rContinuations, &xApprove, 0, 0, &xAbort, 0, 0, 0, 0);
++
++    if ( !xApprove.is() || !xAbort.is() )
++        return;
++
++    try
++    {
++        vos::OGuard aGuard(Application::GetSolarMutex());
++    	std::auto_ptr< ResMgr > xManager(
++	    ResMgr::CreateResMgr(CREATEVERSIONRESMGR_NAME(uui)));
++    	if (!xManager.get())
++            return;
++
++        std::auto_ptr< FileChangedQueryBox > xDialog(new FileChangedQueryBox(
++                            getParentProperty(), xManager.get() ) );
++        sal_Int32 nResult = xDialog->Execute();
++
++        if ( nResult == RET_YES )
++            xApprove->select();
++        else
++            xAbort->select();
++    }
++    catch (std::bad_alloc const &)
++    {
++        throw star::uno::RuntimeException(
++                  rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("out of memory")),
++                  star::uno::Reference< star::uno::XInterface >());
++    }
++}
++
++void
++UUIInteractionHelper::handleLockFileIgnoreRequest(
++    star::uno::Sequence< star::uno::Reference<
++        star::task::XInteractionContinuation > > const &
++            rContinuations )
++    SAL_THROW((star::uno::RuntimeException))
++{
++    star::uno::Reference< star::task::XInteractionApprove > xApprove;
++    star::uno::Reference< star::task::XInteractionAbort > xAbort;
++    getContinuations(
++        rContinuations, &xApprove, 0, 0, &xAbort, 0, 0, 0, 0);
++
++    if ( !xApprove.is() || !xAbort.is() )
++        return;
++
++    try
++    {
++        vos::OGuard aGuard(Application::GetSolarMutex());
++    	std::auto_ptr< ResMgr > xManager(
++	    ResMgr::CreateResMgr(CREATEVERSIONRESMGR_NAME(uui)));
++    	if (!xManager.get())
++            return;
++
++        std::auto_ptr< LockFailedQueryBox > xDialog(new LockFailedQueryBox(
++                            getParentProperty(), xManager.get() ) );
++        sal_Int32 nResult = xDialog->Execute();
++
++        if ( nResult == RET_OK )
++            xApprove->select();
++        else
++            xAbort->select();
++    }
++    catch (std::bad_alloc const &)
++    {
++        throw star::uno::RuntimeException(
++                  rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("out of memory")),
++                  star::uno::Reference< star::uno::XInterface >());
++    }
++}
++
++
+Index: uui/source/trylater.cxx
+===================================================================
+--- uui/source/trylater.cxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/trylater.cxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,54 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#include "ids.hrc"
++#include "trylater.hxx"
++
++TryLaterQueryBox::TryLaterQueryBox( Window* pParent, ResMgr* pResMgr, const String& aMessage ) :
++    MessBox(pParent, 0,
++            String( ResId( STR_TRYLATER_TITLE, *pResMgr ) ),
++            aMessage )
++{
++    SetImage( QueryBox::GetStandardImage() );
++
++    AddButton( String( ResId( STR_TRYLATER_RETRYSAVING_BTN, *pResMgr ) ), RET_YES,
++            BUTTONDIALOG_DEFBUTTON | BUTTONDIALOG_OKBUTTON | BUTTONDIALOG_FOCUSBUTTON);
++    AddButton( String( ResId( STR_TRYLATER_SAVEAS_BTN, *pResMgr ) ), RET_NO, 0);
++    AddButton( BUTTON_CANCEL, RET_CANCEL, BUTTONDIALOG_CANCELBUTTON );
++
++    SetButtonHelpText( RET_YES, String::EmptyString() );
++    SetButtonHelpText( RET_NO, String::EmptyString() );
++}
++
++TryLaterQueryBox::~TryLaterQueryBox()
++{
++}
++
++
+Index: uui/source/masterpasscrtdlg.src
+===================================================================
+--- uui/source/masterpasscrtdlg.src	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/masterpasscrtdlg.src	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -44,51 +44,74 @@
+ 	Moveable = TRUE ;
+ 	OutputSize = TRUE ;
+ 	SVLook = TRUE ;
+-	Size = MAP_APPFONT ( 265 , 64 ) ;
++    Size = MAP_APPFONT ( DLG_WIDTH , DLG_HEIGHT ) ;
++    Text [ en-US ] = "Set Master Password";
++    FixedText FT_INFOTEXT
++    {
++        Pos = MAP_APPFONT ( COL_0 , ROW_0 ) ;
++        Size = MAP_APPFONT ( CTRL_WIDTH , 7*RSC_CD_FIXEDTEXT_HEIGHT ) ;
++        WordBreak = TRUE ;
++        Text [ en-US ] = "Passwords for web connections are protected by a master password. You will be asked to enter it once per session, if %PRODUCTNAME retrieves a password from the protected password list.";
++    };
++    FixedLine FL_INFOTEXT
++    {
++        Pos = MAP_APPFONT ( 0 , ROW_1 ) ;
++        Size = MAP_APPFONT ( DLG_WIDTH , RSC_CD_FIXEDLINE_HEIGHT ) ;
++    };
+ 	FixedText FT_MASTERPASSWORD_CRT
+ 	{
+-		Pos = MAP_APPFONT ( 12 , 17 ) ;
+-		Size = MAP_APPFONT ( 71 , 10 ) ;
+-		Text [ en-US ] = "Master password";
++        Pos = MAP_APPFONT ( COL_0 , ROW_2 ) ;
++        Size = MAP_APPFONT ( CTRL_WIDTH , RSC_CD_FIXEDLINE_HEIGHT ) ;
++        Text [ en-US ] = "~Enter password";
+ 	};
+ 	Edit ED_MASTERPASSWORD_CRT
+ 	{
+-		Border = TRUE ;
+-		Pos = MAP_APPFONT ( 86 , 16 ) ;
+-		Size = MAP_APPFONT ( 94 , 12 ) ;
++        Pos = MAP_APPFONT ( COL_0 , ROW_3 ) ;
++        Size = MAP_APPFONT ( CTRL_WIDTH , RSC_CD_TEXTBOX_HEIGHT ) ;
++        Border = TRUE ;
+ 		PassWord = TRUE ;
+ 	};
+ 	FixedText FT_MASTERPASSWORD_REPEAT
+ 	{
+-		Pos = MAP_APPFONT ( 12 , 37 ) ;
+-		Size = MAP_APPFONT ( 71 , 10 ) ;
+-		Text [ en-US ] = "~Confirm master password";
++        Pos = MAP_APPFONT ( COL_0 , ROW_4 ) ;
++        Size = MAP_APPFONT ( CTRL_WIDTH , RSC_CD_FIXEDLINE_HEIGHT ) ;
++        Text [ en-US ] = "~Reenter password";
+ 	};
+ 	Edit ED_MASTERPASSWORD_REPEAT
+ 	{
+-		Border = TRUE ;
+-		Pos = MAP_APPFONT ( 86 , 36 ) ;
+-		Size = MAP_APPFONT ( 94 , 12 ) ;
++        Pos = MAP_APPFONT ( COL_0 , ROW_5 ) ;
++        Size = MAP_APPFONT ( CTRL_WIDTH , RSC_CD_TEXTBOX_HEIGHT ) ;
++        Border = TRUE ;
+ 		PassWord = TRUE ;
+ 	};
+-	
++    FixedText FT_CAUTIONTEXT
++    {
++        Pos = MAP_APPFONT ( COL_0 , ROW_6 ) ;
++        Size = MAP_APPFONT ( CTRL_WIDTH , 8*RSC_CD_FIXEDTEXT_HEIGHT ) ;
++        WordBreak = TRUE ;
++        Text [ en-US ] = "Caution: Make sure you remember the Master Password you have set. If you forget your Master Password, you will be unable to access any of the information protected by it. Passwords are case-sensitive and at least five characters long.";
++    };
++    FixedLine FL_CAUTIONTEXT
++    {
++        Pos = MAP_APPFONT ( 0 , ROW_7 ) ;
++        Size = MAP_APPFONT ( DLG_WIDTH , RSC_CD_FIXEDLINE_HEIGHT ) ;
++    };
++    HelpButton BTN_MASTERPASSCRT_HELP
++    {
++        Pos = MAP_APPFONT ( COL_0 , ROW_8 ) ;
++        Size = MAP_APPFONT ( RSC_CD_PUSHBUTTON_WIDTH , RSC_CD_PUSHBUTTON_HEIGHT ) ;
++    };
+ 	OKButton BTN_MASTERPASSCRT_OK
+ 	{
+-		Pos = MAP_APPFONT ( 209 , 6 ) ;
+-		Size = MAP_APPFONT ( 50 , 14 ) ;
++        Pos = MAP_APPFONT ( COL_1 , ROW_8 ) ;
++        Size = MAP_APPFONT ( RSC_CD_PUSHBUTTON_WIDTH , RSC_CD_PUSHBUTTON_HEIGHT ) ;
+ 		DefButton = TRUE ;
+ 	};
+ 	CancelButton BTN_MASTERPASSCRT_CANCEL
+ 	{
+-		Pos = MAP_APPFONT ( 209 , 23 ) ;
+-		Size = MAP_APPFONT ( 50 , 14 ) ;
++        Pos = MAP_APPFONT ( COL_2 , ROW_8 ) ;
++        Size = MAP_APPFONT ( RSC_CD_PUSHBUTTON_WIDTH , RSC_CD_PUSHBUTTON_HEIGHT ) ;
+ 	};
+-	HelpButton BTN_MASTERPASSCRT_HELP
+-	{
+-		Pos = MAP_APPFONT ( 209 , 43 ) ;
+-		Size = MAP_APPFONT ( 50 , 14 ) ;
+-	};	
+-	Text [ en-US ] = "Enter Master Password";
+ };
+ 
+ 
+Index: uui/source/openlocked.src
+===================================================================
+--- uui/source/openlocked.src	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/openlocked.src	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -40,7 +40,7 @@
+ };
+ String STR_OPENLOCKED_MSG
+ {
+-	Text [ en-US ] = "Document file '$(ARG1)' is locked for editing by:\n\n$(ARG2)\n\nOpen document read-only or open a copy of the document for editing.";
++	Text [ en-US ] = "Document file '$(ARG1)' is locked for editing by:\n\n$(ARG2)\n\nOpen document read-only or open a copy of the document for editing.\n\n";
+ };
+ String STR_OPENLOCKED_OPENREADONLY_BTN
+ {
+@@ -50,7 +50,7 @@
+ {
+ 	Text [ en-US ] = "Open ~Copy";
+ };
+-String STR_OPENLOCKED_UNKNOWNUSER
++String STR_UNKNOWNUSER
+ {
+ 	Text [ en-US ] = "Unknown User";
+ };
+Index: uui/source/makefile.mk
+===================================================================
+--- uui/source/makefile.mk	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/makefile.mk	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ #*************************************************************************
+ #
+ # DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+-# 
++#
+ # Copyright 2008 by Sun Microsystems, Inc.
+ #
+ # OpenOffice.org - a multi-platform office productivity suite
+@@ -51,7 +51,11 @@
+ 	$(SLO)$/requeststringresolver.obj\
+ 	$(SLO)$/unknownauthdlg.obj\
+ 	$(SLO)$/sslwarndlg.obj\
+-	$(SLO)$/secmacrowarnings.obj
++        $(SLO)$/secmacrowarnings.obj\
++        $(SLO)$/filechanged.obj\
++        $(SLO)$/alreadyopen.obj\
++        $(SLO)$/lockfailed.obj\
++        $(SLO)$/trylater.obj
+ 
+ SRS1NAME=$(TARGET)
+ SRC1FILES = \
+@@ -67,6 +71,11 @@
+ 	fltdlg.src \
+ 	unknownauthdlg.src\
+ 	sslwarndlg.src\
+-	secmacrowarnings.src
++        secmacrowarnings.src\
++        filechanged.src\
++        alreadyopen.src\
++        lockfailed.src\
++        trylater.src
+ 
+ .INCLUDE: target.mk
++
+Index: uui/source/masterpasscrtdlg.hxx
+===================================================================
+--- uui/source/masterpasscrtdlg.hxx	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/masterpasscrtdlg.hxx	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -45,12 +45,20 @@
+ //============================================================================
+ class MasterPasswordCreateDialog : public ModalDialog
+ {
++private:
++    FixedText       aFTInfoText;
++    FixedLine       aFLInfoText;
++
+ 	FixedText		aFTMasterPasswordCrt;
+ 	Edit			aEDMasterPasswordCrt;
+ 	FixedText		aFTMasterPasswordRepeat;
+ 	Edit			aEDMasterPasswordRepeat;
+-	OKButton		aOKBtn;
+-	CancelButton		aCancelBtn;
++
++    FixedText       aFTCautionText;
++    FixedLine       aFLCautionText;
++
++    OKButton        aOKBtn;
++    CancelButton    aCancelBtn;
+ 	HelpButton		aHelpBtn;
+ 
+ 
+@@ -65,6 +73,8 @@
+ private:
+ 	ResMgr*											pResourceMgr;
+ 	sal_uInt16										nMinLen;
++
++    void            CalculateTextHeight();
+ };
+ 
+ #endif // UUI_MASTERPASSCRTDLG_HXX
+Index: uui/source/lockfailed.cxx
+===================================================================
+--- uui/source/lockfailed.cxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/lockfailed.cxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,53 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#include "ids.hrc"
++#include "lockfailed.hxx"
++
++#include <vcl/button.hxx>
++
++LockFailedQueryBox::LockFailedQueryBox( Window* pParent, ResMgr* pResMgr ) :
++    MessBox(pParent, 0,
++            String( ResId( STR_LOCKFAILED_TITLE, *pResMgr ) ),
++            String::EmptyString() )
++{
++    SetImage( ErrorBox::GetStandardImage() );
++
++    AddButton( BUTTON_OK, RET_OK, BUTTONDIALOG_OKBUTTON );
++    AddButton( BUTTON_CANCEL, RET_CANCEL, BUTTONDIALOG_CANCELBUTTON );
++
++    SetMessText( String( ResId( STR_LOCKFAILED_MSG, *pResMgr ) ) );
++    SetCheckBoxText( String( ResId( STR_LOCKFAILED_DONTSHOWAGAIN, *pResMgr ) ) );
++}
++
++LockFailedQueryBox::~LockFailedQueryBox()
++{
++}
++
+Index: uui/source/alreadyopen.cxx
+===================================================================
+--- uui/source/alreadyopen.cxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/alreadyopen.cxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,63 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#include "ids.hrc"
++#include "alreadyopen.hxx"
++
++AlreadyOpenQueryBox::AlreadyOpenQueryBox( Window* pParent, ResMgr* pResMgr, const String& aMessage, sal_Bool bIsStoring ) :
++    MessBox(pParent, 0,
++            String( ResId( STR_ALREADYOPEN_TITLE, *pResMgr ) ),
++            aMessage )
++{
++    SetImage( QueryBox::GetStandardImage() );
++
++    if ( bIsStoring )
++    {
++        AddButton( String( ResId( STR_ALREADYOPEN_RETRY_SAVE_BTN, *pResMgr ) ), RET_YES,
++                BUTTONDIALOG_DEFBUTTON | BUTTONDIALOG_OKBUTTON | BUTTONDIALOG_FOCUSBUTTON );
++        AddButton( String( ResId( STR_ALREADYOPEN_SAVE_BTN, *pResMgr ) ), RET_NO, 0 );
++        AddButton( BUTTON_CANCEL, RET_CANCEL, BUTTONDIALOG_CANCELBUTTON );
++    }
++    else
++    {
++        AddButton( String( ResId( STR_ALREADYOPEN_READONLY_BTN, *pResMgr ) ), RET_YES,
++                BUTTONDIALOG_DEFBUTTON | BUTTONDIALOG_OKBUTTON | BUTTONDIALOG_FOCUSBUTTON );
++        AddButton( String( ResId( STR_ALREADYOPEN_OPEN_BTN, *pResMgr ) ), RET_NO, 0 );
++        AddButton( BUTTON_CANCEL, RET_CANCEL, BUTTONDIALOG_CANCELBUTTON );
++    }
++
++    SetButtonHelpText( RET_YES, String::EmptyString() );
++    SetButtonHelpText( RET_NO, String::EmptyString() );
++}
++
++AlreadyOpenQueryBox::~AlreadyOpenQueryBox()
++{
++}
++
+Index: uui/source/filechanged.cxx
+===================================================================
+--- uui/source/filechanged.cxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/filechanged.cxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,52 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#include "ids.hrc"
++#include "filechanged.hxx"
++
++FileChangedQueryBox::FileChangedQueryBox( Window* pParent, ResMgr* pResMgr ) :
++    MessBox(pParent, 0,
++            String( ResId( STR_FILECHANGED_TITLE, *pResMgr ) ),
++            String::EmptyString() )
++{
++    SetImage( QueryBox::GetStandardImage() );
++
++    AddButton( String( ResId( STR_FILECHANGED_SAVEANYWAY_BTN, *pResMgr ) ), RET_YES,
++            BUTTONDIALOG_DEFBUTTON | BUTTONDIALOG_OKBUTTON | BUTTONDIALOG_FOCUSBUTTON );
++    AddButton( BUTTON_CANCEL, RET_CANCEL, BUTTONDIALOG_CANCELBUTTON );
++
++    SetButtonHelpText( RET_YES, String::EmptyString() );
++    SetMessText( String( ResId( STR_FILECHANGED_MSG, *pResMgr ) ) );
++}
++
++FileChangedQueryBox::~FileChangedQueryBox()
++{
++}
++
+Index: uui/source/trylater.src
+===================================================================
+--- uui/source/trylater.src	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/trylater.src	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,53 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#define __RSC
++
++#ifndef UUI_IDS_HRC
++#include <ids.hrc>
++#endif
++
++String STR_TRYLATER_TITLE
++{
++	Text [ en-US ] = "Document in Use";
++};
++String STR_TRYLATER_MSG
++{
++    Text [ en-US ] = "Document file '$(ARG1)' is locked for editing by:\n\n$(ARG2)\n\nTry again later to save document or save a copy of that document.\n\n";
++};
++String STR_TRYLATER_RETRYSAVING_BTN
++{
++    Text [ en-US ] = "~Retry Saving";
++};
++String STR_TRYLATER_SAVEAS_BTN
++{
++    Text [ en-US ] = "~Save As...";
++};
++
+Index: uui/source/masterpasscrtdlg.hrc
+===================================================================
+--- uui/source/masterpasscrtdlg.hrc	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/masterpasscrtdlg.hrc	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -31,14 +31,43 @@
+ #ifndef UUI_MASTERPASSCRT_HRC
+ #define UUI_MASTERPASSCRT_HRC
+ 
++#include <svtools/controldims.hrc>
++
+ //============================================================================
+-#define FT_MASTERPASSWORD_CRT			20
+-#define ED_MASTERPASSWORD_CRT			21
++
++#define FT_INFOTEXT                 10
++#define FL_INFOTEXT                 11
++
++#define FT_MASTERPASSWORD_CRT       20
++#define ED_MASTERPASSWORD_CRT       21
+ #define FT_MASTERPASSWORD_REPEAT	22
+ #define ED_MASTERPASSWORD_REPEAT	23
+ 
++#define FT_CAUTIONTEXT              30
++#define FL_CAUTIONTEXT              31
++
+ #define BTN_MASTERPASSCRT_OK		50
+ #define BTN_MASTERPASSCRT_CANCEL	51
+ #define BTN_MASTERPASSCRT_HELP		52
+ 
++#define ROW_0                       (RSC_SP_FLGR_INNERBORDER_TOP)
++#define ROW_1                       (ROW_0+7*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_2                       (ROW_1+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_3                       (ROW_2+RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_4                       (ROW_3+RSC_CD_TEXTBOX_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_5                       (ROW_4+RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_6                       (ROW_5+RSC_CD_TEXTBOX_HEIGHT+RSC_SP_CTRL_X)
++#define ROW_7                       (ROW_6+8*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_8                       (ROW_7+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_9                       (ROW_8+RSC_CD_PUSHBUTTON_HEIGHT+RSC_SP_CTRL_X)
++
++#define COL_0                       (RSC_SP_FLGR_INNERBORDER_LEFT)
++#define COL_2                       (DLG_WIDTH-RSC_SP_FLGR_INNERBORDER_LEFT-RSC_CD_PUSHBUTTON_WIDTH)
++#define COL_1                       (COL_2-RSC_SP_CTRL_GROUP_X-RSC_CD_PUSHBUTTON_WIDTH)
++
++#define DLG_WIDTH                   180
++#define CTRL_WIDTH                  (DLG_WIDTH-2*RSC_SP_FLGR_INNERBORDER_LEFT)
++#define DLG_HEIGHT                  (ROW_9)
++
+ #endif // UUI_MASTERPASSCRT_HRC
++
+Index: uui/source/iahndl.hxx
+===================================================================
+--- uui/source/iahndl.hxx	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/iahndl.hxx	(.../cws/mav43)	(revision 274104)
+@@ -59,6 +59,11 @@
+ #define DESCRIPTION_2 2
+ #define TITLE 3
+ 
++#define UUI_DOC_LOAD_LOCK       0
++#define UUI_DOC_OWN_LOAD_LOCK   1
++#define UUI_DOC_SAVE_LOCK       2
++#define UUI_DOC_OWN_SAVE_LOCK   3
++
+ namespace cssu = com::sun::star::uno;
+ namespace dcss = ::com::sun::star; 
+ 
+@@ -67,7 +72,6 @@
+         class AmbigousFilterRequest;
+ 		class FilterOptionsRequest;
+         class NoSuchFilterRequest;
+-        class LockedDocumentRequest;
+     }
+     namespace lang { 
+         class XMultiServiceFactory; 
+@@ -363,11 +367,26 @@
+ 	rtl::OUString & rErrorString);
+ 
+     void handleLockedDocumentRequest(
+-    ::com::sun::star::document::LockedDocumentRequest const & aRequest,
++    const ::rtl::OUString& aDocumentURL,
++    const ::rtl::OUString& aInfo,
+     ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Reference<
+         ::com::sun::star::task::XInteractionContinuation > > const &
++            rContinuations,
++    sal_uInt16 nMode )
++        SAL_THROW((::com::sun::star::uno::RuntimeException));
++
++    void handleChangedByOthersRequest( 
++    ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Reference<
++        ::com::sun::star::task::XInteractionContinuation > > const &
+             rContinuations )
+         SAL_THROW((::com::sun::star::uno::RuntimeException));
++
++    void handleLockFileIgnoreRequest( 
++    ::com::sun::star::uno::Sequence< ::com::sun::star::uno::Reference<
++        ::com::sun::star::task::XInteractionContinuation > > const &
++            rContinuations )
++        SAL_THROW((::com::sun::star::uno::RuntimeException));
++
+ };
+ 
+ #endif // UUI_IAHNDL_HXX
+Index: uui/source/trylater.hxx
+===================================================================
+--- uui/source/trylater.hxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/trylater.hxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,43 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef _UUI_TRYLATER_HXX
++#define _UUI_TRYLATER_HXX
++
++#include <vcl/msgbox.hxx>
++
++class TryLaterQueryBox : public MessBox
++{
++public:
++    TryLaterQueryBox( Window* pParent, ResMgr* pResMgr, const String& aMessage );
++    ~TryLaterQueryBox();
++};
++
++#endif
++
+Index: uui/source/masterpasscrtdlg.cxx
+===================================================================
+--- uui/source/masterpasscrtdlg.cxx	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/masterpasscrtdlg.cxx	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -78,20 +78,80 @@
+ 
+ 	ModalDialog( pParent, ResId( DLG_UUI_MASTERPASSWORD_CRT, *pResMgr ) ),
+ 
+-	aFTMasterPasswordCrt		( this, ResId( FT_MASTERPASSWORD_CRT, *pResMgr ) ),
+-	aEDMasterPasswordCrt		( this, ResId( ED_MASTERPASSWORD_CRT, *pResMgr ) ),
++    aFTInfoText             ( this, ResId( FT_INFOTEXT, *pResMgr ) ),
++    aFLInfoText             ( this, ResId( FL_INFOTEXT, *pResMgr ) ),
++
++    aFTMasterPasswordCrt    ( this, ResId( FT_MASTERPASSWORD_CRT, *pResMgr ) ),
++    aEDMasterPasswordCrt    ( this, ResId( ED_MASTERPASSWORD_CRT, *pResMgr ) ),
+ 	aFTMasterPasswordRepeat	( this, ResId( FT_MASTERPASSWORD_REPEAT, *pResMgr ) ),
+ 	aEDMasterPasswordRepeat	( this, ResId( ED_MASTERPASSWORD_REPEAT, *pResMgr ) ),
+-	aOKBtn					( this, ResId( BTN_MASTERPASSCRT_OK, *pResMgr ) ),
++
++    aFTCautionText          ( this, ResId( FT_CAUTIONTEXT, *pResMgr ) ),
++    aFLCautionText          ( this, ResId( FL_CAUTIONTEXT, *pResMgr ) ),
++
++    aOKBtn                  ( this, ResId( BTN_MASTERPASSCRT_OK, *pResMgr ) ),
+ 	aCancelBtn				( this, ResId( BTN_MASTERPASSCRT_CANCEL, *pResMgr ) ),
+ 	aHelpBtn				( this, ResId( BTN_MASTERPASSCRT_HELP, *pResMgr ) ),
+-	pResourceMgr			( pResMgr ),
+-	nMinLen(5)
++
++    pResourceMgr            ( pResMgr ),
++    nMinLen                 ( 5 )
+ {
+ 	FreeResource();
+ 
+ 	aOKBtn.Enable( sal_False );
+ 	aOKBtn.SetClickHdl( LINK( this, MasterPasswordCreateDialog, OKHdl_Impl ) );
+ 	aEDMasterPasswordCrt.SetModifyHdl( LINK( this, MasterPasswordCreateDialog, EditHdl_Impl ) );
++
++    CalculateTextHeight();
+ };
+ 
++void MasterPasswordCreateDialog::CalculateTextHeight()
++{
++    Size aSize = aFTInfoText.GetSizePixel();
++    Size aMinSize = aFTInfoText.CalcMinimumSize( aSize.Width() );
++    long nDelta = 0;
++
++    if ( aSize.Height() > aMinSize.Height() )
++    {
++        aFTInfoText.SetSizePixel( aMinSize );
++        nDelta = aSize.Height() - aMinSize.Height();
++        Window* pWins[] = { &aFLInfoText, &aFTMasterPasswordCrt, &aEDMasterPasswordCrt,
++                            &aFTMasterPasswordRepeat, &aEDMasterPasswordRepeat, &aFTCautionText,
++                            &aFLCautionText, &aOKBtn, &aCancelBtn, &aHelpBtn };
++        Window** pWindow = pWins;
++        const sal_Int32 nCount = sizeof( pWins ) / sizeof( pWins[0] );
++        for ( sal_Int32 i = 0; i < nCount; ++i, ++pWindow )
++        {
++            Point aNewPos = (*pWindow)->GetPosPixel();
++            aNewPos.Y() -= nDelta;
++            (*pWindow)->SetPosPixel( aNewPos );
++        }
++    }
++
++    aSize = aFTCautionText.GetSizePixel();
++    aMinSize = aFTCautionText.CalcMinimumSize( aSize.Width() );
++
++    if ( aSize.Height() > aMinSize.Height() )
++    {
++        aFTCautionText.SetSizePixel( aMinSize );
++        long nTemp = aSize.Height() - aMinSize.Height();
++        nDelta += nTemp;
++        Window* pWins[] = { &aFLCautionText, &aOKBtn, &aCancelBtn, &aHelpBtn };
++        Window** pWindow = pWins;
++        const sal_Int32 nCount = sizeof( pWins ) / sizeof( pWins[0] );
++        for ( sal_Int32 i = 0; i < nCount; ++i, ++pWindow )
++        {
++            Point aNewPos = (*pWindow)->GetPosPixel();
++            aNewPos.Y() -= nTemp;
++            (*pWindow)->SetPosPixel( aNewPos );
++        }
++    }
++
++    if ( nDelta > 0 )
++    {
++        Size aDlgSize = GetOutputSizePixel();
++        aDlgSize.Height() -= nDelta;
++        SetSizePixel( aDlgSize );
++    }
++}
++
+Index: uui/source/lockfailed.src
+===================================================================
+--- uui/source/lockfailed.src	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/lockfailed.src	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,49 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#define __RSC
++
++#ifndef UUI_IDS_HRC
++#include <ids.hrc>
++#endif
++
++String STR_LOCKFAILED_TITLE
++{
++    Text = "Document Could Not Be Locked";
++};
++String STR_LOCKFAILED_MSG
++{
++    Text [ en-US ] = "The file could not be locked for exclusive access by %PRODUCTNAME, due to missing permission to created a lock file on that file location.";
++};
++String STR_LOCKFAILED_DONTSHOWAGAIN
++{
++    Text = "~Do not show this message again";
++};
++
+Index: uui/source/alreadyopen.src
+===================================================================
+--- uui/source/alreadyopen.src	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/alreadyopen.src	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,65 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++
++#define __RSC
++
++#ifndef UUI_IDS_HRC
++#include <ids.hrc>
++#endif
++
++String STR_ALREADYOPEN_TITLE
++{
++    Text = "Document in Use";
++};
++String STR_ALREADYOPEN_MSG
++{
++    Text [ en-US ] = "Document file '$(ARG1)' is locked for editing by yourself on a different system since $(ARG2)\n\nOpen document read-only, or ignore own file locking and open the document for editing.\n\n";
++};
++String STR_ALREADYOPEN_READONLY_BTN
++{
++    Text [ en-US ] = "Open ~Read-Only";
++};
++String STR_ALREADYOPEN_OPEN_BTN
++{
++    Text [ en-US ] = "~Open";
++};
++String STR_ALREADYOPEN_SAVE_MSG
++{
++    Text [ en-US ] = "Document file '$(ARG1)' is locked for editing by yourself on a different system since $(ARG2)\n\nClose document on other system and retry saving or ignore own file locking and save current document.\n\n";
++};
++String STR_ALREADYOPEN_RETRY_SAVE_BTN
++{
++    Text [ en-US ] = "~Retry Saving";
++};
++String STR_ALREADYOPEN_SAVE_BTN
++{
++    Text [ en-US ] = "~Save";
++};
++
+Index: uui/source/ids.hrc
+===================================================================
+--- uui/source/ids.hrc	(.../tags/DEV300_m35)	(revision 274104)
++++ uui/source/ids.hrc	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -65,11 +65,28 @@
+ #define DLG_UUI_SSLWARN (RID_UUI_START + 28)
+ #define DLG_UUI_SSLWARN_CRT (RID_UUI_START + 29)
+ #define RID_XMLSECDLG_MACROWARN (RID_UUI_START + 30)
+-#define STR_OPENLOCKED_TITLE (RID_UUI_START + 31)
+-#define STR_OPENLOCKED_MSG (RID_UUI_START + 32)
+-#define STR_OPENLOCKED_OPENREADONLY_BTN (RID_UUI_START + 33)
+-#define STR_OPENLOCKED_OPENCOPY_BTN (RID_UUI_START + 34)
+-#define STR_OPENLOCKED_UNKNOWNUSER (RID_UUI_START + 35)
++#define STR_UNKNOWNUSER (RID_UUI_START + 31)
++#define STR_OPENLOCKED_TITLE (RID_UUI_START + 32)
++#define STR_OPENLOCKED_MSG (RID_UUI_START + 33)
++#define STR_OPENLOCKED_OPENREADONLY_BTN (RID_UUI_START + 34)
++#define STR_OPENLOCKED_OPENCOPY_BTN (RID_UUI_START + 35)
++#define STR_FILECHANGED_TITLE (RID_UUI_START + 36)
++#define STR_FILECHANGED_MSG (RID_UUI_START + 37)
++#define STR_FILECHANGED_SAVEANYWAY_BTN (RID_UUI_START + 38)
++#define STR_ALREADYOPEN_TITLE (RID_UUI_START + 39)
++#define STR_ALREADYOPEN_MSG (RID_UUI_START + 40)
++#define STR_ALREADYOPEN_READONLY_BTN (RID_UUI_START + 41)
++#define STR_ALREADYOPEN_OPEN_BTN (RID_UUI_START + 42)
++#define STR_LOCKFAILED_TITLE (RID_UUI_START + 43)
++#define STR_LOCKFAILED_MSG (RID_UUI_START + 44)
++#define STR_LOCKFAILED_DONTSHOWAGAIN (RID_UUI_START + 45)
++#define STR_TRYLATER_TITLE (RID_UUI_START + 46)
++#define STR_TRYLATER_MSG (RID_UUI_START + 47)
++#define STR_TRYLATER_RETRYSAVING_BTN (RID_UUI_START + 48)
++#define STR_TRYLATER_SAVEAS_BTN (RID_UUI_START + 49)
++#define STR_ALREADYOPEN_SAVE_MSG (RID_UUI_START + 50)
++#define STR_ALREADYOPEN_RETRY_SAVE_BTN (RID_UUI_START + 51)
++#define STR_ALREADYOPEN_SAVE_BTN (RID_UUI_START + 52)
+ 
+ #define ERRCODE_UUI_IO_ABORT (ERRCODE_AREA_UUI + 0)
+ #define ERRCODE_UUI_IO_ACCESSDENIED (ERRCODE_AREA_UUI + 1)
+Index: uui/source/lockfailed.hxx
+===================================================================
+--- uui/source/lockfailed.hxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/lockfailed.hxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,45 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef _UUI_LOCKFAILED_HXX
++#define _UUI_LOCKFAILED_HXX
++
++#include <vcl/msgbox.hxx>
++
++class CheckBox;
++
++class LockFailedQueryBox : public MessBox
++{
++public:
++    LockFailedQueryBox( Window* pParent, ResMgr* pResMgr );
++    ~LockFailedQueryBox();
++};
++
++#endif
++
+Index: uui/source/alreadyopen.hxx
+===================================================================
+--- uui/source/alreadyopen.hxx	(.../tags/DEV300_m35)	(revision 0)
++++ uui/source/alreadyopen.hxx	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,43 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ *
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef _UUI_ALREADYOPEN_HXX
++#define _UUI_ALREADYOPEN_HXX
++
++#include <vcl/msgbox.hxx>
++
++class AlreadyOpenQueryBox : public MessBox
++{
++public:
++    AlreadyOpenQueryBox( Window* pParent, ResMgr* pResMgr, const String& aMessage, sal_Bool bIsStoring );
++    ~AlreadyOpenQueryBox();
++};
++
++#endif
++

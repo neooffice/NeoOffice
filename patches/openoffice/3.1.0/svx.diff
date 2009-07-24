@@ -1,0 +1,578 @@
+Index: svx/source/options/optinet2.src
+===================================================================
+--- svx/source/options/optinet2.src	(.../tags/DEV300_m35)	(revision 274104)
++++ svx/source/options/optinet2.src	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -160,8 +160,8 @@
+ 		Pos = MAP_APPFONT ( ED_PORT_COL , GB_TYPES_TOP + 43 ) ;
+ 		Size = MAP_APPFONT ( ED_PORT_WIDTH , 12 ) ;
+ 		Border = TRUE ;
+-	};	
+-	
++	};
++
+ 	FixedText FT_FTP_PROXY
+ 	{
+ 		Pos = MAP_APPFONT ( 12 , GB_TYPES_TOP + 61 ) ;
+@@ -429,112 +429,117 @@
+ 
+ TabPage RID_SVXPAGE_INET_SECURITY
+ {
+-	OutputSize = TRUE ;
+-	Size = MAP_APPFONT( TP_WIDTH , TP_HEIGHT );
+-	SVLook = TRUE;
+-	Hide = TRUE;
+-	Text [ en-US ] = "Security";
+-
+-	FixedLine FL_SEC_SECURITYOPTIONS
+-	{
++    OutputSize = TRUE ;
++    Size = MAP_APPFONT( TP_WIDTH , TP_HEIGHT );
++    SVLook = TRUE;
++    Hide = TRUE;
++    Text [ en-US ] = "Security";
++    FixedLine FL_SEC_SECURITYOPTIONS
++    {
+         Pos = MAP_APPFONT( COL_0, ROW_0 );
+         Size = MAP_APPFONT( COL_5-COL_0, RSC_CD_FIXEDLINE_HEIGHT );
+-		Text [ en-US ] = "Security options and warnings";
+-	};
+-	FixedText FI_SEC_SECURITYOPTIONS
+-	{
++        Text [ en-US ] = "Security options and warnings";
++    };
++    FixedText FI_SEC_SECURITYOPTIONS
++    {
+         Pos = MAP_APPFONT( COL_1, ROW_1 );
+         Size = MAP_APPFONT( COL_2-COL_1, 3*RSC_CD_FIXEDLINE_HEIGHT );
+         Wordbreak = TRUE;
+         Text [ en-US ] = "Adjust security related options and define warnings for hidden information in documents.";
+-	};
+-	PushButton PB_SEC_SECURITYOPTIONS
+-	{
++    };
++    PushButton PB_SEC_SECURITYOPTIONS
++    {
+         Pos = MAP_APPFONT( COL_3, ROW_2a );
+         Size = MAP_APPFONT( RSC_CD_PUSHBUTTON_WIDTH, RSC_CD_PUSHBUTTON_HEIGHT );
+         Text [ en-US ] = "Options...";
+-	};
+-	FixedLine FL_SEC_PASSWORDS
+-	{
++    };
++    FixedLine FL_SEC_PASSWORDS
++    {
+         Pos = MAP_APPFONT( COL_0, ROW_2 );
+         Size = MAP_APPFONT( COL_5-COL_0, RSC_CD_FIXEDLINE_HEIGHT );
+-		Text [ en-US ] = "Passwords for web connections";
+-	};
++        Text [ en-US ] = "Passwords for web connections";
++    };
+     CheckBox CB_SEC_SAVEPASSWORDS
+-	{
++    {
+         Pos = MAP_APPFONT( COL_1, ROW_3 );
+         Size = MAP_APPFONT( COL_2-COL_1, RSC_CD_CHECKBOX_HEIGHT );
+-        Text [ en-US ] = "Persistently save passwords protected by a master password";
+-	};
+-	PushButton PB_SEC_MASTERPASSWORD
+-	{
+-        Pos = MAP_APPFONT( COL_3, ROW_3 - 2 );
++        Text [ en-US ] = "Persistently save passwords for web connections";
++    };
++    PushButton PB_SEC_CONNECTIONS
++    {
++        Pos = MAP_APPFONT( COL_3, ROW_3-1 );
+         Size = MAP_APPFONT( RSC_CD_PUSHBUTTON_WIDTH, RSC_CD_PUSHBUTTON_HEIGHT );
+-        Text [ en-US ] = "Master Password...";
+-	};
+-	FixedText FI_SEC_MASTERPASSWORD
+-	{
+-        Pos = MAP_APPFONT( COL_1, ROW_4 );
+-        Size = MAP_APPFONT( COL_2-COL_1, 4*RSC_CD_FIXEDLINE_HEIGHT );
++        Text [ en-US ] = "Connections...";
++    };
++    CheckBox CB_SEC_MASTERPASSWORD
++    {
++        Pos = MAP_APPFONT( COL_1a, ROW_4 );
++        Size = MAP_APPFONT( COL_2-COL_1a, RSC_CD_CHECKBOX_HEIGHT );
++        Text [ en-US ] = "Protected by a master password (recommended)";
++    };
++    FixedText FI_SEC_MASTERPASSWORD
++    {
++        Pos = MAP_APPFONT( COL_1a, ROW_4a );
++        Size = MAP_APPFONT( COL_2-COL_1a, 4*RSC_CD_FIXEDLINE_HEIGHT );
+         Wordbreak = TRUE;
+         Text [ en-US ] = "Passwords are protected by a master password. You will be asked to enter it once per session, if %PRODUCTNAME retrieves a password from the protected password list.";
+-	};
+-	PushButton PB_SEC_SHOWPASSWORDS
+-	{
+-        Pos = MAP_APPFONT( COL_3, ROW_5a );
++    };
++    PushButton PB_SEC_MASTERPASSWORD
++    {
++        Pos = MAP_APPFONT( COL_3, ROW_4a );
+         Size = MAP_APPFONT( RSC_CD_PUSHBUTTON_WIDTH, RSC_CD_PUSHBUTTON_HEIGHT );
+-        Text [ en-US ] = "Show Passwords...";
+-	};
+-	FixedLine FL_SEC_MACROSEC
+-	{
++        Text [ en-US ] = "Master Password...";
++    };
++    FixedLine FL_SEC_MACROSEC
++    {
+         Pos = MAP_APPFONT( COL_0, ROW_5 );
+         Size = MAP_APPFONT( COL_5-COL_0, RSC_CD_FIXEDLINE_HEIGHT );
+-		Text [ en-US ] = "Macro security";
+-	};
+-	FixedText FI_SEC_MACROSEC
+-	{
++        Text [ en-US ] = "Macro security";
++    };
++    FixedText FI_SEC_MACROSEC
++    {
+         Pos = MAP_APPFONT( COL_1, ROW_6 );
+-        Size = MAP_APPFONT( COL_2-COL_1, ROW_8 - ROW_6 - RSC_SP_FLGR_SPACE_Y );
++        Size = MAP_APPFONT( COL_2-COL_1, 3*RSC_CD_FIXEDLINE_HEIGHT );
+         Wordbreak = TRUE;
+-		Text [ en-US ] = "Adjust the security level for executing macros and specify trusted macro developers.";
+-	};
+-	PushButton PB_SEC_MACROSEC
+-	{
+-        Pos = MAP_APPFONT( COL_3, ROW_7 );
++        Text [ en-US ] = "Adjust the security level for executing macros and specify trusted macro developers.";
++    };
++    PushButton PB_SEC_MACROSEC
++    {
++        Pos = MAP_APPFONT( COL_3, ROW_6-2 );
+         Size = MAP_APPFONT( RSC_CD_PUSHBUTTON_WIDTH, RSC_CD_PUSHBUTTON_HEIGHT );
+         Text [ en-US ] = "Macro Security...";
+-	};
+-	FixedLine FL_SEC_FILESHARING
+-	{
+-        Pos = MAP_APPFONT( COL_0, ROW_8 );
++    };
++    FixedLine FL_SEC_FILESHARING
++    {
++        Pos = MAP_APPFONT( COL_0, ROW_7 );
+         Size = MAP_APPFONT( COL_5-COL_0, RSC_CD_FIXEDLINE_HEIGHT );
+-		Text [ en-US ] = "File sharing options for this document";
+-	};
+-	CheckBox CB_SEC_RECOMMREADONLY
+-	{
+-        Pos = MAP_APPFONT( COL_1, ROW_9 );
++        Text [ en-US ] = "File sharing options for this document";
++    };
++    CheckBox CB_SEC_RECOMMREADONLY
++    {
++        Pos = MAP_APPFONT( COL_1, ROW_8 );
+         Size = MAP_APPFONT( COL_2-COL_1, RSC_CD_CHECKBOX_HEIGHT );
+         Text [ en-US ] = "Open this document in read-only mode";
+-	};
+-	CheckBox CB_SEC_RECORDCHANGES
+-	{
+-        Pos = MAP_APPFONT( COL_1, ROW_10 );
++    };
++    CheckBox CB_SEC_RECORDCHANGES
++    {
++        Pos = MAP_APPFONT( COL_1, ROW_9 );
+         Size = MAP_APPFONT( COL_2-COL_1, RSC_CD_CHECKBOX_HEIGHT );
+-		Text [ en-US ] = "Record changes";
+-	};
+-	PushButton PB_SEC_PROTRECORDS
+-	{
+-        Pos = MAP_APPFONT( COL_3, ROW_11a );
++        Text [ en-US ] = "Record changes";
++    };
++    PushButton PB_SEC_PROTRECORDS
++    {
++        Pos = MAP_APPFONT( COL_3, ROW_9-2 );
+         Size = MAP_APPFONT( RSC_CD_PUSHBUTTON_WIDTH, RSC_CD_PUSHBUTTON_HEIGHT );
+-	};
+-	String STR_SEC_PROTRECORDS
+-	{
+-		Text [ en-US ] = "Protect...";
+-	};
+-	String STR_SEC_UNPROTRECORDS
+-	{
+-		Text [ en-US ] = "Unprotect...";
+-	};
++    };
++    String STR_SEC_PROTRECORDS
++    {
++        Text [ en-US ] = "Protect...";
++    };
++    String STR_SEC_UNPROTRECORDS
++    {
++        Text [ en-US ] = "Unprotect...";
++    };
+     String STR_SEC_NOPASSWDSAVE
+     {
+         Text [ en-US ] = "Disabling the function to persistently store passwords deletes the list of passwords stored and resets the master password.\n\nDo you want to delete password list and reset master password?";
+Index: svx/source/dialog/optinet2.hxx
+===================================================================
+--- svx/source/dialog/optinet2.hxx	(.../tags/DEV300_m35)	(revision 274104)
++++ svx/source/dialog/optinet2.hxx	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -248,34 +248,36 @@
+ 
+     FixedLine           maPasswordsFL;
+     CheckBox            maSavePasswordsCB;
++    PushButton          maShowConnectionsPB;
++    CheckBox            maMasterPasswordCB;
++    FixedInfo           maMasterPasswordFI;
+     PushButton          maMasterPasswordPB;
+-    FixedInfo           maMasterPasswordFI;
+-    PushButton          maShowPasswordsPB;
+ 
+     FixedLine           maMacroSecFL;
+     FixedInfo           maMacroSecFI;
+     PushButton          maMacroSecPB;
+ 
+-	FixedLine			maFilesharingFL;
+-	CheckBox			maRecommReadOnlyCB;
+-	CheckBox			maRecordChangesCB;
+-	PushButton			maProtectRecordsPB;
++    FixedLine           maFilesharingFL;
++    CheckBox            maRecommReadOnlyCB;
++    CheckBox            maRecordChangesCB;
++    PushButton          maProtectRecordsPB;
+ 
+     SvtSecurityOptions*         mpSecOptions;
+     svx::SecurityOptionsDialog* mpSecOptDlg;
+ 
+-	RedliningMode		meRedlingMode;
+-	String				msProtectRecordsStr;
+-	String				msUnprotectRecordsStr;
+-	String				msPasswordStoringDeactivateStr;
++    RedliningMode       meRedlingMode;
++    String              msProtectRecordsStr;
++    String              msUnprotectRecordsStr;
++    String              msPasswordStoringDeactivateStr;
+ 
+     DECL_LINK(          SecurityOptionsHdl, PushButton* );
+     DECL_LINK(          SavePasswordHdl, void* );
+     DECL_LINK(          MasterPasswordHdl, PushButton* );
++    DECL_LINK(          MasterPasswordCBHdl, void* );
+     DECL_LINK(          ShowPasswordsHdl, PushButton* );
+-	DECL_LINK(			MacroSecPBHdl, void* );
+-	DECL_LINK(			RecordChangesCBHdl, void* );
+-	DECL_LINK(			ProtectRecordsPBHdl, void* );
++    DECL_LINK(          MacroSecPBHdl, void* );
++    DECL_LINK(          RecordChangesCBHdl, void* );
++    DECL_LINK(          ProtectRecordsPBHdl, void* );
+ 
+ 	void				CheckRecordChangesState( void );
+     void                InitControls();
+Index: svx/source/dialog/optinet2.cxx
+===================================================================
+--- svx/source/dialog/optinet2.cxx	(.../tags/DEV300_m35)	(revision 274104)
++++ svx/source/dialog/optinet2.cxx	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -122,7 +122,7 @@
+ #include <comphelper/processfactory.hxx>
+ 
+ #include "com/sun/star/ui/dialogs/TemplateDescription.hpp"
+-#include "com/sun/star/task/XMasterPasswordHandling.hpp"
++#include "com/sun/star/task/XMasterPasswordHandling2.hpp"
+ #include "com/sun/star/task/XPasswordContainer.hpp"
+ #include "securityoptions.hxx"
+ #include "webconninfo.hxx"
+@@ -1293,25 +1293,30 @@
+     ,maSecurityOptionsFL( this, SVX_RES( FL_SEC_SECURITYOPTIONS ) )
+     ,maSecurityOptionsFI( this, SVX_RES( FI_SEC_SECURITYOPTIONS ) )
+     ,maSecurityOptionsPB( this, SVX_RES( PB_SEC_SECURITYOPTIONS ) )
++
+     ,maPasswordsFL      ( this, SVX_RES( FL_SEC_PASSWORDS ) )
+     ,maSavePasswordsCB  ( this, SVX_RES( CB_SEC_SAVEPASSWORDS ) )
++    ,maShowConnectionsPB( this, SVX_RES( PB_SEC_CONNECTIONS ) )
++    ,maMasterPasswordCB ( this, SVX_RES( CB_SEC_MASTERPASSWORD ) )
++    ,maMasterPasswordFI ( this, SVX_RES( FI_SEC_MASTERPASSWORD ) )
+     ,maMasterPasswordPB ( this, SVX_RES( PB_SEC_MASTERPASSWORD ) )
+-    ,maMasterPasswordFI ( this, SVX_RES( FI_SEC_MASTERPASSWORD ) )
+-    ,maShowPasswordsPB  ( this, SVX_RES( PB_SEC_SHOWPASSWORDS ) )
++
+     ,maMacroSecFL       ( this, SVX_RES( FL_SEC_MACROSEC ) )
+-	,maMacroSecFI		( this, SVX_RES( FI_SEC_MACROSEC ) )
+-	,maMacroSecPB		( this, SVX_RES( PB_SEC_MACROSEC ) )
+-	,maFilesharingFL	( this, SVX_RES( FL_SEC_FILESHARING ) )
+-	,maRecommReadOnlyCB	( this, SVX_RES( CB_SEC_RECOMMREADONLY ) )
+-	,maRecordChangesCB	( this, SVX_RES( CB_SEC_RECORDCHANGES ) )
+-	,maProtectRecordsPB	( this, SVX_RES( PB_SEC_PROTRECORDS ) )
++    ,maMacroSecFI       ( this, SVX_RES( FI_SEC_MACROSEC ) )
++    ,maMacroSecPB       ( this, SVX_RES( PB_SEC_MACROSEC ) )
++    ,maFilesharingFL    ( this, SVX_RES( FL_SEC_FILESHARING ) )
++    ,maRecommReadOnlyCB ( this, SVX_RES( CB_SEC_RECOMMREADONLY ) )
++    ,maRecordChangesCB  ( this, SVX_RES( CB_SEC_RECORDCHANGES ) )
++    ,maProtectRecordsPB ( this, SVX_RES( PB_SEC_PROTRECORDS ) )
+ 
+     ,mpSecOptions       ( new SvtSecurityOptions )
+     ,mpSecOptDlg        ( NULL )
+-	,meRedlingMode		( RL_NONE )
+-	,msProtectRecordsStr( 		SVX_RES( STR_SEC_PROTRECORDS ) )
+-	,msUnprotectRecordsStr(		SVX_RES( STR_SEC_UNPROTRECORDS ) )
+-    ,msPasswordStoringDeactivateStr( SVX_RES( STR_SEC_NOPASSWDSAVE ) )
++    ,meRedlingMode      ( RL_NONE )
++
++    ,msProtectRecordsStr(               SVX_RES( STR_SEC_PROTRECORDS ) )
++    ,msUnprotectRecordsStr(             SVX_RES( STR_SEC_UNPROTRECORDS ) )
++    ,msPasswordStoringDeactivateStr(    SVX_RES( STR_SEC_NOPASSWDSAVE ) )
++
+ {
+ 	FreeResource();
+ 
+@@ -1320,7 +1325,8 @@
+     maSecurityOptionsPB.SetClickHdl( LINK( this, SvxSecurityTabPage, SecurityOptionsHdl ) );
+     maSavePasswordsCB.SetClickHdl( LINK( this, SvxSecurityTabPage, SavePasswordHdl ) );
+     maMasterPasswordPB.SetClickHdl( LINK( this, SvxSecurityTabPage, MasterPasswordHdl ) );
+-    maShowPasswordsPB.SetClickHdl( LINK( this, SvxSecurityTabPage, ShowPasswordsHdl ) );
++    maMasterPasswordCB.SetClickHdl( LINK( this, SvxSecurityTabPage, MasterPasswordCBHdl ) );
++    maShowConnectionsPB.SetClickHdl( LINK( this, SvxSecurityTabPage, ShowPasswordsHdl ) );
+     maMacroSecPB.SetClickHdl( LINK( this, SvxSecurityTabPage, MacroSecPBHdl ) );
+ 	maProtectRecordsPB.SetClickHdl( LINK( this, SvxSecurityTabPage, ProtectRecordsPBHdl ) );
+ 	maRecordChangesCB.SetClickHdl( LINK( this, SvxSecurityTabPage, RecordChangesCBHdl ) );
+@@ -1358,7 +1364,10 @@
+             if ( xMasterPasswd->changeMasterPassword( Reference< task::XInteractionHandler >() ) )
+             {
+                 maMasterPasswordPB.Enable( TRUE );
+-                maShowPasswordsPB.Enable( TRUE );
++                maMasterPasswordCB.Check( TRUE );
++                maMasterPasswordCB.Enable( TRUE );
++                maMasterPasswordFI.Enable( TRUE );
++                maShowConnectionsPB.Enable( TRUE );
+             }
+             else
+             {
+@@ -1374,14 +1383,17 @@
+             if( RET_YES == nRet )
+             {
+                 xMasterPasswd->allowPersistentStoring( sal_False );
++                maMasterPasswordCB.Check( TRUE );
+                 maMasterPasswordPB.Enable( FALSE );
+-                maShowPasswordsPB.Enable( FALSE );
++                maMasterPasswordCB.Enable( FALSE );
++                maMasterPasswordFI.Enable( FALSE );
++                maShowConnectionsPB.Enable( FALSE );
+             }
+             else
+             {
+                 maSavePasswordsCB.Check( TRUE );
+                 maMasterPasswordPB.Enable( TRUE );
+-                maShowPasswordsPB.Enable( TRUE );
++                maShowConnectionsPB.Enable( TRUE );
+             }
+         }
+     }
+@@ -1411,6 +1423,52 @@
+     return 0;
+ }
+ 
++IMPL_LINK( SvxSecurityTabPage, MasterPasswordCBHdl, void*, EMPTYARG )
++{
++    try
++    {
++        Reference< task::XMasterPasswordHandling2 > xMasterPasswd(
++            comphelper::getProcessServiceFactory()->createInstance(
++                rtl::OUString( RTL_CONSTASCII_USTRINGPARAM ( "com.sun.star.task.PasswordContainer" ) ) ),
++            UNO_QUERY_THROW );
++
++        if ( maMasterPasswordCB.IsChecked() )
++        {
++            if ( xMasterPasswd->isPersistentStoringAllowed() && xMasterPasswd->changeMasterPassword( Reference< task::XInteractionHandler >() ) )
++            {
++                maMasterPasswordPB.Enable( TRUE );
++                maMasterPasswordFI.Enable( TRUE );
++            }
++            else
++            {
++                maMasterPasswordCB.Check( FALSE );
++                maMasterPasswordPB.Enable( TRUE );
++                maMasterPasswordFI.Enable( TRUE );
++            }
++        }
++        else
++        {
++            if ( xMasterPasswd->isPersistentStoringAllowed() && xMasterPasswd->useDefaultMasterPassword( Reference< task::XInteractionHandler >() ) )
++            {
++                maMasterPasswordPB.Enable( FALSE );
++                maMasterPasswordFI.Enable( FALSE );
++            }
++            else
++            {
++                maMasterPasswordCB.Check( TRUE );
++                maMasterPasswordPB.Enable( TRUE );
++                maShowConnectionsPB.Enable( TRUE );
++            }
++        }
++    }
++    catch( Exception& )
++    {
++        maSavePasswordsCB.Check( !maSavePasswordsCB.IsChecked() );
++    }
++
++    return 0;
++}
++
+ IMPL_LINK( SvxSecurityTabPage, ShowPasswordsHdl, PushButton*, EMPTYARG )
+ {
+     try
+@@ -1601,7 +1659,7 @@
+     sal_Int32 i = 0;
+     long nBtnTextWidth = 0;
+     Window* pButtons[] = { &maSecurityOptionsPB, &maMasterPasswordPB,
+-                            &maShowPasswordsPB, &maMacroSecPB, &maProtectRecordsPB };
++                            &maShowConnectionsPB, &maMacroSecPB, &maProtectRecordsPB };
+     Window** pButton = pButtons;
+     const sal_Int32 nBCount = sizeof( pButtons ) / sizeof( pButtons[ 0 ] );
+     for ( ; i < nBCount; ++i, ++pButton )
+@@ -1642,7 +1700,10 @@
+     }
+ 
+     maMasterPasswordPB.Enable( FALSE );
+-    maShowPasswordsPB.Enable( FALSE );
++    maMasterPasswordCB.Enable( FALSE );
++    maMasterPasswordCB.Check( TRUE );
++    maMasterPasswordFI.Enable( FALSE );
++    maShowConnectionsPB.Enable( FALSE );
+ 
+     // initialize the password saving checkbox
+     try
+@@ -1654,9 +1715,19 @@
+ 
+         if ( xMasterPasswd->isPersistentStoringAllowed() )
+         {
+-            maMasterPasswordPB.Enable( TRUE );
+-            maShowPasswordsPB.Enable( TRUE );
++            maMasterPasswordCB.Enable( TRUE );
++            maShowConnectionsPB.Enable( TRUE );
+             maSavePasswordsCB.Check( TRUE );
++
++            Reference< task::XMasterPasswordHandling2 > xMasterPasswd2( xMasterPasswd, UNO_QUERY );
++            if ( xMasterPasswd2.is() && xMasterPasswd2->isDefaultMasterPasswordUsed() )
++                maMasterPasswordCB.Check( FALSE );
++            else
++            {
++                maMasterPasswordPB.Enable( TRUE );
++                maMasterPasswordCB.Check( TRUE );
++                maMasterPasswordFI.Enable( TRUE );
++            }
+         }
+     }
+     catch( Exception& )
+Index: svx/inc/optinet2.hrc
+===================================================================
+--- svx/inc/optinet2.hrc	(.../tags/DEV300_m35)	(revision 274104)
++++ svx/inc/optinet2.hrc	(.../cws/mav43)	(revision 274104)
+@@ -1,7 +1,7 @@
+ /*************************************************************************
+  *
+  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+- * 
++ *
+  * Copyright 2008 by Sun Microsystems, Inc.
+  *
+  * OpenOffice.org - a multi-platform office productivity suite
+@@ -112,47 +112,46 @@
+ #define PB_SEC_SECURITYOPTIONS      12
+ #define FL_SEC_PASSWORDS            13
+ #define CB_SEC_SAVEPASSWORDS        14
+-#define PB_SEC_MASTERPASSWORD       15
+-#define FI_SEC_MASTERPASSWORD       16
+-#define PB_SEC_SHOWPASSWORDS        17
+-#define FL_SEC_MACROSEC             18
+-#define FI_SEC_MACROSEC             19
+-#define PB_SEC_MACROSEC             20
+-#define FL_SEC_FILESHARING          21
+-#define CB_SEC_RECOMMREADONLY       22
+-#define CB_SEC_RECORDCHANGES        23
+-#define PB_SEC_PROTRECORDS          24
++#define PB_SEC_CONNECTIONS          15
++#define CB_SEC_MASTERPASSWORD       16
++#define FI_SEC_MASTERPASSWORD       17
++#define PB_SEC_MASTERPASSWORD       18
++#define FL_SEC_MACROSEC             19
++#define FI_SEC_MACROSEC             20
++#define PB_SEC_MACROSEC             21
++#define FL_SEC_FILESHARING          22
++#define CB_SEC_RECOMMREADONLY       23
++#define CB_SEC_RECORDCHANGES        24
++#define PB_SEC_PROTRECORDS          25
+ 
+-#define STR_SEC_PROTRECORDS			10
+-#define STR_SEC_UNPROTRECORDS		11
+-#define STR_SEC_NOPASSWDSAVE		12
++#define STR_SEC_PROTRECORDS         10
++#define STR_SEC_UNPROTRECORDS       11
++#define STR_SEC_NOPASSWDSAVE        12
+ 
+-#define TP_WIDTH					260
+-#define TP_HEIGHT					185
+-#define	OFFS_BUTTON_Y				(-6)
+-#define BORDER_OFFSET				8
+-#define COL_0						(RSC_SP_TBPG_INNERBORDER_LEFT)
+-#define COL_1						(COL_0+RSC_SP_FLGR_SPACE_X)
++#define TP_WIDTH                    260
++#define TP_HEIGHT                   185
++#define OFFS_BUTTON_Y               (-6)
++#define BORDER_OFFSET               8
++#define COL_0                       (RSC_SP_TBPG_INNERBORDER_LEFT)
++#define COL_1                       (COL_0+RSC_SP_FLGR_SPACE_X)
++#define COL_1a                      (COL_1+RSC_SP_CHK_TEXTINDENT)
+ #define COL_5                       (TP_WIDTH-RSC_SP_TBPG_INNERBORDER_RIGHT)
+ #define COL_4                       (COL_5-RSC_SP_FLGR_SPACE_X)
+ #define COL_3                       (COL_4-RSC_CD_PUSHBUTTON_WIDTH)
+ #define COL_2                       (COL_3-RSC_SP_CTRL_X)
+ 
+-#define ROW_0						(RSC_SP_FLGR_INNERBORDER_TOP)
+-#define ROW_1						(ROW_0+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_2                       (ROW_1+3*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_FLGR_SPACE_Y)
++#define ROW_0                       (RSC_SP_FLGR_INNERBORDER_TOP)
++#define ROW_1                       (ROW_0+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_2                       (ROW_1+3*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_CTRL_DESC_Y)
+ #define ROW_2a                      (ROW_2-RSC_SP_FLGR_SPACE_Y-RSC_CD_PUSHBUTTON_HEIGHT)
+-#define ROW_3                       (ROW_2+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_4						(ROW_3+RSC_CD_CHECKBOX_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_5                       (ROW_4+4*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_5a                      (ROW_5-RSC_SP_FLGR_SPACE_Y-RSC_CD_PUSHBUTTON_HEIGHT)
+-#define ROW_6                       (ROW_5+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_7                       (ROW_6+2*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_FLGR_SPACE_Y+OFFS_BUTTON_Y)
+-#define ROW_8                       (ROW_7+RSC_CD_PUSHBUTTON_HEIGHT)
+-#define ROW_9                       (ROW_8+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_10                      (ROW_9+RSC_CD_CHECKBOX_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_11                      (ROW_10+RSC_CD_CHECKBOX_HEIGHT+RSC_SP_FLGR_SPACE_Y)
+-#define ROW_11a                     (ROW_11-RSC_SP_FLGR_SPACE_Y-RSC_CD_PUSHBUTTON_HEIGHT)
++#define ROW_3                       (ROW_2+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_4                       (ROW_3+RSC_CD_CHECKBOX_HEIGHT+RSC_SP_CTRL_DESC_Y-1)
++#define ROW_4a                      (ROW_4+RSC_CD_CHECKBOX_HEIGHT+1)
++#define ROW_5                       (ROW_4a+4*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_6                       (ROW_5+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_7                       (ROW_6+2*RSC_CD_FIXEDTEXT_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_8                       (ROW_7+RSC_CD_FIXEDLINE_HEIGHT+RSC_SP_CTRL_DESC_Y)
++#define ROW_9                       (ROW_8+RSC_CD_CHECKBOX_HEIGHT+RSC_SP_CTRL_DESC_Y)
+ 
+ // Defines - JavaScriptDisableQueryBox_Impl -------------------------------
+ 

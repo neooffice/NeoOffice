@@ -1,0 +1,19 @@
+Index: officecfg/registry/schema/org/openoffice/Office/Common.xcs
+===================================================================
+--- officecfg/registry/schema/org/openoffice/Office/Common.xcs	(.../tags/DEV300_m35)	(revision 274104)
++++ officecfg/registry/schema/org/openoffice/Office/Common.xcs	(.../cws/mav43)	(revision 274104)
+@@ -5559,6 +5559,14 @@
+ 				</info>
+ 				<value>true</value>
+ 			</prop>
++			<prop oor:name="UseDocumentSystemFileLocking" oor:type="xs:boolean">
++				<info>
++					<author>MAV</author>
++					<desc>Allows to specify whether the OOo document file locking mechanics should use the system file locking additionaly.</desc>
++				</info>
++				<value>true</value>
++			</prop>
++
+ 			<prop oor:name="UseSystemPrintDialog" oor:type="xs:boolean">
+ 				<info>
+ 					<author>PL</author>
