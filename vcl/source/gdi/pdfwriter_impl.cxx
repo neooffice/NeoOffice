@@ -11948,7 +11948,7 @@ sal_Int32 PDFWriterImpl::getNextPDFObject( oslFileHandle aFile, PDFObjectMapping
     // Parse object ID
     sal_uInt64 nEndOfStartPos;
     CHECK_RETURN( osl_File_E_None == osl_getFilePos( aFile, &nEndOfStartPos ) );
-	CHECK_RETURN( osl_File_E_None == osl_setFilePos( aFile, osl_Pos_Absolut, nLastNewlinePos ) );
+    CHECK_RETURN( osl_File_E_None == osl_setFilePos( aFile, osl_Pos_Absolut, nLastNewlinePos ) );
 
     OStringBuffer aIDBuf;
     bool bSpaceFound = false;
@@ -12511,11 +12511,15 @@ void PDFWriterImpl::encodeGlyphs()
                                 }
                             }
 
+                            OString aFontRunTag( " Tf [ " );
                             OString aFontTag( " Tf " );
                             OString aAltFontTag( " Tm " );
+                            OString aTextRunTag( " ] TJ " );
                             OString aTextTag( " Tj " );
+                            int nFontRunTagLen = aFontRunTag.getLength();
                             int nFontTagLen = aFontTag.getLength();
                             int nAltFontTagLen = aAltFontTag.getLength();
+                            int nTextRunTagLen = aTextRunTag.getLength();
                             int nTextTagLen = aTextTag.getLength();
                             int nCurrentGlyph = 0;
                             sal_Int32 nCurrentPos = 0;
@@ -12529,9 +12533,13 @@ void PDFWriterImpl::encodeGlyphs()
                             while ( nCurrentGlyph < nGlyphIDs )
                             {
                                 nNextFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos );
+                                bool bIsTextRun = false;
                                 if ( aCurrentFontID.getLength() )
                                 {
-                                    nNextFontPos = aPageContent.indexOf( aFontTag, nCurrentPos );
+                                    if ( ( nNextFontPos = aPageContent.indexOf( aFontRunTag, nCurrentPos ) ) >= 0 )
+                                         bIsTextRun = true;
+                                    else
+                                         nNextFontPos = aPageContent.indexOf( aFontTag, nCurrentPos );
                                     nNextAltFontPos = aPageContent.indexOf( aAltFontTag, nCurrentPos );
                                 }
                                 else
@@ -12558,7 +12566,7 @@ void PDFWriterImpl::encodeGlyphs()
                                 }
                                 else if ( nNextFontPos >= 0 && ( nNextAltFontPos < 0 || nNextFontPos < nNextAltFontPos ) )
                                 {
-                                    nCurrentPos = nNextFontPos + nFontTagLen;
+                                    nCurrentPos = nNextFontPos + ( bIsTextRun ? nFontRunTagLen : nFontTagLen );
                                 }
                                 else if ( nNextAltFontPos >= 0 && ( nNextFontPos < 0 || nNextAltFontPos < nNextFontPos ) )
                                 {
@@ -12571,9 +12579,12 @@ void PDFWriterImpl::encodeGlyphs()
 
                                 sal_Int32 nTextStart = nCurrentPos;
 
-                                if ( ( nTextPos = aPageContent.indexOf( aTextTag, nCurrentPos ) ) < 0 )
+                                if ( bIsTextRun && ( nTextPos = aPageContent.indexOf( aTextRunTag, nCurrentPos ) ) >= 0 )
+                                    nCurrentPos = nTextPos + nTextRunTagLen;
+                                else if ( !bIsTextRun && ( nTextPos = aPageContent.indexOf( aTextTag, nCurrentPos ) ) >= 0 )
+                                    nCurrentPos = nTextPos + nTextTagLen;
+                                else
                                     break;
-                                nCurrentPos = nTextPos + nTextTagLen;
 
                                 sal_Int32 nTextEnd = nTextPos - 1;
 
@@ -12598,7 +12609,24 @@ void PDFWriterImpl::encodeGlyphs()
                                 if ( bTextIsHex )
                                 {
                                     for ( sal_Int32 j = 0; j < nTextLen; j += 2, pBuf += 2 )
-                                        aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
+                                        if ( bIsTextRun && *pBuf == '>' )
+                                        {
+                                            // Fix bug 3502 by skipping
+                                            // characters not in a text run
+                                            j++;
+                                            pBuf++;
+                                            for ( ; j < nTextLen && *pBuf != '<'; j++, pBuf++ )
+                                                ;
+                                            if ( j < nTextLen )
+                                            {
+                                                j--;
+                                                pBuf--;
+                                            }
+                                        }
+                                        else
+                                        {
+                                            aGlyphBuf.append( (sal_Char)OString( pBuf, nTextLen - j == 1 ? 1 : 2 ).toInt32( 16 ) );
+                                        }
                                 }
                                 else
                                 {
@@ -12607,13 +12635,13 @@ void PDFWriterImpl::encodeGlyphs()
                                     for ( sal_Int32 j = 0; j < nTextLen; j++, pBuf++ )
                                     {
                                         sal_Int32 nOctalBufLen = aOctalBuf.getLength();
-										// Fix bug 3481 by limiting octal
-										// strings to only 3 digits
+                                        // Fix bug 3481 by limiting octal
+                                        // strings to only 3 digits
                                         if ( nOctalBufLen && ( nOctalBufLen > 2 || *pBuf < '0' || *pBuf > '9' ) )
-										{
+                                        {
                                             aGlyphBuf.append( (sal_Char)aOctalBuf.makeStringAndClear().toInt32( 8 ) );
-                                        	nOctalBufLen = 0;
-										}
+                                            nOctalBufLen = 0;
+                                        }
 
                                         if ( !bLastSlash && *pBuf == '\\' )
                                         {
@@ -12648,6 +12676,15 @@ void PDFWriterImpl::encodeGlyphs()
                                                     aGlyphBuf.append( *pBuf );
                                                     break;
                                             }
+                                        }
+                                        else if ( bIsTextRun && *pBuf == ')' )
+                                        {
+                                            // Fix bug 3502 by skipping
+                                            // characters not in a text run
+                                            j++;
+                                            pBuf++;
+                                            for ( ; j < nTextLen && *pBuf != '('; j++, pBuf++ )
+                                                ;
                                         }
                                         else
                                         {
