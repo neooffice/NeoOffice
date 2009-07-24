@@ -48,6 +48,7 @@ extern const NSString *kNeoMobileWidthPref;
 extern const NSString *kNeoMobileHeightPref;
 extern const NSString *kNeoMobileVisiblePref;
 
+NSArray *GetPerformSelectorOnMainThreadModes();
 ::rtl::OUString NSStringToOUString( NSString *pString );
 
 #endif	// _NEOMOBILE_HXX
