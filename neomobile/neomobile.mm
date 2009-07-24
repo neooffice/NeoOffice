@@ -141,6 +141,11 @@ const NSString *kNeoMobileVisiblePref = @"nmVisible";
 
 //========================================================================
 
+NSArray *GetPerformSelectorOnMainThreadModes()
+{
+	return [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+}
+
 OUString NSStringToOUString( NSString *pString )
 {
 	if ( !pString )
@@ -495,9 +500,8 @@ static NeoMobileWebView *pSharedWebView = nil;
 
 	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pAboutURI isNeoOffice:m_bIsNeoOffice];
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
-	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
+	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 	Application::AcquireSolarMutex( nCount );
 		
 	[pool release];
@@ -537,9 +541,8 @@ static NeoMobileWebView *pSharedWebView = nil;
 	
 	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI isNeoOffice:m_bIsNeoOffice];
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
-	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:pModes];
+	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 	Application::AcquireSolarMutex( nCount );
 		
 	[pool release];
@@ -558,9 +561,8 @@ static NeoMobileWebView *pSharedWebView = nil;
 	
 	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pOpenURI isNeoOffice:m_bIsNeoOffice];
 
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	unsigned long nCount = Application::ReleaseSolarMutex();
-	[imp performSelectorOnMainThread:@selector(showWebViewOnlyIfVisible:) withObject:imp waitUntilDone:YES modes:pModes];
+	[imp performSelectorOnMainThread:@selector(showWebViewOnlyIfVisible:) withObject:imp waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 	Application::AcquireSolarMutex( nCount );
 		
 	[pool release];

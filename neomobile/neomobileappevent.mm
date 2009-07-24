@@ -231,9 +231,8 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(neoOfficeMobile->isPasswordProtected())
 			{
 				NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
-				NSArray *modes=[NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 				RunPasswordProtectionAlertOnMainThread *passwordProtection=[[RunPasswordProtectionAlertOnMainThread alloc] init];
-				[passwordProtection performSelectorOnMainThread:@selector(runModal:) withObject:passwordProtection waitUntilDone:YES modes:modes];
+				[passwordProtection performSelectorOnMainThread:@selector(runModal:) withObject:passwordProtection waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 				if([passwordProtection cancelled])
 					mbCanceled = true;
 				[passwordProtection release];
@@ -246,7 +245,6 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// get a unique temporary base filename
 			
 			NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
-			NSArray *modes=[NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 			DoFileManagerOnMainThread *fileMgr=nil;
 			
 			OString pdfExportURLutf8;
@@ -256,7 +254,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			try
 			{
 			fileMgr=[[DoFileManagerOnMainThread alloc] init];
-			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES modes:modes];
+			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 			
 			NSString *filePath=[fileMgr filePath];
 			OUString oufilePath(NSStringToOUString(filePath));
@@ -312,7 +310,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// a single file.  We'll just use our file's base path
 			// as the temporary directory name.
 			
-			[fileMgr performSelectorOnMainThread:@selector(createDir:) withObject:filePath waitUntilDone:YES modes:modes];
+			[fileMgr performSelectorOnMainThread:@selector(createDir:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 						
 			OUString htmlExportURL=OUString::createFromAscii("file://");
 			htmlExportURL+=oufilePath;
@@ -325,7 +323,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #endif	// DEBUG
 				// remove temporary directory used to create zip file
 			
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:modes];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 				mnErrorCode=1;
 				throw this;
 			}
@@ -334,7 +332,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			{
 				// remove temporary directory used to create zip file
 			
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:modes];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 				throw this;
 			}
 			
@@ -355,7 +353,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 						
 			// remove temporary directory used to create zip file
 			
-			[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:modes];
+			[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 
 			if ( mbCanceled )
 				throw this;
@@ -436,11 +434,11 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// our post in memory
 			
 			if(pdfExportURLutf8.getLength())
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] waitUntilDone:YES modes:modes];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 			if(htmlExportZipFileutf8.getLength())
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] waitUntilDone:YES modes:modes];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 			if(openDocExportURLutf8.getLength())
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:modes];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 			
 			[fileMgr release];
 				
