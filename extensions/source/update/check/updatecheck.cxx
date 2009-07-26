@@ -1352,7 +1352,14 @@ void UpdateCheck::handleMenuBarUI( rtl::Reference< UpdateHandler > rUpdateHandle
         
     if( xMenuBarUI.is() )
     {
+#ifdef USE_JAVA
+        // Fix bug reported in the following forum post that caused our update
+        // dialog to be displayed when only extension updates are available:
+        // https://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=55799#55799
+        if( UPDATESTATE_NO_UPDATE_AVAIL == eState || UPDATESTATE_EXT_UPD_AVAIL == eState )
+#else	// USE_JAVA
         if( UPDATESTATE_NO_UPDATE_AVAIL == eState )
+#endif	// USE_JAVA
         {
             xMenuBarUI->setPropertyValue( PROPERTY_SHOW_MENUICON, uno::makeAny(sal_False) );
         }
