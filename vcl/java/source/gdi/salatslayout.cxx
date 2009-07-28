@@ -1468,10 +1468,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					// we know that there is a valid fallback font
 					else if ( !nGlyph && mnFallbackLevel < MAX_FALLBACK - 1 && ( pSymbolFallbackFont || pFallbackFont ) )
 					{
+						// Fix bug 3504 by not changing the glyph flags for
+						// zero glyphs
 						nGlyphWidth = 0;
-						if ( bFirstGlyph )
-							nGlyph = nChar | GF_ISCHAR;
-						else
+						if ( !bFirstGlyph )
 							continue;
 					}
 
