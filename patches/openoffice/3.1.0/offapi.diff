@@ -95,11 +95,11 @@ Index: offapi/com/sun/star/document/makefile.mk
 @@ -45,6 +45,7 @@
  	AmbigousFilterRequest.idl\
  	BrokenPackageRequest.idl\
-     CorruptedFilterConfigurationException.idl\
+         CorruptedFilterConfigurationException.idl\
 +    ChangedByOthersRequest.idl\
-     DocumentEvent.idl\
  	DocumentInfo.idl\
-     DocumentProperties.idl\
+         DocumentProperties.idl\
+ 	EventDescriptor.idl\
 @@ -61,12 +62,15 @@
  	ImportFilter.idl\
  	LinkTarget.idl\
