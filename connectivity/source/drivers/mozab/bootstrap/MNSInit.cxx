@@ -1,51 +1,73 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified July 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified July 2009 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_connectivity.hxx"
+
+#ifndef _CONNECTIVITY_MAB_NS_INCLUDE_HXX_
 #include <MNSInclude.hxx>
+#endif
 
 #include "mozilla_nsinit.h"
 
 #include <sal/types.h>
 #include <osl/diagnose.h>
+#ifndef _OSL_CONDITN_HXX_
 #include <osl/conditn.hxx>
-#include <osl/file.hxx>
-#include <rtl/bootstrap.hxx>
+#endif
+
+#ifndef _CONNECTIVITY_MAB_NS_INIT_HXX_
 #include <MNSInit.hxx>
+#endif
 
 #ifndef CONNECTIVITY_MOZAB_MCONFIGACCESS_HXX
 #include "MConfigAccess.hxx"
 #endif
+
+#ifndef _CONNECTIVITY_MAB_NS_DECLARES_HXX_
 #include "MNSDeclares.hxx"
+#endif
+
+#ifndef _THREAD_HXX_
 #include <osl/thread.hxx>
+#endif
+
+#ifndef _MNSTERMINATELISTENER_HXX
 #include <MNSTerminateListener.hxx>
+#endif
 
 static nsIServiceManager*	sServiceManager = nsnull;
 static sal_Int32 			sInitCounter = 0;
@@ -125,19 +147,12 @@ sal_Bool MNS_InitXPCOM(sal_Bool* aProfileExists)
 #endif
 	{
         nsCOMPtr<nsILocalFile> binDir;
-        // Note: if path3 construction fails, mozilla will default to using MOZILLA_FIVE_HOME in the NS_InitXPCOM2()
-        rtl::OUString path1(
-            RTL_CONSTASCII_USTRINGPARAM("$OOO_BASE_DIR/program"));
-        rtl::Bootstrap::expandMacros(path1);
-        rtl::OString path2;
-        if ((osl::FileBase::getSystemPathFromFileURL(path1, path1) ==
-             osl::FileBase::E_None) &&
-            path1.convertToString(
-                &path2, osl_getThreadTextEncoding(),
-                (RTL_UNICODETOTEXT_FLAGS_UNDEFINED_ERROR |
-                 RTL_UNICODETOTEXT_FLAGS_INVALID_ERROR)))
+        // Note: if getenv() returns NULL, mozilla will default to using MOZILLA_FIVE_HOME in the NS_InitXPCOM2()
+        // The NS_NewNativeLocalFile() will accept NULL as its first parameter.
+        char * env = getenv("OPENOFFICE_MOZILLA_FIVE_HOME");
+        if (env)
         {
-            nsDependentCString sPath(path2.getStr());
+            nsDependentCString sPath(env);
             rv = NS_NewNativeLocalFile(sPath, PR_TRUE, getter_AddRefs(binDir));
             if (NS_FAILED(rv))
                 return sal_False;
