@@ -132,9 +132,9 @@ Index: uui/source/iahndl.cxx
 +#include "filechanged.hxx"
 +#include "trylater.hxx"
 +#include "lockfailed.hxx"
+ #include "newerverwarn.hxx"
  #include <comphelper/processfactory.hxx>
  #include <svtools/zforlist.hxx>
- using namespace com::sun;
 @@ -144,7 +152,7 @@
      inline ErrorResource(ResId & rResId) SAL_THROW(()): Resource(rResId) {}
  
@@ -1332,22 +1332,6 @@ Index: uui/source/iahndl.cxx
                      ::utl::ConfigManager::PRODUCTNAME );
              aProductNameAny >>= aTitle;
          } catch( star::uno::Exception& )
-@@ -2796,13 +2840,13 @@
- {
- 	star::uno::Reference< star::task::XInteractionAbort > xAbort;
- 	star::uno::Reference< star::task::XInteractionApprove > xApprove;
--	
-+
- 	sal_Int32 nCount = rContinuations.getLength();
- 	for( sal_Int32 nStep=0; nStep<nCount; ++nStep )
- 	{
- 	    if( !xAbort.is() )
- 		    xAbort = star::uno::Reference< star::task::XInteractionAbort >( rContinuations[nStep], star::uno::UNO_QUERY );
--	    
-+
- 	    if( !xApprove.is() )
- 		    xApprove = star::uno::Reference< star::task::XInteractionApprove >( rContinuations[nStep], star::uno::UNO_QUERY );
- 	}
 @@ -2842,19 +2886,19 @@
      SAL_THROW((com::sun::star::uno::RuntimeException))
  {
@@ -1997,25 +1981,27 @@ Index: uui/source/makefile.mk
  	$(SLO)$/requeststringresolver.obj\
  	$(SLO)$/unknownauthdlg.obj\
  	$(SLO)$/sslwarndlg.obj\
--	$(SLO)$/secmacrowarnings.obj
+-	$(SLO)$/secmacrowarnings.obj\
 +        $(SLO)$/secmacrowarnings.obj\
 +        $(SLO)$/filechanged.obj\
 +        $(SLO)$/alreadyopen.obj\
 +        $(SLO)$/lockfailed.obj\
-+        $(SLO)$/trylater.obj
++        $(SLO)$/trylater.obj\
+ 	$(SLO)$/newerverwarn.obj
  
  SRS1NAME=$(TARGET)
- SRC1FILES = \
-@@ -67,6 +71,11 @@
+@@ -67,7 +71,12 @@
  	fltdlg.src \
  	unknownauthdlg.src\
  	sslwarndlg.src\
--	secmacrowarnings.src
+-	secmacrowarnings.src\
+-	newerverwarn.src
 +        secmacrowarnings.src\
 +        filechanged.src\
 +        alreadyopen.src\
 +        lockfailed.src\
-+        trylater.src
++        trylater.src\
++	 newerverwarn.src
  
  .INCLUDE: target.mk
 +
@@ -2731,9 +2717,9 @@ Index: uui/source/ids.hrc
 +#define STR_ALREADYOPEN_SAVE_MSG (RID_UUI_START + 50)
 +#define STR_ALREADYOPEN_RETRY_SAVE_BTN (RID_UUI_START + 51)
 +#define STR_ALREADYOPEN_SAVE_BTN (RID_UUI_START + 52)
+ #define RID_DLG_NEWER_VERSION_WARNING (RID_UUI_START + 36)
  
  #define ERRCODE_UUI_IO_ABORT (ERRCODE_AREA_UUI + 0)
- #define ERRCODE_UUI_IO_ACCESSDENIED (ERRCODE_AREA_UUI + 1)
 Index: uui/source/lockfailed.hxx
 ===================================================================
 --- uui/source/lockfailed.hxx	(.../tags/DEV300_m35)	(revision 0)
