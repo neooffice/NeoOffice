@@ -2,18 +2,15 @@ Index: sfx2/source/doc/objstor.cxx
 ===================================================================
 --- sfx2/source/doc/objstor.cxx	(.../tags/DEV300_m35)	(revision 274104)
 +++ sfx2/source/doc/objstor.cxx	(.../cws/mav43)	(revision 274104)
-@@ -649,10 +649,9 @@
+@@ -649,7 +649,7 @@
  
  	EnableSetModified( sal_False );
  
+-    pMedium->LockOrigFileOnDemand( sal_True );
 +    pMedium->LockOrigFileOnDemand( sal_True, sal_False );
      if ( GetError() == ERRCODE_NONE && bOwnStorageFormat && ( !pFilter || !( pFilter->GetFilterFlags() & SFX_FILTER_STARONEFILTER ) ) )
  	{
--        pMedium->LockOrigFileOnDemand( sal_True );
--
  		uno::Reference< embed::XStorage > xStorage;
-         if ( pMedium->GetError() == ERRCODE_NONE )
-             xStorage = pMedium->GetStorage();
 @@ -1206,6 +1205,8 @@
  	{
  		bStoreToSameLocation = sal_True;
@@ -46,11 +43,11 @@ Index: sfx2/source/doc/objstor.cxx
  	if( rMedium.GetErrorCode() || pMedium->GetErrorCode() || GetErrorCode() )
  		return sal_False;
  
+-    rMedium.LockOrigFileOnDemand( sal_False );
 +    rMedium.LockOrigFileOnDemand( sal_False, sal_False );
 +
      if ( bStorageBasedTarget )
  	{
--        rMedium.LockOrigFileOnDemand( sal_False );
          if ( rMedium.GetErrorCode() )
              return sal_False;
  
@@ -211,9 +208,9 @@ Index: sfx2/source/doc/docfile.cxx
  {
      if ( !pImp->aContent.get().is() )
 @@ -692,7 +790,16 @@
-         Transfer_Impl();
- 	}
  
+     // remove truncation mode from the flags
+     nStorOpenMode &= ( ~STREAM_TRUNC );
 -    return GetError() == SVSTREAM_OK;
 +    sal_Bool bResult = ( GetError() == SVSTREAM_OK );
 +
@@ -228,114 +225,6 @@ Index: sfx2/source/doc/docfile.cxx
  }
  
  //------------------------------------------------------------------
-@@ -890,106 +997,8 @@
- 
-     DBG_ASSERT( !pOutStream, "OutStream in a readonly Medium?!" );
- 
--    // medium based on OutputStream: must work with TempFile
--    if( aLogicName.CompareToAscii( "private:stream", 14 ) == COMPARE_EQUAL
--	  || !::utl::LocalFileHelper::IsLocalFile( aLogicName ) )
--        CreateTempFileNoCopy();
--	// if Medium already contains a stream - TODO/LATER: store stream/outputstream in ImplData, not in Medium
--	else if ( GetItemSet()->GetItemState( SID_STREAM ) < SFX_ITEM_SET )
--	{
--		// check whether the backup should be created
--		StorageBackup_Impl();
-+    CreateTempFileNoCopy();
- 
--		if ( GetError() )
--			return uno::Reference< embed::XStorage >();
--
--        ::rtl::OUString aOutputURL = GetOutputStorageURL_Impl();
--
--        SFX_ITEMSET_ARG( GetItemSet(), pOverWrite, SfxBoolItem, SID_OVERWRITE, sal_False );
--        SFX_ITEMSET_ARG( GetItemSet(), pRename, SfxBoolItem, SID_RENAME, sal_False );
--        sal_Bool bRename = pRename ? pRename->GetValue() : FALSE;
--        sal_Bool bOverWrite = pOverWrite ? pOverWrite->GetValue() : !bRename;
--
--        // the target file must be truncated before a storage based on it is created
--        try
--        {
--            uno::Reference< lang::XMultiServiceFactory > xFactory = ::comphelper::getProcessServiceFactory();
--            uno::Reference< ::com::sun::star::ucb::XSimpleFileAccess > xSimpleFileAccess(
--                    xFactory->createInstance( ::rtl::OUString::createFromAscii("com.sun.star.ucb.SimpleFileAccess") ),
--                    uno::UNO_QUERY_THROW );
--
--            uno::Reference< ucb::XCommandEnvironment > xDummyEnv;
--            ::ucbhelper::Content aContent = ::ucbhelper::Content( aOutputURL, xDummyEnv );
--
--            uno::Reference< io::XStream > xStream;
--            sal_Bool bDeleteOnFailure = sal_False;
--
--            try
--            {
--                xStream = aContent.openWriteableStreamNoLock();
--
--                if ( !bOverWrite )
--                {
--                    // the stream should not exist, it should not be possible to open it
--                    if ( xStream->getOutputStream().is() )
--                        xStream->getOutputStream()->closeOutput();
--                    if ( xStream->getInputStream().is() )
--                        xStream->getInputStream()->closeInput();
--
--                    xStream = uno::Reference< io::XStream >();
--                    SetError( ERRCODE_IO_GENERAL );
--                }
--            }
--            catch ( ucb::InteractiveIOException const & e )
--            {
--                if ( e.Code == ucb::IOErrorCode_NOT_EXISTING )
--                {
--                    // Create file...
--                    SvMemoryStream aStream(0,0);
--                    uno::Reference< io::XInputStream > xInput( new ::utl::OInputStreamWrapper( aStream ) );
--                    ucb::InsertCommandArgument aInsertArg;
--                    aInsertArg.Data = xInput;
--                    aInsertArg.ReplaceExisting = sal_False;
--                    aContent.executeCommand( rtl::OUString::createFromAscii( "insert" ), uno::makeAny( aInsertArg ) );
--
--                    // Try to open one more time
--                    xStream = aContent.openWriteableStreamNoLock();
--                    bDeleteOnFailure = sal_True;
--                }
--                else
--                    throw;
--            }
--
--            if ( xStream.is() )
--            {
--                if ( BasedOnOriginalFile_Impl() )
--                {
--                    // the storage will be based on original file, the wrapper should be used
--                    xStream = new OPostponedTruncationFileStream( aOutputURL, xFactory, xSimpleFileAccess, xStream, bDeleteOnFailure );
--                }
--                else
--                {
--                    // the storage will be based on the temporary file, the stream can be truncated directly
--                    uno::Reference< io::XOutputStream > xOutStream = xStream->getOutputStream();
--                    uno::Reference< io::XTruncate > xTruncate( xOutStream, uno::UNO_QUERY );
--                    if ( !xTruncate.is() )
--                        throw uno::RuntimeException();
--
--                    xTruncate->truncate();
--                    xOutStream->flush();
--                }
--
--                pImp->xStream = xStream;
--                GetItemSet()->Put( SfxUsrAnyItem( SID_STREAM, makeAny( xStream ) ) );
--            }
--        }
--        catch( uno::Exception& )
--        {
--            // TODO/LATER: try to use the temporary file in case the target content can not be opened, it might happen in case of some FS, the copy functionality might work in this case
--            SetError( ERRCODE_IO_GENERAL );
--        }
--    }
--
-     return GetStorage();
- }
- 
 @@ -1017,8 +1026,117 @@
  }
  
@@ -455,7 +344,7 @@ Index: sfx2/source/doc/docfile.cxx
      // returns true if the document can be opened for editing ( even if it should be a copy )
      // otherwise the document should be opened readonly
      // if user cancel the loading the ERROR_ABORT is set
-@@ -1029,106 +1147,142 @@
+@@ -1029,104 +1147,142 @@//TIM
      {
          // the special file locking should be used only for file URLs
  
@@ -466,15 +355,15 @@ Index: sfx2/source/doc/docfile.cxx
 +            GetMedium_Impl();
 +        }
 +
-         SFX_ITEMSET_ARG( GetItemSet(), pReadOnlyItem, SfxBoolItem, SID_DOC_READONLY, sal_False);
- 
++        SFX_ITEMSET_ARG( GetItemSet(), pReadOnlyItem, SfxBoolItem, SID_DOC_READONLY, sal_False);
++
          // no locking is necessary on loading if the document is explicitly opened as copy
          SFX_ITEMSET_ARG( GetItemSet(), pTemplateItem, SfxBoolItem, SID_TEMPLATE, sal_False);
          bResult = ( bLoading && pTemplateItem && pTemplateItem->GetValue() );
  
 -        try
 -        {   
--            if ( !bResult && ( !pReadOnlyItem || !pReadOnlyItem->GetValue() ) )
+-            if ( !bResult && !IsReadOnly() )
 +        if ( !bResult && ( !pReadOnlyItem || !pReadOnlyItem->GetValue() || pImp->m_bHandleSysLocked ) )
 +        {
 +            sal_Int8 bUIStatus = LOCK_UI_NOLOCK;
@@ -680,78 +569,6 @@ Index: sfx2/source/doc/docfile.cxx
  
          if ( !bResult && GetError() == ERRCODE_NONE )
          {
-@@ -1559,7 +1713,12 @@
-         nStorOpenMode = nStorOpen;
- 
-         if( !bDontClose )
--            Close();
-+        {
-+            if ( pImp->xStorage.is() )
-+                CloseStorage();
-+
-+            CloseStreams_Impl();
-+        }
-     }
- 
-     bDirect     = bDirectP;
-@@ -1691,7 +1850,11 @@
- 
-     if( !eError || (eError & ERRCODE_WARNING_MASK) )
- 	{
--		Close();
-+        if ( pImp->xStorage.is() )
-+            CloseStorage();
-+
-+        CloseStreams_Impl();
-+
- 		::ucbhelper::Content aTempCont;
- 		if( ::ucbhelper::Content::create( aSource.GetMainURL( INetURLObject::NO_DECODE ), xDummyEnv, aTempCont ) )
- 		{
-@@ -1871,9 +2034,11 @@
- 	   		SFX_ITEMSET_ARG( pSet, pOutStreamItem, SfxUnoAnyItem, SID_OUTPUTSTREAM, sal_False);
- 	 		if( pOutStreamItem && ( pOutStreamItem->GetValue() >>= rOutStream ) )
- 			{
--				// write directly to the stream
--				Close();
-+                if ( pImp->xStorage.is() )
-+                    CloseStorage();
- 
-+                CloseStreams_Impl();
-+
-     		    INetURLObject aSource( aNameURL );
- 				::ucbhelper::Content aTempCont;
- 				if( ::ucbhelper::Content::create( aSource.GetMainURL( INetURLObject::NO_DECODE ), xEnv, aTempCont ) )
-@@ -1993,7 +2158,11 @@
-                     xStor->Commit();
- 
-                     // take new unpacked storage as own storage
--                    Close();
-+                    if ( pImp->xStorage.is() )
-+                        CloseStorage();
-+
-+                    CloseStreams_Impl();
-+
-                     DELETEZ( pImp->pTempFile );
-                     ::utl::LocalFileHelper::ConvertURLToPhysicalName( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ), aName );
-                     SetStorage_Impl( xStor );
-@@ -2054,12 +2223,11 @@
- 
-             if ( !eError || (eError & ERRCODE_WARNING_MASK) )
-             {
--                // free resources, otherwise the transfer may fail
--                Close();
--                // don't create content before Close(), because if the storage was opened in direct mode, it will be flushed
--                // in Close() and this leads to a transfer command executed in the package, which currently is implemented as
--                // remove+move in the file FCP. The "remove" is notified to the ::ucbhelper::Content, that clears its URL and its
--                // content reference in this notification and thus will never get back any URL, so my transfer will fail!
-+                if ( pImp->xStorage.is() )
-+                    CloseStorage();
-+
-+                CloseStreams_Impl();
-+
-                 ::ucbhelper::Content::create( aSource.GetMainURL( INetURLObject::NO_DECODE ), xEnv, aSourceContent );
- 
-                 // check for external parameters that may customize the handling of NameClash situations
 @@ -2287,17 +2455,17 @@
  
          //TODO/MBA: need support for SID_STREAM
@@ -777,7 +594,7 @@ Index: sfx2/source/doc/docfile.cxx
          else if ( pInStreamItem )
          {
              pInStreamItem->GetValue() >>= pImp->xInputStream;
-@@ -2316,88 +2484,94 @@
+@@ -2316,82 +2484,94 @@
              else
                  aFileName = GetName();
  
@@ -856,13 +673,7 @@ Index: sfx2/source/doc/docfile.cxx
 -				sal_Bool bReadOnly = sal_False;
 -				aMedium[comphelper::MediaDescriptor::PROP_READONLY()] >>= bReadOnly;
 -				if ( bReadOnly )
--				{
--				    SFX_ITEMSET_ARG( GetItemSet(), pROItem, SfxBoolItem, SID_DOC_READONLY, sal_False);
--					BOOL bForceWritable = ( pROItem && !pROItem->GetValue() );
 -					GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, sal_True ) );
--					if( bForceWritable )
--						SetError( ERRCODE_IO_ACCESSDENIED );
--				}
 +                // the warning is shown if the user wants to edit the document, but it is not possible
 +                pImp->m_bHandleSysLocked = ( !bRequestedReadOnly && aMedium.getUnpackedValueOrDefault( ::comphelper::MediaDescriptor::PROP_READONLY(), sal_False ) );
  
@@ -970,19 +781,19 @@ Index: sfx2/source/view/viewfrm.cxx
 +++ sfx2/source/view/viewfrm.cxx	(.../cws/mav43)	(revision 274104)
 @@ -474,7 +474,7 @@
                          pMed->SetOpenMode( nOpenMode, pMed->IsDirect() );
-                     	pMed->CompleteReOpen();
-                         if ( bHasStorage )
--                            pMed->LockOrigFileOnDemand( sal_True );
+                         pMed->CompleteReOpen();
+                         if ( nOpenMode & STREAM_WRITE )
+-                            pMed->LockOrigFileOnDemand( sal_False );
 +                            pMed->LockOrigFileOnDemand( sal_False, sal_True );
  
- 						if ( !pMed->GetErrorCode() )
- 							bOK = sal_True;
+                         // LockOrigFileOnDemand might set the readonly flag itself, it should be set back
+                         pMed->GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, !( nOpenMode & STREAM_WRITE ) ) );
 @@ -776,7 +776,7 @@
+                     {
+                         // back to old medium
                          pMedium->ReOpen();
- 
-                         if ( bHasStorage )
--                            pMedium->LockOrigFileOnDemand( sal_True );
-+                            pMedium->LockOrigFileOnDemand( sal_False, sal_True );
+-                        pMedium->LockOrigFileOnDemand( sal_True );
++                        pMedium->LockOrigFileOnDemand( sal_False, sal_True );
  
                          xOldObj->DoSaveCompleted( pMedium );
                      }
