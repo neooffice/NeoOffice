@@ -347,7 +347,7 @@ build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source bui
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release
 	touch "$@"
 	
-build.configure: build.oo_patches
+build.configure: build.oo_310_patches
 	cd "$(BUILD_HOME)/config_office" ; autoconf
 	( cd "$(BUILD_HOME)/config_office" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) TMP=$(TMP) --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --enable-vba --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-headless --disable-pasf --disable-fontconfig --disable-binfilter --without-system-mdbtools --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-wiki-publisher --enable-ogltrans --enable-report-builder )
 	echo 'setenv LIBIDL_CONFIG "$(LIBIDL_CONFIG)"' >> "$(OO_ENV_AQUA)"
