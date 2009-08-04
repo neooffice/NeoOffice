@@ -248,6 +248,18 @@ build.oo_patches: \
 	build.oo_vos_patch
 	touch "$@"
 
+build.oo_310_patches: \
+	build.oo_310_comphelper_patch \
+	build.oo_310_dbaccess_patch \
+	build.oo_310_filter_patch \
+	build.oo_310_offapi_patch \
+	build.oo_310_officecfg_patch \
+	build.oo_310_sfx2_patch \
+	build.oo_310_svtools_patch \
+	build.oo_310_svx_patch \
+	build.oo_310_uui_patch
+	touch "$@"
+
 build.oo_odk_patches: build.oo_patches
 	touch "$@"
 
@@ -266,9 +278,9 @@ build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
 	cd "$(BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
 	touch "$@"
 
-build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
-	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+build.oo_310_%_patch: $(OO_PATCHES_HOME)/3.1.0/%.diff build.oo_patches
+	-( cd "$(BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
