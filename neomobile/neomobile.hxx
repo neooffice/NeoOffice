@@ -47,6 +47,7 @@ extern const NSString *kNeoMobileYPosPref;
 extern const NSString *kNeoMobileWidthPref;
 extern const NSString *kNeoMobileHeightPref;
 extern const NSString *kNeoMobileVisiblePref;
+extern const NSString *kNeoMobileServerTypePref;
 
 NSArray *GetPerformSelectorOnMainThreadModes();
 ::rtl::OUString NSStringToOUString( NSString *pString );

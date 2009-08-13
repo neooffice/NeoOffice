@@ -48,28 +48,31 @@ using namespace rtl;
 using namespace vos;
 using namespace utl;
 
-// Always use the test URLs
-#define TEST
+static const NSString *pDevelopmentBaseURLs[] = {
+	@"http://localhost/"
+};
 
-#ifdef TEST
-static const NSString *pBaseURLs[] = {
+static const NSString *pTestBaseURLs[] = {
 #ifndef DEBUG
 	@"https://neomobile-test.neooffice.org/",
 #endif	// !DEBUG
 	@"https://neomobile-test-primary.neooffice.org/",
 	@"https://neomobile-test-backup.neooffice.org/",
-	@"https://neomobile-test-backup2.neooffice.org/"
+	@"https://neomobile-test-backup2.neooffice.org/",
+	@"https://neomobile-test-backup3.neooffice.org/"
 };
-#else	// TEST
-static const NSString *pBaseURLs[] = {
+
+#ifndef TEST
+static const NSString *pProductionBaseURLs[] = {
 #ifndef DEBUG
 	@"https://neomobile.neooffice.org/",
 #endif	// !DEBUG
 	@"https://neomobile-primary.neooffice.org/",
 	@"https://neomobile-backup.neooffice.org/",
-	@"https://neomobile-backup2.neooffice.org/"
+	@"https://neomobile-backup2.neooffice.org/",
+	@"https://neomobile-backup3.neooffice.org/"
 };
-#endif	// TEST
+#endif	// !TEST
 
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
@@ -138,6 +141,28 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 
 	[super initWithFrame:aFrame frameName:pFrameName groupName:pGroupName];
+
+	// Determine which server type to use. The default server type can be
+	// overridden using the following Terminal command:
+	//   defaults write org.neooffice.NeoOffice nmServerType development|test
+	// To use the default server type, use the following Terminal command:
+	//   defaults delete org.neooffice.NeoOffice nmServerType
+	const NSString **pBaseURLs = nil;
+	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+	NSString *serverType=[defaults stringForKey:kNeoMobileServerTypePref];
+	if ( serverType )
+	{
+		if ( [serverType caseInsensitiveCompare:@"development"] == NSOrderedSame )
+			pBaseURLs = pDevelopmentBaseURLs;
+		else if ( [serverType caseInsensitiveCompare:@"test"] == NSOrderedSame )
+			pBaseURLs = pTestBaseURLs;
+	}
+	if ( !pBaseURLs )
+#ifdef TEST
+		pBaseURLs = pTestBaseURLs;
+#else	// TEST
+		pBaseURLs = pProductionBaseURLs;
+#endif	// TEST
 
 	mnBaseURLEntry = 0;
 	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:sizeof( pBaseURLs ) / sizeof( NSString* )];

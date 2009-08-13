@@ -45,6 +45,10 @@ ENABLE_EXCEPTIONS=TRUE
 
 CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
+# Force client to use test instnace.
+# Delete the following line to build a production release.
+CDEFS+=-DTEST
+
 # Don't put lib prefix on shared library
 DLLPRE=
 
