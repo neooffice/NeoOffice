@@ -138,6 +138,7 @@ const NSString *kNeoMobileYPosPref = @"nmYPos";
 const NSString *kNeoMobileWidthPref = @"nmWidth";
 const NSString *kNeoMobileHeightPref = @"nmHeight";
 const NSString *kNeoMobileVisiblePref = @"nmVisible";
+const NSString *kNeoMobileServerTypePref = @"nmServerType";
 
 //========================================================================
 
