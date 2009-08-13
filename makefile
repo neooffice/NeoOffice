@@ -168,7 +168,7 @@ ODF-CONVERTER_PATCHES= \
 # System.Drawing.GDIPlus references \
 #	odf-converter-2.5-missing-references.diff \
 	odf-converter-2.5-odfvalidator.diff
-IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/trunk/
+IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
 REMOTECONTROL_PACKAGE=remotecontrol
