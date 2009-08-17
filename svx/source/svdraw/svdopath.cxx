@@ -1889,7 +1889,7 @@ sal_Bool SdrPathObj::DoPaintObject(XOutputDevice& rXOut, const SdrPaintInfoRec& 
 #ifdef USE_JAVA
 	// Fix bug 3512 by checking that the three shadow parameters exist
 	SFX_ITEMSET_GET(rSet, pShadItem, SdrShadowItem, SDRATTR_SHADOW, TRUE);
-	if (pShadItem && pShadItem->GetValue())
+	if (pShadItem)
 	{
 		SFX_ITEMSET_GET(rSet, pShadColItem, SdrShadowColorItem, SDRATTR_SHADOWCOLOR, TRUE);
 		SFX_ITEMSET_GET(rSet, pShadTransItem, SdrShadowTransparenceItem, SDRATTR_SHADOWTRANSPARENCE, TRUE);
