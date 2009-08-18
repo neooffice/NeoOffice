@@ -32,7 +32,9 @@ Steps for building on Mac OS X 10.4 (Tiger) for both PowerPC and Intel
 
 6. Make sure that you have downloaded and installed the Mono Mac OS X framework:
 
-   ftp://www.go-mono.com/archive/1.2.4/macos-10-universal/4/MonoFramework-1.2.4_4.macos10.novell.universal.dmg
+   http://mono-project.com/OldReleases
+
+   Important: version 1.9.x must be installed for the odf-converter code to build correctly. If you have more than one version of Mono installed, make sure that the /Library/Frameworks/Mono.framework/Versions softlink points to the correct Mono version folder.
 
 7. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
 
