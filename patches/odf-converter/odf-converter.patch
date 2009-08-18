@@ -1,42 +1,29 @@
---- ./source/Shell/OdfConverter/OdfValidator.cs.bak	2009-01-04 15:43:51.000000000 -0800
-+++ ./source/Shell/OdfConverter/OdfValidator.cs	2009-01-05 09:07:50.000000000 -0800
-@@ -49,9 +49,9 @@
- 	
- #if MONO
- 	// Dummy validation class
--	public class OdfValidator
-+	public class OdfValidator : IValidator
- 	{
--		public OdfValidator(Report report)
-+		public OdfValidator(ConversionReport report)
- 		{ 
- 		}
- 		public void validate(String fileName)
---- ./source/Spreadsheet/Converter/OdfConditionalPostProcessor.cs.bak	2009-01-04 15:43:59.000000000 -0800
-+++ ./source/Spreadsheet/Converter/OdfConditionalPostProcessor.cs	2009-01-05 09:00:43.000000000 -0800
-@@ -39,8 +39,11 @@
- using CleverAge.OdfConverter.OdfConverterLib;
- using CleverAge.OdfConverter.OdfZipUtils;
- using System.Text.RegularExpressions;
-+#if MONO
-+#else
- using System.Drawing;
- using System.Windows.Forms;
-+#endif
+--- source/Shell/OdfConverter/Makefile	2009-04-24 20:53:31.000000000 +0200
++++ source/Shell/OdfConverter/Makefile	2009-04-24 20:32:14.000000000 +0200
+@@ -84,6 +84,7 @@ ifeq ($(OS),Darwin)
+ 		`pkg-config --libs-only-l mono` bundle.o
+ else
+ 	$(CC) -o OdfConverter$(EXEEXT) -Wall `pkg-config --cflags mono` main.c \
++	    -Wl,--stack=20000000 \
+ 	    $(KILLAT) \
+ 	    bundle.o \
+ 	    $(EXPORTDYNAMIC) \
+--- source/Spreadsheet/Converter/Makefile	2009-08-17 18:49:04.000000000 -0700
++++ source/Spreadsheet/Converter/Makefile	2009-08-17 18:51:05.000000000 -0700
+@@ -30,12 +30,16 @@
+ 	$(CSC) $(CSC_DEBUG) -d:MONO $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtils.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLib.dll \
++		-reference:System.Drawing \
++		-reference:System.Windows.Forms \
+ 		-out:$@ $(SOURCE)
  
+ SpreadsheetStatic.dll: $(SOURCE) Makefile $(OOX2ODF_RES) $(ODF2OOX_RES)
+ 	$(CSC) $(CSC_DEBUG) -d:MONO $(RESOURCE_FLAGS) -target:library \
+ 		-reference:../../Common/OdfZipUtils/OdfZipUtilsStatic.dll \
+ 		-reference:../../Common/OdfConverterLib/OdfConverterLibStatic.dll \
++		-reference:System.Drawing \
++		-reference:System.Windows.Forms \
+ 		-out:$@ $(SOURCE)
  
- 
---- ./source/Spreadsheet/Converter/OdfSharedStringsPostProcessor.cs.bak	2009-01-04 15:43:58.000000000 -0800
-+++ ./source/Spreadsheet/Converter/OdfSharedStringsPostProcessor.cs	2009-01-05 09:00:54.000000000 -0800
-@@ -40,8 +40,11 @@
- using CleverAge.OdfConverter.OdfConverterLib;
- using CleverAge.OdfConverter.OdfZipUtils;
- using System.Text.RegularExpressions;
-+#if MONO
-+#else
- using System.Windows.Forms;
- using System.Drawing;
-+#endif
- 
- 
- namespace CleverAge.OdfConverter.Spreadsheet
+ clean-local:
