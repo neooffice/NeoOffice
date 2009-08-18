@@ -4349,6 +4349,12 @@ Dymamic border coloring means that when the mouse is hovered over a control, and
         </info>
         <value>true</value>
       </prop>
+      <prop oor:name="UseDocumentSystemFileLocking" oor:type="xs:boolean">
+        <info>
+          <desc>Allows to specify whether the OOo document file locking mechanics should use the system file locking additionaly.</desc>
+        </info>
+        <value>true</value>
+      </prop>
       <prop oor:name="UseSystemPrintDialog" oor:type="xs:boolean">
         <info>
           <desc>Determines if the system's print dialog should be used. If false, the platform independent print dialog implementation will be used. Relevant on platforms where print dialog integration is implemented.</desc>
