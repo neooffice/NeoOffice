@@ -369,6 +369,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		SAL_CALL MacOSXMediaBrowserImpl::hasMediaBrowser( ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
+	::sal_Bool bRet = sal_False;
+
 	// we currently need to be running on 10.3 in order to have the interfaces
 	// for the media brwoser framework.  Check using our gestalt
 	
@@ -377,22 +379,26 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	{
 		bool isTigerOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
 		if(!isTigerOrHigher)
-			return(false);
+			return(bRet);
 	}
 	
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+
 	// load our framework out of our bundle's directory
 	
 	const struct mach_header * frameworkLib=NSAddImage(kMediaBrowserFrameworkName, NSADDIMAGE_OPTION_RETURN_ON_ERROR | NSADDIMAGE_OPTION_WITH_SEARCHING);
 	if(!frameworkLib)
-		return(false);
+	{
+		// check to see if we can locate our class after we've loaded the framework
 	
-	// check to see if we can locate our class after we've loaded the framework
-	
-	Class mbClass=NSClassFromString(@"iMediaBrowser");
-	if(!mbClass)
-		return(false);
+		Class mbClass=NSClassFromString(@"iMediaBrowser");
+		if(mbClass)
+			bRet = sal_True;
+	}
 
-	return(true);
+	[pool release];
+
+	return(bRet);
 }
 
 /**
