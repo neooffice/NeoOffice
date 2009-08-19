@@ -387,7 +387,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	// load our framework out of our bundle's directory
 	
 	const struct mach_header * frameworkLib=NSAddImage(kMediaBrowserFrameworkName, NSADDIMAGE_OPTION_RETURN_ON_ERROR | NSADDIMAGE_OPTION_WITH_SEARCHING);
-	if(!frameworkLib)
+	if(frameworkLib)
 	{
 		// check to see if we can locate our class after we've loaded the framework
 	
