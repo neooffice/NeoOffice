@@ -167,7 +167,7 @@ update_installation() {
 	if [ ! -z "$lsregister" ] ; then
 		"$lsregister" $lsregisterargs "$2"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" /bin/sh -c "$lsregister $lsregisterargs \"$2\""
+			sudo -H -u "$sudouser" /bin/sh -l -c "$lsregister $lsregisterargs \"$2\""
 		fi
 	fi
 
@@ -179,7 +179,7 @@ update_installation() {
 	if [ -x "/usr/bin/qlmanage" ] ; then
 		/usr/bin/qlmanage -r
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" /bin/sh -c "/usr/bin/qlmanage -r"
+			sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/qlmanage -r"
 		fi
 	fi
 
