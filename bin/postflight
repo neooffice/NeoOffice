@@ -175,7 +175,7 @@ if [ -d "$2" ]; then
 	fi
 
 	if [ ! -z "$sudouser" ] ; then
-		sudo -H -u "$sudouser" -b -i -- -c "$2/Contents/MacOS/soffice.bin"
+		sudo -H -u "$sudouser" -b /bin/sh -c "$2/Contents/MacOS/soffice.bin"
 		sleep 15
 	fi
 
@@ -192,7 +192,7 @@ if [ -d "$2" ]; then
 	if [ ! -z "$lsregister" ] ; then
 		"$lsregister" $lsregisterargs "$2"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" -i -- -c "$lsregister $lsregisterargs \"$2\""
+			sudo -H -u "$sudouser" /bin/sh -c "$lsregister $lsregisterargs \"$2\""
 		fi
 	fi
 
@@ -204,7 +204,7 @@ if [ -d "$2" ]; then
 	if [ -x "/usr/bin/mdimport" ] ; then
 		/usr/bin/mdimport -r "$2/Contents/Library/Spotlight/neolight.mdimporter"
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" -i -- -c "/usr/bin/mdimport -r \"$2\"/Contents/Library/Spotlight/neolight.mdimporter"
+			sudo -H -u "$sudouser" /bin/sh -c "/usr/bin/mdimport -r \"$2\"/Contents/Library/Spotlight/neolight.mdimporter"
 		fi
 	fi
 
@@ -212,7 +212,7 @@ if [ -d "$2" ]; then
 	if [ -x "/usr/bin/qlmanage" ] ; then
 		/usr/bin/qlmanage -r
 		if [ ! -z "$sudouser" ] ; then
-			sudo -H -u "$sudouser" -i -- -c "/usr/bin/qlmanage -r"
+			sudo -H -u "$sudouser" /bin/sh -c "/usr/bin/qlmanage -r"
 		fi
 	fi
 
