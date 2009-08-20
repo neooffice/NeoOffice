@@ -1,0 +1,413 @@
+Index: offapi/com/sun/star/task/makefile.mk
+===================================================================
+--- offapi/com/sun/star/task/makefile.mk	(.../tags/DEV300_m35)	(revision 274104)
++++ offapi/com/sun/star/task/makefile.mk	(.../cws/mav43)	(revision 274104)
+@@ -68,6 +68,7 @@
+ 	XJobExecutor.idl\
+ 	XJobListener.idl\
+ 	XMasterPasswordHandling.idl\
++	XMasterPasswordHandling2.idl\
+ 	XPasswordContainer.idl\
+ 	XStatusIndicator.idl\
+ 	XStatusIndicatorFactory.idl\
+Index: offapi/com/sun/star/task/XMasterPasswordHandling2.idl
+===================================================================
+--- offapi/com/sun/star/task/XMasterPasswordHandling2.idl	(.../tags/DEV300_m35)	(revision 0)
++++ offapi/com/sun/star/task/XMasterPasswordHandling2.idl	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,73 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ * 
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef __com_sun_star_task_XMasterPasswordHandling2_idl__
++#define __com_sun_star_task_XMasterPasswordHandling2_idl__
++
++#ifndef __com_sun_star_task_XInteractionHandler_idl__
++#include <com/sun/star/task/XInteractionHandler.idl>
++#endif
++
++#ifndef __com_sun_star_task_XMasterPasswordHandling_idl__
++#include <com/sun/star/task/XMasterPasswordHandling.idl>
++#endif
++
++//=============================================================================
++
++module com { module sun { module star { module task {
++
++//=============================================================================
++/** allows to change the master password, or let it be requested and checked.
++*/
++interface XMasterPasswordHandling2 : XMasterPasswordHandling
++{
++	//-------------------------------------------------------------------------
++	/** allows to let the default password be used
++
++        <p>
++        Please use this method with care. Using of default master password let
++        the passwords be stored nonencrypted. If a masterpassword is predefined
++        in the algorithm it is no more an encryption, it is just an encoding.
++        </p>
++	*/
++	boolean useDefaultMasterPassword( [in] XInteractionHandler xHandler );
++
++	//-------------------------------------------------------------------------
++	/** allows to detect whether the default master password is used
++	*/
++	boolean isDefaultMasterPasswordUsed();
++
++};
++
++//=============================================================================
++
++}; }; }; };
++
++#endif
++
+Index: offapi/com/sun/star/document/makefile.mk
+===================================================================
+--- offapi/com/sun/star/document/makefile.mk	(.../tags/DEV300_m35)	(revision 274104)
++++ offapi/com/sun/star/document/makefile.mk	(.../cws/mav43)	(revision 274104)
+@@ -45,6 +45,7 @@
+ 	AmbigousFilterRequest.idl\
+ 	BrokenPackageRequest.idl\
+         CorruptedFilterConfigurationException.idl\
++    ChangedByOthersRequest.idl\
+ 	DocumentInfo.idl\
+         DocumentProperties.idl\
+ 	EventDescriptor.idl\
+@@ -61,12 +62,15 @@
+ 	ImportFilter.idl\
+ 	LinkTarget.idl\
+ 	LinkTargets.idl\
++    LockFileIgnoreRequest.idl\
+ 	LockedDocumentRequest.idl\
++	LockedOnSavingRequest.idl\
+ 	MacroExecMode.idl\
+ 	MediaDescriptor.idl\
+ 	NoSuchFilterRequest.idl\
+ 	OfficeDocument.idl\
+ 	OleEmbeddedServerRegistration.idl\
++	OwnLockOnDocumentRequest.idl\
+ 	PrinterIndependentLayout.idl\
+ 	RedlineDisplayType.idl \
+ 	Settings.idl\
+Index: offapi/com/sun/star/document/LockedOnSavingRequest.idl
+===================================================================
+--- offapi/com/sun/star/document/LockedOnSavingRequest.idl	(.../tags/DEV300_m35)	(revision 0)
++++ offapi/com/sun/star/document/LockedOnSavingRequest.idl	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,72 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ * 
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef __com_sun_star_document_LockedOnSavingRequest_idl__
++#define __com_sun_star_document_LockedOnSavingRequest_idl__
++
++#ifndef __com_sun_star_uno_Exception_idl__
++#include <com/sun/star/uno/Exception.idl>
++#endif
++
++#ifndef __com_sun_star_beans_PropertyValue_idl__
++#include <com/sun/star/beans/PropertyValue.idl>
++#endif
++
++#ifndef __com_sun_star_frame_XModel_idl__
++#include <com/sun/star/frame/XModel.idl>
++#endif
++
++//=============================================================================
++
++module com { module sun { module star { module document {
++
++//=============================================================================
++/** Is used for interaction handle to query user decision regarding locked
++    document on saving.
++
++    @since OOo 3.1
++*/
++published exception LockedOnSavingRequest : ::com::sun::star::uno::Exception
++{
++    /** The URL of the locked document.
++     */
++    string DocumentURL;
++
++    /** The user information of the locked document.
++     */
++    string UserInfo;
++
++};
++
++//=============================================================================
++
++}; }; }; };
++
++#endif
++
+Index: offapi/com/sun/star/document/ChangedByOthersRequest.idl
+===================================================================
+--- offapi/com/sun/star/document/ChangedByOthersRequest.idl	(.../tags/DEV300_m35)	(revision 0)
++++ offapi/com/sun/star/document/ChangedByOthersRequest.idl	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,64 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ * 
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef __com_sun_star_document_ChangedByOthersRequest_idl__
++#define __com_sun_star_document_ChangedByOthersRequest_idl__
++
++#ifndef __com_sun_star_uno_Exception_idl__
++#include <com/sun/star/uno/Exception.idl>
++#endif
++
++#ifndef __com_sun_star_beans_PropertyValue_idl__
++#include <com/sun/star/beans/PropertyValue.idl>
++#endif
++
++#ifndef __com_sun_star_frame_XModel_idl__
++#include <com/sun/star/frame/XModel.idl>
++#endif
++
++//=============================================================================
++
++module com { module sun { module star { module document {
++
++//=============================================================================
++/** Is used for interaction handle to query user decision in case the document 
++    being saved was already stored by another user during the editing.
++
++    @since OOo 3.1
++*/
++published exception ChangedByOthersRequest : ::com::sun::star::uno::Exception
++{
++};
++
++//=============================================================================
++
++}; }; }; };
++
++#endif
++
+Index: offapi/com/sun/star/document/OwnLockOnDocumentRequest.idl
+===================================================================
+--- offapi/com/sun/star/document/OwnLockOnDocumentRequest.idl	(.../tags/DEV300_m35)	(revision 0)
++++ offapi/com/sun/star/document/OwnLockOnDocumentRequest.idl	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,75 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ * 
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef __com_sun_star_document_OwnLockOnDocumentRequest_idl__
++#define __com_sun_star_document_OwnLockOnDocumentRequest_idl__
++
++#ifndef __com_sun_star_uno_Exception_idl__
++#include <com/sun/star/uno/Exception.idl>
++#endif
++
++#ifndef __com_sun_star_beans_PropertyValue_idl__
++#include <com/sun/star/beans/PropertyValue.idl>
++#endif
++
++#ifndef __com_sun_star_frame_XModel_idl__
++#include <com/sun/star/frame/XModel.idl>
++#endif
++
++//=============================================================================
++
++module com { module sun { module star { module document {
++
++//=============================================================================
++/** Is used for interaction handle to query user decision regarding locked
++    document.
++
++    @since OOo 3.1
++*/
++published exception OwnLockOnDocumentRequest : ::com::sun::star::uno::Exception
++{
++    /** The URL of the locked document.
++     */
++    string DocumentURL;
++
++    /** The time from which the document is locked.
++     */
++    string TimeInfo;
++
++    /** Whether the request is related to storing process
++     */
++    boolean IsStoring;
++};
++
++//=============================================================================
++
++}; }; }; };
++
++#endif
++
+Index: offapi/com/sun/star/document/LockFileIgnoreRequest.idl
+===================================================================
+--- offapi/com/sun/star/document/LockFileIgnoreRequest.idl	(.../tags/DEV300_m35)	(revision 0)
++++ offapi/com/sun/star/document/LockFileIgnoreRequest.idl	(.../cws/mav43)	(revision 274104)
+@@ -0,0 +1,64 @@
++/*************************************************************************
++ *
++ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
++ * 
++ * Copyright 2008 by Sun Microsystems, Inc.
++ *
++ * OpenOffice.org - a multi-platform office productivity suite
++ *
++ * $RCSfile$
++ * $Revision$
++ *
++ * This file is part of OpenOffice.org.
++ *
++ * OpenOffice.org is free software: you can redistribute it and/or modify
++ * it under the terms of the GNU Lesser General Public License version 3
++ * only, as published by the Free Software Foundation.
++ *
++ * OpenOffice.org is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU Lesser General Public License version 3 for more details
++ * (a copy is included in the LICENSE file that accompanied this code).
++ *
++ * You should have received a copy of the GNU Lesser General Public License
++ * version 3 along with OpenOffice.org.  If not, see
++ * <http://www.openoffice.org/license.html>
++ * for a copy of the LGPLv3 License.
++ *
++ ************************************************************************/
++#ifndef __com_sun_star_document_LockFileIgnoreRequest_idl__
++#define __com_sun_star_document_LockFileIgnoreRequest_idl__
++
++#ifndef __com_sun_star_io_IOException_idl__
++#include <com/sun/star/io/IOException.idl>
++#endif
++
++#ifndef __com_sun_star_beans_PropertyValue_idl__
++#include <com/sun/star/beans/PropertyValue.idl>
++#endif
++
++#ifndef __com_sun_star_frame_XModel_idl__
++#include <com/sun/star/frame/XModel.idl>
++#endif
++
++//=============================================================================
++
++module com { module sun { module star { module document {
++
++//=============================================================================
++/** Is used for interaction handle to query user decision regarding storing
++    to a location where no lock file can be created.
++
++    @since OOo 3.0
++*/
++published exception LockFileIgnoreRequest : ::com::sun::star::io::IOException
++{
++};
++
++//=============================================================================
++
++}; }; }; };
++
++#endif
++
