@@ -165,7 +165,6 @@ update_installation() {
 	fi
 
 	lsregister="/System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
-	lsregisterargs="-f -r"
 	if [ ! -x "$lsregister" ] ; then
 		lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
 		if [ -x "$lsregister" ] ; then
