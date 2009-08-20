@@ -142,32 +142,7 @@ LIBWPD_SOURCE_URL=http://download.go-oo.org/libwpd/libwpd-0.8.14.tar.gz
 LIBWPG_SOURCE_URL=http://download.go-oo.org/SRC680/libwpg-0.1.3.tar.gz
 LIBWPS_SOURCE_URL=http://download.go-oo.org/SRC680/libwps-0.1.2.tar.gz
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
-ODF-CONVERTER_BASE_URL=http://download.go-oo.org/tstnvl/odf-converter/SOURCES/odf-converter-2.5-2
-ODF-CONVERTER_SOURCE=odf-converter-2.5.tar.gz
 ODF-CONVERTER_PACKAGE=odf-converter-2.5
-ODF-CONVERTER_PATCHES= \
-	odf-converter-1.0.3-broken-move.diff \
-	odf-converter-1.0.6-OoxMaximumCellTextPostProcessor.diff \
-	odf-converter-1.1-2oox-sections.diff \
-	odf-converter-1.1-ods-to-xlsx-seconds.diff \
-	odf-converter-1.1-ods-to-xlsx-style-numbering.diff \
-	odf-converter-1.1-pptx-odp-bullets-numbering.diff \
-	odf-converter-1.1-static-libgdiplus.diff \
-	odf-converter-1.1-unused-rows-columns-counting.diff \
-	odf-converter-1.1.1-no-range.diff \
-	odf-converter-1.99.2-msxsl-node-set.diff \
-	odf-converter-2.0-GetTableIndent-infonite-loop.diff \
-	odf-converter-2.0-live-with-wrong-image-size.diff \
-	odf-converter-2.0-transFileName.diff \
-	odf-converter-2.0-win32-stack-size.diff \
-	odf-converter-2.0-win32-unicode-argv.diff \
-	odf-converter-2.0-wordprocessing-dll-rename.diff \
-	odf-converter-2.5-avoid-using-X.diff \
-	odf-converter-2.5-formula-prefix.diff \
-# Disable the following patch so that we can elmininate the \
-# System.Drawing.GDIPlus references \
-#	odf-converter-2.5-missing-references.diff \
-	odf-converter-2.5-odfvalidator.diff
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
@@ -203,15 +178,11 @@ build.ooo-build_checkout: build.oo_checkout
 	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(OOO-BUILD_PACKAGE)"
 	touch "$@"
 
-build.odf-converter_checkout:
+build.odf-converter_checkout: $(ODF-CONVERTER_PATCHES_HOME)/$(ODF-CONVERTER_PACKAGE).tar.gz
 	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; curl -L "$(ODF-CONVERTER_BASE_URL)/$(ODF-CONVERTER_SOURCE)" | tar zxvf -
+	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$<"
 	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(ODF-CONVERTER_PACKAGE)"
-# odf-converter engineers seem to not know that creating a file on Windows and
-# then checking it into cvs or svn from a Unix machine foobar's the newlines
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/source" ; sh -e -c 'for i in `find . -type f | grep -v "\.svn"` ; do cat "$${i}" | tr -d "\015" > "../out" ; mv -f "../out" "$${i}" ; done'
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; sh -e -c 'for i in $(ODF-CONVERTER_PATCHES) ; do echo "Applying patch from $(ODF-CONVERTER_BASE_URL)/$${i}" ; curl -L "$(ODF-CONVERTER_BASE_URL)/$${i}" | tr -d "\015" | patch -b -p0 -N -r "$(PWD)/patch.rej" ; done'
 	touch "$@"
 
 build.imedia_checkout:
