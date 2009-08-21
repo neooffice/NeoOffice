@@ -115,7 +115,11 @@ typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
 static ::vos::OModule aModule;
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
-static const NSString *pAboutURI = @"/mobile/";
+#ifdef TEST
+static const NSString *pAboutURL = @"http://www-test.neooffice.org/neomobile/";
+#else	// TEST
+static const NSString *pAboutURL = @"http://www.neooffice.org/neomobile/";
+#endif	// TEST
 static const NSString *pOpenURI = @"/";
 
 using namespace ::rtl;
@@ -499,12 +503,9 @@ static NeoMobileWebView *pSharedWebView = nil;
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
-	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:pAboutURI isNeoOffice:m_bIsNeoOffice];
+	// Display about webpage in the default web browser
+	[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:pAboutURL, nil]];
 
-	unsigned long nCount = Application::ReleaseSolarMutex();
-	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
-	Application::AcquireSolarMutex( nCount );
-		
 	[pool release];
 	
 	return(sal_True);
