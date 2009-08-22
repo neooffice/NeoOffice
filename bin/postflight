@@ -191,7 +191,7 @@ if [ -d "$2" ]; then
 	fi
 
 	if [ ! -z "$sudouser" ] ; then
-		sudo -H -u "$sudouser" -b /bin/sh -l -c "$2/Contents/MacOS/soffice.bin"
+		sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$2/Contents/MacOS/soffice.bin\""
 		sleep 15
 	fi
 
