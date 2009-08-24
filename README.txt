@@ -1,7 +1,9 @@
 Intructions for Building NeoOffice
 ----------------------------------
 
-At this time, the NeoOffice build supports building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard).
+At this time, the NeoOffice build only supports building on Mac OS X 10.4 (Tiger).
+
+WARNING: Building under Mac OS X 10.5 and higher may not work, and as a result isn't supported. Leopard build instructions below are experimental only.
 
 
 Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC and Intel
