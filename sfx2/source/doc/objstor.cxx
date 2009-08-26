@@ -142,6 +142,10 @@
 
 #ifdef USE_JAVA
 
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
 #endif
@@ -1743,8 +1747,18 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 			}
 
 #ifdef USE_JAVA
+			// Allow disabling of PDF thumbnail support
+			bool bDisablePDF = false;
+			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisablePDFThumbnailSupport" ), kCFPreferencesCurrentApplication );
+			if ( aPref )
+			{
+				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+					bDisablePDF = true;
+				CFRelease( aPref );
+			}
+
 			::rtl::OUString aUserInstallURL;
-			if ( ::utl::Bootstrap::locateUserInstallation( aUserInstallURL ) == ::utl::Bootstrap::PATH_EXISTS && !rMedium.GetName().EqualsIgnoreCaseAscii( aUserInstallURL.getStr(), 0, aUserInstallURL.getLength() ) )
+			if ( !bDisablePDF && ::utl::Bootstrap::locateUserInstallation( aUserInstallURL ) == ::utl::Bootstrap::PATH_EXISTS && !rMedium.GetName().EqualsIgnoreCaseAscii( aUserInstallURL.getStr(), 0, aUserInstallURL.getLength() ) )
 			{
 				try
 				{
