@@ -48,6 +48,10 @@ using namespace rtl;
 using namespace vos;
 using namespace utl;
 
+@interface NonRecursiveResponderPanel : NSPanel
+- (BOOL)tryToPerform:(SEL)aAction with:(id)aObject;
+@end
+
 static const NSString *pDevelopmentBaseURLs[] = {
 	@"http://localhost/"
 };
@@ -215,7 +219,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
 
-	mpPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+	// Fix bug 3525 by using custom NSPanel subclass
+	mpPanel = [[NonRecursiveResponderPanel alloc] initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+24) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( mpPanel )
 	{
 		[mpPanel setFloatingPanel:YES];
@@ -830,6 +835,27 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 		[mpPanel release];
 	
 	[super dealloc];
+}
+
+@end
+
+@implementation NonRecursiveResponderPanel
+
+static NonRecursiveResponderPanel *pCurrentPanel = nil;
+
+- (BOOL)tryToPerform:(SEL)aAction with:(id)aObject
+{
+	BOOL bRet = NO;
+
+	// Fix bug 3525 by preventing infinite recursion
+	if ( pCurrentPanel == self )
+		return bRet;
+
+	pCurrentPanel = self;
+	bRet = [super tryToPerform:aAction with:aObject];
+	pCurrentPanel = nil;
+
+	return bRet;
 }
 
 @end
