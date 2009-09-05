@@ -2407,8 +2407,10 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
-				GlyphVector glyphs = font.getFont().createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
+				// Fix bug 3538 by setting font to one point
+				GlyphVector glyphs = font.getFont().deriveFont(1.0f).createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
 				bounds = glyphs.getGlyphOutline(0).getBounds2D();
+System.out.println("Here: " + glyph + " " + bounds);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
