@@ -1946,6 +1946,10 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 	else
 	{
         // it's a "SaveAs" in an alien format
+#ifdef USE_JAVA
+		// Fix bug 3537 by committing before exporting to alien format
+		rMedium.Commit();
+#endif	// USE_JAVA
 		if ( rMedium.GetFilter() && ( rMedium.GetFilter()->GetFilterFlags() & SFX_FILTER_STARONEFILTER ) )
             bOk = ExportTo( rMedium );
 		else
