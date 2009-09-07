@@ -1034,6 +1034,7 @@ sal_Int8 SfxMedium::ShowLockedDocumentDialog( const uno::Sequence< ::rtl::OUStri
 {
     sal_Int8 nResult = LOCK_UI_NOLOCK;
 
+#ifndef USE_JAVA
     // show the interaction regarding the document opening
     uno::Reference< task::XInteractionHandler > xHandler = GetInteractionHandler();
 
@@ -1134,6 +1135,7 @@ sal_Int8 SfxMedium::ShowLockedDocumentDialog( const uno::Sequence< ::rtl::OUStri
             SetError( ERRCODE_IO_ACCESSDENIED );
 
     }
+#endif	// !USE_JAVA
 
     return nResult;
 }
