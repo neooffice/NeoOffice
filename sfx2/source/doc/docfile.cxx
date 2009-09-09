@@ -1034,7 +1034,6 @@ sal_Int8 SfxMedium::ShowLockedDocumentDialog( const uno::Sequence< ::rtl::OUStri
 {
     sal_Int8 nResult = LOCK_UI_NOLOCK;
 
-#ifndef USE_JAVA
     // show the interaction regarding the document opening
     uno::Reference< task::XInteractionHandler > xHandler = GetInteractionHandler();
 
@@ -1135,7 +1134,6 @@ sal_Int8 SfxMedium::ShowLockedDocumentDialog( const uno::Sequence< ::rtl::OUStri
             SetError( ERRCODE_IO_ACCESSDENIED );
 
     }
-#endif	// !USE_JAVA
 
     return nResult;
 }
@@ -1276,7 +1274,13 @@ sal_Bool SfxMedium::LockOrigFileOnDemand( sal_Bool bLoading, sal_Bool bNoUI )
                             }
                         }
 
+#ifdef USE_JAVA
+                        // Display the read-only dialog only if we are not
+                        // using native file locking
+                        if ( !bResult && !bNoUI && !bUseSystemLock )
+#else	// USE_JAVA
                         if ( !bResult && !bNoUI )
+#endif	// USE_JAVA
                         {
                             bUIStatus = ShowLockedDocumentDialog( aData, bLoading, bOwnLock );
                             if ( bUIStatus == LOCK_UI_SUCCEEDED )
