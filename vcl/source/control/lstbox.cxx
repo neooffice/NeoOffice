@@ -1213,6 +1213,21 @@ void ListBox::SelectEntryPos( USHORT nPos, BOOL bSelect )
 {
 	if ( nPos < mpImplLB->GetEntryList()->GetEntryCount() )
 		mpImplLB->SelectEntry( nPos + mpImplLB->GetEntryList()->GetMRUCount(), bSelect );
+
+#ifdef USE_JAVA
+	// Fix bug 3536 by forcing a redraw when the selection is changed
+	ImplControlValue aControlValue;
+	ImplControlValue aControlValue;
+	Region aBoundingRgn, aContentRgn;
+	Rectangle aRect( GetPosPixel(), GetSizePixel() );
+	Region aArea( aRect );
+	if ( GetNativeControlRegion( CTRL_LISTBOX, PART_BUTTON_DOWN, aArea, 0, aControlValue, rtl::OUString(), aBoundingRgn, aContentRgn ) )
+	{
+		GetParent()->Invalidate();
+		if ( GetParent()->IsInPaint() )
+			GetParent()->Update();
+	}
+#endif	// USE_JAVA
 }
 
 // -----------------------------------------------------------------------
