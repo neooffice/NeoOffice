@@ -1217,7 +1217,6 @@ void ListBox::SelectEntryPos( USHORT nPos, BOOL bSelect )
 #ifdef USE_JAVA
 	// Fix bug 3536 by forcing a redraw when the selection is changed
 	ImplControlValue aControlValue;
-	ImplControlValue aControlValue;
 	Region aBoundingRgn, aContentRgn;
 	Rectangle aRect( GetPosPixel(), GetSizePixel() );
 	Region aArea( aRect );
