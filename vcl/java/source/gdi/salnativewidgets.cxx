@@ -1749,7 +1749,8 @@ BOOL JavaSalGraphics::IsNativeControlSupported( ControlType nType, ControlPart n
 			break;
 
 		case CTRL_TOOLBAR:
-			if( nPart == PART_BUTTON )
+			// Suppress the non-native toolbar background
+			if( nPart == CTRL_PUSHBUTTON || nPart == PART_BUTTON )
 				isSupported = TRUE;
 			break;
 
