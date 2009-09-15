@@ -84,6 +84,8 @@
 #undef check
 
 static EventLoopTimerUPP pSetSystemUIModeTimerUPP = NULL;
+static EventLoopTimerUPP pUpdateSystemActivityTimerUPP = NULL;
+static EventLoopTimerRef pUpdateSystemActivityTimerRef = NULL;
 
 using namespace rtl;
 using namespace vcl;
@@ -722,6 +724,17 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 // -----------------------------------------------------------------------
 
 /**
+ * Timer to prevent sleeping. This should be set to run frequently while
+ * presentations are displayed.
+ */
+static void UpdateSystemActivityTimerCallback( EventLoopTimerRef aTimer, void *pData )
+{
+	UpdateSystemActivity( OverallAct );
+}
+
+// -----------------------------------------------------------------------
+
+/**
  * Timer routine to toggle the system user interface mode on the
  * thread that is hosting our main runloop.  Starting with 10.3.8, it appears
  * that there is some type of contention that is causing SetSystemUIMode
@@ -740,6 +753,25 @@ static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData 
 		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
 	else
 		SetSystemUIMode( kUIModeNormal, 0 );
+
+
+	if ( !pUpdateSystemActivityTimerUPP )
+		pUpdateSystemActivityTimerUPP = NewEventLoopTimerUPP( UpdateSystemActivityTimerCallback );
+
+	// Start or stop sleep prevention timer
+	if ( pUpdateSystemActivityTimerUPP )
+	{
+		if ( enterFullscreen && !pUpdateSystemActivityTimerRef )
+		{
+			// Run timer every 15 seconds
+			InstallEventLoopTimer( GetMainEventLoop(), 0.001, 15, pUpdateSystemActivityTimerUPP, NULL, &pUpdateSystemActivityTimerRef );
+		}
+		else if ( !enterFullscreen && pUpdateSystemActivityTimerRef )
+		{
+			RemoveEventLoopTimer( pUpdateSystemActivityTimerRef );
+			pUpdateSystemActivityTimerRef = NULL;
+		}
+	}
 }
 
 // -----------------------------------------------------------------------
