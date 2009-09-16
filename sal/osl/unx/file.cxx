@@ -371,6 +371,25 @@ static int adjustLockFlags(const char * path, int flags)
         else
         {
             flags &= ~( O_EXLOCK | O_SHLOCK );
+
+            // Fix bug 3553 by disallowing opening existing webdav files on
+            // Snow Leopard or higher
+            if( !(flags & O_CREAT) && 0 == strncmp("webdav", s.f_fstypename, 6) )
+            {
+                static bool initializedOnce = false;
+                static bool isPreSnowLeopard = false;
+                if( !initializedOnce )
+                {
+                    long res = 0;
+                    Gestalt( gestaltSystemVersion, &res );
+                    isPreSnowLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) < 0x6 ) );
+                    initializedOnce = true;
+                }
+
+                struct stat aFileStat;
+                if( !isPreSnowLeopard && 0 == stat(path, &aFileStat) && !S_ISDIR(aFileStat.st_mode) )
+                    flags = O_RDONLY;
+            }
         }
 #endif	// USE_JAVA
     }
@@ -806,6 +825,15 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
             }
 
             /* open the file */
+#ifdef USE_JAVA
+            // Fix bug 3553 by checking if the flags were reset to read only
+            if ( flags == O_RDONLY && uFlags & ( osl_File_OpenFlag_Write | osl_File_OpenFlag_Create ) )
+            {
+                fd = -1;
+                errno = EACCES;
+            }
+            else
+#endif	/* USE_JAVA */
             fd = open( buffer, flags, mode );
             if ( fd >= 0 )
             {
@@ -2096,6 +2124,12 @@ static oslFileError osl_psz_moveFile(const sal_Char* pszPath, const sal_Char* ps
 
     int nRet = 0;
 
+#ifdef USE_JAVA
+    // Fix bug 3553 by not overwriting existing webdav files
+    if ( adjustLockFlags(pszDestPath, OPEN_WRITE_FLAGS) == O_RDONLY )
+        return oslTranslateFileError(OSL_FET_ERROR, EACCES);
+#endif	// USE_JAVA
+
     nRet = rename(pszPath,pszDestPath);
 
     if ( nRet < 0 )
@@ -2219,6 +2253,12 @@ static oslFileError oslDoCopy(const sal_Char* pszSourceFileName, const sal_Char*
 
 		strncat(pszTmpDestFile, TMP_DEST_FILE_EXTENSION, strlen(TMP_DEST_FILE_EXTENSION));
 
+#ifdef USE_JAVA
+        // Fix bug 3553 by not overwriting existing webdav files
+        if ( adjustLockFlags(pszTmpDestFile, OPEN_WRITE_FLAGS) == O_RDONLY )
+            nRet = EACCES;
+        else
+#endif	// USE_JAVA
         /* FIXME: what if pszTmpDestFile already exists? */
         /*        with getcanonical??? */
         nRet=rename(pszDestFileName,pszTmpDestFile);
@@ -2243,8 +2283,20 @@ static oslFileError oslDoCopy(const sal_Char* pszSourceFileName, const sal_Char*
 
     if ( nRet > 0 && DestFileExists == 1 )
     {
+#ifdef USE_JAVA
+        // Fix bug 3553 by not overwriting existing webdav files
+        if ( adjustLockFlags(pszDestFileName, OPEN_WRITE_FLAGS) == O_RDONLY )
+        {
+            nRet = EACCES;
+        }
+        else
+        {
+#endif	// USE_JAVA
         unlink(pszDestFileName);
         rename(pszTmpDestFile,pszDestFileName);
+#ifdef USE_JAVA
+        }
+#endif	// USE_JAVA
     }
 
     if ( nRet > 0 )
@@ -2347,6 +2399,12 @@ static int oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszD
     int DestFileFD=0;
     int nRet=0;
     void* pSourceFile=0;
+
+#ifdef USE_JAVA
+    // Fix bug 3553 by not overwriting existing webdav files
+    if ( adjustLockFlags(pszDestFileName, OPEN_WRITE_FLAGS) == O_RDONLY )
+        return EACCES;
+#endif	// USE_JAVA
 
     SourceFileFD=open(pszSourceFileName,O_RDONLY);
     if ( SourceFileFD < 0 )
