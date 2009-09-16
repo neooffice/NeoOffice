@@ -273,6 +273,11 @@ public final class VCLGraphics {
 	private static Dimension printerResolution = null;
 
 	/**
+	 * The scale glyph bounds factor
+	 */
+	private static float scaleGlyphBoundsFactor = 1.0f;
+
+	/**
 	 * The cached screen resolution.
 	 */
 	private static Dimension screenResolution = null;
@@ -381,6 +386,10 @@ public final class VCLGraphics {
 			// Test for Java 1.5 or higher
 			Class.forName("java.lang.Appendable");
 			drawOnMainThread = false;
+
+			// Test for Java 1.6 or higher
+			Class.forName("java.util.Deque");
+			scaleGlyphBoundsFactor = 12.0f;
 		}
 		catch (Throwable t) {}
 
@@ -2399,9 +2408,12 @@ public final class VCLGraphics {
 		Graphics2D g = getGraphics(false);
 		if (g != null) {
 			try {
-				// Fix bug 3538 by setting font to one point
-				GlyphVector glyphs = font.getFont().deriveFont(1.0f).createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
+				GlyphVector glyphs = font.getFont().createGlyphVector(g.getFontRenderContext(), new int[]{ glyph });
 				bounds = glyphs.getGlyphOutline(0).getBounds2D();
+
+				// Fix bug 3538 by unscaling the glyph bounds
+				if (scaleGlyphBoundsFactor != 1.0)
+					bounds = new Rectangle2D.Double(bounds.getX() / scaleGlyphBoundsFactor, bounds.getY() / scaleGlyphBoundsFactor, bounds.getWidth() / scaleGlyphBoundsFactor, bounds.getHeight() / scaleGlyphBoundsFactor);
 			}
 			catch (Throwable t) {
 				t.printStackTrace();
