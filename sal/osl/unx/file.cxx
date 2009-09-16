@@ -940,7 +940,12 @@ oslFileError osl_closeFile( oslFileHandle Handle )
 
             /* release the file share lock on this file */
 #ifdef USE_JAVA
-            // Fix bug 3553 by letting close() release the lock
+            /*
+             * Mac OS X will return ENOTSUP for mounted file systems so ignore
+             * the error for write locks. Also, fix bug 3110 by using flock()
+             * instead of fcntl() to lock the file.
+             */
+            if ( 0 != flock( pHandleImpl->fd, LOCK_UN | LOCK_NB ) && errno != ENOTSUP )
 #else	/* USE_JAVA */
             if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
 #endif	/* USE_JAVA */
