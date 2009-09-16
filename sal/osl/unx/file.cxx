@@ -352,7 +352,6 @@ static int adjustLockFlags(const char * path, int flags)
             {
                 static bool initializedOnce = false;
                 static bool isPreSnowLeopard = false;
-/*
                 if( !initializedOnce )
                 {
                     long res = 0;
@@ -360,7 +359,6 @@ static int adjustLockFlags(const char * path, int flags)
                     isPreSnowLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) < 0x6 ) );
                     initializedOnce = true;
                 }
-*/
 
                 struct stat aFileStat;
                 if( !isPreSnowLeopard && 0 == stat(path, &aFileStat) && !S_ISDIR(aFileStat.st_mode) )
