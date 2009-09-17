@@ -129,7 +129,6 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 			if ( pVCLImage->getJavaObject() )
 			{
 				mpVCLImage = pVCLImage;
-				mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
 				bRet = TRUE;
 			}
 			else
@@ -142,10 +141,18 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( !mpVCLImage )
 	{
 		// Try to create something so that we don't crash
-		mpVCLImage = new com_sun_star_vcl_VCLImage( 1, 1, mnBitCount );
-		if ( mpVCLImage && mpVCLImage->getJavaObject() )
-			mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
+		com_sun_star_vcl_VCLImage *pVCLImage = new com_sun_star_vcl_VCLImage( 1, 1, mnBitCount );
+		if ( pVCLImage )
+		{
+			if ( pVCLImage->getJavaObject() )
+				mpVCLImage = pVCLImage;
+			else
+				delete pVCLImage;
+		}
 	}
+
+	if ( mbGraphics && mpVCLImage )
+		mpGraphics->mpVCLGraphics = mpVCLImage->getGraphics();
 
 	return bRet;
 }
