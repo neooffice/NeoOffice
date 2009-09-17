@@ -107,19 +107,6 @@ public final class VCLImage {
 		// Always set bit count to 32
 		bitCount = 32;
 
-		VCLEventQueue.runGCIfNeeded(0);
-
-		// Create the image
-		try {
-			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
-		}
-		catch (OutOfMemoryError ome) {
-			// Force the garbage collector to run
-			VCLGraphics.disposeNeedsDisposeGraphics();
-			VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
-			image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
-		}
-
 		// Cache the graphics
 		pageFormat = p;
 		graphics = new VCLGraphics(this, pageFormat);
@@ -206,6 +193,21 @@ public final class VCLImage {
 	 * @return the underlying image
 	 */
 	BufferedImage getImage() {
+
+		// Create the image
+		if (image == null) {
+			VCLEventQueue.runGCIfNeeded(0);
+
+			try {
+				image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+			}
+			catch (OutOfMemoryError ome) {
+				// Force the garbage collector to run
+				VCLGraphics.disposeNeedsDisposeGraphics();
+				VCLEventQueue.runGCIfNeeded(VCLEventQueue.GC_DISPOSED_PIXELS);
+				image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB_PRE);
+			}
+		}
 
 		return image;
 
