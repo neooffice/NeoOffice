@@ -736,7 +736,10 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				// do this for while dragging in a frame as it can cause the
 				// frame to unexpectedly jump backwards.
 				if ( pFrame->mbVisible && !pFrame->mbInSetPosSize && !pFrame->mbInShow && pSalData->mpLastDragFrame )
+				{
+					OThread::yield();
 					pFrame->SetPosSize( 0, 0, 0, 0, 0 );
+				}
 			}
 			if ( pPosSize )
 				delete pPosSize;
