@@ -70,7 +70,7 @@ import java.util.LinkedList;
  * @version 	$Revision$ $Date$
  * @author 	    $Author$
  */
-public final class VCLEventQueue implements Runnable {
+public final class VCLEventQueue {
 
     /** 
      * INPUT_MOUSE constant.
@@ -225,15 +225,8 @@ public final class VCLEventQueue implements Runnable {
 		if (controlDown)
 			modifiers |= InputEvent.CTRL_DOWN_MASK;
 
-		// Note: no matter what buttons we press, the MouseWheelEvents in
-		// Apple's JVMs always seem to have the following constant values:
-		//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
-		//   ScrollUnits == 1
 		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
-		if (rotationX != 0)
-			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationX, true));
-		if (rotationY != 0)
-			eventQueue.postEvent(new MultidirectionalMouseWheelEvent(w, MouseEvent.MOUSE_WHEEL, System.currentTimeMillis(), modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationY, false));
+		eventQueue.invokeLater(new PostMultidirectionalMouseWheelEvent(w, modifiers, x, y, rotationX, rotationY));
 
 	}
 
@@ -253,10 +246,7 @@ public final class VCLEventQueue implements Runnable {
 			return;
 
 		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
-		if (startSession)
-			eventQueue.postEvent(new MouseEvent(w, MouseEvent.MOUSE_PRESSED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK | InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false));
-		else
-			eventQueue.postEvent(new MouseEvent(w, MouseEvent.MOUSE_RELEASED, System.currentTimeMillis(), MouseEvent.BUTTON1_MASK, x, y, 1, false));
+		eventQueue.invokeLater(new PostWindowMoveSessionEvent(w, x, y, startSession));
 
 	}
 
@@ -414,6 +404,8 @@ public final class VCLEventQueue implements Runnable {
 			else if (isApplicationMainThread()) {
 				// Don't post or dispatch, just wait until there are no pending
 				// events
+				PostEmptyEvent e = new PostEmptyEvent();
+				eventQueue.invokeLater(e);
 				AWTEvent nextEvent;
 				while (inDispatchEvent || (nextEvent = eventQueue.peekEvent()) != null) {
 					runApplicationMainThreadTimers();
@@ -666,13 +658,6 @@ public final class VCLEventQueue implements Runnable {
 		}
 
 	}
-
-	/**
-	 * Runnable method that performs nothing. This method is used for passing
-	 * this class to the <code>EventQueue.invokeLater()</code> method so that
-	 * we can prevent blocking in the {@link #dispatchNextEvent()} method.
-	 */
-	public void run() {}
 
 	/**
 	 * Runs any pending native timers.
@@ -1004,6 +989,174 @@ public final class VCLEventQueue implements Runnable {
 
 		}
 
+	}
+
+	/**
+	 * The <code>PostEmptyEvent</code> class is a runnable class used for
+	 * posting an empty event in the Java event dispatch thread.
+	 */
+	static class PostEmptyEvent implements Runnable {
+
+		/**
+		 * The event time.
+		 */
+		protected final long when = System.currentTimeMillis();
+
+		/**
+		 * Runnable method that performs nothing. This method is used for
+		 * passing this class to the <code>EventQueue.invokeLater()</code>
+		 * method so that we can prevent blocking in Java event dispatch thread.
+		 */
+		public void run() {}
+
+	}
+
+	/**
+	 * The <code>PostMultidirectionalMouseWheelEvent</code> class is a runnable
+	 * class used for posting <code>VCLEventQueue.WindowMoveSessionEvent</code>
+	 * event in the Java event dispatch thread from the native event dispatch
+	 * thread without blocking.
+	 */
+	static class PostMultidirectionalMouseWheelEvent extends VCLEventQueue.PostEmptyEvent implements Runnable {
+
+		/**
+		 * The modifiers.
+		 */
+		private int modifiers = 0;
+
+		/**
+		 * The start session flag.
+		 */
+		private boolean startSession = false;
+
+		/**
+		 * The <code>Window</code>.
+		 */
+		private Window window = null;
+
+		/**
+		 * The x coordinate.
+		 */
+		private int x = 0;
+
+		/**
+		 * The y coordinate.
+		 */
+		private int y = 0;
+
+		/**
+		 * The horizontal wheel rotation.
+		 */
+		private int rotationX = 0;
+
+		/**
+		 * The vertical wheel rotation.
+		 */
+		private int rotationY = 0;
+
+		/**
+		 * Construct a <code>PostMultidirectionalMouseWheelEvent</code>.
+		 *
+		 * @param w the <code>Window</code>
+		 * @param m the modifiers
+		 * @param x the x coordinate
+		 * @param y the y coordinate
+		 * @param rx the horizontal wheel rotation
+		 * @param ry the vertical wheel rotation
+		 */
+		PostMultidirectionalMouseWheelEvent(Window w, int m, int x, int y, int rx, int ry) {
+
+			window = w;
+			modifiers = m;
+			this.x = x;
+			this.x = y;
+			rotationX = rx;
+			rotationY = ry;
+
+		}
+
+		/**
+		 * Runnable method that performs nothing. This method is used for
+		 * passing this class to the <code>EventQueue.invokeLater()</code>
+		 * method so that we can prevent blocking in Java event dispatch thread.
+		 */
+		public void run() {
+
+			if (EventQueue.isDispatchThread()) {
+				// Note: no matter what buttons we press, the MouseWheelEvents
+				// in Apple's JVMs always seem to have the following constant
+				// values:
+				//   ScrollType == MouseWheelEvent.WHEEL_UNIT_SCROLL
+				//   ScrollUnits == 1
+				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
+				if (rotationX != 0)
+					eventQueue.dispatchEvent(new MultidirectionalMouseWheelEvent(window, MouseEvent.MOUSE_WHEEL, when, modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationX, true));
+				if (rotationY != 0)
+					eventQueue.dispatchEvent(new MultidirectionalMouseWheelEvent(window, MouseEvent.MOUSE_WHEEL, when, modifiers, x, y, 0, false, MouseWheelEvent.WHEEL_UNIT_SCROLL, 1, rotationY, false));
+			}
+		}
+	}
+
+	/**
+	 * The <code>PostWindowMoveSessionEvent</code> class is a runnable class
+	 * used for posting <code>Mouse</code> event in the Java event dispatch
+	 * thread from the native event dispatch thread without blocking.
+	 */
+	static class PostWindowMoveSessionEvent extends VCLEventQueue.PostEmptyEvent implements Runnable {
+
+		/**
+		 * The start session flag.
+		 */
+		private boolean startSession = false;
+
+		/**
+		 * The <code>Window</code>.
+		 */
+		private Window window = null;
+
+		/**
+		 * The x coordinate.
+		 */
+		private int x = 0;
+
+		/**
+		 * The y coordinate.
+		 */
+		private int y = 0;
+
+		/**
+		 * Construct a <code>PostWindowMoveSessionEvent</code>.
+		 *
+		 * @param w the <code>Window</code>
+		 * @param x the x coordinate
+		 * @param y the y coordinate
+		 * @param s <code>true</code> if starting a window move session
+		 *  otherwise <code>false</code>
+		 */
+		PostWindowMoveSessionEvent(Window w, int x, int y, boolean s) {
+
+			window = w;
+			this.x = x;
+			this.x = y;
+			startSession = s;
+
+		}
+
+		/**
+		 * Runnable method that performs nothing. This method is used for
+		 * passing this class to the <code>EventQueue.invokeLater()</code>
+		 * method so that we can prevent blocking in Java event dispatch thread.
+		 */
+		public void run() {
+
+			if (EventQueue.isDispatchThread()) {
+				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
+				if (startSession)
+					eventQueue.dispatchEvent(new MouseEvent(window, MouseEvent.MOUSE_PRESSED, when, MouseEvent.BUTTON1_MASK | InputEvent.BUTTON1_DOWN_MASK, x, y, 1, false));
+				else
+					eventQueue.dispatchEvent(new MouseEvent(window, MouseEvent.MOUSE_RELEASED, when, MouseEvent.BUTTON1_MASK, x, y, 1, false));
+			}
+		}
 	}
 
 }

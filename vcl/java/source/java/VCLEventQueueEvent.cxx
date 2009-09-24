@@ -744,9 +744,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				}
 
 				// Fix bug 3559 by making sure that the frame fits in the work
-				// work area if the screen size has changed
-				if ( pFrame->mbVisible && !pFrame->mbInSetPosSize && !pFrame->mbInShow )
+				// work area if the screen size has changed. Note that we don't
+				// do this for while dragging in a frame as it can cause the
+				// frame to unexpectedly jump backwards.
+				if ( pFrame->mbVisible && !pFrame->mbInSetPosSize && !pFrame->mbInShow && pSalData->mpLastDragFrame )
+				{
+					OThread::yield();
 					pFrame->SetPosSize( 0, 0, 0, 0, 0 );
+				}
 			}
 			if ( pPosSize )
 				delete pPosSize;
