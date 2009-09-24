@@ -1284,7 +1284,7 @@ public final class VCLEventQueue {
 
 			window = w;
 			this.x = x;
-			this.x = y;
+			this.y = y;
 			startSession = s;
 
 		}
