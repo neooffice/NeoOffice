@@ -742,6 +742,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 
 					pFrame->CallCallback( nID, NULL );
 				}
+
+				// Fix bug 3559 by making sure that the frame fits in the work
+				// work area if the screen size has changed
+				if ( pFrame->mbVisible && !pFrame->mbInSetPosSize && !pFrame->mbInShow )
+					pFrame->SetPosSize( 0, 0, 0, 0, 0 );
 			}
 			if ( pPosSize )
 				delete pPosSize;
