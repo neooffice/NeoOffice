@@ -47,6 +47,53 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
+static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
+{
+	BOOL bRet = NO;
+
+	if ( pEvent && [pEvent type] == NSKeyDown )
+	{
+		CFPreferencesAppSynchronize( CFSTR( "com.apple.universalaccess" ) );
+		CFPropertyListRef pPref = CFPreferencesCopyAppValue( CFSTR( "UserAssignableHotKeys" ), CFSTR( "com.apple.universalaccess" ) );
+		if ( pPref )
+		{
+			if ( CFGetTypeID( pPref ) == CFArrayGetTypeID() )
+			{
+				CFIndex nCount = CFArrayGetCount( pPref );
+				CFIndex i = 0;
+				for ( ; i < nCount; i++ ) {
+					NSDictionary *pDict = (NSDictionary *)CFArrayGetValueAtIndex( pPref, i );
+					if ( pDict && CFGetTypeID( pDict ) == CFDictionaryGetTypeID() )
+					{
+						// Note that Apple uses an odd spelling for this key
+						NSNumber *pSybmolicHotKey = (NSNumber *)[pDict valueForKey:@"sybmolichotkey"];
+						if ( pSybmolicHotKey && [pSybmolicHotKey unsignedIntValue] == nKey )
+						{
+							NSNumber *pEnabled = (NSNumber *)[pDict valueForKey:@"enabled"];
+							if ( pEnabled && [pEnabled intValue] )
+							{
+								NSNumber *pKeyCode = (NSNumber *)[pDict valueForKey:@"key"];
+								if ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] )
+								{
+									NSNumber *pModifiers = (NSNumber *)[pDict valueForKey:@"modifier"];
+									if ( pModifiers && ( [pModifiers unsignedIntValue]  & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) )
+										bRet = YES;
+								}
+							}
+
+							break;
+						}
+					}
+				}
+			}
+
+			CFRelease( pPref );
+		}
+	}
+
+	return bRet;
+}
+
 @interface NSObject (ApplicationHasDelegate)
 - (void)cancelTermination;
 @end
@@ -573,20 +620,8 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 		{
 			// Do not allow utility windows to grab the focus except when the
 			// user presses Control-F6
-			BOOL bGrabFocus = NO;
 			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp )
-			{
-				NSEvent *pEvent = [pApp currentEvent];
-				if ( pEvent && [pEvent type] == NSKeyDown && [pEvent modifierFlags] & NSControlKeyMask )
-				{
-					NSString *pChars = [pEvent charactersIgnoringModifiers];
-					if ( pChars && [pChars length] == 1 && [pChars characterAtIndex:0] == NSF6FunctionKey )
-						bGrabFocus = YES;
-				}
-			}
-
-			if ( !bGrabFocus )
+			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11 ) )
 				return;
 		}
 	}
@@ -726,6 +761,28 @@ static NSMutableArray *pNeedRestoreModalWindows = nil;
 			if ( [pResponder hasMarkedText] )
 				[pResponder insertText:pCancelInputMethodText];
 			[pResponder abandonInput];
+		}
+
+		// Fix bug 3557 by forcing any non-utility windows to the back when
+		// they lose focus while cycling through windows with the Command-`
+		// shortcut
+		if ( ![super respondsToSelector:@selector(_isUtilityWindow)] || ![super _isUtilityWindow] )
+		{
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27 ) )
+			{
+				NSArray *pWindows = [pApp orderedWindows];
+				if ( pWindows )
+				{
+					unsigned int nCount = [pWindows count];
+					if ( nCount )
+					{
+						NSWindow *pBackWindow = [pWindows objectAtIndex:nCount - 1];
+						if ( pBackWindow && pBackWindow != self && [pBackWindow isVisible] )
+							[self orderWindow:NSWindowBelow relativeTo:[pBackWindow windowNumber]];
+					}
+				}
+			}
 		}
 	}
 
