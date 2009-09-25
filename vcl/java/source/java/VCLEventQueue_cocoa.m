@@ -689,7 +689,19 @@ static VCLResponder *pSharedResponder = nil;
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
 			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27 ) )
-				[self orderBack:self];
+			{
+				NSArray *pWindows = [pApp orderedWindows];
+				if ( pWindows )
+				{
+					unsigned int nCount = [pWindows count];
+					if ( nCount )
+					{
+						NSWindow *pBackWindow = [pWindows objectAtIndex:nCount - 1];
+						if ( pBackWindow && pBackWindow != self && [pBackWindow isVisible] )
+							[self orderWindow:NSWindowBelow relativeTo:[pBackWindow windowNumber]];
+					}
+				}
+			}
 		}
 	}
 
