@@ -2935,9 +2935,9 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		if (!showOnlyMenus && window instanceof Frame && window.isShowing()) {
 			// Only invoke Frame.setState() if the state needs to be changed
 			// as this method can cause a deadlock with the native menu handler
-			// on Mac OS X
+			// on Mac OS X. Also, don't allow utility windows to be minimized.
 			int s;
-			if (state == SAL_FRAMESTATE_MINIMIZED)
+			if (state == SAL_FRAMESTATE_MINIMIZED && !utility)
 				s = Frame.ICONIFIED;
 			else if (state == SAL_FRAMESTATE_MAXIMIZED)
 				s = Frame.MAXIMIZED_BOTH;
