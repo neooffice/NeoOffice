@@ -187,6 +187,26 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 
 @end
 
+@interface VCLBundle : NSBundle
++ (BOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
+@end
+
+@implementation VCLBundle
+
++ (BOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
+{
+	BOOL bRet = [[VCLBundle superclass] loadNibFile:pFileName externalNameTable:pContext withZone:pZone];
+
+	// Fix bug 3563 by trying to load Java's English nib file isf the requested
+	// nib file is nil
+	if ( !bRet && !pFileName )
+		bRet = [[VCLBundle superclass] loadNibFile:@"/System/Library/Frameworks/JavaVM.framework/Versions/Current/Resources/English.lproj/DefaultApp.nib" externalNameTable:pContext withZone:pZone];
+
+	return bRet;
+}
+
+@end
+
 // Fix for bugs 1685, 1694, and 1859. Java 1.5 and higher will arbitrarily
 // change the selected font by creating a new font from the font's family
 // name and style. We fix these bugs by prepending the font names to the
@@ -1064,6 +1084,7 @@ static CFDataRef aRTFSelection = nil;
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
 
+	[VCLBundle poseAsClass:[NSBundle class]];
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];
