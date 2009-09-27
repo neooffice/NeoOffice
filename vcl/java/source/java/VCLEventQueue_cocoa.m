@@ -611,7 +611,9 @@ static VCLResponder *pSharedResponder = nil;
 			NSString *pChars = [pEvent charactersIgnoringModifiers];
 			if ( pChars && [pChars isEqualToString:@"m"] )
 			{
-				[self miniaturize:self];
+				// Fix bug 3562 by not allowing utility windows to be minimized
+				if ( ( ![super respondsToSelector:@selector(_isUtilityWindow)] || ![super _isUtilityWindow] ) )
+					[self miniaturize:self];
 				return YES;
 			}
 		}
