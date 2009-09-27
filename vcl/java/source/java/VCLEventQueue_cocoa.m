@@ -638,7 +638,8 @@ static VCLResponder *pSharedResponder = nil;
 	BOOL bRet = [super performKeyEquivalent:pEvent];
 
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
-	// for non-Java windows
+	// for non-Java windows. Fix bug 3561 by responding to Command-w keys for
+	// closable non-Java windows.
 	if ( !bRet && bCommandKeyPressed && [self isVisible] && ![[self className] isEqualToString:pCocoaAppWindowString] )
 	{
 		NSString *pChars = [pEvent charactersIgnoringModifiers];
@@ -658,6 +659,11 @@ static VCLResponder *pSharedResponder = nil;
 			else if ( [pChars isEqualToString:@"v"] && [pResponder respondsToSelector:@selector(paste:)] )
 			{
 				[pResponder paste:self];
+				bRet = YES;
+			}
+			else if ( [pChars isEqualToString:@"w"] && [self styleMask] & NSClosableWindowMask )
+			{
+				[self performClose:self];
 				bRet = YES;
 			}
 			else if ( [pChars isEqualToString:@"x"] && [pResponder respondsToSelector:@selector(cut:)] )
