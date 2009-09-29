@@ -1216,7 +1216,7 @@ public final class VCLEventQueue {
 			window = w;
 			modifiers = m;
 			this.x = x;
-			this.x = y;
+			this.y = y;
 			rotationX = rx;
 			rotationY = ry;
 
