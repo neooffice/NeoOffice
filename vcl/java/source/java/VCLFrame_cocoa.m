@@ -182,7 +182,6 @@
 					if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
 					{
 						[pWindow setLevel:NSFloatingWindowLevel];
-						[pWindow setHidesOnDeactivate:YES];
 
 						// Get the top inset for a utility window
 						NSRect aFrameRect = NSMakeRect( 0, 0, 100, 100 );
@@ -195,6 +194,10 @@
 			{
 				[pWindow setLevel:NSPopUpMenuWindowLevel];
 			}
+
+			// Hide unbordered windows so that the show only menus
+			// window is hidden when in Exposé
+			[pWindow setHidesOnDeactivate:YES];
 		}
 	}
 }
