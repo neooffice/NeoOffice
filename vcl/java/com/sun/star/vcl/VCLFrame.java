@@ -3433,7 +3433,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			super.addNotify();
 
-			if (frame.utility || (isUndecorated() && getOwner() != null)) {
+			if (frame.showOnlyMenus || frame.utility || (isUndecorated() && getOwner() != null)) {
 				// Make the native window a utility window
 				utilityWindowTopInset = frame.makeFloatingWindow(getPeer());
 			}
