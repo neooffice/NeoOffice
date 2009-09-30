@@ -528,7 +528,17 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					while ( pFrame->mpParent && pFrame->mpParent->mbVisible && pFrame->IsUtilityWindow() )
 						pFrame = pFrame->mpParent;
 				}
-				pFrame->CallCallback( nID, pKeyEvent );
+				if ( !pFrame->CallCallback( nID, pKeyEvent ) )
+				{
+					// If the key event fails and this is a command event,
+					// dispatch the original events
+					com_sun_star_vcl_VCLEvent *pEvent;
+					while ( ( pEvent = getNextOriginalKeyEvent() ) != NULL )
+					{
+						pEvent->dispatch();
+						delete pEvent;
+					}
+				}
 			}
 			if ( pKeyEvent )
 				delete pKeyEvent;
@@ -1007,6 +1017,31 @@ USHORT com_sun_star_vcl_VCLEvent::getModifiers()
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 			out = (USHORT)t.pEnv->CallNonvirtualIntMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEvent::getNextOriginalKeyEvent()
+{
+	static jmethodID mID = NULL;
+	com_sun_star_vcl_VCLEvent *out = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Lcom/sun/star/vcl/VCLEvent;";
+			mID = t.pEnv->GetMethodID( getMyClass(), "getNextOriginalKeyEvent", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			if ( tempObj )
+				out = new com_sun_star_vcl_VCLEvent( tempObj );
+		}
 	}
 	return out;
 }

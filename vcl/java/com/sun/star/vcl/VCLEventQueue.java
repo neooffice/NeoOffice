@@ -199,13 +199,22 @@ public final class VCLEventQueue {
 	 * @param o the <code>Window</code> peer
 	 * @param keyCode the key code
 	 * @param shiftDown <code>true</code> if the Shift key is pressed
-	 * @param metaDown <code>true</code> if the Meta key is pressed
-	 * @param altDown <code>true</code> if the Alt key is pressed
 	 * @param controlDown <code>true</code> if the Control key is pressed
+	 * @param altDown <code>true</code> if the Alt key is pressed
+	 * @param metaDown <code>true</code> if the Meta key is pressed
+	 * @param originalKeyChar the original key character
+	 * @param originalShiftDown <code>true</code> if the original Shift key is
+	 *  pressed
+	 * @param originalControlDown <code>true</code> if the original Control key
+	 *  is pressed
+	 * @param originalAltDown <code>true</code> if the original Alt key is
+	 *  pressed
+	 * @param originalMetaDown <code>true</code> if the original Meta key is
+	 *  pressed
 	 * @return <code>true</code> if the event was posted otherwise
 	 *   <code>false</code>
 	 */
-	public static boolean postCommandEvent(Object o, int keyCode, boolean shiftDown, boolean metaDown, boolean altDown, boolean controlDown) {
+	public static boolean postCommandEvent(Object o, int keyCode, boolean shiftDown, boolean controlDown, boolean altDown, boolean metaDown, char originalKeyChar, boolean originalShiftDown, boolean originalControlDown, boolean originalAltDown, boolean originalMetaDown) {
 
 		if (keyCode == 0)
 			return false;
@@ -227,15 +236,25 @@ public final class VCLEventQueue {
 		int modifiers = 0;
 		if (shiftDown)
 			modifiers |= InputEvent.SHIFT_DOWN_MASK;
-		if (metaDown)
-			modifiers |= InputEvent.META_DOWN_MASK;
-		if (altDown)
-			modifiers |= InputEvent.ALT_DOWN_MASK;
 		if (controlDown)
 			modifiers |= InputEvent.CTRL_DOWN_MASK;
+		if (altDown)
+			modifiers |= InputEvent.ALT_DOWN_MASK;
+		if (metaDown)
+			modifiers |= InputEvent.META_DOWN_MASK;
+
+		int originalModifiers = 0;
+		if (originalShiftDown)
+			originalModifiers |= InputEvent.SHIFT_DOWN_MASK;
+		if (originalControlDown)
+			originalModifiers |= InputEvent.CTRL_DOWN_MASK;
+		if (originalAltDown)
+			originalModifiers |= InputEvent.ALT_DOWN_MASK;
+		if (originalMetaDown)
+			originalModifiers |= InputEvent.META_DOWN_MASK;
 
 		EventQueue eventQueue = Toolkit.getDefaultToolkit().getSystemEventQueue();
-		eventQueue.invokeLater(new PostCommandKeyEvent(w, modifiers, keyCode));
+		eventQueue.invokeLater(new PostCommandKeyEvent(w, modifiers, keyCode, originalModifiers, originalKeyChar));
 
 		return true;
 
@@ -997,6 +1016,11 @@ public final class VCLEventQueue {
 		private int commandKeyCode = 0;
 
 		/**
+		 * The original key events.
+		 */
+		private LinkedList originalKeyEvents = new LinkedList();
+
+		/**
 		 * Construct a VCLEventQueue.CommandKeyEvent instance.
 		 *
 		 * @param source the <code>Component</code> that originated the event
@@ -1004,11 +1028,19 @@ public final class VCLEventQueue {
 		 * @param when a long that gives the time the event occurred
 		 * @param modifiers the modifier keys
 		 * @param keyCode the key code
+		 * @param originalModifiers the original modifier keys
+		 * @param originalKeyChar the original key character
 		 */
-		CommandKeyEvent(Component source, int id, long when, int modifiers, int keyCode) {
+		CommandKeyEvent(Component source, int id, long when, int modifiers, int keyCode, int originalModifiers, char originalKeyChar) {
 
 			super(source, id, when, modifiers, 0, KeyEvent.CHAR_UNDEFINED);
 			commandKeyCode = keyCode;
+
+			// If this is a key pressed event, add the original key event
+			if (id == KeyEvent.KEY_PRESSED && originalKeyChar > 0 && (originalModifiers & InputEvent.META_DOWN_MASK) == InputEvent.META_DOWN_MASK) {
+				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_PRESSED, when, originalModifiers, KeyEvent.VK_UNDEFINED, originalKeyChar));
+				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_RELEASED, when, 0, KeyEvent.VK_UNDEFINED, originalKeyChar));
+			}
 
 		}
 
@@ -1020,6 +1052,20 @@ public final class VCLEventQueue {
 		public int getCommandKeyCode() {
 
 			return commandKeyCode;
+
+		}
+
+		/**
+		 * Returns the original key event.
+		 *
+		 * @return the original key event 
+		 */
+		public KeyEvent getNextOriginalKeyEvent() {
+
+			if (originalKeyEvents.size() > 0)
+				return (KeyEvent)originalKeyEvents.removeFirst();
+			else
+				return null;
 
 		}
 
@@ -1124,6 +1170,16 @@ public final class VCLEventQueue {
 		private int modifiers = 0;
 
 		/**
+		 * The original key character.
+		 */
+		private char originalKeyChar = 0;
+
+		/**
+		 * The original modifiers.
+		 */
+		private int originalModifiers = 0;
+
+		/**
 		 * The <code>Window</code>.
 		 */
 		private Window window = null;
@@ -1134,12 +1190,16 @@ public final class VCLEventQueue {
 		 * @param w the <code>Window</code>
 		 * @param m the modifiers
 		 * @param k the key code
+		 * @param om the original modifiers
+		 * @param oc the original key character
 		 */
-		PostCommandKeyEvent(Window w, int m, int k) {
+		PostCommandKeyEvent(Window w, int m, int k, int om, char oc) {
 
 			window = w;
 			modifiers = m;
 			keyCode = k;
+			originalModifiers = om;
+			originalKeyChar = oc;
 
 		}
 
@@ -1152,8 +1212,8 @@ public final class VCLEventQueue {
 
 			if (EventQueue.isDispatchThread()) {
 				VCLEventQueue.NoExceptionsEventQueue eventQueue = (VCLEventQueue.NoExceptionsEventQueue)Toolkit.getDefaultToolkit().getSystemEventQueue();
-				eventQueue.dispatchEvent(new CommandKeyEvent(window, KeyEvent.KEY_PRESSED, when, modifiers, keyCode));
-				eventQueue.dispatchEvent(new CommandKeyEvent(window, KeyEvent.KEY_RELEASED, when, 0, keyCode));
+				eventQueue.dispatchEvent(new CommandKeyEvent(window, KeyEvent.KEY_PRESSED, when, modifiers, keyCode, originalModifiers, originalKeyChar));
+				eventQueue.dispatchEvent(new CommandKeyEvent(window, KeyEvent.KEY_RELEASED, when, 0, keyCode, 0, (char)0));
 			}
 		}
 	}

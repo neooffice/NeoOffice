@@ -80,6 +80,7 @@ public:
 	USHORT				getKeyCode();
 	USHORT				getID();
 	USHORT				getModifiers();
+	com_sun_star_vcl_VCLEvent*	getNextOriginalKeyEvent();
 	::rtl::OUString		getPath();
 	USHORT				getRepeatCount();
 	::rtl::OUString		getText();

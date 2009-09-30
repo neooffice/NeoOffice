@@ -239,12 +239,12 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 
 // ----------------------------------------------------------------------------
 
-BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers )
+BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers, jchar nOriginalKeyChar, short nOriginalModifiers )
 {
 	BOOL bRet = FALSE;
 
 	if ( aPeer )
-		bRet = com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT ? sal_True : sal_False, nModifiers & KEY_MOD1 ? sal_True : sal_False, nModifiers & KEY_MOD2 ? sal_True : sal_False, nModifiers & KEY_MOD3 ? sal_True : sal_False );
+		bRet = com_sun_star_vcl_VCLEventQueue::postCommandEvent( aPeer, nKey, nModifiers & KEY_SHIFT ? sal_True : sal_False, nModifiers & KEY_MOD1 ? sal_True : sal_False, nModifiers & KEY_MOD2 ? sal_True : sal_False, nModifiers & KEY_MOD3 ? sal_True : sal_False, nOriginalKeyChar, nOriginalModifiers & KEY_SHIFT ? sal_True : sal_False, nOriginalModifiers & KEY_MOD1 ? sal_True : sal_False, nOriginalModifiers & KEY_MOD2 ? sal_True : sal_False, nOriginalModifiers & KEY_MOD3 ? sal_True : sal_False );
 
 	return bRet;
 }
@@ -397,7 +397,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-sal_Bool com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short _par1, sal_Bool _par2, sal_Bool _par3, sal_Bool _par4, sal_Bool _par5 )
+sal_Bool com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short _par1, sal_Bool _par2, sal_Bool _par3, sal_Bool _par4, sal_Bool _par5, jchar _par6, sal_Bool _par7, sal_Bool _par8, sal_Bool _par9, sal_Bool _par10 )
 {
 	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
@@ -406,19 +406,24 @@ sal_Bool com_sun_star_vcl_VCLEventQueue::postCommandEvent( jobject _par0, short 
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(Ljava/lang/Object;IZZZZ)Z";
+			char *cSignature = "(Ljava/lang/Object;IZZZZCZZZZ)Z";
 			mID = t.pEnv->GetStaticMethodID( getMyClass(), "postCommandEvent", cSignature );	
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[6];
+			jvalue args[11];
 			args[0].l = _par0;
 			args[1].i = jint( _par1 );
 			args[2].z = jboolean( _par2 );
 			args[3].z = jboolean( _par3 );
 			args[4].z = jboolean( _par4 );
 			args[5].z = jboolean( _par5 );
+			args[6].c = _par6;
+			args[7].z = jboolean( _par7 );
+			args[8].z = jboolean( _par8 );
+			args[9].z = jboolean( _par9 );
+			args[10].z = jboolean( _par10 );
 			out = (sal_Bool)t.pEnv->CallStaticBooleanMethodA( getMyClass(), mID, args );
 		}
 	}

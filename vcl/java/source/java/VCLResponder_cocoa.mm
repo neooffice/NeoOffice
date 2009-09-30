@@ -42,6 +42,25 @@
 
 using namespace ::com::sun::star::awt;
 
+static unsigned short GetCurrentKeyChar()
+{
+	unsigned short nRet = 0;
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSEvent *pEvent = [pApp currentEvent];
+		if ( pEvent && [pEvent type] == NSKeyDown )
+		{
+			NSString *pChars = [pEvent charactersIgnoringModifiers];
+			if ( pChars && [pChars length] )
+				nRet = [pChars characterAtIndex:0];
+		}
+	}
+
+	return nRet;
+}
+
 static short GetCurrentKeyModifiers()
 {
 	short nRet = 0;
@@ -240,6 +259,16 @@ static short GetCurrentKeyModifiers()
 - (short)lastModifiers
 {
 	return mnLastModifiers;
+}
+
+- (unsigned short)lastOriginalKeyChar
+{
+	return GetCurrentKeyChar();
+}
+
+- (short)lastOriginalModifiers
+{
+	return GetCurrentKeyModifiers();
 }
 
 - (NSString *)lastText

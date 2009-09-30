@@ -1060,12 +1060,13 @@ public final class VCLEvent extends AWTEvent {
 	 *
 	 * @param source the <code>AWTEvent</code> that originated the event
 	 * @param id the event type
-	 * @param f the <code>VCLFrame</code> instance
+	 * @param f the <code>VCLFrame</code> pointer
 	 * @param d the data pointer
 	 */
-	VCLEvent(AWTEvent event, int id, VCLFrame f, long d) {
+	VCLEvent(AWTEvent event, int id, long f, long d) {
 
-		this(id, f, d);
+		this(id, null, d);
+		frame = f;
 
 		awtEvent = true;
 
@@ -1210,6 +1211,20 @@ public final class VCLEvent extends AWTEvent {
 		}
 
 		source = event;
+
+	}
+
+	/**
+	 * Constructs a new <code>VCLEvent</code> instance.
+	 *
+	 * @param source the <code>AWTEvent</code> that originated the event
+	 * @param id the event type
+	 * @param f the <code>VCLFrame</code> instance
+	 * @param d the data pointer
+	 */
+	VCLEvent(AWTEvent event, int id, VCLFrame f, long d) {
+
+		this(event, id, f != null ? f.getFrame() : 0, d);
 
 	}
 
@@ -1369,6 +1384,85 @@ public final class VCLEvent extends AWTEvent {
 							keyCode = VCLEvent.KEY_DIVIDE;
 						else if (keyChar == 0x3d)
 							keyCode = VCLEvent.KEY_EQUAL;
+						// 0xf700 and higher are NSEvent action constants
+						else if (keyChar == 0xf700)
+							keyCode = VCLEvent.KEY_UP;
+						else if (keyChar == 0xf701)
+							keyCode = VCLEvent.KEY_DOWN;
+						else if (keyChar == 0xf702)
+							keyCode = VCLEvent.KEY_LEFT;
+						else if (keyChar == 0xf703)
+							keyCode = VCLEvent.KEY_RIGHT;
+						else if (keyChar == 0xf704)
+							keyCode = VCLEvent.KEY_F1;
+						else if (keyChar == 0xf705)
+							keyCode = VCLEvent.KEY_F2;
+						else if (keyChar == 0xf706)
+							keyCode = VCLEvent.KEY_F3;
+						else if (keyChar == 0xf707)
+							keyCode = VCLEvent.KEY_F4;
+						else if (keyChar == 0xf708)
+							keyCode = VCLEvent.KEY_F5;
+						else if (keyChar == 0xf709)
+							keyCode = VCLEvent.KEY_F6;
+						else if (keyChar == 0xf70a)
+							keyCode = VCLEvent.KEY_F7;
+						else if (keyChar == 0xf70b)
+							keyCode = VCLEvent.KEY_F8;
+						else if (keyChar == 0xf70c)
+							keyCode = VCLEvent.KEY_F9;
+						else if (keyChar == 0xf70d)
+							keyCode = VCLEvent.KEY_F10;
+						else if (keyChar == 0xf70e)
+							keyCode = VCLEvent.KEY_F11;
+						else if (keyChar == 0xf70f)
+							keyCode = VCLEvent.KEY_F12;
+						else if (keyChar == 0xf710)
+							keyCode = VCLEvent.KEY_F13;
+						else if (keyChar == 0xf711)
+							keyCode = VCLEvent.KEY_F14;
+						else if (keyChar == 0xf712)
+							keyCode = VCLEvent.KEY_F15;
+						else if (keyChar == 0xf713)
+							keyCode = VCLEvent.KEY_F16;
+						else if (keyChar == 0xf714)
+							keyCode = VCLEvent.KEY_F17;
+						else if (keyChar == 0xf715)
+							keyCode = VCLEvent.KEY_F18;
+						else if (keyChar == 0xf716)
+							keyCode = VCLEvent.KEY_F19;
+						else if (keyChar == 0xf717)
+							keyCode = VCLEvent.KEY_F20;
+						else if (keyChar == 0xf718)
+							keyCode = VCLEvent.KEY_F21;
+						else if (keyChar == 0xf719)
+							keyCode = VCLEvent.KEY_F22;
+						else if (keyChar == 0xf71a)
+							keyCode = VCLEvent.KEY_F23;
+						else if (keyChar == 0xf71b)
+							keyCode = VCLEvent.KEY_F24;
+						else if (keyChar == 0xf71c)
+							keyCode = VCLEvent.KEY_F25;
+						else if (keyChar == 0xf71d)
+							keyCode = VCLEvent.KEY_F26;
+						else if (keyChar == 0xf727)
+							keyCode = VCLEvent.KEY_INSERT;
+						else if (keyChar == 0xf728)
+							keyCode = VCLEvent.KEY_DELETE;
+						else if (keyChar == 0xf729)
+							keyCode = VCLEvent.KEY_HOME;
+						else if (keyChar == 0xf72b)
+							keyCode = VCLEvent.KEY_END;
+						else if (keyChar == 0xf72c)
+							keyCode = VCLEvent.KEY_PAGEUP;
+						else if (keyChar == 0xf72d)
+							keyCode = VCLEvent.KEY_PAGEDOWN;
+						else if (keyChar == 0xf743)
+							keyCode = VCLEvent.KEY_UNDO;
+						else if (keyChar == 0xf745)
+							keyCode = VCLEvent.KEY_FIND;
+						else if (keyChar == 0xf746)
+							keyCode = VCLEvent.KEY_HELP;
 						else
 							keyCode = 0;
 						break;
@@ -1688,6 +1782,33 @@ public final class VCLEvent extends AWTEvent {
 	public int getModifiers() {
 
 		return modifiers;
+
+	}
+
+	/**
+	 * Returns the next original key event.
+	 *
+	 * @return the next original key event or <code>null</code>
+	 */
+	public VCLEvent getNextOriginalKeyEvent() {
+
+		VCLEvent nextOriginalKeyEvent = null;
+
+		if (source instanceof VCLEventQueue.CommandKeyEvent) {
+			KeyEvent e = ((VCLEventQueue.CommandKeyEvent)source).getNextOriginalKeyEvent();
+			if (e != null) {
+				int id = e.getID();
+				if (id == KeyEvent.KEY_PRESSED)
+					nextOriginalKeyEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYINPUT, frame, 0);
+				else if (id == KeyEvent.KEY_RELEASED)
+					nextOriginalKeyEvent = new VCLEvent(e, VCLEvent.SALEVENT_KEYUP, frame, 0);
+
+				if (nextOriginalKeyEvent != null && nextOriginalKeyEvent.getKeyCode() == 0)
+					nextOriginalKeyEvent = null;
+			}
+		}
+
+		return nextOriginalKeyEvent;
 
 	}
 

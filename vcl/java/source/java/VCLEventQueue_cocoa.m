@@ -642,7 +642,7 @@ static VCLResponder *pSharedResponder = nil;
 		// Fix bug 3496 by having any Cocoa commands take precedence over menu
 		// shortcuts
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
-		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers] ) )
+		if ( nCommandKey && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return YES;
 
 		// Fix bug 3357 by updating native menus. Fix bug 3379 by retaining
@@ -759,7 +759,7 @@ static VCLResponder *pSharedResponder = nil;
 
 		// Process any Cocoa commands but ignore when there is marked text
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
-		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers] ) )
+		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return;
 
 		// We still need the key entry fix if there is marked text otherwise

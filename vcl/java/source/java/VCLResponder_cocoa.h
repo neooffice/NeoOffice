@@ -67,6 +67,8 @@
 - (void)interpretKeyEvents:(NSArray *)pEvents;
 - (short)lastCommandKey;
 - (short)lastModifiers;
+- (unsigned short)lastOriginalKeyChar;
+- (short)lastOriginalModifiers;
 - (NSString *)lastText;
 - (void)moveBackwardAndModifySelection:(id)pSender;
 - (void)moveDown:(id)pSender;
