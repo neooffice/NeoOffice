@@ -1152,7 +1152,9 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                     bHandled = true;
                 }
 
-                if( !bHandled && i < mnGlyphCount - 1 )
+                // Fix bug 3564 by only adjusting the next glyph if there is a
+                // valid glyph
+                if( !bHandled && i < mnGlyphCount - 1 && pG->mnGlyphIndex & GF_IDXMASK )
                 {
                     nNewClusterWidth -= nDiff;
                     pNewGlyphWidths[i + 1] += nDiff;
