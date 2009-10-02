@@ -1,135 +1,229 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified October 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified October 2009 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_sw.hxx"
 #define ROLBCK_HISTORY_ONLY 	// Der Kampf gegen die CLOOK's
+
+#ifndef _DOC_HXX
 #include <doc.hxx>
-#include <com/sun/star/document/PrinterIndependentLayout.hpp>
-#include <com/sun/star/document/UpdateDocMode.hpp>
-#include <com/sun/star/text/XTextDocument.hpp>
-#include <com/sun/star/linguistic2/XProofreadingIterator.hpp>
-#include <com/sun/star/text/XFlatParagraphIteratorProvider.hpp>
-
-#include <unotools/processfactory.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/virdev.hxx>
-#include <rtl/logfile.hxx>
-#include <sfx2/printer.hxx>
-#include <sfx2/docfile.hxx>
-#include <sfx2/frame.hxx>
-
-#ifndef _SFXMACITEM_HXX //autogen
-	#include <svtools/macitem.hxx>
 #endif
+#ifndef _COM_SUN_STAR_DOCUMENT_PRINTERINDEPENDENTLAYOUT_HPP_
+#include <com/sun/star/document/PrinterIndependentLayout.hpp>
+#endif
+#ifndef _COM_SUN_STAR_DOCUMENT_UPDATEDOCMODE_HPP_
+#include <com/sun/star/document/UpdateDocMode.hpp>
+#endif
+#ifndef _SV_VIRDEV_HXX
+#include <vcl/virdev.hxx>
+#endif
+#ifndef _RTL_LOGFILE_HXX_
+#include <rtl/logfile.hxx>
+#endif
+#ifndef _SFX_PRINTER_HXX //autogen
+#include <sfx2/printer.hxx>
+#endif
+#ifndef _SFXDOCINF_HXX //autogen
+#include <sfx2/docinf.hxx>
+#endif
+#ifndef _SFXDOCFILE_HXX //autogen
+#include <sfx2/docfile.hxx>
+#endif
+#ifndef _SFXFRAME_HXX
+#include <sfx2/frame.hxx>
+#endif
+#ifndef _SFXMACITEM_HXX //autogen
+#include <svtools/macitem.hxx>
+#endif
+#include <svtools/stylepool.hxx>
 #ifndef _SVX_SVXIDS_HRC
 #include <svx/svxids.hrc>
 #endif
+#ifndef _SVXLINKMGR_HXX
 #include <svx/linkmgr.hxx>
+#endif
+#ifndef _FORBIDDENCHARACTERSTABLE_HXX
 #include <svx/forbiddencharacterstable.hxx>
+#endif
+#ifndef _ZFORLIST_HXX
 #include <svtools/zforlist.hxx>
+#endif
+#ifndef INCLUDED_SVTOOLS_COMPATIBILITY_HXX
 #include <svtools/compatibility.hxx>
-#include <svtools/lingucfg.hxx>
+#endif
+#ifndef _SVDPAGE_HXX
 #include <svx/svdpage.hxx>
+#endif
+
+#ifndef _PARATR_HXX
 #include <paratr.hxx>
+#endif
+#ifndef _FCHRFMT_HXX
 #include <fchrfmt.hxx>
+#endif
+#ifndef _FMTCNTNT_HXX
 #include <fmtcntnt.hxx>
+#endif
+#ifndef _FMTANCHR_HXX
 #include <fmtanchr.hxx>
+#endif
+#ifndef _FMTFSIZE_HXX
 #include <fmtfsize.hxx>
+#endif
+#ifndef _FMTFORDR_HXX
 #include <fmtfordr.hxx>
+#endif
+#ifndef _FMTPDSC_HXX
 #include <fmtpdsc.hxx>
+#endif
+#ifndef _PVPRTDAT_HXX
 #include <pvprtdat.hxx>
+#endif
+#ifndef _ROOTFRM_HXX
 #include <rootfrm.hxx>  //Damit der RootDtor gerufen wird.
+#endif
+#ifndef _LAYOUTER_HXX
 #include <layouter.hxx>
+#endif
+#ifndef _PAGEDESC_HXX
 #include <pagedesc.hxx> //Damit die PageDescs zerstoert werden koennen.
+#endif
+#ifndef _NDTXT_HXX
 #include <ndtxt.hxx>
+#endif
+#ifndef _SW_PRINTDATA_HXX
 #include <printdata.hxx>
+#endif
+#ifndef _DOCFLD_HXX
 #include <docfld.hxx>
+#endif
+#ifndef _FTNINFO_HXX
 #include <ftninfo.hxx>
+#endif
+#ifndef _FTNIDX_HXX
 #include <ftnidx.hxx>
+#endif
+#ifndef _DOCSTAT_HXX
 #include <docstat.hxx>
+#endif
+#ifndef _CHARFMT_HXX
 #include <charfmt.hxx>
+#endif
+#ifndef _FRMFMT_HXX
 #include <frmfmt.hxx>
+#endif
+#ifndef _ROLBCK_HXX
 #include <rolbck.hxx>           // Undo-Attr, SwHistory
+#endif
+#ifndef _POOLFMT_HXX
 #include <poolfmt.hxx>          // fuer die Pool-Vorlage
+#endif
 #ifndef _DBMGR_HXX
 #include <dbmgr.hxx>
 #endif
 #ifndef _DOCSH_HXX
 #include <docsh.hxx>
 #endif
+#ifndef _ACORRECT_HXX
 #include <acorrect.hxx>			// fuer die autom. Aufnahme von Ausnahmen
+#endif
+#ifndef _VISITURL_HXX
 #include <visiturl.hxx>			// fuer die URL-Change Benachrichtigung
+#endif
+#ifndef _DOCARY_HXX
 #include <docary.hxx>
+#endif
 #ifndef _LINEINFO_HXX
 #include <lineinfo.hxx>
 #endif
+#ifndef _DRAWDOC_HXX
 #include <drawdoc.hxx>
+#endif
+#ifndef _LINKENUM_HXX
 #include <linkenum.hxx>
+#endif
+#ifndef _FLDUPDE_HXX
 #include <fldupde.hxx>
+#endif
+#ifndef _EXTINPUT_HXX
 #include <extinput.hxx>
+#endif
+#ifndef _VIEWSH_HXX
 #include <viewsh.hxx>
+#endif
+#ifndef _DOCTXM_HXX
 #include <doctxm.hxx>
+#endif
+#ifndef _SHELLRES_HXX
 #include <shellres.hxx>
+#endif
+#ifndef _UNOCLBCK_HXX
 #include <unoclbck.hxx>
+#endif
+#ifndef _BREAKIT_HXX
 #include <breakit.hxx>
+#endif
+#ifndef _LAYCACHE_HXX
 #include <laycache.hxx>
+#endif
+#ifndef _MVSAVE_HXX
 #include <mvsave.hxx>
+#endif
+#ifndef _ISTYLEACCESS_HXX
 #include <istyleaccess.hxx>
+#endif
 #include <swstylemanager.hxx>
-#include <IGrammarContact.hxx>
-
-#include <unochart.hxx>
 
 #ifndef _CMDID_H
 #include <cmdid.h>              // fuer den dflt - Printer in SetJob
 #endif
 
-
 // --> OD 2006-04-19 #b6375613#
+#ifndef  _COM_SUN_STAR_DOCUMENT_XDOCUMENTINFOSUPPLIER_HPP_
 #include <com/sun/star/document/XDocumentInfoSupplier.hpp>
+#endif
+#ifndef _COM_SUN_STAR_BEANS_XPROPERTYCONTAINER_HPP_
 #include <com/sun/star/beans/XPropertyContainer.hpp>
+#endif
+#ifndef _COM_SUN_STAR_BEANS_PROPERTYATTRIBUTE_HPP_
 #include <com/sun/star/beans/PropertyAttribute.hpp>
+#endif
 
 using namespace ::com::sun::star;
 // <--
-
-// --> OD 2007-03-16 #i73788#
-#include <pausethreadstarting.hxx>
-// <--
-#include <numrule.hxx>
-// --> OD 2008-03-13 #refactorlists#
-#include <list.hxx>
-#include <listfunc.hxx>
-// <--
-
-#include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 
 using namespace ::com::sun::star::document;
 
@@ -144,53 +238,6 @@ SV_IMPL_PTRARR( SwNumRuleTbl, SwNumRulePtr)
 SV_IMPL_PTRARR( SwTxtFmtColls, SwTxtFmtCollPtr)
 SV_IMPL_PTRARR( SwGrfFmtColls, SwGrfFmtCollPtr)
 
-/*
- * global functions...
- */
-
- uno::Reference< linguistic2::XProofreadingIterator > SwDoc::GetGCIterator() const
-{
-    if (!m_xGCIterator.is() && SvtLinguConfig().HasGrammarChecker())
-    {
-        uno::Reference< lang::XMultiServiceFactory >  xMgr( utl::getProcessServiceFactory() );
-        if (xMgr.is())
-        {
-            try
-            {
-                rtl::OUString aServiceName( rtl::OUString::createFromAscii("com.sun.star.linguistic2.ProofreadingIterator") );
-                m_xGCIterator = uno::Reference< linguistic2::XProofreadingIterator >
-                    ( xMgr->createInstance( aServiceName ), uno::UNO_QUERY_THROW );
-            }
-            catch (uno::Exception &)
-            {
-                DBG_ERROR( "No GCIterator" );
-            }
-        }
-    }
-
-    return m_xGCIterator;
-}
-
-void StartGrammarChecking( SwDoc &rDoc, SwRootFrm &rRootFrame )
-{
-//    if (rRootFrame.IsGrammarCheckActive())
-//        return;
-
-	uno::Reference< linguistic2::XProofreadingIterator > xGCIterator( rDoc.GetGCIterator() );
-	if ( xGCIterator.is() )
-	{
-        uno::Reference< lang::XComponent >  xDoc( rDoc.GetDocShell()->GetBaseModel(), uno::UNO_QUERY );
-		uno::Reference< text::XFlatParagraphIteratorProvider >  xFPIP( xDoc, uno::UNO_QUERY );
-
-		// start automatic background checking
-		if ( xFPIP.is() && !xGCIterator->isProofreading( xDoc ) )
-		{
-			rRootFrame.SetNeedGrammarCheck( false );
-			rRootFrame.SetGrammarCheckActive( true );
-			xGCIterator->startProofreading( xDoc, xFPIP );
-		}
-	}
-}
 
 /*
  * interne Funktionen
@@ -238,8 +285,8 @@ SwDoc::SwDoc() :
 	pUndos( new SwUndos( 0, 20 ) ),
 	pUpdtFlds( new SwDocUpdtFld() ),
 	pFldTypes( new SwFldTypes() ),
-    pVirDev( 0 ),
 	pPrt( 0 ),
+    pVirDev( 0 ),
     pPrtData( 0 ),
 	pGlossaryDoc( 0 ),
 	pOutlineRule( 0 ),
@@ -248,6 +295,7 @@ SwDoc::SwDoc() :
 	pLineNumberInfo( new SwLineNumberInfo ),
 	pFtnIdxs( new SwFtnIdxs ),
 	pDocStat( new SwDocStat ),
+	pSwgInfo( 0 ),
 	pDocShell( 0 ),
 	pDocShRef( 0 ),
 	pLinkMgr( new SvxLinkManager( 0 ) ),
@@ -255,49 +303,32 @@ SwDoc::SwDoc() :
 	pURLStateChgd( 0 ),
 	pNumberFormatter( 0 ),
 	pNumRuleTbl( new SwNumRuleTbl ),
-    // --> OD 2008-03-26 #refactorlists#
-    maLists(),
-    maListStyleLists(),
-    // <--
-    pRedlineTbl( new SwRedlineTbl ),
+	pRedlineTbl( new SwRedlineTbl ),
 	pAutoFmtRedlnComment( 0 ),
 	pUnoCrsrTbl( new SwUnoCrsrTbl( 0, 16 ) ),
 	pPgPViewPrtData( 0 ),
 	pExtInputRing( 0 ),
 	pLayouter( 0 ),
-    // --> OD 2008-03-07 #refactorlists#
-    pStyleAccess( 0 ),
-    // <--
+    pStyleAccess( createStyleManager() ),
     pLayoutCache( 0 ),
 	pUnoCallBack(new SwUnoCallBack(0)),
-    mpGrammarContact( 0 ),
-    aChartDataProviderImplRef(),
-    pChartControllerHelper( 0 ),
-    // --> OD 2007-10-31 #i83479#
-    mpListItemsList( new tImplSortedNodeNumList() ),
-    // <--
-    nUndoPos( 0 ),
+	nUndoPos( 0 ),
 	nUndoSavePos( 0 ),
 	nUndoCnt( 0 ),
 	nUndoSttEnd( 0 ),
 	nAutoFmtRedlnCommentNo( 0 ),
-	nLinkUpdMode( GLOBALSETTING ),
- 	eFldUpdMode( AUTOUPD_GLOBALSETTING ),
-	eRedlineMode((RedlineMode_t)(nsRedlineMode_t::REDLINE_SHOW_INSERT | nsRedlineMode_t::REDLINE_SHOW_DELETE)),
+	eRedlineMode((IDocumentRedlineAccess::RedlineMode_t)(IDocumentRedlineAccess::REDLINE_SHOW_INSERT | IDocumentRedlineAccess::REDLINE_SHOW_DELETE)),
 	eChrCmprType( CHARCOMPRESS_NONE ),
     mReferenceCount(0),
     mIdleBlockCount(0),
     nLockExpFld( 0 ),
+	nLinkUpdMode( GLOBALSETTING ),
+ 	nFldUpdMode( AUTOUPD_GLOBALSETTING ),
 	mbReadlineChecked(false),
     mbWinEncryption(sal_False),
+    mbStartIdleTimer(sal_False),
     // --> OD 2005-02-11 #i38810#
-    mbLinksUpdated( sal_False ),
-    mbClipBoard( false ),
-    mbColumnSelection( false ),
-    // i#78591#
-    n32DummyCompatabilityOptions1(0),
-    n32DummyCompatabilityOptions2(0),
-    mbStartIdleTimer(sal_False)
+    mbLinksUpdated( sal_False )
 {
 	RTL_LOGFILE_CONTEXT_AUTHOR( aLog, "SW", "JP93722",  "SwDoc::SwDoc" );
 
@@ -364,7 +395,7 @@ SwDoc::SwDoc() :
     mbOldNumbering                          = false;        // hidden
     mbUseHiResolutionVirtualDevice          = true;         // hidden
     mbIgnoreFirstLineIndentInNumbering      = false;        // hidden
-    mbDoNotJustifyLinesWithManualBreak      = !aOptions.IsExpandWordSpace();
+    mbDoNotJustifyLinesWithManualBreak      = false;        // hidden
     mbDoNotResetParaAttrsForNumFont         = false;        // hidden
     mbOutlineLevelYieldsOutlineRule         = false;        // hidden
     mbTableRowKeep                          = false;        // hidden
@@ -372,20 +403,12 @@ SwDoc::SwDoc() :
     mbDoNotCaptureDrawObjsOnPage            = false;        // hidden
     mbClipAsCharacterAnchoredWriterFlyFrames= false;        // hidden
     mbUnixForceZeroExtLeading               = false;        // hidden
-    mbOldPrinterMetrics                     = false;        // hidden
-    mbTabRelativeToIndent                   = true;         // hidden
-    mbProtectForm                           = false;        // hidden
-    // --> OD 2008-06-05 #i89181#
-    mbTabAtLeftIndentForParagraphsInList    = false;        // hidden
-    // <--
 
     //
     // COMPATIBILITY FLAGS END
     //
 
 	pMacroTable = new SvxMacroTableDtor;
-    
-    mpGrammarContact = ::createGrammarContact();
 
 	/*
 	 * Defaultformate und DefaultFormatsammlungen (FmtColl)
@@ -408,20 +431,16 @@ SwDoc::SwDoc() :
 		GetPageDescFromPool( RES_POOLPAGE_STANDARD );
 
 		//Leere Seite Einstellen.
-    pEmptyPageFmt->SetFmtAttr( SwFmtFrmSize( ATT_FIX_SIZE ) );
+	pEmptyPageFmt->SetAttr( SwFmtFrmSize( ATT_FIX_SIZE ) );
 		//BodyFmt fuer Spalten Einstellen.
-    pColumnContFmt->SetFmtAttr( SwFmtFillOrder( ATT_LEFT_TO_RIGHT ) );
+	pColumnContFmt->SetAttr( SwFmtFillOrder( ATT_LEFT_TO_RIGHT ) );
 
 	_InitFieldTypes();
 
     // lege (fuer die Filter) eine Default-OutlineNumRule an
-    // --> OD 2008-02-11 #newlistlevelattrs#
-    pOutlineRule = new SwNumRule( String::CreateFromAscii( SwNumRule::GetOutlineRuleName() ),
-                                  // --> OD 2008-06-06 #i89178#
-                                  numfunc::GetDefaultPositionAndSpaceMode(),
-                                  // <--
-                                  OUTLINE_RULE );
-    // <--
+	pOutlineRule = new SwNumRule( String::CreateFromAscii(
+										SwNumRule::GetOutlineRuleName() ),
+                                        OUTLINE_RULE );
     // #115901#
     AddNumRule(pOutlineRule);
     // --> OD 2005-10-21 - counting of phantoms depends on <IsOldNumbering()>
@@ -435,6 +454,10 @@ SwDoc::SwDoc() :
 	// den eigenen IdleTimer setzen
 	aIdleTimer.SetTimeout( 600 );
 	aIdleTimer.SetTimeoutHdl( LINK(this, SwDoc, DoIdleJobs) );
+
+	// den CharTimer setzen
+	aChartTimer.SetTimeout( 2000 );
+	aChartTimer.SetTimeoutHdl( LINK( this, SwDoc, DoUpdateAllCharts ));
 
 	aOLEModifiedTimer.SetTimeout( 1000 );
 	aOLEModifiedTimer.SetTimeoutHdl( LINK( this, SwDoc, DoUpdateModifiedOLE ));
@@ -460,17 +483,6 @@ SwDoc::SwDoc() :
 	pNew = new SwTOXType(TOX_AUTHORITIES, 			pShellRes->aTOXAuthoritiesName   );
 	pTOXTypes->Insert( pNew, pTOXTypes->Count() );
 
-    // --> OD 2008-03-07 #refactorlists#
-    // pass empty item set containing the paragraph's list attributes
-    // as ignorable items to the stype manager.
-    {
-        SfxItemSet aIgnorableParagraphItems( GetAttrPool(),
-                                             RES_PARATR_LIST_BEGIN, RES_PARATR_LIST_END-1,
-                                             0 );
-        pStyleAccess = createStyleManager( &aIgnorableParagraphItems );
-    }
-    // <--
-
     ResetModified();
 }
 
@@ -484,25 +496,6 @@ SwDoc::SwDoc() :
 
 SwDoc::~SwDoc()
 {
-    // --> OD 2007-03-16 #i73788#
-    SwPauseThreadStarting aPauseThreadStarting;
-    // <--
-
-    // --> OD 2007-11-01 #i83479#
-    delete mpListItemsList;
-    mpListItemsList = 0;
-    // <--
-
-    // clean up chart related structures...
-    // Note: the chart data provider gets already diposed in ~SwDocShell
-    // since all UNO API related functionality requires an existing SwDocShell
-    // this assures that dipose gets called if there is need for it.
-    aChartDataProviderImplRef.reset();
-    delete pChartControllerHelper;
-    
-    delete mpGrammarContact;
-    mpGrammarContact = 0;
-
     //!! needs to be done to destroy a possible SwFmtDrop format that may
     //!! be connected to a char format which may not otherwise be removed
     //!! and thus would leave a unremoved SwFmt object. (TL)
@@ -650,6 +643,7 @@ SwDoc::~SwDoc()
 
 	// Delete fuer pPrt
 	DELETEZ( pPrt );
+	DELETEZ( pSwgInfo );
 	DELETEZ( pNewDBMgr );
 
 	// Alle Flys muessen vor dem Drawing Model zerstoert werden,
@@ -688,20 +682,6 @@ SwDoc::~SwDoc()
 	delete pDfltGrfFmtColl;
 	delete pNumRuleTbl;
 
-    // --> OD 2008-03-26 #refactorlists#
-    {
-        for ( std::hash_map< String, SwList*, StringHash >::iterator
-                                                    aListIter = maLists.begin();
-              aListIter != maLists.end();
-              ++aListIter )
-        {
-            delete (*aListIter).second;
-        }
-        maLists.clear();
-    }
-    maListStyleLists.clear();
-    // <--
-
 	delete pPrtData;
 	delete pBookmarkTbl;
 	delete pNumberFormatter;
@@ -723,7 +703,6 @@ SwDoc::~SwDoc()
 	delete pDfltFrmFmt;
     delete pLayoutCache;
     delete pVirDev;
-
 }
 
 //---------------------------------------------------
@@ -766,7 +745,6 @@ SfxPrinter& SwDoc::CreatePrinter_() const
 					SID_PRINTER_NOTFOUND_WARN, SID_PRINTER_NOTFOUND_WARN,
 					SID_PRINTER_CHANGESTODOC, SID_PRINTER_CHANGESTODOC,
 					0 );
-
     SfxPrinter* pNewPrt = new SfxPrinter( pSet );
     const_cast<SwDoc*>(this)->setPrinter( pNewPrt, true, true );
     return *pPrt;
@@ -778,7 +756,6 @@ void SwDoc::SetDocShell( SwDocShell* pDSh )
 	if( pDocShell != pDSh )
 	{
 		pDocShell = pDSh;
-
 		pLinkMgr->SetPersist( pDocShell );
 		//JP 27.08.98: Bug 55570 - DocShell Pointer auch am DrawModel setzen
 		if( pDrawModel )
@@ -797,7 +774,7 @@ void SwDoc::SetDocShell( SwDocShell* pDSh )
 
 
 
-uno::Reference < embed::XStorage > SwDoc::GetDocStorage()
+com::sun::star::uno::Reference < com::sun::star::embed::XStorage > SwDoc::GetDocStorage()
 {
 	if( pDocShell )
 		return pDocShell->GetStorage();
@@ -814,6 +791,35 @@ SfxObjectShell* SwDoc::GetPersist() const
 }
 
 
+
+void SwDoc::SetPersist( SfxObjectShell* pPersist )
+{
+	if( !pDocShell )
+	{
+		ASSERT( ( !pPersist && pLinkMgr->GetPersist() ) ||
+				( pPersist && !pLinkMgr->GetPersist() ),
+				"doppeltes setzen von Persist-Pointer?" )
+		pLinkMgr->SetPersist( pPersist );
+	}
+#ifndef PRODUCT
+	else
+		ASSERT( !this, "DocShell existiert schon!" )
+#endif
+}
+
+const SfxDocumentInfo* SwDoc::GetpInfo() const
+{
+	return pSwgInfo;
+}
+
+SfxDocumentInfo* SwDoc::GetInfo()
+{
+	if( !pSwgInfo )
+		// Pointer-Members initialisieren
+		pSwgInfo  = new SfxDocumentInfo;
+	return pSwgInfo;
+}
+
 void SwDoc::ClearDoc()
 {
 	BOOL bOldUndo = mbUndo;
@@ -829,7 +835,7 @@ void SwDoc::ClearDoc()
 
 	// stehen noch FlyFrames rum, loesche auch diese
 	USHORT n;
-	while ( 0 != (n = GetSpzFrmFmts()->Count()) )
+	while ((n = GetSpzFrmFmts()->Count()))
 		DelLayoutFmt((*pSpzFrmFmtTbl)[n-1]);
 	ASSERT( !pDrawModel || !pDrawModel->GetPage(0)->GetObjCount(),
 				"not all DrawObjects removed from the page" );
@@ -855,7 +861,7 @@ void SwDoc::ClearDoc()
 	if( pLayout )
 	{
 		// set the layout to the dummy pagedesc
-        pFirstNd->SetAttr( SwFmtPageDesc( pDummyPgDsc ));
+		pFirstNd->SwCntntNode::SetAttr( SwFmtPageDesc( pDummyPgDsc ));
 
 		SwPosition aPos( *pFirstNd, SwIndex( pFirstNd ));
 		::PaMCorrAbs( aSttIdx, SwNodeIndex( GetNodes().GetEndOfContent() ),
@@ -871,13 +877,9 @@ void SwDoc::ClearDoc()
     pOutlineRule = NULL;
     pNumRuleTbl->DeleteAndDestroy( 0, pNumRuleTbl->Count() );
     // creation of new outline numbering rule
-    // --> OD 2008-02-11 #newlistlevelattrs#
-    pOutlineRule = new SwNumRule( String::CreateFromAscii( SwNumRule::GetOutlineRuleName() ),
-                                  // --> OD 2008-06-06 #i89178#
-                                  numfunc::GetDefaultPositionAndSpaceMode(),
-                                  // <--
+    pOutlineRule = new SwNumRule( String::CreateFromAscii(
+                                      SwNumRule::GetOutlineRuleName() ),
                                   OUTLINE_RULE );
-    // <--
     AddNumRule(pOutlineRule);
     // --> OD 2005-10-21 - counting of phantoms depends on <IsOldNumbering()>
     pOutlineRule->SetCountPhantoms( !get(IDocumentSettingAccess::OLD_NUMBERING) );
@@ -976,23 +978,15 @@ void SwDoc::WriteLayoutCache( SvStream& rStream )
     pLayoutCache->Write( rStream, *this );
 }
 
-IGrammarContact* getGrammarContact( const SwTxtNode& rTxtNode )
-{
-    const SwDoc* pDoc = rTxtNode.GetDoc();
-    if( !pDoc || pDoc->IsInDtor() )
-        return 0;
-    return pDoc->getGrammarContact();
-}
-
 // --> FME 2005-02-25 #i42634# Moved common code of SwReader::Read() and
 // SwDocShell::UpdateLinks() to new SwDoc::UpdateLinks():
-void SwDoc::UpdateLinks( BOOL bUI )
+void SwDoc::UpdateLinks()
 {
     SfxObjectCreateMode eMode;
     USHORT nLinkMode = getLinkUpdateMode( true );
     USHORT nUpdateDocMode = GetDocShell()->GetUpdateDocMode();
     if( GetDocShell() &&
-            (nLinkMode != NEVER ||  document::UpdateDocMode::FULL_UPDATE == nUpdateDocMode) &&
+            (nLinkMode != NEVER ||  ::com::sun::star::document::UpdateDocMode::FULL_UPDATE == nUpdateDocMode) &&
         GetLinkManager().GetLinks().Count() &&
         SFX_CREATE_MODE_INTERNAL !=
                     ( eMode = GetDocShell()->GetCreateMode()) &&
@@ -1005,11 +999,11 @@ void SwDoc::UpdateLinks( BOOL bUI )
         BOOL bUpdate = TRUE;
         switch(nUpdateDocMode)
         {
-            case document::UpdateDocMode::NO_UPDATE:   bUpdate = FALSE;break;
-            case document::UpdateDocMode::QUIET_UPDATE:bAskUpdate = FALSE; break;
-            case document::UpdateDocMode::FULL_UPDATE: bAskUpdate = TRUE; break;
+            case ::com::sun::star::document::UpdateDocMode::NO_UPDATE:   bUpdate = FALSE;break;
+            case ::com::sun::star::document::UpdateDocMode::QUIET_UPDATE:bAskUpdate = FALSE; break;
+            case ::com::sun::star::document::UpdateDocMode::FULL_UPDATE: bAskUpdate = TRUE; break;
         }
-        if( bUpdate && (bUI || !bAskUpdate) )
+        if(bUpdate)
         {
             SfxMedium* pMedium = GetDocShell()->GetMedium();
             SfxFrame* pFrm = pMedium ? pMedium->GetLoadTargetFrame() : 0;
