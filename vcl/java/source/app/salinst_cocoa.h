@@ -45,6 +45,7 @@ BEGIN_C
 #endif
 void NSApplication_dispatchPendingEvents();
 id NSApplication_getModalWindow();
+void NSApplication_setHelpMenu();
 #ifdef __cplusplus
 END_C
 #endif

@@ -246,6 +246,9 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						}
 					}
 
+					// Set the help menu
+					NSApplication_setHelpMenu();
+
 					// We need to let any timers run that were added by any menu
 					// changes. Otherwise, some menus will be drawn in the state
 					// that they were in before we updated the menus.
