@@ -421,19 +421,32 @@ namespace sdr
 					const XGradient aNullGrad(aNullLineCol, COL_WHITE);
 					const XHatch aNullHatch(aNullLineCol);
 
-					mpItemSet->Put(SdrShadowItem());
-					mpItemSet->Put(SdrShadowColorItem(aNullStr, aNullShadowCol));
-					mpItemSet->Put(SdrShadowTransparenceItem());
-					mpItemSet->Put(XFillColorItem(aNullStr, aNullFillCol));
-					mpItemSet->Put(XFillFloatTransparenceItem());
-					mpItemSet->Put(XFillGradientItem(aNullStr, aNullGrad));
-					mpItemSet->Put(XFillHatchItem(aNullStr, aNullHatch));
-					mpItemSet->Put(XFillTransparenceItem());
-					mpItemSet->Put(XLineColorItem(aNullStr, aNullLineCol));
-					mpItemSet->Put(XLineDashItem(aNullStr, aNullDash));
-					mpItemSet->Put(XLineEndItem(aNullStr, aNullPol));
-					mpItemSet->Put(XLineStartItem(aNullStr, aNullPol));
-					mpItemSet->Put(XLineTransparenceItem());
+					if( mpItemSet->GetItemState(SDRATTR_SHADOW) != SFX_ITEM_SET )
+						mpItemSet->Put(SdrShadowItem());
+					if( mpItemSet->GetItemState(SDRATTR_SHADOWCOLOR) != SFX_ITEM_SET )
+						mpItemSet->Put(SdrShadowColorItem(aNullStr, aNullShadowCol));
+					if( mpItemSet->GetItemState(SDRATTR_SHADOWTRANSPARENCE) != SFX_ITEM_SET )
+						mpItemSet->Put(SdrShadowTransparenceItem());
+					if( mpItemSet->GetItemState(XATTR_FILLCOLOR) != SFX_ITEM_SET )
+						mpItemSet->Put(XFillColorItem(aNullStr, aNullFillCol));
+					if( mpItemSet->GetItemState(XATTR_FILLFLOATTRANSPARENCE) != SFX_ITEM_SET )
+						mpItemSet->Put(XFillFloatTransparenceItem());
+					if( mpItemSet->GetItemState(XATTR_FILLGRADIENT) != SFX_ITEM_SET )
+						mpItemSet->Put(XFillGradientItem(aNullStr, aNullGrad));
+					if( mpItemSet->GetItemState(XATTR_FILLHATCH) != SFX_ITEM_SET )
+						mpItemSet->Put(XFillHatchItem(aNullStr, aNullHatch));
+					if( mpItemSet->GetItemState(XATTR_FILLTRANSPARENCE) != SFX_ITEM_SET )
+						mpItemSet->Put(XFillTransparenceItem());
+					if( mpItemSet->GetItemState(XATTR_LINECOLOR) != SFX_ITEM_SET )
+						mpItemSet->Put(XLineColorItem(aNullStr, aNullLineCol));
+					if( mpItemSet->GetItemState(XATTR_LINEDASH) != SFX_ITEM_SET )
+						mpItemSet->Put(XLineDashItem(aNullStr, aNullDash));
+					if( mpItemSet->GetItemState(XATTR_LINEEND) != SFX_ITEM_SET )
+						mpItemSet->Put(XLineEndItem(aNullStr, aNullPol));
+					if( mpItemSet->GetItemState(XATTR_LINESTART) != SFX_ITEM_SET )
+						mpItemSet->Put(XLineStartItem(aNullStr, aNullPol));
+					if( mpItemSet->GetItemState(XATTR_LINETRANSPARENCE) != SFX_ITEM_SET )
+						mpItemSet->Put(XLineTransparenceItem());
 				}
 #endif	// USE_JAVA
 			}
