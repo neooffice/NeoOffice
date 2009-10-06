@@ -44,6 +44,10 @@
 #include <map>
 #include "neomobilei18n.hxx"
 
+#ifndef NSDownloadsDirectory
+#define NSDownloadsDirectory ((NSSearchPathDirectory)15)
+#endif
+
 using namespace rtl;
 using namespace vos;
 using namespace utl;
@@ -667,7 +671,41 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( !decodedFilename )
 		decodedFilename = filename;
 
-	NSString *basePath = NSTemporaryDirectory();
+	NSString *basePath = nil;
+	NSArray *downloadPaths = nil;
+
+	// Use NSDownloadsDirectory only if we are running Leopard or higher,
+	// otherwise use NSDesktopDirectory
+	long res = 0;
+	if (Gestalt(gestaltSystemVersion, &res) == noErr)
+	{
+		bool isLeopardOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x5 ) );
+		if (isLeopardOrHigher)
+			downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
+		else
+			downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
+	}
+
+	if (downloadPaths)
+	{
+ 		unsigned int dirCount = [downloadPaths count];
+ 		unsigned int i = 0;
+		for (; i < dirCount && !basePath; i++)
+		{
+			MacOSBOOL isDir = NO;
+			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
+			if ([[NSFileManager defaultManager] fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
+			{
+				basePath = downloadPath;
+				break;
+			}
+		}
+	}
+
+	if (!basePath)
+		basePath = NSTemporaryDirectory();
+	if (!basePath)
+		basePath = @"/tmp";
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
 	int i=0;
 	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
