@@ -667,8 +667,15 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #endif
 	// Fix broken WebKit handling of the Content-Disposition header by assuming
 	// that our server has URL encoded the file name
-	NSString *decodedFilename = [filename stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
-	if ( !decodedFilename )
+	NSString *decodedFilename = filename;
+	NSMutableString *mutableDecodedFilename = [NSMutableString stringWithString:filename];
+	if (mutableDecodedFilename)
+	{
+		[mutableDecodedFilename replaceOccurrencesOfString:@"+" withString:@" " options:0 range:NSMakeRange(0, [filename length])];
+		decodedFilename = mutableDecodedFilename;
+	}
+	decodedFilename = [decodedFilename stringByReplacingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+	if (!decodedFilename)
 		decodedFilename = filename;
 
 	NSString *basePath = nil;
