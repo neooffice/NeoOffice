@@ -214,7 +214,13 @@ public:
 		SAL_CALL getOpenDocumentExtension( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
+		SAL_CALL getOfficeDocumentExtension( ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::rtl::OUString
 		SAL_CALL getMimeType( ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::rtl::OUString
+		SAL_CALL getOfficeMimeType( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
 		SAL_CALL isPasswordProtected( )
@@ -227,6 +233,9 @@ public:
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
 		SAL_CALL saveAsOpenDocument( const rtl::OUString& url ) 
+		throw (::com::sun::star::uno::RuntimeException);
+	virtual ::sal_Bool
+		SAL_CALL saveAsOfficeDocument( const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
 		SAL_CALL zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
@@ -680,6 +689,39 @@ static NeoMobileWebView *pSharedWebView = nil;
 }
 
 ::rtl::OUString
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getOfficeDocumentExtension( void ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+		try
+		{
+			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			
+			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+			
+			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+			Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+			Reference< XModel > rModel=rFrame->getController()->getModel();
+
+			Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+			if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+				return(OUString::createFromAscii(".doc"));
+			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+				return(OUString::createFromAscii(".xls"));
+			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+				return(OUString::createFromAscii(".ppt"));
+			else
+				return(OUString::createFromAscii(""));
+		}
+		catch (...)
+		{
+		}
+		
+	return(OUString::createFromAscii(""));
+}
+
+::rtl::OUString
 	SAL_CALL MacOSXNeoOfficeMobileImpl::getMimeType( void ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
@@ -704,6 +746,39 @@ static NeoMobileWebView *pSharedWebView = nil;
 				return(OUString::createFromAscii("application/vnd.oasis.opendocument.graphics"));
 			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
 				return(OUString::createFromAscii("application/vnd.oasis.opendocument.presentation"));
+			else
+				return(OUString::createFromAscii(""));
+		}
+		catch (...)
+		{
+		}
+		
+	return(OUString::createFromAscii(""));
+}
+
+::rtl::OUString
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getOfficeMimeType( void ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+		try
+		{
+			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+			
+			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+			
+			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+			Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+			Reference< XModel > rModel=rFrame->getController()->getModel();
+						
+			Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+						if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+				return(OUString::createFromAscii("application/msword"));
+			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+				return(OUString::createFromAscii("application/msexcel"));
+			else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+				return(OUString::createFromAscii("application/mspowerpoint"));
 			else
 				return(OUString::createFromAscii(""));
 		}
@@ -888,6 +963,51 @@ static NeoMobileWebView *pSharedWebView = nil;
 	return(sal_False);
 }
 
+::sal_Bool
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsOfficeDocument( const rtl::OUString& url ) 
+	throw (::com::sun::star::uno::RuntimeException)
+{
+	try
+	{
+		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+		
+		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+		
+		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
+		Reference< XModel > rModel=rFrame->getController()->getModel();
+		
+		Sequence< PropertyValue > lProperties(2);
+		
+		lProperties[0].Name=OUString::createFromAscii("FilterName");
+		
+		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY);
+		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("MS Word 97");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.sheet.SpreadsheetDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("MS Excel 97");
+		else if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.presentation.PresentationDocument")))
+			lProperties[0].Value <<= OUString::createFromAscii("MS PowerPoint 97");
+		else
+			return(sal_False);
+		
+		lProperties[1].Name=OUString::createFromAscii("Overwrite");
+		lProperties[1].Value <<= sal_True;
+		
+		Reference< XStorable > xStore(rModel, UNO_QUERY);
+		xStore->storeToURL(url, lProperties);
+		
+		return(sal_True);
+	}
+	catch (...)
+	{
+	}
+
+	return(sal_False);
+}
+
 /**
  * Zip the contents of a directory into new selfcontained zip file.
  *
@@ -916,7 +1036,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 		
 		getcwd(oldWD, sizeof(oldWD));
 		chdir(asciiDirPath.getStr());
-		OString zipCmd("/usr/bin/zip \"");
+		OString zipCmd("/usr/bin/zip -q \"");
 		zipCmd+=asciiZipFilePath;
 		zipCmd+=OString("\" *");
 		short outVal=system(zipCmd.getStr());

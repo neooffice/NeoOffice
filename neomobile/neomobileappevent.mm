@@ -220,6 +220,10 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return(0);
 			}
 			
+			// Some ODF file formats do not have a matching Office file format
+			// so it is not a problem if there is no matching Office mime type
+			OString officeMimeType = OUStringToOString(neoOfficeMobile->getOfficeMimeType(),RTL_TEXTENCODING_UTF8);
+			
 			// embed the UUID within the current document.  This is saved 
 			// in the opendocument formatted export.
 			
@@ -249,6 +253,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			OString pdfExportURLutf8;
 			OString openDocExportURLutf8;
+			OString officeDocExportURLutf8;
 			OString htmlExportZipFileutf8;
 			
 			try
@@ -284,6 +289,32 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			if ( mbCanceled )
 				throw this;
+			
+			// perform an Office document export but skip if there is no
+			// matchin Office document mime type
+
+			OUString officeDocExtension=neoOfficeMobile->getOfficeDocumentExtension();
+			
+			if(officeMimeType.getLength())
+			{
+				OUString officeDocExportURL=OUString::createFromAscii("file://");
+				officeDocExportURL+=oufilePath;
+				officeDocExportURL+=officeDocExtension;
+				
+				officeDocExportURLutf8 = OUStringToOString(officeDocExportURL,RTL_TEXTENCODING_UTF8);
+
+				if(!neoOfficeMobile->saveAsOfficeDocument(officeDocExportURL))
+				{
+#ifdef DEBUG
+					fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform Office document export\n" );
+#endif	// DEBUG
+					mnErrorCode=1;
+					throw this;
+				}
+			
+				if ( mbCanceled )
+					throw this;
+			}
 			
 			// perform a PDF export
 			
@@ -403,6 +434,20 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 						
 			[mpPostBody appendData:[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]]]];
 
+			// add Office document data tagged with the appropriate mime type
+			
+			if(officeMimeType.getLength())
+			{
+				[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
+				
+				OString officePartName = OUStringToOString(officeDocExtension.copy(1),RTL_TEXTENCODING_UTF8); // extension with first period stripped off
+										
+				[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Disposition: form-data; name=\"%@\"; filename=\"unused.%@\"\r\n\r\n", [NSString stringWithUTF8String: officePartName.getStr()], [NSString stringWithUTF8String: officePartName.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
+				[mpPostBody appendData:[[NSString stringWithFormat:@"Content-Type: %@\r\n\r\n", [NSString stringWithUTF8String: officeMimeType.getStr()]] dataUsingEncoding:NSUTF8StringEncoding]];
+						
+				[mpPostBody appendData:[NSData dataWithContentsOfURL:[NSURL URLWithString:[NSString stringWithUTF8String: officeDocExportURLutf8.getStr()]]]];
+			}
+
 			// add UUID
 			
 			[mpPostBody appendData:[[NSString stringWithFormat:@"\r\n--%@\r\n",stringBoundary] dataUsingEncoding:NSUTF8StringEncoding]];
@@ -439,6 +484,8 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 			if(openDocExportURLutf8.getLength())
 				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+			if(officeDocExportURLutf8.getLength())
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: officeDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
 			
 			[fileMgr release];
 				
