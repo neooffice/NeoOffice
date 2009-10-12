@@ -33,7 +33,6 @@
 
 #include "neomobilei18n.hxx"
 #include <map>
-#include <vcl/svapp.hxx>
 
 static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
 static NSDictionary*pDefaultLocaleDict = nil;
@@ -213,7 +212,7 @@ NSString *GetLocalizedString( const sal_Char *key )
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "pt" ) ), OUString(), OUString() ) ), pEntries_pt );
 
 		// Set locale dictionaries based on default locale
-		Locale aLocale( Application::GetSettings().GetUILocale() );
+		Locale aLocale( GetApplicationLocale() );
 
 		// Check if locale exists in our list of locales. Note that we ignore
 		// variant at this time as no variant-specific localizations are

@@ -34,13 +34,42 @@
 #ifndef _NEOMOBILEAPPEVENT_HXX
 #define _NEOMOBILEAPPEVENT_HXX
 
+#include <tools/link.hxx>
+
 #include <premac.h>
 #include <Foundation/Foundation.h>
 #include <postmac.h>
 
-#ifndef _SV_SVAPP_HXX
-#include <vcl/svapp.hxx>
+// Redefine Cocoa YES and NO defines types for convenience
+#ifdef YES
+#undef YES
+#define YES (MacOSBOOL)1
 #endif
+#ifdef NO
+#undef NO
+#define NO (MacOSBOOL)0
+#endif
+
+@interface RunPasswordProtectionAlertOnMainThread : NSObject
+{
+	MacOSBOOL mcancelled;
+}
+- (id)init;
+- (void)runModal:(id)arg;
+- (MacOSBOOL)cancelled;
+@end
+
+@interface DoFileManagerOnMainThread : NSObject
+{
+	NSString *mpath;
+}
+- (id)init;
+- (void)dealloc;
+- (void)makeBasePath:(id)arg;
+- (NSString *)filePath;
+- (void)createDir:(NSString *)path;
+- (void)removeItem:(NSString *)path;
+@end
 
 class NeoMobileExportFileAppEvent
 {
@@ -56,11 +85,12 @@ public:
 							NeoMobileExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
 	virtual					~NeoMobileExportFileAppEvent() {};
 							DECL_LINK( ExportFile, void* );
-	int						GetErrorCode() { return mnErrorCode; }
-	bool					IsFinished() { return mbFinished; }
-	NSData*					GetPostBody() { return mpPostBody; }
 	void					Cancel() { mbCanceled=true; }
+	void					Execute();
+	int						GetErrorCode() { return mnErrorCode; }
+	NSData*					GetPostBody() { return mpPostBody; }
 	bool					IsCanceled() { return(mbCanceled); }
+	bool					IsFinished() { return mbFinished; }
 	bool					IsUnsupportedComponentType() { return(mbUnsupportedComponentType); }
 };
 

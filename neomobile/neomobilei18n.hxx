@@ -34,7 +34,9 @@
 #ifndef _NEOMOBILEI18N_HXX
 #define _NEOMOBILEI18N_HXX
 
+#include <com/sun/star/lang/Locale.hpp>
 #include <sal/types.h>
+
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
@@ -51,6 +53,11 @@
 #define NEOMOBILEUPLOADCONTINUE "upload.continue"
 #define NEOMOBILEUPLOADINGFILE "uploading.file"
 #define NEOMOBILEUPLOADPASSWORDPROTECTED "upload.password.protected"
+
+/**
+ * Returns the application's locale.
+ */
+::com::sun::star::lang::Locale GetApplicationLocale();
 
 /**
  * Lookup a string and retrieve a translated string.  If no translation

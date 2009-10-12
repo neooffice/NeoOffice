@@ -49,7 +49,6 @@
 
 @interface NeoMobileWebView : WebView
 {
-	BOOL					mbIsNeoOffice;
 	NSArray*				mpBaseURLs;
 	unsigned				mnBaseURLCount;
 	unsigned				mnBaseURLEntry;
@@ -64,7 +63,7 @@
 	NeoMobileExportFileAppEvent*	mpexportEvent;
 }
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName isNeoOffice:(BOOL)bIsNeoOffice;
+- (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName userAgent:(const NSString *)pUserAgent;
 - (void)loadURI:(NSString *)pURI;
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;

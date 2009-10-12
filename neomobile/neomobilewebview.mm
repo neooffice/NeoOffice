@@ -32,25 +32,20 @@
  *************************************************************************/
 
 #include "neomobile.hxx"
+#include "neomobilei18n.hxx"
 #include "neomobilewebview.h"
+
+#include <map>
 
 #include "premac.h"
 #include <objc/objc-class.h>
 #include "postmac.h"
-
-#include <unotools/bootstrap.hxx>
-#include <vos/mutex.hxx>
-
-#include <map>
-#include "neomobilei18n.hxx"
 
 #ifndef NSDownloadsDirectory
 #define NSDownloadsDirectory ((NSSearchPathDirectory)15)
 #endif
 
 using namespace rtl;
-using namespace vos;
-using namespace utl;
 
 @interface NonRecursiveResponderPanel : NSPanel
 - (BOOL)tryToPerform:(SEL)aAction with:(id)aObject;
@@ -117,10 +112,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 @implementation NeoMobileWebView
 
-- (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName isNeoOffice:(BOOL)bIsNeoOffice
+- (id)initWithFrame:(NSRect)aFrame frameName:(NSString *)pFrameName groupName:(NSString *)pGroupName userAgent:(const NSString *)pUserAgent
 {
-	mbIsNeoOffice = bIsNeoOffice;
-
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
 		// Override [WebJavaScriptTextInputPanel windowDidLoad]
@@ -199,21 +192,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[self setPolicyDelegate:self];
 
 	// Set custom user agent
-	OUString aProductKey = Bootstrap::getProductKey();
-	if ( aProductKey.getLength() )
-	{
-#ifdef MACOSX
-#ifdef POWERPC
-		aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " (PPC" ) );
-#else	// POWERPC
-		aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " (Intel" ) );
-#endif	// POWERPC
-		aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " Mac OS X)" ) );
-#endif	// MACOSX
-		NSString *pUserAgent = [NSString stringWithCharacters:aProductKey.getStr() length:aProductKey.getLength()];
-		if ( pUserAgent && [pUserAgent length] )
-			[self setCustomUserAgent:pUserAgent];
-	}
+	if ( pUserAgent && [pUserAgent length] )
+		[self setCustomUserAgent:pUserAgent];
 
 	mpdownload=nil;
 	mndownloadSize=0;
@@ -518,13 +498,12 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
 		if ( pSaveURL )
 		{
-			NSApplication *pApp = [NSApplication sharedApplication];
 			NSMutableURLRequest *pURLRequest = [NSMutableURLRequest requestWithURL:pSaveURL];
 			NSFileManager *pFileManager = [NSFileManager defaultManager];
 			NSData *pPostBody = [NSMutableData dataWithLength:0];
-			if ( pApp && pURLRequest && pFileManager && pPostBody )
+			if ( pURLRequest && pFileManager && pPostBody )
 			{
-				if ( Application::IsInMain() && !mpexportEvent )
+				if ( !mpexportEvent )
 				{
 					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
 					mpexportEvent=&aEvent;
@@ -532,31 +511,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					[mpcancelButton setEnabled:YES];
 					[mpstatusLabel setString:GetLocalizedString(NEOMOBILEEXPORTINGFILE)];
 
-					vos::IMutex& rSolarMutex = Application::GetSolarMutex();
-					rSolarMutex.acquire();
-
-					Application::PostUserEvent( LINK( &aEvent, NeoMobileExportFileAppEvent, ExportFile ) );
-					if ( mbIsNeoOffice )
-						rSolarMutex.release();
-
-					// Dispatch any pending native events until event is
-					// dispatched or cancelled
-					while ( Application::IsInMain() && !aEvent.IsFinished() && !aEvent.IsCanceled() )
-					{
-						if ( mbIsNeoOffice )
-						{
-							NSEvent *pEvent;
-							while ( ( pEvent = [pApp nextEventMatchingMask:NSAnyEventMask untilDate:nil inMode:( [pApp modalWindow] ? NSModalPanelRunLoopMode : NSDefaultRunLoopMode ) dequeue:YES] ) != nil )
-								[pApp sendEvent:pEvent];
-						}
-						else
-						{
-							Application::Reschedule();
-						}
-					}
-					
-					if ( !mbIsNeoOffice )
-						rSolarMutex.release();
+					aEvent.Execute();
 
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
