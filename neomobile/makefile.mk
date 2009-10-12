@@ -69,7 +69,10 @@ SLOFILES= \
 	$(SLO)$/neomobilewebview.obj
 
 SHL1TARGET=$(TARGET)
-SHL1OBJS=$(SLOFILES)
+SHL1OBJS=$(SLOFILES) \
+	$(SLO)$/neooffice.obj \
+	$(SLO)$/neoofficeappevent.obj \
+	$(SLO)$/neoofficei18n.obj
 SHL1STDLIBS= \
 	$(SALLIB) \
 	$(CPPULIB) \
@@ -80,6 +83,16 @@ SHL1STDLIBS= \
 	$(VCLLIB)
 
 SHL1STDLIBS += -framework AppKit -framework WebKit -framework Carbon
+
+SHL2TARGET=$(TARGET:s/.uno//).office
+SHL2OBJS=$(SLOFILES) \
+	$(SLO)$/office.obj \
+	$(SLO)$/officeappevent.obj \
+	$(SLO)$/officei18n.obj
+SHL2STDLIBS= \
+	$(SALLIB)
+
+SHL2STDLIBS += -framework AppKit -framework WebKit -framework Carbon
 
 # --- Targets ------------------------------------------------------
 

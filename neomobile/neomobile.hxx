@@ -34,22 +34,36 @@
 #ifndef _NEOMOBILE_HXX
 #define _NEOMOBILE_HXX
 
+#include <rtl/ustring.hxx>
+
 #include "premac.h"
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
-#ifndef _RTL_USTRING_HXX_
-#include <rtl/ustring.hxx>
-#endif
-
+extern const NSString *kAboutURL;
 extern const NSString *kNeoMobileXPosPref;
 extern const NSString *kNeoMobileYPosPref;
 extern const NSString *kNeoMobileWidthPref;
 extern const NSString *kNeoMobileHeightPref;
 extern const NSString *kNeoMobileVisiblePref;
 extern const NSString *kNeoMobileServerTypePref;
+extern const NSString *kOpenURI;
+
+@interface CreateWebViewImpl : NSObject
+{
+	const NSString*				mpURI;
+	const NSString*				mpUserAgent;
+}
++ (id)createWithURI:(const NSString *)pURI userAgent:(const NSString *)pUserAgent;
+- (id)initWithURI:(const NSString *)pURI userAgent:(const NSString *)pUserAgent;
+- (void)showWebView:(id)obj;
+- (void)showWebViewOnlyIfVisible:(id)obj;
+@end
 
 NSArray *GetPerformSelectorOnMainThreadModes();
+NSString *GetUserAgent();
 ::rtl::OUString NSStringToOUString( NSString *pString );
+::sal_Bool IsSupportedMacOSXVersion();
+::sal_Bool ZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath );
 
 #endif	// _NEOMOBILE_HXX
