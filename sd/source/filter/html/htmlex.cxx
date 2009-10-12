@@ -3083,8 +3083,22 @@ bool HtmlExport::checkFileExists( Reference< ::com::sun::star::ucb::XSimpleFileA
 	{
 		OUString url( maExportPath );
 		url += aFileName;
-fprintf( stderr, "Here: %i %s\n", xFileAccess->exists( url ), OUStringToOString( url, RTL_TEXTENCODING_UTF8 ).getStr() );
+#ifdef USE_JAVA
+		// Prevent file exists error from showing when the table of contents
+		// page option is false by returning false if the file exists but is
+		// zero length
+		bool bExists = xFileAccess->exists( url );
+		if ( bExists )
+		{
+			::osl::DirectoryItem aDirItem;
+			::osl::FileStatus aFileStatus( FileStatusMask_FileSize );
+			if ( ::osl::DirectoryItem::get( url, aDirItem ) != ::osl::FileBase::E_None || aDirItem.getFileStatus( aFileStatus ) != ::osl::FileBase::E_None || !aFileStatus.getFileSize() )
+				bExists = false;
+		}
+		return bExists;
+#else	// USE_JAVA
 		return xFileAccess->exists( url );
+#endif	// USE_JAVA
 	}
 	catch( com::sun::star::uno::Exception& e )
 	{
@@ -3112,13 +3126,7 @@ bool HtmlExport::checkForExistingFiles()
 		for( nSdPage = 0; !bFound && (nSdPage < mnSdPageCount); nSdPage++)
 		{
 			if( (mpImageFiles[nSdPage] && checkFileExists( xFA, *mpImageFiles[nSdPage] )) ||
-#ifdef USE_JAVA
-				// Prevent file exists error from showing when the table of
-				// contents page option is false
-				((nSdPage || mbContentsPage) && mpHTMLFiles[nSdPage] && checkFileExists( xFA, *mpHTMLFiles[nSdPage] )) ||
-#else	// USE_JAVA
 				(mpHTMLFiles[nSdPage] && checkFileExists( xFA, *mpHTMLFiles[nSdPage] )) ||
-#endif	// USE_JAVA
 				(mpPageNames[nSdPage] && checkFileExists( xFA, *mpPageNames[nSdPage] )) ||
 				(mpTextFiles[nSdPage] && checkFileExists( xFA, *mpTextFiles[nSdPage] )) )
 			{
