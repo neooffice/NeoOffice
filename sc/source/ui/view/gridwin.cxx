@@ -184,6 +184,29 @@ extern USHORT nScFillModeMouseModifier;				// global.cxx
 
 #define SC_FILTERLISTBOX_LINES	12
 
+#ifdef USE_JAVA
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+bool UseMacHighlightColor()
+{
+	bool bUseMacHighlightColor = false;
+
+    CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
+    if( aPref ) 
+    {
+        if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+            bUseMacHighlightColor = true;
+        CFRelease( aPref );
+    }
+
+	return bUseMacHighlightColor;
+}
+
+#endif	// USE_JAVA
+
 //==================================================================
 
 class ScFilterListBox : public ListBox
@@ -5376,13 +5399,14 @@ void ScGridWindow::UpdateCursorOverlay()
 
 		if(pOverlayManager)
         {
-#ifdef USE_JAVA
-            // Revert to highlighting used in OOo 2.x as using the transparent
-            // highlight color is barely visible on Mac OS X
-            ScOverlayType eType = SC_OVERLAY_INVERT;
-#else	// USE_JAVA
             BOOL bOld = pViewData->GetView()->IsOldSelection();
 
+#ifdef USE_JAVA
+            // Revert to highlighting used in OOo 2.x as using the transparent
+            // highlight color is barely visible on Mac OS X unless the user
+            // enables the UseMacHighlightColor preference
+            ScOverlayType eType = bOld || !UseMacHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
+#else	// USE_JAVA
             ScOverlayType eType = bOld ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
 #endif	// USE_JAVA
             Color aCursorColor( SC_MOD()->GetColorConfig().GetColorValue(svtools::FONTCOLOR).nColor );
@@ -5455,8 +5479,9 @@ void ScGridWindow::UpdateSelectionOverlay()
 		{
 #ifdef USE_JAVA
             // Revert to highlighting used in OOo 2.x as using the transparent
-            // highlight color is barely visible on Mac OS X
-            ScOverlayType eType = SC_OVERLAY_INVERT;
+            // highlight color is barely visible on Mac OS X unless the user
+            // enables the UseMacHighlightColor preference
+            ScOverlayType eType = aConverter.bOld || !UseMacHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_BORDER_TRANSPARENT;
 #else	// USE_JAVA
             ScOverlayType eType = aConverter.bOld ? SC_OVERLAY_INVERT : SC_OVERLAY_BORDER_TRANSPARENT;
 #endif	// USE_JAVA
@@ -5533,13 +5558,14 @@ void ScGridWindow::UpdateAutoFillOverlay()
 
 		if(pOverlayManager)
 		{
-#ifdef USE_JAVA
-            // Revert to highlighting used in OOo 2.x as using the transparent
-            // highlight color is barely visible on Mac OS X
-            ScOverlayType eType = SC_OVERLAY_INVERT;
-#else	// USE_JAVA
             BOOL bOld = pViewData->GetView()->IsOldSelection();
 
+#ifdef USE_JAVA
+            // Revert to highlighting used in OOo 2.x as using the transparent
+            // highlight color is barely visible on Mac OS X unless the user
+            // enables the UseMacHighlightColor preference
+            ScOverlayType eType = bOld || !UseMacHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
+#else	// USE_JAVA
             ScOverlayType eType = bOld ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
 #endif	// USE_JAVA
             Color aHandleColor( SC_MOD()->GetColorConfig().GetColorValue(svtools::FONTCOLOR).nColor );
