@@ -58,6 +58,7 @@
 #ifdef USE_JAVA
 
 #include <svtools/itempool.hxx>
+#include <svx/svdopath.hxx>
 #include <svx/xflbckit.hxx>
 #include <svx/xflftrit.hxx>
 #include <svx/xflgrit.hxx>
@@ -406,9 +407,10 @@ namespace sdr
 				// Fix bug 3512 by detecting when the default items have been
 				// deleted out from underneath us
 				SfxItemPool *pPool = mpItemSet->GetPool();
-				if( (mpItemSet->GetItemState(SDRATTR_SHADOW) == SFX_ITEM_DEFAULT && !dynamic_cast< const SdrShadowItem* >(pPool->GetPoolDefaultItem(SDRATTR_SHADOW))) || 
-					(mpItemSet->GetItemState(SDRATTR_SHADOWCOLOR) == SFX_ITEM_DEFAULT && !dynamic_cast< const SdrShadowColorItem* >(pPool->GetPoolDefaultItem(SDRATTR_SHADOWCOLOR))) ||
-					(mpItemSet->GetItemState(SDRATTR_SHADOWTRANSPARENCE) == SFX_ITEM_DEFAULT && !dynamic_cast< const SdrShadowTransparenceItem* >(pPool->GetPoolDefaultItem(SDRATTR_SHADOWTRANSPARENCE))) )
+				if( dynamic_cast< SdrPathObj* >(&mrObject) &&
+					mpItemSet->GetItemState(SDRATTR_SHADOW) == SFX_ITEM_DEFAULT && !dynamic_cast< const SdrShadowItem* >(pPool->GetPoolDefaultItem(SDRATTR_SHADOW)) && 
+					mpItemSet->GetItemState(SDRATTR_SHADOWCOLOR) == SFX_ITEM_DEFAULT && !dynamic_cast< const SdrShadowColorItem* >(pPool->GetPoolDefaultItem(SDRATTR_SHADOWCOLOR)) &&
+					mpItemSet->GetItemState(SDRATTR_SHADOWTRANSPARENCE) == SFX_ITEM_DEFAULT && !dynamic_cast< const SdrShadowTransparenceItem* >(pPool->GetPoolDefaultItem(SDRATTR_SHADOWTRANSPARENCE)) )
 				{
 					// Default shapes and colors copied from the
 					// svx/source/xoutdev/xpool.cxx file
