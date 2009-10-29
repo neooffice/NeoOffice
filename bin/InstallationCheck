@@ -61,11 +61,12 @@ fi
 target_machine="$(TARGET_MACHINE)"
 machine=`uname -p`
 if [ "$target_machine" != "$machine" ] ; then
-	# Return 96 + 18, 19, or 20 if we are running the incorrect hardware
+	# Return 96 + 18, 19, 20, or 21 if we are running the incorrect hardware
 	case "$machine" in
 		i386) exit 114;;
 		powerpc) exit 115;;
-		*) exit 116;;
+		x86_64) exit 116;;
+		*) exit 117;;
 	esac
 fi
 
@@ -102,7 +103,7 @@ fi
 # If this is an X11 installation, check that X11 is intalled
 if [ -d "$scriptdir" -a -f "$scriptdir/$(X11_FILE_LIST_FILE)" -a -s "$scriptdir/$(X11_FILE_LIST_FILE)" ] ; then
 	while read i ; do
-		# Return 96 + 21 if any files are not found
+		# Return 96 + 22 if any files are not found
 		if [ ! -f "$i" ] ; then
 			# Open installation guide before exiting
 			if [ -f "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)" -a -s "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)" ] ; then
@@ -110,10 +111,9 @@ if [ -d "$scriptdir" -a -f "$scriptdir/$(X11_FILE_LIST_FILE)" -a -s "$scriptdir/
 					open -a TextEdit "$scriptdir/$(X11_INSTALLATION_GUIDE_FILE)"
 				fi
 			fi
-			exit 117
+			exit 118
 		fi
 	done < "$scriptdir/$(X11_FILE_LIST_FILE)"
 fi
 
 exit 0
-
