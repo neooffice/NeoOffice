@@ -1431,11 +1431,6 @@ void lcl_saveLastURLs(SvStringsDtor*&                                    rpURLLi
                       ::comphelper::SequenceAsVector< ::rtl::OUString >& lLastURLs )
 {
     lLastURLs.clear();
-#ifdef USE_JAVA
-    // Fix bug 3568 checking for NULL values
-    if (!rpURLList)
-        return;
-#endif	// USE_JAVA
     USHORT c = rpURLList->Count();
     USHORT i = 0;
     for (i=0; i<c; ++i)
