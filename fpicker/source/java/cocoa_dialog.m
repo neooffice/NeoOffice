@@ -142,6 +142,7 @@ static NSString *pBlankItem = @" ";
 - (BOOL)isChecked:(ShowFileDialogArgs *)pArgs;
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
 - (NSSavePanel *)panel;
+- (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
 - (void *)picker;
 - (void)release:(id)pObject;
@@ -715,6 +716,21 @@ static NSString *pBlankItem = @" ";
 - (NSSavePanel *)panel
 {
 	return mpFilePanel;
+}
+
+- (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL
+{
+	if ( pURL && ![pURL isFileURL] )
+		pURL = [pURL filePathURL];
+
+	// Fix bug 3568 by forcefully setting the directory when it has been
+	// changed by the user
+	if ( pURL && [pURL isFileURL] )
+	{
+		NSString *pPath = [pURL path];
+		if ( pPath )
+			[mpFilePanel setDirectory:[pURL path]];
+	}
 }
 
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
