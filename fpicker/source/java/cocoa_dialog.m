@@ -109,6 +109,10 @@ static NSString *pBlankItem = @" ";
 
 @end
 
+@interface NSURL (ShowFileDialog)
+- (NSURL *)filePathURL;
+@end
+
 @interface ShowFileDialog : NSObject
 {
 	BOOL					mbChooseFiles;
@@ -720,7 +724,7 @@ static NSString *pBlankItem = @" ";
 
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL
 {
-	if ( pURL && ![pURL isFileURL] )
+	if ( pURL && ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
 		pURL = [pURL filePathURL];
 
 	// Fix bug 3568 by forcefully setting the directory when it has been
