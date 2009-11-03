@@ -87,6 +87,7 @@
 
 typedef void NativeShutdownCancelledHandler_Type();
 
+static ::std::map< sal_IntPtr, sal_IntPtr > aBadATUSFontIDMap;
 static ATSFontNotificationRef aFontNotification = NULL;
 static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
@@ -197,6 +198,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 							sal_IntPtr nNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
+								continue;
+
+							// Fix bug 3446 by skipping bad native fonts
+							::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = aBadATUSFontIDMap.find( nNativeFont );
+							if ( bit != aBadATUSFontIDMap.end() )
 								continue;
 
 							// Get the ATS font name as the Cocoa name on some
@@ -396,6 +402,27 @@ static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData 
 
 	// Release any waiting thread
 	aLoadNativeFontsCondition.set();
+}
+
+// -----------------------------------------------------------------------
+
+static void RunNativeFontsTimerCallback()
+{
+	if ( pLoadNativeFontsTimerUPP )
+	{
+		if ( GetCurrentEventLoop() != GetMainEventLoop() )
+		{
+			aLoadNativeFontsCondition.reset();
+			InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pLoadNativeFontsTimerUPP, NULL, NULL );
+			ULONG nCount = Application::ReleaseSolarMutex();
+			aLoadNativeFontsCondition.wait();
+			Application::AcquireSolarMutex( nCount );
+		}
+		else
+		{
+			LoadNativeFontsTimerCallback( NULL, NULL );
+		}
+	}
 }
 
 // =======================================================================
@@ -625,6 +652,10 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 				pFont->mpFontData = pChildFontData;
 			}
 		}
+
+		// Fix bug 3664 by checking if this is a bad font
+		ImplFontMetricData aMetricData( *pFont );
+		GetFontMetric( &aMetricData );
 	}
 	else
 	{
@@ -640,6 +671,8 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
+	bool bBadFont = true;
+
 	if ( mpVCLFont )
 	{
 		pMetric->mnWidth = mpVCLFont->getSize();
@@ -668,6 +701,8 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 				pMetric->mnDescent = (long)( ( ( aFontMetrics.leading + fabs( aFontMetrics.descent ) ) * pMetric->mnWidth ) + 0.5 );
 				if ( pMetric->mnDescent < 0 )
 					pMetric->mnDescent = 0;
+
+				bBadFont = false;
 			}
 			else
 			{
@@ -684,6 +719,9 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 					pMetric->mnAscent = pMetric->mnDescent;
 					pMetric->mnDescent = 0;
 				}
+
+				// Mark font as bad when font has abnormal values
+				bBadFont = true;
  			}
 		}
 
@@ -716,6 +754,17 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	pMetric->mnExtLeading = 0;
 	pMetric->mbKernableFont = false;
 	pMetric->mnSlant = 0;
+
+	if ( bBadFont )
+	{
+		// Fix bug 3446 by reloading native fonts without any known bad fonts
+		::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = aBadATUSFontIDMap.find( mpFontData->mnATSUFontID );
+		if ( bit == aBadATUSFontIDMap.end() )
+		{
+			aBadATUSFontIDMap[ mpFontData->mnATSUFontID ] = mpFontData->mnATSUFontID;
+			RunNativeFontsTimerCallback();
+		}
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -751,22 +800,7 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 			pShutdownCancelledHandler();
 
 		pLoadNativeFontsTimerUPP = NewEventLoopTimerUPP( LoadNativeFontsTimerCallback );
-		if ( pLoadNativeFontsTimerUPP )
-		{
-			if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			{
-				aLoadNativeFontsCondition.reset();
-				InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pLoadNativeFontsTimerUPP, NULL, NULL );
-				ULONG nCount = Application::ReleaseSolarMutex();
-				aLoadNativeFontsCondition.wait();
-				Application::AcquireSolarMutex( nCount );
-			}
-			else
-			{
-				LoadNativeFontsTimerCallback( NULL, NULL );
-			}
-		}
-
+		RunNativeFontsTimerCallback();
 		pSalData->mpEventQueue->setShutdownDisabled( sal_False );
 	}
 
