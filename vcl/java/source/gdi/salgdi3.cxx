@@ -629,8 +629,12 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mpFontData = (JavaImplFontData *)pFontData->Clone();
 
 		// Set font for graphics device
+		sal_IntPtr nOldNativeFont = 0;
 		if ( mpVCLFont )
+		{
+			nOldNativeFont = mpVCLFont->getNativeFont();
 			delete mpVCLFont;
+		}
 		mpVCLFont = new com_sun_star_vcl_VCLFont( maFallbackFonts[ nFallbackLevel ] );
 
 		mnFontFamily = pFont->GetFamilyType();
@@ -650,9 +654,12 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			}
 		}
 
-		// Fix bug 3664 by checking if this is a bad font
-		ImplFontMetricData aMetricData( *pFont );
-		GetFontMetric( &aMetricData );
+		// Fix bug 3664 by checking if the new font is a bad font
+		if ( mpVCLFont->getNativeFont() != nOldNativeFont )
+		{
+			ImplFontMetricData aMetricData( *pFont );
+			GetFontMetric( &aMetricData );
+		}
 	}
 	else
 	{
