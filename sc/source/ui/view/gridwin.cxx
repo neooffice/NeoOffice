@@ -190,15 +190,27 @@ extern USHORT nScFillModeMouseModifier;				// global.cxx
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
+// Uncomment the following line to use our custom native highlighting code
+// #define USE_NATIVE_HIGHLIGHT_COLOR
+
 bool UseMacHighlightColor()
 {
+#ifdef USE_NATIVE_HIGHLIGHT_COLOR
+	bool bUseMacHighlightColor = true;
+#else	// USE_NATIVE_HIGHLIGHT_COLOR
 	bool bUseMacHighlightColor = false;
+#endif	// USE_NATIVE_HIGHLIGHT_COLOR
 
     CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
     if( aPref ) 
     {
+#ifdef USE_NATIVE_HIGHLIGHT_COLOR
+        if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
+            bUseMacHighlightColor = false;
+#else	// USE_NATIVE_HIGHLIGHT_COLOR
         if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
             bUseMacHighlightColor = true;
+#endif	// USE_NATIVE_HIGHLIGHT_COLOR
         CFRelease( aPref );
     }
 
@@ -5439,8 +5451,27 @@ void ScGridWindow::UpdateSelectionOverlay()
     std::vector<Rectangle> aPixelRects;
     GetSelectionRects( aPixelRects );
 
+#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+	if ( UseMacHighlightColor() && pViewData->IsActive() )
+    {
+		for ( std::vector< Rectangle >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
+			Invalidate( PixelToLogic( *it ) );
+		aLastSelectionPixelRects.clear();
+    }
+#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
+
     if ( aPixelRects.size() && pViewData->IsActive() )
     {
+#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+		if ( UseMacHighlightColor() )
+		{
+			for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin(); it != aPixelRects.end(); ++it )
+				Invalidate( PixelToLogic( *it ) );
+			aLastSelectionPixelRects = aPixelRects;
+		}
+		else
+		{
+#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
         struct SelectionConverter : RectangleConverter {
             SCTAB nTab;
             BOOL bLayoutRTL;
@@ -5493,6 +5524,9 @@ void ScGridWindow::UpdateSelectionOverlay()
 	        mpOOSelection = new ::sdr::overlay::OverlayObjectList;
 		    mpOOSelection->append(*pOverlay);
 		}
+#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+		}
+#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
     }
 
     if ( aOldMode != aDrawMode )
@@ -5870,6 +5904,20 @@ void ScGridWindow::flushOverlayManager()
 		pOverlayManager->flush();
 	}
 }
+
+#ifdef USE_JAVA
+
+void ScGridWindow::GetNativeHightlightColorRects( ::std::vector< Rectangle >& rPixelRects )
+{
+	rPixelRects.clear();
+
+#ifdef USE_NATIVE_HIGHLIGHT_COLOR
+	if ( UseMacHighlightColor() )
+		GetSelectionRects( rPixelRects );
+#endif	// USE_NATIVE_HIGHLIGHT_COLOR
+}
+
+#endif	// USE_JAVA
 
 // ---------------------------------------------------------------------------
 

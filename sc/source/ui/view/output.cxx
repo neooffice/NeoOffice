@@ -1,30 +1,29 @@
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of OpenOffice.org.
+ * This file is part of NeoOffice.
  *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified November 2009 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -205,6 +204,9 @@ ScOutputData::ScOutputData( OutputDevice* pNewDev, ScOutputType eNewType,
 	bAnyRotated( FALSE ),
 	bAnyClipped( FALSE ),
 	mpTargetPaintWindow(0) // #i74769# use SdrPaintWindow direct
+#ifdef USE_JAVA
+	, mpGridWindow( NULL )
+#endif	// USE_JAVA
 {
 	if (pZoomX)
 		aZoomX = *pZoomX;
@@ -800,6 +802,35 @@ void ScOutputData::DrawBackground()
 	// used only if bSolidBackground is set (only for ScGridWindow):
     Color aBgColor( pScMod->GetColorConfig().GetColorValue(svtools::DOCCOLOR).nColor );
 
+#ifdef USE_JAVA
+    Color aNativeHighlightColor( COL_TRANSPARENT );
+    PolyPolygon aNativeHighlightPolyPoly;
+	if ( mpGridWindow )
+	{
+    	aNativeHighlightColor = mpGridWindow->GetSettings().GetStyleSettings().GetHighlightColor();
+
+		std::vector< Rectangle > aPixelRects;
+		mpGridWindow->GetNativeHightlightColorRects( aPixelRects );
+		sal_uInt32 nRectCount = aPixelRects.size();
+		for ( sal_uInt32 nRect = 0; nRect < nRectCount; ++nRect )
+		{
+			if ( !aPixelRects[ nRect ].IsEmpty() )
+			{
+				Rectangle aRect( pDev->PixelToLogic( aPixelRects[ nRect ] ) );
+				if ( nRectCount == 1 || nRect + 1 < nRectCount )
+				{
+					aNativeHighlightPolyPoly.Insert( Polygon( aRect ) );
+				}
+				else
+				{
+					PolyPolygon aTemp( aNativeHighlightPolyPoly );
+					aTemp.GetUnion( Polygon( aRect ), aNativeHighlightPolyPoly );
+				}
+			}
+		}
+	}
+#endif	 // USE_JAVA
+
 	Rectangle aRect;
 	Size aOnePixel = pDev->PixelToLogic(Size(1,1));
 	long nOneX = aOnePixel.Width();
@@ -902,6 +933,15 @@ void ScOutputData::DrawBackground()
 								pDev->SetFillColor( aBackCol );
 								pDev->DrawRect( aRect );
 							}
+#ifdef USE_JAVA
+							if ( aNativeHighlightPolyPoly.Count() )
+							{
+								PolyPolygon aTemp;
+								aNativeHighlightPolyPoly.GetIntersection( Polygon( aRect ), aTemp );
+								pDev->SetFillColor( aNativeHighlightColor );
+								pDev->DrawPolyPolygon( aTemp );
+							}
+#endif	// USE_JAVA
 						}
 						aRect.Left() = nPosX;
 						pOldBackground = pBackground;
@@ -919,6 +959,15 @@ void ScOutputData::DrawBackground()
 						pDev->SetFillColor( aBackCol );
 						pDev->DrawRect( aRect );
 					}
+#ifdef USE_JAVA
+					if ( aNativeHighlightPolyPoly.Count() )
+					{
+						PolyPolygon aTemp;
+						aNativeHighlightPolyPoly.GetIntersection( Polygon( aRect ), aTemp );
+						pDev->SetFillColor( aNativeHighlightColor );
+						pDev->DrawPolyPolygon( aTemp );
+					}
+#endif	// USE_JAVA
 				}
 
 				nArrY += nSkip;
