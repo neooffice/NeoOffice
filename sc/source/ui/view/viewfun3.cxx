@@ -1055,7 +1055,12 @@ BOOL ScViewFunc::PasteFromClip( USHORT nFlags, ScDocument* pClipDoc,
 	ScDocFunc& rDocFunc = pDocSh->GetDocFunc(); 
 	if ( bRecord )
 	{
+#ifdef USE_JAVA
+		// Fix bug 3569 by setting undo comment to paste instead of copy
+		String aUndo = ScGlobal::GetRscString( pClipDoc->IsCutMode() ? STR_UNDO_MOVE : STR_UNDO_PASTE );
+#else	// USE_JAVA
 		String aUndo = ScGlobal::GetRscString( pClipDoc->IsCutMode() ? STR_UNDO_MOVE : STR_UNDO_COPY );
+#endif	// USE_JAVA
 		pUndoMgr->EnterListAction( aUndo, aUndo );
 	}
 
