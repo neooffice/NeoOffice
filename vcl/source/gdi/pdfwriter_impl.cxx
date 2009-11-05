@@ -12536,10 +12536,16 @@ void PDFWriterImpl::encodeGlyphs()
                                 bool bIsTextRun = false;
                                 if ( aCurrentFontID.getLength() )
                                 {
-                                    if ( ( nNextFontPos = aPageContent.indexOf( aFontRunTag, nCurrentPos ) ) >= 0 )
+                                    // Fix bug 3570 by detecting when both the
+                                    // font tag and the font run tag are used
+                                    // in the same page content
+                                    nNextFontPos = aPageContent.indexOf( aFontTag, nCurrentPos );
+                                    sal_Int32 nNextFontRunPos = aPageContent.indexOf( aFontRunTag, nCurrentPos );
+                                    if ( nNextFontRunPos >= 0 && nNextFontRunPos <= nNextFontPos )
+                                    {
+                                         nNextFontPos = nNextFontRunPos;
                                          bIsTextRun = true;
-                                    else
-                                         nNextFontPos = aPageContent.indexOf( aFontTag, nCurrentPos );
+                                    }
                                     nNextAltFontPos = aPageContent.indexOf( aAltFontTag, nCurrentPos );
                                 }
                                 else
