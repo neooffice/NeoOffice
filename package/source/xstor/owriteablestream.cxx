@@ -1,46 +1,89 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified November 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified November 2009 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_package.hxx"
+
+#ifndef _COM_SUN_STAR_UCB_XSIMPLEFILEACCESS_HPP_
 #include <com/sun/star/ucb/XSimpleFileAccess.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_UCB_XCOMMANDENVIRONMENT_HPP_
 #include <com/sun/star/ucb/XCommandEnvironment.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_LANG_DISPOSEDEXCEPTION_HPP_
 #include <com/sun/star/lang/DisposedException.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_LANG_XUNOTUNNEL_HPP_
 #include <com/sun/star/lang/XUnoTunnel.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_LANG_XTYPEPROVIDER_HPP_
 #include <com/sun/star/lang/XTypeProvider.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_IO_XINPUTSTREAM_HPP_
 #include <com/sun/star/io/XInputStream.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_IO_IOEXCEPTION_HPP_
 #include <com/sun/star/io/IOException.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_EMBED_ELEMENTMODES_HPP_
 #include <com/sun/star/embed/ElementModes.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_LANG_WRAPPEDTARGETRUNTIMEEXCEPTION_HPP_
 #include <com/sun/star/lang/WrappedTargetRuntimeException.hpp>
+#endif
+
+#ifndef _CPPUHELPER_TYPEPROVIDER_HXX_
 #include <cppuhelper/typeprovider.hxx>
+#endif
+
+#ifndef _CPPUHELPER_EXC_HLP_HXX_
 #include <cppuhelper/exc_hlp.hxx>
+#endif
+
+#ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
+#endif
 
 #ifndef _COMPHELPER_PROCESSFACTORY_HXX
 #include <comphelper/processfactory.hxx>
@@ -924,24 +967,14 @@ uno::Sequence< beans::PropertyValue > OWriteStream_Impl::ReadPackageStreamProper
 		nPropNum = 4;
 	uno::Sequence< beans::PropertyValue > aResult( nPropNum );
 
-    // The "Compressed" property must be set after "MediaType" property,
-    // since the setting of the last one can change the value of the first one
-
-    if ( m_nStorageType == OFOPXML_STORAGE || m_nStorageType == PACKAGE_STORAGE )
-    {
-        aResult[0].Name = ::rtl::OUString::createFromAscii("MediaType");
-        aResult[1].Name = ::rtl::OUString::createFromAscii("Compressed");
-        aResult[2].Name = ::rtl::OUString::createFromAscii("Size");
-
-        if ( m_nStorageType == PACKAGE_STORAGE )
-            aResult[3].Name = ::rtl::OUString::createFromAscii("Encrypted"); 
-    }
-    else
-    {
-        aResult[0].Name = ::rtl::OUString::createFromAscii("Compressed");
-        aResult[1].Name = ::rtl::OUString::createFromAscii("Size");
-
-    }
+	aResult[0].Name = ::rtl::OUString::createFromAscii("Compressed");
+	aResult[1].Name = ::rtl::OUString::createFromAscii("Size");
+	if ( m_nStorageType == OFOPXML_STORAGE || m_nStorageType == PACKAGE_STORAGE )
+	{
+		aResult[2].Name = ::rtl::OUString::createFromAscii("MediaType");
+		if ( m_nStorageType == PACKAGE_STORAGE )
+			aResult[3].Name = ::rtl::OUString::createFromAscii("Encrypted"); 
+	}
 
 	// TODO: may be also raw stream should be marked
 
@@ -1718,7 +1751,6 @@ void OWriteStream::CopyToStreamInternally_Impl( const uno::Reference< io::XStrea
 		throw eThrown;
 
 	// now the properties can be copied
-    // the order of the properties setting is not important for StorageStream API
 	::rtl::OUString aPropName = ::rtl::OUString::createFromAscii( "Compressed" );
 	xDestProps->setPropertyValue( aPropName, getPropertyValue( aPropName ) );
 	if ( m_pData->m_nStorageType == PACKAGE_STORAGE || m_pData->m_nStorageType == OFOPXML_STORAGE )
