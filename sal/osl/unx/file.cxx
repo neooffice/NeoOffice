@@ -156,18 +156,7 @@ static const sal_Char* MOUNTTAB="/etc/mtab";
 #undef TimeValue
 
 #ifdef USE_JAVA
-
-#include <map>
 #include <libgen.h>
-#include "osl/mutex.hxx"
-
-// Set update access time interval to 3 hours
-#define UPDATE_ACCESS_TIME_INTERVAL_SECONDS ( 3 * 60 * 60 )
-
-static ::std::map< oslFileHandle, sal_Char* > aOpenFileMap;
-static ::osl::Mutex aOpenFileMutex;
-static oslThread hOpenFileUpdateThread = NULL;
-
 #endif	// USE_JAVA
 #endif
 
@@ -299,12 +288,9 @@ static int           oslDoCopyLink(const sal_Char* pszSourceFileName, const sal_
 static int           oslDoCopyFile(const sal_Char* pszSourceFileName, const sal_Char* pszDestFileName, size_t nSourceSize, mode_t mode);
 static oslFileError  oslDoMoveFile(const sal_Char* pszPath, const sal_Char* pszDestPath);
 static rtl_uString*  oslMakeUStrFromPsz(const sal_Char* pszStr,rtl_uString** uStr);
-#ifdef USE_JAVA
-#ifdef PRODUCT_FILETYPE
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
 static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
-#endif	// PRODUCT_FILETYPE
-static void          oslUpdateAccessTimeForAllOpenFiles( void *pData );
-#endif	// USE_JAVA
+#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
 /******************************************************************************
  *
@@ -915,19 +901,10 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
                         *pHandle = (oslFileHandle) pHandleImpl;
 
-#ifdef USE_JAVA
-#ifdef PRODUCT_FILETYPE
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
                         if ( uFlags & osl_File_OpenFlag_Create ) 
                             oslSetFileTypeFromPsz( buffer );
-#endif	// PRODUCT_FILETYPE
-
-                        // Fix OpenOffice.org bug 69993 by updating the access
-                        // time on any files that are open for a long time
-                        ::osl::Guard< ::osl::Mutex > aGuard( aOpenFileMutex );
-                        if ( !hOpenFileUpdateThread )
-                            hOpenFileUpdateThread = osl_createThread( oslUpdateAccessTimeForAllOpenFiles, NULL );
-                        aOpenFileMap[ pHandleImpl ] = strdup( buffer );
-#endif	// USE_JAVA
+#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
                         return osl_File_E_None;
                     }
@@ -1009,17 +986,6 @@ oslFileError osl_closeFile( oslFileHandle Handle )
         }
         else
             eRet = osl_File_E_None;
-
-#ifdef USE_JAVA
-        ::osl::Guard< ::osl::Mutex > aGuard( aOpenFileMutex );
-        ::std::map< oslFileHandle, sal_Char* >::iterator it = aOpenFileMap.find( pHandleImpl );
-        if ( it != aOpenFileMap.end() )
-        {
-            aOpenFileMap.erase( it );
-            if ( it->second )
-                free( it->second );
-        }
-#endif	// USE_JAVA
 
         rtl_freeMemory( pHandleImpl );
     }
@@ -2544,10 +2510,7 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
  * oslSetFileTypeFromPsz
  ****************************************/
 
-#ifdef USE_JAVA
-
-#ifdef PRODUCT_FILETYPE
-
+#if defined USE_JAVA && defined PRODUCT_FILETYPE
 static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
 {
     FSRef aFSRef;
@@ -2561,34 +2524,7 @@ static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
         }
     }
 }
-
-#endif	// PRODUCT_FILETYPE
-
-static void oslUpdateAccessTimeForAllOpenFiles( void *pData )
-{
-    for ( ; ; )
-    {
-        usleep( (useconds_t)UPDATE_ACCESS_TIME_INTERVAL_SECONDS * 1000 * 1000 );
-
-        timeval aCurrentTime;
-        gettimeofday( &aCurrentTime, NULL );
-
-        TimeValue aAccessTime;
-        aAccessTime.Seconds = aCurrentTime.tv_sec;
-        aAccessTime.Nanosec = aCurrentTime.tv_usec;
-
-        // Fix OpenOffice.org bug 69993 by updating the access time on any
-        // files that are open for a long time
-        ::osl::Guard< ::osl::Mutex > aGuard( aOpenFileMutex );
-        for ( ::std::map< oslFileHandle, sal_Char* >::const_iterator it = aOpenFileMap.begin(); it != aOpenFileMap.end(); ++it )
-        {
-            if ( it->second )
-                osl_psz_setFileTime( it->second, NULL, &aAccessTime, NULL );
-        }
-    }
-}
-
-#endif	// USE_JAVA
+#endif	/* USE_JAVA && PRODUCT_FILETYPE */
 
 /*****************************************************************************
  * UnicodeToText
