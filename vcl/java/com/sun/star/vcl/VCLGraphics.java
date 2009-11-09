@@ -1367,11 +1367,12 @@ public final class VCLGraphics {
 				Font f = font.getFont();
 				g.setFont(f);
 
-				if (!font.isAntialiased()) {
-					RenderingHints hints = g.getRenderingHints();
+				// Always turn on fractional metrics
+				RenderingHints hints = g.getRenderingHints();
+				hints.put(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+				if (!font.isAntialiased())
 					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-					g.setRenderingHints(hints);
-				}
+				g.setRenderingHints(hints);
 				g.setColor(new Color(color, true));
 
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
