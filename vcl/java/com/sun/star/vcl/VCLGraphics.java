@@ -1382,8 +1382,7 @@ public final class VCLGraphics {
 				double advance = 0;
 				for (int i = 0; i < glyphs.length; i++) {
 					Point2D p = gv.getGlyphPosition(i);
-					// p.setLocation(advance, p.getY());
-					p.setLocation(p.getX() * 1.05, p.getY());
+					p.setLocation(advance, p.getY());
 					gv.setGlyphPosition(i, p);
 					advance += advances[i] / fScaleX;
 				}
