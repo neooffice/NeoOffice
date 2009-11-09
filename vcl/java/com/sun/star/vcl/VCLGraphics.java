@@ -2384,17 +2384,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Returns the font render context of the underlying graphics device.
-	 *
-	 * @return the font render context of the underlying graphics device
-	 */
-	FontRenderContext getFontRenderContext() {
-
-		return graphics.getFontRenderContext();
-
-	}
-
-	/**
 	 * Get the bounding rectangle of the specified glyph and font.
 	 *
 	 * @param glyph the glyph index
@@ -2476,6 +2465,8 @@ public final class VCLGraphics {
 		}
 
 		if (g != null) {
+			// Always turn on fractional metrics
+			g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 			if (notify)
 				notifyGraphicsChanged();
