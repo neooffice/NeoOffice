@@ -1367,12 +1367,11 @@ public final class VCLGraphics {
 				Font f = font.getFont();
 				g.setFont(f);
 
-				// Always turn on fractional metrics
-				RenderingHints hints = g.getRenderingHints();
-				hints.put(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-				if (!font.isAntialiased())
+				if (!font.isAntialiased()) {
+					RenderingHints hints = g.getRenderingHints();
 					hints.put(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_OFF);
-				g.setRenderingHints(hints);
+					g.setRenderingHints(hints);
+				}
 				g.setColor(new Color(color, true));
 
 				GlyphVector gv = f.createGlyphVector(g.getFontRenderContext(), glyphs);
@@ -1383,7 +1382,8 @@ public final class VCLGraphics {
 				double advance = 0;
 				for (int i = 0; i < glyphs.length; i++) {
 					Point2D p = gv.getGlyphPosition(i);
-					p.setLocation(advance, p.getY());
+					// p.setLocation(advance, p.getY());
+					p.setLocation(p.getX() * 1.05, p.getY());
 					gv.setGlyphPosition(i, p);
 					advance += advances[i] / fScaleX;
 				}
@@ -2393,17 +2393,6 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Returns the font render context of the underlying graphics device.
-	 *
-	 * @return the font render context of the underlying graphics device
-	 */
-	FontRenderContext getFontRenderContext() {
-
-		return graphics.getFontRenderContext();
-
-	}
-
-	/**
 	 * Get the bounding rectangle of the specified glyph and font.
 	 *
 	 * @param glyph the glyph index
@@ -2485,6 +2474,8 @@ public final class VCLGraphics {
 		}
 
 		if (g != null) {
+			// Always turn on fractional metrics
+			g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
 			g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
 			if (notify)
 				notifyGraphicsChanged();
