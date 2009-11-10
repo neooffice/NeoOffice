@@ -60,6 +60,16 @@
 #pragma warning(pop)
 #endif 
 
+#ifdef USE_JAVA
+
+#ifndef USE_SUBPIXEL_TEXT_RENDERING
+#ifndef _SV_SALATSLAYOUT_HXX
+#include <salatslayout.hxx>
+#endif
+#endif	// USE_SUBPIXEL_TEXT_RENDERING
+
+#endif	// USE_JAVA
+
 #include <algorithm>
 
 // =======================================================================
@@ -1113,6 +1123,12 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
     for( i = 0; i < mnGlyphCount; ++i )
         pNewGlyphWidths[ i ] = 0;
 
+#ifdef USE_SUBPIXEL_TEXT_RENDERING
+    // Smooth out kerning by allocating deltas evenly within each word
+    long nUnshiftedDelta = 0;
+    int nShiftable = 0;
+    GlyphItem* pFirstUnshiftedGlyph = NULL;
+#endif	// USE_SUBPIXEL_TEXT_RENDERING
     bool bRTL;
     for( int nCharPos = i = -1; rArgs.GetNextPos( &nCharPos, &bRTL ); )
     {
@@ -1125,6 +1141,61 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             if( n > 0 )
                 nDelta -= rArgs.mpDXArray[ n-1 ];
             pNewGlyphWidths[ i ] += nDelta * mnUnitsPerPixel;
+
+#ifdef USE_SUBPIXEL_TEXT_RENDERING
+            pG = mpGlyphItems + i;
+            GlyphItem* pClusterG = pG + 1;
+            int j;
+            for( j = i; ++j < mnGlyphCount; ++pClusterG )
+            {
+                if( pClusterG->IsClusterStart() )
+                    break;
+            }
+
+            if( j == mnGlyphCount || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
+            {
+                // Apply unshifted delta to previous clusters
+                if( nUnshiftedDelta && nShiftable && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
+                {
+                    pG--;
+                    for( j = i - 1; pG >= pFirstUnshiftedGlyph; --j, --pG )
+                    {
+                        if( pNewGlyphWidths[ j ] )
+                        {
+                            int nShift = nUnshiftedDelta / nShiftable--;
+                            if( nShift > pNewGlyphWidths[ j ] )
+                                nShift = pNewGlyphWidths[ j ];
+                            pNewGlyphWidths[ j ] = pG->mnNewWidth + nShift;
+                            nUnshiftedDelta -= nShift;
+                        }
+                    }
+                }
+
+                nUnshiftedDelta = 0;
+                nShiftable = 0;
+                pFirstUnshiftedGlyph = NULL;
+            }
+            else
+            {
+                if( !pFirstUnshiftedGlyph )
+                    pFirstUnshiftedGlyph = pG;
+                if( pNewGlyphWidths[ i ] > 0 )
+                    nShiftable++;
+
+                // calculate original and adjusted cluster width
+                int nOldClusterWidth = pG->mnNewWidth;
+                int nNewClusterWidth = pNewGlyphWidths[ i ];
+                pClusterG = pG + 1;
+                for( j = i; ++j < mnGlyphCount; ++pClusterG )
+                {
+                    if( pClusterG->IsClusterStart() )
+                        break;
+                    nOldClusterWidth += pClusterG->mnNewWidth;
+                    nNewClusterWidth += pNewGlyphWidths[ j ];
+                }
+                nUnshiftedDelta += nNewClusterWidth - nOldClusterWidth;
+            }
+#endif	// USE_SUBPIXEL_TEXT_RENDERING
         }
     }
 
