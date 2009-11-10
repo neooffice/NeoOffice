@@ -1340,7 +1340,7 @@ public final class VCLGraphics {
 	 * @param glyphScaleX the scale factor to apply in addition to the font's
 	 *  scale factor
 	 */
-	public void drawGlyphs(int x, int y, int[] glyphs, int[] advances, VCLFont font, int color, int orientation, int glyphOrientation, int translateX, int translateY, float glyphScaleX) {
+	public void drawGlyphs(int x, int y, int[] glyphs, float[] advances, VCLFont font, int color, int orientation, int glyphOrientation, int translateX, int translateY, float glyphScaleX) {
 
 		// Don't allow drawing of glyphs to printer
 		if (graphics != null)

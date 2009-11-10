@@ -51,6 +51,9 @@
 #include <postmac.h>
 #undef check
 
+// Comment out the following line to disable subpixel text rendering
+#define USE_SUBPIXEL_TEXT_RENDERING
+
 struct ImplATSLayoutData;
 class JavaSalGraphics;
 

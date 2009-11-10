@@ -1137,7 +1137,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, long *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, long *_par3, float *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -1145,7 +1145,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(II[I[ILcom/sun/star/vcl/VCLFont;IIIIIF)V";
+			char *cSignature = "(II[I[FLcom/sun/star/vcl/VCLFont;IIIIIF)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphs", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1158,10 +1158,10 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			jint *pGlyphBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( glypharray, &bCopy );
 			memcpy( pGlyphBits, (jint *)_par3, elements * sizeof( jint ) );
 			t.pEnv->ReleasePrimitiveArrayCritical( glypharray, pGlyphBits, 0 );
-			jintArray advancearray = t.pEnv->NewIntArray( elements );
+			jfloatArray advancearray = t.pEnv->NewFloatArray( elements );
 			bCopy = sal_False;
-			jint *pAdvanceBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( advancearray, &bCopy );
-			memcpy( pAdvanceBits, (jint *)_par4, elements * sizeof( jint ) );
+			jfloat *pAdvanceBits = (jfloat *)t.pEnv->GetPrimitiveArrayCritical( advancearray, &bCopy );
+			memcpy( pAdvanceBits, (jfloat *)_par4, elements * sizeof( jfloat ) );
 			t.pEnv->ReleasePrimitiveArrayCritical( advancearray, pAdvanceBits, 0 );
 
 			jvalue args[11];

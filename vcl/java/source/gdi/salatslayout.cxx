@@ -66,6 +66,11 @@
 #endif
 
 #define MAXEXTRACHARS 100
+#ifdef USE_SUBPIXEL_TEXT_RENDERING
+#define UNITS_PER_PIXEL 1000
+#else	// USE_SUBPIXEL_TEXT_RENDERING
+#define UNITS_PER_PIXEL 1
+#endif	// USE_SUBPIXEL_TEXT_RENDERING
 
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
@@ -544,11 +549,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		{
 			ATSTrapezoid aTrapezoid;
 			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
-				mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY );
+				mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY * UNITS_PER_PIXEL );
 		}
 		else
 		{
-			mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY );
+			mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY * UNITS_PER_PIXEL );
 		}
 
 		// Make sure that ligature glyphs get all of the width and that their
@@ -605,13 +610,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		BslnBaselineRecord aBaseline;
 		memset( aBaseline, 0, sizeof( BslnBaselineRecord ) );
 		if ( ATSUCalculateBaselineDeltas( maVerticalFontStyle, kBSLNRomanBaseline, aBaseline ) == noErr )
-			mnBaselineDelta = Float32ToLong( Fix2X( aBaseline[ kBSLNIdeographicCenterBaseline ] ) * mfFontScaleY );
+			mnBaselineDelta = Float32ToLong( Fix2X( aBaseline[ kBSLNIdeographicCenterBaseline ] ) * mfFontScaleY * UNITS_PER_PIXEL );
 		if ( !mnBaselineDelta )
 		{
 			ATSFontMetrics aFontMetrics;
 			ATSFontRef aFont = FMGetATSFontRefFromFont( mpHash->mnFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
-				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * nSize );
+				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * nSize * UNITS_PER_PIXEL );
 		}
 	}
 
@@ -797,7 +802,7 @@ static OSStatus SalATSCubicMoveToCallback( const Float32Point *pPoint, void *pDa
 {
 	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pData;
 
-	Point aPoint( Float32ToLong( pPoint->x ), Float32ToLong( pPoint->y ) );
+	Point aPoint( Float32ToLong( pPoint->x * UNITS_PER_PIXEL ), Float32ToLong( pPoint->y * UNITS_PER_PIXEL ) );
 	pPolygonList->push_back( Polygon( 1, &aPoint ) );
 
 	return noErr;
@@ -809,7 +814,7 @@ static OSStatus SalATSCubicLineToCallback( const Float32Point *pPoint, void *pDa
 {
 	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pData;
 
-	pPolygonList->back().Insert( pPolygonList->back().GetSize(), Point( Float32ToLong( pPoint->x ), Float32ToLong( pPoint->y ) ) );
+	pPolygonList->back().Insert( pPolygonList->back().GetSize(), Point( Float32ToLong( pPoint->x * UNITS_PER_PIXEL ), Float32ToLong( pPoint->y * UNITS_PER_PIXEL ) ) );
 
 	return noErr;
 }
@@ -820,9 +825,9 @@ static OSStatus SalATSCubicCurveToCallback( const Float32Point *pStart, const Fl
 {
 	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pData;
 
-	Point aStart( Float32ToLong( pStart->x ), Float32ToLong( pStart->y ) );
-	Point aOffCurve( Float32ToLong( pOffCurve->x ), Float32ToLong( pOffCurve->y ) );
-	Point aEnd( Float32ToLong( pEnd->x ), Float32ToLong( pEnd->y ) );
+	Point aStart( Float32ToLong( pStart->x * UNITS_PER_PIXEL ), Float32ToLong( pStart->y * UNITS_PER_PIXEL ) );
+	Point aOffCurve( Float32ToLong( pOffCurve->x * UNITS_PER_PIXEL ), Float32ToLong( pOffCurve->y * UNITS_PER_PIXEL ) );
+	Point aEnd( Float32ToLong( pEnd->x * UNITS_PER_PIXEL ), Float32ToLong( pEnd->y * UNITS_PER_PIXEL ) );
 
 	USHORT nSize = pPolygonList->back().GetSize();
 	pPolygonList->back().Insert( nSize++, aStart, POLY_CONTROL );
@@ -879,6 +884,8 @@ SalATSLayout::SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel ) :
 	mnOrigWidth( 0 ),
 	mfGlyphScaleX( 1.0 )
 {
+	SetUnitsPerPixel( UNITS_PER_PIXEL );
+
 	if ( mnFallbackLevel )
 	{
 		::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = mpGraphics->maFallbackFonts.find( mnFallbackLevel );
@@ -915,9 +922,9 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	{
 		long nWidth;
 		if ( rArgs.mpDXArray )
-			nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ];
+			nWidth = rArgs.mpDXArray[ rArgs.mnEndCharPos - rArgs.mnMinCharPos - 1 ] * UNITS_PER_PIXEL;
 		else if ( rArgs.mnLayoutWidth )
-			nWidth = rArgs.mnLayoutWidth;
+			nWidth = rArgs.mnLayoutWidth * UNITS_PER_PIXEL;
 		else
 			nWidth = mnOrigWidth;
 
@@ -1688,6 +1695,9 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			for ( i = nStartGlyph; i < nCurrentGlyph; i++ )
 				aGlyphArray[ i ] &= GF_IDXMASK;
 
+			float fTranslateX = (float)nTranslateX / UNITS_PER_PIXEL;
+			float fTranslateY = (float)nTranslateY / UNITS_PER_PIXEL;
+
 			if ( bPrinter )
 			{
 				// Don't delete the CGGlyph buffer and let the Java native
@@ -1706,16 +1716,20 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 				{
 					for ( i = 0; i < nGlyphCount; i++ )
 					{
-						pSizes[ i ].width = (float)aDXArray[ i + nStartGlyph ];
+						pSizes[ i ].width = (float)aDXArray[ i + nStartGlyph ] / UNITS_PER_PIXEL;
 						pSizes[ i ].height = 0.0f;
 					}
 				}
 
-				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX, rJavaGraphics.maNativeClipPath ? CGPathCreateCopy( rJavaGraphics.maNativeClipPath ) : NULL );
+				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX, rJavaGraphics.maNativeClipPath ? CGPathCreateCopy( rJavaGraphics.maNativeClipPath ) : NULL );
 			}
 			else
 			{
-				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, nTranslateX, nTranslateY, mfGlyphScaleX );
+				float aAdvances[ nGlyphCount ];
+				for ( i = 0; i < nGlyphCount; i++ )
+					aAdvances[ i ] = (float)aDXArray[ i + nStartGlyph ] / UNITS_PER_PIXEL;
+
+				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aAdvances, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX );
 			}
 		}
 	}
@@ -1793,10 +1807,16 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 
 		ImplATSLayoutData *pCurrentLayoutData = pLayoutData;
 
-		// Check if this is a mirrored or ideographic space character
-		sal_Unicode nChar = pCurrentLayoutData->mpHash->mpStr[ nIndex ];
-		if ( pCurrentLayoutData->mpHash->mbRTL )
+		// Check if this is a kashida glyph
+		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpGlyphDataArray && (sal_Int32)( aGlyphArray[ 0 ] & GF_IDXMASK ) == mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID )
 		{
+			pCurrentLayoutData = mpKashidaLayoutData;
+			nIndex = mpKashidaLayoutData->mpHash->mnLen - 1;
+		}
+		// Check if this is a mirrored or ideographic space character
+		else if ( pCurrentLayoutData->mpHash->mbRTL )
+		{
+			sal_Unicode nChar = pCurrentLayoutData->mpHash->mpStr[ nIndex ];
 			::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
 			if ( mit != maMirroredLayoutData.end() )
 			{
@@ -1836,7 +1856,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			long nTranslateX = 0;
 			long nTranslateY = 0;
 
-			aPolyPolygon.Move( aPos.X(), aPos.Y() );
+			aPolyPolygon.Move( aPos.X() * UNITS_PER_PIXEL, aPos.Y() * UNITS_PER_PIXEL );
 
 			sal_Int32 nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
 			if ( pCurrentLayoutData->maVerticalFontStyle )
@@ -1965,12 +1985,12 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 		ATSGlyphScreenMetrics aHorizontalMetrics;
 		if ( ATSUGlyphGetScreenMetrics( pRet->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( pRet->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
 		{
-			nX = Float32ToLong( ( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x ) * pRet->mfFontScaleY );
+			nX = Float32ToLong( ( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
 			if ( nGlyphOrientation == GF_ROTL )
 				nX += pRet->mnBaselineDelta;
 			else
 				nX -= pRet->mnBaselineDelta;
-			nY = Float32ToLong( ( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y ) * pRet->mfFontScaleY );
+			nY = Float32ToLong( ( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
 		}
 	}
 
