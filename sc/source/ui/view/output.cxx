@@ -824,7 +824,7 @@ void ScOutputData::DrawBackground()
 				else
 				{
 					PolyPolygon aTemp( aNativeHighlightPolyPoly );
-					aTemp.GetUnion( Polygon( aRect ), aNativeHighlightPolyPoly );
+					aTemp.GetUnion( PolyPolygon( Polygon( aRect ) ), aNativeHighlightPolyPoly );
 				}
 			}
 		}
@@ -937,7 +937,7 @@ void ScOutputData::DrawBackground()
 							if ( aNativeHighlightPolyPoly.Count() )
 							{
 								PolyPolygon aTemp;
-								aNativeHighlightPolyPoly.GetIntersection( Polygon( aRect ), aTemp );
+								aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRect ) ), aTemp );
 								pDev->SetFillColor( aNativeHighlightColor );
 								pDev->DrawPolyPolygon( aTemp );
 							}
@@ -963,7 +963,7 @@ void ScOutputData::DrawBackground()
 					if ( aNativeHighlightPolyPoly.Count() )
 					{
 						PolyPolygon aTemp;
-						aNativeHighlightPolyPoly.GetIntersection( Polygon( aRect ), aTemp );
+						aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRect ) ), aTemp );
 						pDev->SetFillColor( aNativeHighlightColor );
 						pDev->DrawPolyPolygon( aTemp );
 					}
