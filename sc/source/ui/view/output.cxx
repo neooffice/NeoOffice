@@ -811,21 +811,12 @@ void ScOutputData::DrawBackground()
 
 		std::vector< Rectangle > aPixelRects;
 		mpGridWindow->GetNativeHightlightColorRects( aPixelRects );
-		sal_uInt32 nRectCount = aPixelRects.size();
-		for ( sal_uInt32 nRect = 0; nRect < nRectCount; ++nRect )
+		for ( sal_uInt32 nRect = 0; nRect < aPixelRects.size(); ++nRect )
 		{
 			if ( !aPixelRects[ nRect ].IsEmpty() )
 			{
 				Rectangle aRect( pDev->PixelToLogic( aPixelRects[ nRect ] ) );
-				if ( nRectCount == 1 || nRect + 1 < nRectCount )
-				{
-					aNativeHighlightPolyPoly.Insert( Polygon( aRect ) );
-				}
-				else
-				{
-					PolyPolygon aTemp( aNativeHighlightPolyPoly );
-					aTemp.GetUnion( PolyPolygon( Polygon( aRect ) ), aNativeHighlightPolyPoly );
-				}
+				aNativeHighlightPolyPoly.Insert( Polygon( aRect ) );
 			}
 		}
 	}
