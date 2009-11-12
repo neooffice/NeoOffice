@@ -224,7 +224,7 @@ private:
 
 	Rectangle				aInvertRect;
 #ifdef USE_JAVA
-	std::vector< Rectangle >	aLastSelectionPixelRects;
+	::std::vector< Rectangle >	aLastSelectionPixelRects;
 #endif	// USE_JAVA
 
 	DECL_LINK( PopupModeEndHdl, FloatingWindow* );
