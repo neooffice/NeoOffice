@@ -803,8 +803,7 @@ void SwSelPaintRects::Hide()
 	}
 #else	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 	for( USHORT n = 0; n < Count(); ++n )
-			Paint( (*this)[n] );
-	}
+		Paint( (*this)[n] );
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 	SwRects::Remove( 0, Count() );
 }
