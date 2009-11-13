@@ -781,31 +781,29 @@ void SwSelPaintRects::Hide()
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
 	if ( UseMacHighlightColor() )
 	{
-		for ( std::vector< SwRect >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
+		Window *pWin = GetShell()->GetWin();
+		if ( pWin && !GetShell()->IsPreView() )
 		{
-			SwRect aNextRect( *it );
-			if ( !aNextRect.IsEmpty() )
-				((SwCrsrShell*)GetShell())->InvalidateWindows( SwRect( aNextRect.Left() - 1, aNextRect.Top() - 1, aNextRect.Right() + 1, aNextRect.Bottom() + 1 ) );
+			for ( std::vector< SwRect >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
+			{
+				Rectangle aPaintRect( it->SVRect() );
+				if ( !aPaintRect.IsEmpty() )
+					pWin->Invalidate( aPaintRect );
+			}
+
+			for( USHORT n = 0; n < Count(); ++n )
+			{
+				const SwRect aNextRect( (*this)[n] );
+				Rectangle aPaintRect( aNextRect.SVRect() );
+				if ( !aPaintRect.IsEmpty() )
+					pWin->Invalidate( aPaintRect );
+			}
 		}
 		aLastSelectionPixelRects.clear();
 	}
-#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
-
+#else	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 	for( USHORT n = 0; n < Count(); ++n )
-#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-	{
-		if ( UseMacHighlightColor() )
-		{
-			const SwRect aNextRect( (*this)[n] );
-			if ( !aNextRect.IsEmpty() )
-				((SwCrsrShell*)GetShell())->InvalidateWindows( SwRect( aNextRect.Left() - 1, aNextRect.Top() - 1, aNextRect.Right() + 1, aNextRect.Bottom() + 1 ) );
-		}
-		else
-		{
-#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 			Paint( (*this)[n] );
-#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-		}
 	}
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 	SwRects::Remove( 0, Count() );
@@ -825,9 +823,10 @@ void SwSelPaintRects::Show()
 			Window* pWin = GetShell()->GetWin();
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-			bool bInvalidate = false;
 			if ( UseMacHighlightColor() )
 			{
+				bool bInvalidate = false;
+
 				// Check if the highlighed range has changed
 				if ( aLastSelectionPixelRects.size() != Count() )
 				{
@@ -848,32 +847,37 @@ void SwSelPaintRects::Show()
 
 				if ( bInvalidate )
 				{
-					for ( std::vector< SwRect >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
+					if ( pWin && !GetShell()->IsPreView() )
 					{
-						SwRect aNextRect( *it );
-						if ( !aNextRect.IsEmpty() )
-							((SwCrsrShell*)GetShell())->InvalidateWindows( SwRect( aNextRect.Left() - 1, aNextRect.Top() - 1, aNextRect.Right() + 1, aNextRect.Bottom() + 1 ) );
+						for ( std::vector< SwRect >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
+						{
+							Rectangle aPaintRect( it->SVRect() );
+							if ( !aPaintRect.IsEmpty() )
+								pWin->Invalidate( aPaintRect );
+						}
 					}
+
 					aLastSelectionPixelRects.clear();
+
+					if ( pWin && !GetShell()->IsPreView() )
+					{
+						for( USHORT n = 0; n < Count(); ++n )
+						{
+							const SwRect aNextRect( (*this)[n] );
+							Rectangle aPaintRect( aNextRect.SVRect() );
+							if ( !aPaintRect.IsEmpty() )
+								pWin->Invalidate( aPaintRect );
+							aLastSelectionPixelRects.push_back( aNextRect );
+						}
+					}
 				}
 			}
+			else
+			{
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
-
 			for(sal_uInt16 a(0); a < Count(); a++)
 			{
 				const SwRect aNextRect((*this)[a]);
-#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-				if ( UseMacHighlightColor() )
-				{
-					if ( bInvalidate && !aNextRect.IsEmpty() )
-					{
-						aLastSelectionPixelRects.push_back( aNextRect );
-						((SwCrsrShell*)GetShell())->InvalidateWindows( SwRect( aNextRect.Left() - 1, aNextRect.Top() - 1, aNextRect.Right() + 1, aNextRect.Bottom() + 1 ) );
-					}
-				}
-				else
-				{
-#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 				Rectangle aPntRect(aNextRect.SVRect());
 
 				if(pWin)
@@ -911,15 +915,8 @@ void SwSelPaintRects::Show()
 				}
 
 				aNewRanges.push_back(basegfx::B2DRange(aPntRect.Left(), aPntRect.Top(), aPntRect.Right(), aPntRect.Bottom()));
-#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-				}
-#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 			}
 
-#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-			if ( !UseMacHighlightColor() )
-			{
-#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 			if(mpCursorOverlay)
 			{
 				if(aNewRanges.size())
@@ -1325,8 +1322,8 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 		{
 			const SwRect aNextRect( (*this)[n] );
 			Rectangle aPaintRect( aNextRect.SVRect() );
-			aPaintRect.Right()++;
-			aPaintRect.Bottom()++;
+			aPaintRect.Right() += 2;
+			aPaintRect.Bottom() += 2;
 			rPixelRects.push_back( aPaintRect );
 		}
 	}
