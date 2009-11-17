@@ -238,9 +238,10 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 						// when there are visible windows
 						for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 						{
-							// Fix bug 3571 by not cancelling menu display when
-							// all windows are minimized
-							if ( (*it)->mbVisible && (*it)->mpVCLFrame && (*it)->mpVCLFrame->getState() != SAL_FRAMESTATE_MINIMIZED )
+							// Fix bug 3571 by only cancelling when at least
+							// one visible non-backing, non-floating, and
+							// non-floating frame
+							if ( (*it)->mbVisible && !(*it)->mbShowOnlyMenus && !(*it)->IsFloatingFrame() && (*it)->mpVCLFrame && (*it)->mpVCLFrame->getState() != SAL_FRAMESTATE_MINIMIZED )
 							{
 								bSucceeded = false;
 								break;
