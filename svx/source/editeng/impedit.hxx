@@ -258,7 +258,7 @@ private:
 	EditSelection		aEditSelection;
 	EVAnchorMode		eAnchorMode;
 #ifdef USE_JAVA 
-	::std::vector< Rectangle >	aLastSelectionPixelRects;
+	bool				bInPaint;
 #endif  // USE_JAVA
 
 protected:
@@ -387,6 +387,8 @@ public:
 	sal_uInt16		GetInvalidateMore() const { return (sal_uInt16)nInvMore; }
 #ifdef USE_JAVA
 	PolyPolygon		GetNativeHightlightColorPolyPolygon();
+	bool			IsInPaint() { return bInPaint; }
+	void			SetInPaint( bool bPaint ) { bInPaint = bPaint; }
 #endif  // USE_JAVA
 };
 

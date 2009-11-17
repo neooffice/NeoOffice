@@ -140,6 +140,9 @@ ImpEditView::ImpEditView( EditView* pView, EditEngine* pEng, Window* pWindow ) :
 	nTravelXPos			= TRAVEL_X_DONTKNOW;
 	nControl 			= EV_CNTRL_AUTOSCROLL | EV_CNTRL_ENABLEPASTE;
     bActiveDragAndDropListener = FALSE;
+#ifdef USE_JAVA
+    bInPaint = false;
+#endif	// USE_JAVA
 
 	aEditSelection.Min() = pEng->pImpEditEngine->GetEditDoc().GetStartPaM();
 	aEditSelection.Max() = pEng->pImpEditEngine->GetEditDoc().GetEndPaM();
@@ -376,7 +379,9 @@ void ImpEditView::ImplDrawHighlightRect( Window* _pOutWin, const Point& rDocPosT
 #ifdef USE_JAVA
 			if ( UseMacHighlightColor() )
 			{
-				if ( !aRect.IsEmpty() )
+				// Prevent infinite repainting by ignoring new repaint requests
+				// when this view is already in paint mode
+				if ( !IsInPaint() && !aRect.IsEmpty() )
 					_pOutWin->Invalidate( aRect );
 			}
 			else

@@ -2865,7 +2865,7 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 		PolyPolygon aTemp;
 		aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aClipRec ) ), aTemp );
 		pOutDev->SetFillColor( aNativeHighlightColor );
-		pOutDev->SetLineColor();
+		pOutDev->SetLineColor( aNativeHighlightColor );
 		pOutDev->DrawPolyPolygon( aTemp );
 	}
 #endif	// USE_JAVA
@@ -3510,6 +3510,11 @@ void ImpEditEngine::Paint( ImpEditView* pView, const Rectangle& rRec, sal_Bool b
 	if ( !GetUpdateMode() || IsInUndo() )
 		return;
 
+#ifdef USE_JAVA
+	bool bOldInPaint = pView->IsInPaint();
+	pView->SetInPaint( true );
+#endif	// USE_JAVA
+
 	// Schnittmenge aus Paintbereich und OutputArea.
 	Rectangle aClipRec( pView->GetOutputArea() );
 	aClipRec.Intersection( rRec );
@@ -3589,6 +3594,9 @@ void ImpEditEngine::Paint( ImpEditView* pView, const Rectangle& rRec, sal_Bool b
 		if ( !bVDevValid )
 		{
 			Paint( pView, rRec, sal_False /* ohne VDev */ );
+#ifdef USE_JAVA
+			pView->SetInPaint( bOldInPaint );
+#endif	// USE_JAVA
 			return;
 		}
 
@@ -3677,7 +3685,14 @@ void ImpEditEngine::Paint( ImpEditView* pView, const Rectangle& rRec, sal_Bool b
 		{
 			long nMaxX = pView->GetOutputArea().Left() + GetPaperSize().Width();
 			if ( aClipRec.Left() > nMaxX )
+#ifdef USE_JAVA
+			{
+				pView->SetInPaint( bOldInPaint );
+#endif	// USE_JAVA
 				return;
+#ifdef USE_JAVA
+			}
+#endif	// USE_JAVA
 			if ( aClipRec.Right() > nMaxX )
 				aClipRec.Right() = nMaxX;
 		}
@@ -3695,6 +3710,10 @@ void ImpEditEngine::Paint( ImpEditView* pView, const Rectangle& rRec, sal_Bool b
 
 		pView->DrawSelection();
 	}
+
+#ifdef USE_JAVA
+	pView->SetInPaint( bOldInPaint );
+#endif	// USE_JAVA
 
 }
 
