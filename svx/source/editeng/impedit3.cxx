@@ -2864,9 +2864,13 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 	{
 		PolyPolygon aTemp;
 		aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aClipRec ) ), aTemp );
+		Color aOldFillColor = pOutDev->GetFillColor();
+		Color aOldLineColor = pOutDev->GetLineColor();
 		pOutDev->SetFillColor( aNativeHighlightColor );
 		pOutDev->SetLineColor( aNativeHighlightColor );
 		pOutDev->DrawPolyPolygon( aTemp );
+		pOutDev->SetFillColor( aOldFillColor );
+		pOutDev->SetLineColor( aOldLineColor );
 	}
 #endif	// USE_JAVA
 
