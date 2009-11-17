@@ -929,8 +929,13 @@ void ScOutputData::DrawBackground()
 							{
 								PolyPolygon aTemp;
 								aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRect ) ), aTemp );
+								Color aOldFillColor = pDev->GetFillColor();
+								Color aOldLineColor = pDev->GetLineColor();
 								pDev->SetFillColor( aNativeHighlightColor );
+								pDev->SetLineColor( aNativeHighlightColor );
 								pDev->DrawPolyPolygon( aTemp );
+								pDev->SetFillColor( aOldFillColor );
+								pDev->SetLineColor( aOldLineColor );
 							}
 #endif	// USE_JAVA
 						}
@@ -955,8 +960,13 @@ void ScOutputData::DrawBackground()
 					{
 						PolyPolygon aTemp;
 						aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRect ) ), aTemp );
+						Color aOldFillColor = pDev->GetFillColor();
+						Color aOldLineColor = pDev->GetLineColor();
+						pDev->SetFillColor( aNativeHighlightColor );
 						pDev->SetFillColor( aNativeHighlightColor );
 						pDev->DrawPolyPolygon( aTemp );
+						pDev->SetFillColor( aOldFillColor );
+						pDev->SetLineColor( aOldLineColor );
 					}
 #endif	// USE_JAVA
 				}
