@@ -2038,9 +2038,12 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     PolyPolygon aTemp;
                     aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRegion[i].SVRect() ) ), aTemp );
                     Color aOldFillColor = pOutDev->GetFillColor();
+                    Color aOldLineColor = pOutDev->GetLineColor();
                     pOutDev->SetFillColor( aNativeHighlightColor );
+                    pOutDev->SetLineColor( aNativeHighlightColor );
                     pOutDev->DrawPolyPolygon( aTemp );
                     pOutDev->SetFillColor( aOldFillColor );
+                    pOutDev->SetLineColor( aOldLineColor );
                 }
 #endif  // USE_JAVA
             }

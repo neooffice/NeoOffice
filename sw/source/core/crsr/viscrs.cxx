@@ -1320,10 +1320,7 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 		for( USHORT n = 0; n < Count(); ++n )
 		{
 			const SwRect aNextRect( (*this)[n] );
-			Rectangle aPaintRect( aNextRect.SVRect() );
-			aPaintRect.Right() += 2;
-			aPaintRect.Bottom() += 2;
-			rPixelRects.push_back( aPaintRect );
+			rPixelRects.push_back( aNextRect.SVRect() );
 		}
 	}
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
