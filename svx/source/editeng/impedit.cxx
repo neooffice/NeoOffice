@@ -1540,8 +1540,14 @@ void ImpEditView::HideDDCursor()
 {
 	if ( pDragAndDropInfo && pDragAndDropInfo->bVisCursor )
 	{
+#ifdef USE_JAVA
+		// Clear drag cursor from last ShowDDCursor() call
+		if ( !pDragAndDropInfo->aCurSavedCursor.IsEmpty() )
+			GetWindow()->Invalidate( pDragAndDropInfo->aCurSavedCursor );
+#else	// USE_JAVA
 		GetWindow()->DrawOutDev( pDragAndDropInfo->aCurSavedCursor.TopLeft(), pDragAndDropInfo->aCurSavedCursor.GetSize(),
 							Point(0,0), pDragAndDropInfo->aCurSavedCursor.GetSize(),*pDragAndDropInfo->pBackground );
+#endif	// USE_JAVA
 		pDragAndDropInfo->bVisCursor = sal_False;
 	}
 }
@@ -1583,8 +1589,14 @@ void ImpEditView::ShowDDCursor( const Rectangle& rRect )
 
 		aSaveRec = GetWindow()->PixelToLogic( aSaveRec );
 
+#ifdef USE_JAVA
+		// Clear drag cursor from last ShowDDCursor() call
+		if ( !pDragAndDropInfo->aCurSavedCursor.IsEmpty() )
+			GetWindow()->Invalidate( pDragAndDropInfo->aCurSavedCursor );
+#else	// USE_JAVA
 		pDragAndDropInfo->pBackground->DrawOutDev( Point(0,0), aSaveRec.GetSize(),
 									aSaveRec.TopLeft(), aSaveRec.GetSize(), *GetWindow() );
+#endif	// USE_JAVA
 		pDragAndDropInfo->aCurSavedCursor = aSaveRec;
 
 		// Cursor malen...
