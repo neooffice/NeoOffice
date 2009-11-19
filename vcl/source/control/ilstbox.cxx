@@ -3307,7 +3307,17 @@ void ImplListBoxFloatingWindow::StartFloat( BOOL bStartTracking )
 		StartPopupMode( aRect, FLOATWIN_POPUPMODE_DOWN );
 
         if( nPos != LISTBOX_ENTRY_NOTFOUND )
+#ifdef USE_JAVA
+            // Display a few entries before the selected entry as requested
+            // in the following forum topic:
+            // http://trinity.neooffice.org/modules.php?name=Forums&file=viewtopic&p=57915#57915
+            if( nPos < 3 )
+			    mpImplLB->SetTopEntry( 0 );
+            else
+			    mpImplLB->SetTopEntry( nPos - 3 );
+#else	// USE_JAVA
 			mpImplLB->SetTopEntry( nPos );
+#endif	// USE_JAVA
 
 		if( bStartTracking )
 			mpImplLB->GetMainWindow()->EnableMouseMoveSelect( TRUE );
