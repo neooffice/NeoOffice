@@ -194,6 +194,7 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 				rSolarMutex.acquire();
 				if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
 				{
+					rSolarMutex.release();
 					aEventQueueMutex.release();
 					return userCanceledErr;
 				}
