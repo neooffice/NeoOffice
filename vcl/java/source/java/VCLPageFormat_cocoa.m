@@ -197,7 +197,7 @@ BOOL NSPageLayout_finished( id pDialog )
 	return bRet;
 }
 
-BOOL NSPageLayout_result( id pDialog )
+BOOL NSPageLayout_result( id pDialog, BOOL *bLandscape )
 {
 	BOOL bRet = NO;
 
@@ -206,6 +206,8 @@ BOOL NSPageLayout_result( id pDialog )
 	if ( pDialog )
 	{
 		bRet = [(ShowPageLayoutDialog *)pDialog result];
+		if ( bLandscape )
+			*bLandscape = [(ShowPageLayoutDialog *)pDialog orientation];
 		[(ShowPageLayoutDialog *)pDialog release];
 	}
 

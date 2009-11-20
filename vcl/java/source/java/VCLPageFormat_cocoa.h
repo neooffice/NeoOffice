@@ -44,7 +44,7 @@ typedef void* id;
 BEGIN_C
 #endif
 BOOL NSPageLayout_finished( id pDialog );
-BOOL NSPageLayout_result( id pDialog );
+BOOL NSPageLayout_result( id pDialog, BOOL *bLandscape );
 id NSPrintInfo_create();
 void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *pHeight, float *pImageableX, float *pImageableY, float *pImageableWidth, float *pImageableHeight );
 BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight );
