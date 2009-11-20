@@ -734,8 +734,9 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 	{
 		// Ignore any AWT events while the page layout dialog is showing to
 		// emulate a modal dialog
+		BOOL bOldLandscape = ( getOrientation() == ORIENTATION_LANDSCAPE ? TRUE : FALSE );
 		void *pNSPrintInfo = getNativePrinterJob();
-		void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ) ? TRUE : FALSE );
+		void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow(), ( getOrientation() == ORIENTATION_LANDSCAPE ? TRUE : FALSE ) );
 
 		pSalData->mpNativeModalSheetFrame = pFocusFrame;
 		pSalData->mbInNativeModalSheet = true;
@@ -744,10 +745,11 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		pSalData->mbInNativeModalSheet = false;
 		pSalData->mpNativeModalSheetFrame = NULL;
 
-		BOOL bLandscape = FALSE;
-		out = (sal_Bool)NSPageLayout_result( pDialog, &bLandscape );
+		// Use old orientation to correctly set the Java orientation when the
+		// paper size or orientation changes in the native page setup dialog
+		out = (sal_Bool)NSPageLayout_result( pDialog );
 		if ( out )
-			updatePageFormat( bLandscape ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT );
+			updatePageFormat( bOldLandscape ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT );
 	}
 
 	return out;
