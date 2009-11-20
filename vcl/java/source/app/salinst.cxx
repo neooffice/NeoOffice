@@ -200,6 +200,7 @@ BOOL VCLInstance_updateNativeMenus()
 	rSolarMutex.acquire();
 	if ( Application::IsShutDown() || pSalData->mbInNativeModalSheet )
 	{
+		rSolarMutex.release();
 		aEventQueueMutex.release();
 		return bRet;
 	}
