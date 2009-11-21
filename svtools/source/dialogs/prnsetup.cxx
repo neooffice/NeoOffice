@@ -396,17 +396,28 @@ short PrinterSetupDialog::Execute()
     if ( maBtnOptions.GetClickHdl().IsSet() )
 	{
 		// Copy printer properties or else certain printer options will be unset
+		Printer *pOldPrinter = mpPrinter;
 		if ( mpTempPrinter )
+		{
 			mpTempPrinter->SetPrinterProps( mpPrinter );
-		nRet = maBtnOptions.GetClickHdl().Call( this );
+
+			// Temporarily make the temp printer available via the GetPrinter()
+			// method so that the print options dialog can access it to call
+			// the printer's Setup() method
+			mpPrinter = mpTempPrinter;
+		}
+
+		// Since the native page setup dialog may change the paper size or
+		// orientation, ignore the return value
+		maBtnOptions.GetClickHdl().Call( this );
+		mpPrinter = pOldPrinter;
 
 		// Fix bug 3433 by forcing focus back to this dialog's parent window
 		Window *pParent = GetParent();
 		if ( pParent )
 			pParent->ToTop( TOTOP_FOREGROUNDTASK );
 	}
-
-	if ( nRet )
+	else
 	{
 		if ( mpTempPrinter )
 			nRet = mpTempPrinter->Setup();
