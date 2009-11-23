@@ -11,7 +11,10 @@
 					<value>_self</value>
 				</prop>
 				<prop oor:name="Title" oor:type="xs:string">
-					<value>NeoOffice Mobile</value>
+					<value xml:lang="en-US">NeoOffice Mobile</value>
+					<value xml:lang="es">NeoOffice Móvil</value>
+					<value xml:lang="nl">NeoOffice Mobiel</value>
+					<value xml:lang="pt">NeoOffice Móvel</value>
 				</prop>
 				<prop oor:name="ImageIdentifier" oor:type="xs:string">
 					<value/>
@@ -26,11 +29,11 @@
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">What is NeoOffice Mobile?</value>
-							<value xml:lang="es">¿Qué es NeoOffice Mobile?</value>
+							<value xml:lang="es">¿Qué es NeoOffice Móvil?</value>
 							<value xml:lang="fr">Qu'est-ce que NeoOffice Mobile ?</value>
 							<value xml:lang="it">Che cose'è NeoOffice Mobile?</value>
-							<value xml:lang="nl">Wat is NeoOffice Mobile?</value>
-							<value xml:lang="pt">O que é NeoOffice Mobile?</value>
+							<value xml:lang="nl">Wat is NeoOffice Mobiel?</value>
+							<value xml:lang="pt">O que é NeoOffice Móvel?</value>
 						</prop>
 						<prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
@@ -48,11 +51,11 @@
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
 							<value xml:lang="en-US">Open NeoOffice Mobile</value>
-							<value xml:lang="es">Abrir NeoOffice Mobile</value>
+							<value xml:lang="es">Abrir NeoOffice Móvil</value>
 							<value xml:lang="fr">Ouvrir NeoOffice Mobile</value>
 							<value xml:lang="it">Apri NeoOffice Mobile</value>
-							<value xml:lang="nl">Open NeoOffice Mobile</value>
-							<value xml:lang="pt">Abrir NeoOffice Mobile</value>
+							<value xml:lang="nl">Open NeoOffice Mobiel</value>
+							<value xml:lang="pt">Abrir NeoOffice Móvel</value>
 						</prop>
 						<prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
