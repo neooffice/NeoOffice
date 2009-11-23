@@ -73,7 +73,7 @@ static const sal_Char *pEntries_es[] = {
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exportando archivo…",
 	NEOMOBILELOADING, "Cargando…",
-	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Móvil",
 	NEOMOBILEUPLOADINGFILE, "Subiendo archivo…",
 	nil, nil
 };
@@ -117,15 +117,18 @@ static const sal_Char *pEntries_it[] = {
  * Translated strings for nl locale
  */
 static const sal_Char *pEntries_nl[] = {
-	NEOMOBILECANCEL, "Annuleren",
+	NEOMOBILECANCEL, "Annuleer",
 	NEOMOBILEDOWNLOADCANCELED, "Ophalen geannuleerd",
 	NEOMOBILEDOWNLOADFAILED, "Ophalen mislukt",
 	NEOMOBILEDOWNLOADINGFILE, "Bestand ophalen…",
 	NEOMOBILEERROR, "Fout:",
 	NEOMOBILEEXPORTINGFILE, "Bestand exporteren…",
 	NEOMOBILELOADING, "Laden…",
-	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
-	NEOMOBILEUPLOADINGFILE, "Bestand versturen…",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Mobiel",
+	NEOMOBILEUPLOADCONTINUE, "Wilt u dit document alsnog verzenden?",
+	NEOMOBILEUPLOADINGFILE, "Bestand verzenden…",
+	NEOMOBILEUPLOADPASSWORDPROTECTED, "Dit document wordt verzonden zonder bescherming met een wachtwoord",
+	NEOMOBILEUPLOAD, "Verzend",
 	nil, nil
 };
 
@@ -140,7 +143,7 @@ static const sal_Char *pEntries_pt[] = {
 	NEOMOBILEERROR, "Erro:",
 	NEOMOBILEEXPORTINGFILE, "Exportando arquivo…",
 	NEOMOBILELOADING, "Carregando…",
-	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILEPRODUCTNAME, "NeoOffice Móvel",
 	NEOMOBILEUPLOADINGFILE, "Enviando arquivo…",
 	nil, nil
 };
