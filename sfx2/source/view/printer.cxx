@@ -621,8 +621,20 @@ long SfxPrintOptionsDialog::Notify( NotifyEvent& rNEvt )
 			Printer *pPrinter = pSetupDlg->GetPrinter();
 			if ( pPrinter )
 			{
-				bShowPrintSetupDialog = false;
-				pPrinter->Setup( this );
+				Printer *pTempPrinter = new Printer( pPrinter->GetJobSetup() );
+				if ( pTempPrinter )
+				{
+					bShowPrintSetupDialog = false;
+
+					// If the user presses the native page setup dialog's OK
+					// button, signal that action to the code in the
+					// svtools/source/dialog/prnsetup.cxx file by changing the
+					// dialog's printer
+					if ( pTempPrinter->Setup( this ) )
+						pSetupDlg->SetPrinter( pTempPrinter );
+					else
+						delete pTempPrinter;
+				}
 			}
 		}
 	}

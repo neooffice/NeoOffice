@@ -407,9 +407,21 @@ short PrinterSetupDialog::Execute()
 			mpPrinter = mpTempPrinter;
 		}
 
-		// Since the native page setup dialog may change the paper size or
-		// orientation, ignore the return value
+		Printer *pPreOptionsPrinter = mpPrinter;
 		maBtnOptions.GetClickHdl().Call( this );
+
+		// If the printer pointer has changes, the native page setup dialog
+		// code in sfx2/source/view/printer.cxx has created a new printer
+		if ( mpPrinter != pPreOptionsPrinter )
+		{
+			pPreOptionsPrinter->SetPrinterProps( mpPrinter );
+			delete mpPrinter;
+		}
+		else
+		{
+			nRet = FALSE;
+		}
+
 		mpPrinter = pOldPrinter;
 
 		// Fix bug 3433 by forcing focus back to this dialog's parent window
