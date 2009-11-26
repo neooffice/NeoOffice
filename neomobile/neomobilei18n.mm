@@ -117,7 +117,7 @@ static const sal_Char *pEntries_it[] = {
  * Translated strings for nl locale
  */
 static const sal_Char *pEntries_nl[] = {
-	NEOMOBILECANCEL, "Annuleer",
+	NEOMOBILECANCEL, "Annuleren",
 	NEOMOBILEDOWNLOADCANCELED, "Ophalen geannuleerd",
 	NEOMOBILEDOWNLOADFAILED, "Ophalen mislukt",
 	NEOMOBILEDOWNLOADINGFILE, "Bestand ophalen…",
