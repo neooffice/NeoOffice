@@ -319,9 +319,24 @@ static oslThread osl_thread_create_Impl (
 
     pthread_mutex_lock (&(pImpl->m_Lock));
 
+#ifdef USE_JAVA
+	pthread_attr_t *pAttr = PTHREAD_ATTR_DEFAULT;
+
+	// Fix bug 3573 by setting the minimum stack size to 2 MB
+	const size_t nMinStacksize = 2 * 1024 * 1024;
+	size_t nStacksize;
+	pthread_attr_t aAttr;
+	if (!pthread_attr_init(&aAttr) && !pthread_attr_getstacksize(&aAttr, &nStacksize) && nStacksize < nMinStacksize && !pthread_attr_setstacksize(&aAttr, nMinStacksize))
+		pAttr = &aAttr;
+#endif	/* USE_JAVA */
+
 	if ((nRet = pthread_create (
 		&(pImpl->m_hThread),
+#ifdef USE_JAVA
+		pAttr,
+#else	/* USE_JAVA */
 		PTHREAD_ATTR_DEFAULT,
+#endif	/* USE_JAVA */
 		osl_thread_start_Impl,
 		(void*)(pImpl))) != 0)
 	{
