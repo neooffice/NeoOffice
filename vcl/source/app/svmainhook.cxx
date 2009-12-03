@@ -1,35 +1,45 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified October 2008 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified December 2009 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
+
+#ifndef _TOOLS_H
 #include <tools/tools.h>
+#endif
 
 #ifndef MACOSX
 
@@ -39,8 +49,6 @@ BOOL ImplSVMainHook( BOOL * )
 }
 
 #else
-// MACOSX cocoa implementation of ImplSVMainHook is in aqua/source/app/salinst.cxx
-#if !defined QUARTZ || defined USE_JAVA
 #include <osl/thread.h>
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -117,13 +125,7 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     ThreadContext tcx;
     tcx.pRet = pbInit;  // the return value
     tcx.pRunLoopRef = &runLoopRef;
-#ifdef USE_JAVA
-    bInCreateSVMainThread = true;
-#endif	// USE_JAVA
     oslThread hThreadID = osl_createThread(RunSVMain, &tcx);
-#ifdef USE_JAVA
-    bInCreateSVMainThread = false;
-#endif	// USE_JAVA
 
     // Start the CFRunLoop
     CFRunLoopSourceContext aSourceContext;
@@ -148,4 +150,3 @@ BOOL ImplSVMainHook( BOOL *pbInit )
 }
 
 #endif // MACOSX
-#endif
