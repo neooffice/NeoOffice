@@ -38,6 +38,7 @@
 
 #ifdef USE_JAVA
 typedef void DetachCurrentThreadFromJVMFunc();
+typedef size_t NewThreadMinStackSizeFunc();
 #endif	/* USE_JAVA */
 
 /****************************************************************************
@@ -305,20 +306,35 @@ static oslThread osl_thread_create_Impl (
     pthread_mutex_lock (&(pImpl->m_Lock));
 
 #ifdef USE_JAVA
-	pthread_attr_t *pAttr = PTHREAD_ATTR_DEFAULT;
-
-	// Fix bug 3573 by setting the minimum stack size to 2 MB
-	const size_t nMinStacksize = 2 * 1024 * 1024;
-	size_t nStacksize;
+	/*
+	 * Fix bug 3573 by setting the minimum stack size to the minimum size
+	 * required by libvcl
+	 */
+	pthread_attr_t *pAttr = NULL;
 	pthread_attr_t aAttr;
-	if (!pthread_attr_init(&aAttr) && !pthread_attr_getstacksize(&aAttr, &nStacksize) && nStacksize < nMinStacksize && !pthread_attr_setstacksize(&aAttr, nMinStacksize))
-		pAttr = &aAttr;
+
+	NewThreadMinStackSizeFunc *pFunc = dlsym(RTLD_DEFAULT, "NewThreadMinStackSize");
+	if (pFunc)
+	{
+		size_t nMinStacksize = pFunc();
+		if (nMinStacksize)
+		{
+			if (!pthread_attr_init(&aAttr))
+			{
+				pAttr = &aAttr;
+
+				size_t nStacksize;
+				if (!pthread_attr_getstacksize(pAttr, &nStacksize) && nStacksize < nMinStacksize)
+					pthread_attr_setstacksize(pAttr, nMinStacksize);
+			}
+		}
+	}
 #endif	/* USE_JAVA */
 
 	if ((nRet = pthread_create (
 		&(pImpl->m_hThread),
 #ifdef USE_JAVA
-		pAttr,
+		pAttr ? pAttr : PTHREAD_ATTR_DEFAULT,
 #else	/* USE_JAVA */
 		PTHREAD_ATTR_DEFAULT,
 #endif	/* USE_JAVA */
@@ -328,6 +344,10 @@ static oslThread osl_thread_create_Impl (
 	    OSL_TRACE("osl_thread_create_Impl(): errno: %d, %s\n",
 			      nRet, strerror(nRet));
 
+#ifdef USE_JAVA
+		if (pAttr)
+			pthread_attr_destroy(pAttr);
+#endif	/* USE_JAVA */
 		pthread_mutex_unlock (&(pImpl->m_Lock));
 		osl_thread_destruct_Impl (&pImpl);
 
@@ -343,6 +363,10 @@ static oslThread osl_thread_create_Impl (
 		pthread_cleanup_pop (0);
     }
 
+#ifdef USE_JAVA
+    if (pAttr)
+        pthread_attr_destroy(pAttr);
+#endif	/* USE_JAVA */
     pthread_mutex_unlock (&(pImpl->m_Lock));
 
 	return ((oslThread)(pImpl));

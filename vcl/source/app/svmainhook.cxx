@@ -47,10 +47,37 @@ BOOL ImplSVMainHook( BOOL * )
 #include <postmac.h>
 #include <unistd.h>
 
+#ifdef USE_JAVA
+
+#include <premac.h>
+#include <Carbon/Carbon.h>
+#include <postmac.h>
+
+#define MIN_SVMAIN_STACK_SIZE ( 2 * 1024 * 1024 )
+
+static bool bInCreateSVMainThread = false;
+
+#endif	// USE_JAVA
+
 extern BOOL ImplSVMain();
 
 // ============================================================================
 
+#ifdef USE_JAVA
+
+extern "C" size_t SAL_DLLPUBLIC_EXPORT NewThreadMinStackSize()
+{
+    size_t nRet = 0;
+
+    // Fix bug 3573 by setting a higher minimum stack size for the thread
+    // that SVMain runs on
+    if ( bInCreateSVMainThread && GetCurrentEventLoop() == GetMainEventLoop() )
+        nRet = MIN_SVMAIN_STACK_SIZE;
+
+    return nRet;
+}
+
+#endif	 // USE_JAVA
 
 static void SourceContextCallBack( void *pInfo )
 {
@@ -90,7 +117,13 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     ThreadContext tcx;
     tcx.pRet = pbInit;  // the return value
     tcx.pRunLoopRef = &runLoopRef;
+#ifdef USE_JAVA
+    bInCreateSVMainThread = true;
+#endif	// USE_JAVA
     oslThread hThreadID = osl_createThread(RunSVMain, &tcx);
+#ifdef USE_JAVA
+    bInCreateSVMainThread = false;
+#endif	// USE_JAVA
 
     // Start the CFRunLoop
     CFRunLoopSourceContext aSourceContext;
