@@ -673,11 +673,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OString aExtPath( "-Djava.ext.dirs=" );
     aExtPath += rtl::OUStringToOString( sPathLocation, osl_getThreadTextEncoding() );
     aExtPath += rtl::OString( "/lib/ext" );
-#ifdef USE_JAVA
     options[i+1].optionString = strdup( (char *)aExtPath.getStr() );
-#else	// USE_JAVA
-    options[i+1].optionString = (char *)aExtPath.getStr();
-#endif	// USE_JAVA
     options[i+1].extraInfo = NULL;
 
     // Set the endorsed directory to use the JVM's XML parser
@@ -698,11 +694,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
         aBootPath += aDirPath;
         aBootPath += rtl::OString( "xml-apis.jar" );
     }
-#ifdef USE_JAVA
     options[i+2].optionString = strdup( (char *)aBootPath.getStr() );
-#else	// USE_JAVA
-    options[i+2].optionString = (char *)aBootPath.getStr();
-#endif	// USE_JAVA
     options[i+2].extraInfo = NULL;
 
     rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
@@ -730,11 +722,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     // Set the library path to include the executable path but none of the
     // extensions
-#ifdef USE_JAVA
     options[i+3].optionString = strdup( (char *)aLibPath.getStr() );
-#else	// USE_JAVA
-    options[i+3].optionString = (char *)aLibPath.getStr();
-#endif	// USE_JAVA
     options[i+3].extraInfo = NULL;
 
     // Set miscellaneous optimizations for the JVM
@@ -761,11 +749,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OStringBuffer aBuf( "-Xmx" );
     aBuf.append( (sal_Int32)nUserMem );
     aBuf.append( "m" );
-#ifdef USE_JAVA
     options[i+8].optionString = strdup( (char *)aBuf.makeStringAndClear().getStr() );
-#else	// USE_JAVA
-    options[i+8].optionString = (char *)aBuf.makeStringAndClear().getStr();
-#endif	// USE_JAVA
     options[i+8].extraInfo = NULL;
    
     vm_args.version= JNI_VERSION_1_4;
