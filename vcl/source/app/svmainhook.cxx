@@ -57,12 +57,16 @@ BOOL ImplSVMainHook( BOOL * )
 
 #ifdef USE_JAVA
 
+#include <rtl/alloc.h>
+#include <pthread.h>
+
 #include <premac.h>
 #include <Carbon/Carbon.h>
 #include <postmac.h>
 
 #define MIN_SVMAIN_STACK_SIZE ( 2 * 1024 * 1024 )
 
+static pthread_attr_t *pSVMainAttr = NULL;
 static bool bInCreateSVMainThread = false;
 
 #endif	// USE_JAVA
@@ -73,16 +77,33 @@ extern BOOL ImplSVMain();
 
 #ifdef USE_JAVA
 
-extern "C" size_t SAL_DLLPUBLIC_EXPORT NewThreadMinStackSize()
+extern "C" SAL_DLLPUBLIC_EXPORT const pthread_attr_t *NewSVMainThreadAttributes()
 {
-    size_t nRet = 0;
-
     // Fix bug 3573 by setting a higher minimum stack size for the thread
     // that SVMain runs on
     if ( bInCreateSVMainThread && GetCurrentEventLoop() == GetMainEventLoop() )
-        nRet = MIN_SVMAIN_STACK_SIZE;
+    {
+        if ( !pSVMainAttr )
+        {
+            pSVMainAttr = (pthread_attr_t *)rtl_allocateMemory( sizeof( pthread_attr_t ) );
+            if ( pSVMainAttr )
+            {
+                if ( !pthread_attr_init( pSVMainAttr ) )
+                {
+                    size_t nStacksize;
+                    if ( !pthread_attr_getstacksize( pSVMainAttr, &nStacksize ) && nStacksize < MIN_SVMAIN_STACK_SIZE )
+                        pthread_attr_setstacksize( pSVMainAttr, MIN_SVMAIN_STACK_SIZE );
+                }
+                else
+                {
+                    rtl_freeMemory( pSVMainAttr );
+                    pSVMainAttr = NULL;
+                }
+            }
+        }
+    }
 
-    return nRet;
+    return pSVMainAttr;
 }
 
 #endif	 // USE_JAVA

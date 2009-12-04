@@ -53,7 +53,7 @@
 
 #ifdef USE_JAVA
 typedef void DetachCurrentThreadFromJVMFunc();
-typedef size_t NewThreadMinStackSizeFunc();
+typedef const pthread_attr_t *NewSVMainThreadAttributesFunc();
 #endif	/* USE_JAVA */
 
 /****************************************************************************
@@ -288,7 +288,7 @@ static void* osl_thread_start_Impl (void* pData)
 		 * Fix bug 2865 by calling the detach JVM function in libvcl before the
 		 * thread terminates
 		 */
-		DetachCurrentThreadFromJVMFunc *pFunc = dlsym(RTLD_DEFAULT, "DetachCurrentThreadFromJVM");
+		DetachCurrentThreadFromJVMFunc *pFunc = (DetachCurrentThreadFromJVMFunc *)dlsym(RTLD_DEFAULT, "DetachCurrentThreadFromJVM");
 		if (pFunc)
 			pFunc();
 #endif	/* USE_JAVA */
@@ -325,25 +325,10 @@ static oslThread osl_thread_create_Impl (
 	 * Fix bug 3573 by setting the minimum stack size to the minimum size
 	 * required by libvcl
 	 */
-	pthread_attr_t *pAttr = NULL;
-	pthread_attr_t aAttr;
-
-	NewThreadMinStackSizeFunc *pFunc = dlsym(RTLD_DEFAULT, "NewThreadMinStackSize");
+	const pthread_attr_t *pAttr = NULL;
+	NewSVMainThreadAttributesFunc *pFunc = (NewSVMainThreadAttributesFunc *)dlsym(RTLD_DEFAULT, "NewSVMainThreadAttributes");
 	if (pFunc)
-	{
-		size_t nMinStacksize = pFunc();
-		if (nMinStacksize)
-		{
-			if (!pthread_attr_init(&aAttr))
-			{
-				pAttr = &aAttr;
-
-				size_t nStacksize;
-				if (!pthread_attr_getstacksize(pAttr, &nStacksize) && nStacksize < nMinStacksize)
-					pthread_attr_setstacksize(pAttr, nMinStacksize);
-			}
-		}
-	}
+		pAttr = pFunc();
 #endif	/* USE_JAVA */
 
 	if ((nRet = pthread_create (
@@ -359,10 +344,6 @@ static oslThread osl_thread_create_Impl (
 	    OSL_TRACE("osl_thread_create_Impl(): errno: %d, %s\n",
 			      nRet, strerror(nRet));
 
-#ifdef USE_JAVA
-		if (pAttr)
-			pthread_attr_destroy(pAttr);
-#endif	/* USE_JAVA */
 		pthread_mutex_unlock (&(pImpl->m_Lock));
 		osl_thread_destruct_Impl (&pImpl);
 
@@ -378,10 +359,6 @@ static oslThread osl_thread_create_Impl (
 		pthread_cleanup_pop (0);
     }
 
-#ifdef USE_JAVA
-    if (pAttr)
-        pthread_attr_destroy(pAttr);
-#endif	/* USE_JAVA */
     pthread_mutex_unlock (&(pImpl->m_Lock));
 
 	return ((oslThread)(pImpl));
