@@ -146,7 +146,13 @@ BOOL ImplSVMainHook( BOOL *pbInit )
     ThreadContext tcx;
     tcx.pRet = pbInit;  // the return value
     tcx.pRunLoopRef = &runLoopRef;
+#ifdef USE_JAVA
+    bInCreateSVMainThread = true;
+#endif	// USE_JAVA
     oslThread hThreadID = osl_createThread(RunSVMain, &tcx);
+#ifdef USE_JAVA
+    bInCreateSVMainThread = false;
+#endif	// USE_JAVA
 
     // Start the CFRunLoop
     CFRunLoopSourceContext aSourceContext;
