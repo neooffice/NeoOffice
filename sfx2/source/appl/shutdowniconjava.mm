@@ -43,6 +43,7 @@
 
 #define USE_APP_SHORTCUTS
 #include "app.hrc"
+#include "../dialog/dialog.hrc"
 #include "shutdownicon.hxx"
 
 #include <premac.h>
@@ -70,9 +71,87 @@ using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::uno;
 using namespace ::rtl;
 
+class QuickstartMenuItemDescriptor
+{
+	int							mnID;
+	XubString					maText;
+	::std::vector< QuickstartMenuItemDescriptor >	maItems;
+
+public:
+								QuickstartMenuItemDescriptor( int nID, XubString aText ) : mnID( nID ), maText( aText ) {}
+								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, XubString aText ) : mnID( 0 ), maText( aText ), maItems( rItems ) {}
+								~QuickstartMenuItemDescriptor() {};
+	NSMenuItem*					CreateMenuItem() const;
+};
+
+NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMenuItem() const
+{
+	NSMenuItem *pRet = nil;
+
+	if ( maText.Len() )
+	{
+		SEL aSelector;
+		switch ( mnID )
+		{
+			case BASE_COMMAND_ID:
+				aSelector = @selector(handleBaseCommand:);
+				break;
+			case CALC_COMMAND_ID:
+				aSelector = @selector(handleCalcCommand:);
+				break;
+			case DRAW_COMMAND_ID:
+				aSelector = @selector(handleDrawCommand:);
+				break;
+			case FILEOPEN_COMMAND_ID:
+				aSelector = @selector(handleFileOpenCommand:);
+				break;
+			case FROMTEMPLATE_COMMAND_ID:
+				aSelector = @selector(handleFromTemplateCommand:);
+				break;
+			case IMPRESS_COMMAND_ID:
+				aSelector = @selector(handleImpressCommand:);
+				break;
+			case MATH_COMMAND_ID:
+				aSelector = @selector(handleMathCommand:);
+				break;
+			case WRITER_COMMAND_ID:
+				aSelector = @selector(handleWriterCommand:);
+				break;
+			default:
+				aSelector = nil;
+				break;
+		}
+
+		NSString *pTitle = [NSString stringWithCharacters:maText.GetBuffer() length:maText.Len()];
+		if ( pTitle )
+		{
+			pRet = [[NSMenuItem alloc] initWithTitle:pTitle action:aSelector keyEquivalent:@""];
+			if ( pRet && maItems.size() )
+			{
+				NSMenu *pMenu = [[NSMenu alloc] initWithTitle:pTitle];
+				if ( pMenu )
+				{
+					for ( ::std::vector< QuickstartMenuItemDescriptor >::const_iterator it = maItems.begin(); it != maItems.end(); ++it )
+					{
+						NSMenuItem *pSubmenuItem = it->CreateMenuItem();
+						if ( pSubmenuItem );
+							[pMenu addItem:pSubmenuItem];
+
+					}
+
+					[pRet setSubmenu:pMenu];
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
+
 class ShutdownIconEvent
 {
 	int					mnCommand;
+
 public:
 						ShutdownIconEvent( int nCommand ) : mnCommand( nCommand ) {}
 						~ShutdownIconEvent() {}
@@ -365,20 +444,18 @@ void ProcessShutdownIconCommand( int nCommand )
 
 @interface QuickstartMenuItems : NSObject
 {
-	int					mnItems;
-	int*				mpIDs;
-	CFStringRef*		mpStrings;
+	const ::std::vector< QuickstartMenuItemDescriptor >*	mpItems;
 }
-+ (id)createWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings;
++ (id)createWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
 - (void)addMenuItems:(id)pObject;
-- (id)initWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings;
+- (id)initWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
 @end
 
 @implementation QuickstartMenuItems
 
-+ (id)createWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings
++ (id)createWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
 {
-	QuickstartMenuItems *pRet = [[QuickstartMenuItems alloc] initWithItems:nItems menuCommands:pIDs strings:pStrings];
+	QuickstartMenuItems *pRet = [[QuickstartMenuItems alloc] initWithItems:pItems];
 	[pRet autorelease];
 	return pRet;
 }
@@ -386,7 +463,7 @@ void ProcessShutdownIconCommand( int nCommand )
 - (void)addMenuItems:(id)pObject
 {
 	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	if ( pApp && mpItems && mpItems->size() )
 	{
 		NSMenu *pAppMenu = nil;
 		NSMenu *pDockMenu = nil;
@@ -421,66 +498,32 @@ void ProcessShutdownIconCommand( int nCommand )
 			[pAppMenu insertItem:[NSMenuItem separatorItem] atIndex:2];
 
 			// Work the list of menu items is reverse order
-			SEL aSelector;
-			int i;
-			for ( i = mnItems - 1; i >= 0; i-- )
+			for ( ::std::vector< QuickstartMenuItemDescriptor >::const_reverse_iterator it = mpItems->rbegin(); it != mpItems->rend(); ++it )
 			{
-				switch ( mpIDs[ i ] )
+				NSMenuItem *pAppMenuItem = it->CreateMenuItem();
+				NSMenuItem *pDockMenuItem = it->CreateMenuItem();
+				if ( pAppMenuItem )
 				{
-					case BASE_COMMAND_ID:
-						aSelector = @selector(handleBaseCommand:);
-						break;
-					case CALC_COMMAND_ID:
-						aSelector = @selector(handleCalcCommand:);
-						break;
-					case DRAW_COMMAND_ID:
-						aSelector = @selector(handleDrawCommand:);
-						break;
-					case FILEOPEN_COMMAND_ID:
-						aSelector = @selector(handleFileOpenCommand:);
-						break;
-					case FROMTEMPLATE_COMMAND_ID:
-						aSelector = @selector(handleFromTemplateCommand:);
-						break;
-					case IMPRESS_COMMAND_ID:
-						aSelector = @selector(handleImpressCommand:);
-						break;
-					case MATH_COMMAND_ID:
-						aSelector = @selector(handleMathCommand:);
-						break;
-					case WRITER_COMMAND_ID:
-						aSelector = @selector(handleWriterCommand:);
-						break;
-					default:
-						aSelector = nil;
-						break;
+					[pAppMenu insertItem:pAppMenuItem atIndex:2];
+					[pAppMenuItem setTarget:pDelegate];
 				}
-
-				// Insert and release string
-				if ( mpStrings[ i ] )
+				if ( pDockMenuItem )
 				{
-					NSMenuItem *pAppMenuItem = [pAppMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:2];
-					if ( pAppMenuItem )
-						[pAppMenuItem setTarget:pDelegate];
-					NSMenuItem *pDockMenuItem = [pDockMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:0];
-					if ( pDockMenuItem )
-						[pDockMenuItem setTarget:pDelegate];
+					[pDockMenu insertItem:pDockMenuItem atIndex:0];
+					[pDockMenuItem setTarget:pDelegate];
 				}
 			}
 
-			mpIDs = nil;
-			mpStrings = nil;
+			mpItems = nil;
 		}
 	}
 }
 
-- (id)initWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings;
+- (id)initWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
 {
 	[super init];
 
-	mnItems = nItems;
-	mpIDs = pIDs;
-	mpStrings = pStrings;
+	mpItems = pItems;
 
 	return self;
 }
@@ -545,9 +588,8 @@ extern "C" void java_init_systray()
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	// insert the menu entries for launching the applications
-	int nItems = 0;
-	int aIDs[ 8 ];
-	CFStringRef aStrings[ 8 ];
+	::std::vector< QuickstartMenuItemDescriptor > aAppMenuItems;
+	::std::vector< QuickstartMenuItemDescriptor > aNewSubmenuItems;
 	XubString aDesc;
 	SvtModuleOptions aModuleOptions;
 	for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( MenuEntryDescriptor ); ++i )
@@ -564,39 +606,38 @@ extern "C" void java_init_systray()
 		if ( aFileNewAppsAvailable.find( sURL ) == aFileNewAppsAvailable.end() )
 			continue;
 
-		aIDs[ nItems ] = aMenuItems[i].nMenuItemID;
 		aDesc = XubString( pShutdownIcon->GetUrlDescription( sURL ) );
 		aDesc.EraseAllChars( '~' );
 		// Fix bug 2206 by putting in some default text if the
 		// description is an empty string
 		if ( !aDesc.Len() )
 		{
-			aDesc = XubString( ::rtl::OUString::createFromAscii( aMenuItems[i].pFallbackDescription ) );
+			aDesc = XubString::CreateFromAscii( aMenuItems[i].pFallbackDescription );
 			aDesc.EraseAllChars( '~' );
 		}
-		aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
+		aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( aMenuItems[i].nMenuItemID, aDesc ) );
 	}
 
 	// insert the remaining menu entries
-	aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
 	aDesc = XubString( pShutdownIcon->GetResString( STR_QUICKSTART_FROMTEMPLATE ) );
 	aDesc.EraseAllChars( '~' );
-	aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-	aIDs[ nItems ] = FILEOPEN_COMMAND_ID;
+	aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( FROMTEMPLATE_COMMAND_ID, aDesc ) );
+
+	aDesc = XubString( pShutdownIcon->GetResString( STR_NEW ) );
+	aDesc.EraseAllChars( '~' );
+	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aNewSubmenuItems, aDesc ) );
+
 	aDesc = XubString( pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN ) );
 	aDesc.EraseAllChars( '~' );
-	aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
+	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( FILEOPEN_COMMAND_ID, aDesc ) );
 
 	ULONG nCount = Application::ReleaseSolarMutex();
 
-	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItems:nItems menuCommands:aIDs strings:aStrings];
+	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItems:&aAppMenuItems];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES modes:pModes];
 
 	Application::AcquireSolarMutex( nCount );
-
-	for ( int i = 0; i < nItems; i++ )
-		CFRelease( aStrings[ i ] );
 
 	[pPool release];
 }
