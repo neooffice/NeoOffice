@@ -190,27 +190,18 @@ extern USHORT nScFillModeMouseModifier;				// global.cxx
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
-// Uncomment the following line to use our custom native highlighting code
-// #define USE_NATIVE_HIGHLIGHT_COLOR
+// Comment out the following line to disable our custom native highlighting code
+#define USE_NATIVE_HIGHLIGHT_COLOR
 
 bool UseMacHighlightColor()
 {
-#ifdef USE_NATIVE_HIGHLIGHT_COLOR
 	bool bUseMacHighlightColor = true;
-#else	// USE_NATIVE_HIGHLIGHT_COLOR
-	bool bUseMacHighlightColor = false;
-#endif	// USE_NATIVE_HIGHLIGHT_COLOR
 
     CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
     if( aPref ) 
     {
-#ifdef USE_NATIVE_HIGHLIGHT_COLOR
         if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
             bUseMacHighlightColor = false;
-#else	// USE_NATIVE_HIGHLIGHT_COLOR
-        if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
-            bUseMacHighlightColor = true;
-#endif	// USE_NATIVE_HIGHLIGHT_COLOR
         CFRelease( aPref );
     }
 
