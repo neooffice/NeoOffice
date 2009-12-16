@@ -1,4 +1,4 @@
-﻿/*************************************************************************
+/*************************************************************************
  *
  *  $RCSfile$
  *
@@ -38,35 +38,41 @@
 String STR_OPENATLAUNCH
 {
 	Text [ en-US ] = "Open at Launch";
+	Text [ fr ] = "Document par défaut";
 	Text [ nl ] = "Toon bij starten";
 };
 
 String STR_MACOSXOPTIONS
 {
 	Text [ en-US ] = "Mac OS X Options";
+	Text [ fr ] = "Options liées à Mac OS X ";
 	Text [ nl ] = "Mac OS X mogelijkheden";
 };
 
 String STR_IGNORETRACKPADGESTURES
 {
 	Text [ en-US ] = "Ignore Trackpad Gestures";
+	Text [ fr ] = "Ignorer les gestes du trackpad";
 	Text [ nl ] = "Negeer trackpad gebaren";
 };
 
 String STR_DISABLEMACOSXSERVICESMENU
 {
 	Text [ en-US ] = "Disable Mac OS X Services Menu";
+	Text [ fr ] = "Désactiver le menu Services de Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X voorzieningen uit";
 };
 
 String STR_DISABLEMACOSXTEXTHIGHLIGHTING
 {
 	Text [ en-US ] = "Disable Mac OS X Text Highlighting";
+	Text [ fr ] = "Désactiver le surlignage de texte Mac OS X";
 	Text [ nl ] = "Schakel Mac OS X tekst markeren uit";
 };
 
 String STR_DISABLEQUICKLOOKSUPPORT
 {
 	Text [ en-US ] = "Disable Quick Look Support in Documents";
+	Text [ fr ] = "Désactiver la prise en charge de QuickLook pour les documents";
 	Text [ nl ] = "Schakel ondersteuning voor Quick Look in documenten uit";
 };
