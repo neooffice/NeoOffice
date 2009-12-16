@@ -36,14 +36,17 @@
 #import <set>
 
 #include <comphelper/sequenceashashmap.hxx>
+#include <sfx2/app.hxx>
 #include <svtools/dynamicmenuoptions.hxx>
 #include <svtools/moduleoptions.hxx>
 #include <tools/link.hxx>
+#include <tools/rcid.h>
 #include <vcl/svapp.hxx>
 
 #define USE_APP_SHORTCUTS
 #include "app.hrc"
 #include "../dialog/dialog.hrc"
+#include "shutdowniconjava.hrc"
 #include "shutdownicon.hxx"
 
 #include <premac.h>
@@ -71,10 +74,28 @@ static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
 static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
+static ResMgr *pJavaResMgr = NULL;
 
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::uno;
 using namespace ::rtl;
+
+static XubString GetJavaResString( int nId )
+{
+    if ( !pJavaResMgr )
+    {
+        pJavaResMgr = SfxApplication::CreateResManager( "shutdowniconjava" );
+        if ( !pJavaResMgr )
+            return OUString();
+    }
+
+    ResId aResId( nId, *pJavaResMgr );
+    aResId.SetRT( RSC_STRING );
+    if ( !pJavaResMgr->IsAvailable( aResId ) )
+        return OUString();
+ 
+    return XubString( ResId( nId, *pJavaResMgr ) );
+}
 
 class QuickstartMenuItemDescriptor
 {
@@ -294,7 +315,7 @@ void ProcessShutdownIconCommand( int nCommand )
 }
 
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication
-{   
+{
     return mpDockMenu;
 } 
 
@@ -759,31 +780,31 @@ extern "C" void java_init_systray()
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFileOpenCommand:), aDesc ) );
 
 	// Insert the open at launch submenu
-	aDesc = XubString::CreateFromAscii( "Open at Launch" );
+	aDesc = GetJavaResString( STR_OPENATLAUNCH );
 	aDesc.EraseAllChars( '~' );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aOpenAtLaunchSubmenuItems, aDesc ) );
 
 	// Insert the Mac OS X submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aMacOSXSubmenuItems;
 
-	aDesc = XubString::CreateFromAscii( "Ignore Trackpad Gestures" );
+	aDesc = GetJavaResString( STR_IGNORETRACKPADGESTURES );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "IgnoreTrackpadGestures" ), kCFBooleanTrue, FALSE ) );
 
-	aDesc = XubString::CreateFromAscii( "Disable Mac OS X Services Menu" );
+	aDesc = GetJavaResString( STR_DISABLEMACOSXSERVICESMENU );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableServicesMenu" ), kCFBooleanTrue, FALSE ) );
 
-	aDesc = XubString::CreateFromAscii( "Disable Mac OS X Text Highlighting" );
+	aDesc = GetJavaResString( STR_DISABLEMACOSXTEXTHIGHLIGHTING );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseMacHighlightColor" ), kCFBooleanFalse, FALSE ) );
 
-	aDesc = XubString::CreateFromAscii( "Disable Quick Look Support in Documents" );
+	aDesc = GetJavaResString( STR_DISABLEQUICKLOOKSUPPORT );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
 
 	// Insert the Mac OS X submenu
-	aDesc = XubString::CreateFromAscii( "Mac OS X Options" );
+	aDesc = GetJavaResString( STR_MACOSXOPTIONS );
 	aDesc.EraseAllChars( '~' );
 	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aMacOSXSubmenuItems, aDesc ) );
 

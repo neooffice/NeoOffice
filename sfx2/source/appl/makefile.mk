@@ -75,6 +75,15 @@ SRS2NAME=sfx
 SRC2FILES =  \
 		sfx.src
 
+.IF "$(GUIBASE)" == "java"
+SRS3NAME=shutdowniconjava
+SRC3FILES =  \
+		shutdowniconjava.src
+RESLIB3NAME=shutdowniconjava
+RESLIB3IMAGES=$(PRJ)$/res
+RESLIB3SRSFILES=$(SRS)$/shutdowniconjava.srs
+.ENDIF "$(GUIBASE)" == "java"
+
 SFX_OBJECTS = \
 	$(SLO)$/app.obj \
 	$(SLO)$/appbas.obj \
