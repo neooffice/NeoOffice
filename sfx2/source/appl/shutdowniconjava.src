@@ -45,7 +45,7 @@ String STR_OPENATLAUNCH
 String STR_MACOSXOPTIONS
 {
 	Text [ en-US ] = "Mac OS X Options";
-	Text [ fr ] = "Options liées à Mac OS X ";
+	Text [ fr ] = "Options liées à Mac OS X";
 	Text [ nl ] = "Mac OS X mogelijkheden";
 };
 
