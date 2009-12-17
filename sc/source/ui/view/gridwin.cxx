@@ -193,7 +193,7 @@ extern USHORT nScFillModeMouseModifier;				// global.cxx
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
-bool UseMacHighlightColor()
+static bool UseMacHighlightColor()
 {
 	bool bUseMacHighlightColor = true;
 
