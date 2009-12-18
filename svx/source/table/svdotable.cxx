@@ -2171,6 +2171,7 @@ void SdrTableObj::ImpDoPaintTableCell(const CellPos& rPos, XOutputDevice& rXOut,
 					SfxItemSet aNativeHighlightSet( *rSet.GetPool() );
 					aNativeHighlightSet.Put( XLineStyleItem( XLINE_NONE ) );
 					aNativeHighlightSet.Put( XFillColorItem( String(), aNativeHighlightColor ) );
+					aNativeHighlightSet.Put( XFillTransparenceItem( 25 ) );
 					rXOut.SetLineAttr( aNativeHighlightSet );
 					rXOut.SetFillAttr( aNativeHighlightSet );
 					rXOut.DrawRect( aNativeHighlightRect );

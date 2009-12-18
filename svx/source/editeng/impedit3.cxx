@@ -2868,7 +2868,7 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 		Color aOldLineColor = pOutDev->GetLineColor();
 		pOutDev->SetFillColor( aNativeHighlightColor );
 		pOutDev->SetLineColor( aNativeHighlightColor );
-		pOutDev->DrawPolyPolygon( aTemp );
+		pOutDev->DrawTransparent( aTemp, 25 );
 		pOutDev->SetFillColor( aOldFillColor );
 		pOutDev->SetLineColor( aOldLineColor );
 	}
