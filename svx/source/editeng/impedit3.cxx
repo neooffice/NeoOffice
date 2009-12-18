@@ -3516,7 +3516,7 @@ void ImpEditEngine::Paint( ImpEditView* pView, const Rectangle& rRec, sal_Bool b
 
 #ifdef USE_JAVA
 	bool bOldInPaint = pView->IsInPaint();
-	pView->SetInPaint( true );
+	pView->SetInPaint( !bUseVirtDev );
 #endif	// USE_JAVA
 
 	// Schnittmenge aus Paintbereich und OutputArea.
