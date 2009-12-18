@@ -933,7 +933,7 @@ void ScOutputData::DrawBackground()
 								Color aOldLineColor = pDev->GetLineColor();
 								pDev->SetFillColor( aNativeHighlightColor );
 								pDev->SetLineColor( aNativeHighlightColor );
-								pDev->DrawPolyPolygon( aTemp );
+								pDev->DrawTransparent( aTemp, 25 );
 								pDev->SetFillColor( aOldFillColor );
 								pDev->SetLineColor( aOldLineColor );
 							}
@@ -964,7 +964,7 @@ void ScOutputData::DrawBackground()
 						Color aOldLineColor = pDev->GetLineColor();
 						pDev->SetFillColor( aNativeHighlightColor );
 						pDev->SetFillColor( aNativeHighlightColor );
-						pDev->DrawPolyPolygon( aTemp );
+						pDev->DrawTransparent( aTemp, 25 );
 						pDev->SetFillColor( aOldFillColor );
 						pDev->SetLineColor( aOldLineColor );
 					}
