@@ -87,6 +87,10 @@
 #include <doc.hxx>
 #include <pam.hxx>
 
+#ifdef USE_JAVA
+#include <crsrsh.hxx>
+#endif  // USE_JAVA
+
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::linguistic2;
 using namespace ::com::sun::star::uno;
@@ -691,6 +695,59 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
             pBlink = NULL;
         }
 	}
+
+#ifdef USE_JAVA
+    Color aNativeHighlightColor( COL_TRANSPARENT );
+    PolyPolygon aNativeHighlightPolyPoly;
+    SwRect aRect;
+    SwRect aPaintRect;
+    CalcRect( rPor, &aRect, &aPaintRect );
+    SwCrsrShell *pCrsrSh = dynamic_cast< SwCrsrShell* >( pFrm->GetShell() );
+    if ( aPaintRect.HasArea() && pCrsrSh )
+    {
+    	OutputDevice *pOutDev = pOut;
+        aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
+
+        std::vector< Rectangle > aPixelRects;
+
+        SwShellTableCrsr *pTblCrsr = (SwShellTableCrsr *)pCrsrSh->GetTableCrsr();
+        if ( pTblCrsr )
+        {
+            std::vector< Rectangle > aTblCrsrPixelRects;
+            pTblCrsr->GetNativeHightlightColorRects( aTblCrsrPixelRects );
+            for ( std::vector< Rectangle >::const_iterator it = aTblCrsrPixelRects.begin() ; it != aTblCrsrPixelRects.end() ; ++it )
+                aPixelRects.push_back( *it );
+        }
+
+        SwShellCrsr *pCurCrsr = (SwShellCrsr *)pCrsrSh->_GetCrsr();
+        if ( pCurCrsr )
+        {
+            std::vector< Rectangle > aCurCrsrPixelRects;
+            pCurCrsr->GetNativeHightlightColorRects( aCurCrsrPixelRects );
+            for ( std::vector< Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
+                aPixelRects.push_back( *it );
+        }
+
+        for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
+        {
+            if ( !it->IsEmpty() )
+                aNativeHighlightPolyPoly.Insert( Polygon( *it ) );
+        }
+
+        if ( aNativeHighlightPolyPoly.Count() )
+        {
+            PolyPolygon aTemp;
+            aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aPaintRect.SVRect() ) ), aTemp );
+            Color aOldFillColor = pOutDev->GetFillColor();
+            Color aOldLineColor = pOutDev->GetLineColor();
+            pOutDev->SetFillColor( aNativeHighlightColor );
+            pOutDev->SetLineColor( aNativeHighlightColor );
+            pOutDev->DrawTransparent( aTemp, 25 );
+            pOutDev->SetFillColor( aOldFillColor );
+            pOutDev->SetLineColor( aOldLineColor );
+        }
+    }
+#endif	// USE_JAVA
 
     // The SwScriptInfo is useless if we are inside a field portion
     SwScriptInfo* pSI = 0;

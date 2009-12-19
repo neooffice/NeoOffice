@@ -2016,7 +2016,7 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     Color aOldLineColor = pOutDev->GetLineColor();
                     pOutDev->SetFillColor( aNativeHighlightColor );
                     pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawTransparent( aTemp, 25 );
+                    pOutDev->DrawPolyPolygon( aTemp );
                     pOutDev->SetFillColor( aOldFillColor );
                     pOutDev->SetLineColor( aOldLineColor );
                 }
@@ -2044,7 +2044,7 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     Color aOldLineColor = pOutDev->GetLineColor();
                     pOutDev->SetFillColor( aNativeHighlightColor );
                     pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawTransparent( aTemp, 25 );
+                    pOutDev->DrawPolyPolygon( aTemp );
                     pOutDev->SetFillColor( aOldFillColor );
                     pOutDev->SetLineColor( aOldLineColor );
                 }
@@ -5865,7 +5865,7 @@ void SwFrm::PaintBackground( const SwRect &rRect, const SwPageFrm *pPage,
                         ///         - see declaration in /core/inc/frmtool.hxx.
                         ::DrawGraphic( pItem, pOut, aOrigBackRect, aRegion[i], GRFNUM_NO,
 #ifdef USE_JAVA
-                                bConsiderBackgroundTransparency, pSh );
+                                bConsiderBackgroundTransparency, !IsTxtFrm() ? pSh : NULL );
 #else	// USE_JAVA
                                 bConsiderBackgroundTransparency );
 #endif	// USE_JAVA
