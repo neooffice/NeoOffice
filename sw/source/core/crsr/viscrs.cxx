@@ -83,6 +83,8 @@ MapMode* SwSelPaintRects::pMapMode = 0;
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
+std::map< SwSelPaintRects*, bool > aUseMacHighlightColorMap;
+
 static bool UseMacHighlightColor()
 {
 	bool bUseMacHighlightColor = true;
@@ -734,11 +736,20 @@ SwSelPaintRects::SwSelPaintRects( const SwCrsrShell& rCSh )
 	pCShell( &rCSh ),
 	mpCursorOverlay(0)
 {
+#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+	aUseMacHighlightColorMap[ this ] = UseMacHighlightColor();
+#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 }
 
 SwSelPaintRects::~SwSelPaintRects()
 {
 	Hide();
+
+#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
+	if ( it != aUseMacHighlightColorMap.end() )
+		aUseMacHighlightColorMap.erase( this );
+#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 }
 
 void SwSelPaintRects::swapContent(SwSelPaintRects& rSwap)
@@ -770,7 +781,8 @@ void SwSelPaintRects::Hide()
 	}
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-	if ( UseMacHighlightColor() )
+	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
+	if ( it != aUseMacHighlightColorMap.end() && it->second )
 	{
 		Window *pWin = GetShell()->GetWin();
 		if ( pWin && !GetShell()->IsPreView() )
@@ -813,7 +825,14 @@ void SwSelPaintRects::Show()
 			Window* pWin = GetShell()->GetWin();
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-			if ( UseMacHighlightColor() )
+			std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
+			if ( it != aUseMacHighlightColorMap.end() && it->second != UseMacHighlightColor() )
+			{
+				SwSelPaintRects::Hide();
+				aUseMacHighlightColorMap[ this ] = UseMacHighlightColor();
+			}
+
+			if ( it != aUseMacHighlightColorMap.end() && it->second )
 			{
 				bool bInvalidate = false;
 
@@ -1306,7 +1325,8 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 	rPixelRects.clear();
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	if ( UseMacHighlightColor() )
+	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
+	if ( it != aUseMacHighlightColorMap.end() && it->second )
 	{
 		for( USHORT n = 0; n < Count(); ++n )
 		{
