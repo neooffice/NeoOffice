@@ -80,6 +80,8 @@ public:
 	mutable sal_IntPtr		mnATSUFontID;
 	::std::list< JavaImplFontData* >	maChildren;
 
+	DECL_STATIC_LINK( JavaImplFontData, RunNativeFontsTimer, void* );
+
 							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, ::rtl::OUString aVCLFontName, sal_IntPtr nATSUFontID );
 	virtual					~JavaImplFontData();
 
