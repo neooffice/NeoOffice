@@ -424,6 +424,14 @@ static void RunNativeFontsTimerCallback()
 		}
 	}
 }
+IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCallData )
+{
+	RunNativeFontsTimerCallback();
+	return 0;
+}
+
+// -----------------------------------------------------------------------
+
 
 // =======================================================================
 
@@ -769,7 +777,9 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		if ( bit == aBadATUSFontIDMap.end() )
 		{
 			aBadATUSFontIDMap[ mpFontData->mnATSUFontID ] = mpFontData->mnATSUFontID;
-			RunNativeFontsTimerCallback();
+			// Fix bug 3576 by updating the fonts after all currently queued
+			// event are dispatched
+			Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
 		}
 	}
 }
