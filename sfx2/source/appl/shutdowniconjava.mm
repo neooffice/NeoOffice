@@ -36,13 +36,17 @@
 #import <set>
 
 #include <comphelper/sequenceashashmap.hxx>
+#include <sfx2/app.hxx>
 #include <svtools/dynamicmenuoptions.hxx>
 #include <svtools/moduleoptions.hxx>
 #include <tools/link.hxx>
+#include <tools/rcid.h>
 #include <vcl/svapp.hxx>
 
 #define USE_APP_SHORTCUTS
 #include "app.hrc"
+#include "../dialog/dialog.hrc"
+#include "shutdowniconjava.hrc"
 #include "shutdownicon.hxx"
 
 #include <premac.h>
@@ -66,13 +70,117 @@
 #define BASE_FALLBACK_DESC				"Database"
 #define MATH_FALLBACK_DESC				"Formula"
 
+static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
+static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
+static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
+static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
+static ResMgr *pJavaResMgr = NULL;
+
 using namespace ::com::sun::star::beans;
 using namespace ::com::sun::star::uno;
 using namespace ::rtl;
 
+static XubString GetJavaResString( int nId )
+{
+    if ( !pJavaResMgr )
+    {
+        pJavaResMgr = SfxApplication::CreateResManager( "shutdowniconjava" );
+        if ( !pJavaResMgr )
+            return OUString();
+    }
+
+    ResId aResId( nId, *pJavaResMgr );
+    aResId.SetRT( RSC_STRING );
+    if ( !pJavaResMgr->IsAvailable( aResId ) )
+        return OUString();
+ 
+    return XubString( ResId( nId, *pJavaResMgr ) );
+}
+
+class QuickstartMenuItemDescriptor
+{
+	SEL							maSelector;
+	XubString					maText;
+	::std::vector< QuickstartMenuItemDescriptor >	maItems;
+	CFStringRef					maPrefName;
+	CFPropertyListRef			maCheckedPrefValue;
+	BOOL						mbValueIsDefaultForPref;
+
+public:
+								QuickstartMenuItemDescriptor( SEL aSelector, XubString aText, CFStringRef aPrefName = NULL, CFPropertyListRef aCheckedPrefValue = NULL, BOOL bValueIsDefaultForPref = FALSE ) : maSelector( aSelector ), maText( aText ), maPrefName( aPrefName ), maCheckedPrefValue( aCheckedPrefValue ), mbValueIsDefaultForPref( bValueIsDefaultForPref ) {}
+								QuickstartMenuItemDescriptor( ::std::vector< QuickstartMenuItemDescriptor > &rItems, XubString aText ) : maSelector( NULL ), maText( aText ), maItems( rItems ), maPrefName( NULL ), maCheckedPrefValue( NULL ), mbValueIsDefaultForPref( FALSE ) {}
+								~QuickstartMenuItemDescriptor() {};
+	NSMenuItem*					CreateMenuItem( const NSObject *pDelegate ) const;
+};
+
+NSMenuItem *QuickstartMenuItemDescriptor::QuickstartMenuItemDescriptor::CreateMenuItem( const NSObject *pDelegate ) const
+{
+	NSMenuItem *pRet = nil;
+
+	if ( maText.Len() )
+	{
+		NSString *pTitle = [NSString stringWithCharacters:maText.GetBuffer() length:maText.Len()];
+		if ( pTitle )
+		{
+			pRet = [[NSMenuItem alloc] initWithTitle:pTitle action:maSelector keyEquivalent:@""];
+			if ( pRet )
+			{
+				if ( pDelegate )
+					[pRet setTarget:pDelegate];
+
+				if ( pRet && maItems.size() )
+				{
+					NSMenu *pMenu = [[NSMenu alloc] initWithTitle:pTitle];
+					if ( pMenu )
+					{
+						if ( pDelegate )
+							[pMenu setDelegate:pDelegate];
+
+						for ( ::std::vector< QuickstartMenuItemDescriptor >::const_iterator it = maItems.begin(); it != maItems.end(); ++it )
+						{
+							NSMenuItem *pSubmenuItem = it->CreateMenuItem( pDelegate );
+							if ( pSubmenuItem );
+								[pMenu addItem:pSubmenuItem];
+
+						}
+
+						[pRet setSubmenu:pMenu];
+					}
+				}
+				else if ( maPrefName && maCheckedPrefValue )
+				{
+					NSObject *pPrefKey = nil;
+					NSObject *pPrefValue = nil;
+					if ( CFGetTypeID( maCheckedPrefValue ) == CFBooleanGetTypeID() )
+					{
+						pPrefKey = kMenuItemPrefBooleanValueKey;
+						pPrefValue = [NSNumber numberWithBool:(CFBooleanRef)maCheckedPrefValue == kCFBooleanTrue ? YES : NO];
+					}
+					else if ( CFGetTypeID( maCheckedPrefValue ) == CFStringGetTypeID() )
+					{
+						pPrefKey = kMenuItemPrefStringValueKey;
+						pPrefValue = (NSString *)maCheckedPrefValue;
+					}
+					NSObject *pValueIsDefaultForPref = [NSNumber numberWithBool:mbValueIsDefaultForPref];
+
+					if ( pPrefKey && pPrefValue && pValueIsDefaultForPref )
+					{
+						NSDictionary *pDict = [NSDictionary dictionaryWithObjectsAndKeys:(NSString *)maPrefName, kMenuItemPrefNameKey, pPrefValue, pPrefKey, pValueIsDefaultForPref, kMenuItemValueIsDefaultForPrefKey, nil];
+						if ( pDict )
+							[pRet setRepresentedObject:pDict];
+					}
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
+
 class ShutdownIconEvent
 {
 	int					mnCommand;
+
 public:
 						ShutdownIconEvent( int nCommand ) : mnCommand( nCommand ) {}
 						~ShutdownIconEvent() {}
@@ -181,8 +289,10 @@ void ProcessShutdownIconCommand( int nCommand )
 - (void)handleFromTemplateCommand:(id)pObject;
 - (void)handleImpressCommand:(id)pObject;
 - (void)handleMathCommand:(id)pObject;
+- (void)handlePreferenceChangeCommand:(id)pObject;
 - (void)handleWriterCommand:(id)pObject;
 - (void)setDelegate:(id)pDelegate;
+- (void)menuNeedsUpdate:(NSMenu *)pMenu;
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
 
@@ -205,7 +315,7 @@ void ProcessShutdownIconCommand( int nCommand )
 }
 
 - (NSMenu *)applicationDockMenu:(NSApplication *)pApplication
-{   
+{
     return mpDockMenu;
 } 
 
@@ -305,6 +415,37 @@ void ProcessShutdownIconCommand( int nCommand )
 	ProcessShutdownIconCommand( MATH_COMMAND_ID );
 }
 
+- (void)handlePreferenceChangeCommand:(id)pObject
+{
+	if ( pObject && [pObject isKindOfClass:[NSMenuItem class]] )
+	{
+		NSMenuItem *pMenuItem = (NSMenuItem *)pObject;
+		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+		NSObject *pPrefs = [pMenuItem representedObject];
+		if ( pDefaults && pPrefs && [pPrefs isKindOfClass:[NSDictionary class]] )
+		{
+			NSDictionary *pDict = (NSDictionary *)pPrefs;
+			NSString *pPrefName = (NSString *)[pDict objectForKey:kMenuItemPrefNameKey];
+			if ( pPrefName )
+			{
+				NSNumber *pPrefBooleanValue = (NSNumber *)[pDict objectForKey:kMenuItemPrefBooleanValueKey];
+				NSString *pPrefStringValue = (NSString *)[pDict objectForKey:kMenuItemPrefStringValueKey];
+				if ( pPrefBooleanValue )
+				{
+					BOOL bValue = [pPrefBooleanValue boolValue];
+					[pDefaults setBool:( [pMenuItem state] == NSOffState ? bValue : !bValue ) forKey:pPrefName];
+					[pDefaults synchronize];
+				}
+				else if ( pPrefStringValue )
+				{
+					[pDefaults setObject:pPrefStringValue forKey:pPrefName];
+					[pDefaults synchronize];
+				}
+			}
+		}
+	}
+}
+
 - (void)handleWriterCommand:(id)pObject
 {
 	ProcessShutdownIconCommand( WRITER_COMMAND_ID );
@@ -327,6 +468,80 @@ void ProcessShutdownIconCommand( int nCommand )
 	{
     	mpDelegate = pDelegate;
     	[mpDelegate retain];
+	}
+}
+
+- (void)menuNeedsUpdate:(NSMenu *)pMenu
+{
+	if ( pMenu )
+	{
+		NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+		NSMutableDictionary *pCheckedMenuItems = [NSMutableDictionary dictionaryWithCapacity:1];
+
+		unsigned int nCount = [pMenu numberOfItems];
+		unsigned i = 0;
+		for ( ; i < nCount; i++ )
+		{
+			NSMenuItem *pMenuItem = [pMenu itemAtIndex:i];
+			if ( pMenuItem )
+			{
+				NSObject *pPrefs = [pMenuItem representedObject];
+				if ( pPrefs && [pPrefs isKindOfClass:[NSDictionary class]] )
+				{
+					[pMenuItem setState:NSOffState];
+
+					NSDictionary *pDict = (NSDictionary *)pPrefs;
+					NSString *pPrefName = (NSString *)[pDict objectForKey:kMenuItemPrefNameKey];
+					if ( pPrefName )
+					{
+						NSNumber *pPrefBooleanValue = (NSNumber *)[pDict objectForKey:kMenuItemPrefBooleanValueKey];
+						NSString *pPrefStringValue = (NSString *)[pDict objectForKey:kMenuItemPrefStringValueKey];
+						NSNumber *pValueIsDefaultForPref = (NSNumber *)[pDict objectForKey:kMenuItemValueIsDefaultForPrefKey];
+						if ( pPrefBooleanValue )
+						{
+							if ( pDefaults )
+							{
+								NSNumber *pValue = (NSNumber *)[pDefaults objectForKey:pPrefName];
+								if ( pValue && [pValue boolValue] == [pPrefBooleanValue boolValue] )
+									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
+							}
+						}
+						else if ( pPrefStringValue )
+						{
+							if ( pDefaults )
+							{
+								NSString *pValue = [pDefaults stringForKey:pPrefName];
+								if ( pValue && [pValue isEqualToString:pPrefStringValue] )
+									[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
+							}
+						}
+
+						// If no checked item is set for this key and the menu
+						// item is marked as the default checked item, make it
+						// the checked item until another menu item becomes the
+						// checked item
+						if ( pValueIsDefaultForPref && [pValueIsDefaultForPref boolValue] && pCheckedMenuItems && ![pCheckedMenuItems objectForKey:pPrefName] )
+							[pCheckedMenuItems setObject:pMenuItem forKey:pPrefName];
+					}
+				}
+			}
+		}
+
+		if ( pCheckedMenuItems )
+		{
+			NSArray *pArray = [pCheckedMenuItems allValues];
+			if ( pArray )
+			{
+				nCount = [pArray count];
+				i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSMenuItem *pMenuItem = (NSMenuItem *)[pArray objectAtIndex:i];
+					if ( pMenuItem )
+						[pMenuItem setState:NSOnState];
+				}
+			}
+		}
 	}
 }
 
@@ -365,20 +580,18 @@ void ProcessShutdownIconCommand( int nCommand )
 
 @interface QuickstartMenuItems : NSObject
 {
-	int					mnItems;
-	int*				mpIDs;
-	CFStringRef*		mpStrings;
+	const ::std::vector< QuickstartMenuItemDescriptor >*	mpItems;
 }
-+ (id)createWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings;
++ (id)createWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
 - (void)addMenuItems:(id)pObject;
-- (id)initWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings;
+- (id)initWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems;
 @end
 
 @implementation QuickstartMenuItems
 
-+ (id)createWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings
++ (id)createWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
 {
-	QuickstartMenuItems *pRet = [[QuickstartMenuItems alloc] initWithItems:nItems menuCommands:pIDs strings:pStrings];
+	QuickstartMenuItems *pRet = [[QuickstartMenuItems alloc] initWithItems:pItems];
 	[pRet autorelease];
 	return pRet;
 }
@@ -386,7 +599,7 @@ void ProcessShutdownIconCommand( int nCommand )
 - (void)addMenuItems:(id)pObject
 {
 	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	if ( pApp && mpItems && mpItems->size() )
 	{
 		NSMenu *pAppMenu = nil;
 		NSMenu *pDockMenu = nil;
@@ -421,66 +634,26 @@ void ProcessShutdownIconCommand( int nCommand )
 			[pAppMenu insertItem:[NSMenuItem separatorItem] atIndex:2];
 
 			// Work the list of menu items is reverse order
-			SEL aSelector;
-			int i;
-			for ( i = mnItems - 1; i >= 0; i-- )
+			for ( ::std::vector< QuickstartMenuItemDescriptor >::const_reverse_iterator it = mpItems->rbegin(); it != mpItems->rend(); ++it )
 			{
-				switch ( mpIDs[ i ] )
-				{
-					case BASE_COMMAND_ID:
-						aSelector = @selector(handleBaseCommand:);
-						break;
-					case CALC_COMMAND_ID:
-						aSelector = @selector(handleCalcCommand:);
-						break;
-					case DRAW_COMMAND_ID:
-						aSelector = @selector(handleDrawCommand:);
-						break;
-					case FILEOPEN_COMMAND_ID:
-						aSelector = @selector(handleFileOpenCommand:);
-						break;
-					case FROMTEMPLATE_COMMAND_ID:
-						aSelector = @selector(handleFromTemplateCommand:);
-						break;
-					case IMPRESS_COMMAND_ID:
-						aSelector = @selector(handleImpressCommand:);
-						break;
-					case MATH_COMMAND_ID:
-						aSelector = @selector(handleMathCommand:);
-						break;
-					case WRITER_COMMAND_ID:
-						aSelector = @selector(handleWriterCommand:);
-						break;
-					default:
-						aSelector = nil;
-						break;
-				}
-
-				// Insert and release string
-				if ( mpStrings[ i ] )
-				{
-					NSMenuItem *pAppMenuItem = [pAppMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:2];
-					if ( pAppMenuItem )
-						[pAppMenuItem setTarget:pDelegate];
-					NSMenuItem *pDockMenuItem = [pDockMenu insertItemWithTitle:(NSString *)mpStrings[ i ] action:aSelector keyEquivalent:@"" atIndex:0];
-					if ( pDockMenuItem )
-						[pDockMenuItem setTarget:pDelegate];
-				}
+				NSMenuItem *pAppMenuItem = it->CreateMenuItem( pDelegate );
+				NSMenuItem *pDockMenuItem = it->CreateMenuItem( pDelegate );
+				if ( pAppMenuItem )
+					[pAppMenu insertItem:pAppMenuItem atIndex:2];
+				if ( pDockMenuItem )
+					[pDockMenu insertItem:pDockMenuItem atIndex:0];
 			}
 
-			mpIDs = nil;
-			mpStrings = nil;
+			mpItems = nil;
 		}
 	}
 }
 
-- (id)initWithItems:(int)nItems menuCommands:(int *)pIDs strings:(CFStringRef *)pStrings;
+- (id)initWithItems:(const ::std::vector< QuickstartMenuItemDescriptor >*)pItems
 {
 	[super init];
 
-	mnItems = nItems;
-	mpIDs = pIDs;
-	mpStrings = pStrings;
+	mpItems = pItems;
 
 	return self;
 }
@@ -525,17 +698,19 @@ extern "C" void java_init_systray()
 	struct MenuEntryDescriptor
 	{
 		SvtModuleOptions::EModule	eModuleIdentifier;
-		int							nMenuItemID;
 		const char*					pAsciiURLDescription;
 		const char*					pFallbackDescription;
+		SEL							aNewSelector;
+		const CFStringRef			aCheckedPrefValue;
+		BOOL						bValueIsDefaultForPref;
 	} aMenuItems[] =
 	{
-		{ SvtModuleOptions::E_SWRITER, WRITER_COMMAND_ID, WRITER_URL, WRITER_FALLBACK_DESC },
-		{ SvtModuleOptions::E_SCALC, CALC_COMMAND_ID, CALC_URL, CALC_FALLBACK_DESC },
-		{ SvtModuleOptions::E_SIMPRESS, IMPRESS_COMMAND_ID, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC },
-		{ SvtModuleOptions::E_SDRAW, DRAW_COMMAND_ID, DRAW_URL, DRAW_FALLBACK_DESC },
-		{ SvtModuleOptions::E_SDATABASE, BASE_COMMAND_ID, BASE_URL, BASE_FALLBACK_DESC },
-		{ SvtModuleOptions::E_SMATH, MATH_COMMAND_ID, MATH_URL, MATH_FALLBACK_DESC }
+		{ SvtModuleOptions::E_SWRITER, WRITER_URL, WRITER_FALLBACK_DESC, @selector(handleWriterCommand:), CFSTR( "-writer" ), TRUE },
+		{ SvtModuleOptions::E_SCALC, CALC_URL, CALC_FALLBACK_DESC, @selector(handleCalcCommand:), CFSTR( "-calc" ), FALSE },
+		{ SvtModuleOptions::E_SIMPRESS, IMPRESS_WIZARD_URL, IMPRESS_WIZARD_FALLBACK_DESC, @selector(handleImpressCommand:), CFSTR( "-impress" ), FALSE },
+		{ SvtModuleOptions::E_SDRAW, DRAW_URL, DRAW_FALLBACK_DESC, @selector(handleDrawCommand:), CFSTR( "-draw" ), FALSE },
+		{ SvtModuleOptions::E_SDATABASE, BASE_URL, BASE_FALLBACK_DESC, @selector(handleBaseCommand:), CFSTR( "-base" ), FALSE },
+		{ SvtModuleOptions::E_SMATH, MATH_URL, MATH_FALLBACK_DESC, @selector(handleMathCommand:), CFSTR( "-math" ), FALSE  }
 	};
 
 	// Disable shutdown
@@ -544,11 +719,18 @@ extern "C" void java_init_systray()
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	// insert the menu entries for launching the applications
-	int nItems = 0;
-	int aIDs[ 8 ];
-	CFStringRef aStrings[ 8 ];
+	::std::vector< QuickstartMenuItemDescriptor > aAppMenuItems;
 	XubString aDesc;
+
+	// Insert the new document and default launch submenu entries
+	::std::vector< QuickstartMenuItemDescriptor > aNewSubmenuItems;
+	::std::vector< QuickstartMenuItemDescriptor > aOpenAtLaunchSubmenuItems;
+
+	// None menu item is only used in default launch submenu
+	aDesc = XubString( pShutdownIcon->GetResString( STR_NONE ) );
+	aDesc.EraseAllChars( '~' );
+	aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), CFSTR( "-nodefault" ), FALSE ) );
+
 	SvtModuleOptions aModuleOptions;
 	for ( size_t i = 0; i < sizeof( aMenuItems ) / sizeof( MenuEntryDescriptor ); ++i )
 	{
@@ -564,39 +746,75 @@ extern "C" void java_init_systray()
 		if ( aFileNewAppsAvailable.find( sURL ) == aFileNewAppsAvailable.end() )
 			continue;
 
-		aIDs[ nItems ] = aMenuItems[i].nMenuItemID;
 		aDesc = XubString( pShutdownIcon->GetUrlDescription( sURL ) );
 		aDesc.EraseAllChars( '~' );
 		// Fix bug 2206 by putting in some default text if the
 		// description is an empty string
 		if ( !aDesc.Len() )
 		{
-			aDesc = XubString( ::rtl::OUString::createFromAscii( aMenuItems[i].pFallbackDescription ) );
+			aDesc = XubString::CreateFromAscii( aMenuItems[i].pFallbackDescription );
 			aDesc.EraseAllChars( '~' );
 		}
-		aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
+		aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( aMenuItems[i].aNewSelector, aDesc ) );
+
+		// Add module name to open at launch submenu
+		aDesc = XubString( aModuleOptions.GetModuleName( aMenuItems[i].eModuleIdentifier ) );
+		aDesc.EraseAllChars( '~' );
+		if ( aDesc.Len() )
+			aOpenAtLaunchSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DefaultLaunchOptions" ), aMenuItems[i].aCheckedPrefValue, aMenuItems[i].bValueIsDefaultForPref ) );
 	}
 
-	// insert the remaining menu entries
-	aIDs[ nItems ] = FROMTEMPLATE_COMMAND_ID;
+	// Open template menu item is only used in new document submenu
 	aDesc = XubString( pShutdownIcon->GetResString( STR_QUICKSTART_FROMTEMPLATE ) );
 	aDesc.EraseAllChars( '~' );
-	aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
-	aIDs[ nItems ] = FILEOPEN_COMMAND_ID;
+	aNewSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFromTemplateCommand:), aDesc ) );
+
+	// Insert the new document submenu
+	aDesc = XubString( pShutdownIcon->GetResString( STR_NEW ) );
+	aDesc.EraseAllChars( '~' );
+	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aNewSubmenuItems, aDesc ) );
+
+	// Insert the open document menu item into the application menu
 	aDesc = XubString( pShutdownIcon->GetResString( STR_QUICKSTART_FILEOPEN ) );
 	aDesc.EraseAllChars( '~' );
-	aStrings[ nItems++ ] = CFStringCreateWithCharacters( NULL, aDesc.GetBuffer(), aDesc.Len() );
+	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handleFileOpenCommand:), aDesc ) );
+
+	// Insert the open at launch submenu
+	aDesc = GetJavaResString( STR_OPENATLAUNCH );
+	aDesc.EraseAllChars( '~' );
+	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aOpenAtLaunchSubmenuItems, aDesc ) );
+
+	// Insert the Mac OS X submenu entries
+	::std::vector< QuickstartMenuItemDescriptor > aMacOSXSubmenuItems;
+
+	aDesc = GetJavaResString( STR_IGNORETRACKPADGESTURES );
+	aDesc.EraseAllChars( '~' );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "IgnoreTrackpadGestures" ), kCFBooleanTrue, FALSE ) );
+
+	aDesc = GetJavaResString( STR_DISABLEMACOSXSERVICESMENU );
+	aDesc.EraseAllChars( '~' );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableServicesMenu" ), kCFBooleanTrue, FALSE ) );
+
+	aDesc = GetJavaResString( STR_DISABLEMACOSXTEXTHIGHLIGHTING );
+	aDesc.EraseAllChars( '~' );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseMacHighlightColor" ), kCFBooleanFalse, FALSE ) );
+
+	aDesc = GetJavaResString( STR_DISABLEQUICKLOOKSUPPORT );
+	aDesc.EraseAllChars( '~' );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
+
+	// Insert the Mac OS X submenu
+	aDesc = GetJavaResString( STR_MACOSXOPTIONS );
+	aDesc.EraseAllChars( '~' );
+	aAppMenuItems.push_back( QuickstartMenuItemDescriptor( aMacOSXSubmenuItems, aDesc ) );
 
 	ULONG nCount = Application::ReleaseSolarMutex();
 
-	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItems:nItems menuCommands:aIDs strings:aStrings];
+	QuickstartMenuItems *pItems = [QuickstartMenuItems createWithItems:&aAppMenuItems];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pItems performSelectorOnMainThread:@selector(addMenuItems:) withObject:pItems waitUntilDone:YES modes:pModes];
 
 	Application::AcquireSolarMutex( nCount );
-
-	for ( int i = 0; i < nItems; i++ )
-		CFRelease( aStrings[ i ] );
 
 	[pPool release];
 }

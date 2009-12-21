@@ -110,6 +110,26 @@ long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 
 // Note: this must not be static as the symbol will be loaded by the framework
 // module
+sal_Bool IsShowOnlyMenusWindow( Window *pWindow )
+{
+	if ( !pWindow )
+		return sal_False;
+
+	SystemWindow *pSystemWindow = pWindow->GetSystemWindow();
+	if ( !pSystemWindow )
+		return sal_False;
+
+	JavaSalFrame *pFrame = (JavaSalFrame *)pSystemWindow->ImplGetFrame();
+	if ( !pFrame )
+		return sal_False;
+
+	return pFrame->mbShowOnlyMenus;
+}
+
+// -----------------------------------------------------------------------
+
+// Note: this must not be static as the symbol will be loaded by the framework
+// module
 void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 {
 	if ( !pWindow )
