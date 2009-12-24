@@ -1401,6 +1401,14 @@ IMPL_LINK( MenuBarManager, Select, Menu *, pMenu )
                         Any aItem = xList->getByIndex(i);
                         Reference< XFrame > xFrame;
                         aItem >>= xFrame;
+
+#ifdef USE_JAVA
+                        // Fix bug 3577 by skipping any "show only menus"
+                        // windows
+                        if ( xFrame.is() && pIsShowOnlyMenusWindow && pIsShowOnlyMenusWindow( VCLUnoHelper::GetWindow( xFrame->getContainerWindow() ) ) )
+                            continue;
+#endif	// USE_JAVA
+
                         if ( xFrame.is() && nTaskId == nCurItemId )
 						{
                             Window* pWin = VCLUnoHelper::GetWindow( xFrame->getContainerWindow() );
