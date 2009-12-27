@@ -7486,6 +7486,7 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
 
         if( bRet )
         {
+#ifndef USE_JAVA
             int nWidthFactor = pSalLayout->GetUnitsPerPixel();
 
             if( nWidthFactor > 1 )
@@ -7500,6 +7501,7 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
                 aPixelRect.Bottom()
                     = static_cast< long >(aPixelRect.Bottom() * fFactor);
             }
+#endif	// !USE_JAVA
 
             Point aRotatedOfs( mnTextOffX, mnTextOffY );
             aRotatedOfs -= pSalLayout->GetDrawPosition( Point( nXOffset, 0 ) );
