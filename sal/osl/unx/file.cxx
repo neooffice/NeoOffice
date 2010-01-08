@@ -231,6 +231,16 @@ typedef struct _oslVolumeDeviceHandleImpl
  *
  *****************************************************************************/
 
+#ifdef USE_JAVA
+
+#include <map>
+#include <osl/mutex.hxx>
+
+static std::multimap< rtl::OUString, int > aOpenFilesMap;
+static osl::Mutex aOpenFilesMutex;
+
+#endif	// USE_JAVA
+
 static const char * pFileLockEnvVar = (char *) -1;
 
 
@@ -275,6 +285,10 @@ static void          oslSetFileTypeFromPsz(const sal_Char* pszStr);
 extern "C" int UnicodeToText( char *, size_t, const sal_Unicode *, sal_Int32 );
 extern "C" int TextToUnicode(
     const char* text, size_t text_buffer_size,	sal_Unicode* unic_text, sal_Int32 unic_text_buffer_size);
+
+#ifdef USE_JAVA
+extern "C" rtl::OUString SAL_DLLPUBLIC_EXPORT osl_getOpenFilePath( rtl::OUString &aOrigPath );
+#endif	// USE_JAVA
 
 /******************************************************************************
  *
@@ -862,10 +876,16 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 
                         *pHandle = (oslFileHandle) pHandleImpl;
 
-#if defined USE_JAVA && defined PRODUCT_FILETYPE
+#ifdef USE_JAVA
+#ifdef PRODUCT_FILETYPE
                         if ( uFlags & osl_File_OpenFlag_Create ) 
                             oslSetFileTypeFromPsz( buffer );
-#endif	/* USE_JAVA && PRODUCT_FILETYPE */
+#endif	// PRODUCT_FILETYPE
+
+                        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
+                        aOpenFilesMap.insert( std::pair< rtl::OUString, int >( rtl::OUString( pHandleImpl->ustrFilePath ), pHandleImpl->fd ) );
+                        aGuard.clear();
+#endif	// USE_JAVA
 
                         return osl_File_E_None;
                     }
@@ -945,6 +965,20 @@ oslFileError osl_closeFile( oslFileHandle Handle )
                 }
             }
         }
+
+#ifdef USE_JAVA
+        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
+        rtl::OUString aFilePath( pHandleImpl->ustrFilePath );
+        for ( std::multimap< rtl::OUString, int >::iterator it = aOpenFilesMap.lower_bound( aFilePath ); it != aOpenFilesMap.end() && it->first == aFilePath; ++it )
+        {
+            if ( pHandleImpl->fd == it->second )
+            {
+                aOpenFilesMap.erase( it );
+                break;
+            }
+        }
+        aGuard.clear();
+#endif	// USE_JAVA
 
         if( 0 > close( pHandleImpl->fd ) )
         {
@@ -2468,7 +2502,9 @@ static rtl_uString* oslMakeUStrFromPsz(const sal_Char* pszStr, rtl_uString** ust
     return *ustrValid;
 }
 
-#if defined USE_JAVA && defined PRODUCT_FILETYPE
+#ifdef USE_JAVA
+
+#ifdef PRODUCT_FILETYPE
 
 /*****************************************
  * oslSetFileTypeFromPsz
@@ -2488,7 +2524,32 @@ static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
     }
 }
 
-#endif	/* USE_JAVA && PRODUCT_FILETYPE */
+#endif	// PRODUCT_FILETYPE
+
+rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
+{
+    char realPath[ PATH_MAX + 1 ];
+    char buffer[ MAXPATHLEN + 1 ];
+
+    rtl::OUString aRealPath( aOrigPath );
+    if ( realpath( rtl::OUStringToOString( aOrigPath, osl_getThreadTextEncoding() ).getStr(), realPath ) )
+        aRealPath = rtl::OUString( realPath, strlen( realPath ), osl_getThreadTextEncoding() );
+
+    osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
+    for ( std::multimap< rtl::OUString, int >::iterator it = aOpenFilesMap.lower_bound( aOrigPath ); it != aOpenFilesMap.end() && it->first == aOrigPath; ++it )
+    {
+        if ( !fcntl( it->second, F_GETPATH, buffer ) )
+        {
+            rtl::OUString aFdPath( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
+            if ( aFdPath.getLength() && aFdPath != aRealPath )
+                return aFdPath;
+        }
+    }
+
+    return aOrigPath;
+}
+
+#endif	// USE_JAVA
 
 /*****************************************************************************
  * UnicodeToText

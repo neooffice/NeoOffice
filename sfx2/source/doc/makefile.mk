@@ -39,6 +39,10 @@ ENABLE_EXCEPTIONS=TRUE
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/util$/makefile.pmk
 
+.IF "$(GUIBASE)" == "java"
+CFLAGS+=-DUDK_MAJOR=$(UDK_MAJOR)
+.ENDIF
+
 # --- Files --------------------------------------------------------
 
 SRS1NAME=$(TARGET)
