@@ -146,6 +146,29 @@ using namespace ::com::sun::star::io;
 
 //#include "xmlversion.hxx"
 
+#ifdef USE_JAVA
+
+#ifndef _OSL_FILE_H_
+#include <osl/file.h>
+#endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
+
+#ifndef UDK_MAJOR
+#error UDK_MAJOR must be defined in makefile.mk
+#endif
+
+#define DOSTRING( x )			#x
+#define STRING( x )				DOSTRING( x )
+
+typedef ::rtl::OUString osl_getOpenFilePath_Type( ::rtl::OUString& );
+
+static ::vos::OModule aModule;
+static osl_getOpenFilePath_Type *pGetOpenFilePath = NULL;
+
+#endif	// USE_JAVA
+
 #define MAX_REDIRECT 5
 
 namespace {
@@ -4246,3 +4269,40 @@ sal_Bool SfxMedium::SwitchDocumentToFile( ::rtl::OUString aURL )
     return bResult;
 }
 
+#ifdef USE_JAVA
+
+void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
+{
+    // Load libuno_sal and invoke the osl_getOpenFilePath function
+    if ( !pGetOpenFilePath )
+    {
+        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libuno_sal" );
+        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib." ) );
+        aLibName += ::rtl::OUString::createFromAscii( STRING( UDK_MAJOR ) );
+        if ( aModule.load( aLibName ) )
+            pGetOpenFilePath = (osl_getOpenFilePath_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "osl_getOpenFilePath" ) );
+    }
+
+    if ( pGetOpenFilePath && GetName() == GetOrigURL() )
+    {
+        ::rtl::OUString aOrigURL( GetOrigURL() );
+        ::rtl::OUString aOrigPath;
+        if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None )
+        {
+            ::rtl::OUString aOpenFilePath( pGetOpenFilePath( aOrigPath ) );
+            if ( aOpenFilePath != aOrigPath )
+            {
+                ::rtl::OUString aOpenFileURL;
+                if ( osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
+                {
+                    SetName( String( aOpenFileURL ), sal_True );
+                    ReOpen();
+                    if ( pDoc )
+                        pDoc->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
+                }
+            }
+        }
+    }
+}
+
+#endif	// USE_JAVA

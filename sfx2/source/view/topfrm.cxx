@@ -99,11 +99,10 @@
 
 #ifdef USE_JAVA
 
-#ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
-#endif
-
 #include <vcl/sysdata.hxx>
+#include <vcl/timer.hxx>
+
 #include "topfrm_cocoa.h"
 
 #endif	// USE_JAVA
@@ -156,6 +155,9 @@ class SfxTopWindow_Impl : public Window
 {
 public:
 	SfxTopFrame*   		pFrame;
+#ifdef USE_JAVA
+	Timer               aTimer;
+#endif	// USE_JAVA
 
     SfxTopWindow_Impl( SfxTopFrame* pF );
 //        : Window( pF->pImp->pWindow, WB_CLIPCHILDREN | WB_NODIALOGCONTROL | WB_3DLOOK )
@@ -171,12 +173,19 @@ public:
     virtual void        GetFocus();
 	void				DoResize();
 	DECL_LINK(			CloserHdl, void* );
+#ifdef USE_JAVA
+	DECL_LINK(			CheckForMovedFile, void* );
+#endif	// USE_JAVA
 };
 
 SfxTopWindow_Impl::SfxTopWindow_Impl( SfxTopFrame* pF )
         : Window( pF->pImp->pWindow, WB_BORDER | WB_CLIPCHILDREN | WB_NODIALOGCONTROL | WB_3DLOOK )
         , pFrame( pF )
 {
+#ifdef USE_JAVA
+	aTimer.SetTimeoutHdl( LINK( this, SfxTopWindow_Impl, CheckForMovedFile ) );
+	aTimer.SetTimeout( 60000 );
+#endif	// USE_JAVA
 }
 
 SfxTopWindow_Impl::~SfxTopWindow_Impl( )
@@ -202,6 +211,13 @@ long SfxTopWindow_Impl::Notify( NotifyEvent& rNEvt )
 
     if ( rNEvt.GetType() == EVENT_GETFOCUS )
     {
+#ifdef USE_JAVA
+        SfxMedium *pMedium = pView->GetObjectShell()->GetMedium();
+        if ( pMedium )
+            pMedium->CheckForMovedFile( pView->GetObjectShell() );
+        aTimer.Start();
+#endif	// USE_JAVA
+
         if ( pView->GetViewShell() && !pView->GetViewShell()->GetUIActiveIPClient_Impl() && !pFrame->IsInPlace() )
         {
             DBG_TRACE("SfxTopFrame: GotFocus");
@@ -222,6 +238,12 @@ long SfxTopWindow_Impl::Notify( NotifyEvent& rNEvt )
 
 		return sal_True;
 	}
+#ifdef USE_JAVA
+    else if ( rNEvt.GetType() == EVENT_LOSEFOCUS )
+	{
+        aTimer.Stop();
+	}
+#endif	// USE_JAVA
     else if( rNEvt.GetType() == EVENT_KEYINPUT )
 	{
         if ( pView->GetViewShell()->KeyInput( *rNEvt.GetKeyEvent() ) )
@@ -313,6 +335,36 @@ void SfxTopWindow_Impl::DoResize()
     if ( !pFrame->pImp->bLockResize )
         pFrame->Resize();
 }
+
+#ifdef USE_JAVA
+
+IMPL_LINK( SfxTopWindow_Impl, CheckForMovedFile, void*, EMPTYARG )
+{
+    if ( IsActive() && pFrame )
+    {
+        SfxViewFrame* pView = pFrame->GetCurrentViewFrame();
+        if ( pView )
+        {
+            SfxObjectShell *pDoc = pView->GetObjectShell();
+            if ( pDoc )
+            {
+                SfxMedium *pMedium = pView->GetObjectShell()->GetMedium();
+                if ( pMedium )
+                    pMedium->CheckForMovedFile( pView->GetObjectShell() );
+            }
+        }
+
+        aTimer.Start();
+    }
+    else
+    {
+        aTimer.Stop();
+    }
+
+    return 0;
+}
+
+#endif	// USE_JAVA
 
 class StopButtonTimer_Impl : public Timer
 {

@@ -151,25 +151,9 @@
 #endif
 #ifndef _SV_FIXED_HXX
 #include <vcl/fixed.hxx>
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
 #endif
 
 #include "../../../build/sw/inc/statstr.hrc"
-
-#ifndef UDK_MAJOR
-#error UDK_MAJOR must be defined in makefile.mk
-#endif
-
-#define DOSTRING( x )			#x
-#define STRING( x )				DOSTRING( x )
-
-typedef ::rtl::OUString osl_getOpenFilePath_Type( ::rtl::OUString& );
-
-static ::vos::OModule aModule;
-static osl_getOpenFilePath_Type *pGetOpenFilePath = NULL;
-
-#endif
 
 #endif	// USE_JAVA
 
@@ -1449,34 +1433,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 	RTL_LOGFILE_CONTEXT( aLog, "sfx2 (mv76033) SfxObjectShell::SaveTo_Impl" );
 
 #ifdef USE_JAVA
-    // Load libuno_sal and invoke the osl_getOpenFilePath function
-    if ( !pGetOpenFilePath )
-    {
-        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libuno_sal" );
-        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib." ) );
-        aLibName += ::rtl::OUString::createFromAscii( STRING( UDK_MAJOR ) );
-        if ( aModule.load( aLibName ) )
-            pGetOpenFilePath = (osl_getOpenFilePath_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "osl_getOpenFilePath" ) );
-    }
-
-    if ( pGetOpenFilePath && rMedium.GetName() == rMedium.GetOrigURL() )
-    {
-        ::rtl::OUString aOrigURL( rMedium.GetOrigURL() );
-        ::rtl::OUString aOrigPath;
-        if ( osl_getSystemPathFromFileURL( aOrigURL.pData, &aOrigPath.pData ) == osl_File_E_None )
-        {
-            ::rtl::OUString aOpenFilePath( pGetOpenFilePath( aOrigPath ) );
-            if ( aOpenFilePath != aOrigPath )
-            {
-                ::rtl::OUString aOpenFileURL;
-                if ( osl_getFileURLFromSystemPath( aOpenFilePath.pData, &aOpenFileURL.pData ) == osl_File_E_None )
-                {
-                    rMedium.SetName( String( aOpenFileURL ), sal_True );
-                    rMedium.ReOpen();
-                }
-            }
-        }
-    }
+    rMedium.CheckForMovedFile( this );
 #endif	// USE_JAVA
 
     ModifyBlocker_Impl aMod(this);
