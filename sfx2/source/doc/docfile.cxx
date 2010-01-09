@@ -4283,7 +4283,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
             pGetOpenFilePath = (osl_getOpenFilePath_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "osl_getOpenFilePath" ) );
     }
 
-    if ( pGetOpenFilePath && GetName() == GetOrigURL() )
+    if ( pGetOpenFilePath && pDoc && pDoc->IsLoadingFinished() && GetName() == GetOrigURL() )
     {
         ::rtl::OUString aOrigURL( GetOrigURL() );
         ::rtl::OUString aOrigPath;
@@ -4297,8 +4297,7 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
                 {
                     SetName( String( aOpenFileURL ), sal_True );
                     ReOpen();
-                    if ( pDoc )
-                        pDoc->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
+                    pDoc->Broadcast( SfxSimpleHint( SFX_HINT_TITLECHANGED ) );
                 }
             }
         }
