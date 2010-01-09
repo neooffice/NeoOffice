@@ -234,9 +234,10 @@ typedef struct _oslVolumeDeviceHandleImpl
 #ifdef USE_JAVA
 
 #include <map>
+#include <list>
 #include <osl/mutex.hxx>
 
-static std::multimap< rtl::OUString, int > aOpenFilesMap;
+static std::multimap< rtl::OUString, oslFileHandleImpl* > aOpenFilesMap;
 static osl::Mutex aOpenFilesMutex;
 
 #endif	// USE_JAVA
@@ -883,7 +884,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 #endif	// PRODUCT_FILETYPE
 
                         osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
-                        aOpenFilesMap.insert( std::pair< rtl::OUString, int >( rtl::OUString( pHandleImpl->ustrFilePath ), pHandleImpl->fd ) );
+                        aOpenFilesMap.insert( std::pair< rtl::OUString, oslFileHandleImpl* >( rtl::OUString( pHandleImpl->ustrFilePath ), pHandleImpl ) );
                         aGuard.clear();
 #endif	// USE_JAVA
 
@@ -933,6 +934,19 @@ oslFileError osl_closeFile( oslFileHandle Handle )
 
     if( pHandleImpl )
     {
+#ifdef USE_JAVA
+        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
+        for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
+        {
+            if ( pHandleImpl == it->second )
+            {
+                aOpenFilesMap.erase( it );
+                break;
+            }
+        }
+        aGuard.clear();
+#endif	// USE_JAVA
+
         rtl_uString_release( pHandleImpl->ustrFilePath );
 
         /* release file lock if locking is enabled */
@@ -965,20 +979,6 @@ oslFileError osl_closeFile( oslFileHandle Handle )
                 }
             }
         }
-
-#ifdef USE_JAVA
-        osl::ClearableGuard< osl::Mutex > aGuard( aOpenFilesMutex );
-        rtl::OUString aFilePath( pHandleImpl->ustrFilePath );
-        for ( std::multimap< rtl::OUString, int >::iterator it = aOpenFilesMap.lower_bound( aFilePath ); it != aOpenFilesMap.end() && it->first == aFilePath; ++it )
-        {
-            if ( pHandleImpl->fd == it->second )
-            {
-                aOpenFilesMap.erase( it );
-                break;
-            }
-        }
-        aGuard.clear();
-#endif	// USE_JAVA
 
         if( 0 > close( pHandleImpl->fd ) )
         {
@@ -2528,6 +2528,8 @@ static void oslSetFileTypeFromPsz(const sal_Char* pszStr)
 
 rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
 {
+    rtl::OUString aRet( aOrigPath );
+	
     char realPath[ PATH_MAX + 1 ];
     char buffer[ MAXPATHLEN + 1 ];
 
@@ -2536,17 +2538,32 @@ rtl::OUString osl_getOpenFilePath( rtl::OUString &aOrigPath )
         aRealPath = rtl::OUString( realPath, strlen( realPath ), osl_getThreadTextEncoding() );
 
     osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
-    for ( std::multimap< rtl::OUString, int >::iterator it = aOpenFilesMap.lower_bound( aOrigPath ); it != aOpenFilesMap.end() && it->first == aOrigPath; ++it )
+    std::list< oslFileHandleImpl* > aMovedFilesList;
+    for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::iterator it = aOpenFilesMap.lower_bound( aOrigPath ); it != aOpenFilesMap.end() && it->first == aOrigPath; ++it )
     {
-        if ( !fcntl( it->second, F_GETPATH, buffer ) )
+        if ( !fcntl( it->second->fd, F_GETPATH, buffer ) )
         {
             rtl::OUString aFdPath( buffer, strlen( buffer ), osl_getThreadTextEncoding() );
             if ( aFdPath.getLength() && aFdPath != aRealPath )
-                return aFdPath;
+            {
+                aRet = aFdPath;
+                aMovedFilesList.push_back( it->second );
+                aOpenFilesMap.erase( it );
+            }
         }
     }
 
-    return aOrigPath;
+    while ( aMovedFilesList.size() )
+    {
+        oslFileHandleImpl *pHandleImpl = aMovedFilesList.front();
+        rtl_uString_release( pHandleImpl->ustrFilePath );
+        rtl_uString_acquire( aRet.pData );
+        pHandleImpl->ustrFilePath = aRet.pData;
+        aOpenFilesMap.insert( std::pair< rtl::OUString, oslFileHandleImpl* >( aRet, pHandleImpl ) );
+        aMovedFilesList.pop_front();
+    }
+
+    return aRet;
 }
 
 #endif	// USE_JAVA
