@@ -787,9 +787,9 @@ void SwSelPaintRects::Hide()
 		Window *pWin = GetShell()->GetWin();
 		if ( pWin && !GetShell()->IsPreView() )
 		{
-			for ( std::vector< SwRect >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
+			for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
 			{
-				Rectangle aPaintRect( it->SVRect() );
+				Rectangle aPaintRect( sit->SVRect() );
 				if ( !aPaintRect.IsEmpty() )
 					pWin->Invalidate( aPaintRect );
 			}
@@ -858,9 +858,9 @@ void SwSelPaintRects::Show()
 				{
 					if ( pWin && !GetShell()->IsPreView() )
 					{
-						for ( std::vector< SwRect >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
+						for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
 						{
-							Rectangle aPaintRect( it->SVRect() );
+							Rectangle aPaintRect( sit->SVRect() );
 							if ( !aPaintRect.IsEmpty() )
 								pWin->Invalidate( aPaintRect );
 						}
