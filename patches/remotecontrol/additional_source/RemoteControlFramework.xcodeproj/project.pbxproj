@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3F0C8F5D10FB715100716719 /* MainController.h in Headers */ = {isa = PBXBuildFile; fileRef = 3F0C8F5B10FB715100716719 /* MainController.h */; };
+		3F0C8F5E10FB715100716719 /* MainController.m in Sources */ = {isa = PBXBuildFile; fileRef = 3F0C8F5C10FB715100716719 /* MainController.m */; };
 		ACA34FB80DED043F0081A4AD /* license.txt in Resources */ = {isa = PBXBuildFile; fileRef = ACA34FA50DED043F0081A4AD /* license.txt */; };
 		ACA34FBA0DED043F0081A4AD /* MultiClickRemoteBehavior.h in Headers */ = {isa = PBXBuildFile; fileRef = ACA34FA80DED043F0081A4AD /* MultiClickRemoteBehavior.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		ACA34FBB0DED043F0081A4AD /* MultiClickRemoteBehavior.m in Sources */ = {isa = PBXBuildFile; fileRef = ACA34FA90DED043F0081A4AD /* MultiClickRemoteBehavior.m */; };
@@ -48,7 +50,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		3F555B4A10FAF7E000AF0F00 /* RemoteControl.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; name = RemoteControl.framework; path = build/Release/RemoteControl.framework; sourceTree = "<group>"; };
+		3F0C8F5B10FB715100716719 /* MainController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MainController.h; sourceTree = "<group>"; };
+		3F0C8F5C10FB715100716719 /* MainController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MainController.m; sourceTree = "<group>"; };
+		3F555B4A10FAF7E000AF0F00 /* RemoteControl.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RemoteControl.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACA34F880DED03E00081A4AD /* RemoteControl-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = "RemoteControl-Info.plist"; sourceTree = "<group>"; };
 		ACA34FA50DED043F0081A4AD /* license.txt */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = license.txt; sourceTree = SOURCE_ROOT; };
 		ACA34FA80DED043F0081A4AD /* MultiClickRemoteBehavior.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = MultiClickRemoteBehavior.h; sourceTree = SOURCE_ROOT; };
@@ -87,6 +91,8 @@
 		ACA34F750DED03CA0081A4AD = {
 			isa = PBXGroup;
 			children = (
+				3F0C8F5B10FB715100716719 /* MainController.h */,
+				3F0C8F5C10FB715100716719 /* MainController.m */,
 				ACA350670DED04700081A4AD /* Frameworks */,
 				ACA34FAF0DED043F0081A4AD /* Devices */,
 				ACA34FAA0DED043F0081A4AD /* Base Classes */,
@@ -158,6 +164,7 @@
 				ACA34FBC0DED043F0081A4AD /* RemoteControl.h in Headers */,
 				ACA34FBE0DED043F0081A4AD /* HIDRemoteControlDevice.h in Headers */,
 				ACA34FC00DED043F0081A4AD /* AppleRemote.h in Headers */,
+				3F0C8F5D10FB715100716719 /* MainController.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -220,6 +227,7 @@
 				ACA34FBD0DED043F0081A4AD /* RemoteControl.m in Sources */,
 				ACA34FBF0DED043F0081A4AD /* HIDRemoteControlDevice.m in Sources */,
 				ACA34FC10DED043F0081A4AD /* AppleRemote.m in Sources */,
+				3F0C8F5E10FB715100716719 /* MainController.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
