@@ -1152,7 +1152,9 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                     break;
             }
 
-            if( j == mnGlyphCount || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
+            // Fix bug 3582 by not shifting the glyph immediately to the left
+            // of a spacing glyph
+            if( j == mnGlyphCount || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
             {
                 // Apply unshifted delta to previous clusters
                 if( nUnshiftedDelta && nShiftable && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
