@@ -147,9 +147,8 @@ ODF-CONVERTER_PACKAGE=odf-converter-2.5
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
-REMOTECONTROL_PACKAGE=remotecontrol
-REMOTECONTROL_ZIP_URL=http://martinkahr.com/files/source/RemoteControlWrapper_R962.tgz
-REMOTECONTROL_ZIP_FILENAME=RemoteControlWrapper_R962.tgz
+REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
+REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=-rNeoOffice-3_0_2_Early_Access
@@ -197,8 +196,7 @@ build.remotecontrol_checkout:
 	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; curl -L -O "$(REMOTECONTROL_ZIP_URL)"
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; tar xvfz "$(REMOTECONTROL_ZIP_FILENAME)"
+	cd "$(BUILD_HOME)" ; tar xvfz "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
 	touch "$@"
 
 build.oo_patches: \
@@ -634,6 +632,9 @@ build.patch_package_shared:
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#'  | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "MacOS/bootstraprc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' | sed 's# #%20#g' | sed 's#^buildid=.*$$#buildid=$(PRODUCT_PATCH_VERSION)#' > "MacOS/versionrc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do strip -S -x "$$i" ; done'
+# Integrate the RemoteControl framework
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
+	cd "$(PATCH_INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)/build/Release" ; gnutar cvf - --exclude Headers RemoteControl.framework ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x RemoteControl.framework/Versions/A/RemoteControl ) )
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
