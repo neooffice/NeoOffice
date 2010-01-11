@@ -127,7 +127,7 @@ PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 X11_PRODUCT_UPDATE_CHECK_URL=$(X11_PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser neomobile remotecontrol
 X11_PRODUCT_COMPONENT_MODULES=
-PRODUCT_COMPONENT_PATCH_MODULES=neomobile
+PRODUCT_COMPONENT_PATCH_MODULES=neomobile remotecontrol
 X11_PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
@@ -148,10 +148,8 @@ ODF-CONVERTER_PACKAGE=odf-converter-2.5
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
-REMOTECONTROL_PACKAGE=remotecontrol
-#!!! FIXME !!!
-REMOTECONTROL_ZIP_URL=http://martinkahr.com/files/source/RemoteControlWrapper_R962.tgz
-REMOTECONTROL_ZIP_FILENAME=RemoteControlWrapper_R962.tgz
+REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
+REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
 NEO_TAG:=-rNeoOffice-2_2_6
@@ -200,8 +198,7 @@ build.remotecontrol_checkout:
 	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
 	mkdir -p "$(BUILD_HOME)"
 	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; curl -L -O "$(REMOTECONTROL_ZIP_URL)"
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; tar xvfz "$(REMOTECONTROL_ZIP_FILENAME)"
+	cd "$(BUILD_HOME)" ; tar xvfz "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
 	touch "$@"
 
 build.oo_patches: build.ooo-build_patches \
@@ -651,7 +648,7 @@ build.patch_package_shared:
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program/classes"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/program/resource"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/jvmfwk/$(UOUTPUTDIR)/lib/sunjavaplugin.dylib" "$(PWD)/$(BUILD_HOME)/package/$(UOUTPUTDIR)/lib/libxstor.dylib" "$(PWD)/$(BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "program"
+	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/jvmfwk/$(UOUTPUTDIR)/lib/sunjavaplugin.dylib" "$(PWD)/$(BUILD_HOME)/package/$(UOUTPUTDIR)/lib/libxstor.dylib" "$(PWD)/$(BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "$(PWD)/$(BUILD_HOME)/store/$(UOUTPUTDIR)/lib/libstore.dylib.3" "program"
 ifndef X11_PRODUCT
 	source "$(OO_ENV_JAVA)" ; cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/fpicker/$(UOUTPUTDIR)/lib/fps_java.uno.dylib" "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$${UPD}$(DLLSUFFIX).dylib" "program"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "program/classes"
@@ -675,6 +672,9 @@ ifdef X11_PRODUCT
 endif
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*" -o -name "*.bin"` ; do strip -S -x "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'if [ ! -d "MacOS" ] ; then rm -Rf "MacOS" ; mv -f "program" "MacOS" ; ln -sf "MacOS" "program" ; fi'
+# Integrate the RemoteControl framework
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Frameworks"
+	cd "$(PATCH_INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)/build/Release" ; gnutar cvf - --exclude Headers RemoteControl.framework ) | ( cd "$(PWD)/$(PATCH_INSTALL_HOME)/package/Contents/Frameworks" ; gnutar xvf - ; strip -S -x RemoteControl.framework/Versions/A/RemoteControl ) )
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
