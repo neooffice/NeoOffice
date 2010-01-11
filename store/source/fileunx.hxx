@@ -44,10 +44,6 @@
 #define EDEADLOCK EDEADLK
 #endif /* FREEBSD || NETBSD || MACOSX */
 
-#ifdef USE_JAVA
-#include <sys/sysctl.h>
-#endif	// USE_JAVA
-
 typedef int HSTORE;
 
 /*========================================================================
@@ -127,14 +123,11 @@ inline sal_uInt8* __store_mmap (HSTORE h, sal_uInt32 k, sal_uInt32 n)
 	// Don't invoke mmap() if secure virtual memory is enabled, shared memory
 	// requests will always fail and eventually the cumulative failed requests
 	// will cause crashing
-	int nValue = 0;
-	size_t nSize = sizeof( int );
-	if ( ( !sysctlbyname( "security.mac.sysvshm_enforce", &nValue, &nSize, NULL, 0 ) && nValue ) || ( !sysctlbyname( "security.mac.posixshm_enforce", &nValue, &nSize, NULL, 0 ) && nValue ) )
-		return 0;
-#endif	// USE_JAVA
-
+	return 0;
+#else	// USE_JAVA
 	void * p = ::mmap (NULL, (size_t)n, PROT_READ, MAP_SHARED, h, (off_t)k);
 	return ((p != MAP_FAILED) ? (sal_uInt8*)p : 0);
+#endif	// USE_JAVA
 }
 
 /*
