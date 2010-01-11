@@ -121,6 +121,7 @@ typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
+static NSString *kMainControllerClass = @"MainController";
 
 using namespace ::rtl;
 using namespace ::osl;
@@ -387,13 +388,13 @@ MacOSXRemoteControlImpl::~MacOSXRemoteControlImpl()
 @interface RemoteControlDelegateImpl : NSObject
 {
 id realAppDelegate;
-id rcContainer;
-id rcBehavior;
+id rcController;
+id rcControl;
 }
 - (id)init;
 - (void)dealloc;
 - (void)bindRemoteControls:(id)obj;
-- (void)remoteButton: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown clickCount: (unsigned int)clickCount;
+- (void)sendRemoteButtonEvent: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown remoteControl: (id)remoteControl;
 - (void)startPresentation:(id)obj;
 - (void)previousSlide:(id)obj;
 - (void)nextSlide:(id)obj;
@@ -439,7 +440,7 @@ id rcBehavior;
 	
 	// check to see if we can locate our class after we've loaded the framework
 	
-	Class rcClass=NSClassFromString(@"RemoteControlContainer");
+	Class rcClass=NSClassFromString(kMainControllerClass);
 	if(!rcClass)
 		return(false);
 
@@ -478,8 +479,8 @@ id rcBehavior;
 - (id)init
 {
 	realAppDelegate=nil;
-	rcContainer=nil;
-	rcBehavior=nil;
+	rcController=nil;
+	rcControl=nil;
 	self = [super init];
 	return(self);
 }
@@ -488,10 +489,10 @@ id rcBehavior;
 {
 	if(realAppDelegate)
 		[realAppDelegate autorelease];
-	if(rcContainer)
-		[rcContainer autorelease];
-	if(rcBehavior)
-		[rcBehavior autorelease];
+	if(rcController)
+		[rcController autorelease];
+	if(rcControl)
+		[rcControl autorelease];
 	
 	[super dealloc];
 }
@@ -511,56 +512,37 @@ id rcBehavior;
 		return;
 	}
 	
-	Class rcClass=NSClassFromString(@"RemoteControlContainer");
+	Class rcClass=NSClassFromString(kMainControllerClass);
 	if(rcClass)
 	{
-		rcContainer=[rcClass performSelector:@selector(alloc)];
-		if(rcContainer)
+		rcController=[rcClass performSelector:@selector(alloc)];
+		if(rcController)
 		{
-			Class rbClass=NSClassFromString(@"MultiClickRemoteBehavior");
-			if(rbClass)
+		    [rcController performSelector:@selector(init)];
+		    [rcController performSelector:@selector(awakeFromNib)];
+		    rcControl=[rcController performSelector:@selector(remoteControl)];
+		    if(rcControl)
 			{
-				rcBehavior=[rbClass performSelector:@selector(alloc)];
-				if(rcBehavior)
-				{
-					[rcBehavior performSelector:@selector(init)];
-					[rcBehavior performSelector:@selector(setDelegate:) withObject:self];
-					
-					[rcContainer performSelector:@selector(initWithDelegate:) withObject:rcBehavior];
-					
-					Class appleRemoteClass=NSClassFromString(@"AppleRemote");
-					if(appleRemoteClass)
-						[rcContainer performSelector:@selector(instantiateAndAddRemoteControlDeviceWithClass:) withObject:appleRemoteClass];
-					else
-						fprintf(stderr, "AppleRemote class not found\n");
-						
-					Class keyspanRemoteClass=NSClassFromString(@"KeyspanFrontRowControl");
-					if(keyspanRemoteClass)
-						[rcContainer performSelector:@selector(instantiateAndAddRemoteControlDeviceWithClass:) withObject:keyspanRemoteClass];
-					else
-						fprintf(stderr, "KeyspanFrontRowControl class not found\n");
+		    	[rcControl performSelector:@selector(setDelegate:) withObject:self];
 
-					realAppDelegate = [pApp delegate];
-					if(realAppDelegate)
-						[realAppDelegate retain];
-					[pApp setDelegate:self];
-					if([pApp isActive])
-						[rcContainer performSelector:@selector(startListening:) withObject:self];
-				}
-			}
-			else
-			{
-				fprintf(stderr, "MultiClickRemoteBehavior class not found\n");
+				realAppDelegate = [pApp delegate];
+				if(realAppDelegate)
+					[realAppDelegate retain];
+				[pApp setDelegate:self];
+
+				// Manually start listening if the application is already active
+				if([pApp isActive])
+					[rcController performSelector:@selector(applicationWillBecomeActive:) withObject:nil];
 			}
 		}
 	}
 	else
 	{
-		fprintf(stderr, "RemoteControlContainer class not found\n");
+		fprintf(stderr, "Controller class not found\n");
 	}
 }
 
-- (void)remoteButton: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown clickCount: (unsigned int)clickCount
+- (void)sendRemoteButtonEvent: (RemoteControlEventIdentifier)buttonIdentifier pressedDown: (MacOSBOOL) pressedDown remoteControl: (id)remoteControl
 {	
 	switch(buttonIdentifier) 
 	{
@@ -738,8 +720,8 @@ id rcBehavior;
 
 - (void)applicationWillBecomeActive:(NSNotification *)pNotification
 {
-	if(rcContainer)
-		[rcContainer performSelector:@selector(startListening:) withObject:self];
+	if(rcController)
+		[rcController performSelector:@selector(applicationWillBecomeActive:) withObject:pNotification];
 
 	if(realAppDelegate && [realAppDelegate respondsToSelector:@selector(applicationWillBecomeActive:)])
 		[realAppDelegate applicationWillBecomeActive:pNotification];
@@ -747,8 +729,8 @@ id rcBehavior;
 
 - (void)applicationWillResignActive:(NSNotification *)pNotification
 {
-	if(rcContainer)
-		[rcContainer performSelector:@selector(stopListening:) withObject:self];
+	if(rcController)
+		[rcController performSelector:@selector(applicationWillResignActive:) withObject:pNotification];
 
 	if(realAppDelegate && [realAppDelegate respondsToSelector:@selector(applicationWillResignActive:)])
 		[realAppDelegate applicationWillResignActive:pNotification];
