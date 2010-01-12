@@ -84,6 +84,7 @@ MapMode* SwSelPaintRects::pMapMode = 0;
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
 std::map< SwSelPaintRects*, bool > aUseMacHighlightColorMap;
+std::multimap< Window*, SwSelPaintRects* > aWindowMap;
 
 static bool UseMacHighlightColor()
 {
@@ -738,6 +739,9 @@ SwSelPaintRects::SwSelPaintRects( const SwCrsrShell& rCSh )
 {
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
 	aUseMacHighlightColorMap[ this ] = UseMacHighlightColor();
+	Window *pWin = GetShell()->GetWin();
+	if ( pWin )
+		aWindowMap.insert( std::pair< Window*, SwSelPaintRects* >( pWin, this ) );
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 }
 
@@ -749,6 +753,12 @@ SwSelPaintRects::~SwSelPaintRects()
 	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
 	if ( it != aUseMacHighlightColorMap.end() )
 		aUseMacHighlightColorMap.erase( this );
+
+	for ( std::multimap< Window*, SwSelPaintRects* >::iterator sit = aWindowMap.begin(); sit != aWindowMap.end(); ++sit )
+	{
+		if ( this == sit->second )
+			aWindowMap.erase( sit );
+	}
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 }
 
@@ -1325,13 +1335,35 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 	rPixelRects.clear();
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
-	if ( it != aUseMacHighlightColorMap.end() && it->second )
+	Window *pWin = GetShell()->GetWin();
+	if ( pWin )
 	{
-		for( USHORT n = 0; n < Count(); ++n )
+		// Fix bug 3579 by including all SwSelPaintRects that share the same
+		// window as this instance
+		for ( std::multimap< Window*, SwSelPaintRects* >::const_iterator sit = aWindowMap.lower_bound( pWin ); sit != aWindowMap.end() && sit->first == pWin; ++sit )
 		{
-			const SwRect aNextRect( (*this)[n] );
-			rPixelRects.push_back( aNextRect.SVRect() );
+			std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
+			if ( it != aUseMacHighlightColorMap.end() && it->second )
+			{
+				SwSelPaintRects *pSelPaintRects = sit->second;
+				for( USHORT n = 0; n < pSelPaintRects->Count(); ++n )
+				{
+					const SwRect aNextRect( (*pSelPaintRects)[n] );
+					rPixelRects.push_back( aNextRect.SVRect() );
+				}
+			}
+		}
+	}
+	else
+	{
+		std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
+		if ( it != aUseMacHighlightColorMap.end() && it->second )
+		{
+			for( USHORT n = 0; n < Count(); ++n )
+			{
+				const SwRect aNextRect( (*this)[n] );
+				rPixelRects.push_back( aNextRect.SVRect() );
+			}
 		}
 	}
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
