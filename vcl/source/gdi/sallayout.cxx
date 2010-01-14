@@ -1239,7 +1239,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 {
                     // Fix bug 823 by handling inappropriate placement of
                     // kashidas by upper layers.
-                    if( pG->IsKashidaAllowedAfterGlyph() || pG->IsNonprintingChar() || IsSpacingGlyph( pG->mnGlyphIndex ) )
+                    if( i == mnGlyphCount - 1 || pG->IsKashidaAllowedAfterGlyph() || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) )
                         bHandled = true;
                 }
                 else if( pG > mpGlyphItems )
