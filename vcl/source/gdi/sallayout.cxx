@@ -1153,8 +1153,9 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             }
 
             // Fix bug 3582 by not shifting the glyph immediately to the left
-            // of a spacing glyph
-            if( j == mnGlyphCount || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
+            // of a spacing glyph and by treating nonprinting characters like
+            // spaces
+            if( j == mnGlyphCount || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
             {
                 // Apply unshifted delta to previous clusters
                 if( nUnshiftedDelta && nShiftable && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
@@ -1238,7 +1239,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 {
                     // Fix bug 823 by handling inappropriate placement of
                     // kashidas by upper layers.
-                    if( pG->IsKashidaAllowedAfterGlyph() || IsSpacingGlyph( pG->mnGlyphIndex ) )
+                    if( pG->IsKashidaAllowedAfterGlyph() || pG->IsNonprintingChar() || IsSpacingGlyph( pG->mnGlyphIndex ) )
                         bHandled = true;
                 }
                 else if( pG > mpGlyphItems )
@@ -1448,7 +1449,7 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
             continue;
 
 #ifdef USE_JAVA
-        if( !pG1->IsKashidaAllowedAfterGlyph() || IsSpacingGlyph( pG1->mnGlyphIndex ) )
+        if( !pG1->IsKashidaAllowedAfterGlyph() || pG1->IsNonprintingChar() || IsSpacingGlyph( pG1->mnGlyphIndex ) )
             continue;
 #endif	// USE_JAVA
 

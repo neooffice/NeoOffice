@@ -84,6 +84,8 @@ static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
+inline bool IsNonprintingChar( sal_Unicode nChar ) { return ( nChar == 0x00b6 || nChar == 0x00b7 ); }
+
 struct ImplATSLayoutDataHash {
 	int					mnLen;
 	ATSUFontID			mnFontID;
@@ -563,7 +565,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		// attached spacing glyphs have zero width so that the OOo code will
 		// force the cursor to the end of the ligature instead of the beginning
 		long nWidthAdjust = 0;
-		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !IsNonprintingChar( mpHash->mpStr[ nIndex ] ) && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
 			if ( nLastNonSpacingGlyph >= 0 && nLastNonSpacingGlyph != i && nLastNonSpacingIndex != nIndex )
 			{
@@ -577,7 +579,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				mpGlyphAdvances[ i ] = 0;
 			}
 		}
-		else if ( pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+		else if ( IsNonprintingChar( mpHash->mpStr[ nIndex ] ) || pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
 			nLastNonSpacingIndex = -1;
 			nLastNonSpacingGlyph = -1;
@@ -971,14 +973,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		nMinCharPos = rArgs.mnMinCharPos;
 		nEndCharPos = rArgs.mnEndCharPos;
 		int nMaxPosChange = MAXEXTRACHARS;
-		while ( nMaxPosChange && nMinCharPos && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos - 1 ] | GF_ISCHAR ) )
+		while ( nMaxPosChange && nMinCharPos && !IsNonprintingChar( rArgs.mpStr[ nMinCharPos - 1 ] ) && !IsSpacingGlyph( rArgs.mpStr[ nMinCharPos - 1 ] | GF_ISCHAR ) )
 		{
 			nMinCharPos--;
 			nMaxPosChange--;
 			bDeleteArgs = true;
 		}
 		nMaxPosChange = MAXEXTRACHARS;
-		while ( nMaxPosChange && nEndCharPos < rArgs.mnLength && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos ] | GF_ISCHAR ) )
+		while ( nMaxPosChange && nEndCharPos < rArgs.mnLength && !IsNonprintingChar( rArgs.mpStr[ nEndCharPos ] ) && !IsSpacingGlyph( rArgs.mpStr[ nEndCharPos ] | GF_ISCHAR ) )
 		{
 			nEndCharPos++;
 			nMaxPosChange--;
@@ -1058,9 +1060,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				while ( nStart > nMinCharPos )
 				{
 					int i = nStart;
-					for ( ; i > nMinCharPos && !IsSpacingGlyph( pArgs->mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
+					for ( ; i > nMinCharPos && !IsNonprintingChar( pArgs->mpStr[ i - 1 ] ) && !IsSpacingGlyph( pArgs->mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
 						;
-					for ( ; i > nMinCharPos && IsSpacingGlyph( pArgs->mpStr[ i - 1 ] | GF_ISCHAR ); i-- )
+					for ( ; i > nMinCharPos && ( IsNonprintingChar( pArgs->mpStr[ i - 1 ] ) || IsSpacingGlyph( pArgs->mpStr[ i - 1 ] | GF_ISCHAR ) ); i-- )
 						;
 					mpGraphics->maFallbackRuns.AddRun( i, nStart, bRunRTL );
 					nEstimatedGlyphs += nStart - i;
@@ -1073,9 +1075,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				while ( nStart < nEndCharPos )
 				{
 					int i = nStart;
-					for ( ; i < nEndCharPos && !IsSpacingGlyph( pArgs->mpStr[ i ] | GF_ISCHAR ); i++ )
+					for ( ; i < nEndCharPos && !IsNonprintingChar( pArgs->mpStr[ i ] ) && !IsSpacingGlyph( pArgs->mpStr[ i ] | GF_ISCHAR ); i++ )
 						;
-					for ( ; i < nEndCharPos && IsSpacingGlyph( pArgs->mpStr[ i ] | GF_ISCHAR ); i++ )
+					for ( ; i < nEndCharPos && ( IsNonprintingChar( pArgs->mpStr[ i ] ) || IsSpacingGlyph( pArgs->mpStr[ i ] | GF_ISCHAR ) ); i++ )
 						;
 					mpGraphics->maFallbackRuns.AddRun( nStart, i, bRunRTL );
 					nEstimatedGlyphs += i - nStart;
@@ -1271,7 +1273,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( nMinCharPos > nMinFallbackCharPos )
 			{
 				int nIndex = pLayoutData->mpCharsToChars[ nMinCharPos - nMinFallbackCharPos - ( bRunRTL ? 1 : 0 ) ];
-				if ( nIndex >= 0 && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+				if ( nIndex >= 0 && !IsNonprintingChar( pLayoutData->mpHash->mpStr[ nIndex ] ) && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
 					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
 					if ( i >= 0 && pLayoutData->mpGlyphDataArray && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
@@ -1285,7 +1287,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 			if ( nEndCharPos < nEndFallbackCharPos )
 			{
 				int nIndex = pLayoutData->mpCharsToChars[ nEndCharPos - nMinFallbackCharPos - ( bRunRTL ? 1 : 0 ) ];
-				if ( nIndex >= 0 && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+				if ( nIndex >= 0 && !IsNonprintingChar( pLayoutData->mpHash->mpStr[ nIndex ] ) && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
 					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
 					if ( i >= 0 && pLayoutData->mpGlyphDataArray && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
@@ -1509,6 +1511,10 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							}
 						}
 					}
+
+					// Mark known nonprinting characters
+					if ( IsNonprintingChar( nChar ) )
+						nGlyphFlags |= GlyphItem::IS_NONPRINTING_CHAR;
 
 					AppendGlyph( GlyphItem( nCharPos, nGlyph, aPos, nGlyphFlags, nGlyphWidth ) );
 
