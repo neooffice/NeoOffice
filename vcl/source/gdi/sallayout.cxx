@@ -1165,7 +1165,9 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                     {
                         if( pNewGlyphWidths[ j ] )
                         {
-                            int nShift = nUnshiftedDelta / nShiftable--;
+                            int nShift = nUnshiftedDelta;
+                            if( nShiftable )
+                                nShift /= nShiftable--;
                             if( nShift > pNewGlyphWidths[ j ] )
                                 nShift = pNewGlyphWidths[ j ];
                             pNewGlyphWidths[ j ] = pG->mnNewWidth + nShift;
