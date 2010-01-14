@@ -450,7 +450,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jfloat _par6, jint _par7, jint _par8, jint _par9, jfloat _par10, jfloat _par11, jfloat _par12, jlong _par13, jboolean _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jfloat _par6, jint _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jlong _par13, jboolean _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
 {
 	// Mark the glyph data for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -525,7 +525,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 		}
 
 		if ( _par3 && _par4 && aFont )
-			CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, (float)_par8, (float)_par9, _par10, _par11, _par12, aPath, _par14, _par15, _par16, _par17, _par18, _par19 );
+			CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, _par8, _par9, _par10, _par11, _par12, aPath, _par14, _par15, _par16, _par17, _par18, _par19 );
 	}
 }
 
@@ -763,7 +763,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].signature = "(JJFFFFJZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
 			pMethods[3].name = "drawGlyphBuffer0";
-			pMethods[3].signature = "(IIIJJIFIIIFFFJZFFFFF)V";
+			pMethods[3].signature = "(IIIJJIFIFFFFFJZFFFFF)V";
 			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0;
 			pMethods[4].name = "drawLine0";
 			pMethods[4].signature = "(FFFFIJZFFFFF)V";
@@ -1045,7 +1045,7 @@ void com_sun_star_vcl_VCLGraphics::drawBitmapBuffer( BitmapBuffer *_par0, long _
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _par2, CGGlyph *_par3, CGSize *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11, CGPathRef _par12 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _par2, CGGlyph *_par3, CGSize *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, float _par9, float _par10, float _par11, CGPathRef _par12 )
 {
 	// Mark the glyph array for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -1108,7 +1108,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIJJIFDIIIIIFJ)V";
+			char *cSignature = "(IIIJJIFDIIIFFFJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphBuffer", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1126,8 +1126,8 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 			args[8].i = jint( _par6 );
 			args[9].i = jint( _par7 );
 			args[10].i = jint( _par8 );
-			args[11].i = jint( _par9 );
-			args[12].i = jint( _par10 );
+			args[11].f = jfloat( _par9 );
+			args[12].f = jfloat( _par10 );
 			args[13].f = jfloat( _par11 );
 			args[14].j = jlong( _par12 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
@@ -1137,7 +1137,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 
 // ----------------------------------------------------------------------------
 
-void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, sal_GlyphId *_par3, float *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, long _par9, long _par10, float _par11 )
+void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2, sal_GlyphId *_par3, float *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, float _par9, float _par10, float _par11 )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -1145,7 +1145,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(II[I[FLcom/sun/star/vcl/VCLFont;IIIIIF)V";
+			char *cSignature = "(II[I[FLcom/sun/star/vcl/VCLFont;IIIFFF)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphs", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1173,8 +1173,8 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphs( long _par0, long _par1, int _par2
 			args[5].i = jint( _par6 );
 			args[6].i = jint( _par7 );
 			args[7].i = jint( _par8 );
-			args[8].i = jint( _par9 );
-			args[9].i = jint( _par10 );
+			args[8].f = jfloat( _par9 );
+			args[9].f = jfloat( _par10 );
 			args[10].f = jfloat( _par11 );
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
