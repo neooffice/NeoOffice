@@ -336,7 +336,7 @@ public:
             {}
 
 #ifdef USE_JAVA
-    enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200, IS_KASHIDA_ALLOWED_AFTER_GLYPH=0x400 };
+    enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200, IS_KASHIDA_ALLOWED_AFTER_GLYPH=0x400, IS_NONPRINTING_CHAR=0x800 };
 #else	// USE_JAVA
     enum{ FALLBACK_MASK=0xFF, IS_IN_CLUSTER=0x100, IS_RTL_GLYPH=0x200 };
 #endif	// USE_JAVA
@@ -345,6 +345,7 @@ public:
     bool    IsRTLGlyph() const { return ((mnFlags & IS_RTL_GLYPH) != 0); }
 #ifdef USE_JAVA
     bool    IsKashidaAllowedAfterGlyph() const { return ((mnFlags & IS_KASHIDA_ALLOWED_AFTER_GLYPH) != 0); }
+    bool    IsNonprintingChar() const { return ((mnFlags & IS_NONPRINTING_CHAR) != 0); }
 #endif	// USE_JAVA
 };
 
