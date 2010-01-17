@@ -1335,11 +1335,37 @@ void SwTextShell::Execute(SfxRequest &rReq)
             String aText( pNode->GetCurWord( aPoint.nContent.GetIndex() ) );
             if ( aText.Len() )
             {
-                // Select current word
-                rSh.ResetSelect( NULL, FALSE );
-                if ( rSh.IsEndWrd() )
-                    rSh.Left( CRSR_SKIP_CELLS, FALSE, 1, FALSE );
-                rSh.SelWrd();
+                // Exclude footnotes and other "in word" characters at the
+                // left or right ends of the selected word
+                const sal_Unicode* pChar = aText.GetBuffer();
+                xub_StrLen nLeft = 0;
+                while ( pChar && *pChar++ == CH_TXTATR_INWORD )
+                    ++nLeft;
+                pChar = aText.GetBuffer() + aText.Len() - 1;
+                xub_StrLen nRight = 0;
+                while ( pChar && *pChar-- == CH_TXTATR_INWORD )
+                    ++nRight;
+                long nLen = aText.Len() - nLeft - nRight;
+                if ( nLen > 0 )
+                {
+                    // Select current word
+                    String aNodeText( pNode->GetTxt() );
+                    xub_StrLen nIndex = aPoint.nContent.GetIndex();
+                    if ( nIndex == STRING_LEN )
+                        nIndex = aNodeText.Len();
+                    aText = aText.Copy( nLeft, nLen );
+                    nIndex = aNodeText.Search( aText, nIndex > nLen ? nIndex - nLen : 0 );
+                    if ( nIndex != STRING_NOTFOUND )
+                    {
+                        aPoint = *rSh.GetCrsr()->GetPoint();
+                        aPoint.nContent = nIndex;
+                        *rSh.GetCrsr()->GetPoint() = aPoint;
+                        rSh.EndSelect();
+                        rSh.ClearMark();
+                        rSh.SttSelect();
+                        rSh.ExtendSelection( TRUE, nLen );
+                    }
+                }
             }
         }
     }
