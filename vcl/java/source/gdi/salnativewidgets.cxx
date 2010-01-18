@@ -98,7 +98,8 @@ using namespace rtl;
 #define SPINNER_TRIMHEIGHT				1
 #define TABITEM_HEIGHT_SLOP				( ( vcl::IsRunningPanther() ) ? 0 : 4 )
 #define CHECKBOX_WIDTH					18
-#define CHECKBOX_HEIGHT					16
+#define CHECKBOX_HEIGHT					17
+#define CHECKBOX_TRIMY					( ( vcl::IsRunningPanther() || vcl::IsRunningTiger() ) ? 0 : 2 )
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
 // constants and structures for 10.3
@@ -1619,7 +1620,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 
 		HIRect destRect;
 		destRect.origin.x = 0;
-		destRect.origin.y = 0;
+		destRect.origin.y = CHECKBOX_TRIMY;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
