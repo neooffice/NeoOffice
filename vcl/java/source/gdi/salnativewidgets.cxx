@@ -97,6 +97,8 @@ using namespace rtl;
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
 #define TABITEM_HEIGHT_SLOP				( ( vcl::IsRunningPanther() ) ? 0 : 4 )
+#define CHECKBOX_WIDTH					18
+#define CHECKBOX_HEIGHT					16
 
 #if ( BUILD_OS_MAJOR == 10 ) && ( BUILD_OS_MINOR == 3 )
 // constants and structures for 10.3
@@ -176,6 +178,7 @@ static VCLBitmapBuffer aSharedDisclosureBtnBuffer;
 static VCLBitmapBuffer aSharedSeparatorLineBuffer;
 static VCLBitmapBuffer aSharedListViewHeaderBuffer;
 static VCLBitmapBuffer aSharedBevelButtonBuffer;
+static VCLBitmapBuffer aSharedCheckboxBuffer;
 
 // =======================================================================
 
@@ -1586,6 +1589,53 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 // =======================================================================
 
 /**
+ * (static) Draw a native checkbox.
+ *
+ * @param pGraphics		pointer to the graphics object where the button should
+ *						be painted
+ * @param rDestBounds	destination drawing rectangle for the disclosure button
+ * @param nState		current control enabled/disabled/focused state
+ * @param aValue		control value
+ */
+static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+{
+	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
+	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	if ( bRet )
+	{
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
+		// Don't paint focus ring as there is not enough room for it in
+		// OpenOffice.org 2.2.x
+		HIThemeButtonDrawInfo aButtonDrawInfo;
+		InitButtonDrawInfo( &aButtonDrawInfo, nState & ~CTRL_STATE_FOCUSED );
+
+		aButtonDrawInfo.kind = kThemeCheckBox;
+		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+			aButtonDrawInfo.value = kThemeButtonOn;
+		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
+			aButtonDrawInfo.value = kThemeButtonMixed;
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+	}
+
+	pBuffer->ReleaseContext();
+
+	if ( bRet )
+		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
  * (static) Exclude the window's grow box region from the specified region if
  * the window has a grow box.
  *
@@ -1869,8 +1919,7 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 					nState = 0;
 
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				mpVCLGraphics->drawCheckBox( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
-				bOK = TRUE;
+				bOK = DrawNativeCheckbox( this, buttonRect, nState, aValue );
 			}
 			break;
 
@@ -2104,7 +2153,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				rNativeBoundingRegion = Region( mpVCLGraphics->getPreferredCheckBoxBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption ) );
+				Point topLeft( buttonRect.Left(), buttonRect.Top() );
+				Size boundsSize( (long)CHECKBOX_WIDTH, (long)CHECKBOX_HEIGHT );
+				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
 			}

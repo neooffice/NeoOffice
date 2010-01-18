@@ -71,7 +71,6 @@ import java.util.LinkedList;
 import java.util.StringTokenizer;
 import javax.swing.ButtonModel;
 import javax.swing.JButton;
-import javax.swing.JCheckBox;
 import javax.swing.JRadioButton;
 
 /**
@@ -158,11 +157,6 @@ public final class VCLGraphics {
 	private static Method drawBitmapBufferMethod = null;
 
 	/**
-	 * The drawCheckBox method.
-	 */
-	private static Method drawCheckBoxMethod = null;
-
-	/**
 	 * The drawEPSMethod method.
 	 */
 	private static Method drawEPSMethod = null;
@@ -246,26 +240,6 @@ public final class VCLGraphics {
 	 * The radio button preferred size.
 	 */
 	private final static Dimension radioButtonPreferredSize = new Dimension(16, 16);
-
-	/**
-	 * The checkbox component.
-	 */
-	private static JCheckBox checkBoxButton = null;
-
-	/**
-	 * The checkbox x coordinate offset.
-	 */
-	private static int checkBoxButtonXOffset = 0;
-
-	/**
-	 * The checkbox y coordinate offset.
-	 */
-	private static int checkBoxButtonYOffset = 0;
-
-	/**
-	 * The checkbox preferred size.
-	 */
-	private final static Dimension checkBoxButtonPreferredSize = new Dimension(16, 16);
 
 	/**
 	 * The cached printer resolution.
@@ -402,21 +376,14 @@ public final class VCLGraphics {
 		radioButton = new JRadioButton();
 		radioButton.setBackground(c);
 
-		checkBoxButton = new JCheckBox();
-		checkBoxButton.setBackground(c);
-
 		// Adjust offsets for Swing controls
 		if (osVersion < 0x000a0505) {
 			VCLGraphics.radioButtonXOffset = 0;
 			VCLGraphics.radioButtonYOffset = -2;
-			VCLGraphics.checkBoxButtonXOffset = 0;
-			VCLGraphics.checkBoxButtonYOffset = -1;
 		}
 		else {
 			VCLGraphics.radioButtonXOffset = -3;
 			VCLGraphics.radioButtonYOffset = -1;
-			VCLGraphics.checkBoxButtonXOffset = -3;
-			VCLGraphics.checkBoxButtonYOffset = 0;
 		}
 
 		// Fix bug 3051 by setting the printer resolution to twips
@@ -435,12 +402,6 @@ public final class VCLGraphics {
 		}
 		try {
 			drawBitmapBufferMethod = VCLGraphics.class.getMethod("drawBitmapBuffer", new Class[]{ long.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, int.class, long.class });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
-		try {
-			drawCheckBoxMethod = VCLGraphics.class.getMethod("drawCheckBox", new Class[]{ int.class, int.class, int.class, int.class, String.class, boolean.class, boolean.class, boolean.class, int.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -2248,120 +2209,6 @@ public final class VCLGraphics {
 
 	}
 	
-	/**
-	 * Draws a check box into the graphics using the default Swing LAF
-	 *
-	 * @param x the x coordinate of the top left of the button frame
-	 * @param y the y coordinate of the top left of the button frame
-	 * @param width the width of the button
-	 * @param height the height of the button
-	 * @param title the text to be drawn aside the button.  Will be placed besode the button literally without accelerator replacement.
-	 * @param enabled true if the button is enabled, false if the button is disabled
-	 * @param focused true if the button is keyboard focused, false if the button is not keyboard focused
-	 * @param pressed true if the button is currently pressed, false if it is in normal state
-	 * @param buttonState	0 = off, 1 = on, 2 = mixed.  Note that Aqua does not provide mixed button state by default.
-	 */
-	public void drawCheckBox(int x, int y, int width, int height, String title, boolean enabled, boolean focused, boolean pressed, int buttonState) {
-
-		if (pageQueue != null) {
-			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawCheckBoxMethod, new Object[]{ new Integer(x), new Integer(y), new Integer(width), new Integer(height), title, new Boolean(enabled), new Boolean(focused), new Boolean(pressed), new Integer(buttonState) });
-			pageQueue.postDrawingOperation(pqi);
-			return;
-		}
-
-		Rectangle destBounds = new Rectangle(x, y, width, height).intersection(graphicsBounds);
-		if (destBounds.isEmpty())
-			return;
-
-		LinkedList clipList = new LinkedList();
-		if (userClipList != null) {
-			Iterator clipRects = userClipList.iterator();
-			while (clipRects.hasNext()) {
-				Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
-				if (!clip.isEmpty())
-					clipList.add(clip);
-			}
-		}
-		else {
-			clipList.add(destBounds);
-		}
-
-		Graphics2D g = getGraphics();
-		if (g != null) {
-			try {
-				ButtonModel m = VCLGraphics.checkBoxButton.getModel();
-				// Fix bug 3305 by setting the enabled state on both the Swing
-				// control and its model
-				VCLGraphics.checkBoxButton.setEnabled(enabled);
-				m.setEnabled(enabled);
-				m.setPressed(pressed);
-				if (pressed)
-					m.setArmed(true);
-				else
-					m.setArmed(false);
-				if (buttonState == VCLGraphics.BUTTONVALUE_ON)
-					m.setSelected(true);
-				else
-					m.setSelected(false);
-
-				// Fix bug 3028 by using the adjusted preferred bounds
-				Dimension d = getPreferredCheckBoxBounds(0, 0, 1, 1, "").getSize();
-				Rectangle bounds = new Rectangle(x + VCLGraphics.checkBoxButtonXOffset, y + VCLGraphics.checkBoxButtonYOffset, d.width, d.height);
-				if (width > d.width)
-					bounds.x += (width - d.width) / 2;
-				if (height > d.height)
-					bounds.y += (height - d.height) / 2;
-				if (bounds.width > width || bounds.height > height) {
-					VCLImage srcImage = new VCLImage(bounds.width, bounds.height, bitCount);
-					VCLGraphics srcGraphics = srcImage.getGraphics();
-					srcGraphics.drawCheckBox(0, 0, bounds.width, bounds.height, title, enabled, focused, pressed, buttonState);
-					copyBits(srcGraphics, 0, 0, bounds.width, bounds.height, x, y, width, height, false);
-					srcImage.dispose();
-				}
-				else {
-					VCLGraphics.checkBoxButton.setSize(d.width, d.height);
-					if (!userPolygonClip) {
-						Iterator clipRects = clipList.iterator();
-						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
-							g.translate(bounds.x, bounds.y);
-							VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
-							g.translate(bounds.x * -1, bounds.y * -1);
-						}
-					}
-					else {
-						g.setClip(userClip);
-						g.translate(bounds.x, bounds.y);
-						VCLGraphics.checkBoxButton.getUI().paint(g, VCLGraphics.checkBoxButton);
-						g.translate(bounds.x * -1, bounds.y * -1);
-					}
-				}
-			}
-			catch (Throwable t) {
-				t.printStackTrace();
-			}
-			g.dispose();
-		}
-
-	}
-
-	/**
-	 * Retrieves the desired width for a checkbox implemented via default
-	 * Swing LAF.
-	 *
-	 * @param x the x coordinate of the top left of the button frame
-	 * @param y the y coordinate of the top left of the button frame
-	 * @param width the width of the button
-	 * @param height the height of the button
-	 * @param title the text to be contained within the button.  Will be placed in the button literally without accelerator replacement.
-	 * @return desired button bounds
-	 */
-	public Rectangle getPreferredCheckBoxBounds(int x, int y, int width, int height, String title) {
-
-		return new Rectangle(x, y, VCLGraphics.checkBoxButtonPreferredSize.width + 4, VCLGraphics.checkBoxButtonPreferredSize.height);
-
-	}
-
 	/**
 	 * Applies the cached clipping area. The cached clipping area is set using
 	 * the {@link #beginSetClipRegion(boolean)} and the
