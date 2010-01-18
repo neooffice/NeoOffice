@@ -95,8 +95,6 @@ public:
 	const Rectangle		getPreferredPushButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 	void				drawRadioButton( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
 	const Rectangle		getPreferredRadioButtonBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
-	void				drawCheckBox( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4, sal_Bool _par5, sal_Bool _par6, sal_Bool _par7, long _par8 );
-	const Rectangle		getPreferredCheckBoxBounds( long _par0, long _par1, long _par2, long _par3, ::rtl::OUString _par4 );
 	void				endSetClipRegion( sal_Bool _par0 );
 	USHORT				getBitCount();
 	const Rectangle		getGlyphBounds( int _par0, com_sun_star_vcl_VCLFont *_par1, int _par2 );
