@@ -1,49 +1,81 @@
 /*************************************************************************
  *
- * Copyright 2008 by Sun Microsystems, Inc.
+ *  $RCSfile$
  *
- * $RCSfile$
- * $Revision$
+ *  $Revision$
  *
- * This file is part of NeoOffice.
+ *  last change: $Author$ $Date$
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
- * only, as published by the Free Software Foundation.
+ *  The Contents of this file are made available subject to
+ *  the terms of GNU General Public License Version 2.1.
  *
- * NeoOffice is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
- * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
+ *    GNU General Public License Version 2.1
+ *    =============================================
+ *    Copyright 2005 by Sun Microsystems, Inc.
+ *    901 San Antonio Road, Palo Alto, CA 94303, USA
  *
- * Modified January 2010 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ *    This library is free software; you can redistribute it and/or
+ *    modify it under the terms of the GNU General Public
+ *    License version 2.1, as published by the Free Software Foundation.
+ *
+ *    This library is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ *    General Public License for more details.
+ *
+ *    You should have received a copy of the GNU General Public
+ *    License along with this library; if not, write to the Free Software
+ *    Foundation, Inc., 59 Temple Place, Suite 330, Boston,
+ *    MA  02111-1307  USA
+ *
+ *    Modified January 2008 by Patrick Luby. NeoOffice is distributed under
+ *    GPL only under modification term 3 of the LGPL.
  *
  ************************************************************************/
 
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_shell.hxx"
+
+#ifndef _OSL_DIAGNOSE_H_
 #include <osl/diagnose.h>
+#endif
+
+#ifndef _OSL_THREAD_H_
 #include <osl/thread.h>
+#endif
+
+#ifndef _OSL_PROCESS_H_
 #include <osl/process.h>
+#endif
+
+#ifndef _OSL_FILE_HXX_
 #include <osl/file.hxx>
+#endif
+
+#ifndef _RTL_USTRBUF_HXX_
 #include <rtl/ustrbuf.hxx>
+#endif
 
 #ifndef _RTL_URI_H_
 #include <rtl/uri.hxx>
 #endif
-#include "shellexec.hxx"
-#include <com/sun/star/system/SystemShellExecuteFlags.hpp>
 
-#include <com/sun/star/util/XMacroExpander.hpp>
+#ifndef _SHELLEXEC_HXX_
+#include "shellexec.hxx"
+#endif
+
+#ifndef _COM_SUN_STAR_SYSTEM_SYSTEMSHELLEXECUTEFLAGS_HPP_
+#include <com/sun/star/system/SystemShellExecuteFlags.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_URI_XEXTERNALURIREFERENCETRANSLATOR_HPP_
 #include <com/sun/star/uri/XExternalUriReferenceTranslator.hpp>
+#endif
+
+#ifndef _COM_SUN_STAR_URI_EXTERNALURIREFERENCETRANSLATOR_HPP_
 #include <com/sun/star/uri/ExternalUriReferenceTranslator.hpp>
+#endif
 
 #include "uno/current_context.hxx"
 
@@ -133,7 +165,7 @@ ShellExec::ShellExec( const Reference< XComponentContext >& xContext ) :
 //
 //-------------------------------------------------
 
-void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 nFlags ) 
+void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aParameter, sal_Int32 /*nFlags*/ ) 
     throw (IllegalArgumentException, SystemShellExecuteException, RuntimeException)
 {
     OStringBuffer aBuffer, aLaunchBuffer;
@@ -166,34 +198,11 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
 #ifdef MACOSX
         aBuffer.append("open");
 #else
-        // The url launchers are expected to be in the $OOO_BASE_DIR/program
-        // directory:
-        com::sun::star::uno::Reference< com::sun::star::util::XMacroExpander >
-            exp;
-        if (!(m_xContext->getValueByName(
-                  rtl::OUString(
-                      RTL_CONSTASCII_USTRINGPARAM(
-                          "/singletons/com.sun.star.util.theMacroExpander")))
-              >>= exp)
-            || !exp.is())
-        {
-            throw SystemShellExecuteException(
-                rtl::OUString(
-                    RTL_CONSTASCII_USTRINGPARAM(
-                        "component context fails to supply singleton"
-                        " com.sun.star.util.theMacroExpander of type"
-                        " com.sun.star.util.XMacroExpander")),
-                static_cast< XSystemShellExecute * >(this), ENOENT);
-        }
         OUString aProgramURL;
-        try {
-            aProgramURL = exp->expandMacros(
-                rtl::OUString(
-                    RTL_CONSTASCII_USTRINGPARAM("$OOO_BASE_DIR/program/")));
-        } catch (com::sun::star::lang::IllegalArgumentException &)
+        if ( osl_Process_E_None != osl_getExecutableFile(&aProgramURL.pData) )
         {
             throw SystemShellExecuteException(
-                OUString(RTL_CONSTASCII_USTRINGPARAM("Could not expand $OOO_BASE_DIR path")), 
+                OUString(RTL_CONSTASCII_USTRINGPARAM("Cound not determine executable path")), 
                 static_cast < XSystemShellExecute * > (this), ENOENT );
         }
         
@@ -205,13 +214,12 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
                 static_cast < XSystemShellExecute * > (this), ENOENT );
         }
         
+        // The url launchers are expected to be in the same directory as the main executable,
+        // so prefixing the launchers with the path of the executable including the last slash 
         OString aTmp = OUStringToOString(aProgram, osl_getThreadTextEncoding());
-        escapeForShell(aBuffer, aTmp);
-
-#ifdef SOLARIS
-        if ( m_aDesktopEnvironment.getLength() == 0 )
-             m_aDesktopEnvironment = OString("GNOME");
-#endif
+        nIndex = aTmp.lastIndexOf('/');
+        if (nIndex > 0)
+            escapeForShell(aBuffer, aTmp.copy(0, nIndex+1));
             
         // Respect the desktop environment - if there is an executable named 
         // <desktop-environement-is>-open-url, pass the url to this one instead
@@ -219,7 +227,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
         if ( m_aDesktopEnvironment.getLength() > 0 )
         {
             OString aDesktopEnvironment(m_aDesktopEnvironment.toAsciiLowerCase());
-            OStringBuffer aCopy(aTmp);
+            OStringBuffer aCopy(aBuffer);
             
             aCopy.append(aDesktopEnvironment);
             aCopy.append("-open-url");
@@ -251,10 +259,7 @@ void SAL_CALL ShellExec::execute( const OUString& aCommand, const OUString& aPar
     } else {
         escapeForShell(aBuffer, OUStringToOString(aCommand, osl_getThreadTextEncoding()));
         aBuffer.append(" ");
-        if( nFlags != 42 )
-            escapeForShell(aBuffer, OUStringToOString(aParameter, osl_getThreadTextEncoding()));
-        else
-            aBuffer.append(OUStringToOString(aParameter, osl_getThreadTextEncoding()));
+        escapeForShell(aBuffer, OUStringToOString(aParameter, osl_getThreadTextEncoding()));
     }
     
 #ifndef USE_JAVA
