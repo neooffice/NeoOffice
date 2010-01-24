@@ -1948,14 +1948,17 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                 for ( std::vector< Rectangle >::const_iterator it = aTblCrsrPixelRects.begin() ; it != aTblCrsrPixelRects.end() ; ++it )
                     aPixelRects.push_back( *it );
             }
-
-            SwShellCrsr *pCurCrsr = pCrsrSh->_GetCrsr();
-            if ( pCurCrsr )
+            else
             {
-                std::vector< Rectangle > aCurCrsrPixelRects;
-                pCurCrsr->GetNativeHightlightColorRects( aCurCrsrPixelRects );
-                for ( std::vector< Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
-                    aPixelRects.push_back( *it );
+                // Fix bug 3585 by not duplicating pixel rects
+                SwShellCrsr *pCurCrsr = pCrsrSh->_GetCrsr();
+                if ( pCurCrsr )
+                {
+                    std::vector< Rectangle > aCurCrsrPixelRects;
+                    pCurCrsr->GetNativeHightlightColorRects( aCurCrsrPixelRects );
+                    for ( std::vector< Rectangle >::const_iterator it = aCurCrsrPixelRects.begin() ; it != aCurCrsrPixelRects.end() ; ++it )
+                        aPixelRects.push_back( *it );
+                }
             }
 
             for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin() ; it != aPixelRects.end() ; ++it )
