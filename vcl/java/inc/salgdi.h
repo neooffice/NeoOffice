@@ -76,10 +76,12 @@ class com_sun_star_vcl_VCLGraphics;
 class JavaImplFontData : public ImplFontData
 {
 public:
+	static ::std::map< sal_IntPtr, sal_IntPtr >	maBadATUSFontIDMap;
 	::rtl::OUString			maVCLFontName;
 	mutable sal_IntPtr		mnATSUFontID;
 	::std::list< JavaImplFontData* >	maChildren;
 
+	static void				HandleBadFont( sal_IntPtr nATSUFontID );
 	DECL_STATIC_LINK( JavaImplFontData, RunNativeFontsTimer, void* );
 
 							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, ::rtl::OUString aVCLFontName, sal_IntPtr nATSUFontID );
