@@ -1106,7 +1106,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
     long nUnshiftedDelta = 0;
     int nShiftable = 0;
     GlyphItem* pFirstUnshiftedGlyph = NULL;
-#endif	// USE_SUBPIXEL_TEXT_RENDERING
+#endif	// USE_JAVA && USE_SUBPIXEL_TEXT_RENDERING
     bool bRTL;
     for( int nCharPos = i = -1; rArgs.GetNextPos( &nCharPos, &bRTL ); )
     {
@@ -1120,7 +1120,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 nDelta -= rArgs.mpDXArray[ n-1 ];
             pNewGlyphWidths[ i ] += nDelta * mnUnitsPerPixel;
 
-#ifdef USE_SUBPIXEL_TEXT_RENDERING
+#if defined USE_JAVA && defined  USE_SUBPIXEL_TEXT_RENDERING
             pG = mpGlyphItems + i;
             GlyphItem* pClusterG = pG + 1;
             int j;
@@ -1133,7 +1133,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
             // Fix bug 3582 by not shifting the glyph immediately to the left
             // of a spacing glyph and by treating nonprinting characters like
             // spaces
-            if( j == mnGlyphCount || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
+            if( j == mnGlyphCount || !pG->mnGlyphIndex || ( pG->IsRTLGlyph() && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && pG->IsKashidaAllowedAfterGlyph() ) || pG[1].IsNonprintingChar() || pG->IsNonprintingChar() || IsSpacingGlyph( pG[1].mnGlyphIndex ) || IsSpacingGlyph( pG->mnGlyphIndex ) || ( pG > mpGlyphItems && pG[-1].mnCharPos - pG->mnCharPos > 1 ) )
             {
                 // Apply unshifted delta to previous clusters
                 if( nUnshiftedDelta && nShiftable && pFirstUnshiftedGlyph && pFirstUnshiftedGlyph < pG )
@@ -1178,7 +1178,7 @@ void GenericSalLayout::ApplyDXArray( ImplLayoutArgs& rArgs )
                 }
                 nUnshiftedDelta += nNewClusterWidth - nOldClusterWidth;
             }
-#endif	// USE_SUBPIXEL_TEXT_RENDERING
+#endif	// USE_JAVA && USE_SUBPIXEL_TEXT_RENDERING
         }
     }
 
