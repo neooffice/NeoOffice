@@ -1131,6 +1131,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 
 	com_sun_star_vcl_VCLFont *pFallbackFont = NULL;
 	Point aPos;
+	bool bBadFont = true;
 	maRuns.ResetPos();
 	mpGraphics->maFallbackRuns.ResetPos();
 	while ( maRuns.GetRun( &nMinCharPos, &nEndCharPos, &bRunRTL ) )
@@ -1469,9 +1470,14 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					}
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
-					// 0x0000ffff glyphs as spaces
+					// 0x0000ffff glyphs as spaces. Fix bug 3664 by treating
+					// layouts that contain only 0x0000ffff glyphs and no
+					// spacing characters as a bad font.
 					if ( nGlyph >= 0x0000ffff )
 					{
+						if ( IsSpacingGlyph( nChar | GF_ISCHAR ) )
+							bBadFont = false;
+
 						if ( bFirstGlyph )
 							nGlyph = 0x0020 | GF_ISCHAR;
 						else
@@ -1481,11 +1487,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					// we know that there is a valid fallback font
 					else if ( !nGlyph && mnFallbackLevel < MAX_FALLBACK - 1 && ( pSymbolFallbackFont || pFallbackFont ) )
 					{
+						bBadFont = false;
+
 						// Fix bug 3504 by not changing the glyph flags for
 						// zero glyphs
 						nGlyphWidth = 0;
 						if ( !bFirstGlyph )
 							continue;
+					}
+					else if ( bBadFont )
+					{
+						bBadFont = false;
 					}
 
 					// Fix bug 2512 without breaking fix for bug 2453 by
@@ -1602,6 +1614,9 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 		else
 			rArgs.mnFlags |= SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
 	}
+
+	if ( bRet && bBadFont )
+		JavaImplFontData::HandleBadFont( mpVCLFont->getNativeFont() );
 
 	return bRet;
 }

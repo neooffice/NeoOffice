@@ -83,7 +83,6 @@
 
 typedef void NativeShutdownCancelledHandler_Type();
 
-static ::std::map< sal_IntPtr, sal_IntPtr > aBadATUSFontIDMap;
 static ATSFontNotificationRef aFontNotification = NULL;
 static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
@@ -198,8 +197,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								continue;
 
 							// Fix bug 3446 by skipping bad native fonts
-							::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = aBadATUSFontIDMap.find( nNativeFont );
-							if ( bit != aBadATUSFontIDMap.end() )
+							::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaImplFontData::maBadATUSFontIDMap.find( nNativeFont );
+							if ( bit != JavaImplFontData::maBadATUSFontIDMap.end() )
 								continue;
 
 							// Get the ATS font name as the Cocoa name on some
@@ -423,6 +422,25 @@ static void RunNativeFontsTimerCallback()
 }
 
 // =======================================================================
+
+::std::map< sal_IntPtr, sal_IntPtr > JavaImplFontData::maBadATUSFontIDMap;
+
+// -----------------------------------------------------------------------
+
+void JavaImplFontData::HandleBadFont( sal_IntPtr nATSUFontID )
+{
+	// Fix bug 3446 by reloading native fonts without any known bad fonts
+	::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = maBadATUSFontIDMap.find( nATSUFontID );
+	if ( bit == maBadATUSFontIDMap.end() )
+	{
+		maBadATUSFontIDMap[ nATSUFontID ] = nATSUFontID;
+		// Fix bug 3576 by updating the fonts after all currently queued
+		// event are dispatched
+		Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
+	}
+}
+
+// -----------------------------------------------------------------------
 
 IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCallData )
 {
@@ -683,8 +701,6 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 
 void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
-	bool bBadFont = true;
-
 	if ( mpVCLFont )
 	{
 		pMetric->mnWidth = (long)( mpVCLFont->getSize() + 0.5 );
@@ -713,16 +729,16 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 				pMetric->mnDescent = (long)( ( ( aFontMetrics.leading + fabs( aFontMetrics.descent ) ) * pMetric->mnWidth ) + 0.5 );
 				if ( pMetric->mnDescent < 0 )
 					pMetric->mnDescent = 0;
-
-				bBadFont = false;
 			}
 			else
 			{
+				// Fix bug 3664 by treating a font that don't have horizontal
+				// metrics as a bad font
+				JavaImplFontData::HandleBadFont( mpFontData->mnATSUFontID );
 				pMetric->mnAscent = 0;
 				pMetric->mnDescent = 0;
 			}
 
-			// Fix bug 3446 by preventing abnormal values being returned
 			if ( pMetric->mnAscent < 1 )
 			{
 				pMetric->mnAscent = pMetric->mnWidth - pMetric->mnDescent;
@@ -731,9 +747,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 					pMetric->mnAscent = pMetric->mnDescent;
 					pMetric->mnDescent = 0;
 				}
-
-				// Mark font as bad when font has abnormal values
-				bBadFont = true;
 			}
 		}
 
@@ -766,19 +779,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	pMetric->mnExtLeading = 0;
 	pMetric->mbKernableFont = false;
 	pMetric->mnSlant = 0;
-
-	if ( bBadFont )
-	{
-		// Fix bug 3446 by reloading native fonts without any known bad fonts
-		::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = aBadATUSFontIDMap.find( mpFontData->mnATSUFontID );
-		if ( bit == aBadATUSFontIDMap.end() )
-		{
-			aBadATUSFontIDMap[ mpFontData->mnATSUFontID ] = mpFontData->mnATSUFontID;
-			// Fix bug 3576 by updating the fonts after all currently queued
-			// event are dispatched
-			Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
-		}
-	}
 }
 
 // -----------------------------------------------------------------------
