@@ -1378,8 +1378,12 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				for ( ItemCount i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && (int)( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
 					long nGlyphWidth = pCurrentLayoutData->mpGlyphAdvances[ i ];
-
 					sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
+
+					// Fix bug 3588 by setting fallback glyph IDs to zero
+					if ( nGlyph && pLayoutData->mpNeedFallback && pLayoutData->mpNeedFallback[ nIndex ] )
+						nGlyph = 0;
+
 					if ( !nGlyph )
 					{
 						if ( nChar < 0x0500 )
