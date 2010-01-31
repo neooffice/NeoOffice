@@ -680,7 +680,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			}
 		}
 
-		// Fix bug 3664 by checking if the new font is a bad font
+		// Fix bug 3446 by checking if the new font is a bad font
 		if ( mpVCLFont->getNativeFont() != nOldNativeFont )
 		{
 			ImplFontMetricData aMetricData( *pFont );
@@ -732,7 +732,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 			}
 			else
 			{
-				// Fix bug 3664 by treating a font that don't have horizontal
+				// Fix bug 3446 by treating a font that don't have horizontal
 				// metrics as a bad font
 				JavaImplFontData::HandleBadFont( mpFontData->mnATSUFontID );
 				pMetric->mnAscent = 0;
