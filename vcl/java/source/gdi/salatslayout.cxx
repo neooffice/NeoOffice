@@ -1467,7 +1467,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					}
 
 					// Fix bugs 810, 1806, 1927, and 2089 by treating all
-					// 0x0000ffff glyphs as spaces. Fix bug 3664 by treating
+					// 0x0000ffff glyphs as spaces. Fix bug 3446 by treating
 					// layouts that contain only 0x0000ffff glyphs and no
 					// spacing characters as a bad font.
 					if ( nGlyph >= 0x0000ffff )
