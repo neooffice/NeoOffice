@@ -66,6 +66,24 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 	return aRet;
 }
 
+CFStringRef NSFont_familyName( id pNSFont )
+{
+	CFStringRef aRet = nil;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pNSFont )
+	{
+		NSString *pFamilyName = [pNSFont familyName];
+		if ( pFamilyName )
+			aRet = CFStringCreateCopy( NULL, (CFStringRef)pFamilyName );
+	}
+
+	[pPool release];
+
+	return aRet;
+}
+
 ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic )
 {
 	ATSFontRef aRet = nil;

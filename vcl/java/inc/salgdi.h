@@ -80,11 +80,12 @@ public:
 	::rtl::OUString			maVCLFontName;
 	mutable sal_IntPtr		mnATSUFontID;
 	::std::list< JavaImplFontData* >	maChildren;
+	::rtl::OUString			maFamilyName;
 
-	static void				HandleBadFont( sal_IntPtr nATSUFontID );
+	static void				HandleBadFont( JavaImplFontData *pFontData );
 	DECL_STATIC_LINK( JavaImplFontData, RunNativeFontsTimer, void* );
 
-							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, ::rtl::OUString aVCLFontName, sal_IntPtr nATSUFontID );
+							JavaImplFontData( const ImplDevFontAttributes& rAttibutes, const ::rtl::OUString& rVCLFontName, sal_IntPtr nATSUFontID, const ::rtl::OUString& rFamilyName );
 	virtual					~JavaImplFontData();
 
 	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& rData ) const;
