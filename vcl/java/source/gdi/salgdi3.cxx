@@ -459,6 +459,7 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 		maBadATUSFontIDMap[ pFontData->mnATSUFontID ] = pFontData->mnATSUFontID;
 	}
 
+#ifdef DISABLE_BAD_FONT_FAMILY
 	// Find any fonts that have the same family as the current font and mark
 	// those as bad fonts
 	SalData *pSalData = GetSalData();
@@ -474,6 +475,7 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 			}
 		}
 	}
+#endif	// DISABLE_BAD_FONT_FAMILY
 
 	// Fix bug 3576 by updating the fonts after all currently queued
 	// event are dispatched
