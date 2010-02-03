@@ -744,13 +744,11 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
 	if ( mpVCLFont )
 	{
-		pMetric->mnWidth = (long)( mpVCLFont->getSize() + 0.5 );
+		// Fix bug 3446 by only overriding the width if it is positive
+		long nWidth = (long)( mpVCLFont->getSize() + 0.5 );
+		if ( nWidth >= 0 )
+			pMetric->mnWidth = nWidth;
 		pMetric->mnOrientation = mpVCLFont->getOrientation();
-	}
-	else
-	{
-		pMetric->mnWidth = 0;
-		pMetric->mnOrientation = 0;
 	}
 
 	if ( mpFontData )
@@ -776,8 +774,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 				// Fix bug 3446 by treating a font that don't have horizontal
 				// metrics as a bad font
 				JavaImplFontData::HandleBadFont( mpFontData );
-				pMetric->mnAscent = 0;
-				pMetric->mnDescent = 0;
 			}
 
 			if ( pMetric->mnAscent < 1 )
@@ -803,8 +799,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	}
 	else
 	{
-		pMetric->mnAscent = 0;
-		pMetric->mnDescent = 0;
 		pMetric->mbDevice = false;
 		pMetric->mbScalableFont = false;
 		pMetric->maName = String();
