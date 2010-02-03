@@ -22,7 +22,7 @@
  * <http://www.gnu.org/licenses/gpl-3.0.txt>
  * for a copy of the GPLv3 License.
  *
- * Modified December 2007 by Patrick Luby. NeoOffice is distributed under
+ * Modified February 2010 by Patrick Luby. NeoOffice is distributed under
  * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
@@ -2616,7 +2616,12 @@ bool SwWW8ImplReader::AddExtraOutlinesAsExtraStyles(SwTOXBase& rBase)
             sal_uInt16 nStyleLevel = rSI.nOutlineLevel;
             sal_uInt16 nMaxLevel = rBase.GetLevel();
             if (
+                 //nStyleLevel != pFmt->GetOutlineLevel() &&		//#outline level,zhaojianwei
+#if SUPD == 300
                  nStyleLevel != pFmt->GetOutlineLevel() &&
+#else   // SUPD == 300
+				 nStyleLevel != (pFmt->GetAttrOutlineLevel()-1) &&	//<-end,zhaojianwei
+#endif  // SUPD == 300
                  nStyleLevel < nMaxLevel
                )
             {

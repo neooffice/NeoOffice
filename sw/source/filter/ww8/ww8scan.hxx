@@ -829,7 +829,7 @@ private:
     WW8_CP nLineEnd;                // zeigt *hinter* das <CR>
     long nLastWhereIdxCp;           // last result of WhereIdx()
     USHORT nPLCF;                   // so viele PLCFe werden verwaltet
-    short nManType;
+    ManTypes nManType;
     bool mbDoingDrawTextBox;        //Normally we adjust the end of attributes
                                     //so that the end of a paragraph occurs
                                     //before the para end mark, but for
@@ -839,6 +839,7 @@ private:
     WW8PLCFxDesc *pChp, *pPap, *pSep, *pFld, *pFtn, *pEdn, *pBkm, *pPcd, 
         *pPcdA, *pAnd;
     WW8PLCFspecial *pFdoa, *pTxbx, *pTxbxBkd,*pMagicTables, *pSubdocs;
+    BYTE* pExtendedAtrds;
 
     const WW8Fib* pWwFib;
 
@@ -854,7 +855,7 @@ private:
     void AdvNoSprm(short nIdx, bool bStart);
     USHORT GetId(const WW8PLCFxDesc* p ) const;
 public:
-    WW8PLCFMan(WW8ScannerBase* pBase, short nType, long nStartCp, 
+    WW8PLCFMan(WW8ScannerBase* pBase, ManTypes nType, long nStartCp, 
         bool bDoingDrawTextBox = false);
     ~WW8PLCFMan();
 
@@ -897,7 +898,8 @@ public:
     WW8PLCFspecial* GetTxbxBkd() const { return pTxbxBkd; }
     WW8PLCFspecial* GetMagicTables() const { return pMagicTables; }
     WW8PLCFspecial* GetWkbPLCF() const { return pSubdocs; }
-    short GetManType() const { return nManType; }
+    BYTE* GetExtendedAtrds() const { return pExtendedAtrds; }
+    ManTypes GetManType() const { return nManType; }
     bool GetDoingDrawTextBox() const { return mbDoingDrawTextBox; }
 };
 
@@ -916,7 +918,7 @@ friend WW8PLCFx_Cp_FKP::WW8PLCFx_Cp_FKP( SvStream*, SvStream*, SvStream*,
     const WW8ScannerBase&, ePLCFT );
 
 #ifndef DUMP
-friend WW8PLCFMan::WW8PLCFMan(WW8ScannerBase*, short, long, bool);
+friend WW8PLCFMan::WW8PLCFMan(WW8ScannerBase*, ManTypes, long, bool);
 friend class SwWw8ImplReader;
 friend class SwWW8FltControlStack;
 #endif
@@ -944,6 +946,7 @@ private:
     WW8PLCFspecial*   pHdFtTxbxBkd;     // Break-Deskriptoren fuer diese
     WW8PLCFspecial*   pMagicTables;     // Break-Deskriptoren fuer diese
     WW8PLCFspecial*   pSubdocs;         // subdoc references in master document
+    BYTE*             pExtendedAtrds;   // Extended ATRDs
     WW8PLCFx_Book*    pBook;            // Bookmarks
 
     WW8PLCFpcd*         pPiecePLCF; // fuer FastSave ( Basis-PLCF ohne Iterator )
@@ -1002,6 +1005,19 @@ public:
          des Winword-FIB)
     */
     UINT16 wIdent;      // 0x0 int magic number
+    /*
+        File Information Block (FIB) values:
+        WinWord 1.0 = 33
+        WinWord 2.0 = 45
+        WinWord 6.0c for 16bit = 101
+        Word 6/32 bit = 104
+        Word 95 = 104
+        Word 97 = 193
+        Word 2000 = 217
+        Word 2002 = 257
+        Word 2003 = 268
+        Word 2007 = 274
+    */
     UINT16 nFib;        // 0x2 FIB version written
     UINT16 nProduct;    // 0x4 product version written by
     INT16 lid;          // 0x6 language stamp---localized version;
@@ -1022,6 +1038,7 @@ public:
                                                     // to decide which table stream is valid.
 
     UINT16 fExtChar :1; // 1000 =1, when using extended character set in file
+    UINT16 fFarEast :1; // 4000 =1, probably, when far-East language vaiants of Word is used to create a file #i90932#
 
 
     UINT16 nFibBack;    // 0xc
@@ -1386,8 +1403,17 @@ public:
     WW8_FC fcSttbListNames;// 0x0372 PLCF for Listname Table
     INT32 lcbSttbListNames;// 0x0376
 
-    WW8_FC fcMagicTable;
-    INT32 lcbMagicTable;
+    WW8_FC fcPlcfTch;
+    INT32 lcbPlcfTch;
+
+    // 0x38A - 41A == ignore
+    WW8_FC fcAtrdExtra;
+    UINT32 lcbAtrdExtra;
+
+    // 0x422 - 0x4D4 == ignore
+    WW8_FC fcHplxsdr;    //bizarrely, word xp seems to require this set to shows dates from AtrdExtra
+    UINT32 lcbHplxsdr; 
+
     /*
         General-Varaiblen, die fuer Ver67 und Ver8 verwendet werden,
         obwohl sie in der jeweiligen DATEI verschiedene Groesse haben:
@@ -1396,6 +1422,11 @@ public:
     INT32 pnPapFirst;
     INT32 cpnBteChp;
     INT32 cpnBtePap;
+    /*
+        The actual nFib, moved here because some readers assumed 
+        they couldn't read any format with nFib > some constant
+    */
+    UINT16 nFib_actual; // 0x05bc #i56856#
     /*
         nun wird lediglich noch ein Ctor benoetigt
     */
@@ -1406,6 +1437,7 @@ public:
     bool Write(SvStream& rStrm);
     static rtl_TextEncoding GetFIBCharset(UINT16 chs);
     ww::WordVersion GetFIBVersion() const;
+    WW8_CP GetBaseCp(ManTypes nType) const;
 };
 
 class WW8Style
@@ -1525,6 +1557,7 @@ public:
     UINT16 copts_fTransparentMetafiles : 1; //    when 1, don�t blank area between metafile pictures
     UINT16 copts_fShowBreaksInFrames : 1;   //    when 1, show hard page or column breaks in frames
     UINT16 copts_fSwapBordersFacingPgs : 1; //    when 1, swap left and right pages on odd facing pages
+    UINT16 copts_fExpShRtn : 1;             //    when 1, expand character spaces on the line ending SHIFT+RETURN  // #i56856#
 
     INT16  dxaTab;              // 720 twips    default tab width
     UINT16 wSpare;              //
@@ -1585,7 +1618,7 @@ public:
     UINT32 fShowBreaksInFrames              :1; // see above
     UINT32 fSwapBordersFacingPgs            :1; // see above
 	UINT32 fCompatabilityOptions_Unknown1_13	:1; // #i78591#
-	UINT32 fCompatabilityOptions_Unknown1_14	:1; // #i78591#
+	UINT32 fExpShRtn				:1; // #i78591# and #i56856#
 	UINT32 fCompatabilityOptions_Unknown1_15	:1; // #i78591#
 	UINT32 fCompatabilityOptions_Unknown1_16	:1; // #i78591#
     UINT32 fSuppressTopSpacingMac5      :1; // Suppress extra line spacing at top
@@ -1678,6 +1711,21 @@ public:
 
     UINT16 fUnknown3:15;
     UINT16 fUseBackGroundInAllmodes:1;
+
+    UINT16 fDoNotEmbedSystemFont:1;
+    UINT16 fWordCompat:1;
+    UINT16 fLiveRecover:1;
+    UINT16 fEmbedFactoids:1;
+    UINT16 fFactoidXML:1;
+    UINT16 fFactoidAllDone:1;
+    UINT16 fFolioPrint:1;
+    UINT16 fReverseFolio:1;
+    UINT16 iTextLineEnding:3;
+    UINT16 fHideFcc:1;
+    UINT16 fAcetateShowMarkup:1;
+    UINT16 fAcetateShowAtn:1;
+    UINT16 fAcetateShowInsDel:1;
+    UINT16 fAcetateShowProps:1;
 
     // 2. Initialisier-Dummy:
     BYTE    nDataEnd;

@@ -1699,9 +1699,14 @@ bool WW8_WrPlcSubDoc::WriteGenericTxt(SwWW8Writer& rWrt, BYTE nTTyp,
 
                 const SwPostItField& rPFld = *(SwPostItField*)aCntnt[ i ];
                 rWrt.WritePostItBegin();
-				String sTxt(rPFld.GetTxt());                                    
-                sTxt.SearchAndReplaceAll(0x0A, 0x0B);                           
-                rWrt.WriteStringAsPara( sTxt );                                 
+                if (const OutlinerParaObject* pOutliner = rPFld.GetTextObject())
+                    rWrt.WriteOutliner(*pOutliner, nTTyp);
+                else
+                {
+                    String sTxt(rPFld.GetTxt());
+                    sTxt.SearchAndReplaceAll(0x0A, 0x0B);
+                    rWrt.WriteStringAsPara( sTxt );
+                }
             }
             break;
 
@@ -1735,6 +1740,32 @@ bool WW8_WrPlcSubDoc::WriteGenericTxt(SwWW8Writer& rWrt, BYTE nTTyp,
                     rWrt.WriteSpecialText( pNdIdx->GetIndex() + 1,
                                        pNdIdx->GetNode().EndOfSectionIndex(),
                                        nTTyp );
+                    // --> OD 2008-08-07 #156757#
+                    {
+                        SwNodeIndex aContentIdx = *pNdIdx;
+                        aContentIdx++;
+                        if ( aContentIdx.GetNode().IsTableNode() )
+                        {
+                            bool bContainsOnlyTables = true;
+                            do {
+                                aContentIdx = *(aContentIdx.GetNode().EndOfSectionNode());
+                                aContentIdx++;
+                                if ( !aContentIdx.GetNode().IsTableNode() &&
+                                     aContentIdx.GetIndex() != pNdIdx->GetNode().EndOfSectionIndex() )
+                                {
+                                    bContainsOnlyTables = false;
+                                }
+                            } while ( aContentIdx.GetNode().IsTableNode() );
+                            if ( bContainsOnlyTables )
+                            {
+                                // Additional paragraph containing a space to
+                                // assure that by WW created RTF from written WW8
+                                // does not crash WW.
+                                rWrt.WriteStringAsPara( String::CreateFromAscii( " " ) );
+                            }
+                        }
+                    }
+                    // <--
                 }
 
                 // CR at end of one textbox text ( otherwise WW gpft :-( )
@@ -1833,6 +1864,30 @@ void WW8_WrPlcSubDoc::WriteGenericPlc( SwWW8Writer& rWrt, BYTE nTTyp,
                 rFib.fcGrpStAtnOwners = nFcStart;
                 nFcStart = rWrt.pTableStrm->Tell();
                 rFib.lcbGrpStAtnOwners = nFcStart - rFib.fcGrpStAtnOwners;
+
+                // Write the extended >= Word XP ATLD records
+                if( rWrt.bWrtWW8 )
+                {
+                    for( i = 0; i < nLen; ++i )
+                    {
+                        const SwPostItField& rPFld = *(SwPostItField*)aCntnt[ i ];
+
+                        sal_uInt32 nDTTM = 
+                            sw::ms::DateTime2DTTM(DateTime(rPFld.GetDate(),rPFld.GetTime()));
+
+                        SwWW8Writer::WriteLong( *rWrt.pTableStrm, nDTTM );
+                        SwWW8Writer::WriteShort( *rWrt.pTableStrm, 0 );
+                        SwWW8Writer::WriteLong( *rWrt.pTableStrm, 0 );
+                        SwWW8Writer::WriteLong( *rWrt.pTableStrm, 0 );
+                        SwWW8Writer::WriteLong( *rWrt.pTableStrm, 0 );
+                    }
+
+                    rFib.fcAtrdExtra = nFcStart;
+                    nFcStart = rWrt.pTableStrm->Tell();
+                    rFib.lcbAtrdExtra = nFcStart - rFib.fcAtrdExtra;
+                    rFib.fcHplxsdr = 0x01010002;  //WTF, but apparently necessary
+                    rFib.lcbHplxsdr = 0;
+                }
             }
             break;
         case TXT_TXTBOX:

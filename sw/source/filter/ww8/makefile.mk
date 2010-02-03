@@ -38,6 +38,7 @@ TARGET=ww8
 
 .INCLUDE :	$(PRJ)$/inc$/swpre.mk
 .INCLUDE :	settings.mk
+MAKING_LIBMSWORD=TRUE
 .INCLUDE :	$(PRJ)$/inc$/sw.mk
 
 .IF "$(mydebug)" != ""
@@ -66,7 +67,9 @@ EXCEPTIONSFILES = \
 		$(SLO)$/ww8par6.obj \
 		$(SLO)$/writerhelper.obj \
 		$(SLO)$/writerwordglue.obj \
-        $(SLO)$/ww8scan.obj
+        $(SLO)$/ww8scan.obj \
+        $(SLO)$/WW8TableInfo.obj \
+        $(SLO)$/WW8FFData.obj
 
 
 SLOFILES =	\
@@ -91,7 +94,9 @@ SLOFILES =	\
 		$(SLO)$/styles.obj \
 		$(SLO)$/ww8scan.obj \
 		$(SLO)$/writerhelper.obj \
-		$(SLO)$/writerwordglue.obj
+		$(SLO)$/writerwordglue.obj \
+        $(SLO)$/WW8TableInfo.obj \
+        $(SLO)$/WW8FFData.obj
 
 
 # --- Tagets -------------------------------------------------------

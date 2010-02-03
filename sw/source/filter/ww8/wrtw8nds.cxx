@@ -1,29 +1,30 @@
 /*************************************************************************
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
  * Copyright 2008 by Sun Microsystems, Inc.
+ *
+ * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of NeoOffice.
+ * This file is part of OpenOffice.org.
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * NeoOffice is distributed in the hope that it will be useful,
+ * OpenOffice.org is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
+ * GNU Lesser General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified April 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
  *
  ************************************************************************/
 
@@ -37,6 +38,7 @@
 #include <utility>
 #include <algorithm>
 #include <functional>
+#include <iostream>
 #include <hintids.hxx>
 #include <tools/urlobj.hxx>
 #include <svx/boxitem.hxx>
@@ -102,10 +104,7 @@
 #include <numrule.hxx>
 #include "wrtww8.hxx"
 #include "ww8par.hxx"
-
-#ifndef _BOOKMRK_HXX
 #include <bookmrk.hxx>
-#endif
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::i18n;
@@ -289,23 +288,24 @@ xub_StrLen WW8_SwAttrIter::SearchNext( xub_StrLen nStartPos )
 {
     xub_StrLen nPos;
     xub_StrLen nMinPos = STRING_MAXLEN;
-    xub_StrLen i=0;
-
 	const String aTxt = rNd.GetTxt();
-	xub_StrLen pos=aTxt.Search(CH_TXT_ATR_FIELDSTART, nStartPos);
-	if (pos==STRING_NOTFOUND) 
-		pos=aTxt.Search(CH_TXT_ATR_FIELDEND, nStartPos);
-	if (pos==STRING_NOTFOUND) 
-		pos=aTxt.Search(CH_TXT_ATR_FORMELEMENT, nStartPos);
-	if (pos!=STRING_NOTFOUND)  
+	xub_StrLen pos = aTxt.Search(CH_TXT_ATR_FIELDSTART, nStartPos);
+	if( pos==STRING_NOTFOUND )
+    {
+		pos = aTxt.Search(CH_TXT_ATR_FIELDEND, nStartPos);
+        if( pos==STRING_NOTFOUND )
+            pos = aTxt.Search(CH_TXT_ATR_FORMELEMENT, nStartPos);
+    }
+	if( pos!=STRING_NOTFOUND )
 		nMinPos=pos;
+
+    xub_StrLen i=0;
 
     // first the redline, then the attributes
     if( pCurRedline )
     {
         const SwPosition* pEnd = pCurRedline->End();
-        if (pEnd->nNode == rNd && ((i = pEnd->nContent.GetIndex()) >= nStartPos))
-			if (i<nMinPos)
+        if (pEnd->nNode == rNd && ((i = pEnd->nContent.GetIndex()) >= nStartPos) && i < nMinPos )
 				nMinPos = i;
     }
 
@@ -926,7 +926,7 @@ void WW8_AttrIter::StartURL(const String &rUrl, const String &rTarget)
     SwWW8Writer::WriteLong( *rWrt.pDataStrm, nFlag );
 
     INetProtocol eProto = aURL.GetProtocol();
-    if (eProto == INET_PROT_FILE || eProto == INET_PROT_SMB)
+    if (eProto == INET_PROT_FILE)
     {
 // version 1 (for a document)
 
@@ -944,7 +944,7 @@ void WW8_AttrIter::StartURL(const String &rUrl, const String &rTarget)
 
         // save the links to files as relative
         sURL = URIHelper::simpleNormalizedMakeRelative( rWrt.GetBaseURL(), sURL );
-        if ( eProto == INET_PROT_FILE && sURL.EqualsAscii( "/", 0, 1 ) )
+        if ( sURL.EqualsAscii( "/", 0, 1 ) )
             sURL = aURL.PathToFileName();
 
         // special case for the absolute windows names
@@ -955,15 +955,6 @@ void WW8_AttrIter::StartURL(const String &rUrl, const String &rTarget)
              sURL.EqualsAscii( ":", 2, 1 ) )
         {
             sURL.Erase( 0, 1 );
-            sURL.SearchAndReplaceAll( '/', '\\' );
-        }
-
-        // n#261623 convert smb notation to '\\'
-        const char pSmb[] = "smb://";
-        if ( eProto == INET_PROT_SMB &&
-             sURL.EqualsAscii( pSmb, 0, sizeof( pSmb ) - 1 ) )
-        {
-            sURL.Erase( 0, sizeof( pSmb ) - 3 );
             sURL.SearchAndReplaceAll( '/', '\\' );
         }
 
@@ -1461,6 +1452,10 @@ SwTxtFmtColl& lcl_getFormatCollection( Writer& rWrt, SwTxtNode* pTxtNode )
 
 Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
 {
+#ifdef DEBUG
+    ::std::clog << "<OutWW8_SwTxtNode>" << ::std::endl;
+#endif
+
     SwWW8Writer& rWW8Wrt = (SwWW8Writer&)rWrt;
     SwTxtNode* pNd = &((SwTxtNode&)rNode);
 
@@ -1518,6 +1513,12 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
 
     String aStr( pNd->GetTxt() );
 
+    ww8::WW8TableNodeInfo::Pointer_t pTextNodeInfo(rWW8Wrt.mpTableInfo->getTableNodeInfo(pNd));
+    ww8::WW8TableNodeInfoInner::Pointer_t pTextNodeInfoInner;
+
+    if (pTextNodeInfo.get() != NULL)
+        pTextNodeInfoInner = pTextNodeInfo->getFirstInner();
+
     xub_StrLen nAktPos = 0;
     xub_StrLen nEnd = aStr.Len();
     bool bUnicode = rWW8Wrt.bWrtWW8, bRedlineAtEnd = false;
@@ -1550,7 +1551,7 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
 				if (pFieldmark!=NULL) {
 					rWW8Wrt.AppendBookmark( pFieldmark->GetName(), 1);
 				}
-				rWW8Wrt.OutField(NULL, ww::eFORMTEXT, String::CreateFromAscii(" FORMTEXT "), WRITEFIELD_START | WRITEFIELD_CMD_START);	
+				rWW8Wrt.OutField(NULL, ww::eFORMTEXT, String::CreateFromAscii(" FORMTEXT "), WRITEFIELD_START | WRITEFIELD_CMD_START);
 				if (pFieldmark!=NULL) {
 					rWW8Wrt.WriteFormData( *pFieldmark );
 				}
@@ -1570,33 +1571,18 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
 				if (pFieldmark!=NULL) {
 					rWW8Wrt.AppendBookmark( pFieldmark->GetName(), 1);
 				}
+				rWW8Wrt.OutField(NULL, ww::eFORMCHECKBOX, String::CreateFromAscii(" FORMCHECKBOX "), WRITEFIELD_START | WRITEFIELD_CMD_START);
 				if (pFieldmark!=NULL) {
-				    switch (pFieldmark->GetType()) {
-					case 0: assert(0); /* should not happend*/ break;
-					case 1: /* CHECKBOX */ 
-					    rWW8Wrt.OutField(NULL, ww::eFORMCHECKBOX, String::CreateFromAscii(" FORMCHECKBOX "), WRITEFIELD_START | WRITEFIELD_CMD_START);
-					    
-					    rWW8Wrt.WriteFormData( *pFieldmark );
-					    rWW8Wrt.OutField(NULL, ww::eFORMCHECKBOX, String(), WRITEFIELD_CMD_END | WRITEFIELD_CLOSE);
-					    break;
-					case 2: /* LIST */ 
-					    rWW8Wrt.OutField(NULL, ww::eFORMDROPDOWN, String::CreateFromAscii(" FORMDROPDOWN "), WRITEFIELD_START | WRITEFIELD_CMD_START);
-					    
-					    rWW8Wrt.WriteFormData( *pFieldmark );
-					    rWW8Wrt.OutField(NULL, ww::eFORMDROPDOWN, String(), WRITEFIELD_CMD_END | WRITEFIELD_CLOSE);
-					    break;
-					default:
-					    break;
 
-
-				    }
+					rWW8Wrt.WriteFormData( *pFieldmark );
 				}
+				rWW8Wrt.OutField(NULL, ww::eFORMCHECKBOX, String(), WRITEFIELD_CMD_END | WRITEFIELD_CLOSE);
 				if (pFieldmark!=NULL) {
 					rWW8Wrt.AppendBookmark( pFieldmark->GetName(), 0);
 				}
 			}
-			nLen-=ofs;
-			String aSnippet(aAttrIter.GetSnippet(aStr, nAktPos+ofs, nLen));
+			nLen-=static_cast<USHORT>(ofs);
+			String aSnippet(aAttrIter.GetSnippet(aStr, nAktPos+static_cast<USHORT>(ofs), nLen));
             if ((rWW8Wrt.nTxtTyp == TXT_EDN || rWW8Wrt.nTxtTyp == TXT_FTN) && nAktPos ==0 && nLen>0)
             {
                 // Insert tab for aesthetic puposes #i24762#
@@ -1664,9 +1650,18 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
                 }
             }
 
-            rWW8Wrt.WriteCR();
+            rWW8Wrt.WriteCR(pTextNodeInfoInner);
 
-            rWW8Wrt.pPapPlc->AppendFkpEntry( rWrt.Strm().Tell(), pO->Count(),
+			if (pTextNodeInfo.get() != NULL)
+    		{
+#ifdef DEBUG
+        		::std::clog << pTextNodeInfo->toString() << ::std::endl;
+#endif
+
+        		rWW8Wrt.OutWW8TableInfoCell(pTextNodeInfoInner);
+    		}
+
+ 			rWW8Wrt.pPapPlc->AppendFkpEntry( rWrt.Strm().Tell(), pO->Count(),
                 pO->GetData() );
             pO->Remove( 0, pO->Count() );
 
@@ -1730,7 +1725,7 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
                         rWW8Wrt.pop_charpropstart();
                         rWW8Wrt.EndTOX(*pTOXSect);
                     }
-                    rWW8Wrt.WriteCR();              // CR danach
+                    rWW8Wrt.WriteCR(pTextNodeInfoInner);              // CR danach
                 }
             }
         }
@@ -1748,7 +1743,7 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
 	//If we have exported a field result, then we will have been forced to
 	//split up the text into a 0x13, 0x14, <result> 0x15 sequence with the
 	//properties forced out at the end of the result, so the 0x15 itself
-	//should remain clean of all other attributes to avoid #i93105#
+	//should remain clean of all other attributes to avoid #iXXXXX#
         if (!bExportedFieldResult)
         {
             rWW8Wrt.pChpPlc->AppendFkpEntry( rWrt.Strm().Tell(),
@@ -1789,7 +1784,7 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
                     rWW8Wrt.EndTOX( *pTOXSect );
                 }
 
-                rWW8Wrt.WriteCR();              // CR danach
+                rWW8Wrt.WriteCR(pTextNodeInfoInner);              // CR danach
 
                 if( bRedlineAtEnd )
                 {
@@ -1816,14 +1811,13 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
     if (rWW8Wrt.mpParentFrame && !rWW8Wrt.bIsInTable)    // Fly-Attrs
         rWW8Wrt.Out_SwFmt(rWW8Wrt.mpParentFrame->GetFrmFmt(), false, false, true);
 
-    if( rWW8Wrt.bOutTable )
-    {                                               // Tab-Attr
-        // sprmPFInTable
-        if( rWW8Wrt.bWrtWW8 )
-            SwWW8Writer::InsUInt16( *pO, 0x2416 );
-        else
-            pO->Insert( 24, pO->Count() );
-        pO->Insert( 1, pO->Count() );
+    if (pTextNodeInfo.get() != NULL)
+    {
+#ifdef DEBUG
+        ::std::clog << pTextNodeInfo->toString() << ::std::endl;
+#endif
+
+        rWW8Wrt.OutWW8TableInfoCell(pTextNodeInfoInner);
     }
 
     if( !bFlyInTable )
@@ -1898,14 +1892,25 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
                 }
                 // <--
 
+                // --> OD 2009-03-09 #100020#
+                // correct fix for issue i94187
                 if (SFX_ITEM_SET !=
                     pTmpSet->GetItemState(RES_PARATR_NUMRULE, false) )
                 {
-                    //If the numbering is not outline, and theres no numrule
-                    //name in the itemset, put one in there
-
-                    // NumRule from a template - then put it into the itemset
+                    // List style set via paragraph style - then put it into the itemset.
+                    // This is needed to get list level and list id exported for
+                    // the paragraph.
                     pTmpSet->Put( SwNumRuleItem( pRule->GetName() ));
+
+                    // Put indent values into the itemset in case that the list
+                    // style is applied via paragraph style and the list level
+                    // indent values are not applicable.
+                    if ( pFmt->GetPositionAndSpaceMode() ==
+                                            SvxNumberFormat::LABEL_ALIGNMENT &&
+                         !pNd->AreListLevelIndentsApplicable() )
+                    {
+                        pTmpSet->Put( aLR );
+                    }
                 }
             }
             else
@@ -2104,12 +2109,63 @@ Writer& OutWW8_SwTxtNode( Writer& rWrt, SwCntntNode& rNode )
     }
 
     rWW8Wrt.pPapPlc->AppendFkpEntry( rWrt.Strm().Tell(), pO->Count(),
-        pO->GetData() );
+                                    pO->GetData() );
     pO->Remove( 0, pO->Count() );                       // leeren
+
+    if (pTextNodeInfoInner.get() != NULL)
+    {
+        if (pTextNodeInfoInner->isEndOfLine())
+        {
+            rWW8Wrt.WriteRowEnd(pTextNodeInfoInner->getDepth());
+
+            pO->Insert( (BYTE*)&nSty, 2, pO->Count() );     // Style #
+            rWW8Wrt.OutWW8TableInfoRow(pTextNodeInfoInner);
+            rWW8Wrt.pPapPlc->AppendFkpEntry( rWrt.Strm().Tell(), pO->Count(),
+                                            pO->GetData() );
+            pO->Remove( 0, pO->Count() );                       // leeren
+        }
+    }
+
+#ifdef DEBUG
+    ::std::clog << "</OutWW8_SwTxtNode>" << ::std::endl;
+#endif
+
     return rWrt;
 }
 
+void SwWW8Writer::OutWW8TableNodeInfo(ww8::WW8TableNodeInfo::Pointer_t pNodeInfo)
+{
+    SVBT16 nSty;
+    ShortToSVBT16( nStyleBeforeFly, nSty );
 
+    ww8::WW8TableNodeInfo::Inners_t::const_iterator aIt
+    (pNodeInfo->getInners().begin());
+    ww8::WW8TableNodeInfo::Inners_t::const_iterator aItEnd
+    (pNodeInfo->getInners().end());
+
+    while (aIt != aItEnd)
+    {
+        ww8::WW8TableNodeInfoInner::Pointer_t pInner = aIt->second;
+        if (pInner->isEndOfCell())
+        {
+            WriteRowEnd(pInner->getDepth());
+
+            pO->Insert( (BYTE*)&nSty, 2, pO->Count() );     // Style #
+            OutWW8TableInfoRow(pInner);
+            pPapPlc->AppendFkpEntry( Strm().Tell(), pO->Count(),
+                                    pO->GetData() );
+            pO->Remove( 0, pO->Count() );                       // leeren
+        }
+
+        if (pInner->isEndOfLine())
+        {
+        }
+
+        aIt++;
+    }
+}
+
+#if 0
 /*  */
 
 USHORT SwWW8Writer::StartTableFromFrmFmt(WW8Bytes &rAt, const SwFrmFmt *pFmt,
@@ -2228,581 +2284,10 @@ bool RowContainsProblematicGraphic(const SwWriteTableCellPtr *pRow,
     }
     return bHasGraphic;
 }
-
+#endif
 //---------------------------------------------------------------------------
 //       Tabellen
 //---------------------------------------------------------------------------
-
-Writer& OutWW8_SwTblNode( Writer& rWrt, SwTableNode & rNode )
-{
-    SwWW8Writer & rWW8Wrt = (SwWW8Writer&)rWrt;
-    SwTable& rTbl = rNode.GetTable();
-    const bool bNewTableModel = rTbl.IsNewModel();
-
-    const SwFrmFmt *pFmt = rTbl.GetFrmFmt();
-    ASSERT(pFmt,"Impossible");
-    if (!pFmt)
-        return rWrt;
-    rWW8Wrt.Out_SfxBreakItems(&(pFmt->GetAttrSet()), rNode);
-
-    /*
-    ALWAYS relative when text::HoriOrientation::NONE (nPageSize + ( nPageSize / 10 )) < nTblSz,
-    in that case the cell width's and table width's are not real. The table
-    width is maxed and cells relative, so we need the frame (generally page)
-    width that the table is in to work out the true widths.
-    */
-    const SwFmtFrmSize &rSize = pFmt->GetFrmSize();
-    int nWidthPercent = rSize.GetWidthPercent();
-    bool bManualAligned = pFmt->GetHoriOrient().GetHoriOrient() == text::HoriOrientation::NONE;
-    if ( (pFmt->GetHoriOrient().GetHoriOrient() == text::HoriOrientation::FULL) || bManualAligned )
-        nWidthPercent = 100;
-    bool bRelBoxSize = nWidthPercent != 0;
-    unsigned long nTblSz = static_cast<unsigned long>(rSize.GetWidth());
-    if (nTblSz > USHRT_MAX/2 && !bRelBoxSize)
-    {
-        ASSERT(bRelBoxSize, "huge table width but not relative, suspicious");
-        bRelBoxSize = true;
-    }
-
-    unsigned long nPageSize = nTblSz;
-    if (bRelBoxSize)
-    {
-        Point aPt;
-        SwRect aRect(pFmt->FindLayoutRect(false, &aPt));
-        if (aRect.IsEmpty())
-        {
-            // dann besorge mal die Seitenbreite ohne Raender !!
-            const SwFrmFmt* pParentFmt =
-                rWW8Wrt.mpParentFrame ?
-                &(rWW8Wrt.mpParentFrame->GetFrmFmt()) :
-                const_cast<const SwDoc *>(rWrt.pDoc)->GetPageDesc(0).GetPageFmtOfNode(rNode, false);
-            aRect = pParentFmt->FindLayoutRect(true);
-            if (0 == (nPageSize = aRect.Width()))
-            {
-                const SvxLRSpaceItem& rLR = pParentFmt->GetLRSpace();
-                nPageSize = pParentFmt->GetFrmSize().GetWidth() - rLR.GetLeft()
-                    - rLR.GetRight();
-            }
-        }
-        else
-        {
-            nPageSize = aRect.Width();
-            if(bManualAligned)
-            {
-                // #i37571# For manually aligned tables
-                const SvxLRSpaceItem &rLR = pFmt->GetLRSpace();
-                nPageSize -= (rLR.GetLeft() + rLR.GetRight());
-            }
-
-        }
-
-        ASSERT(nWidthPercent, "Impossible");
-        if (nWidthPercent)
-        {
-            nPageSize *= nWidthPercent;
-            nPageSize /= 100;
-        }
-    }
-
-    WW8Bytes aAt( 128, 128 );   // Attribute fuer's Tabellen-Zeilenende
-    SwTwips nTblOffset = 0;
-    USHORT nStdAtLen = rWW8Wrt.StartTableFromFrmFmt(aAt, pFmt, nTblOffset);
-    static const BYTE aNullBytes[] = { 0, 0, 0, 0 };
-
-    SwWriteTable* pTableWrt;
-    const SwHTMLTableLayout *pLayout = rTbl.GetHTMLTableLayout();
-    if( pLayout && pLayout->IsExportable() )
-        pTableWrt = new SwWriteTable( pLayout );
-    else
-    {
-        pTableWrt = new SwWriteTable( rTbl.GetTabLines(), nPageSize,
-            (USHORT)nTblSz, false);
-    }
-
-    const SwFrmFmt *pDefaultFmt = 0;
-    // WW6 / 8 can not have more then 31 / 63 cells
-    const BYTE nMaxCols = rWW8Wrt.bWrtWW8 ? 63 : 31;
-    // rCols are the array of all cols of the table
-    const SwWriteTableCols& rCols = pTableWrt->GetCols();
-    USHORT nColCnt = rCols.Count();
-    SwWriteTableCellPtr* pBoxArr = new SwWriteTableCellPtr[ nColCnt ];
-    USHORT* pRowSpans = new USHORT[ nColCnt ];
-    memset( pBoxArr, 0, sizeof( pBoxArr[0] ) * nColCnt );
-    memset( pRowSpans, 0, sizeof( pRowSpans[0] ) * nColCnt );
-    const SwWriteTableRows& rRows = pTableWrt->GetRows();
-    for( USHORT nLine = 0; nLine < rRows.Count(); ++nLine )
-    {
-        USHORT nBox, nRealBox;
-
-        const SwWriteTableRow *pRow = rRows[ nLine ];
-        const SwWriteTableCells& rCells = pRow->GetCells();
-
-        bool bFixRowHeight = false;
-        USHORT nRealColCnt = 0;
-        USHORT nTotal = rCells.Count();
-        ASSERT(nTotal <= rCols.Count(),
-            "oh oh!,row has more cells than table is wide!");
-        if (nTotal > rCols.Count())
-            nTotal = rCols.Count();
-        for( nColCnt = 0, nBox = 0; nBox < nTotal; ++nColCnt )
-        {
-            ASSERT( nColCnt < rCols.Count(), "Leaving table" );
-
-            SwWriteTableCell* pCell = rCells[nBox];
-            const bool bProcessCoveredCell = bNewTableModel && 0 == pCell->GetRowSpan();
-
-            if( !pRowSpans[ nColCnt ] || bProcessCoveredCell )
-            {
-                // set new BoxPtr
-                nBox++;
-                pBoxArr[ nColCnt ] = pCell;
-                if ( !bProcessCoveredCell )
-                    pRowSpans[ nColCnt ] = pCell->GetRowSpan();
-                for( USHORT nCellSpan = pCell->GetColSpan(), nCS = 1;
-                        nCS < nCellSpan; ++nCS, ++nColCnt )
-                {
-                    ASSERT( nColCnt+1 < rCols.Count(), "More colspan than columns" );
-                    if( nColCnt+1 < rCols.Count() ) // robust against wrong colspans
-                    {
-                        pBoxArr[ nColCnt+1 ] = pBoxArr[ nColCnt ];
-                        pRowSpans[ nColCnt+1 ] = pRowSpans[ nColCnt ];
-                    }
-                }
-                ++nRealColCnt;
-            }
-            else if( !nColCnt || pBoxArr[ nColCnt-1 ] != pBoxArr[ nColCnt ] )
-                ++nRealColCnt;
-
-            if( 1 != pRowSpans[ nColCnt ] && !bNewTableModel )
-                bFixRowHeight = true;
-        }
-
-        for( ; nColCnt < rCols.Count() && pRowSpans[ nColCnt ]; ++nColCnt )
-        {
-            if( !nColCnt || pBoxArr[ nColCnt-1 ] != pBoxArr[ nColCnt ] )
-                ++nRealColCnt;
-            bFixRowHeight = true;
-        }
-        nColCnt = rCols.Count(); // A wrong cellspan-value could cause a nColCnt > rCols.Count()
-
-        if (!bFixRowHeight)
-        {
-            bFixRowHeight = RowContainsProblematicGraphic(pBoxArr, nColCnt,
-                rWW8Wrt);
-        }
-
-        //Winword column export limited to 31/63 cells
-        sal_uInt8 nWWColMax = nRealColCnt > nMaxCols ?
-            nMaxCols : msword_cast<sal_uInt8>(nRealColCnt);
-
-        // Check if this is a repeated row - sprmTTableHeader
-        if( rTbl.GetRowsToRepeat() > nLine)
-        {
-            if( rWW8Wrt.bWrtWW8 )
-                SwWW8Writer::InsUInt16( aAt, 0x3404 );
-            else
-                aAt.Insert( 186, aAt.Count() );
-            aAt.Insert( 1, aAt.Count() );
-        }
-
-        const SwTableLine* pLine = pBoxArr[0]->GetBox()->GetUpper();
-        const SwFrmFmt *pLineFmt = pLine ? pLine->GetFrmFmt() : 0;
-
-        // Zeilenhoehe ausgeben   sprmTDyaRowHeight
-        long nHeight = 0;
-        if( bFixRowHeight )
-        {
-            nHeight = -pRow->GetPos();      //neg. => abs. height!
-            if( nLine )
-                nHeight += rRows[ nLine - 1 ]->GetPos();
-        }
-        else
-        {
-            const SwFmtFrmSize& rLSz = pLineFmt->GetFrmSize();
-            if( ATT_VAR_SIZE != rLSz.GetHeightSizeType() && rLSz.GetHeight() )
-                nHeight = ATT_MIN_SIZE == rLSz.GetHeightSizeType()
-                                                ? rLSz.GetHeight()
-                                                : -rLSz.GetHeight();
-        }
-        if (nHeight)
-        {
-            if( rWW8Wrt.bWrtWW8 )
-                SwWW8Writer::InsUInt16( aAt, 0x9407 );
-            else
-                aAt.Insert( 189, aAt.Count() );
-            SwWW8Writer::InsUInt16( aAt, (USHORT)nHeight );
-        }
-
-        /*
-        By default the row can be split in word, and now in writer we have a
-        feature equivalent to this, Word stores 1 for fCantSplit if the row
-        cannot be split, we set true if we can split it. An example is #i4569#
-        */
-        const SwFmtRowSplit& rSplittable = pLineFmt->GetRowSplit();
-        BYTE nCantSplit = (!rSplittable.GetValue()) ? 1 : 0;
-        if (rWW8Wrt.bWrtWW8)
-        {
-            SwWW8Writer::InsUInt16(aAt, 0x3403);
-			aAt.Insert(nCantSplit, aAt.Count());
-            SwWW8Writer::InsUInt16(aAt, 0x3466); // also write fCantSplit90
-        }
-        else
-		{
-            aAt.Insert(185, aAt.Count());
-		}
-		aAt.Insert(nCantSplit, aAt.Count());
-
-
-        if (rWW8Wrt.bWrtWW8)
-        {
-            if (rWW8Wrt.TrueFrameDirection(*pFmt) == FRMDIR_HORI_RIGHT_TOP)
-            {
-                SwWW8Writer::InsUInt16(aAt, 0x560B);
-                SwWW8Writer::InsUInt16(aAt, 1);
-            }
-        }
-
-        // Inhalt der Boxen ausgeben
-        for( nBox = 0, nRealBox = 0; nBox < nColCnt; ++nBox )
-        {
-            if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
-                continue;
-
-            if (pBoxArr[nBox] && pBoxArr[nBox]->GetRowSpan() == pRowSpans[nBox])
-            {
-                // new Box
-                const SwStartNode* pSttNd = pBoxArr[nBox]->GetBox()->GetSttNd();
-                WW8SaveData aSaveData( rWW8Wrt, pSttNd->GetIndex()+1,
-                                        pSttNd->EndOfSectionIndex() );
-                rWW8Wrt.bOutTable = true;
-                rWW8Wrt.bIsInTable= true;
-                rWW8Wrt.WriteText();
-            }
-            else
-            {
-                rWW8Wrt.bOutTable = true;
-                rWW8Wrt.WriteStringAsPara( aEmptyStr );
-                rWW8Wrt.bOutTable = false;
-            }
-
-            if( nWWColMax < nRealColCnt )
-            {
-                if( nRealBox+1 < nWWColMax || nRealBox+1 == nRealColCnt )
-                    rWW8Wrt.WriteCellEnd(); // SpaltenEnde
-            }
-            else if( nRealBox < nWWColMax )
-                    rWW8Wrt.WriteCellEnd(); // SpaltenEnde
-            ++nRealBox;
-        }
-
-        // das wars mit der Line
-        rWW8Wrt.WriteRowEnd();  // TabellenZeilen-Ende
-
-        if( rWW8Wrt.bWrtWW8 )
-        {
-            // SprmTDefTable
-            // 0+1 - OpCode, 2+3 - Laenge = Cells * (sizeof TC + uint16)
-            // 4 - Cells (max 32!)
-            SwWW8Writer::InsUInt16( aAt, 0xD608 );
-            SwWW8Writer::InsUInt16( aAt, 2 + ( nWWColMax + 1 ) * 2 +
-                                                ( nWWColMax * 20 ));
-            aAt.Insert( nWWColMax, aAt.Count() );               //
-        }
-        else
-        {
-            // SprmTDefTable
-            // 0 - OpCode, 1,2 - Laenge = Cells * (sizeof TC + uint16)
-            // 3 - Cells (max 32!)
-            aAt.Insert( 190, aAt.Count() );
-            SwWW8Writer::InsUInt16( aAt, nWWColMax * 12 + 4 );  // Sprm-Laenge
-            aAt.Insert( nWWColMax, aAt.Count() );               //
-        }
-
-        SwTwips nSz = 0, nCalc;
-#ifdef USE_JAVA
-        nCalc = 0;
-#endif  // USE_JAVA
-        SwWW8Writer::InsUInt16( aAt, (USHORT)nTblOffset );
-
-        for (nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
-        {
-#ifdef USE_JAVA
-            // Fix bug 3449 by testing array bounds
-            if (nBox < nColCnt)
-            {
-#endif  // USE_JAVA
-            if( (nBox > 0 && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ])
-                || pBoxArr[nBox] == NULL)
-                continue;
-
-            const SwFrmFmt* pBoxFmt = pBoxArr[ nBox ]->GetBox()->GetFrmFmt();
-            const SwFmtFrmSize& rLSz = pBoxFmt->GetFrmSize();
-            nSz += rLSz.GetWidth();
-            nCalc = nSz;
-#ifdef USE_JAVA
-            }
-#endif  // USE_JAVA
-            if( bRelBoxSize )
-            {
-                nCalc *= nPageSize;
-                nCalc /= nTblSz;
-            }
-            SwWW8Writer::InsUInt16( aAt, (USHORT)(nTblOffset + nCalc ));
-            ++nRealBox;
-        }
-
-        for (nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
-        {
-#ifdef USE_JAVA
-            // Fix bug 3449 by testing array bounds
-            if (nBox < nColCnt)
-            {
-#endif  // USE_JAVA
-            if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
-                continue;
-            // rgf, erstmal alles 0 - WW8: 4, sonst 2 Byte
-            // write vertikal alignment
-            const SwFrmFmt& rFmt = *pBoxArr[ nBox ]->GetBox()->GetFrmFmt();
-            if( rWW8Wrt.bWrtWW8 )
-            {
-                USHORT nFlags = pBoxArr[ nBox ]->GetRowSpan();
-                if( 1 < nFlags || ( bNewTableModel && 0 == nFlags ) )
-                {
-                    if( nFlags == pRowSpans[ nBox ] )
-                        nFlags = 0x60;      // start a new vert. merge
-                    else
-                        nFlags = 0x20;      // continue a vert. merge
-                }
-                else
-                    nFlags = 0;             // no vert. merge
-
-                switch (rFmt.GetVertOrient().GetVertOrient())
-                {
-                    case text::VertOrientation::CENTER:
-                        nFlags |= 0x080;
-                        break;
-                    case text::VertOrientation::BOTTOM:
-                        nFlags |= 0x100;
-                        break;
-                    default:
-                        break;
-                }
-                SwWW8Writer::InsUInt16( aAt, nFlags );
-            }
-#ifndef USE_JAVA
-            ++nRealBox;
-#endif  // !USE_JAVA
-            aAt.Insert( aNullBytes, 2, aAt.Count() );   // dummy
-            rWW8Wrt.Out_SwFmtTableBox( aAt, rFmt.GetBox() ); // 8/16 Byte
-#ifdef USE_JAVA
-            }
-            ++nRealBox;
-#endif  // USE_JAVA
-        }
-
-        //Cell widths and heights
-        if (rWW8Wrt.bWrtWW8)
-        {
-            if (!pDefaultFmt && nWWColMax)
-                pDefaultFmt = pBoxArr[ 0 ]->GetBox()->GetFrmFmt();
-
-            static USHORT __READONLY_DATA aBorders[] =
-            {
-                BOX_LINE_TOP, BOX_LINE_LEFT,
-                BOX_LINE_BOTTOM, BOX_LINE_RIGHT
-            };
-            const USHORT* pBrd = aBorders;
-
-            //Export non default border spacing
-            for( nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
-            {
-#ifdef USE_JAVA
-                // Fix bug 3449 by testing array bounds
-                if (nBox < nColCnt)
-                {
-#endif  // USE_JAVA
-                if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
-                    continue;
-                const SwFrmFmt& rFmt = *pBoxArr[ nBox ]->GetBox()->GetFrmFmt();
-
-                pBrd = aBorders;
-                for( int i = 0; i < 4; ++i, ++pBrd)
-                {
-                    USHORT nDist = rFmt.GetBox().GetDistance(*pBrd);
-                    if (pDefaultFmt->GetBox().GetDistance(*pBrd) != nDist)
-                    {
-                        SwWW8Writer::InsUInt16(aAt, 0xD632);
-                        aAt.Insert( BYTE(6), aAt.Count() );
-                        aAt.Insert( BYTE(nRealBox), aAt.Count() );
-                        aAt.Insert( BYTE(3), aAt.Count() );
-                        aAt.Insert( BYTE(1 << i), aAt.Count() );
-                        aAt.Insert( BYTE(3), aAt.Count() );
-                        SwWW8Writer::InsUInt16(aAt, nDist);
-                    }
-                }
-#ifdef USE_JAVA
-                }
-#endif  // USE_JAVA
-                ++nRealBox;
-            }
-
-            //Export any vertical direction cells
-            for (nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox)
-            {
-#ifdef USE_JAVA
-                // Fix bug 3449 by testing array bounds
-                if (nBox < nColCnt)
-                {
-#endif  // USE_JAVA
-                if( nBox && pBoxArr[nBox-1] == pBoxArr[nBox])
-                    continue;
-                const SwFrmFmt& rFmt = *pBoxArr[ nBox ]->GetBox()->GetFrmFmt();
-                //a bit lazy, could calculate range of cells with equal
-                //direction to optimize size of exported document
-                if (FRMDIR_VERT_TOP_RIGHT == rWW8Wrt.TrueFrameDirection(rFmt))
-                {
-                    SwWW8Writer::InsUInt16(aAt, 0x7629);
-                    aAt.Insert(BYTE(nBox), aAt.Count());        //start range
-                    aAt.Insert(BYTE(nBox + 1), aAt.Count());    //end range
-                    SwWW8Writer::InsUInt16(aAt, 5); //Equals vertical writing
-                }
-#ifdef USE_JAVA
-                }
-#endif  // USE_JAVA
-                ++nRealBox;
-            }
-
-            //Set Default, just taken from the first cell of the first
-            //row
-            pBrd = aBorders;
-            for( int i = 0; i < 4; ++i, ++pBrd)
-            {
-                SwWW8Writer::InsUInt16(aAt, 0xD634);
-                aAt.Insert( BYTE(6), aAt.Count() );
-                aAt.Insert( BYTE(0), aAt.Count() );
-                aAt.Insert( BYTE(1), aAt.Count() );
-                aAt.Insert( BYTE(1 << i), aAt.Count() );
-                aAt.Insert( BYTE(3), aAt.Count() );
-
-                SwWW8Writer::InsUInt16(aAt,
-                    pDefaultFmt->GetBox().GetDistance(*pBrd));
-            }
-        }
-
-        // Background
-        USHORT nBackg;
-        if( pRow->GetBackground() )
-            // over all boxes!
-            nBackg = nWWColMax;
-        else
-        {
-            nBackg = 0;
-            for( nBox = 0, nRealBox = 0; nRealBox < nWWColMax; ++nBox )
-            {
-#ifdef USE_JAVA
-                // Fix bug 3449 by testing array bounds
-                if (nBox < nColCnt)
-                {
-#endif  // USE_JAVA
-                if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
-                    continue;
-
-                SwWriteTableCell* pCell = pBoxArr[ nBox ];
-                if( pCell->GetBackground() ||
-                    SFX_ITEM_ON == pCell->GetBox()->GetFrmFmt()->
-                    GetItemState( RES_BACKGROUND, false) )
-                    nBackg = nRealBox + 1;
-#ifdef USE_JAVA
-                }
-#endif  // USE_JAVA
-                ++nRealBox;
-            }
-        }
-
-        if( nBackg )
-        {
-            // TableShade, 0(+1) - OpCode, 1(2) - Count * sizeof( SHD ),
-            // 2..(3..) - SHD
-            if( rWW8Wrt.bWrtWW8 )
-                SwWW8Writer::InsUInt16( aAt, 0xD609 );
-            else
-                aAt.Insert( (BYTE)191, aAt.Count() );
-            aAt.Insert( (BYTE)(nBackg * 2), aAt.Count() );  // Len
-
-            Color *pColors = new Color[nBackg];
-
-            const SfxPoolItem* pI;
-            for( nBox = 0, nRealBox = 0; nRealBox < nBackg; ++nBox )
-            {
-#ifdef USE_JAVA
-                // Fix bug 3449 by testing array bounds
-                if (nBox < nColCnt)
-                {
-#endif  // USE_JAVA
-                if( nBox && pBoxArr[ nBox-1 ] == pBoxArr[ nBox ] )
-                    continue;
-
-                SwWriteTableCell* pCell = pBoxArr[ nBox ];
-                if( SFX_ITEM_ON == pCell->GetBox()->GetFrmFmt()->
-                    GetAttrSet().GetItemState( RES_BACKGROUND, false, &pI )
-                    || 0 != ( pI = pCell->GetBackground() )
-                    || 0 != ( pI = pRow->GetBackground() ) )
-                {
-                    pColors[nRealBox] = ((const SvxBrushItem*)pI)->GetColor();
-                }
-                else
-                    pColors[nRealBox] = COL_AUTO;
-#ifdef USE_JAVA
-                }
-#endif  // USE_JAVA
-                ++nRealBox;
-            }
-
-            for(USHORT nI = 0; nI < nBackg; ++nI)
-            {
-                WW8_SHD aShd;
-                rWW8Wrt.TransBrush(pColors[nI], aShd);
-                SwWW8Writer::InsUInt16(aAt, aShd.GetValue());
-            }
-
-            if( rWW8Wrt.bWrtWW8 )
-            {
-                SwWW8Writer::InsUInt16( aAt, 0xD612 );
-                aAt.Insert( (BYTE)(nBackg * 10), aAt.Count() ); // Len
-                for(USHORT nI = 0; nI < nBackg; ++nI)
-                {
-                    SwWW8Writer::InsUInt32(aAt, 0xFF000000);
-                    sal_uInt32 nBgColor = pColors[nI].GetColor();
-                    if (nBgColor == COL_AUTO)
-                        nBgColor = 0xFF000000;
-                    else
-                        nBgColor = wwUtility::RGBToBGR(nBgColor);
-                    SwWW8Writer::InsUInt32(aAt, nBgColor);
-                    SwWW8Writer::InsUInt16(aAt, 0x0000);
-                }
-            }
-
-            delete[] pColors;
-        }
-
-        rWW8Wrt.pPapPlc->AppendFkpEntry( rWrt.Strm().Tell(),
-                                   aAt.Count(), aAt.GetData() );
-        if( aAt.Count() > nStdAtLen )
-            aAt.Remove( nStdAtLen, aAt.Count() - nStdAtLen );
-
-        for( nBox = 0; nBox < nColCnt; ++nBox )
-            --pRowSpans[ nBox ];
-    }
-
-    delete pTableWrt;
-    delete[] pBoxArr;
-    delete[] pRowSpans;
-
-    // Pam hinter die Tabelle verschieben
-    rWW8Wrt.pCurPam->GetPoint()->nNode = *rNode.EndOfSectionNode();
-
-    return rWrt;
-}
 
 bool SwWW8Writer::NoPageBreakSection(const SfxItemSet* pSet)
 {

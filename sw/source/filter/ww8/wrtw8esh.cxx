@@ -109,6 +109,7 @@
 // --> OD 2007-07-24 #148096#
 #include <ndtxt.hxx>
 // <--
+#include "WW8FFData.hxx"
 
 using namespace com::sun::star;
 using namespace sw::util;
@@ -200,13 +201,13 @@ void SwWW8Writer::DoComboBox(const rtl::OUString &rName,
     if (!bWrtWW8)
         return;
     OutField(0, ww::eFORMDROPDOWN, FieldString(ww::eFORMDROPDOWN),
-        WRITEFIELD_START | WRITEFIELD_CMD_START);
+             WRITEFIELD_START | WRITEFIELD_CMD_START);
     // write the refence to the "picture" structure
     ULONG nDataStt = pDataStrm->Tell();
     pChpPlc->AppendFkpEntry( Strm().Tell() );
-
+    
     WriteChar( 0x01 );
-
+    
     static BYTE aArr1[] =
     {
         0x03, 0x6a, 0,0,0,0,    // sprmCPicLocation
@@ -216,152 +217,30 @@ void SwWW8Writer::DoComboBox(const rtl::OUString &rName,
     };
     BYTE* pDataAdr = aArr1 + 2;
     Set_UInt32( pDataAdr, nDataStt );
-
+    
     pChpPlc->AppendFkpEntry(Strm().Tell(), sizeof(aArr1), aArr1);
-
+    
     OutField(0, ww::eFORMDROPDOWN, FieldString(ww::eFORMDROPDOWN),
-        WRITEFIELD_CLOSE);
-
-    static const sal_uInt8 aComboData1[] =
+             WRITEFIELD_CLOSE);
+    
+    ::sw::WW8FFData aFFData;
+    
+    aFFData.setType(2); 
+    aFFData.setName(rName);
+    aFFData.setHelp(rHelp);
+    aFFData.setStatus(rToolTip);
+    
+    sal_uInt32 nListItems = rListItems.getLength();
+    
+    for (sal_uInt32 i = 0; i < nListItems; i++)
     {
-        0,0,0,0,        // len of struct
-        0x44,0,         // the start of "next" data
-        0,0,0,0,0,0,0,0,0,0,                // PIC-Structure!
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,                            // /
-    };
-    pDataStrm->Write( aComboData1, sizeof(aComboData1) );
-
-    static const sal_uInt8 aComboData2[] =
-    {
-        0xFF, 0xFF, 0xFF, 0xFF
-    };
-    pDataStrm->Write( aComboData2, sizeof(aComboData2) );
-
-    sal_uInt8 nHeaderByte = 0xe2;
-    sal_uInt32 nNoStrings = rListItems.getLength();
-    if (nNoStrings)
-    {
-        bool bSelectedDone = false;
-        sal_uInt32 i;
-
-        for ( i = 0; i < nNoStrings; ++i)
-        {
-            if (rSelected == rListItems[i])
-            {
-                bSelectedDone = true;
-                i++;
-                break;
-            }
-        }
-        if (bSelectedDone && i <= 0x3F) //only 6 bit available for selected item
-        {
-            nHeaderByte |= (i << 2);
-        }
+        if (i < 0x20 && rSelected == rListItems[i])
+            aFFData.setResult(::sal::static_int_cast<sal_uInt8>(i));
+        aFFData.addListboxEntry(rListItems[i]);
     }
+        
+    aFFData.Write(pDataStrm);    
 
-    *pDataStrm << nHeaderByte;
-
-    sal_uInt8 aComboData9[] =
-    {
-        0x80, 0x00, 0x00, 0x00, 0x00
-    };
-
-    if (rToolTip.getLength() > 0)
-        aComboData9[0] |= 1;
-
-    pDataStrm->Write( aComboData9, sizeof(aComboData9) );
-
-    sal_uInt16 nLen = msword_cast<sal_uInt16>(rName.getLength());
-    *pDataStrm << nLen;
-    WriteString16(*pDataStrm, rName, true);
-
-    static const sal_uInt8 aComboData3[] =
-    {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
-    pDataStrm->Write( aComboData3, sizeof(aComboData3) );
-
-    nLen = msword_cast<sal_uInt16>(rHelp.getLength());
-    *pDataStrm << nLen;
-    WriteString16(*pDataStrm, rHelp, true);
-
-    nLen = msword_cast<sal_uInt16>(rToolTip.getLength());
-    if (nLen > 0)
-    {
-        *pDataStrm << nLen;
-        WriteString16(*pDataStrm, rToolTip, true);
-    }
-
-    static const sal_uInt8 aComboData4[] =
-    {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0xff, 0xff
-    };
-
-    pDataStrm->Write( aComboData4, sizeof(aComboData4) );
-    *pDataStrm << nNoStrings;
-    if (!nNoStrings)
-        *pDataStrm << sal_uInt16(0);
-    else
-    {
-        for (sal_uInt32 i = 0; i < nNoStrings; ++i)
-        {
-            const rtl::OUString &rItem = rListItems[i];
-            sal_uInt16 nStrLen = msword_cast<sal_uInt16>(rItem.getLength());
-            *pDataStrm << nStrLen;
-            WriteString16(*pDataStrm, rItem, false);
-        }
-    }
-
-    SwWW8Writer::WriteLong( *pDataStrm, nDataStt,
-        pDataStrm->Tell() - nDataStt );
-}
-
-static bool lcl_HasPropertyNonEmpty
-(uno::Reference<beans::XPropertySet> xPropSet,
- const rtl::OUString & sPropName)
-{
-    bool bResult = false;
-
-    uno::Reference<beans::XPropertySetInfo> xPropSetInfo =
-        xPropSet->getPropertySetInfo();
-
-    if (xPropSetInfo->hasPropertyByName(sPropName))
-    {
-        uno::Any aTmp(xPropSet->getPropertyValue(sPropName));
-        const rtl::OUString * pStr = (const rtl::OUString *)aTmp.getValue();
-
-        if (pStr && pStr->getLength() > 0)
-            bResult = true;
-    }
-
-    return bResult;
-}
-
-static void lcl_WW8WriteProperty(uno::Reference<beans::XPropertySet> xPropSet,
-                                 SvStream * pDataStrm,
-                                 const rtl::OUString & sPropName)
-{
-    uno::Reference<beans::XPropertySetInfo> xPropSetInfo =
-        xPropSet->getPropertySetInfo();
-
-    const rtl::OUString * pStr = NULL;
-    uno::Any aTmp;
-
-    if (xPropSetInfo->hasPropertyByName(sPropName))
-    {
-        aTmp = xPropSet->getPropertyValue(sPropName);
-        pStr = (const rtl::OUString *)aTmp.getValue();
-    }
-    sal_uInt16 nLen = pStr ? msword_cast<sal_uInt16>(pStr->getLength()) : 0;
-    *pDataStrm << nLen;
-    if (pStr)
-        SwWW8Writer::WriteString16(*pDataStrm, String(*pStr), true);
-    else
-        SwWW8Writer::WriteString16(*pDataStrm, aEmptyStr, true);
 }
 
 void SwWW8Writer::DoCheckBox(uno::Reference<beans::XPropertySet> xPropSet)
@@ -388,82 +267,56 @@ void SwWW8Writer::DoCheckBox(uno::Reference<beans::XPropertySet> xPropSet)
 
     pChpPlc->AppendFkpEntry(Strm().Tell(),
                 sizeof( aArr1 ), aArr1 );
-
-    static const sal_uInt8 aComboData1[] =
-    {
-        0,0,0,0,        // len of struct
-        0x44,0,         // the start of "next" data
-        0,0,0,0,0,0,0,0,0,0,                // PIC-Structure!
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,                            // /
-    };
-    pDataStrm->Write( aComboData1, sizeof(aComboData1) );
-
-    static const sal_uInt8 aComboData2[] =
-    {
-        0xFF, 0xFF, 0xFF, 0xFF
-    };
-    pDataStrm->Write( aComboData2, sizeof(aComboData2) );
-
+                
+    ::sw::WW8FFData aFFData;
+    
+    aFFData.setType(1);
+    aFFData.setCheckboxHeight(0x14);
+    
     sal_Int16 nTemp = 0;
     xPropSet->getPropertyValue(C2U("DefaultState")) >>= nTemp;
     sal_uInt32 nIsDefaultChecked(nTemp);
 
     xPropSet->getPropertyValue(C2U("State")) >>= nTemp;
     sal_uInt32 nIsChecked(nTemp);
-    sal_uInt8 nHeaderByte = 0xe5;
+
     if (nIsDefaultChecked != nIsChecked)
     {
         switch (nIsChecked)
         {
             case false:
-                nHeaderByte = 0x1;
+                aFFData.setResult(0);
                 break;
             case true:
-                nHeaderByte = 0x5;
+                aFFData.setResult(1);
                 break;
             default:
                 ASSERT(!this, "how did that happen");
         }
     }
-    *pDataStrm << nHeaderByte;
-
-    sal_uInt8 aComboData5[] =
+    
+    ::rtl::OUString aStr;
+    static ::rtl::OUString sName(C2U("Name"));
+    if (xPropSetInfo->hasPropertyByName(sName))
     {
-        0x04, 0x00, 0x00, 0x14, 0x00
-    };
+        xPropSet->getPropertyValue(sName) >>= aStr;
+        aFFData.setName(aStr);
+    }
 
-    const rtl::OUString sHelpText(C2U("HelpText"));
-    if (lcl_HasPropertyNonEmpty(xPropSet, sHelpText))
-        aComboData5[0] |= 0x1;
-
-    pDataStrm->Write( aComboData5, sizeof(aComboData5) );
-
-    lcl_WW8WriteProperty(xPropSet, pDataStrm, C2U("Name"));
-
-    *pDataStrm << nIsDefaultChecked;
-
-    static const sal_uInt8 aComboData3[] =
+    static ::rtl::OUString sHelpText(C2U("HelpText"));
+    if (xPropSetInfo->hasPropertyByName(sHelpText))
     {
-        0x00, 0x00
-    };
-
-    pDataStrm->Write( aComboData3, sizeof(aComboData3) );
-
-    lcl_WW8WriteProperty(xPropSet, pDataStrm, C2U("HelpF1Text"));
-    lcl_WW8WriteProperty(xPropSet, pDataStrm, sHelpText);
-
-    static const sal_uInt8 aComboData4[] =
+        xPropSet->getPropertyValue(sHelpText) >>= aStr;
+        aFFData.setHelp(aStr);
+    }
+    static ::rtl::OUString sHelpF1Text(C2U("HelpF1Text"));
+    if (xPropSetInfo->hasPropertyByName(sHelpF1Text))
     {
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
-    };
+        xPropSet->getPropertyValue(sHelpF1Text) >>= aStr;
+        aFFData.setStatus(aStr);
+    }
 
-    pDataStrm->Write( aComboData4, sizeof(aComboData4) );
-
-    SwWW8Writer::WriteLong( *pDataStrm, nDataStt,
-        pDataStrm->Tell() - nDataStt );
+    aFFData.Write(pDataStrm);
 
     OutField(0, ww::eFORMCHECKBOX, aEmptyStr, WRITEFIELD_CLOSE);
 }
@@ -490,64 +343,13 @@ void SwWW8Writer::DoFormText(const SwInputField * pFld)
     pChpPlc->AppendFkpEntry(Strm().Tell(),
                 sizeof( aArr1 ), aArr1 );
 
-    static const sal_uInt8 aComboData1[] =
-    {
-        0,0,0,0,        // len of struct
-        0x44,0,         // the start of "next" data
-        0,0,0,0,0,0,0,0,0,0,                // PIC-Structure!
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,    //  |
-        0,0,0,0                            // /
-    };
-    pDataStrm->Write( aComboData1, sizeof(aComboData1) );
-
-    sal_uInt8 aComboData2[] =
-    {
-        0xFF, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0, 0, 0
-    };
-
-    if (pFld->GetToolTip().Len() > 0)
-        aComboData2[5] |= 0x1;
-
-    pDataStrm->Write( aComboData2, sizeof(aComboData2) );
-
-    rtl::OUString aStr = pFld->GetPar2();
-    sal_uInt16 nLen = msword_cast<sal_uInt16>(aStr.getLength());
-    *pDataStrm << nLen;
-    WriteString16(*pDataStrm, aStr, true);
-
-    aStr = rtl::OUString();//aEmptyStr; //pFld->GetPar1();
-    nLen = msword_cast<sal_uInt16>(aStr.getLength());
-    *pDataStrm << nLen;
-    WriteString16(*pDataStrm, aStr, true);
-
-    aStr = pFld->GetHelp();
-    nLen = msword_cast<sal_uInt16>(aStr.getLength());
-    *pDataStrm << nLen;
-    WriteString16(*pDataStrm, aStr, true);
-
-    nLen = 0;
-    *pDataStrm << nLen;
-    WriteString16(*pDataStrm, aEmptyStr, true);
-
-    aStr = pFld->GetToolTip();
-    if (aStr.getLength() > 0)
-    {
-        nLen = msword_cast<sal_uInt16>(aStr.getLength());
-        *pDataStrm << nLen;
-        WriteString16(*pDataStrm, aStr, true);
-    }
-
-    static sal_uInt8 aComboData3[] =
-    {
-        0, 0, 0, 0, 0, 0, 0, 0
-    };
-
-    pDataStrm->Write( aComboData3, sizeof(aComboData3) );
-
-    SwWW8Writer::WriteLong( *pDataStrm, nDataStt,
-        pDataStrm->Tell() - nDataStt );
+    ::sw::WW8FFData aFFData;
+    
+    aFFData.setType(0);
+    aFFData.setName(pFld->GetPar2());
+    aFFData.setHelp(pFld->GetHelp());
+    aFFData.setStatus(pFld->GetToolTip());
+    aFFData.Write(pDataStrm);
 
     OutField(0, ww::eFORMTEXT, aEmptyStr, WRITEFIELD_CMD_END);
 
@@ -1361,76 +1163,77 @@ void SwWW8Writer::WriteSdrTextObj(const SdrObject& rObj, BYTE nTyp)
     if (!pTxtObj)
         return;
 
+    if (const OutlinerParaObject* pParaObj = sw::hack::GetOutlinerParaObject(*pTxtObj))
+        WriteOutliner(*pParaObj, nTyp);
+}
+
+void SwWW8Writer::WriteOutliner(const OutlinerParaObject& rParaObj, BYTE nTyp)
+{
     bool bAnyWrite = false;
-    const OutlinerParaObject* pParaObj =
-        sw::hack::GetOutlinerParaObject(*pTxtObj);
-    if (pParaObj)
+    const EditTextObject& rEditObj = rParaObj.GetTextObject();
+    WW8_SdrAttrIter aAttrIter( *this, rEditObj, nTyp );
+
+    USHORT nPara = rEditObj.GetParagraphCount();
+    BYTE bNul = 0;
+    for( USHORT n = 0; n < nPara; ++n )
     {
-        const EditTextObject& rEditObj = pParaObj->GetTextObject();
-        WW8_SdrAttrIter aAttrIter( *this, rEditObj, nTyp );
+        if( n )
+            aAttrIter.NextPara( n );
 
-        USHORT nPara = rEditObj.GetParagraphCount();
-        BYTE bNul = 0;
-        for( USHORT n = 0; n < nPara; ++n )
-        {
-            if( n )
-                aAttrIter.NextPara( n );
+        rtl_TextEncoding eChrSet = aAttrIter.GetNodeCharSet();
 
-            rtl_TextEncoding eChrSet = aAttrIter.GetNodeCharSet();
+        ASSERT( !pO->Count(), " pO ist am Zeilenanfang nicht leer" );
 
-            ASSERT( !pO->Count(), " pO ist am Zeilenanfang nicht leer" );
+        String aStr( rEditObj.GetText( n ));
+        xub_StrLen nAktPos = 0;
+        xub_StrLen nEnd = aStr.Len();
+        do {
+            xub_StrLen nNextAttr = aAttrIter.WhereNext();
+            rtl_TextEncoding eNextChrSet = aAttrIter.GetNextCharSet();
 
-            String aStr( rEditObj.GetText( n ));
-            xub_StrLen nAktPos = 0;
-            xub_StrLen nEnd = aStr.Len();
-            do {
-                xub_StrLen nNextAttr = aAttrIter.WhereNext();
-                rtl_TextEncoding eNextChrSet = aAttrIter.GetNextCharSet();
+            if( nNextAttr > nEnd )
+                nNextAttr = nEnd;
 
-                if( nNextAttr > nEnd )
-                    nNextAttr = nEnd;
+            bool bTxtAtr = aAttrIter.IsTxtAttr( nAktPos );
+            if( !bTxtAtr )
+                OutSwString( aStr, nAktPos, nNextAttr - nAktPos,
+                                true, eChrSet );
 
-                bool bTxtAtr = aAttrIter.IsTxtAttr( nAktPos );
-                if( !bTxtAtr )
-                    OutSwString( aStr, nAktPos, nNextAttr - nAktPos,
-                                    true, eChrSet );
+                        // Am Zeilenende werden die Attribute bis ueber das CR
+                        // aufgezogen. Ausnahme: Fussnoten am Zeilenende
+            if( nNextAttr == nEnd && !bTxtAtr )
+                WriteCR();              // CR danach
 
-                            // Am Zeilenende werden die Attribute bis ueber das CR
-                            // aufgezogen. Ausnahme: Fussnoten am Zeilenende
-                if( nNextAttr == nEnd && !bTxtAtr )
-                    WriteCR();              // CR danach
-
-                                                // Ausgabe der Zeichenattribute
-                aAttrIter.OutAttr( nAktPos );   // nAktPos - 1 ??
-                pChpPlc->AppendFkpEntry( Strm().Tell(),
-                                                pO->Count(), pO->GetData() );
-                pO->Remove( 0, pO->Count() );                   // leeren
-
-                            // Ausnahme: Fussnoten am Zeilenende
-                if( nNextAttr == nEnd && bTxtAtr )
-                    WriteCR();              // CR danach
-
-                nAktPos = nNextAttr;
-                eChrSet = eNextChrSet;
-                aAttrIter.NextPos();
-            }
-            while( nAktPos < nEnd );
-
-            ASSERT( !pO->Count(), " pO ist am ZeilenEnde nicht leer" );
-
-            pO->Insert( bNul, pO->Count() );        // Style # as short
-            pO->Insert( bNul, pO->Count() );
-
-            aAttrIter.OutParaAttr(false);
-
-            ULONG nPos = Strm().Tell();
-            pPapPlc->AppendFkpEntry( Strm().Tell(),
+                                            // Ausgabe der Zeichenattribute
+            aAttrIter.OutAttr( nAktPos );   // nAktPos - 1 ??
+            pChpPlc->AppendFkpEntry( Strm().Tell(),
                                             pO->Count(), pO->GetData() );
-            pO->Remove( 0, pO->Count() );                       // leeren
-            pChpPlc->AppendFkpEntry( nPos );
+            pO->Remove( 0, pO->Count() );                   // leeren
+
+                        // Ausnahme: Fussnoten am Zeilenende
+            if( nNextAttr == nEnd && bTxtAtr )
+                WriteCR();              // CR danach
+            nAktPos = nNextAttr;
+            eChrSet = eNextChrSet;
+            aAttrIter.NextPos();
         }
-        bAnyWrite = 0 != nPara;
+        while( nAktPos < nEnd );
+
+        ASSERT( !pO->Count(), " pO ist am ZeilenEnde nicht leer" );
+
+        pO->Insert( bNul, pO->Count() );        // Style # as short
+        pO->Insert( bNul, pO->Count() );
+
+        aAttrIter.OutParaAttr(false);
+
+        ULONG nPos = Strm().Tell();
+        pPapPlc->AppendFkpEntry( Strm().Tell(),
+                                        pO->Count(), pO->GetData() );
+        pO->Remove( 0, pO->Count() );                       // leeren
+        pChpPlc->AppendFkpEntry( nPos );
     }
+
+    bAnyWrite = 0 != nPara;
     if( !bAnyWrite )
         WriteStringAsPara( aEmptyStr );
 }
@@ -2913,8 +2716,11 @@ void SwEscherEx::WriteOCXControl( const SwFrmFmt& rFmt, UINT32 nShapeId )
         // SdrExchangeView aExchange(pModel, pDevice);
         SdrView aExchange(pModel, pDevice);
 
-		Graphic aGraphic(aExchange.GetObjGraphic(pModel,
-            const_cast<SdrObject*>(pSdrObj)));
+#if SUPD == 300
+		Graphic aGraphic(aExchange.GetObjGraphic(pModel, (SdrObject *)pSdrObj));
+#else   //  SUPD == 300
+		Graphic aGraphic(aExchange.GetObjGraphic(pModel, pSdrObj));
+#endif  //  SUPD == 300
 
         EscherPropertyContainer aPropOpt;
         WriteOLEPicture(aPropOpt, 0xa00 | SHAPEFLAG_OLESHAPE, aGraphic,
