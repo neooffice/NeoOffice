@@ -462,6 +462,7 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 		maBadATUSFontIDMap[ pFontData->mnATSUFontID ] = pFontData->mnATSUFontID;
 	}
 
+#ifdef DISABLE_BAD_FONT_FAMILY
 	// Find any fonts that have the same family as the current font and mark
 	// those as bad fonts
 	SalData *pSalData = GetSalData();
@@ -477,6 +478,7 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 			}
 		}
 	}
+#endif	// DISABLE_BAD_FONT_FAMILY
 
 	// Fix bug 3576 by updating the fonts after all currently queued
 	// event are dispatched
@@ -747,13 +749,11 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 {
 	if ( mpVCLFont )
 	{
-		pMetric->mnWidth = mpVCLFont->getSize();
+		// Fix bug 3446 by only overriding the width if it is positive
+		long nWidth = pMetric->mnWidth = mpVCLFont->getSize();
+		if ( nWidth >= 0 )
+			pMetric->mnWidth = nWidth;
 		pMetric->mnOrientation = mpVCLFont->getOrientation();
-	}
-	else
-	{
-		pMetric->mnWidth = 0;
-		pMetric->mnOrientation = 0;
 	}
 
 	if ( mpFontData )
@@ -779,8 +779,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 				// Fix bug 3446 by treating a font that don't have horizontal
 				// metrics as a bad font
 				JavaImplFontData::HandleBadFont( mpFontData );
-				pMetric->mnAscent = 0;
-				pMetric->mnDescent = 0;
 			}
 
 			// Fix bug 3446 by preventing abnormal values being returned
@@ -807,8 +805,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	}
 	else
 	{
-		pMetric->mnAscent = 0;
-		pMetric->mnDescent = 0;
 		pMetric->mbDevice = false;
 		pMetric->mbScalableFont = false;
 		pMetric->maName = String();
