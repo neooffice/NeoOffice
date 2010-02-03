@@ -192,6 +192,24 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !aPSName.getLength() )
 								continue;
 
+							// Get the font family name
+							CFStringRef aFamilyString = NSFont_familyName( pNSFont );
+							if ( !aFamilyString )
+								continue;
+
+							CFIndex nFamilyLen = CFStringGetLength( aFamilyString );
+							CFRange aFamilyRange = CFRangeMake( 0, nFamilyLen );
+							sal_Unicode pFamilyBuffer[ nFamilyLen + 1 ];
+							CFStringGetCharacters( aFamilyString, aFamilyRange, pFamilyBuffer );
+							pFamilyBuffer[ nFamilyLen ] = 0;
+							CFRelease( aFamilyString );
+
+							// Ignore empty family names or family names that
+							// start with a "."
+							OUString aFamilyName( pFamilyBuffer );
+							if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
+								continue;
+
 							sal_IntPtr nNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
 								continue;
@@ -285,7 +303,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							aAttributes.mbSubsettable = true;
 							aAttributes.mbEmbeddable = false;
 
-							JavaImplFontData *pFontData = new JavaImplFontData( aAttributes, aPSName, nNativeFont );
+							JavaImplFontData *pFontData = new JavaImplFontData( aAttributes, aPSName, nNativeFont, aFamilyName );
 							pSalData->maFontNameMapping[ aXubDisplayName ] = pFontData;
 
 							// Multiple native fonts can map to the same font
@@ -427,17 +445,40 @@ static void RunNativeFontsTimerCallback()
 
 // -----------------------------------------------------------------------
 
-void JavaImplFontData::HandleBadFont( sal_IntPtr nATSUFontID )
+void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 {
+	if ( !pFontData )
+		return;
+
 	// Fix bug 3446 by reloading native fonts without any known bad fonts
-	::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = maBadATUSFontIDMap.find( nATSUFontID );
+	bool bReloadFonts = false;
+	::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = maBadATUSFontIDMap.find( pFontData->mnATSUFontID );
 	if ( bit == maBadATUSFontIDMap.end() )
 	{
-		maBadATUSFontIDMap[ nATSUFontID ] = nATSUFontID;
-		// Fix bug 3576 by updating the fonts after all currently queued
-		// event are dispatched
-		Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
+		bReloadFonts = true;
+		maBadATUSFontIDMap[ pFontData->mnATSUFontID ] = pFontData->mnATSUFontID;
 	}
+
+	// Find any fonts that have the same family as the current font and mark
+	// those as bad fonts
+	SalData *pSalData = GetSalData();
+	for ( ::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.begin(); it != pSalData->maFontNameMapping.end(); ++it )
+	{
+		if ( it->second->maFamilyName == pFontData->maFamilyName )
+		{
+			bit = maBadATUSFontIDMap.find( it->second->mnATSUFontID );
+			if ( bit == maBadATUSFontIDMap.end() )
+			{
+				bReloadFonts = true;
+				maBadATUSFontIDMap[ it->second->mnATSUFontID ] = it->second->mnATSUFontID;
+			}
+		}
+	}
+
+	// Fix bug 3576 by updating the fonts after all currently queued
+	// event are dispatched
+	if ( bReloadFonts )
+		Application::PostUserEvent( STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ) );
 }
 
 // -----------------------------------------------------------------------
@@ -450,7 +491,7 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCall
 
 // -----------------------------------------------------------------------
 
-JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, OUString aVCLFontName, sal_IntPtr nATSUFontID ) : ImplFontData( rAttributes, 0 ), maVCLFontName( aVCLFontName ), mnATSUFontID( nATSUFontID )
+JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, const OUString& rVCLFontName, sal_IntPtr nATSUFontID, const OUString& rFamilyName ) : ImplFontData( rAttributes, 0 ), maVCLFontName( rVCLFontName ), mnATSUFontID( nATSUFontID ), maFamilyName( rFamilyName )
 {
 
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
@@ -482,7 +523,7 @@ ImplFontEntry* JavaImplFontData::CreateFontInstance( ImplFontSelectData& rData )
 
 ImplFontData* JavaImplFontData::Clone() const
 {
-	return new JavaImplFontData( *this, maVCLFontName, mnATSUFontID );
+	return new JavaImplFontData( *this, maVCLFontName, mnATSUFontID, maFamilyName );
 }
 
 // -----------------------------------------------------------------------
@@ -734,7 +775,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 			{
 				// Fix bug 3446 by treating a font that don't have horizontal
 				// metrics as a bad font
-				JavaImplFontData::HandleBadFont( mpFontData->mnATSUFontID );
+				JavaImplFontData::HandleBadFont( mpFontData );
 				pMetric->mnAscent = 0;
 				pMetric->mnDescent = 0;
 			}
