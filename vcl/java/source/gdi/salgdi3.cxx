@@ -722,18 +722,6 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 		mbFontItalic = ( pFont->GetSlant() == ITALIC_OBLIQUE || pFont->GetSlant() == ITALIC_NORMAL );
 		mnFontPitch = pFont->GetPitch();
 
-		// Clone the new font data and make it a child of the requested font
-		// data so that it will eventually get deleted
-		if ( pFont->mpFontData != pFontData )
-		{
-			JavaImplFontData *pChildFontData = (JavaImplFontData *)pFontData->Clone();
-			if ( pChildFontData )
-			{
-				((JavaImplFontData *)pFont->mpFontData)->maChildren.push_back( pChildFontData );
-				pFont->mpFontData = pChildFontData;
-			}
-		}
-
 		// Fix bug 3446 by checking if the new font is a bad font
 		if ( mpVCLFont->getNativeFont() != nOldNativeFont )
 		{
@@ -760,6 +748,18 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 					if ( bit == JavaImplFontData::maBadATUSFontIDMap.end() )
 						break;
 				}
+			}
+		}
+
+		// Clone the new font data and make it a child of the requested font
+		// data so that it will eventually get deleted
+		if ( pFont->mpFontData != pFontData )
+		{
+			JavaImplFontData *pChildFontData = (JavaImplFontData *)pFontData->Clone();
+			if ( pChildFontData )
+			{
+				((JavaImplFontData *)pFont->mpFontData)->maChildren.push_back( pChildFontData );
+				pFont->mpFontData = pChildFontData;
 			}
 		}
 	}
