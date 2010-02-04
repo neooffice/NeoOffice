@@ -770,7 +770,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	{
 		// No need to clone as the select data is merely temporary data in
 		// fallback levels
-		pFont->mpFontData = pFontData;
+		pFont->mpFontData = (JavaImplFontData *)pFontData;
 	}
 
 	return 0;
