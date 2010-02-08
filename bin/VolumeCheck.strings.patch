@@ -1,2 +1,3 @@
 "16" = "A $(PRODUCT_NAME) $(PRODUCT_VERSION) installation could not be found in this volume's /Applications folder. $(PRODUCT_NAME) $(PRODUCT_VERSION) must be installed in the /Applications folder before you can install this patch.";
+"17" = "The $(PRODUCT_NAME) version in this volume is too old for this patch. $(PRODUCT_NAME) $(PRODUCT_VERSION) must be installed in the /Applications folder before you can install this patch.";
 
