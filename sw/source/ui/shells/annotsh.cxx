@@ -123,11 +123,7 @@
 #include <langhelper.hxx>
 
 #ifdef USE_JAVA
-
-// Uncomment the following to test dictionary lookup by selecting the
-// Default Formatting popup menu
-// #define TEST_DICTIONARY_LOOKUP_SERVICE
-
+#include <macdictlookup.hxx>
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star;
@@ -459,8 +455,8 @@ void SwAnnotationShell::Exec( SfxRequest &rReq )
             pOLV->SetAttribs(aAttr);
 			break;
         }
-#ifdef TEST_DICTIONARY_LOOKUP_SERVICE
-		case SID_ATTR_CHAR_WEIGHT:
+#ifdef USE_JAVA
+		case FN_LOOKUP_IN_MACOSX_DICTIONARY:
 		{
 			ESelection aSel( pOLV->GetEditView().GetSelection() );
 			String aText( pOLV->GetEditView().GetEditEngine()->GetWord( aSel.nStartPara, aSel.nStartPos ) );
@@ -471,10 +467,12 @@ void SwAnnotationShell::Exec( SfxRequest &rReq )
 				aSel.nEndPos = aSel.nStartPos;
 				pOLV->GetEditView().SetSelection( aSel );
 				pOLV->GetEditView().SelectCurrentWord();
+
+				LookupInMacDict( aText );
 			}
 			break;
 		}
-#endif	// TEST_DICTIONARY_LOOKUP_SERVICE
+#endif	// USE_JAVA
 	}
 
     if(nEEWhich && pNewAttrs)

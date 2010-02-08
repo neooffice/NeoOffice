@@ -131,7 +131,7 @@ SHL1STDLIBS+= $(ADVAPI32LIB)
 .ENDIF # WNT
 
 .IF "$(GUIBASE)"=="java"
-SHL1STDLIBS+=-framework CoreFoundation
+SHL1STDLIBS+=-framework CoreFoundation -framework AppKit
 .ENDIF		# "$(GUIBASE)"=="java"
 
 SHL1DEF=    $(MISC)$/$(SHL1TARGET).def

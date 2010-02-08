@@ -160,11 +160,7 @@
 #include <langhelper.hxx>
 
 #ifdef USE_JAVA
-
-// Uncomment the following to test dictionary lookup by selecting the
-// Default Formatting popup menu
-// #define TEST_DICTIONARY_LOOKUP_SERVICE
-
+#include <macdictlookup.hxx>
 #endif	// USE_JAVA
 
 using namespace ::com::sun::star;
@@ -511,7 +507,6 @@ void SwTextShell::Execute(SfxRequest &rReq)
             GetView().ExecuteInsertDoc( rReq, pItem );
 			break;
         }
-#ifndef TEST_DICTIONARY_LOOKUP_SERVICE
 		case FN_FORMAT_RESET:
 		{
 			// #i78856, reset all attributes but not the language attributes
@@ -546,7 +541,6 @@ void SwTextShell::Execute(SfxRequest &rReq)
 			rReq.Done();
 			break;
 		}
-#endif	// !TEST_DICTIONARY_LOOKUP_SERVICE
 		case FN_INSERT_BREAK_DLG:
 		{
             USHORT nKind=0, nPageNumber=0;
@@ -1324,8 +1318,8 @@ void SwTextShell::Execute(SfxRequest &rReq)
         delete pDialog;
     }
     break;
-#ifdef TEST_DICTIONARY_LOOKUP_SERVICE
-    case FN_FORMAT_RESET:
+#ifdef USE_JAVA
+    case FN_LOOKUP_IN_MACOSX_DICTIONARY:
     {
         SwWrtShell &rSh = GetShell();
         SwPosition aPoint( *rSh.GetCrsr()->GetPoint() );
@@ -1364,13 +1358,15 @@ void SwTextShell::Execute(SfxRequest &rReq)
                         rSh.ClearMark();
                         rSh.SttSelect();
                         rSh.ExtendSelection( TRUE, nLen );
+
+                        LookupInMacDict( aText );
                     }
                 }
             }
         }
     }
     break;
-#endif	// TEST_DICTIONARY_LOOKUP_SERVICE
+#endif	 // USE_JAVA
     default:
 		ASSERT(!this, falscher Dispatcher);
 		return;

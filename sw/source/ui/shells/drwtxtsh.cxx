@@ -111,11 +111,7 @@
 #include <cppuhelper/bootstrap.hxx>
 
 #ifdef USE_JAVA
-
-// Uncomment the following to test dictionary lookup by selecting the
-// Default Formatting popup menu
-// #define TEST_DICTIONARY_LOOKUP_SERVICE
-
+#include <macdictlookup.hxx>
 #endif	// USE_JAVA
 
 
@@ -551,7 +547,6 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 		}
 		break;
 
-#ifndef TEST_DICTIONARY_LOOKUP_SERVICE
 		case FN_FORMAT_RESET:	// Harte Textattributierung l�schen
 		{
             pOLV->RemoveAttribsKeepLanguages( true );
@@ -559,7 +554,6 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 			rReq.Done();
 		}
 		break;
-#endif	// !TEST_DICTIONARY_LOOKUP_SERVICE
 
 		case FN_ESCAPE:
 			if (pSdrView->IsTextEdit())
@@ -600,8 +594,8 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 			}
 			break;
 
-#ifdef TEST_DICTIONARY_LOOKUP_SERVICE
-		case FN_FORMAT_RESET:
+#ifdef USE_JAVA
+		case FN_LOOKUP_IN_MACOSX_DICTIONARY:
 			{
 				ESelection aSel( pOLV->GetEditView().GetSelection() );
 				String aText( pOLV->GetEditView().GetEditEngine()->GetWord( aSel.nStartPara, aSel.nStartPos ) );
@@ -612,10 +606,12 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 					aSel.nEndPos = aSel.nStartPos;
 					pOLV->GetEditView().SetSelection( aSel );
 					pOLV->GetEditView().SelectCurrentWord();
+
+					LookupInMacDict( aText );
 				}
 			}
 			break;
-#endif	// TEST_DICTIONARY_LOOKUP_SERVICE
+#endif	// USE_JAVA
 
 		default:
 			ASSERT(!this, "unexpected slot-id");
