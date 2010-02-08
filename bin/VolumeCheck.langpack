@@ -66,6 +66,11 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 `( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -maxdepth 4 -name "*.app" -prune 2>/dev/null ) | sort -u`
 !
 
+	# Use special error message if old product found
+	if [ ! -z "$last_installed_product_found" ] ; then
+		exit 49
+	fi
+
 fi
 
 exit 48

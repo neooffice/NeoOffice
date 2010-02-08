@@ -39,6 +39,7 @@ userinstall="$HOME/Library/Preferences/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAM
 target_file_type="$(TARGET_FILE_TYPE)"
 mdimporter_id="$(NEOLIGHT_MDIMPORTER_ID)"
 qlplugin_id="$(NEOPEEK_QLPLUGIN_ID)"
+last_installed_product_found=
 
 check_installation() {
 
@@ -84,6 +85,10 @@ check_installation() {
 			fi
 		elif [ "$productkey" = "$(PRODUCT_NAME) $(PREVIOUS_PRODUCT_VERSION)" ] ; then
 			return 0
+		fi
+
+		if [ ! -z "$productkey" ] ; then
+			last_installed_product_found="$productkey"
 		fi
 	fi
 
