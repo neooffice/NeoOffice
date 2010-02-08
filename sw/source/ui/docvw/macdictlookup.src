@@ -37,5 +37,22 @@
 
 String STR_LOOKUP_IN_MACOSX_DICTIONARY
 {
+	Text [ da ] = "Slå op i Ordbog";
+	Text [ de ] = "Im Lexikon nachschlagen";
 	Text [ en-US ] = "Look Up in Dictionary";
+	Text [ es ] = "Buscar en el diccionario";
+	Text [ fi ] = "Etsi Sanakirjasta";
+	Text [ fr ] = "Rechercher dans le dictionnaire";
+	Text [ it ] = "Cerca nel dizionario";
+	Text [ ja ] = "辞書で調べる";
+	Text [ ko ] = "사전에서 찾아보기";
+	Text [ nb ] = "Slå opp i Ordliste";
+	Text [ nl ] = "Zoek op in Woordenboek";
+	Text [ pl ] = "Poszukaj w Słowniku";
+	Text [ pt ] = "Procurar no dicionário";
+	Text [ pt-BR ] = "Consultar o Dicionário";
+	Text [ ru ] = "Найти в Словаре";
+	Text [ sv ] = "Slå upp i Ordlista";
+	Text [ zh-CN ] = "在字典中查找";
+	Text [ zh-TW ] = "在字典裡查找";
 };
