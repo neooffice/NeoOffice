@@ -4825,6 +4825,10 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
 						SfxPopupMenuManager *pPopupMenuManager = GetView().GetViewFrame()->GetDispatcher()->Popup( 0, this, &aPixPos );
 						if ( pPopupMenuManager )
 						{
+							((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertSeparator( 0 );
+							((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, GetMacDictLoookupResString( STR_LOOKUP_IN_MACOSX_DICTIONARY ), 0, 0 );
+							((PopupMenu *)pPopupMenuManager->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, FALSE );
+
 							SwWrtShell &rSh = GetView().GetWrtShell();
 							SdrView *pSdrView = rSh.GetDrawView();
     						OutlinerView* pOLV = pSdrView->GetTextEditOutlinerView();
@@ -4833,10 +4837,7 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
 								ESelection aSel( pOLV->GetEditView().GetSelection() );
 								String aText( pOLV->GetEditView().GetEditEngine()->GetWord( aSel.nStartPara, aSel.nStartPos ) );
 								if ( aText.Len() )
-								{
-									((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertSeparator( 0 );
-									((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, GetMacDictLoookupResString( STR_LOOKUP_IN_MACOSX_DICTIONARY ), 0, 0 );
-								}
+									((PopupMenu *)pPopupMenuManager->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, TRUE );
 							}
 							else
 							{
@@ -4868,10 +4869,7 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
 											aText = aText.Copy( nLeft, nLen );
 											nIndex = aNodeText.Search( aText, nIndex > nLen ? nIndex - nLen : 0 );
 											if ( nIndex != STRING_NOTFOUND )
-											{
-												((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertSeparator( 0 );
-												((PopupMenu *)pPopupMenuManager->GetSVMenu())->InsertItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, GetMacDictLoookupResString( STR_LOOKUP_IN_MACOSX_DICTIONARY ), 0, 0 );
-											}
+												((PopupMenu *)pPopupMenuManager->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, TRUE );
 										}
 									}
 								}
