@@ -188,10 +188,6 @@ SvxTableController::SvxTableController( SdrObjEditView* pView, const SdrObject* 
 
 	if( mxTableObj.is() )
 	{
-#ifdef USE_JAVA
-		static_cast< const SdrTableObj* >( pObj )->SetTableController( this );
-#endif	// USE_JAVA
-
 		static_cast< const SdrTableObj* >( pObj )->getActiveCellPos( maCursorFirstPos );
 		maCursorLastPos = maCursorFirstPos;
 
@@ -204,12 +200,23 @@ SvxTableController::SvxTableController( SdrObjEditView* pView, const SdrObject* 
 			mxTable.set( dynamic_cast< TableModel* >( xTable.get() ) );
 		}
 	}
+
+#ifdef USE_JAVA
+	if ( mxTableObj.get() )
+		static_cast< SdrTableObj* >( mxTableObj.get() )->SetTableController( this );
+#endif	// USE_JAVA
 }
 
 // --------------------------------------------------------------------
 
 SvxTableController::~SvxTableController()
 {
+#ifdef USE_JAVA
+	// Fix bug 3589 by detaching this controller from its table object
+	if ( mxTableObj.get() )
+		static_cast< SdrTableObj* >( mxTableObj.get() )->SetTableController( NULL );
+#endif	// USE_JAVA
+
 	if( mnUpdateEvent )
 	{
 		Application::RemoveUserEvent( mnUpdateEvent );
