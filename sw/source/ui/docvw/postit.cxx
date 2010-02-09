@@ -393,7 +393,7 @@ void PostItTxt::Command( const CommandEvent& rCEvt )
     		{
 				((PopupMenu *)aMgr->GetSVMenu())->InsertSeparator( 0 );
 				((PopupMenu *)aMgr->GetSVMenu())->InsertItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, GetMacDictLoookupResString( STR_LOOKUP_IN_MACOSX_DICTIONARY ), 0, 0 );
-				((PopupMenu *)pPopupMenuManager->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, FALSE );
+				((PopupMenu *)aMgr->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, FALSE );
 
 				ESelection aSel( mpOutlinerView->GetEditView().GetSelection() );
 				String aText( mpOutlinerView->GetEditView().GetEditEngine()->GetWord( aSel.nStartPara, aSel.nStartPos ) );
