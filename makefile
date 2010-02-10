@@ -161,9 +161,11 @@ build.ooo-build_configure: build.ooo-build_checkout
 	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 	touch "$@"
 
-build.ooo-build_patches: build.ooo-build_apply_patch
+build.ooo-build_patches: \
+	build.ooo-build_apply_patch \
+	build.ooo-build_cws-ooxml03-opc-svx-and-ptt-split.diff_patch
 	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; ./download
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) unpack
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) build.prepare
 	touch "$@"
 
 build.ooo-build_all: build.ooo-build_patches

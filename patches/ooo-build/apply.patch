@@ -1,5 +1,5 @@
---- patches/dev300/apply	2009-08-26 03:04:41.000000000 -0700
-+++ patches/dev300/apply	2010-02-09 18:52:24.000000000 -0800
+--- patches/dev300/apply	2010-02-09 19:27:56.000000000 -0800
++++ patches/dev300/apply	2010-02-09 19:34:48.000000000 -0800
 @@ -651,6 +651,7 @@
  sc-standard-filter-options-ods-hack.diff, i#35579, jonp
  
@@ -76,7 +76,54 @@
  
  [ CalcFixes < dev300-m52 ]
  # Display references when entering input mode, even when the separators are not ';'.
-@@ -2765,7 +2773,8 @@
+@@ -2427,8 +2435,9 @@
+ layout-simple-dialogs-sfx2.diff
+ layout-simple-dialogs-solenv.diff
+ layout-simple-dialogs-starmath.diff
+-layout-simple-dialogs-svx.diff
+-#layout-simple-dialogs-svx-no-gtk.diff
++# Fix build breakage by using layout-simple-dialogs-svx-no-gtk.diff instead of
++#layout-simple-dialogs-svx.diff
++layout-simple-dialogs-svx-no-gtk.diff
+ layout-simple-dialogs-sw.diff
+ layout-simple-dialogs-toolkit.diff
+ layout-simple-dialogs-vcl.diff
+@@ -2459,20 +2468,22 @@
+ SectionIssue => i#62234
+ 
+ # Correct accidental use of cAPS LOCK KEY!
+-autocorrect-accidental-caps-lock-offapi.diff
+-autocorrect-accidental-caps-lock-officecfg.diff
+-autocorrect-accidental-caps-lock-sc.diff
+-autocorrect-accidental-caps-lock-sw.diff
+-autocorrect-accidental-caps-lock-svx.diff
+-autocorrect-accidental-caps-lock-vcl.diff
++# Disable section because we want to preserve the existing NeoOffice behavior
++# autocorrect-accidental-caps-lock-offapi.diff
++# autocorrect-accidental-caps-lock-officecfg.diff
++# autocorrect-accidental-caps-lock-sc.diff
++# autocorrect-accidental-caps-lock-sw.diff
++# autocorrect-accidental-caps-lock-svx.diff
++# autocorrect-accidental-caps-lock-vcl.diff
+ 
+ # Fancy document modified status window
+-statusbar-fancy-modified-status-sc.diff,       i#103862, kohei
+-statusbar-fancy-modified-status-sd.diff,       i#103862, kohei
+-statusbar-fancy-modified-status-sfx2.diff,     i#103862, kohei
+-statusbar-fancy-modified-status-starmath.diff, i#103862, kohei
+-statusbar-fancy-modified-status-svx.diff,      i#103862, kohei
+-statusbar-fancy-modified-status-sw.diff,       i#103862, kohei
++# Disable section because we want to preserve the existing NeoOffice behavior
++# statusbar-fancy-modified-status-sc.diff,       i#103862, kohei
++# statusbar-fancy-modified-status-sd.diff,       i#103862, kohei
++# statusbar-fancy-modified-status-sfx2.diff,     i#103862, kohei
++# statusbar-fancy-modified-status-starmath.diff, i#103862, kohei
++# statusbar-fancy-modified-status-svx.diff,      i#103862, kohei
++# statusbar-fancy-modified-status-sw.diff,       i#103862, kohei
+ 
+ 
+ [ UnitTesting ]
+@@ -2765,7 +2776,8 @@
  [ Fixes ]
  fix-ppt-linespacing-import-export.diff, n#355302, rodo
  sw-section-import-fix.diff, n#364533, freuter
@@ -86,7 +133,7 @@
  sw-tab-export-fix-i100264.diff, n#479068, freuter
  sw-section-header-export-problem.diff, i#100918, freuter
  oox-fix-abs-relations.diff, n#493528, freuter
-@@ -3165,7 +3174,8 @@
+@@ -3165,7 +3177,8 @@
  xlsx-export-set-xml-2007-flavour.diff, n#502090, janneke
  xlsx-export-simple-autofilter.diff, n#497559, janneke
  # hack to ignore writerfilter when odf-converter is present
