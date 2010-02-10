@@ -1,9 +1,9 @@
 "16" = "One or more BSD commands were not found on this machine. You must install the \"BSD Subsystem\" package that is in the following folder on disk 1 of your Mac OS X installation CD:\n\n\"/Welcome to Mac OS X/Optional Installs\"";
-"17" = "The $(PRODUCT_NAME) application can only be installed on Mac OS X 10.4 or higher.";
-"18" = "The $(PRODUCT_NAME) application can only be installed on a PowerPC machine and it cannot be installed on an Intel-based machine.";
-"19" = "The $(PRODUCT_NAME) application can only be installed on an Intel-based machine and it cannot be installed on a PowerPC machine.";
-"20" = "The $(PRODUCT_NAME) application can only be installed when Mac OS X is running in 32 bit mode.";
-"21" = "The $(PRODUCT_NAME) installer could not determine whether or not this is a PowerPC or an Intel-based machine.";
-"24" = "The version of Java on this machine is too old. To install this application, you must get a current version of Java from Apple. To get a current version of Java, run Mac OS X's Software Update tool in the System Preferences application and install any listed Java and Mac OS X updates.";
-"25" = "The $(PRODUCT_NAME) application appears to be running. Please retry after you have quit the $(PRODUCT_NAME) application.";
+"17" = "You cannot install $(PRODUCT_NAME) on this machine. Your version of Mac OS X is too old. $(PRODUCT_NAME) can only be installed on Mac OS X 10.4 or higher.";
+"18" = "You are using the wrong installer. You have a Mac Intel machine and this installer only works on Mac PowerPC machines. You must download the $(PRODUCT_NAME) installer for Mac Intel machine.";
+"19" = "You are using the wrong installer. You have a Mac PowerPC machine and this installer only works on Mac Intel machines. You must download the $(PRODUCT_NAME) installer for Mac PowerPC machine.";
+"20" = "You cannot install $(PRODUCT_NAME) on this machine. You are using Mac OS X in 64 bit mode. You must use Mac OS X in 32 bit mode to install $(PRODUCT_NAME).";
+"21" = "You cannot install $(PRODUCT_NAME) on this machine. You have a unknown type of Mac machine and $(PRODUCT_NAME) only works on Mac Intel or PowerPC machines.";
+"24" = "You cannot install $(PRODUCT_NAME) on this machine. The version of Java is too old. You must install the latest version of Java from Apple. To install the latest Java from Apple, select the Apple :: Software Update... menu and install any Mac OS X updates that are listed.";
+"25" = "You must quit $(PRODUCT_NAME) before you can install $(PRODUCT_NAME). Quit $(PRODUCT_NAME) by Control-clicking on the $(PRODUCT_NAME) icon in the Dock and selecting Quit from the popup menu that appears.";
 
