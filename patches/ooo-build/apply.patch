@@ -1,18 +1,6 @@
 --- patches/dev300/apply	2009-08-26 03:04:41.000000000 -0700
-+++ patches/dev300/apply	2010-02-09 16:59:24.000000000 -0800
-@@ -11,9 +11,10 @@
- OLDEST_SUPPORTED=ooo310-m17
- 
- # -------- Functional sub-sets --------
-+# Remove EasterEgg because it is unnecessary for NeoOffice
- Common : PreprocessPatches, BuildBits, TemporaryHacks, FixesNotForUpstream, \
- 	 Fixes, DefaultSettings, Features, VCL, Misc, HelpContent, \
--	 Icons, Branding, CalcFixes, WriterFixes, EasterEgg, \
-+	 Icons, Branding, CalcFixes, WriterFixes, \
- 	 GStreamer, CWSBackports, WPG, Cleanups, WMF, GnomeVFS, WebDAV, \
- 	 Layout, VBABits, VBAObjects, CalcErrors, Store, CJK, GCJ, Lwp, WPS, \
- 	 OOXML, OOXMLExport, SVGImport, FrameworkFeature, UnitTesting, \
-@@ -651,6 +652,7 @@
++++ patches/dev300/apply	2010-02-09 18:52:24.000000000 -0800
+@@ -651,6 +651,7 @@
  sc-standard-filter-options-ods-hack.diff, i#35579, jonp
  
  # Hides the filtered rows when height of rows are changed bxc #62161
@@ -20,7 +8,7 @@
  # sc-filter-hide-filteredrows.diff, i#35581, jody
  
  # Autofill doesnt fill filtered rows bxc 62499
-@@ -678,7 +680,8 @@
+@@ -678,7 +679,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -30,7 +18,7 @@
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -884,7 +887,8 @@
+@@ -884,7 +886,8 @@
  
  [ Misc ]
  # Insert symbol defaults to the Symbol font - not a random one
@@ -40,7 +28,7 @@
  # Address data source ordering x#62860
  addrbk-datasrc-ordering.diff, michael
  # Changed the default option in the Templates and Documents dialog.
-@@ -902,8 +906,9 @@
+@@ -902,8 +905,9 @@
  desktop-cmdhelp-stdout.diff, kohei
  
  # always enable file save even when the document is not modified.
@@ -52,6 +40,16 @@
  
  # Adjust scroll speed while extending selection beyoud visible sheet area.
  scroll-accel-sc.diff, n#375909, i#71362, kohei
+@@ -927,7 +931,8 @@
+ 
+ [ EasterEgg ]
+ # go-oo.org people active in this release
+-go-oo-team.diff, michael
++# Disable EasterEgg because it is unnecessary for NeoOffice
++# go-oo-team.diff, michael
+ 
+ 
+ [ NovellOnly ]
 @@ -1959,7 +1964,8 @@
  writerfilter-source-dmapper-domainmapper-debug.diff
  docx-import-fixes.diff

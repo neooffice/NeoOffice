@@ -167,7 +167,7 @@ build.ooo-build_patches: build.ooo-build_apply_patch
 	touch "$@"
 
 build.ooo-build_all: build.ooo-build_patches
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) all
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) build
 	touch "$@"
 
 build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.ooo-build_configure
