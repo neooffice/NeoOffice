@@ -36,6 +36,7 @@ Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC a
    sudo /path/to/port/command install libIDL
    sudo /path/to/port/command install gperf
    sudo /path/to/port/command install flex
+   sudo /path/to/port/command install wget
 
 5. Make sure that you have downloaded and installed the Mono Mac OS X framework:
 
