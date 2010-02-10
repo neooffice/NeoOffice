@@ -1,3 +1,3 @@
-"16" = "A $(PRODUCT_NAME) $(PRODUCT_VERSION) installation could not be found in this volume's /Applications folder. $(PRODUCT_NAME) $(PRODUCT_VERSION) must be installed in the /Applications folder before you can install this language pack.";
-"17" = "The $(PRODUCT_NAME) version in this volume is too old for this language pack. $(PRODUCT_NAME) $(PRODUCT_VERSION) must be installed in the /Applications folder before you can install this language pack.";
+"16" = "You do not have $(PRODUCT_NAME) $(PRODUCT_VERSION) installed. You must install $(PRODUCT_NAME) $(PRODUCT_VERSION) before you can install this language pack.";
+"17" = "You have an old version of $(PRODUCT_NAME). You must install $(PRODUCT_NAME) $(PRODUCT_VERSION) before you can install this language pack.";
 
