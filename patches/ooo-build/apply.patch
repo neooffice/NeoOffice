@@ -1,28 +1,26 @@
-Index: patches/dev300/apply
-===================================================================
---- patches/dev300/apply	(revision 14968)
-+++ patches/dev300/apply	(working copy)
-@@ -378,7 +378,8 @@
- printing-bugfix-254573.diff, n#254573, rodo
+--- patches/dev300/apply	2009-08-26 03:04:41.000000000 -0700
++++ patches/dev300/apply	2010-02-09 16:59:24.000000000 -0800
+@@ -11,9 +11,10 @@
+ OLDEST_SUPPORTED=ooo310-m17
  
- # use basic (advanced) shapes for rectangle/ellipse on draw/impress's toolbars. make shapes wrap words by default, n#171052, rodo
--sd-toolbar-advanced-shapes.diff, n#171052, rodo
-+# Disable because it causes NeoOffice bug 2668
-+# sd-toolbar-advanced-shapes.diff, n#171052, rodo
- svx-shapes-default-word-wrap-enable.diff, n#171052, rodo
- svx-honour-customshape-capabilities.diff, n#395372, thorsten
+ # -------- Functional sub-sets --------
++# Remove EasterEgg because it is unnecessary for NeoOffice
+ Common : PreprocessPatches, BuildBits, TemporaryHacks, FixesNotForUpstream, \
+ 	 Fixes, DefaultSettings, Features, VCL, Misc, HelpContent, \
+-	 Icons, Branding, CalcFixes, WriterFixes, EasterEgg, \
++	 Icons, Branding, CalcFixes, WriterFixes, \
+ 	 GStreamer, CWSBackports, WPG, Cleanups, WMF, GnomeVFS, WebDAV, \
+ 	 Layout, VBABits, VBAObjects, CalcErrors, Store, CJK, GCJ, Lwp, WPS, \
+ 	 OOXML, OOXMLExport, SVGImport, FrameworkFeature, UnitTesting, \
+@@ -651,6 +652,7 @@
+ sc-standard-filter-options-ods-hack.diff, i#35579, jonp
  
-@@ -424,7 +425,8 @@
+ # Hides the filtered rows when height of rows are changed bxc #62161
++# Disable because it causes NeoOffice bug 3437
+ # sc-filter-hide-filteredrows.diff, i#35581, jody
  
- [ LinuxOnly ]
- # fix that allows OOo to work with a standard (unpatched) libjpeg,
--jpegc.c.diff, i#80674, n#272574, flr
-+# Disable because it causes NeoOffice bug 2613
-+# jpegc.c.diff, i#80674, n#272574, flr
- 
- [ Fixes < ooo300-m13 ]
- # handle hyperlinks to files better
-@@ -656,7 +658,8 @@
+ # Autofill doesnt fill filtered rows bxc 62499
+@@ -678,7 +680,8 @@
  sc-change-record-dnd.diff, i#44982, jody
  
  # keybindings: <ctrl> +/‑ to insert/delete a complete line in calc (X#62530)
@@ -32,7 +30,7 @@ Index: patches/dev300/apply
  
  sc-dp-gridlayout.diff, i#68544 n#190970, jody
  
-@@ -818,7 +821,8 @@
+@@ -884,7 +887,8 @@
  
  [ Misc ]
  # Insert symbol defaults to the Symbol font - not a random one
@@ -42,65 +40,61 @@ Index: patches/dev300/apply
  # Address data source ordering x#62860
  addrbk-datasrc-ordering.diff, michael
  # Changed the default option in the Templates and Documents dialog.
-@@ -836,7 +840,8 @@
+@@ -902,8 +906,9 @@
  desktop-cmdhelp-stdout.diff, kohei
  
  # always enable file save even when the document is not modified.
--sfx2-always-allow-save-document.diff, n#347423, i#5226, kohei
+-always-allow-save-document-sfx2.diff, n#347423, n#450789, i#5226, kohei
+-always-allow-save-document-sc.diff,   n#347423, n#450789, i#5226, kohei
 +# Disable because we want to preserve the existing NeoOffice behavior
-+# sfx2-always-allow-save-document.diff, n#347423, i#5226, kohei
++# always-allow-save-document-sfx2.diff, n#347423, n#450789, i#5226, kohei
++# always-allow-save-document-sc.diff,   n#347423, n#450789, i#5226, kohei
  
  # Adjust scroll speed while extending selection beyoud visible sheet area.
  scroll-accel-sc.diff, n#375909, i#71362, kohei
-@@ -1031,7 +1036,8 @@
- build-ibm-java-enable.diff, i#93114, pmladek
- 
- # openjdk contains rhino.jar. breaks the build... 
--buildfix-openjdk-6-no-rhino.diff 
-+# Disable because it breaks the build on Mac OS X
-+# buildfix-openjdk-6-no-rhino.diff 
- 
- # fixed build with IBM Java 1.6.0
- bean-ibm-java.diff, i#93113, pmladek
-@@ -1257,8 +1263,9 @@
- 
- [ BuildBits ]
- 
--pyuno-rpath-ooodir.diff
--system-python-ure-bootstrap.diff, deb#501028, i#90701
-+# Disable as these patches do not exist
-+# pyuno-rpath-ooodir.diff
-+# system-python-ure-bootstrap.diff, deb#501028, i#90701
- 
- no-latex-filter-without-writer2latex.diff, i#93520
- 
-@@ -1699,7 +1706,8 @@
- sfx2-pre-and-postprocess-during-save-load.diff, i#71939, florian
- sfx2-pre-and-postprocess-crash-fix.diff, n#270544, rodo
- # hack to ignore writerfilter if odf-converter is present
--odf-converter-ignore-writerfilter.diff, n#348471, jholesov
-+# Disable because we want to allow user to decide which filter to use
-+# odf-converter-ignore-writerfilter.diff, n#348471, jholesov
- 
- 
- [ msaccess ]
-@@ -1735,7 +1743,8 @@
- 
+@@ -1959,7 +1964,8 @@
  writerfilter-source-dmapper-domainmapper-debug.diff
+ docx-import-fixes.diff
  
 -buildfix-oox-depends-on-unotools.diff
-+# Disable because we want to allow user to decide which filter to use
++# Disable because we want NeoOffice to decide which filter to use
 +# buildfix-oox-depends-on-unotools.diff
  
- [ CalcFixes ]
+ oox-fix-placeholder-layout.diff, n#485316, n#480223, rodo
+ oox-fix-list-style-apply.diff, n#485417, rodo
+@@ -1996,10 +2002,12 @@
+ # Make the formula separators changeable per locale setting, and add new 
+ # configuration page for formula syntax and separators.
  
-@@ -2438,7 +2447,8 @@
+-calc-formula-variable-separators-sc.diff,        n#447164, i#92056, kohei
++# Disable because it causes NeoOffice bug 3394
++# calc-formula-variable-separators-sc.diff,        n#447164, i#92056, kohei
+ 
+-calc-formula-variable-separators-svx.diff,       n#447164, i#92056, kohei
+-calc-formula-variable-separators-officecfg.diff, n#447164, i#92056, kohei
++# Disable because it causes NeoOffice bug 3394
++# calc-formula-variable-separators-svx.diff,       n#447164, i#92056, kohei
++# calc-formula-variable-separators-officecfg.diff, n#447164, i#92056, kohei
+ 
+ [ CalcFixes < dev300-m52 ]
+ # Display references when entering input mode, even when the separators are not ';'.
+@@ -2765,7 +2773,8 @@
  [ Fixes ]
  fix-ppt-linespacing-import-export.diff, n#355302, rodo
  sw-section-import-fix.diff, n#364533, freuter
 -sw-allow-negative-spacing.diff, n#364534, freuter
 +# Disable because we want to preserve the existing NeoOffice behavior
 +# sw-allow-negative-spacing.diff, n#364534, freuter
+ sw-tab-export-fix-i100264.diff, n#479068, freuter
+ sw-section-header-export-problem.diff, i#100918, freuter
+ oox-fix-abs-relations.diff, n#493528, freuter
+@@ -3165,7 +3174,8 @@
+ xlsx-export-set-xml-2007-flavour.diff, n#502090, janneke
+ xlsx-export-simple-autofilter.diff, n#497559, janneke
+ # hack to ignore writerfilter when odf-converter is present
+-odf-converter-ignore-writerfilter.diff, n#348471, n#502173, jholesov
++# Disable because we want NeoOffice to decide which filter to use
++# odf-converter-ignore-writerfilter.diff, n#348471, n#502173, jholesov
+ xlsx-export-skip-auto-format.diff, n#497560, janneke
  
- sd-slideshow-slideshowview-transformation-fix.diff, rodo
- 
+ # fixes visibility to make it work with some compilers
