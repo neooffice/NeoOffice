@@ -1,67 +1,107 @@
-# Note: commented locales are those that have almost no Writer localizations
-af,0,Afrikaans
+# Commented locales are those that are not supported as a tier 0, 1, or 2
+# language by Mac OS X 10.6 per the following file:
+# /System/Library/PreferencePanes/Localization.prefPane/Contents/Resources/IntlLanguages.prefPane/Contents/Resources/English.lproj/allLanguagesArray
+# af,0,Afrikaans
 ar,0,Arabic
-as-IN,0,Assamese
-be-BY,0,Byelorussian
+# as-IN,0,Assamese
+# be-BY,0,Byelorussian
 bg,1,Bulgarian
 # bn,0,Bengali
+# bn-BD,0,Bengali
 # bn-IN,0,Bengali
-ca,1,Catalan
+# br,0,Breton
+# brx,0,Bodo
+# bs,0,Bosnian
+# by,0,Blin
+# ca,1,Catalan
 cs,1,Czech
-cy,0,Welsh
+# cy,0,Welsh
 da,1,Danish
 de,1,German
+# dgo,0,Dogri
+# dz,0,Dzongkha
 el,1,Greek
 en-GB,1,British English
 en-US,1,American English
 en-ZA,1,South African English
-eo,0,Esperanto
+# eo,0,Esperanto
 es,1,Spanish
-et,1,Estonian
+# et,1,Estonian
 # eu,0,Basque
-fa,1,Persian
+# fa,1,Persian
 fi,0,Finnish
 fr,1,French
-ga,0,Irish
-gl,1,Galician
+# ga,0,Irish
+# gl,1,Galician
+# gd,0,Gaelic
 # gu,0,Gujurati
-gu-IN,0,Gujurati
+# gu-IN,0,Gujurati
 he,0,Hebrew
-hi-IN,1,Hindi
-hr,0,Croatian
+# hi-IN,1,Hindi
+# hr,0,Croatian
 hu,1,Hungarian
 it,1,Italian
 ja,1,Japanese
-ko,1,Korean
+# ka,0,Georgian
+# km,0,Khmer
 # kn,0,Kannada
-lt,0,Lithuanian
+ko,1,Korean
+# kok,0,Konkani
+# ks,0,Kashmiri
+# ku,0,Kurdish
+# lo,0,Lao
+# lt,0,Lithuanian
 # lv,0,Latvian
-mk,1,Macedonian
-ml-IN,0,Malayalam
-mr-IN,0,Marathi
+# mai,0,Maithili
+# mk,1,Macedonian
+# ml-IN,0,Malayalam
+# mn,0,Mongolian
+# mni,0,Manipuri
+# mr-IN,0,Marathi
+# ms,0,Malay
+# my,0,Burmese
 nb,1,Norwegian
-ne,1,Nepali
+# ne,1,Nepali
 nl,1,Dutch
-or-IN,0,Oriya
-pa-IN,0,Punjabi
+# nn,0,Norwegion Nynorsk
+# nr,0,Southern Ndebele
+# ns,0,Unknown
+# oc,0,Occitan
+# or-IN,0,Oriya
+# pa-IN,0,Punjabi
 pl,1,Polish
 pt,1,Portuguese
 pt-BR,1,Brazilian Portuguese
+ro,0,Romanian
 ru,1,Russian
+# rw,0,Kinyarwanda
+# sa,0,Sanskrit
+# sat,0,Santail
+# sc,0,Sardinian
+# sd,0,Sindhi
+# sh,0,Serbo Croatian
 sk,1,Slovak
-sl,1,Slovenian
-sr,0,Serbian
+# sl,1,Slovenian
+# sr,0,Serbian
+# ss,0,Swati
+# st,0,Southern Sotho
 sv,1,Swedish
 # sw,0,Swahili
-sw-TZ,0,Tanzanian Swahili
-ta-IN,0,Tamil
-te-IN,0,Telugu
+# sw-TZ,0,Tanzanian Swahili
+# ta-IN,0,Tamil
+# te-IN,0,Telugu
+# tg,0,Tajik
 th,1,Thai
-ti-ER,0,Tigrinya
+# ti-ER,0,Tswana
+# tn,0,Tsonga
 tr,1,Turkish
+# ts,0,Tsonga
 uk,1,Ukrainian
-ur-IN,0,Urdu
-uz,1,Uzbek
-vi,0,Vietnamese
+# ur-IN,0,Urdu
+# uz,1,Uzbek
+# ve,0,Venda
+# vi,0,Vietnamese
+# xh,0,Xhosa
 zh-CN,1,Simplified Chinese
 zh-TW,1,Traditional Chinese
+# zu,0,Zulu
