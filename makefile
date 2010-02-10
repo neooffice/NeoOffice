@@ -132,6 +132,7 @@ PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
 OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
+OOO-BUILD_BUILD_HOME=$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/build/ooo310-m19
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
 ODF-CONVERTER_PACKAGE=odf-converter-2.5
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
@@ -158,7 +159,7 @@ build.ooo-build_configure: build.ooo-build_checkout
 # Include OpenOffice.org extenstions and templates. Note that we exclude the
 # wiki-publisher.oxt file as it has been found to have buggy network
 # connectivity.
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
+	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 	touch "$@"
 
 build.ooo-build_patches: \
@@ -168,8 +169,23 @@ build.ooo-build_patches: \
 	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) build.prepare
 	touch "$@"
 
-build.ooo-build_all: build.ooo-build_patches
-	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) build
+build.oo_patches: \
+	build.oo_configure.in_patch \
+	build.oo_moz_patch
+	touch "$@"
+
+build.oo_configure.in_patch: $(OO_PATCHES_HOME)/configure.in.patch build.ooo-build_patches
+	-( cd "$(OOO-BUILD_BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OOO-BUILD_BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+
+build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
+	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
+	touch "$@"
+
+build.ooo-build_all: build.oo_patches
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; "$(MAKE)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" build
 	touch "$@"
 
 build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.ooo-build_configure
@@ -200,37 +216,6 @@ build.remotecontrol_checkout:
 	cd "$(BUILD_HOME)" ; tar xvfz "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
 	touch "$@"
 
-build.oo_patches: \
-	build.oo_config_office_patch \
-	build.oo_cppu_patch \
-	build.oo_cppuhelper_patch \
-	build.oo_cpputools_patch \
-	build.oo_external_patch \
-	build.oo_filter_patch \
-	build.oo_framework_patch \
-	build.oo_i18npool_patch \
-	build.oo_jvmfwk_patch \
-	build.oo_lingucomponent_patch \
-	build.oo_moz_patch \
-	build.oo_solenv_patch \
-	build.oo_sw_patch \
-	build.oo_testshl2_patch \
-	build.oo_vcl_patch \
-	build.oo_vos_patch
-	touch "$@"
-
-build.oo_310_patches: \
-	build.oo_310_comphelper_patch \
-	build.oo_310_dbaccess_patch \
-	build.oo_310_filter_patch \
-	build.oo_310_offapi_patch \
-	build.oo_310_officecfg_patch \
-	build.oo_310_sfx2_patch \
-	build.oo_310_svtools_patch \
-	build.oo_310_svx_patch \
-	build.oo_310_uui_patch
-	touch "$@"
-
 build.oo_odk_patches: build.oo_patches
 	touch "$@"
 
@@ -241,17 +226,6 @@ build.oo_external_patch: build.ooo-build_patches \
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
-	touch "$@"
-
-build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
-	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(BUILD_HOME)/moz/download" ; curl -L -O "$(MOZ_SOURCE_URL)"
-	touch "$@"
-
-build.oo_310_%_patch: $(OO_PATCHES_HOME)/3.1.0/%.diff build.oo_patches
-	-( cd "$(BUILD_HOME)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches

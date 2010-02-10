@@ -1,0 +1,23 @@
+--- configure.in	2010-02-10 00:15:20.000000000 -0800
++++ configure.in.bak.orig	2010-02-10 00:24:15.000000000 -0800
+@@ -2559,7 +2559,7 @@
+       LDFLAGS=$sharedlink_ldflags_save
+    fi
+ 
+-   if test "$HAVE_GCC_VISIBILITY_FEATURE" = "TRUE"; then
++   if test "$_os" != "Darwin" -a test "$HAVE_GCC_VISIBILITY_FEATURE" = "TRUE"; then
+       AC_MSG_CHECKING([if gcc has a visibility bug with class-level attributes (GCC bug 26905)])
+       cat >visibility.cxx <<_ACEOF
+ #pragma GCC visibility push(hidden)
+@@ -4346,11 +4346,6 @@
+       if test "$MOZILLA_TOOLKIT" = "gtk2"; then
+          AC_MSG_NOTICE([checking whether mozilla can be built...])
+          PKG_CHECK_MODULES(MOZGTK2, gtk+-2.0 >= 2.4 libIDL-2.0 >= 0.8, AC_MSG_NOTICE([OK - can build mozilla]), AC_MSG_ERROR([Prerequisites to build mozilla not met. Either use the precompiled mozilla binaries or install the missing packages]))
+-      else
+-         PKG_CHECK_MODULES(MOZLIBREQ, libIDL >= 0.6.3 libIDL <= 0.6.8, MOZIDL="TRUE", MOZIDL="")
+-         if test -z "$MOZIDL"; then
+-            AC_MSG_ERROR([libIDL 0.6.3 - 0.6.8 is needed when not using GTK2 to build mozilla.])
+-         fi
+       fi
+    else
+       # Generic Unix/Linux section
