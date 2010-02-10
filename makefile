@@ -89,7 +89,7 @@ else
 OO_ENV_AQUA:=$(BUILD_HOME)/MacOSXX86Env.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX86EnvJava.Set
 endif
-OO_LANGUAGES=ALL
+OO_LANGUAGES:=$(shell cat $(PWD)/etc/supportedlanguages.txt | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimporter.tgz
 NEOLIGHT_MDIMPORTER_ID:=org.neooffice.neolight
 NEOPEEK_QLPLUGIN_URL:=http://trinity.neooffice.org/downloads/neopeek.qlgenerator.tgz
@@ -97,11 +97,11 @@ NEOPEEK_QLPLUGIN_ID:=org.neooffice.quicklookplugin
 
 # Product information
 OO_PRODUCT_NAME=OpenOffice.org
-OO_PRODUCT_VERSION=3.0.1
+OO_PRODUCT_VERSION=3.1.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 PRODUCT_VERSION_FAMILY=3.0
-PRODUCT_VERSION=3.0.2
-PRODUCT_DIR_VERSION=3.0.2
+PRODUCT_VERSION=3.1.1 Developer Preview
+PRODUCT_DIR_VERSION=3.1.1 Developer Preview
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
@@ -131,17 +131,7 @@ PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser neomobile remot
 PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
-OO_CVSROOT:=:pserver:anoncvs@anoncvs.services.openoffice.org:/cvs
-OO_PACKAGES:=OpenOffice3 Extensions3
-OO_TAG:=-rOOO300_m14
-OOO-BUILD_SVNROOT:=http://svn.gnome.org/svn/ooo-build/branches/ooo-build-3-0-1
-OOO-BUILD_PACKAGE:=ooo-build
-OOO-BUILD_TAG:=--revision '{2008-12-30}'
-OOO-BUILD_APPLY_TAG:=OOO300_m14
-LPSOLVE_SOURCE_URL=http://download.go-oo.org/SRC680/lp_solve_5.5.tar.gz
-LIBWPD_SOURCE_URL=http://download.go-oo.org/libwpd/libwpd-0.8.14.tar.gz
-LIBWPG_SOURCE_URL=http://download.go-oo.org/SRC680/libwpg-0.1.3.tar.gz
-LIBWPS_SOURCE_URL=http://download.go-oo.org/SRC680/libwps-0.1.2.tar.gz
+OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
 ODF-CONVERTER_PACKAGE=odf-converter-2.5
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
@@ -151,32 +141,41 @@ REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
 REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=-rNeoOffice-3_0_2
+NEO_TAG:=
 
 all: build.all
 
 # Include dependent makefiles
 include neo_configure.mk
 
-# Create the build directory and checkout the OpenOffice.org sources
-build.oo_checkout:
-	mkdir -p "$(BUILD_HOME)"
-# The OOo cvs server gets messed up with tags so we need to do a little trick
-# to get the checkout to work
-	rm -Rf "$(BUILD_HOME)/tmp" ; mkdir -p "$(BUILD_HOME)/tmp" ; cd "$(BUILD_HOME)/tmp" ; cvs -d "$(OO_CVSROOT)" co MathMLDTD ; cd MathMLDTD ; cvs update -d $(OO_TAG)
-	rm -Rf "$(BUILD_HOME)/tmp"
-# Do the real checkout
-	cd "$(BUILD_HOME)" ; cvs -d "$(OO_CVSROOT)" co $(OO_TAG) $(OO_PACKAGES)
-# cvs seems to always fail so check that the last module has been checked out
-	cd "$(BUILD_HOME)/basebmp" ; cvs -d "$(OO_CVSROOT)" update $(OO_TAG)
-	chmod -Rf u+w "$(BUILD_HOME)"
+build.ooo-build_checkout: $(OOO-BUILD_PATCHES_HOME)/$(OOO-BUILD_PACKAGE).tar.gz
+	mkdir -p "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)"
+	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$<"
+	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(OOO-BUILD_PACKAGE)"
 	touch "$@"
 
-build.ooo-build_checkout: build.oo_checkout
-	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; svn co $(OOO-BUILD_TAG) $(OOO-BUILD_SVNROOT) "$(OOO-BUILD_PACKAGE)"
-	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(OOO-BUILD_PACKAGE)"
+build.ooo-build_configure: build.ooo-build_checkout
+# Include OpenOffice.org extenstions and templates. Note that we exclude the
+# wiki-publisher.oxt file as it has been found to have buggy network
+# connectivity.
+	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) PKG_CONFIG=$(PKG_CONFIG) PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 	touch "$@"
+
+build.ooo-build_patches: build.ooo-build_apply_patch
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; ./download
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) unpack
+	touch "$@"
+
+build.ooo-build_all: build.ooo-build_patches
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) all
+	touch "$@"
+
+build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.ooo-build_configure
+	-( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	touch "$@"
+
+# End of converted make rules
 
 build.odf-converter_checkout: $(ODF-CONVERTER_PATCHES_HOME)/$(ODF-CONVERTER_PACKAGE).tar.gz
 	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)"
@@ -256,27 +255,6 @@ build.oo_310_%_patch: $(OO_PATCHES_HOME)/3.1.0/%.diff build.oo_patches
 build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
 	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	touch "$@"
-
-build.ooo-build_patches: build.ooo-build_checkout \
-	build.ooo-build_apply_patch
-	touch "$@"
-
-build.ooo-build_apply_patch: $(OOO-BUILD_PATCHES_HOME)/apply.patch build.oo_checkout build.ooo-build_checkout
-	-( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	rm -f "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/patches/apply.pl" ; sed 's#@GNUPATCH@#patch#g' "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/patches/apply.pl.in" > "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/patches/apply.pl" ; chmod a+x "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/patches/apply.pl" ; "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/patches/apply.pl" --tag="$(OOO-BUILD_APPLY_TAG)" --distro=MacOSX "$(PWD)/$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/patches/dev300" "$(PWD)/$(BUILD_HOME)"
-	cp "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/src/go-oo-team.png" "$(BUILD_HOME)/default_images/sw/res"
-	cp "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/src/evolocal.odb" "$(BUILD_HOME)/extras/source/database"
-	mkdir -p "$(BUILD_HOME)/lpsolve/download" ; cd "$(BUILD_HOME)/lpsolve/download" ; curl -L -O "$(LPSOLVE_SOURCE_URL)"
-	mkdir -p "$(BUILD_HOME)/libwpd/download" ; cd "$(BUILD_HOME)/libwpd/download" ; curl -L -O "$(LIBWPD_SOURCE_URL)"
-	mkdir -p "$(BUILD_HOME)/libwpg/download" ; cd "$(BUILD_HOME)/libwpg/download" ; curl -L -O "$(LIBWPG_SOURCE_URL)"
-	mkdir -p "$(BUILD_HOME)/libwps/download" ; cd "$(BUILD_HOME)/libwps/download" ; curl -L -O "$(LIBWPS_SOURCE_URL)"
-	touch "$@"
-
-build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.oo_checkout build.ooo-build_checkout
-	-( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch build.odf-converter_checkout
