@@ -29,15 +29,17 @@
                  specialOpCodes.add(opCode);
              }
          // addOpCodes(names, opCodes,SPECIAL,false);
-@@ -251,7 +251,7 @@
+@@ -251,8 +251,8 @@
              {
                  ret.append(formulaToken.Data);
              }
 -            else if ( parserAllOpCodes.containsKey(formulaToken.OpCode) )
 +            else if ( parserAllOpCodes.containsKey(new Integer(formulaToken.OpCode)) )
              {
-                 final FormulaOpCodeMapEntry opCode = (FormulaOpCodeMapEntry) parserAllOpCodes.get(formulaToken.OpCode);
+-                final FormulaOpCodeMapEntry opCode = (FormulaOpCodeMapEntry) parserAllOpCodes.get(formulaToken.OpCode);
++                final FormulaOpCodeMapEntry opCode = (FormulaOpCodeMapEntry) parserAllOpCodes.get(new Integer(formulaToken.OpCode));
                  if ( opCode.Name.length() > 0 )
+                     ret.append(opCode.Name);
 @@ -379,8 +379,8 @@
                  opCode = new FormulaOpCodeMapEntry(names[j], token);
              }
