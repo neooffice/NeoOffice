@@ -795,17 +795,13 @@ void SwSelPaintRects::Hide()
 	if ( it != aUseMacHighlightColorMap.end() && it->second )
 	{
 		Window *pWin = GetShell()->GetWin();
-		if ( pWin && pWin->IsReallyVisible() && !GetShell()->IsPreView() )
+		if ( pWin && !pWin->IsInPaint() && !GetShell()->IsPreView() )
 		{
 			for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
 			{
 				Rectangle aPaintRect( sit->SVRect() );
 				if ( !aPaintRect.IsEmpty() )
-				{
 					pWin->Invalidate( aPaintRect );
-					if ( pWin->IsInPaint() )
-						pWin->Update();
-				}
 			}
 
 			for( USHORT n = 0; n < Count(); ++n )
@@ -813,11 +809,7 @@ void SwSelPaintRects::Hide()
 				const SwRect aNextRect( (*this)[n] );
 				Rectangle aPaintRect( aNextRect.SVRect() );
 				if ( !aPaintRect.IsEmpty() )
-				{
 					pWin->Invalidate( aPaintRect );
-					if ( pWin->IsInPaint() )
-						pWin->Update();
-				}
 			}
 		}
 		aLastSelectionPixelRects.clear();
@@ -874,23 +866,19 @@ void SwSelPaintRects::Show()
 
 				if ( bInvalidate )
 				{
-					if ( pWin && pWin->IsReallyVisible() && !GetShell()->IsPreView() )
+					if ( pWin && !pWin->IsInPaint() && !GetShell()->IsPreView() )
 					{
 						for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
 						{
 							Rectangle aPaintRect( sit->SVRect() );
 							if ( !aPaintRect.IsEmpty() )
-							{
 								pWin->Invalidate( aPaintRect );
-								if ( pWin->IsInPaint() )
-									pWin->Update();
-							}
 						}
 					}
 
 					aLastSelectionPixelRects.clear();
 
-					if ( pWin && pWin->IsReallyVisible() && !GetShell()->IsPreView() )
+					if ( pWin && !pWin->IsInPaint() && !GetShell()->IsPreView() )
 					{
 						for( USHORT n = 0; n < Count(); ++n )
 						{
@@ -899,8 +887,6 @@ void SwSelPaintRects::Show()
 							if ( !aPaintRect.IsEmpty() )
 							{
 								pWin->Invalidate( aPaintRect );
-								if ( pWin->IsInPaint() )
-									pWin->Update();
 								aLastSelectionPixelRects.push_back( aNextRect );
 							}
 						}
@@ -1352,7 +1338,7 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
 	Window *pWin = GetShell()->GetWin();
-	if ( pWin && pWin->IsReallyVisible() )
+	if ( pWin )
 	{
 		// Fix bug 3579 by including all SwSelPaintRects that share the same
 		// window as this instance
