@@ -1,0 +1,21 @@
+--- patches/liblayout.patch.old	2009-03-02 11:32:56.000000000 -0800
++++ patches/liblayout.patch	2010-02-10 21:56:15.000000000 -0800
+@@ -8,3 +8,18 @@
+        <include name="*.jar" />
+      </fileset>
+    </path>
++--- misc/build/liblayout/source/org/jfree/layouting/util/AttributeMap.java	2009-02-12 08:56:02.000000000 -0800
+++++ misc/build/liblayout/source/org/jfree/layouting/util/AttributeMap.java	2010-02-10 21:54:59.000000000 -0800
++@@ -254,10 +254,10 @@
++     }
++     if (namespacesArray != null)
++     {
++-      return namespacesArray.clone();
+++      return (String[])namespacesArray.clone();
++     }
++     namespacesArray = (String[]) namespaces.keySet().toArray(new String[namespaces.size()]);
++-    return namespacesArray.clone();
+++    return (String[])namespacesArray.clone();
++   }
++ 
++   public void makeReadOnly()

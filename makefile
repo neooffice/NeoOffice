@@ -178,6 +178,7 @@ build.oo_patches: \
 	build.oo_filter_patch \
 	build.oo_framework_patch \
 	build.oo_i18npool_patch \
+	build.oo_jfreereport_patch \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \
 	build.oo_moz_patch \
