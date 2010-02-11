@@ -795,7 +795,7 @@ void SwSelPaintRects::Hide()
 	if ( it != aUseMacHighlightColorMap.end() && it->second )
 	{
 		Window *pWin = GetShell()->GetWin();
-		if ( pWin && !pWin->IsInPaint() && !GetShell()->IsPreView() )
+		if ( pWin && pWin->IsReallyVisible() && !GetShell()->IsPreView() )
 		{
 			for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
 			{
@@ -866,7 +866,7 @@ void SwSelPaintRects::Show()
 
 				if ( bInvalidate )
 				{
-					if ( pWin && !pWin->IsInPaint() && !GetShell()->IsPreView() )
+					if ( pWin && pWin->IsReallyVisible() && !GetShell()->IsPreView() )
 					{
 						for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
 						{
@@ -878,7 +878,7 @@ void SwSelPaintRects::Show()
 
 					aLastSelectionPixelRects.clear();
 
-					if ( pWin && !pWin->IsInPaint() && !GetShell()->IsPreView() )
+					if ( pWin && pWin->IsReallyVisible() && !GetShell()->IsPreView() )
 					{
 						for( USHORT n = 0; n < Count(); ++n )
 						{
@@ -1338,7 +1338,7 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
 	Window *pWin = GetShell()->GetWin();
-	if ( pWin )
+	if ( pWin && pWin->IsReallyVisible() )
 	{
 		// Fix bug 3579 by including all SwSelPaintRects that share the same
 		// window as this instance
