@@ -1,4 +1,4 @@
---- patches/liblayout.patch.old	2009-03-02 11:32:56.000000000 -0800
+--- patches/liblayout.patch	2009-03-02 11:32:56.000000000 -0800
 +++ patches/liblayout.patch	2010-02-10 21:56:15.000000000 -0800
 @@ -8,3 +8,18 @@
         <include name="*.jar" />
@@ -19,3 +19,26 @@
 +   }
 + 
 +   public void makeReadOnly()
+--- patches/flow-engine.patch	2009-03-02 11:32:56.000000000 -0800
++++ patches/flow-engine.patch
+@@ -8,3 +8,20 @@
+        <include name="*.jar" />
+      </fileset>
+    </path>
++--- misc/build/core/source/org/jfree/report/data/FastGlobalView.java	2009-02-12 09:12:26.000000000 -0800
+++++ misc/build/core/source/org/jfree/report/data/FastGlobalView.java.new	2010-02-10 22:20:06.000000000 -0800
++@@ -78,10 +78,10 @@
++             this.columnNames = parent.columnNames;
++             this.modifiableNameCache = false;
++         }
++-        this.columnChanged = parent.columnChanged.clone();
++-        this.columnValue = parent.columnValue.clone();
++-        this.columnOldValue = parent.columnOldValue.clone();
++-        this.columnPrev = parent.columnPrev.clone();
+++        this.columnChanged = (boolean[])parent.columnChanged.clone();
+++        this.columnValue = (DataFlags[])parent.columnValue.clone();
+++        this.columnOldValue = (DataFlags[])parent.columnOldValue.clone();
+++        this.columnPrev = (int[])parent.columnPrev.clone();
++         this.length = parent.length;
++         this.warnInvalidColumns = parent.warnInvalidColumns;
++         this.invalidColumns = parent.invalidColumns;
