@@ -750,9 +750,9 @@ SwSelPaintRects::~SwSelPaintRects()
 	Hide();
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
+	std::map< SwSelPaintRects*, bool >::iterator it = aUseMacHighlightColorMap.find( this );
 	if ( it != aUseMacHighlightColorMap.end() )
-		aUseMacHighlightColorMap.erase( this );
+		aUseMacHighlightColorMap.erase( it );
 
 	for ( std::multimap< Window*, SwSelPaintRects* >::iterator sit = aWindowMap.begin(); sit != aWindowMap.end(); ++sit )
 	{
