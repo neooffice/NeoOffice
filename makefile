@@ -172,7 +172,21 @@ build.ooo-build_patches: \
 build.oo_patches: \
 	build.oo_configure.in_patch \
 	build.oo_set_soenv.in_patch \
-	build.oo_moz_patch
+	build.oo_cppu_patch \
+	build.oo_cppuhelper_patch \
+	build.oo_cpputools_patch \
+	build.oo_filter_patch \
+	build.oo_framework_patch \
+	build.oo_i18npool_patch \
+	build.oo_jvmfwk_patch \
+	build.oo_lingucomponent_patch \
+	build.oo_moz_patch \
+	build.oo_qadevOOo_patch \
+	build.oo_solenv_patch \
+	build.oo_sw_patch \
+	build.oo_testshl2_patch \
+	build.oo_vcl_patch \
+	build.oo_vos_patch
 	touch "$@"
 
 build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches
@@ -184,6 +198,11 @@ build.oo_moz_patch: $(OO_PATCHES_HOME)/moz.patch build.ooo-build_patches
 	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cd "$(OOO-BUILD_BUILD_HOME)/moz/download" ; curl -L -C - -O "$(MOZ_SOURCE_URL)"
+	touch "$@"
+
+build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
+	-( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(OOO-BUILD_BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.ooo-build_all: build.oo_patches
@@ -228,11 +247,6 @@ build.oo_external_patch: build.ooo-build_patches \
 	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
 	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
 	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
-	touch "$@"
-
-build.oo_%_patch: $(OO_PATCHES_HOME)/%.patch build.ooo-build_patches
-	-( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(@:build.oo_%_patch=%)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
 build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch build.odf-converter_checkout
