@@ -186,7 +186,8 @@ build.oo_patches: \
 	build.oo_sw_patch \
 	build.oo_testshl2_patch \
 	build.oo_vcl_patch \
-	build.oo_vos_patch
+	build.oo_vos_patch \
+	build.oo_wizards_patch
 	touch "$@"
 
 build.oo_%.in_patch: $(OO_PATCHES_HOME)/%.in.patch build.ooo-build_patches
