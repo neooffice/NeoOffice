@@ -1,8 +1,15 @@
-# Commented locales are those that are not supported as a tier 0, 1, or 2
-# language by Mac OS X 10.6 per the following file:
-# /System/Library/PreferencePanes/Localization.prefPane/Contents/Resources/IntlLanguages.prefPane/Contents/Resources/English.lproj/allLanguagesArray
+# Commented out all locales except those that meet all of the following
+# criteria:
+#
+# 1. The language has over 15,000 translated help entries in the various
+#    localize.sdf files in the helpcontent2/source/text directory
+# 2. The language listed as a tier 0, 1, or 2 language in Mac OS X 10.6's
+#    /System/Library/PreferencePanes/Localization.prefPane/Contents/Resources/IntlLanguages.prefPane/Contents/Resources/English.lproj/allLanguagesArray
+#    file or the language is listed as having at least 50 million speakers in
+#    the http://en.wikipedia.org/wiki/List_of_languages_by_number_of_native_speakers#50_to_100_million_native_speakers article
+#
 # af,0,Afrikaans
-ar,0,Arabic
+ar,1,Arabic
 # as-IN,0,Assamese
 # be-BY,0,Byelorussian
 bg,1,Bulgarian
@@ -29,15 +36,15 @@ es,1,Spanish
 # et,1,Estonian
 # eu,0,Basque
 # fa,1,Persian
-fi,0,Finnish
+fi,1,Finnish
 fr,1,French
 # ga,0,Irish
 # gl,1,Galician
 # gd,0,Gaelic
 # gu,0,Gujurati
 # gu-IN,0,Gujurati
-he,0,Hebrew
-# hi-IN,1,Hindi
+he,1,Hebrew
+hi-IN,1,Hindi
 # hr,0,Croatian
 hu,1,Hungarian
 it,1,Italian
@@ -72,7 +79,7 @@ nl,1,Dutch
 pl,1,Polish
 pt,1,Portuguese
 pt-BR,1,Brazilian Portuguese
-ro,0,Romanian
+# ro,0,Romanian
 ru,1,Russian
 # rw,0,Kinyarwanda
 # sa,0,Sanskrit
@@ -88,19 +95,19 @@ sk,1,Slovak
 sv,1,Swedish
 # sw,0,Swahili
 # sw-TZ,0,Tanzanian Swahili
-# ta-IN,0,Tamil
-# te-IN,0,Telugu
+ta-IN,1,Tamil
+te-IN,1,Telugu
 # tg,0,Tajik
 th,1,Thai
 # ti-ER,0,Tswana
 # tn,0,Tsonga
 tr,1,Turkish
 # ts,0,Tsonga
-uk,1,Ukrainian
-# ur-IN,0,Urdu
+# uk,0,Ukrainian
+ur-IN,1,Urdu
 # uz,1,Uzbek
 # ve,0,Venda
-# vi,0,Vietnamese
+vi,1,Vietnamese
 # xh,0,Xhosa
 zh-CN,1,Simplified Chinese
 zh-TW,1,Traditional Chinese
