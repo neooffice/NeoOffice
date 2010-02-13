@@ -83,8 +83,8 @@ MapMode* SwSelPaintRects::pMapMode = 0;
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
-std::map< SwSelPaintRects*, bool > aUseMacHighlightColorMap;
-std::map< SwSelPaintRects*, Window* > aWindowMap;
+static std::map< SwSelPaintRects*, bool > aUseMacHighlightColorMap;
+static std::map< SwSelPaintRects*, Window* > aWindowMap;
 
 static bool UseMacHighlightColor()
 {
