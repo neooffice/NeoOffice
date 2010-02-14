@@ -82,7 +82,6 @@ OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
 OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
 OOO-BUILD_BUILD_HOME=$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/build/ooo310-m19
-ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
 IMEDIA_PATCHES_HOME:=patches/imedia
 REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
 ifeq ("$(UNAME)","powerpc")
@@ -136,7 +135,6 @@ PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
-ODF-CONVERTER_PACKAGE=odf-converter-2.5
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
 IMEDIA_PACKAGE=imedia-read-only
 IMEDIA_TAG:=--revision '{2008-12-11}'
@@ -223,99 +221,9 @@ build.neo_configure: build.ooo-build_all neo_configure.mk
 	$(MAKE) $(MFLAGS) build.neo_configure_phony
 	touch "$@"
 
-# End of converted make rules
-
-build.odf-converter_checkout: $(ODF-CONVERTER_PATCHES_HOME)/$(ODF-CONVERTER_PACKAGE).tar.gz
-	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)"
-	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; tar zxvf "$(PWD)/$<"
-	cd "$(BUILD_HOME)" ; chmod -Rf u+rw "$(ODF-CONVERTER_PACKAGE)"
-	touch "$@"
-
-build.imedia_checkout:
-	rm -Rf "$(BUILD_HOME)/$(IMEDIA_PACKAGE)"
-	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_TAG) $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
-	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(IMEDIA_PACKAGE)"
-	touch "$@"
-
-build.remotecontrol_checkout:
-	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
-	mkdir -p "$(BUILD_HOME)"
-	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
-	cd "$(BUILD_HOME)" ; tar xvfz "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
-	touch "$@"
-
-build.oo_odk_patches: build.oo_patches
-	touch "$@"
-
-build.oo_external_patch: build.ooo-build_patches \
-	$(OO_PATCHES_HOME)/gpc231.tar.Z
-	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
-	gnutar zxf "$(OO_PATCHES_HOME)/gpc231.tar.Z" -C "$(BUILD_HOME)/external/gpc"
-	chmod -Rf u+w "$(BUILD_HOME)/external/gpc"
-	mv -f "$(BUILD_HOME)/external/gpc/gpc231"/* "$(BUILD_HOME)/external/gpc"
-	rm -Rf "$(BUILD_HOME)/external/gpc/gpc231"
-	touch "$@"
-
-build.odf-converter_patches: $(ODF-CONVERTER_PATCHES_HOME)/odf-converter.patch build.odf-converter_checkout
-	-( cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<" 
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR)":/usr/bin:"$$PATH" ; "$(MAKE)" $(MFLAGS)
-	rm -Rf "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist"
-	mkdir -p "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist"
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; ( ( cd "`/usr/bin/pkg-config --variable=prefix mono`/etc" ; gnutar cvf - mono ) | ( cd "$(PWD)/$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; gnutar xvf - ) )
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; cp "$(PWD)/$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/source/Shell/OdfConverter/OdfConverter" "OdfConverter" ; chmod a+x "OdfConverter" ; otool -L "OdfConverter" | awk '{ print $$1 }' | grep '\.dylib' | grep -v ':$$' | grep -v '^\/usr\/lib\/' | grep -v '^\/System\/Library\/Frameworks\/' | sed 's#^@executable_path/\.\./lib/#/Library/Frameworks/Mono.framework/Libraries/#' > "library.list"
-# Find all non-system linked libraries
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; touch "library.list.bak" ; sh -c -e 'while ! diff -q "library.list" "library.list.bak" >/dev/null ; do cp "library.list" "library.list.bak" ; for i in `cat "library.list"` ; do otool -L "$$i" | awk "{ print \$$1 }" | grep "\.dylib" | grep -v ":\$$" | grep -v "^\/usr\/lib\/" | grep -v "^\/System\/Library\/Frameworks\/" | sed "s#^@executable_path/\.\./lib/#/Library/Frameworks/Mono.framework/Libraries/#" >> "library.list" ; done ; sort -u "library.list" > "library.list.tmp" ; mv "library.list.tmp" "library.list" ; done' ; rm "library.list.bak"
-# Resolve and copy all softlinks
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; touch "library.list.bak" ; sh -c -e 'while ! diff -q "library.list" "library.list.bak" >/dev/null ; do cp "library.list" "library.list.bak" ; for i in `cat "library.list"` ; do if [ -h "$$i" ] ; then linkedfile=`ls -l "$$i" | awk "{ print \\$$NF }"` ; dirname=`dirname "$$i"` ; if [ -f "$$dirname/$$linkedfile" ] ; then echo "$$dirname/$$linkedfile" >> "library.list" ; ln -sf "$$linkedfile" `basename "$$i"` ; fi ; fi ; done ; sort -u "library.list" > "library.list.tmp" ; mv "library.list.tmp" "library.list" ; done' ; rm "library.list.bak"
-# Copy all files
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; sh -c -e 'for i in `cat "library.list"` ; do if [ -f "$$i" ] ; then cp "$$i" `basename "$$i"` ; fi ; done'
-# Change each library's internal name to @executable_path/libname
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; sh -c -e 'for i in OdfConverter `cat "library.list"` ; do basename=`basename "$$i"` ; install_name_tool -id "@executable_path/$$basename" "$$basename" ; done'
-# Change each library's link list to @executable_path/linkedlibname
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; sh -c -e 'for i in OdfConverter `cat "library.list"` ; do for j in `cat "library.list"` ; do basename=`basename "$$i"` ; install_name_tool -change "$$j" @executable_path/`basename "$$j"` "$$basename" ; install_name_tool -change @executable_path/../lib/`basename "$$j"` @executable_path/`basename "$$j"` "$$basename" ; done ; done'
-	cd "$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; rm "library.list"
-	touch "$@"
-
-build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj ) | tar xvf -
-	touch "$@"
-
-build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_src_untar
-	-( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
-	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug clean
-	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug
-	touch "$@"
-
-build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source build.remotecontrol_checkout
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.xcodeproj *.plist ) | tar xvf -
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release clean
-	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release
-	touch "$@"
-	
-build.neo_%_patch: % build.neo_configure
-	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do mkdir -p "$$i" ; done'
-	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
-	sh -e -c 'if [ ! -d "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" -a -d "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)" ] ; then rm -Rf "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; mv -f "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)" "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; fi'
-	rm -Rf "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)"
-	mkdir -p "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)"
-	cd "$<" ; ln -sf "$(PWD)/$(BUILD_HOME)/$</$(UOUTPUTDIR)"
-	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
-	touch "$@"
-
-build.neo_%_component: % build.neo_configure
-	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
-	mkdir -p "$(PWD)/$</$(UOUTPUTDIR)"
-	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
-	touch "$@"
-
-build.neo_patches: build.oo_all \
+build.neo_patches: build.ooo-build_all \
 	build.imedia_patches \
 	build.remotecontrol_patches \
-	build.odf-converter_patches \
 	$(PRODUCT_COMPONENT_MODULES:%=build.neo_%_component) \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \
 	build.neo_avmedia_patch \
@@ -349,18 +257,61 @@ build.neo_patches: build.oo_all \
 	build.neo_svtools_patch \
 	build.neo_svx_patch \
 	build.neo_sw_patch \
-	build.neo_vcl_patch \
-	build.neo_dtrans_patch \
+	build.neo_vcl_patch build.neo_dtrans_patch \
 	build.neo_ucb_patch \
 	build.neo_ucbhelper_patch \
 	build.neo_libwpd_patch build.neo_writerperfect_patch \
 	build.neo_xmloff_patch
 	touch "$@"
 
-build.neo_odk_patches: \
-	build.oo_odk_all \
-	build.neo_odk_patch
+build.neo_%_patch: % build.neo_configure
+	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do mkdir -p "$$i" ; done'
+	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	sh -e -c 'if [ ! -d "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR).oo" -a -d "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR)" ] ; then rm -Rf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; mv -f "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR)" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR).oo" ; fi'
+	rm -Rf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR)"
+	mkdir -p "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR)"
+	cd "$<" ; ln -sf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$(UOUTPUTDIR)"
+	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
+
+build.neo_%_component: % build.neo_configure
+	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
+	mkdir -p "$(PWD)/$</$(UOUTPUTDIR)"
+	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
+	touch "$@"
+
+build.imedia_checkout:
+	rm -Rf "$(BUILD_HOME)/$(IMEDIA_PACKAGE)"
+	mkdir -p "$(BUILD_HOME)"
+	cd "$(BUILD_HOME)" ; svn co $(IMEDIA_TAG) $(IMEDIA_SVNROOT) "$(IMEDIA_PACKAGE)"
+	cd "$(BUILD_HOME)" ; chmod -Rf u+w "$(IMEDIA_PACKAGE)"
+	touch "$@"
+
+build.remotecontrol_checkout:
+	rm -Rf "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)"
+	mkdir -p "$(BUILD_HOME)"
+	cd "$(BUILD_HOME)" ; mkdir "$(REMOTECONTROL_PACKAGE)"
+	cd "$(BUILD_HOME)" ; tar xvfz "$(PWD)/$(REMOTECONTROL_PATCHES_HOME)/$(REMOTECONTROL_SOURCE_FILENAME)"
+	touch "$@"
+
+build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_checkout
+	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj ) | tar xvf -
+	touch "$@"
+
+build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_src_untar
+	-( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
+	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
+	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug clean
+	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug
+	touch "$@"
+
+build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source build.remotecontrol_checkout
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.xcodeproj *.plist ) | tar xvf -
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release clean
+	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release
+	touch "$@"
+	
+# End of converted make rules
 
 build.package: build.neo_patches
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
@@ -527,10 +478,6 @@ endif
 	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `find "$(PWD)/$(BUILD_HOME)/solver/$${UPD}/$(UOUTPUTDIR)/bin" -type f -name "*.oxt" | grep -v "wiki-publisher.oxt" | grep -v "presenter-screen.oxt" | grep -v "sun-presentation-minimizer.oxt"` "$(PWD)/$(BUILD_HOME)/sdext/$(UOUTPUTDIR)/bin/presenter-screen.oxt" "$(PWD)/$(BUILD_HOME)/sdext/$(UOUTPUTDIR)/bin/sun-presentation-minimizer.oxt" ; do rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; echo "yes" | ./unopkg.bin add --shared --verbose "$$i" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
 # Install shared .oxt files
 	cd "$(INSTALL_HOME)/package/Contents/MacOS" ; sh -c -e 'JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; for i in `echo "$(PRODUCT_COMPONENT_MODULES)"` ; do if [ -f "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ] ; then rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp" ; ./unopkg.bin add --shared --verbose "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" -env:UserInstallation=file://"$(PWD)/$(INSTALL_HOME)/tmp" ; fi ; done ; rm -Rf "$(PWD)/$(INSTALL_HOME)/tmp"'
-# Integrate the odf-converter. Don't strip the binaries as it will break the
-# Mono libraries
-	mkdir -p "$(INSTALL_HOME)/package/Contents/MacOS/mono/2.0"
-	cd "$(INSTALL_HOME)/package" ; ( ( cd "$(PWD)/$(BUILD_HOME)/$(ODF-CONVERTER_PACKAGE)/dist" ; gnutar cvf - . ) | ( cd "$(PWD)/$(INSTALL_HOME)/package/Contents/MacOS" ; gnutar xvf - ) )
 	mkdir -p "$(INSTALL_HOME)/package/Contents/Library/Spotlight"
 	cd "$(INSTALL_HOME)/package/Contents/Library/Spotlight" ; curl -L "$(NEOLIGHT_MDIMPORTER_URL)" | tar zxvf -
 #	Make Spotlight plugin ID unique for each build
@@ -570,9 +517,6 @@ endif
 	chmod -f u+w "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)"
 	mv "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)"
 	sync ; hdiutil create -srcfolder "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME)" -format UDZO -ov -o "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).dmg"
-
-build.odk_package: build.neo_odk_patches
-	touch "$@"
 
 build.patch_package: build.package
 	@source "$(OO_ENV_JAVA)" ; sh -c -e 'if [ "$$PRODUCT_NAME" != "$(PRODUCT_NAME)" ] ; then echo "You must rebuild the build.neo_configure target before you can build this target" ; exit 1 ; fi'
