@@ -70,6 +70,7 @@ DLLSUFFIX=mxi
 TARGET_FILE_TYPE=Mach-O executable i386
 endif
 COMPILERDIR=$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
+BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
 
 # Build location macros
 BUILD_HOME:=build
@@ -79,14 +80,16 @@ SOURCE_HOME:=source
 CD_INSTALL_HOME:=cd_install
 OO_PATCHES_HOME:=patches/openoffice
 OOO-BUILD_PATCHES_HOME:=patches/ooo-build
+OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
+OOO-BUILD_BUILD_HOME=$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/build/ooo310-m19
 ODF-CONVERTER_PATCHES_HOME:=patches/odf-converter
 IMEDIA_PATCHES_HOME:=patches/imedia
 REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
 ifeq ("$(UNAME)","powerpc")
-OO_ENV_AQUA:=$(BUILD_HOME)/MacOSXPPCEnv.Set
+OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/MacOSXPPCEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
 else
-OO_ENV_AQUA:=$(BUILD_HOME)/MacOSXX86Env.Set
+OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/MacOSXX86Env.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX86EnvJava.Set
 endif
 OO_LANGUAGES:=$(shell cat $(PWD)/etc/supportedlanguages.txt | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
@@ -107,6 +110,7 @@ PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
 PRODUCT_DIR_PATCH_VERSION=Patch-0
+PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
 PRODUCT_SUPPORT_URL=http://www.neooffice.org/neojava/contact.php
@@ -131,8 +135,6 @@ PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser neomobile remot
 PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
-OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
-OOO-BUILD_BUILD_HOME=$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/build/ooo310-m19
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
 ODF-CONVERTER_PACKAGE=odf-converter-2.5
 IMEDIA_SVNROOT=http://imedia.googlecode.com/svn/branches/1.x/
@@ -217,6 +219,10 @@ build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.ooo-build_confi
 	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	touch "$@"
 
+build.neo_configure: build.ooo-build_all neo_configure.mk
+	$(MAKE) $(MFLAGS) build.neo_configure_phony
+	touch "$@"
+
 # End of converted make rules
 
 build.odf-converter_checkout: $(ODF-CONVERTER_PATCHES_HOME)/$(ODF-CONVERTER_PACKAGE).tar.gz
@@ -290,11 +296,6 @@ build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/additional_source bui
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release
 	touch "$@"
 	
-build.neo_configure: build.oo_all neo_configure.mk
-	rm -f "$(OO_ENV_JAVA)"
-	$(MAKE) $(MFLAGS) build.neo_configure_phony
-	touch "$@"
-
 build.neo_%_patch: % build.neo_configure
 	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do mkdir -p "$$i" ; done'
 	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
