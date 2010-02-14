@@ -83,8 +83,8 @@ MapMode* SwSelPaintRects::pMapMode = 0;
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
-std::map< SwSelPaintRects*, bool > aUseMacHighlightColorMap;
-std::multimap< Window*, SwSelPaintRects* > aWindowMap;
+static std::map< SwSelPaintRects*, bool > aUseMacHighlightColorMap;
+static std::map< SwSelPaintRects*, Window* > aWindowMap;
 
 static bool UseMacHighlightColor()
 {
@@ -737,12 +737,9 @@ SwSelPaintRects::SwSelPaintRects( const SwCrsrShell& rCSh )
 	pCShell( &rCSh ),
 	mpCursorOverlay(0)
 {
-#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+#ifdef USE_JAVA
 	aUseMacHighlightColorMap[ this ] = UseMacHighlightColor();
-	Window *pWin = GetShell()->GetWin();
-	if ( pWin )
-		aWindowMap.insert( std::pair< Window*, SwSelPaintRects* >( pWin, this ) );
-#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
+#endif	// USE_JAVA
 }
 
 SwSelPaintRects::~SwSelPaintRects()
@@ -754,11 +751,9 @@ SwSelPaintRects::~SwSelPaintRects()
 	if ( it != aUseMacHighlightColorMap.end() )
 		aUseMacHighlightColorMap.erase( this );
 
-	for ( std::multimap< Window*, SwSelPaintRects* >::iterator sit = aWindowMap.begin(); sit != aWindowMap.end(); ++sit )
-	{
-		if ( this == sit->second )
-			aWindowMap.erase( sit );
-	}
+	std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
+	if ( wit != aWindowMap.end() )
+		aWindowMap.erase( this );
 #endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
 }
 
@@ -794,22 +789,27 @@ void SwSelPaintRects::Hide()
 	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
 	if ( it != aUseMacHighlightColorMap.end() && it->second )
 	{
-		Window *pWin = GetShell()->GetWin();
-		if ( pWin && !GetShell()->IsPreView() )
+		std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
+		if ( wit != aWindowMap.end() )
 		{
-			for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
+			Window *pWin = wit->second;
+			aWindowMap.erase( this );
+			if ( pWin )
 			{
-				Rectangle aPaintRect( sit->SVRect() );
-				if ( !aPaintRect.IsEmpty() )
-					pWin->Invalidate( aPaintRect );
-			}
+				for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
+				{
+					Rectangle aPaintRect( sit->SVRect() );
+					if ( !aPaintRect.IsEmpty() )
+						pWin->Invalidate( aPaintRect );
+				}
 
-			for( USHORT n = 0; n < Count(); ++n )
-			{
-				const SwRect aNextRect( (*this)[n] );
-				Rectangle aPaintRect( aNextRect.SVRect() );
-				if ( !aPaintRect.IsEmpty() )
-					pWin->Invalidate( aPaintRect );
+				for( USHORT n = 0; n < Count(); ++n )
+				{
+					const SwRect aNextRect( (*this)[n] );
+					Rectangle aPaintRect( aNextRect.SVRect() );
+					if ( !aPaintRect.IsEmpty() )
+						pWin->Invalidate( aPaintRect );
+				}
 			}
 		}
 		aLastSelectionPixelRects.clear();
@@ -844,29 +844,31 @@ void SwSelPaintRects::Show()
 
 			if ( it != aUseMacHighlightColorMap.end() && it->second )
 			{
-				bool bInvalidate = false;
+				if ( pWin && !GetShell()->IsPreView() )
+				{
+					aWindowMap[ this ] = pWin;
 
-				// Check if the highlighed range has changed
-				if ( aLastSelectionPixelRects.size() != Count() )
-				{
-					bInvalidate = true;
-				}
-				else
-				{
-					for( USHORT n = 0; n < Count(); ++n )
+					bool bInvalidate = false;
+
+					// Check if the highlighed range has changed
+					if ( aLastSelectionPixelRects.size() != Count() )
 					{
-						const SwRect aNextRect( (*this)[n] );
-						if ( aNextRect != aLastSelectionPixelRects[ n ] )
+						bInvalidate = true;
+					}
+					else
+					{
+						for( USHORT n = 0; n < Count(); ++n )
 						{
-							bInvalidate = true;
-							break;
+							const SwRect aNextRect( (*this)[n] );
+							if ( aNextRect != aLastSelectionPixelRects[ n ] )
+							{
+								bInvalidate = true;
+								break;
+							}
 						}
 					}
-				}
 
-				if ( bInvalidate )
-				{
-					if ( pWin && !GetShell()->IsPreView() )
+					if ( bInvalidate )
 					{
 						for ( std::vector< SwRect >::const_iterator sit = aLastSelectionPixelRects.begin(); sit != aLastSelectionPixelRects.end(); ++sit )
 						{
@@ -874,21 +876,24 @@ void SwSelPaintRects::Show()
 							if ( !aPaintRect.IsEmpty() )
 								pWin->Invalidate( aPaintRect );
 						}
-					}
 
-					aLastSelectionPixelRects.clear();
+						aLastSelectionPixelRects.clear();
 
-					if ( pWin && !GetShell()->IsPreView() )
-					{
 						for( USHORT n = 0; n < Count(); ++n )
 						{
 							const SwRect aNextRect( (*this)[n] );
 							Rectangle aPaintRect( aNextRect.SVRect() );
 							if ( !aPaintRect.IsEmpty() )
+							{
 								pWin->Invalidate( aPaintRect );
-							aLastSelectionPixelRects.push_back( aNextRect );
+								aLastSelectionPixelRects.push_back( aNextRect );
+							}
 						}
 					}
+				}
+				else
+				{
+					aLastSelectionPixelRects.clear();
 				}
 			}
 			else
@@ -1335,34 +1340,41 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 	rPixelRects.clear();
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	Window *pWin = GetShell()->GetWin();
-	if ( pWin )
+	std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
+	if ( wit != aWindowMap.end() )
 	{
-		// Fix bug 3579 by including all SwSelPaintRects that share the same
-		// window as this instance
-		for ( std::multimap< Window*, SwSelPaintRects* >::const_iterator sit = aWindowMap.lower_bound( pWin ); sit != aWindowMap.end() && sit->first == pWin; ++sit )
+		Window *pWin = wit->second;
+		if ( pWin )
+		{
+			// Fix bug 3579 by including all SwSelPaintRects that share the same
+			// window as this instance
+			for ( wit = aWindowMap.begin(); wit != aWindowMap.end(); ++wit )
+			{
+				if ( pWin == wit->second )
+				{
+					std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( wit->first );
+					if ( it != aUseMacHighlightColorMap.end() && it->second )
+					{
+						SwSelPaintRects *pSelPaintRects = wit->first;
+						for( USHORT n = 0; n < pSelPaintRects->Count(); ++n )
+						{
+							const SwRect aNextRect( (*pSelPaintRects)[n] );
+							rPixelRects.push_back( aNextRect.SVRect() );
+						}
+					}
+				}
+			}
+		}
+		else
 		{
 			std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
 			if ( it != aUseMacHighlightColorMap.end() && it->second )
 			{
-				SwSelPaintRects *pSelPaintRects = sit->second;
-				for( USHORT n = 0; n < pSelPaintRects->Count(); ++n )
+				for( USHORT n = 0; n < Count(); ++n )
 				{
-					const SwRect aNextRect( (*pSelPaintRects)[n] );
+					const SwRect aNextRect( (*this)[n] );
 					rPixelRects.push_back( aNextRect.SVRect() );
 				}
-			}
-		}
-	}
-	else
-	{
-		std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
-		if ( it != aUseMacHighlightColorMap.end() && it->second )
-		{
-			for( USHORT n = 0; n < Count(); ++n )
-			{
-				const SwRect aNextRect( (*this)[n] );
-				rPixelRects.push_back( aNextRect.SVRect() );
 			}
 		}
 	}
