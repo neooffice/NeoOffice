@@ -53,10 +53,53 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 {
 	BOOL bRet = NO;
 
-	if ( pEvent && [pEvent type] == NSKeyDown )
+	if ( !pEvent || [pEvent type] != NSKeyDown )
+		return bRet;
+
+	CFPreferencesAppSynchronize( CFSTR( "com.apple.symbolichotkeys" ) );
+	CFPropertyListRef pPref = CFPreferencesCopyAppValue( CFSTR( "AppleSymbolicHotKeys" ), CFSTR( "com.apple.symbolichotkeys" ) );
+	if ( pPref )
+	{
+		if ( CFGetTypeID( pPref ) == CFDictionaryGetTypeID() )
+		{
+			NSString *pKey = [[NSNumber numberWithUnsignedInt:nKey] stringValue];
+			if ( pKey )
+			{
+				NSDictionary *pDict = (NSDictionary *)[(NSDictionary *)pPref objectForKey:pKey];
+				if ( pDict && CFGetTypeID( pDict ) == CFDictionaryGetTypeID() )
+				{
+					NSNumber *pEnabled = (NSNumber *)[pDict valueForKey:@"enabled"];
+					if ( pEnabled && [pEnabled intValue] )
+					{
+						NSDictionary *pValue = (NSDictionary *)[pDict objectForKey:@"value"];
+						if ( pValue && CFGetTypeID( pValue ) == CFDictionaryGetTypeID() )
+						{
+							NSArray *pParams = (NSArray *)[pValue objectForKey:@"parameters"];
+							if ( pParams && CFGetTypeID( pParams ) == CFArrayGetTypeID() && [pParams count] > 2 )
+							{
+								NSNumber *pKeyCode = (NSNumber *)[pParams objectAtIndex:1];
+								if ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] )
+								{
+									NSNumber *pModifiers = (NSNumber *)[pParams objectAtIndex:2];
+									if ( pModifiers && ( [pModifiers unsignedIntValue]  & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) )
+{
+										bRet = YES;
+}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		CFRelease( pPref );
+	}
+
+	if ( !bRet )
 	{
 		CFPreferencesAppSynchronize( CFSTR( "com.apple.universalaccess" ) );
-		CFPropertyListRef pPref = CFPreferencesCopyAppValue( CFSTR( "UserAssignableHotKeys" ), CFSTR( "com.apple.universalaccess" ) );
+		pPref = CFPreferencesCopyAppValue( CFSTR( "UserAssignableHotKeys" ), CFSTR( "com.apple.universalaccess" ) );
 		if ( pPref )
 		{
 			if ( CFGetTypeID( pPref ) == CFArrayGetTypeID() )
@@ -79,7 +122,9 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 								{
 									NSNumber *pModifiers = (NSNumber *)[pDict valueForKey:@"modifier"];
 									if ( pModifiers && ( [pModifiers unsignedIntValue]  & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) )
+{
 										bRet = YES;
+}
 								}
 							}
 
