@@ -228,7 +228,6 @@ build.neo_patches: build.ooo-build_all \
 	$(PRODUCT_COMPONENT_PATCH_MODULES:%=build.neo_%_component) \
 	build.neo_avmedia_patch \
 	build.neo_basic_patch \
-	build.neo_binfilter_patch \
 	build.neo_bridges_patch \
 	build.neo_canvas_patch \
 	build.neo_configmgr_patch \
@@ -353,17 +352,6 @@ endif
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/jvmfwk/$(UOUTPUTDIR)/bin/javavendors.xml" "basis-link/ure-link/share/misc/javavendors.xml"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/extensions/$(UOUTPUTDIR)/misc/registry/spool/org/openoffice/Office/Addons/Addons-onlineupdate.xcu" "basis-link/share/registry/data/org/openoffice/Office/Addons.xcu"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/extensions/$(UOUTPUTDIR)/misc/registry/spool/org/openoffice/Office/Jobs/Jobs-onlineupdate.xcu" "basis-link/share/registry/data/org/openoffice/Office/Jobs.xcu"
-# Fix bug 3426 by including the legacy binfilter files
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -c -e 'for i in `cd "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/lib" ; find . -name "*.dylib*" -maxdepth 1` ; do cp "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/lib/$${i}" "basis-link/program/$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/bin/legacy_binfilters.rdb" "basis-link/program/legacy_binfilters.rdb"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -c -e 'for i in `cd "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/bin" ; find . -name "*en-US.res" -maxdepth 1` ; do cp "$(PWD)/$(BUILD_HOME)/binfilter/$(UOUTPUTDIR)/bin/$${i}" "basis-link/program/resource/$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/filter/$(UOUTPUTDIR)/misc/filters/ui/langpacks/en-US/org/openoffice/TypeDetection/Filter.xcu" "basis-link/share/registry/res/en-US/org/openoffice/TypeDetection/Filter.xcu"
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -c -e 'for i in `cd "$(PWD)/$(BUILD_HOME)/filter/$(UOUTPUTDIR)/misc/filters/modulepacks" ; find . -name "*_bf_filters.xcu" -maxdepth 1` ; do cp "$(PWD)/$(BUILD_HOME)/filter/$(UOUTPUTDIR)/misc/filters/modulepacks/$${i}" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Filter/$${i}" ; done'
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -c -e 'for i in `cd "$(PWD)/$(BUILD_HOME)/filter/$(UOUTPUTDIR)/misc/filters/modulepacks" ; find . -name "*_bf_types.xcu" -maxdepth 1` ; do cp "$(PWD)/$(BUILD_HOME)/filter/$(UOUTPUTDIR)/misc/filters/modulepacks/$${i}" "basis-link/share/registry/modules/org/openoffice/TypeDetection/Types/$${i}" ; done'
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libbf_migratefilter$(DLLSUFFIX).dylib'
-	source "$(OO_ENV_JAVA)" ; cd "$(INSTALL_HOME)/package/Contents/basis-link/program" ; regcomp -register -r services.rdb -c 'vnd.sun.star.expand:$$OOO_BASE_DIR/program/libbindet$(DLLSUFFIX).dylib'
-# Include the uui*.res files as they contain several new GUI resources
-	cd "$(INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `cat "$(PWD)/$(INSTALL_HOME)/language_names"` ; do langname=`grep "^$${i}," "$(PWD)/etc/supportedlanguages.txt" | sed "s/#.*$$//" | awk -F, "{ print \\$$1 }"` ; if [ -z "$${langname}" ] ; then echo "Skipping $${i} language..." ; continue ; fi ; cp "$(PWD)/$(BUILD_HOME)/uui/$(UOUTPUTDIR)/bin/uui$${langname}.res" "basis-link/program/resource/uui$${langname}.res" ; done'
 	cd "$(INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
 	cd "$(INSTALL_HOME)/package/Contents" ; printf '%s' 'APPL$(PRODUCT_FILETYPE)' > "PkgInfo"
 	cd "$(INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_HOME)/hsqldb/$(UOUTPUTDIR)/misc/build/hsqldb/lib/hsqldb.jar" "basis-link/program/classes"
