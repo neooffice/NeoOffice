@@ -5,7 +5,22 @@ retrieving revision 1.34
 diff -u -r1.34 unxmacx.mk
 --- inc/unxmacx.mk	11 Jul 2008 14:45:24 -0000	1.34
 +++ inc/unxmacx.mk	6 Aug 2008 18:14:38 -0000
-@@ -251,7 +251,7 @@
+@@ -51,10 +51,13 @@
+ .IF "$(GUIBASE)"=="unx" && "$(USE_SYSTEM_STL)"!="YES"
+ CDEFS+=-DX_LOCALE
+ .ENDIF
+-.IF "$(GUIBASE)"=="aqua"
++.IF "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
+ # TODO: use MACOSX_DEPLOYMENT_TARGET instead of MAC_OS_X_VERSION_MIN_REQUIRED?
+ CDEFS+=-DQUARTZ -DMAC_OS_X_VERSION_MIN_REQUIRED=1040
+ .ENDIF
++.IF "$(GUIBASE)"=="java"
++CDEFS+=-DUSE_JAVA
++.ENDIF
+ 
+ # Name of library where static data members are initialized
+ # STATICLIBNAME=static$(DLLPOSTFIX)
+@@ -259,7 +262,7 @@
  STDOBJCUI=
  STDSLOCUI=
  
