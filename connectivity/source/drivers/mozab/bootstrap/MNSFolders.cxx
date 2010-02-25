@@ -122,7 +122,7 @@ namespace
             const char* pProfileByEnv = getenv( ProductRootEnvironmentVariable[ productIndex ] );
             if ( pProfileByEnv )
             {
-                sProductPath = ::rtl::OUString( pProfileByEnv, strlen( pProfileByEnv ), osl_getThreadTextEncoding() );
+                sProductPath = ::rtl::OUString( pProfileByEnv, rtl_str_getLength( pProfileByEnv ), osl_getThreadTextEncoding() );
                 // asume that this is fine, no further checks
             }
             else
@@ -172,7 +172,7 @@ namespace
 
     return lcl_guessProfileRoot( product );
 }
-
+#ifndef MINIMAL_PROFILEDISCOVER
 // -----------------------------------------------------------------------
 ::rtl::OUString getRegistryFileName(MozillaProductType product)
 {
@@ -181,5 +181,4 @@ namespace
 
 	return getRegistryDir(product) + ::rtl::OUString::createFromAscii(APP_REGISTRY_NAME);
 }
-
-
+#endif
