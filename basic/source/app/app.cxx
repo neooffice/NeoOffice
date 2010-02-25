@@ -309,7 +309,7 @@ void BasicApp::Main( )
 //  Install filter for OSLAsserts
     DbgPrintMsgBox = DbgGetPrintMsgBox();
 	DbgSetPrintTestTool( DBG_TestToolDebugMessageFilter );
-	DBG_INSTOUTERROR( DBG_OUT_TESTTOOL )
+	DBG_INSTOUTERROR( DBG_OUT_TESTTOOL );
 
     if ( osl_setDebugMessageFunc( osl_TestToolDebugMessageFilter ) )
         DBG_ERROR("osl_setDebugMessageFunc returns non NULL pointer");
@@ -973,7 +973,7 @@ void BasicFrame::WinMax_Restore()
 	BOOL bHasFullscreenWin = FALSE;
 	for( p = pList->First(); p && !bHasFullscreenWin ; p = pList->Next() )
 		bHasFullscreenWin |= ( p->GetWinState() == TT_WIN_STATE_MAX );
-	GetMenuBar()->ShowButtons( bHasFullscreenWin, bHasFullscreenWin, bHasFullscreenWin );
+	GetMenuBar()->ShowButtons( bHasFullscreenWin, FALSE, FALSE );
 	WinShow_Hide();
 }
 
@@ -1468,7 +1468,7 @@ long BasicFrame::Command( short nID, BOOL bChecked )
 				else
                 {
                     AppWin *w = NULL;
-                    for ( w = pList->Last() ; w ? !w->ISA(AppBasEd) : FALSE ; w = pList->Prev() );
+                    for ( w = pList->Last() ; w ? !w->ISA(AppBasEd) : FALSE ; w = pList->Prev() ) ;
                     if ( w )
                     {
 					    p = ((AppBasEd*)w);

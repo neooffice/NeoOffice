@@ -1173,7 +1173,7 @@ sal_Bool SfxLibraryContainer::init_Impl(
 		// #i93163
 		if( bCleanUp )
 		{
-			DBG_ERROR( "Upgrade of Basic installation failed somehow" )
+			DBG_ERROR( "Upgrade of Basic installation failed somehow" );
 
 			static char strErrorSavFolderName[] = "__basic_80_err";
 			INetURLObject aPrevUserBasicInetObj_Err( aUserBasicInetObj );
@@ -2174,10 +2174,9 @@ void SAL_CALL SfxLibraryContainer::removeLibrary( const OUString& Name )
 		    Sequence< OUString > aNames = pImplLib->getElementNames();
 		    sal_Int32 nNameCount = aNames.getLength();
 		    const OUString* pNames = aNames.getConstArray();
-		    for( sal_Int32 i = 0 ; i < nNameCount ; i++ )
+		    for( sal_Int32 i = 0 ; i < nNameCount ; ++i, ++pNames )
 		    {
-			    OUString aElementName = pNames[ i ];
-                pImplLib->removeByName( aElementName );
+                pImplLib->removeElementWithoutChecks( *pNames, SfxLibrary::LibraryContainerAccess() );
 		    }
 	    }
 
@@ -2747,6 +2746,10 @@ OUString SfxLibraryContainer::expand_url( const OUString& url )
 	{
 		// get the standard library
 		String aLibName( RTL_CONSTASCII_USTRINGPARAM( "Standard" ) );
+
+                if ( pBasMgr->GetName().Len() )
+                    aLibName = pBasMgr->GetName();
+
 		StarBASIC* pBasic = pBasMgr->GetLib( aLibName );
 		if( pBasic )
 			bVBACompat = pBasic->isVBAEnabled();
@@ -2955,20 +2958,16 @@ void SfxLibrary::insertByName( const OUString& aName, const Any& aElement )
 	implSetModified( sal_True );
 }
 
-void SfxLibrary::removeByName( const OUString& Name )
-	throw(NoSuchElementException, WrappedTargetException, RuntimeException)
+void SfxLibrary::impl_removeWithoutChecks( const ::rtl::OUString& _rElementName )
 {
-    impl_checkReadOnly();
-    impl_checkLoaded();
-
-	maNameContainer.removeByName( Name );
+	maNameContainer.removeByName( _rElementName );
 	implSetModified( sal_True );
 
     // Remove element file
 	if( maStorageURL.getLength() )
 	{
 		INetURLObject aElementInetObj( maStorageURL );
-		aElementInetObj.insertName( Name, sal_False,
+		aElementInetObj.insertName( _rElementName, sal_False,
 			INetURLObject::LAST_SEGMENT, sal_True, INetURLObject::ENCODE_ALL );
 		aElementInetObj.setExtension( maLibElementFileExtension );
 		OUString aFile = aElementInetObj.GetMainURL( INetURLObject::NO_DECODE );
@@ -2980,9 +2979,17 @@ void SfxLibrary::removeByName( const OUString& Name )
         }
         catch( Exception& )
         {
+            DBG_UNHANDLED_EXCEPTION();
         }
 	}
+}
 
+void SfxLibrary::removeByName( const OUString& Name )
+	throw(NoSuchElementException, WrappedTargetException, RuntimeException)
+{
+    impl_checkReadOnly();
+    impl_checkLoaded();
+    impl_removeWithoutChecks( Name );
 }
 
 // XTypeProvider
