@@ -27,7 +27,7 @@
  *
  ************************************************************************/
 
-#include <cstdio> 
+#include <stdio.h> 
  
 #include <avmedia/mediawindow.hxx>
 #include "mediawindow_impl.hxx"
