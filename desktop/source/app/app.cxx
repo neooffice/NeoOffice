@@ -35,7 +35,6 @@
 #include "app.hxx"
 #include "desktop.hrc"
 #include "appinit.hxx"
-#include "intro.hxx"
 #include "officeipcthread.hxx"
 #include "cmdlineargs.hxx"
 #include "desktopresid.hxx"
@@ -48,6 +47,7 @@
 #include "desktopcontext.hxx"
 #include "exithelper.hxx"
 #include "../migration/pages.hxx"
+#include "../migration/migration.hxx"
 
 #include <svtools/javacontext.hxx>
 #include <com/sun/star/frame/XSessionManagerListener.hpp>
@@ -1281,7 +1281,6 @@ void Desktop::Main()
                 HandleBootstrapErrors( BE_USERINSTALL_FAILED );
             return;
         }
-
         // refresh path information
         utl::Bootstrap::reloadData();
         SetSplashScreenProgress(25);
@@ -1423,6 +1422,7 @@ void Desktop::Main()
         tools::InitTestToolLib();
         RTL_LOGFILE_CONTEXT_TRACE( aLog, "} tools::InitTestToolLib" );
 
+#if 0 // ooo-build doesn't use First Start Wizard at all.
         // First Start Wizard allowed ?
         if ( ! pCmdLineArgs->IsNoFirstStartWizard())
         {
@@ -1449,13 +1449,12 @@ void Desktop::Main()
                     }
                 }
             }
-#if 0
             else if ( RegistrationPage::hasReminderDateCome() )
                 RegistrationPage::executeSingleMode();
-#endif
             
             RTL_LOGFILE_CONTEXT_TRACE( aLog, "} FirstStartWizard" );
         }
+#endif
 
 #ifdef USE_JAVA
         OUString aProgName;
@@ -1591,7 +1590,7 @@ void Desktop::Main()
     SvtFontSubstConfig().Apply();
 
     SvtTabAppearanceCfg aAppearanceCfg;
-	//aAppearanceCfg.SetInitialized();
+	aAppearanceCfg.SetInitialized();
 	aAppearanceCfg.SetApplicationDefaults( this );
 	SvtAccessibilityOptions aOptions;
 	aOptions.SetVCLSettings();
@@ -1682,12 +1681,12 @@ void Desktop::Main()
     }
     catch(const com::sun::star::document::CorruptedFilterConfigurationException& exFilterCfg)
     {
-        OfficeIPCThread::BlockAllRequests();
+        OfficeIPCThread::SetDowning();
         FatalError( MakeStartupErrorMessage(exFilterCfg.Message) );
     }
     catch(const com::sun::star::configuration::CorruptedConfigurationException& exAnyCfg)
     {
-        OfficeIPCThread::BlockAllRequests();
+        OfficeIPCThread::SetDowning();
         FatalError( MakeStartupErrorMessage(exAnyCfg.Message) );
     }
 
@@ -2520,6 +2519,8 @@ void Desktop::OpenClients()
             }
         }
     }
+    
+    OfficeIPCThread::EnableRequests();
 
 	sal_Bool bShutdown( sal_False );
 	if ( !pArgs->IsServer() )

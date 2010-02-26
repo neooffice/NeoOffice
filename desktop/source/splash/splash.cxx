@@ -616,7 +616,7 @@ void SplashScreen::Paint( const Rectangle&)
               aDrawRect.Bottom() += (nProgressHeight - _barheight)/2;
               aControlRegion = Region( aDrawRect );
         }
-       
+        
 #ifdef USE_JAVA 
         SetFillColor();
 #endif	// USE_JAVA 

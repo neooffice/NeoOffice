@@ -39,12 +39,12 @@ ENABLE_EXCEPTIONS=TRUE
 
 .INCLUDE :  settings.mk
 
-.IF "$(PRODUCT_DIR_NAME)" != ""
-CDEFS += -DPRODUCT_DIR_NAME='"$(PRODUCT_DIR_NAME)"'
-.ENDIF
-
 .IF "$(GUIBASE)"=="aqua"
 CFLAGS+=-x objective-c++
+.ENDIF
+
+.IF "$(ENABLE_GNOMEVFS)"=="TRUE"
+CFLAGS+=-DGNOME_VFS_ENABLED
 .ENDIF
 
 SHL1TARGET = sofficeapp
@@ -61,14 +61,11 @@ SHL1OBJS = \
     $(SLO)$/desktopcontext.obj \
     $(SLO)$/desktopresid.obj \
     $(SLO)$/dispatchwatcher.obj \
-    $(SLO)$/intro.obj \
     $(SLO)$/langselect.obj \
     $(SLO)$/lockfile.obj \
     $(SLO)$/lockfile2.obj \
     $(SLO)$/migration.obj \
     $(SLO)$/officeipcthread.obj \
-    $(SLO)$/oinstanceprovider.obj \
-    $(SLO)$/opluginframefactory.obj \
     $(SLO)$/pages.obj \
     $(SLO)$/sofficemain.obj \
     $(SLO)$/userinstall.obj \
@@ -94,8 +91,11 @@ DEF1NAME = $(SHL1TARGET)
 
 OBJFILES = \
     $(OBJ)$/copyright_ascii_ooo.obj \
-    $(OBJ)$/copyright_ascii_sun.obj \
     $(OBJ)$/main.obj
+.IF "$(GUI)" != "OS2"
+OBJFILES += \
+    $(OBJ)$/copyright_ascii_sun.obj
+.ENDIF
 
 .IF "$(GUIBASE)" == "java"
 OBJFILES += \
