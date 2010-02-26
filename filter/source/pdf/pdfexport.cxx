@@ -63,9 +63,11 @@
 #include <com/sun/star/frame/XModel.hpp>
 #include <com/sun/star/frame/XModuleManager.hpp>
 #include <com/sun/star/frame/XStorable.hpp>
+#include <com/sun/star/frame/XController.hpp>
 #include <com/sun/star/document/XDocumentProperties.hpp>
 #include <com/sun/star/document/XDocumentPropertiesSupplier.hpp>
 #include <com/sun/star/container/XNameAccess.hpp>
+#include <com/sun/star/view/XViewSettingsSupplier.hpp>
 #include <unotools/configmgr.hxx>
 #include <com/sun/star/lang/XServiceInfo.hpp>
 #include <com/sun/star/drawing/XShapes.hpp>
@@ -116,28 +118,29 @@ OUString GetProperty( const Reference< XPropertySet > & rXPropSet, const sal_Cha
 // -------------
 
 PDFExport::PDFExport( const Reference< XComponent >& rxSrcDoc, Reference< task::XStatusIndicator >& rxStatusIndicator, const Reference< lang::XMultiServiceFactory >& xFactory ) :
-    mxSrcDoc				( rxSrcDoc ),
-    mxMSF                   ( xFactory ),
-	mxStatusIndicator		( rxStatusIndicator ),
-	mbUseTaggedPDF			( sal_False ),
-    mnPDFTypeSelection      ( 0 ),
-	mbExportNotes			( sal_True ),
-	mbExportNotesPages		( sal_False ),
-	mbEmbedStandardFonts    ( sal_False ),//in preparation for i54636 and i76458.
-                                          //already used for i59651 (PDF/A-1)
-	mbUseTransitionEffects	( sal_True ),
-    mbExportBookmarks       ( sal_True ),
-    mnOpenBookmarkLevels    ( -1 ),
-	mbUseLosslessCompression( sal_False ),
-	mbReduceImageResolution	( sal_False ),
-    mbSkipEmptyPages        ( sal_True ),
-    mbAddStream             ( sal_False ),
-	mnMaxImageResolution	( 300 ),
-	mnQuality				( 90 ),
-	mnFormsFormat			( 0 ),
-    mbExportFormFields      ( sal_True ),
-	mnProgressValue			( 0 ),
-    mbWatermark             ( sal_False ),
+    mxSrcDoc				    ( rxSrcDoc ),
+    mxMSF                       ( xFactory ),
+	mxStatusIndicator		    ( rxStatusIndicator ),
+	mbUseTaggedPDF			    ( sal_False ),
+    mnPDFTypeSelection          ( 0 ),
+	mbExportNotes			    ( sal_True ),
+	mbExportNotesPages		    ( sal_False ),
+	mbEmbedStandardFonts        ( sal_False ),//in preparation for i54636 and i76458.
+                                              //already used for i59651 (PDF/A-1)
+	mbUseTransitionEffects	    ( sal_True ),
+    mbExportBookmarks           ( sal_True ),
+    mnOpenBookmarkLevels        ( -1 ),
+	mbUseLosslessCompression    ( sal_False ),
+	mbReduceImageResolution	    ( sal_False ),
+    mbSkipEmptyPages            ( sal_True ),
+    mbAddStream                 ( sal_False ),
+	mnMaxImageResolution	    ( 300 ),
+	mnQuality				    ( 90 ),
+	mnFormsFormat			    ( 0 ),
+    mbExportFormFields          ( sal_True ),
+	mnProgressValue			    ( 0 ),
+    mbRemoveTransparencies      ( sal_False ),
+    mbWatermark                 ( sal_False ),
 
     mbHideViewerToolbar			( sal_False ),
     mbHideViewerMenubar			( sal_False ),
@@ -161,7 +164,7 @@ PDFExport::PDFExport( const Reference< XComponent >& rxSrcDoc, Reference< task::
     mnChangesAllowed			( 4 ),
     mbCanCopyOrExtract			( sal_True ),
     mbCanExtractForAccessibility( sal_True ),
-    
+
     mnCachePatternId            ( -1 ),
 
 //--->i56629
@@ -282,7 +285,7 @@ class PDFExportStreamDoc : public vcl::PDFOutputStream
       m_aPassWd( rPwd )
     {}
     virtual ~PDFExportStreamDoc();
-    
+
     virtual void write( const Reference< XOutputStream >& xStream );
 };
 
@@ -394,7 +397,7 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
     INetURLObject   aURL( rFile );
     OUString        aFile;
     sal_Bool        bRet = sal_False;
-    
+
     std::set< PDFWriter::ErrorCode > aErrors;
 
     if( aURL.GetProtocol() != INET_PROT_FILE )
@@ -526,7 +529,7 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
  					rFilterData[ nData ].Value >>= mbConvertOOoTargetToPDFTarget;
   				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportBookmarksToPDFDestination" ) ) )
   					rFilterData[ nData ].Value >>= mbExportBmkToDest;
-//<---                
+//<---
 				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "ExportBookmarks" ) ) )
 					rFilterData[ nData ].Value >>= mbExportBookmarks;
 				else if ( rFilterData[ nData ].Name == OUString( RTL_CONSTASCII_USTRINGPARAM( "OpenBookmarkLevels" ) ) )
@@ -543,12 +546,14 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                 break;
             case 1:
                 aContext.Version	= PDFWriter::PDF_A_1;
-//force the tagged PDF as well                
+//force the tagged PDF as well
                 mbUseTaggedPDF = sal_True;
 //force embedding of standard fonts
                 mbEmbedStandardFonts = sal_True;
 //force disabling of form conversion
                 mbExportFormFields = sal_False;
+// PDF/A does not allow transparencies
+                mbRemoveTransparencies = sal_True;
                 break;
             }
 
@@ -679,9 +684,9 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                     break;
                 default:
                 case 4:
-                    aContext.AccessPermissions.CanModifyTheContent		= 
-                        aContext.AccessPermissions.CanCopyOrExtract		= 
-                        aContext.AccessPermissions.CanAddOrModify		= 
+                    aContext.AccessPermissions.CanModifyTheContent		=
+                        aContext.AccessPermissions.CanCopyOrExtract		=
+                        aContext.AccessPermissions.CanAddOrModify		=
                         aContext.AccessPermissions.CanFillInteractive	= sal_True;
                     break;
                 }
@@ -710,11 +715,11 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                     break;
             }
 
+            //get model
+            Reference< frame::XModel > xModel( mxSrcDoc, UNO_QUERY );
 			{
-//---> i56629 Relative link stuff				
+//---> i56629 Relative link stuff
 //set the base URL of the file:
-//get model
-				Reference< frame::XModel > xModel( mxSrcDoc, UNO_QUERY );
 //then base URL
 				aContext.BaseURL = xModel->getURL();
 //relative link option is private to PDF Export filter and limited to local filesystem only
@@ -857,6 +862,29 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 #endif	// USE_JAVA
 
 				sal_Bool		bSecondPassForImpressNotes = sal_False;
+				bool bReChangeToNormalView = false;
+              	::rtl::OUString sShowOnlineLayout( RTL_CONSTASCII_USTRINGPARAM( "ShowOnlineLayout"));
+              	uno::Reference< beans::XPropertySet > xViewProperties;
+
+				if ( aCreator.EqualsAscii( "Writer" ) )
+				{
+				    //i92835 if Writer is in web layout mode this has to be switched to normal view and back to web view in the end
+                    try
+                    {
+                        Reference< view::XViewSettingsSupplier > xVSettingsSupplier( xModel->getCurrentController(), uno::UNO_QUERY_THROW );
+                        xViewProperties =  xVSettingsSupplier->getViewSettings();
+                    	xViewProperties->getPropertyValue( sShowOnlineLayout ) >>= bReChangeToNormalView;
+                    	if( bReChangeToNormalView )
+                    	{
+                    	    xViewProperties->setPropertyValue( sShowOnlineLayout, uno::makeAny( false ) );
+                    	}
+                    }
+                    catch( const uno::Exception& )
+                    {
+                    }
+
+				}
+
                 const sal_Int32 nPageCount = xRenderable->getRendererCount( aSelection, aRenderOptions );
 				const Range     aRange( 1, nPageCount );
 				MultiSelection  aMultiSelection;
@@ -912,7 +940,7 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
 					xRenderable->render( 0, aSelection, aRenderOptions );
 				}
 #endif	// USE_JAVA
-                
+
                 // if during the export the doc locale was set copy it to PDF writer
                 const com::sun::star::lang::Locale& rLoc( pPDFExtOutDevData->GetDocumentLocale() );
                 if( rLoc.Language.getLength() )
@@ -925,15 +953,26 @@ sal_Bool PDFExport::Export( const OUString& rFile, const Sequence< PropertyValue
                     aErrors = pPDFWriter->GetErrors();
 				}
 				pOut->SetExtOutDevData( NULL );
+                if( bReChangeToNormalView )
+                {
+                    try
+                    {
+                        xViewProperties->setPropertyValue( sShowOnlineLayout, uno::makeAny( true ) );
+                    }
+                    catch( const uno::Exception& )
+                    {
+                    }
+                }
 			}
+
 			delete pPDFExtOutDevData;
             delete pPDFWriter;
         }
     }
-    
+
     // show eventual errors during export
     showErrors( aErrors );
-    
+
     return bRet;
 }
 
@@ -971,10 +1010,10 @@ sal_Bool PDFExport::ImplExportPage( PDFWriter& rWriter, PDFExtOutDevData& rPDFEx
     rWriter.SetClipRegion( aPageRect );
     bRet = ImplWriteActions( rWriter, &rPDFExtOutDevData, rMtf, aDummyVDev );
 	rPDFExtOutDevData.ResetSyncData();
-    
+
     if( mbWatermark )
         ImplWriteWatermark( rWriter, aSizePDF );
-    
+
     return bRet;
 }
 
@@ -994,12 +1033,12 @@ void PDFExport::ImplWriteWatermark( PDFWriter& rWriter, const Size& rPageSize )
         nTextWidth = rPageSize.Height();
         aFont.SetOrientation( 2700 );
     }
-    
+
     if( ! ( maWatermark >>= aText ) )
     {
         // more complicated watermark ?
     }
-    
+
     // adjust font height for text to fit
     OutputDevice* pDev = rWriter.GetReferenceDevice();
     pDev->Push( PUSH_ALL );
@@ -1023,7 +1062,7 @@ void PDFExport::ImplWriteWatermark( PDFWriter& rWriter, const Size& rPageSize )
     // some fonts go a little outside ascent/descent
     nTextHeight += nTextHeight/20;
     pDev->Pop();
-    
+
     rWriter.Push( PUSH_ALL );
     rWriter.SetMapMode( MapMode( MAP_POINT ) );
     rWriter.SetFont( aFont );
@@ -1054,15 +1093,31 @@ void PDFExport::ImplWriteWatermark( PDFWriter& rWriter, const Size& rPageSize )
 // -----------------------------------------------------------------------------
 
 sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDFExtOutDevData,
-										const GDIMetaFile& rMtf, VirtualDevice& rDummyVDev )
+										const GDIMetaFile& rInMtf, VirtualDevice& rDummyVDev )
 {
     bool bAssertionFired( false );
 
-	for( sal_uInt32 i = 0, nCount = rMtf.GetActionCount(); i < nCount; )
+    GDIMetaFile aMtf;
+    bool bTransparenciesRemoved = false;
+    #if 0
+    if( mbRemoveTransparencies )
+    {
+        bTransparenciesRemoved = rWriter.GetReferenceDevice()->
+            RemoveTransparenciesFromMetaFile( rInMtf, aMtf, mnMaxImageResolution, mnMaxImageResolution,
+                                              false, true, mbReduceImageResolution );
+    }
+    else
+    #endif
+    {
+        aMtf = rInMtf;
+    }
+
+
+	for( sal_uInt32 i = 0, nCount = aMtf.GetActionCount(); i < nCount; )
 	{
 		if ( !pPDFExtOutDevData || !pPDFExtOutDevData->PlaySyncPageAct( rWriter, i ) )
 		{
-			const MetaAction*	pAction = rMtf.GetAction( i );
+			const MetaAction*	pAction = aMtf.GetAction( i );
 			const USHORT		nType = pAction->GetType();
 
 			switch( nType )
@@ -1313,6 +1368,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 				break;
 
 				case( META_COMMENT_ACTION ):
+                if( ! bTransparenciesRemoved )
 				{
 					const MetaCommentAction*	pA = (const MetaCommentAction*) pAction;
 					String						aSkipComment;
@@ -1324,7 +1380,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 
 						while( !bDone && ( ++i < nCount ) )
 						{
-							pAction = rMtf.GetAction( i );
+							pAction = aMtf.GetAction( i );
 
 							if( pAction->GetType() == META_GRADIENTEX_ACTION )
 								pGradAction = (const MetaGradientExAction*) pAction;
@@ -1372,7 +1428,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 									bSkipSequence = sal_False;
 								if ( (sal_uInt32)eJT > 2 )
 									bSkipSequence = sal_False;
-								if ( aDashArray.size() && ( fStrokeWidth != 0.0 ) )
+								if ( aDashArray.size() && ( fStrokeWidth != 0.0 ) && ( fTransparency == 0.0 ) )
 									bSkipSequence = sal_False;
 								if ( bSkipSequence )
 								{
@@ -1434,7 +1490,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
                                     bool bUseCache = false;
                                     SvtGraphicFill::Transform aPatTransform;
                                     aFill.getTransform( aPatTransform );
-                                    
+
                                     if(  mnCachePatternId >= 0 )
                                     {
                                         SvtGraphicFill::Transform aCacheTransform;
@@ -1453,7 +1509,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
                                                 bUseCache = true;
                                         }
                                     }
-                                    
+
                                     if( ! bUseCache )
                                     {
 
@@ -1467,7 +1523,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
                                         rDummyVDev.Pop();
                                         rDummyVDev.SetConnectMetaFile( NULL );
                                         aPattern.WindStart();
-                                        
+
                                         MapMode	aPatternMapMode( aPatternGraphic.GetPrefMapMode() );
                                         // prepare pattern from metafile
                                         Size aPrefSize( aPatternGraphic.GetPrefSize() );
@@ -1488,9 +1544,9 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
                                         ImplWriteActions( rWriter, NULL, aPattern, rDummyVDev );
                                         rDummyVDev.Pop();
                                         rWriter.Pop();
-                                        
+
                                         nPattern = rWriter.EndPattern( aPatTransform );
-                                        
+
                                         // try some caching and reuse pattern
                                         mnCachePatternId = nPattern;
                                         maCacheFill = aFill;
@@ -1500,7 +1556,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
                                     PolyPolygon aPath;
                                     aFill.getPath( aPath );
                                     rWriter.DrawPolyPolygon( aPath, nPattern, aFill.getFillRule() == SvtGraphicFill::fillEvenOdd );
-                                    
+
                                     bSkipSequence = sal_True;
                                 }
 */
@@ -1509,7 +1565,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 							{
 								while( ++i < nCount )
 								{
-									pAction = rMtf.GetAction( i );
+									pAction = aMtf.GetAction( i );
 									if ( pAction->GetType() == META_COMMENT_ACTION )
 									{
 										ByteString sComment( ((MetaCommentAction*)pAction)->GetComment() );
@@ -1629,7 +1685,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 				case( META_TEXTLINE_ACTION ):
 				{
 					const MetaTextLineAction* pA = (const MetaTextLineAction*) pAction;
-					rWriter.DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline() );
+					rWriter.DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->GetOverline() );
 
 				}
 				break;
@@ -1703,6 +1759,17 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 						rWriter.SetTextLineColor( pA->GetColor() );
 					else
 						rWriter.SetTextLineColor();
+				}
+				break;
+
+				case( META_OVERLINECOLOR_ACTION ):
+				{
+					const MetaOverlineColorAction* pA = (const MetaOverlineColorAction*) pAction;
+
+					if( pA->IsSetting() )
+						rWriter.SetOverlineColor( pA->GetColor() );
+					else
+						rWriter.SetOverlineColor();
 				}
 				break;
 
