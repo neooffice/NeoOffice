@@ -44,22 +44,23 @@ CDEFS+=-DDLLPOSTFIX=$(DLLPOSTFIX)
 
 # --- Generate -----------------------------------------------------
 
-SLOFILES=			\
-					$(SLO)$/desktop.obj								\
-					$(SLO)$/frame.obj								\
-					$(SLO)$/urltransformer.obj						\
-					$(SLO)$/mediatypedetectionhelper.obj			\
-					$(SLO)$/substitutepathvars.obj					\
-                    $(SLO)$/pathsettings.obj                        \
-                    $(SLO)$/backingcomp.obj							\
-                    $(SLO)$/backingwindow.obj						\
-                    $(SLO)$/dispatchhelper.obj                      \
-                    $(SLO)$/license.obj                      		\
-                    $(SLO)$/modulemanager.obj                       \
-                    $(SLO)$/autorecovery.obj                        \
-                    $(SLO)$/sessionlistener.obj                     \
-                    $(SLO)$/taskcreatorsrv.obj						\
-                    $(SLO)$/uriabbreviation.obj
+SLOFILES=\
+        $(SLO)$/desktop.obj \
+        $(SLO)$/frame.obj \
+        $(SLO)$/urltransformer.obj \
+        $(SLO)$/mediatypedetectionhelper.obj \
+        $(SLO)$/substitutepathvars.obj \
+        $(SLO)$/pathsettings.obj \
+        $(SLO)$/backingcomp.obj \
+        $(SLO)$/backingwindow.obj \
+        $(SLO)$/dispatchhelper.obj \
+        $(SLO)$/license.obj \
+        $(SLO)$/modulemanager.obj \
+        $(SLO)$/autorecovery.obj \
+        $(SLO)$/sessionlistener.obj \
+        $(SLO)$/taskcreatorsrv.obj \
+        $(SLO)$/uriabbreviation.obj \
+        $(SLO)$/tabwindowservice.obj
 
 SRS1NAME=$(TARGET)
 SRC1FILES= fwk_services.src

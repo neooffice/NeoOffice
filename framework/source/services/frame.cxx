@@ -45,7 +45,6 @@
 #include <helper/oframes.hxx>
 #include <helper/statusindicatorfactory.hxx>
 #include <helper/titlehelper.hxx>
-#include <classes/targetfinder.hxx>
 #include <classes/droptargetlistener.hxx>
 #include <classes/taskcreator.hxx>
 #include <loadenv/targethelper.hxx>
@@ -2747,7 +2746,6 @@ css::uno::Any SAL_CALL Frame::impl_getPropertyValue(const ::rtl::OUString& /*sPr
 	switch (nHandle)
 	{
         case FRAME_PROPHANDLE_TITLE :
-                //aValue <<= implts_getTitleFromWindow();
 				aValue <<= getTitle ();
                 break;
 
@@ -2902,67 +2900,6 @@ void Frame::implts_resizeComponentWindow()
             xComponentWindow->setPosSize( 0, 0, aSize.Width, aSize.Height, css::awt::PosSize::POSSIZE );
         }
     }
-}
-
-/*-****************************************************************************************************//**
-    @short      helper to set/get a title on/from our container window
-    @descr      We need this impl method to make it threadsafe. Another reason is - we can't hold this value
-                by using an own member ... because if somewhere change the title by using the vcl-window directly ...
-                we never get this information! That's why we write and rewad this property direct via toolkit and vcl!
-
-    @seealso    interface XVclWindowPeer
-
-    @param      "sTitle", new value to set it on our window
-    @return     Current title of our window.
-
-    @onerror    We do nothing or return an empty value.
-*//*-*****************************************************************************************************/
-void Frame::implts_setTitleOnWindow( const ::rtl::OUString& sTitle )
-{
-    /* UNSAFE AREA --------------------------------------------------------------------------------------------- */
-    // Look for rejected calls.
-    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
-
-	/* SAFE AREA ----------------------------------------------------------------------------------------------- */
-    // Make snapshot of neccessary members and release lock.
-    ReadGuard aReadLock( m_aLock );
-    css::uno::Reference< css::awt::XVclWindowPeer > xContainerWindow( m_xContainerWindow, css::uno::UNO_QUERY );
-    aReadLock.unlock();
-    /* UNSAFE AREA --------------------------------------------------------------------------------------------- */
-
-    // Use non well known feature of toolkit to set property on window!
-    // -> cast window to XVclWindowPeer interface and call setProperty() ...
-    if( xContainerWindow.is() == sal_True )
-    {
-        css::uno::Any aValue;
-        aValue <<= sTitle;
-        xContainerWindow->setProperty( DECLARE_ASCII("Title"), aValue );
-    }
-}
-
-//*****************************************************************************************************************
-const ::rtl::OUString Frame::implts_getTitleFromWindow() const
-{
-    /* UNSAFE AREA --------------------------------------------------------------------------------------------- */
-    // Look for rejected calls.
-    TransactionGuard aTransaction( m_aTransactionManager, E_HARDEXCEPTIONS );
-
-	/* SAFE AREA ----------------------------------------------------------------------------------------------- */
-    // Make snapshot of neccessary members and release lock.
-    ReadGuard aReadLock( m_aLock );
-    css::uno::Reference< css::awt::XVclWindowPeer > xContainerWindow( m_xContainerWindow, css::uno::UNO_QUERY );
-    aReadLock.unlock();
-    /* UNSAFE AREA --------------------------------------------------------------------------------------------- */
-
-    // Use non well known feature of toolkit to get property from window!
-    // -> cast window to XVclWindowPeer interface and call getProperty() ...
-    ::rtl::OUString sTitle;
-    if( xContainerWindow.is() == sal_True )
-    {
-        css::uno::Any aValue = xContainerWindow->getProperty( DECLARE_ASCII("Title") );
-        aValue >>= sTitle;
-    }
-    return sTitle;
 }
 
 /*-****************************************************************************************************//**

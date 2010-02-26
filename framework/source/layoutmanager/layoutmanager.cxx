@@ -34,7 +34,7 @@
 //	my own includes
 //_________________________________________________________________________________________________________________
 
-#include <math.h>
+// #include <math.h>
 
 #ifndef _FRAMEWORK_SERVICES_LAYOUTMANAGER_HXX_
 #include <services/layoutmanager.hxx>
@@ -125,6 +125,10 @@ using namespace ::com::sun::star::frame;
 #define UIRESOURCE_URL_ASCII            "private:resource"
 #define UIRESOURCE_URL                  rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( UIRESOURCE_URL_ASCII ))
 
+// ATTENTION!
+// This value is directly copied from the sfx2 project.
+// You have to change BOTH values, see sfx2/inc/sfx2/sfxsids.hrc (SID_DOCKWIN_START)
+static const sal_Int32 DOCKWIN_ID_BASE = 9800;
 
 // convert alignment constant to vcl's WindowAlign type
 static WindowAlign ImplConvertAlignment( sal_Int16 aAlignment )
@@ -296,6 +300,43 @@ static sal_Bool implts_isFrameOrWindowTop( const css::uno::Reference< css::frame
     }
 
     return sal_False;
+}
+
+static void impl_setDockingWindowVisibility( const css::uno::Reference< css::lang::XMultiServiceFactory>& rSMGR, const css::uno::Reference< css::frame::XFrame >& rFrame, const ::rtl::OUString& rDockingWindowName, bool bVisible )
+{
+    const ::rtl::OUString aDockWinPrefixCommand( RTL_CONSTASCII_USTRINGPARAM( "DockingWindow" ));
+    css::uno::WeakReference< css::frame::XDispatchHelper > xDispatchHelper;
+    
+    sal_Int32 nID    = rDockingWindowName.toInt32();
+    sal_Int32 nIndex = nID - DOCKWIN_ID_BASE;
+
+    css::uno::Reference< css::frame::XDispatchProvider > xProvider(rFrame, css::uno::UNO_QUERY);
+    if ( nIndex >= 0 && xProvider.is() )
+    {
+        ::rtl::OUString aDockWinCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:" ));
+        ::rtl::OUString aDockWinArgName( aDockWinPrefixCommand );
+        
+        aDockWinArgName += ::rtl::OUString::valueOf( nIndex );
+        
+        css::uno::Sequence< css::beans::PropertyValue > aArgs(1);
+        aArgs[0].Name  = aDockWinArgName;
+        aArgs[0].Value = css::uno::makeAny( bVisible );
+
+        css::uno::Reference< css::frame::XDispatchHelper > xDispatcher( xDispatchHelper );
+        if ( !xDispatcher.is())
+        {
+            xDispatcher = css::uno::Reference< css::frame::XDispatchHelper >(
+                rSMGR->createInstance(SERVICENAME_DISPATCHHELPER), css::uno::UNO_QUERY_THROW);
+        }
+
+        aDockWinCommand = aDockWinCommand + aDockWinArgName;
+        xDispatcher->executeDispatch(
+            xProvider,
+            aDockWinCommand,
+            ::rtl::OUString::createFromAscii("_self"),
+            0,
+            aArgs);
+    }
 }
 
 //*****************************************************************************************************************
@@ -3278,6 +3319,7 @@ void LayoutManager::implts_updateUIElementsVisibleState( sal_Bool bSetVisible )
 
             WriteGuard aWriteLock( m_aLock );
             m_aDockingArea = css::awt::Rectangle();
+            m_bMustDoLayout = sal_True;
             aWriteLock.unlock();
         }
         catch ( Exception& )
@@ -4290,6 +4332,13 @@ throw (RuntimeException)
             implts_createProgressBar();
             bNotify = sal_True;
         }
+		else if ( aElementType.equalsIgnoreAsciiCaseAscii( "dockingwindow" ))
+        {
+            aWriteLock.unlock();
+			
+            // The docking window is created by a factory method located in the sfx2 library.
+            CreateDockingWindow( xFrame, aElementName );
+		}
     }
 
     /* SAFE AREA ----------------------------------------------------------------------------------------------- */
@@ -4346,7 +4395,7 @@ throw (RuntimeException)
             bMustLayouted = sal_True;
             bNotify = sal_True;
         }
-        else
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "toolbar" ))
         {
             UIElementVector::iterator pIter;
 
@@ -4404,6 +4453,16 @@ throw (RuntimeException)
                     break;
                 }
             }
+        }
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "dockingwindow" ))
+        {
+            css::uno::Reference< css::frame::XFrame > xFrame( m_xFrame );
+            css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR( m_xSMGR );
+            aWriteLock.unlock();
+
+            impl_setDockingWindowVisibility( xSMGR, xFrame, aElementName, false );
+            bMustLayouted = sal_False;
+            bNotify = sal_False;
         }
     }
     aWriteLock.unlock();
@@ -4486,7 +4545,7 @@ throw (::com::sun::star::uno::RuntimeException)
             bResult = sal_True;
             bNotify = sal_True;
         }
-        else
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "toolbar" ))
         {
             if ( m_bVisible )
             {
@@ -4566,6 +4625,13 @@ throw (::com::sun::star::uno::RuntimeException)
                     }
                 }
             }
+        }
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "dockingwindow" ))
+        {
+            css::uno::Reference< css::frame::XFrame > xFrame( m_xFrame );
+            aWriteLock.unlock();
+
+            CreateDockingWindow( xFrame, aElementName );
         }
     }
 
@@ -4677,7 +4743,7 @@ throw (RuntimeException)
         {
             bNotify = bResult = implts_showProgressBar();
         }
-        else
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "toolbar" ))
         {
             UIElementVector::iterator pIter;
 
@@ -4717,6 +4783,15 @@ throw (RuntimeException)
                     }
                 }
             }
+        }
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "dockingwindow" ))
+        {
+            ReadGuard aReadGuard( m_aLock );
+            css::uno::Reference< css::frame::XFrame > xFrame( m_xFrame );
+            css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR( m_xSMGR );
+            aReadGuard.unlock();
+
+            impl_setDockingWindowVisibility( xSMGR, xFrame, aElementName, true );
         }
     }
 
@@ -4793,7 +4868,7 @@ throw (RuntimeException)
         {
             bResult = bNotify = implts_hideProgressBar();
         }
-        else
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "toolbar" ))
         {
             UIElementVector::iterator pIter;
 
@@ -4821,6 +4896,15 @@ throw (RuntimeException)
                     }
                 }
             }
+        }
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "dockingwindow" ))
+        {
+            ReadGuard aReadGuard( m_aLock );
+            css::uno::Reference< css::frame::XFrame > xFrame( m_xFrame );
+            css::uno::Reference< css::lang::XMultiServiceFactory > xSMGR( m_xSMGR );
+            aReadGuard.unlock();
+
+            impl_setDockingWindowVisibility( xSMGR, xFrame, aElementName, false );
         }
     }
 
@@ -5266,7 +5350,7 @@ throw (RuntimeException)
             if ( m_aProgressBarElement.m_xUIElement.is() )
                 return m_aProgressBarElement.m_bVisible;
         }
-        else
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "toolbar" ))
         {
             UIElementVector::const_iterator pIter;
 
@@ -5286,6 +5370,14 @@ throw (RuntimeException)
                     }
                 }
             }
+        }
+        else if ( aElementType.equalsIgnoreAsciiCaseAscii( "dockingwindow" ))
+        {
+            ReadGuard aReadGuard( m_aLock );
+            css::uno::Reference< css::frame::XFrame > xFrame( m_xFrame );
+            aReadGuard.unlock();
+            
+            return IsDockingWindowVisible( xFrame, aElementName );
         }
     }
 
@@ -7577,7 +7669,7 @@ const com::sun::star::uno::Sequence< com::sun::star::beans::Property > LayoutMan
         com::sun::star::beans::Property( LAYOUTMANAGER_PROPNAME_AUTOMATICTOOLBARS, LAYOUTMANAGER_PROPHANDLE_AUTOMATICTOOLBARS, ::getCppuType((const sal_Bool*)NULL), com::sun::star::beans::PropertyAttribute::TRANSIENT  ),
         com::sun::star::beans::Property( LAYOUTMANAGER_PROPNAME_HIDECURRENTUI, LAYOUTMANAGER_PROPHANDLE_HIDECURRENTUI, ::getCppuType((const sal_Bool*)NULL), com::sun::star::beans::PropertyAttribute::TRANSIENT  ),
         com::sun::star::beans::Property( LAYOUTMANAGER_PROPNAME_LOCKCOUNT, LAYOUTMANAGER_PROPHANDLE_LOCKCOUNT, ::getCppuType((const sal_Int32*)NULL), com::sun::star::beans::PropertyAttribute::TRANSIENT|com::sun::star::beans::PropertyAttribute::READONLY  ),
-        com::sun::star::beans::Property( LAYOUTMANAGER_PROPNAME_MENUBARCLOSER, LAYOUTMANAGER_PROPHANDLE_MENUBARCLOSER, ::getCppuType((const Reference< XStatusListener >*)NULL), com::sun::star::beans::PropertyAttribute::TRANSIENT  ),
+        com::sun::star::beans::Property( LAYOUTMANAGER_PROPNAME_MENUBARCLOSER, LAYOUTMANAGER_PROPHANDLE_MENUBARCLOSER, ::getCppuType((const sal_Bool*)NULL), com::sun::star::beans::PropertyAttribute::TRANSIENT  ),
         com::sun::star::beans::Property( LAYOUTMANAGER_PROPNAME_REFRESHVISIBILITY, LAYOUTMANAGER_PROPHANDLE_REFRESHVISIBILITY, ::getCppuType((const sal_Bool*)NULL), com::sun::star::beans::PropertyAttribute::TRANSIENT  )
 	};
 	// Use it to initialize sequence!

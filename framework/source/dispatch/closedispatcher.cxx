@@ -419,9 +419,9 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
         }
         bSuccess = bQuickstarterRunning ? implts_terminateApplication() : implts_establishBackingMode();
     }
-    #else
+    #else	// QUARTZ && !USE_JAVA
         bSuccess = implts_establishBackingMode();
-    #endif
+    #endif	// QUARTZ && !USE_JAVA
     else
     if (bTerminateApp)
         bSuccess = implts_terminateApplication();
