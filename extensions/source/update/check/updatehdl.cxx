@@ -341,7 +341,8 @@ void SAL_CALL UpdateHandler::actionPerformed( awt::ActionEvent const & rEvent )
             bool bCancel = true;
 
             if ( ( meCurState == UPDATESTATE_DOWNLOADING ) ||
-                 ( meCurState == UPDATESTATE_DOWNLOAD_PAUSED ) )
+                 ( meCurState == UPDATESTATE_DOWNLOAD_PAUSED ) ||
+                 ( meCurState == UPDATESTATE_ERROR_DOWNLOADING ) )
                 bCancel = showWarning( msCancelMessage );
 
             if ( bCancel )
@@ -479,6 +480,7 @@ void SAL_CALL UpdateHandler::handle( uno::Reference< task::XInteractionRequest >
 void SAL_CALL UpdateHandler::queryTermination( const lang::EventObject& )
     throw ( frame::TerminationVetoException, uno::RuntimeException )
 {
+    setVisible( false );
 }
 
 //------------------------------------------------------------------------------

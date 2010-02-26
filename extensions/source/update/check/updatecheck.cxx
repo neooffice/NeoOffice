@@ -667,10 +667,9 @@ DownloadThread::run()
         // release config class for now
         rModel.clear();
             
+        static sal_uInt8 n = 0;
         if( ! m_aDownload.start(m_aURL, aLocalFile, aDownloadDest ) )
         {
-            static sal_uInt8 n = 0;
-            
             // retry every 15s unless the dialog is not visible
             TimeValue tv;
             tv.Seconds = 15;
@@ -687,6 +686,11 @@ DownloadThread::run()
             }
             m_aCondition.wait(&tv);
         }
+		else
+		{
+			// reset wait period after successful download
+			n=0;
+		}
     }
 }
 
@@ -898,18 +902,14 @@ UpdateCheck::install()
         uno::UNO_QUERY );
     
     try {
-        
         // Construct install command ??
-        
         
         // Store release note for position 3 and 4
         rtl::OUString aURL(getReleaseNote(m_aUpdateInfo, 3));
-        if( aURL.getLength() > 0 )
-            storeReleaseNote(1, aURL);
+        storeReleaseNote(1, aURL);
 
         aURL = getReleaseNote(m_aUpdateInfo, 4);
-        if( aURL.getLength() > 0 )
-            storeReleaseNote(2, aURL);
+        storeReleaseNote(2, aURL);
         
         if( xShellExecute.is() )
         {
@@ -1391,7 +1391,13 @@ void UpdateCheck::setUIState(UpdateState eState, bool suppressBubble)
     {
         m_xMenuBarUI = createMenuBarUI(m_xContext, new MenuBarButtonJob(this));
     }
-    
+
+    // Show bubble only when the status has changed
+    if ( eState == m_eUpdateState )
+        suppressBubble = true;
+    else
+        m_eUpdateState = eState;
+
     rtl::Reference<UpdateHandler> aUpdateHandler(getUpdateHandler());
     OSL_ASSERT( aUpdateHandler.is() );
 
@@ -1479,6 +1485,10 @@ UpdateCheck::storeReleaseNote(sal_Int8 nNum, const rtl::OUString &rURL)
     if ( rc != osl::FileBase::E_None ) return false;
 
     rc = osl::File::remove( aFilePath );
+
+    // don't store empty release notes, but delete old ones
+    if ( rURL.getLength() == 0 )
+        return true;
 
     osl::File aFile( aFilePath );
     rc = aFile.open( OpenFlag_Write | OpenFlag_Create );

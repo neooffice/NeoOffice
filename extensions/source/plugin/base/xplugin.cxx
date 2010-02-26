@@ -514,7 +514,7 @@ void XPlugin_Impl::loadPlugin()
     const SystemEnvData* pEnvData = getSysChildSysData();
 #if defined( UNX ) && !(defined(QUARTZ))
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// UNX && !QUARTZ
+#endif
     if( ! getPluginComm() )
     {
         if( m_aDescription.PluginName.getLength() )
@@ -566,7 +566,7 @@ void XPlugin_Impl::loadPlugin()
 
 #if defined( UNX ) && !defined(QUARTZ)
     XSync( (Display*)pEnvData->pDisplay, False );
-#endif	// UNX && !QUARTZ
+#endif
 #ifdef UNX
 #if !defined(QUARTZ)
     m_aNPWindow.window      = (void*)pEnvData->aWindow;
