@@ -70,6 +70,8 @@
 #include <basegfx/range/b2drectangle.hxx>
 #include <basegfx/point/b2dpoint.hxx>
 #include <basegfx/tuple/b2dtuple.hxx>
+#include <basegfx/polygon/b2dpolygonclipper.hxx>
+#include <basegfx/polygon/b2dpolypolygoncutter.hxx>
 
 #include <canvas/canvastools.hxx>
 #include <vcl/canvastools.hxx>
@@ -197,6 +199,7 @@ namespace
                 aCalculatedNewState.xFont 					= rNewState.xFont;
                 aCalculatedNewState.fontRotation 			= rNewState.fontRotation;
                 aCalculatedNewState.textReliefStyle 		= rNewState.textReliefStyle;
+                aCalculatedNewState.textOverlineStyle 		= rNewState.textOverlineStyle;
                 aCalculatedNewState.textUnderlineStyle 		= rNewState.textUnderlineStyle;
                 aCalculatedNewState.textStrikeoutStyle 		= rNewState.textStrikeoutStyle;
                 aCalculatedNewState.textEmphasisMarkStyle 	= rNewState.textEmphasisMarkStyle;
@@ -361,72 +364,62 @@ namespace
             return nChar;
 
         sal_Unicode nOffset(0);
-        switch( eLang )
+        // eLang & LANGUAGE_MASK_PRIMARY catches language independent of region.
+        // CAVEAT! To some like Mongolian MS assigned the same primary language
+        // although the script type is different!
+        switch( eLang & LANGUAGE_MASK_PRIMARY )
         {
             default:
                 break;
 
-            case LANGUAGE_ARABIC:
-                // FALLTHROUGS intended
-            case LANGUAGE_ARABIC_SAUDI_ARABIA:
-            case LANGUAGE_ARABIC_IRAQ:
-            case LANGUAGE_ARABIC_EGYPT:
-            case LANGUAGE_ARABIC_LIBYA:
-            case LANGUAGE_ARABIC_ALGERIA:
-            case LANGUAGE_ARABIC_MOROCCO:
-            case LANGUAGE_ARABIC_TUNISIA:
-            case LANGUAGE_ARABIC_OMAN:
-            case LANGUAGE_ARABIC_YEMEN:
-            case LANGUAGE_ARABIC_SYRIA:
-            case LANGUAGE_ARABIC_JORDAN:
-            case LANGUAGE_ARABIC_LEBANON:
-            case LANGUAGE_ARABIC_KUWAIT:
-            case LANGUAGE_ARABIC_UAE:
-            case LANGUAGE_ARABIC_BAHRAIN:
-            case LANGUAGE_ARABIC_QATAR:
-            case LANGUAGE_URDU:
-            case LANGUAGE_URDU_PAKISTAN:
-            case LANGUAGE_URDU_INDIA:
-            case LANGUAGE_PUNJABI: //???
+            case LANGUAGE_ARABIC_SAUDI_ARABIA  & LANGUAGE_MASK_PRIMARY:
+            case LANGUAGE_URDU          & LANGUAGE_MASK_PRIMARY:
+            case LANGUAGE_PUNJABI       & LANGUAGE_MASK_PRIMARY: //???
                 nOffset = 0x0660 - '0';  // arabic/persian/urdu
                 break;
-            case LANGUAGE_BENGALI:
+            case LANGUAGE_BENGALI       & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x09E6 - '0';  // bengali
                 break;
-            case LANGUAGE_HINDI:
+            case LANGUAGE_BURMESE       & LANGUAGE_MASK_PRIMARY:
+                nOffset = 0x1040 - '0';  // burmese
+                break;
+            case LANGUAGE_HINDI         & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0966 - '0';  // devanagari
                 break;
-            case LANGUAGE_GUJARATI:
+            case LANGUAGE_GUJARATI      & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0AE6 - '0';  // gujarati
                 break;
-            case LANGUAGE_KANNADA:
+            case LANGUAGE_KANNADA       & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0CE6 - '0';  // kannada
                 break;
-            case LANGUAGE_KHMER:
+            case LANGUAGE_KHMER         & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x17E0 - '0';  // khmer
                 break;
-            case LANGUAGE_LAO:
+            case LANGUAGE_LAO           & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0ED0 - '0';  // lao
                 break;
-            case LANGUAGE_MALAYALAM:
+            case LANGUAGE_MALAYALAM     & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0D66 - '0';   // malayalam
                 break;
-            case LANGUAGE_MONGOLIAN:
-                nOffset = 0x1810 - '0';   // mongolian
+            case LANGUAGE_MONGOLIAN     & LANGUAGE_MASK_PRIMARY:
+                if (eLang == LANGUAGE_MONGOLIAN_MONGOLIAN)
+                    nOffset = 0x1810 - '0';   // mongolian
+                else
+                    nOffset = 0;              // mongolian cyrillic
                 break;
-            case LANGUAGE_ORIYA:
+            case LANGUAGE_ORIYA         & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0B66 - '0';   // oriya
                 break;
-            case LANGUAGE_TAMIL:
+            case LANGUAGE_TAMIL         & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0BE7 - '0';   // tamil
                 break;
-            case LANGUAGE_TELUGU:
+            case LANGUAGE_TELUGU        & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0C66 - '0';   // telugu
                 break;
-            case LANGUAGE_THAI:
+            case LANGUAGE_THAI          & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0E50 - '0';   // thai
                 break;
-            case LANGUAGE_TIBETAN:
+            case LANGUAGE_TIBETAN       & LANGUAGE_MASK_PRIMARY:
                 nOffset = 0x0F20 - '0';   // tibetan
                 break;
         }
@@ -1256,17 +1249,9 @@ namespace cppcanvas
                                                      rState.clipRect.Bottom()+1 ) ) );
                 }
 
-                rState.clip = ::basegfx::tools::correctOrientations( rState.clip );
-                aClipPoly = ::basegfx::tools::correctOrientations( aClipPoly );
-
-                // intersect the two poly-polygons
-                rState.clip = ::basegfx::tools::removeAllIntersections(rState.clip);
-                rState.clip = ::basegfx::tools::removeNeutralPolygons(rState.clip, sal_True);
-                aClipPoly = ::basegfx::tools::removeAllIntersections(aClipPoly);
-                aClipPoly = ::basegfx::tools::removeNeutralPolygons(aClipPoly, sal_True);
-                rState.clip.append(aClipPoly);
-                rState.clip = ::basegfx::tools::removeAllIntersections(rState.clip);
-                rState.clip = ::basegfx::tools::removeNeutralPolygons(rState.clip, sal_False);
+                // AW: Simplified
+				rState.clip = basegfx::tools::clipPolyPolygonOnPolyPolygon(
+					aClipPoly, rState.clip, true, false);
             }
 
             // by now, our clip resides in the OutDevState::clip
@@ -1344,17 +1329,10 @@ namespace cppcanvas
                                                  rClipRect.Bottom() ) ) );
 
                 rState.clipRect.SetEmpty();
-                rState.clip = ::basegfx::tools::correctOrientations( rState.clip );
-                aClipPoly = ::basegfx::tools::correctOrientations( aClipPoly );
 
-                // intersect the two poly-polygons
-                rState.clip = ::basegfx::tools::removeAllIntersections(rState.clip);
-                rState.clip = ::basegfx::tools::removeNeutralPolygons(rState.clip, sal_True);
-                aClipPoly = ::basegfx::tools::removeAllIntersections(aClipPoly);
-                aClipPoly = ::basegfx::tools::removeNeutralPolygons(aClipPoly, sal_True);
-                rState.clip.append(aClipPoly);
-                rState.clip = ::basegfx::tools::removeAllIntersections(rState.clip);
-                rState.clip = ::basegfx::tools::removeNeutralPolygons(rState.clip, sal_False);
+                // AW: Simplified
+				rState.clip = basegfx::tools::clipPolyPolygonOnPolyPolygon(
+					aClipPoly, rState.clip, true, false);
             }
 
             if( rState.clip.count() == 0 )
@@ -1648,6 +1626,7 @@ namespace cppcanvas
 
                         // TODO(Q2): define and use appropriate enumeration types
                         rState.textReliefStyle          = (sal_Int8)rFont.GetRelief();
+                        rState.textOverlineStyle        = (sal_Int8)rFont.GetOverline();
                         rState.textUnderlineStyle       = rParms.maFontUnderline.isValid() ?
                             (rParms.maFontUnderline.getValue() ? (sal_Int8)UNDERLINE_SINGLE : (sal_Int8)UNDERLINE_NONE) :
                             (sal_Int8)rFont.GetUnderline();
