@@ -30,13 +30,13 @@
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_goodies.hxx"
 
-#include <math.h>
 #include <string.h>
 #include <vcl/bmpacc.hxx>
 #include <vcl/graph.hxx>
 #include <tools/poly.hxx>
 #include <vcl/virdev.hxx>
 #include <svtools/fltcall.hxx>
+#include <math.h>
 
 #ifdef USE_JAVA
 
