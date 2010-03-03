@@ -4876,6 +4876,7 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
 							}
 
 							pPopupMenuManager->Execute( aPixPos, this );
+							delete pPopupMenuManager;
 						}
 					}
 #else	// USE_JAVA
