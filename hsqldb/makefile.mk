@@ -82,5 +82,5 @@ BUILD_ACTION=$(ANT) -Dbuild.label="build-$(RSCREVISION)" -Dant.build.javac.sourc
 .ENDIF
 
 .IF "$(GUIBASE)" == "java"
-BACK_PATH:=$(BACK_PATH)..$/..$/$(PRJNAME)$/
+BACK_PATH:=$(PWD)$/
 .ENDIF		# "$(GUIBASE)" == "java"
