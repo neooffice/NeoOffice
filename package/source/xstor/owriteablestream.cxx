@@ -218,6 +218,7 @@ OWriteStream_Impl::OWriteStream_Impl( OStorage_Impl* pParent,
 , m_xOrigRelInfoStream( xRelInfoStream )
 , m_bOrigRelInfoBroken( sal_False )
 , m_nRelInfoStatus( RELINFO_NO_INIT )
+, m_nRelId( 1 )
 {
 	OSL_ENSURE( xPackageStream.is(), "No package stream is provided!\n" );
 	OSL_ENSURE( xPackage.is(), "No package component is provided!\n" );
@@ -2264,52 +2265,57 @@ void SAL_CALL OWriteStream::dispose()
 		throw ( uno::RuntimeException )
 {
 	// should be an internal method since it can be called only from parent storage
+    {
+        ::osl::MutexGuard aGuard( m_pData->m_rSharedMutexRef->GetMutex() );
 
-	::osl::MutexGuard aGuard( m_pData->m_rSharedMutexRef->GetMutex() );
+        if ( !m_pImpl )
+            throw lang::DisposedException();
 
-	if ( !m_pImpl )
-		throw lang::DisposedException();
+        if ( m_xOutStream.is() )
+            CloseOutput_Impl();
 
-	if ( m_xOutStream.is() )
-		CloseOutput_Impl();
+        if ( m_xInStream.is() )
+        {
+            m_xInStream->closeInput();
+            m_xInStream = uno::Reference< io::XInputStream >();
+        }
 
-	if ( m_xInStream.is() )
-	{
-		m_xInStream->closeInput();
-		m_xInStream = uno::Reference< io::XInputStream >();
-	}
+        m_pImpl->m_pAntiImpl = NULL;
+
+        if ( !m_bInitOnDemand )
+        {
+            try
+            {
+                if ( !m_bTransacted )
+                {
+                    m_pImpl->Commit();
+                }
+                else
+                {
+                    // throw away all the changes
+                    m_pImpl->Revert();
+                }
+            }
+            catch( uno::Exception& )
+            {
+                uno::Any aCaught( ::cppu::getCaughtException() );
+                throw lang::WrappedTargetRuntimeException(
+                                                ::rtl::OUString::createFromAscii( "Can not commit/revert the storage!\n" ),
+                                                uno::Reference< uno::XInterface >(  static_cast< OWeakObject* >( this ),
+                                                                                    uno::UNO_QUERY ),
+                                                aCaught );
+            }
+        }
+
+        m_pImpl = NULL;
+    }
+
+    // the listener might try to get rid of parent storage, and the storage would delete this object;
+    // for now the listener is just notified at the end of the method to workaround the problem
+    // in future a more elegant way should be found
 
    	lang::EventObject aSource( static_cast< ::cppu::OWeakObject* >(this) );
 	m_pData->m_aListenersContainer.disposeAndClear( aSource );
-
-	m_pImpl->m_pAntiImpl = NULL;
-
-	if ( !m_bInitOnDemand )
-	{
-		try
-		{
-			if ( !m_bTransacted )
-			{
-				m_pImpl->Commit();
-			}
-			else
-			{
-				// throw away all the changes
-				m_pImpl->Revert();
-			}
-		}
-		catch( uno::Exception& )
-		{
-   			uno::Any aCaught( ::cppu::getCaughtException() );
-			throw lang::WrappedTargetRuntimeException(
-											::rtl::OUString::createFromAscii( "Can not commit/revert the storage!\n" ),
-											uno::Reference< uno::XInterface >(  static_cast< OWeakObject* >( this ),
-																				uno::UNO_QUERY ),
-											aCaught );
-		}
-	}
-
-	m_pImpl = NULL;
 }
 
 //-----------------------------------------------
@@ -2564,9 +2570,9 @@ void SAL_CALL OWriteStream::insertRelationshipByID(  const ::rtl::OUString& sID,
 
 		aSeq[nIDInd][0].First = aIDTag;
 		aSeq[nIDInd][0].Second = sID;
-		sal_Int32 nIndTarget = 0;
+		sal_Int32 nIndTarget = 1;
 		for ( sal_Int32 nIndOrig = 0;
-			  nIndOrig <= aEntry.getLength();
+			  nIndOrig < aEntry.getLength();
 			  nIndOrig++ )
 		{
 			if ( !aEntry[nIndOrig].First.equals( aIDTag ) )
@@ -2833,6 +2839,11 @@ uno::Any SAL_CALL OWriteStream::getPropertyValue( const ::rtl::OUString& aProp )
 
 	if ( !m_pImpl )
 		throw lang::DisposedException();
+
+    if ( aProp.equalsAscii( "RelId" ) )
+    {
+        return uno::makeAny( m_pImpl->GetNewRelId() );
+    }
 
 	::rtl::OUString aPropertyName;
 	if ( aProp.equalsAscii( "IsEncrypted" ) )
