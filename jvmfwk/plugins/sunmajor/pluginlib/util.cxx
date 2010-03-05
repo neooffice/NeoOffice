@@ -746,9 +746,10 @@ vector<Reference<VendorBase> > getAllJREInfos()
     //Otherwise in SDKs Java may be started twice
  	createJavaInfoFromPath(vecInfos);
 
-#ifdef UNX    
+#ifdef UNX
     createJavaInfoDirScan(vecInfos);
 #endif
+
     bubbleSortVersion(vecInfos);
     return vecInfos;
 }
@@ -1120,6 +1121,15 @@ bool makeDriveLetterSame(OUString * fileURL)
 }
 
 #ifdef UNX
+#ifdef SOLARIS
+
+void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
+{
+    JFW_TRACE2(OUSTR("\n[Java framework] Checking \"/usr/jdk/latest\"\n"));
+    getJREInfoByPath(OUSTR("file:////usr/jdk/latest"), vecInfos);   
+}
+
+#else
 void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
 {
     OUString excMessage = OUSTR("[Java framework] sunjavaplugin: "
@@ -1242,5 +1252,6 @@ void createJavaInfoDirScan(vector<rtl::Reference<VendorBase> >& vecInfos)
         }
     }
 }
-#endif
+#endif // ifdef SOLARIS
+#endif // ifdef UNX
 }
