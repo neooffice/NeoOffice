@@ -213,18 +213,18 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromWindowsCharset( sal_uInt8 nWinC
         default:    eTextEncoding = RTL_TEXTENCODING_DONTKNOW; break;
     };
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 	/* Mac OS X sets the encoding in RTF files to 77 + nWinCharset */
 	if ( eTextEncoding == RTL_TEXTENCODING_DONTKNOW && nWinCharset >= 77 )
 		eTextEncoding = rtl_getTextEncodingFromMacTextEncoding( nWinCharset - 77 );
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
 
     return eTextEncoding;
 }
 
 /* ----------------------------------------------------------------------- */
 
-#ifdef MACOSX
+#ifdef USE_JAVA
 
 rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMacTextEncoding( sal_uInt32 nMacTextEncoding )
 {
@@ -380,7 +380,7 @@ rtl_TextEncoding SAL_CALL rtl_getTextEncodingFromMacTextEncoding( sal_uInt32 nMa
     return eTextEncoding;
 }
 
-#endif	/* MACOSX */
+#endif	/* USE_JAVA */
 
 /* ----------------------------------------------------------------------- */
 

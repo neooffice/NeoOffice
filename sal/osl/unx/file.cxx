@@ -347,6 +347,8 @@ static int adjustLockFlags(const char * path, int flags)
             flags &= ~O_EXLOCK;
             flags |= O_SHLOCK;
         }    
+        else
+        {
 #ifdef USE_JAVA
         /*
          * Fix bugs 2504 and 2639 and other file locking bugs by not making an
@@ -357,11 +359,11 @@ static int adjustLockFlags(const char * path, int flags)
          * Important note: we need to use flock() instead of fcntl() to lock
          * files or bug 2696 will reoccur with AFP file systems.
          */
-        else
-        {
-            flags &= ~( O_EXLOCK | O_SHLOCK );
-        }
+#else	// USE_JAVA
+            /* Needed flags to allow opening a webdav file */
 #endif	// USE_JAVA
+            flags &= ~( O_EXLOCK | O_SHLOCK );
+		}
     }
 #ifdef USE_JAVA
     // Fix bug 2504 by handling cases where we are trying to create a file
@@ -410,9 +412,9 @@ oslFileError SAL_CALL osl_openDirectory(rtl_uString* ustrDirectoryURL, oslDirect
 #ifdef MACOSX 
 #ifdef USE_JAVA
 	 && macxp_resolveAlias( path, PATH_MAX, sal_False ) == 0 
-#else	/* USE_JAVA */
+#else	// USE_JAVA
 	 && macxp_resolveAlias( path, PATH_MAX ) == 0 
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
 #endif /* MACOSX */
 	 )
     {
@@ -524,7 +526,7 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
         return osl_File_E_NOENT;
 
 
-#if defined(MACOSX) && (BUILD_OS_MAJOR==10) && (BUILD_OS_MINOR>=2) && !defined USE_JAVA
+#if defined(MACOSX) && !defined USE_JAVA
 
     // convert decomposed filename to precomposed unicode 
     char composed_name[BUFSIZ];  
@@ -536,13 +538,13 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
     rtl_string2UString( &ustrFileName, composed_name, strlen( composed_name),
 	osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
 
-#else  /* !MACOSX && !USE_JAVA */
+#else  // MACOSX && !USE_JAVA
     /* convert file name to unicode */
     rtl_string2UString( &ustrFileName, pEntry->d_name, strlen( pEntry->d_name ),
         osl_getThreadTextEncoding(), OSTRING_TO_OUSTRING_CVTFLAGS );
     OSL_ASSERT(ustrFileName != 0);
 
-#endif	/* !MACOSX && !USE_JAVA */
+#endif	// MACOSX && !USE_JAVA
 
 	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
 #ifdef USE_JAVA
@@ -565,7 +567,7 @@ oslFileError SAL_CALL osl_getNextDirectoryItem(oslDirectory Directory, oslDirect
 
     	osl_systemPathMakeAbsolutePath(pDirImpl->ustrPath, ustrFileName, &ustrFilePath);
     }
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
     rtl_uString_release( ustrFileName );
 
 #ifdef _DIRENT_HAVE_D_TYPE
@@ -747,9 +749,9 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 #ifdef MACOSX 
 #ifdef USE_JAVA
 	 && macxp_resolveAlias( buffer, PATH_MAX, sal_False ) == 0 
-#else	/* USE_JAVA */
+#else	// USE_JAVA
 	 && macxp_resolveAlias( buffer, PATH_MAX ) == 0 
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
 #endif /* MACOSX */
 	 )
     {
@@ -825,7 +827,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
 #ifndef USE_JAVA
                     /* disable range based locking */
                     pFileLockEnvVar = NULL;
-#endif	/* !USE_JAVA */
+#endif	// !USE_JAVA
                     
                     /* remove the NONBLOCK flag again */
                     flags = fcntl(fd, F_GETFL, NULL);
@@ -837,6 +839,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                         aflock.l_type = 0;
 
                     /* lock the file if flock.l_type is set */
+#ifdef MACOSX
 #ifdef USE_JAVA
                     /*
                      * Mac OS X will return ENOTSUP for mounted file systems so
@@ -860,9 +863,18 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
                             bLocked = sal_True;
                         }
                     }
-#else	/* USE_JAVA */
-                    bLocked = ( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) );
-#endif	/* USE_JAVA */
+#else	// USE_JAVA
+                    bLocked = ( F_WRLCK != aflock.l_type );
+                    if (!bLocked) 
+					{
+                       /* Mac OSX returns ENOTSUP for webdav drives. We should try read lock */
+                       if ( 0 == flock( fd, LOCK_EX | LOCK_NB ) || errno == ENOTSUP )
+                          bLocked = ( errno != ENOTSUP ) || ( 0 == flock( fd, LOCK_SH | LOCK_NB ) || errno == ENOTSUP );
+                    }
+#endif	// USE_JAVA
+#else	/* MACOSX */
+                     bLocked = ( F_WRLCK != aflock.l_type || -1 != fcntl( fd, F_SETLK, &aflock ) );
+#endif	/* MACOSX */
                 }
 
                 if ( !bNeedsLock || bLocked )
@@ -908,7 +920,7 @@ oslFileError osl_openFile( rtl_uString* ustrFileURL, oslFileHandle* pHandle, sal
              */
             if ( errno == EPERM || errno == EINVAL )
                 errno = EACCES;
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
 
             PERROR( "osl_openFile", buffer );
             eRet = oslTranslateFileError(OSL_FET_ERROR, errno );
@@ -964,16 +976,20 @@ oslFileError osl_closeFile( oslFileHandle Handle )
                 /* FIXME: check if file is really locked ?  */
 
                 /* release the file share lock on this file */
+#ifdef MACOSX
 #ifdef USE_JAVA
                 /*
                  * Mac OS X will return ENOTSUP for mounted file systems so
                  * ignore the error for write locks. Also, fix bug 3110 by
                  * using flock() instead of fcntl() to lock the file.
                  */
-                if( 0 != flock( pHandleImpl->fd, LOCK_UN | LOCK_NB ) && errno != ENOTSUP )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
+                /* Mac OSX will return ENOTSUP for webdav drives. We should ignore the error */
+#endif	// USE_JAVA
+                if ( 0 != flock( pHandleImpl->fd, LOCK_UN | LOCK_NB ) && errno != ENOTSUP )
+#else	/* MACOSX */
                 if( -1 == fcntl( pHandleImpl->fd, F_SETLK, &aflock ) )
-#endif	/* USE_JAVA */
+#endif	/* MACOSX */
                 {
                     PERROR( "osl_closeFile", "unlock failed" );
                 }
@@ -1057,9 +1073,9 @@ oslFileError osl_moveFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
 #ifdef MACOSX
 #ifdef USE_JAVA
     if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_True ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1092,9 +1108,9 @@ oslFileError osl_copyFile( rtl_uString* ustrFileURL, rtl_uString* ustrDestURL )
 #ifdef MACOSX
 #ifdef USE_JAVA
     if ( macxp_resolveAlias( srcPath, PATH_MAX, sal_False ) != 0 || macxp_resolveAlias( destPath, PATH_MAX, sal_False ) != 0 )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( srcPath, PATH_MAX ) != 0 || macxp_resolveAlias( destPath, PATH_MAX ) != 0 )
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1120,9 +1136,9 @@ oslFileError osl_removeFile( rtl_uString* ustrFileURL )
 #ifdef MACOSX
 #ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_True ) != 0 )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1149,9 +1165,9 @@ oslFileError osl_getVolumeInformation( rtl_uString* ustrDirectoryURL, oslVolumeI
 #ifdef MACOSX
 #ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1177,9 +1193,9 @@ oslFileError osl_createDirectory( rtl_uString* ustrDirectoryURL )
 #ifdef MACOSX
 #ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1214,10 +1230,10 @@ oslFileError osl_removeDirectory( rtl_uString* ustrDirectoryURL )
     {
         return oslTranslateFileError( OSL_FET_ERROR, errno );
     }
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
       return oslTranslateFileError( OSL_FET_ERROR, errno );
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
 #endif/* MACOSX */
 
     return osl_psz_removeDirectory( path );
@@ -1321,7 +1337,7 @@ oslFileError SAL_CALL osl_createDirectoryPath(
         p = rtl::OString( path );
     }
     sys_path = ::rtl::OStringToOUString( p, osl_getThreadTextEncoding() );
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
 
     // const_cast because sys_path is a local copy which we want to modify inplace instead of 
     // coyp it into another buffer on the heap again
@@ -1360,9 +1376,9 @@ oslFileError osl_setFileAttributes( rtl_uString* ustrFileURL, sal_uInt64 uAttrib
 #ifdef MACOSX
 #ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1389,9 +1405,9 @@ oslFileError osl_setFileTime( rtl_uString* ustrFileURL, const TimeValue* pCreati
 #ifdef MACOSX
 #ifdef USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX, sal_False ) != 0 )
-#else	/* USE_JAVA */
+#else	// USE_JAVA
     if ( macxp_resolveAlias( path, PATH_MAX ) != 0 )
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
       return oslTranslateFileError( OSL_FET_ERROR, errno );
 #endif/* MACOSX */
 
@@ -1700,7 +1716,7 @@ oslFileError SAL_CALL osl_syncFile(oslFileHandle Handle)
    of the target platforms fix it!!!! */
 #	define __OSL_STATFS_IS_CASE_SENSITIVE_FS(a)	 (1)
 #	define __OSL_STATFS_IS_CASE_PRESERVING_FS(a) (1)
-#endif /* FREEBSD || NETBSD */
+#endif /* FREEBSD || NETBSD || MACOSX */
 
 #if defined(LINUX)
 #	define __OSL_NFS_SUPER_MAGIC				 0x6969
@@ -2050,7 +2066,7 @@ static oslFileError osl_psz_createDirectory( const sal_Char* pszPath )
         errno = EACCES;
         return oslTranslateFileError(OSL_FET_ERROR, nRet);
     }
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
 
     nRet = mkdir(pszPath,mode);
 
@@ -2601,7 +2617,7 @@ int UnicodeToText( char * buffer, size_t bufLen, const sal_Unicode * uniText, sa
 
 #ifdef USE_JAVA
     macxp_decomposeString( buffer, bufLen );
-#endif	/* USE_JAVA */
+#endif	// USE_JAVA
 
     return nDestBytes;
 }

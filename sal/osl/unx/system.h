@@ -354,9 +354,6 @@ extern char *strdup(const char *);
 #ifdef USE_JAVA
 #       include <sal/types.h>
 #endif	/* USE_JAVA */
-int  readdir_r( DIR *dirp, struct dirent *entry, struct dirent **result );
-char *asctime_r( const struct tm *tm, char *buffer );
-void macxp_getSystemVersion( unsigned int *isDarwin, unsigned int *majorVersion, unsigned int *minorVersion, unsigned int *minorMinorVersion );
 #ifdef __cplusplus
 extern "C" {
 #endif

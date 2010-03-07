@@ -818,7 +818,7 @@ static sal_Bool SAL_CALL osl_psz_getConfigDir(oslSecurity Security, sal_Char* ps
  * as soon as we can bumb the baseline to Tiger (for NSApplicationSupportDirectory) and have
  * support for Objective-C in the build environment
  */
-
+ 
 #ifdef USE_JAVA 
 #define MACOSX_CONFIG_DIR "/Library/Preferences"
 #else	/* USE_JAVA */
