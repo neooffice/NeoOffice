@@ -80,6 +80,7 @@
 //#ifndef _SVDETC_HXX
 //#include <svx/svdetc.hxx>
 //#endif
+#include <svx/frmdiritem.hxx>
 #include <svx/svdoutl.hxx>
 #include <svx/impgrf.hxx>				// FillFilter()
 #include <tools/urlobj.hxx>               // INetURLObject
@@ -363,6 +364,21 @@ String HtmlState::SetLink( const String& aLink, const String& aTarget )
 // class HtmlExport Methoden
 // *********************************************************************
 
+static String getParagraphStyle( SdrOutliner* pOutliner, USHORT nPara )
+{
+    SfxItemSet aParaSet( pOutliner->GetParaAttribs( nPara ) );
+    
+    String sStyle( RTL_CONSTASCII_USTRINGPARAM("direction:") );
+    if( static_cast<const SvxFrameDirectionItem*>(aParaSet.GetItem( EE_PARA_WRITINGDIR ))->GetValue() == FRMDIR_HORI_RIGHT_TOP )
+    {
+        sStyle += String( RTL_CONSTASCII_USTRINGPARAM("rtl;") );
+    }
+    else
+    {
+         sStyle += String( RTL_CONSTASCII_USTRINGPARAM("ltr;") );
+    }
+    return sStyle;
+}
 
 // =====================================================================
 // Konstruktor fuer die Html Export Hilfsklasse
@@ -385,6 +401,7 @@ HtmlExport::HtmlExport(
         mnCompression( -1 ),
         mbDownload( false ),
 		mbSlideSound(true),
+        mbHiddenSlides(true),
         mbUserAttr(false),
         mbDocColors(false),
         maHTMLExtension(SdResId(STR_HTMLEXP_DEFAULT_EXTENSION)),
@@ -537,6 +554,18 @@ void HtmlExport::InitExportParameters( const Sequence< PropertyValue >& rParams 
 			pParams->Value >>= temp;
 			mbDownload = temp;
 		}
+		else if( pParams->Name.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "SlideSound" ) ) )
+		{
+			sal_Bool temp = sal_True;
+			pParams->Value >>= temp;
+			mbSlideSound = temp;
+		}
+		else if( pParams->Name.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "HiddenSlides" ) ) )
+		{
+			sal_Bool temp = sal_True;
+			pParams->Value >>= temp;
+			mbHiddenSlides = temp;
+		}
 		else if( pParams->Name.equalsAsciiL( RTL_CONSTASCII_STRINGPARAM( "BackColor" ) ) )
 		{
 			sal_Int32 temp = 0;
@@ -633,6 +662,7 @@ void HtmlExport::InitExportParameters( const Sequence< PropertyValue >& rParams 
 	Size aTmpSize( pPage->GetSize() );
 	double dRatio=((double)aTmpSize.Width())/aTmpSize.Height();
 
+/*
 	switch( mnWidthPixel )
 	{
 		case 800:
@@ -646,6 +676,7 @@ void HtmlExport::InitExportParameters( const Sequence< PropertyValue >& rParams 
 			mnWidthPixel = 512;
 			break;
 	}
+*/
 	mnHeightPixel = (USHORT)(mnWidthPixel/dRatio);
 
 	//------------------------------------------------------------------
@@ -656,8 +687,21 @@ void HtmlExport::InitExportParameters( const Sequence< PropertyValue >& rParams 
 
 	maExportPath = aINetURLObj.GetPartBeforeLastName();	// with trailing '/'
 	maIndex = aINetURLObj.GetLastName();
-
+    
 	mnSdPageCount = mpDoc->GetSdPageCount( PK_STANDARD );
+//    USHORT nHiddenSlides = 0;
+    for( USHORT nPage = 0; nPage < mnSdPageCount; nPage++ )
+    {
+        pPage = mpDoc->GetSdPage( nPage, PK_STANDARD );
+        
+        if( mbHiddenSlides || !pPage->IsExcluded() )
+        {
+            maPages.push_back( pPage );
+            maNotesPages.push_back( mpDoc->GetSdPage( nPage, PK_NOTES ) );
+        }
+    }
+    mnSdPageCount = maPages.size();
+
 	mbFrames = meMode == PUBLISH_FRAMES;
 
 	maDocFileName = maIndex;
@@ -996,7 +1040,7 @@ bool HtmlExport::CreateImagesForPresPages()
 
 		for (USHORT nSdPage = 0; nSdPage < mnSdPageCount; nSdPage++)
 		{
-			SdPage* pPage = mpDoc->GetSdPage( nSdPage, PK_STANDARD );
+			SdPage* pPage = maPages[ nSdPage ];
 
 			OUString aFull(maExportPath);
 			aFull += *mpImageFiles[nSdPage];
@@ -1066,7 +1110,7 @@ bool HtmlExport::CreateHtmlTextForPresPages()
 
 	for(USHORT nSdPage = 0; nSdPage < mnSdPageCount && bOk; nSdPage++)
 	{
-		SdPage* pPage = mpDoc->GetSdPage(nSdPage, PK_STANDARD);
+		SdPage* pPage = maPages[ nSdPage ];
 
 		if( mbDocColors )
 		{
@@ -1087,8 +1131,11 @@ bool HtmlExport::CreateHtmlTextForPresPages()
 		aStr += CreateNavBar(nSdPage, true);
 
 // Seitentitel
-		aStr.AppendAscii( "<h1>" );
-		aStr += CreateTextForTitle(pOutliner,pPage, pPage->GetPageBackgroundColor());
+        String sTitleText( CreateTextForTitle(pOutliner,pPage, pPage->GetPageBackgroundColor()) );
+		aStr.AppendAscii( "<h1 style=\"");
+        aStr.Append( getParagraphStyle( pOutliner, 0 ) );
+        aStr.AppendAscii( "\">" );
+		aStr += sTitleText;
 		aStr.AppendAscii( "</h1>\r\n" );
 
 // Gliederungstext schreiben
@@ -1097,7 +1144,7 @@ bool HtmlExport::CreateHtmlTextForPresPages()
 // Notizen
 		if(mbNotes)
 		{
-			SdPage* pNotesPage = mpDoc->GetSdPage(nSdPage, PK_NOTES);
+			SdPage* pNotesPage = maNotesPages[ nSdPage ];
 			String aNotesStr( CreateTextForNotesPage( pOutliner, pNotesPage, true, maBackColor) );
 
 			if( aNotesStr.Len() )
@@ -1223,8 +1270,6 @@ String HtmlExport::CreateTextForPage( SdrOutliner* pOutliner,
 					{
 						aStr.AppendAscii( "</ul>" );
 						nActDepth--;
-						if( nActDepth >= 0 )
-							aStr.AppendAscii( "</li>" );
 					}
 					while(nDepth < nActDepth);
 				}
@@ -1232,18 +1277,33 @@ String HtmlExport::CreateTextForPage( SdrOutliner* pOutliner,
 				{
 					do
 					{
-						if( nActDepth >= 0 )
-							aStr.AppendAscii( "<li>" );
 						aStr.AppendAscii( "<ul>" );
 						nActDepth++;
 					}
 					while( nDepth > nActDepth );
 				}
 
+                String sStyle( getParagraphStyle( pOutliner, nPara ) );
 				if(nActDepth >= 0 )
-					aStr.AppendAscii( "<li>" );
-				if(nActDepth == 0 && bHeadLine)
-					aStr.AppendAscii( "<h2>" );
+                {
+					aStr.AppendAscii( "<li style=\"");
+                    aStr.Append( sStyle );
+                    aStr.AppendAscii( "\">" );
+                }
+				
+                if(nActDepth <= 0 && bHeadLine)
+                {
+                    if( nActDepth == 0 )
+                    {
+					    aStr.AppendAscii( "<h2>" );
+                    }
+                    else
+                    {
+					    aStr.AppendAscii( "<h2 style=\"");
+                        aStr.Append( sStyle );
+                        aStr.AppendAscii( "\">" );
+                    }
+                }
 				aStr += aParaText;
 				if(nActDepth == 0 && bHeadLine)
 					aStr.AppendAscii( "</h2>" );
@@ -1256,8 +1316,6 @@ String HtmlExport::CreateTextForPage( SdrOutliner* pOutliner,
 			{
 				aStr.AppendAscii( "</ul>" );
 				nActDepth--;
-				if( nActDepth >= 0 )
-					aStr.AppendAscii( "</li>" );
 			};
 		}
 	}
@@ -1288,8 +1346,11 @@ String HtmlExport::CreateTextForNotesPage( SdrOutliner* pOutliner,
 			ULONG nCount = pOutliner->GetParagraphCount();
 			for (ULONG nPara = 0; nPara < nCount; nPara++)
 			{
+                aStr.AppendAscii("<p style=\"");
+                aStr.Append( getParagraphStyle( pOutliner, nPara ) );
+                aStr.AppendAscii("\">");
 				aStr += ParagraphToHTMLString( pOutliner, nPara,rBackgroundColor );
-				aStr.AppendAscii( "<br>\r\n" );
+				aStr.AppendAscii( "</p>\r\n" );
 			}
 		}
 	}
@@ -1384,7 +1445,7 @@ String HtmlExport::TextAttribToHTMLString( SfxItemSet* pSet, HtmlState* pState, 
 
 	if ( pSet->GetItemState( EE_CHAR_UNDERLINE ) == SFX_ITEM_ON )
 	{
-		bTemp = ((const SvxUnderlineItem&)pSet->Get( EE_CHAR_UNDERLINE )).GetUnderline() != UNDERLINE_NONE;
+		bTemp = ((const SvxUnderlineItem&)pSet->Get( EE_CHAR_UNDERLINE )).GetLineStyle() != UNDERLINE_NONE;
 		aTemp = pState->SetUnderline( bTemp );
 		if( bTemp )
 			aStr.Insert( aTemp, 0 );
@@ -1450,7 +1511,7 @@ bool HtmlExport::CreateHtmlForPresPages()
 		// die Liste stellen, da in HTML bei Ueberlappungen die
 		// _erstgenannte_ Area wirkt.
 
-		SdPage* pPage = mpDoc->GetSdPage(nSdPage, PK_STANDARD);
+		SdPage* pPage = maPages[ nSdPage ];
 
 		if( mbDocColors )
 		{
@@ -1500,7 +1561,7 @@ bool HtmlExport::CreateHtmlForPresPages()
 		aStr.AppendAscii( "</title>\r\n" );
 
 // insert timing information
-		pPage = mpDoc->GetSdPage(nSdPage, PK_STANDARD);
+		pPage = maPages[ nSdPage ];
 		if( meMode == PUBLISH_KIOSK )
 		{
 			ULONG nSecs = 0;
@@ -1564,7 +1625,7 @@ bool HtmlExport::CreateHtmlForPresPages()
 		if(mbNotes && !mbFrames)
 		{
 			SdrOutliner* pOutliner = mpDoc->GetInternalOutliner();
-			SdPage* pNotesPage = mpDoc->GetSdPage(nSdPage, PK_NOTES);
+			SdPage* pNotesPage = maNotesPages[ nSdPage ];
 			String aNotesStr( CreateTextForNotesPage( pOutliner, pNotesPage, true, maBackColor) );
 			pOutliner->Clear();
 
@@ -1948,7 +2009,7 @@ bool HtmlExport::CreateNotesPages()
 	SdrOutliner* pOutliner = mpDoc->GetInternalOutliner();
 	for( USHORT nSdPage = 0; bOk && nSdPage < mnSdPageCount; nSdPage++ )
 	{
-		SdPage* pPage = mpDoc->GetSdPage(nSdPage, PK_NOTES);
+		SdPage* pPage = maNotesPages[nSdPage];
 		if( mbDocColors )
 			SetDocColors( pPage );
 
@@ -2004,7 +2065,7 @@ bool HtmlExport::CreateOutlinePages()
 		SdrOutliner* pOutliner = mpDoc->GetInternalOutliner();
 		for(USHORT nSdPage = 0; nSdPage < mnSdPageCount; nSdPage++)
 		{
-			SdPage* pPage = mpDoc->GetSdPage(nSdPage, PK_STANDARD);
+			SdPage* pPage = maPages[ nSdPage ];
 
 			aStr.AppendAscii( "<div align=\"left\">" );
 			String aLink( RTL_CONSTASCII_USTRINGPARAM( "JavaScript:parent.NavigateAbs(" ) );
@@ -2014,11 +2075,15 @@ bool HtmlExport::CreateOutlinePages()
 			String aTitle = CreateTextForTitle(pOutliner,pPage, maBackColor);
 			if(aTitle.Len() == 0)
 				aTitle = *mpPageNames[nSdPage];
+
+            aStr.AppendAscii("<p style=\"");
+            aStr.Append( getParagraphStyle( pOutliner, 0 ) );
+            aStr.AppendAscii("\">");
 			aStr += CreateLink(aLink, aTitle);
+            aStr.AppendAscii("</p>");
 
 			if(nPage==1)
 			{
-				aStr.AppendAscii( "<br>" );
 				aStr += CreateTextForPage( pOutliner, pPage, false, maBackColor );
 			}
 			aStr.AppendAscii( "</div>\r\n" );
@@ -2081,7 +2146,7 @@ void HtmlExport::CreateFileNames()
 		*pName += maHTMLExtension;
 		mpTextFiles[nSdPage] = pName;
 
-		SdPage* pSdPage = mpDoc->GetSdPage(nSdPage, PK_STANDARD);
+		SdPage* pSdPage = maPages[ nSdPage ];
 
 		// get slide title from page name
 		String* pPageTitle = new String();
@@ -2252,7 +2317,7 @@ bool HtmlExport::CreateFrames()
 	aStr.AppendAscii( "<script type=\"text/javascript\">\r\n<!--\r\n" );
 
 	aStr.AppendAscii( "var nCurrentPage = 0;\r\nvar nPageCount = " );
-	aStr += String::CreateFromInt32(mpDoc->GetSdPageCount( PK_STANDARD ));
+	aStr += String::CreateFromInt32(mnSdPageCount);
 	aStr.AppendAscii( ";\r\n\r\n" );
 
 	String aFunction;
@@ -2417,7 +2482,7 @@ bool HtmlExport::CreateNavBarFrames()
 		if(nFile != 2 && mnSdPageCount > 1)
 		{
 			String aLink(RTL_CONSTASCII_USTRINGPARAM("JavaScript:parent.NavigateAbs("));
-			aLink += String::CreateFromInt32(mpDoc->GetSdPageCount( PK_STANDARD )-1);
+			aLink += String::CreateFromInt32(mnSdPageCount-1);
 			aLink.AppendAscii( ")" );
 			aButton = CreateLink( aLink, aButton);
 		}
