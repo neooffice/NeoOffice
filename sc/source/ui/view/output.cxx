@@ -49,8 +49,6 @@
 #include <svtools/accessibilityoptions.hxx>
 #include <svx/framelinkarray.hxx>
 
-#include <math.h>
-
 #include "output.hxx"
 #include "document.hxx"
 #include "cell.hxx"
@@ -69,6 +67,8 @@
 #include "scmod.hxx"
 #include "appoptio.hxx"
 #include "postit.hxx"
+
+#include <math.h>
 
 using namespace com::sun::star;
 
@@ -90,7 +90,7 @@ class ScActionColorChanger
 {
 private:
 	const ScAppOptions&		rOpt;
-	const StrCollection&	rUsers;
+	const ScStrCollection&	rUsers;
 	String					aLastUserName;
 	USHORT					nLastUserIndex;
 	ColorData				nColor;
@@ -327,8 +327,9 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 	long nPosX;
 	long nPosY;
 	SCSIZE nArrY;
-	BYTE nOldFlags = 0;
-	BYTE nFlags;
+    ScBreakType nBreak    = BREAK_NONE;
+    ScBreakType nBreakOld = BREAK_NONE;
+
 	BOOL bSingle;
 	Color aPageColor;
 	Color aManualColor;
@@ -383,27 +384,28 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 			if ( bPage )
 			{
 				//	Seitenumbrueche auch in ausgeblendeten suchen
-				nFlags = 0;
 				SCCOL nCol = nXplus1;
 				while (nCol <= MAXCOL)
 				{
 					BYTE nDocFl = pDoc->GetColFlags( nCol, nTab );
-					nFlags = nDocFl & ( CR_PAGEBREAK | CR_MANUALBREAK );
-					if ( nFlags || !(nDocFl & CR_HIDDEN) )
+                    nBreak = pDoc->HasColBreak(nCol, nTab);
+                    bool bHidden = pDoc->ColHidden(nCol, nTab);
+
+                    if ( nBreak || !bHidden )
 						break;
 					++nCol;
 				}
 
-				if (nFlags != nOldFlags)
+                if (nBreak != nBreakOld)
 				{
 					aGrid.Flush();
-					pDev->SetLineColor( (nFlags & CR_MANUALBREAK) ? aManualColor :
-									 (nFlags) ? aPageColor : aGridColor );
-					nOldFlags = nFlags;
+                    pDev->SetLineColor( (nBreak & BREAK_MANUAL) ? aManualColor :
+                                        nBreak ? aPageColor : aGridColor );
+                    nBreakOld = nBreak;
 				}
 			}
 
-			BOOL bDraw = bGrid || nOldFlags;	// einfaches Gitter nur wenn eingestellt
+			BOOL bDraw = bGrid || nBreakOld;	// einfaches Gitter nur wenn eingestellt
 
 			//!	Mit dieser Abfrage wird zuviel weggelassen, wenn ein automatischer
 			//!	Umbruch mitten in den Wiederholungsspalten liegt.
@@ -414,7 +416,7 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 			{
 				if ( nX == MAXCOL )
 					bDraw = FALSE;
-				else if (pDoc->GetColFlags(nXplus1,nTab) & ( CR_PAGEBREAK | CR_MANUALBREAK ))
+                else if (pDoc->HasColBreak(nXplus1, nTab))
 					bDraw = FALSE;
 			}
 #endif
@@ -505,28 +507,24 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 		{
 			if ( bPage )
 			{
-				//	Seitenumbrueche auch in ausgeblendeten suchen
-				nFlags = 0;
-                ScCompressedArrayIterator< SCROW, BYTE > aIter(
-                        pDoc->GetRowFlagsArray( nTab), nYplus1, MAXROW);
-                do
+                for (SCROW i = nYplus1; i <= MAXROW; ++i)
                 {
-					BYTE nDocFl = *aIter;
-					nFlags = nDocFl & ( CR_PAGEBREAK | CR_MANUALBREAK );
-					if ( nFlags || !(nDocFl & CR_HIDDEN) )
-						break;
-                } while (aIter.NextRange());
+                    nBreak = pDoc->HasRowBreak(i, nTab);
+                    bool bHidden = pDoc->RowHidden(i, nTab);
+                    if (nBreak || !bHidden)
+                        break;
+                }
 
-				if (nFlags != nOldFlags)
+                if (nBreakOld != nBreak)
 				{
 					aGrid.Flush();
-					pDev->SetLineColor( (nFlags & CR_MANUALBREAK) ? aManualColor :
-									 (nFlags) ? aPageColor : aGridColor );
-					nOldFlags = nFlags;
+					pDev->SetLineColor( (nBreak & BREAK_MANUAL) ? aManualColor :
+                                        (nBreak) ? aPageColor : aGridColor );
+                    nBreakOld = nBreak;
 				}
 			}
 
-			BOOL bDraw = bGrid || nOldFlags;	// einfaches Gitter nur wenn eingestellt
+			BOOL bDraw = bGrid || nBreakOld;	// einfaches Gitter nur wenn eingestellt
 
 			//!	Mit dieser Abfrage wird zuviel weggelassen, wenn ein automatischer
 			//!	Umbruch mitten in den Wiederholungszeilen liegt.
@@ -537,7 +535,7 @@ void ScOutputData::DrawGrid( BOOL bGrid, BOOL bPage )
 			{
 				if ( nY == MAXROW )
 					bDraw = FALSE;
-				else if (pDoc->GetRowFlags(nYplus1,nTab) & ( CR_PAGEBREAK | CR_MANUALBREAK ))
+                else if (pDoc->HasRowBreak(nYplus1, nTab))
 					bDraw = FALSE;
 			}
 #endif
@@ -659,7 +657,7 @@ void ScOutputData::FindRotated()
 				const ScPatternAttr* pPattern = pInfo->pPatternAttr;
 				const SfxItemSet* pCondSet = pInfo->pConditionSet;
 
-				if ( !pPattern && (pDoc->GetColFlags(nX,nTab) & CR_HIDDEN) == 0 )
+                if ( !pPattern && !pDoc->ColHidden(nX, nTab) )
 				{
 					pPattern = pDoc->GetPattern( nX, nY, nTab );
 					pCondSet = pDoc->GetCondResult( nX, nY, nTab );
@@ -793,14 +791,23 @@ BOOL lcl_EqualBack( const RowInfo& rFirst, const RowInfo& rOther,
 	return TRUE;
 }
 
+void ScOutputData::DrawDocumentBackground()
+{
+    if ( !bSolidBackground )
+        return;
+
+    Size aOnePixel = pDev->PixelToLogic(Size(1,1));
+    long nOneX = aOnePixel.Width();
+    long nOneY = aOnePixel.Height();
+    Rectangle aRect(nScrX - nOneX, nScrY - nOneY, nScrX + nScrW, nScrY + nScrH);
+    Color aBgColor( SC_MOD()->GetColorConfig().GetColorValue(svtools::DOCCOLOR).nColor );
+    pDev->SetFillColor(aBgColor);
+    pDev->DrawRect(aRect);
+}
+
 void ScOutputData::DrawBackground()
 {
 	FindRotated();				//! von aussen ?
-
-	ScModule* pScMod = SC_MOD();
-
-	// used only if bSolidBackground is set (only for ScGridWindow):
-    Color aBgColor( pScMod->GetColorConfig().GetColorValue(svtools::DOCCOLOR).nColor );
 
 #ifdef USE_JAVA
     Color aNativeHighlightColor( COL_TRANSPARENT );
@@ -869,7 +876,7 @@ void ScOutputData::DrawBackground()
 				long nPosX = nScrX;
 				if ( bLayoutRTL )
 					nPosX += nMirrorW - nOneX;
-				aRect = Rectangle( nPosX,nPosY, nPosX,nPosY+nRowHeight-nOneY );
+				aRect = Rectangle( nPosX, nPosY-nOneY, nPosX, nPosY+nRowHeight-nOneY );
 
 				const SvxBrushItem* pOldBackground = NULL;
 				const SvxBrushItem* pBackground;
@@ -917,8 +924,6 @@ void ScOutputData::DrawBackground()
 						if (pOldBackground)				// ==0 if hidden
 						{
 							Color aBackCol = pOldBackground->GetColor();
-							if ( bSolidBackground && aBackCol.GetTransparency() )
-								aBackCol = aBgColor;
 							if ( !aBackCol.GetTransparency() )		//! partial transparency?
 							{
 								pDev->SetFillColor( aBackCol );
@@ -939,7 +944,7 @@ void ScOutputData::DrawBackground()
 							}
 #endif	// USE_JAVA
 						}
-						aRect.Left() = nPosX;
+						aRect.Left() = nPosX - nSignedOneX;
 						pOldBackground = pBackground;
 					}
 					nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth * nLayoutSign;
@@ -948,8 +953,6 @@ void ScOutputData::DrawBackground()
 				if (pOldBackground)
 				{
 					Color aBackCol = pOldBackground->GetColor();
-					if ( bSolidBackground && aBackCol.GetTransparency() )
-						aBackCol = aBgColor;
 					if ( !aBackCol.GetTransparency() )		//! partial transparency?
 					{
 						pDev->SetFillColor( aBackCol );
@@ -1196,11 +1199,6 @@ size_t lclGetArrayColFromCellInfoX( USHORT nCellInfoX, USHORT nCellInfoFirstX, U
     return static_cast< size_t >( bRTL ? (nCellInfoLastX + 2 - nCellInfoX) : (nCellInfoX - nCellInfoFirstX) );
 }
 
-USHORT lclGetCellInfoXFromArrayCol( size_t nCol, USHORT nCellInfoFirstX, USHORT nCellInfoLastX, bool bRTL )
-{
-    return static_cast< USHORT >( bRTL ? (nCellInfoLastX + 2 - nCol) : (nCol + nCellInfoFirstX) );
-}
-
 void ScOutputData::DrawFrame()
 {
 	ULONG nOldDrawMode = pDev->GetDrawMode();
@@ -1215,7 +1213,6 @@ void ScOutputData::DrawFrame()
 	//	for display mode / B&W printing. The VCL DrawMode handling doesn't work for lines
 	//	that are drawn with DrawRect, so if the line/background bits are set, the DrawMode
 	//	must be reset and the border colors handled here.
-	//	(Similar to fix for #72796# in SdrObject::ImpDrawLineGeometry)
 
 	if ( ( nOldDrawMode & DRAWMODE_WHITEFILL ) && ( nOldDrawMode & DRAWMODE_BLACKLINE ) )
 	{
@@ -1371,7 +1368,7 @@ const SvxBorderLine* lcl_FindHorLine( ScDocument* pDoc,
 	else
 		pNextTop = NULL;
 
-	if ( HasPriority( pThisBottom, pNextTop ) )
+	if ( ScHasPriority( pThisBottom, pNextTop ) )
 		return pThisBottom;
 	else
 		return pNextTop;
@@ -1740,81 +1737,6 @@ void ScOutputData::DrawRotatedFrame( const Color* pForceColor )
 }
 
 //	Drucker
-
-void ScOutputData::DrawPageBorder( SCCOL nStartX, SCROW nStartY, SCCOL nEndX, SCROW nEndY )
-{
-	PutInOrder( nStartX, nEndX );
-	PutInOrder( nStartY, nEndY );
-
-	if ( nStartX <= nX2 && nEndX >= nX1 &&
-		 nStartY <= nY2 && nEndY >= nY1 )
-	{
-		long nMinX = nScrX;
-		long nMinY = nScrY;
-		long nMaxX = nScrX+nScrW-1;
-		long nMaxY = nScrY+nScrH-1;
-		BOOL bTop    = FALSE;
-		BOOL bBottom = FALSE;
-		BOOL bLeft   = FALSE;
-		BOOL bRight	 = FALSE;
-
-		long nPosY = nScrY;
-		for (SCSIZE nArrY=1; nArrY+1<nArrCount; nArrY++)
-		{
-			SCROW nY = pRowInfo[nArrY].nRowNo;
-
-			if ( nY==nStartY )
-			{
-				nMinY = nPosY;
-				bTop = TRUE;
-			}
-
-			if ( nY==nEndY )
-			{
-//				nMaxY = nPosY + pRowInfo[nArrY].nHeight - 2;
-				nMaxY = nPosY + pRowInfo[nArrY].nHeight;
-				bBottom = TRUE;
-			}
-
-			nPosY += pRowInfo[nArrY].nHeight;
-		}
-
-		long nPosX = nScrX;
-		for (SCCOL nX=nX1; nX<=nX2; nX++)
-		{
-			if ( nX==nStartX )
-			{
-				nMinX = nPosX;
-				bLeft = TRUE;
-			}
-			if ( nX==nEndX )
-			{
-//				nMaxX = nPosX + pRowInfo[0].pCellInfo[nX+1].nWidth - 2;
-				nMaxX = nPosX + pRowInfo[0].pCellInfo[nX+1].nWidth;
-				bRight = TRUE;
-			}
-			nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth;
-		}
-
-		pDev->SetLineColor( COL_BLACK );
-		if (bTop && bBottom && bLeft && bRight)
-		{
-			pDev->SetFillColor();
-			pDev->DrawRect( Rectangle( nMinX, nMinY, nMaxX, nMaxY ) );
-		}
-		else
-		{
-			if (bTop)
-				pDev->DrawLine( Point( nMinX,nMinY ), Point( nMaxX,nMinY ) );
-			if (bBottom)
-				pDev->DrawLine( Point( nMinX,nMaxY ), Point( nMaxX,nMaxY ) );
-			if (bLeft)
-				pDev->DrawLine( Point( nMinX,nMinY ), Point( nMinX,nMaxY ) );
-			if (bRight)
-				pDev->DrawLine( Point( nMaxX,nMinY ), Point( nMaxX,nMaxY ) );
-		}
-	}
-}
 
 PolyPolygon ScOutputData::GetChangedArea()
 {
@@ -2327,7 +2249,7 @@ void ScOutputData::DrawNoteMarks()
 					// use origin's pCell for NotePtr test below
 				}
 
-				if ( pCell && pCell->GetNotePtr() && ( bIsMerged ||
+                if ( pCell && pCell->HasNote() && ( bIsMerged ||
 						( !pInfo->bHOverlapped && !pInfo->bVOverlapped ) ) )
 				{
 					if (bFirst)
@@ -2405,7 +2327,7 @@ void ScOutputData::AddPDFNotes()
                     // use origin's pCell for NotePtr test below
                 }
 
-                if ( pCell && pCell->GetNotePtr() && ( bIsMerged ||
+                if ( pCell && pCell->HasNote() && ( bIsMerged ||
                         ( !pInfo->bHOverlapped && !pInfo->bVOverlapped ) ) )
                 {
                     long nNoteWidth = (long)( SC_CLIPMARK_SIZE * nPPTX );
@@ -2425,7 +2347,7 @@ void ScOutputData::AddPDFNotes()
                     if ( bLayoutRTL ? ( nMarkX >= 0 ) : ( nMarkX < nScrX+nScrW ) )
                     {
                         Rectangle aNoteRect( nMarkX, nPosY, nMarkX+nNoteWidth*nLayoutSign, nPosY+nNoteHeight );
-                        const ScPostIt* pNote = pCell->GetNotePtr();
+                        const ScPostIt* pNote = pCell->GetNote();
 
                         // Note title is the cell address (as on printed note pages)
                         String aTitle;
@@ -2434,7 +2356,6 @@ void ScOutputData::AddPDFNotes()
 
                         // Content has to be a simple string without line breaks
                         String aContent = pNote->GetText();
-                        aContent.ConvertLineEnd(LINEEND_LF);
                         xub_StrLen nPos;
                         while ( (nPos=aContent.Search('\n')) != STRING_NOTFOUND )
                             aContent.SetChar( nPos, ' ' );
@@ -2451,64 +2372,6 @@ void ScOutputData::AddPDFNotes()
         }
         nPosY += pThisRowInfo->nHeight;
     }
-}
-
-long lcl_FindInList( const List& rPosList, const ScAddress &rPos )
-{
-	long nCount = rPosList.Count();
-	for (long i=0; i<nCount; i++)
-		if (*(ScAddress*)rPosList.GetObject(i) == rPos)
-			return i+1;
-
-	return 0;
-}
-
-void ScOutputData::PrintNoteMarks( const List& rPosList )
-{
-	Font aFont;
-	ScAutoFontColorMode eColorMode = bUseStyleColor ?
-										( bForceAutoColor ? SC_AUTOCOL_IGNOREFONT : SC_AUTOCOL_DISPLAY ) :
-										SC_AUTOCOL_PRINT;
-	((const ScPatternAttr&)pDoc->GetPool()->GetDefaultItem(ATTR_PATTERN)).GetFont(aFont, eColorMode);
-	aFont.SetSize( Size( 0, (long) ( 120 * nPPTY ) ) );			// 6 pt
-	pDev->SetFont( aFont );
-
-	String aStr;
-
-	long nPosY = nScrY;
-	for (SCSIZE nArrY=1; nArrY+1<nArrCount; nArrY++)
-	{
-		RowInfo* pThisRowInfo = &pRowInfo[nArrY];
-		if ( pThisRowInfo->bChanged )
-		{
-			long nPosX = nScrX;
-			for (SCCOL nX=nX1; nX<=nX2; nX++)
-			{
-				CellInfo* pInfo = &pThisRowInfo->pCellInfo[nX+1];
-				ScBaseCell* pCell = pInfo->pCell;
-				if ( pCell && pCell->GetNotePtr() )		// auch verdeckte wegen der Numerierung
-				{
-                    aStr = String::CreateFromInt32( lcl_FindInList( rPosList,
-                                ScAddress( nX, pThisRowInfo->nRowNo, nTab)));
-					long nMarkX = nPosX + pRowInfo[0].pCellInfo[nX+1].nWidth - 2 -
-									pDev->GetTextWidth(aStr);
-					pDev->DrawText( Point( nMarkX,nPosY ), aStr );
-				}
-
-				nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth;
-			}
-		}
-		nPosY += pThisRowInfo->nHeight;
-	}
-}
-
-void ScOutputData::ConnectObject( const uno::Reference < embed::XEmbeddedObject >& rRef, SdrOle2Obj* pOleObj )
-{
-    if (rRef.is())
-	{
-        if ( rRef->getStatus( pOleObj->GetAspect() ) & embed::EmbedMisc::MS_EMBED_ACTIVATEWHENVISIBLE )
-			pViewShell->ConnectObject( pOleObj );
-	}
 }
 
 void ScOutputData::DrawClipMarks()

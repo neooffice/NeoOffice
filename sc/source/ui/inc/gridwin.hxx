@@ -38,13 +38,18 @@
 #include <svx/sdr/overlay/overlayobject.hxx>
 
 #include <vector>
+#include <memory>
+#include <boost/shared_ptr.hpp>
 
 // ---------------------------------------------------------------------------
 
 struct ScTableInfo;
 class ScViewSelectionEngine;
+#if OLD_PIVOT_IMPLEMENTATION
 class ScPivot;
+#endif
 class ScDPObject;
+class ScDPFieldPopupWindow;
 class ScOutputData;
 class ScFilterListBox;
 class AutoFilterPopup;
@@ -96,8 +101,7 @@ public:
 // predefines
 class ScGridWindow;
 
-enum ScOverlayType { SC_OVERLAY_INVERT, SC_OVERLAY_HATCH, SC_OVERLAY_SOLID,
-                     SC_OVERLAY_TRANSPARENT, SC_OVERLAY_LIGHT_TRANSPARENT, SC_OVERLAY_BORDER_TRANSPARENT };
+enum ScOverlayType { SC_OVERLAY_INVERT, SC_OVERLAY_SOLID, SC_OVERLAY_BORDER_TRANSPARENT };
 
 // #114409#
 namespace sdr
@@ -148,6 +152,25 @@ private:
     ::sdr::overlay::OverlayObjectList*              mpOOHeader;
     ::sdr::overlay::OverlayObjectList*              mpOOShrink;
 
+    ::boost::shared_ptr<Rectangle> mpAutoFillRect;
+
+    /** 
+     * Stores current visible column and row ranges, used to avoid expensive 
+     * operations on objects that are outside visible area. 
+     */
+    struct VisibleRange
+    {
+        SCCOL mnCol1;
+        SCCOL mnCol2;
+        SCROW mnRow1;
+        SCROW mnRow2;
+
+        VisibleRange();
+
+        bool isInside(SCCOL nCol, SCROW nRow) const;
+    };
+    VisibleRange maVisibleRange;
+
 private:
 	ScViewData*				pViewData;
 	ScSplitPos				eWhich;
@@ -158,6 +181,7 @@ private:
 
 	ScFilterListBox*		pFilterBox;
 	FloatingWindow*			pFilterFloat;
+    ::std::auto_ptr<ScDPFieldPopupWindow> mpDPFieldPopup;
 
 	USHORT					nCursorHideCount;
 
@@ -168,11 +192,13 @@ private:
 	BYTE					nMouseStatus;
     BYTE                    nNestedButtonState;     // track nested button up/down calls
 
+#if OLD_PIVOT_IMPLEMENTATION
 	BOOL					bPivotMouse;			// Pivot-D&D (alte Pivottabellen)
 	ScPivot*				pDragPivot;
 	BOOL					bPivotColField;
 	SCCOL					nPivotCol;
 	SCCOL					nPivotField;
+#endif
 
 	BOOL					bDPMouse;				// DataPilot-D&D (neue Pivottabellen)
 	long					nDPField;
@@ -234,14 +260,26 @@ private:
 
 	BOOL			DoPageFieldSelection( SCCOL nCol, SCROW nRow );
 	void			DoPushButton( SCCOL nCol, SCROW nRow, const MouseEvent& rMEvt );
+#if OLD_PIVOT_IMPLEMENTATION
 	void			PivotMouseMove( const MouseEvent& rMEvt );
 	void			PivotMouseButtonUp( const MouseEvent& rMEvt );
 	BOOL			PivotTestMouse( const MouseEvent& rMEvt, BOOL bMove );
 	void			DoPivotDrop( BOOL bDelete, BOOL bToCols, SCSIZE nDestPos );
+#endif
 
 	void			DPMouseMove( const MouseEvent& rMEvt );
 	void			DPMouseButtonUp( const MouseEvent& rMEvt );
 	void			DPTestMouse( const MouseEvent& rMEvt, BOOL bMove );
+
+    /** 
+     * Check if the mouse click is on a field popup button. 
+     *  
+     * @return bool true if the field popup menu has been launched and no 
+     *         further mouse event handling is necessary, false otherwise.
+     */
+    bool            DPTestFieldPopupArrow(const MouseEvent& rMEvt, const ScAddress& rPos, ScDPObject* pDPObj);
+    void            DPLaunchFieldPopupMenu(
+        const Point& rSrcPos, const Size& rSrcSize, const ScAddress& rPos, ScDPObject* pDPObj);
 
 	void			RFMouseMove( const MouseEvent& rMEvt, BOOL bUp );
 
@@ -251,7 +289,7 @@ private:
 
 	BOOL 			IsAutoFilterActive( SCCOL nCol, SCROW nRow, SCTAB nTab );
 	void			ExecFilter( ULONG nSel, SCCOL nCol, SCROW nRow,
-								const String& aValue );
+                                const String& aValue, bool bCheckForDates );
 	void			FilterSelect( ULONG nSel );
 
 	void			ExecDataSelect( SCCOL nCol, SCROW nRow, const String& rStr );
@@ -285,7 +323,6 @@ private:
     void            DrawSdrGrid( const Rectangle& rDrawingRect, OutputDevice* pContentDev );
 	//BOOL			DrawBeforeScroll();
 	void			DrawAfterScroll(/*BOOL bVal*/);
-	void			OutlinerViewPaint( const Rectangle& rRect );
 	//void			DrawMarks();
 	//BOOL			NeedDrawMarks();
 	void 			DrawComboButton( const Point&	rCellPos,
@@ -321,11 +358,11 @@ private:
                         sdr::overlay::OverlayObjectCell::RangeVector* pRanges,
                         const MapMode& rDrawMode,
                         const RectangleConverter *pConverter = NULL);
-    void            UpdateCopySourceOverlay(const MapMode& rDrawMode);
 
 protected:
     using Window::Resize;
 	virtual void 	Resize( const Size& rSize );
+	virtual void 	PrePaint();
 	virtual void 	Paint( const Rectangle& rRect );
 	virtual void	KeyInput(const KeyEvent& rKEvt);
 	virtual void	GetFocus();
@@ -388,11 +425,7 @@ public:
 	void			InvertSimple( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2,
 									BOOL bTestMerge = FALSE, BOOL bRepeat = FALSE );
 
-	void			DrawDragRect( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2 );
-
-	void			DrawRefMark( SCCOL nRefStartX, SCROW nRefStartY,
-									SCCOL nRefEndX, SCROW nRefEndY,
-									const Color& rColor, BOOL bHandle );
+//UNUSED2008-05  void			DrawDragRect( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2 );
 
 	void			CreateAnchorHandle(SdrHdlList& rHdl, const ScAddress& rAddress);
 
@@ -420,10 +453,14 @@ public:
 
 	void			CheckNeedsRepaint();
 
+    void            UpdateDPFromFieldPopupMenu();
+
 	// #114409#
 	void CursorChanged();
 	void DrawLayerCreated();
 
+    void            DeleteCopySourceOverlay();
+    void            UpdateCopySourceOverlay();
     void            DeleteCursorOverlay();
     void            UpdateCursorOverlay();
     void            DeleteSelectionOverlay();

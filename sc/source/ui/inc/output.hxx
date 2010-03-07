@@ -161,7 +161,6 @@ private:
 	void			GetVisibleCell( SCCOL nCol, SCROW nRow, SCTAB nTab, ScBaseCell*& rpCell );
 
 	BOOL			IsAvailable( SCCOL nX, SCROW nY );
-	long			GetAvailableWidth( SCCOL nX, SCROW nY, long nNeeded );
 	void			GetOutputArea( SCCOL nX, SCSIZE nArrY, long nPosX, long nPosY,
 									SCCOL nCellX, SCROW nCellY, long nNeeded,
 									const ScPatternAttr& rPattern,
@@ -178,8 +177,6 @@ private:
 
 	void			SetSyntaxColor( Font* pFont, ScBaseCell* pCell );
 	void			SetEditSyntaxColor( EditEngine& rEngine, ScBaseCell* pCell );
-
-    void            ConnectObject( const com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >& rRef, SdrOle2Obj* pOleObj );
 
 	double			GetStretch();
 
@@ -226,6 +223,7 @@ public:
 
 	void	DrawGrid( BOOL bGrid, BOOL bPage );
 	void	DrawStrings( BOOL bPixelToLogic = FALSE );
+    void    DrawDocumentBackground();
 	void	DrawBackground();
 	void	DrawShadow();
 	void	DrawExtraShadow(BOOL bLeft, BOOL bTop, BOOL bRight, BOOL bBottom);
@@ -238,21 +236,15 @@ public:
 	void	DrawRotated(BOOL bPixelToLogic);		// logisch
 
 	void	DrawClear();
-	void	DrawPageBorder( SCCOL nStartX, SCROW nStartY, SCCOL nEndX, SCROW nEndY );
 
 	// #i72502# printer only command set
 	Point PrePrintDrawingLayer(long nLogStX, long nLogStY );
 	void PostPrintDrawingLayer(const Point& rMMOffset); // #i74768# need offset for FormLayer
-	void PrintDrawingLayer(const sal_uInt16 nLayer, const sal_uInt16 nPaintMode, const Point& rMMOffset);
+	void PrintDrawingLayer(const sal_uInt16 nLayer, const Point& rMMOffset);
 
 	// nur Bildschirm:
-	// #109985#
-	//void	DrawingSingle( USHORT nLayer, USHORT nObjectFlags, USHORT nDummyFlags );
-	void	DrawingSingle(const sal_uInt16 nLayer, const sal_uInt16 nPaintMode);
-
-	// #109985#
-	//void	DrawSelectiveObjects( USHORT nLayer, const Rectangle& rRect, USHORT nObjectFlags, USHORT nDummyFlags = 0 );
-	void	DrawSelectiveObjects(const sal_uInt16 nLayer, const sal_uInt16 nPaintMode);
+	void	DrawingSingle(const sal_uInt16 nLayer);
+	void	DrawSelectiveObjects(const sal_uInt16 nLayer);
 
 	BOOL	SetChangedClip();		// FALSE = nix
     PolyPolygon GetChangedArea();
@@ -271,7 +263,6 @@ public:
 
 	void	DrawNoteMarks();
     void    AddPDFNotes();
-	void	PrintNoteMarks( const List& rPosList );		// List of ScAddress
 #ifdef USE_JAVA
 	void 	SetGridWindow( ScGridWindow *pGridWindow ) { mpGridWindow = pGridWindow; }
 #endif	// USE_JAVA

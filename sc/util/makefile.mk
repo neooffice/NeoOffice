@@ -57,6 +57,7 @@ RESLIB1LIST=\
 	$(SRS)$/formdlgs.srs \
 	$(SRS)$/pagedlg.srs	\
 	$(SRS)$/navipi.srs	\
+	$(SRS)$/cctrl.srs	\
 	$(SOLARCOMMONRESDIR)$/sfx.srs
 
 RESLIB1NAME=sc
@@ -77,10 +78,12 @@ SHL1IMPLIB= sci
 
 # dynamic libraries
 SHL1STDLIBS=       \
+		$(VBAHELPERLIB) \
 	$(BASICLIB)	\
 	$(SFXLIB)		\
 	$(SVTOOLLIB)	\
 	$(SVLLIB)		\
+	$(SVXCORELIB)		\
 	$(SVXLIB)		\
 	$(GOODIESLIB)	\
     $(BASEGFXLIB) \
@@ -99,19 +102,11 @@ SHL1STDLIBS=       \
 	$(SOTLIB)		\
 	$(XMLOFFLIB)	\
 	$(DBTOOLSLIB)	\
-	$(AVMEDIALIB)
-
-.IF "$(GUIBASE)"=="java"
-SHL1STDLIBS+=-framework CoreFoundation
-.ENDIF		# "$(GUIBASE)"=="java"
-
+	$(AVMEDIALIB) \
+	$(FORLIB) \
+    $(FORUILIB)
+	
 SHL1LIBS=$(LIB3TARGET) $(LIB4TARGET)
-
-.IF "$(GUI)"!="UNX"
-.IF "$(GUI)$(COM)" != "WNTGCC"
-SHL1OBJS=   $(SLO)$/scdll.obj
-.ENDIF
-.ENDIF
 
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
@@ -120,6 +115,10 @@ DEFLIB1NAME= $(LIB3TARGET:b) $(LIB4TARGET:b)
 .IF "$(GUI)" == "WNT"
 SHL1RES=    $(RCTARGET)
 .ENDIF
+
+.IF "$(GUIBASE)"=="java"
+SHL1STDLIBS+=-framework CoreFoundation
+.ENDIF		# "$(GUIBASE)"=="java"
 
 # --- Linken der Applikation ---------------------------------------
 
@@ -147,17 +146,8 @@ LIB4TARGET=$(SLB)$/scalc3c.lib
 LIB4FILES=	\
 	$(SLB)$/data.lib \
 	$(SLB)$/tool.lib \
-	$(SLB)$/dif.lib \
-	$(SLB)$/excel.lib \
-	$(SLB)$/xcl97.lib \
-	$(SLB)$/html.lib \
-	$(SLB)$/lotus.lib \
-	$(SLB)$/qpro.lib\
-	$(SLB)$/rtf.lib \
 	$(SLB)$/xml.lib \
-	$(SLB)$/accessibility.lib \
-	$(SLB)$/ftools.lib \
-	$(SLB)$/scflt.lib
+	$(SLB)$/accessibility.lib
 
 SHL2TARGET= scd$(DLLPOSTFIX)
 SHL2IMPLIB= scdimp
@@ -181,6 +171,98 @@ SHL2OBJS=   $(SLO)$/scdetect.obj \
 	    $(SLO)$/detreg.obj
 SHL2DEPN+=	makefile.mk
 
+# split out filters
+SHL6TARGET= scfilt$(DLLPOSTFIX)
+SHL6IMPLIB= scfiltimp
+SHL6LIBS= \
+	$(SLB)$/ftools.lib \
+	$(SLB)$/excel.lib \
+	$(SLB)$/xcl97.lib \
+	$(SLB)$/lotus.lib \
+	$(SLB)$/qpro.lib \
+	$(SLB)$/dif.lib \
+	$(SLB)$/html.lib \
+	$(SLB)$/rtf.lib \
+	$(SLB)$/scflt.lib
+SHL6VERSIONMAP= scfilt.map
+SHL6DEF=$(MISC)$/$(SHL6TARGET).def
+DEF6NAME= $(SHL6TARGET)
+SHL6DEPN=$(SHL1TARGETN)
+SHL6STDLIBS= \
+	$(ISCLIB) \
+	$(BASICLIB)	\
+	$(SFXLIB)		\
+	$(SVTOOLLIB)	\
+	$(SVLLIB)		\
+	$(SVXCORELIB)		\
+	$(SVXMSFILTERLIB)		\
+	$(SVXLIB)		\
+	$(GOODIESLIB)	\
+    $(BASEGFXLIB) \
+	$(VCLLIB)		\
+	$(CPPULIB)		\
+	$(CPPUHELPERLIB)	\
+	$(COMPHELPERLIB)	\
+	$(UCBHELPERLIB)	\
+	$(TKLIB)		\
+	$(VOSLIB)		\
+	$(SALLIB)		\
+	$(TOOLSLIB)	\
+	$(I18NISOLANGLIB) \
+	$(UNOTOOLSLIB) \
+	$(SOTLIB)		\
+	$(XMLOFFLIB)	\
+	$(DBTOOLSLIB)	\
+	$(AVMEDIALIB)   \
+	$(OOXLIB)       \
+	$(SAXLIB) \
+    $(FORLIB)
+
+# xlsx filter
+LIB7TARGET = $(SLB)$/xlsx2.lib
+LIB7OBJFILES = \
+		$(SLO)$/fapihelper.obj				\
+		$(SLO)$/fprogressbar.obj			\
+		$(SLO)$/ftools.obj
+
+SHL7TARGET= xlsx$(DLLPOSTFIX)
+SHL7IMPLIB= xlsximp
+SHL7LIBS= \
+	$(LIB7TARGET) \
+	$(SLB)$/xlsx.lib
+SHL7VERSIONMAP= xlsx.map
+SHL7DEF=$(MISC)$/$(SHL7TARGET).def
+DEF7NAME= $(SHL7TARGET)
+SHL7DEPN=$(SHL1TARGETN) $(LIB7TARGETN)
+SHL7STDLIBS= \
+	$(ISCLIB) \
+	$(BASICLIB)	\
+	$(SFXLIB)		\
+	$(SVTOOLLIB)	\
+	$(SVLLIB)		\
+	$(SVXCORELIB)		\
+	$(SVXMSFILTERLIB)		\
+	$(SVXLIB)		\
+	$(GOODIESLIB)	\
+    $(BASEGFXLIB) \
+	$(VCLLIB)		\
+	$(CPPULIB)		\
+	$(CPPUHELPERLIB)	\
+	$(COMPHELPERLIB)	\
+	$(UCBHELPERLIB)	\
+	$(TKLIB)		\
+	$(VOSLIB)		\
+	$(SALLIB)		\
+	$(TOOLSLIB)	\
+	$(I18NISOLANGLIB) \
+	$(UNOTOOLSLIB) \
+	$(SOTLIB)		\
+	$(XMLOFFLIB)	\
+	$(DBTOOLSLIB)	\
+	$(AVMEDIALIB)   \
+	$(OOXLIB)       \
+	$(SAXLIB) \
+    $(FORLIB)
 
 # add for scui
 SHL8TARGET= scui$(DLLPOSTFIX)
@@ -192,6 +274,7 @@ DEF8NAME=$(SHL8TARGET)
 
 SHL8STDLIBS= \
 			$(ISCLIB) \
+            $(SVXCORELIB) \
             $(SVXLIB) \
             $(SFX2LIB) \
             $(SVTOOLLIB) \
@@ -233,6 +316,7 @@ LIB8OBJFILES = \
 		$(SLO)$/attrdlg.obj	\
 		$(SLO)$/scuiimoptdlg.obj	\
 		$(SLO)$/strindlg.obj		\
+        $(SLO)$/tabbgcolordlg.obj   \
 		$(SLO)$/shtabdlg.obj		\
 		$(SLO)$/scendlg.obj		\
 		$(SLO)$/pvfundlg.obj	\
@@ -255,6 +339,7 @@ LIB8OBJFILES = \
 		$(SLO)$/dapidata.obj	\
 		$(SLO)$/crdlg.obj			\
 		$(SLO)$/scuiasciiopt.obj	\
+		$(SLO)$/langchooser.obj	\
 		$(SLO)$/scuiautofmt.obj	\
 	    $(SLO)$/dpgroupdlg.obj	\
 		$(SLO)$/editfield.obj
@@ -275,6 +360,7 @@ SHL9RPATH=OOO
 .ENDIF
 
 SHL9STDLIBS= \
+		$(VBAHELPERLIB) \
 		$(CPPUHELPERLIB) \
 		$(VCLLIB) \
 		$(CPPULIB) \
@@ -284,13 +370,14 @@ SHL9STDLIBS= \
 		$(SALLIB)\
 		$(BASICLIB)	\
 		$(SFXLIB)	\
-		$(SVXLIB)	\
+		$(SVXCORELIB)	\
 		$(SVTOOLLIB)    \
 		$(SVLLIB) \
 		$(ISCLIB) \
         $(VCLLIB) \
         $(TKLIB) \
-
+	    $(SVXMSFILTERLIB)		\
+        $(FORLIB)
 
 SHL9DEPN=$(SHL1TARGETN) $(SHL8TARGETN)
 SHL9LIBS=$(SLB)$/$(TARGET_VBA).lib

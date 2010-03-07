@@ -54,7 +54,6 @@
 #include "conditio.hxx"
 #include "stlpool.hxx"
 
-
 // -----------------------------------------------------------------------
 
 const USHORT ROWINFO_MAX = 1024;
@@ -99,11 +98,13 @@ void lcl_GetMergeRange( SCsCOL nX, SCsROW nY, SCSIZE nArrY,
 	rStartY = nY;
 	BOOL bHOver = pInfo->bHOverlapped;
 	BOOL bVOver = pInfo->bVOverlapped;
+    SCCOL nLastCol;
+    SCROW nLastRow;
 
 	while (bHOver)				// nY konstant
 	{
 		--rStartX;
-		if (rStartX >= (SCsCOL) nX1 && (pDoc->GetColFlags(rStartX,nTab) & CR_HIDDEN) == 0)
+        if (rStartX >= (SCsCOL) nX1 && !pDoc->ColHidden(rStartX, nTab, nLastCol))
 		{
 			bHOver = pRowInfo[nArrY].pCellInfo[rStartX+1].bHOverlapped;
 			bVOver = pRowInfo[nArrY].pCellInfo[rStartX+1].bVOverlapped;
@@ -125,8 +126,8 @@ void lcl_GetMergeRange( SCsCOL nX, SCsROW nY, SCSIZE nArrY,
 			--nArrY;						// lokale Kopie !
 
 		if (rStartX >= (SCsCOL) nX1 && rStartY >= (SCsROW) nY1 &&
-			(pDoc->GetColFlags(rStartX,nTab) & CR_HIDDEN) == 0 &&
-			(pDoc->GetRowFlags(rStartY,nTab) & CR_HIDDEN) == 0 &&
+            !pDoc->ColHidden(rStartX, nTab, nLastCol) &&
+            !pDoc->RowHidden(rStartY, nTab, nLastRow) &&
 			(SCsROW) pRowInfo[nArrY].nRowNo == rStartY)
 		{
 			bHOver = pRowInfo[nArrY].pCellInfo[rStartX+1].bHOverlapped;
@@ -143,8 +144,8 @@ void lcl_GetMergeRange( SCsCOL nX, SCsROW nY, SCSIZE nArrY,
 
 	const ScMergeAttr* pMerge;
 	if (rStartX >= (SCsCOL) nX1 && rStartY >= (SCsROW) nY1 &&
-		(pDoc->GetColFlags(rStartX,nTab) & CR_HIDDEN) == 0 &&
-		(pDoc->GetRowFlags(rStartY,nTab) & CR_HIDDEN) == 0 &&
+        !pDoc->ColHidden(rStartX, nTab, nLastCol) &&
+        !pDoc->RowHidden(rStartY, nTab, nLastRow) &&
 		(SCsROW) pRowInfo[nArrY].nRowNo == rStartY)
 	{
 		pMerge = (const ScMergeAttr*) &pRowInfo[nArrY].pCellInfo[rStartX+1].pPatternAttr->
@@ -156,12 +157,6 @@ void lcl_GetMergeRange( SCsCOL nX, SCsROW nY, SCSIZE nArrY,
 	rEndX = rStartX + pMerge->GetColMerge() - 1;
 	rEndY = rStartY + pMerge->GetRowMerge() - 1;
 }
-
-inline BOOL ScDocument::RowHidden( SCROW nRow, SCTAB nTab )
-{
-	return ( pTab[nTab]->pRowFlags->GetValue(nRow) & CR_HIDDEN ) != 0;
-}
-
 
 #define CELLINFO(x,y) pRowInfo[nArrY+y].pCellInfo[nArrX+x]
 
@@ -331,6 +326,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 			pInfo->bVOverlapped = FALSE;
 			pInfo->bAutoFilter	= FALSE;
 			pInfo->bPushButton	= FALSE;
+            pInfo->bPopupButton = false;
+            pInfo->bFilterActive = false;
 			pInfo->nRotateDir	= SC_ROTDIR_NONE;
 
 			pInfo->bPrinted		= FALSE;					//	view-intern
@@ -356,7 +353,7 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 		nX = nArrX-1;
 		if ( ValidCol(nX) )
 		{
-			if ( (GetColFlags(nX,nTab) & CR_HIDDEN) == 0 )			// Spalte nicht versteckt
+            if (!ColHidden(nX, nTab))
 			{
 				USHORT nThisWidth = (USHORT) (GetColWidth( nX, nTab ) * nScaleX);
 				if (!nThisWidth)
@@ -376,7 +373,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
             // #i58049#, #i57939# Hidden columns must be skipped here, or their attributes
             // will disturb the output
 
-            if ( (GetColFlags(nX,nTab) & CR_HIDDEN) == 0 )          // column not hidden
+            // TODO: Optimize this loop.
+            if (!ColHidden(nX, nTab))
 			{
 				USHORT nThisWidth = (USHORT) (GetColWidth( nX, nTab ) * nScaleX);
                 if (!nThisWidth)
@@ -466,6 +464,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 						BOOL bAutoFilter  = ((nOverlap & SC_MF_AUTO) != 0);
 						BOOL bPushButton  = ((nOverlap & SC_MF_BUTTON) != 0);
 						BOOL bScenario	  = ((nOverlap & SC_MF_SCENARIO) != 0);
+                        bool bPopupButton = ((nOverlap & SC_MF_BUTTON_POPUP) != 0);
+                        bool bFilterActive = ((nOverlap & SC_MF_HIDDEN_MEMBER) != 0);
 						if (bMerged||bHOverlapped||bVOverlapped)
 							bAnyMerged = TRUE;								// intern
 
@@ -488,7 +488,14 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 
 						do
 						{
-							if ( nArrY==0 || !RowHidden( nCurRow,nTab ) )
+#define NEW_METHOD 1
+#if NEW_METHOD
+                            SCROW nLastHiddenRow = -1;
+                            bool bRowHidden = RowHidden(nCurRow, nTab, nLastHiddenRow);
+#else
+                            bool bRowHidden = RowHidden(nCurRow, nTab);
+#endif
+							if ( nArrY==0 || !bRowHidden )
 							{
 								RowInfo* pThisRowInfo = &pRowInfo[nArrY];
 								if (pBackground != pDefBackground)			// Spalten-HG == Standard ?
@@ -506,6 +513,8 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 								pInfo->bVOverlapped	= bVOverlapped;
 								pInfo->bAutoFilter	= bAutoFilter;
 								pInfo->bPushButton	= bPushButton;
+                                pInfo->bPopupButton = bPopupButton;
+                                pInfo->bFilterActive = bFilterActive;
 								pInfo->pLinesAttr	= pLinesAttr;
                                 pInfo->mpTLBRLine   = pTLBRLine;
                                 pInfo->mpBLTRLine   = pBLTRLine;
@@ -520,7 +529,7 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 										nCurRow >= aEmbedRange.aStart.Row() &&
 										nCurRow <= aEmbedRange.aEnd.Row();
 
-								if (bPushButton || bScenario)
+								if (bScenario)
 								{
 									pInfo->pBackground = ScGlobal::GetButtonBrushItem();
 									pThisRowInfo->bEmptyBack = FALSE;
@@ -556,6 +565,14 @@ void ScDocument::FillInfo( ScTableInfo& rTabInfo, SCCOL nX1, SCROW nY1, SCCOL nX
 
 								++nArrY;
 							}
+#if NEW_METHOD
+                            else if (bRowHidden && nLastHiddenRow >= 0)
+                            {
+                                nCurRow = nLastHiddenRow;
+                                if (nCurRow > nThisRow)
+                                    nCurRow = nThisRow;
+                            }
+#endif
 							++nCurRow;
 						}
 						while (nCurRow <= nThisRow && nCurRow <= nYExtra);
