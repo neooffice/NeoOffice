@@ -1218,6 +1218,7 @@ BOOL ScViewFunc::PasteFromClip( USHORT nFlags, ScDocument* pClipDoc,
 		String aUndo = ScGlobal::GetRscString( pClipDoc->IsCutMode() ? STR_UNDO_MOVE : STR_UNDO_PASTE );
 #else	// USE_JAVA
 		String aUndo = ScGlobal::GetRscString( pClipDoc->IsCutMode() ? STR_UNDO_MOVE : STR_UNDO_COPY );
+#endif	// USE_JAVA
 		pUndoMgr->EnterListAction( aUndo, aUndo );
 	}
 
