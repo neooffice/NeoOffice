@@ -314,7 +314,7 @@ WinMtfFontStyle::WinMtfFontStyle( LOGFONTW& rFont )
 // ------------------------------------------------------------------------
 
 #ifdef WIN_MTF_ASSERT
-const void WinMtfAssertHandler( const sal_Char* pAction, sal_uInt32 nFlags )
+void WinMtfAssertHandler( const sal_Char* pAction, sal_uInt32 nFlags )
 {
     static sal_Bool     bOnlyOnce;
     static sal_Int32    nAssertCount;
@@ -419,6 +419,14 @@ Point WinMtfOutput::ImplMap( const Point& rPt )
 		{
 			switch( mnMapMode )
 			{
+			        case MM_TEXT:
+ 					fX2 -= mnWinOrgX;
+ 					fY2 -= mnWinOrgY;
+					fX2 *= 2540.0/mnUnitsPerInch;
+					fY2 *= 2540.0/mnUnitsPerInch;
+ 					fX2 += mnDevOrgX;
+ 					fY2 += mnDevOrgY;
+					break;
 				case MM_LOENGLISH :
 				{
 					fX2 -= mnWinOrgX;
@@ -494,6 +502,10 @@ Size WinMtfOutput::ImplMap( const Size& rSz )
 		{
 			switch( mnMapMode )
 			{
+			    case MM_TEXT:
+					fWidth *= 2540.0/mnUnitsPerInch;
+					fHeight*= 2540.0/mnUnitsPerInch;
+				break;
 				case MM_LOENGLISH :
 				{
 					fWidth *= 25.40;
@@ -577,7 +589,7 @@ Polygon& WinMtfOutput::ImplMap( Polygon& rPolygon )
 PolyPolygon& WinMtfOutput::ImplMap( PolyPolygon& rPolyPolygon )
 {
 	UINT16 nPolys = rPolyPolygon.Count();
-	for ( UINT16 i = 0; i < nPolys; ImplMap( rPolyPolygon[ i++ ] ) );
+	for ( UINT16 i = 0; i < nPolys; ImplMap( rPolyPolygon[ i++ ] ) ) ;
 	return rPolyPolygon;
 }
 
@@ -930,6 +942,7 @@ WinMtfOutput::WinMtfOutput( GDIMetaFile& rGDIMetaFile ) :
 	mbFillStyleSelected	( sal_False ),
 	mnGfxMode			( GM_COMPATIBLE ),
     mnMapMode           ( MM_TEXT ),
+    mnUnitsPerInch ( 96 ),
 	mnDevOrgX			( 0 ),
 	mnDevOrgY			( 0 ),
 	mnDevWidth			( 1 ),
@@ -1698,7 +1711,7 @@ void WinMtfOutput::ImplDrawBitmap( const Point& rPos, const Size& rSize, const B
 	if ( aBmpEx.IsTransparent() )
 		mpGDIMetaFile->AddAction( new MetaBmpExScaleAction( rPos, rSize, aBmpEx ) );
 	else
-		mpGDIMetaFile->AddAction( new MetaBmpScaleAction( rPos, rSize, aBmpEx.GetBitmap() ) );
+	    mpGDIMetaFile->AddAction( new MetaBmpScaleAction( rPos, rSize, aBmpEx.GetBitmap() ) );
 }
 
 //-----------------------------------------------------------------------------------
@@ -2057,6 +2070,14 @@ void WinMtfOutput::SetMapMode( sal_uInt32 nMapMode )
 		mnWinExtX = mnMillX * 100;
 		mnWinExtY = mnMillY * 100;
 	}
+}
+
+//-----------------------------------------------------------------------------------
+
+void WinMtfOutput::SetUnitsPerInch( UINT16 nUnitsPerInch )
+{
+    if( nUnitsPerInch != 0 )
+	mnUnitsPerInch = nUnitsPerInch;
 }
 
 //-----------------------------------------------------------------------------------

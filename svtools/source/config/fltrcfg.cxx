@@ -64,7 +64,6 @@ using namespace com::sun::star::uno;
 #define FILTERCFG_ENABLE_WORD_PREVIEW   0x80000
 #define FILTERCFG_USE_ENHANCED_FIELDS	0x100000
 
-
 static SvtFilterOptions* pOptions=0;
 
 /* -----------------------------22.01.01 10:23--------------------------------
@@ -195,34 +194,42 @@ void SvtCalcFilterOptions_Impl::Load()
  ---------------------------------------------------------------------------*/
 struct SvtFilterOptions_Impl
 {
-	ULONG nFlags;
-	SvtAppFilterOptions_Impl	aWriterCfg;
-	SvtCalcFilterOptions_Impl	aCalcCfg;
-	SvtAppFilterOptions_Impl	aImpressCfg;
+    ULONG nFlags;
+    SvtAppFilterOptions_Impl aWriterCfg;
+    SvtCalcFilterOptions_Impl aCalcCfg;
+    SvtAppFilterOptions_Impl aImpressCfg;
 
-	SvtFilterOptions_Impl() :
-		aWriterCfg(C2U("Office.Writer/Filter/Import/VBA")),
-		aCalcCfg(C2U("Office.Calc/Filter/Import/VBA")),
-		aImpressCfg(C2U("Office.Impress/Filter/Import/VBA"))
-		{
-			nFlags = FILTERCFG_WORD_CODE		| FILTERCFG_WORD_STORAGE |
-					FILTERCFG_EXCEL_CODE	| FILTERCFG_EXCEL_STORAGE |
-					FILTERCFG_PPOINT_CODE	| FILTERCFG_PPOINT_STORAGE |
-					FILTERCFG_MATH_LOAD		| FILTERCFG_MATH_SAVE |
-					FILTERCFG_WRITER_LOAD	| FILTERCFG_WRITER_SAVE |
-					FILTERCFG_CALC_LOAD		| FILTERCFG_CALC_SAVE	|
-					FILTERCFG_IMPRESS_LOAD	| FILTERCFG_IMPRESS_SAVE | FILTERCFG_USE_ENHANCED_FIELDS;
-		   Load();
-		}
+    SvtFilterOptions_Impl() :
+        aWriterCfg(C2U("Office.Writer/Filter/Import/VBA")),
+        aCalcCfg(C2U("Office.Calc/Filter/Import/VBA")),
+        aImpressCfg(C2U("Office.Impress/Filter/Import/VBA"))
+    {
+        nFlags = FILTERCFG_WORD_CODE |
+            FILTERCFG_WORD_STORAGE |
+            FILTERCFG_EXCEL_CODE |
+            FILTERCFG_EXCEL_STORAGE |
+            FILTERCFG_PPOINT_CODE |
+            FILTERCFG_PPOINT_STORAGE |
+            FILTERCFG_MATH_LOAD |
+            FILTERCFG_MATH_SAVE |
+            FILTERCFG_WRITER_LOAD |
+            FILTERCFG_WRITER_SAVE |
+            FILTERCFG_CALC_LOAD |
+            FILTERCFG_CALC_SAVE |
+            FILTERCFG_IMPRESS_LOAD |
+            FILTERCFG_IMPRESS_SAVE | 
+            FILTERCFG_USE_ENHANCED_FIELDS;
+        Load();
+    }
 
-	void SetFlag( ULONG nFlag, BOOL bSet );
-	BOOL IsFlag( ULONG nFlag ) const;
-	void	Load()
-	{
-		aWriterCfg.Load();
-		aCalcCfg.Load();
-		aImpressCfg.Load();
-	}
+    void SetFlag( ULONG nFlag, BOOL bSet );
+    BOOL IsFlag( ULONG nFlag ) const;
+    void Load()
+    {
+        aWriterCfg.Load();
+        aCalcCfg.Load();
+        aImpressCfg.Load();
+    }
 };
 /* -----------------------------22.01.01 10:34--------------------------------
 
@@ -303,8 +310,8 @@ const Sequence<OUString>& SvtFilterOptions::GetPropertyNames()
 			"Export/CalcToExcel",            	//  7
 			"Export/EnablePowerPointPreview",	//	8
 			"Export/EnableExcelPreview",		//	9
-			"Export/EnableWordPreview"			// 10
-			, "Import/ImportWWFieldsAsEnhancedFields" // 11
+			"Export/EnableWordPreview",			// 10
+			"Import/ImportWWFieldsAsEnhancedFields" // 11
 		};
 		OUString* pNames = aNames.getArray();
 		for(int i = 0; i < nCount; i++)
@@ -329,7 +336,7 @@ static ULONG lcl_GetFlag(sal_Int32 nProp)
 		case  8: nFlag = FILTERCFG_ENABLE_PPT_PREVIEW; break;
 		case  9: nFlag = FILTERCFG_ENABLE_EXCEL_PREVIEW; break;
 		case 10: nFlag = FILTERCFG_ENABLE_WORD_PREVIEW; break;
-   	        case 11: nFlag = FILTERCFG_USE_ENHANCED_FIELDS; break;
+		case 11: nFlag = FILTERCFG_USE_ENHANCED_FIELDS; break;
 
 		default: DBG_ERROR("illegal value");
 	}
@@ -370,7 +377,7 @@ void SvtFilterOptions::Load()
 	const Sequence<OUString>& rNames = GetPropertyNames();
 	Sequence<Any> aValues = GetProperties(rNames);
 	const Any* pValues = aValues.getConstArray();
-	DBG_ASSERT(aValues.getLength() == rNames.getLength(), "GetProperties failed")
+	DBG_ASSERT(aValues.getLength() == rNames.getLength(), "GetProperties failed");
 	if(aValues.getLength() == rNames.getLength())
 	{
 		for(int nProp = 0; nProp < rNames.getLength(); nProp++)
@@ -518,10 +525,10 @@ void SvtFilterOptions::SetWriter2WinWord( BOOL bFlag )
 BOOL SvtFilterOptions::IsUseEnhancedFields() const
 {
 #ifdef USE_JAVA
-	// Fix bug 3540 by disabling use of enhanced fields
-	return FALSE;
+    // Fix bug 3540 by disabling use of enhanced fields
+    return FALSE;
 #else	// USE_JAVA
-	return pImp->IsFlag( FILTERCFG_USE_ENHANCED_FIELDS );
+    return pImp->IsFlag( FILTERCFG_USE_ENHANCED_FIELDS );
 #endif	// USE_JAVA
 }
 

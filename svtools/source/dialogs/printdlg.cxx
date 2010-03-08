@@ -157,8 +157,6 @@ PrintDialog::PrintDialog( Window* pWindow, bool bWithSheetsAndCells ) :
 
 	maRbtAll.Check();
     ImplSetImages();
-
-    maNumCopies.GrabFocus();
 }
 
 // -----------------------------------------------------------------------
@@ -772,6 +770,8 @@ short PrintDialog::Execute()
 	ImplSetInfo();
 	maStatusTimer.Start();
 	ImplInitControls();
+    maNumCopies.GrabFocus();
+    maNumCopies.SetSelection( Selection( 0, maNumCopies.GetText().Len() ) );
 	ImplModifyControlHdl( NULL );
 
 #ifdef USE_JAVA
