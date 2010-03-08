@@ -375,7 +375,8 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 		while [ "$1" != "" ]; do
 			case $1 in
 				--attach)
-					ATTACH="${ATTACH:-}${ATTACH:+ } $2"
+					#i95688# fix filenames containing accented chars, whatever alien
+					ATTACH="${ATTACH:-}${ATTACH:+ }"`echo "file://$2" | ${URI_ENCODE}`
 					shift
 					;;
 				*)
@@ -383,7 +384,6 @@ case `basename "$MAILER" | sed 's/-.*$//'` in
 			esac
 			shift;
 		done
-		 
 		/usr/bin/open -a "${MAILER}" ${ATTACH}
 		;;
 
