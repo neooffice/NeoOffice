@@ -1,29 +1,30 @@
 /*************************************************************************
  *
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ * 
  * Copyright 2008 by Sun Microsystems, Inc.
+ *
+ * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of NeoOffice.
+ * This file is part of OpenOffice.org.
  *
- * NeoOffice is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 3
+ * OpenOffice.org is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * NeoOffice is distributed in the hope that it will be useful,
+ * OpenOffice.org is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License version 3 for more details
+ * GNU Lesser General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU General Public License
- * version 3 along with NeoOffice.  If not, see
- * <http://www.gnu.org/licenses/gpl-3.0.txt>
- * for a copy of the GPLv3 License.
- *
- * Modified August 2009 by Patrick Luby. NeoOffice is distributed under
- * GPL only under modification term 2 of the LGPL.
+ * You should have received a copy of the GNU Lesser General Public License
+ * version 3 along with OpenOffice.org.  If not, see
+ * <http://www.openoffice.org/license.html>
+ * for a copy of the LGPLv3 License.
  *
  ************************************************************************/
 
@@ -305,7 +306,6 @@ public:
     sal_Bool m_bSalvageMode: 1;
     sal_Bool m_bVersionsAlreadyLoaded: 1;
     sal_Bool m_bLocked: 1;
-    sal_Bool m_bHandleSysLocked: 1;
     sal_Bool m_bGotDateTime: 1;
 
     uno::Reference < embed::XStorage > xStorage;
@@ -400,7 +400,6 @@ SfxMedium_Impl::SfxMedium_Impl( SfxMedium* pAntiImplP )
     m_bSalvageMode( sal_False ),
     m_bVersionsAlreadyLoaded( sal_False ),
     m_bLocked( sal_False ),
-    m_bHandleSysLocked( sal_False ),
     m_bGotDateTime( sal_False ),
     pAntiImpl( pAntiImplP ),
     nFileVersion( 0 ),
@@ -495,7 +494,7 @@ long SfxMedium::GetFileVersion() const
 //------------------------------------------------------------------
 void SfxMedium::CheckFileDate( const util::DateTime& aInitDate )
 {
-    GetInitFileDate();
+    GetInitFileDate( sal_True );
     if ( pImp->m_aDateTime.Seconds != aInitDate.Seconds
       || pImp->m_aDateTime.Minutes != aInitDate.Minutes
       || pImp->m_aDateTime.Hours != aInitDate.Hours
@@ -555,9 +554,15 @@ void SfxMedium::CheckFileDate( const util::DateTime& aInitDate )
 }
 
 //------------------------------------------------------------------
-util::DateTime SfxMedium::GetInitFileDate()
+sal_Bool SfxMedium::DocNeedsFileDateCheck()
 {
-    if ( !pImp->m_bGotDateTime && GetContent().is() )
+    return ( !IsReadOnly() && SupportsActiveStreaming( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ) ) );
+}
+
+//------------------------------------------------------------------
+util::DateTime SfxMedium::GetInitFileDate( sal_Bool bIgnoreOldValue )
+{
+    if ( ( bIgnoreOldValue || !pImp->m_bGotDateTime ) && GetContent().is() )
     {
         try
         {
@@ -635,7 +640,7 @@ Reference < XContent > SfxMedium::GetContent() const
     {
         SvtSaveOptions aOpt;
         sal_Bool bIsRemote = IsRemote();
-        if( bIsRemote && !aOpt.IsSaveRelINet() || !bRemote && !aOpt.IsSaveRelFSys() )
+        if( (bIsRemote && !aOpt.IsSaveRelINet()) || (!bRemote && !aOpt.IsSaveRelFSys()) )
             return ::rtl::OUString();
     }
 
@@ -773,10 +778,13 @@ sal_Bool SfxMedium::CloseOutStream_Impl()
 }
 
 //------------------------------------------------------------------
-const String& SfxMedium::GetPhysicalName() const
+const String& SfxMedium::GetPhysicalName( sal_Bool bForceCreateTempIfRemote ) const
 {
     if ( !aName.Len() && aLogicName.Len() )
-        (( SfxMedium*)this)->CreateFileStream();
+    {
+        if ( bForceCreateTempIfRemote || !SupportsActiveStreaming( aLogicName ) )
+            (( SfxMedium*)this)->CreateFileStream();
+    }
 
     // return the name then
     return aName;
@@ -812,17 +820,11 @@ sal_Bool SfxMedium::Commit()
         Transfer_Impl();
 	}
 
-    // remove truncation mode from the flags
-    nStorOpenMode &= ( ~STREAM_TRUNC );
     sal_Bool bResult = ( GetError() == SVSTREAM_OK );
 
-    if ( bResult )
-    {
-        pImp->m_bGotDateTime = sal_False;
-        GetInitFileDate();
-    }
+    if ( bResult && DocNeedsFileDateCheck() )
+        GetInitFileDate( sal_True );
 
-    nStorOpenMode &= (~STREAM_TRUNC);
     return bResult;
 }
 
@@ -953,11 +955,31 @@ sal_Bool SfxMedium::TryStorage()
 }
 
 //------------------------------------------------------------------
+sal_Bool SfxMedium::SupportsActiveStreaming( const rtl::OUString &rName ) const
+{
+    if ( ::utl::LocalFileHelper::IsLocalFile( rName ) )
+        return sal_True;
+
+    ::ucbhelper::Content aTmpContent;
+    Reference< ::com::sun::star::ucb::XCommandEnvironment > xDummyEnv;
+    if ( ::ucbhelper::Content::create( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ), xDummyEnv, aTmpContent ) )
+    {
+        Any aAny = aTmpContent.getPropertyValue(
+                ::rtl::OUString(RTL_CONSTASCII_USTRINGPARAM( "SupportsActiveStreaming" )) );
+
+        sal_Bool bSupportsStreaming = sal_False;
+        return ( ( aAny >>= bSupportsStreaming ) && bSupportsStreaming );
+    }
+
+    return sal_False;
+}
+
+//------------------------------------------------------------------
 sal_Bool SfxMedium::BasedOnOriginalFile_Impl()
 {
 	return ( !pImp->pTempFile && !( aLogicName.Len() && pImp->m_bSalvageMode )
 	  && GetURLObject().GetMainURL( INetURLObject::NO_DECODE ).getLength()
-      && ::utl::LocalFileHelper::IsLocalFile( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ) )
+ 	  && SupportsActiveStreaming( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ) )
 	  && ::utl::UCBContentHelper::IsDocument( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ) ) );
 }
 
@@ -1021,10 +1043,105 @@ uno::Reference < embed::XStorage > SfxMedium::GetOutputStorage()
 
     DBG_ASSERT( !pOutStream, "OutStream in a readonly Medium?!" );
 
-    // TODO/LATER: The current solution is to store the document temporary and then copy it to the target location;
-    // in future it should be stored directly and then copied to the temporary location, since in this case no
-    // file attributes have to be preserved and system copying mechanics could be used instead of streaming.
+    // medium based on OutputStream: must work with TempFile
+    if( aLogicName.CompareToAscii( "private:stream", 14 ) == COMPARE_EQUAL
+	  || !::utl::LocalFileHelper::IsLocalFile( aLogicName ) )
     CreateTempFileNoCopy();
+	// if Medium already contains a stream - TODO/LATER: store stream/outputstream in ImplData, not in Medium
+	else if ( GetItemSet()->GetItemState( SID_STREAM ) < SFX_ITEM_SET )
+	{
+		// check whether the backup should be created
+		StorageBackup_Impl();
+
+		if ( GetError() )
+			return uno::Reference< embed::XStorage >();
+
+        ::rtl::OUString aOutputURL = GetOutputStorageURL_Impl();
+
+        SFX_ITEMSET_ARG( GetItemSet(), pOverWrite, SfxBoolItem, SID_OVERWRITE, sal_False );
+        SFX_ITEMSET_ARG( GetItemSet(), pRename, SfxBoolItem, SID_RENAME, sal_False );
+        sal_Bool bRename = pRename ? pRename->GetValue() : FALSE;
+        sal_Bool bOverWrite = pOverWrite ? pOverWrite->GetValue() : !bRename;
+
+        // the target file must be truncated before a storage based on it is created
+        try
+        {
+            uno::Reference< lang::XMultiServiceFactory > xFactory = ::comphelper::getProcessServiceFactory();
+            uno::Reference< ::com::sun::star::ucb::XSimpleFileAccess > xSimpleFileAccess(
+                    xFactory->createInstance( ::rtl::OUString::createFromAscii("com.sun.star.ucb.SimpleFileAccess") ),
+                    uno::UNO_QUERY_THROW );
+
+            uno::Reference< ucb::XCommandEnvironment > xDummyEnv;
+            ::ucbhelper::Content aContent = ::ucbhelper::Content( aOutputURL, xDummyEnv );
+
+            uno::Reference< io::XStream > xStream;
+            sal_Bool bDeleteOnFailure = sal_False;
+
+            try
+            {
+                xStream = aContent.openWriteableStreamNoLock();
+
+                if ( !bOverWrite )
+                {
+                    // the stream should not exist, it should not be possible to open it
+                    if ( xStream->getOutputStream().is() )
+                        xStream->getOutputStream()->closeOutput();
+                    if ( xStream->getInputStream().is() )
+                        xStream->getInputStream()->closeInput();
+
+                    xStream = uno::Reference< io::XStream >();
+                    SetError( ERRCODE_IO_GENERAL );
+                }
+            }
+            catch ( ucb::InteractiveIOException const & e )
+            {
+                if ( e.Code == ucb::IOErrorCode_NOT_EXISTING )
+                {
+                    // Create file...
+                    SvMemoryStream aStream(0,0);
+                    uno::Reference< io::XInputStream > xInput( new ::utl::OInputStreamWrapper( aStream ) );
+                    ucb::InsertCommandArgument aInsertArg;
+                    aInsertArg.Data = xInput;
+                    aInsertArg.ReplaceExisting = sal_False;
+                    aContent.executeCommand( rtl::OUString::createFromAscii( "insert" ), uno::makeAny( aInsertArg ) );
+
+                    // Try to open one more time
+                    xStream = aContent.openWriteableStreamNoLock();
+                    bDeleteOnFailure = sal_True;
+                }
+                else
+                    throw;
+            }
+
+            if ( xStream.is() )
+            {
+                if ( BasedOnOriginalFile_Impl() )
+                {
+                    // the storage will be based on original file, the wrapper should be used
+                    xStream = new OPostponedTruncationFileStream( aOutputURL, xFactory, xSimpleFileAccess, xStream, bDeleteOnFailure );
+                }
+                else
+                {
+                    // the storage will be based on the temporary file, the stream can be truncated directly
+                    uno::Reference< io::XOutputStream > xOutStream = xStream->getOutputStream();
+                    uno::Reference< io::XTruncate > xTruncate( xOutStream, uno::UNO_QUERY );
+                    if ( !xTruncate.is() )
+                        throw uno::RuntimeException();
+
+                    xTruncate->truncate();
+                    xOutStream->flush();
+                }
+
+                pImp->xStream = xStream;
+                GetItemSet()->Put( SfxUsrAnyItem( SID_STREAM, makeAny( xStream ) ) );
+            }
+        }
+        catch( uno::Exception& )
+        {
+            // TODO/LATER: try to use the temporary file in case the target content can not be opened, it might happen in case of some FS, the copy functionality might work in this case
+            SetError( ERRCODE_IO_GENERAL );
+        }
+    }
 
     return GetStorage();
 }
@@ -1170,61 +1287,77 @@ sal_Bool SfxMedium::LockOrigFileOnDemand( sal_Bool bLoading, sal_Bool bNoUI )
 
     sal_Bool bResult = pImp->m_bLocked;
 
-    if ( ::utl::LocalFileHelper::IsLocalFile( aLogicName ) )
+    if ( !bResult )
     {
-        // the special file locking should be used only for file URLs
-
-        // in case of storing the document should request the output before locking
-        if ( bLoading )
-        {
-            // let the stream be opened to check the system file locking
-            GetMedium_Impl();
-        }
-
-        SFX_ITEMSET_ARG( GetItemSet(), pReadOnlyItem, SfxBoolItem, SID_DOC_READONLY, sal_False);
-
-        // no locking is necessary on loading if the document is explicitly opened as copy
+        // no read-write access is necessary on loading if the document is explicitly opened as copy
         SFX_ITEMSET_ARG( GetItemSet(), pTemplateItem, SfxBoolItem, SID_TEMPLATE, sal_False);
         bResult = ( bLoading && pTemplateItem && pTemplateItem->GetValue() );
+    }
 
-        if ( !bResult && ( !pReadOnlyItem || !pReadOnlyItem->GetValue() || pImp->m_bHandleSysLocked ) )
+    if ( !bResult && !IsReadOnly() )
+    {
+        // check whether the file is readonly in fs
+        // do it only for loading, some contents still might have problems with this property, let them not affect the saving
+        sal_Bool bContentReadonly = sal_False;
+        if ( bLoading )
         {
-            sal_Int8 bUIStatus = LOCK_UI_NOLOCK;
-
-            // check whether system file locking has been used, the default value is false
-            sal_Bool bUseSystemLock = sal_False;
             try
             {
-
-                uno::Reference< uno::XInterface > xCommonConfig = ::comphelper::ConfigurationHelper::openConfig(
-                                    ::comphelper::getProcessServiceFactory(),
-                                    ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "/org.openoffice.Office.Common" ) ),
-                                    ::comphelper::ConfigurationHelper::E_STANDARD );
-                if ( !xCommonConfig.is() )
-                    throw uno::RuntimeException();
-
-                ::comphelper::ConfigurationHelper::readRelativeKey(
-                        xCommonConfig,
-                        ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Misc/" ) ),
-                        ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "UseDocumentSystemFileLocking" ) ) ) >>= bUseSystemLock;
+                // MediaDescriptor does this check also, the duplication should be avoided in future
+                pImp->aContent.getPropertyValue( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "IsReadOnly" ) ) ) >>= bContentReadonly;
             }
-            catch( const uno::Exception& )
-            {
-            }
+            catch( uno::Exception )
+            {}
+        }
 
-            // TODO/LATER: This implementation does not allow to detect the system lock on saving here, actually this is no big problem
-            if ( bUseSystemLock && !pImp->xStream.is() && !pOutStream )
-                pImp->m_bHandleSysLocked = sal_True; // if system lock is used the writeable stream should be available
-
-            do
+        if ( !bContentReadonly )
+        {
+            if ( ::utl::LocalFileHelper::IsLocalFile( aLogicName ) )
             {
+                // the special file locking should be used only for file URLs
+
+                // in case of storing the document should request the output before locking
+                if ( bLoading )
+                {
+                    // let the stream be opened to check the system file locking
+                    GetMedium_Impl();
+                }
+
+                sal_Int8 bUIStatus = LOCK_UI_NOLOCK;
+
+                // check whether system file locking has been used, the default value is false
+                sal_Bool bUseSystemLock = sal_False;
                 try
-                {   
-                    ::svt::DocumentLockFile aLockFile( aLogicName );
-                    if ( !pImp->m_bHandleSysLocked )
-                    {
-                        try
+                {
+                    uno::Reference< uno::XInterface > xCommonConfig = ::comphelper::ConfigurationHelper::openConfig(
+                                        ::comphelper::getProcessServiceFactory(),
+                                        ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "/org.openoffice.Office.Common" ) ),
+                                        ::comphelper::ConfigurationHelper::E_STANDARD );
+                    if ( !xCommonConfig.is() )
+                        throw uno::RuntimeException();
+
+                    ::comphelper::ConfigurationHelper::readRelativeKey(
+                            xCommonConfig,
+                            ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "Misc/" ) ),
+                            ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "UseDocumentSystemFileLocking" ) ) ) >>= bUseSystemLock;
+                }
+                catch( const uno::Exception& )
+                {
+                }
+
+                // TODO/LATER: This implementation does not allow to detect the system lock on saving here, actually this is no big problem
+                // if system lock is used the writeable stream should be available
+                sal_Bool bHandleSysLocked = ( bLoading && bUseSystemLock && !pImp->xStream.is() && !pOutStream );
+
+                do
+                {
+                    try
+                    {   
+                        ::svt::DocumentLockFile aLockFile( aLogicName );
+                        if ( !bHandleSysLocked )
                         {
+                            try
+                            {
 #ifdef USE_JAVA
                             // Do not create a lock file and rely exclusively
                             // on the native file locking
@@ -1232,112 +1365,120 @@ sal_Bool SfxMedium::LockOrigFileOnDemand( sal_Bool bLoading, sal_Bool bNoUI )
                                 bResult = sal_True;
                             else
 #endif	// USE_JAVA
-                            bResult = aLockFile.CreateOwnLockFile();
-                        }
-                        catch ( ucb::InteractiveIOException& e )
-                        {
-                            if ( e.Code == IOErrorCode_INVALID_PARAMETER )
+                                bResult = aLockFile.CreateOwnLockFile();
+                            }
+                            catch ( ucb::InteractiveIOException& e )
                             {
-                                // it looks like the lock file name is not accepted by the content
-                                if ( !bUseSystemLock )
+                                if ( e.Code == IOErrorCode_INVALID_PARAMETER )
                                 {
-                                    // system file locking is not active, ask user whether he wants to open the document without any locking
-                                    uno::Reference< task::XInteractionHandler > xHandler = GetInteractionHandler();
-                                    
-                                    if ( xHandler.is() )
+                                    // it looks like the lock file name is not accepted by the content
+                                    if ( !bUseSystemLock )
                                     {
-                                        ::rtl::Reference< ::ucbhelper::InteractionRequest > xIgnoreRequestImpl
-                                            = new ::ucbhelper::InteractionRequest( uno::makeAny( document::LockFileIgnoreRequest() ) );
+                                        // system file locking is not active, ask user whether he wants to open the document without any locking
+                                        uno::Reference< task::XInteractionHandler > xHandler = GetInteractionHandler();
+                                        
+                                        if ( xHandler.is() )
+                                        {
+                                            ::rtl::Reference< ::ucbhelper::InteractionRequest > xIgnoreRequestImpl
+                                                = new ::ucbhelper::InteractionRequest( uno::makeAny( document::LockFileIgnoreRequest() ) );
 
-                                        uno::Sequence< uno::Reference< task::XInteractionContinuation > > aContinuations( 2 );
-                                        aContinuations[0] = new ::ucbhelper::InteractionAbort( xIgnoreRequestImpl.get() );
-                                        aContinuations[1] = new ::ucbhelper::InteractionApprove( xIgnoreRequestImpl.get() );
-                                        xIgnoreRequestImpl->setContinuations( aContinuations );
+                                            uno::Sequence< uno::Reference< task::XInteractionContinuation > > aContinuations( 2 );
+                                            aContinuations[0] = new ::ucbhelper::InteractionAbort( xIgnoreRequestImpl.get() );
+                                            aContinuations[1] = new ::ucbhelper::InteractionApprove( xIgnoreRequestImpl.get() );
+                                            xIgnoreRequestImpl->setContinuations( aContinuations );
 
-                                        xHandler->handle( xIgnoreRequestImpl.get() );
+                                            xHandler->handle( xIgnoreRequestImpl.get() );
 
-                                        ::rtl::Reference< ::ucbhelper::InteractionContinuation > xSelected = xIgnoreRequestImpl->getSelection();
-                                        bResult = (  uno::Reference< task::XInteractionApprove >( xSelected.get(), uno::UNO_QUERY ).is() );
+                                            ::rtl::Reference< ::ucbhelper::InteractionContinuation > xSelected = xIgnoreRequestImpl->getSelection();
+                                            bResult = (  uno::Reference< task::XInteractionApprove >( xSelected.get(), uno::UNO_QUERY ).is() );
+                                        }
                                     }
+                                    else
+                                        bResult = sal_True;
                                 }
                                 else
-                                    bResult = sal_True;
+                                    throw;
                             }
-                            else
-                                throw;
                         }
-                    }
 
-                   
-                    if ( !bResult )
-                    {
-                        uno::Sequence< ::rtl::OUString > aData;
-                        try
-                        {
-                            // impossibility to get data is no real problem
-                            aData = aLockFile.GetLockData();
-                        }
-                        catch( uno::Exception ) {}
-
-                        sal_Bool bOwnLock = sal_False;
-
-                        if ( !pImp->m_bHandleSysLocked )
-                        {
-                            uno::Sequence< ::rtl::OUString > aOwnData = aLockFile.GenerateOwnEntry();
-                            bOwnLock = ( aData.getLength() > LOCKFILE_USERURL_ID
-                                      && aOwnData.getLength() > LOCKFILE_USERURL_ID
-                                      && aOwnData[LOCKFILE_SYSUSERNAME_ID].equals( aData[LOCKFILE_SYSUSERNAME_ID] ) );
                        
-                            if ( bOwnLock
-                              && aOwnData[LOCKFILE_LOCALHOST_ID].equals( aData[LOCKFILE_LOCALHOST_ID] )
-                              && aOwnData[LOCKFILE_USERURL_ID].equals( aData[LOCKFILE_USERURL_ID] ) )
+                        if ( !bResult )
+                        {
+                            uno::Sequence< ::rtl::OUString > aData;
+                            try
                             {
-                                // this is own lock from the same installation, it could remain because of crash
-                                bResult = sal_True;
+                                // impossibility to get data is no real problem
+                                aData = aLockFile.GetLockData();
                             }
-                        }
+                            catch( uno::Exception ) {}
+
+                            sal_Bool bOwnLock = sal_False;
+
+                            if ( !bHandleSysLocked )
+                            {
+                                uno::Sequence< ::rtl::OUString > aOwnData = aLockFile.GenerateOwnEntry();
+                                bOwnLock = ( aData.getLength() > LOCKFILE_USERURL_ID
+                                          && aOwnData.getLength() > LOCKFILE_USERURL_ID
+                                          && aOwnData[LOCKFILE_SYSUSERNAME_ID].equals( aData[LOCKFILE_SYSUSERNAME_ID] ) );
+                           
+                                if ( bOwnLock
+                                  && aOwnData[LOCKFILE_LOCALHOST_ID].equals( aData[LOCKFILE_LOCALHOST_ID] )
+                                  && aOwnData[LOCKFILE_USERURL_ID].equals( aData[LOCKFILE_USERURL_ID] ) )
+                                {
+                                    // this is own lock from the same installation, it could remain because of crash
+                                    bResult = sal_True;
+                                }
+                            }
 
 #ifdef USE_JAVA
-                        // Display the read-only dialog only if we are not
-                        // using native file locking
-                        if ( !bResult && !bNoUI && !bUseSystemLock )
+                            // Display the read-only dialog only if we are not
+                            // using native file locking
+                            if ( !bResult && !bNoUI && !bUseSystemLock )
 #else	// USE_JAVA
-                        if ( !bResult && !bNoUI )
+                            if ( !bResult && !bNoUI )
 #endif	// USE_JAVA
-                        {
-                            bUIStatus = ShowLockedDocumentDialog( aData, bLoading, bOwnLock );
-                            if ( bUIStatus == LOCK_UI_SUCCEEDED )
                             {
-                                // take the ownership over the lock file
-                                bResult = aLockFile.OverwriteOwnLockFile();
+                                bUIStatus = ShowLockedDocumentDialog( aData, bLoading, bOwnLock );
+                                if ( bUIStatus == LOCK_UI_SUCCEEDED )
+                                {
+                                    // take the ownership over the lock file
+                                    bResult = aLockFile.OverwriteOwnLockFile();
+                                }
                             }
+
+                            bHandleSysLocked = sal_False;
                         }
-
-                        pImp->m_bHandleSysLocked = sal_False;
                     }
-                }
-                catch( uno::Exception& )
-                {
-                }
-            } while( !bResult && bUIStatus == LOCK_UI_TRY );
+                    catch( uno::Exception& )
+                    {
+                    }
+                } while( !bResult && bUIStatus == LOCK_UI_TRY );
 
-            pImp->m_bLocked = bResult;
-        }
-
-        if ( !bResult && GetError() == ERRCODE_NONE )
-        {
-            // the error should be set in case it is storing process
-            // or the document has been opened for editing explicitly
-
-            SFX_ITEMSET_ARG( pSet, pReadOnlyItem, SfxBoolItem, SID_DOC_READONLY, FALSE );
-            if ( !bLoading || pReadOnlyItem && !pReadOnlyItem->GetValue() )
-                SetError( ERRCODE_IO_ACCESSDENIED );
-            else 
-                GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, sal_True ) );
+                pImp->m_bLocked = bResult;
+            }
+            else
+            {
+                // this is no file URL, check whether the file is readonly
+                bResult = !bContentReadonly;
+            }
         }
     }
-    else
-        bResult = sal_True;
+
+    if ( !bResult && GetError() == ERRCODE_NONE )
+    {
+        // the error should be set in case it is storing process
+        // or the document has been opened for editing explicitly
+
+        SFX_ITEMSET_ARG( pSet, pReadOnlyItem, SfxBoolItem, SID_DOC_READONLY, FALSE );
+        if ( !bLoading || (pReadOnlyItem && !pReadOnlyItem->GetValue()) )
+            SetError( ERRCODE_IO_ACCESSDENIED );
+        else 
+            GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, sal_True ) );
+    }
+
+    // when the file is locked, get the current file date
+    if ( bResult && DocNeedsFileDateCheck() )
+        GetInitFileDate( sal_True );
 
     return bResult;
 }
@@ -1399,7 +1540,7 @@ uno::Reference < embed::XStorage > SfxMedium::GetStorage()
 
             try
             {
-                if ( IsReadOnly() && ::utl::LocalFileHelper::IsLocalFile( aLogicName ) )
+                if ( IsReadOnly() && SupportsActiveStreaming( aLogicName ) )
                 {
                     //TODO/LATER: performance problem if not controlled by special Mode in SfxMedium
                     //(should be done only for permanently open storages)
@@ -2022,8 +2163,8 @@ sal_Bool SfxMedium::TryDirectTransfer( const ::rtl::OUString& aURL, SfxItemSet& 
             		aInsertArg.Data = xInStream;
                		SFX_ITEMSET_ARG( &aTargetSet, pRename, SfxBoolItem, SID_RENAME, sal_False );
                		SFX_ITEMSET_ARG( &aTargetSet, pOverWrite, SfxBoolItem, SID_OVERWRITE, sal_False );
-               		if ( pOverWrite && !pOverWrite->GetValue() // argument says: never overwrite
-               		  || pRename && pRename->GetValue() ) // argument says: rename file
+               		if ( (pOverWrite && !pOverWrite->GetValue()) // argument says: never overwrite
+               		  || (pRename && pRename->GetValue()) ) // argument says: rename file
             			aInsertArg.ReplaceExisting = sal_False;
                		else
             			aInsertArg.ReplaceExisting = sal_True; // default is overwrite existing files
@@ -2076,7 +2217,6 @@ void SfxMedium::Transfer_Impl()
 	   		SFX_ITEMSET_ARG( pSet, pOutStreamItem, SfxUnoAnyItem, SID_OUTPUTSTREAM, sal_False);
 	 		if( pOutStreamItem && ( pOutStreamItem->GetValue() >>= rOutStream ) )
 			{
-				// write directly to the stream
                 if ( pImp->xStorage.is() )
                     CloseStorage();
 
@@ -2229,7 +2369,7 @@ void SfxMedium::Transfer_Impl()
 			xComEnv = new ::ucbhelper::CommandEnvironment( xInteractionHandler,
 													  Reference< ::com::sun::star::ucb::XProgressHandler >() );
 
-        if ( ::utl::LocalFileHelper::IsLocalFile( aDest.GetMainURL( INetURLObject::NO_DECODE ) ) || !aDest.removeSegment() )
+        if ( SupportsActiveStreaming( aDest.GetMainURL( INetURLObject::NO_DECODE ) ) || !aDest.removeSegment() )
 		{
 			TransactedTransferForFS_Impl( aSource, aDest, xComEnv );
 		}
@@ -2272,10 +2412,6 @@ void SfxMedium::Transfer_Impl()
 
                 CloseStreams_Impl();
 
-                // don't create content before Close(), because if the storage was opened in direct mode, it will be flushed
-                // in Close() and this leads to a transfer command executed in the package, which currently is implemented as
-                // remove+move in the file FCP. The "remove" is notified to the ::ucbhelper::Content, that clears its URL and its
-                // content reference in this notification and thus will never get back any URL, so my transfer will fail!
                 ::ucbhelper::Content::create( aSource.GetMainURL( INetURLObject::NO_DECODE ), xEnv, aSourceContent );
 
                 // check for external parameters that may customize the handling of NameClash situations
@@ -2564,7 +2700,6 @@ void SfxMedium::GetMedium_Impl()
             {
                 TransformItems( SID_OPENDOC, *GetItemSet(), xProps );
                 comphelper::MediaDescriptor aMedium( xProps );
-                sal_Bool bRequestedReadOnly = aMedium.getUnpackedValueOrDefault( ::comphelper::MediaDescriptor::PROP_READONLY(), sal_False );
 
                 if ( bFromTempFile )
                 {
@@ -2572,7 +2707,7 @@ void SfxMedium::GetMedium_Impl()
                     aMedium.erase( comphelper::MediaDescriptor::PROP_READONLY() );
                     aMedium.addInputStream();
                 }
-                else if ( ::utl::LocalFileHelper::IsLocalFile( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ) ) )
+                else if ( SupportsActiveStreaming( GetURLObject().GetMainURL( INetURLObject::NO_DECODE ) ) )
                 {
                     // use the special locking approach only for file URLs
                     aMedium.addInputStreamOwnLock();
@@ -2580,19 +2715,8 @@ void SfxMedium::GetMedium_Impl()
                 else
                     aMedium.addInputStream();
 
-                // the warning is shown if the user wants to edit the document, but it is not possible
-                pImp->m_bHandleSysLocked = ( !bRequestedReadOnly && aMedium.getUnpackedValueOrDefault( ::comphelper::MediaDescriptor::PROP_READONLY(), sal_False ) );
-
-                sal_Bool bReadOnly = sal_False;
-                aMedium[comphelper::MediaDescriptor::PROP_READONLY()] >>= bReadOnly;
-                if ( bReadOnly )
-                {
-                    SFX_ITEMSET_ARG( GetItemSet(), pROItem, SfxBoolItem, SID_DOC_READONLY, sal_False);
-                    BOOL bForceWritable = ( pROItem && !pROItem->GetValue() );
-                    GetItemSet()->Put( SfxBoolItem( SID_DOC_READONLY, sal_True ) );
-                    if( bForceWritable )
-                        SetError( ERRCODE_IO_ACCESSDENIED );
-                }
+                // the ReadOnly property set in aMedium is ignored
+                // the check is done in LockOrigFileOnDemand() for file and non-file URLs
 
                 //TODO/MBA: what happens if property is not there?!
                 GetContent();
@@ -2623,8 +2747,6 @@ void SfxMedium::GetMedium_Impl()
             else if ( pImp->xInputStream.is() )
                 pInStream = utl::UcbStreamHelper::CreateStream( pImp->xInputStream );
         }
-
-        GetInitFileDate();
 
         pImp->bDownloadDone = sal_True;
         pImp->aDoneLink.ClearPendingCall();
@@ -2813,6 +2935,17 @@ void SfxMedium::Init_Impl()
 		pSet->ClearItem( SID_OUTPUTSTREAM );
 		DBG_ERROR( "Unexpected Output stream parameter!\n" );
 	}
+
+    if ( aLogicName.Len() )
+    {
+        // if the logic name is set it should be set in MediaDescriptor as well
+        SFX_ITEMSET_ARG( pSet, pFileNameItem, SfxStringItem, SID_FILE_NAME, FALSE );
+        if ( !pFileNameItem )
+        {
+            // let the ItemSet be created if necessary
+            GetItemSet()->Put( SfxStringItem( SID_FILE_NAME, INetURLObject( aLogicName ).GetMainURL( INetURLObject::NO_DECODE ) ) );
+        }
+    }
 
     SetIsRemote_Impl();
 }
@@ -3470,8 +3603,9 @@ void SfxMedium::SetStorage_Impl( const uno::Reference < embed::XStorage >& rStor
 
 SfxItemSet* SfxMedium::GetItemSet() const
 {
-    if( !pSet ) ((SfxMedium*)this)->pSet =
-                    new SfxAllItemSet( SFX_APP()->GetPool() );
+	// this method *must* return an ItemSet, returning NULL can cause crashes
+    if( !pSet ) 
+		((SfxMedium*)this)->pSet = new SfxAllItemSet( SFX_APP()->GetPool() );
     return pSet;
 }
 //----------------------------------------------------------------

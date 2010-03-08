@@ -84,7 +84,8 @@ SLOFILES =	\
         $(SLO)$/docmacromode.obj \
         $(SLO)$/SfxDocumentMetaData.obj \
         $(SLO)$/sfxmodelfactory.obj \
-        $(SLO)$/docstoragemodifylistener.obj
+        $(SLO)$/docstoragemodifylistener.obj \
+        $(SLO)$/querytemplate.obj
 
 .IF "$(GUIBASE)" == "java"
 SLOFILES += $(SLO)$/objmisc_cocoa.obj

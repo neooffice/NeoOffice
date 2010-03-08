@@ -107,8 +107,8 @@
 #include <svtools/embedhlp.hxx>
 #include <rtl/logfile.hxx>
 #include <basic/modsizeexceeded.hxx>
-#include <com/sun/star/util/XMacroExpander.hpp>
 #include <osl/file.hxx>
+#include <com/sun/star/util/XMacroExpander.hpp>
 #include <osl/process.h>
 #include <osl/thread.hxx>
 
@@ -560,7 +560,7 @@ void SfxObjectShell::SetupStorage( const uno::Reference< embed::XStorage >& xSto
 		String aFullTypeName, aShortTypeName, aAppName;
         sal_uInt32 nClipFormat=0;
 
-        FillClass( &aName, &nClipFormat, &aAppName, &aFullTypeName, &aShortTypeName, nVersion );
+        FillClass( &aName, &nClipFormat, &aAppName, &aFullTypeName, &aShortTypeName, nVersion, bTemplate );
         if ( nClipFormat )
         {
             // basic doesn't have a ClipFormat
@@ -570,30 +570,13 @@ void SfxObjectShell::SetupStorage( const uno::Reference< embed::XStorage >& xSto
             SotExchange::GetFormatDataFlavor( nClipFormat, aDataFlavor );
             if ( aDataFlavor.MimeType.getLength() )
             {
-			    if ( bTemplate )
-			    {
-				    // TODO/LATER: this is a temporary solution for BETA to avoid incompatible change
-				    if ( aDataFlavor.MimeType.equals( MIMETYPE_OASIS_OPENDOCUMENT_TEXT ) )
-					    aDataFlavor.MimeType = MIMETYPE_OASIS_OPENDOCUMENT_TEXT_TEMPLATE;
-				    else if ( aDataFlavor.MimeType.equals( MIMETYPE_OASIS_OPENDOCUMENT_DRAWING ) )
-					    aDataFlavor.MimeType = MIMETYPE_OASIS_OPENDOCUMENT_DRAWING_TEMPLATE;
-				    else if ( aDataFlavor.MimeType.equals( MIMETYPE_OASIS_OPENDOCUMENT_PRESENTATION ) )
-					    aDataFlavor.MimeType = MIMETYPE_OASIS_OPENDOCUMENT_PRESENTATION_TEMPLATE;
-				    else if ( aDataFlavor.MimeType.equals( MIMETYPE_OASIS_OPENDOCUMENT_SPREADSHEET ) )
-					    aDataFlavor.MimeType = MIMETYPE_OASIS_OPENDOCUMENT_SPREADSHEET_TEMPLATE;
-				    else if ( aDataFlavor.MimeType.equals( MIMETYPE_OASIS_OPENDOCUMENT_CHART ) )
-					    aDataFlavor.MimeType = MIMETYPE_OASIS_OPENDOCUMENT_CHART_TEMPLATE;
-				    else if ( aDataFlavor.MimeType.equals( MIMETYPE_OASIS_OPENDOCUMENT_FORMULA ) )
-					    aDataFlavor.MimeType = MIMETYPE_OASIS_OPENDOCUMENT_FORMULA_TEMPLATE;
-			    }
-
                 try
                 {
                     xProps->setPropertyValue( ::rtl::OUString::createFromAscii( "MediaType" ), uno::makeAny( aDataFlavor.MimeType ) );
                 }
                 catch( uno::Exception& )
                 {
-                    // TODO/LATER: ErrorHandling
+                    const_cast<SfxObjectShell*>( this )->SetError( ERRCODE_IO_GENERAL );
                 }
 
                 ::rtl::OUString aVersion;
@@ -870,6 +853,9 @@ sal_Bool SfxObjectShell::DoLoad( SfxMedium *pMed )
 		sal_uInt32 nError = HandleFilter( pMedium, this );
 		if ( nError != ERRCODE_NONE )
 			SetError( nError );
+
+        if (pMedium->GetFilter()->GetFilterFlags() & SFX_FILTER_STARTPRESENTATION)
+            pSet->Put( SfxBoolItem( SID_DOC_STARTPRESENTATION, TRUE) );
 	}
 
 	EnableSetModified( sal_False );
@@ -1494,8 +1480,10 @@ sal_Bool SfxObjectShell::SaveTo_Impl
             // preserve only if the same filter has been used
             bTryToPreservScriptSignature = pMedium->GetFilter() && pFilter && pMedium->GetFilter()->GetFilterName() == pFilter->GetFilterName();
 
-            bNoPreserveForOasis = ( aODFVersion.equals( ODFVER_012_TEXT ) && nVersion == SvtSaveOptions::ODFVER_011
-                                      || !aODFVersion.getLength() && nVersion == SvtSaveOptions::ODFVER_012 );
+            bNoPreserveForOasis = (
+                                   (aODFVersion.equals( ODFVER_012_TEXT ) && nVersion == SvtSaveOptions::ODFVER_011) ||
+                                   (!aODFVersion.getLength() && nVersion == SvtSaveOptions::ODFVER_012)
+                                  );
         }
 	}
 
@@ -1505,7 +1493,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
     {
         SFX_ITEMSET_ARG( pMedSet, pSaveToItem, SfxBoolItem, SID_SAVETO, sal_False );
         bCopyTo =   GetCreateMode() == SFX_CREATE_MODE_EMBEDDED ||
-                    pSaveToItem && pSaveToItem->GetValue();
+                    (pSaveToItem && pSaveToItem->GetValue());
     }
 
     // use UCB for case sensitive/insensitive file name comparison
@@ -1516,7 +1504,8 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 	{
 		bStoreToSameLocation = sal_True;
 
-        rMedium.CheckFileDate( pMedium->GetInitFileDate() );
+        if ( pMedium->DocNeedsFileDateCheck() )
+            rMedium.CheckFileDate( pMedium->GetInitFileDate( sal_False ) );
 
         if ( bCopyTo && GetCreateMode() != SFX_CREATE_MODE_EMBEDDED )
         {
@@ -1611,15 +1600,13 @@ sal_Bool SfxObjectShell::SaveTo_Impl
     else
     {
         // This is SaveAs or export action, prepare the target medium
+        // the alien filters still might write directly to the file, that is of course a bug,
+        // but for now the framework has to be ready for it
+        // TODO/LATER: let the medium be prepared for alien formats as well
         rMedium.CloseAndRelease();
         if ( bStorageBasedTarget )
         {
             rMedium.GetOutputStorage();
-        }
-        else
-        {
-            rMedium.CreateTempFileNoCopy();
-            rMedium.GetOutStream();
         }
     }
 
@@ -1950,10 +1937,6 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 	else
 	{
         // it's a "SaveAs" in an alien format
-#ifdef USE_JAVA
-		// Fix bug 3537 by committing before exporting to alien format
-		rMedium.Commit();
-#endif	// USE_JAVA
 		if ( rMedium.GetFilter() && ( rMedium.GetFilter()->GetFilterFlags() & SFX_FILTER_STARONEFILTER ) )
             bOk = ExportTo( rMedium );
 		else
@@ -2137,14 +2120,6 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 			}
 		}
 	}
-
-#ifdef USE_JAVA
-	// Fix bug 3397 by adding back code that ooo-build removed in their OOo 3.0
-	// builds
-	if (bOk) {
-	    bOk = rMedium.Commit();
-	}
-#endif	// USE_JAVA
 
 	if (bOk && xNewTmpStorage.is()) {
 	    rMedium.SetStorage_Impl(xNewTmpStorage);
@@ -2522,6 +2497,12 @@ sal_Bool SfxObjectShell::DoSaveCompleted( SfxMedium* pNewMed )
 				InvalidateName();
 			SetModified(sal_False); // nur bei gesetztem Medium zur"ucksetzen
             Broadcast( SfxSimpleHint(SFX_HINT_MODECHANGED) );
+
+            // this is the end of the saving process, it is possible that the file was changed
+            // between medium commit and this step ( attributes change and so on )
+            // so get the file date again
+            if ( pNewMed->DocNeedsFileDateCheck() )
+                pNewMed->GetInitFileDate( sal_True );
 		}
 	}
 
@@ -2830,6 +2811,8 @@ sal_Bool SfxObjectShell::ExportTo( SfxMedium& rMedium )
 
 		// put in the REAL file name, and copy all PropertyValues
         const OUString sOutputStream ( RTL_CONSTASCII_USTRINGPARAM ( "OutputStream" ) );
+        const OUString sStream ( RTL_CONSTASCII_USTRINGPARAM ( "StreamForOutput" ) );
+        BOOL bHasOutputStream = FALSE;
         BOOL bHasStream = FALSE;
         BOOL bHasBaseURL = FALSE;
 		sal_Int32 i;
@@ -2841,16 +2824,26 @@ sal_Bool SfxObjectShell::ExportTo( SfxMedium& rMedium )
             if ( pOldValue[i].Name.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "FileName" ) ) )
 				pNewValue[i].Value <<= OUString ( rMedium.GetName() );
             else if ( pOldValue[i].Name == sOutputStream )
+                bHasOutputStream = sal_True;
+            else if ( pOldValue[i].Name == sStream )
                 bHasStream = sal_True;
             else if ( pOldValue[i].Name.equalsAsciiL ( RTL_CONSTASCII_STRINGPARAM ( "DocumentBaseURL" ) ) )
                 bHasBaseURL = sal_True;
 		}
 
-        if ( !bHasStream )
+        if ( !bHasOutputStream )
 		{
             aArgs.realloc ( ++nEnd );
             aArgs[nEnd-1].Name = sOutputStream;
             aArgs[nEnd-1].Value <<= com::sun::star::uno::Reference < com::sun::star::io::XOutputStream > ( new utl::OOutputStreamWrapper ( *rMedium.GetOutStream() ) );
+		}
+
+        // add stream as well, for OOX export and maybe others
+        if ( !bHasStream )
+		{
+            aArgs.realloc ( ++nEnd );
+            aArgs[nEnd-1].Name = sStream;
+            aArgs[nEnd-1].Value <<= com::sun::star::uno::Reference < com::sun::star::io::XStream > ( new utl::OStreamWrapper ( *rMedium.GetOutStream() ) );
 		}
 
         if ( !bHasBaseURL )
@@ -2937,7 +2930,7 @@ sal_Bool SfxObjectShell::DoSave_Impl( const SfxItemSet* pArgs )
 
     // copy the original itemset, but remove the "version" item, because pMediumTmp
     // is a new medium "from scratch", so no version should be stored into it
-    SfxItemSet* pSet = pRetrMedium->GetItemSet() ? new SfxAllItemSet(*pRetrMedium->GetItemSet()): 0;
+    SfxItemSet* pSet = new SfxAllItemSet(*pRetrMedium->GetItemSet());
     pSet->ClearItem( SID_VERSION );
 
     // create a medium as a copy; this medium is only for writingm, because it uses the same name as the original one
@@ -3101,7 +3094,7 @@ sal_Bool SfxObjectShell::CommonSaveAs_Impl
     const SfxFilter* pFilter = GetFactory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
     if ( !pFilter
 		|| !pFilter->CanExport()
-		|| !bSaveTo && !pFilter->CanImport() )
+		|| (!bSaveTo && !pFilter->CanImport()) )
     {
         SetError( ERRCODE_IO_INVALIDPARAMETER );
         return sal_False;
@@ -3147,6 +3140,8 @@ sal_Bool SfxObjectShell::CommonSaveAs_Impl
 		SfxItemSet *pSet = GetMedium()->GetItemSet();
 		pSet->ClearItem( SID_INTERACTIONHANDLER );
 		pSet->ClearItem( SID_PROGRESS_STATUSBAR_CONTROL );
+		pSet->ClearItem( SID_STANDARD_DIR );
+		pSet->ClearItem( SID_PATH );
 
 		if ( !bSaveTo )
 		{
@@ -3163,6 +3158,8 @@ sal_Bool SfxObjectShell::CommonSaveAs_Impl
 			//pSet->ClearItem( SID_USE_FILTEROPTIONS );
 			pSet->ClearItem( SID_EDITDOC );
 			pSet->ClearItem( SID_OVERWRITE );
+			pSet->ClearItem( SID_DEFAULTFILEPATH );
+			pSet->ClearItem( SID_DEFAULTFILENAME );
 
 			SFX_ITEMSET_GET( (*aParams), pFilterItem, SfxStringItem, SID_FILTER_NAME, sal_False );
 			if ( pFilterItem )
@@ -3265,7 +3262,7 @@ sal_Bool SfxObjectShell::PreDoSaveAs_Impl
 
     // check if a "SaveTo" is wanted, no "SaveAs"
     SFX_ITEMSET_ARG( pParams, pSaveToItem, SfxBoolItem, SID_SAVETO, sal_False );
-    sal_Bool bCopyTo = GetCreateMode() == SFX_CREATE_MODE_EMBEDDED || pSaveToItem && pSaveToItem->GetValue();
+    sal_Bool bCopyTo = GetCreateMode() == SFX_CREATE_MODE_EMBEDDED || (pSaveToItem && pSaveToItem->GetValue());
 
     // distinguish between "Save" and "SaveAs"
     pImp->bIsSaving = sal_False;

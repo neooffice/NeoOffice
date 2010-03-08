@@ -921,26 +921,6 @@ sal_Bool SfxTopFrame::InsertDocument( SfxObjectShell* pDoc )
     if ( pMarkItem )
 		aMark = pMarkItem->GetValue();
 
-	if ( pDoc->Get_Impl()->nLoadedFlags & SFX_LOADED_MAINDOCUMENT )
-	{
-    	if ( pViewDataItem )
-			pFrame->GetViewShell()->ReadUserData( pViewDataItem->GetValue(), sal_True );
-		else if( aMark.Len() )
-			GetCurrentViewFrame()->GetViewShell()->JumpToMark( aMark );
-	}
-	else
-	{
-		// Daten setzen, die in FinishedLoading ausgewertet werden
-		MarkData_Impl*& rpMark = pDoc->Get_Impl()->pMarkData;
-		if (!rpMark)
-			rpMark = new MarkData_Impl;
-		rpMark->pFrame = GetCurrentViewFrame();
-		if ( pViewDataItem )
-			rpMark->aUserData = pViewDataItem->GetValue();
-		else
-			rpMark->aMark = aMark;
-	}
-
 	// Position und Groesse setzen
 	//sal_uInt16 nWinMode = pModeItem ? pModeItem->GetValue() : 1;
 	if ( pAreaItem && !pOld )
@@ -971,7 +951,7 @@ sal_Bool SfxTopFrame::InsertDocument( SfxObjectShell* pDoc )
 
     if ( !pImp->bHidden )
 	{
-        if ( pDoc->IsHelpDocument() || pPluginItem && pPluginItem->GetValue() == 2 )
+        if ( pDoc->IsHelpDocument() )
             pFrame->GetDispatcher()->HideUI( TRUE );
         else
             pFrame->GetDispatcher()->HideUI( FALSE );
@@ -1006,6 +986,26 @@ sal_Bool SfxTopFrame::InsertDocument( SfxObjectShell* pDoc )
     {
         DBG_ASSERT( !IsInPlace() && !pPluginMode && !pPluginItem, "Special modes not compatible with hidden mode!" );
         GetWindow().Show();
+    }
+
+    if ( pDoc->Get_Impl()->nLoadedFlags & SFX_LOADED_MAINDOCUMENT )
+    {
+        if ( pViewDataItem )
+            pFrame->GetViewShell()->ReadUserData( pViewDataItem->GetValue(), sal_True );
+        else if( aMark.Len() )
+            GetCurrentViewFrame()->GetViewShell()->JumpToMark( aMark );
+    }
+    else
+    {
+        // Daten setzen, die in FinishedLoading ausgewertet werden
+        MarkData_Impl*& rpMark = pDoc->Get_Impl()->pMarkData;
+        if (!rpMark)
+            rpMark = new MarkData_Impl;
+        rpMark->pFrame = GetCurrentViewFrame();
+        if ( pViewDataItem )
+            rpMark->aUserData = pViewDataItem->GetValue();
+        else
+            rpMark->aMark = aMark;
     }
 
 	// Jetzt UpdateTitle, hidden TopFrames haben sonst keinen Namen!

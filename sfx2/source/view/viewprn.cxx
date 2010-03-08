@@ -699,7 +699,10 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	            // Collate
 	            SFX_REQUEST_ARG(rReq, pCollateItem, SfxBoolItem, SID_PRINT_COLLATE, FALSE);
 	            if ( pCollateItem )
+				{
 	                bCollate = pCollateItem->GetValue();
+					pPrintDlg->CheckCollate( bCollate );
+				}
 
 	            // Selection
 	            SFX_REQUEST_ARG(rReq, pSelectItem, SfxBoolItem, SID_SELECTION, FALSE);
@@ -895,6 +898,8 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
 	            rReq.Ignore();
 			}
+
+            pPrinter->SetNextJobIsQuick( false );
 
 			delete pPrintDlg;
 			break;

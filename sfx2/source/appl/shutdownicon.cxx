@@ -51,7 +51,6 @@
 #include <com/sun/star/ui/dialogs/ControlActions.hpp>
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/document/UpdateDocMode.hpp>
-#include <rtl/bootstrap.hxx>
 #include <sfx2/filedlghelper.hxx>
 #include <sfx2/fcontnr.hxx>
 #ifndef _UNOTOOLS_PROCESSFACTORY_HXX
@@ -63,10 +62,11 @@
 #include <tools/urlobj.hxx>
 #include <osl/security.hxx>
 #include <osl/file.hxx>
-#include <unotools/bootstrap.hxx>
+#include <rtl/bootstrap.hxx>
 #include <tools/link.hxx>
 #ifdef UNX // need symlink
 #include <unistd.h>
+#include <errno.h>
 #endif
 
 #include "sfxresid.hxx"
@@ -83,7 +83,11 @@ using namespace ::vos;
 using namespace ::rtl;
 using namespace ::sfx2;
 
+#ifdef ENABLE_QUICKSTART_APPLET
+# if !defined(WIN32) && !defined(QUARTZ)
 extern "C" { static void SAL_CALL thisModule() {} }
+# endif
+#endif
 
 class SfxNotificationListener_Impl : public cppu::WeakImplHelper1< XDispatchResultListener >
 {
@@ -192,7 +196,9 @@ void ShutdownIcon::initSystray()
 		return;
 	m_bInitialized = true;
 
-	(void) LoadModule( &m_pPlugin, &m_pInitSystray, &m_pDeInitSystray );
+    if (!m_pPlugin)
+	    (void) LoadModule( &m_pPlugin, &m_pInitSystray, &m_pDeInitSystray );
+
 	m_bVeto = true;
 	m_pInitSystray();
 }
@@ -201,15 +207,11 @@ void ShutdownIcon::deInitSystray()
 {
 	if (!m_bInitialized)
 		return;
+
     if (m_pDeInitSystray)
 		m_pDeInitSystray();
 
 	m_bVeto = false;
-	m_pInitSystray = 0;
-	m_pDeInitSystray = 0;
-	if (m_pPlugin)
-		delete m_pPlugin;
-	m_pPlugin = 0;
     delete m_pFileDlg;
 	m_pFileDlg = NULL;
 	m_bInitialized = false;
@@ -233,6 +235,11 @@ ShutdownIcon::ShutdownIcon( Reference< XMultiServiceFactory > aSMgr ) :
 ShutdownIcon::~ShutdownIcon()
 {
 	deInitSystray();
+    //Bustage on dlclosing when: no qstarter, start writer, enable, close writer, choose disable/quit
+    //dlclose gets called and pulls .so from under hack-tower
+#ifndef UNX
+	delete m_pPlugin;
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -304,10 +311,12 @@ void ShutdownIcon::FromTemplate()
         Reference < ::com::sun::star::frame::XDispatchProvider > xProv( xFrame, UNO_QUERY );
         Reference < ::com::sun::star::frame::XDispatch > xDisp;
 	    if ( xProv.is() )
+	    {
             if ( aTargetURL.Protocol.compareToAscii("slot:") == COMPARE_EQUAL )
                 xDisp = xProv->queryDispatch( aTargetURL, ::rtl::OUString(), 0 );
             else
                 xDisp = xProv->queryDispatch( aTargetURL, ::rtl::OUString::createFromAscii("_blank"), 0 );
+	    }
         if ( xDisp.is() )
 	    {
 		    Sequence<PropertyValue> aArgs(1);
@@ -680,19 +689,6 @@ void SAL_CALL ShutdownIcon::initialize( const ::com::sun::star::uno::Sequence< :
 					ShutdownIcon::getInstance()->addTerminateListener();
 				}
 #endif
-#ifdef OS2
-				// above win32 starts the quickstart thread, but we have
-				// quickstart running only when -quickstart is specified
-				// on command line (next boot). 
-				// so if -quickstart was not specified, we cannot issue	
-				// quickstart veto on shutdown.
-				if (bQuickstart)
-				{
-					// disable shutdown
-					ShutdownIcon::getInstance()->SetVeto( true );
-					ShutdownIcon::getInstance()->addTerminateListener();
-				}
-#endif
 			}
 			catch(const ::com::sun::star::lang::IllegalArgumentException&)
 			{
@@ -845,10 +841,11 @@ void ShutdownIcon::SetAutostart( bool bActivate )
 													 osl_getThreadTextEncoding() );
 		OString aShortcutUnx = OUStringToOString( aShortcut,
 												  osl_getThreadTextEncoding() );
-		// call unlink just in case there is a broken link pointing to an older OOo that
-		// is not longer available on the system
-		unlink( aShortcutUnx );
-		symlink( aDesktopFileUnx, aShortcutUnx );
+		if ((0 != symlink(aDesktopFileUnx, aShortcutUnx)) && (errno == EEXIST)) 
+		{ 
+		unlink(aShortcutUnx); 
+		symlink(aDesktopFileUnx, aShortcutUnx); 
+		}
 
 		ShutdownIcon *pIcon = ShutdownIcon::createInstance();
 		if( pIcon )

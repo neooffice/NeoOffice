@@ -55,7 +55,9 @@
 #include <com/sun/star/embed/ElementModes.hpp>
 #include <com/sun/star/container/XEnumeration.hpp>
 #include <com/sun/star/container/XContainerQuery.hpp>
+#include <com/sun/star/task/XInteractionRequest.hpp>
 #include <com/sun/star/ucb/InteractiveAugmentedIOException.hpp>
+
 #include <comphelper/processfactory.hxx>
 #include <comphelper/types.hxx>
 #include <comphelper/sequenceashashmap.hxx>
@@ -83,7 +85,9 @@
 #include <svtools/helpid.hrc>
 #endif
 #include <svtools/pickerhelper.hxx>
+#include <svtools/docpasswdrequest.hxx>
 #include <ucbhelper/content.hxx>
+#include <ucbhelper/commandenvironment.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <toolkit/helper/vclunohelper.hxx>
 #include <sfx2/app.hxx>
@@ -555,18 +559,24 @@ struct CheckPasswordCapability
 {
 	sal_Bool operator() ( const SfxFilter* _pFilter )
 	{
-        if (_pFilter && _pFilter->GetFilterName().EqualsAscii("MS Excel 97"))
-            // temporary hack to enable password protection for Excel 97.  Is
-            // there a better way to enable password protection of a filter?
-            return true;
+        if (!_pFilter)
+            return false;
 
-        return  _pFilter && _pFilter->IsOwnFormat()
-			&&	_pFilter->UsesStorage()
+#if 1
+        if (_pFilter->GetFilterName().EqualsAscii("MS Excel 97"))
+            // For now, we eanble password protection for Excel 97 as a 
+            // special case.  If we start having more filters supporting
+            // export encryption with password, we should probably switch to
+            // using a filter flag instead.
+            return true;
+#endif
+
+        return _pFilter->IsOwnFormat() && _pFilter->UsesStorage()
 #ifdef USE_JAVA
 			&&	_pFilter->GetUserData().SearchAscii( "Preprocess" ) == STRING_NOTFOUND
 			&&	_pFilter->GetUserData().SearchAscii( "Postprocess" ) == STRING_NOTFOUND
 #endif	// USE_JAVA
-			&&	( SOFFICE_FILEFORMAT_60 <= _pFilter->GetVersion() );
+            && ( SOFFICE_FILEFORMAT_60 <= _pFilter->GetVersion() );
 	}
 };
 
@@ -909,7 +919,15 @@ sal_Bool lcl_isSystemFilePicker( const uno::Reference< XFilePicker >& _rxFP )
 // -----------		FileDialogHelper_Impl		---------------------------
 // ------------------------------------------------------------------------
 
-FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_Int16 nDialogType, sal_Int64 nFlags, sal_Int16 nDialog, Window* _pPreferredParentWindow, const String& sStandardDir )
+FileDialogHelper_Impl::FileDialogHelper_Impl( 
+	FileDialogHelper* _pAntiImpl, 
+	sal_Int16 nDialogType, 
+	sal_Int64 nFlags, 
+	sal_Int16 nDialog, 
+	Window* _pPreferredParentWindow, 
+	const String& sStandardDir,
+	const ::com::sun::star::uno::Sequence< ::rtl::OUString >& rBlackList 
+	)
 	:m_nDialogType			( nDialogType )
 	,meContext				( FileDialogHelper::UNKNOWN_CONTEXT )
 {
@@ -1070,7 +1088,7 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 		
 
 		//Sequence < Any > aInitArguments( mbSystemPicker || !mpPreferredParentWindow ? 1 : 3 );
-		Sequence < Any > aInitArguments( !mpPreferredParentWindow ? 2 : 3 );
+		Sequence < Any > aInitArguments( !mpPreferredParentWindow ? 3 : 4 );
 
 		// This is a hack. We currently know that the internal file picker implementation
 		// supports the extended arguments as specified below.
@@ -1094,8 +1112,15 @@ FileDialogHelper_Impl::FileDialogHelper_Impl( FileDialogHelper* _pAntiImpl, sal_
 									::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "StandardDir" ) ),
 									makeAny( sStandardDirTemp )
 								);
+
+			aInitArguments[2] <<= NamedValue(
+									::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "BlackList" ) ),
+									makeAny( rBlackList )
+								);
+
+
 			if ( mpPreferredParentWindow )
-				aInitArguments[2] <<= NamedValue(
+				aInitArguments[3] <<= NamedValue(
 										::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "ParentWindow" ) ),
 										makeAny( VCLUnoHelper::GetInterface( mpPreferredParentWindow ) )
 									);
@@ -1552,41 +1577,6 @@ ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
 		if( !rpSet )
 			rpSet = new SfxAllItemSet( SFX_APP()->GetPool() );
 
-		// set the filter
-		getRealFilter( rFilter );
-
-		// check, wether or not we have to display a password box
-		if ( mbHasPassword && mbIsPwdEnabled && xCtrlAccess.is() )
-		{
-			try
-			{
-				Any aValue = xCtrlAccess->getValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0 );
-				sal_Bool bPassWord = sal_False;
-				if ( ( aValue >>= bPassWord ) && bPassWord )
-				{
-					// ask for a password
-					SfxPasswordDialog aPasswordDlg( NULL );
-					aPasswordDlg.ShowExtras( SHOWEXTRAS_CONFIRM );
-                    if ( rFilter.EqualsAscii("MS Excel 97") )
-                    {
-                        // Excel allows 1-15 length password.
-                        aPasswordDlg.SetMinLen(1);
-                        aPasswordDlg.SetMaxLen(15);
-                    }
-
-					short nRet = aPasswordDlg.Execute();
-					if ( RET_OK == nRet )
-					{
-						String aPasswd = aPasswordDlg.GetPassword();
-						rpSet->Put( SfxStringItem( SID_PASSWORD, aPasswd ) );
-					}
-					else
-						return ERRCODE_ABORT;
-				}
-			}
-			catch( IllegalArgumentException ){}
-		}
-
         // the item should remain only if it was set by the dialog
         rpSet->ClearItem( SID_SELECTION );
 
@@ -1640,11 +1630,44 @@ ErrCode FileDialogHelper_Impl::execute( SvStringsDtor*& rpURLList,
 			catch( IllegalArgumentException ){}
 		}
 
+		// set the filter
+		getRealFilter( rFilter );
+
 		// fill the rpURLList
 		implGetAndCacheFiles(mxFileDlg, rpURLList, getCurentSfxFilter());
-		if ( rpURLList == NULL )
+		if ( rpURLList == NULL || rpURLList->GetObject(0) == NULL )
 			return ERRCODE_ABORT;
-        
+ 
+		// check, wether or not we have to display a password box
+		if ( mbHasPassword && mbIsPwdEnabled && xCtrlAccess.is() )
+		{
+			try
+			{
+				Any aValue = xCtrlAccess->getValue( ExtendedFilePickerElementIds::CHECKBOX_PASSWORD, 0 );
+				sal_Bool bPassWord = sal_False;
+				if ( ( aValue >>= bPassWord ) && bPassWord )
+				{
+					// ask for a password
+                    uno::Reference < ::com::sun::star::task::XInteractionHandler > xInteractionHandler( ::comphelper::getProcessServiceFactory()->createInstance(::rtl::OUString::createFromAscii("com.sun.star.comp.uui.UUIInteractionHandler")), UNO_QUERY );
+
+                    if( xInteractionHandler.is() )
+                    {
+                        // TODO: find out a way to set the 1-15 char limits on MS Excel 97 filter.
+                        RequestDocumentPassword* pPasswordRequest = new RequestDocumentPassword(
+                            ::com::sun::star::task::PasswordRequestMode_PASSWORD_CREATE, *(rpURLList->GetObject(0)) );
+ 
+                        uno::Reference< com::sun::star::task::XInteractionRequest > rRequest( pPasswordRequest );
+                        xInteractionHandler->handle( rRequest );
+                        if ( pPasswordRequest->isPassword() )
+                            rpSet->Put( SfxStringItem( SID_PASSWORD, pPasswordRequest->getPassword() ) );
+                        else
+						    return ERRCODE_ABORT;
+                    }
+				}
+			}
+			catch( IllegalArgumentException ){}
+		}
+
         SaveLastUsedFilter();
         return ERRCODE_NONE;
 	}
@@ -2294,9 +2317,10 @@ FileDialogHelper::FileDialogHelper(
 	sal_Int16 nDialog,
     SfxFilterFlags nMust,
     SfxFilterFlags nDont,
-	const String& rStandardDir)
+	const String& rStandardDir,
+	const ::com::sun::star::uno::Sequence< ::rtl::OUString >& rBlackList)
 {
-	mpImp = new FileDialogHelper_Impl( this, getDialogType( nFlags ), nFlags, nDialog, NULL , rStandardDir );
+	mpImp = new FileDialogHelper_Impl( this, getDialogType( nFlags ), nFlags, nDialog, NULL , rStandardDir, rBlackList );
 	mxImp = mpImp;
 
 	// create the list of filters
@@ -2349,9 +2373,10 @@ FileDialogHelper::FileDialogHelper(
 	sal_Int16 nDialog,
     SfxFilterFlags nMust,
     SfxFilterFlags nDont,
-	const String& rStandardDir )
+	const String& rStandardDir,
+	const ::com::sun::star::uno::Sequence< ::rtl::OUString >& rBlackList)
 {
-	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, nDialog, NULL, rStandardDir );
+	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, nDialog, NULL, rStandardDir, rBlackList );
 	mxImp = mpImp;
 
 	// create the list of filters
@@ -2375,9 +2400,10 @@ FileDialogHelper::FileDialogHelper(
 	const ::rtl::OUString& aFilterUIName,
 	const ::rtl::OUString& aExtName,
 	const ::rtl::OUString& rStandardDir,
+	const ::com::sun::star::uno::Sequence< ::rtl::OUString >& rBlackList,
     Window* _pPreferredParent )
 {
-	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, SFX2_IMPL_DIALOG_CONFIG, _pPreferredParent,rStandardDir );
+	mpImp = new FileDialogHelper_Impl( this, nDialogType, nFlags, SFX2_IMPL_DIALOG_CONFIG, _pPreferredParent,rStandardDir, rBlackList );
 	mxImp = mpImp;
 
 	// the wildcard here is expected in form "*.extension"
@@ -2567,10 +2593,21 @@ ErrCode FileDialogHelper::GetGraphic( Graphic& rGraphic ) const
 // ------------------------------------------------------------------------
 static int impl_isFolder( const OUString& rPath )
 {
+    uno::Reference< task::XInteractionHandler > xHandler;
+	try
+	{
+        uno::Reference< lang::XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory(), uno::UNO_QUERY_THROW );
+        xHandler.set( xFactory->createInstance( DEFINE_CONST_OUSTRING( "com.sun.star.task.InteractionHandler" ) ),
+                      uno::UNO_QUERY_THROW );
+	}
+    catch ( Exception const & )
+	{
+	}
+
 	try
 	{
 		::ucbhelper::Content aContent(
-			rPath, uno::Reference< ucb::XCommandEnvironment >() );
+			rPath, new ::ucbhelper::CommandEnvironment( xHandler, uno::Reference< ucb::XProgressHandler >() ) );
 		if ( aContent.isFolder() )
 			return 1;
 
@@ -2729,10 +2766,11 @@ ErrCode FileOpenDialog_Impl( sal_Int64 nFlags,
                              SfxItemSet *& rpSet,
                              const String* pPath,
 							 sal_Int16 nDialog,
-							 const String& rStandardDir )
+							 const String& rStandardDir,
+							 const ::com::sun::star::uno::Sequence< ::rtl::OUString >& rBlackList )
 {
 	ErrCode nRet;
-	FileDialogHelper aDialog( nFlags, rFact, nDialog, 0, 0, rStandardDir );
+	FileDialogHelper aDialog( nFlags, rFact, nDialog, 0, 0, rStandardDir, rBlackList );
 
     String aPath;
     if ( pPath )

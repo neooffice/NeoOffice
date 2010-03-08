@@ -48,6 +48,7 @@
 #include <svtools/rectitem.hxx>
 #include <svtools/eitem.hxx>
 #include <svtools/urihelper.hxx>
+#include <svtools/ctloptions.hxx>
 #include <comphelper/processfactory.hxx>
 #include <comphelper/storagehelper.hxx>
 #include <svtools/securityoptions.hxx>
@@ -82,6 +83,7 @@
 #include <sfx2/docfile.hxx>
 #include <sfx2/request.hxx>
 #include "openflag.hxx"
+#include "querytemplate.hxx"
 
 #ifdef USE_JAVA
 
@@ -176,6 +178,18 @@ SfxObjectShell::CreatePreviewMetaFile_Impl( sal_Bool bFullContent, sal_Bool bHig
                 "size of first page is 0, overload GetFirstPageSize or set vis-area!" );
 
     pFile->Record( &aDevice );
+
+    LanguageType eLang;
+    SvtCTLOptions*  pCTLOptions = new SvtCTLOptions;
+    if ( SvtCTLOptions::NUMERALS_HINDI == pCTLOptions->GetCTLTextNumerals() )
+        eLang = LANGUAGE_ARABIC_SAUDI_ARABIA;
+    else if ( SvtCTLOptions::NUMERALS_ARABIC == pCTLOptions->GetCTLTextNumerals() )
+        eLang = LANGUAGE_ENGLISH;
+    else
+        eLang = (LanguageType) Application::GetSettings().GetLanguage();
+
+    aDevice.SetDigitLanguage( eLang );
+
     ((SfxObjectShell*)this)->DoDraw( &aDevice, Point(0,0), aTmpSize, JobSetup(), nAspect );
     pFile->Stop();
 
@@ -571,7 +585,6 @@ USHORT SfxObjectShell::GetContentCount(
 			SfxStyleSheetBasePool *pStylePool = GetStyleSheetPool();
 			if(!pStylePool)
 				return 0;
-
 			SetOrganizerSearchMask(pStylePool);
 			return pStylePool->Count();
 		}
@@ -1328,7 +1341,9 @@ void SfxObjectShell::UpdateFromTemplate_Impl(  )
 						bLoad = TRUE;
 					else if ( bCanUpdateFromTemplate == document::UpdateDocMode::ACCORDING_TO_CONFIG )
 					{
-                    	QueryBox aBox( GetDialogParent(), SfxResId(MSG_QUERY_LOAD_TEMPLATE) );
+                        String sMessage( SfxResId( STR_QRYTEMPL_MESSAGE ) );
+                        sMessage.SearchAndReplace( String::CreateFromAscii("$(ARG1)"), aTemplName );
+                        sfx2::QueryTemplateBox aBox( GetDialogParent(), sMessage );
 						if ( RET_YES == aBox.Execute() )
 							bLoad = TRUE;
 					}
@@ -1476,31 +1491,35 @@ sal_Bool SfxObjectShell::IsHelpDocument() const
 
 void SfxObjectShell::ResetFromTemplate( const String& rTemplateName, const String& rFileName )
 {
-    uno::Reference<document::XDocumentProperties> xDocProps(getDocProperties());
-    xDocProps->setTemplateURL( ::rtl::OUString() );
-    xDocProps->setTemplateName( ::rtl::OUString() );
-    xDocProps->setTemplateDate( util::DateTime() );
-    xDocProps->resetUserData( ::rtl::OUString() );
-
-	// TODO/REFACTOR:
-	// Title?
-
-    if( ::utl::LocalFileHelper::IsLocalFile( rFileName ) )
-	{
-        String aFoundName;
-        if( SFX_APP()->Get_Impl()->GetDocumentTemplates()->GetFull( String(), rTemplateName, aFoundName ) )
-        {
-            INetURLObject aObj( rFileName );
-            xDocProps->setTemplateURL( aObj.GetMainURL(INetURLObject::DECODE_TO_IURI) );
-            xDocProps->setTemplateName( rTemplateName );
-
-            ::DateTime now;
-            xDocProps->setTemplateDate( util::DateTime(
-                now.Get100Sec(), now.GetSec(), now.GetMin(),
-                now.GetHour(), now.GetDay(), now.GetMonth(),
-                now.GetYear() ) );
-
-			SetQueryLoadTemplate( sal_True );
+    // only care about reseting this data for openoffice formats otherwise
+    if ( IsOwnStorageFormat_Impl( *GetMedium())  )
+    {
+        uno::Reference<document::XDocumentProperties> xDocProps(getDocProperties());
+        xDocProps->setTemplateURL( ::rtl::OUString() );
+        xDocProps->setTemplateName( ::rtl::OUString() );
+        xDocProps->setTemplateDate( util::DateTime() );
+        xDocProps->resetUserData( ::rtl::OUString() );
+    
+    	// TODO/REFACTOR:
+    	// Title?
+    
+        if( ::utl::LocalFileHelper::IsLocalFile( rFileName ) )
+    	{
+            String aFoundName;
+            if( SFX_APP()->Get_Impl()->GetDocumentTemplates()->GetFull( String(), rTemplateName, aFoundName ) )
+            {
+                INetURLObject aObj( rFileName );
+                xDocProps->setTemplateURL( aObj.GetMainURL(INetURLObject::DECODE_TO_IURI) );
+                xDocProps->setTemplateName( rTemplateName );
+    
+                ::DateTime now;
+                xDocProps->setTemplateDate( util::DateTime(
+                    now.Get100Sec(), now.GetSec(), now.GetMin(),
+                    now.GetHour(), now.GetDay(), now.GetMonth(),
+                    now.GetYear() ) );
+    
+    			SetQueryLoadTemplate( sal_True );
+            }
         }
     }
 }

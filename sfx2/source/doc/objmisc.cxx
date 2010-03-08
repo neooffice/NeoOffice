@@ -60,6 +60,7 @@
 #include <com/sun/star/document/MacroExecMode.hpp>
 #include <com/sun/star/document/XScriptInvocationContext.hpp>
 #include <com/sun/star/embed/EmbedStates.hpp>
+#include <com/sun/star/embed/XEmbedPersist.hpp>
 #include <com/sun/star/util/XModifiable.hpp>
 #include <com/sun/star/container/XChild.hpp>
 
@@ -83,6 +84,14 @@
 
 #include <com/sun/star/security/XDocumentDigitalSignatures.hpp>
 #include <com/sun/star/frame/XModel.hpp>
+
+#ifdef USE_JAVA
+
+// [ed] 4/26/07 Includes for invoking NSWindow setDocumentEdited
+#include <vcl/sysdata.hxx>
+#include "objmisc_cocoa.h"
+
+#endif	// USE_JAVA
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -144,14 +153,6 @@ using namespace ::com::sun::star::container;
 #include <sfx2/sfxdlg.hxx>
 #include "appbaslib.hxx"
 #include <openflag.hxx>                 // SFX_STREAM_READWRITE
-
-#ifdef USE_JAVA
-
-// [ed] 4/26/07 Includes for invoking NSWindow setDocumentEdited
-#include <vcl/sysdata.hxx>
-#include "objmisc_cocoa.h"
-
-#endif	// USE_JAVA
 
 using namespace ::com::sun::star;
 
@@ -340,14 +341,16 @@ sal_Bool SfxObjectShell::IsEnableSetModified() const
 
 sal_Bool SfxObjectShell::IsModified()
 {
-	if ( pImp->m_bIsModified )
-		return sal_True;
+    if ( pImp->m_bIsModified )
+        return sal_True;
 
-	if ( !pImp->m_xDocStorage.is() )
-	{
-		// if the document still has no storage and is not set to be modified explicitly it is not modified
-		return sal_False;
-	}
+    if ( !pImp->m_xDocStorage.is() || IsReadOnly() )
+    {
+        // if the document still has no storage and is not set to be modified explicitly it is not modified
+        // a readonly document is also not modified
+
+        return sal_False;
+    }
 
     uno::Sequence < ::rtl::OUString > aNames = GetEmbeddedObjectContainer().GetObjectNames();
     for ( sal_Int32 n=0; n<aNames.getLength(); n++ )
@@ -355,23 +358,23 @@ sal_Bool SfxObjectShell::IsModified()
         uno::Reference < embed::XEmbeddedObject > xObj = GetEmbeddedObjectContainer().GetEmbeddedObject( aNames[n] );
         OSL_ENSURE( xObj.is(), "An empty entry in the embedded objects list!\n" );
         if ( xObj.is() )
-		{
-			try
-			{
-				sal_Int32 nState = xObj->getCurrentState();
+        {
+            try
+            {
+                sal_Int32 nState = xObj->getCurrentState();
                 if ( nState != embed::EmbedStates::LOADED )
-				{
-					uno::Reference< util::XModifiable > xModifiable( xObj->getComponent(), uno::UNO_QUERY );
-					if ( xModifiable.is() && xModifiable->isModified() )
-						return sal_True;
-				}
-			}
-			catch( uno::Exception& )
-			{}
-		}
-	}
+                {
+                    uno::Reference< util::XModifiable > xModifiable( xObj->getComponent(), uno::UNO_QUERY );
+                    if ( xModifiable.is() && xModifiable->isModified() )
+                        return sal_True;
+                }
+            }
+            catch( uno::Exception& )
+            {}
+        }
+    }
 
-	return sal_False;
+    return sal_False;
 }
 
 //-------------------------------------------------------------------------
@@ -380,7 +383,7 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 {
 #ifdef DBG_UTIL
     if ( !bModifiedP && !IsEnableSetModified() )
-        DBG_WARNING( "SFX_PERSIST: SetModified( sal_False ), obwohl IsEnableSetModified() == sal_False" )
+        DBG_WARNING( "SFX_PERSIST: SetModified( sal_False ), obwohl IsEnableSetModified() == sal_False" );
 #endif
 
 	if( !IsEnableSetModified() )
@@ -549,10 +552,30 @@ sal_Bool SfxObjectShell::SwitchToShared( sal_Bool bShared, sal_Bool bSave )
 
     if ( bShared != IsDocShared() )
     {
+        ::rtl::OUString aOrigURL = GetMedium()->GetURLObject().GetMainURL( INetURLObject::NO_DECODE );
+
+        if ( !aOrigURL.getLength() && bSave )
+        {
+            // this is a new document, let it be stored before switching to the shared mode;
+            // the storing should be done without shared flag, since it is possible that the
+            // target location does not allow to create sharing control file;
+            // the shared flag will be set later after creation of sharing control file
+            SfxViewFrame* pViewFrame = SfxViewFrame::GetFirst( this );
+
+            if ( pViewFrame )
+            {
+                // TODO/LATER: currently the application guards against the reentrance problem
+				const SfxPoolItem* pItem = pViewFrame->GetBindings().ExecuteSynchron( HasName() ? SID_SAVEDOC : SID_SAVEASDOC );
+                SfxBoolItem* pResult = PTR_CAST( SfxBoolItem, pItem );
+                bResult = ( pResult && pResult->GetValue() );
+                if ( bResult )
+                    aOrigURL = GetMedium()->GetURLObject().GetMainURL( INetURLObject::NO_DECODE );
+            }
+        }
+
         sal_Bool bOldValue = HasSharedXMLFlagSet();
         SetSharedXMLFlag( bShared );
 
-        ::rtl::OUString aOrigURL = GetMedium()->GetURLObject().GetMainURL( INetURLObject::NO_DECODE );
         sal_Bool bRemoveEntryOnError = sal_False;
         if ( bResult && bShared )
         {
@@ -575,6 +598,7 @@ sal_Bool SfxObjectShell::SwitchToShared( sal_Bool bShared, sal_Bool bSave )
             if ( pViewFrame )
             {
                 // TODO/LATER: currently the application guards against the reentrance problem
+                SetModified( sal_True ); // the modified flag has to be set to let the document be stored with the shared flag
 				const SfxPoolItem* pItem = pViewFrame->GetBindings().ExecuteSynchron( HasName() ? SID_SAVEDOC : SID_SAVEASDOC );
                 SfxBoolItem* pResult = PTR_CAST( SfxBoolItem, pItem );
                 bResult = ( pResult && pResult->GetValue() );
@@ -2165,7 +2189,7 @@ String SfxObjectShell::UpdateTitle( SfxMedium* pMed, USHORT nDocViewNumber )
         	aTitle += String( SfxResId(STR_REPAIREDDOCUMENT) );
 	}
 
-	if ( IsReadOnlyUI() || pMed && pMed->IsReadOnly() )
+	if ( IsReadOnlyUI() || (pMed && pMed->IsReadOnly()) )
         aTitle += String( SfxResId(STR_READONLY) );
     else if ( IsDocShared() )
         aTitle += String( SfxResId(STR_SHARED) );

@@ -182,10 +182,11 @@ public:
 #endif
 
     void                CheckFileDate( const ::com::sun::star::util::DateTime& aInitDate );
-    ::com::sun::star::util::DateTime GetInitFileDate();
+    sal_Bool            DocNeedsFileDateCheck();
+    ::com::sun::star::util::DateTime GetInitFileDate( sal_Bool bIgnoreOldValue );
 
     ::com::sun::star::uno::Reference< ::com::sun::star::ucb::XContent > GetContent() const;
-	const String&       GetPhysicalName() const;
+	const String&       GetPhysicalName( sal_Bool bForceCreateTempIfRemote = sal_True ) const;
 	void                SetTemporary( sal_Bool bTemp );
     sal_Bool            IsTemporary() const;
     sal_Bool            IsRemote();
@@ -259,6 +260,7 @@ public:
 	void				SetCharset( ::rtl::OUString );
     ::rtl::OUString     GetBaseURL( bool bForSaving=false );
 
+    sal_Bool            SupportsActiveStreaming( const rtl::OUString &rName ) const;
 #ifdef USE_JAVA
 	void				CheckForMovedFile( SfxObjectShell *pDoc );
 #endif	// USE_JAVA
