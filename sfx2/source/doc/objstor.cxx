@@ -153,7 +153,7 @@
 #include <vcl/fixed.hxx>
 #endif
 
-#include "../../../build/sw/inc/statstr.hrc"
+#include "../../../build/ooo-build-3.1.1.1/build/ooo310-m19/sw/inc/statstr.hrc"
 
 #endif	// USE_JAVA
 
