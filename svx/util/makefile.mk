@@ -51,8 +51,6 @@ RSCLOCINC+=-I$(PRJ)$/source$/svdraw
 
 LIB1TARGET= $(SLB)$/$(TARGET).lib
 LIB1FILES=\
-	$(SLB)$/animation.lib \
-	$(SLB)$/overlay.lib \
 	$(SLB)$/svdraw.lib \
 	$(SLB)$/form.lib
 
@@ -64,10 +62,6 @@ LIB2TARGET= $(SLB)$/$(TARGET)_2.lib
 LIB2FILES=\
 	$(SLB)$/init.lib \
 	$(SLB)$/items.lib     \
-	$(SLB)$/svxlink.lib   \
-	$(SLB)$/svxrtf.lib    \
-	$(SLB)$/editeng.lib   \
-	$(SLB)$/outliner.lib \
 	$(SLB)$/dialogs.lib	\
 	$(SLB)$/mnuctrls.lib  \
 	$(SLB)$/options.lib   \
@@ -80,40 +74,112 @@ LIB3TARGET= $(SLB)$/$(TARGET)_3.lib
 LIB3FILES=\
 	$(SLB)$/unodraw.lib	\
 	$(SLB)$/unogallery.lib\
-	$(SLB)$/gal.lib		\
 	$(SLB)$/accessibility.lib	\
-	$(SLB)$/customshapes.lib\
-	$(SLB)$/toolbars.lib \
-	$(SLB)$/properties.lib \
-	$(SLB)$/contact.lib \
-	$(SLB)$/mixer.lib \
-        $(SLB)$/event.lib
+	$(SLB)$/customshapes.lib
 
 LIB4TARGET= $(SLB)$/$(TARGET)_4.lib
 LIB4FILES=\
 	$(SLB)$/fmcomp.lib \
 	$(SLB)$/engine3d.lib \
-	$(SLB)$/msfilter.lib \
-	$(SLB)$/xout.lib \
-	$(SLB)$/xml.lib \
 	$(SLB)$/table.lib
+
+# Objects needed for the svxcore library.
+LIB5TARGET= $(SLB)$/$(TARGET)_5.lib
+LIB5FILES=\
+	$(SLB)$/accessibility-core.lib \
+	$(SLB)$/animation.lib \
+	$(SLB)$/attribute.lib \
+	$(SLB)$/contact.lib \
+	$(SLB)$/customshapes-core.lib \
+	$(SLB)$/dialogs-core.lib \
+	$(SLB)$/editeng.lib \
+	$(SLB)$/engine3d-core.lib \
+	$(SLB)$/event.lib \
+	$(SLB)$/fmcomp-core.lib \
+	$(SLB)$/form-core.lib \
+	$(SLB)$/gal.lib \
+	$(SLB)$/items-core.lib \
+	$(SLB)$/msfilter-core.lib \
+	$(SLB)$/options-core.lib   \
+	$(SLB)$/outliner.lib \
+	$(SLB)$/overlay.lib \
+	$(SLB)$/primitive2d.lib \
+	$(SLB)$/primitive3d.lib \
+	$(SLB)$/properties.lib \
+	$(SLB)$/svdraw-core.lib \
+	$(SLB)$/svxlink.lib \
+	$(SLB)$/svxrtf-core.lib    \
+	$(SLB)$/table-core.lib \
+	$(SLB)$/tbxctrls-core.lib  \
+	$(SLB)$/toolbars.lib \
+	$(SLB)$/unodraw-core.lib \
+	$(SLB)$/unoedit-core.lib   \
+	$(SLB)$/xml.lib \
+	$(SLB)$/xout.lib
+
+# Objects needed for the svxmsfilter library.
+LIB6TARGET= $(SLB)$/$(TARGET)_6.lib
+LIB6FILES=\
+	$(SLB)$/msfilter-msfilter.lib \
+	$(SLB)$/svdraw-msfilter.lib \
+	$(SLB)$/svxrtf.lib
 
 HELPIDFILES=    ..$/inc$/helpid.hrc
 
-# svx
-SHL1TARGET= svx$(DLLPOSTFIX)
-SHL1IMPLIB= i$(TARGET)
+# svxcore
+SHL1TARGET= svxcore$(DLLPOSTFIX)
+SHL1IMPLIB= isvxcore
 SHL1USE_EXPORTS=name
+SHL1LIBS= $(LIB5TARGET)
 
-SHL1LIBS= $(LIB1TARGET) $(LIB2TARGET) $(LIB3TARGET) $(LIB4TARGET)
 SHL1STDLIBS= \
-			$(AVMEDIALIB) \
+             $(AVMEDIALIB) \
+             $(SFX2LIB) \
+             $(XMLOFFLIB) \
+             $(GOODIESLIB) \
+             $(BASEGFXLIB) \
+             $(DRAWINGLAYERLIB) \
+             $(LNGLIB) \
+             $(BASICLIB) \
+             $(SVTOOLLIB) \
+             $(TKLIB) \
+             $(VCLLIB) \
+             $(SVLLIB) \
+             $(SOTLIB) \
+             $(UNOTOOLSLIB) \
+             $(TOOLSLIB) \
+             $(I18NISOLANGLIB) \
+             $(COMPHELPERLIB) \
+             $(UCBHELPERLIB) \
+             $(CPPUHELPERLIB) \
+             $(CPPULIB) \
+             $(VOSLIB) \
+             $(SALLIB) \
+             $(ICUUCLIB)
+
+.IF "$(GUIBASE)"=="java"
+SHL1STDLIBS+=-framework CoreFoundation
+.ENDIF		# "$(GUIBASE)"=="java"
+
+SHL1DEF=	$(MISC)$/$(SHL1TARGET).def
+DEF1NAME=	$(SHL1TARGET)
+DEFLIB1NAME=$(TARGET)_5
+
+# svx
+SHL2TARGET= svx$(DLLPOSTFIX)
+SHL2IMPLIB= i$(TARGET)
+SHL2USE_EXPORTS=name
+SHL2DEPN=$(SHL1TARGETN)
+
+SHL2LIBS= $(LIB1TARGET) $(LIB2TARGET) $(LIB3TARGET) $(LIB4TARGET)
+SHL2STDLIBS= \
+            $(SVXCORELIB) \
             $(SFX2LIB) \
 			$(XMLOFFLIB) \
             $(GOODIESLIB) \
             $(BASEGFXLIB) \
+            $(DRAWINGLAYERLIB) \
             $(BASICLIB) \
-            $(LNGLIB) \
             $(SVTOOLLIB) \
             $(TKLIB) \
             $(VCLLIB) \
@@ -128,37 +194,33 @@ SHL1STDLIBS= \
 			$(CPPUHELPERLIB)	\
 			$(CPPULIB) \
             $(VOSLIB) \
-            $(SALLIB) \
-            $(ICUUCLIB)
+            $(SALLIB)
 
 .IF "$(GUI)"=="WNT"
-SHL1STDLIBS+=$(SHELLLIB)
+SHL2STDLIBS+=$(SHELLLIB)
 .ENDIF # WNT
-
-.IF "$(GUIBASE)"=="java"
-SHL1STDLIBS+=-framework CoreFoundation
-.ENDIF		# "$(GUIBASE)"=="java"
-
-SHL1DEF=	$(MISC)$/$(SHL1TARGET).def
-DEF1NAME=	$(SHL1TARGET)
-DEFLIB1NAME=$(TARGET) $(TARGET)_2 $(TARGET)_3 $(TARGET)_4
-
-
-# cui
-SHL2TARGET= cui$(DLLPOSTFIX)
-SHL2VERSIONMAP= cui.map
-SHL2IMPLIB=icui
-SHL2DEPN=$(SHL1TARGETN)
 
 SHL2DEF=	$(MISC)$/$(SHL2TARGET).def
 DEF2NAME=	$(SHL2TARGET)
+DEFLIB2NAME=$(TARGET) $(TARGET)_2 $(TARGET)_3 $(TARGET)_4
 
-SHL2LIBS=	$(SLB)$/cui.lib
-SHL2OBJS= \
+
+# cui
+SHL3TARGET= cui$(DLLPOSTFIX)
+SHL3VERSIONMAP= cui.map
+SHL3IMPLIB=icui
+SHL3DEPN=$(SHL2TARGETN)
+
+SHL3DEF=	$(MISC)$/$(SHL3TARGET).def
+DEF3NAME=	$(SHL3TARGET)
+
+SHL3LIBS=	$(SLB)$/cui.lib
+SHL3OBJS= \
         $(SLO)$/cuiexp.obj     \
         $(SLO)$/dlgfact.obj
 
-SHL2STDLIBS= \
+SHL3STDLIBS= \
+            $(SVXCORELIB) \
             $(SVXLIB) \
 			$(AVMEDIALIB) \
             $(SFX2LIB) \
@@ -178,38 +240,69 @@ SHL2STDLIBS= \
 			$(CPPULIB) \
             $(VOSLIB) \
             $(SALLIB) \
-            $(JVMFWKLIB) \
-            $(ICUUCLIB)
+            $(JVMFWKLIB)
 
 .IF "$(GUI)"=="WNT"
-SHL2STDLIBS+= \
+SHL3STDLIBS+= \
              $(SHLWAPILIB) \
              $(CPPUHELPERLIB) \
              $(ADVAPI32LIB)
 .ENDIF # WNT
 
+# svxmsfilter library
+SHL4TARGET= svxmsfilter$(DLLPOSTFIX)
+SHL4IMPLIB= isvxmsfilter
+SHL4USE_EXPORTS=name
+SHL4DEPN=$(SHL1TARGETN)
+SHL4LIBS= $(LIB6TARGET)
+
+SHL4STDLIBS= \
+             $(SVXCORELIB) \
+             $(SFX2LIB) \
+             $(XMLOFFLIB) \
+             $(GOODIESLIB) \
+             $(BASEGFXLIB) \
+             $(BASICLIB) \
+             $(SVTOOLLIB) \
+             $(TKLIB) \
+             $(VCLLIB) \
+             $(SVLLIB) \
+             $(SOTLIB) \
+             $(UNOTOOLSLIB) \
+             $(TOOLSLIB) \
+             $(XMLSCRIPTLIB) \
+             $(COMPHELPERLIB) \
+             $(CPPUHELPERLIB) \
+             $(CPPULIB) \
+             $(SALLIB)
+
+SHL4DEF=	$(MISC)$/$(SHL4TARGET).def
+DEF4NAME=	$(SHL4TARGET)
+DEFLIB4NAME=$(TARGET)_6
+
 # ------------------------------------------------------------------------------
 
 # Resource files
 SRSFILELIST=\
-                $(SRS)$/svdstr.srs      \
-                $(SRS)$/editeng.srs     \
-                $(SRS)$/outliner.srs \
-                $(SRS)$/dialogs.srs     \
-                $(SRS)$/drawdlgs.srs \
-                $(SRS)$/mnuctrls.srs \
-                $(SRS)$/stbctrls.srs \
-                $(SRS)$/tbxctrls.srs \
-                $(SRS)$/options.srs     \
-                $(SRS)$/svxitems.srs \
-				$(SRS)$/form.srs \
-				$(SRS)$/fmcomp.srs \
-				$(SRS)$/engine3d.srs \
-				$(SRS)$/unodraw.srs \
-                $(SRS)$/svxlink.srs \
-                $(SRS)$/accessibility.srs \
-                $(SRS)$/toolbars.srs \
-                $(SOLARCOMMONRESDIR)$/sfx.srs
+        $(SRS)$/svdstr.srs \
+        $(SRS)$/editeng.srs \
+        $(SRS)$/outliner.srs \
+        $(SRS)$/dialogs.srs \
+        $(SRS)$/drawdlgs.srs \
+        $(SRS)$/mnuctrls.srs \
+        $(SRS)$/stbctrls.srs \
+        $(SRS)$/tbxctrls.srs \
+        $(SRS)$/options.srs \
+        $(SRS)$/svxitems.srs \
+        $(SRS)$/form.srs \
+        $(SRS)$/fmcomp.srs \
+        $(SRS)$/engine3d.srs \
+        $(SRS)$/unodraw.srs \
+        $(SRS)$/svxlink.srs \
+        $(SRS)$/accessibility.srs \
+        $(SRS)$/table.srs \
+        $(SRS)$/toolbars.srs \
+        $(SOLARCOMMONRESDIR)$/sfx.srs
 
 RESLIB1NAME=svx
 RESLIB1IMAGES=$(PRJ)$/res $(PRJ)$/source/svdraw

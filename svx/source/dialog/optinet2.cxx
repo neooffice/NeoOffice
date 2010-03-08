@@ -776,6 +776,7 @@ SvxSearchTabPage::SvxSearchTabPage(Window* pParent, const SfxItemSet& rSet ) :
 	sModifyMsg(SVX_RES(MSG_MODIFY))
 {
 	FreeResource();
+
     SetExchangeSupport();
 	aCaseED.SelectEntryPos(0); // falls kein Eintrag vorhanden ist, kann es sonst "Arger geben
 
@@ -796,6 +797,8 @@ SvxSearchTabPage::SvxSearchTabPage(Window* pParent, const SfxItemSet& rSet ) :
 	aAndRB.SetClickHdl( aLink );
 	aOrRB.SetClickHdl( aLink );
 	aExactRB.SetClickHdl( aLink );
+
+    InitControls_Impl();
 }
 
 // -----------------------------------------------------------------------
@@ -920,6 +923,52 @@ BOOL SvxSearchTabPage::ConfirmLeave( const String& rStringSelection)
 	}
 	return TRUE;
 }
+
+// -----------------------------------------------------------------------
+
+void SvxSearchTabPage::InitControls_Impl()
+{
+    // detect longest label text
+    sal_Int32 i = 0;
+    long nLabelTextWidth = 0;
+    Window* pLabels[] = { &aSearchNameFT, &aSearchFT, &aURLFT, &aPostFixFT, &aSeparatorFT, &aCaseFT };
+    Window** pLabel = pLabels;
+    const sal_Int32 nLabelCount = sizeof( pLabels ) / sizeof( pLabels[0] );
+    for ( ; i < nLabelCount; ++i, ++pLabel )
+    {
+        long nTemp = (*pLabel)->GetCtrlTextWidth( (*pLabel)->GetText() );
+        if ( nTemp > nLabelTextWidth )
+            nLabelTextWidth = nTemp;
+    }
+
+    // resize all labels
+    nLabelTextWidth = nLabelTextWidth * 120 / 100; // additional space looks better
+    const long nLabelWidth = aSearchNameFT.GetSizePixel().Width();
+    const long nDelta = nLabelWidth - nLabelTextWidth;
+    pLabel = pLabels;
+    for ( i = 0; i < nLabelCount; ++i, ++pLabel )
+    {
+        Size aNewSize = (*pLabel)->GetSizePixel();
+        aNewSize.Width() += nDelta;
+        (*pLabel)->SetSizePixel( aNewSize );
+    }
+
+    // resize and move the edits
+    Window* pEdits[] = { &aSearchNameED, &aAndRB, &aOrRB,
+        &aExactRB, &aURLED, &aPostFixED, &aSeparatorED, &aCaseED };
+    Window** pEdit = pEdits;
+    const sal_Int32 nCCount = sizeof( pEdits ) / sizeof( pEdits[ 0 ] );
+    for ( i = 0; i < nCCount; ++i, ++pEdit )
+    {
+        Point aNewPos = (*pEdit)->GetPosPixel();
+        aNewPos.X() -= nDelta;
+        Size aNewSize = (*pEdit)->GetSizePixel();
+        if ( (*pEdit) != &aSeparatorED && (*pEdit) != &aCaseED )
+            aNewSize.Width() += nDelta;
+        (*pEdit)->SetPosSizePixel( aNewPos, aNewSize );
+    }
+}
+
 // -----------------------------------------------------------------------
 
 IMPL_LINK( SvxSearchTabPage, NewSearchHdl_Impl, PushButton *, EMPTYARG )
@@ -990,7 +1039,7 @@ IMPL_LINK( SvxSearchTabPage, DeleteSearchHdl_Impl, PushButton *, EMPTYARG)
 {
 	aChangePB.Enable(FALSE);     //add by BerryJia for fixing Bug102610 Time:2002-8-29 11:00 (China Standard Time GMT+08:00)
 	USHORT nPos = aSearchLB.GetSelectEntryPos();
-	DBG_ASSERT(nPos != LISTBOX_ENTRY_NOTFOUND, "kein Eintrag selektiert!")
+	DBG_ASSERT(nPos != LISTBOX_ENTRY_NOTFOUND, "kein Eintrag selektiert!");
     aSearchConfig.RemoveData(aSearchLB.GetSelectEntry());
     aSearchLB.RemoveEntry(nPos);
 	aSearchLB.SelectEntryPos(0);
@@ -1011,7 +1060,7 @@ IMPL_LINK( SvxSearchTabPage, SearchEntryHdl_Impl, ListBox*, pBox )
 			return 0;
 
 		const SvxSearchEngineData* pData = aSearchConfig.GetData(sSelection);
-        DBG_ASSERT(pData, "SearchEngine not available")
+        DBG_ASSERT(pData, "SearchEngine not available");
         if(pData)
         {
             aSearchNameED.SetText(sSelection);
@@ -1667,21 +1716,33 @@ void SvxSecurityTabPage::InitControls()
         if ( nTemp > nBtnTextWidth )
             nBtnTextWidth = nTemp;
     }
+
     nBtnTextWidth = nBtnTextWidth * 115 / 100; // a little offset
-    long nButtonWidth = maSecurityOptionsPB.GetSizePixel().Width();
-    long nMaxWidth = nButtonWidth * 130 / 100;
+    const long nButtonWidth = maSecurityOptionsPB.GetSizePixel().Width();
+    const long nMaxWidth = nButtonWidth * 140 / 100;
+    long nExtra = ( nBtnTextWidth > nMaxWidth ) ? nBtnTextWidth - nMaxWidth : 0;
     nBtnTextWidth = std::min( nBtnTextWidth, nMaxWidth );
+
     if ( nBtnTextWidth > nButtonWidth )
     {
         // so make the buttons broader and its control in front of it smaller
         long nDelta = nBtnTextWidth - nButtonWidth;
         pButton = pButtons;
+
+        if ( nExtra > 0 )
+        {
+            long nPos = (*pButton)->GetPosPixel().X() - nDelta;
+            long nWidth = (*pButton)->GetSizePixel().Width() + nDelta;
+            long nMaxExtra = GetOutputSizePixel().Width() - ( nPos + nWidth ) - 2;
+            nExtra = ( nExtra < nMaxExtra ) ? nExtra : nMaxExtra;
+        }
+
         for ( i = 0; i < nBCount; ++i, ++pButton )
         {
             Point aNewPos = (*pButton)->GetPosPixel();
             aNewPos.X() -= nDelta;
             Size aNewSize = (*pButton)->GetSizePixel();
-            aNewSize.Width() += nDelta;
+            aNewSize.Width() += ( nDelta + nExtra );
             (*pButton)->SetPosSizePixel( aNewPos, aNewSize );
         }
 
@@ -1843,7 +1904,7 @@ void SvxSecurityTabPage::Reset( const SfxItemSet& )
 		if( pCurDocShell->HasSecurityOptOpenReadOnly() && !bIsHTMLDoc )
 		{
 			maRecommReadOnlyCB.Check( pCurDocShell->IsSecurityOptOpenReadOnly() );
-//!			maRecommReadOnlyCB.Enable( !bIsReadonly );
+            maRecommReadOnlyCB.Enable( !bIsReadonly );
 		}
 		else
 			maRecommReadOnlyCB.Disable();

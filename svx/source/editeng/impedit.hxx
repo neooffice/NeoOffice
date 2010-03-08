@@ -60,6 +60,8 @@
 #include <com/sun/star/i18n/XExtendedInputSequenceChecker.hpp>
 #endif
 
+#include <i18npool/lang.h>
+
 #include <vos/ref.hxx>
 
 DBG_NAMEEX( EditView )
@@ -98,10 +100,9 @@ class TextRanger;
 class SvKeyValueIterator;
 class SvxForbiddenCharactersTable;
 class SvtCTLOptions;
-class Window;
-
 #include <svx/SpellPortions.hxx>
 
+#include <svx/eedata.hxx>
 
 class SvUShorts;
 class SvxNumberFormat;
@@ -298,7 +299,7 @@ public:
 
 	BOOL			IsVertical() const;
 
-	BOOL			PostKeyEvent( const KeyEvent& rKeyEvent, Window* pFrameWin = NULL );
+	BOOL			PostKeyEvent( const KeyEvent& rKeyEvent );
 
 	BOOL			MouseButtonUp( const MouseEvent& rMouseEvent );
 	BOOL			MouseButtonDown( const MouseEvent& rMouseEvent );
@@ -504,9 +505,6 @@ private:
     sal_Bool            bUseAutoColor;
     sal_Bool            bForceAutoColor;
 	sal_Bool			bCallParaInsertedOrDeleted;
-    sal_Bool			bVerboseTextComments; // #110496# Optional mtf
-                                              // comments for text
-                                              // layout (paras, lines etc)
     sal_Bool            bImpConvertFirstCall;   // specifies if ImpConvert is called the very first time after Convert was called
     sal_Bool            bFirstWordCapitalization;   // specifies if auto-correction should capitalize the first word or not
 
@@ -646,6 +644,7 @@ private:
     void                ImplExpandCompressedPortions( EditLine* pLine, ParaPortion* pParaPortion, long nRemainingWidth );
 
     void                ImplInitLayoutMode( OutputDevice* pOutDev, USHORT nPara, USHORT nIndex );
+    void                ImplInitDigitMode( OutputDevice* pOutDev, String* pString, xub_StrLen nStt, xub_StrLen nLen, LanguageType eLang );
 
 	EditPaM				ReadText( SvStream& rInput, EditSelection aSel );
 	EditPaM				ReadRTF( SvStream& rInput, EditSelection aSel );
@@ -713,15 +712,7 @@ private:
 		the output string at hand. This is necessary for slideshow
 		text effects.
      */
-    void 				ImplDrawWithComments( SvxFont& 								rFont,
-                                              const ::com::sun::star::lang::Locale& rLocale,
-                                              OutputDevice&							rOut,
-                                              GDIMetaFile& 							rMtf,
-                                              const Point&							rPos,
-                                              const String&							rTxt,
-                                              const USHORT 							nIdx,
-                                              const USHORT 							nLen,
-                                              const sal_Int32* 							pDXArray ) const;
+    void ImplFillTextMarkingVector(const ::com::sun::star::lang::Locale& rLocale, EEngineData::TextMarkingVector& rTextMarkingVector, const String& rTxt, const USHORT nIdx, const USHORT nLen) const;
 
 protected:
 	virtual void			Notify( SfxBroadcaster& rBC, const SfxHint& rHint );
@@ -803,7 +794,7 @@ public:
 	EditPaM			DeleteSelected( EditSelection aEditSelection);
     EditPaM         InsertText( const EditSelection& rCurEditSelection, sal_Unicode c, sal_Bool bOverwrite, sal_Bool bIsUserInput = sal_False );
 	EditPaM			InsertText( EditSelection aCurEditSelection, const String& rStr );
-	EditPaM			AutoCorrect( const EditSelection& rCurEditSelection, sal_Unicode c, bool bOverwrite, Window* pFrameWin = NULL );
+	EditPaM			AutoCorrect( const EditSelection& rCurEditSelection, sal_Unicode c, sal_Bool bOverwrite );
 	EditPaM			DeleteLeftOrRight( const EditSelection& rEditSelection, BYTE nMode, BYTE nDelMode = DELMODE_SIMPLE );
 	EditPaM			InsertParaBreak( EditSelection aEditSelection );
 	EditPaM			InsertLineBreak( EditSelection aEditSelection );
@@ -1035,10 +1026,6 @@ public:
 
 	vos::ORef<SvxForbiddenCharactersTable>	GetForbiddenCharsTable( BOOL bGetInternal = TRUE ) const;
 	void				SetForbiddenCharsTable( vos::ORef<SvxForbiddenCharactersTable> xForbiddenChars );
-
-    // #110496#
-    void				EnableVerboseTextComments( BOOL bEnable ) { bVerboseTextComments=bEnable; }
-    BOOL				IsVerboseTextComments() const { return bVerboseTextComments; }
 
 	BOOL				mbLastTryMerge;
 

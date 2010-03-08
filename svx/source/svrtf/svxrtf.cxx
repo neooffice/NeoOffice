@@ -60,7 +60,7 @@ using namespace ::com::sun::star;
 SV_IMPL_PTRARR( SvxRTFColorTbl, ColorPtr )
 SV_IMPL_PTRARR( SvxRTFItemStackList, SvxRTFItemStackType* )
 
-const CharSet lcl_GetDefaultTextEncodingForRTF()
+CharSet lcl_GetDefaultTextEncodingForRTF()
 {
 
     ::com::sun::star::lang::Locale aLocale;
@@ -1093,7 +1093,7 @@ void SvxRTFParser::AttrGroupEnd()	// den akt. Bearbeiten, vom Stack loeschen
 					_ClearStyleAttr( *pOld );
 #else
                 /*
-                #i21422# 
+                #i21422#
                 If the parent (pAkt) sets something e.g. , and the child (pOld)
                 unsets it and the style both are based on has it unset then
                 clearing the pOld by looking at the style is clearly a disaster
@@ -1246,7 +1246,7 @@ SvxRTFStyleType::SvxRTFStyleType( SfxItemPool& rPool, const USHORT* pWhichRange 
 	: aAttrSet( rPool, pWhichRange )
 {
 	nOutlineNo = BYTE(-1);			// nicht gesetzt
-	nBasedOn = 0; 
+	nBasedOn = 0;
 	bBasedOnIsSet = FALSE;          //$flr #117411#
 	nNext = 0;
 	bIsCharFmt = FALSE;
@@ -1476,6 +1476,7 @@ RTFPlainAttrMapIds::RTFPlainAttrMapIds( const SfxItemPool& rPool )
 	nPosture = rPool.GetTrueWhich( SID_ATTR_CHAR_POSTURE, FALSE );
 	nShadowed = rPool.GetTrueWhich( SID_ATTR_CHAR_SHADOWED, FALSE );
 	nUnderline = rPool.GetTrueWhich( SID_ATTR_CHAR_UNDERLINE, FALSE );
+	nOverline = rPool.GetTrueWhich( SID_ATTR_CHAR_OVERLINE, FALSE );
 	nWeight = rPool.GetTrueWhich( SID_ATTR_CHAR_WEIGHT, FALSE );
 	nWordlineMode = rPool.GetTrueWhich( SID_ATTR_CHAR_WORDLINEMODE, FALSE );
 	nAutoKerning = rPool.GetTrueWhich( SID_ATTR_CHAR_AUTOKERN, FALSE );

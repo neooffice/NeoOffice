@@ -82,13 +82,17 @@ ModalDialog RID_DEFAULTABOUT
 		Pos = MAP_APPFONT ( 54 , 6 ) ;
 		Size = MAP_APPFONT ( 118 , 16 ) ;
 		WordBreak = TRUE ;
-	    Text = "%PRODUCTNAME %PRODUCTVERSION %PRODUCTEXTENSION" ;
+// #ifdef USE_JAVA
+		Text = "%PRODUCTNAME %PRODUCTVERSION %PRODUCTEXTENSION" ;
+// #endif	// USE_JAVA
    	};
 	FixedText ABOUT_FTXT_COPYRIGHT
 	{
 		Pos = MAP_APPFONT ( 54 , 25 ) ;
 		Size = MAP_APPFONT ( 168 , 51 ) ;
-	 	Text =  "Copyright 2003-2010 Planamesa Inc.\nwith portions copyright 2000-2009 Sun Microsystems Inc.\nThis product has been created based on OpenOffice.org.";
+// #ifdef USE_JAVA
+ 		Text = "Copyright 2003-2010 Planamesa Inc.\nwith portions copyright 2000-2009 Sun Microsystems Inc.\nThis product has been created based on OpenOffice.org.";
+// #endif	// USE_JAVA
 		WordBreak = TRUE ;
 	};
 	StringArray ABOUT_STR_DEVELOPER_ARY

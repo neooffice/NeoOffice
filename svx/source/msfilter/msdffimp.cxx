@@ -87,9 +87,7 @@
 #endif
 #include <unotools/localfilehelper.hxx>
 #include <svx/escherex.hxx>
-#ifndef _BGFX_RANGE_B2IRANGE_HXX
 #include <basegfx/range/b2drange.hxx>
-#endif
 #include <com/sun/star/container/XIdentifierContainer.hpp>
 #include <com/sun/star/drawing/XGluePointsSupplier.hpp>
 #include <com/sun/star/drawing/Position3D.hpp>
@@ -347,11 +345,11 @@ void Impl_OlePres::Write( SvStream & rStm )
 		// Immer auf 1/100 mm, bis Mtf-Loesung gefunden
 		// Annahme (keine Skalierung, keine Org-Verschiebung)
 		DBG_ASSERT( pMtf->GetPrefMapMode().GetScaleX() == Fraction( 1, 1 ),
-					"X-Skalierung im Mtf" )
+					"X-Skalierung im Mtf" );
 		DBG_ASSERT( pMtf->GetPrefMapMode().GetScaleY() == Fraction( 1, 1 ),
-					"Y-Skalierung im Mtf" )
+					"Y-Skalierung im Mtf" );
 		DBG_ASSERT( pMtf->GetPrefMapMode().GetOrigin() == Point(),
-					"Origin-Verschiebung im Mtf" )
+					"Origin-Verschiebung im Mtf" );
 		MapUnit nMU = pMtf->GetPrefMapMode().GetMapUnit();
 		if( MAP_100TH_MM != nMU )
 		{
@@ -368,7 +366,7 @@ void Impl_OlePres::Write( SvStream & rStm )
 	}
 	else
 	{
-		DBG_ERROR( "unknown format" )
+		DBG_ERROR( "unknown format" );
 	}
 	ULONG nEndPos = rStm.Tell();
 	rStm.Seek( nPos );
@@ -1669,12 +1667,7 @@ void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, co
 			XGradientStyle eGrad = XGRAD_LINEAR;
 			sal_Int32 nChgColors = 0;
 
-			if ( !nAngle )
-				nChgColors ^= 1;
-
-			if ( !nFocus )
-				nChgColors ^= 1;
-			else if ( nFocus < 0 )		// Bei negativem Focus sind die Farben zu tauschen
+			if ( nFocus < 0 )		// Bei negativem Focus sind die Farben zu tauschen
 			{
 				nFocus =- nFocus;
 				nChgColors ^= 1;
@@ -1682,8 +1675,8 @@ void DffPropertyReader::ApplyFillAttributes( SvStream& rIn, SfxItemSet& rSet, co
 			if( nFocus > 40 && nFocus < 60 )
 			{
 				eGrad = XGRAD_AXIAL;	// Besser gehts leider nicht
-				nChgColors ^= 1;
 			}
+
 			USHORT nFocusX = (USHORT)nFocus;
 			USHORT nFocusY = (USHORT)nFocus;
 
@@ -4454,7 +4447,7 @@ SdrObject* SvxMSDffManager::ImportGraphic( SvStream& rSt, SfxItemSet& rSet, Rect
 
 // PptSlidePersistEntry& rPersistEntry, SdPage* pPage
 SdrObject* SvxMSDffManager::ImportObj( SvStream& rSt, void* pClientData,
-	const Rectangle& rClientRect, const Rectangle& rGlobalChildRect, int nCalledByGroup, sal_Int32* pShapeId )
+    Rectangle& rClientRect, const Rectangle& rGlobalChildRect, int nCalledByGroup, sal_Int32* pShapeId )
 {
     SdrObject* pRet = NULL;
     DffRecordHeader aObjHd;
@@ -4472,7 +4465,7 @@ SdrObject* SvxMSDffManager::ImportObj( SvStream& rSt, void* pClientData,
 }
 
 SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& rSt, void* pClientData,
-											const Rectangle& rClientRect, const Rectangle& rGlobalChildRect,
+                                            Rectangle& rClientRect, const Rectangle& rGlobalChildRect,
 												int nCalledByGroup, sal_Int32* pShapeId )
 {
 	SdrObject* pRet = NULL;
@@ -4496,8 +4489,6 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
 			nGroupRotateAngle = mnFix16Angle;
 
 			Rectangle aClientRect( rClientRect );
-			if ( rClientRect.IsEmpty() )
-				 aClientRect = pRet->GetSnapRect();
 
 			Rectangle aGlobalChildRect;
 			if ( !nCalledByGroup || rGlobalChildRect.IsEmpty() )
@@ -4508,13 +4499,13 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
 			if ( ( nGroupRotateAngle > 4500 && nGroupRotateAngle <= 13500 )
 				|| ( nGroupRotateAngle > 22500 && nGroupRotateAngle <= 31500 ) )
 			{
-				sal_Int32 nHalfWidth = ( aGlobalChildRect.GetWidth() + 1 ) >> 1;
-				sal_Int32 nHalfHeight = ( aGlobalChildRect.GetHeight() + 1 ) >> 1;
-				Point aTopLeft( aGlobalChildRect.Left() + nHalfWidth - nHalfHeight,
-								aGlobalChildRect.Top() + nHalfHeight - nHalfWidth );
-				Size aNewSize( aGlobalChildRect.GetHeight(), aGlobalChildRect.GetWidth() );
+				sal_Int32 nHalfWidth = ( aClientRect.GetWidth() + 1 ) >> 1;
+				sal_Int32 nHalfHeight = ( aClientRect.GetHeight() + 1 ) >> 1;
+				Point aTopLeft( aClientRect.Left() + nHalfWidth - nHalfHeight,
+								aClientRect.Top() + nHalfHeight - nHalfWidth );
+				Size aNewSize( aClientRect.GetHeight(), aClientRect.GetWidth() );
 				Rectangle aNewRect( aTopLeft, aNewSize );
-				aGlobalChildRect = aNewRect;
+				aClientRect = aNewRect;
 			}
 
 			// now importing the inner objects of the group
@@ -4576,7 +4567,7 @@ SdrObject* SvxMSDffManager::ImportGroup( const DffRecordHeader& rHd, SvStream& r
 }
 
 SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& rSt, void* pClientData,
-											const Rectangle& rClientRect, const Rectangle& rGlobalChildRect,
+                                            Rectangle& rClientRect, const Rectangle& rGlobalChildRect,
 											int nCalledByGroup, sal_Int32* pShapeId )
 {
 	SdrObject* pRet = NULL;
@@ -4687,7 +4678,12 @@ SdrObject* SvxMSDffManager::ImportShape( const DffRecordHeader& rHd, SvStream& r
 		if ( aObjData.nSpFlags & SP_FGROUP )
 		{
 			pRet = new SdrObjGroup;
-			pRet->NbcSetLogicRect( aBoundRect );		// SJ: SnapRect is allowed to be set at the group only for the first time
+            /*  After CWS aw033 has been integrated, an empty group object
+                cannot store its resulting bounding rectangle anymore. We have
+                to return this rectangle via rClientRect now, but only, if
+                caller has not passed an own bounding ractangle. */
+            if ( rClientRect.IsEmpty() )
+                 rClientRect = aBoundRect;
 			nGroupShapeFlags = aObjData.nSpFlags;		// #73013#
 		}
 		else if ( ( aObjData.eShapeType != mso_sptNil ) || IsProperty( DFF_Prop_pVertices ) || bGraphic )
@@ -6658,7 +6654,7 @@ BOOL SvxMSDffManager::GetShapeContainerData( SvStream& rSt,
             aInfo.nTxBxComp = ( aInfo.nTxBxComp & 0xFFFF0000 ) +
                               nDrawingContainerId;
             DBG_ASSERT( (aInfo.nTxBxComp & 0x0000FFFF) == nDrawingContainerId,
-                        "<SvxMSDffManager::GetShapeContainerData(..)> - internal drawing container Id could not be correctly merged into DFF_msofbtClientTextbox value." )
+                        "<SvxMSDffManager::GetShapeContainerData(..)> - internal drawing container Id could not be correctly merged into DFF_msofbtClientTextbox value." );
             // <--
 		}
 		else
@@ -7529,6 +7525,18 @@ com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >  SvxMS
                 pFilter = aMatch.GetFilter4EA( aType );
         }
 
+//#define DBG_EXTRACTOLESTREAMS
+#ifdef DBG_EXTRACTOLESTREAMS
+        static sal_Int32 nCount(0);
+        String aTmpName(String::CreateFromAscii(RTL_CONSTASCII_STRINGPARAM("/tmp/embedded_stream_")));
+        aTmpName += String::CreateFromInt32(nCount++);
+        aTmpName += String::CreateFromAscii(RTL_CONSTASCII_STRINGPARAM(".bin"));
+        SvFileStream aTmpStream(aTmpName,STREAM_READ|STREAM_WRITE|STREAM_TRUNC);
+        pStream->Seek(0);
+        *pStream >> aTmpStream;
+        aTmpStream.Close();
+#endif
+
         if ( pName || pFilter )
         {
             //Reuse current ole name
@@ -7557,9 +7565,19 @@ com::sun::star::uno::Reference < com::sun::star::embed::XEmbeddedObject >  SvxMS
             ::rtl::OUString aName( aDstStgName );
             comphelper::EmbeddedObjectContainer aCnt( rDestStorage );
             xObj = aCnt.InsertEmbeddedObject( aMedium, aName );
+
             if ( !xObj.is() )
-                // TODO/LATER: error handling
-                return xObj;
+            {
+                if( aFilterName.getLength() )
+                {
+                    // throw the filter parameter away as workaround
+                    aMedium.realloc( 2 );
+                    xObj = aCnt.InsertEmbeddedObject( aMedium, aName );
+                }
+
+                if ( !xObj.is() )
+                     return xObj;
+            }
 
             // TODO/LATER: ViewAspect must be passed from outside!
             sal_Int64 nViewAspect = embed::Aspects::MSOLE_CONTENT;

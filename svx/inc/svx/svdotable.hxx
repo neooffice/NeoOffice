@@ -42,9 +42,15 @@
 class SvStream;
 class SfxStyleSheet;
 
+namespace sdr { namespace contact {
+	class ViewContactOfTableObj;
+}}
+
 namespace sdr { namespace table {
 
+class TableLayouter;
 struct ImplTableShadowPaintInfo;
+
 #ifdef USE_JAVA
 class SvxTableController;
 #endif	// USE_JAVA
@@ -219,9 +225,6 @@ public:
 	virtual void SetModel(SdrModel* pNewModel);
 	virtual void TakeObjInfo(SdrObjTransformInfoRec& rInfo) const;
 	virtual UINT16 GetObjIdentifier() const;
-	virtual sal_Bool DoPaintObject(XOutputDevice& rOut, const SdrPaintInfoRec& rInfoRec) const;
-	virtual void RecalcBoundRect();
-
 	virtual void SetChanged();
 
 	virtual FASTBOOL AdjustTextFrameWidthAndHeight(Rectangle& rR, FASTBOOL bHgt=TRUE, FASTBOOL bWdt=TRUE) const;
@@ -230,7 +233,7 @@ public:
 	virtual void TakeObjNameSingul(String& rName) const;
 	virtual void TakeObjNamePlural(String& rName) const;
 	virtual void operator=(const SdrObject& rObj);
-	virtual basegfx::B2DPolyPolygon TakeXorPoly(sal_Bool bDetail) const;
+	virtual basegfx::B2DPolyPolygon TakeXorPoly() const;
 	virtual basegfx::B2DPolyPolygon TakeContour() const;
 	virtual void RecalcSnapRect();
 	virtual const Rectangle& GetSnapRect() const;
@@ -246,13 +249,12 @@ public:
 	virtual SdrHdl* GetHdl(sal_uInt32 nHdlNum) const;
 	virtual void AddToHdlList(SdrHdlList& rHdlList) const;
 
-	virtual FASTBOOL HasSpecialDrag() const;
-	virtual FASTBOOL BegDrag(SdrDragStat& rDrag) const;
-	virtual FASTBOOL MovDrag(SdrDragStat& rDrag) const;
-	virtual FASTBOOL EndDrag(SdrDragStat& rDrag);
-	virtual void BrkDrag(SdrDragStat& rDrag) const;
-	virtual String GetDragComment(const SdrDragStat& rDrag, FASTBOOL bUndoDragComment, FASTBOOL bCreateComment) const;
-	virtual basegfx::B2DPolyPolygon TakeDragPoly(const SdrDragStat& rDrag) const;
+    // special drag methods
+    virtual bool hasSpecialDrag() const;
+	virtual bool beginSpecialDrag(SdrDragStat& rDrag) const;
+	virtual bool applySpecialDrag(SdrDragStat& rDrag);
+	virtual String getSpecialDragComment(const SdrDragStat& rDrag) const;
+	virtual basegfx::B2DPolyPolygon getSpecialDragPoly(const SdrDragStat& rDrag) const;
 
 	virtual FASTBOOL BegCreate(SdrDragStat& rStat);
 	virtual FASTBOOL MovCreate(SdrDragStat& rStat);
@@ -264,16 +266,11 @@ public:
 
 	virtual void NbcMove(const Size& rSiz);
 	virtual void NbcResize(const Point& rRef, const Fraction& xFact, const Fraction& yFact);
-//	virtual void NbcRotate(const Point& rRef, long nWink, double sn, double cs);
-//	virtual void NbcMirror(const Point& rRef1, const Point& rRef2);
-//	virtual void NbcShear(const Point& rRef, long nWink, double tn, FASTBOOL bVShear);
 
-//	virtual FASTBOOL HasTextEdit() const;
-	virtual sal_Bool BegTextEdit(SdrOutliner& rOutl);
+    virtual sal_Bool BegTextEdit(SdrOutliner& rOutl);
 	virtual void EndTextEdit(SdrOutliner& rOutl);
 	virtual void TakeTextEditArea(Size* pPaperMin, Size* pPaperMax, Rectangle* pViewInit, Rectangle* pViewMin) const;
 	virtual void TakeTextEditArea(const sdr::table::CellPos& rPos, Size* pPaperMin, Size* pPaperMax, Rectangle* pViewInit, Rectangle* pViewMin) const;
-//	virtual SdrObject* CheckTextEditHit(const Point& rPnt, USHORT nTol, const SetOfByte* pVisiLayer) const;
 	virtual USHORT GetOutlinerViewAnchorMode() const;
 
 	virtual void NbcSetOutlinerParaObject(OutlinerParaObject* pTextObject);
@@ -283,10 +280,6 @@ public:
 
 	virtual void NbcReformatText();
 	virtual void ReformatText();
-
-//	virtual FASTBOOL CalcFieldValue(const SvxFieldItem& rField, USHORT nPara, USHORT nPos, FASTBOOL bEdit, Color*& rpTxtColor, Color*& rpFldColor, String& rRet) const;
-
-//	virtual SdrObject* DoConvertToPolyObj(BOOL bBezier) const;
 
 	void SetTextEditOutliner(SdrOutliner* pOutl) { pEdtOutl=pOutl; }
 
@@ -322,20 +315,13 @@ public:
 	/** hack for clipboard with calc and writer, export and import table content as rtf table */
 	static void ExportAsRTF( SvStream& rStrm, SdrTableObj& rObj );
 	static void ImportAsRTF( SvStream& rStrm, SdrTableObj& rObj );
-
 #ifdef USE_JAVA
 	void SetTableController( SvxTableController *pTableController ) { mpTableController = pTableController; }
 #endif	// USE_JAVA
 
+
 private:
 	void init( sal_Int32 nColumns, sal_Int32 nRows );
-
-	void ImpAddBorderLinesToBoundRect();
-
-	// paint stuff
-	void ImpDoPaintTableCell(const sdr::table::CellPos& rPos, XOutputDevice& rXOut, const ImplTableShadowPaintInfo* pShadowInfo = 0 ) const;
-	void ImpDoPaintCellText(const sdr::table::CellPos& rPos, XOutputDevice& rXOut, const SdrPaintInfoRec& rInfoRec ) const;
-	void ImplDoPaintBorders( XOutputDevice& rXOut, const ImplTableShadowPaintInfo* pShadowInfo = 0 ) const;
 
 	// BaseProperties section
 	SVX_DLLPRIVATE virtual sdr::properties::BaseProperties* CreateObjectSpecificProperties();
@@ -351,6 +337,12 @@ protected:
 
 private:
 	SdrOutliner* GetCellTextEditOutliner( const ::sdr::table::Cell& rCell ) const;
+
+private:
+	// for the ViewContactOfTableObj to build the primitive representation, it is necessary to access the
+	// TableLayouter for position and attribute informations
+	friend class sdr::contact::ViewContactOfTableObj;
+	const TableLayouter& getTableLayouter() const;
 
 	Rectangle	maLogicRect;
 private:
