@@ -39,6 +39,7 @@
 #include <com/sun/star/i18n/XBreakIterator.hpp>
 #include <com/sun/star/i18n/ScriptType.hpp>
 #include <com/sun/star/i18n/InputSequenceCheckMode.hpp>
+#include <com/sun/star/embed/EmbedVerbs.hpp>
 
 #include <com/sun/star/i18n/UnicodeScript.hpp>
 
@@ -148,11 +149,12 @@
 #include <vos/mutex.hxx>
 #include <vcl/svapp.hxx>
 
-#include "PostItMgr.hxx"
-#include "postit.hxx"
-
 #include <bookmrk.hxx>
 #include <doc.hxx>
+#include <ecmaflds.hxx>
+
+#include "PostItMgr.hxx"
+#include "postit.hxx"
 
 #ifdef USE_JAVA
 
@@ -1452,6 +1454,7 @@ void SwEditWin::KeyInput(const KeyEvent &rKEvt)
                        KS_NumIndentInc, KS_NumIndentDec,
                        // <- #i23725#
 
+					   KS_OutlineLvOff,
                        KS_NextCell, KS_PrevCell, KS_OutlineUp, KS_OutlineDown,
                        KS_GlossaryExpand, KS_NextPrevGlossary,
                        KS_AutoFmtByInput,
@@ -1483,11 +1486,11 @@ void SwEditWin::KeyInput(const KeyEvent &rKEvt)
                        KS_Fly_Change, KS_Draw_Change,
                        KS_SpecialInsert,
                        KS_EnterCharCell,
-
-		       KS_GotoNextFieldBookmark,
-		       KS_GotoPrevFieldBookmark,
-
+                       KS_GotoNextFieldBookmark,
+                       KS_GotoPrevFieldBookmark,
                        KS_Ende };
+
+
 
 	SW_KeyState eKeyState = bIsDocReadOnly ? KS_CheckDocReadOnlyKeys
 										   : KS_CheckKey,
@@ -1773,7 +1776,7 @@ KEYINPUT_CHECKTABLE_INSDEL:
                                  !rSh.GetCurNumRule()->IsOutlineRule() &&
                                  !rSh.HasSelection() &&
 								rSh.IsSttPara() && rSh.IsEndPara() )
-							eKeyState = KS_NumOff;
+							eKeyState = KS_NumOff, eNextKeyState = KS_OutlineLvOff;  
 
 						//RETURN fuer neuen Absatz mit AutoFormatierung
 						else if( pACfg && pACfg->IsAutoFmtByInput() &&
@@ -1786,6 +1789,14 @@ KEYINPUT_CHECKTABLE_INSDEL:
 							eNextKeyState = eKeyState, eKeyState = KS_CheckAutoCorrect;
 					}
 					break;
+
+				case KEY_RETURN | KEY_SHIFT:	// SHIFT-Return
+					if( !rSh.HasReadonlySel() )
+					{
+                        if(rSh.GetSelectionType() & nsSelectionType::SEL_OLE)
+                            eKeyState = KS_LaunchOLEObject;
+                    }
+                    break;
 
 				case KEY_RETURN | KEY_MOD2:		// ALT-Return
 					if( !rSh.HasReadonlySel() && !rSh.IsSttPara() && rSh.GetCurNumRule() )
@@ -1901,7 +1912,6 @@ KEYINPUT_CHECKTABLE_INSDEL:
 					}
                 case KEY_TAB:
 				{
-				    sal_Unicode ch=rSh.GetChar();
 
 #ifdef SW_CRSR_TIMER
 					BOOL bOld = rSh.ChgCrsrTimerFlag( FALSE );
@@ -1944,7 +1954,9 @@ KEYINPUT_CHECKTABLE_INSDEL:
 							SwTxtFmtColl* pColl = rSh.GetCurTxtFmtColl();
 							if( pColl &&
                                 //0 <= pColl->GetOutlineLevel() && #i24560#
-								MAXLEVEL - 1 > pColl->GetOutlineLevel() )
+								//MAXLEVEL - 1 > pColl->GetOutlineLevel() )//#outline level,zhaojianwei
+								pColl->IsAssignedToListLevelOfOutlineStyle()
+								&& MAXLEVEL-1 > pColl->GetAssignedOutlineStyleLevel() )//<-end,zhaojianwei
 								eKeyState = KS_OutlineDown;
 						}
 					}
@@ -1994,8 +2006,11 @@ KEYINPUT_CHECKTABLE_INSDEL:
 						if( rSh.IsSttOfPara() && !rSh.HasReadonlySel() )
 						{
 							SwTxtFmtColl* pColl = rSh.GetCurTxtFmtColl();
-							if( pColl && 0 < pColl->GetOutlineLevel() &&
-								MAXLEVEL - 1 >= pColl->GetOutlineLevel() )
+							//if( pColl && 0 < pColl->GetOutlineLevel() &&	//#outline level,zhaojianwei
+							//	MAXLEVEL - 1 >= pColl->GetOutlineLevel() )
+							if( pColl && 
+								pColl->IsAssignedToListLevelOfOutlineStyle() &&
+								0 < pColl->GetAssignedOutlineStyleLevel())
 								eKeyState = KS_OutlineUp;
 						}
 					}
@@ -2184,7 +2199,10 @@ KEYINPUT_CHECKTABLE_INSDEL:
 			}
 			break;
         case KS_LaunchOLEObject:
-            rSh.LaunchOLEObj();
+            if( rKEvt.GetKeyCode().IsShift() )
+                rSh.LaunchOLEObj(embed::EmbedVerbs::MS_OLEVERB_OPEN);
+            else
+                rSh.LaunchOLEObj();
             eKeyState = KS_Ende;
         break;
         case KS_GoIntoFly :
@@ -2230,29 +2248,31 @@ KEYINPUT_CHECKTABLE_INSDEL:
 		    SwFieldBookmark *fieldBM=rSh.IsInFormFieldBookmark(); //$flr refactor!!!
    		    ASSERT(fieldBM!=NULL, "Where is my FieldBookmark??");
 		    if (fieldBM!=NULL) {
-			switch (fieldBM->GetType()) {
-			    case 0: // TEXT
-				assert(0); // should not happen; since "TEXT" should never get CH_TXT_ATR_FORMELEMENT...
-				break;
-			    case 1: // CHECKBOX
-				fieldBM->SetChecked(!fieldBM->IsChecked());
-				fieldBM->invalidate();
-				rSh.InvalidateWindows(rView.GetVisArea());
-				break;
-			    case 2: // LIST
-				if (fieldBM && fieldBM->getListItems()>0) {
-				    int li=fieldBM->getCurrentListItem()+1;
-				    if (li>=fieldBM->getListItems()) {
-					li=0;
-				    }
-				    fieldBM->setCurrentListItem(li);
-				}
-				fieldBM->invalidate();
-				rSh.InvalidateWindows(rView.GetVisArea());
-				break;
-			    default:
-				break;				
-			}			
+			if (fieldBM->isType(ECMA_FORMCHECKBOX)) {
+			    bool isChecked=fieldBM->getParam(ECMA_FORMCHECKBOX_CHECKED).second.compareToAscii("on")==0;
+			    /* printf("checked-before=%i\n", isChecked); */
+			    isChecked=!isChecked; // swap it...
+			    /* printf("checked-after=%i\n", isChecked); */
+			    fieldBM->addParam(rtl::OUString::createFromAscii(ECMA_FORMCHECKBOX_CHECKED), rtl::OUString::createFromAscii(isChecked?"on":"off"));
+			    /* printf("checked-after-add=%i\n", fieldBM->getParam(ECMA_FORMCHECKBOX_CHECKED).second.compareToAscii("on")==0); */
+			    fieldBM->invalidate();
+			}
+			if (fieldBM->isType(ECMA_FORMDROPDOWN)) {
+			    int currentIndex=fieldBM->getParam(ECMA_FORMDROPDOWN_RESULT, "0").second.toInt32();
+			    int entries=0;
+			    for(int i=0;i<fieldBM->getNumOfParams();i++) {
+				SwFieldBookmark::ParamPair_t p=fieldBM->getParam(i);
+				if (p.first.compareToAscii(ECMA_FORMDROPDOWN_LISTENTRY)==0)
+				    entries++;
+			    }
+			    currentIndex++;
+			    if (currentIndex>=entries) {
+				currentIndex=0;
+			    }
+			    fieldBM->addParam(ECMA_FORMDROPDOWN_RESULT, currentIndex);
+			    fieldBM->invalidate();
+			    rSh.InvalidateWindows(rView.GetVisArea());
+			}
 		    }
 //		    rSh.Overwrite(String('X'));
 		    eKeyState = KS_Ende;
@@ -2349,6 +2369,9 @@ KEYINPUT_CHECKTABLE_INSDEL:
 			case KS_NumOff:
 				// Shellwechsel - also vorher aufzeichnen
 				rSh.DelNumRules();
+				eKeyState = eNextKeyState;
+				break;
+			case KS_OutlineLvOff: // delete autofmt outlinelevel later
 				break;
 
 			case KS_NumDown:
@@ -3797,6 +3820,7 @@ void SwEditWin::MouseMove(const MouseEvent& _rMEvt)
                                 break;
                         }
 			//#i6193#, change ui if mouse is over SwPostItField
+			// TODO: do the same thing for redlines SW_REDLINE
 			SwRect aFldRect;
 			SwContentAtPos aCntntAtPos( SwContentAtPos::SW_FIELD);
 			if( rSh.GetContentAtPos( aDocPt, aCntntAtPos, FALSE, &aFldRect ) )
@@ -4188,8 +4212,7 @@ void SwEditWin::MouseButtonUp(const MouseEvent& rMEvt)
 
                         SwContentAtPos aCntntAtPos( SwContentAtPos::SW_CLICKFIELD |
 													SwContentAtPos::SW_INETATTR |
-                                                    SwContentAtPos::SW_SMARTTAG |
-			    SwContentAtPos::SW_FORMCTRL);
+                                                    SwContentAtPos::SW_SMARTTAG  | SwContentAtPos::SW_FORMCTRL);
 
 						if( rSh.GetContentAtPos( aDocPt, aCntntAtPos, TRUE ) )
 						{
@@ -4217,24 +4240,19 @@ void SwEditWin::MouseButtonUp(const MouseEvent& rMEvt)
 				    SwFieldBookmark *fieldBM=const_cast<SwFieldBookmark *>(aCntntAtPos.aFnd.pFldBookmark);
 				    SwDocShell* pDocSh = rView.GetDocShell();
 				    SwDoc *pDoc=pDocSh->GetDoc();
-				    switch(fieldBM->GetType()) {
-					case 0: // Text
-					    assert(0); // should not happend; a "text" has not SW_FORMCTRL content pos...
-					    break;
-					case 1: // CheckBox
-					    fieldBM->SetChecked(!fieldBM->IsChecked());
-					    fieldBM->invalidate();
-					    rSh.InvalidateWindows(rView.GetVisArea());
-					    break;
-					case 2: // List
-					    rView.ExecFieldPopup( aDocPt, fieldBM );
-					    fieldBM->invalidate();
-					    rSh.InvalidateWindows(rView.GetVisArea());
-					    break;
-					default: 
-					    break;
+				    if (fieldBM->isType(ECMA_FORMCHECKBOX)) {
+					bool isChecked=fieldBM->getParam(ECMA_FORMCHECKBOX_CHECKED).second.compareToAscii("on")==0;
+					isChecked=!isChecked; // swap it...
+					fieldBM->addParam(rtl::OUString::createFromAscii(ECMA_FORMCHECKBOX_CHECKED), rtl::OUString::createFromAscii(isChecked?"on":"off"));
+					fieldBM->invalidate();
+					rSh.InvalidateWindows(rView.GetVisArea());
+				    } else if (fieldBM->isType(ECMA_FORMDROPDOWN)) {
+					rView.ExecFieldPopup( aDocPt, fieldBM );
+					fieldBM->invalidate();
+					rSh.InvalidateWindows(rView.GetVisArea());
+				    } else {
+					// unknown type..
 				    }
-
 				}
 			    }
 			    else // if ( SwContentAtPos::SW_INETATTR == aCntntAtPos.eCntntAtPos )
@@ -5038,8 +5056,8 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
                     SvxAutoCorrCfg* pACfg = SvxAutoCorrCfg::Get();
                     SvxAutoCorrect* pACorr = pACfg->GetAutoCorrect();
                     if(pACorr &&
-                        ( pACorr->IsAutoCorrFlag( ChgQuotes ) && ('\"' == aCh ))||
-                        ( pACorr->IsAutoCorrFlag( ChgSglQuotes ) && ( '\'' == aCh)))
+                        (( pACorr->IsAutoCorrFlag( ChgQuotes ) && ('\"' == aCh ))||
+                        ( pACorr->IsAutoCorrFlag( ChgSglQuotes ) && ( '\'' == aCh))))
                     {
                         rSh.DelLeft();
                         rSh.AutoCorrect( *pACorr, aCh );
@@ -5163,7 +5181,55 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
             bInputLanguageSwitched = true;
             SetUseInputLanguage( sal_True );
         break;
+        case COMMAND_SELECTIONCHANGE:
+        {
+            const CommandSelectionChangeData *pData = rCEvt.GetSelectionChangeData();
+            rSh.HideCrsr();
+            rSh.GoStartSentence();
+            rSh.GetCrsr()->GetPoint()->nContent += sal::static_int_cast<sal_uInt16, ULONG>(pData->GetStart());
+            rSh.SetMark();
+            rSh.GetCrsr()->GetMark()->nContent += sal::static_int_cast<sal_uInt16, ULONG>( pData->GetEnd() - pData->GetStart() );
+            rSh.ShowCrsr();
+        }
+        break;
+        case COMMAND_PREPARERECONVERSION:
+        if( rSh.HasSelection() )
+        {
+            if ( rSh.IsMultiSelection() )
+            {
+                // Save the last selected area.
+                SwPaM *pCrsr = (SwPaM*)rSh.GetCrsr()->GetPrev();
+                xub_StrLen nPosIdx = pCrsr->GetPoint()->nContent.GetIndex();
+                ULONG nPosNodeIdx = pCrsr->GetPoint()->nNode.GetIndex();
+                xub_StrLen nMarkIdx = pCrsr->GetMark()->nContent.GetIndex();
+                ULONG nMarkNodeIdx = pCrsr->GetMark()->nNode.GetIndex();
 
+                // ToDo: Deselect the text behind the first paragraph break,
+                //       if the last selected area ranges from one paragraph
+                //       to another.
+                if( nPosNodeIdx != nMarkNodeIdx )
+                break;
+
+                // Cancel all selection.
+                while( rSh._GetCrsr()->GetNext() != rSh._GetCrsr() )
+                delete rSh._GetCrsr()->GetNext();
+
+                // Restore the last selected area.
+                rSh.GetCrsr()->GetPoint()->nContent = nPosIdx;
+                rSh.GetCrsr()->GetPoint()->nNode = nPosNodeIdx;
+                rSh.SetMark();
+                rSh.GetCrsr()->GetMark()->nContent = nMarkIdx;
+                rSh.GetCrsr()->GetMark()->nNode = nMarkNodeIdx;
+                rSh.ShowCrsr();
+            }
+            else
+            {
+                // Deselect the text behind the first paragraph break.
+                rSh.NormalizePam( FALSE );
+                while( !rSh.IsSelOnePara() && rSh.MovePara( fnParaPrev, fnParaEnd ));
+            }
+        }
+        break;
 #ifdef DBG_UTIL
 		default:
 			ASSERT( !this, "unknown command." );
@@ -5691,4 +5757,63 @@ void SwEditWin::SetUseInputLanguage( sal_Bool bNew )
         rBind.Invalidate( SID_ATTR_CHAR_FONTHEIGHT );
     }
     bUseInputLanguage = bNew;
+}
+
+/*-- 13.11.2008 10:18:17---------------------------------------------------
+
+  -----------------------------------------------------------------------*/
+XubString SwEditWin::GetSurroundingText() const
+{
+    String sReturn;
+    SwWrtShell& rSh = rView.GetWrtShell();
+    if( rSh.HasSelection() && !rSh.IsMultiSelection() && rSh.IsSelOnePara() )
+        rSh.GetSelectedText( sReturn );
+    else if( !rSh.HasSelection() )
+    {
+        SwPosition *pPos = rSh.GetCrsr()->GetPoint();
+        xub_StrLen nPos = pPos->nContent.GetIndex();
+
+        // get the sentence around the cursor
+        rSh.HideCrsr();
+        rSh.GoStartSentence();
+        rSh.SetMark();
+        rSh.GoEndSentence();
+        rSh.GetSelectedText( sReturn );
+
+        pPos->nContent = nPos;
+        rSh.ClearMark();
+        rSh.HideCrsr();
+    }
+
+    return sReturn;
+}
+/*-- 13.11.2008 10:18:17---------------------------------------------------
+
+  -----------------------------------------------------------------------*/
+Selection SwEditWin::GetSurroundingTextSelection() const
+{
+    SwWrtShell& rSh = rView.GetWrtShell();
+    if( rSh.HasSelection() )
+    {
+        String sReturn;
+        rSh.GetSelectedText( sReturn );
+        return Selection( 0, sReturn.Len() );
+    }
+    else
+    {
+        // Return the position of the visible cursor in the sentence
+        // around the visible cursor.
+        SwPosition *pPos = rSh.GetCrsr()->GetPoint();
+        xub_StrLen nPos = pPos->nContent.GetIndex();
+
+        rSh.HideCrsr();
+        rSh.GoStartSentence();
+        xub_StrLen nStartPos = rSh.GetCrsr()->GetPoint()->nContent.GetIndex();
+
+        pPos->nContent = nPos;
+        rSh.ClearMark();
+        rSh.ShowCrsr();
+
+        return Selection( nPos - nStartPos, nPos - nStartPos );
+    }
 }

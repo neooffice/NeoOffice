@@ -144,10 +144,6 @@
 #include <vcl/outdev.hxx>
 #include <i18npool/mslangid.hxx>
 
-#if SUPD == 300
-#define DI_SUB_MASK 0xff00
-#endif  // SUPD == 300
-
 using namespace ::com::sun::star;
 using namespace nsFieldFlags;
 using namespace nsSwDocInfoSubType;
@@ -787,12 +783,7 @@ bool SwWW8Writer::DisallowInheritingOutlineNumbering(const SwFmt &rFmt)
             //BYTE nLvl = ((const SwTxtFmtColl*)pParent)->GetOutlineLevel();	//#outline level,removed by zhaojianwei
             //if (MAXLEVEL > nLvl)
             //{																	//<-end, ->add by zhaojianwei
-#if SUPD == 300
-            BYTE nLvl = ((const SwTxtFmtColl*)pParent)->GetOutlineLevel();
-            if (MAXLEVEL > nLvl)
-#else   // SUPD == 300
 			if (((const SwTxtFmtColl*)pParent)->IsAssignedToListLevelOfOutlineStyle())
-#endif  // SUPD == 300
 			{																	//<-end,zhaojianwei
 				if (bWrtWW8)
                 {
@@ -828,15 +819,9 @@ void SwWW8Writer::Out_SwFmt(const SwFmt& rFmt, bool bPapFmt, bool bChpFmt,
             //BYTE nLvl = ((const SwTxtFmtColl&)rFmt).GetOutlineLevel();	//#outline level,removed by zhaojianwei
             //if (MAXLEVEL > nLvl)
             //{																//<-end, ->add by zhaojianwei
-#if SUPD == 300
-            BYTE nLvl = ((const SwTxtFmtColl&)rFmt).GetOutlineLevel();	//#outline level,removed by zhaojianwei
-            if (MAXLEVEL > nLvl)
-            {
-#else   // SUPD == 300
 			if (((const SwTxtFmtColl&)rFmt).IsAssignedToListLevelOfOutlineStyle())
 			{
 				int nLvl = ((const SwTxtFmtColl&)rFmt).GetAssignedOutlineStyleLevel();	//<-end,zhaojianwei
-#endif  // SUPD == 300
 
                 //if outline numbered
                 // if Write StyleDefinition then write the OutlineRule
@@ -1226,11 +1211,7 @@ static Writer& OutWW8_SwUnderline( Writer& rWrt, const SfxPoolItem& rHt )
                             //  6 = thick,   7 = dash,       8 = dot(not used)
                             //  9 = dotdash 10 = dotdotdash, 11 = wave
     BYTE b = 0;
-#if SUPD == 300
-    switch (rAttr.GetUnderline())
-#else   // SUPD == 300
     switch (rAttr.GetLineStyle())
-#endif  // SUPD == 300
     {
         case UNDERLINE_SINGLE:
             b = ( bWord ) ? 2 : 1;
@@ -1787,6 +1768,9 @@ WW8_WrPlcFld* SwWW8Writer::CurrentFieldPlc() const
             break;
         case TXT_EDN:
             pFldP = pFldEdn;
+            break;
+        case TXT_ATN:
+            pFldP = pFldAtn;
             break;
         case TXT_TXTBOX:
             pFldP = pFldTxtBxs;
@@ -3362,13 +3346,8 @@ static Writer& OutWW8_SwNumRuleItem( Writer& rWrt, const SfxPoolItem& rHt )
                     const SwTxtFmtColl* pC = (SwTxtFmtColl*)rWW8Wrt.pOutFmtNode;
                     //if( pC && MAXLEVEL > pC->GetOutlineLevel() )	//#outline level,removed by zhaojianwei
                     //    nLvl = pC->GetOutlineLevel();				//<-end, ->add by zhaojianwei
-#if SUPD == 300
-                    if( pC && MAXLEVEL > pC->GetOutlineLevel() )
-                        nLvl = pC->GetOutlineLevel();
-#else   // SUPD == 300
 					if( pC && pC->IsAssignedToListLevelOfOutlineStyle() )
                         nLvl = static_cast<BYTE>(pC->GetAssignedOutlineStyleLevel()); //<-end,zhaojianwei
-#endif  // SUPD == 300
                 }
             }
         }
@@ -4999,6 +4978,24 @@ static Writer& OutWW8_SwTabStop(Writer& rWrt, const SfxPoolItem& rHt)
             nCurrentLeft = ((const SvxLRSpaceItem*)pLR)->GetTxtLeft();
     }
 
+
+    // --> FLR 2009-03-17 #i100264#
+    if (rWW8Wrt.bStyDef 
+	&& rWW8Wrt.pCurrentStyle!=NULL 
+	&& rWW8Wrt.pCurrentStyle->DerivedFrom()!=NULL) {
+      SvxTabStopItem aTabs(0, 0, SVX_TAB_ADJUST_DEFAULT, RES_PARATR_TABSTOP);
+      const SwFmt *pParentStyle=rWW8Wrt.pCurrentStyle->DerivedFrom();
+      const SvxTabStopItem* pParentTabs=HasItem<SvxTabStopItem>(pParentStyle->GetAttrSet(), RES_PARATR_TABSTOP);
+      if (pParentTabs) {
+	aTabs.Insert(pParentTabs);
+      }
+      
+      OutWW8_SwTabStopDelAdd(rWW8Wrt, aTabs, 0, rTStops, 0);
+      return rWrt;
+    }
+    // <--
+
+
     // StyleDef -> "einfach" eintragen || keine Style-Attrs -> dito
     const SvxTabStopItem* pStyleTabs = 0;
     if (!rWW8Wrt.bStyDef && rWW8Wrt.pStyAttr)
@@ -5073,11 +5070,9 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_CHRATR_DUMMY4 */             OutWW8_ScaleWidth,
 /* RES_CHRATR_RELIEF*/              OutWW8_Relief,
 /* RES_CHRATR_HIDDEN */             OutWW8_SvxCharHidden,
-#if SUPD != 300
 /* RES_CHRATR_OVERLINE */           0,
 /* RES_CHRATR_DUMMY1 */             0,
 /* RES_CHRATR_DUMMY2 */             0,
-#endif  // SUPD != 300
 
 /* RES_TXTATR_DUMMY4 */             0,
 /* RES_TXTATR_INETFMT */            OutSwFmtINetFmt,
@@ -5114,9 +5109,7 @@ SwAttrFnTab aWW8AttrFnTab = {
 /* RES_PARATR_VERTALIGN */          OutWW8_SvxParaVertAlignItem,
 /* RES_PARATR_SNAPTOGRID*/          OutWW8_SvxParaGridItem,
 /* RES_PARATR_CONNECT_TO_BORDER */  0, // new
-#if SUPD != 300
 /* RES_PARATR_OUTLINELEVEL */       0, // new - outlinelevel
-#endif  // SUPD != 300
 
 /* RES_PARATR_LIST_ID */            0, // new
 /* RES_PARATR_LIST_LEVEL */         0, // new

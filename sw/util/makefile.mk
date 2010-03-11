@@ -101,12 +101,14 @@ LIB1OBJFILES= $(OUT)$/slo$/swmodule.obj \
 # dynamic libraries
 SHL1STDLIBS+= \
     $(LNGLIB) \
+	$(SVXCORELIB) \
 	$(SVXLIB) \
 	$(SFXLIB) \
 	$(XMLOFFLIB) \
 	$(BASICLIB) \
 	$(GOODIESLIB) \
 	$(BASEGFXLIB) \
+    $(DRAWINGLAYERLIB) \
 	$(SVTOOLLIB) \
 	$(TKLIB) \
 	$(VCLLIB) \
@@ -124,6 +126,7 @@ SHL1STDLIBS+= \
 	$(SALHELPERLIB) \
     $(ICUUCLIB) \
 	$(I18NUTILLIB)	\
+		        $(VBAHELPERLIB) \
 	$(AVMEDIALIB)
 
 .IF "$(GUI)"=="WNT"
@@ -161,7 +164,8 @@ SHL2STDLIBS= \
 
 SHL2OBJS=   $(SLO)$/swdetect.obj \
         $(SLO)$/swdet2.obj \
-        $(SLO)$/detreg.obj
+        $(SLO)$/detreg.obj \
+        $(SLO)$/iodetect.obj
 
 .IF "$(product)"==""
 SHL2OBJS+=  \
@@ -180,6 +184,7 @@ DEF3NAME=       $(SHL3TARGET)
 
 SHL3STDLIBS= \
 		$(ISWLIB) \
+            $(SVXCORELIB) \
             $(SVXLIB) \
             $(SFX2LIB) \
             $(BASICLIB) \
@@ -310,5 +315,106 @@ SHL3OBJS += $(SLO)$/pchname.obj \
             $(SLO)$/pchname_ex.obj
 .ENDIF # "$(ENABLE_PCH)" != ""
 .ENDIF # "$(GUI)$(COM)" == "WNTMSC"
+
+SHL4TARGET=msword$(DLLPOSTFIX)
+SHL4VERSIONMAP=msword.map
+SHL4LIBS=$(SLB)$/rtf.lib $(SLB)$/ww8.lib
+SHL4DEPN=$(SHL1TARGETN)
+SHL4DEF=$(MISC)$/$(SHL4TARGET).def
+DEF4NAME=$(SHL4TARGET)
+
+SHL4STDLIBS= \
+	$(ISWLIB) \
+	$(OOXLIB) \
+	$(SAXLIB) \
+	$(SVXCORELIB) \
+	$(SVXMSFILTERLIB) \
+	$(SFXLIB) \
+	$(GOODIESLIB) \
+	$(BASEGFXLIB) \
+	$(SVTOOLLIB) \
+	$(TKLIB) \
+	$(VCLLIB) \
+	$(SVLLIB)	\
+	$(SOTLIB) \
+	$(UNOTOOLSLIB) \
+	$(TOOLSLIB) \
+	$(I18NISOLANGLIB) \
+	$(COMPHELPERLIB) \
+	$(UCBHELPERLIB) \
+	$(CPPULIB) \
+	$(CPPUHELPERLIB) \
+	$(SALLIB) \
+	$(ICUUCLIB) \
+    $(BASICLIB)     \
+	$(I18NUTILLIB)
+
+#target vba
+TARGET_VBA=vbaswobj
+SHL5TARGET=$(TARGET_VBA)$(DLLPOSTFIX).uno
+SHL5IMPLIB=     i$(TARGET_VBA)
+
+SHL5VERSIONMAP=$(TARGET_VBA).map
+SHL5DEF=$(MISC)$/$(SHL5TARGET).def
+DEF5NAME=$(SHL5TARGET)
+SHL5STDLIBS= \
+                $(ISWLIB) \
+                $(CPPUHELPERLIB) \
+                $(VCLLIB) \
+                $(CPPULIB) \
+                $(COMPHELPERLIB) \
+                $(SVLIB) \
+	            $(UNOTOOLSLIB) \
+                $(TOOLSLIB) \
+                $(SALLIB)\
+		        $(VBAHELPERLIB) \
+                $(BASICLIB)     \
+                $(SFXLIB)       \
+                $(SVXLIB)       \
+                $(SVTOOLLIB)    \
+                $(SVLLIB) \
+                $(VCLLIB) \
+                $(TKLIB) \
+                $(I18NISOLANGLIB) \
+	            $(SVXCORELIB) \
+                $(SVXMSFILTERLIB) \
+
+SHL5DEPN=$(SHL1TARGETN)
+SHL5LIBS=$(SLB)$/$(TARGET_VBA).lib
+
+SHL6TARGET=docx$(DLLPOSTFIX)
+SHL6VERSIONMAP=docx.map
+SHL6LIBS=$(SLB)$/rtf.lib $(SLB)$/docx.lib
+SHL6DEPN=$(SHL1TARGETN)
+SHL6DEF=$(MISC)$/$(SHL6TARGET).def
+DEF6NAME=$(SHL6TARGET)
+
+SHL6STDLIBS= \
+    $(ISWLIB) \
+    $(OOXLIB) \
+    $(SAXLIB) \
+    $(OOXLIB) \
+    $(SVXCORELIB) \
+    $(SVXMSFILTERLIB) \
+    $(SFXLIB) \
+    $(GOODIESLIB) \
+    $(BASEGFXLIB) \
+    $(SVTOOLLIB) \
+    $(TKLIB) \
+    $(VCLLIB) \
+    $(SVLLIB) \
+    $(SOTLIB) \
+    $(UNOTOOLSLIB) \
+    $(TOOLSLIB) \
+    $(I18NISOLANGLIB) \
+    $(COMPHELPERLIB) \
+    $(UCBHELPERLIB) \
+    $(CPPULIB) \
+    $(CPPUHELPERLIB) \
+    $(SALLIB) \
+    $(ICUUCLIB) \
+    $(VBAHELPERLIB) \
+    $(BASICLIB)     \
+    $(I18NUTILLIB)
 
 .INCLUDE :  target.mk

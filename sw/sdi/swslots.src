@@ -289,6 +289,14 @@ SfxSlotInfo FN_FORMAT_FRAME_DLG
 {
 	Slotname [ en-US ] = "Frame Properties";
 };
+SfxSlotInfo FN_INPLACE_OLE
+{
+	Slotname [ en-US ] = "Open OLE object inplace";
+};
+SfxSlotInfo FN_OUTPLACE_OLE
+{
+	Slotname [ en-US ] = "Open OLE object outplace";
+};
 SfxSlotInfo FN_FORMAT_GRAFIC_DLG
 {
 	Slotname [ en-US ] = "Edit Graphics";
@@ -1493,3 +1501,4 @@ SfxSlotInfo FN_LOOKUP_IN_MACOSX_DICTIONARY
     Slotname [ en-US ] = "Look Up in Dictionary";
 };
 // #endif	// USE_JAVA
+

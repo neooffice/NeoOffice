@@ -35,7 +35,6 @@
 #include <svtools/linguprops.hxx>
 #include <svtools/lingucfg.hxx>
 #include <hintids.hxx>
-#include <svtools/ctloptions.hxx>
 #include <sfx2/printer.hxx>
 #include <svx/hyznitem.hxx>
 #include <svx/escpitem.hxx>
@@ -76,6 +75,9 @@
 #include <porrst.hxx>		// SwHangingPortion
 #include <itratr.hxx>
 #include <accessibilityoptions.hxx>
+#include <wrong.hxx>
+#include <doc.hxx>
+#include <pam.hxx>
 #include <SwGrammarMarkUp.hxx>
 
 // --> FME 2004-06-08 #i12836# enhanced pdf export
@@ -83,9 +85,6 @@
 // <--
 
 #include <unomid.h>
-
-#include <doc.hxx>
-#include <pam.hxx>
 
 #ifdef USE_JAVA
 #include <crsrsh.hxx>
@@ -114,7 +113,7 @@ using namespace ::com::sun::star::beans;
 namespace numfunc
 {
     extern const String& GetDefBulletFontname();
-    extern const bool IsDefBulletFontUserDefined();
+    extern bool IsDefBulletFontUserDefined();
 }
 // <--
 
@@ -347,17 +346,17 @@ void SwTxtSizeInfo::CtorInitTxtSizeInfo( SwTxtFrm *pFrame, SwFont *pNewFnt,
         nDirection = DIR_LEFT2RIGHT;
     }
 
-    LanguageType eLang;
+/*    LanguageType eLang;
     const SvtCTLOptions& rCTLOptions = SW_MOD()->GetCTLOptions();
     if ( SvtCTLOptions::NUMERALS_HINDI == rCTLOptions.GetCTLTextNumerals() )
-        eLang = LANGUAGE_ARABIC;
+        eLang = LANGUAGE_ARABIC_SAUDI_ARABIA;
     else if ( SvtCTLOptions::NUMERALS_ARABIC == rCTLOptions.GetCTLTextNumerals() )
         eLang = LANGUAGE_ENGLISH;
     else
         eLang = (LanguageType)::GetAppLanguage();
 
     pOut->SetDigitLanguage( eLang );
-    pRef->SetDigitLanguage( eLang );
+    pRef->SetDigitLanguage( eLang );*/
 
     //
     // The Options
@@ -1200,6 +1199,42 @@ void SwTxtPaintInfo::DrawPostIts( const SwLinePortion&, sal_Bool bScript ) const
 	}
 }
 
+
+void SwTxtPaintInfo::DrawCheckBox( const SwFieldFormPortion &rPor, bool checked) const
+{
+    SwRect aIntersect;
+    CalcRect( rPor, &aIntersect, 0 );
+    if ( aIntersect.HasArea() ) {
+	if (OnWin() && SwViewOption::IsFieldShadings() && !GetOpt().IsPagePreview()) {
+	    OutputDevice* pOut_ = (OutputDevice*)GetOut();
+	    pOut_->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );
+	    pOut_->SetFillColor( SwViewOption::GetFieldShadingsColor() );
+	    pOut_->SetLineColor();
+//	    pOut_->SetLineColor( Color(220, 233, 245));
+//	    pOut_->SetFillColor( Color(220, 233, 245));
+	    pOut_->DrawRect( aIntersect.SVRect() );
+	    pOut_->Pop();
+	}
+	const int delta=10;
+	Rectangle r(aIntersect.Left()+delta, aIntersect.Top()+delta, aIntersect.Right()-delta, aIntersect.Bottom()-delta);
+	pOut->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );	    
+	pOut->SetLineColor( Color(0, 0, 0));
+	pOut->SetFillColor();
+	pOut->DrawRect( r );
+	if (checked) {
+	    pOut->DrawLine(r.TopLeft(), r.BottomRight());
+	    pOut->DrawLine(r.TopRight(), r.BottomLeft());
+#ifndef USE_JAVA
+	    pOut->Pop();
+#endif	// !USE_JAVA
+	}
+#ifdef USE_JAVA
+	// Fix bug 3477 by always popping after a push
+	pOut->Pop();
+#endif	// USE_JAVA
+    }
+}
+
 /*************************************************************************
  *					   SwTxtPaintInfo::DrawBackGround()
  *************************************************************************/
@@ -1233,11 +1268,9 @@ void SwTxtPaintInfo::DrawBackground( const SwLinePortion &rPor ) const
 
 void SwTxtPaintInfo::_DrawBackBrush( const SwLinePortion &rPor ) const
 {
-	ASSERT( pFnt->GetBackColor(), "DrawBackBrush: Lost Color" );
-
     {
-	SwRect aIntersect;
-	CalcRect( rPor, &aIntersect, 0 );
+        SwRect aIntersect;
+        CalcRect( rPor, &aIntersect, 0 );
 	SwTxtNode *pNd = pFrm->GetTxtNode();
 	SwBookmark *pBM=NULL;	
 	if ( aIntersect.HasArea() )
@@ -1252,29 +1285,26 @@ void SwTxtPaintInfo::_DrawBackBrush( const SwLinePortion &rPor ) const
 	    }
 	    bool bIsStartMark=(1==GetLen() && CH_TXT_ATR_FIELDSTART==GetTxt().GetChar(GetIdx()));
 	    if (OnWin() && (pBM!=NULL || bIsStartMark) && SwViewOption::IsFieldShadings() && !GetOpt().IsPagePreview()) {
-		OutputDevice* pOut = (OutputDevice*)GetOut();
-		pOut->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );
-		pOut->SetFillColor( SwViewOption::GetFieldShadingsColor() );
-		pOut->SetLineColor();
-//		pOut->SetLineColor( Color(220, 233, 245));
-//		pOut->SetFillColor( Color(220, 233, 245));
-		pOut->DrawRect( aIntersect.SVRect() );
-		pOut->Pop();
+		OutputDevice* pOut_ = (OutputDevice*)GetOut();
+		pOut_->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );
+		pOut_->SetFillColor( SwViewOption::GetFieldShadingsColor() );
+		pOut_->SetLineColor();
+//		pOut_->SetLineColor( Color(220, 233, 245));
+//		pOut_->SetFillColor( Color(220, 233, 245));
+		pOut_->DrawRect( aIntersect.SVRect() );
+		pOut_->Pop();
 	    }
 	}
-
     }
+    if( !pFnt->GetBackColor() ) return;
 
-
-
-    if( !pFnt->GetBackColor() )
-	return;
+    ASSERT( pFnt->GetBackColor(), "DrawBackBrush: Lost Color" );
 
     SwRect aIntersect;
     CalcRect( rPor, 0, &aIntersect );
 
     if ( aIntersect.HasArea() )
-	{
+    {
         OutputDevice* pTmpOut = (OutputDevice*)GetOut();
 
         // --> FME 2004-06-24 #i16816# tagged pdf support
@@ -1289,42 +1319,6 @@ void SwTxtPaintInfo::_DrawBackBrush( const SwLinePortion &rPor ) const
         DrawRect( aIntersect, sal_True, sal_False );
 
         pTmpOut->Pop();
-    }
-}
-
-
-void SwTxtPaintInfo::DrawCheckBox( const SwFieldFormPortion &rPor, bool checked) const
-{
-    SwRect aIntersect;
-    CalcRect( rPor, &aIntersect, 0 );
-    if ( aIntersect.HasArea() ) {
-	if (OnWin() && SwViewOption::IsFieldShadings() && !GetOpt().IsPagePreview()) {
-	    OutputDevice* pOut = (OutputDevice*)GetOut();
-	    pOut->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );
-	    pOut->SetFillColor( SwViewOption::GetFieldShadingsColor() );
-	    pOut->SetLineColor();
-//	    pOut->SetLineColor( Color(220, 233, 245));
-//	    pOut->SetFillColor( Color(220, 233, 245));
-	    pOut->DrawRect( aIntersect.SVRect() );
-	    pOut->Pop();
-	}
-	const int delta=10;
-	Rectangle r(aIntersect.Left()+delta, aIntersect.Top()+delta, aIntersect.Right()-delta, aIntersect.Bottom()-delta);
-	pOut->Push( PUSH_LINECOLOR | PUSH_FILLCOLOR );	    
-	pOut->SetLineColor( Color(0, 0, 0));
-	pOut->SetFillColor();
-	pOut->DrawRect( r );
-	if (checked) {
-	    pOut->DrawLine(r.TopLeft(), r.BottomRight());
-	    pOut->DrawLine(r.TopRight(), r.BottomLeft());
-#ifndef USE_JAVA
-	    pOut->Pop();
-#endif	// !USE_JAVA
-	}
-#ifdef USE_JAVA
-	// Fix bug 3477 by always popping after a push
-	pOut->Pop();
-#endif	// USE_JAVA
     }
 }
 
@@ -1362,7 +1356,6 @@ void SwTxtPaintInfo::DrawViewOpt( const SwLinePortion &rPor,
 			default:
 			{
 				ASSERT( !this, "SwTxtPaintInfo::DrawViewOpt: don't know how to draw this" );
-				// printf("SwTxtPaintInfo::DrawViewOpt %04X\n", (int)nWhich);
 				break;
 			}
 		}

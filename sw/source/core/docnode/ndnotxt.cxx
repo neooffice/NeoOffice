@@ -222,7 +222,7 @@ BOOL SwNoTxtNode::GetContourAPI( PolyPolygon &rContour ) const
 	return TRUE;
 }
 
-const BOOL SwNoTxtNode::IsPixelContour() const
+BOOL SwNoTxtNode::IsPixelContour() const
 {
 	BOOL bRet;
 	if( bContourMapModeValid )

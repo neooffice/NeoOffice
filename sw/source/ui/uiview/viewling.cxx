@@ -114,6 +114,7 @@
 
 #include <unomid.h>
 #include <bookmrk.hxx>
+#include <ecmaflds.hxx>
 
 #include <memory>
 
@@ -931,6 +932,8 @@ sal_Bool SwView::ExecSmartTagPopup( const Point& rPt )
     return bRet;
 }
 
+
+
 class SwFieldPopup : public PopupMenu
 {
 public:
@@ -982,22 +985,14 @@ public:
 
 	assert(fieldBM!=NULL);
 	if (fieldBM!=NULL) {
-	    int listitems=fieldBM->getListItems();
-	    for(int i=0;i<listitems;i++) {
-		aListBox.InsertEntry(fieldBM->getListItem(i));
+	    int items=fieldBM->getNumOfParams();	    
+	    for(int i=0;i<items;i++) {
+		SwFieldBookmark::ParamPair_t p=fieldBM->getParam(i);
+		if (p.first.compareToAscii(ECMA_FORMDROPDOWN_LISTENTRY)==0) {
+		    aListBox.InsertEntry(p.second);
+		}
 	    }
 	}
-/*
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXY"));
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("Hello"));
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("World"));
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("Red"));
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("Green"));
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("Blue"));
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("Pink"));
-	aListBox.InsertEntry(::rtl::OUString::createFromAscii("Orange"));
-*/
-//	aListBox.SetPosPixel(Size(0, 0));
 	Size lbSize=aListBox.GetOptimalSize(WINDOWSIZE_PREFERRED);
 	lbSize.Width()+=50;
 #ifdef USE_JAVA
@@ -1077,7 +1072,7 @@ BOOL SwView::ExecFieldPopup( const Point& rPt, SwFieldBookmark *fieldBM )
 	short ret=aFldDlg.Execute();
 	int selection=aFldDlg.getSelection();
 	if (selection>=0) {
-	    fieldBM->setCurrentListItem((unsigned int)selection);
+	    fieldBM->addParam(ECMA_FORMDROPDOWN_RESULT, selection);
 	}
     }
 
@@ -1086,3 +1081,4 @@ BOOL SwView::ExecFieldPopup( const Point& rPt, SwFieldBookmark *fieldBM )
 
     return bRet;
 }
+

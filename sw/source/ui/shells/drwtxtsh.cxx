@@ -1,30 +1,29 @@
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2008 by Sun Microsystems, Inc.
- *
- * OpenOffice.org - a multi-platform office productivity suite
  *
  * $RCSfile$
  * $Revision$
  *
- * This file is part of OpenOffice.org.
+ * This file is part of NeoOffice.
  *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified January 2010 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 
@@ -110,10 +109,12 @@
 
 #include <cppuhelper/bootstrap.hxx>
 
+#include "swabstdlg.hxx" //CHINA001
+#include "misc.hrc"
+
 #ifdef USE_JAVA
 #include <macdictlookup.hxx>
 #endif	// USE_JAVA
-
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -497,9 +498,6 @@ void SwDrawTextShell::ExecDrawLingu(SfxRequest &rReq)
 /*--------------------------------------------------------------------
 	Beschreibung:
  --------------------------------------------------------------------*/
-
-
-
 void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 {
 	SwWrtShell &rSh = GetShell();
@@ -531,9 +529,23 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
             rReq.Done();
         }
         break;
-        case FN_INSERT_SYMBOL:  // Sonderzeichen einfuegen
+        case FN_INSERT_SYMBOL:
+	{  // Sonderzeichen einfuegen
             InsertSymbol(rReq);
 			break;
+	}
+	      case FN_INSERT_STRING:
+                {
+			const SfxItemSet *pNewAttrs = rReq.GetArgs();
+                        sal_uInt16 nSlot = rReq.GetSlot();
+			const SfxPoolItem* pItem = 0;
+                        if(pNewAttrs)
+			{
+                                pNewAttrs->GetItemState(nSlot, FALSE, &pItem );
+                         	pOLV->InsertText(((const SfxStringItem *)pItem)->GetValue());
+			}
+                        break;
+                }
 
 		case SID_SELECTALL:
 		{
@@ -547,7 +559,7 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 		}
 		break;
 
-		case FN_FORMAT_RESET:	// Harte Textattributierung l�schen
+		case FN_FORMAT_RESET:	// delete hard text attributes
 		{
             pOLV->RemoveAttribsKeepLanguages( true );
             pOLV->GetEditView().GetEditEngine()->RemoveFields(TRUE);
@@ -567,7 +579,6 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 				return;
 			}
 			break;
-
 		case FN_DRAWTEXT_ATTR_DLG:
 			{
 				SfxItemSet aNewAttr( pSdrView->GetModel()->GetItemPool() );

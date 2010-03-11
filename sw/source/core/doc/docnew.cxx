@@ -185,7 +185,7 @@ void StartGrammarChecking( SwDoc &rDoc, SwRootFrm &rRootFrame )
 		// start automatic background checking
 		if ( xFPIP.is() && !xGCIterator->isProofreading( xDoc ) )
 		{
-			rRootFrame.SetNeedGrammarCheck( false );
+			// rRootFrame.SetNeedGrammarCheck( false );
 			rRootFrame.SetGrammarCheckActive( true );
 			xGCIterator->startProofreading( xDoc, xFPIP );
 		}
@@ -216,13 +216,13 @@ BOOL lcl_DelFmtIndizes( const SwFrmFmtPtr& rpFmt, void* )
 SwDoc::SwDoc() :
 	aNodes( this ),
 	aUndoNodes( this ),
-	aAttrPool( this ),
-	pDfltFrmFmt( new SwFrmFmt( aAttrPool, sFrmFmtStr, 0 ) ),
-	pEmptyPageFmt( new SwFrmFmt( aAttrPool, sEmptyPageStr, pDfltFrmFmt ) ),
-	pColumnContFmt( new SwFrmFmt( aAttrPool, sColumnCntStr, pDfltFrmFmt ) ),
-	pDfltCharFmt( new SwCharFmt( aAttrPool, sCharFmtStr, 0 ) ),
-	pDfltTxtFmtColl( new SwTxtFmtColl( aAttrPool, sTxtCollStr ) ),
-	pDfltGrfFmtColl( new SwGrfFmtColl( aAttrPool, sGrfCollStr ) ),
+	mpAttrPool(new SwAttrPool(this)),
+	pDfltFrmFmt( new SwFrmFmt( GetAttrPool(), sFrmFmtStr, 0 ) ),
+	pEmptyPageFmt( new SwFrmFmt( GetAttrPool(), sEmptyPageStr, pDfltFrmFmt ) ),
+	pColumnContFmt( new SwFrmFmt( GetAttrPool(), sColumnCntStr, pDfltFrmFmt ) ),
+	pDfltCharFmt( new SwCharFmt( GetAttrPool(), sCharFmtStr, 0 ) ),
+	pDfltTxtFmtColl( new SwTxtFmtColl( GetAttrPool(), sTxtCollStr ) ),
+	pDfltGrfFmtColl( new SwGrfFmtColl( GetAttrPool(), sGrfCollStr ) ),
 	pFrmFmtTbl( new SwFrmFmts() ),
 	pCharFmtTbl( new SwCharFmts() ),
 	pSpzFrmFmtTbl( new SwSpzFrmFmts() ),
@@ -295,6 +295,7 @@ SwDoc::SwDoc() :
     mbClipBoard( false ),
     mbColumnSelection( false ),
     // i#78591#
+	mbProtectForm(false),
     n32DummyCompatabilityOptions1(0),
     n32DummyCompatabilityOptions2(0),
     mbStartIdleTimer(sal_False)
@@ -374,10 +375,10 @@ SwDoc::SwDoc() :
     mbUnixForceZeroExtLeading               = false;        // hidden
     mbOldPrinterMetrics                     = false;        // hidden
     mbTabRelativeToIndent                   = true;         // hidden
-    mbProtectForm                           = false;        // hidden
     // --> OD 2008-06-05 #i89181#
     mbTabAtLeftIndentForParagraphsInList    = false;        // hidden
     // <--
+    mbInvertBorderSpacing                   = false;        // hidden
 
     //
     // COMPATIBILITY FLAGS END
@@ -724,6 +725,7 @@ SwDoc::~SwDoc()
     delete pLayoutCache;
     delete pVirDev;
 
+    SfxItemPool::Free(mpAttrPool);
 }
 
 //---------------------------------------------------

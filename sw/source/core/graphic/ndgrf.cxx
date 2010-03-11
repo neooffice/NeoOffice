@@ -473,7 +473,7 @@ short SwGrfNode::SwapIn( BOOL bWaitForData )
                 SvStream* pStrm = _GetStreamForEmbedGrf( refPics, aStrmName );
 #ifdef USE_JAVA
                 // Fix bug 2581 by disabling the ooo-build hack in
-    			// _GetStreamStorageNames()
+                // _GetStreamStorageNames()
                 if ( !pStrm && aNewStrmName.Len() )
                 {
                     String aOldNewStrmName( aNewStrmName );

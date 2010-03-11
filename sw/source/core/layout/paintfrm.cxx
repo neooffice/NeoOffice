@@ -200,7 +200,7 @@ public:
 	void LockLines( BOOL bLock );
 
     /// OD 13.08.2002 - correct type of function
-    const USHORT Free() const { return nFree; }
+    USHORT Free() const { return nFree; }
 };
 
 class SwSubsRects : public SwLineRects
@@ -2054,7 +2054,6 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
 #endif  // USE_JAVA
             }
         }
-
        pOutDev ->Pop();
 	}
 
@@ -3081,7 +3080,7 @@ void SwRootFrm::Paint( const SwRect& rRect ) const
                 // #i68597#
                 // moved paint post-process for DrawingLayer overlay here, see above
                 {
-                    pSh->DLPostPaint2();
+                    pSh->DLPostPaint2(true);
                 }
             }
         }
@@ -3138,7 +3137,7 @@ void SwRootFrm::Paint( const SwRect& rRect ) const
                 SwPageFrm::PaintNotesSidebar( aEmptyPageRect, pSh, pPage->GetPhyPageNum(), bRightSidebar);
 
                 {
-                    pSh->DLPostPaint2();
+                    pSh->DLPostPaint2(true);
                 }
             }
         }
@@ -3398,7 +3397,7 @@ void SwLayoutFrm::Paint( const SwRect& rRect ) const
 
     @return true, if background is transparent drawn.
 */
-const sal_Bool SwFlyFrm::IsBackgroundTransparent() const
+sal_Bool SwFlyFrm::IsBackgroundTransparent() const
 {
     sal_Bool bBackgroundTransparent = GetFmt()->IsBackgroundTransparent();
     if ( !bBackgroundTransparent &&
@@ -3450,7 +3449,7 @@ const sal_Bool SwFlyFrm::IsBackgroundTransparent() const
 
     @return true, if shadow color is transparent.
 */
-const sal_Bool SwFlyFrm::IsShadowTransparent() const
+sal_Bool SwFlyFrm::IsShadowTransparent() const
 {
     return GetFmt()->IsShadowTransparent();
 };
@@ -4733,7 +4732,7 @@ void SwFrm::PaintBorder( const SwRect& rRect, const SwPageFrm *pPage,
 						 const SwBorderAttrs &rAttrs ) const
 {
     //fuer (Row,Body,Ftn,Root,Column,NoTxt) gibt's hier nix zu tun
-    if ( (GetType() & 0x90C5) || (Prt().SSize() == Frm().SSize()) )
+    if ( (GetType() & 0x90C5) )
         return;
 
 	if ( (GetType() & 0x2000) && 	//Cell
@@ -6729,16 +6728,6 @@ Graphic SwFlyFrmFmt::MakeGraphic( ImageMap* pMap )
 		aDev.SetFillColor();
 		aDev.SetFont( pOld->GetFont() );
 
-		Window *pWin = pSh->GetWin();
-		USHORT nZoom = pSh->GetViewOptions()->GetZoom();
-		::SetOutDevAndWin( pSh, &aDev, 0, 100 );
-		bFlyMetafile = TRUE;
-		pFlyMetafileOut = pWin;
-
-		SwViewImp *pImp = pSh->Imp();
-		pFlyOnlyDraw = pFly;
-		pLines = new SwLineRects;
-
 		//Rechteck ggf. ausdehnen, damit die Umrandunge mit aufgezeichnet werden.
 		SwRect aOut( pFly->Frm() );
 		SwBorderAttrAccess aAccess( SwFrm::GetCache(), pFly );
@@ -6747,6 +6736,20 @@ Graphic SwFlyFrmFmt::MakeGraphic( ImageMap* pMap )
 			aOut.SSize().Width() += 2*nPixelSzW;
 		if ( rAttrs.CalcBottomLine() )
 			aOut.SSize().Height()+= 2*nPixelSzH;
+
+		// #i92711# start Pre/PostPaint encapsulation before pOut is changed to the buffering VDev
+		const Region aRepaintRegion(aOut.SVRect());
+    	pSh->DLPrePaint2(aRepaintRegion);
+
+        Window *pWin = pSh->GetWin();
+		USHORT nZoom = pSh->GetViewOptions()->GetZoom();
+		::SetOutDevAndWin( pSh, &aDev, 0, 100 );
+		bFlyMetafile = TRUE;
+		pFlyMetafileOut = pWin;
+
+		SwViewImp *pImp = pSh->Imp();
+		pFlyOnlyDraw = pFly;
+		pLines = new SwLineRects;
 
         // OD 09.12.2002 #103045# - determine page, fly frame is on
         const SwPageFrm* pFlyPage = pFly->FindPageFrm();
@@ -6774,7 +6777,10 @@ Graphic SwFlyFrmFmt::MakeGraphic( ImageMap* pMap )
 		bFlyMetafile = FALSE;
 		::SetOutDevAndWin( pSh, pOld, pWin, nZoom );
 
-		aMet.Stop();
+		// #i92711# end Pre/PostPaint encapsulation when pOut is back and content is painted
+   		pSh->DLPostPaint2(true);
+
+        aMet.Stop();
 		aMet.Move( -pFly->Frm().Left(), -pFly->Frm().Top() );
 		aRet = Graphic( aMet );
 

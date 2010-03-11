@@ -169,6 +169,7 @@ using ::osl::FileBase;
 #define SW_CREATE_MARKER_TABLE          0x06
 #define SW_CREATE_DRAW_DEFAULTS         0x07
 
+#include <comphelper/processfactory.hxx> 
 
 /******************************************************************************
  *
@@ -222,6 +223,12 @@ sal_Int64 SAL_CALL SwXTextDocument::getSomething( const Sequence< sal_Int8 >& rI
 										rId.getConstArray(), 16 ) )
     {
             return sal::static_int_cast< sal_Int64 >( reinterpret_cast< sal_IntPtr >( this ));
+    }
+    if( rId.getLength() == 16
+        && 0 == rtl_compareMemory( SfxObjectShell::getUnoTunnelId().getConstArray(),
+										rId.getConstArray(), 16 ) )
+    {
+        return sal::static_int_cast<sal_Int64>(reinterpret_cast<sal_IntPtr>(pDocShell ));
     }
 
 	sal_Int64 nRet = SfxBaseModel::getSomething( rId );
@@ -361,6 +368,9 @@ SwXTextDocument::SwXTextDocument(SwDocShell* pShell) :
     pxXRedlines(0),
     m_pHiddenViewFrame(0)
 {
+    uno::Reference< document::XDocumentProperties > xWriterProps( ::comphelper::getProcessServiceFactory()->createInstance( DEFINE_CONST_UNICODE("com.sun.star.writer.DocumentProperties") ), uno::UNO_QUERY_THROW);
+
+    SfxBaseModel::setDocumentProperties( xWriterProps );
 }
 /*-- 18.12.98 11:53:00---------------------------------------------------
 
@@ -801,8 +811,10 @@ sal_Int32 SwXTextDocument::replaceAll(const Reference< util::XSearchDescriptor >
 	}
 	else
 	{
+		//todo/mba: assuming that notes should be omitted
+		BOOL bSearchInNotes = FALSE;
         BOOL bCancel;
-        nResult = pUnoCrsr->Find( aSearchOpt,
+        nResult = pUnoCrsr->Find( aSearchOpt, bSearchInNotes,
             eStart, eEnd, bCancel,
 			(FindRanges)eRanges,
 			sal_True );
@@ -929,9 +941,11 @@ SwUnoCrsr* 	SwXTextDocument::FindAny(const Reference< util::XSearchDescriptor > 
 						(FindRanges)eRanges, pReplaceColl );
 		}
 		else
-		{
-            BOOL bCancel;
-            nResult = (sal_Int32)pUnoCrsr->Find( aSearchOpt,
+		{          
+			//todo/mba: assuming that notes should be omitted
+			BOOL bSearchInNotes = FALSE;
+			BOOL bCancel;
+			nResult = (sal_Int32)pUnoCrsr->Find( aSearchOpt, bSearchInNotes,
                     eStart, eEnd, bCancel,
 					(FindRanges)eRanges,
 					/*int bReplace =*/sal_False );
@@ -1445,10 +1459,15 @@ Reference< drawing::XDrawPage >  SwXTextDocument::getDrawPage(void) throw( Runti
 		throw RuntimeException();
 	if(!pxXDrawPage)
 	{
-		((SwXTextDocument*)this)->pxXDrawPage = new Reference< drawing::XDrawPage > ;
+        // simplified this creation, keeping original below as reference
+        // for the case that it did something by purpose
 		((SwXTextDocument*)this)->pDrawPage = new SwXDrawPage(pDocShell->GetDoc());
-		Reference< drawing::XShapes >  xTmp = pDrawPage;
-		*pxXDrawPage = Reference< drawing::XDrawPage>(xTmp, UNO_QUERY);
+        ((SwXTextDocument*)this)->pxXDrawPage = new Reference< drawing::XDrawPage >(pDrawPage);
+
+        //((SwXTextDocument*)this)->pxXDrawPage = new Reference< drawing::XDrawPage > ;
+		//((SwXTextDocument*)this)->pDrawPage = new SwXDrawPage(pDocShell->GetDoc());
+		//Reference< drawing::XShapes >  xTmp = pDrawPage;
+		//*pxXDrawPage = Reference< drawing::XDrawPage>(xTmp, UNO_QUERY);
 	}
 	return *pxXDrawPage;
 }
@@ -1588,7 +1607,7 @@ void	SwXTextDocument::InitNewDoc()
         uno::Reference<lang::XComponent> xComp( *pxXDrawPage, uno::UNO_QUERY );
         xComp->dispose();
         // <--
-        pDrawPage->Invalidate();
+		pDrawPage->InvalidateSwDoc();
         delete pxXDrawPage;
         pxXDrawPage = 0;
     }
@@ -1777,7 +1796,7 @@ Reference< XInterface >  SwXTextDocument::createInstance(const OUString& rServic
                 if( 0 == rServiceName.reverseCompareToAsciiL( RTL_CONSTASCII_STRINGPARAM("com.sun.star.chart2.data.DataProvider") ) )
                     xRet = Reference < XInterface > ( dynamic_cast< chart2::data::XDataProvider * >(pDocShell->getIDocumentChartDataProviderAccess()->GetChartDataProvider()) );
             }
-            
+
             if(!xRet.is())
 			{
 				//! we don't want to insert OLE2 Shapes (e.g. "com.sun.star.drawing.OLE2Shape", ...)
@@ -2133,6 +2152,9 @@ Any SwXTextDocument::getPropertyValue(const OUString& rPropertyName)
 	Any aAny;
 	switch(pMap->nWID)
 	{
+		case WID_DOC_ISTEMPLATEID    :
+			aAny <<= pDocShell->IsTemplate();
+			break;
 		case  WID_DOC_CHAR_COUNT     :
 		case  WID_DOC_PARA_COUNT     :
 		case  WID_DOC_WORD_COUNT     :
@@ -2241,6 +2263,14 @@ Any SwXTextDocument::getPropertyValue(const OUString& rPropertyName)
         case WID_DOC_DIALOG_LIBRARIES:
             aAny <<= pDocShell->GetDialogContainer();
         break;
+        case WID_DOC_VBA_DOCOBJ:
+        {
+            beans::PropertyValue aProp;
+            aProp.Name = rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("ThisWordDoc") );
+            aProp.Value <<= pDocShell->GetModel();
+            aAny <<= aProp;
+        }
+        break;
         case WID_DOC_RUNTIME_UID:
             aAny <<= getRuntimeUID();
         break;
@@ -2276,7 +2306,7 @@ void SwXTextDocument::addPropertyChangeListener(const OUString& /*PropertyName*/
     const Reference< XPropertyChangeListener > & /*aListener*/)
 	throw( UnknownPropertyException, WrappedTargetException, RuntimeException )
 {
-	DBG_WARNING("not implemented")
+	DBG_WARNING("not implemented");
 }
 /*-- 10.05.99 13:58:59---------------------------------------------------
 
@@ -2285,7 +2315,7 @@ void SwXTextDocument::removePropertyChangeListener(const OUString& /*PropertyNam
     const Reference< XPropertyChangeListener > & /*aListener*/)
 	throw( UnknownPropertyException, WrappedTargetException, RuntimeException )
 {
-	DBG_WARNING("not implemented")
+	DBG_WARNING("not implemented");
 }
 /*-- 10.05.99 13:59:00---------------------------------------------------
 
@@ -2294,7 +2324,7 @@ void SwXTextDocument::addVetoableChangeListener(const OUString& /*PropertyName*/
     const Reference< XVetoableChangeListener > & /*aListener*/)
 	throw( UnknownPropertyException, WrappedTargetException, RuntimeException )
 {
-	DBG_WARNING("not implemented")
+	DBG_WARNING("not implemented");
 }
 /*-- 10.05.99 13:59:00---------------------------------------------------
 
@@ -2303,7 +2333,7 @@ void SwXTextDocument::removeVetoableChangeListener(const OUString& /*PropertyNam
                         const Reference< XVetoableChangeListener > & /*aListener*/)
 	throw( UnknownPropertyException, WrappedTargetException, RuntimeException )
 {
-	DBG_WARNING("not implemented")
+	DBG_WARNING("not implemented");
 }
 /* -----------------25.10.99 10:42-------------------
 
@@ -2453,6 +2483,7 @@ Any SAL_CALL SwXTextDocument::getPropertyDefault( const OUString& rPropertyName 
 class SwViewOptionAdjust_Impl
 {
     bool m_bSwitchOff_IsFldName;
+    bool m_bSwitchOff_PlaceHolderView;
     bool m_bSwitchOff_HiddenChar;
     bool m_bSwitchOff_HiddenParagraphs;
     bool m_bSwitchOff_IsShowHiddenField;
@@ -2473,6 +2504,8 @@ SwViewOptionAdjust_Impl::SwViewOptionAdjust_Impl(SwWrtShell& rSh) :
     const SwViewOption* pCurrentViewOptions = m_rShell.GetViewOptions();
     m_bSwitchOff_IsFldName = pCurrentViewOptions->IsFldName() && m_rShell.IsAnyFieldInDoc();
     bool bApplyViewOptions = m_bSwitchOff_IsFldName;
+    //switch off painting of placeholder fields
+    m_bSwitchOff_PlaceHolderView = pCurrentViewOptions->IsShowPlaceHolderFields();
     //switch off display of hidden characters if on and hidden characters are in use
     m_bSwitchOff_HiddenChar = pCurrentViewOptions->IsShowHiddenChar() && m_rShell.GetDoc()->ContainsHiddenChars();
     //switch off display of hidden paragraphs if on and hidden paragraphs are in use
@@ -2491,7 +2524,7 @@ SwViewOptionAdjust_Impl::SwViewOptionAdjust_Impl(SwWrtShell& rSh) :
             m_bSwitchOff_IsShowHiddenField = false;
     }
 
-
+    bApplyViewOptions |= m_bSwitchOff_PlaceHolderView;
     bApplyViewOptions |= m_bSwitchOff_HiddenChar;
     bApplyViewOptions |= m_bSwitchOff_HiddenParagraphs;
     bApplyViewOptions |= m_bSwitchOff_IsShowHiddenField;
@@ -2500,6 +2533,8 @@ SwViewOptionAdjust_Impl::SwViewOptionAdjust_Impl(SwWrtShell& rSh) :
         m_pViewOption = new SwViewOption(*m_rShell.GetViewOptions());
         if(m_bSwitchOff_IsFldName)
             m_pViewOption->SetFldName(FALSE);
+        if(m_bSwitchOff_PlaceHolderView)
+            m_pViewOption->SetShowPlaceHolderFields(FALSE);
         if(m_bSwitchOff_HiddenChar)
             m_pViewOption->SetShowHiddenChar(FALSE);
         if(m_bSwitchOff_HiddenParagraphs)
@@ -2518,6 +2553,8 @@ SwViewOptionAdjust_Impl::~SwViewOptionAdjust_Impl()
     {
         if(m_bSwitchOff_IsFldName)
             m_pViewOption->SetFldName(TRUE);
+        if(m_bSwitchOff_PlaceHolderView)
+            m_pViewOption->SetShowPlaceHolderFields(TRUE);
         if(m_bSwitchOff_HiddenChar)
             m_pViewOption->SetShowHiddenChar(TRUE);
         if(m_bSwitchOff_HiddenParagraphs)
@@ -2886,6 +2923,7 @@ uno::Sequence< lang::Locale > SAL_CALL SwXTextDocument::getDocumentLanguages(
     throw (lang::IllegalArgumentException, uno::RuntimeException)
 {
 	::vos::OGuard aGuard(Application::GetSolarMutex());
+
 
     // possible canonical values for nScriptTypes
     // any bit wise combination is allowed
@@ -3432,7 +3470,7 @@ sal_Bool SwXLinkNameAccessWrapper::hasElements(void) throw( RuntimeException )
 	sal_Bool bRet = sal_False;
 	if(pxDoc)
 	{
-		DBG_ERROR("not implemented")
+		DBG_ERROR("not implemented");
 	}
 	else
 	{
@@ -3748,7 +3786,7 @@ Reference<XInterface> SwXDocumentPropertyHelper::GetDrawTable(short nWhich)
                 xRet = xDrawDefaults;
             break;
 #ifdef DBG_UTIL
-            default: DBG_ERROR("which table?")
+            default: DBG_ERROR("which table?");
 #endif
         }
     }
