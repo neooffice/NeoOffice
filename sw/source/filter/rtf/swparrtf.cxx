@@ -1105,20 +1105,22 @@ void InsertedTablesManager::InsertTable(SwTableNode &rTableNode, SwPaM &rPaM)
 {
     if (!mbHasRoot)
         return;
-#ifdef USE_JAVA
-    // Fix bug 3400 by detecting when the value for an existing key is changing
-    TblMap::const_iterator it = maTables.find(&rTableNode);
-    if (it != maTables.end() && it->second != &(rPaM.GetPoint()->nNode))
-    {
-        mbHasRoot = false;
-        maTables.clear();
-        return;
-    }
-#endif  // USE_JAVA
     //Associate this tablenode with this after position, replace an //old
     //node association if necessary
     
     InsertedTableClient * pClient = new InsertedTableClient(rTableNode);
+
+#ifdef USE_JAVA
+    // Fix bug 3400 by detecting when the value for an existing key is changing
+    TblMapIter it = maTables.find(pClient);
+    if (it != maTables.end() && it->second != &(rPaM.GetPoint()->nNode))
+    {
+        mbHasRoot = false;
+        maTables.clear();
+        delete pClient;
+        return;
+    }
+#endif  // USE_JAVA
     
     maTables.insert(TblMap::value_type(pClient, &(rPaM.GetPoint()->nNode)));
 }
