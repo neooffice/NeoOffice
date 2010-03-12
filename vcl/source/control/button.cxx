@@ -4468,8 +4468,8 @@ Size CheckBox::ImplGetCheckImageSize() const
         ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = !IsNativeWidgetEnabled();
 #endif	// USE_JAVA
         aSize = GetCheckImage( GetSettings(), 0 ).GetSizePixel();
-        ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = false;
 #ifdef USE_JAVA
+        ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = false;
     }
 #endif	// USE_JAVA
     return aSize;
