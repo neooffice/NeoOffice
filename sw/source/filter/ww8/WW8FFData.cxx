@@ -114,7 +114,7 @@ void WW8FFData::Write(SvStream * pDataStrm)
 #ifdef USE_JAVA 
     // Fix bug 3594 by never setting the help bit checkboxes as all versions
     // of OpenOffice.org do not mask the help bit when importing files
-    if (mbOwnHelp && mnType != 1 && msHelp.getLength() )
+    if (mbOwnHelp && mnType != 1)
 #else	// USE_JAVA 
     if (mbOwnHelp)
 #endif	// USE_JAVA 

@@ -2206,7 +2206,12 @@ void WW8FormulaControl::FormulaRead(SwWw8ControlType nWhich,
         *pDataStream >> nDefaultChecked;
         nChecked = nDefaultChecked;
         //Don't know the details yet
+#ifdef USE_JAVA
+        // Fix bug 3594 by masking out the help bit
+        switch (nHeaderByte & 0x0f)
+#else   // USE_JAVA
         switch (nHeaderByte)
+#endif  // USE_JAVA
         {
             case 0x65: //01100101
                 //use defaults ?
