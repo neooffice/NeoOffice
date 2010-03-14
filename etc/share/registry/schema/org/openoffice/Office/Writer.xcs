@@ -710,6 +710,17 @@
     </group>
   </templates>
   <component>
+    <group oor:name="GlobalTemplateList">
+      <info>
+        <desc>Contains the most recently opened documents.</desc>
+      </info>
+      <prop oor:name="Paths" oor:type="oor:string-list">
+        <info>
+          <desc>Lists the file global templates loaded when importing writer documents.</desc>
+        </info>
+        <value oor:separator=";"></value>
+      </prop>
+    </group>
     <group oor:name="MailMergeWizard">
       <info>
         <desc>Settings of the mail merge wizard.</desc>
@@ -4703,6 +4714,18 @@
           <value>-1</value>
         </prop>
       </group>
+    </group>
+    <group oor:name="Notes">
+      <info>
+        <desc>Contains settings for notes</desc>
+      </info>
+      <prop oor:name="ShowAnkor" oor:type="xs:boolean">
+        <info>
+          <desc>configures if note anchor should be shown or hidden when display is off</desc>
+          <label>Notes Ankor on/off</label>
+        </info>
+        <value>false</value>
+      </prop>
     </group>
     <group oor:name="Navigator">
       <info>
