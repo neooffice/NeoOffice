@@ -3,7 +3,7 @@ AllLanguages=en-US
 BuildVersion=
 buildid=
 ExtensionUpdateURL=http://updateext.services.openoffice.org/ProductUpdateService/check.Update
-OOOBaseVersion=3.0
+OOOBaseVersion=3.1
 # ProductBuildid must be set to zero as the UpdateURL will always return 1 if
 # there is a newer version
 ProductBuildid=0

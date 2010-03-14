@@ -105,7 +105,7 @@
 	</xsl:choose>
 </xsl:variable>
 
-<!-- the other parameters given by the help caller -->
+  <!-- the other parameters given by the help caller -->
 <xsl:param name="System" select="'WIN'"/>
 <xsl:param name="productname" select="'Office'"/>
 <xsl:param name="productversion" select="''"/>
@@ -119,7 +119,7 @@
 <xsl:param name="distrib">
 	<!-- Always use "OpenSource" -->
 	<xsl:value-of select="'OpenSource'"/>
-    <!--
+	<!--
 	<xsl:choose>
 		<xsl:when test="starts-with($productname,'OpenOffice')">
 			<xsl:value-of select="'OpenSource'"/>
@@ -128,14 +128,16 @@
 			<xsl:value-of select="'COMMERCIAL'"/>
 		</xsl:otherwise>
 	</xsl:choose>
-    -->
+	-->
 </xsl:param>
 <xsl:param name="Language" select="'en-US'"/>
 <xsl:variable name="lang" select="$Language"/>
 
+<xsl:param name="ExtensionId" select="''"/>
+<xsl:param name="ExtensionPath" select="''"/>
 
 
-<!-- parts of help and image urls -->
+  <!-- parts of help and image urls -->
 <xsl:variable name="help_url_prefix" select="'vnd.sun.star.help://'"/>
 <xsl:variable name="img_url_prefix" select="concat('vnd.sun.star.pkg://',$imgrepos,'/')"/>
 <xsl:variable name="urlpost" select="concat('?Language=',$lang,$am,'System=',$System,$am,'UseDB=no')"/>
@@ -566,11 +568,11 @@
 		
 		<!-- Replace as many OpenOffice.org references as we can -->
 		<xsl:when test="contains($string,$brand5)">
-			    <xsl:variable name="newstr">
-                <xsl:value-of select="substring-before($string,$brand5)"/>
-                <xsl:value-of select="$productname"/>
-                <xsl:value-of select="substring-after($string,$brand5)"/>
-           </xsl:variable>
+			<xsl:variable name="newstr">
+				<xsl:value-of select="substring-before($string,$brand5)"/>
+				<xsl:value-of select="$productname"/>
+				<xsl:value-of select="substring-after($string,$brand5)"/>
+			</xsl:variable>
 			<xsl:call-template name="brand">
 				<xsl:with-param name="string" select="$newstr"/>
 			</xsl:call-template>
@@ -864,18 +866,25 @@
 			<xsl:with-param name="s"><xsl:value-of select="@src"/></xsl:with-param>
 		</xsl:call-template>
 	</xsl:variable>
-	
-	<xsl:variable name="src">
-		<xsl:choose>
-			<xsl:when test="(@localize='true') and not($lang='en-US')">
-				<xsl:value-of select="concat($img_url_prefix,$fpath,$lang,'/',$fname)"/>
-			</xsl:when>
-			<xsl:otherwise>
-				<xsl:value-of select="concat($img_url_prefix,$fpath,$fname)"/>
-			</xsl:otherwise>
-		</xsl:choose>
-	</xsl:variable>
-	
+
+  <xsl:variable name="src">
+    <xsl:choose>
+      <xsl:when test="not($ExtensionId='') and starts-with(@src,$ExtensionId)">
+        <xsl:value-of select="concat($ExtensionPath,'/',@src)"/>
+      </xsl:when>
+      <xsl:otherwise>
+        <xsl:choose>
+          <xsl:when test="(@localize='true') and not($lang='en-US')">
+            <xsl:value-of select="concat($img_url_prefix,$fpath,$lang,'/',$fname)"/>
+          </xsl:when>
+          <xsl:otherwise>
+            <xsl:value-of select="concat($img_url_prefix,$fpath,$fname)"/>
+          </xsl:otherwise>
+        </xsl:choose>
+      </xsl:otherwise>
+    </xsl:choose>
+  </xsl:variable>
+  
 	<!--<xsl:variable name="src"><xsl:value-of select="concat($img_url_prefix,@src)"/></xsl:variable>-->
 	<xsl:variable name="alt"><xsl:value-of select="./alt"/></xsl:variable>
 	<xsl:variable name="width" select="''"/> <!-- Images don't all have the correct size -->
@@ -1018,7 +1027,6 @@
 
 <!-- Remove OpenOffice.org support text -->
 <xsl:template match="paragraph[@id='par_id9173253']" />
-<xsl:template match="paragraph[@id='par_id3149140']" />
 <xsl:template match="paragraph[@id='par_id3149140']" />
 <xsl:template match="paragraph[@id='par_id3154230']" />
 <xsl:template match="paragraph[@id='hd_id26327']" />

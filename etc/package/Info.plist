@@ -419,11 +419,13 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>doc</string>
+				<string>docm</string>
 				<string>docx</string>
 				<string>wp</string>
 				<string>wpd</string>
 				<string>wri</string>
 				<string>jtd</string>
+				<string>jtt</string>
 				<string>hwp</string>
 				<string>wps</string>
 				<string>xml</string>
@@ -435,6 +437,8 @@
 			<key>CFBundleTypeMIMETypes</key>
 			<array>
 				<string>application/msword</string>
+				<string>application/vnd.ms-word.document.macroEnabled.12</string>
+				<string>application/vnd.ms-word.template.macroEnabled.12</string>
 				<string>application/vnd.wordperfect</string>
 				<string>application/vnd.wordperfect5.1</string>
 				<string>application/wordperfect5.1</string>
@@ -444,6 +448,7 @@
 				<string>application/vnd.aportisdoc</string>
 				<string>application/x-pocket-word</string>
 				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.document</string>
+				<string>application/vnd.openxmlformats-officedocument.wordprocessingml.template</string>
 				<string>application/vnd.ms-works</string>
 			</array>
 			<key>CFBundleTypeName</key>
@@ -467,6 +472,8 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>dot</string>
+				<string>dotm</string>
+				<string>dotx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>stw_dot_Option_1.icns</string>
@@ -542,6 +549,8 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>pot</string>
+				<string>potm</string>
+				<string>potx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>sti_pot.icns</string>
@@ -561,6 +570,7 @@
 			<array>
 				<string>pps</string>
 				<string>ppt</string>
+				<string>pptm</string>
 				<string>pptx</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
@@ -570,8 +580,11 @@
 				<string>application/powerpoint</string>
 				<string>application/mspowerpoint</string>
 				<string>application/vnd.ms-powerpoint</string>
+				<string>application/vnd.ms-powerpoint.presentation.macroEnabled.12</string>
+				<string>application/vnd.ms-powerpoint.template.macroEnabled.12</string>
 				<string>application/x-mspowerpoint</string>
 				<string>application/vnd.openxmlformats-officedocument.presentationml.presentation</string>
+				<string>application/vnd.openxmlformats-officedocument.presentationml.template</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
@@ -623,6 +636,9 @@
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>TEXT</string>
+				<string>TXT</string>
+				<string>sEXT</string>
+				<string>ttro</string>
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
@@ -637,12 +653,16 @@
 				<string>sylk</string>
 				<string>wk1</string>
 				<string>wks</string>
-				<string>wb2</string>
+				<string>wk2</string>
 				<string>xl</string>
 				<string>xlc</string>
 				<string>xlm</string>
 				<string>xls</string>
+				<string>xlsb</string>
+				<string>xlsm</string>
 				<string>xlsx</string>
+				<string>xltm</string>
+				<string>xltx</string>
 				<string>xlw</string>
 				<string>xml</string>
 				<string>pxl</string>
@@ -654,6 +674,9 @@
 				<string>application/excel</string>
 				<string>application/msexcel</string>
 				<string>application/vnd.ms-excel</string>
+				<string>application/vnd.ms-excel.sheet.binary.macroEnabled.12</string>
+				<string>application/vnd.ms-excel.sheet.macroEnabled.12</string>
+				<string>application/vnd.ms-excel.template.macroEnabled.12</string>
 				<string>application/x-msexcel</string>
 				<string>application/vnd.lotus-1-2-3</string>
 				<string>application/x-123</string>
@@ -663,6 +686,7 @@
 				<string>applivation/x-quattropro</string>
 				<string>application/x-pocket-excel</string>
 				<string>application/vnd.openxmlformats-officedocument.spreadsheetml.sheet</string>
+				<string>application/vnd.openxmlformats-officedocument.spreadsheetml.template</string>
 			</array>
 			<key>CFBundleTypeName</key>
 			<string>$(PRODUCT_NAME) Document</string>
@@ -732,10 +756,14 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>$(PRODUCT_VERSION)</string>
+	<string>$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION)</string>
 	<key>CFBundleSignature</key>
 	<string>$(PRODUCT_FILETYPE)</string>
 	<key>CFBundleVersion</key>
 	<string>$(PRODUCT_VERSION) $(PRODUCT_PATCH_VERSION) $(ULONGNAME) ($(BUILD_MACHINE))</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
 </dict>
 </plist>
