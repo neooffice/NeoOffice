@@ -366,43 +366,5 @@
 		<prop oor:name="ClipboardFormat"/>
 	</node>
 
-	<node oor:name="LaTeX" oor:op="replace">
-		<prop oor:name="DetectService"/>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>tex</value></prop>
-		<prop oor:name="MediaType"/>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"/>
-		<prop oor:name="UIName">
-			<value>LaTeX 2e</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"/>
-	</node>
-
-	<node oor:name="BibTeX" oor:op="replace">
-		<prop oor:name="DetectService"/>
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>bib</value></prop>
-		<prop oor:name="MediaType"/>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"/>
-		<prop oor:name="UIName">
-			<value>BibTeX</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"/>
-	</node>
-
-	<node oor:name="MOOXTYPE" oor:op="replace">
-		<prop oor:name="URLPattern"/>
-		<prop oor:name="Extensions"><value>docx</value></prop>
-		<prop oor:name="MediaType"><value>application/vnd.openxmlformats-officedocument.wordprocessingml.document</value></prop>
-		<prop oor:name="Preferred"><value>false</value></prop>
-		<prop oor:name="PreferredFilter"><value>MOOX</value></prop>
-		<prop oor:name="UIName">
-			<value xml:lang="x-default">Microsoft Word 2007 Document</value>
-		</prop>
-		<prop oor:name="ClipboardFormat"><value>Microsoft Word 2007 XML</value></prop>
-	</node>
-
 	</node>
 </oor:component-data>
