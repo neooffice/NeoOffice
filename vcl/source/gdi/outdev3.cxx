@@ -1195,11 +1195,6 @@ String GetSubsFontName( const String& rName, ULONG nFlags )
     // #93662# do not try to replace StarSymbol with MS only font
     if( nFlags == (SUBSFONT_MS|SUBSFONT_ONLYONE)
     &&  ( aOrgName.EqualsAscii( "starsymbol" )
-#ifdef USE_JAVA
-      ||  aOrgName.EqualsAscii( "euclid" )
-      ||  aOrgName.EqualsAscii( "mtextra" )
-      ||  aOrgName.EqualsAscii( "symbol" )
-#endif	// USE_JAVA
       ||  aOrgName.EqualsAscii( "opensymbol" ) ) )
         return aName;
 
@@ -1321,6 +1316,11 @@ ImplFontData::ImplFontData( const ImplDevFontAttributes& rDFA, int nMagic )
     // StarSymbol is a unicode font, but it still deserves the symbol flag
     if( !mbSymbolFlag )
         if( 0 == GetFamilyName().CompareIgnoreCaseToAscii( "starsymbol", 10)
+#ifdef USE_JAVA
+        ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "euclid", 6)
+        ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "mt extra", 8)
+        ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "symbol", 6)
+#endif	// USE_JAVA
         ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "opensymbol", 10) )
             mbSymbolFlag = true;
 }
