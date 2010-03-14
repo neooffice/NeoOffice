@@ -41,6 +41,9 @@
 #include "DAVAuthListenerImpl.hxx"
 #include "DAVResourceAccess.hxx"
 
+#include <comphelper/processfactory.hxx>
+#include <ucbhelper/commandenvironment.hxx>
+
 using namespace webdav_ucp;
 using namespace com::sun::star;
 
@@ -60,56 +63,55 @@ int DAVAuthListener_Impl::authenticate(
     ::rtl::OUString & inoutUserName,
     ::rtl::OUString & outPassWord )
 {
+    uno::Reference< task::XInteractionHandler > xIH;
+
     if ( m_xEnv.is() )
-    {
-        uno::Reference< task::XInteractionHandler > xIH
-            = m_xEnv->getInteractionHandler();
-        if ( xIH.is() )
-        {
-            // #102871# - Supply username and password from previous try.
-            // Password container service depends on this!
-            if ( inoutUserName.getLength() == 0 )
-                inoutUserName = m_aPrevUsername;
+        xIH = m_xEnv->getInteractionHandler();
+    else
+        xIH = DAVResourceAccess::createCommandEnvironment()->getInteractionHandler();
 
-            if ( outPassWord.getLength() == 0 )
-                outPassWord = m_aPrevPassword;
+    if ( !xIH.is() )
+        return -1;
 
-            rtl::Reference< ucbhelper::SimpleAuthenticationRequest > xRequest
-                = new ucbhelper::SimpleAuthenticationRequest( inHostName,
-                                                              inRealm,
-                                                              inoutUserName,
-                                                              outPassWord );
-            xIH->handle( xRequest.get() );
+    // #102871# - Supply username and password from previous try.
+    // Password container service depends on this!
+    if ( inoutUserName.getLength() == 0 )
+        inoutUserName = m_aPrevUsername;
 
-            rtl::Reference< ucbhelper::InteractionContinuation > xSelection
-				= xRequest->getSelection();
-            
-            if ( xSelection.is() )
-            {
-                // Handler handled the request.
-                uno::Reference< task::XInteractionAbort > xAbort(
-                    xSelection.get(), uno::UNO_QUERY );
-                if ( !xAbort.is() )
-                {
-                    const rtl::Reference<
-                        ucbhelper::InteractionSupplyAuthentication > & xSupp
-                        = xRequest->getAuthenticationSupplier();
+    if ( outPassWord.getLength() == 0 )
+        outPassWord = m_aPrevPassword;
 
-                    inoutUserName = xSupp->getUserName();
-                    outPassWord   = xSupp->getPassword();
-		    
-                    // #102871# - Remember username and password.
-                    m_aPrevUsername = inoutUserName;
-                    m_aPrevPassword = outPassWord;
+    rtl::Reference< ucbhelper::SimpleAuthenticationRequest > xRequest
+        = new ucbhelper::SimpleAuthenticationRequest( inHostName,
+                inRealm,
+                inoutUserName,
+                outPassWord );
+    xIH->handle( xRequest.get() );
 
-                    // go on.
-                    return 0;
-                }
-            }
-        }
-    }
-    // Abort.
-    return -1;
+    rtl::Reference< ucbhelper::InteractionContinuation > xSelection
+        = xRequest->getSelection();
+
+    if ( !xSelection.is() )
+        return -1;
+
+    // Handler handled the request.
+    uno::Reference< task::XInteractionAbort > xAbort(
+            xSelection.get(), uno::UNO_QUERY );
+    if ( xAbort.is() )
+        return -1;
+
+    const rtl::Reference< ucbhelper::InteractionSupplyAuthentication > & xSupp
+        = xRequest->getAuthenticationSupplier();
+
+    inoutUserName = xSupp->getUserName();
+    outPassWord   = xSupp->getPassword();
+
+    // #102871# - Remember username and password.
+    m_aPrevUsername = inoutUserName;
+    m_aPrevPassword = outPassWord;
+
+    // go on.
+    return 0;
 }
 
 //=========================================================================
@@ -443,15 +445,16 @@ void DAVResourceAccess::GET(
 }
 
 //=========================================================================
-uno::Reference< io::XInputStream > DAVResourceAccess::GET(
+uno::Reference< io::XStream > DAVResourceAccess::GET(
     const std::vector< rtl::OUString > & rHeaderNames,
     DAVResource & rResource,
-    const uno::Reference< ucb::XCommandEnvironment > & xEnv )
+    const uno::Reference< ucb::XCommandEnvironment > & xEnv,
+    sal_Bool bAllowEmpty )
   throw( DAVException )
 {
     initialize();
 
-    uno::Reference< io::XInputStream > xStream;
+    uno::Reference< io::XStream > xStream;
 	int errorCount = 0;
     bool bRetry;
     do
@@ -471,7 +474,8 @@ uno::Reference< io::XInputStream > DAVResourceAccess::GET(
                                        DAVRequestEnvironment(
                                            getRequestURI(),
                                            new DAVAuthListener_Impl( xEnv ),
-                                           aHeaders, xEnv ) );
+                                           aHeaders, xEnv ),
+                                       bAllowEmpty );
         }
         catch ( DAVException & e )
         {
@@ -596,6 +600,45 @@ void DAVResourceAccess::PUT(
         catch ( DAVException & e )
         {
 			errorCount++;
+            bRetry = handleException( e, errorCount );
+            if ( !bRetry )
+                throw;
+        }
+    }
+    while ( bRetry );
+}
+
+//=========================================================================
+void DAVResourceAccess::PUT(
+        const char * buffer, size_t size,
+        const uno::Reference< ucb::XCommandEnvironment > & xEnv )
+throw( DAVException )
+{
+    initialize();
+
+    bool bRetry = false;
+    int errorCount = 0;
+    do
+    {
+        bRetry = false;
+        try
+        {
+            DAVRequestHeaders aHeaders;
+            getUserRequestHeaders( xEnv, 
+                                   getRequestURI(), 
+                                   rtl::OUString::createFromAscii( "PUT" ), 
+                                   aHeaders );
+            
+            m_xSession->PUT( getRequestURI(),
+                             buffer, size,
+                             DAVRequestEnvironment(
+                                 getRequestURI(),
+                                 new DAVAuthListener_Impl( xEnv ),
+                                 aHeaders, xEnv ) );
+        }
+        catch ( DAVException & e )
+        {
+            errorCount++;
             bRetry = handleException( e, errorCount );
             if ( !bRetry )
                 throw;
@@ -887,22 +930,44 @@ void DAVResourceAccess::DESTROY(
 
 //=========================================================================
 void DAVResourceAccess::LOCK ( 
-    const ucb::Lock & /*rLock*/,
-    const uno::Reference< ucb::XCommandEnvironment > & /*xEnv*/ )
+    ucb::Lock & rLock,
+    const uno::Reference< ucb::XCommandEnvironment > & xEnv )
   throw( DAVException )
 {
-//    initialize();
-    OSL_ENSURE( sal_False, "DAVResourceAccess::LOCK - NYI" );
+    initialize();
+
+    DAVRequestHeaders aHeaders;
+    getUserRequestHeaders( xEnv, 
+            getRequestURI(), 
+            rtl::OUString::createFromAscii( "LOCK" ), 
+            aHeaders );
+    
+    m_xSession->LOCK( rLock,
+            DAVRequestEnvironment(
+                getRequestURI(),
+                new DAVAuthListener_Impl( xEnv ),
+                aHeaders, xEnv ) );
 }
 
 //=========================================================================
 void DAVResourceAccess::UNLOCK ( 
-    const ucb::Lock & /*rLock*/,
-    const uno::Reference< ucb::XCommandEnvironment > & /*xEnv*/ )
+    ucb::Lock & rLock,
+    const uno::Reference< ucb::XCommandEnvironment > & xEnv )
   throw( DAVException )
 {
-//    initialize();
-    OSL_ENSURE( sal_False, "DAVResourceAccess::UNLOCK - NYI" );
+    initialize();
+
+    DAVRequestHeaders aHeaders;
+    getUserRequestHeaders( xEnv, 
+            getRequestURI(), 
+            rtl::OUString::createFromAscii( "UNLOCK" ), 
+            aHeaders );
+
+    m_xSession->UNLOCK( rLock,
+            DAVRequestEnvironment(
+                getRequestURI(),
+                new DAVAuthListener_Impl( xEnv ),
+                aHeaders, xEnv ) );
 }
 
 //=========================================================================
@@ -1006,6 +1071,18 @@ void DAVResourceAccess::getUserRequestHeaders(
         }
     }
 }
+
+// static
+com::sun::star::uno::Reference< com::sun::star::ucb::XCommandEnvironment > DAVResourceAccess::createCommandEnvironment( void )
+{
+    uno::Reference< lang::XMultiServiceFactory > xFactory( ::comphelper::getProcessServiceFactory(), uno::UNO_QUERY );
+    uno::Reference< task::XInteractionHandler > xInteractionHandler = uno::Reference< task::XInteractionHandler > (
+            xFactory->createInstance( rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.uui.InteractionHandler") ) ), uno::UNO_QUERY );
+    ucbhelper::CommandEnvironment* pCommandEnv = new ::ucbhelper::CommandEnvironment( xInteractionHandler, uno::Reference< ucb::XProgressHandler >() );
+
+    return uno::Reference< ucb::XCommandEnvironment >( static_cast< ucb::XCommandEnvironment* >( pCommandEnv ), uno::UNO_QUERY );
+}
+
 
 //=========================================================================
 sal_Bool DAVResourceAccess::detectRedirectCycle(
