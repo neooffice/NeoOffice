@@ -88,7 +88,7 @@ SHL1VERSIONMAP=exports.map
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)
 
-.ENDIIF		# "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
+.ENDIF		# "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
 
 # --- Targets ------------------------------------------------------
 
