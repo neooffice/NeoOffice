@@ -60,8 +60,6 @@ SLOFILES= \
 	$(SLO)$/salgdi3.obj \
 	$(SLO)$/salgdi3_cocoa.obj \
 	$(SLO)$/salnativewidgets.obj \
-	$(SLO)$/salogl.obj \
-	$(SLO)$/salogl_cocoa.obj \
 	$(SLO)$/salprn.obj \
 	$(SLO)$/salvd.obj
 
