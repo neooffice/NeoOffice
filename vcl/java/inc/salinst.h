@@ -103,7 +103,6 @@ public:
 	virtual void			DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo );
 	virtual String			GetDefaultPrinter();
 	virtual SalTimer*		CreateSalTimer();
-	virtual SalOpenGL*		CreateSalOpenGL( SalGraphics* pGraphics );
 	virtual SalI18NImeStatus*	CreateI18NImeStatus();
 	virtual SalSystem*		CreateSalSystem();
 	virtual SalBitmap*		CreateSalBitmap();
