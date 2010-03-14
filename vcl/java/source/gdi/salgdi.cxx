@@ -220,7 +220,7 @@ void JavaSalGraphics::SetFillColor( SalColor nSalColor )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::SetXORMode( BOOL bSet, bool bInvertOnly )
+void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 {
 	mpVCLGraphics->setXORMode( bSet );
 }

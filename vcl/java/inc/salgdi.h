@@ -159,7 +159,7 @@ public:
 	virtual void			SetLineColor( SalColor nSalColor );
 	virtual void			SetFillColor();
 	virtual void			SetFillColor( SalColor nSalColor );
-	virtual void			SetXORMode( BOOL bSet, bool bInvertOnly );
+	virtual void			SetXORMode( bool bSet, bool bInvertOnly );
 	virtual void			SetROPLineColor( SalROPColor nROPColor );
 	virtual void			SetROPFillColor( SalROPColor nROPColor );
 	virtual void			SetTextColor( SalColor nSalColor );
