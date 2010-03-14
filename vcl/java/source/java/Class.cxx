@@ -88,7 +88,7 @@ java_lang_Class *java_lang_Class::forName( const ::rtl::OUString& _par0 )
 sal_Bool java_lang_Class::isAssignableFrom( java_lang_Class *_par0 )
 {
 	static jmethodID mID = NULL;
-	jboolean out;
+	jboolean out = JNI_FALSE;
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
