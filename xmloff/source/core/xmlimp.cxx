@@ -46,9 +46,7 @@
 #include <xmloff/xmlictxt.hxx>
 #include <xmloff/xmlimp.hxx>
 #include <xmloff/xmlnumfi.hxx>
-#ifndef _XMLOFF_XMLEVENTIMPORTHELPER_HXX
 #include "XMLEventImportHelper.hxx"
-#endif
 #include "XMLStarBasicContextFactory.hxx"
 #include "XMLScriptContextFactory.hxx"
 #include "StyleMap.hxx"
@@ -65,9 +63,7 @@
 #include <tools/string.hxx> // used in StartElement for logging
 #include <cppuhelper/implbase1.hxx>
 #include <comphelper/extract.hxx>
-#ifndef _VCL_FONTCVT_HXX
 #include <vcl/fontcvt.hxx>
-#endif
 
 #include <com/sun/star/rdf/XMetadatable.hpp>
 
@@ -298,9 +294,9 @@ void SvXMLImport::_InitCtor()
                             XML_NAMESPACE_XFORMS );
 		mpNamespaceMap->Add( OUString( RTL_CONSTASCII_USTRINGPARAM ( sXML_np__ooow ) ), GetXMLToken(XML_N_OOOW), XML_NAMESPACE_OOOW );
 		mpNamespaceMap->Add( OUString( RTL_CONSTASCII_USTRINGPARAM ( sXML_np__oooc ) ), GetXMLToken(XML_N_OOOC), XML_NAMESPACE_OOOC );
-		mpNamespaceMap->Add( OUString( RTL_CONSTASCII_USTRINGPARAM ( sXML_np__of ) ),  GetXMLToken(XML_N_OF), XML_NAMESPACE_OF );
-	        mpNamespaceMap->Add( OUString( RTL_CONSTASCII_USTRINGPARAM ( sXML_np__field ) ), GetXMLToken(XML_N_FIELD), XML_NAMESPACE_FIELD );
-		    
+        mpNamespaceMap->Add( OUString( RTL_CONSTASCII_USTRINGPARAM ( sXML_np__field ) ), GetXMLToken(XML_N_FIELD), XML_NAMESPACE_FIELD );
+		mpNamespaceMap->Add( OUString( RTL_CONSTASCII_USTRINGPARAM ( sXML_np__of ) ),
+                            GetXMLToken(XML_N_OF), XML_NAMESPACE_OF );
 	}
 
 	msPackageProtocol = OUString( RTL_CONSTASCII_USTRINGPARAM( "vnd.sun.star.Package:" ) );
@@ -1394,7 +1390,7 @@ void SvXMLImport::AddStyleDisplayName( sal_uInt16 nFamily,
 }
 
 OUString SvXMLImport::GetStyleDisplayName( sal_uInt16 nFamily,
-										   const OUString& rName )
+										   const OUString& rName ) const
 {
 	OUString sName( rName );
 	if( mpStyleMap && rName.getLength() )
