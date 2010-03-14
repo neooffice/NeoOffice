@@ -182,6 +182,7 @@ build.oo_patches: \
 	build.oo_jvmfwk_patch \
 	build.oo_lingucomponent_patch \
 	build.oo_moz_patch \
+	build.oo_postprocess_patch \
 	build.oo_qadevOOo_patch \
 	build.oo_reportbuilder_patch \
 	build.oo_solenv_patch \

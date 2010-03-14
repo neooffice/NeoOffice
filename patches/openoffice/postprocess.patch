@@ -1,0 +1,14 @@
+--- packconfig/packconfig.pl	2009-01-07 08:00:52.000000000 -0800
++++ packconfig/packconfig.pl	2010-03-13 19:44:42.000000000 -0800
+@@ -183,11 +183,6 @@
+ 
+     foreach ( sort keys %{$zip_hash_ref} ) {
+         my $path = "$files_path/$_";
+-	# only Mac OS X Aqua is concerned here
+-	# but changes for other platforms can easely be added following the same principle
+-	if ( ( $platform =~ /^.*macx*/) && ($path =~ /^.*menubar.xml/ ) ) {
+-	    $path = modify_mac_menus($path);
+-	}
+ 	print_message("zipping '$path' ...") if $extra_verbose;
+ 	if ( !$zip->addFile($path, $_) ) {
+ 	    print_error("can't add file '$path' to config zip archive: $!", 5);
