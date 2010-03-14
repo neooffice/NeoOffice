@@ -1538,12 +1538,12 @@ void GenericSalLayout::KashidaJustify( long nKashidaIndex, int nKashidaWidth )
         if( nGapWidth < 0 )
         {
             aPos.X() += nGapWidth;
-            if( nKashidaCount <= 1 )
-                nGapWidth /= 2;               // for small gap move kashida to middle
 #ifdef USE_JAVA
             // Fix bug 1245 by not shifting the kashida
-            pG2[-1].mnNewWidth += nDelta; // adjust kashida width to gap width
+            pG2[-1].mnNewWidth += nGapWidth;  // adjust kashida width to gap width
 #else	// USE_JAVA
+            if( nKashidaCount <= 1 )
+                nGapWidth /= 2;               // for small gap move kashida to middle
             pG2[-1].mnNewWidth += nGapWidth;  // adjust kashida width to gap width
             pG2[-1].maLinearPos.X() += nGapWidth;
 #endif	// USE_JAVA

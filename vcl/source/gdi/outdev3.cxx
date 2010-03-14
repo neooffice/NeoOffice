@@ -1196,9 +1196,9 @@ String GetSubsFontName( const String& rName, ULONG nFlags )
     if( nFlags == (SUBSFONT_MS|SUBSFONT_ONLYONE)
     &&  ( aOrgName.EqualsAscii( "starsymbol" )
 #ifdef USE_JAVA
-      ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "euclid", 6)
-      ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "mt extra", 8)
-      ||  0 == GetFamilyName().CompareIgnoreCaseToAscii( "symbol", 6)
+      ||  aOrgName.EqualsAscii( "euclid" )
+      ||  aOrgName.EqualsAscii( "mtextra" )
+      ||  aOrgName.EqualsAscii( "symbol" )
 #endif	// USE_JAVA
       ||  aOrgName.EqualsAscii( "opensymbol" ) ) )
         return aName;
