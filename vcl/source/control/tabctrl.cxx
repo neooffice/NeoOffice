@@ -476,7 +476,7 @@ Size TabControl::ImplGetItemSize( ImplTabItem* pItem, long nMaxWidth )
 
 // -----------------------------------------------------------------------
 
-Rectangle TabControle:ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight )
+Rectangle TabControl::ImplGetTabRect( USHORT nItemPos, long nWidth, long nHeight )
 {
     Size aWinSize = Control::GetOutputSizePixel();
     if ( nWidth == -1 )
@@ -1202,7 +1202,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
     // find current item
     ImplTabItem* pCurItem = NULL;
 #ifdef USE_JAVA
-    int curItemIndex = 0;
+    size_t curItemIndex = 0;
 #endif	// USE_JAVA
     for( std::vector< ImplTabItem >::iterator it = mpTabCtrlData->maItemList.begin();
          it != mpTabCtrlData->maItemList.end(); ++it )
@@ -1218,7 +1218,7 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
     }
 #ifdef USE_JAVA
     if ( ! pCurItem )
-       curItemIndex = -1;
+       curItemIndex = mpTabCtrlData->maItemList.size();
 #endif	// USE_JAVA
 
     // Draw the TabPage border
@@ -1360,17 +1360,15 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
                 {
                     bool isLastTabInRow = (pItem == pLastTab);
                     bool isFirstTabInRow = (pItem == pFirstTab);
-                    if ( pItem != pFirstTab )
+                    if ( pItem != pFirstTab && idx && mpTabCtrlData->maItemList.size() > idx - 1 )
                     {
-                        ImplTabItem * prevTab = mpItemList->GetObject(idx-1);
-                        if ( prevTab && ( prevTab->mnLine != pItem->mnLine ) )
+                        if ( mpTabCtrlData->maItemList[ idx - 1 ].mnLine != pItem->mnLine )
                             isFirstTabInRow = true;
                     }
 
-                    if ( pItem != pLastTab )
+                    if ( pItem != pLastTab && mpTabCtrlData->maItemList.size() > idx + 1 )
                     {
-                        ImplTabItem * nextTab = mpItemList->GetObject(idx+1); 
-                        if ( nextTab && ( nextTab->mnLine != pItem->mnLine ) )
+                        if ( mpTabCtrlData->maItemList[ idx + 1 ].mnLine != pItem->mnLine )
                             isLastTabInRow = true;
                     }
                     ImplDrawItem( pItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, FALSE );
@@ -1397,17 +1395,15 @@ void TabControl::ImplPaint( const Rectangle& rRect, bool bLayout )
             {
                 bool isLastTabInRow = (pCurItem == pLastTab);
                 bool isFirstTabInRow = (pCurItem == pFirstTab);
-                if ( ( pCurItem != pFirstTab ) && ! ( curItemIndex < 0 ) )
+                if ( pCurItem != pFirstTab && curItemIndex && mpTabCtrlData->maItemList.size() > curItemIndex - 1 )
                 {
-                    ImplTabItem * prevTab = mpItemList->GetObject(curItemIndex-1);
-                    if ( prevTab && ( prevTab->mnLine != pCurItem->mnLine ) )
+                    if ( mpTabCtrlData->maItemList[ curItemIndex - 1 ].mnLine != pCurItem->mnLine )
                         isFirstTabInRow = true;
                 }
 
-                if ( ( pCurItem != pLastTab ) && ! ( curItemIndex < 0 ) )
+                if ( pCurItem != pLastTab && mpTabCtrlData->maItemList.size() > curItemIndex + 1 )
                 {
-                    ImplTabItem * nextTab = mpItemList->GetObject(curItemIndex+1); 
-                    if ( nextTab && ( nextTab->mnLine != pCurItem->mnLine ) )
+                    if ( mpTabCtrlData->maItemList[ curItemIndex + 1 ].mnLine != pCurItem->mnLine )
                         isLastTabInRow = true;
                 }
                 ImplDrawItem( pCurItem, aCurRect, bLayout, isFirstTabInRow, isLastTabInRow, TRUE );
