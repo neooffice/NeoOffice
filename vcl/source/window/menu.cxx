@@ -30,42 +30,36 @@
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#ifndef _SV_SVSYS_HXX
-#include <svsys.h>
-#endif
-#include <vcl/salinst.hxx>
-#include <tools/list.hxx>
-#include <tools/debug.hxx>
-#include <vcl/svdata.hxx>
-#include <vcl/svapp.hxx>
-#include <vcl/mnemonic.hxx>
-#include <vcl/image.hxx>
-#include <vcl/event.hxx>
-#include <vcl/help.hxx>
-#ifndef _SV_SVIDS_HRC
-#include <vcl/svids.hrc>
-#endif
-#include <vcl/floatwin.hxx>
-#include <vcl/wrkwin.hxx>
-#include <vcl/timer.hxx>
-#include <vcl/sound.hxx>
-#include <vcl/decoview.hxx>
-#include <vcl/bitmap.hxx>
-#ifndef _SV_RC_H
-#include <tools/rc.h>
-#endif
-#include <vcl/menu.hxx>
-#include <vcl/button.hxx>
-#include <vcl/gradient.hxx>
-#include <vcl/i18nhelp.hxx>
-#include <vcl/taskpanelist.hxx>
-#include <vcl/window.h>
-#include <vcl/controllayout.hxx>
-#include <vcl/toolbox.hxx>
-#include <tools/stream.hxx>
-#include <vcl/salmenu.hxx>
-#include <vcl/salframe.hxx>
-#include <vcl/dockingarea.hxx>
+#include "svsys.h"
+#include "vcl/salinst.hxx"
+#include "tools/list.hxx"
+#include "tools/debug.hxx"
+#include "vcl/svdata.hxx"
+#include "vcl/svapp.hxx"
+#include "vcl/mnemonic.hxx"
+#include "vcl/image.hxx"
+#include "vcl/event.hxx"
+#include "vcl/help.hxx"
+#include "vcl/svids.hrc"
+#include "vcl/floatwin.hxx"
+#include "vcl/wrkwin.hxx"
+#include "vcl/timer.hxx"
+#include "vcl/sound.hxx"
+#include "vcl/decoview.hxx"
+#include "vcl/bitmap.hxx"
+#include "tools/rc.h"
+#include "vcl/menu.hxx"
+#include "vcl/button.hxx"
+#include "vcl/gradient.hxx"
+#include "vcl/i18nhelp.hxx"
+#include "vcl/taskpanelist.hxx"
+#include "vcl/window.h"
+#include "vcl/controllayout.hxx"
+#include "vcl/toolbox.hxx"
+#include "tools/stream.hxx"
+#include "vcl/salmenu.hxx"
+#include "vcl/salframe.hxx"
+#include "vcl/dockingarea.hxx"
 
 
 #include <com/sun/star/uno/Reference.h>
@@ -2300,6 +2294,10 @@ Size Menu::ImplCalcSize( Window* pWin )
     if( nMax > nMinMenuItemHeight )
         nMinMenuItemHeight = nMax;
 
+    // When no native rendering of the checkbox & no image in the menu, we
+    // have to add some extra space even in the MENU_FLAG_SHOWCHECKIMAGES case
+    bool bSpaceForCheckbox = ( nMax == 0 );
+
 	const StyleSettings& rSettings = pWin->GetSettings().GetStyleSettings();
 	if ( rSettings.GetUseImagesInMenus() )
 	{
@@ -2307,8 +2305,11 @@ Size Menu::ImplCalcSize( Window* pWin )
 		for ( USHORT i = (USHORT)pItemList->Count(); i; )
 		{
 			MenuItemData* pData = pItemList->GetDataFromPos( --i );
-			if ( ImplIsVisible( i ) && ( pData->eType == MENUITEM_IMAGE ) || ( pData->eType == MENUITEM_STRINGIMAGE ))
+			if ( ImplIsVisible( i ) && (( pData->eType == MENUITEM_IMAGE ) || ( pData->eType == MENUITEM_STRINGIMAGE )))
 			{
+                // we have an icon, don't add the extra space
+                bSpaceForCheckbox = false;
+
 				Size aImgSz = pData->aImage.GetSizePixel();
 				if ( aImgSz.Height() > aMaxImgSz.Height() )
 					aMaxImgSz.Height() = aImgSz.Height();
@@ -2353,7 +2354,7 @@ Size Menu::ImplCalcSize( Window* pWin )
 			if ( !bIsMenuBar && pData->HasCheck() )
 			{
 				nCheckWidth = nMaxCheckWidth;
-				if (nMenuFlags & MENU_FLAG_SHOWCHECKIMAGES) 
+                if ( ( nMenuFlags & MENU_FLAG_SHOWCHECKIMAGES ) || bSpaceForCheckbox )
 					nWidth += nCheckWidth + nExtra * 2;
 			}
 
@@ -2413,7 +2414,7 @@ Size Menu::ImplCalcSize( Window* pWin )
     {
         USHORT gfxExtra = (USHORT) Max( nExtra, 7L ); // #107710# increase space between checkmarks/images/text
         nCheckPos = (USHORT)nExtra;
-		if (nMenuFlags & MENU_FLAG_SHOWCHECKIMAGES)
+        if ( ( nMenuFlags & MENU_FLAG_SHOWCHECKIMAGES ) || bSpaceForCheckbox )
 		{
             // non-NWF case has an implicit little extra space around
             // the symbol; NWF case has not, so image pos needs to
@@ -3618,7 +3619,7 @@ USHORT PopupMenu::ImplExecute( Window* pW, const Rectangle& rRect, ULONG nPopupM
 
     pWin->SetFocusId( nFocusId );
     pWin->SetOutputSizePixel( aSz );
-    // #102158# menues must never grab the focus, otherwise
+    // #102158# menus must never grab the focus, otherwise
     // they will be closed immediately
     // from now on focus grabbing is only prohibited automatically if
     // FLOATWIN_POPUPMODE_GRABFOCUS was set (which is done below), because some

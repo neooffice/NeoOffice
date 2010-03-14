@@ -119,13 +119,6 @@ void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::GetScreenFontResolution( long& rDPIX, long& rDPIY )
-{
-	GetResolution( rDPIX, rDPIY );
-}
-
-// -----------------------------------------------------------------------
-
 USHORT JavaSalGraphics::GetBitCount()
 {
 	return mpVCLGraphics->getBitCount();
@@ -227,7 +220,7 @@ void JavaSalGraphics::SetFillColor( SalColor nSalColor )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::SetXORMode( BOOL bSet )
+void JavaSalGraphics::SetXORMode( BOOL bSet, bool bInvertOnly )
 {
 	mpVCLGraphics->setXORMode( bSet );
 }
@@ -340,7 +333,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPolyPoly, const ::basegfx::B2DVector& rLineWidths )
+bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin )
 {
 #ifdef DEBUG
 	fprintf( stderr, "JavaSalGraphics::drawPolyLine not implemented\n" );

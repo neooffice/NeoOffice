@@ -88,9 +88,9 @@ using namespace rtl;
     only small deviations feasible.
 */
 
-// =======================================================================
-
 #ifdef USE_JAVA
+
+// =======================================================================
 
 static OSStatus RelayoutScrollBars( EventHandlerCallRef inHandlerCallRef, EventRef inEvent, void * inUserData )
 {

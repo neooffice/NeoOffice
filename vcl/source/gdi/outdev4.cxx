@@ -30,11 +30,7 @@
 // MARKER(update_precomp.py): autogen include statement, do not remove
 #include "precompiled_vcl.hxx"
 
-#include <math.h>
-
-#ifndef _SV_SVSYS_HXX
 #include <svsys.h>
-#endif
 #include <vcl/salgdi.hxx>
 #include <tools/debug.hxx>
 #include <vcl/svdata.hxx>

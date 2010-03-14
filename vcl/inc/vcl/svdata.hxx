@@ -112,7 +112,7 @@ class DockingManager;
 
 namespace vos { class OMutex; }
 namespace vos { class OCondition; }
-namespace vcl { class DisplayConnection; class FontSubstConfiguration; class SettingsConfigItem; class DefaultFontConfiguration; }
+namespace vcl { class DisplayConnection; class FontSubstConfiguration; class SettingsConfigItem; class DefaultFontConfiguration; class DeleteOnDeinitBase; }
 
 // -----------------
 // - ImplSVAppData -
@@ -222,7 +222,8 @@ struct ImplSVWinData
     Window*                 mpExtTextInputWin;  // Window, which is in ExtTextInput
     Window*                 mpTrackWin;         // window, that is in tracking mode
     AutoTimer*              mpTrackTimer;       // tracking timer
-    ImageList*              mpMsgBoxImgList;    // ImageList for MessageBoxen
+    ImageList*              mpMsgBoxImgList;    // ImageList for MessageBox
+    ImageList*              mpMsgBoxHCImgList;  // ImageList for MessageBox (high contrast mode)
     Window*                 mpAutoScrollWin;    // window, that is in AutoScrollMode mode
     USHORT                  mnTrackFlags;       // tracking flags
     USHORT                  mnAutoScrollFlags;  // auto scroll flags
@@ -342,6 +343,7 @@ struct ImplSVData
     UnoWrapperBase*         mpUnoWrapper;
     Window*                 mpIntroWindow;      // the splash screen
     DockingManager*         mpDockingManager;
+    BOOL                    mbIsTestTool;
 
     vos::OThread::TThreadIdentifier                     mnMainThreadId;
     ::com::sun::star::uno::Reference< 
@@ -350,6 +352,7 @@ struct ImplSVData
     ::com::sun::star::uno::Reference< ::com::sun::star::uno::XInterface > mxAccessBridge;
     com::sun::star::uno::Reference< com::sun::star::frame::XSessionManagerClient > xSMClient;
     ::vcl::SettingsConfigItem*			mpSettingsConfigItem;
+    std::list< vcl::DeleteOnDeinitBase* >*   mpDeinitDeleteList;
 };
 
 void        ImplInitSVData();

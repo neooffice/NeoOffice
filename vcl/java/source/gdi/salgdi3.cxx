@@ -849,6 +849,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 	pMetric->mnExtLeading = 0;
 	pMetric->mbKernableFont = false;
 	pMetric->mnSlant = 0;
+	pMetric->mnMinKashida = 0;
 }
 
 // -----------------------------------------------------------------------

@@ -88,7 +88,7 @@ private:
     bool                mbUnderlineAbove;
 
 public:
-    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline ), mbUnderlineAbove( bUnderlineAbove ) {}
+    					MetaTextLinePDFAction( const Point& rPos, long nWidth, FontStrikeout eStrikeout, FontUnderline eUnderline, FontUnderline eOverline, bool bUnderlineAbove ) : MetaTextLineAction( rPos, nWidth, eStrikeout, eUnderline, eOverline ), mbUnderlineAbove( bUnderlineAbove ) {}
     virtual				~MetaTextLinePDFAction() {}
 
     bool				IsUnderlineAbove() const { return mbUnderlineAbove; }
@@ -639,7 +639,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
             case( META_TEXTLINE_PDF_ACTION ):
             {
                 const MetaTextLinePDFAction* pA = (const MetaTextLinePDFAction*) pAction;
-                aWriter.DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->IsUnderlineAbove() );
+                aWriter.DrawTextLine( pA->GetStartPoint(), pA->GetWidth(), pA->GetStrikeout(), pA->GetUnderline(), pA->GetOverline(), pA->IsUnderlineAbove() );
             }
             break;
 
@@ -936,6 +936,16 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
                     aWriter.SetTextLineColor( pA->GetColor() );
                 else
                     aWriter.SetTextLineColor();
+            }
+            break;
+
+            case( META_OVERLINECOLOR_ACTION ):
+            {
+                const MetaOverlineColorAction* pA = (const MetaOverlineColorAction*) pAction;
+                if ( pA->IsSetting() )
+                    aWriter.SetOverlineColor( pA->GetColor() );
+                else
+                    aWriter.SetOverlineColor();
             }
             break;
 
@@ -1302,13 +1312,14 @@ void PDFWriter::DrawTextLine(
                              long nWidth,
                              FontStrikeout eStrikeout,
                              FontUnderline eUnderline,
+                             FontUnderline eOverline,
                              BOOL bUnderlineAbove )
 {
 #ifdef USE_JAVA
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
-        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, bUnderlineAbove ) );
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove ) );
 #endif	// USE_JAVA
-    ((PDFWriterImpl*)pImplementation)->drawTextLine( rPos, nWidth, eStrikeout, eUnderline, bUnderlineAbove );
+    ((PDFWriterImpl*)pImplementation)->drawTextLine( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove );
 }
 
 void PDFWriter::DrawTextArray(
@@ -1823,6 +1834,24 @@ void PDFWriter::SetTextLineColor( const Color& rColor )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( rColor, TRUE ) );
 #endif	// USE_JAVA
     ((PDFWriterImpl*)pImplementation)->setTextLineColor( rColor );
+}
+
+void PDFWriter::SetOverlineColor()
+{
+#ifdef USE_JAVA
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
+#endif	// USE_JAVA
+    ((PDFWriterImpl*)pImplementation)->setOverlineColor();
+}
+
+void PDFWriter::SetOverlineColor( const Color& rColor )
+{
+#ifdef USE_JAVA
+    if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
+        ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( rColor, TRUE ) );
+#endif	// USE_JAVA
+    ((PDFWriterImpl*)pImplementation)->setOverlineColor( rColor );
 }
 
 void PDFWriter::SetTextAlign( ::TextAlign eAlign )

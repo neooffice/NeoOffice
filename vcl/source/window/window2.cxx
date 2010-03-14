@@ -67,8 +67,6 @@ DBG_NAMEEX( Window )
 #define IMPL_MAXSAVEBACKSIZE    (640*480)
 #define IMPL_MAXALLSAVEBACKSIZE (800*600*2)
 
-//#define USE_NEW_RTL_IMPLEMENTATION
-
 // =======================================================================
 
 struct ImplFocusDelData : public ImplDelData
@@ -700,7 +698,7 @@ IMPL_LINK( Window, ImplTrackTimerHdl, Timer*, pTimer )
 
     // Tracking-Event erzeugen
     Point           aMousePos( mpWindowImpl->mpFrameData->mnLastMouseX, mpWindowImpl->mpFrameData->mnLastMouseY );
-    if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+    if( ImplIsAntiparallel() )
     {
         // - RTL - re-mirror frame pos at pChild
 #ifdef USE_NEW_RTL_IMPLEMENTATION
@@ -778,7 +776,7 @@ void Window::EndTracking( USHORT nFlags )
         if ( !(nFlags & ENDTRACK_DONTCALLHDL) )
         {
             Point           aMousePos( mpWindowImpl->mpFrameData->mnLastMouseX, mpWindowImpl->mpFrameData->mnLastMouseY );
-            if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+            if( ImplIsAntiparallel() )
             {
                 // - RTL - re-mirror frame pos at pChild
 #ifdef USE_NEW_RTL_IMPLEMENTATION
@@ -1469,11 +1467,19 @@ Window* Window::ImplGetTopmostFrameWindow()
 
 // making these Methods out of line to be able to change them lateron without complete rebuild
 // TODO: Set the SmartId in here and remove mpWindowImpl->mnHelpId
-void Window::SetHelpId( ULONG nHelpId ) { mpWindowImpl->mnHelpId = nHelpId; }
-ULONG Window::GetHelpId() const { return mpWindowImpl->mnHelpId; }
+void Window::SetHelpId( ULONG nHelpId ) 
+{ 
+    SetSmartHelpId(SmartId(nHelpId)); 
+}
+
+ULONG Window::GetHelpId() const 
+{ 
+    return mpWindowImpl->mnHelpId; 
+}
 
 void Window::SetSmartHelpId( const SmartId& aId, SmartIdUpdateMode aMode )
 {
+    mpWindowImpl->maHelpText = String();
     // create SmartId if required
     if ( (aMode == SMART_SET_STR) || (aMode == SMART_SET_ALL) || ( (aMode == SMART_SET_SMART) && aId.HasString() ) )
     {
@@ -1486,7 +1492,9 @@ void Window::SetSmartHelpId( const SmartId& aId, SmartIdUpdateMode aMode )
         ImplGetWinData()->mpSmartHelpId->UpdateId( aId, aMode );
     
     if ( (aMode == SMART_SET_NUM) || (aMode == SMART_SET_ALL) || ( (aMode == SMART_SET_SMART) && aId.HasNumeric() ) )
+    {
         mpWindowImpl->mnHelpId = aId.GetNum();
+    }
 }
 
 SmartId Window::GetSmartHelpId() const

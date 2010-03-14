@@ -147,8 +147,6 @@ public:
 	virtual void			BeginSetClipRegion( ULONG nRects );
 	virtual void			UnionClipRegion( long nX, long nY, long nWidth, long nHeight );
 	virtual void			EndSetClipRegion();
-	virtual SalFrame::SalIndicatorState	GetIndicatorState();
-	virtual void			SimulateKeyPress( USHORT nKeyCode );
 	virtual void			SetScreenNumber( unsigned int nScreen );
 };
 

@@ -79,9 +79,6 @@ extern void MyOutputDebugString( char *s);
 #endif
 
 
-//#define USE_NEW_RTL_IMPLEMENTATION
-
-
 // =======================================================================
 
 #define IMPL_MIN_NEEDSYSWIN         49
@@ -457,15 +454,10 @@ long ImplHandleMouseEvent( Window* pWindow, USHORT nSVEvent, BOOL bMouseLeave,
     // Ein paar Test ausfuehren und Message abfangen oder Status umsetzen
     if ( pChild )
     {
-        if( pChild->ImplHasMirroredGraphics() && !pChild->IsRTLEnabled() )
+        if( pChild->ImplIsAntiparallel() )
         {
             // - RTL - re-mirror frame pos at pChild
-#ifdef USE_NEW_RTL_IMPLEMENTATION
-            Window *pRefWindow = (Window*) pChild->mpDummy4;
-            pRefWindow->ImplReMirror( aMousePos );
-#else
             pChild->ImplReMirror( aMousePos );
-#endif
         }
         // no mouse messages to system object windows ?
 		// !!!KA: Is it OK to comment this out? !!!
@@ -1863,11 +1855,15 @@ static void ImplHandleGetFocus( Window* pWindow )
     // nicht alles flackert, wenn diese den Focus bekommen
     if ( !pWindow->ImplGetWindowImpl()->mpFrameData->mnFocusId )
     {
+        bool bCallDirect = ImplGetSVData()->mbIsTestTool;
         pWindow->ImplGetWindowImpl()->mpFrameData->mbStartFocusState = !pWindow->ImplGetWindowImpl()->mpFrameData->mbHasFocus;
-        Application::PostUserEvent( pWindow->ImplGetWindowImpl()->mpFrameData->mnFocusId, LINK( pWindow, Window, ImplAsyncFocusHdl ) );
+        if( ! bCallDirect )
+            Application::PostUserEvent( pWindow->ImplGetWindowImpl()->mpFrameData->mnFocusId, LINK( pWindow, Window, ImplAsyncFocusHdl ) );
 		Window* pFocusWin = pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin;
 		if ( pFocusWin && pFocusWin->ImplGetWindowImpl()->mpCursor )
 			pFocusWin->ImplGetWindowImpl()->mpCursor->ImplShow();
+        if( bCallDirect )
+            pWindow->ImplAsyncFocusHdl( NULL );
     }
 }
 
@@ -1901,15 +1897,19 @@ static void ImplHandleLoseFocus( Window* pWindow )
 
     // Focus-Events zeitverzoegert ausfuehren, damit bei SystemChildFenstern
     // nicht alles flackert, wenn diese den Focus bekommen
+    bool bCallDirect = ImplGetSVData()->mbIsTestTool;
     if ( !pWindow->ImplGetWindowImpl()->mpFrameData->mnFocusId )
     {
         pWindow->ImplGetWindowImpl()->mpFrameData->mbStartFocusState = !pWindow->ImplGetWindowImpl()->mpFrameData->mbHasFocus;
-        Application::PostUserEvent( pWindow->ImplGetWindowImpl()->mpFrameData->mnFocusId, LINK( pWindow, Window, ImplAsyncFocusHdl ) );
+        if( ! bCallDirect )
+            Application::PostUserEvent( pWindow->ImplGetWindowImpl()->mpFrameData->mnFocusId, LINK( pWindow, Window, ImplAsyncFocusHdl ) );
     }
 
 	Window* pFocusWin = pWindow->ImplGetWindowImpl()->mpFrameData->mpFocusWin;
 	if ( pFocusWin && pFocusWin->ImplGetWindowImpl()->mpCursor )
 		pFocusWin->ImplGetWindowImpl()->mpCursor->ImplHide();
+    if( bCallDirect )
+        pWindow->ImplAsyncFocusHdl( NULL );
 }
 
 // -----------------------------------------------------------------------
@@ -2295,6 +2295,78 @@ static long ImplHandleShowDialog( Window* pWindow, int nDialogId )
 
 // -----------------------------------------------------------------------
 
+static void ImplHandleSurroundingTextRequest( Window *pWindow,
+					      XubString& rText,
+					      Selection &rSelRange )
+{
+    Window* pChild = ImplGetKeyInputWindow( pWindow );
+
+    if ( !pChild )
+    {
+	rText = XubString::EmptyString();
+	rSelRange.setMin( 0 );
+	rSelRange.setMax( 0 );
+    }
+    else
+    {
+
+	rText = pChild->GetSurroundingText();
+	Selection aSel = pChild->GetSurroundingTextSelection();
+	rSelRange.setMin( aSel.Min() );
+	rSelRange.setMax( aSel.Max() );
+    }
+}
+
+// -----------------------------------------------------------------------
+
+static void ImplHandleSalSurroundingTextRequest( Window *pWindow,
+						 SalSurroundingTextRequestEvent *pEvt )
+{
+	Selection aSelRange;
+	ImplHandleSurroundingTextRequest( pWindow, pEvt->maText, aSelRange );
+
+	aSelRange.Justify();
+
+	if( aSelRange.Min() < 0 )
+		pEvt->mnStart = 0;
+	else if( aSelRange.Min() > pEvt->maText.Len() )
+		pEvt->mnStart = pEvt->maText.Len();
+	else
+		pEvt->mnStart = aSelRange.Min();
+
+	if( aSelRange.Max() < 0 )
+		pEvt->mnStart = 0;
+	else if( aSelRange.Max() > pEvt->maText.Len() )
+		pEvt->mnEnd = pEvt->maText.Len();
+	else
+		pEvt->mnEnd = aSelRange.Max();
+}
+
+// -----------------------------------------------------------------------
+
+static void ImplHandleSurroundingTextSelectionChange( Window *pWindow,
+						      ULONG nStart,
+						      ULONG nEnd )
+{
+    Window* pChild = ImplGetKeyInputWindow( pWindow );
+    if( pChild )
+    {
+        CommandSelectionChangeData data( nStart, nEnd );
+        ImplCallCommand( pChild, COMMAND_SELECTIONCHANGE, &data );
+    }
+}
+
+// -----------------------------------------------------------------------
+
+static void ImplHandleStartReconversion( Window *pWindow )
+{
+    Window* pChild = ImplGetKeyInputWindow( pWindow );
+    if( pChild )
+	ImplCallCommand( pChild, COMMAND_PREPARERECONVERSION );
+}
+
+// -----------------------------------------------------------------------
+
 long ImplWindowFrameProc( Window* pWindow, SalFrame* /*pFrame*/,
                           USHORT nEvent, const void* pEvent )
 {
@@ -2527,7 +2599,20 @@ long ImplWindowFrameProc( Window* pWindow, SalFrame* /*pFrame*/,
                 nRet = ImplHandleShowDialog( pWindow, nDialogID );
             }
             break;
-
+        case SALEVENT_SURROUNDINGTEXTREQUEST:
+            ImplHandleSalSurroundingTextRequest( pWindow, (SalSurroundingTextRequestEvent*)pEvent );
+            break;
+        case SALEVENT_SURROUNDINGTEXTSELECTIONCHANGE:
+        {
+            SalSurroundingTextSelectionChangeEvent* pEvt
+             = (SalSurroundingTextSelectionChangeEvent*)pEvent;
+            ImplHandleSurroundingTextSelectionChange( pWindow,
+						      pEvt->mnStart,
+						      pEvt->mnEnd );
+        }
+        case SALEVENT_STARTRECONVERSION:
+            ImplHandleStartReconversion( pWindow );
+            break;
 #ifdef DBG_UTIL
         default:
             DBG_ERROR1( "ImplWindowFrameProc(): unknown event (%lu)", (ULONG)nEvent );

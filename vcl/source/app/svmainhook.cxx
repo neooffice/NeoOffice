@@ -40,7 +40,7 @@ BOOL ImplSVMainHook( BOOL * )
 
 #else
 // MACOSX cocoa implementation of ImplSVMainHook is in aqua/source/app/salinst.cxx
-#if !defined QUARTZ || defined USE_JAVA
+#if !defined QUARTZ || defined USE_JAVA  // MACOSX (X11) needs the CFRunLoop()
 #include <osl/thread.h>
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>

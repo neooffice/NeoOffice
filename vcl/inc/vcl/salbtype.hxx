@@ -30,7 +30,6 @@
 #ifndef _SV_SALBTYPE_HXX
 #define _SV_SALBTYPE_HXX
 #include <stdio.h>
-#include <math.h>
 #include <string.h>
 #include <stdlib.h>
 #include <osl/endian.h>

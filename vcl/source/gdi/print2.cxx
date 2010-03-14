@@ -50,6 +50,8 @@
 #include <vcl/sallayout.hxx>
 #include <vcl/bmpacc.hxx>
 
+#include "pdfwriter_impl.hxx"
+
 // -----------
 // - Defines -
 // -----------
@@ -642,18 +644,18 @@ static bool ImplIsActionHandlingTransparency( const MetaAction& rAct )
 }
 
 // remove comment to enable highlighting of generated output
-void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutMtf, 
-                                   long nMaxBmpDPIX, long nMaxBmpDPIY )
+bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutMtf, 
+                                                     long nMaxBmpDPIX, long nMaxBmpDPIY,
+                                                     bool bReduceTransparency, bool bTransparencyAutoMode,
+                                                     bool bDownsampleBitmaps )
 {
-    const PrinterOptions&   rPrinterOptions = GetPrinterOptions();
 	MetaAction*             pCurrAct;
 	bool		            bTransparent( false );
 
 	rOutMtf.Clear();
 
 #ifndef USE_JAVA
-    if( !rPrinterOptions.IsReduceTransparency() || 
-        ( PRINTER_TRANSPARENCY_AUTO == rPrinterOptions.GetReducedTransparencyMode() ) )
+    if( ! bReduceTransparency || bTransparencyAutoMode )
     {
         // watch for transparent drawing actions
 	    for( pCurrAct = ( (GDIMetaFile&) rInMtf ).FirstAction(); 
@@ -1110,7 +1112,17 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
         //
 
         Point aTmpPoint;
-        const Rectangle aOutputRect( aTmpPoint, GetOutputSizePixel() );
+        Size aTmpSize( GetOutputSizePixel() );
+        if( mpPDFWriter )
+        {
+            aTmpSize = mpPDFWriter->getCurPageSize();
+            aTmpSize = LogicToPixel( aTmpSize, MapMode( MAP_POINT ) );
+            
+            // also add error code to PDFWriter
+            mpPDFWriter->insertError( vcl::PDFWriter::Warning_Transparency_Converted );
+        }
+        const Rectangle aOutputRect( aTmpPoint, aTmpSize );
+        bool bTiling = dynamic_cast<Printer*>(this) != NULL;
 
         // iterate over all aCCList members and generate bitmaps for the special ones
         for( aCurr = aCCList.begin(); aCurr != aLast; ++aCurr )
@@ -1124,9 +1136,7 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
                 const double fOutArea( (double) aOutputRect.GetWidth() * aOutputRect.GetHeight() );
 
                 // check if output doesn't exceed given size
-                if( rPrinterOptions.IsReduceTransparency() && 
-                    ( PRINTER_TRANSPARENCY_AUTO == rPrinterOptions.GetReducedTransparencyMode() ) &&
-                    ( fBmpArea > ( 0.25 * fOutArea ) ) )
+                if( bReduceTransparency && bTransparencyAutoMode && ( fBmpArea > ( 0.25 * fOutArea ) ) )
                 {
                     // output normally. Therefore, we simply clear the
                     // special attribute, as everything non-special is
@@ -1154,7 +1164,7 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
                         while( aDstPtPix.Y() <= aBoundRect.Bottom() )
                         {
                             aDstPtPix.X() = aBoundRect.Left();
-                            aDstSzPix = Size( MAX_TILE_WIDTH, MAX_TILE_HEIGHT );
+                            aDstSzPix = bTiling ? Size( MAX_TILE_WIDTH, MAX_TILE_HEIGHT ) : aBoundRect.GetSize();
 
                             if( ( aDstPtPix.Y() + aDstSzPix.Height() - 1L ) > aBoundRect.Bottom() )
                                 aDstSzPix.Height() = aBoundRect.Bottom() - aDstPtPix.Y() + 1L;
@@ -1208,7 +1218,11 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
                                         else if( META_GRADIENT_ACTION == nType )
                                         {
                                             MetaGradientAction* pGradientAction = static_cast<MetaGradientAction*>(pCurrAct);
-                                            DrawGradientEx( &aPaintVDev, pGradientAction->GetRect(), pGradientAction->GetGradient() );
+                                            Printer* pPrinter = dynamic_cast< Printer* >(this);
+                                            if( pPrinter )
+                                                pPrinter->DrawGradientEx( &aPaintVDev, pGradientAction->GetRect(), pGradientAction->GetGradient() );
+                                            else
+                                                DrawGradient( pGradientAction->GetRect(), pGradientAction->GetGradient() );
                                         }
                                         else
                                         {
@@ -1225,11 +1239,11 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
                                     Bitmap aBandBmp( aPaintVDev.GetBitmap( Point(), aDstSzPix ) );
 
                                     // scale down bitmap, if requested
-                                    if( rPrinterOptions.IsReduceBitmaps() && rPrinterOptions.IsReducedBitmapIncludesTransparency() )
+                                    if( bDownsampleBitmaps )
                                     {
-                                        aBandBmp = GetPreparedBitmap( aDstSzPix, 
-                                                                      Point(), aBandBmp.GetSizePixel(),
-                                                                      aBandBmp, nMaxBmpDPIX, nMaxBmpDPIY );
+                                        aBandBmp = GetDownsampledBitmap( aDstSzPix, 
+                                                                         Point(), aBandBmp.GetSizePixel(),
+                                                                         aBandBmp, nMaxBmpDPIX, nMaxBmpDPIY );
                                     }
 
                                     rOutMtf.AddAction( new MetaCommentAction( "PRNSPOOL_TRANSPARENTBITMAP_BEGIN" ) );
@@ -1311,13 +1325,14 @@ void Printer::GetPreparedMetaFile( const GDIMetaFile& rInMtf, GDIMetaFile& rOutM
         rOutMtf.SetPrefMapMode( rInMtf.GetPrefMapMode() );
         rOutMtf.SetPrefSize( rInMtf.GetPrefSize() );
 	}
+    return bTransparent;
 }
 
 // -----------------------------------------------------------------------------
 
-Bitmap Printer::GetPreparedBitmap( const Size& rDstSz, 
-                                   const Point& rSrcPt, const Size& rSrcSz,
-                                   const Bitmap& rBmp, long nMaxBmpDPIX, long nMaxBmpDPIY )
+Bitmap OutputDevice::GetDownsampledBitmap( const Size& rDstSz, 
+                                           const Point& rSrcPt, const Size& rSrcSz,
+                                           const Bitmap& rBmp, long nMaxBmpDPIX, long nMaxBmpDPIY )
 {
     Bitmap aBmp( rBmp );
 
@@ -1388,9 +1403,9 @@ Bitmap Printer::GetPreparedBitmap( const Size& rDstSz,
 
 // -----------------------------------------------------------------------------
 
-BitmapEx Printer::GetPreparedBitmapEx( const Size& rDstSz,
-                                       const Point& rSrcPt, const Size& rSrcSz,
-                                       const BitmapEx& rBmpEx, long nMaxBmpDPIX, long nMaxBmpDPIY )
+BitmapEx OutputDevice::GetDownsampledBitmapEx( const Size& rDstSz,
+                                               const Point& rSrcPt, const Size& rSrcSz,
+                                               const BitmapEx& rBmpEx, long nMaxBmpDPIX, long nMaxBmpDPIY )
 {
     BitmapEx aBmpEx( rBmpEx );
 

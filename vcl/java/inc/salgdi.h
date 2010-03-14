@@ -134,7 +134,7 @@ public:
 	virtual void			drawPolygon( ULONG nPoints, const SalPoint* pPtAry );
 	virtual void			drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry );
 	virtual bool			drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency );
-	virtual bool			drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths );
+	virtual bool			drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin );
 	virtual sal_Bool		drawPolyLineBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry );
 	virtual sal_Bool		drawPolygonBezier( ULONG nPoints, const SalPoint* pPtAry, const BYTE* pFlgAry );
 	virtual sal_Bool		drawPolyPolygonBezier( ULONG nPoly, const ULONG* pPoints, const SalPoint* const* pPtAry, const BYTE* const* pFlgAry );
@@ -150,7 +150,6 @@ public:
 	virtual void			invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags );
 	virtual BOOL			drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize );
 	virtual void			GetResolution( sal_Int32& rDPIX, sal_Int32& rDPIY );
-	virtual void			GetScreenFontResolution( sal_Int32& rDPIX, sal_Int32& rDPIY );
 	virtual USHORT			GetBitCount();
 	virtual long			GetGraphicsWidth() const;
 	virtual void			ResetClipRegion();
@@ -160,7 +159,7 @@ public:
 	virtual void			SetLineColor( SalColor nSalColor );
 	virtual void			SetFillColor();
 	virtual void			SetFillColor( SalColor nSalColor );
-	virtual void			SetXORMode( BOOL bSet );
+	virtual void			SetXORMode( BOOL bSet, bool bInvertOnly );
 	virtual void			SetROPLineColor( SalROPColor nROPColor );
 	virtual void			SetROPFillColor( SalROPColor nROPColor );
 	virtual void			SetTextColor( SalColor nSalColor );

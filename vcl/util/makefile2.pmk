@@ -30,17 +30,13 @@
 
 # Reduction of exported symbols:
 CDEFS += -DVCL_DLLIMPLEMENTATION
-.IF "$(COMNAME)" == "gcc3" && "$(HAVE_GCC_VISIBILITY_FEATURE)" == "TRUE"
-CFLAGS += -fvisibility=hidden
-.ELIF "$(COMNAME)" == "sunpro5" && "$(CCNUMVER)" >= "00050005"
-CFLAGS += -xldscope=hidden
-.ENDIF
-
-.IF "$(GUIBASE)"=="java"
-INCGUI += -I$(PRJ)$/aqua/inc
-.ENDIF  # "$(GUIBASE)"=="java"
+VISIBILITY_HIDDEN=TRUE
 
 .IF "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
 OBJCXXFLAGS=-x objective-c++ -fobjc-exceptions
 CFLAGSCXX+=$(OBJCXXFLAGS)
 .ENDIF  # "$(GUIBASE)"=="aqua" || "$(GUIBASE)"=="java"
+
+.IF "$(GUIBASE)"=="java"
+INCGUI += -I$(PRJ)$/aqua/inc
+.ENDIF  # "$(GUIBASE)"=="java"

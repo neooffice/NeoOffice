@@ -99,6 +99,8 @@
 #include "vcl/pdfextoutdevdata.hxx"
 #include "vcl/lazydelete.hxx"
 
+#include <set>
+
 using namespace rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
@@ -382,11 +384,27 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
 #ifdef USE_JAVA
     // Always use 9pt
     defFontheight = Max(9, defFontheight);
+    bool bBrokenLangFontHeight = true;
 #else	// USE_JAVA
-    // if the UI is korean, always use 9pt
+    // if the UI is korean, chinese or another locale
+    // where the system font size is kown to be often too small to
+    // generate readable fonts enforce a minimum font size of 9 points
+    bool bBrokenLangFontHeight = false;
+    static const LanguageType eBrokenSystemFontSizeLanguages[] =
+    { LANGUAGE_KOREAN, LANGUAGE_KOREAN_JOHAB,
+      LANGUAGE_CHINESE_HONGKONG, LANGUAGE_CHINESE_MACAU, LANGUAGE_CHINESE_SIMPLIFIED, LANGUAGE_CHINESE_SINGAPORE, LANGUAGE_CHINESE_TRADITIONAL
+    };
+    static std::set< LanguageType > aBrokenSystemFontSizeLanguagesSet(
+        eBrokenSystemFontSizeLanguages,
+        eBrokenSystemFontSizeLanguages + 
+        (sizeof(eBrokenSystemFontSizeLanguages)/sizeof(eBrokenSystemFontSizeLanguages[0]))
+        );
     LanguageType aLang = Application::GetSettings().GetUILanguage();
-    if( aLang == LANGUAGE_KOREAN || aLang == LANGUAGE_KOREAN_JOHAB )
+    if( aBrokenSystemFontSizeLanguagesSet.find( aLang ) != aBrokenSystemFontSizeLanguagesSet.end() )
+    {
         defFontheight = Max(9, defFontheight);
+        bBrokenLangFontHeight = true;
+    }
 #endif	// USE_JAVA
 
     // i22098, toolfont will be scaled differently to avoid bloated rulers and status bars for big fonts
@@ -397,18 +415,28 @@ void Window::ImplUpdateGlobalSettings( AllSettings& rSettings, BOOL bCallHdl )
     aFont = aStyleSettings.GetAppFont();
     aFont.SetHeight( defFontheight );
     aStyleSettings.SetAppFont( aFont );
-    //aFont = aStyleSettings.GetHelpFont();
-    //aFont.SetHeight( defFontheight );
-    //aStyleSettings.SetHelpFont( aFont );
     aFont = aStyleSettings.GetTitleFont();
     aFont.SetHeight( defFontheight );
     aStyleSettings.SetTitleFont( aFont );
     aFont = aStyleSettings.GetFloatTitleFont();
     aFont.SetHeight( defFontheight );
     aStyleSettings.SetFloatTitleFont( aFont );
-    //aFont = aStyleSettings.GetMenuFont();
-    //aFont.SetHeight( defFontheight );
-    //aStyleSettings.SetMenuFont( aFont );
+    // keep menu and help font size from system unless in broken locale size
+    if( bBrokenLangFontHeight )
+    {
+        aFont = aStyleSettings.GetMenuFont();
+        if( aFont.GetHeight() < defFontheight )
+        {
+            aFont.SetHeight( defFontheight );
+            aStyleSettings.SetMenuFont( aFont );
+        }
+        aFont = aStyleSettings.GetHelpFont();
+        if( aFont.GetHeight() < defFontheight )
+        {
+            aFont.SetHeight( defFontheight );
+            aStyleSettings.SetHelpFont( aFont );
+        }
+    }
 
     // use different height for toolfont
     aFont = aStyleSettings.GetToolFont();
@@ -686,7 +714,7 @@ void Window::ImplInitWindowData( WindowType nType )
     mpWindowImpl->mbDisableAccessibleLabelForRelation = FALSE; // TRUE: do not set LabelFor relation on accessible objects
     mpWindowImpl->mbDisableAccessibleLabeledByRelation = FALSE; // TRUE: do not set LabeledBy relation on accessible objects
 
-    mbEnableRTL         = TRUE;         // TRUE: this outdev will be mirrored if RTL window layout (UI mirroring) is globally active
+    mbEnableRTL         = Application::GetSettings().GetLayoutRTL();         // TRUE: this outdev will be mirrored if RTL window layout (UI mirroring) is globally active
 }
 
 // -----------------------------------------------------------------------
@@ -704,7 +732,7 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
 
     ImplSVData* pSVData = ImplGetSVData();
     Window*     pRealParent = pParent;
-
+    
     // 3D-Look vererben
     if ( !mpWindowImpl->mbOverlapWin && pParent && (pParent->GetStyle() & WB_3DLOOK) )
         nStyle |= WB_3DLOOK;
@@ -750,6 +778,9 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
         mpWindowImpl->mpOverlapData->mbSaveBack       = FALSE;
         mpWindowImpl->mpOverlapData->mnTopLevel       = 1;
     }
+
+    if( pParent && ! mpWindowImpl->mbFrame )
+        mbEnableRTL = pParent->mbEnableRTL;
 
     // test for frame creation
     if ( mpWindowImpl->mbFrame )
@@ -893,15 +924,12 @@ void Window::ImplInit( Window* pParent, WinBits nStyle, SystemParentData* pSyste
         {
             mpWindowImpl->mpFrameData->mnDPIX     = pParent->mpWindowImpl->mpFrameData->mnDPIX;
             mpWindowImpl->mpFrameData->mnDPIY     = pParent->mpWindowImpl->mpFrameData->mnDPIY;
-            mpWindowImpl->mpFrameData->mnFontDPIX = pParent->mpWindowImpl->mpFrameData->mnFontDPIX;
-            mpWindowImpl->mpFrameData->mnFontDPIY = pParent->mpWindowImpl->mpFrameData->mnFontDPIY;
         }
         else
         {
             if ( ImplGetGraphics() )
             {
                 mpGraphics->GetResolution( mpWindowImpl->mpFrameData->mnDPIX, mpWindowImpl->mpFrameData->mnDPIY );
-                mpGraphics->GetScreenFontResolution( mpWindowImpl->mpFrameData->mnFontDPIX, mpWindowImpl->mpFrameData->mnFontDPIY );
             }
         }
 
@@ -1366,7 +1394,7 @@ Window* Window::ImplFindWindow( const Point& rFramePos )
 USHORT Window::ImplHitTest( const Point& rFramePos )
 {
     Point aFramePos( rFramePos );
-    if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+    if( ImplIsAntiparallel() )
     {
         // - RTL - re-mirror frame pos at this window
         ImplReMirror( aFramePos );
@@ -1685,13 +1713,13 @@ void Window::ImplPointToLogic( Font& rFont ) const
 
     if ( aSize.Width() )
     {
-        aSize.Width() *= mpWindowImpl->mpFrameData->mnFontDPIX;
+        aSize.Width() *= mpWindowImpl->mpFrameData->mnDPIX;
         aSize.Width() += 72/2;
         aSize.Width() /= 72;
         aSize.Width() *= nScreenFontZoom;
         aSize.Width() /= 100;
     }
-    aSize.Height() *= mpWindowImpl->mpFrameData->mnFontDPIY;
+    aSize.Height() *= mpWindowImpl->mpFrameData->mnDPIY;
     aSize.Height() += 72/2;
     aSize.Height() /= 72;
     aSize.Height() *= nScreenFontZoom;
@@ -1718,14 +1746,14 @@ void Window::ImplLogicToPoint( Font& rFont ) const
         aSize.Width() *= 100;
         aSize.Width() /= nScreenFontZoom;
         aSize.Width() *= 72;
-        aSize.Width() += mpWindowImpl->mpFrameData->mnFontDPIX/2;
-        aSize.Width() /= mpWindowImpl->mpFrameData->mnFontDPIX;
+        aSize.Width() += mpWindowImpl->mpFrameData->mnDPIX/2;
+        aSize.Width() /= mpWindowImpl->mpFrameData->mnDPIX;
     }
     aSize.Height() *= 100;
     aSize.Height() /= nScreenFontZoom;
     aSize.Height() *= 72;
-    aSize.Height() += mpWindowImpl->mpFrameData->mnFontDPIY/2;
-    aSize.Height() /= mpWindowImpl->mpFrameData->mnFontDPIY;
+    aSize.Height() += mpWindowImpl->mpFrameData->mnDPIY/2;
+    aSize.Height() /= mpWindowImpl->mpFrameData->mnDPIY;
 
     rFont.SetSize( aSize );
 }
@@ -2313,6 +2341,10 @@ void Window::ImplCalcOverlapRegion( const Rectangle& rSourceRect, Region& rRegio
 
 void Window::ImplCallPaint( const Region* pRegion, USHORT nPaintFlags )
 {
+    // call PrePaint. PrePaint may add to the invalidate region as well as
+    // other parameters used below.
+    PrePaint();
+    
     mpWindowImpl->mbPaintFrame = FALSE;
 
     if ( nPaintFlags & IMPL_PAINT_PAINTALLCHILDS )
@@ -2375,7 +2407,7 @@ void Window::ImplCallPaint( const Region* pRegion, USHORT nPaintFlags )
             Rectangle   aPaintRect = aPaintRegion.GetBoundRect();
 
             // - RTL - re-mirror paint rect and region at this window
-		    if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+		    if( ImplIsAntiparallel() )
             {
                 ImplReMirror( aPaintRect );
                 ImplReMirror( aPaintRegion );
@@ -2512,12 +2544,15 @@ void Window::ImplInvalidateFrameRegion( const Region* pRegion, USHORT nFlags )
     if ( !ImplIsOverlapWindow() )
     {
         Window* pTempWindow = this;
+        USHORT nTranspPaint = IsPaintTransparent() ? IMPL_PAINT_PAINT : 0;
         do
         {
             pTempWindow = pTempWindow->ImplGetParent();
             if ( pTempWindow->mpWindowImpl->mnPaintFlags & IMPL_PAINT_PAINTCHILDS )
                 break;
-            pTempWindow->mpWindowImpl->mnPaintFlags |= IMPL_PAINT_PAINTCHILDS;
+            pTempWindow->mpWindowImpl->mnPaintFlags |= IMPL_PAINT_PAINTCHILDS | nTranspPaint;
+            if( ! pTempWindow->IsPaintTransparent() )
+                nTranspPaint = 0;
         }
         while ( !pTempWindow->ImplIsOverlapWindow() );
     }
@@ -2649,7 +2684,7 @@ void Window::ImplInvalidate( const Region* pRegion, USHORT nFlags )
         if ( pRegion )
         {
             // --- RTL --- remirror region before intersecting it
-            if ( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+            if ( ImplIsAntiparallel() )
             {
                 Region aRgn( *pRegion );
                 ImplReMirror( aRgn );
@@ -2870,7 +2905,7 @@ void Window::ImplScroll( const Rectangle& rRect,
         bScrollChilds = FALSE;
 
     // --- RTL --- check if this window requires special action
-    BOOL bReMirror = ( ImplHasMirroredGraphics() && !IsRTLEnabled() );
+    BOOL bReMirror = ( ImplIsAntiparallel() );
 
     Rectangle aRectMirror( rRect );
     if( bReMirror )
@@ -2986,25 +3021,9 @@ void Window::ImplScroll( const Rectangle& rRect,
         Window* pWindow = mpWindowImpl->mpFirstChild;
         while ( pWindow )
         {
-            pWindow->mpWindowImpl->mnX        += nHorzScroll;
-            pWindow->mpWindowImpl->maPos.X()  += nHorzScroll;
-            pWindow->mpWindowImpl->mnY        += nVertScroll;
-            pWindow->mpWindowImpl->maPos.Y()  += nVertScroll;
-            if ( pWindow->ImplUpdatePos() )
-                pWindow->ImplUpdateSysObjPos();
-            if ( pWindow->IsReallyVisible() )
-                pWindow->ImplSetClipFlag();
-            if ( pWindow->mpWindowImpl->mpClientWindow )
-                pWindow->mpWindowImpl->mpClientWindow->mpWindowImpl->maPos = pWindow->mpWindowImpl->maPos;
-
-            if ( pWindow->IsVisible() )
-            {
-                pWindow->ImplCallMove();
-            }
-            else
-            {
-                pWindow->mpWindowImpl->mbCallMove = TRUE;
-            }
+            Point aPos = pWindow->GetPosPixel();
+            aPos += Point( nHorzScroll, nVertScroll );
+            pWindow->SetPosPixel( aPos );
 
             pWindow = pWindow->mpWindowImpl->mpNext;
         }
@@ -3232,7 +3251,6 @@ void Window::ImplPosSizeWindow( long nX, long nY,
     if ( nFlags & WINDOW_POSSIZE_X )
     {
         long nOrgX = nX;
-        //if ( nX != mnX )
 		// --- RTL ---  (compare the screen coordinates)
 		Point aPtDev( Point( nX+mnOutOffX, 0 ) );
 		if( ImplHasMirroredGraphics() )
@@ -3242,12 +3260,32 @@ void Window::ImplPosSizeWindow( long nX, long nY,
             // #106948# always mirror our pos if our parent is not mirroring, even
             // if we are also not mirroring
             // --- RTL --- check if parent is in different coordinates
-            if( !bnXRecycled && mpWindowImpl->mpParent && !mpWindowImpl->mpParent->mpWindowImpl->mbFrame && mpWindowImpl->mpParent->ImplHasMirroredGraphics() && !mpWindowImpl->mpParent->IsRTLEnabled() )
+            if( !bnXRecycled && mpWindowImpl->mpParent && !mpWindowImpl->mpParent->mpWindowImpl->mbFrame && mpWindowImpl->mpParent->ImplIsAntiparallel() )
+            {
+                // --- RTL --- (re-mirror at parent window)
+                nX = mpWindowImpl->mpParent->mnOutWidth - mnOutWidth - nX;
+            }
+            /* #i99166# An LTR window in RTL UI that gets sized only would be
+               expected to not moved its upper left point
+            */
+            if( bnXRecycled )
+            {
+                if( ImplIsAntiparallel() )
+                {
+                    aPtDev.X() = mpWindowImpl->mnAbsScreenX;
+                    nOrgX = mpWindowImpl->maPos.X();
+                }
+            }
+        }
+        else if( !bnXRecycled && mpWindowImpl->mpParent && !mpWindowImpl->mpParent->mpWindowImpl->mbFrame && mpWindowImpl->mpParent->ImplIsAntiparallel() )
+        {
+            // mirrored window in LTR UI
             {
                 // --- RTL --- (re-mirror at parent window)
                 nX = mpWindowImpl->mpParent->mnOutWidth - mnOutWidth - nX;
             }
         }
+        
         // check maPos as well, as it could have been changed for client windows (ImplCallMove())
         if ( mpWindowImpl->mnAbsScreenX != aPtDev.X() || nX != mpWindowImpl->mnX || nOrgX != mpWindowImpl->maPos.X() )
         {
@@ -4725,19 +4763,11 @@ Window::~Window()
 // -----------------------------------------------------------------------
 void Window::doLazyDelete()
 {
-    if( dynamic_cast<SystemWindow*>(this) )
+    SystemWindow* pSysWin = dynamic_cast<SystemWindow*>(this);
+    DockingWindow* pDockWin = dynamic_cast<DockingWindow*>(this);
+    if( pSysWin || ( pDockWin && pDockWin->IsFloatingMode() ) )
         SetParent( ImplGetDefaultWindow() );
     vcl::LazyDeletor<Window>::Delete( this );
-}
-
-USHORT Window::GetIndicatorState() const
-{
-    return mpWindowImpl->mpFrame->GetIndicatorState().mnState;
-}
-
-void Window::SimulateKeyPress( USHORT nKeyCode ) const
-{
-    mpWindowImpl->mpFrame->SimulateKeyPress(nKeyCode);
 }
 
 // -----------------------------------------------------------------------
@@ -4803,6 +4833,12 @@ void Window::KeyUp( const KeyEvent& rKEvt )
     NotifyEvent aNEvt( EVENT_KEYUP, this, &rKEvt );
     if ( !Notify( aNEvt ) )
         mpWindowImpl->mbKeyUp = TRUE;
+}
+
+// -----------------------------------------------------------------------
+
+void Window::PrePaint()
+{
 }
 
 // -----------------------------------------------------------------------
@@ -5913,12 +5949,13 @@ Font Window::GetPointFont() const
 
 // -----------------------------------------------------------------------
 
+// TODO: remove in next incompatible build
 void Window::GetFontResolution( sal_Int32& nDPIX, sal_Int32& nDPIY ) const
 {
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
 
-    nDPIX = mpWindowImpl->mpFrameData->mnFontDPIX;
-    nDPIY = mpWindowImpl->mpFrameData->mnFontDPIY;
+    nDPIX = mpWindowImpl->mpFrameData->mnDPIX;
+    nDPIY = mpWindowImpl->mpFrameData->mnDPIY;
 }
 
 // -----------------------------------------------------------------------
@@ -6109,7 +6146,7 @@ Region Window::GetWindowClipRegionPixel( USHORT nFlags ) const
         Region* pWinChildClipRegion = ((Window*)this)->ImplGetWinChildClipRegion();
         aWinClipRegion = *pWinChildClipRegion;
         // --- RTL --- remirror clip region before passing it to somebody
-        if( ((Window*)this)->ImplHasMirroredGraphics() && !IsRTLEnabled() )
+        if( ImplIsAntiparallel() )
             ImplReMirror( aWinClipRegion );
     }
 
@@ -6157,7 +6194,7 @@ void Window::ExpandPaintClipRegion( const Region& rRegion )
 
         Region aWinChildRegion = *ImplGetWinChildClipRegion();
         // --- RTL -- only this region is in frame coordinates, so re-mirror it
-        if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+        if( ImplIsAntiparallel() )
             ImplReMirror( aWinChildRegion );
         aDevPixRegion.Intersect( aWinChildRegion );
         if( ! aDevPixRegion.IsEmpty() )
@@ -6495,7 +6532,10 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
 
             if ( !mpWindowImpl->mbFrame )
             {
-                ImplInvalidate( NULL, INVALIDATE_NOTRANSPARENT | INVALIDATE_CHILDREN );
+                USHORT nInvalidateFlags = INVALIDATE_CHILDREN;
+                if( ! IsPaintTransparent() )
+                    nInvalidateFlags |= INVALIDATE_NOTRANSPARENT;
+                ImplInvalidate( NULL, nInvalidateFlags );
                 ImplGenerateMouseMove();
             }
         }
@@ -7179,7 +7219,7 @@ void Window::SetPosSizePixel( long nX, long nY,
                 Window* pParent = pWindow->GetParent();
                 nX += pParent->mnOutOffX;
 			}
-            if( GetParent() && GetParent()->ImplHasMirroredGraphics() && !GetParent()->IsRTLEnabled() )
+            if( GetParent() && GetParent()->ImplIsAntiparallel() )
             {
                 // --- RTL --- (re-mirror at parent window)
                 Rectangle aRect( Point ( nX, nY ), Size( nWidth, nHeight ) );
@@ -7301,7 +7341,7 @@ long Window::ImplGetUnmirroredOutOffX()
     long offx = mnOutOffX;
     if( ImplHasMirroredGraphics() )
     {
-        if( mpWindowImpl->mpParent && !mpWindowImpl->mpParent->mpWindowImpl->mbFrame && mpWindowImpl->mpParent->ImplHasMirroredGraphics() && !mpWindowImpl->mpParent->IsRTLEnabled() )
+        if( mpWindowImpl->mpParent && !mpWindowImpl->mpParent->mpWindowImpl->mbFrame && mpWindowImpl->mpParent->ImplIsAntiparallel() )
         {
             if ( !ImplIsOverlapWindow() )
                 offx -= mpWindowImpl->mpParent->mnOutOffX;
@@ -7834,6 +7874,10 @@ void Window::SetPointerPosPixel( const Point& rPos )
         // mirroring is required here, SetPointerPos bypasses SalGraphics
         mpGraphics->mirror( aPos.X(), this );
     }
+    else if( ImplIsAntiparallel() )
+    {
+        ImplReMirror( aPos );
+    }
     mpWindowImpl->mpFrame->SetPointerPos( aPos.X(), aPos.Y() );
 }
 
@@ -7844,7 +7888,7 @@ Point Window::GetPointerPosPixel()
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
 
     Point aPos( mpWindowImpl->mpFrameData->mnLastMouseX, mpWindowImpl->mpFrameData->mnLastMouseY );
-    if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+    if( ImplIsAntiparallel() )
     {
         // --- RTL --- (re-mirror mouse pos at this window)
         ImplReMirror( aPos );
@@ -7859,13 +7903,11 @@ Point Window::GetLastPointerPosPixel()
     DBG_CHKTHIS( Window, ImplDbgCheckWindow );
 
     Point aPos( mpWindowImpl->mpFrameData->mnBeforeLastMouseX, mpWindowImpl->mpFrameData->mnBeforeLastMouseY );
-#ifndef REMOTE_APPSERVER
-    if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+    if( ImplIsAntiparallel() )
     {
         // --- RTL --- (re-mirror mouse pos at this window)
         ImplReMirror( aPos );
     }
-#endif
     return ImplFrameToOutput( aPos );
 }
 
@@ -7897,7 +7939,7 @@ Window::PointerState Window::GetPointerState()
         SalFrame::SalPointerState aSalPointerState;
 
         aSalPointerState = mpWindowImpl->mpFrame->GetPointerState();
-        if( ImplHasMirroredGraphics() && !IsRTLEnabled() )
+        if( ImplIsAntiparallel() )
         {
             // --- RTL --- (re-mirror mouse pos at this window)
             ImplReMirror( aSalPointerState.maPos );
@@ -8559,7 +8601,7 @@ Reference< XClipboard > Window::GetClipboard()
                 {
                     mpWindowImpl->mpFrameData->mxClipboard = Reference< XClipboard >( xFactory->createInstance( OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.SystemClipboard" ) ), UNO_QUERY );
 
-#if defined(UNX) && !defined(QUARTZ)          // unix clipboard needs to be initialized
+#if defined(UNX) && (!defined(QUARTZ) || defined(USE_JAVA))          // unix clipboard needs to be initialized
                     if( mpWindowImpl->mpFrameData->mxClipboard.is() )
                     {
                         Reference< XInitialization > xInit = Reference< XInitialization >( mpWindowImpl->mpFrameData->mxClipboard, UNO_QUERY );
@@ -8574,7 +8616,7 @@ Reference< XClipboard > Window::GetClipboard()
                             xInit->initialize( aArgumentList );
                         }
                     }
-#endif
+#endif	// UNX && (!QUARTZ || USE_JAVA)
                 }
             }
 
@@ -8608,7 +8650,7 @@ Reference< XClipboard > Window::GetPrimarySelection()
 
                 if( xFactory.is() )
                 {
-#if defined(UNX) && (!defined(QUARTZ) || defined(USE_JAVA))
+#if defined(UNX) && !defined(QUARTZ)
                     Sequence< Any > aArgumentList( 3 );
                   	aArgumentList[ 0 ] = makeAny( Application::GetDisplayConnection() );
                     aArgumentList[ 1 ] = makeAny( OUString::createFromAscii( "PRIMARY" ) );
@@ -9680,7 +9722,7 @@ Reference< ::com::sun::star::rendering::XSpriteCanvas > Window::GetFullscreenSpr
     return xSpriteCanvas;
 }
 
-void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev, const Region* pOuterClip )
+void Window::ImplPaintToDevice( OutputDevice* i_pTargetOutDev, const Point& i_rPos )
 {
     BOOL bRVisible = mpWindowImpl->mbReallyVisible;
     mpWindowImpl->mbReallyVisible = mpWindowImpl->mbVisible;
@@ -9689,8 +9731,8 @@ void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev
 
     long nOldDPIX = ImplGetDPIX();
     long nOldDPIY = ImplGetDPIY();
-    mnDPIX = pTargetOutDev->ImplGetDPIX();
-    mnDPIY = pTargetOutDev->ImplGetDPIY();
+    mnDPIX = i_pTargetOutDev->ImplGetDPIX();
+    mnDPIY = i_pTargetOutDev->ImplGetDPIY();
     BOOL bOutput = IsOutputEnabled();
     EnableOutput();
 
@@ -9699,11 +9741,11 @@ void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev
     // preserve graphicsstate
     Push();
     Region aClipRegion( GetClipRegion() );
-    SetClipRegion();
+    SetClipRegion();    
 
     GDIMetaFile* pOldMtf = GetConnectMetaFile();
-    pMtf->WindEnd();
-    SetConnectMetaFile( pMtf );
+    GDIMetaFile aMtf;
+    SetConnectMetaFile( &aMtf );
 
     // put a push action to metafile
     Push();
@@ -9728,6 +9770,10 @@ void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev
         SetTextLineColor( GetTextLineColor() );
     else
         SetTextLineColor();
+    if( IsOverlineColor() )
+        SetOverlineColor( GetOverlineColor() );
+    else
+        SetOverlineColor();
     if( IsTextFillColor() )
         SetTextFillColor( GetTextFillColor() );
     else
@@ -9742,8 +9788,6 @@ void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev
     SetDigitLanguage( GetDigitLanguage() );
     Rectangle aPaintRect( Point( 0, 0 ), GetOutputSizePixel() );
     aClipRegion.Intersect( aPaintRect );
-    if( pOuterClip )
-        aClipRegion.Intersect( *pOuterClip );
     SetClipRegion( aClipRegion );
 
     // do the actual paint
@@ -9759,38 +9803,31 @@ void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev
     SetConnectMetaFile( pOldMtf );
     EnableOutput( bOutput );
     mpWindowImpl->mbReallyVisible = bRVisible;
+    
+    // paint metafile to VDev
+    VirtualDevice* pMaskedDevice = new VirtualDevice( *i_pTargetOutDev, 0, 0 );
+    pMaskedDevice->SetOutputSizePixel( GetOutputSizePixel() );
+    pMaskedDevice->EnableRTL( IsRTLEnabled() );
+    aMtf.WindStart();
+    aMtf.Play( pMaskedDevice );
+    BitmapEx aBmpEx( pMaskedDevice->GetBitmapEx( Point( 0, 0 ), pMaskedDevice->GetOutputSizePixel() ) );
+    i_pTargetOutDev->DrawBitmapEx( i_rPos, aBmpEx );
+    // get rid of virtual device now so they don't pile up during recursive calls
+    delete pMaskedDevice, pMaskedDevice = NULL;
+
 
     for( Window* pChild = mpWindowImpl->mpFirstChild; pChild; pChild = pChild->mpWindowImpl->mpNext )
     {
         if( pChild->mpWindowImpl->mpFrame == mpWindowImpl->mpFrame && pChild->IsVisible() )
         {
-            Region aClip( aPaintRect );
-            if( pOuterClip )
-                aClip.Intersect( *pOuterClip );
-            sal_Int32 nDeltaX = GetOutOffXPixel() - pChild->GetOutOffXPixel();
-            sal_Int32 nDeltaY = GetOutOffYPixel() - pChild->GetOutOffYPixel();
-            pMtf->Move( nDeltaX, nDeltaY );
-            aClip.Move( nDeltaX, nDeltaY );
-            pChild->ImplPaintToMetaFile( pMtf, pTargetOutDev, &aClip );
-            pMtf->Move( -nDeltaX, -nDeltaY );
-        }
-    }
-
-    for( Window* pOverlap = mpWindowImpl->mpFirstOverlap; pOverlap; pOverlap = pOverlap->mpWindowImpl->mpNext )
-    {
-        if( pOverlap->mpWindowImpl->mpFrame == mpWindowImpl->mpFrame && pOverlap->IsVisible() )
-        {
-            Region aClip;
-            sal_Int32 nDeltaX = GetOutOffXPixel() - pOverlap->GetOutOffXPixel();
-            sal_Int32 nDeltaY = GetOutOffYPixel() - pOverlap->GetOutOffYPixel();
-            pMtf->Move( nDeltaX, nDeltaY );
-            if( pOuterClip )
-            {
-                aClip = *pOuterClip;
-                aClip.Move( nDeltaX, nDeltaY );
-            }
-            pOverlap->ImplPaintToMetaFile( pMtf, pTargetOutDev, pOuterClip ? &aClip : NULL );
-            pMtf->Move( -nDeltaX, -nDeltaY );
+            long nDeltaX = pChild->mnOutOffX - mnOutOffX;
+            if( ImplHasMirroredGraphics() )
+                nDeltaX = mnOutWidth - nDeltaX - pChild->mnOutWidth;
+            long nDeltaY = pChild->GetOutOffYPixel() - GetOutOffYPixel();
+            Point aPos( i_rPos );
+            Point aDelta( nDeltaX, nDeltaY );                
+            aPos += aDelta;
+            pChild->ImplPaintToDevice( i_pTargetOutDev, aPos );
         }
     }
 
@@ -9807,7 +9844,11 @@ void Window::ImplPaintToMetaFile( GDIMetaFile* pMtf, OutputDevice* pTargetOutDev
 void Window::PaintToDevice( OutputDevice* pDev, const Point& rPos, const Size& /*rSize*/ )
 {
     // FIXME: scaling: currently this is for pixel copying only
-    GDIMetaFile aMF;
+    
+    DBG_ASSERT( ! pDev->ImplHasMirroredGraphics(), "PaintToDevice to mirroring graphics" );
+    DBG_ASSERT( ! pDev->IsRTLEnabled(), "PaintToDevice to mirroring device" );
+    
+    
     Point       aPos  = pDev->LogicToPixel( rPos );
 
     Window* pRealParent = NULL;
@@ -9825,24 +9866,25 @@ void Window::PaintToDevice( OutputDevice* pDev, const Point& rPos, const Size& /
 
     BOOL bVisible = mpWindowImpl->mbVisible;
     mpWindowImpl->mbVisible = TRUE;
-
+    
     if( mpWindowImpl->mpBorderWindow )
-        mpWindowImpl->mpBorderWindow->ImplPaintToMetaFile( &aMF, pDev );
+        mpWindowImpl->mpBorderWindow->ImplPaintToDevice( pDev, rPos );
     else
-        ImplPaintToMetaFile( &aMF, pDev );
+        ImplPaintToDevice( pDev, rPos );
 
     mpWindowImpl->mbVisible = bVisible;
 
     if( pRealParent )
         SetParent( pRealParent );
+}
 
-    pDev->Push();
-    pDev->SetMapMode();
+XubString Window::GetSurroundingText() const
+{
+  return XubString::EmptyString();
+}
 
-    aMF.Move( aPos.X(), aPos.Y() );
-    aMF.WindStart();
-    aMF.Play( pDev );
-
-    pDev->Pop();
+Selection Window::GetSurroundingTextSelection() const
+{
+  return Selection( 0, 0 );
 }
 

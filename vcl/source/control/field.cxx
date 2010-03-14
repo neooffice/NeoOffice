@@ -45,6 +45,7 @@
 #include "vcl/svapp.hxx"
 #include "vcl/svdata.hxx"
 #include "vcl/unohelp.hxx"
+#include "i18nutil/unicode.hxx"
 
 #include "rtl/math.hxx"
 
@@ -1061,11 +1062,7 @@ static XubString ImplMetricGetUnitText( const XubString& rStr )
     for ( short i = rStr.Len()-1; i >= 0; i-- )
     {
         xub_Unicode c = rStr.GetChar( i );
-        if ( ((c >= 'A') && (c <= 'Z')) ||
-             ((c >= 'a') && (c <= 'z')) ||
-    	     // #i69080# check for hebrew characters
-             // FIXME: need a general solution for all languages/scripts
-             ((c >= 0x590) && (c <= 0x5FF)) ||
+        if ( unicode::isAlpha( c ) ||
              (c == '\'') || (c == '\"') || (c == '%' ) )
             aStr.Insert( c, 0 );
         else

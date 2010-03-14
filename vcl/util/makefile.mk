@@ -46,7 +46,11 @@ SNDFILELIB=$(SNDFILE_LIBS)
 .INCLUDE :  makefile2.pmk
 
 .IF "$(OS)" == "SOLARIS"
+.IF "$(CPUNAME)" == "SPARC" && "$(CPU)" == "U"
+LINKFLAGSRUNPATH_OOO := -R/usr/sfw/lib/64 $(LINKFLAGSRUNPATH_OOO)
+.ELSE
 LINKFLAGSRUNPATH_OOO := -R/usr/sfw/lib $(LINKFLAGSRUNPATH_OOO)
+.ENDIF
 .ENDIF
 
 # --- Allgemein ----------------------------------------------------------
@@ -92,7 +96,6 @@ HXXDEPNLST= $(INC)$/vcl$/accel.hxx       \
             $(INC)$/vcl$/msgbox.hxx      \
             $(INC)$/vcl$/octree.hxx      \
             $(INC)$/vcl$/outdev.hxx      \
-            $(INC)$/vcl$/outdev3d.hxx    \
             $(INC)$/vcl$/pointr.hxx      \
             $(INC)$/vcl$/ptrstyle.hxx    \
             $(INC)$/vcl$/prntypes.hxx    \
@@ -159,52 +162,8 @@ LIB1FILES+= \
             $(SLB)$/salapp.lib
 .IF "$(GUIBASE)"=="java"
 LIB1FILES+= $(SLB)$/saljava.lib
-.ENDIF
-.ENDIF
-
-SHL1TARGET= vcl$(VERSION)$(DLLPOSTFIX)
-SHL1IMPLIB= ivcl
-SHL1STDLIBS+=\
-            $(SOTLIB)           \
-            $(UNOTOOLSLIB)      \
-            $(TOOLSLIB)         \
-            $(I18NISOLANGLIB)   \
-            $(COMPHELPERLIB)	\
-            $(UCBHELPERLIB)     \
-            $(CPPUHELPERLIB)    \
-            $(CPPULIB)          \
-            $(VOSLIB)           \
-            $(SALLIB)			\
-            $(BASEGFXLIB)		\
-            $(ICUUCLIB)			\
-            $(ICULELIB)			\
-			$(JVMACCESSLIB)
-SHL1USE_EXPORTS=ordinal
-
-.IF "$(USE_BUILTIN_RASTERIZER)"!=""
-    LIB1FILES +=    $(SLB)$/glyphs.lib
-    SHL1STDLIBS+=   $(FREETYPELIB)
-.ENDIF # USE_BUILTIN_RASTERIZER
-
-.IF "$(GUIBASE)"=="java"
-SHL1STDLIBS+= $(TKLIB)
-.ENDIF
-
-.IF "$(OS)"=="MACOSX"
-SHL1STDLIBS += -framework CoreFoundation
-.IF "$(GUIBASE)"=="unx"
-SHL1STDLIBS += -lX11
-.ENDIF		# "$(GUIBASE)"=="unx"
-.ENDIF		# "$(OS)"=="MACOSX"
-
-SHL1LIBS=   $(LIB1TARGET)
-.IF "$(GUI)"!="UNX"
-SHL1OBJS=   $(SLO)$/salshl.obj
-.ENDIF
-
-.IF "$(GUI)" != "MAC"
-.IF "$(GUI)" != "UNX"
-.ENDIF
+.ENDIF		# "$(GUIBASE)"=="java"
+.ENDIF		# "$(GUI)" == "UNX" && "$(GUIBASE)"!="aqua" && "$(GUIBASE)"!="java"
 
 SHL1TARGET= vcl$(DLLPOSTFIX)
 SHL1IMPLIB= ivcl
@@ -213,6 +172,7 @@ SHL1STDLIBS+=\
             $(UNOTOOLSLIB)      \
             $(TOOLSLIB)         \
             $(I18NISOLANGLIB)   \
+            $(I18NUTILLIB)   \
             $(COMPHELPERLIB)	\
             $(UCBHELPERLIB)     \
             $(CPPUHELPERLIB)    \
@@ -221,16 +181,24 @@ SHL1STDLIBS+=\
             $(SALLIB)			\
             $(BASEGFXLIB)		\
             $(ICUUCLIB)			\
+			$(ICUDATALIB)		\
             $(ICULELIB)			\
 			$(JVMACCESSLIB)
 SHL1USE_EXPORTS=name
 
 .IF "$(GUIBASE)"=="aqua"
-SHL1STDLIBS+=$(BASEBMPLIB)
+SHL1STDLIBS+= \
+	$(BASEBMPLIB) \
+	-lAppleRemote$(DLLPOSTFIX)
+
 SHL1STDLIBS+= \
              -framework QTKit
 LIB1FILES+= \
             $(SLB)$/sala11y.lib
+.ENDIF
+
+.IF "$(GUIBASE)"=="java"
+SHL1STDLIBS+= $(TKLIB)
 .ENDIF
 
 .IF "$(USE_BUILTIN_RASTERIZER)"!=""
@@ -267,7 +235,8 @@ SHL1STDLIBS += $(PSPLIB)
 
 SHL1STDLIBS += $(UWINAPILIB)      \
                $(GDI32LIB)        \
-               $(MSIMG32LIB)        \
+			   $(GDIPLUSLIB)	  \
+               $(MSIMG32LIB)      \
                $(WINSPOOLLIB)     \
                $(OLE32LIB)        \
                $(SHELL32LIB)      \
@@ -321,6 +290,7 @@ SHL2STDLIBS=\
             $(CPPUHELPERLIB)    \
             $(CPPULIB)          \
             $(VOSLIB)           \
+            $(BASEGFXLIB)	\
             $(SALLIB)
 
 # prepare linking of Xinerama
@@ -347,7 +317,7 @@ SHL2STDLIBS+=`pkg-config --libs xrender`
 
 .IF "$(GUIBASE)"=="unx"
 
-SHL2STDLIBS += -lXext -lXtst -lSM -lICE -lX11
+SHL2STDLIBS += -lXext -lSM -lICE -lX11
 .IF "$(OS)"!="MACOSX" && "$(OS)"!="FREEBSD"
 # needed by salprnpsp.cxx
 SHL2STDLIBS+= -ldl
@@ -440,7 +410,7 @@ SHL5STDLIBS+= $(XRANDR_LIBS)
 
 .ENDIF # "$(ENABLE_KDE)" != ""
 
-.ENDIF # UNX
+.ENDIF		# "$(GUI)" == "UNX" && "$(GUIBASE)" != "aqua" && "$(GUIBASE)"!="java"
 
 .IF "$(GUIBASE)"=="java"
 
@@ -467,8 +437,6 @@ JARTARGET = $(TARGET).jar
 JARCOMPRESS = TRUE
 
 .ENDIF # "$(GUIBASE)"=="java"
-
-.ENDIF
 
 # --- Allgemein ----------------------------------------------------------
 

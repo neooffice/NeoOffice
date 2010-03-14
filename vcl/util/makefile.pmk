@@ -30,7 +30,7 @@
 
 .IF "$(GUI)" == "UNX" && "$(GUIBASE)"!="aqua" && "$(GUIBASE)"!="java"
 USE_BUILTIN_RASTERIZER=true
-.ENDIF
+.ENDIF		# "$(GUI)" == "UNX" && "$(GUIBASE)"!="aqua" && "$(GUIBASE)"!="java"
 
 .IF "$(USE_BUILTIN_RASTERIZER)" != ""
 ADDCDEFS += -DUSE_BUILTIN_RASTERIZER

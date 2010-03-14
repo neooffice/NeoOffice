@@ -46,7 +46,6 @@ struct ImplJobSetup;
 class SalGraphics;
 class SalFrame;
 class SalObject;
-class SalOpenGL;
 class SalMenu;
 class SalMenuItem;
 class SalVirtualDevice;
@@ -126,8 +125,6 @@ public:
 
     // SalTimer
     virtual SalTimer*			CreateSalTimer() = 0;
-    // SalOpenGL
-    virtual SalOpenGL*			CreateSalOpenGL( SalGraphics* pGraphics ) = 0;
     // SalI18NImeStatus
     virtual SalI18NImeStatus*	CreateI18NImeStatus() = 0;
     // SalSystem

@@ -65,9 +65,6 @@
 #ifndef _SV_SALOBJ_H
 #include <salobj.h>
 #endif
-#ifndef _SV_SALOGL_H
-#include <salogl.h>
-#endif
 #ifndef _SV_SALPTYPE_HXX
 #include <vcl/salptype.hxx>
 #endif
@@ -967,13 +964,6 @@ void JavaSalInstance::DestroyVirtualDevice( SalVirtualDevice* pDevice )
 SalTimer* JavaSalInstance::CreateSalTimer()
 {
     return new JavaSalTimer();
-}
-
-// -----------------------------------------------------------------------
-
-SalOpenGL* JavaSalInstance::CreateSalOpenGL( SalGraphics* pGraphics )
-{
-    return new JavaSalOpenGL();
 }
 
 // -----------------------------------------------------------------------

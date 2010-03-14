@@ -190,9 +190,9 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
             const Bitmap&       rBmp = pBmpScaleAction->GetBitmap();
 
             DrawBitmap( pBmpScaleAction->GetPoint(), pBmpScaleAction->GetSize(),
-                        GetPreparedBitmap( pBmpScaleAction->GetSize(), 
-                                           Point(), rBmp.GetSizePixel(), 
-                                           rBmp, nMaxBmpDPIX, nMaxBmpDPIY ) );
+                        GetDownsampledBitmap( pBmpScaleAction->GetSize(), 
+                                              Point(), rBmp.GetSizePixel(), 
+                                              rBmp, nMaxBmpDPIX, nMaxBmpDPIY ) );
 
             bExecuted = sal_True;
         }
@@ -202,9 +202,9 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
             const Bitmap&           rBmp = pBmpScalePartAction->GetBitmap();
 
             DrawBitmap( pBmpScalePartAction->GetDestPoint(), pBmpScalePartAction->GetDestSize(),
-                        GetPreparedBitmap( pBmpScalePartAction->GetDestSize(),
-                                           pBmpScalePartAction->GetSrcPoint(), pBmpScalePartAction->GetSrcSize(), 
-                                           rBmp, nMaxBmpDPIX, nMaxBmpDPIY ) );
+                        GetDownsampledBitmap( pBmpScalePartAction->GetDestSize(),
+                                              pBmpScalePartAction->GetSrcPoint(), pBmpScalePartAction->GetSrcSize(), 
+                                              rBmp, nMaxBmpDPIX, nMaxBmpDPIY ) );
 
             bExecuted = sal_True;
         }
@@ -214,9 +214,9 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
             const BitmapEx&         rBmpEx = pBmpExScaleAction->GetBitmapEx();
 
             DrawBitmapEx( pBmpExScaleAction->GetPoint(), pBmpExScaleAction->GetSize(),
-                          GetPreparedBitmapEx( pBmpExScaleAction->GetSize(), 
-                                               Point(), rBmpEx.GetSizePixel(), 
-                                               rBmpEx, nMaxBmpDPIX, nMaxBmpDPIY ) );
+                          GetDownsampledBitmapEx( pBmpExScaleAction->GetSize(), 
+                                                  Point(), rBmpEx.GetSizePixel(), 
+                                                  rBmpEx, nMaxBmpDPIX, nMaxBmpDPIY ) );
 
             bExecuted = sal_True;
         }
@@ -226,9 +226,9 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
             const BitmapEx&             rBmpEx = pBmpExScalePartAction->GetBitmapEx();
 
             DrawBitmapEx( pBmpExScalePartAction->GetDestPoint(), pBmpExScalePartAction->GetDestSize(),
-                          GetPreparedBitmapEx( pBmpExScalePartAction->GetDestSize(),
-                                               pBmpExScalePartAction->GetSrcPoint(), pBmpExScalePartAction->GetSrcSize(), 
-                                               rBmpEx, nMaxBmpDPIX, nMaxBmpDPIY ) );
+                          GetDownsampledBitmapEx( pBmpExScalePartAction->GetDestSize(),
+                                                  pBmpExScalePartAction->GetSrcPoint(), pBmpExScalePartAction->GetSrcSize(), 
+                                                  rBmpEx, nMaxBmpDPIX, nMaxBmpDPIY ) );
 
             bExecuted = sal_True;
         }
@@ -318,7 +318,7 @@ void ImplQPrinter::PrePrintPage( QueuePage* pPage )
     mnRestoreDrawMode = GetDrawMode();
 #ifdef USE_JAVA
     // Prevent downscaling of images if reduce bitmaps is turned off
-	// by setting the max resolution to negative
+    // by setting the max resolution to negative
     mnMaxBmpDPIX = -1;
     mnMaxBmpDPIY = -1;
 #else	// USE_JAVA
@@ -377,7 +377,11 @@ void ImplQPrinter::PrePrintPage( QueuePage* pPage )
     }
 
     maCurPageMetaFile = GDIMetaFile();
-    GetPreparedMetaFile( *pPage->mpMtf, maCurPageMetaFile, mnMaxBmpDPIX, mnMaxBmpDPIY );
+    RemoveTransparenciesFromMetaFile( *pPage->mpMtf, maCurPageMetaFile, mnMaxBmpDPIX, mnMaxBmpDPIY,
+                                     rPrinterOptions.IsReduceTransparency(),
+                                     rPrinterOptions.GetReducedTransparencyMode() == PRINTER_TRANSPARENCY_AUTO,
+                                     rPrinterOptions.IsReduceBitmaps() && rPrinterOptions.IsReducedBitmapIncludesTransparency()
+                                     );
 }
 
 void ImplQPrinter::PostPrintPage()
@@ -453,10 +457,10 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
             mpParent->Error();
         if( ! aDel.isDeleted() )
 #ifdef USE_JAVA
-		{
+        {
             mpParent->ImplEndPrint();
-			break;
-		}
+            break;
+        }
 #else	// USE_JAVA
             mpParent->ImplEndPrint();
 #endif	// USE_JAVA
@@ -507,11 +511,11 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		if( mbDestroyed )
 #ifdef USE_JAVA
 		{
+#endif	// USE_JAVA
 			Destroy();
+#ifdef USE_JAVA
 			break;
 		}
-#else	// USE_JAVA
-			Destroy();
 #endif	// USE_JAVA
 	}
 #ifdef USE_JAVA
