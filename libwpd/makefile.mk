@@ -60,5 +60,5 @@ BUILD_DIR=src$/lib
 .INCLUDE :	tg_ext.mk
 
 .IF "$(GUIBASE)" == "java"
-BACK_PATH:=$(BACK_PATH)..$/..$/libwpd$/
+BACK_PATH:=$(PWD)$/
 .ENDIF		# "$(GUIBASE)" == "java"
