@@ -20,29 +20,7 @@
 					<value/>
 				</prop>
 				<node oor:name="Submenu">
-					<node oor:name="open" oor:op="replace">
-						<prop oor:name="URL" oor:type="xs:string">
-							<value>macro:///NeoOfficeMobile.XNeoOfficeMobile.OpenNeoOfficeMobile</value>
-						</prop>
-						<prop oor:name="Target" oor:type="xs:string">
-							<value>_self</value>
-						</prop>
-						<prop oor:name="Title" oor:type="xs:string">
-							<value xml:lang="en-US">Open NeoOffice Mobile</value>
-							<value xml:lang="es">Abrir NeoOffice Móvil</value>
-							<value xml:lang="fr">Ouvrir NeoOffice Mobile</value>
-							<value xml:lang="it">Apri NeoOffice Mobile</value>
-							<value xml:lang="nl">Open NeoOffice Mobiel</value>
-							<value xml:lang="pt">Abrir NeoOffice Móvel</value>
-						</prop>
-						<prop oor:name="ImageIdentifier" oor:type="xs:string">
-							<value/>
-						</prop>
-						<prop oor:name="Context" oor:type="xs:string">
-							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
-						</prop>
-					</node>
-					<node oor:name="about" oor:op="replace">
+					<node oor:name="neomobile1" oor:op="replace">
 						<prop oor:name="URL" oor:type="xs:string">
 							<value>macro:///NeoOfficeMobile.XNeoOfficeMobile.AboutNeoOfficeMobile</value>
 						</prop>
@@ -56,6 +34,28 @@
 							<value xml:lang="it">Che cose'è NeoOffice Mobile?</value>
 							<value xml:lang="nl">Wat is NeoOffice Mobiel?</value>
 							<value xml:lang="pt">O que é NeoOffice Móvel?</value>
+						</prop>
+						<prop oor:name="ImageIdentifier" oor:type="xs:string">
+							<value/>
+						</prop>
+						<prop oor:name="Context" oor:type="xs:string">
+							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
+						</prop>
+					</node>
+					<node oor:name="neomobile2" oor:op="replace">
+						<prop oor:name="URL" oor:type="xs:string">
+							<value>macro:///NeoOfficeMobile.XNeoOfficeMobile.OpenNeoOfficeMobile</value>
+						</prop>
+						<prop oor:name="Target" oor:type="xs:string">
+							<value>_self</value>
+						</prop>
+						<prop oor:name="Title" oor:type="xs:string">
+							<value xml:lang="en-US">Open NeoOffice Mobile</value>
+							<value xml:lang="es">Abrir NeoOffice Móvil</value>
+							<value xml:lang="fr">Ouvrir NeoOffice Mobile</value>
+							<value xml:lang="it">Apri NeoOffice Mobile</value>
+							<value xml:lang="nl">Open NeoOffice Mobiel</value>
+							<value xml:lang="pt">Abrir NeoOffice Móvel</value>
 						</prop>
 						<prop oor:name="ImageIdentifier" oor:type="xs:string">
 							<value/>
