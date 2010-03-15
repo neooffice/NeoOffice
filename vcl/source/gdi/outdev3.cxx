@@ -2919,7 +2919,6 @@ ImplFontEntry* ImplFontCache::GetFontEntry( ImplDevFontList* pFontList,
 #endif	// USE_JAVA
 
     if( pEntry ) // cache hit => use existing font instance
-    if( pEntry ) // cache hit => use existing font instance
     {
         // increase the font instance's reference count
         if( !pEntry->mnRefCount++ )
