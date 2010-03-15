@@ -1033,5 +1033,9 @@
 <xsl:template match="paragraph[@id='par_id1318380']" />
 <xsl:template match="paragraph[@id='hd_id2611386']" />
 <xsl:template match="paragraph[@id='par_id3166335']" />
+<xsl:template match="paragraph[@id='hd_id0915200811081722']" />
+<xsl:template match="paragraph[@id='par_id0915200811081778']" />
+<xsl:template match="paragraph[@id='hd_id0804200803314150']" />
+<xsl:template match="paragraph[@id='par_id0804200803314235']" />
 
 </xsl:stylesheet>
