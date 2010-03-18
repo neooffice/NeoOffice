@@ -73,6 +73,13 @@ using namespace vos;
 
 // ============================================================================
 
+static jboolean JNICALL Java_sun_print_CUPSPrinter_canConnect( JNIEnv *pEnv, jobject object, jobject _par0, jint _par1 )
+{
+	return JNI_FALSE;
+}
+
+// ============================================================================
+
 jclass com_sun_star_vcl_VCLPrintJob::theClass = NULL;
 
 // ----------------------------------------------------------------------------
@@ -83,6 +90,19 @@ jclass com_sun_star_vcl_VCLPrintJob::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
+
+		// Override the CUPSPrinter.canConnect() method to explicity
+		// disable hanging with networked CUPS printers
+		jclass cCUPSPrinterClass = t.pEnv->FindClass( "sun/print/CUPSPrinter" );
+		if ( cCUPSPrinterClass )
+		{
+			JNINativeMethod aMethod;
+			aMethod.name = "canConnect";
+			aMethod.signature = "(Ljava/lang/String;I)Z";
+			aMethod.fnPtr = (void *)Java_sun_print_CUPSPrinter_canConnect;
+			t.pEnv->RegisterNatives( cCUPSPrinterClass, &aMethod, 1 );
+		}
+
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPrintJob" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
