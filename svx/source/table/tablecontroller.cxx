@@ -1997,7 +1997,11 @@ void SvxTableController::updateSelectionOverlay()
 					{
 						// sdr::overlay::CellOverlayType eType = sdr::overlay::CELL_OVERLAY_INVERT;
 						// sdr::overlay::CellOverlayType eType = sdr::overlay::CELL_OVERLAY_HATCH;
+#ifdef USE_JAVA
+						sdr::overlay::CellOverlayType eType = sdr::overlay::CELL_OVERLAY_INVERT;
+#else	// USE_JAVA
 						sdr::overlay::CellOverlayType eType = sdr::overlay::CELL_OVERLAY_TRANSPARENT;
+#endif	// USE_JAVA
 
 						sdr::overlay::OverlayObjectCell* pOverlay = new sdr::overlay::OverlayObjectCell( eType, aHighlight, aRanges );
 
