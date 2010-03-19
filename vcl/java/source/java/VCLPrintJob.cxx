@@ -75,7 +75,7 @@ using namespace vos;
 
 static jboolean JNICALL Java_sun_print_CUPSPrinter_canConnect( JNIEnv *pEnv, jobject object, jobject _par0, jint _par1 )
 {
-	return JNI_TRUE;
+	return JNI_FALSE;
 }
 
 // ============================================================================
