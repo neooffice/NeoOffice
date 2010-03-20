@@ -222,6 +222,8 @@ void JavaSalGraphics::SetFillColor( SalColor nSalColor )
 
 void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 {
+	// Ignore the bInvertOnly parameter as it is not used by Windows or X11
+	// platforms
 	mpVCLGraphics->setXORMode( bSet );
 }
 
