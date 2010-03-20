@@ -2581,7 +2581,7 @@ Rectangle SvxTableController::GetNativeHighlightColorRect()
 			pTableObj->getCellBounds( aStart, aSelectedRect );
 
 			Rectangle aRect;
-			findMergeOrigin( aEnd );
+			findMergeOrigin( aStart );
 			pTableObj->getCellBounds( aEnd, aRect );
 			if ( aSelectedRect.IsEmpty() )
 				aSelectedRect = aRect;
@@ -2592,6 +2592,26 @@ Rectangle SvxTableController::GetNativeHighlightColorRect()
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
 
 	return aSelectedRect;
+}
+
+// --------------------------------------------------------------------
+
+bool SvxTableController::IsNativeHighlightColorCellPos( CellPos aPos )
+{
+	bool bIsSelectedCell = false;
+
+#ifdef USE_NATIVE_HIGHLIGHT_COLOR
+	if ( mbCellSelectionMode && UseMacHighlightColor() )
+	{
+		CellPos aStart, aEnd;
+		getSelectedCells( aStart, aEnd );
+		findMergeOrigin( aStart );
+		if ( aPos.mnRow >= aStart.mnRow && aPos.mnRow <= aEnd.mnRow && aPos.mnCol >= aStart.mnCol && aPos.mnCol <= aEnd.mnCol )
+			bIsSelectedCell = true;
+	}
+#endif	// USE_NATIVE_HIGHLIGHT_COLOR
+
+	return bIsSelectedCell;
 }
 
 #endif  // USE_JAVA
