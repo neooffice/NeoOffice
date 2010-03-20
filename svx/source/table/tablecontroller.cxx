@@ -1862,7 +1862,7 @@ void SvxTableController::UpdateSelection( const CellPos& rPos )
 {
 #ifdef USE_JAVA
 	// Invalidate the previous selection range before setting the new range
-	Rectangle aPaintRect( GetNativeHightlightColorRect() );
+	Rectangle aPaintRect( GetNativeHighlightColorRect() );
 	if ( !aPaintRect.IsEmpty() )
 	{
 		const sal_uInt32 nCount = mpView->PaintWindowCount();
@@ -1912,7 +1912,7 @@ void SvxTableController::RemoveSelection()
 	{
 #ifdef USE_JAVA
 		// Invalidate the previous selection range
-		Rectangle aPaintRect( GetNativeHightlightColorRect() );
+		Rectangle aPaintRect( GetNativeHighlightColorRect() );
 		if ( !aPaintRect.IsEmpty() )
 		{
 			const sal_uInt32 nCount = mpView->PaintWindowCount();
@@ -2566,7 +2566,7 @@ IMPL_LINK( SvxTableController, UpdateHdl, void *, EMPTYARG )
 
 // --------------------------------------------------------------------
 
-Rectangle SvxTableController::GetNativeHightlightColorRect()
+Rectangle SvxTableController::GetNativeHighlightColorRect()
 {
 	Rectangle aSelectedRect;
 

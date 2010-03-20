@@ -2904,7 +2904,7 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 			if ( pView && pView->GetWindow() == pOutDev )
 			{
 				aNativeHighlightColor = pOutDev->GetSettings().GetStyleSettings().GetHighlightColor();
-				aNativeHighlightPolyPoly = pView->GetNativeHightlightColorPolyPolygon();
+				aNativeHighlightPolyPoly = pView->GetNativeHighlightColorPolyPolygon();
 				break;
 			}
 		}

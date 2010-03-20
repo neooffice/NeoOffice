@@ -101,7 +101,7 @@ public:
 
     SVX_DLLPRIVATE void onTableModified();
 #ifdef USE_JAVA
-	Rectangle GetNativeHightlightColorRect();
+	Rectangle GetNativeHighlightColorRect();
 #endif  // USE_JAVA
 
 private:

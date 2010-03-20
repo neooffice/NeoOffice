@@ -2065,7 +2065,7 @@ void ImpEditView::RemoveDragAndDropListeners()
 
 #ifdef USE_JAVA
 
-PolyPolygon ImpEditView::GetNativeHightlightColorPolyPolygon()
+PolyPolygon ImpEditView::GetNativeHighlightColorPolyPolygon()
 {
 	PolyPolygon aPolyPoly;
 

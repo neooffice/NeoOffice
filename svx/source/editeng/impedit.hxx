@@ -387,7 +387,7 @@ public:
 	void			SetInvalidateMore( sal_uInt16 nPixel ) { nInvMore = nPixel; }
 	sal_uInt16		GetInvalidateMore() const { return (sal_uInt16)nInvMore; }
 #ifdef USE_JAVA
-	PolyPolygon		GetNativeHightlightColorPolyPolygon();
+	PolyPolygon		GetNativeHighlightColorPolyPolygon();
 	bool			IsInPaint() { return bInPaint; }
 	void			SetInPaint( bool bPaint ) { bInPaint = bPaint; }
 #endif  // USE_JAVA
