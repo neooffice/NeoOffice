@@ -380,6 +380,33 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 
 	USHORT nId = rReq.GetSlot();
 
+#ifdef USE_JAVA
+	// If we are saving to an Office XML format, forcing the file save as
+	// dialog to appear by changing this to a save as operation. Note that
+	// we had to put "OXML" in the "UserData" field in each filter's
+	// modules/org/openoffice/TypeDetection/Filter/fcfg_*_filters.xcu file.
+	::rtl::OUString aUserData;
+	if ( nId == SID_SAVEDOC && GetMedium() )
+	{
+		String aFilterName;
+		SFX_ITEMSET_ARG( GetMedium()->GetItemSet(), pFilterNameItem, SfxStringItem, SID_FILTER_NAME, sal_False );
+		if( pFilterNameItem )
+		{
+			aFilterName = pFilterNameItem->GetValue();
+			const SfxFilter* pFilter = GetFactory().GetFilterContainer()->GetFilter4FilterName( aFilterName );
+			if ( pFilter )
+			{
+				aUserData = pFilter->GetUserData();
+				if ( aUserData == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "OXML" ) ) )
+				{
+					nId = SID_SAVEASDOC;
+					rReq.SetSlot( nId );
+				}
+			}
+		}
+	}
+#endif	// USE_JAVA
+
     if( SID_SIGNATURE == nId || SID_MACRO_SIGNATURE == nId )
 	{
 		if ( QueryHiddenInformation( WhenSigning, NULL ) == RET_YES )
@@ -658,6 +685,14 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 									*rReq.GetArgs(),
 							 		aDispatchArgs,
 							 		NULL );
+
+#ifdef USE_JAVA
+				// Pass the filter's user data down to the save as dialog
+				sal_uInt32 nArgsLen = aDispatchArgs.getLength();
+				aDispatchArgs.realloc( nArgsLen + 1 );
+				aDispatchArgs[ nArgsLen ].Name = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "UserData" ) );
+				aDispatchArgs[ nArgsLen ].Value <<= aUserData;
+#endif	// USE_JAVA
 
 				const SfxSlot* pSlot = GetModule()->GetSlotPool()->GetSlot( nId );
 				if ( !pSlot )
