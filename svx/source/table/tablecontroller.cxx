@@ -2577,6 +2577,7 @@ Rectangle SvxTableController::GetNativeHightlightColorRect()
 			pTableObj->getCellBounds( aStart, aSelectedRect );
 
 			Rectangle aRect;
+			findMergeOrigin( aEnd );
 			pTableObj->getCellBounds( aEnd, aRect );
 			if ( aSelectedRect.IsEmpty() )
 				aSelectedRect = aRect;
