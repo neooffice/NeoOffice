@@ -139,7 +139,7 @@
 	<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER PREFERRED</value></prop>
 	<prop oor:name="UIComponent"/>
 	<prop oor:name="FilterService"><value>com.sun.star.comp.Impress.oox.PowerPointImport</value></prop>
-	<prop oor:name="UserData"/>
+	<prop oor:name="UserData"><value>OXML</value></prop>
 	<prop oor:name="FileFormatVersion"/>
 	<prop oor:name="Type"><value>MS PowerPoint 2007 XML</value></prop>
 	<prop oor:name="TemplateName"/>
@@ -150,7 +150,7 @@
 	<prop oor:name="Flags"><value>IMPORT EXPORT ALIEN 3RDPARTYFILTER TEMPLATE TEMPLATEPATH PREFERRED</value></prop>
 	<prop oor:name="UIComponent"/>
 	<prop oor:name="FilterService"><value>com.sun.star.comp.Impress.oox.PowerPointImport</value></prop>
-	<prop oor:name="UserData"/>
+	<prop oor:name="UserData"><value>OXML</value></prop>
 	<prop oor:name="FileFormatVersion"/>
 	<prop oor:name="Type"><value>MS PowerPoint 2007 XML Template</value></prop>
 	<prop oor:name="TemplateName"/>
