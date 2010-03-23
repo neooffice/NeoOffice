@@ -64,6 +64,7 @@ JAVAFILES = \
 	VCLMenuBar.java \
 	VCLMenuItemData.java \
 	VCLPageFormat.java \
+	VCLPath.java \
 	VCLPrintJob.java \
 	VCLScreen.java
 

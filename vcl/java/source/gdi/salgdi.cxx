@@ -53,10 +53,94 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPATH_HXX
+#include <com/sun/star/vcl/VCLPath.hxx>
+#endif
+#include <basegfx/polygon/b2dpolygon.hxx>
 
 #include "salgdi_cocoa.h"
 
+static const ::basegfx::B2DPoint aHalfPointOffset( 0.5, 0.5 );
+
 using namespace vcl;
+
+// =======================================================================
+
+static void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath )
+{
+	const sal_uInt32 nCount = rPolygon.count();
+	if ( !nCount )
+		return;
+
+	const bool bHasCurves = rPolygon.areControlPointsUsed();
+	bool bPendingCurve = false;
+	sal_uInt32 nIndex = 0;
+	sal_uInt32 nPreviousIndex = 0;
+	for ( ; ; nPreviousIndex = nIndex++ )
+	{
+		sal_uInt32 nClosedIndex = nIndex;
+		if( nIndex >= nCount )
+		{
+			// Prepare to close last curve segment if needed
+			if( bClosePath && ( nIndex == nCount ) )
+				nClosedIndex = 0;
+			else
+				break;
+		}
+
+		::basegfx::B2DPoint aPoint = rPolygon.getB2DPoint( nClosedIndex );
+
+		if ( !nIndex )
+		{
+			if ( pVCLPath )
+				pVCLPath->moveTo( aPoint.getX(), aPoint.getY() );
+			if ( aCGPath )
+				CGPathMoveToPoint( aCGPath, NULL, aPoint.getX(), aPoint.getY() );
+		}
+		else if ( !bPendingCurve )
+		{
+			if ( pVCLPath )
+				pVCLPath->lineTo( aPoint.getX(), aPoint.getY() );
+			if ( aCGPath )
+				CGPathAddLineToPoint( aCGPath, NULL, aPoint.getX(), aPoint.getY() );
+		}
+		else
+		{
+			::basegfx::B2DPoint aFirstControlPoint = rPolygon.getNextControlPoint( nPreviousIndex );
+			::basegfx::B2DPoint aSecondControlPoint = rPolygon.getPrevControlPoint( nClosedIndex );
+			if ( pVCLPath )
+				pVCLPath->curveTo( aFirstControlPoint.getX(), aFirstControlPoint.getY(), aSecondControlPoint.getX(), aSecondControlPoint.getY(), aPoint.getX(), aPoint.getY() );
+			if ( aCGPath )
+				CGPathAddCurveToPoint( aCGPath, NULL, aFirstControlPoint.getX(), aFirstControlPoint.getY(), aSecondControlPoint.getX(), aSecondControlPoint.getY(), aPoint.getX(), aPoint.getY() );
+		}
+
+		if ( bHasCurves )
+			bPendingCurve = rPolygon.isNextControlPointUsed( nClosedIndex );
+	}
+
+	if ( bClosePath )
+	{
+		if ( pVCLPath )
+			pVCLPath->closePath();
+		if ( aCGPath )
+			CGPathCloseSubpath( aCGPath );
+	}
+}
+
+// -----------------------------------------------------------------------
+
+static void AddPolyPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly )
+{
+	const sal_uInt32 nCount = rPolyPoly.count();
+	if ( !nCount )
+		return;
+
+	for ( sal_uInt32 i = 0; i < nCount; i++ )
+	{
+		const ::basegfx::B2DPolygon rPolygon = rPolyPoly.getB2DPolygon( i );
+		AddPolygonToPaths( pVCLPath, aCGPath, rPolygon, true );
+	}
+}
 
 // =======================================================================
 
@@ -327,20 +411,46 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 
 bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalGraphics::drawPolyPolygon not implemented\n" );
-#endif
-	return false;
+	if ( mpPrinter )
+		return false;
+
+	const sal_uInt32 nPoly = rPolyPoly.count();
+	if ( nPoly && ( mnFillColor || mnLineColor ) )
+	{
+		com_sun_star_vcl_VCLPath aPath;
+		AddPolyPolygonToPaths( &aPath, NULL, rPolyPoly );
+
+		sal_uInt8 nTransparency = (sal_uInt8)( ( fTransparency * 100 ) + 0.5 );
+		setFillTransparency( nTransparency );
+		setLineTransparency( nTransparency );
+		if ( mnFillColor )
+			mpVCLGraphics->drawPath( &aPath, mnFillColor, TRUE, getAntiAliasB2DDraw(), NULL, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+		if ( mnLineColor )
+			mpVCLGraphics->drawPath( &aPath, mnFillColor, FALSE, getAntiAliasB2DDraw(), NULL, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+		setFillTransparency( 0 );
+		setLineTransparency( 0 );
+	}
+
+	return true;
 }
 
 // -----------------------------------------------------------------------
 
-bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths, basegfx::B2DLineJoin eLineJoin )
+bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths, ::basegfx::B2DLineJoin eLineJoin )
 {
-#ifdef DEBUG
-	fprintf( stderr, "JavaSalGraphics::drawPolyLine not implemented\n" );
-#endif
-	return false;
+	if ( mpPrinter )
+		return false;
+
+	const sal_uInt32 nCount= rPoly.count();
+	if ( nCount && mnLineColor )
+	{
+		com_sun_star_vcl_VCLPath aPath;
+		AddPolygonToPaths( &aPath, NULL, rPoly, rPoly.isClosed() );
+
+		mpVCLGraphics->drawPathline( &aPath, mnLineColor, getAntiAliasB2DDraw(), rLineWidths.getX(), eLineJoin, NULL, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+	}
+
+	return true;
 }
 
 // -----------------------------------------------------------------------
@@ -378,7 +488,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 			if ( pPtrCopy )
 			{
 				// Don't delete the copied buffer and let the Java native
-                // method print the buffer directly
+				// method print the buffer directly
 				memcpy( pPtrCopy, pPtr, nSize );
 				mpVCLGraphics->drawEPS( pPtrCopy, nSize, nX, nY, nWidth, nHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 				bRet = TRUE;

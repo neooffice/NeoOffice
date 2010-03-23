@@ -132,6 +132,31 @@ public final class VCLGraphics {
 	public final static int BUTTONVALUE_MIXED = 3;
 
 	/**
+	 * The B2DLINEJOIN_NONE constant.
+	 */
+	public final static int B2DLINEJOIN_NONE = 0;
+
+	/**
+	 * The B2DLINEJOIN_MIDDLE constant.
+	 */
+	public final static int B2DLINEJOIN_MIDDLE = 1;
+
+	/**
+	 * The B2DLINEJOIN_BEVEL constant.
+	 */
+	public final static int B2DLINEJOIN_BEVEL = 2;
+
+	/**
+	 * The B2DLINEJOIN_MITER constant.
+	 */
+	public final static int B2DLINEJOIN_MITER = 3;
+
+	/**
+	 * The B2DLINEJOIN_ROUND constant.
+	 */
+	public final static int B2DLINEJOIN_ROUND = 4;
+
+	/**
 	 * The button component.
 	 */
 	private static DefaultableJButton button = null;
@@ -175,6 +200,16 @@ public final class VCLGraphics {
 	 * The draw on main thread flag.
 	 */
 	private static boolean drawOnMainThread = true;
+
+	/**
+	 * The drawPath method.
+	 */
+	private static Method drawPathMethod = null;
+
+	/**
+	 * The drawPathline method.
+	 */
+	private static Method drawPathlineMethod = null;
 
 	/**
 	 * The drawPolygon method.
@@ -420,6 +455,18 @@ public final class VCLGraphics {
 		}
 		try {
 			drawLineMethod = VCLGraphics.class.getMethod("drawLine", new Class[]{ int.class, int.class, int.class, int.class, int.class, long.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawPathMethod = VCLGraphics.class.getMethod("drawPath", new Class[]{ VCLPath.class, int.class, boolean.class, boolean.class, long.class, long.class });
+		}
+		catch (Throwable t) {
+			t.printStackTrace();
+		}
+		try {
+			drawPathlineMethod = VCLGraphics.class.getMethod("drawPathline", new Class[]{ VCLPath.class, int.class, boolean.class, float.class, int.class, long.class, long.class });
 		}
 		catch (Throwable t) {
 			t.printStackTrace();
@@ -1489,6 +1536,237 @@ public final class VCLGraphics {
 	 * @param scaleY the vertical scale factor
 	 */
 	native void drawLine0(float x1, float y1, float x2, float y2, int color, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+
+	/**
+	 * Draws or fills the specified path with the specified color.
+	 *
+	 * @param path the <code>VCLPath</code>
+	 * @param color the color of the polygon
+	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
+	 * @param antialiased <code>true</code> to use antialiased drawing
+	 *  to draw just the outline
+	 * @param nativePath the native path
+	 * @param nativeClipPath the native clip path
+	 */
+	public void drawPath(VCLPath path, int color, boolean fill, boolean antialiased, long nativePath, long nativeClipPath) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPathMethod, new Object[]{ path, new Integer(color), new Boolean(fill), new Boolean(antialiased), new Long(nativePath), new Long(nativeClipPath) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
+		Shape shape = path.getShape();
+		Rectangle destBounds = shape.getBounds();
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		if (!fill) {
+			destBounds.width++;
+			destBounds.height++;
+		}
+		destBounds = destBounds.intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return;
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					drawPath0(color, fill, nativePath, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+				}
+				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
+					if (xor) {
+						// Smooth out image drawing for bug 2475 image
+						if (fill)
+							g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					}
+					g.setColor(new Color(color, true));
+					if (antialiased)
+						g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							if (fill)
+								g.fill(shape);
+							else
+								g.draw(shape);
+						}
+					}
+					else {
+						g.setClip(userClip);
+						if (fill)
+							g.fill(shape);
+						else
+							g.draw(shape);
+					}
+				}
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+	}
+
+	/**
+	 * Draws or fills the specified path with the specified color to the
+	 * underlying graphics.
+	 *
+	 * @param path the <code>VCLPath</code>
+	 * @param color the color of the polygon
+	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
+	 * @param nativePath the native path
+	 * @param nativeClipPath the native clip path
+	 */
+	native void drawPath0(int color, boolean fill, long nativePath, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+
+	/**
+	 * Draws a line for the specified path with the specified color.
+	 *
+	 * @param path the <code>VCLPath</code>
+	 * @param color the color of the polygon
+	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
+	 * @param antialiased <code>true</code> to use antialiased drawing
+	 *  to draw just the outline
+	 * @param lineWidth the line width
+	 * @param join the join type
+	 * @param nativePath the native path
+	 * @param nativeClipPath the native clip path
+	 */
+	public void drawPathline(VCLPath path, int color, boolean antialiased, float lineWidth, int join, long nativePath, long nativeClipPath) {
+
+		if (pageQueue != null) {
+			VCLGraphics.PageQueueItem pqi = new VCLGraphics.PageQueueItem(VCLGraphics.drawPathlineMethod, new Object[]{ path, new Integer(color), new Boolean(antialiased), new Float(lineWidth), new Integer(join), new Long(nativePath), new Long(nativeClipPath) });
+			pageQueue.postDrawingOperation(pqi);
+			return;
+		}
+
+		Shape shape = path.getShape();
+		Rectangle destBounds = shape.getBounds();
+		if (destBounds.width < 0) {
+			destBounds.x += destBounds.width;
+			destBounds.width *= -1;
+		}
+		if (destBounds.height < 0) {
+			destBounds.y += destBounds.height;
+			destBounds.height *= -1;
+		}
+		destBounds.width++;
+		destBounds.height++;
+		destBounds = destBounds.intersection(graphicsBounds);
+		if (destBounds.isEmpty())
+			return;
+
+		Graphics2D g = getGraphics();
+		if (g != null) {
+			try {
+				if (graphics != null) {
+					AffineTransform transform = g.getTransform();
+					drawPathline0(color, lineWidth, join, nativePath, nativeClipPath, VCLGraphics.drawOnMainThread, (float)transform.getTranslateX(), (float)transform.getTranslateY(), rotatedPageAngle, pageScaleX, pageScaleY);
+				}
+				else {
+					LinkedList clipList = new LinkedList();
+					if (userClipList != null) {
+						Iterator clipRects = userClipList.iterator();
+						while (clipRects.hasNext()) {
+							Rectangle clip = ((Rectangle)clipRects.next()).intersection(destBounds);
+							if (!clip.isEmpty())
+								clipList.add(clip);
+						}
+					}
+					else {
+						clipList.add(destBounds);
+					}
+
+					// Set the line width and join
+					BasicStroke stroke = (BasicStroke)g.getStroke();
+					int strokeJoin;
+					switch (join) {
+						case VCLGraphics.B2DLINEJOIN_BEVEL:
+							strokeJoin = BasicStroke.JOIN_BEVEL;
+							break;
+						case VCLGraphics.B2DLINEJOIN_ROUND:
+							strokeJoin = BasicStroke.JOIN_ROUND;
+							break;
+						default:
+							strokeJoin = BasicStroke.JOIN_MITER;
+							break;
+					}
+					g.setStroke(new BasicStroke(lineWidth, BasicStroke.CAP_BUTT, strokeJoin, stroke.getMiterLimit()));
+
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
+					g.setColor(new Color(color, true));
+					if (antialiased)
+						g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+					if (!userPolygonClip) {
+						Iterator clipRects = clipList.iterator();
+						while (clipRects.hasNext()) {
+							g.setClip((Rectangle)clipRects.next());
+							g.draw(shape);
+						}
+					}
+					else {
+						g.setClip(userClip);
+						g.draw(shape);
+					}
+				}
+			}
+			catch (Throwable t) {
+				t.printStackTrace();
+			}
+			g.dispose();
+		}
+
+	}
+
+	/**
+	 * Draws a line for the specified path with the specified color to the
+	 * underlying graphics.
+	 *
+	 * @param color the color of the polygon
+	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
+	 * @param lineWidth the line width
+	 * @param join the join type
+	 * @param nativePath the native path
+	 * @param nativeClipPath the native clip path
+	 */
+	native void drawPathline0(int color, float lineWidth, int join, long nativePath, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
+
+	/**
+	 * Draws or fills the specified path with the specified color to the
+	 * underlying graphics.
+	 *
+	 * @param path the <code>VCLPath</code>
+	 * @param color the color of the polygon
+	 * @param fill <code>true</code> to fill the polygon and <code>false</code>
+	 * @param nativePath the native path
+	 * @param nativeClipPath the native clip path
+	 */
+	native void drawPathline0(int color, boolean fill, long nativePath, long nativeClipPath, boolean drawOnMainThread, float translateX, float translateY, float rotateAngle, float scaleX, float scaleY);
 
 	/**
 	 * Draws or fills the specified polygon with the specified color.

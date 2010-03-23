@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2003
+ *  Patrick Luby, March 2010
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2003 Planamesa Inc.
+ *  Copyright 2010 Planamesa Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -33,54 +33,33 @@
  *
  ************************************************************************/
 
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
-#define	_SV_COM_SUN_STAR_VCL_VCLFONT_HXX
-
-#include <map>
+#ifndef _SV_COM_SUN_STAR_VCL_VCLPATH_HXX
+#define	_SV_COM_SUN_STAR_VCL_VCLPATH_HXX
 
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
 #endif
-#ifndef _VCL_VCLENUM_HXX
-#include <vcl/vclenum.hxx>
-#endif
 
 namespace vcl {
 
-class com_sun_star_vcl_VCLGraphics;
-
-class com_sun_star_vcl_VCLFont : public java_lang_Object
+class com_sun_star_vcl_VCLPath : public java_lang_Object
 {
-	::rtl::OUString		maName;
-	sal_IntPtr			mnNativeFont;
-	short				mnOrientation;
-	::rtl::OUString		maPSName;
-	double				mfScaleX;
-	float				mfSize;
-	sal_Bool			mbAntialiased;
-	sal_Bool			mbVertical;
-
 protected:
 	static jclass		theClass;
 
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLFont( ::rtl::OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
-						com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont );
-	virtual				~com_sun_star_vcl_VCLFont() {};
+						com_sun_star_vcl_VCLPath( jobject myObj ) : java_lang_Object( myObj ) {}
+						com_sun_star_vcl_VCLPath();
+	virtual				~com_sun_star_vcl_VCLPath() {};
 
-	com_sun_star_vcl_VCLFont*	clone();
-	::rtl::OUString		getName();
-	sal_IntPtr			getNativeFont();
-	short				getOrientation();
-	::rtl::OUString		getPSName();
-	double				getScaleX();
-	float				getSize();
-	sal_Bool			isAntialiased();
-	sal_Bool			isVertical();
+	void				closePath();
+	void				curveTo( double _par0, double _par1, double _par2, double _par3, double _par4, double _par5 );
+	void				lineTo( double _par0, double _par1 );
+	void				moveTo( double _par0, double _par1 );
 };
 
 } // namespace vcl
 
-#endif // _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
+#endif // _SV_COM_SUN_STAR_VCL_VCLPATH_HXX

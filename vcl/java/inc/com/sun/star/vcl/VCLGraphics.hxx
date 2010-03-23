@@ -48,6 +48,7 @@
 #ifndef _SV_SALLAYOUT_HXX
 #include <vcl/sallayout.hxx>
 #endif
+#include <basegfx/vector/b2enums.hxx>
 #ifndef _SV_GEN_HXX
 #include <tools/gen.hxx>
 #endif
@@ -64,6 +65,7 @@ namespace vcl {
 class com_sun_star_vcl_VCLBitmap;
 class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLImage;
+class com_sun_star_vcl_VCLPath;
 
 class com_sun_star_vcl_VCLGraphics : public java_lang_Object
 {
@@ -87,6 +89,8 @@ public:
 	void				drawGlyphBuffer( int _par0, int _par1, int _par2, CGGlyph *_par3, CGSize *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, float _par9, float _par10, float _par11, CGPathRef _par12 );
 	void				drawGlyphs( long _par0, long _par1, int _par2, sal_GlyphId *_par3, float *_par4, com_sun_star_vcl_VCLFont *_par5, SalColor _par6, int _par7, int _par8, float _par9, float _par10, float _par11 );
 	void				drawLine( long _par0, long _par1, long _par2, long _par3, SalColor _par4, CGPathRef _par5 );
+	void				drawPath( com_sun_star_vcl_VCLPath *_par0, SalColor _par1, sal_Bool _par2, sal_Bool _par3, CGPathRef _par4, CGPathRef _par5 );
+	void				drawPathline( com_sun_star_vcl_VCLPath *_par0, SalColor _par1, sal_Bool _par2, double _par3, ::basegfx::B2DLineJoin _par4, CGPathRef _par5, CGPathRef _par6 );
 	void				drawPolygon( ULONG _par0, const SalPoint *_par1, SalColor _par2, sal_Bool _par3, CGPathRef _par4 );
 	void				drawPolyline( ULONG _par0, const SalPoint *_par1, SalColor _par2, CGPathRef _par3 );
 	void				drawPolyPolygon( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, SalColor _par3, sal_Bool _par4, CGPathRef _par5 );

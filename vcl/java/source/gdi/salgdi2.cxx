@@ -933,8 +933,10 @@ bool JavaSalGraphics::supportsOperation( OutDevSupportType eType ) const
 
 	switch( eType )
 	{
+		case OutDevSupport_B2DDraw:
 		case OutDevSupport_TransparentRect:
-			bRet = true;
+			if ( !mpPrinter )
+				bRet = true;
 			break;
 		default:
 			break;
