@@ -1150,7 +1150,7 @@ void com_sun_star_vcl_VCLGraphics::drawPath( com_sun_star_vcl_VCLPath *_par0, Sa
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[5];
+			jvalue args[6];
 			args[0].l = _par0->getJavaObject();
 			args[1].i = jint( _par1 );
 			args[2].z = jboolean( _par2 );
