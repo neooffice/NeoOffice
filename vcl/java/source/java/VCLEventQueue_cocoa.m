@@ -49,7 +49,7 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
-static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
+static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey, bool bIncludeDeviceDependentFlagsIfShiftPressed )
 {
 	BOOL bRet = NO;
 
@@ -81,10 +81,9 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 								if ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] )
 								{
 									NSNumber *pModifiers = (NSNumber *)[pParams objectAtIndex:2];
-									if ( pModifiers && ( [pModifiers unsignedIntValue]  & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & NSDeviceIndependentModifierFlagsMask ) )
-{
+									unsigned int nDeviceFlagMask = ( bIncludeDeviceDependentFlagsIfShiftPressed && [pEvent modifierFlags] & NSShiftKeyMask ? 0xffffffff : NSDeviceIndependentModifierFlagsMask );
+									if ( pModifiers && ( [pModifiers unsignedIntValue] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nDeviceFlagMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nDeviceFlagMask ) )
 										bRet = YES;
-}
 								}
 							}
 						}
@@ -587,7 +586,7 @@ static VCLResponder *pSharedResponder = nil;
 			// Do not allow utility windows to grab the focus except when the
 			// user presses Control-F6
 			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11 ) )
+			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11, false ) )
 				return;
 		}
 	}
@@ -757,11 +756,12 @@ static VCLResponder *pSharedResponder = nil;
 
 		// Fix bug 3557 by forcing any non-utility windows to the back when
 		// they lose focus while cycling through windows with the Command-`
-		// shortcut
+		// shortcut. Fix bug 3557 by including the event's device dependent
+		// modifiers if the shift key is pressed.
 		if ( ![super respondsToSelector:@selector(_isUtilityWindow)] || ![super _isUtilityWindow] )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27 ) )
+			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27, true ) )
 			{
 				NSArray *pWindows = [pApp orderedWindows];
 				if ( pWindows )
