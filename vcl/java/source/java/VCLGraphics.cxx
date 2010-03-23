@@ -62,6 +62,7 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPATH_HXX
 #include <com/sun/star/vcl/VCLPath.hxx>
 #endif
+#include <basegfx/vector/b2enums.hxx>
 
 #include "VCLGraphics_cocoa.h"
 
@@ -534,9 +535,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPath0( JNIEnv *pEnv
 	CGPathRef aClipPath = (CGPathRef)_par3;
 	CacheCGPath( aClipPath );
 
-#ifdef DEBUG
-	fprintf( stderr, "Java_com_sun_star_vcl_VCLGraphics_drawPath0 not implemented\n" );
-#endif
+	CGContext_drawPath( _par0, _par1, aDrawPath, aClipPath, _par4, _par5, _par6, _par7, _par8, _par9 );
 }
 
 // ----------------------------------------------------------------------------
@@ -549,9 +548,21 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPathline0( JNIEnv *
 	CGPathRef aClipPath = (CGPathRef)_par4;
 	CacheCGPath( aClipPath );
 
-#ifdef DEBUG
-	fprintf( stderr, "Java_com_sun_star_vcl_VCLGraphics_drawPathline0 not implemented\n" );
-#endif
+	CGLineJoin nJoin;
+	switch ( _par2 )
+	{
+		case ::basegfx::B2DLINEJOIN_BEVEL:
+			nJoin = kCGLineJoinBevel;
+			break;
+		case ::basegfx::B2DLINEJOIN_ROUND:
+			nJoin = kCGLineJoinRound;
+			break;
+		default:
+			nJoin = kCGLineJoinMiter;
+			break;
+	}
+
+	CGContext_drawPathline( _par0, _par1, nJoin, aDrawPath, aClipPath, _par5, _par6, _par7, _par8, _par9, _par10 );
 }
 
 // ----------------------------------------------------------------------------

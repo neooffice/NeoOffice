@@ -426,6 +426,181 @@
 
 @end
 
+@interface DrawPath : NSObject
+{
+	CGPathRef			maPath;
+	int					mnColor;
+	BOOL				mbFill;
+	CGPathRef			maClipPath;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
++ (id)createWithPath:(CGPathRef)aPath color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (void)drawPath:(id)pObject;
+- (id)initWithPath:(CGPathRef)aPath color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawPath
+
++ (id)createWithPath:(CGPathRef)aPath color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	DrawPath *pRet = [[DrawPath alloc] initWithPath:aPath color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)drawPath:(id)pObject
+{
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
+	{
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
+		{
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
+
+			CGContextBeginPath( aContext );
+			CGContextAddPath( aContext, maPath );
+			if ( mbFill )
+			{
+				CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextFillPath( aContext );
+			}
+			else
+			{
+				CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextSetLineWidth( aContext, mfScaleX );
+				CGContextStrokePath( aContext );
+			}
+
+			CGContextRestoreGState( aContext );
+		}
+	}
+}
+
+- (id)initWithPath:(CGPathRef)aPath color:(int)nColor fill:(BOOL)bFill clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	maPath = aPath;
+	mnColor = nColor;
+	mbFill = bFill;
+	maClipPath = aClipPath;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
+@interface DrawPathline : NSObject
+{
+	CGPathRef			maPath;
+	int					mnColor;
+	CGLineJoin			mnJoin;
+	float				mfLineWidth;
+	CGPathRef			maClipPath;
+	float				mfTranslateX;
+	float				mfTranslateY;
+	float				mfRotateAngle;
+	float				mfScaleX;
+	float				mfScaleY;
+}
++ (id)createWithPath:(CGPathRef)aPath color:(int)nColor lineWidth:(float)fLineWidth join:(CGLineJoin)nJoin clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+- (void)drawPathline:(id)pObject;
+- (id)initWithPath:(CGPathRef)aPath color:(int)nColor lineWidth:(float)fLineWidth join:(CGLineJoin)nJoin clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY;
+@end
+
+@implementation DrawPathline
+
++ (id)createWithPath:(CGPathRef)aPath color:(int)nColor lineWidth:(float)fLineWidth join:(CGLineJoin)nJoin clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	DrawPathline *pRet = [[DrawPathline alloc] initWithPath:aPath color:nColor lineWidth:fLineWidth join:nJoin clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)drawPathline:(id)pObject
+{
+	NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+	if ( pContext )
+	{
+		CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+		if ( aContext )
+		{
+			// Fix bug 1218 by setting the clip here and not in Java
+			CGContextSaveGState( aContext );
+			CGContextBeginPath( aContext );
+			CGContextTranslateCTM( aContext, mfTranslateX, mfTranslateY );
+			CGContextRotateCTM( aContext, mfRotateAngle );
+			if ( maClipPath )
+			{
+				CGMutablePathRef aAdjustedClipPath = CGPathCreateMutable();
+				if ( aAdjustedClipPath )
+				{
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGPathAddPath( aAdjustedClipPath, &aTransform, maClipPath );
+					CGContextAddPath( aContext, aAdjustedClipPath );
+					CGContextClip( aContext );
+					CGPathRelease( aAdjustedClipPath );
+				}
+			}
+
+			CGContextBeginPath( aContext );
+			CGContextAddPath( aContext, maPath );
+			CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+			CGContextSetLineWidth( aContext, mfLineWidth * mfScaleX );
+			CGContextSetLineJoin( aContext, mnJoin );
+			CGContextStrokePath( aContext );
+
+			CGContextRestoreGState( aContext );
+		}
+	}
+}
+
+- (id)initWithPath:(CGPathRef)aPath color:(int)nColor lineWidth:(float)fLineWidth join:(CGLineJoin)nJoin clipPath:(CGPathRef)aClipPath translateX:(float)fTranslateX translateY:(float)fTranslateY rotateAngle:(float)fRotateAngle scaleX:(float)fScaleX scaleY:(float)fScaleY
+{
+	[super init];
+
+	maPath = aPath;
+	mnColor = nColor;
+	mfLineWidth = fLineWidth;
+	mnJoin = kCGLineJoinMiter;
+	maClipPath = aClipPath;
+	mfTranslateX = fTranslateX;
+	mfTranslateY = fTranslateY;
+	mfRotateAngle = fRotateAngle;
+	mfScaleX = fScaleX;
+	mfScaleY = fScaleY;
+
+	return self;
+}
+
+@end
+
 @interface DrawPolygon : NSObject
 {
 	int					mnPoints;
@@ -847,6 +1022,48 @@ void CGContext_drawLine( float fX1, float fY1, float fX2, float fY2, int nColor,
 	else
 	{
 		[pDrawLine drawLine:pDrawLine];
+	}
+
+	[pPool release];
+}
+
+void CGContext_drawPath( int nColor, BOOL bFill, CGPathRef aPath, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( aPath )
+	{
+		DrawPath *pDrawPath = [DrawPath createWithPath:aPath color:nColor fill:bFill clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDrawPath performSelectorOnMainThread:@selector(drawPath:) withObject:pDrawPath waitUntilDone:YES modes:pModes];
+		}
+		else
+		{
+			[pDrawPath drawPath:pDrawPath];
+		}
+	}
+
+	[pPool release];
+}
+
+void CGContext_drawPathline( int nColor, float fLineWidth, CGLineJoin nJoin, CGPathRef aPath, CGPathRef aClipPath, BOOL bDrawInMainThread, float fTranslateX, float fTranslateY, float fRotateAngle, float fScaleX, float fScaleY )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( aPath )
+	{
+		DrawPathline *pDrawPathline = [DrawPathline createWithPath:aPath color:nColor lineWidth:fLineWidth join:nJoin clipPath:aClipPath translateX:fTranslateX translateY:fTranslateY rotateAngle:fRotateAngle scaleX:fScaleX scaleY:fScaleY];
+		if ( bDrawInMainThread )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pDrawPathline performSelectorOnMainThread:@selector(drawPathline:) withObject:pDrawPathline waitUntilDone:YES modes:pModes];
+		}
+		else
+		{
+			[pDrawPathline drawPathline:pDrawPathline];
+		}
 	}
 
 	[pPool release];

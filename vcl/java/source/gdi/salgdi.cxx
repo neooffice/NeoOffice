@@ -60,8 +60,6 @@
 
 #include "salgdi_cocoa.h"
 
-static const ::basegfx::B2DPoint aHalfPointOffset( 0.5, 0.5 );
-
 using namespace vcl;
 
 // =======================================================================
@@ -411,22 +409,22 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 
 bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency )
 {
-	if ( mpPrinter )
-		return false;
-
 	const sal_uInt32 nPoly = rPolyPoly.count();
 	if ( nPoly && ( mnFillColor || mnLineColor ) )
 	{
 		com_sun_star_vcl_VCLPath aPath;
-		AddPolyPolygonToPaths( &aPath, NULL, rPolyPoly );
+		CGMutablePathRef aCGPath = NULL;
+		if ( mpPrinter )
+			aCGPath = CGPathCreateMutable();
+		AddPolyPolygonToPaths( &aPath, aCGPath, rPolyPoly );
 
 		sal_uInt8 nTransparency = (sal_uInt8)( ( fTransparency * 100 ) + 0.5 );
 		setFillTransparency( nTransparency );
 		setLineTransparency( nTransparency );
 		if ( mnFillColor )
-			mpVCLGraphics->drawPath( &aPath, mnFillColor, TRUE, getAntiAliasB2DDraw(), NULL, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+			mpVCLGraphics->drawPath( &aPath, mnFillColor, TRUE, getAntiAliasB2DDraw(), aCGPath, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		if ( mnLineColor )
-			mpVCLGraphics->drawPath( &aPath, mnFillColor, FALSE, getAntiAliasB2DDraw(), NULL, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+			mpVCLGraphics->drawPath( &aPath, mnFillColor, FALSE, getAntiAliasB2DDraw(), aCGPath, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 		setFillTransparency( 0 );
 		setLineTransparency( 0 );
 	}
@@ -445,9 +443,12 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 	if ( nCount && mnLineColor )
 	{
 		com_sun_star_vcl_VCLPath aPath;
-		AddPolygonToPaths( &aPath, NULL, rPoly, rPoly.isClosed() );
+		CGMutablePathRef aCGPath = NULL;
+		if ( mpPrinter )
+			aCGPath = CGPathCreateMutable();
+		AddPolygonToPaths( &aPath, aCGPath, rPoly, rPoly.isClosed() );
 
-		mpVCLGraphics->drawPathline( &aPath, mnLineColor, getAntiAliasB2DDraw(), rLineWidths.getX(), eLineJoin, NULL, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+		mpVCLGraphics->drawPathline( &aPath, mnLineColor, getAntiAliasB2DDraw(), rLineWidths.getX(), eLineJoin, aCGPath, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	}
 
 	return true;
