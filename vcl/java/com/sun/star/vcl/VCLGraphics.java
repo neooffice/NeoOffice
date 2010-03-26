@@ -2182,17 +2182,8 @@ public final class VCLGraphics {
 						clipList.add(destBounds);
 					}
 
-					if (xor) {
-						if (fill) {
-							// Fix problem where end of highlighted area gets
-							// unhighlighted when Command-A is pressed
-							g.setComposite(VCLGraphics.xorImageComposite);
-							VCLGraphics.xorImageComposite.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-						}
-						else {
-							g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
-						}
-					}
+					if (xor)
+						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
 						Iterator clipRects = clipList.iterator();
