@@ -111,8 +111,8 @@ public:
 	void				resetGraphics();
 	void				setPixel( long _par0, long _par1, SalColor _par2, CGPathRef _par3 );
 	void				setXORMode( sal_Bool _par0 );
+	void				unionClipPath( com_sun_star_vcl_VCLPath *_par0, sal_Bool _par1 );
 	void				unionClipRegion( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 );
-	sal_Bool			unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3, sal_Int32 _par4, sal_Int32 _par5 );
 };
 
 } // namespace vcl

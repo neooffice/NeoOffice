@@ -261,7 +261,31 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 
 bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPoly )
 {
-	return false;
+	const sal_uInt32 nPoly = rPolyPoly.count();
+	if ( nPoly )
+	{
+		if ( mpPrinter )
+		{
+			if ( !maNativeClipPath )
+				maNativeClipPath = CGPathCreateMutable();
+
+			if ( maNativeClipPath )
+			{
+				CGMutablePathRef aCGPath = CGPathCreateMutable();
+				AddPolyPolygonToPaths( NULL, aCGPath, rPolyPoly );
+				CGPathAddPath( maNativeClipPath, NULL, aCGPath );
+				CFRelease( aCGPath );
+			}
+		}
+		else
+		{
+			com_sun_star_vcl_VCLPath aPath;
+			AddPolyPolygonToPaths( &aPath, NULL, rPolyPoly );
+			mpVCLGraphics->unionClipPath( &aPath, sal_False );
+		}
+	}
+
+	return true;
 }
 
 // -----------------------------------------------------------------------
@@ -571,52 +595,4 @@ void JavaSalGraphics::setFillTransparency( sal_uInt8 nTransparency )
 	// already transparent.
 	if ( mnFillColor )
 		SetFillColor( mnFillColor & 0x00ffffff );
-}
-
-// -----------------------------------------------------------------------
-
-BOOL JavaSalGraphics::unionClipRegion( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry, sal_Int32 nOffsetX, sal_Int32 nOffsetY )
-{
-	BOOL bRet = FALSE;
-
-	if ( mpPrinter )
-	{
-		for ( ULONG i = 0; i < nPoly; i++ )
-		{
-			// CGMutablePathRef aPolyPath = CGPathCreateMutable();
-			CGMutablePathRef aPolyPath = NULL;
-			if ( !aPolyPath )
-				continue;
-
-			ULONG nCount = pPoints[ i ];
-			if ( nCount )
-			{
-				CGPathMoveToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ 0 ].mnX + nOffsetX ), (float)( pPtAry[ i ][ 0 ].mnY + nOffsetY ) );
-				for ( ULONG j = 1; j < nCount; j++ )
-					CGPathAddLineToPoint( aPolyPath, NULL, (float)( pPtAry[ i ][ j ].mnX + nOffsetX ), (float)( pPtAry[ i ][ j ].mnY + nOffsetY ) );
-				CGPathCloseSubpath( aPolyPath );
-			}
-				
-			CGRect aBounds = CGPathGetBoundingBox( aPolyPath );
-			if ( aBounds.size.width > 0 && aBounds.size.height > 0 )
-			{
-				if ( !maNativeClipPath )
-					maNativeClipPath = CGPathCreateMutable();
-
-				if ( maNativeClipPath )
-				{
-					CGPathAddPath( maNativeClipPath, NULL, aPolyPath );
-					bRet = TRUE;
-				}
-			}
-
-			CFRelease( aPolyPath );
-		}
-	}
-	else
-	{
-		bRet = mpVCLGraphics->unionClipRegion( nPoly, pPoints, pPtAry, sal_False, nOffsetX, nOffsetY );
-	}
-
-	return bRet;
 }

@@ -1968,6 +1968,30 @@ void com_sun_star_vcl_VCLGraphics::setXORMode( sal_Bool _par0 )
 
 // ----------------------------------------------------------------------------
 
+void com_sun_star_vcl_VCLGraphics::unionClipPath( com_sun_star_vcl_VCLPath *_par0, sal_Bool _par1 )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "(Lcom/sun/star/vcl/VCLPath;Z)V";
+			mID = t.pEnv->GetMethodID( getMyClass(), "unionClipPath", cSignature );
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+		{
+			jvalue args[2];
+			args[0].l = _par0->getJavaObject();
+			args[1].z = jboolean( _par1 );
+			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
+		}
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long _par2, long _par3, sal_Bool _par4 )
 {
 	static jmethodID mID = NULL;
@@ -1991,66 +2015,4 @@ void com_sun_star_vcl_VCLGraphics::unionClipRegion( long _par0, long _par1, long
 			t.pEnv->CallNonvirtualVoidMethodA( object, getMyClass(), mID, args );
 		}
 	}
-}
-
-// ----------------------------------------------------------------------------
-
-sal_Bool com_sun_star_vcl_VCLGraphics::unionClipRegion( ULONG _par0, const ULONG *_par1, PCONSTSALPOINT *_par2, sal_Bool _par3, sal_Int32 _par4, sal_Int32 _par5 )
-{
-	static jmethodID mID = NULL;
-	sal_Bool out = sal_False;
-	VCLThreadAttach t;
-	if ( t.pEnv )
-	{
-		if ( !mID )
-		{
-			char *cSignature = "(I[I[[I[[IZ)Z";
-			mID = t.pEnv->GetMethodID( getMyClass(), "unionClipRegion", cSignature );
-		}
-		OSL_ENSURE( mID, "Unknown method id!" );
-		jclass tempClass = t.pEnv->FindClass( "[I" );
-		if ( mID && tempClass )
-		{
-			jboolean bCopy;
-			jsize elements( _par0 );
-			jintArray ptsarray = t.pEnv->NewIntArray( elements );
-			bCopy = sal_False;
-			jint *pPtsBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( ptsarray, &bCopy );
-			memcpy( pPtsBits, (jint *)_par1, elements * sizeof( jint ) );
-			t.pEnv->ReleasePrimitiveArrayCritical( ptsarray, pPtsBits, 0 );
-			
-			jintArray tempArray = t.pEnv->NewIntArray( 0 );
-			jobjectArray xptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
-			jobjectArray yptsarray = t.pEnv->NewObjectArray( elements, tempClass, tempArray );
-			for ( jsize i = 0; i < elements; i++ )
-			{
-				jsize points( _par1[ i ] );
-				const SalPoint *pPts = _par2[ i ];
-				jintArray xarray = t.pEnv->NewIntArray( points );
-				jintArray yarray = t.pEnv->NewIntArray( points );
-				bCopy = sal_False;
-				jint *pXBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( xarray, &bCopy );
-				bCopy = sal_False;
-				jint *pYBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( yarray, &bCopy );
-				for ( jsize j = 0; j < points; j++ )
-				{
-					pXBits[ j ] = pPts[ j ].mnX + _par4;
-					pYBits[ j ] = pPts[ j ].mnY + _par5;
-				}
-				t.pEnv->ReleasePrimitiveArrayCritical( yarray, pYBits, 0 );
-				t.pEnv->ReleasePrimitiveArrayCritical( xarray, pXBits, 0 );
-				t.pEnv->SetObjectArrayElement( yptsarray, i, yarray );
-				t.pEnv->SetObjectArrayElement( xptsarray, i, xarray );
-			}
-
-			jvalue args[5];
-			args[0].i = jint( _par0 );
-			args[1].l = ptsarray;
-			args[2].l = xptsarray;
-			args[3].l = yptsarray;
-			args[4].z = jboolean( _par3 );
-			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
-		}
-	}
-	return out;
 }

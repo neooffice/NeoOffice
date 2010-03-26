@@ -933,6 +933,7 @@ bool JavaSalGraphics::supportsOperation( OutDevSupportType eType ) const
 
 	switch( eType )
 	{
+		case OutDevSupport_B2DClip:
 		case OutDevSupport_B2DDraw:
 		case OutDevSupport_TransparentRect:
 			bRet = true;

@@ -75,14 +75,6 @@
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <vcl/unohelp.hxx>
 
-#ifdef USE_JAVA
-
-#ifndef _SV_SALGDI_H
-#include <salgdi.h>
-#endif
-
-#endif	 // USE_JAVA
-
 using namespace ::com::sun::star;
 
 DBG_NAME( OutputDevice )
@@ -1489,7 +1481,6 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 		if(!(ImplGetGraphics()))
 			return;
 
-#ifndef USE_JAVA
 	if( mpGraphics->supportsOperation( OutDevSupport_B2DClip ) )
 	{
 #if 0
@@ -1546,7 +1537,6 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 		mbInitClipRegion = FALSE;
 		return;
 	}
-#endif	// !USE_JAVA
 
 	sal_Int32 offset_x = 0;
 	sal_Int32 offset_y = 0;
@@ -1602,16 +1592,10 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 		return;
 	}
 
-#ifdef USE_JAVA
-	sal_uInt32*			pPointAry = new sal_uInt32[dwNumTriangles];
-	PCONSTSALPOINT* 	pPointAryAry = new PCONSTSALPOINT[dwNumTriangles];
-	USHORT				k = 0;
-#else	// USE_JAVA
 	// this container provides all services we need to
 	// efficiently store/retrieve spans from the table.
 	const sal_uInt32 dwNumSpansPerScanline = dwNumTriangles;
 	ScanlineContainer container(dwNumScanlines,dwNumSpansPerScanline);
-#endif	// USE_JAVA
 
 	// convert the incoming polypolygon to spans, we assume that
 	// the polypolygon has already been triangulated since we don't
@@ -1625,11 +1609,6 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 		{
 			for(USHORT j=0; j<dwNumVertices; j+=3)
 			{
-#ifdef USE_JAVA
-				pPointAry[k] = 3;
-				pPointAryAry[k] = (PCONSTSALPOINT)( rPoly.GetConstPointAry() + j);
-				++k;
-#else	// USE_JAVA
 				const Point &p0 = rPoly.GetPoint(j+0);
 				const Point &p1 = rPoly.GetPoint(j+1);
 				const Point &p2 = rPoly.GetPoint(j+2);
@@ -1763,12 +1742,10 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 					rx += rQ; rd += rR;
 					if(rd > 0) { rd -= rD; rx += 1; }
 				}
-#endif	// USE_JAVA
 			}
 		}
 	}
 
-#ifndef USE_JAVA
 	// now try to consolidate as many scanlines as possible.
 	// please note that this will probably change the number
 	// of spans [at least this is why we do all this hassle].
@@ -1778,16 +1755,7 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 	// hm, how to say, *picky* if you supply not correctly
 	// the amount of regions.
 	container.Consolidate();
-#endif	// !USE_JAVA
 
-#ifdef USE_JAVA
-	mpGraphics->BeginSetClipRegion( 1 );
-	mbOutputClipped = ( ((JavaSalGraphics *)mpGraphics)->unionClipRegion( k, pPointAry, pPointAryAry, offset_x, offset_y ) ? FALSE : TRUE );
-	mpGraphics->EndSetClipRegion();
-
-	delete[] pPointAry;
-	delete[] pPointAryAry;
-#else 	// USE_JAVA
 	// now forward the spantable to the graphics handler.
 	SpanIterator it(container.Iterate());
 	mpGraphics->BeginSetClipRegion( container.GetNumSpans() );
@@ -1819,7 +1787,6 @@ void OutputDevice::ImplSetTriangleClipRegion( const PolyPolygon &rPolyPolygon )
 	// visible areas. the clip covers the whole area
 	// if there's not a single region.
 	mbOutputClipped = (container.GetNumSpans() == 0);
-#endif	// USE_JAVA
 
 	// indicates that a clip region has been
 	// presented to the output device.

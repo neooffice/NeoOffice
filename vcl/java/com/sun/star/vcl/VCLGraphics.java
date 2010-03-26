@@ -2490,7 +2490,7 @@ public final class VCLGraphics {
 		return new Rectangle(x, y, VCLGraphics.radioButtonPreferredSize.width + 4, VCLGraphics.radioButtonPreferredSize.height + 4);
 
 	}
-	
+
 	/**
 	 * Applies the cached clipping area. The cached clipping area is set using
 	 * the {@link #beginSetClipRegion(boolean)} and the
@@ -3187,76 +3187,68 @@ public final class VCLGraphics {
 	}
 
 	/**
-	 * Unions the cached clipping area with the specified poly polygon. The
+	 * Unions the cached clipping area with the specified path. The
 	 * cached clipping area is not actually applied until the
 	 * {@link #endSetClipRegion(boolean)} method is called. Note that some
 	 * drawing methods in this class cannot handle non-rectangular clip regions
 	 * so this method will likely leave too big of a clip region for such
 	 * methods.
 	 *
-	 * @param npoly the number of polygons
-	 * @param npoints the array of the total number of points in each polygon
-	 * @param xpoints the array of arrays of x coordinates
-	 * @param ypoints the array of arrays of y coordinates
-	 * @param b <code>true</code> if this clip is coming from the C++ SalFrame
-	 *  methods otherwise <code>false</code>
+	 * @param path the <code>VCLPath</code>
 	 * @return <code>true</code> if the clip region is not empty, otherwise
 	 *  <code>false</code>
 	 */
-	public boolean unionClipRegion(int npoly, int[] npoints, int[][] xpoints, int[][] ypoints, boolean b) {
+	public void unionClipPath(VCLPath path, boolean b) {
 
 		if (graphics != null)
-			return false;
+			return;
 
-		for (int i = 0; i < npoly; i++) {
-			Polygon p = new Polygon(xpoints[i], ypoints[i], npoints[i]);
-			Area a = new Area(p);
-			if (a != null && !a.isEmpty()) {
-				Area currentClip;
-				LinkedList currentClipList;
-				boolean currentPolygonClip;
-				if (b) {
-					currentClip = frameClip;
-					currentClipList = frameClipList;
-					currentPolygonClip = framePolygonClip;
-				}
-				else {
-					currentClip = graphicsClip;
-					currentClipList = graphicsClipList;
-					currentPolygonClip = graphicsPolygonClip;
-				}
+		Area a = new Area(path.getShape());
+		if (a != null && !a.isEmpty()) {
+			Area currentClip;
+			LinkedList currentClipList;
+			boolean currentPolygonClip;
+			if (b) {
+				currentClip = frameClip;
+				currentClipList = frameClipList;
+				currentPolygonClip = framePolygonClip;
+			}
+			else {
+				currentClip = graphicsClip;
+				currentClipList = graphicsClipList;
+				currentPolygonClip = graphicsPolygonClip;
+			}
 
-				if (currentClip != null)
-					currentClip.add(a);
-				else
-					currentClip = a;
+			if (currentClip != null)
+				currentClip.add(a);
+			else
+				currentClip = a;
 
-				if (currentClip.isEmpty()) {
+			if (currentClip.isEmpty()) {
+				currentClipList = new LinkedList();
+				currentPolygonClip = false;
+			}
+			else if (currentClip.isRectangular()) {
+				currentClipList = new LinkedList();
+				currentClipList.add(currentClip.getBounds());
+				currentPolygonClip = false;
+			}
+			else {
+				if (currentClipList == null)
 					currentClipList = new LinkedList();
-					currentPolygonClip = false;
-				}
-				else if (currentClip.isRectangular()) {
-					currentClipList = new LinkedList();
-					currentClipList.add(currentClip.getBounds());
-					currentPolygonClip = false;
-				}
-				else {
-					if (currentClipList == null)
-						currentClipList = new LinkedList();
-					if (!currentPolygonClip && !a.isRectangular())
-						currentPolygonClip = true;
-				}
+				if (!currentPolygonClip && !a.isRectangular())
+					currentPolygonClip = true;
+			}
 
-				if (b) {
-					frameClip = currentClip;
-					frameClipList = currentClipList;
-					framePolygonClip = currentPolygonClip;
-				}
-				else {
-					graphicsClip = currentClip;
-					graphicsClipList = currentClipList;
-					graphicsPolygonClip = currentPolygonClip;
-				}
+			if (b) {
+				frameClip = currentClip;
+				frameClipList = currentClipList;
+				framePolygonClip = currentPolygonClip;
+			}
+			else {
+				graphicsClip = currentClip;
+				graphicsClipList = currentClipList;
+				graphicsPolygonClip = currentPolygonClip;
 			}
 		}
 
@@ -3271,7 +3263,7 @@ public final class VCLGraphics {
 					while (graphicsClipRects.hasNext()) {
 						Rectangle currentGraphicsClip = (Rectangle)graphicsClipRects.next();
 						Iterator clipRects = graphicsClipList.iterator();
-						while (clipRects.hasNext()) {
+					while (clipRects.hasNext()) {
 							Rectangle clip = ((Rectangle)clipRects.next()).intersection(currentGraphicsClip);
 							if (!clip.isEmpty())
 								userClipList.add(clip);
@@ -3310,9 +3302,6 @@ public final class VCLGraphics {
 				userPolygonClip = graphicsPolygonClip;
 			}
 		}
-
-		return (userClip != null && !userClip.isEmpty());
-
 	}
 
 	/**
