@@ -49,7 +49,7 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
-static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey, bool bIncludeDeviceDependentFlagsIfShiftPressed )
+static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey, bool bUseSpecialEventModifierHandling )
 {
 	BOOL bRet = NO;
 
@@ -81,8 +81,9 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey, bool bI
 								if ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] )
 								{
 									NSNumber *pModifiers = (NSNumber *)[pParams objectAtIndex:2];
-									unsigned int nDeviceFlagMask = ( bIncludeDeviceDependentFlagsIfShiftPressed && [pEvent modifierFlags] & NSShiftKeyMask ? 0xffffffff : NSDeviceIndependentModifierFlagsMask );
-									if ( pModifiers && ( [pModifiers unsignedIntValue] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nDeviceFlagMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nDeviceFlagMask ) )
+									unsigned int nControlKeyMask = ( bUseSpecialEventModifierHandling && [pEvent modifierFlags] & NSControlKeyMask ? ~NSControlKeyMask : 0xffffffff );
+									unsigned int nDeviceFlagMask = ( bUseSpecialEventModifierHandling && [pEvent modifierFlags] & NSShiftKeyMask ? 0xffffffff : NSDeviceIndependentModifierFlagsMask );
+									if ( pModifiers && ( [pModifiers unsignedIntValue] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nDeviceFlagMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nControlKeyMask & nDeviceFlagMask ) )
 										bRet = YES;
 								}
 							}
@@ -757,7 +758,8 @@ static VCLResponder *pSharedResponder = nil;
 		// Fix bug 3557 by forcing any non-utility windows to the back when
 		// they lose focus while cycling through windows with the Command-`
 		// shortcut. Fix bug 3557 by including the event's device dependent
-		// modifiers if the shift key is pressed.
+		// modifiers if the Shift key is pressed and excluding the Control key
+		// modifier if the Control key is pressed.
 		if ( ![super respondsToSelector:@selector(_isUtilityWindow)] || ![super _isUtilityWindow] )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
