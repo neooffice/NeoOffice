@@ -49,7 +49,7 @@ static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
-static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey, bool bUseSpecialEventModifierHandling )
+static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 {
 	BOOL bRet = NO;
 
@@ -77,13 +77,19 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey, bool bU
 							NSArray *pParams = (NSArray *)[pValue objectForKey:@"parameters"];
 							if ( pParams && CFGetTypeID( pParams ) == CFArrayGetTypeID() && [pParams count] > 2 )
 							{
+								NSString *pChars = nil;
+								NSNumber *pChar = (NSNumber *)[pParams objectAtIndex:0];
+								if ( pChar )
+								{
+									unichar nChar = [pChar unsignedCharValue];
+									pChars = [NSString stringWithCharacters:&nChar length:1];
+								}
+
 								NSNumber *pKeyCode = (NSNumber *)[pParams objectAtIndex:1];
-								if ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] )
+								if ( ( pChars && [pChars isEqualToString:[pEvent characters]] ) || ( pKeyCode && [pKeyCode unsignedShortValue] == [pEvent keyCode] ) )
 								{
 									NSNumber *pModifiers = (NSNumber *)[pParams objectAtIndex:2];
-									unsigned int nControlKeyMask = ( bUseSpecialEventModifierHandling && [pEvent modifierFlags] & NSControlKeyMask ? ~NSControlKeyMask : 0xffffffff );
-									unsigned int nDeviceFlagMask = ( bUseSpecialEventModifierHandling && [pEvent modifierFlags] & NSShiftKeyMask ? 0xffffffff : NSDeviceIndependentModifierFlagsMask );
-									if ( pModifiers && ( [pModifiers unsignedIntValue] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nDeviceFlagMask ) == ( (unsigned int)[pEvent modifierFlags] & ~NSHelpKeyMask & ~NSFunctionKeyMask & nControlKeyMask & nDeviceFlagMask ) )
+									if ( pModifiers && ( [pModifiers unsignedIntValue] & ( NSCommandKeyMask | NSShiftKeyMask ) ) == ( (unsigned int)[pEvent modifierFlags] & ( NSCommandKeyMask | NSShiftKeyMask ) ) )
 										bRet = YES;
 								}
 							}
@@ -587,7 +593,7 @@ static VCLResponder *pSharedResponder = nil;
 			// Do not allow utility windows to grab the focus except when the
 			// user presses Control-F6
 			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11, false ) )
+			if ( pApp && !EventMatchesShortcutKey( [pApp currentEvent], 11 ) )
 				return;
 		}
 	}
@@ -763,7 +769,7 @@ static VCLResponder *pSharedResponder = nil;
 		if ( ![super respondsToSelector:@selector(_isUtilityWindow)] || ![super _isUtilityWindow] )
 		{
 			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27, true ) )
+			if ( pApp && EventMatchesShortcutKey( [pApp currentEvent], 27 ) )
 			{
 				NSArray *pWindows = [pApp orderedWindows];
 				if ( pWindows )
