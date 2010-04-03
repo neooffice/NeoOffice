@@ -128,26 +128,6 @@ com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object(
 		char *cSignature = "(Lcom/sun/star/vcl/VCLEventQueue;)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
-		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPrintJob" );
-		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
-		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
-	}
-	return theClass;
-}
-
-// ----------------------------------------------------------------------------
-
-com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object( (jobject)NULL )
-{
-	static jmethodID mID = NULL;
-	VCLThreadAttach t;
-	if ( !t.pEnv )
-		return;
-	if ( !mID )
-	{
-		char *cSignature = "(Lcom/sun/star/vcl/VCLEventQueue;)V";
-		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
-	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 	jvalue args[1];
 	args[0].l = GetSalData()->mpEventQueue->getJavaObject();
