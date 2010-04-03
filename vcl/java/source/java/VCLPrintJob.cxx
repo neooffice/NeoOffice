@@ -103,6 +103,31 @@ jclass com_sun_star_vcl_VCLPrintJob::getMyClass()
 			t.pEnv->RegisterNatives( cCUPSPrinterClass, &aMethod, 1 );
 		}
 
+		// Fix bug 3597 by handling Java versions that do not have a
+		// CUPSPrinter class
+		if ( t.pEnv->ExceptionCheck() )
+			t.pEnv->ExceptionClear();
+
+		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPrintJob" );
+		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
+		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
+	}
+	return theClass;
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object( (jobject)NULL )
+{
+	static jmethodID mID = NULL;
+	VCLThreadAttach t;
+	if ( !t.pEnv )
+		return;
+	if ( !mID )
+	{
+		char *cSignature = "(Lcom/sun/star/vcl/VCLEventQueue;)V";
+		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
+	}
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLPrintJob" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
