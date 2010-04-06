@@ -58,7 +58,7 @@ protected:
 public:
 	static jclass		getMyClass();
 
-						com_sun_star_vcl_VCLPageFormat::com_sun_star_vcl_VCLPageFormat( jobject myObj ) : java_lang_Object( (jobject)myObj ) {}
+						com_sun_star_vcl_VCLPageFormat( jobject myObj ) : java_lang_Object( (jobject)myObj ) {}
 						com_sun_star_vcl_VCLPageFormat();
 	virtual				~com_sun_star_vcl_VCLPageFormat() {}
 
