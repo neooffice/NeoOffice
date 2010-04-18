@@ -40,6 +40,11 @@ ENABLE_EXCEPTIONS=TRUE
 .INCLUDE :  settings.mk
 .INCLUDE :  $(PRJ)$/inc$/sw.mk
 
+.IF "$(GUIBASE)" == "java"
+# Fix bug 3598 by compiling without optimization
+CDEFS+=-O0
+.ENDIF	# "$(GUIBASE)" == "java"
+
 # --- Files --------------------------------------------------------
 
 SRS1NAME=$(TARGET)
