@@ -5435,7 +5435,8 @@ void ScGridWindow::UpdateSelectionOverlay()
     GetSelectionRects( aPixelRects );
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-	if ( UseMacHighlightColor() && pViewData->IsActive() )
+	// Always clear last selection even if native highlighting is turned off
+	if ( pViewData->IsActive() )
     {
 		for ( std::vector< Rectangle >::const_iterator it = aLastSelectionPixelRects.begin(); it != aLastSelectionPixelRects.end(); ++it )
 			Invalidate( PixelToLogic( *it ) );
