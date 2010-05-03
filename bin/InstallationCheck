@@ -65,7 +65,7 @@ if [ "$target_machine" != "$machine" ] ; then
 	case "$machine" in
 		i386) exit 114;;
 		powerpc) exit 115;;
-		x86_64) exit 116;;
+		x86_64) if [ "$target_machine" != "i386" ] ; then exit 114 ; fi;;
 		*) exit 117;;
 	esac
 fi
