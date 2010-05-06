@@ -8650,7 +8650,7 @@ Reference< XClipboard > Window::GetPrimarySelection()
 
                 if( xFactory.is() )
                 {
-#if defined(UNX) && !defined(QUARTZ)
+#if defined UNX && (!defined QUARTZ || defined USE_JAVA)
                     Sequence< Any > aArgumentList( 3 );
                   	aArgumentList[ 0 ] = makeAny( Application::GetDisplayConnection() );
                     aArgumentList[ 1 ] = makeAny( OUString::createFromAscii( "PRIMARY" ) );
@@ -8658,14 +8658,14 @@ Reference< XClipboard > Window::GetPrimarySelection()
 
                     mpWindowImpl->mpFrameData->mxSelection = Reference< XClipboard >( xFactory->createInstanceWithArguments(
 					OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.SystemClipboard" ), aArgumentList ), UNO_QUERY );
-#	else
+#else	// UNX && (!QUARTZ || USE_JAVA)
 					static Reference< XClipboard >	s_xSelection;
 
 					if ( !s_xSelection.is() )
  						s_xSelection = Reference< XClipboard >( xFactory->createInstance( OUString::createFromAscii( "com.sun.star.datatransfer.clipboard.GenericClipboard" ) ), UNO_QUERY );
 
                     mpWindowImpl->mpFrameData->mxSelection = s_xSelection;
-#	endif
+#endif	// UNX && (!QUARTZ || USE_JAVA)
                 }
             }
 
