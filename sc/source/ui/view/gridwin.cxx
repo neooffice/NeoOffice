@@ -5897,8 +5897,9 @@ void ScGridWindow::GetNativeHightlightColorRects( ::std::vector< Rectangle >& rP
 	rPixelRects.clear();
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
+	// Fix bug 3602 by using the cached selection rectangles
 	if ( UseMacHighlightColor() )
-		GetSelectionRects( rPixelRects );
+		rPixelRects = aLastSelectionPixelRects;
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
 }
 
