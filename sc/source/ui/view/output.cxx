@@ -930,17 +930,14 @@ void ScOutputData::DrawBackground()
 								pDev->DrawRect( aRect );
 							}
 #ifdef USE_JAVA
-							if ( aNativeHighlightPolyPoly.Count() )
+							if ( aNativeHighlightPolyPoly.Count() && !aRect.IsEmpty() )
 							{
-								PolyPolygon aTemp;
-								aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRect ) ), aTemp );
-								Color aOldFillColor = pDev->GetFillColor();
-								Color aOldLineColor = pDev->GetLineColor();
+								pDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+								pDev->IntersectClipRegion( aRect );
 								pDev->SetFillColor( aNativeHighlightColor );
 								pDev->SetLineColor( aNativeHighlightColor );
-								pDev->DrawTransparent( aTemp, 25 );
-								pDev->SetFillColor( aOldFillColor );
-								pDev->SetLineColor( aOldLineColor );
+								pDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+								pDev->Pop();
 							}
 #endif	// USE_JAVA
 						}
@@ -959,17 +956,14 @@ void ScOutputData::DrawBackground()
 						pDev->DrawRect( aRect );
 					}
 #ifdef USE_JAVA
-					if ( aNativeHighlightPolyPoly.Count() )
+					if ( aNativeHighlightPolyPoly.Count() && !aRect.IsEmpty() )
 					{
-						PolyPolygon aTemp;
-						aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRect ) ), aTemp );
-						Color aOldFillColor = pDev->GetFillColor();
-						Color aOldLineColor = pDev->GetLineColor();
+						pDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+						pDev->IntersectClipRegion( aRect );
 						pDev->SetFillColor( aNativeHighlightColor );
-						pDev->SetFillColor( aNativeHighlightColor );
-						pDev->DrawTransparent( aTemp, 25 );
-						pDev->SetFillColor( aOldFillColor );
-						pDev->SetLineColor( aOldLineColor );
+						pDev->SetLineColor( aNativeHighlightColor );
+						pDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+						pDev->Pop();
 					}
 #endif	// USE_JAVA
 				}
