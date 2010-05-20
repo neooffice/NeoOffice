@@ -80,6 +80,7 @@ static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
 static const String aHiraginoMinchoProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Mincho Pro W3" ) );
 static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
+static const String aRaanana( RTL_CONSTASCII_USTRINGPARAM( "Raanana" ) );
 static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
@@ -1396,6 +1397,29 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 								SalData *pSalData = GetSalData();
 
 								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( mpGraphics->mpFontData->meFamily == FAMILY_ROMAN ? aTimesRoman : aHelvetica );
+								if ( it != pSalData->maFontNameMapping.end() )
+								{
+									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
+									if ( pSymbolFallbackFont->getNativeFont() == mpVCLFont->getNativeFont() )
+									{
+										delete pSymbolFallbackFont;
+										pSymbolFallbackFont = NULL;
+									}
+								}
+							}
+
+							rArgs.NeedFallback( nCharPos, bRunRTL );
+							rArgs.mnFlags &= ~SAL_LAYOUT_DISABLE_GLYPH_PROCESSING;
+						}
+						else if ( nChar >= 0x0590 && nChar < 0x0600 )
+						{
+							// If there is no fallback font and it is a Hebrew
+							// character, use the Raanana font
+							if ( !pSymbolFallbackFont )
+							{
+								SalData *pSalData = GetSalData();
+
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aRaanana);
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
 									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
