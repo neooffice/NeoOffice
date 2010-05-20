@@ -2013,15 +2013,12 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
                     aRegion -= aGrf;
                 for( USHORT i = 0; i < aRegion.Count(); ++i )
                 {
-                    PolyPolygon aTemp;
-                    aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRegion[i].SVRect() ) ), aTemp );
-                    Color aOldFillColor = pOutDev->GetFillColor();
-                    Color aOldLineColor = pOutDev->GetLineColor();
+                    pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+                    pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
                     pOutDev->SetFillColor( aNativeHighlightColor );
                     pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawPolyPolygon( aTemp );
-                    pOutDev->SetFillColor( aOldFillColor );
-                    pOutDev->SetLineColor( aOldLineColor );
+                    pOutDev->DrawPolyPolygon( aNativeHighlightPolyPoly );
+                    pOutDev->Pop();
                 }
             }
 #endif  // USE_JAVA
@@ -2041,15 +2038,12 @@ void MA_FASTCALL DrawGraphic( const SvxBrushItem *pBrush,
 #ifdef USE_JAVA
                 if ( aNativeHighlightPolyPoly.Count() )
                 {
-                    PolyPolygon aTemp;
-                    aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aRegion[i].SVRect() ) ), aTemp );
-                    Color aOldFillColor = pOutDev->GetFillColor();
-                    Color aOldLineColor = pOutDev->GetLineColor();
+                    pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+                    pOutDev->IntersectClipRegion( aRegion[i].SVRect() );
                     pOutDev->SetFillColor( aNativeHighlightColor );
                     pOutDev->SetLineColor( aNativeHighlightColor );
-                    pOutDev->DrawPolyPolygon( aTemp );
-                    pOutDev->SetFillColor( aOldFillColor );
-                    pOutDev->SetLineColor( aOldLineColor );
+                    pOutDev->DrawPolyPolygon( aNativeHighlightPolyPoly );
+                    pOutDev->Pop();
                 }
 #endif  // USE_JAVA
             }

@@ -738,15 +738,12 @@ void SwTxtPaintInfo::_DrawText( const XubString &rText, const SwLinePortion &rPo
 
         if ( aNativeHighlightPolyPoly.Count() )
         {
-            PolyPolygon aTemp;
-            aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aPaintRect.SVRect() ) ), aTemp );
-            Color aOldFillColor = pOutDev->GetFillColor();
-            Color aOldLineColor = pOutDev->GetLineColor();
+            pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+            pOutDev->IntersectClipRegion( aPaintRect.SVRect() );
             pOutDev->SetFillColor( aNativeHighlightColor );
             pOutDev->SetLineColor( aNativeHighlightColor );
-            pOutDev->DrawTransparent( aTemp, 25 );
-            pOutDev->SetFillColor( aOldFillColor );
-            pOutDev->SetLineColor( aOldLineColor );
+            pOutDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+            pOutDev->Pop();
         }
     }
 #endif	// USE_JAVA
