@@ -2912,15 +2912,15 @@ void ImpEditEngine::Paint( OutputDevice* pOutDev, Rectangle aClipRec, Point aSta
 
 	if ( aNativeHighlightPolyPoly.Count() )
 	{
-		PolyPolygon aTemp;
-		aNativeHighlightPolyPoly.GetIntersection( PolyPolygon( Polygon( aClipRec ) ), aTemp );
-		Color aOldFillColor = pOutDev->GetFillColor();
-		Color aOldLineColor = pOutDev->GetLineColor();
+		// Fix bug 3605 by setting the clip on the device instead of drawing
+		// an intersection of the native polypolygon and the clip
+		pOutDev->Push( PUSH_CLIPREGION | PUSH_FILLCOLOR | PUSH_LINECOLOR );
+		if ( !aClipRec.IsEmpty() )
+			pOutDev->IntersectClipRegion( aClipRec );
 		pOutDev->SetFillColor( aNativeHighlightColor );
 		pOutDev->SetLineColor( aNativeHighlightColor );
-		pOutDev->DrawTransparent( aTemp, 25 );
-		pOutDev->SetFillColor( aOldFillColor );
-		pOutDev->SetLineColor( aOldLineColor );
+		pOutDev->DrawTransparent( aNativeHighlightPolyPoly, 25 );
+		pOutDev->Pop();
 	}
 #endif	// USE_JAVA
 
