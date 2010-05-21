@@ -80,7 +80,7 @@ static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
 static const String aHiraginoKakuGothicProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Kaku Gothic Pro W3" ) );
 static const String aHiraginoMinchoProW3( RTL_CONSTASCII_USTRINGPARAM( "Hiragino Mincho Pro W3" ) );
 static const String aOpenSymbol( RTL_CONSTASCII_USTRINGPARAM( "OpenSymbol" ) );
-static const String aRaanana( RTL_CONSTASCII_USTRINGPARAM( "Raanana" ) );
+static const String aTimesNewRoman( RTL_CONSTASCII_USTRINGPARAM( "Times New Roman" ) );
 static const String aTimesRoman( RTL_CONSTASCII_USTRINGPARAM( "Times Roman" ) );
 
 inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
@@ -1419,7 +1419,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 							{
 								SalData *pSalData = GetSalData();
 
-								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aRaanana);
+								::std::map< String, JavaImplFontData* >::const_iterator it = pSalData->maFontNameMapping.find( aTimesNewRoman );
 								if ( it != pSalData->maFontNameMapping.end() )
 								{
 									pSymbolFallbackFont = new com_sun_star_vcl_VCLFont( it->second->maVCLFontName, mpVCLFont->getSize(), mpVCLFont->getOrientation(), mpVCLFont->isAntialiased(), mpVCLFont->isVertical(), mpVCLFont->getScaleX() );
