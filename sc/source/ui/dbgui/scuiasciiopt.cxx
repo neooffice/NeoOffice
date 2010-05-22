@@ -208,11 +208,7 @@ static void save_Separators(
 // ----------------------------------------------------------------------------
 
 ScImportAsciiDlg::ScImportAsciiDlg( Window* pParent,String aDatName,
-#ifdef USE_JAVA
-                                    SvStream* pInStream, sal_Unicode cSep ) :
-#else	// USE_JAVA
                                     SvStream* pInStream, sal_Unicode /*cSep*/ ) :
-#endif	// USE_JAVA
 		ModalDialog	( pParent, ScResId( RID_SCDLG_ASCII ) ),
         mpDatStream  ( pInStream ),
         mnStreamPos( pInStream ? pInStream->Tell() : 0 ),
@@ -289,7 +285,8 @@ ScImportAsciiDlg::ScImportAsciiDlg( Window* pParent,String aDatName,
     sal_Int32 nCharSet = -1;
     sal_Int32 nLanguage = 0;
 #ifdef USE_JAVA
-    // Always load separators even if they are from the clipboard
+    // Fix bug 3606 by always loading separators even if the data comes from
+	// the clipboard
 #else	// USE_JAVA
     if (mbFileImport)
         // load separators only when importing csv files.
@@ -297,10 +294,9 @@ ScImportAsciiDlg::ScImportAsciiDlg( Window* pParent,String aDatName,
         load_Separators (sFieldSeparators, sTextSeparators, bMergeDelimiters, 
                          bQuotedFieldAsText, bDetectSpecialNum, bFixedWidth, nFromRow, nCharSet, nLanguage);
 #ifdef USE_JAVA
-    // Fix bug 3606 by using the separator passed to this method if the
-    // data is coming from the clipboard
+    // Don't use saved character set if data comes from the clipboard
     if (!mbFileImport)
-        sFieldSeparators = OUString( cSep );
+    	nCharSet = -1;
 #endif	// USE_JAVA
     maFieldSeparators = String(sFieldSeparators);
 
@@ -435,7 +431,7 @@ ScImportAsciiDlg::ScImportAsciiDlg( Window* pParent,String aDatName,
 
 ScImportAsciiDlg::~ScImportAsciiDlg()
 {
-#ifndef USE_JAVA
+#ifdef USE_JAVA
     // Always save separators even if they are from the clipboard
 #else	// USE_JAVA
     if (mbFileImport)
