@@ -288,17 +288,19 @@ ScImportAsciiDlg::ScImportAsciiDlg( Window* pParent,String aDatName,
     sal_Int32 nFromRow = 1;
     sal_Int32 nCharSet = -1;
     sal_Int32 nLanguage = 0;
+#ifdef USE_JAVA
+    // Always load separators even if they are from the clipboard
+#else	// USE_JAVA
     if (mbFileImport)
         // load separators only when importing csv files.
+#endif	// USE_JAVA
         load_Separators (sFieldSeparators, sTextSeparators, bMergeDelimiters, 
                          bQuotedFieldAsText, bDetectSpecialNum, bFixedWidth, nFromRow, nCharSet, nLanguage);
 #ifdef USE_JAVA
-    else
-    {
-        // Fix bug 3606 by using the separator passed to this method if the
-        // data is coming from the clipboard
+    // Fix bug 3606 by using the separator passed to this method if the
+    // data is coming from the clipboard
+    if (!mbFileImport)
         sFieldSeparators = OUString( cSep );
-    }
 #endif	// USE_JAVA
     maFieldSeparators = String(sFieldSeparators);
 
@@ -433,7 +435,11 @@ ScImportAsciiDlg::ScImportAsciiDlg( Window* pParent,String aDatName,
 
 ScImportAsciiDlg::~ScImportAsciiDlg()
 {
+#ifndef USE_JAVA
+    // Always save separators even if they are from the clipboard
+#else	// USE_JAVA
     if (mbFileImport)
+#endif	// USE_JAVA
         save_Separators( maFieldSeparators, aCbTextSep.GetText(), aCkbAsOnce.IsChecked(), 
                          aCkbQuotedAsText.IsChecked(), aCkbDetectNumber.IsChecked(), 
                          aRbFixed.IsChecked(), aNfRow.GetValue(), aLbCharSet.GetSelectEntryPos(),
