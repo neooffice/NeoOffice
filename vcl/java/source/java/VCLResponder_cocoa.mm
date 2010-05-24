@@ -365,7 +365,7 @@ static short GetCurrentKeyModifiers()
 
 - (void)moveWordLeftAndModifySelection:(id)pSender
 {
-	mnLastCommandKey = Key::SELECT_WORD_BACKWORD;
+	mnLastCommandKey = Key::SELECT_WORD_BACKWARD;
 }
 
 - (void)moveWordRight:(id)pSender
