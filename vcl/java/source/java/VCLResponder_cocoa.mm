@@ -302,6 +302,26 @@ static short GetCurrentKeyModifiers()
 	mnLastModifiers = KEY_SHIFT;
 }
 
+- (void)moveParagraphBackward:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_PARAGRAPH;
+}
+
+- (void)moveParagraphBackwardAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_BEGIN_OF_PARAGRAPH;
+}
+
+- (void)moveParagraphForward:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_END_OF_PARAGRAPH;
+}
+
+- (void)moveParagraphForwardAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_END_OF_PARAGRAPH;
+}
+
 - (void)moveRight:(id)pSender
 {
 	mnLastCommandKey = KEY_RIGHT;
@@ -313,9 +333,24 @@ static short GetCurrentKeyModifiers()
 	mnLastModifiers = KEY_SHIFT;
 }
 
+- (void)moveToBeginningOfDocument:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_DOCUMENT;
+}
+
+- (void)moveToBeginningOfDocumentAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_BEGIN_OF_DOCUMENT;
+}
+
 - (void)moveToBeginningOfLine:(id)pSender
 {
 	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_LINE;
+}
+
+- (void)moveToBeginningOfLineAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_BEGIN_OF_LINE;
 }
 
 - (void)moveToBeginningOfParagraph:(id)pSender
@@ -323,14 +358,39 @@ static short GetCurrentKeyModifiers()
 	mnLastCommandKey = Key::MOVE_TO_BEGIN_OF_PARAGRAPH;
 }
 
+- (void)moveToBeginningOfParagraphAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_BEGIN_OF_PARAGRAPH;
+}
+
+- (void)moveToEndOfDocument:(id)pSender
+{
+	mnLastCommandKey = Key::MOVE_TO_END_OF_DOCUMENT;
+}
+
+- (void)moveToEndOfDocumentAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_END_OF_DOCUMENT;
+}
+
 - (void)moveToEndOfLine:(id)pSender
 {
 	mnLastCommandKey = Key::MOVE_TO_END_OF_LINE;
 }
 
+- (void)moveToEndOfLineAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_END_OF_LINE;
+}
+
 - (void)moveToEndOfParagraph:(id)pSender
 {
 	mnLastCommandKey = Key::MOVE_TO_END_OF_PARAGRAPH;
+}
+
+- (void)moveToEndOfParagraphAndModifySelection:(id)pSender
+{
+	mnLastCommandKey = Key::SELECT_TO_END_OF_PARAGRAPH;
 }
 
 - (void)moveUp:(id)pSender
