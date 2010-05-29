@@ -5434,6 +5434,14 @@ void ScGridWindow::UpdateSelectionOverlay()
     std::vector<Rectangle> aPixelRects;
     GetSelectionRects( aPixelRects );
 
+#ifdef USE_JAVA
+	// Fix bug 3607 by invalidating the merge toolbar buttons
+	SfxBindings& rBindings = pViewData->GetBindings();
+	rBindings.Invalidate( FID_MERGE_ON );
+	rBindings.Invalidate( FID_MERGE_OFF );
+	rBindings.Invalidate( FID_MERGE_TOGGLE );
+#endif	// USE_JAVA
+
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
 	// Always clear last selection even if native highlighting is turned off
 	if ( pViewData->IsActive() )
