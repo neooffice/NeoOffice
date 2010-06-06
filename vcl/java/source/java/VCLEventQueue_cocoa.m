@@ -1010,43 +1010,31 @@ static CFDataRef aRTFSelection = nil;
 {
 	BOOL bRet = NO;
 
-	if ( pPasteboard )
+	NSWindow *pWindow = [self window];
+	if ( pPasteboard && pWindow && [pWindow isVisible] )
 	{
 		NSArray *pTypes = [pPasteboard types];
 		if ( pTypes && [pTypes count] )
 		{
-			CFStringRef aCurrentTextSelection = nil;
-			CFDataRef aCurrentRTFSelection = nil;
-			VCLEventQueue_getTextSelection( &aCurrentTextSelection, &aCurrentRTFSelection );
-
-			BOOL bPaste = ( aCurrentTextSelection || aCurrentRTFSelection );
-			if ( aCurrentTextSelection )
-				CFRelease( aCurrentTextSelection );
-			if ( aCurrentRTFSelection )
-				CFRelease( aCurrentRTFSelection );
-
-			if ( bPaste )
+			NSPasteboard *pGeneralPasteboard = [NSPasteboard generalPasteboard];
+			if ( pGeneralPasteboard )
 			{
-				NSPasteboard *pGeneralPasteboard = [NSPasteboard generalPasteboard];
-				if ( pGeneralPasteboard )
-				{
-					[pGeneralPasteboard declareTypes:pTypes owner:nil];
+				[pGeneralPasteboard declareTypes:pTypes owner:nil];
 
-					unsigned int nCount = [pTypes count];
-					unsigned int i = 0;
-					for ( ; i < nCount; i++ )
+				unsigned int nCount = [pTypes count];
+				unsigned int i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSString *pType = (NSString *)[pTypes objectAtIndex:i];
+					if ( pType )
 					{
-						NSString *pType = (NSString *)[pTypes objectAtIndex:i];
-						if ( pType )
-						{
-							NSData *pData = [pPasteboard dataForType:pType];
-							if ( pData )
-								[pGeneralPasteboard setData:pData forType:pType];
-						}
+						NSData *pData = [pPasteboard dataForType:pType];
+						if ( pData )
+							[pGeneralPasteboard setData:pData forType:pType];
 					}
-					
-					bRet = VCLEventQueue_paste();
 				}
+				
+				bRet = VCLEventQueue_paste( pWindow );
 			}
 		}
 	}
@@ -1056,7 +1044,8 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
-	if ( pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSRTFPboardType] || [pReturnType isEqual:NSStringPboardType] ) )
+	NSWindow *pWindow = [self window];
+	if ( pWindow && [pWindow isVisible] && pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSRTFPboardType] || [pReturnType isEqual:NSStringPboardType] ) )
 	{
 		if ( [pSendType isEqual:NSRTFPboardType] )
 		{
@@ -1066,7 +1055,7 @@ static CFDataRef aRTFSelection = nil;
 				aRTFSelection = nil;
 			}
 
-			VCLEventQueue_getTextSelection( NULL, &aRTFSelection );
+			VCLEventQueue_getTextSelection( pWindow, NULL, &aRTFSelection );
 			if ( aRTFSelection )
 				return self;
 		}
@@ -1078,7 +1067,7 @@ static CFDataRef aRTFSelection = nil;
 				aTextSelection = nil;
 			}
 
-			VCLEventQueue_getTextSelection( &aTextSelection, NULL );
+			VCLEventQueue_getTextSelection( pWindow, &aTextSelection, NULL );
 			if ( aTextSelection )
 				return self;
 		}

@@ -77,14 +77,14 @@
 #ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUE_HDL
 #include <com/sun/star/beans/PropertyValue.hpp>
 #endif
+#ifndef _COM_SUN_STAR_FRAME_XINDEXACCESS_HDL
+#include <com/sun/star/container/XIndexAccess.hpp>
+#endif
 #ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HDL_
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 #endif
 #ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HDL_
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HDL_
-#include <com/sun/star/frame/XDesktop.hpp>
 #endif
 #ifndef _COM_SUN_STAR_FRAME_XDISPATCHHELPER_HDL_
 #include <com/sun/star/frame/XDispatchHelper.hpp>
@@ -94,6 +94,9 @@
 #endif
 #ifndef _COM_SUN_STAR_FRAME_XFRAME_HDL_
 #include <com/sun/star/frame/XFrame.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XFRAMESSUPPLIER_HDL_
+#include <com/sun/star/frame/XFramesSupplier.hpp>
 #endif
 
 #include <premac.h>
@@ -106,6 +109,7 @@ static ::vos::OModule aAWTFontModule;
 
 using namespace com::sun::star::awt;
 using namespace com::sun::star::beans;
+using namespace com::sun::star::container;
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::frame;
@@ -152,7 +156,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 
 // ============================================================================
 
-void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRTFSelection )
+void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection )
 {
 	if ( !pTextSelection && !pRTFSelection )
 		return;
@@ -169,70 +173,75 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 		*pRTFSelection = NULL;
 	}
 
-	if ( !Application::IsShutDown() )
+	if ( pNSWindow && !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 
 		if ( !Application::IsShutDown() )
 		{
-			Reference< XDesktop > xDesktop( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-			if ( xDesktop.is() )
+			JavaSalFrame *pFrame = NULL;
+			SalData *pSalData = GetSalData();
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				Reference< XFrame > xFrame = xDesktop->getCurrentFrame();
-				if ( xFrame.is() )
+				if ( (*it)->mbVisible && (*it)->mpVCLFrame->getNativeWindow() == pNSWindow )
 				{
-					Reference< XWindow > xWindow = xFrame->getComponentWindow();
-					if ( xWindow.is() )
+					pFrame = *it;
+					break;
+				}
+			}
+
+			if ( pFrame )
+			{
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+				if ( pWindow )
+				{
+					Reference< XClipboard > xClipboard = pWindow->GetPrimarySelection();
+					if ( xClipboard.is() )
 					{
-						Window *pWindow = VCLUnoHelper::GetWindow( xWindow );
-						if ( pWindow )
+						Reference< XTransferable > xTransferable = xClipboard->getContents();
+						if ( xTransferable.is() )
 						{
-							Reference< XClipboard > xClipboard = pWindow->GetPrimarySelection();
-							if ( xClipboard.is() )
+							DataFlavor aFlavor;
+
+							// Handle string selection
+							if ( pTextSelection )
 							{
-								Reference< XTransferable > xTransferable = xClipboard->getContents();
-								if ( xTransferable.is() )
+								Type aType( getCppuType( ( OUString* )0 ) );
+								aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
+								aFlavor.DataType = aType;
+								if ( xTransferable->isDataFlavorSupported( aFlavor ) )
 								{
-									DataFlavor aFlavor;
-
-									// Handle string selection
-									if ( pTextSelection )
+									Any aValue = xTransferable->getTransferData( aFlavor );
+									if ( aValue.getValueType().equals( aType ) )
 									{
-										Type aType( getCppuType( ( OUString* )0 ) );
-										aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/plain;charset=utf-16" ) );
-										aFlavor.DataType = aType;
-										if ( xTransferable->isDataFlavorSupported( aFlavor ) )
-										{
-											Any aValue = xTransferable->getTransferData( aFlavor );
-											if ( aValue.getValueType().equals( aType ) )
-											{
-												OUString aText;
-												aValue >>= aText;
-												if ( aText.getLength() )
-													*pTextSelection = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
-											}
-										}
+										OUString aText;
+										aValue >>= aText;
+										if ( aText.getLength() )
+											*pTextSelection = CFStringCreateWithCharacters( NULL, aText.getStr(), aText.getLength() );
 									}
+								}
+							}
 
-									// Handle RTF selection
-									if ( pRTFSelection )
+							// Handle RTF selection
+							if ( pRTFSelection )
+							{
+								Type aType( getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ) );
+								aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/richtext" ) );
+								aFlavor.DataType = aType;
+								if ( xTransferable->isDataFlavorSupported( aFlavor ) )
+								{
+									Any aValue = xTransferable->getTransferData( aFlavor );
+									if ( aValue.getValueType().equals( aType ) )
 									{
-										Type aType( getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ) );
-										aFlavor.MimeType = OUString( RTL_CONSTASCII_USTRINGPARAM( "text/richtext" ) );
-										aFlavor.DataType = aType;
-										if ( xTransferable->isDataFlavorSupported( aFlavor ) )
+										Sequence< sal_Int8 > aData;
+										aValue >>= aData;
+										if ( aData.getLength() )
 										{
-											Any aValue = xTransferable->getTransferData( aFlavor );
-											if ( aValue.getValueType().equals( aType ) )
-											{
-												Sequence< sal_Int8 > aData;
-												aValue >>= aData;
-												if ( aData.getLength() )
-												{
-													*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
-												}
-											}
+											*pRTFSelection = CFDataCreate( NULL, (const UInt8 *)aData.getArray(), aData.getLength() );
 										}
 									}
 								}
@@ -249,7 +258,7 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 
 // ----------------------------------------------------------------------------
 
-BOOL VCLEventQueue_paste()
+BOOL VCLEventQueue_paste( void *pNSWindow )
 {
 	BOOL bRet = FALSE;
 
@@ -260,20 +269,63 @@ BOOL VCLEventQueue_paste()
 
 		if ( !Application::IsShutDown() )
 		{
-			Reference< XDesktop > xDesktop( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
-			if ( xDesktop.is() )
+			JavaSalFrame *pFrame = NULL;
+			SalData *pSalData = GetSalData();
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				Reference< XFrame > xFrame = xDesktop->getCurrentFrame();
-				if ( xFrame.is() )
+				if ( (*it)->mbVisible && (*it)->mpVCLFrame->getNativeWindow() == pNSWindow )
 				{
-					Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
-					if ( xDispatchProvider.is() )
+					pFrame = *it;
+					break;
+				}
+			}
+
+			if ( pFrame )
+			{
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+				if ( pWindow )
+				{
+					Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+					if ( xFramesSupplier.is() )
 					{
-						Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
-						if ( xDispatchHelper.is() )
+						Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
+						if ( xList.is() )
 						{
-							Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Paste" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
-							bRet = ( aRet.getValue() ? TRUE : FALSE );
+							sal_Int32 nCount = xList->getCount();
+							for ( sal_Int32 i = 0; i < nCount; i++ )
+							{
+								Reference< XFrame > xFrame;
+								xList->getByIndex( i ) >>= xFrame;
+								if ( xFrame.is() )
+								{
+									Reference< XWindow > xWindow = xFrame->getComponentWindow();
+									if ( xWindow.is() )
+									{
+										Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
+										while ( pCurrentWindow && pCurrentWindow != pWindow && pCurrentWindow->GetParent() )
+											pCurrentWindow = pCurrentWindow->GetParent();
+										if ( pCurrentWindow == pWindow )
+										
+										{
+											Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+											if ( xDispatchProvider.is() )
+											{
+												Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+												if ( xDispatchHelper.is() )
+												{
+													Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Paste" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
+													bRet = ( aRet.getValue() ? TRUE : FALSE );
+												}
+											}
+
+											break;
+										}
+									}
+								}
+							}
 						}
 					}
 				}
