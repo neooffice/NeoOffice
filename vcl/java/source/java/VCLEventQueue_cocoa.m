@@ -1008,12 +1008,55 @@ static CFDataRef aRTFSelection = nil;
 
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
 {
-	return NO;
+	BOOL bRet = NO;
+
+	if ( pPasteboard )
+	{
+		NSArray *pTypes = [pPasteboard types];
+		if ( pTypes && [pTypes count] )
+		{
+			CFStringRef aCurrentTextSelection = nil;
+			CFDataRef aCurrentRTFSelection = nil;
+			VCLEventQueue_getTextSelection( &aCurrentTextSelection, &aCurrentRTFSelection );
+
+			BOOL bPaste = ( aCurrentTextSelection || aCurrentRTFSelection );
+			if ( aCurrentTextSelection )
+				CFRelease( aCurrentTextSelection );
+			if ( aCurrentRTFSelection )
+				CFRelease( aCurrentRTFSelection );
+
+			if ( bPaste )
+			{
+				NSPasteboard *pGeneralPasteboard = [NSPasteboard generalPasteboard];
+				if ( pGeneralPasteboard )
+				{
+					[pGeneralPasteboard declareTypes:pTypes owner:nil];
+
+					unsigned int nCount = [pTypes count];
+					unsigned int i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSString *pType = (NSString *)[pTypes objectAtIndex:i];
+						if ( pType )
+						{
+							NSData *pData = [pPasteboard dataForType:pType];
+							if ( pData )
+								[pGeneralPasteboard setData:pData forType:pType];
+						}
+					}
+					
+					bRet = VCLEventQueue_paste();
+				}
+			}
+		}
+	}
+
+	return bRet;
 }
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
-	if ( pSharedResponder && ![pSharedResponder disableServicesMenu] && !pReturnType && pSendType )
+	if ( pSharedResponder && ![pSharedResponder disableServicesMenu] && pSendType && ( !pReturnType || [pReturnType isEqual:NSRTFPboardType] || [pReturnType isEqual:NSStringPboardType] ) )
 	{
 		if ( [pSendType isEqual:NSRTFPboardType] )
 		{

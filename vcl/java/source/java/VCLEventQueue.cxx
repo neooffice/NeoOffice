@@ -74,6 +74,9 @@
 #ifndef _COM_SUN_STAR_AWT_XWINDOW_HDL_
 #include <com/sun/star/awt/XWindow.hpp>
 #endif
+#ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUE_HDL
+#include <com/sun/star/beans/PropertyValue.hpp>
+#endif
 #ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HDL_
 #include <com/sun/star/datatransfer/XTransferable.hpp>
 #endif
@@ -82,6 +85,12 @@
 #endif
 #ifndef _COM_SUN_STAR_FRAME_XDESKTOP_HDL_
 #include <com/sun/star/frame/XDesktop.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XDISPATCHHELPER_HDL_
+#include <com/sun/star/frame/XDispatchHelper.hpp>
+#endif
+#ifndef _COM_SUN_STAR_FRAME_XDISPATCHPROVIDER_HDL_
+#include <com/sun/star/frame/XDispatchProvider.hpp>
 #endif
 #ifndef _COM_SUN_STAR_FRAME_XFRAME_HDL_
 #include <com/sun/star/frame/XFrame.hpp>
@@ -96,6 +105,7 @@
 static ::vos::OModule aAWTFontModule;
 
 using namespace com::sun::star::awt;
+using namespace com::sun::star::beans;
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::datatransfer::clipboard;
 using namespace com::sun::star::frame;
@@ -235,6 +245,45 @@ void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRT
 
 		rSolarMutex.release();
 	}
+}
+
+// ----------------------------------------------------------------------------
+
+BOOL VCLEventQueue_paste()
+{
+	BOOL bRet = FALSE;
+
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			Reference< XDesktop > xDesktop( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+			if ( xDesktop.is() )
+			{
+				Reference< XFrame > xFrame = xDesktop->getCurrentFrame();
+				if ( xFrame.is() )
+				{
+					Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+					if ( xDispatchProvider.is() )
+					{
+						Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+						if ( xDispatchHelper.is() )
+						{
+							Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:Paste" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
+							bRet = ( aRet.getValue() ? TRUE : FALSE );
+						}
+					}
+				}
+			}
+		}
+
+		rSolarMutex.release();
+	}
+
+	return bRet;
 }
 
 // ----------------------------------------------------------------------------
