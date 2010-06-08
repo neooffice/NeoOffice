@@ -35,9 +35,8 @@
 #include "neomobileappevent.hxx"
 #include "neomobilei18n.hxx"
 
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/lang/XServiceInfo.hpp>
-#include <com/sun/star/lang/XSingleServiceFactory.hpp>
+#include <com/sun/star/frame/XDesktop.hpp>
+#include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <comphelper/processfactory.hxx>
 #include <cppuhelper/factory.hxx>
@@ -63,9 +62,10 @@ static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 using namespace rtl;
 using namespace osl;
 using namespace cppu;
-using namespace com::sun::star::uno;
+using namespace com::sun::star::frame;
 using namespace com::sun::star::lang;
 using namespace com::sun::star::registry;
+using namespace com::sun::star::uno;
 using namespace org::neooffice;
 using namespace vos;
 
@@ -96,9 +96,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// get reference to our NeoOfficeMobile service to be used to
 			// perform our conversions
 			
-			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-			Reference< XInterface > rNeoOfficeMobile = rServiceManager->createInstanceWithContext(OUString::createFromAscii("org.neooffice.NeoOfficeMobile"), component);
+			Reference< XInterface > rNeoOfficeMobile = ::comphelper::getProcessServiceFactory()->createInstance(OUString::createFromAscii("org.neooffice.NeoOfficeMobile"));
 			
 			if(!rNeoOfficeMobile.is())
 			{
@@ -117,10 +115,29 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				return 0;
 			}
 			
+			// get current frame
+			Reference< XDesktop > rDesktop(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop"))), UNO_QUERY);
+			if(!rDesktop.is())
+			{
+#ifdef DEBUG
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to get XDesktop service reference\n" );
+#endif	// DEBUG
+				return 0;
+			}
+
+			Reference< XFrame > rFrame=rDesktop->getCurrentFrame();
+			if(!rFrame.is())
+			{
+#ifdef DEBUG
+				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to get current frame reference\n" );
+#endif	// DEBUG
+				return 0;
+			}
+			
 			// check that we have a supported document type.  If not, return without
 			// attempting to assemble the post or perform an export.
 			
-			OString mimeType = OUStringToOString(neoOfficeMobile->getMimeType(),RTL_TEXTENCODING_UTF8);
+			OString mimeType = OUStringToOString(neoOfficeMobile->getMimeType(rFrame),RTL_TEXTENCODING_UTF8);
 			if(!mimeType.getLength())
 			{
 				mbUnsupportedComponentType = true;
@@ -130,17 +147,17 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			// Some ODF file formats do not have a matching Office file format
 			// so it is not a problem if there is no matching Office mime type
-			OString officeMimeType = OUStringToOString(neoOfficeMobile->getOfficeMimeType(),RTL_TEXTENCODING_UTF8);
+			OString officeMimeType = OUStringToOString(neoOfficeMobile->getOfficeMimeType(rFrame),RTL_TEXTENCODING_UTF8);
 			
 			// embed the UUID within the current document.  This is saved 
 			// in the opendocument formatted export.
 			
-			neoOfficeMobile->setPropertyValue(OUString::createFromAscii("uuid"), maSaveUUID);
+			neoOfficeMobile->setPropertyValue(rFrame, OUString::createFromAscii("uuid"), maSaveUUID);
 			
 
 			// Check if the current document is a password protected. If so,
 			// display an alert and if the alert is cancelled, cancel this event
-			if(neoOfficeMobile->isPasswordProtected())
+			if(neoOfficeMobile->isPasswordProtected(rFrame))
 			{
 				NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 				RunPasswordProtectionAlertOnMainThread *passwordProtection=[[RunPasswordProtectionAlertOnMainThread alloc] init];
@@ -178,7 +195,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			// perform an opendocument export
 			
-			OUString docExtension=neoOfficeMobile->getOpenDocumentExtension();
+			OUString docExtension=neoOfficeMobile->getOpenDocumentExtension(rFrame);
 			
 			OUString openDocExportURL=OUString::createFromAscii("file://");
 			openDocExportURL+=oufilePath;
@@ -186,7 +203,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			openDocExportURLutf8 = OUStringToOString(openDocExportURL,RTL_TEXTENCODING_UTF8);
 
-			if(!neoOfficeMobile->saveAsOpenDocument(openDocExportURL))
+			if(!neoOfficeMobile->saveAsOpenDocument(rFrame, openDocExportURL))
 			{
 #ifdef DEBUG
 				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform OpenDocument export\n" );
@@ -201,7 +218,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// perform an Office document export but skip if there is no
 			// matchin Office document mime type
 
-			OUString officeDocExtension=neoOfficeMobile->getOfficeDocumentExtension();
+			OUString officeDocExtension=neoOfficeMobile->getOfficeDocumentExtension(rFrame);
 			
 			if(officeMimeType.getLength())
 			{
@@ -211,7 +228,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				
 				officeDocExportURLutf8 = OUStringToOString(officeDocExportURL,RTL_TEXTENCODING_UTF8);
 
-				if(!neoOfficeMobile->saveAsOfficeDocument(officeDocExportURL))
+				if(!neoOfficeMobile->saveAsOfficeDocument(rFrame, officeDocExportURL))
 				{
 #ifdef DEBUG
 					fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform Office document export\n" );
@@ -232,7 +249,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			pdfExportURLutf8 = OUStringToOString(pdfExportURL,RTL_TEXTENCODING_UTF8);
 
-			if(!neoOfficeMobile->saveAsPDF(pdfExportURL))
+			if(!neoOfficeMobile->saveAsPDF(rFrame, pdfExportURL))
 			{
 #ifdef DEBUG
 				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform PDF export\n" );
@@ -255,7 +272,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			htmlExportURL+=oufilePath;
 			htmlExportURL+=OUString::createFromAscii("/_nm_export.html");
 			
-			if(!neoOfficeMobile->saveAsHTML(htmlExportURL))
+			if(!neoOfficeMobile->saveAsHTML(rFrame, htmlExportURL))
 			{
 #ifdef DEBUG
 				fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to perform HTML export\n" );

@@ -33,6 +33,10 @@
 
 #include <com/sun/star/uno/XInterface.idl>
 
+#ifndef __com_sun_star_frame_XFrame_idl__
+#include <com/sun/star/frame/XFrame.idl>
+#endif
+
 module org {
 module neooffice
 {
@@ -44,17 +48,17 @@ module neooffice
 		boolean aboutNeoOfficeMobile( );
 		boolean hasNeoOfficeMobile( );
 		boolean openNeoOfficeMobile( );
-		boolean setPropertyValue( [in] string key, [in] string value );
-		string getPropertyValue( [in] string key );
-		boolean isPasswordProtected( );
-		boolean saveAsPDF( [in] string url );
-		boolean saveAsHTML( [in] string url );
-		boolean saveAsOpenDocument( [in] string url );
-		boolean saveAsOfficeDocument( [in] string url );
-		string getOpenDocumentExtension( );
-		string getOfficeDocumentExtension( );
-		string getMimeType( );
-		string getOfficeMimeType( );
+		boolean setPropertyValue( [in] com::sun::star::frame::XFrame frame, [in] string key, [in] string value );
+		string getPropertyValue( [in] com::sun::star::frame::XFrame frame, [in] string key );
+		boolean isPasswordProtected( [in] com::sun::star::frame::XFrame frame );
+		boolean saveAsPDF( [in] com::sun::star::frame::XFrame frame, [in] string url );
+		boolean saveAsHTML( [in] com::sun::star::frame::XFrame frame, [in] string url );
+		boolean saveAsOpenDocument( [in] com::sun::star::frame::XFrame frame, [in] string url );
+		boolean saveAsOfficeDocument( [in] com::sun::star::frame::XFrame frame, [in] string url );
+		string getOpenDocumentExtension( [in] com::sun::star::frame::XFrame frame );
+		string getOfficeDocumentExtension( [in] com::sun::star::frame::XFrame frame );
+		string getMimeType( [in] com::sun::star::frame::XFrame frame );
+		string getOfficeMimeType( [in] com::sun::star::frame::XFrame frame );
 		boolean zipDirectory( [in] string dirPath, [in] string outZipFile );
 	};
 	

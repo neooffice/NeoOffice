@@ -49,6 +49,7 @@ using namespace rtl;
 
 @interface NonRecursiveResponderPanel : NSPanel
 - (BOOL)tryToPerform:(SEL)aAction with:(id)aObject;
+- (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame;
 @end
 
 static const NSString *pDevelopmentBaseURLs[] = {
@@ -764,7 +765,7 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 - (void)windowDidMove:(NSNotification *)notification
 {
 	NSWindow *window=[notification object];
-	if(window && (window==mpPanel))
+	if(window && (window==mpPanel) && ![window isZoomed])
 	{
 		NSPoint windowPos=[window frame].origin;
 		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
@@ -777,7 +778,7 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 - (void)windowDidResize:(NSNotification *)notification
 {
 	NSWindow *window=[notification object];
-	if(window && (window==mpPanel))
+	if(window && (window==mpPanel) && ![window isZoomed])
 	{
 		NSView *pContentView = [window contentView];
 		if(pContentView)
@@ -856,6 +857,55 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	pCurrentPanel = nil;
 
 	return bRet;
+}
+
+- (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame
+{
+	NSRect aRet = aFrame;
+
+	if ( pWindow == self )
+	{
+		aRet = [pWindow frame];
+
+		NSView *pContentView = [pWindow contentView];
+		if ( pContentView )
+		{
+			// Make the window only big enough to show the bottom view
+			NSView *pBottomView = nil;
+			NSArray *pSubviews = [pContentView subviews];
+			if ( pSubviews )
+			{
+				unsigned int nCount = [pSubviews count];
+				unsigned int i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSView *pView = (NSView *)[pSubviews objectAtIndex:i];
+					if ( pView && ( !pBottomView || [pView frame].origin.y < [pBottomView frame].origin.y ) )
+						pBottomView = pView;
+				}
+			}
+
+			NSRect aContentFrame = [pContentView frame];
+			aContentFrame.origin.x += aRet.origin.x;
+			aContentFrame.origin.y += aRet.origin.y + aContentFrame.size.height;
+			if ( pBottomView )
+			{
+				NSRect aBottomFrame = [pBottomView frame];
+				aContentFrame.origin.y -= aBottomFrame.size.height;
+				aContentFrame.size.height = aBottomFrame.origin.y + aBottomFrame.size.height;
+			}
+			else
+			{
+				aContentFrame.size.height = 0;
+			}
+				
+			aRet = [NSWindow frameRectForContentRect:aContentFrame styleMask:[pWindow styleMask]];
+
+			
+		}
+	}
+
+	return aRet;
 }
 
 @end

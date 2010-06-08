@@ -47,14 +47,10 @@
 #include <com/sun/star/beans/XPropertySet.hpp>
 #include <com/sun/star/beans/XPropertyContainer.hpp>
 #include <com/sun/star/document/XDocumentInfoSupplier.hpp>
-#include <com/sun/star/frame/XDesktop.hpp>
-#include <com/sun/star/frame/XDispatchHelper.hpp>
-#include <com/sun/star/frame/XDispatchProvider.hpp>
 #include <com/sun/star/frame/XFrame.hpp>
 #include <com/sun/star/frame/XStorable.hpp>
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
 #include <com/sun/star/lang/XServiceInfo.hpp>
-#include <com/sun/star/lang/XSingleServiceFactory.hpp>
 #include <com/sun/star/registry/XRegistryKey.hpp>
 #include <com/sun/star/task/XJob.hpp>
 #include <comphelper/processfactory.hxx>
@@ -158,37 +154,37 @@ public:
 		SAL_CALL openNeoOfficeMobileOnlyIfVisible( ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool 
-		SAL_CALL setPropertyValue( const rtl::OUString& key, const rtl::OUString& value ) 
+		SAL_CALL setPropertyValue( const Reference< XFrame >& frame, const rtl::OUString& key, const rtl::OUString& value ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
-		SAL_CALL getPropertyValue( const rtl::OUString& key ) 
+		SAL_CALL getPropertyValue( const Reference< XFrame >& frame, const rtl::OUString& key ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
-		SAL_CALL getOpenDocumentExtension( ) 
+		SAL_CALL getOpenDocumentExtension( const Reference< XFrame >& frame ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
-		SAL_CALL getOfficeDocumentExtension( ) 
+		SAL_CALL getOfficeDocumentExtension( const Reference< XFrame >& frame ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
-		SAL_CALL getMimeType( ) 
+		SAL_CALL getMimeType( const Reference< XFrame >& frame ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::rtl::OUString
-		SAL_CALL getOfficeMimeType( ) 
+		SAL_CALL getOfficeMimeType( const Reference< XFrame >& frame ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
-		SAL_CALL isPasswordProtected( )
+		SAL_CALL isPasswordProtected( const Reference< XFrame >& frame )
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
-		SAL_CALL saveAsPDF( const rtl::OUString& url ) 
+		SAL_CALL saveAsPDF( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
-		SAL_CALL saveAsHTML( const rtl::OUString& url ) 
+		SAL_CALL saveAsHTML( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
-		SAL_CALL saveAsOpenDocument( const rtl::OUString& url ) 
+		SAL_CALL saveAsOpenDocument( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
-		SAL_CALL saveAsOfficeDocument( const rtl::OUString& url ) 
+		SAL_CALL saveAsOfficeDocument( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 		throw (::com::sun::star::uno::RuntimeException);
 	virtual ::sal_Bool
 		SAL_CALL zipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) throw (::com::sun::star::uno::RuntimeException);
@@ -395,19 +391,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::sal_Bool 
-	SAL_CALL MacOSXNeoOfficeMobileImpl::setPropertyValue( const rtl::OUString& key, const rtl::OUString& value ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::setPropertyValue( const Reference< XFrame >& frame, const rtl::OUString& key, const rtl::OUString& value ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 		try
 		{
-			Reference< XDesktop > rDesktop(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop"))), UNO_QUERY_THROW);
-			
-			Reference< XDispatchHelper > rDispatchHelper(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.DispatchHelper"))), UNO_QUERY_THROW); 
-			
-			Reference< XFrame > rFrame=rDesktop->getCurrentFrame(); 
-			if (rFrame.is())
+			if (frame.is())
 			{
-				Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY_THROW );
+				Reference< XDocumentInfoSupplier > xDocInfoSupplier( frame->getController()->getModel(), UNO_QUERY_THROW );
 				
 				Reference< XDocumentInfo > docInfo = xDocInfoSupplier->getDocumentInfo();
 				if (docInfo.is())
@@ -437,19 +428,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::rtl::OUString
-	SAL_CALL MacOSXNeoOfficeMobileImpl::getPropertyValue( const rtl::OUString& key ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getPropertyValue( const Reference< XFrame >& frame, const rtl::OUString& key ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 		try
 		{
-			Reference< XDesktop > rDesktop(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop"))), UNO_QUERY_THROW);
-
-			Reference< XDispatchHelper > rDispatchHelper(::comphelper::getProcessServiceFactory()->createInstance(OUString(RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.DispatchHelper"))), UNO_QUERY_THROW ); 
-			
-			Reference< XFrame > rFrame=rDesktop->getCurrentFrame(); 
-			if (rFrame.is())
+			if (frame.is())
 			{
-				Reference< XDocumentInfoSupplier > xDocInfoSupplier( rFrame->getController()->getModel(), UNO_QUERY_THROW );
+				Reference< XDocumentInfoSupplier > xDocInfoSupplier( frame->getController()->getModel(), UNO_QUERY_THROW );
 				
 				Reference< XDocumentInfo > docInfo = xDocInfoSupplier->getDocumentInfo();
 				Reference< XPropertySet > bagOfMe( docInfo, UNO_QUERY_THROW );
@@ -467,22 +453,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::rtl::OUString
-	SAL_CALL MacOSXNeoOfficeMobileImpl::getOpenDocumentExtension( void ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getOpenDocumentExtension( const Reference< XFrame >& frame ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(OUString::createFromAscii(""));
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 
 		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY_THROW);
 		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
@@ -504,22 +482,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::rtl::OUString
-	SAL_CALL MacOSXNeoOfficeMobileImpl::getOfficeDocumentExtension( void ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getOfficeDocumentExtension( const Reference< XFrame >& frame ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(OUString::createFromAscii(""));
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 
 		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY_THROW);
 		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
@@ -539,22 +509,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::rtl::OUString
-	SAL_CALL MacOSXNeoOfficeMobileImpl::getMimeType( void ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getMimeType( const Reference< XFrame >& frame ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(OUString::createFromAscii(""));
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 					
 		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY_THROW);
 		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
@@ -576,22 +538,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::rtl::OUString
-	SAL_CALL MacOSXNeoOfficeMobileImpl::getOfficeMimeType( void ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::getOfficeMimeType( const Reference< XFrame >& frame ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(OUString::createFromAscii(""));
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 					
 		Reference< XServiceInfo > serviceInfo(rModel, UNO_QUERY_THROW);
 		if(serviceInfo->supportsService(OUString::createFromAscii("com.sun.star.text.TextDocument")))
@@ -611,22 +565,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::sal_Bool
-	SAL_CALL MacOSXNeoOfficeMobileImpl::isPasswordProtected( void )
+	SAL_CALL MacOSXNeoOfficeMobileImpl::isPasswordProtected( const Reference< XFrame >& frame )
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(sal_False);
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 		
 		// Determine if this document is password protected
 		const OUString aPasswordPropName( RTL_CONSTASCII_USTRINGPARAM( "Password" ) );
@@ -646,22 +592,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::sal_Bool
-	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsPDF( const rtl::OUString& url ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsPDF( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(sal_False);
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 		
 		Sequence< PropertyValue > lProperties(2);
 		
@@ -695,22 +633,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::sal_Bool
-	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsHTML( const rtl::OUString& url ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsHTML( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(sal_False);
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 		
 		Sequence< PropertyValue > lProperties(2);
 		
@@ -744,22 +674,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::sal_Bool
-	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsOpenDocument( const rtl::OUString& url ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsOpenDocument( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(sal_False);
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 		
 		Sequence< PropertyValue > lProperties(2);
 		
@@ -793,22 +715,14 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 }
 
 ::sal_Bool
-	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsOfficeDocument( const rtl::OUString& url ) 
+	SAL_CALL MacOSXNeoOfficeMobileImpl::saveAsOfficeDocument( const Reference< XFrame >& frame, const rtl::OUString& url ) 
 	throw (::com::sun::star::uno::RuntimeException)
 {
 	try
 	{
-		Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-		Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-		Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-		
-		Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY_THROW ); 
-		
-		Reference< XDesktop > Desktop(rDesktop,UNO_QUERY_THROW);
-		Reference< XFrame > rFrame=Desktop->getCurrentFrame();
-		if (!rFrame.is())
+		if (!frame.is())
 			return(sal_False);
-		Reference< XModel > rModel=rFrame->getController()->getModel();
+		Reference< XModel > rModel=frame->getController()->getModel();
 		
 		Sequence< PropertyValue > lProperties(2);
 		
