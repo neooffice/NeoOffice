@@ -130,11 +130,13 @@ update_installation() {
 	sync
 
 	# Install shared .oxt files
-	REAL_INSTALLER_TEMP=`cd "$INSTALLER_TEMP" ; pwd`
-	if [ "$INSTALLER_TEMP" != "$HOME" -a "$REAL_INSTALLER_TEMP" != "$HOME" ] ; then
+	if [ -d "$2/Contents/share/uno_packages/cache/uno_packages" ] ; then
 		for i in `cd "$1/Contents/Resources" ; find . -name "*.oxt"` ; do
-			( cd "$2/Contents/MacOS" || exit 1 ; JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY=1 ; export JFW_PLUGIN_DO_NOT_CHECK_ACCESSIBILITY ; unset CLASSPATH ; unset DYLD_LIBRARY_PATH ; rm -Rf "$REAL_INSTALLER_TEMP/tmp" ; "./unopkg.bin" remove --shared --verbose `basename "$i"` -env:UserInstallation="file://$REAL_INSTALLER_TEMP/tmp" ; rm -Rf "$REAL_INSTALLER_TEMP/tmp" ; "./unopkg.bin" add --shared --verbose "$1/Contents/Resources/$i" -env:UserInstallation="file://$REAL_INSTALLER_TEMP/tmp" )
-			sync
+			oxtfile=`basename "$i"`
+			for j in `cd "$2/Contents/share/uno_packages/cache/uno_packages" ; find . -type d -name "$oxtfile"` ; do
+				unzip -o "$1/Contents/Resources/$i" -d "$2/Contents/share/uno_packages/cache/uno_packages/$j"
+				sync
+			done
 		done
 	fi
 
