@@ -739,10 +739,18 @@ void ScGridWindow::Draw( SCCOL nX1, SCROW nY1, SCCOL nX2, SCROW nY2, ScUpdateMod
 		aOutputData.SetSolidBackground(TRUE);
 
 	pContentDev->SetMapMode(MAP_PIXEL);
+#ifdef USE_JAVA
+	// Fix bug 3611 by disabling Go-oo's "draw background on top of grid"
+	// feature
+	aOutputData.DrawBackground();
+#else	// USE_JAVA
     aOutputData.DrawDocumentBackground();
+#endif	// USE_JAVA
 	if ( bGridFirst && ( bGrid || bPage ) )
 		aOutputData.DrawGrid( bGrid, bPage );
+#ifndef USE_JAVA
 	aOutputData.DrawBackground();
+#endif	// !USE_JAVA
 	if ( bPageMode )
 	{
 		// #87655# DrawPagePreview draws complete lines/page numbers, must always be clipped
