@@ -223,7 +223,9 @@ public:
 
 	void	DrawGrid( BOOL bGrid, BOOL bPage );
 	void	DrawStrings( BOOL bPixelToLogic = FALSE );
+#ifdef USE_sc-cellbackground-over-gridlines_PATCH
     void    DrawDocumentBackground();
+#endif	// USE_sc-cellbackground-over-gridlines_PATCH
 	void	DrawBackground();
 	void	DrawShadow();
 	void	DrawExtraShadow(BOOL bLeft, BOOL bTop, BOOL bRight, BOOL bBottom);

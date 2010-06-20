@@ -791,6 +791,7 @@ BOOL lcl_EqualBack( const RowInfo& rFirst, const RowInfo& rOther,
 	return TRUE;
 }
 
+#ifdef USE_sc-cellbackground-over-gridlines_PATCH
 void ScOutputData::DrawDocumentBackground()
 {
     if ( !bSolidBackground )
@@ -804,10 +805,18 @@ void ScOutputData::DrawDocumentBackground()
     pDev->SetFillColor(aBgColor);
     pDev->DrawRect(aRect);
 }
+#endif	// USE_sc-cellbackground-over-gridlines_PATCH
 
 void ScOutputData::DrawBackground()
 {
 	FindRotated();				//! von aussen ?
+
+#ifndef USE_sc-cellbackground-over-gridlines_PATCH
+	ScModule* pScMod = SC_MOD();
+
+	// used only if bSolidBackground is set (only for ScGridWindow):
+    Color aBgColor( pScMod->GetColorConfig().GetColorValue(svtools::DOCCOLOR).nColor );
+#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 
 #ifdef USE_JAVA
     Color aNativeHighlightColor( COL_TRANSPARENT );
@@ -876,7 +885,11 @@ void ScOutputData::DrawBackground()
 				long nPosX = nScrX;
 				if ( bLayoutRTL )
 					nPosX += nMirrorW - nOneX;
+#ifndef USE_sc-cellbackground-over-gridlines_PATCH
+				aRect = Rectangle( nPosX,nPosY, nPosX,nPosY+nRowHeight-nOneY );
+#else	// !USE_sc-cellbackground-over-gridlines_PATCH
 				aRect = Rectangle( nPosX, nPosY-nOneY, nPosX, nPosY+nRowHeight-nOneY );
+#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 
 				const SvxBrushItem* pOldBackground = NULL;
 				const SvxBrushItem* pBackground;
@@ -924,6 +937,10 @@ void ScOutputData::DrawBackground()
 						if (pOldBackground)				// ==0 if hidden
 						{
 							Color aBackCol = pOldBackground->GetColor();
+#ifndef USE_sc-cellbackground-over-gridlines_PATCH
+							if ( bSolidBackground && aBackCol.GetTransparency() )
+								aBackCol = aBgColor;
+#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 							if ( !aBackCol.GetTransparency() )		//! partial transparency?
 							{
 								pDev->SetFillColor( aBackCol );
@@ -941,7 +958,11 @@ void ScOutputData::DrawBackground()
 							}
 #endif	// USE_JAVA
 						}
+#ifndef USE_sc-cellbackground-over-gridlines_PATCH
+						aRect.Left() = nPosX;
+#else	// !USE_sc-cellbackground-over-gridlines_PATCH
 						aRect.Left() = nPosX - nSignedOneX;
+#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 						pOldBackground = pBackground;
 					}
 					nPosX += pRowInfo[0].pCellInfo[nX+1].nWidth * nLayoutSign;
@@ -950,6 +971,10 @@ void ScOutputData::DrawBackground()
 				if (pOldBackground)
 				{
 					Color aBackCol = pOldBackground->GetColor();
+#ifndef USE_sc-cellbackground-over-gridlines_PATCH
+					if ( bSolidBackground && aBackCol.GetTransparency() )
+						aBackCol = aBgColor;
+#endif	// !USE_sc-cellbackground-over-gridlines_PATCH
 					if ( !aBackCol.GetTransparency() )		//! partial transparency?
 					{
 						pDev->SetFillColor( aBackCol );
