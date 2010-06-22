@@ -419,6 +419,7 @@ Point WinMtfOutput::ImplMap( const Point& rPt )
 		{
 			switch( mnMapMode )
 			{
+#ifdef USE_wmf-mm-text_PATCH
 			        case MM_TEXT:
  					fX2 -= mnWinOrgX;
  					fY2 -= mnWinOrgY;
@@ -427,6 +428,7 @@ Point WinMtfOutput::ImplMap( const Point& rPt )
  					fX2 += mnDevOrgX;
  					fY2 += mnDevOrgY;
 					break;
+#endif	// USE_wmf-mm-text_PATCH
 				case MM_LOENGLISH :
 				{
 					fX2 -= mnWinOrgX;
@@ -502,10 +504,12 @@ Size WinMtfOutput::ImplMap( const Size& rSz )
 		{
 			switch( mnMapMode )
 			{
+#ifdef USE_wmf-mm-text_PATCH
 			    case MM_TEXT:
 					fWidth *= 2540.0/mnUnitsPerInch;
 					fHeight*= 2540.0/mnUnitsPerInch;
 				break;
+#endif	// USE_wmf-mm-text_PATCH
 				case MM_LOENGLISH :
 				{
 					fWidth *= 25.40;
@@ -942,7 +946,9 @@ WinMtfOutput::WinMtfOutput( GDIMetaFile& rGDIMetaFile ) :
 	mbFillStyleSelected	( sal_False ),
 	mnGfxMode			( GM_COMPATIBLE ),
     mnMapMode           ( MM_TEXT ),
+#ifdef USE_wmf-mm-text_PATCH
     mnUnitsPerInch ( 96 ),
+#endif	// USE_wmf-mm-text_PATCH
 	mnDevOrgX			( 0 ),
 	mnDevOrgY			( 0 ),
 	mnDevWidth			( 1 ),
@@ -2074,6 +2080,7 @@ void WinMtfOutput::SetMapMode( sal_uInt32 nMapMode )
 
 //-----------------------------------------------------------------------------------
 
+#ifdef USE_wmf-mm-text_PATCH
 void WinMtfOutput::SetUnitsPerInch( UINT16 nUnitsPerInch )
 {
     if( nUnitsPerInch != 0 )
@@ -2082,6 +2089,7 @@ void WinMtfOutput::SetUnitsPerInch( UINT16 nUnitsPerInch )
 
 //-----------------------------------------------------------------------------------
 
+#endif	// USE_wmf-mm-text_PATCH
 void WinMtfOutput::SetWorldTransform( const XForm& rXForm )
 {
 	maXForm.eM11 = rXForm.eM11;
