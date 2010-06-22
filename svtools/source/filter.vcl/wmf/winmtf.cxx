@@ -419,16 +419,26 @@ Point WinMtfOutput::ImplMap( const Point& rPt )
 		{
 			switch( mnMapMode )
 			{
-#ifdef USE_wmf-mm-text_PATCH
 			        case MM_TEXT:
  					fX2 -= mnWinOrgX;
  					fY2 -= mnWinOrgY;
+#ifdef USE_JAVA
+					// Fix bug 3611 by merging the Go-oo 3.2.1.4
+					// wmf-mm-text-1.diff patch
+					if( mnDevWidth != 1 || mnDevHeight != 1 ) {
+#endif	// USE_JAVA
 					fX2 *= 2540.0/mnUnitsPerInch;
 					fY2 *= 2540.0/mnUnitsPerInch;
+#ifdef USE_JAVA
+					}
+#endif	// USE_JAVA
  					fX2 += mnDevOrgX;
  					fY2 += mnDevOrgY;
+#ifdef USE_JAVA
+					fX2 *= (double)mnMillX * 100.0 / (double)mnPixX;
+					fY2 *= (double)mnMillY * 100.0 / (double)mnPixY;
+#endif	// USE_JAVA
 					break;
-#endif	// USE_wmf-mm-text_PATCH
 				case MM_LOENGLISH :
 				{
 					fX2 -= mnWinOrgX;
@@ -504,12 +514,21 @@ Size WinMtfOutput::ImplMap( const Size& rSz )
 		{
 			switch( mnMapMode )
 			{
-#ifdef USE_wmf-mm-text_PATCH
 			    case MM_TEXT:
+#ifdef USE_JAVA
+					// Fix bug 3611 by merging the Go-oo 3.2.1.4
+					// wmf-mm-text-1.diff patch
+					if( mnDevWidth != 1 || mnDevHeight != 1 ) {
+#endif	// USE_JAVA
 					fWidth *= 2540.0/mnUnitsPerInch;
 					fHeight*= 2540.0/mnUnitsPerInch;
+#ifdef USE_JAVA
+					} else {
+						fWidth *= (double)mnMillX * 100 / (double)mnPixX;
+						fHeight *= (double)mnMillY * 100 / (double)mnPixY;
+					}
+#endif	// USE_JAVA
 				break;
-#endif	// USE_wmf-mm-text_PATCH
 				case MM_LOENGLISH :
 				{
 					fWidth *= 25.40;
@@ -946,9 +965,7 @@ WinMtfOutput::WinMtfOutput( GDIMetaFile& rGDIMetaFile ) :
 	mbFillStyleSelected	( sal_False ),
 	mnGfxMode			( GM_COMPATIBLE ),
     mnMapMode           ( MM_TEXT ),
-#ifdef USE_wmf-mm-text_PATCH
     mnUnitsPerInch ( 96 ),
-#endif	// USE_wmf-mm-text_PATCH
 	mnDevOrgX			( 0 ),
 	mnDevOrgY			( 0 ),
 	mnDevWidth			( 1 ),
@@ -2080,7 +2097,6 @@ void WinMtfOutput::SetMapMode( sal_uInt32 nMapMode )
 
 //-----------------------------------------------------------------------------------
 
-#ifdef USE_wmf-mm-text_PATCH
 void WinMtfOutput::SetUnitsPerInch( UINT16 nUnitsPerInch )
 {
     if( nUnitsPerInch != 0 )
@@ -2089,7 +2105,6 @@ void WinMtfOutput::SetUnitsPerInch( UINT16 nUnitsPerInch )
 
 //-----------------------------------------------------------------------------------
 
-#endif	// USE_wmf-mm-text_PATCH
 void WinMtfOutput::SetWorldTransform( const XForm& rXForm )
 {
 	maXForm.eM11 = rXForm.eM11;
