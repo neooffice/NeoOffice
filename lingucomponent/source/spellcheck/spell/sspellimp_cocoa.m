@@ -135,9 +135,10 @@
 	@try
 	{
 		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
-		if ( pChecker && [pChecker setLanguage:pLocale] )
+		if ( pChecker )
 		{
-			NSRange aRange = [pChecker checkSpellingOfString:pString startingAt:0];
+			// Fix bug 3613 by explicitly specifying the locale
+			NSRange aRange = [pChecker checkSpellingOfString:pString startingAt:0 language:pLocale wrap:NO inSpellDocumentWithTag:0 wordCount:nil];
 			if ( aRange.location != NSNotFound && aRange.length > 0 )
 				[pArgs setResult:[NSNumber numberWithBool:NO]];
 		}
