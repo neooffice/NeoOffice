@@ -275,7 +275,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 			{
 				String aEmptyStr;
-				ApplicationEvent aAppEvt( aEmptyStr, ApplicationAddress(), SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
+				ApplicationEvent aAppEvt( aEmptyStr, ApplicationAddress(), nID == SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
 				pSVData->mpApp->AppEvent( aAppEvt );
 			}
 			else
