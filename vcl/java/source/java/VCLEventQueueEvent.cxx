@@ -275,7 +275,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 			{
 				String aEmptyStr;
-				ApplicationEvent aAppEvt( aEmptyStr, aEmptyStr, SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
+fprintf( stderr, "Here: %s\n", OUStringToOString( getPath(), RTL_TEXTENCODING_UTF8 ).getStr() );
+				ApplicationEvent aAppEvt( aEmptyStr, ApplicationAddress(), SALEVENT_OPENDOCUMENT ? APPEVENT_OPEN_STRING : APPEVENT_PRINT_STRING, getPath() );
 				pSVData->mpApp->AppEvent( aAppEvt );
 			}
 			else
