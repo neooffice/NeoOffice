@@ -303,17 +303,17 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			pFocusFrame = pSalData->mpFocusFrame;
 
 		// Fix bug 3294 by not attaching to utility windows
-		while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() ) )
+		while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus ) )
 			pFocusFrame = pFocusFrame->mpParent;
 
 		// Fix bug 1106 If the focus frame is not set or is not visible, find
 		// the first visible non-floating, non-utility frame
-		if ( !pFocusFrame || !pFocusFrame->mbVisible )
+		if ( !pFocusFrame || !pFocusFrame->mbVisible || pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus )
 		{
 			pFocusFrame = NULL;
 			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 			{
-				if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() )
+				if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
 				{
 					pFocusFrame = *it;
 					break;
@@ -321,22 +321,21 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			}
 		}
 
-		if ( pFocusFrame )
-		{
-			// Ignore any AWT events while the print dialog is showing to
-			// emulate a modal dialog
-			void *pNSPrintInfo = _par0->getNativePrinterJob();
-			void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow() );
+		// Ignore any AWT events while the print dialog is showing to
+		// emulate a modal dialog
+		void *pNSPrintInfo = _par0->getNativePrinterJob();
+		ULONG nCount = pFocusFrame ? 0 : Application::ReleaseSolarMutex();
+		void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame ? pFocusFrame->mpVCLFrame->getNativeWindow() : NULL );
+		Application::AcquireSolarMutex( nCount );
 
-			pSalData->mpNativeModalSheetFrame = pFocusFrame;
-			pSalData->mbInNativeModalSheet = true;
-			while ( !NSPrintPanel_finished( pDialog ) )
-				Application::Yield();
-			pSalData->mbInNativeModalSheet = false;
-			pSalData->mpNativeModalSheetFrame = NULL;
+		pSalData->mpNativeModalSheetFrame = pFocusFrame;
+		pSalData->mbInNativeModalSheet = true;
+		while ( !NSPrintPanel_finished( pDialog ) )
+			Application::Yield();
+		pSalData->mbInNativeModalSheet = false;
+		pSalData->mpNativeModalSheetFrame = NULL;
 
-			out = (sal_Bool)NSPrintPanel_result( pDialog );
-		}
+		out = (sal_Bool)NSPrintPanel_result( pDialog );
 	}
 
 	return out;

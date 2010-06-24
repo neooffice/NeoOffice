@@ -337,7 +337,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 		pFrame = NULL;
 
 	bool bDeleteDataOnly = false;
-	if ( pSalData->mbInNativeModalSheet && pFrame != pSalData->mpNativeModalSheetFrame )
+	if ( pSalData->mbInNativeModalSheet && pSalData->mpNativeModalSheetFrame && pFrame != pSalData->mpNativeModalSheetFrame )
 	{
 		// We need to prevent dispatching of events other than system events
 		// like bounds change or paint events. Fix bug 3429 by only forcing

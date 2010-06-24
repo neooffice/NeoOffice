@@ -36,11 +36,6 @@
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 
-@interface VCLPrintOperation : NSPrintOperation
-+ (NSPrintOperation *)printOperationWithView:(NSView *)pView;
-+ (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
-@end
-
 @implementation VCLPrintOperation
 
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView

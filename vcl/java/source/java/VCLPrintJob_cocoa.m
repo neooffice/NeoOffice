@@ -143,7 +143,9 @@
 
 	if ( aSettings )
 	{
-		NSString *pTitle = [mpWindow title];
+		NSString *pTitle = nil;
+		if ( mpWindow )
+			pTitle = [mpWindow title];
 		if ( pTitle )
 			pTitle = [pTitle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
 		else
@@ -177,7 +179,59 @@
 		NSPrinter *pPrinter = [NSPrintInfo defaultPrinter];
 		if ( pPrinter )
 			[mpInfo setPrinter:pPrinter];
-		[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
+
+		// Fix bug 3614 by displaying a modal print dialog if there is no
+		// window to attach a sheet to
+		if ( !mpWindow )
+		{
+			NSView *pView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
+			if ( pView )
+			{
+				[pView autorelease];
+
+				NSPrintOperation *pOperation = [VCLPrintOperation printOperationWithView:pView printInfo:mpInfo];
+				if ( pOperation )
+				{
+					NSPrintOperation *pOldOperation = [NSPrintOperation currentOperation];
+					[NSPrintOperation setCurrentOperation:pOperation];
+					if ( [pPanel runModal] == NSOKButton )
+					{
+						// Copy any dictionary changes
+						NSPrintInfo *pInfo = [pOperation printInfo];
+						if ( pInfo && pInfo != mpInfo )
+						{
+							NSMutableDictionary *pSrcDict = [pInfo dictionary];
+							NSMutableDictionary *pDestDict = [mpInfo dictionary];
+							if ( pSrcDict && pDestDict )
+							{
+								NSEnumerator *pSrcKeys = [pSrcDict keyEnumerator];
+								if ( pSrcKeys )
+								{
+									id pKey;
+									while ( ( pKey = [pSrcKeys nextObject] ) )
+									{
+										id pValue = [pSrcDict objectForKey:pKey];
+										if ( pValue )
+											[pDestDict setObject:pValue forKey:pKey];
+									}
+								}
+							}
+						}
+
+						[self printPanelDidEnd:pPanel returnCode:NSOKButton contextInfo:nil];
+					}
+
+					[pOperation cleanUpOperation];
+					[NSPrintOperation setCurrentOperation:pOldOperation];
+				}
+			}
+
+			mbFinished = YES;
+		}
+		else
+		{
+			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
+		}
 	}
 }
 
@@ -243,7 +297,7 @@ id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pNSPrintInfo && pNSWindow )
+	if ( pNSPrintInfo )
 	{
 		// Do not retain as invoking alloc disables autorelease
 		pRet = [[ShowPrintDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow];

@@ -38,6 +38,11 @@
 
 #ifdef __cplusplus
 typedef void* id;
+#else
+@interface VCLPrintOperation : NSPrintOperation
++ (NSPrintOperation *)printOperationWithView:(NSView *)pView;
++ (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
+@end
 #endif
 
 #ifdef __cplusplus
