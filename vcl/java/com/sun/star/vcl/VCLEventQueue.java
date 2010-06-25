@@ -1036,8 +1036,10 @@ public final class VCLEventQueue {
 			super(source, id, when, modifiers, 0, KeyEvent.CHAR_UNDEFINED);
 			commandKeyCode = keyCode;
 
-			// If this is a key pressed event, add the original key event
-			if (id == KeyEvent.KEY_PRESSED && originalKeyChar > 0 && (originalModifiers & InputEvent.META_DOWN_MASK) == InputEvent.META_DOWN_MASK) {
+			// If this is a key pressed event, add the original key event.
+			// Fix bug 3615 by posting original key events if any modifiers are
+			// pressed.
+			if (id == KeyEvent.KEY_PRESSED && originalKeyChar > 0 && originalModifiers > 0) {
 				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_PRESSED, when, originalModifiers, KeyEvent.VK_UNDEFINED, originalKeyChar));
 				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_RELEASED, when, 0, KeyEvent.VK_UNDEFINED, originalKeyChar));
 			}
