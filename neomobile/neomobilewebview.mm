@@ -323,7 +323,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		return;
 
 	NSURL *pURL = [pRequest URL];
-	if ( !pURL )
+	if ( !pURL || ![self isNeoMobileURL:pURL] )
 		return;
 
 	NSMutableString *pURI = [NSMutableString stringWithCapacity:512];
@@ -384,7 +384,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				[pNewRequest setHTTPBodyStream:pBodyStream];
 			[pNewRequest setHTTPMethod:[pRequest HTTPMethod]];
 			[pWebFrame stopLoading];
-			[pWebFrame loadRequest:[NSURLRequest requestWithURL:pURL]];
+			[pWebFrame loadRequest:pNewRequest];
 		}
 	}
 }
@@ -420,12 +420,16 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener
 {
-	// Launch the URL with the /usr/bin/open command
+	// Have Mac OS X open the URL
 	if ( pRequest )
 	{
 		NSURL *pURL = [pRequest URL];
 		if ( pURL )
-			[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:[pURL absoluteString], nil]];
+		{
+			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+			if ( pWorkspace )
+				[pWorkspace openURL:pURL];
+		}
 	}
 
 	// Tell the listener to ignore the request
@@ -551,6 +555,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				}
 			}
 		}
+	}
+	else if ( !mpexportEvent )
+	{
+		// If not an upload, save last URL preference
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		[defaults setObject:[pURL absoluteString] forKey:kNeoMobileLastURLPref];
+		[defaults synchronize];
 	}
 }
 
@@ -836,6 +847,34 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 		[mpPanel release];
 	
 	[super dealloc];
+}
+
+- (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL
+{
+	// Make sure that the list of servers has been populated
+	if ( !mpBaseURLs )
+		return NO;
+
+	if ( !pURL )
+		return NO;
+
+	NSString *pURLHost = [pURL host];
+	if ( !pURLHost || ![pURLHost length] )
+		return NO;
+
+	for ( unsigned int i = 0; i < mnBaseURLCount; i++ )
+	{
+		NSURL *pBaseURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:i]];
+		if ( !pBaseURL )
+			continue;
+		NSString *pBaseHost = [pBaseURL host];
+		if(!pBaseHost || ![pBaseHost length])
+			continue;
+		else if ([pBaseHost caseInsensitiveCompare:pURLHost] == NSOrderedSame)
+			return YES;
+	}
+
+	return NO;
 }
 
 @end
