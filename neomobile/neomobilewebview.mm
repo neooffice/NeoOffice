@@ -185,7 +185,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[pPrefs setJavaScriptEnabled:YES];
 	}
 
-	[self setMaintainsBackForwardList:NO];
+	[self setMaintainsBackForwardList:YES];
 	[self setResourceLoadDelegate:self];
 	[self setFrameLoadDelegate:self];
 	[self setUIDelegate:self];
@@ -329,6 +329,22 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	NSMutableString *pURI = [NSMutableString stringWithCapacity:512];
 	if ( !pURI )
 		return;
+
+	// Clear all history since we are going to switch to a different server
+	WebView *pWebView = [pWebFrame webView];
+	if ( pWebView )
+	{
+		WebBackForwardList *pHistory = [pWebView backForwardList];
+		if ( pHistory && [pHistory forwardListCount] )
+		{
+			int nCapacity = [pHistory capacity];
+			if ( nCapacity )
+			{
+				[pHistory setCapacity:0];
+				[pHistory setCapacity:nCapacity];
+			}
+		}
+	}
 
 	NSURL *pRelativeURL = nil;
 	while ( !pRelativeURL && ++mnBaseURLEntry < mnBaseURLCount )
@@ -500,6 +516,18 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	NSString *pSaveUUIDHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uuid"];
 	if ( pSaveURIHeader && pSaveUUIDHeader )
 	{
+		// Disable history completely once an upload starts. Note that once we
+		// enter the upload process, we cannot reliably go back so we set the
+		// history list capacity to zero.
+		int nCapacity = 0;
+		WebBackForwardList *pHistory = [pWebView backForwardList];
+		if ( pHistory )
+		{
+			nCapacity = [pHistory capacity];
+			if ( nCapacity )
+				[pHistory setCapacity:0];
+		}
+
 		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
 		if ( pSaveURL )
 		{
@@ -555,6 +583,9 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				}
 			}
 		}
+
+		if ( nCapacity && pHistory )
+			[pHistory setCapacity:nCapacity];
 	}
 	else if ( !mpexportEvent )
 	{
@@ -568,7 +599,10 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 - (void)webView:(WebView *)pWebView didStartProvisionalLoadForFrame:(WebFrame *)pFrame
 {
 	[mpcancelButton setEnabled:YES];
-	
+
+	if ( !pWebView || !pFrame )
+		return;
+
 	WebDataSource *pDataSource = [pFrame provisionalDataSource];
 	
 	NSMutableURLRequest *pRequest = nil;
@@ -583,6 +617,18 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
 {
+	// Clear the forward history
+	WebBackForwardList *pHistory = [pWebView backForwardList];
+	if ( pHistory && [pHistory forwardListCount] )
+	{
+		int nCapacity = [pHistory capacity];
+		if ( nCapacity )
+		{
+			[pHistory setCapacity:[pHistory backListCount] + 1];
+			[pHistory setCapacity:nCapacity];
+		}
+	}
+
 	if ( mnBaseURLEntry >= mnBaseURLCount )
 		mnBaseURLEntry = 0;
 
@@ -632,6 +678,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	fprintf( stderr, "Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+
 	// Fix broken WebKit handling of the Content-Disposition header by assuming
 	// that our server has URL encoded the file name
 	NSString *decodedFilename = filename;
@@ -715,7 +762,7 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 #ifdef DEBUG
 	fprintf( stderr, "Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	
+
 	mpdownload=download;
 	[mpcancelButton setEnabled:YES];
 	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
