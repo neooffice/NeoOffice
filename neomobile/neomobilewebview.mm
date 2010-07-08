@@ -330,22 +330,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( !pURI )
 		return;
 
-	// Clear all history since we are going to switch to a different server
-	WebView *pWebView = [pWebFrame webView];
-	if ( pWebView )
-	{
-		WebBackForwardList *pHistory = [pWebView backForwardList];
-		if ( pHistory && [pHistory forwardListCount] )
-		{
-			int nCapacity = [pHistory capacity];
-			if ( nCapacity )
-			{
-				[pHistory setCapacity:0];
-				[pHistory setCapacity:nCapacity];
-			}
-		}
-	}
-
 	NSURL *pRelativeURL = nil;
 	while ( !pRelativeURL && ++mnBaseURLEntry < mnBaseURLCount )
 	{
@@ -360,6 +344,30 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	{
 		mnBaseURLEntry = 0;
 		return;
+	}
+
+	// Clear all history since we are going to switch to a different server
+	WebView *pWebView = [pWebFrame webView];
+	if ( pWebView )
+	{
+		WebBackForwardList *pHistory = [pWebView backForwardList];
+		if ( pHistory )
+		{
+			int nCapacity = [pHistory capacity];
+			if ( nCapacity )
+			{
+				[pHistory setCapacity:0];
+				[pHistory setCapacity:nCapacity];
+
+				// Put the new server in the history list
+				WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
+				if ( pItem )
+				{
+					[pItem autorelease];
+					[pHistory addItem:pItem];
+				}
+			}
+		}
 	}
 
 	// Try to load next base URL
@@ -585,7 +593,21 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		}
 
 		if ( nCapacity && pHistory )
+		{
 			[pHistory setCapacity:nCapacity];
+
+			// Put the new server in the history list
+			NSURL *pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+			if ( pRelativeURL )
+			{
+				WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
+				if ( pItem )
+				{
+					[pItem autorelease];
+					[pHistory addItem:pItem];
+				}
+			}
+		}
 	}
 	else if ( !mpexportEvent )
 	{
@@ -617,20 +639,36 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
 {
+	if ( mnBaseURLEntry >= mnBaseURLCount )
+		mnBaseURLEntry = 0;
+
 	// Clear the forward history
 	WebBackForwardList *pHistory = [pWebView backForwardList];
-	if ( pHistory && [pHistory forwardListCount] )
+	if ( pHistory )
 	{
 		int nCapacity = [pHistory capacity];
 		if ( nCapacity )
 		{
-			[pHistory setCapacity:[pHistory backListCount] + 1];
+			int nBackListCount = [pHistory backListCount];
+			[pHistory setCapacity:nBackListCount + 1];
 			[pHistory setCapacity:nCapacity];
+
+			// Put the new server in the history list
+			if ( !nBackListCount )
+			{
+				NSURL *pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+				if ( pRelativeURL )
+				{
+					WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
+					if ( pItem )
+					{
+						[pItem autorelease];
+						[pHistory addItem:pItem];
+					}
+				}
+			}
 		}
 	}
-
-	if ( mnBaseURLEntry >= mnBaseURLCount )
-		mnBaseURLEntry = 0;
 
 	// Always add a special header with the name and version of the application
 	// that this web view is running in
