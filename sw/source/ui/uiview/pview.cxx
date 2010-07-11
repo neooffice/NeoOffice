@@ -512,12 +512,6 @@ void SwPreviewPrintOptionsDialog::Apply()
 	SwDoc* pDoc = rPreView.GetDocShell()->GetDoc();
 	if(bStandard)
 		pDoc->SetPreViewPrtData(0);
-#ifdef USE_JAVA
-	// Always apply the settings even if they have not changed to ensure that
-	// the printer prints in brochure mode when the document is in Preview
-	// mode and the brochure printing option is enabled
-	else
-#else	// USE_JAVA
 	else if(	aLSpaceMF.GetSavedValue() != aLSpaceMF.GetText() ||
 		aRSpaceMF.GetSavedValue() != aRSpaceMF.GetText() ||
 		aTSpaceMF.GetSavedValue() != aTSpaceMF.GetText() ||
@@ -528,7 +522,6 @@ void SwPreviewPrintOptionsDialog::Apply()
 		aColsNF.GetSavedValue() != aColsNF.GetText() ||
 		aLandscapeRB.GetSavedValue() != aLandscapeRB.IsChecked() ||
 		aPortraitRB.GetSavedValue() != aPortraitRB.IsChecked() )
-#endif	// USE_JAVA
 	{
 		SwPagePreViewPrtData aData;
 		if(pDoc->GetPreViewPrtData())
@@ -1548,6 +1541,20 @@ MOVEPAGE:
 		break;
 		case SID_PRINTDOCDIRECT:
 		case SID_PRINTDOC:
+#ifdef USE_JAVA
+			// If we are printing while in Preview mode, get the page
+			// orientation as it will have changed if brochure printing is
+			// enabled
+			const SwPagePreViewPrtData* pPPVPD = aViewWin.GetViewShell()->GetDoc()->GetPreViewPrtData();
+			// die Sache mit der Orientation
+			if(pPPVPD)
+			{
+				SfxPrinter* pPrinter = GetPrinter( TRUE );
+				if((pPrinter->GetOrientation() == ORIENTATION_LANDSCAPE)
+						!= pPPVPD->GetLandscape())
+					pPrinter->SetOrientation(pPPVPD->GetLandscape() ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT);
+			}
+#endif	// USE_JAVA
 			::SetAppPrintOptions( aViewWin.GetViewShell(), FALSE );
 			bNormalPrint = TRUE;
 			SfxViewShell::ExecuteSlot( rReq, SfxViewShell::GetInterface() );
