@@ -512,6 +512,12 @@ void SwPreviewPrintOptionsDialog::Apply()
 	SwDoc* pDoc = rPreView.GetDocShell()->GetDoc();
 	if(bStandard)
 		pDoc->SetPreViewPrtData(0);
+#ifdef USE_JAVA
+	// Always apply the settings even if they have not changed to ensure that
+	// the printer prints in brochure mode when the document is in Preview
+	// mode and the brochure printing option is enabled
+	else
+#else	// USE_JAVA
 	else if(	aLSpaceMF.GetSavedValue() != aLSpaceMF.GetText() ||
 		aRSpaceMF.GetSavedValue() != aRSpaceMF.GetText() ||
 		aTSpaceMF.GetSavedValue() != aTSpaceMF.GetText() ||
@@ -522,6 +528,7 @@ void SwPreviewPrintOptionsDialog::Apply()
 		aColsNF.GetSavedValue() != aColsNF.GetText() ||
 		aLandscapeRB.GetSavedValue() != aLandscapeRB.IsChecked() ||
 		aPortraitRB.GetSavedValue() != aPortraitRB.IsChecked() )
+#endif	// USE_JAVA
 	{
 		SwPagePreViewPrtData aData;
 		if(pDoc->GetPreViewPrtData())
@@ -1531,22 +1538,12 @@ MOVEPAGE:
 			rReq.SetSlot( nPrtSlot );
 			SfxViewShell::ExecuteSlot( rReq, SfxViewShell::GetInterface() );
 			rReq.SetSlot( FN_PRINT_PAGEPREVIEW );
-#ifdef USE_JAVA
-			// Prevent print page preview toolbar from being disabled after
-			// pressing other buttons in the same toolbar
-			GetViewFrame()->GetBindings().SetState( SfxBoolItem( FN_PRINT_PAGEPREVIEW, FALSE ) );
-#endif	 // USE_JAVA
 			return;
 		}
 		case FN_PREVIEW_PRINT_OPTIONS :
 		{
 			SwPreviewPrintOptionsDialog aDlg(aViewWin, *this);
 			aDlg.Execute();
-#ifdef USE_JAVA
-			// Prevent print page preview toolbar from being disabled after
-			// pressing other buttons in the same toolbar
-			GetViewFrame()->GetBindings().SetState( SfxBoolItem( FN_PRINT_PAGEPREVIEW, FALSE ) );
-#endif	 // USE_JAVA
 		}
 		break;
 		case SID_PRINTDOCDIRECT:
@@ -1554,11 +1551,6 @@ MOVEPAGE:
 			::SetAppPrintOptions( aViewWin.GetViewShell(), FALSE );
 			bNormalPrint = TRUE;
 			SfxViewShell::ExecuteSlot( rReq, SfxViewShell::GetInterface() );
-#ifdef USE_JAVA
-			// Prevent print page preview toolbar from being disabled after
-			// pressing other buttons in the same toolbar
-			GetViewFrame()->GetBindings().SetState( SfxBoolItem( FN_PRINT_PAGEPREVIEW, FALSE ) );
-#endif	 // USE_JAVA
 			return;
         case FN_CLOSE_PAGEPREVIEW:
         case SID_PRINTPREVIEW:
