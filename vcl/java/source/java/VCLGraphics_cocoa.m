@@ -478,18 +478,26 @@
 				}
 			}
 
-			CGContextBeginPath( aContext );
-			CGContextAddPath( aContext, maPath );
-			if ( mbFill )
+			// Fix bug 3617 by scaling the path before drawing
+			CGMutablePathRef aAdjustedPath = CGPathCreateMutable();
+			if ( aAdjustedPath )
 			{
-				CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-				CGContextFillPath( aContext );
-			}
-			else
-			{
-				CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-				CGContextSetLineWidth( aContext, mfScaleX );
-				CGContextStrokePath( aContext );
+				CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+				CGPathAddPath( aAdjustedPath, &aTransform, maPath );
+				CGContextBeginPath( aContext );
+				CGContextAddPath( aContext, aAdjustedPath );
+				if ( mbFill )
+				{
+					CGContextSetRGBFillColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+					CGContextFillPath( aContext );
+				}
+				else
+				{
+					CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+					CGContextSetLineWidth( aContext, mfScaleX );
+					CGContextStrokePath( aContext );
+				}
+				CGPathRelease( aAdjustedPath );
 			}
 
 			CGContextRestoreGState( aContext );
@@ -569,12 +577,20 @@
 				}
 			}
 
-			CGContextBeginPath( aContext );
-			CGContextAddPath( aContext, maPath );
-			CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
-			CGContextSetLineWidth( aContext, mfLineWidth * mfScaleX );
-			CGContextSetLineJoin( aContext, mnJoin );
-			CGContextStrokePath( aContext );
+			// Fix bug 3617 by scaling the path before drawing
+			CGMutablePathRef aAdjustedPath = CGPathCreateMutable();
+			if ( aAdjustedPath )
+			{
+				CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+				CGPathAddPath( aAdjustedPath, &aTransform, maPath );
+				CGContextBeginPath( aContext );
+				CGContextAddPath( aContext, aAdjustedPath );
+				CGContextSetRGBStrokeColor( aContext, (float)( ( mnColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( mnColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( mnColor & 0x000000ff ) / (float)0xff, (float)( ( mnColor & 0xff000000 ) >> 24 ) / (float)0xff );
+				CGContextSetLineWidth( aContext, mfLineWidth * mfScaleX );
+				CGContextSetLineJoin( aContext, mnJoin );
+				CGContextStrokePath( aContext );
+				CGPathRelease( aAdjustedPath );
+			}
 
 			CGContextRestoreGState( aContext );
 		}
