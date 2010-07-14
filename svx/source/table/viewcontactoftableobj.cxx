@@ -641,9 +641,12 @@ namespace sdr
 									{
 										if(pAttribute->isVisible())
 										{
+#ifdef USE_JAVA
+											sdr::table::SvxTableController *pTableController = sdr::table::SvxTableController::GetTableController(&rTableObj);
+#endif	// USE_JAVA
 											const drawinglayer::primitive2d::Primitive2DReference xCellReference(new drawinglayer::primitive2d::SdrCellPrimitive2D(
 #ifdef USE_JAVA
-												aCellMatrix, *pAttribute, rTableObj.mpTableController ? rTableObj.mpTableController->IsNativeHighlightColorCellPos(aCellPos) : false));
+												aCellMatrix, *pAttribute, pTableController ? pTableController->IsNativeHighlightColorCellPos(sdr::table::CellPos(aCellPos)) : false));
 #else	// USE_JAVA
 												aCellMatrix, *pAttribute));
 #endif	// USE_JAVA

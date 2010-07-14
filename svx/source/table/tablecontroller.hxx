@@ -101,6 +101,7 @@ public:
 
     SVX_DLLPRIVATE void onTableModified();
 #ifdef USE_JAVA
+	static SvxTableController *GetTableController( const SdrTableObj *pObj );
 	Rectangle GetNativeHighlightColorRect();
 	bool IsNativeHighlightColorCellPos( CellPos aPos );
 #endif  // USE_JAVA
@@ -163,6 +164,9 @@ private:
 	::com::sun::star::uno::Reference< ::com::sun::star::util::XModifyListener > mxModifyListener;
 
 	ULONG mnUpdateEvent;
+#ifdef USE_JAVA
+	static ::std::map< SvxTableController*, SdrTableObj* > maTableControllerMap;
+#endif	// USE_JAVA
 };
 
 } }

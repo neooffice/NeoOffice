@@ -172,6 +172,30 @@ rtl::Reference< sdr::SelectionController > SvxTableController::create( SdrObjEdi
 	return new SvxTableController( pView, pObj );
 }
 
+#ifdef USE_JAVA
+
+// --------------------------------------------------------------------
+
+::std::map< SvxTableController*, SdrTableObj* > SvxTableController::maTableControllerMap;
+
+// --------------------------------------------------------------------
+
+SvxTableController *SvxTableController::GetTableController( const SdrTableObj *pObj )
+{
+	if ( !pObj )
+		return NULL;
+
+	for ( ::std::map< SvxTableController*, SdrTableObj* >::const_iterator it = SvxTableController::maTableControllerMap.begin(); it != SvxTableController::maTableControllerMap.end(); ++it )
+	{
+		if ( it->second == pObj )
+			return it->first;
+	}
+
+	return NULL;
+}
+
+#endif	// USE_JAVA
+
 // --------------------------------------------------------------------
 
 SvxTableController::SvxTableController( SdrObjEditView* pView, const SdrObject* pObj )
@@ -199,12 +223,16 @@ SvxTableController::SvxTableController( SdrObjEditView* pView, const SdrObject* 
 
 			mxTable.set( dynamic_cast< TableModel* >( xTable.get() ) );
 		}
-	}
 
 #ifdef USE_JAVA
-	if ( mxTableObj.get() )
-		static_cast< SdrTableObj* >( mxTableObj.get() )->SetTableController( this );
+		if ( mxTableObj.get() )
+		{
+			SdrTableObj *pTableObj = dynamic_cast< SdrTableObj* >( mxTableObj.get() );
+			if ( pTableObj )
+				SvxTableController::maTableControllerMap[ this ] = pTableObj;
+		}
 #endif	// USE_JAVA
+	}
 }
 
 // --------------------------------------------------------------------
@@ -213,8 +241,9 @@ SvxTableController::~SvxTableController()
 {
 #ifdef USE_JAVA
 	// Fix bug 3589 by detaching this controller from its table object
-	if ( mxTableObj.get() )
-		static_cast< SdrTableObj* >( mxTableObj.get() )->SetTableController( NULL );
+	::std::map< SvxTableController*, SdrTableObj* >::const_iterator it = SvxTableController::maTableControllerMap.find( this );
+	if ( it != SvxTableController::maTableControllerMap.end() )
+		SvxTableController::maTableControllerMap.erase( this );
 #endif	// USE_JAVA
 
 	if( mnUpdateEvent )
@@ -2573,20 +2602,24 @@ Rectangle SvxTableController::GetNativeHighlightColorRect()
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
 	if ( mbCellSelectionMode && UseMacHighlightColor() )
 	{
-		::sdr::table::SdrTableObj *pTableObj = dynamic_cast< ::sdr::table::SdrTableObj* >( mxTableObj.get() );
-		if ( pTableObj )
+		::std::map< SvxTableController*, SdrTableObj* >::const_iterator it = SvxTableController::maTableControllerMap.find( this );
+		if ( it != SvxTableController::maTableControllerMap.end() )
 		{
-			CellPos aStart, aEnd;
-			getSelectedCells( aStart, aEnd );
-			pTableObj->getCellBounds( aStart, aSelectedRect );
+			::sdr::table::SdrTableObj *pTableObj = it->second;
+			if ( pTableObj )
+			{
+				CellPos aStart, aEnd;
+				getSelectedCells( aStart, aEnd );
+				pTableObj->getCellBounds( aStart, aSelectedRect );
 
-			Rectangle aRect;
-			findMergeOrigin( aEnd );
-			pTableObj->getCellBounds( aEnd, aRect );
-			if ( aSelectedRect.IsEmpty() )
-				aSelectedRect = aRect;
-			else if ( !aRect.IsEmpty() )
-				aSelectedRect.Union( aRect );
+				Rectangle aRect;
+				findMergeOrigin( aEnd );
+				pTableObj->getCellBounds( aEnd, aRect );
+				if ( aSelectedRect.IsEmpty() )
+					aSelectedRect = aRect;
+				else if ( !aRect.IsEmpty() )
+					aSelectedRect.Union( aRect );
+			}
 		}
 	}
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
