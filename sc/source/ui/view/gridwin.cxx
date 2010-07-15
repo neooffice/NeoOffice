@@ -5731,6 +5731,14 @@ void ScGridWindow::UpdateDragRectOverlay()
 		{
 			ScOverlayType eType = SC_OVERLAY_INVERT;
 			Color aHighlight = GetSettings().GetStyleSettings().GetHighlightColor();
+#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+            // Fix bug 3619 by using a solid overlay for native highlighting
+            if ( UseMacHighlightColor() )
+            {
+                eType = SC_OVERLAY_SOLID;
+                aHighlight = Color( COL_BLACK );
+            }
+#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
             sdr::overlay::OverlayObjectCell* pOverlay =
 	            new sdr::overlay::OverlayObjectCell( eType, aHighlight, aRanges );
 
@@ -5864,6 +5872,14 @@ void ScGridWindow::UpdateShrinkOverlay()
 		{
 			ScOverlayType eType = SC_OVERLAY_INVERT;
             Color aHighlight = GetSettings().GetStyleSettings().GetHighlightColor();
+#if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
+            // Fix bug 3619 by using a solid overlay for native highlighting
+            if ( UseMacHighlightColor() )
+            {
+                eType = SC_OVERLAY_SOLID;
+                aHighlight = Color( COL_BLACK );
+            }
+#endif	// USE_JAVA && USE_NATIVE_HIGHLIGHT_COLOR
             sdr::overlay::OverlayObjectCell* pOverlay =
 	            new sdr::overlay::OverlayObjectCell( eType, aHighlight, aRanges );
 
