@@ -131,6 +131,8 @@ struct ImplATSLayoutData {
 	ATSUStyle			maVerticalFontStyle;
 	long				mnBaselineDelta;
 	bool				mbValid;
+	bool				mbGlyphBounds;
+	Rectangle			maGlyphBounds;
 
 	static void					ClearLayoutDataCache();
 	static void					SetFontFallbacks();
@@ -140,6 +142,7 @@ struct ImplATSLayoutData {
 						~ImplATSLayoutData();
 
 	void				Destroy();
+	const Rectangle&	GetGlyphBounds();
 	bool				IsValid() const { return mbValid; }
 	void				Reference() const;
 	void				Release() const;
@@ -344,7 +347,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mpGlyphAdvances( NULL ),
 	maVerticalFontStyle( NULL ),
 	mnBaselineDelta( 0 ),
-	mbValid( false )
+	mbValid( false ),
+	mbGlyphBounds( false )
 {
 	if ( !mpHash )
 	{
@@ -708,6 +712,25 @@ ImplATSLayoutData::~ImplATSLayoutData()
 
 // ----------------------------------------------------------------------------
 
+const Rectangle& ImplATSLayoutData::GetGlyphBounds()
+{
+	if ( !mbGlyphBounds )
+	{
+		Rect aRect;
+		if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
+		{
+			maGlyphBounds = Rectangle( Point( Float32ToLong( aRect.left * mpHash->mfFontScaleX * mfFontScaleY ), Float32ToLong( aRect.top * mfFontScaleY ) ), Size( Float32ToLong( ( aRect.right - aRect.left ) * mpHash->mfFontScaleX * mfFontScaleY ), Float32ToLong( ( aRect.bottom - aRect.top ) * mfFontScaleY ) ) );
+			maGlyphBounds.Justify();
+		}
+
+		mbGlyphBounds = true;
+	}
+
+	return maGlyphBounds;
+}
+
+// ----------------------------------------------------------------------------
+
 void ImplATSLayoutData::Destroy()
 {
 	if ( mpHash )
@@ -782,6 +805,8 @@ void ImplATSLayoutData::Destroy()
 
 	mnBaselineDelta = 0;
 	mbValid = false;
+	mbGlyphBounds = false;
+	maGlyphBounds.SetEmpty();
 }
 
 // ----------------------------------------------------------------------------
@@ -1774,9 +1799,38 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 // ----------------------------------------------------------------------------
 
+bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
+{
+	rRect.SetEmpty();
+
+	Rectangle aRect;
+	for ( std::vector< ImplATSLayoutData* >::const_iterator it = maLayoutData.begin(); it != maLayoutData.end(); ++it )
+	{
+		Rectangle aGlyphBounds( (*it)->GetGlyphBounds() );
+		if ( aGlyphBounds.IsEmpty() )
+			continue;
+		if ( !aRect.IsEmpty() )
+			aGlyphBounds.setX( aGlyphBounds.Left() + aRect.Left() + aRect.GetWidth() );
+		aRect.Union( aGlyphBounds );
+	}
+
+	if ( !aRect.IsEmpty() )
+		aRect.setWidth( Float32ToLong( (float)aRect.GetWidth() * mfGlyphScaleX ) );
+
+	// Fix bug 2191 by always returning true so that the OOo code doesn't
+	// exeecute its "draw the glyph and see which pixels are black" code
+	rRect = aRect;
+	return true;
+}
+
+// ----------------------------------------------------------------------------
+
 bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVector ) const
 {
 	bool bRet = false;
+
+	if ( !maLayoutData.size() )
+		return bRet;
 
 	if ( !pATSCubicMoveToUPP )
 		pATSCubicMoveToUPP = NewATSCubicMoveToUPP( SalATSCubicMoveToCallback );
@@ -1970,6 +2024,9 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 
 	nX = 0;
 	nY = 0;
+
+	if ( !maLayoutData.size() )
+		return pRet;
 
 	unsigned int nRunIndex = 0;
 	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
