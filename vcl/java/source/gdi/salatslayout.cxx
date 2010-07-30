@@ -568,9 +568,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 		// Make sure that ligature glyphs get all of the width and that their
 		// attached spacing glyphs have zero width so that the OOo code will
-		// force the cursor to the end of the ligature instead of the beginning
+		// force the cursor to the end of the ligature instead of the beginning.
+		// Fix bug 3621 by treating negative width glyphs like ligatured glyphs.
 		long nWidthAdjust = 0;
-		if ( mpGlyphDataArray[ i ].glyphID == 0xffff && !IsNonprintingChar( mpHash->mpStr[ nIndex ] ) && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+		if ( ( mpGlyphDataArray[ i ].glyphID == 0xffff || mpGlyphAdvances[ i ] < 0 ) && !IsNonprintingChar( mpHash->mpStr[ nIndex ] ) && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 		{
 			if ( nLastNonSpacingGlyph >= 0 && nLastNonSpacingGlyph != i && nLastNonSpacingIndex != nIndex )
 			{
