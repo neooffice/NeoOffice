@@ -361,7 +361,6 @@ public:
         // Fix bug 3622 by detecting if the last node is being disconnected
         if (!node_pos->right)
         {
-            disconnect_node(node_pos.get());
             m_valid_tree = false;
             return;
         }
