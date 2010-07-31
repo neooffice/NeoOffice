@@ -78,11 +78,12 @@ class NeoMobileExportFileAppEvent
 	bool					mbFinished;
 	NSMutableData*			mpPostBody;
 	::rtl::OUString			maSaveUUID;
+	NSArray*				mpMimeTypes;
 	bool					mbCanceled;
 	bool					mbUnsupportedComponentType;
 
 public:
-							NeoMobileExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody );
+							NeoMobileExportFileAppEvent( ::rtl::OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody, NSArray *pMimeTypes );
 	virtual					~NeoMobileExportFileAppEvent() {};
 							DECL_LINK( ExportFile, void* );
 	void					Cancel() { mbCanceled=true; }

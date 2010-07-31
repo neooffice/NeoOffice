@@ -112,12 +112,13 @@ using namespace ::rtl;
 
 @end
 
-NeoMobileExportFileAppEvent::NeoMobileExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody ) :
+NeoMobileExportFileAppEvent::NeoMobileExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody, NSArray *pMimeTypes ) :
 	mnErrorCode( 0 ),
 	mpFileManager( pFileManager ),
 	mbFinished( false ),
 	mpPostBody( pPostBody ),
 	maSaveUUID( aSaveUUID ),
+	mpMimeTypes( pMimeTypes ),
 	mbCanceled( false ),
 	mbUnsupportedComponentType( false )
 {

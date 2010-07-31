@@ -546,7 +546,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			{
 				if ( !mpexportEvent )
 				{
-					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
+					// Get list of supported mime types if any
+					NSArray *pMimeTypes = nil;
+					NSString *pSaveMimeTypesHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Mime-Types"];
+					if ( pSaveMimeTypesHeader )
+						pMimeTypes = [pSaveMimeTypesHeader componentsSeparatedByString:@", "];
+
+					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody, pMimeTypes );
 					mpexportEvent=&aEvent;
 
 					[mpcancelButton setEnabled:YES];
