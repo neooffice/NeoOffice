@@ -965,7 +965,7 @@ void SvxSearchDialog::CalculateDelta_Impl()
     for ( USHORT nChild = 0; nChild < nChildCount; nChild++ )
 	{
 		Window *pChildWin = GetChild( nChild );
-		if ( pChildWin && pChildWin->GetPosPixel().Y() >= aMatchCasePos.Y() && ( pChildWin->GetPosPixel().Y() < aBackwardsBtnPos.Y() || pChildWin->GetPosPixel().X() != aBackwardsBtnPos.X() ) )
+		if ( pChildWin && pChildWin->GetPosPixel().Y() >= aMatchCasePos.Y() )
     		lcl_MoveDown( *pChildWin, nChildShift );
 	}
     aBackwardsBtn.SetPosPixel( Point( aBackwardsBtnPos.X(), aMatchCasePos.Y() ) );
