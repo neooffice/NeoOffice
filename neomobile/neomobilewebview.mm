@@ -149,25 +149,34 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	//   defaults write org.neooffice.NeoOffice nmServerType development|test
 	// To use the default server type, use the following Terminal command:
 	//   defaults delete org.neooffice.NeoOffice nmServerType
+	mnBaseURLCount = 0;
 	const NSString **pBaseURLs = nil;
 	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
 	NSString *serverType=[defaults stringForKey:kNeoMobileServerTypePref];
 	if ( serverType )
 	{
 		if ( [serverType caseInsensitiveCompare:@"development"] == NSOrderedSame )
+		{
+			mnBaseURLCount = sizeof( pDevelopmentBaseURLs ) / sizeof( NSString* );
 			pBaseURLs = pDevelopmentBaseURLs;
+		}
 		else if ( [serverType caseInsensitiveCompare:@"test"] == NSOrderedSame )
+		{
+			mnBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
 			pBaseURLs = pTestBaseURLs;
+		}
 	}
 	if ( !pBaseURLs )
 #ifdef TEST
+		mnBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
 		pBaseURLs = pTestBaseURLs;
 #else	// TEST
+		mnBaseURLCount = sizeof( pProductionBaseURLs ) / sizeof( NSString* );
 		pBaseURLs = pProductionBaseURLs;
 #endif	// TEST
 
 	mnBaseURLEntry = 0;
-	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:sizeof( pBaseURLs ) / sizeof( NSString* )];
+	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:mnBaseURLCount];
 	if ( mpBaseURLs )
 	{
 		[mpBaseURLs retain];
@@ -271,7 +280,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)loadURI:(NSString *)pURI
 {
-	if ( !pURI )
+	if ( !pURI || ![pURI length] )
 		pURI = @"/";
 
 	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
@@ -293,7 +302,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		// processing a data download we've redirected from the web frame
 		return;
 	}
-	else if ( nErr == -999 )
+	else if ( nErr == NSURLErrorCancelled )
 	{
 		// Error code -999 indicates that the WebKit is doing the Back, Reload,
 		// or Forward actions so we don't trigger server fallback. These
@@ -306,6 +315,14 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:@""];
+
+	if ( nErr != NSURLErrorTimedOut && nErr != NSURLErrorCannotFindHost && nErr != NSURLErrorCannotConnectToHost )
+	{
+		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", GetLocalizedString(NEOMOBILEERROR), [pError localizedDescription]] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+		if ( pAlert )
+            [pAlert runModal];
+        return;
+    }
 
 	if ( !pWebFrame )
 		return;
