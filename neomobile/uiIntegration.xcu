@@ -39,7 +39,7 @@
 							<value/>
 						</prop>
 						<prop oor:name="Context" oor:type="xs:string">
-							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
+							<value/>
 						</prop>
 					</node>
 					<node oor:name="neomobile2" oor:op="replace">
@@ -61,7 +61,7 @@
 							<value/>
 						</prop>
 						<prop oor:name="Context" oor:type="xs:string">
-							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
+							<value/>
 						</prop>
 					</node>
 				</node>
