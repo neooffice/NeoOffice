@@ -1038,8 +1038,9 @@ public final class VCLEventQueue {
 
 			// If this is a key pressed event, add the original key event.
 			// Fix bug 3615 by posting original key events if any modifiers are
-			// pressed.
-			if (id == KeyEvent.KEY_PRESSED && originalKeyChar > 0 && originalModifiers > 0) {
+			// pressed. Fix bug 3625 by posting originalKeyChar events even if
+			// there no modifiers set.
+			if (id == KeyEvent.KEY_PRESSED && originalKeyChar > 0) {
 				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_PRESSED, when, originalModifiers, KeyEvent.VK_UNDEFINED, originalKeyChar));
 				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_RELEASED, when, 0, KeyEvent.VK_UNDEFINED, originalKeyChar));
 			}
