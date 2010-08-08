@@ -167,6 +167,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		}
 	}
 	if ( !pBaseURLs )
+	{
 #ifdef TEST
 		mnBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
 		pBaseURLs = pTestBaseURLs;
@@ -174,6 +175,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		mnBaseURLCount = sizeof( pProductionBaseURLs ) / sizeof( NSString* );
 		pBaseURLs = pProductionBaseURLs;
 #endif	// TEST
+	}
 
 	mnBaseURLEntry = 0;
 	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:mnBaseURLCount];
