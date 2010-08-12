@@ -1802,6 +1802,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 {
+GenericSalLayout::GetBoundRect( rGraphics, rRect );
 	rRect.SetEmpty();
 
 	Rectangle aRect;
@@ -1816,7 +1817,11 @@ bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) cons
 	}
 
 	if ( !aRect.IsEmpty() )
+	{
+		// Fix bug 3578 by moving the rectangle to the layout's draw position
+		aRect += GetDrawPosition( Point( 0, 0 ) );
 		aRect.setWidth( Float32ToLong( (float)aRect.GetWidth() * mfGlyphScaleX ) );
+	}
 
 	// Fix bug 2191 by always returning true so that the OOo code doesn't
 	// exeecute its "draw the glyph and see which pixels are black" code
