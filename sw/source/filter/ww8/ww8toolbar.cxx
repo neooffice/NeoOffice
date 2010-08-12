@@ -720,6 +720,11 @@ void Tcg::Print( FILE* fp )
 
 bool Tcg::ImportCustomToolBar( SfxObjectShell& rDocSh )
 {
+#ifdef USE_JAVA
+    // Fix bug 3629 by checking for a NULL pointer
+    if ( !tcg.get() )
+        tcg.reset( new Tcg255() );
+#endif	// USE_JAVA
     return tcg->ImportCustomToolBar( rDocSh );
 }
 
