@@ -883,9 +883,13 @@ void SwGrfNode::_GetStreamStorageNames( String& rStrmName,
 	if( !aUserData.Len() )
         return;
 
+#ifdef USE_JAVA
+	// Fix bug 3631 by removing Go-oo's sw-graphic-save-problem.diff patch
+#else	// USE_JAVA
 	if (aNewStrmName.Len()>0) {
 	    aUserData=aNewStrmName;
 	}
+#endif	// USE_JAVA
 
 	String aProt( RTL_CONSTASCII_STRINGPARAM( "vnd.sun.star.Package:" ) );
 	if( 0 == aUserData.CompareTo( aProt, aProt.Len() ) )
