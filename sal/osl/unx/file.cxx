@@ -692,6 +692,25 @@ oslFileHandle osl_createFileHandleFromFD( int fd )
 
             /* FIXME: it should be detected whether the file has been locked */
 			pHandleImpl->bLocked = sal_True;
+
+#ifdef USE_JAVA
+			osl::Guard< osl::Mutex > aGuard( aOpenFilesMutex );
+			bool bFound = false;
+			for ( std::multimap< rtl::OUString, oslFileHandleImpl* >::const_iterator it = aOpenFilesMap.begin(); it != aOpenFilesMap.end(); ++it )
+			{
+				if ( it->second->fd == fd )
+				{
+					bFound = true;
+					rtl_uString_assign( &pHandleImpl->ustrFilePath, it->second->ustrFilePath );
+					pHandleImpl->bLocked = it->second->bLocked;
+					if ( pHandleImpl->bLocked )
+						break;
+				}
+			}
+
+			if ( bFound )
+				aOpenFilesMap.insert( std::pair< rtl::OUString, oslFileHandleImpl* >( rtl::OUString( pHandleImpl->ustrFilePath ), pHandleImpl ) );
+#endif	// USE_JAVA
 		}
 	}
 
