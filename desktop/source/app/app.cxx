@@ -1308,6 +1308,9 @@ void Desktop::Main()
         // check user installation directory for lockfile so we can be sure
         // there is no other instance using our data files from a remote host
         RTL_LOGFILE_CONTEXT_TRACE( aLog, "desktop (lo119109) Desktop::Main -> Lockfile" );
+#ifdef USE_JAVA
+        if ( !m_pLockfile )
+#endif	// USE_JAVA
         m_pLockfile = new Lockfile;
         if ( !pCmdLineArgs->IsInvisible() && !pCmdLineArgs->IsNoLockcheck() && !m_pLockfile->check( Lockfile_execWarning )) {
             // Lockfile exists, and user clicked 'no'

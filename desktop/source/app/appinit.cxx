@@ -432,6 +432,9 @@ void Desktop::CreateTemporaryDirectory()
 		// be using the same user preference files as in
 		// sal/osl/unx/tempfile.c we set the temporary directory to the
 		// preference directory's user/temp subdirectory
+		if ( !m_pLockfile )
+			m_pLockfile = new Lockfile;
+fprintf( stderr, "Here 0: %p %i %s\n", m_pLockfile, m_pLockfile ? m_pLockfile->check( NULL ) : 0, ::rtl::OUStringToOString( aOldTempURL, RTL_TEXTENCODING_UTF8 ).getStr() );
 		if ( m_pLockfile && m_pLockfile->check( NULL ) )
 #endif	// USE_JAVA
 	    ::utl::UCBContentHelper::Kill( aOldTempURL );
