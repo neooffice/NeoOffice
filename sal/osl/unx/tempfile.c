@@ -47,7 +47,20 @@
 #endif
  
 #ifdef USE_JAVA
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+#include <osl/module.h>
 #include <rtl/bootstrap.h>
+
+// typedef OSStatus CSBackupSetItemExcluded_Type( CFURLRef aItem, MacOSBoolean bExclude, MacOSBoolean bExcludeByPath );
+typedef OSStatus CSBackupSetItemExcluded_Type( CFURLRef aItem, Boolean bExclude, Boolean bExcludeByPath );
+
+static oslModule aCoreServicesModule = NULL;
+static CSBackupSetItemExcluded_Type *pCSBackupSetItemExcluded = NULL;
+
 #endif	// USE_JAVA
  
 /*****************************************************************/
@@ -95,7 +108,41 @@ oslFileError SAL_CALL osl_getTempDirURL( rtl_uString** pustrTempDir )
     rtl_uString_release( pBrandBaseDir );
 
     if ( bUserTempDirFound )
+    {
+        if ( !aCoreServicesModule )
+        {
+            rtl_uString *pCoreServicesLib = NULL;
+            rtl_uString_newFromAscii( &pCoreServicesLib, "file:///System/Library/Frameworks/CoreServices.framework/CoreServices" );
+            aCoreServicesModule = osl_loadModule( pCoreServicesLib, SAL_LOADMODULE_GLOBAL );
+            rtl_uString_release( pCoreServicesLib );
+            if ( aCoreServicesModule && !pCSBackupSetItemExcluded )
+            {
+                rtl_uString *pCSBackupSetItemExcludedFuncName = NULL;
+                rtl_uString_newFromAscii( &pCSBackupSetItemExcludedFuncName, "CSBackupSetItemExcluded" );
+                pCSBackupSetItemExcluded = (CSBackupSetItemExcluded_Type *)osl_getSymbol( aCoreServicesModule, pCSBackupSetItemExcludedFuncName );
+                rtl_uString_release( pCSBackupSetItemExcludedFuncName );
+            }
+        }
+
+        // Exlude temp directory from time machine backups
+        if ( pCSBackupSetItemExcluded )
+        {
+            CFStringRef aString = CFStringCreateWithCharacters( kCFAllocatorDefault, rtl_uString_getStr( *pustrTempDir ), rtl_uString_getLength( *pustrTempDir ) );
+            if ( aString )
+            {
+                CFURLRef aURL = CFURLCreateWithString( kCFAllocatorDefault, aString, NULL );
+                if ( aURL )
+                {
+                    pCSBackupSetItemExcluded( aURL, true, true );
+                    CFRelease( aURL );
+                }
+
+                CFRelease( aString );
+            }
+        }
+
         return osl_File_E_None;
+    }
 #endif	// USE_JAVA
 
 #ifdef MACOSX
