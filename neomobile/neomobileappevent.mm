@@ -31,6 +31,7 @@
  *
  *************************************************************************/
 
+#include <crt_externs.h>
 #include "neomobile.hxx"
 #include "neomobileappevent.hxx"
 #include "neomobilei18n.hxx"
@@ -86,7 +87,48 @@ using namespace ::rtl;
 {
 #pragma unused(arg)
 
-	NSString *basePath = NSTemporaryDirectory();
+	NSString *basePath = nil;
+
+	// Use NSCachesDirectory to stay within FileVault encryption
+	NSArray *cachePaths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+	if (cachePaths)
+	{
+ 		unsigned int dirCount = [cachePaths count];
+ 		unsigned int i = 0;
+		for (; i < dirCount && !basePath; i++)
+		{
+			MacOSBOOL isDir = NO;
+			NSString *cachePath = (NSString *)[cachePaths objectAtIndex:i];
+			if ([[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDir] && isDir)
+			{
+				// Append program name to cache path
+				char **progName = _NSGetProgname();
+				if (progName && *progName)
+				{
+					cachePath = [cachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*progName]];
+					isDir = NO;
+					if ([[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDir] && isDir)
+					{
+						basePath = cachePath;
+						break;
+					}
+					else if ([[NSFileManager defaultManager] createDirectoryAtPath:cachePath attributes:nil])
+					{
+						basePath = cachePath;
+						break;
+					}
+				}
+			}
+		}
+	}
+
+	if (!basePath)
+	{
+		basePath = NSTemporaryDirectory();
+		if (!basePath)
+			basePath = @"/tmp";
+	}
+
 	NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
 	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
 		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];

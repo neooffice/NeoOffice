@@ -787,9 +787,12 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 
 	if (!basePath)
+	{
 		basePath = NSTemporaryDirectory();
-	if (!basePath)
-		basePath = @"/tmp";
+		if (!basePath)
+			basePath = @"/tmp";
+	}
+
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
 	int i=0;
 	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {

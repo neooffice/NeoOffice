@@ -79,7 +79,10 @@
 #include <svtools/internaloptions.hxx>
 
 #ifdef USE_JAVA
+
+#include <osl/security.hxx>
 #include "lockfile.hxx"
+
 #endif	// USE_JAVA
 
 #define	DEFINE_CONST_OUSTRING(CONSTASCII)		OUString(RTL_CONSTASCII_USTRINGPARAM(CONSTASCII))
@@ -429,13 +432,23 @@ void Desktop::CreateTemporaryDirectory()
 		// remove old temporary directory
 #ifdef USE_JAVA
 		// Don't delete the temporary directory if another instance appears to
-		// be using the same user preference files as in
-		// sal/osl/unx/tempfile.c we set the temporary directory to the
-		// preference directory's user/temp subdirectory
+		// be using the same user preference files as that may indicate that
+		// we are running on a mounted home directory and if the temporary
+		// directory is also in the home directory, we may accidentally delete
+		// another NeoOffice instance's files
 		if ( !m_pLockfile )
-			m_pLockfile = new Lockfile;
-fprintf( stderr, "Here 0: %p %i %s\n", m_pLockfile, m_pLockfile ? m_pLockfile->check( NULL ) : 0, ::rtl::OUStringToOString( aOldTempURL, RTL_TEXTENCODING_UTF8 ).getStr() );
-		if ( m_pLockfile && m_pLockfile->check( NULL ) )
+		{
+			rtl::OUString aHomeDir;
+			osl::Security aSecurity;
+			if ( aSecurity.getHomeDir( aHomeDir ) )
+			{
+				aHomeDir += OUString( RTL_CONSTASCII_USTRINGPARAM( "/" ) );
+				if ( OUString( aOldTempURL ).match( aHomeDir ) )
+					m_pLockfile = new Lockfile;
+			}
+		}
+
+		if ( !m_pLockfile || m_pLockfile->check( NULL ) )
 #endif	// USE_JAVA
 	    ::utl::UCBContentHelper::Kill( aOldTempURL );
 	}

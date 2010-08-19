@@ -83,7 +83,9 @@ APP1NOSAL=TRUE
 APP1RPATH=BRAND
 APP1OBJS=$(OBJ)$/copyright_ascii_sun.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP1OBJS+=$(OBJ)$/main_java.obj
+APP1OBJS+=\
+	$(OBJ)$/main_java.obj \
+	$(OBJ)$/main_java_cocoa.obj
 APP1STDLIBS = $(SALLIB) $(VOSLIB) $(TOOLSLIB)
 .ELSE		# "$(GUIBASE)" == "java"
 APP1STDLIBS = $(SALLIB) $(SOFFICELIB)
@@ -117,7 +119,9 @@ APP5NOSAL=TRUE
 APP5RPATH=BRAND
 APP5OBJS=$(OBJ)$/copyright_ascii_ooo.obj $(OBJ)$/main.obj
 .IF "$(GUIBASE)" == "java"
-APP5OBJS+=$(OBJ)$/main_java.obj
+APP5OBJS+=\
+	$(OBJ)$/main_java.obj \
+	$(OBJ)$/main_java_cocoa.obj
 APP5STDLIBS = $(SALLIB) $(VOSLIB) $(TOOLSLIB)
 .ELSE		# "$(GUIBASE)" == "java"
 APP5STDLIBS = $(SALLIB) $(SOFFICELIB)

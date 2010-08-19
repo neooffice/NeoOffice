@@ -51,6 +51,8 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
+#include "main_java_cocoa.hxx"
+
 #define TMPDIR "/tmp"
 
 typedef int SofficeMain_Type();
@@ -111,13 +113,21 @@ extern "C" int java_main( int argc, char **argv )
     // just to be sure.
     symlink( "private/tmp", TMPDIR );
 
-    // If TMPDIR is not set, set it to /tmp
-    if ( !getenv( "TMPDIR" ) )
-        putenv( "TMPDIR=" TMPDIR );
-    if ( !getenv( "TMP" ) )
-        putenv( "TMP=" TMPDIR );
-    if ( !getenv( "TEMP" ) )
-        putenv( "TEMP=" TMPDIR );
+    // Fix bug 3631 by setting the temporary directory to something other
+    // than /tmp if we can since Mac OS X will clear out the /tmp directory
+    // periodically
+    OString aTmpDir( GetNSTemporaryDirectory() );
+    if ( !aTmpDir.getLength() )
+        aTmpDir = OString( TMPDIR );
+  	OString aTmpEnv( "TMPDIR=" );
+    aTmpEnv += aTmpDir;
+    putenv( (char *)aTmpEnv.getStr() );
+  	aTmpEnv = OString( "TMP=" );
+    aTmpEnv += aTmpDir;
+    putenv( (char *)aTmpEnv.getStr() );
+  	aTmpEnv = OString( "TEMP=" );
+    aTmpEnv += aTmpDir;
+    putenv( (char *)aTmpEnv.getStr() );
 
     // Get absolute path of command's directory
     OString aCmdPath( pCmdPath );
