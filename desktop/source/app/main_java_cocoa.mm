@@ -47,33 +47,35 @@ OString GetNSTemporaryDirectory()
 
 	NSString *pTempDir = nil;
 
-	// Use NSCachesDirectory to stay within FileVault encryption
-	NSArray *pCachePaths = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, YES );
-	if ( pCachePaths )
+	NSFileManager *pFileManager = [NSFileManager defaultManager];
+	if ( pFileManager )
 	{
- 		unsigned int nCount = [pCachePaths count];
- 		unsigned int i = 0;
-		for ( ; i < nCount && !pTempDir; i++ )
+		// Use NSCachesDirectory to stay within FileVault encryption
+		NSArray *pCachePaths = NSSearchPathForDirectoriesInDomains( NSCachesDirectory, NSUserDomainMask, YES );
+		if ( pCachePaths )
 		{
-			BOOL bDir = NO;
-			NSString *pCachePath = (NSString *)[pCachePaths objectAtIndex:i];
-			if ( [[NSFileManager defaultManager] fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir )
+			NSNumber *pPerms = [NSNumber numberWithUnsignedLong:( S_IRUSR | S_IWUSR | S_IXUSR )];
+			NSDictionary *pDict = ( pPerms ? [NSDictionary dictionaryWithObject:pPerms forKey:NSFilePosixPermissions] : nil );
+
+ 			unsigned int nCount = [pCachePaths count];
+ 			unsigned int i = 0;
+			for ( ; i < nCount && !pTempDir; i++ )
 			{
-				// Append program name to cache path
-				char **pProgName = _NSGetProgname();
-				if ( pProgName && *pProgName )
+				BOOL bDir = NO;
+				NSString *pCachePath = (NSString *)[pCachePaths objectAtIndex:i];
+				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
 				{
-					pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*pProgName]];
-					bDir = NO;
-					if ( [[NSFileManager defaultManager] fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir )
+					// Append program name to cache path
+					char **pProgName = _NSGetProgname();
+					if ( pProgName && *pProgName )
 					{
-						pTempDir = pCachePath;
-						break;
-					}
-					else if ( [[NSFileManager defaultManager] createDirectoryAtPath:pCachePath attributes:nil] )
-					{
-						pTempDir = pCachePath;
-						break;
+						pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*pProgName]];
+						bDir = NO;
+						if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
+						{
+							pTempDir = pCachePath;
+							break;
+						}
 					}
 				}
 			}

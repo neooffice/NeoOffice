@@ -89,33 +89,35 @@ using namespace ::rtl;
 
 	NSString *basePath = nil;
 
-	// Use NSCachesDirectory to stay within FileVault encryption
-	NSArray *cachePaths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
-	if (cachePaths)
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	if (fileManager)
 	{
- 		unsigned int dirCount = [cachePaths count];
- 		unsigned int i = 0;
-		for (; i < dirCount && !basePath; i++)
+		// Use NSCachesDirectory to stay within FileVault encryption
+		NSArray *cachePaths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+		if (cachePaths)
 		{
-			MacOSBOOL isDir = NO;
-			NSString *cachePath = (NSString *)[cachePaths objectAtIndex:i];
-			if ([[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDir] && isDir)
+			NSNumber *perms = [NSNumber numberWithUnsignedLong:(S_IRUSR | S_IWUSR | S_IXUSR)];
+			NSDictionary *dict = (perms ? [NSDictionary dictionaryWithObject:perms forKey:NSFilePosixPermissions] : nil);
+
+ 			unsigned int dirCount = [cachePaths count];
+ 			unsigned int i = 0;
+			for (; i < dirCount && !basePath; i++)
 			{
-				// Append program name to cache path
-				char **progName = _NSGetProgname();
-				if (progName && *progName)
+				MacOSBOOL isDir = NO;
+				NSString *cachePath = (NSString *)[cachePaths objectAtIndex:i];
+				if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath attributes:dict])
 				{
-					cachePath = [cachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*progName]];
-					isDir = NO;
-					if ([[NSFileManager defaultManager] fileExistsAtPath:cachePath isDirectory:&isDir] && isDir)
+					// Append program name to cache path
+					char **progName = _NSGetProgname();
+					if (progName && *progName)
 					{
-						basePath = cachePath;
-						break;
-					}
-					else if ([[NSFileManager defaultManager] createDirectoryAtPath:cachePath attributes:nil])
-					{
-						basePath = cachePath;
-						break;
+						cachePath = [cachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*progName]];
+						isDir = NO;
+						if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath attributes:dict])
+						{
+							basePath = cachePath;
+							break;
+						}
 					}
 				}
 			}
@@ -130,8 +132,10 @@ using namespace ::rtl;
 	}
 
 	NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
-	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
+	if (fileManager)
+	{
+		while ([fileManager fileExistsAtPath:filePath])
+			filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
 	}
 	[filePath retain];
 	mpath=filePath;
@@ -140,11 +144,6 @@ using namespace ::rtl;
 - (NSString *)filePath
 {
 	return(mpath);
-}
-
-- (void)createDir:(NSString *)path
-{
-	[[NSFileManager defaultManager] createDirectoryAtPath: path attributes: nil];
 }
 
 - (void)removeItem:(NSString *)path

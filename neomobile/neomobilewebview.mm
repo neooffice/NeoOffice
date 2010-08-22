@@ -755,6 +755,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if (!decodedFilename)
 		decodedFilename = filename;
 
+	NSFileManager *fileManager = [NSFileManager defaultManager];
 	NSString *basePath = nil;
 	NSArray *downloadPaths = nil;
 
@@ -770,7 +771,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
 	}
 
-	if (downloadPaths)
+	if (downloadPaths && fileManager)
 	{
  		unsigned int dirCount = [downloadPaths count];
  		unsigned int i = 0;
@@ -778,7 +779,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		{
 			MacOSBOOL isDir = NO;
 			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
-			if ([[NSFileManager defaultManager] fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
+			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
 			{
 				basePath = downloadPath;
 				break;
@@ -794,9 +795,11 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
-	int i=0;
-	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [decodedFilename stringByDeletingPathExtension], (++i), [decodedFilename pathExtension]]];
+	if (fileManager)
+	{
+		int i=0;
+		while ([fileManager fileExistsAtPath:filePath])
+			filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [decodedFilename stringByDeletingPathExtension], (++i), [decodedFilename pathExtension]]];
 	}
 	
 	[download setDestination:filePath allowOverwrite:YES];
