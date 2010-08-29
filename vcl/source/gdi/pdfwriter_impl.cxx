@@ -7181,9 +7181,13 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             // Use the same units for glyph width as is used for position
             pGlyphWidths[i] = nAdvanceWidths[i] / rLayout.GetUnitsPerPixel();
 
-            // Do not allow invalid glyphs to be written to the PDF output
-            if( ! ( pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) ) )
+            // Do not allow invalid glyphs to be written to the PDF output and
+            // do not include their advance like is done in the
+            // SalATSLayout::DrawText method
+            if( pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) )
+                continue;
 #endif	// USE_JAVA
+
             aGlyphs.push_back( PDFGlyph( aGNGlyphPos,
                                          pGlyphWidths[i],
                                          pGlyphs[i],
