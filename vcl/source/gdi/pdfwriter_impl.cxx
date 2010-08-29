@@ -7171,6 +7171,8 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
         if ( !isReplayWriter() )
             continue;
+
+        sal_Int32 nTotalAdvance = 0;
 #else	// USE_JAVA
         registerGlyphs( nGlyphs, pGlyphs, pGlyphWidths, pUnicodes, pMappedGlyphs, pMappedFontObjects, pFallbackFonts );
 #endif	// USE_JAVA
@@ -7179,15 +7181,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         {
 #ifdef USE_JAVA
             // Use the same units for glyph width as is used for position
-            pGlyphWidths[i] = nAdvanceWidths[i] / rLayout.GetUnitsPerPixel();
+            pGlyphWidths[i] = ( ( nAdvanceWidths[i] + nTotalAdvance ) / rLayout.GetUnitsPerPixel() ) - ( nTotalAdvance / rLayout.GetUnitsPerPixel() );
+            nTotalAdvance += nAdvanceWidths[i];
 
-            // Do not allow invalid glyphs to be written to the PDF output and
-            // do not include their advance like is done in the
-            // SalATSLayout::DrawText method
-            if( pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) )
-                continue;
+            // Do not allow invalid glyphs to be written to the PDF output
+            if( ! ( pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) ) )
 #endif	// USE_JAVA
-
             aGlyphs.push_back( PDFGlyph( aGNGlyphPos,
                                          pGlyphWidths[i],
                                          pGlyphs[i],
@@ -7198,13 +7197,17 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                                          pMappedIdentityGlyphs[i],
                                          pCharPosAry[i],
                                          &rLayout ) );
+            if( bVertical )
+                aGNGlyphPos.Y() += pGlyphWidths[i];
+            else
+                aGNGlyphPos.X() += pGlyphWidths[i];
 #else	// USE_JAVA
                                          pMappedGlyphs[i] ) );
-#endif	// USE_JAVA
             if( bVertical )
                 aGNGlyphPos.Y() += nAdvanceWidths[i]/rLayout.GetUnitsPerPixel();
             else
                 aGNGlyphPos.X() += nAdvanceWidths[i]/rLayout.GetUnitsPerPixel();
+#endif	// USE_JAVA
         }
     }
 
