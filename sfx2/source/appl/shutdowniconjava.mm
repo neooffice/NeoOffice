@@ -70,15 +70,18 @@
 #define BASE_FALLBACK_DESC				"Database"
 #define MATH_FALLBACK_DESC				"Formula"
 
+typedef void VCLOpenPrintFileHandler_Type( const char *pPath, sal_Bool bPrint );
+typedef void VCLRequestShutdownHandler_Type();
+
 static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
 static const NSString *kMenuItemValueIsDefaultForPrefKey = @"MenuItemValueIsDefaultForPref";
 static ResMgr *pJavaResMgr = NULL;
 
-using namespace ::com::sun::star::beans;
-using namespace ::com::sun::star::uno;
-using namespace ::rtl;
+using namespace com::sun::star::beans;
+using namespace com::sun::star::uno;
+using namespace rtl;
 
 static XubString GetJavaResString( int nId )
 {
@@ -254,11 +257,11 @@ void ProcessShutdownIconCommand( int nCommand )
 @interface NSObject (ShutdownIconDelegate)
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
+- (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
-- (void)cancelTermination;
 @end
 
 /*
@@ -270,7 +273,6 @@ void ProcessShutdownIconCommand( int nCommand )
 {
 	id					mpDelegate;
 	NSMenu*				mpDockMenu;
-	BOOL				mbInTermination;
 }
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
@@ -280,7 +282,6 @@ void ProcessShutdownIconCommand( int nCommand )
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
-- (void)cancelTermination;
 - (void)dealloc;
 - (id)init;
 - (void)handleCalcCommand:(id)pObject;
@@ -300,7 +301,7 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
 {
-	if ( !mbInTermination && mpDelegate && [mpDelegate respondsToSelector:@selector(application:openFile:)] )
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:openFile:)] )
 		return [mpDelegate application:pApplication openFile:pFilename];
 	else
 		return NO;
@@ -308,7 +309,7 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename
 {
-	if ( !mbInTermination && mpDelegate && [mpDelegate respondsToSelector:@selector(application:printFile:)] )
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(application:printFile:)] )
 		return [mpDelegate application:pApplication printFile:pFilename];
 	else
 		return NO;
@@ -321,8 +322,8 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification
 {
-	// Fix bug 221 by explicitly reenabling all keyboards
-	KeyScript( smKeyEnableKybds );
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationDidBecomeActive:)] )
+		[mpDelegate applicationDidBecomeActive:pNotification];
 }
 
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification
@@ -333,7 +334,7 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag
 {
-	if ( !mbInTermination && mpDelegate && [mpDelegate respondsToSelector:@selector(applicationShouldHandleReopen:hasVisibleWindows:)] )
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationShouldHandleReopen:hasVisibleWindows:)] )
 		return [mpDelegate applicationShouldHandleReopen:pApplication hasVisibleWindows:bFlag];
 	else
 		return NO;
@@ -341,11 +342,6 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
-	if ( mbInTermination || ( pApplication && [pApplication modalWindow] ) )
-		return NSTerminateCancel;
-
-	mbInTermination = YES;
-
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationShouldTerminate:)] )
 		return [mpDelegate applicationShouldTerminate:pApplication];
 	else
@@ -356,11 +352,6 @@ void ProcessShutdownIconCommand( int nCommand )
 {
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillFinishLaunching:)] )
 		[mpDelegate applicationWillFinishLaunching:pNotification];
-}
-
-- (void)cancelTermination
-{
-	mbInTermination = NO;
 }
 
 - (void)dealloc
@@ -380,7 +371,6 @@ void ProcessShutdownIconCommand( int nCommand )
 
 	mpDelegate = nil;
 	mpDockMenu = [[NSMenu alloc] initWithTitle:@""];
-	mbInTermination = NO;
 
 	return self;
 }
@@ -547,35 +537,12 @@ void ProcessShutdownIconCommand( int nCommand )
 
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
-	return !mbInTermination;
+	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(validateMenuItem:)] )
+		return [mpDelegate validateMenuItem:pMenuItem];
+	else
+		return NO;
 }
 
-@end
-
-@interface CancelTermination : NSObject
-+ (id)create;
-- (void)cancelTermination:(id)pObject;
-@end
-
-@implementation CancelTermination
-
-+ (id)create
-{
-	CancelTermination *pRet = [[CancelTermination alloc] init];
-	[pRet autorelease];
-	return pRet;
-}
-
-- (void)cancelTermination:(id)pObject;
-{
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSObject *pDelegate = [pApp delegate];
-		if ( pDelegate && [pDelegate respondsToSelector:@selector(cancelTermination)] )
-			[pDelegate cancelTermination];
-	}
-}
 @end
 
 @interface QuickstartMenuItems : NSObject
@@ -628,6 +595,7 @@ void ProcessShutdownIconCommand( int nCommand )
 			pDockMenu = [pNewDelegate applicationDockMenu:pApp];
 		}
 
+
 		if ( pAppMenu && pDockMenu )
 		{
 			// Insert a separator menu item (only in the application menu)
@@ -660,18 +628,6 @@ void ProcessShutdownIconCommand( int nCommand )
 
 @end
 
-// Note: this must not be static as the symbol will be loaded by the vcl module
-extern "C" __attribute__((visibility("default"))) void NativeShutdownCancelledHandler()
-{
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	CancelTermination *pCancelTermination = [CancelTermination create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pCancelTermination performSelectorOnMainThread:@selector(cancelTermination:) withObject:pCancelTermination waitUntilDone:YES modes:pModes];
-
-	[pPool release];
-}
-
 extern "C" void java_init_systray()
 {
 	ShutdownIcon *pShutdownIcon = ShutdownIcon::getInstance();
@@ -679,17 +635,17 @@ extern "C" void java_init_systray()
 		return;
 
 	// Collect the URLs of the entries in the File/New menu
-	::std::set< ::rtl::OUString > aFileNewAppsAvailable;
+	::std::set< OUString > aFileNewAppsAvailable;
 	SvtDynamicMenuOptions aOpt;
 	Sequence < Sequence < PropertyValue > > aNewMenu = aOpt.GetMenu( E_NEWMENU );
-	const ::rtl::OUString sURLKey( RTL_CONSTASCII_USTRINGPARAM( "URL" ) );
+	const OUString sURLKey( RTL_CONSTASCII_USTRINGPARAM( "URL" ) );
 
 	const Sequence< PropertyValue >* pNewMenu = aNewMenu.getConstArray();
 	const Sequence< PropertyValue >* pNewMenuEnd = aNewMenu.getConstArray() + aNewMenu.getLength();
 	for ( ; pNewMenu != pNewMenuEnd; ++pNewMenu )
 	{
 		::comphelper::SequenceAsHashMap aEntryItems( *pNewMenu );
-		::rtl::OUString sURL( aEntryItems.getUnpackedValueOrDefault( sURLKey, ::rtl::OUString() ) );
+		OUString sURL( aEntryItems.getUnpackedValueOrDefault( sURLKey, OUString() ) );
 		if ( sURL.getLength() )
 			aFileNewAppsAvailable.insert( sURL );
 	}
@@ -738,7 +694,7 @@ extern "C" void java_init_systray()
 		if ( !aModuleOptions.IsModuleInstalled( aMenuItems[i].eModuleIdentifier ) )
 			continue;
 
-		::rtl::OUString sURL( ::rtl::OUString::createFromAscii( aMenuItems[i].pAsciiURLDescription ) );
+		OUString sURL( OUString::createFromAscii( aMenuItems[i].pAsciiURLDescription ) );
 
 		// the application is installed, but the entry has been
 		// configured to *not* appear in the File/New menu =>

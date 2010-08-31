@@ -367,7 +367,7 @@ public final class VCLEventQueue {
 	/**
 	 * The shutdown disabled flag.
 	 */
-	private boolean shutdownDisabled = false;
+	private boolean shutdownDisabled = true;
 
 	/**
 	 * The list of queues.
@@ -539,15 +539,6 @@ public final class VCLEventQueue {
 	}
 
 	/**
-	 * Returns <code>true</code> if the application has a delegate and it is
-	 * not the default Java delegate.
-	 *
-	 * @return <code>true</code> if the application has a delegate and it is
-	 *  not the default Java delegate
-	 */
-	public native boolean hasApplicationDelegate();
-
-	/**
 	 * Returns <code>true</code> if the application is active and a native
 	 * modal window is not showing.
 	 *
@@ -564,6 +555,18 @@ public final class VCLEventQueue {
 	 *  main thread
 	 */
 	public native boolean isApplicationMainThread();
+
+	/**
+	 * Returns the shutdown disabled flag.
+	 *
+	 * @return <code>true</code> if shutdown is disabled otherwise
+	 *  <code>false</code>
+	 */
+	public boolean isShutdownDisabled() {
+
+		return shutdownDisabled;
+
+	}
 
 	/**
 	 * Add an event to the cache.

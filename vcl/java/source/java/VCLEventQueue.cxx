@@ -119,13 +119,6 @@ using namespace vos;
 
 // ============================================================================
 
-JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_hasApplicationDelegate( JNIEnv *pEnv, jobject object )
-{
-	return ( NSApplication_hasDelegate() ? JNI_TRUE : JNI_FALSE );
-}
-
-// ----------------------------------------------------------------------------
-
 JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive( JNIEnv *pEnv, jobject object )
 {
 	return ( NSApplication_isActive() ? JNI_TRUE : JNI_FALSE );
@@ -475,20 +468,17 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[4]; 
-			pMethods[0].name = "hasApplicationDelegate";
+			JNINativeMethod pMethods[3]; 
+			pMethods[0].name = "isApplicationActive";
 			pMethods[0].signature = "()Z";
-			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_hasApplicationDelegate;
-			pMethods[1].name = "isApplicationActive";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
+			pMethods[1].name = "isApplicationMainThread";
 			pMethods[1].signature = "()Z";
-			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
-			pMethods[2].name = "isApplicationMainThread";
-			pMethods[2].signature = "()Z";
-			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
-			pMethods[3].name = "runApplicationMainThreadTimers";
-			pMethods[3].signature = "()V";
-			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
+			pMethods[2].name = "runApplicationMainThreadTimers";
+			pMethods[2].signature = "()V";
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
+			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
 		}
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
@@ -683,6 +673,27 @@ com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEventQueue::getNextCachedEvent( U
 
 // ----------------------------------------------------------------------------
 
+sal_Bool com_sun_star_vcl_VCLEventQueue::isShutdownDisabled()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isShutdownDisabled", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLEventQueue::postCachedEvent( const com_sun_star_vcl_VCLEvent *_par0 )
 {
 	static jmethodID mID = NULL;
@@ -731,6 +742,15 @@ void com_sun_star_vcl_VCLEventQueue::removeCachedEvents( const JavaSalFrame *_pa
 
 void com_sun_star_vcl_VCLEventQueue::setShutdownDisabled( sal_Bool _par0 )
 {
+	// When no shutdown is no longer disabled, allow native termination and
+	// dequeue any pending native open or print events
+	if ( !_par0 )
+	{
+		ULONG nCount = Application::ReleaseSolarMutex();
+		VCLEventQueue_cancelTermination();
+		Application::AcquireSolarMutex( nCount );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )

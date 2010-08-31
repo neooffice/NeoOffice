@@ -56,6 +56,7 @@ SLOFILES = \
 	$(SLO)/Object.obj \
 	$(SLO)/String.obj \
 	$(SLO)/Throwable.obj \
+	$(SLO)/VCLApplicationDelegate_cocoa.obj \
 	$(SLO)/VCLBitmap.obj \
 	$(SLO)/VCLEventQueue.obj \
 	$(SLO)/VCLEventQueue_cocoa.obj \

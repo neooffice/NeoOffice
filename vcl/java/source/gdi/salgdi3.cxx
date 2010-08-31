@@ -71,9 +71,6 @@
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
@@ -81,13 +78,9 @@
 
 #include "salgdi3_cocoa.h"
 
-typedef void NativeShutdownCancelledHandler_Type();
-
 static ATSFontNotificationRef aFontNotification = NULL;
 static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
 static ::osl::Condition aLoadNativeFontsCondition;
-static ::vos::OModule aShutdownCancelledHandlerModule;
-static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
 using namespace basegfx;
 using namespace rtl;
@@ -868,19 +861,8 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 	// Only run the timer once since loading fonts is extremely expensive
 	if ( !pLoadNativeFontsTimerUPP )
 	{
+		// Invoke the native shutdown cancelled handler
 		pSalData->mpEventQueue->setShutdownDisabled( sal_True );
-
-		// Load libsfx and invoke the native shutdown cancelled handler
-		if ( !pShutdownCancelledHandler )
-		{
-			OUString aLibName = ::vcl::unohelper::CreateLibraryName( "sfx", TRUE );
-			if ( aShutdownCancelledHandlerModule.load( aLibName ) )
-				pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
-		}
-
-		if ( pShutdownCancelledHandler )
-			pShutdownCancelledHandler();
-
 		pLoadNativeFontsTimerUPP = NewEventLoopTimerUPP( LoadNativeFontsTimerCallback );
 		RunNativeFontsTimerCallback();
 		pSalData->mpEventQueue->setShutdownDisabled( sal_False );

@@ -99,14 +99,7 @@ public class VCLApplicationListener implements ApplicationListener {
 	 *
 	 * @param event the event
 	 */
-	public void handleOpenFile(ApplicationEvent event) {
-
-		File file = new File(event.getFilename());
-		if (file.exists() && !file.isDirectory())
-			queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_OPENDOCUMENT, null, 0, file.getAbsolutePath()));
-		event.setHandled(true);
-
-	}
+	public void handleOpenFile(ApplicationEvent event) {}
 
 	/**
 	 * Called to handle preferences operations.
@@ -125,53 +118,14 @@ public class VCLApplicationListener implements ApplicationListener {
 	 *
 	 * @param event the event
 	 */
-	public void handlePrintFile(ApplicationEvent event) {
-
-		File file = new File(event.getFilename());
-		if (file.exists() && !file.isDirectory())
-			queue.postCachedEvent(new VCLEvent(VCLEvent.SALEVENT_PRINTDOCUMENT, null, 0, file.getAbsolutePath()));
-		event.setHandled(true);
-
-	}
+	public void handlePrintFile(ApplicationEvent event) {}
 
 	/**
 	 * Called when the application is about to quit.
 	 *
 	 * @param event the event
 	 */
-	public void handleQuit(ApplicationEvent event) {
-
-		Application application = Application.getApplication();
-		application.setEnabledAboutMenu(false);
-		application.setEnabledPreferencesMenu(false);
-
-		// Only allow shutdown after we have registered our custom
-		//  NSApplication delegate in the sfx2 module
-		if (queue.hasApplicationDelegate()) {
-			VCLEvent shutdownEvent = new VCLEvent(VCLEvent.SALEVENT_SHUTDOWN, null, 0);
-			queue.postCachedEvent(shutdownEvent);
-
-			// Wait for event to be dispatched in the C++ code. Note that if
-			// the event is successfully processed, this loop will never finish
-			// and the process will exit.
-			while (!shutdownEvent.isShutdownCancelled()) {
-				queue.dispatchNextEvent();
-				try {
-					// Fix bug 3485 by sleeping a little while since, in most
-					// cases, the other threads are blocked and so this thread
-					// will consume excessive CPU
-					Thread.currentThread().sleep(100);
-				}
-				catch (Throwable t) {}
-			}
-		}
-
-		event.setHandled(false);
-
-		application.setEnabledAboutMenu(true);
-		application.setEnabledPreferencesMenu(true);
-
-	}
+	public void handleQuit(ApplicationEvent event) {}
 
 	/**
 	 * Called when the application is actived.

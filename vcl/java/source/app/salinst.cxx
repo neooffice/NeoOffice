@@ -316,6 +316,10 @@ void InitJavaAWT()
 				aType.eventKind = kEventMenuBeginTracking;
 				InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, NULL );
 			}
+
+			// Invoke the native shutdown cancelled handler to clear any
+			// pending native open and print events
+			pSalData->mpEventQueue->setShutdownDisabled( sal_False );
 		}
 	}
 }

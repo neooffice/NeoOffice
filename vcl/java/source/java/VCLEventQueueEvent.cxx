@@ -76,14 +76,11 @@
 
 typedef void NativeAboutMenuHandler_Type();
 typedef void NativePreferencesMenuHandler_Type();
-typedef void NativeShutdownCancelledHandler_Type();
 
 static ::vos::OModule aAboutHandlerModule;
 static ::vos::OModule aPreferencesHandlerModule;
-static ::vos::OModule aShutdownCancelledHandlerModule;
 static NativeAboutMenuHandler_Type *pAboutHandler = NULL;
 static NativePreferencesMenuHandler_Type *pPreferencesHandler = NULL;
-static NativeShutdownCancelledHandler_Type *pShutdownCancelledHandler = NULL;
 
 using namespace rtl;
 using namespace vcl;
@@ -178,7 +175,7 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalF
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const char *str ) : java_lang_Object( (jobject)NULL )
+com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalFrame *pFrame, void *pData, const OString &rPath ) : java_lang_Object( (jobject)NULL )
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -194,7 +191,7 @@ com_sun_star_vcl_VCLEvent::com_sun_star_vcl_VCLEvent( USHORT nID, const JavaSalF
 	args[0].i = jint( nID );
 	args[1].l = pFrame ? pFrame->mpVCLFrame->getJavaObject() : NULL;
 	args[2].j = jlong( pData );
-	args[3].l = t.pEnv->NewStringUTF( str );
+	args[3].l = t.pEnv->NewStringUTF( rPath.getStr() );
 
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
@@ -240,7 +237,7 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( !isShutdownCancelled() )
 			{
 				ImplSVData *pSVData = ImplGetSVData();
-				if ( pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
+				if ( !pSVData->maWinData.mpFirstFloat && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet && pSalData->maFrameList.size() )
 				{
 					JavaSalFrame *pFrame = pSalData->maFrameList.front();
 					if ( pFrame && !pFrame->CallCallback( nID, NULL ) )
@@ -252,16 +249,8 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			{
 				cancelShutdown();
 
-				// Load libsfx and invoke the native shutdown cancelled handler
-				if ( !pShutdownCancelledHandler )
-				{
-					OUString aLibName = ::vcl::unohelper::CreateLibraryName( "sfx", TRUE );
-					if ( aShutdownCancelledHandlerModule.load( aLibName ) )
-						pShutdownCancelledHandler = (NativeShutdownCancelledHandler_Type *)aShutdownCancelledHandlerModule.getSymbol( OUString::createFromAscii( "NativeShutdownCancelledHandler" ) );
-				}
-
-				if ( pShutdownCancelledHandler )
-					pShutdownCancelledHandler();
+				// Invoke the native shutdown cancelled handler
+				GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
 			}
 
 			return;
