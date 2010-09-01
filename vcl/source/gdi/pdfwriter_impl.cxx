@@ -6893,19 +6893,7 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aMat.skew( 0.0, fSkew );
             aMat.scale( fXScale, 1.0 );
             aMat.rotate( fAngle );
-#ifdef USE_JAVA
-            // Fix bug 3448 by properly rotating the position. Fix bug 3484 by
-            // not applying the X scaling factor to the rotation matrix.
-            Matrix3 aRotScale;
-            if( fAngle != 0.0 )
-                aRotScale.rotate( -fAngle );
-
-            Point aDeltaPos = Point( aCurPos.X() - aStartPos.X(), aCurPos.Y() - aStartPos.Y() );
-            aDeltaPos = aRotScale.transform( aDeltaPos );
-            aMat.translate( aStartPos.X() + aDeltaPos.X(), aStartPos.Y() + aDeltaPos.Y() );
-#else	// USE_JAVA
             aMat.translate( aCurPos.X(), aCurPos.Y() );
-#endif	// USE_JAVA
             aMat.append( m_aPages.back(), rLine );
             rLine.append( " Tm\n" );
         }
