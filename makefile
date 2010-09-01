@@ -103,13 +103,13 @@ OO_PRODUCT_NAME=OpenOffice.org
 OO_PRODUCT_VERSION=3.1.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 PRODUCT_VERSION_FAMILY=3.0
-PRODUCT_VERSION=3.1.1
-PRODUCT_DIR_VERSION=3.1.1
+PRODUCT_VERSION=3.1.2
+PRODUCT_DIR_VERSION=3.1.2
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 2
-PRODUCT_DIR_PATCH_VERSION=Patch-2
+PRODUCT_PATCH_VERSION=Patch 1
+PRODUCT_DIR_PATCH_VERSION=Patch-0
 PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
@@ -132,7 +132,7 @@ PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL=http://neowiki.neooffice.org/index.php
 PRODUCT_DOCUMENTATION_SPELLCHECK_URL=http://neowiki.neooffice.org/index.php/Activating_Dictionaries_and_Configuring_Spellcheck
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser neomobile remotecontrol
-PRODUCT_COMPONENT_PATCH_MODULES=neomobile
+PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
@@ -143,7 +143,7 @@ REMOTECONTROL_PACKAGE=martinkahr-apple_remote_control-2ba0484
 REMOTECONTROL_SOURCE_FILENAME=martinkahr-apple_remote_control.tar.gz
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=-rNeoOffice-3_1_1
+NEO_TAG:=-rNeoOffice-3_1_2
 
 all: build.all
 
@@ -506,11 +506,11 @@ build.patch_package_shared:
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
+#	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/package/$(UOUTPUTDIR)/lib/libxstor.dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/lingucomponent/$(UOUTPUTDIR)/lib/libspell$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sc/$(UOUTPUTDIR)/lib/libscui$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/svtools/$(UOUTPUTDIR)/lib/libsvt$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/svx/$(UOUTPUTDIR)/lib/libsvx$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/svx/$(UOUTPUTDIR)/lib/libsvxcore$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libmsword$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/ucb/$(UOUTPUTDIR)/lib/libucpdav1.dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "basis-link/program/classes"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#'  | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "MacOS/bootstraprc"
@@ -530,7 +530,7 @@ build.patch_package_shared:
 	sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "etc/Description.plist.patch" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' > "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources/Description.plist"
 	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; sh -e -c 'for i in `find . -type d -name "*.lproj"` ; do ln -sf "../Description.plist" "$${i}/Description.plist" ; done'
 # Copy shared .oxt files
-	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; sh -c -e 'for i in `echo "$(PRODUCT_COMPONENT_PATCH_MODULES)"` ; do if [ -f "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ] ; then cp "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" . ; fi ; done'
+#	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; sh -c -e 'for i in `echo "$(PRODUCT_COMPONENT_PATCH_MODULES)"` ; do if [ -f "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" ] ; then cp "$(PWD)/$$i/$(UOUTPUTDIR)/bin/$$i.oxt" . ; fi ; done'
 # Make empty BOM so that nothing gets extracted in the temporary installation
 	mkdir "$(PATCH_INSTALL_HOME)/emptydir"
 	mkbom "$(PATCH_INSTALL_HOME)/emptydir" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Archive.bom" >& /dev/null
