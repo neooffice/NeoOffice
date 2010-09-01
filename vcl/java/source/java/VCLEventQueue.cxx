@@ -481,6 +481,44 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
 		}
 
+		// Apple periodically deprecates methods in the com.apple.eawt package
+		// so try to dynamically initialize the that class in case any
+		// deprecated methods invoked in the com.sun.star.vcl.VCLEventQueue
+		// class' static initizer no longer work
+		jclass cAppMenuBarHandlerClass = t.pEnv->FindClass( "com/apple/eawt/_AppMenuBarHandler" );
+		if ( cAppMenuBarHandlerClass )
+		{
+			jmethodID mIDGetInstance = NULL;
+			jmethodID mIDSetPrefsMenu = NULL;
+			if ( !mIDGetInstance )
+			{
+				char *cSignature = "()Lcom/apple/eawt/_AppMenuBarHandler;";
+				mIDGetInstance = t.pEnv->GetStaticMethodID( cAppMenuBarHandlerClass, "getInstance", cSignature );
+			}
+			OSL_ENSURE( mIDGetInstance, "Unknown method id!" );
+			if ( !mIDSetPrefsMenu )
+			{
+				char *cSignature = "(Z)V";
+				mIDSetPrefsMenu = t.pEnv->GetMethodID( cAppMenuBarHandlerClass, "setPreferencesMenuItemVisible", cSignature );
+			}
+			OSL_ENSURE( mIDSetPrefsMenu , "Unknown method id!" );
+			if ( mIDGetInstance && mIDSetPrefsMenu )
+			{
+				jobject tempObj = t.pEnv->CallStaticObjectMethod( cAppMenuBarHandlerClass, mIDGetInstance );
+				if ( tempObj )
+				{
+					jvalue args[1];
+					args[0].z = JNI_TRUE;
+					t.pEnv->CallNonvirtualVoidMethodA( tempObj, cAppMenuBarHandlerClass, mIDSetPrefsMenu, args );
+				}
+			}
+		}
+
+		// Handle Java versions that do not have a newer version of the
+		// com.apple.eawt package
+		if ( t.pEnv->ExceptionCheck() )
+			t.pEnv->ExceptionClear();
+
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
 	return theClass;

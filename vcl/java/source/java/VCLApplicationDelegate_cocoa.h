@@ -52,9 +52,11 @@
 - (void)cancelTermination;
 - (void)dealloc;
 - (id)init;
+- (void)menuNeedsUpdate:(NSMenu *)pMenu;
 - (void)setDelegate:(id)pDelegate;
+- (void)showAbout;
+- (void)showPreferences;
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
-
 
 #endif

@@ -57,7 +57,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Iterator;
@@ -355,6 +354,24 @@ public final class VCLEventQueue {
 	}
 
 	/**
+	 * Initialize static data members.
+	 */
+	static {
+
+		// Load platform specific event handlers
+		try {
+			Class c = Class.forName("com.apple.eawt.Application");
+			Method m = c.getMethod("getApplication", new Class[]{});
+			Object o = m.invoke(null, new Object[]{});
+			m = c.getMethod("setEnabledPreferencesMenu", new Class[]{ boolean.class });
+			m.invoke(o, new Object[]{ new Boolean( true ) });
+
+		}
+		catch (Throwable t) {}
+
+	}
+
+	/**
 	 * The in dispatch event flag.
 	 */
 	private volatile boolean inDispatchEvent = false;
@@ -390,16 +407,6 @@ public final class VCLEventQueue {
 
 		// Swap in our own event queue
 		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
-
-		// Load platform specific event handlers
-		try {
-			Class c = Class.forName("com.sun.star.vcl.macosx.VCLApplicationListener");
-			Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-			ctor.newInstance(new Object[]{ this });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
 
 		// Set keyboard focus manager
 		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();

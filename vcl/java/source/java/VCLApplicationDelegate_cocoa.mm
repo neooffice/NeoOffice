@@ -57,11 +57,35 @@ struct ImplPendingOpenPrintFileRequest
 						~ImplPendingOpenPrintFileRequest() {};
 };
 
+static NSString *pApplicationDelegateString = @"ApplicationDelegate";
 static std::list< ImplPendingOpenPrintFileRequest* > aPendingOpenPrintFileRequests;
 
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
+
+static void HandleAboutRequest()
+{
+	if ( !Application::IsShutDown() )
+	{
+		// If no Java event queue exists yet, ignore event as we are likely to
+		// deadlock
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			IMutex& rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+
+			if ( !Application::IsShutDown() )
+			{
+				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_ABOUT, NULL, NULL);
+				pSalData->mpEventQueue->postCachedEvent( &aEvent );
+			}
+
+			rSolarMutex.release();
+		}
+	}
+}
 
 static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 {
@@ -88,6 +112,29 @@ static void HandleOpenPrintFileRequest( const OString &rPath, sal_Bool bPrint )
 		}
 
 		rSolarMutex.release();
+	}
+}
+
+static void HandlePreferencesRequest()
+{
+	if ( !Application::IsShutDown() )
+	{
+		// If no Java event queue exists yet, ignore event as we are likely to
+		// deadlock
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			IMutex& rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+
+			if ( !Application::IsShutDown() )
+			{
+				com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PREFS, NULL, NULL);
+				pSalData->mpEventQueue->postCachedEvent( &aEvent );
+			}
+
+			rSolarMutex.release();
+		}
 	}
 }
 
@@ -234,7 +281,64 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	mpDelegate = nil;
 	mbInTermination = NO;
 
+	// Set the application delegate as the delegate for the application menu so
+	// that the Java menu item target and selector can be replaced with our own
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSMenu *pMainMenu = [pApp mainMenu];
+		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
+		{
+			NSMenuItem *pItem = [pMainMenu itemAtIndex:0];
+			if ( pItem )
+			{
+				NSMenu *pAppMenu = [pItem submenu];
+				if ( pAppMenu )
+					[pAppMenu setDelegate:self];
+			}
+		}
+	}
+
 	return self;
+}
+
+- (void)menuNeedsUpdate:(NSMenu *)pMenu
+{
+	if ( pMenu )
+	{
+		int nItems = [pMenu numberOfItems];
+		int i = 0;
+		for ( ; i < nItems; i++ )
+		{
+			NSMenuItem *pItem = [pMenu itemAtIndex:i];
+			if ( pItem )
+			{
+				NSObject *pTarget = [pItem target];
+				if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
+				{
+					NSString *pAction = NSStringFromSelector( [pItem action] );
+					if ( pAction )
+					{
+						NSRange aRange = [pAction rangeOfString:@"about" options:NSCaseInsensitiveSearch];
+						if ( aRange.location != NSNotFound && aRange.length > 0 )
+						{
+							[pItem setTarget:self];
+							[pItem setAction:@selector(showAbout)];
+						}
+						else
+						{
+							aRange = [pAction rangeOfString:@"preferences" options:NSCaseInsensitiveSearch];
+							if ( aRange.location != NSNotFound && aRange.length > 0 )
+							{
+								[pItem setTarget:self];
+								[pItem setAction:@selector(showPreferences)];
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }
 
 - (void)setDelegate:(id)pDelegate
@@ -250,6 +354,18 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
     	mpDelegate = pDelegate;
     	[mpDelegate retain];
 	}
+}
+
+- (void)showAbout
+{
+	if ( !mbInTermination )
+		HandleAboutRequest();
+}
+
+- (void)showPreferences
+{
+	if ( !mbInTermination )
+		HandlePreferencesRequest();
 }
 
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
