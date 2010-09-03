@@ -206,11 +206,11 @@ namespace
                 false));
 			basegfx::B2DHomMatrix aNewTransform;
 
-#ifdef USE_svx-ooo320-backports_PATCH
+#ifndef USE_svx-ooo320-backports_PATCH
 			// #i100489# need extra scale factor for DXArray which collects all scalings
 			// which are needed to get the DXArray to unit coordinates
 			double fDXArrayScaleFactor(aSize.getX());
-#endif	// USE_svx-ooo320-backports_PATCH
+#endif	// !USE_svx-ooo320-backports_PATCH
 
 			// add font scale to new transform
 			aNewTransform.scale(aSize.getX(), aSize.getY());
@@ -221,11 +221,11 @@ namespace
 				const double fFactor(rInfo.mrFont.GetPropr() / 100.0);
 				aNewTransform.scale(fFactor, fFactor);
 
-#ifdef USE_svx-ooo320-backports_PATCH
+#ifndef USE_svx-ooo320-backports_PATCH
 				// #i100489# proportional font scaling influences the DXArray,
 				// add to factor
 				fDXArrayScaleFactor *= fFactor;
-#endif	// USE_svx-ooo320-backports_PATCH
+#endif	// !USE_svx-ooo320-backports_PATCH
 			}
 
 			// apply font rotate
@@ -278,10 +278,10 @@ namespace
 			if(!bDisableTextArray && rInfo.mpDXArray && rInfo.mnTextLen)
 			{
 #ifdef USE_svx-ooo320-backports_PATCH
+				const double fScaleFactor(basegfx::fTools::equalZero(aSize.getX()) ? 1.0 : 1.0 / aSize.getX());
+#else	// USE_svx-ooo320-backports_PATCH
 				// #i100489# use fDXArrayScaleFactor here
 				const double fScaleFactor(basegfx::fTools::equalZero(fDXArrayScaleFactor) ? 1.0 : 1.0 / fDXArrayScaleFactor);
-#else	// USE_svx-ooo320-backports_PATCH
-				const double fScaleFactor(basegfx::fTools::equalZero(aSize.getX()) ? 1.0 : 1.0 / aSize.getX());
 #endif	// USE_svx-ooo320-backports_PATCH
 				aDXArray.reserve(rInfo.mnTextLen);
 
