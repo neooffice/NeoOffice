@@ -146,9 +146,16 @@ using namespace ::rtl;
 	return(mpath);
 }
 
+- (void)createDir:(NSString *)path
+{
+	NSNumber *perms = [NSNumber numberWithUnsignedLong:(S_IRUSR | S_IWUSR | S_IXUSR)];
+	NSDictionary *dict = (perms ? [NSDictionary dictionaryWithObject:perms forKey:NSFilePosixPermissions] : nil);
+	[[NSFileManager defaultManager] createDirectoryAtPath:path attributes:dict];
+}
+
 - (void)removeItem:(NSString *)path
 {
-	[[NSFileManager defaultManager] removeFileAtPath:path handler:NULL];
+	[[NSFileManager defaultManager] removeFileAtPath:path handler:nil];
 }
 
 @end

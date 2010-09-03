@@ -67,6 +67,7 @@
 - (void)dealloc;
 - (void)makeBasePath:(id)arg;
 - (NSString *)filePath;
+- (void)createDir:(NSString *)path;
 - (void)removeItem:(NSString *)path;
 @end
 
