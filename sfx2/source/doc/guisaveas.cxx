@@ -847,7 +847,7 @@ sal_Bool ModelData_Impl::OutputFileDialog( sal_Int8 nStoreMode,
 		{
 			::rtl::OUString aUserData;
 			it->second >>= aUserData;
-			if ( aUserData = ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "OXML" ) ) )
+			if ( aUserData == ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "OXML" ) ) )
 				bSetStandardName = true;
 		}
 	}
