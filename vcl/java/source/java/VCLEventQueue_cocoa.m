@@ -583,50 +583,77 @@ static VCLResponder *pSharedResponder = nil;
 {
 	[super orderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 
-	if ( [self isVisible] && [self level] == NSFloatingWindowLevel && [self styleMask] & NSTitledWindowMask && [[self className] isEqualToString:pCocoaAppWindowString] )
+	if ( [self level] == NSFloatingWindowLevel && [self styleMask] & NSTitledWindowMask && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
-		NSView *pContentView = [self contentView];
-		if ( pContentView )
+		if ( [self isVisible] )
 		{
-			if ( [super respondsToSelector:@selector(_isUtilityWindow)] && ![super _isUtilityWindow] && [super respondsToSelector:@selector(_setUtilityWindow:)] )
+			NSView *pContentView = [self contentView];
+			if ( pContentView )
 			{
-				NSRect aFrame = [self frame];
-				[super _setUtilityWindow:YES];
-
-				// We must set the level again after changing the window to a
-				// utility window otherwise the resize icon does not display
-				// on Mac OS X 10.5.x
-				[self setLevel:NSFloatingWindowLevel];
-
-				float fHeightChange = [self frame].size.height - aFrame.size.height;
-
-				[self setFrame:aFrame display:NO];
-
-				// Adjust origin of subviews by height change
-				if ( bUseQuickTimeContentViewHack )
+				if ( [super respondsToSelector:@selector(_isUtilityWindow)] && ![super _isUtilityWindow] && [super respondsToSelector:@selector(_setUtilityWindow:)] )
 				{
-					NSArray *pSubviews = [pContentView subviews];
-					if ( pSubviews )
+					NSRect aFrame = [self frame];
+					[super _setUtilityWindow:YES];
+
+					// We must set the level again after changing the window to
+					// a utility window otherwise the resize icon does not
+					// display on Mac OS X 10.5.x
+					[self setLevel:NSFloatingWindowLevel];
+
+					float fHeightChange = [self frame].size.height - aFrame.size.height;
+
+					[self setFrame:aFrame display:NO];
+
+					// Adjust origin of subviews by height change
+					if ( bUseQuickTimeContentViewHack )
 					{
-						unsigned int nCount = [pSubviews count];
-						unsigned int i = 0;
-						for ( ; i < nCount; i++ )
+						NSArray *pSubviews = [pContentView subviews];
+						if ( pSubviews )
 						{
-							NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
-							if ( pSubview && [pSubview isFlipped] )
+							unsigned int nCount = [pSubviews count];
+							unsigned int i = 0;
+							for ( ; i < nCount; i++ )
 							{
-								NSRect aBounds = [pSubview bounds];
-								aBounds.origin.y += fHeightChange;
-								[pSubview setBounds:aBounds];
+								NSView *pSubview = (NSView *)[pSubviews objectAtIndex:i];
+								if ( pSubview && [pSubview isFlipped] )
+								{
+									NSRect aBounds = [pSubview bounds];
+									aBounds.origin.y += fHeightChange;
+									[pSubview setBounds:aBounds];
+								}
 							}
 						}
 					}
+					else
+					{
+						NSRect aBounds = [pContentView bounds];
+						aBounds.origin.y += fHeightChange;
+						[pContentView setBounds:aBounds];
+					}
 				}
-				else
+			}
+		}
+		else
+		{
+			// Fix bug 3637 by making the first non-floating, non-utility
+			// window has focus after a utility window is closed
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+			{
+				NSArray *pWindows = [pApp orderedWindows];
+				if ( pWindows )
 				{
-					NSRect aBounds = [pContentView bounds];
-					aBounds.origin.y += fHeightChange;
-					[pContentView setBounds:aBounds];
+					unsigned int i = 0;
+					unsigned int nCount = [pWindows count];
+					for ( ; i < nCount; i++ )
+					{
+						NSWindow *pWindow = [pWindows objectAtIndex:i];
+						if ( pWindow && [pWindow isVisible] && [pWindow level] == NSNormalWindowLevel && [pWindow styleMask] & NSTitledWindowMask && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+						{
+							[pWindow makeKeyWindow];
+							break;
+						}
+					}
 				}
 			}
 		}
