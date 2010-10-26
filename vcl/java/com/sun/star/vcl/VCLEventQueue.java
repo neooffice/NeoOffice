@@ -57,7 +57,6 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
 import java.awt.event.PaintEvent;
 import java.awt.event.WindowEvent;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.Iterator;
@@ -355,6 +354,24 @@ public final class VCLEventQueue {
 	}
 
 	/**
+	 * Initialize static data members.
+	 */
+	static {
+
+		// Load platform specific event handlers
+		try {
+			Class c = Class.forName("com.apple.eawt.Application");
+			Method m = c.getMethod("getApplication", new Class[]{});
+			Object o = m.invoke(null, new Object[]{});
+			m = c.getMethod("setEnabledPreferencesMenu", new Class[]{ boolean.class });
+			m.invoke(o, new Object[]{ new Boolean( true ) });
+
+		}
+		catch (Throwable t) {}
+
+	}
+
+	/**
 	 * The in dispatch event flag.
 	 */
 	private volatile boolean inDispatchEvent = false;
@@ -367,7 +384,7 @@ public final class VCLEventQueue {
 	/**
 	 * The shutdown disabled flag.
 	 */
-	private boolean shutdownDisabled = false;
+	private boolean shutdownDisabled = true;
 
 	/**
 	 * The list of queues.
@@ -390,16 +407,6 @@ public final class VCLEventQueue {
 
 		// Swap in our own event queue
 		Toolkit.getDefaultToolkit().getSystemEventQueue().push(new VCLEventQueue.NoExceptionsEventQueue(this));
-
-		// Load platform specific event handlers
-		try {
-			Class c = Class.forName("com.sun.star.vcl.macosx.VCLApplicationListener");
-			Constructor ctor = c.getConstructor(new Class[]{ getClass() });
-			ctor.newInstance(new Object[]{ this });
-		}
-		catch (Throwable t) {
-			t.printStackTrace();
-		}
 
 		// Set keyboard focus manager
 		KeyboardFocusManager kfm = KeyboardFocusManager.getCurrentKeyboardFocusManager();
@@ -539,15 +546,6 @@ public final class VCLEventQueue {
 	}
 
 	/**
-	 * Returns <code>true</code> if the application has a delegate and it is
-	 * not the default Java delegate.
-	 *
-	 * @return <code>true</code> if the application has a delegate and it is
-	 *  not the default Java delegate
-	 */
-	public native boolean hasApplicationDelegate();
-
-	/**
 	 * Returns <code>true</code> if the application is active and a native
 	 * modal window is not showing.
 	 *
@@ -564,6 +562,18 @@ public final class VCLEventQueue {
 	 *  main thread
 	 */
 	public native boolean isApplicationMainThread();
+
+	/**
+	 * Returns the shutdown disabled flag.
+	 *
+	 * @return <code>true</code> if shutdown is disabled otherwise
+	 *  <code>false</code>
+	 */
+	public boolean isShutdownDisabled() {
+
+		return shutdownDisabled;
+
+	}
 
 	/**
 	 * Add an event to the cache.
@@ -1036,8 +1046,11 @@ public final class VCLEventQueue {
 			super(source, id, when, modifiers, 0, KeyEvent.CHAR_UNDEFINED);
 			commandKeyCode = keyCode;
 
-			// If this is a key pressed event, add the original key event
-			if (id == KeyEvent.KEY_PRESSED && originalKeyChar > 0 && (originalModifiers & InputEvent.META_DOWN_MASK) == InputEvent.META_DOWN_MASK) {
+			// If this is a key pressed event, add the original key event.
+			// Fix bug 3615 by posting original key events if any modifiers are
+			// pressed. Fix bug 3625 by posting originalKeyChar events even if
+			// there no modifiers set.
+			if (id == KeyEvent.KEY_PRESSED && originalKeyChar > 0) {
 				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_PRESSED, when, originalModifiers, KeyEvent.VK_UNDEFINED, originalKeyChar));
 				originalKeyEvents.add(new KeyEvent(source, KeyEvent.KEY_RELEASED, when, 0, KeyEvent.VK_UNDEFINED, originalKeyChar));
 			}

@@ -36,6 +36,7 @@
 #import <Cocoa/Cocoa.h>
 #import <Carbon/Carbon.h>
 #import <objc/objc-class.h>
+#import "VCLApplicationDelegate_cocoa.h"
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 #import "VCLResponder_cocoa.h"
@@ -234,6 +235,30 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 	NSApplication *pApp = [NSApplication sharedApplication];
 	if ( pApp )
 		mbActive = ( [pApp isActive] && ![pApp modalWindow] && ( ![pApp keyWindow] || [[[pApp keyWindow] className] isEqualToString:pCocoaAppWindowString] ) );
+}
+
+@end
+
+@interface VCLApplication : NSApplication
+- (void)setDelegate:(id)pDelegate;
+@end
+
+@implementation VCLApplication
+
+- (void)setDelegate:(id)pDelegate
+{
+	if ( ![self delegate] )
+	{
+		VCLApplicationDelegate *pNewDelegate = [VCLApplicationDelegate sharedDelegate];
+		if ( pNewDelegate )
+		{
+			[pNewDelegate setDelegate:pDelegate];
+			// NSApplication does not retain delegates so don't release it
+			pDelegate = pNewDelegate;
+		}
+	}
+
+	[super setDelegate:pDelegate];
 }
 
 @end
@@ -1137,6 +1162,7 @@ static CFDataRef aRTFSelection = nil;
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
 
+	[VCLApplication poseAsClass:[NSApplication class]];
 	[VCLBundle poseAsClass:[NSBundle class]];
 	[VCLFontManager poseAsClass:[NSFontManager class]];
 	[VCLWindow poseAsClass:[NSWindow class]];
@@ -1193,6 +1219,39 @@ void NSFontManager_release()
 		bFontManagerLocked = NO;
 		[pFontManagerLock unlock];
 	}
+}
+
+@interface CancelTermination : NSObject
++ (id)create;
+- (void)cancelTermination:(id)pObject;
+@end
+
+@implementation CancelTermination
+
++ (id)create
+{
+	CancelTermination *pRet = [[CancelTermination alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)cancelTermination:(id)pObject;
+{
+	VCLApplicationDelegate *pDelegate = [VCLApplicationDelegate sharedDelegate];
+	if ( pDelegate )
+		[pDelegate cancelTermination];
+}
+@end
+
+void VCLEventQueue_cancelTermination()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	CancelTermination *pCancelTermination = [CancelTermination create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pCancelTermination performSelectorOnMainThread:@selector(cancelTermination:) withObject:pCancelTermination waitUntilDone:YES modes:pModes];
+
+	[pPool release];
 }
 
 void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix )

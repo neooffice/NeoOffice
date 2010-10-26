@@ -73,6 +73,7 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
+void VCLEventQueue_cancelTermination();
 void VCLEventQueue_getTextSelection( CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
 BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers, jchar nOriginalKeyChar, short nOriginalModifiers );
 void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );

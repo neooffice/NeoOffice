@@ -374,21 +374,56 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		if ( tempClass )
 		{
 			// Register the native methods for our class
-			JNINativeMethod pMethods[4]; 
-			pMethods[0].name = "hasApplicationDelegate";
+			JNINativeMethod pMethods[3]; 
+			pMethods[0].name = "isApplicationActive";
 			pMethods[0].signature = "()Z";
-			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_hasApplicationDelegate;
-			pMethods[1].name = "isApplicationActive";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
+			pMethods[1].name = "isApplicationMainThread";
 			pMethods[1].signature = "()Z";
-			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationActive;
-			pMethods[2].name = "isApplicationMainThread";
-			pMethods[2].signature = "()Z";
-			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
-			pMethods[3].name = "runApplicationMainThreadTimers";
-			pMethods[3].signature = "()V";
-			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
+			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_isApplicationMainThread;
+			pMethods[2].name = "runApplicationMainThreadTimers";
+			pMethods[2].signature = "()V";
+			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
 			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
 		}
+
+		// Apple periodically deprecates methods in the com.apple.eawt package
+		// so try to dynamically initialize the that class in case any
+		// deprecated methods invoked in the com.sun.star.vcl.VCLEventQueue
+		// class' static initizer no longer work
+		jclass cAppMenuBarHandlerClass = t.pEnv->FindClass( "com/apple/eawt/_AppMenuBarHandler" );
+		if ( cAppMenuBarHandlerClass )
+		{
+			jmethodID mIDGetInstance = NULL;
+			jmethodID mIDSetPrefsMenu = NULL;
+			if ( !mIDGetInstance )
+			{
+				char *cSignature = "()Lcom/apple/eawt/_AppMenuBarHandler;";
+				mIDGetInstance = t.pEnv->GetStaticMethodID( cAppMenuBarHandlerClass, "getInstance", cSignature );
+			}
+			OSL_ENSURE( mIDGetInstance, "Unknown method id!" );
+			if ( !mIDSetPrefsMenu )
+			{
+				char *cSignature = "(Z)V";
+				mIDSetPrefsMenu = t.pEnv->GetMethodID( cAppMenuBarHandlerClass, "setPreferencesMenuItemVisible", cSignature );
+			}
+			OSL_ENSURE( mIDSetPrefsMenu , "Unknown method id!" );
+			if ( mIDGetInstance && mIDSetPrefsMenu )
+			{
+				jobject tempObj = t.pEnv->CallStaticObjectMethod( cAppMenuBarHandlerClass, mIDGetInstance );
+				if ( tempObj )
+				{
+					jvalue args[1];
+					args[0].z = JNI_TRUE;
+					t.pEnv->CallNonvirtualVoidMethodA( tempObj, cAppMenuBarHandlerClass, mIDSetPrefsMenu, args );
+				}
+			}
+		}
+
+		// Handle Java versions that do not have a newer version of the
+		// com.apple.eawt package
+		if ( t.pEnv->ExceptionCheck() )
+			t.pEnv->ExceptionClear();
 
 		theClass = (jclass)t.pEnv->NewGlobalRef( tempClass );
 	}
@@ -582,6 +617,27 @@ com_sun_star_vcl_VCLEvent *com_sun_star_vcl_VCLEventQueue::getNextCachedEvent( U
 
 // ----------------------------------------------------------------------------
 
+sal_Bool com_sun_star_vcl_VCLEventQueue::isShutdownDisabled()
+{
+	static jmethodID mID = NULL;
+	sal_Bool out = sal_False;
+	VCLThreadAttach t;
+	if ( t.pEnv )
+	{
+		if ( !mID )
+		{
+			char *cSignature = "()Z";
+			mID = t.pEnv->GetMethodID( getMyClass(), "isShutdownDisabled", cSignature );	
+		}
+		OSL_ENSURE( mID, "Unknown method id!" );
+		if ( mID )
+			out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethod( object, getMyClass(), mID );
+	}
+	return out;
+}
+
+// ----------------------------------------------------------------------------
+
 void com_sun_star_vcl_VCLEventQueue::postCachedEvent( const com_sun_star_vcl_VCLEvent *_par0 )
 {
 	static jmethodID mID = NULL;
@@ -630,6 +686,15 @@ void com_sun_star_vcl_VCLEventQueue::removeCachedEvents( const JavaSalFrame *_pa
 
 void com_sun_star_vcl_VCLEventQueue::setShutdownDisabled( sal_Bool _par0 )
 {
+	// When no shutdown is no longer disabled, allow native termination and
+	// dequeue any pending native open or print events
+	if ( !_par0 )
+	{
+		ULONG nCount = Application::ReleaseSolarMutex();
+		VCLEventQueue_cancelTermination();
+		Application::AcquireSolarMutex( nCount );
+	}
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
