@@ -384,7 +384,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 			pMethods[2].name = "runApplicationMainThreadTimers";
 			pMethods[2].signature = "()V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers;
-			t.pEnv->RegisterNatives( tempClass, pMethods, 4 );
+			t.pEnv->RegisterNatives( tempClass, pMethods, 3 );
 		}
 
 		// Apple periodically deprecates methods in the com.apple.eawt package
