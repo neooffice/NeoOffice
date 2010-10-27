@@ -41,6 +41,7 @@
 #include "postmac.h"
 
 extern const NSString *kAboutURL;
+extern const NSString *kNeoMobileLastURLPref;
 extern const NSString *kNeoMobileXPosPref;
 extern const NSString *kNeoMobileYPosPref;
 extern const NSString *kNeoMobileWidthPref;

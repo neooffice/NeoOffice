@@ -149,25 +149,36 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	//   defaults write org.neooffice.NeoOffice nmServerType development|test
 	// To use the default server type, use the following Terminal command:
 	//   defaults delete org.neooffice.NeoOffice nmServerType
+	mnBaseURLCount = 0;
 	const NSString **pBaseURLs = nil;
 	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
 	NSString *serverType=[defaults stringForKey:kNeoMobileServerTypePref];
 	if ( serverType )
 	{
 		if ( [serverType caseInsensitiveCompare:@"development"] == NSOrderedSame )
+		{
+			mnBaseURLCount = sizeof( pDevelopmentBaseURLs ) / sizeof( NSString* );
 			pBaseURLs = pDevelopmentBaseURLs;
+		}
 		else if ( [serverType caseInsensitiveCompare:@"test"] == NSOrderedSame )
+		{
+			mnBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
 			pBaseURLs = pTestBaseURLs;
+		}
 	}
 	if ( !pBaseURLs )
+	{
 #ifdef TEST
+		mnBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
 		pBaseURLs = pTestBaseURLs;
 #else	// TEST
+		mnBaseURLCount = sizeof( pProductionBaseURLs ) / sizeof( NSString* );
 		pBaseURLs = pProductionBaseURLs;
 #endif	// TEST
+	}
 
 	mnBaseURLEntry = 0;
-	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:sizeof( pBaseURLs ) / sizeof( NSString* )];
+	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:mnBaseURLCount];
 	if ( mpBaseURLs )
 	{
 		[mpBaseURLs retain];
@@ -185,7 +196,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[pPrefs setJavaScriptEnabled:YES];
 	}
 
-	[self setMaintainsBackForwardList:NO];
+	[self setMaintainsBackForwardList:YES];
 	[self setResourceLoadDelegate:self];
 	[self setFrameLoadDelegate:self];
 	[self setUIDelegate:self];
@@ -271,7 +282,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)loadURI:(NSString *)pURI
 {
-	if ( !pURI )
+	if ( !pURI || ![pURI length] )
 		pURI = @"/";
 
 	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
@@ -293,7 +304,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		// processing a data download we've redirected from the web frame
 		return;
 	}
-	else if ( nErr == -999 )
+	else if ( nErr == NSURLErrorCancelled )
 	{
 		// Error code -999 indicates that the WebKit is doing the Back, Reload,
 		// or Forward actions so we don't trigger server fallback. These
@@ -306,6 +317,14 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:@""];
+
+	if ( nErr != NSURLErrorTimedOut && nErr != NSURLErrorCannotFindHost && nErr != NSURLErrorCannotConnectToHost )
+	{
+		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", GetLocalizedString(NEOMOBILEERROR), [pError localizedDescription]] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+		if ( pAlert )
+            [pAlert runModal];
+        return;
+    }
 
 	if ( !pWebFrame )
 		return;
@@ -323,7 +342,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		return;
 
 	NSURL *pURL = [pRequest URL];
-	if ( !pURL )
+	if ( !pURL || ![self isNeoMobileURL:pURL] )
 		return;
 
 	NSMutableString *pURI = [NSMutableString stringWithCapacity:512];
@@ -344,6 +363,30 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	{
 		mnBaseURLEntry = 0;
 		return;
+	}
+
+	// Clear all history since we are going to switch to a different server
+	WebView *pWebView = [pWebFrame webView];
+	if ( pWebView )
+	{
+		WebBackForwardList *pHistory = [pWebView backForwardList];
+		if ( pHistory )
+		{
+			int nCapacity = [pHistory capacity];
+			if ( nCapacity )
+			{
+				[pHistory setCapacity:0];
+				[pHistory setCapacity:nCapacity];
+
+				// Put the new server in the history list
+				WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
+				if ( pItem )
+				{
+					[pItem autorelease];
+					[pHistory addItem:pItem];
+				}
+			}
+		}
 	}
 
 	// Try to load next base URL
@@ -384,7 +427,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				[pNewRequest setHTTPBodyStream:pBodyStream];
 			[pNewRequest setHTTPMethod:[pRequest HTTPMethod]];
 			[pWebFrame stopLoading];
-			[pWebFrame loadRequest:[NSURLRequest requestWithURL:pURL]];
+			[pWebFrame loadRequest:pNewRequest];
 		}
 	}
 }
@@ -420,12 +463,16 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener
 {
-	// Launch the URL with the /usr/bin/open command
+	// Have Mac OS X open the URL
 	if ( pRequest )
 	{
 		NSURL *pURL = [pRequest URL];
 		if ( pURL )
-			[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:[pURL absoluteString], nil]];
+		{
+			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+			if ( pWorkspace )
+				[pWorkspace openURL:pURL];
+		}
 	}
 
 	// Tell the listener to ignore the request
@@ -496,6 +543,18 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	NSString *pSaveUUIDHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Uuid"];
 	if ( pSaveURIHeader && pSaveUUIDHeader )
 	{
+		// Disable history completely once an upload starts. Note that once we
+		// enter the upload process, we cannot reliably go back so we set the
+		// history list capacity to zero.
+		int nCapacity = 0;
+		WebBackForwardList *pHistory = [pWebView backForwardList];
+		if ( pHistory )
+		{
+			nCapacity = [pHistory capacity];
+			if ( nCapacity )
+				[pHistory setCapacity:0];
+		}
+
 		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
 		if ( pSaveURL )
 		{
@@ -506,7 +565,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			{
 				if ( !mpexportEvent )
 				{
-					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody );
+					// Get list of supported mime types if any
+					NSArray *pMimeTypes = nil;
+					NSString *pSaveMimeTypesHeader = (NSString *)[pHeaders objectForKey:@"Neomobile-Save-Mime-Types"];
+					if ( pSaveMimeTypesHeader )
+						pMimeTypes = [pSaveMimeTypesHeader componentsSeparatedByString:@", "];
+
+					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody, pMimeTypes );
 					mpexportEvent=&aEvent;
 
 					[mpcancelButton setEnabled:YES];
@@ -551,13 +616,40 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				}
 			}
 		}
+
+		if ( nCapacity && pHistory )
+		{
+			[pHistory setCapacity:nCapacity];
+
+			// Put the new server in the history list
+			NSURL *pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+			if ( pRelativeURL )
+			{
+				WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
+				if ( pItem )
+				{
+					[pItem autorelease];
+					[pHistory addItem:pItem];
+				}
+			}
+		}
+	}
+	else if ( !mpexportEvent )
+	{
+		// If not an upload, save last URL preference
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		[defaults setObject:[pURL absoluteString] forKey:kNeoMobileLastURLPref];
+		[defaults synchronize];
 	}
 }
 
 - (void)webView:(WebView *)pWebView didStartProvisionalLoadForFrame:(WebFrame *)pFrame
 {
 	[mpcancelButton setEnabled:YES];
-	
+
+	if ( !pWebView || !pFrame )
+		return;
+
 	WebDataSource *pDataSource = [pFrame provisionalDataSource];
 	
 	NSMutableURLRequest *pRequest = nil;
@@ -574,6 +666,34 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 {
 	if ( mnBaseURLEntry >= mnBaseURLCount )
 		mnBaseURLEntry = 0;
+
+	// Clear the forward history
+	WebBackForwardList *pHistory = [pWebView backForwardList];
+	if ( pHistory )
+	{
+		int nCapacity = [pHistory capacity];
+		if ( nCapacity )
+		{
+			int nBackListCount = [pHistory backListCount];
+			[pHistory setCapacity:nBackListCount + 1];
+			[pHistory setCapacity:nCapacity];
+
+			// Put the new server in the history list
+			if ( !nBackListCount )
+			{
+				NSURL *pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+				if ( pRelativeURL )
+				{
+					WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
+					if ( pItem )
+					{
+						[pItem autorelease];
+						[pHistory addItem:pItem];
+					}
+				}
+			}
+		}
+	}
 
 	// Always add a special header with the name and version of the application
 	// that this web view is running in
@@ -621,6 +741,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 #ifdef DEBUG
 	fprintf( stderr, "Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+
 	// Fix broken WebKit handling of the Content-Disposition header by assuming
 	// that our server has URL encoded the file name
 	NSString *decodedFilename = filename;
@@ -634,6 +755,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if (!decodedFilename)
 		decodedFilename = filename;
 
+	NSFileManager *fileManager = [NSFileManager defaultManager];
 	NSString *basePath = nil;
 	NSArray *downloadPaths = nil;
 
@@ -649,7 +771,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
 	}
 
-	if (downloadPaths)
+	if (downloadPaths && fileManager)
 	{
  		unsigned int dirCount = [downloadPaths count];
  		unsigned int i = 0;
@@ -657,7 +779,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		{
 			MacOSBOOL isDir = NO;
 			NSString *downloadPath = (NSString *)[downloadPaths objectAtIndex:i];
-			if ([[NSFileManager defaultManager] fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
+			if ([fileManager fileExistsAtPath:downloadPath isDirectory:&isDir] && isDir)
 			{
 				basePath = downloadPath;
 				break;
@@ -666,13 +788,18 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 
 	if (!basePath)
+	{
 		basePath = NSTemporaryDirectory();
-	if (!basePath)
-		basePath = @"/tmp";
+		if (!basePath)
+			basePath = @"/tmp";
+	}
+
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
-	int i=0;
-	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [decodedFilename stringByDeletingPathExtension], (++i), [decodedFilename pathExtension]]];
+	if (fileManager)
+	{
+		int i=0;
+		while ([fileManager fileExistsAtPath:filePath])
+			filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [decodedFilename stringByDeletingPathExtension], (++i), [decodedFilename pathExtension]]];
 	}
 	
 	[download setDestination:filePath allowOverwrite:YES];
@@ -704,7 +831,7 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 #ifdef DEBUG
 	fprintf( stderr, "Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	
+
 	mpdownload=download;
 	[mpcancelButton setEnabled:YES];
 	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
@@ -836,6 +963,34 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 		[mpPanel release];
 	
 	[super dealloc];
+}
+
+- (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL
+{
+	// Make sure that the list of servers has been populated
+	if ( !mpBaseURLs )
+		return NO;
+
+	if ( !pURL )
+		return NO;
+
+	NSString *pURLHost = [pURL host];
+	if ( !pURLHost || ![pURLHost length] )
+		return NO;
+
+	for ( unsigned int i = 0; i < mnBaseURLCount; i++ )
+	{
+		NSURL *pBaseURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:i]];
+		if ( !pBaseURL )
+			continue;
+		NSString *pBaseHost = [pBaseURL host];
+		if(!pBaseHost || ![pBaseHost length])
+			continue;
+		else if ([pBaseHost caseInsensitiveCompare:pURLHost] == NSOrderedSame)
+			return YES;
+	}
+
+	return NO;
 }
 
 @end

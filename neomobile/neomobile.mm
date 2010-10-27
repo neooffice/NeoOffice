@@ -48,6 +48,7 @@ const NSString *kAboutURL = @"http://www-test.neooffice.org/neomobile/";
 #else	// TEST
 const NSString *kAboutURL = @"http://www.neooffice.org/neomobile/";
 #endif	// TEST
+const NSString *kNeoMobileLastURLPref = @"nmLastURL";
 const NSString *kNeoMobileXPosPref = @"nmXPos";
 const NSString *kNeoMobileYPosPref = @"nmYPos";
 const NSString *kNeoMobileWidthPref = @"nmWidth";
@@ -84,13 +85,14 @@ static NeoMobileWebView *pSharedWebView = nil;
 
 	if(pSharedWebView)
 	{
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+
 		NSWindow *pWindow = [pSharedWebView window];
 		if(pWindow && ![pWindow isVisible])
 		{
 			// Check for retained user position. If not available, make
 			// relative to the primary frame.
 			NSPoint windowPos={0, 0};
-			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
 			NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
 			NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
 			if(xPosStr && yPosStr)
@@ -126,9 +128,18 @@ static NeoMobileWebView *pSharedWebView = nil;
 			[defaults setBool:YES forKey:kNeoMobileVisiblePref];
 			[defaults synchronize];
 		}
-	
+
+		NSString *pURI=mpURI;
+		NSString *pLastURLPref=[defaults stringForKey:kNeoMobileLastURLPref];
+		if(pLastURLPref)
+		{
+			NSURL *pLastURL=[NSURL URLWithString:pLastURLPref];
+			if(pLastURL && [pSharedWebView isNeoMobileURL:pLastURL])
+				pURI=[pLastURL absoluteString];
+		}
+
 		// Load URI
-		[pSharedWebView loadURI:mpURI];
+		[pSharedWebView loadURI:pURI];
 	}
 }
 

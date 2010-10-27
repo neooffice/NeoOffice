@@ -11,16 +11,16 @@
 					<value>_self</value>
 				</prop>
 				<prop oor:name="Title" oor:type="xs:string">
-					<value xml:lang="en-US">NeoOffice Mobile</value>
-					<value xml:lang="es">NeoOffice Móvil</value>
-					<value xml:lang="nl">NeoOffice Mobiel</value>
-					<value xml:lang="pt">NeoOffice Móvel</value>
+					<value xml:lang="en-US">Mobile</value>
+					<value xml:lang="es">Móvil</value>
+					<value xml:lang="nl">Mobiel</value>
+					<value xml:lang="pt">Móvel</value>
 				</prop>
 				<prop oor:name="ImageIdentifier" oor:type="xs:string">
 					<value/>
 				</prop>
 				<node oor:name="Submenu">
-					<node oor:name="about" oor:op="replace">
+					<node oor:name="neomobile1" oor:op="replace">
 						<prop oor:name="URL" oor:type="xs:string">
 							<value>macro:///NeoOfficeMobile.XNeoOfficeMobile.AboutNeoOfficeMobile</value>
 						</prop>
@@ -39,10 +39,10 @@
 							<value/>
 						</prop>
 						<prop oor:name="Context" oor:type="xs:string">
-							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
+							<value/>
 						</prop>
 					</node>
-					<node oor:name="open" oor:op="replace">
+					<node oor:name="neomobile2" oor:op="replace">
 						<prop oor:name="URL" oor:type="xs:string">
 							<value>macro:///NeoOfficeMobile.XNeoOfficeMobile.OpenNeoOfficeMobile</value>
 						</prop>
@@ -61,7 +61,7 @@
 							<value/>
 						</prop>
 						<prop oor:name="Context" oor:type="xs:string">
-							<value>com.sun.star.text.TextDocument,com.sun.star.sheet.SpreadsheetDocument,com.sun.star.presentation.PresentationDocument,com.sun.star.drawing.DrawingDocument</value>
+							<value/>
 						</prop>
 					</node>
 				</node>

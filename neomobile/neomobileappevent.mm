@@ -31,6 +31,7 @@
  *
  *************************************************************************/
 
+#include <crt_externs.h>
 #include "neomobile.hxx"
 #include "neomobileappevent.hxx"
 #include "neomobilei18n.hxx"
@@ -86,10 +87,55 @@ using namespace ::rtl;
 {
 #pragma unused(arg)
 
-	NSString *basePath = NSTemporaryDirectory();
+	NSString *basePath = nil;
+
+	NSFileManager *fileManager = [NSFileManager defaultManager];
+	if (fileManager)
+	{
+		// Use NSCachesDirectory to stay within FileVault encryption
+		NSArray *cachePaths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES);
+		if (cachePaths)
+		{
+			NSNumber *perms = [NSNumber numberWithUnsignedLong:(S_IRUSR | S_IWUSR | S_IXUSR)];
+			NSDictionary *dict = (perms ? [NSDictionary dictionaryWithObject:perms forKey:NSFilePosixPermissions] : nil);
+
+ 			unsigned int dirCount = [cachePaths count];
+ 			unsigned int i = 0;
+			for (; i < dirCount && !basePath; i++)
+			{
+				MacOSBOOL isDir = NO;
+				NSString *cachePath = (NSString *)[cachePaths objectAtIndex:i];
+				if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath attributes:dict])
+				{
+					// Append program name to cache path
+					char **progName = _NSGetProgname();
+					if (progName && *progName)
+					{
+						cachePath = [cachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*progName]];
+						isDir = NO;
+						if (([fileManager fileExistsAtPath:cachePath isDirectory:&isDir] && isDir) || [fileManager createDirectoryAtPath:cachePath attributes:dict])
+						{
+							basePath = cachePath;
+							break;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (!basePath)
+	{
+		basePath = NSTemporaryDirectory();
+		if (!basePath)
+			basePath = @"/tmp";
+	}
+
 	NSString *filePath = [basePath stringByAppendingPathComponent:@"_nm_export"];
-	while ([[NSFileManager defaultManager] fileExistsAtPath:filePath]) {
-		filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
+	if (fileManager)
+	{
+		while ([fileManager fileExistsAtPath:filePath])
+			filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"_nm_export_%d", rand()]];
 	}
 	[filePath retain];
 	mpath=filePath;
@@ -102,22 +148,25 @@ using namespace ::rtl;
 
 - (void)createDir:(NSString *)path
 {
-	[[NSFileManager defaultManager] createDirectoryAtPath: path attributes: nil];
+	NSNumber *perms = [NSNumber numberWithUnsignedLong:(S_IRUSR | S_IWUSR | S_IXUSR)];
+	NSDictionary *dict = (perms ? [NSDictionary dictionaryWithObject:perms forKey:NSFilePosixPermissions] : nil);
+	[[NSFileManager defaultManager] createDirectoryAtPath:path attributes:dict];
 }
 
 - (void)removeItem:(NSString *)path
 {
-	[[NSFileManager defaultManager] removeFileAtPath:path handler:NULL];
+	[[NSFileManager defaultManager] removeFileAtPath:path handler:nil];
 }
 
 @end
 
-NeoMobileExportFileAppEvent::NeoMobileExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody ) :
+NeoMobileExportFileAppEvent::NeoMobileExportFileAppEvent( OUString aSaveUUID, NSFileManager *pFileManager, NSMutableData *pPostBody, NSArray *pMimeTypes ) :
 	mnErrorCode( 0 ),
 	mpFileManager( pFileManager ),
 	mbFinished( false ),
 	mpPostBody( pPostBody ),
 	maSaveUUID( aSaveUUID ),
+	mpMimeTypes( pMimeTypes ),
 	mbCanceled( false ),
 	mbUnsupportedComponentType( false )
 {

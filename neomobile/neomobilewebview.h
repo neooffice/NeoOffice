@@ -87,4 +87,5 @@
 - (void)windowDidMove:(NSNotification *)notification;
 - (void)windowDidResize:(NSNotification *)notification;
 - (void)windowWillClose:(NSNotification *)notification;
+- (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL;
 @end
