@@ -1033,11 +1033,30 @@ static CFDataRef aRTFSelection = nil;
 
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
 {
-	return NO;
+	BOOL bRet = NO;
+
+	// Invoke superclass if this is not an NSViewAWT class
+	if ( ![[self className] isEqualToString:pNSViewAWTString] )
+	{
+		if ( [super respondsToSelector:@selector(readSelectionFromPasteboard:)] )
+			bRet = (BOOL)[super readSelectionFromPasteboard:pPasteboard];
+		return bRet;
+	}
+
+	return bRet;
 }
 
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
+	// Invoke superclass if this is not an NSViewAWT class
+	if ( ![[self className] isEqualToString:pNSViewAWTString] )
+	{
+		id pRet = nil;
+		if ( [super respondsToSelector:@selector(validRequestorForSendType:returnType:)] )
+			pRet = [super validRequestorForSendType:pSendType returnType:pReturnType];
+		return pRet;
+	}
+
 	if ( pSharedResponder && ![pSharedResponder disableServicesMenu] && !pReturnType && pSendType )
 	{
 		if ( [pSendType isEqual:NSRTFPboardType] )
@@ -1072,6 +1091,14 @@ static CFDataRef aRTFSelection = nil;
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
 {
 	BOOL bRet = NO;
+
+	// Invoke superclass if this is not an NSViewAWT class
+	if ( ![[self className] isEqualToString:pNSViewAWTString] )
+	{
+		if ( [super respondsToSelector:@selector(writeSelectionToPasteboard:types:)] )
+			bRet = (BOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
+		return bRet;
+	}
 
 	if ( pPasteboard && pTypes )
 	{
