@@ -252,10 +252,10 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 							Sequence< sal_Int8 > aData;
 							aValue >>= aData;
 
-							// Add HTML Microsoft Office headers
-							if ( nType == 'HTML' )
-								aData = TextHtmlToHTMLFormat( aData );
-
+							// Fix bug 3640 by not adding the Microsoft Office
+							// HTML headers. Microsoft Office 2004 and 2008 do
+							// appear to need those headers and the headers are
+							// not understood by other applications.
 							sal_Int8 *pArray = aData.getArray();
 							sal_Int32 nLen = aData.getLength();
 							if ( pArray && nLen )
