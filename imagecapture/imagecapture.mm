@@ -366,14 +366,15 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		CFSTR("tif"), CFSTR("tiff"), CFSTR("jpg"), CFSTR("jpeg"), CFSTR("gif"), CFSTR("png")
 	};
 	
-	CFIndex theCount = 6;
-	CFArrayRef theTypes = CFArrayCreate( NULL, (const void**)strings, theCount, &kCFTypeArrayCallBacks );
-	if(!theTypes)
+	CFArrayRef theTypes = (CFArrayRef)[NSArray arrayWithObjects: @"tif", @"tiff", @"jpg", @"jpeg", @"gif", @"png", NULL];
 		return;
 
 	ICAImportImagePB thePB;
 	memset(&thePB, '\0', sizeof(thePB));
-	
+
+	// Fix bug 3641 by passing a pointer to NULL
+	CFArrayRef importedImages = NULL;
+	thePB.importedImages = &importedImages;
 	thePB.supportedFileTypes = theTypes;
 	error = ICAImportImage(&thePB, NULL);
 	if((error==noErr) && thePB.importedImages)
@@ -409,8 +410,6 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 			}
 		}
 	}
-	
-	CFRelease(theTypes);
 }
 
 - (bool)capturedImage
