@@ -360,53 +360,51 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 
 - (void)doImageCapture: (id)pObj
 {
-    OSErr error;
-    CFStringRef strings[] = 
-	{
-		CFSTR("tif"), CFSTR("tiff"), CFSTR("jpg"), CFSTR("jpeg"), CFSTR("gif"), CFSTR("png")
-	};
-	
-	CFArrayRef theTypes = (CFArrayRef)[NSArray arrayWithObjects: @"tif", @"tiff", @"jpg", @"jpeg", @"gif", @"png", NULL];
-		return;
-
 	ICAImportImagePB thePB;
 	memset(&thePB, '\0', sizeof(thePB));
 
-	// Fix bug 3641 by passing a pointer to NULL
+	// Fix bug 3641 by passing a pointer to NULL and by allowing all types
+	// supported by the scanner to be imported
 	CFArrayRef importedImages = NULL;
 	thePB.importedImages = &importedImages;
-	thePB.supportedFileTypes = theTypes;
-	error = ICAImportImage(&thePB, NULL);
+	thePB.flags = kICAAllowMultipleImages;
+	thePB.supportedFileTypes = NULL;
+	OSErr error = ICAImportImage(&thePB, NULL);
 	if((error==noErr) && thePB.importedImages)
 	{
-		CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
-		if(theImage)
+		CFIndex nCount = CFArrayGetCount(*thePB.importedImages);
+		gotImage=false;
+		for (CFIndex i = 0; !gotImage && i < nCount; i++)
 		{
-			// convert image into TIFF so we can put it on the clipboard
-			// using the scrap manager
-			NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
-			if(theNSImage)
+			CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, i);
+			if(theImage)
 			{
-				NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
-				if(theNSTIFFData)
+				// convert image into TIFF so we can put it on the clipboard
+				// using the scrap manager
+				NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
+				if(theNSImage)
 				{
-					IMutex &rSolarMutex = Application::GetSolarMutex();
-					rSolarMutex.acquire();
-
-					NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
-					if(thePasteboard)
+					NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
+					if(theNSTIFFData)
 					{
-						[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
-						[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
-						// mark that we've successfully imported the image and
-						// placed it onto the clipboard
-						gotImage=true;
+						IMutex &rSolarMutex = Application::GetSolarMutex();
+						rSolarMutex.acquire();
+
+						NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
+						if(thePasteboard)
+						{
+							[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
+							[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
+							// mark that we've successfully imported the image
+							// and placed it onto the clipboard
+							gotImage=true;
+						}
+
+						rSolarMutex.release();
 					}
 
-					rSolarMutex.release();
+					[theNSImage release];
 				}
-
-				[theNSImage release];
 			}
 		}
 	}
