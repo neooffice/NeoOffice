@@ -40,9 +40,34 @@
 
 #import <Cocoa/Cocoa.h>
 
+#define MIN_MACOSX_MAJOR_VERSION 0x4
+#define MAX_MACOSX_MAJOR_VERSION 0x6
 #define TMPDIR "/tmp"
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef int SofficeMain_Type( int argc, char **argv );
+
+static BOOL IsSupportedMacOSXVersion() {
+
+	BOOL bRet = NO;
+
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			// Currently we only support Mac OS X 10.4.x through 10.6.x
+			long res = 0;
+			pGestalt( gestaltSystemVersion, &res );
+			bRet = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= MIN_MACOSX_MAJOR_VERSION ) && ( ( ( res >> 4 ) & 0x000F ) <= MAX_MACOSX_MAJOR_VERSION ) );
+		}
+
+		dlclose( pLib );
+	}
+
+	return bRet;
+}
 
 static NSString *GetNSTemporaryDirectory( const char *pProgName )
 {
@@ -110,6 +135,19 @@ int java_main( int argc, char **argv )
 		fprintf( stderr, "%s: application's main bundle is nil\n", argv[ 0 ] );
 		[pPool release];
 		_exit( 1 );
+	}
+
+	if ( !IsSupportedMacOSXVersion() )
+	{
+		// Try to open the bundled "unsupported_macosx_version.html" file in
+		// the default web browser
+		NSString *pHTMLPath = [pMainBundle pathForResource:@"unsupported_macosx_version" ofType:@"html"];
+		if ( pHTMLPath )
+		{
+			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+			if ( pWorkspace )
+				[pWorkspace openFile:pHTMLPath];
+		}
 	}
 
 	NSString *pBundlePath = [pMainBundle bundlePath];
