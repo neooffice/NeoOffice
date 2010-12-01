@@ -36,8 +36,6 @@
 #ifndef INCLUDED_DESKTOP_SOURCE_APP_MAIN_JAVA_H
 #define INCLUDED_DESKTOP_SOURCE_APP_MAIN_JAVA_H
 
-#ifdef USE_JAVA
-
 #include "sal/config.h"
 
 #if defined __cplusplus
@@ -49,7 +47,5 @@ int java_main( int argc, char **argv );
 #if defined __cplusplus
 }
 #endif
-
-#endif	// USE_JAVA
 
 #endif

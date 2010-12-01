@@ -35,11 +35,24 @@
 #include <rtl/logfile.hxx>
 #include <tools/extendapplicationenvironment.hxx>
 
+#ifdef USE_JAVA
+#include "sal/main.h"
+#endif	// USE_JAVA
+
 BOOL SVMain();
 
 // -=-= main() -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
+#ifdef USE_JAVA
+// All references to main() need to be redefined to soffice_main()
+#define main soffice_main
+extern "C"
+{
+SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
+#undef main
+#else	// USE_JAVA
 extern "C" int soffice_main()
+#endif	// USE_JAVA
 {
     tools::extendApplicationEnvironment();
 
@@ -57,3 +70,6 @@ extern "C" int soffice_main()
     return 0;
 #endif	// USE_JAVA
 }
+#ifdef USE_JAVA
+}
+#endif	// USE_JAVA
