@@ -129,15 +129,24 @@ int java_main( int argc, char **argv )
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSBundle *pMainBundle = [NSBundle mainBundle];
-	if ( !pMainBundle )
+	// Use CFBundle as [NSBundle mainBundle] will cause Java menu load failures
+	CFBundleRef aMainBundle = CFBundleGetMainBundle();
+	if ( !aMainBundle )
 	{
 		fprintf( stderr, "%s: application's main bundle is nil\n", argv[ 0 ] );
 		[pPool release];
 		_exit( 1 );
 	}
 
-	NSString *pBundlePath = [pMainBundle bundlePath];
+	NSString *pBundlePath = nil;
+	CFURLRef aBundleURL = CFBundleCopyBundleURL( aMainBundle );
+	if ( aBundleURL )
+	{
+		pBundlePath = (NSString *)CFURLCopyFileSystemPath( aBundleURL, kCFURLPOSIXPathStyle );
+		if ( pBundlePath )
+			[pBundlePath autorelease];
+		CFRelease( aBundleURL );
+	}
 	if ( !pBundlePath )
 	{
 		fprintf( stderr, "%s: application's main bundle path is nil\n", argv[ 0 ] );
@@ -145,7 +154,15 @@ int java_main( int argc, char **argv )
 		_exit( 1 );
 	}
 
-	NSString *pCmdPath = [pMainBundle executablePath];
+	NSString *pCmdPath = nil;
+	CFURLRef aCmdURL = CFBundleCopyExecutableURL( aMainBundle );
+	if ( aCmdURL )
+	{
+		pCmdPath = (NSString *)CFURLCopyFileSystemPath( aCmdURL, kCFURLPOSIXPathStyle );
+		if ( pCmdPath )
+			[pCmdPath autorelease];
+		CFRelease( aCmdURL );
+	}
 	if ( !pCmdPath )
 	{
 		fprintf( stderr, "%s: application's executable path is nil\n", argv[ 0 ] );
@@ -353,21 +370,33 @@ int java_main( int argc, char **argv )
 	// "unsupported_macosx_version.html" file in the default web browser
 	if ( !IsSupportedMacOSXVersion() )
 	{
-		NSString *pFile = @"unsupported_macosx_version";
-		NSString *pExt = @"html";
-		NSString *pHTMLPath = [pMainBundle pathForResource:pFile ofType:pExt];
-		if ( !pHTMLPath )
-		{
-			pHTMLPath = [pMainBundle pathForResource:pFile ofType:pExt inDirectory:@"" forLocalization:@"en"];
-			if ( !pHTMLPath )
-				pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, pFile, pExt];
-		}
+		CFStringRef aFile = CFSTR( "unsupported_macosx_version" );
+		CFStringRef aType = CFSTR( "html" );
+		CFURLRef aHTMLURL = CFBundleCopyResourceURL( aMainBundle, aFile, aType, CFSTR( "" ) );
+		if ( !aHTMLURL )
+			aHTMLURL = CFBundleCopyResourceURLForLocalization( aMainBundle, aFile, aType, CFSTR( "" ), CFSTR( "en" ) );
 
+		NSString *pHTMLPath = nil;
+		if ( aHTMLURL )
+		{
+			pHTMLPath = (NSString *)CFURLCopyFileSystemPath( aHTMLURL, kCFURLPOSIXPathStyle );
+			if ( pHTMLPath )
+				[pHTMLPath autorelease];
+			CFRelease( aHTMLURL );
+		}
+		if ( !pHTMLPath )
+			pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, (NSString *)aFile, (NSString *)aType];
 		if ( pHTMLPath )
 		{
 			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
 			if ( pWorkspace )
-				[pWorkspace openFile:pHTMLPath];
+			{
+				// Use [NSWorkspace openURL] as [NSWorkspace openFile] will
+				// cause Java menu load failures
+				NSURL *pURL = [NSURL fileURLWithPath:pHTMLPath];
+				if ( pURL )
+					[pWorkspace openURL:[NSURL fileURLWithPath:pHTMLPath]];
+			}
 		}
 	}
 
@@ -385,11 +414,12 @@ int java_main( int argc, char **argv )
 	// so the value must be set to "yes" to actually disable shared memory.
 	putenv( "MONO_DISABLE_SHM=yes" );
 
-	[pPool release];
-
 	// Dynamically load soffice_main symbol to improve startup speed
 	NSString *pSofficeLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
 	void *pSofficeLib = dlopen( [pSofficeLibPath UTF8String], RTLD_LAZY | RTLD_LOCAL );
+
+	[pPool release];
+
 	if ( pSofficeLib )
 	{
 		SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)dlsym( pSofficeLib, "soffice_main" );
