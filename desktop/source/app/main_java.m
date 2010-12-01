@@ -146,7 +146,7 @@ int java_main( int argc, char **argv )
 	}
 
 	NSString *pCmdPath = [pMainBundle executablePath];
-	if ( !pBundlePath )
+	if ( !pCmdPath )
 	{
 		fprintf( stderr, "%s: application's executable path is nil\n", argv[ 0 ] );
 		[pPool release];
@@ -384,6 +384,8 @@ int java_main( int argc, char **argv )
 	// Fix bug 2394 by turning off shared memory. Note that Mono is picky and
 	// so the value must be set to "yes" to actually disable shared memory.
 	putenv( "MONO_DISABLE_SHM=yes" );
+
+	[pPool release];
 
 	// Dynamically load soffice_main symbol to improve startup speed
 	NSString *pSofficeLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
