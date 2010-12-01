@@ -47,8 +47,8 @@
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef int SofficeMain_Type( int argc, char **argv );
 
-static BOOL IsSupportedMacOSXVersion() {
-
+static BOOL IsSupportedMacOSXVersion()
+{
 	BOOL bRet = NO;
 
 	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
@@ -135,19 +135,6 @@ int java_main( int argc, char **argv )
 		fprintf( stderr, "%s: application's main bundle is nil\n", argv[ 0 ] );
 		[pPool release];
 		_exit( 1 );
-	}
-
-	if ( !IsSupportedMacOSXVersion() )
-	{
-		// Try to open the bundled "unsupported_macosx_version.html" file in
-		// the default web browser
-		NSString *pHTMLPath = [pMainBundle pathForResource:@"unsupported_macosx_version" ofType:@"html"];
-		if ( pHTMLPath )
-		{
-			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
-			if ( pWorkspace )
-				[pWorkspace openFile:pHTMLPath];
-		}
 	}
 
 	NSString *pBundlePath = [pMainBundle bundlePath];
@@ -362,6 +349,28 @@ int java_main( int argc, char **argv )
 		_exit( 1 );
 	}
 
+	// If this Mac OS X version is not supported, try to open the bundled
+	// "unsupported_macosx_version.html" file in the default web browser
+	if ( !IsSupportedMacOSXVersion() )
+	{
+		NSString *pFile = @"unsupported_macosx_version";
+		NSString *pExt = @"html";
+		NSString *pHTMLPath = [pMainBundle pathForResource:pFile ofType:pExt];
+		if ( !pHTMLPath )
+		{
+			pHTMLPath = [pMainBundle pathForResource:pFile ofType:pExt inDirectory:@"" forLocalization:@"en"];
+			if ( !pHTMLPath )
+				pHTMLPath = [NSString stringWithFormat:@"%@/Contents/Resources/en.lproj/%@.%@", pBundlePath, pFile, pExt];
+		}
+
+		if ( pHTMLPath )
+		{
+			NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+			if ( pWorkspace )
+				[pWorkspace openFile:pHTMLPath];
+		}
+	}
+
 	// File locking is enabled by default
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
 
@@ -377,8 +386,8 @@ int java_main( int argc, char **argv )
 	putenv( "MONO_DISABLE_SHM=yes" );
 
 	// Dynamically load soffice_main symbol to improve startup speed
-	NSString *pSofficeLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/programs/libsofficeapp.dylib", pBundlePath];
-	void *pSofficeLib = dlopen( [pSofficeLibPath UTF8String], SAL_LOADMODULE_DEFAULT );
+	NSString *pSofficeLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
+	void *pSofficeLib = dlopen( [pSofficeLibPath UTF8String], RTLD_LAZY | RTLD_LOCAL );
 	if ( pSofficeLib )
 	{
 		SofficeMain_Type *pSofficeMain = (SofficeMain_Type *)dlsym( pSofficeLib, "soffice_main" );
