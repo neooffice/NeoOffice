@@ -49,6 +49,13 @@ typedef int SofficeMain_Type( int argc, char **argv );
 
 static BOOL IsSupportedMacOSXVersion()
 {
+	// Allow users to disable the Mac OS X version check by using the
+	// following command:
+	//   defaults write org.neooffice.NeoOffice DisableMacOSXVersionCheck -bool YES
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableMacOSXVersionCheck" ), kCFPreferencesCurrentApplication );
+	if ( aPref && CFGetTypeID( aPref ) == CFBooleanGetTypeID() && CFBooleanGetValue( (CFBooleanRef)aPref ) )
+		return YES;
+
 	BOOL bRet = NO;
 
 	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
