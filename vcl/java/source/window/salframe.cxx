@@ -1202,12 +1202,15 @@ void JavaSalFrame::SetMenu( SalMenu* pSalMenu )
 	JavaSalMenu *pJavaSalMenu = (JavaSalMenu *)pSalMenu;
 	if ( pJavaSalMenu && pJavaSalMenu->mbIsMenuBarMenu )
 	{
-		bool bUpdateAllMenus = ( mbVisible && mpMenuBar );
+		bool bUpdateMenus = ( mbVisible && pJavaSalMenu != mpMenuBar );
 		mpMenuBar = pJavaSalMenu;
 
 		// If the menu is being set, we need to update the new menus. Fix
-		// bug 2577 by only updating the menubar and not its submenus.
-		UpdateMenusForFrame( this, NULL, bUpdateAllMenus );
+		// bug 2577 by only updating the menubar and not its submenus. Fix
+		// bug 3643 by only doing an update of the top level menus as a full
+		// update causes changes to be excessively slow.
+		if ( bUpdateMenus )
+			UpdateMenusForFrame( this, NULL, false );
 	}
 	else
 	{
