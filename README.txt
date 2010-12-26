@@ -17,7 +17,7 @@ Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC a
    
    For OS X 10.5 Leopard:
    
-   Xcode Tools v3.0
+   Xcode Tools v3.1.4
 
    Important: you will need to select the X11SDK package during installation as this package is required to build OpenOffice.org moz module.
    
@@ -38,17 +38,11 @@ Steps for building on Mac OS X 10.4 (Tiger) or 10.5 (Leopard) for both PowerPC a
    sudo /path/to/port/command install flex
    sudo /path/to/port/command install wget
 
-5. Make sure that you have downloaded and installed the Mono Mac OS X framework:
-
-   http://mono-project.com/OldReleases
-
-   Important: version 1.9.x must be installed for the odf-converter code to build correctly. If you have more than one version of Mono installed, make sure that the /Library/Frameworks/Mono.framework/Versions softlink points to the correct Mono version folder.
-
-6. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
+5. Make sure that you have downloaded and installed the Subversion client and have the "svn" command in your PATH. Subversion binaries can be downloaded from here:
 
    http://subversion.tigris.org/project_packages.html
 
-7. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
+6. Start the build by invoking the following commands. Note that you should replace $NEO_HOME with absolute path of your workspace's "neojava" directory:
 
    cd $NEO_HOME
    make GNUCP=</absolute/path/of/your/gcp/command> LIBIDL_CONFIG=</absolute/path/of/your/libIDL-config-2/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
