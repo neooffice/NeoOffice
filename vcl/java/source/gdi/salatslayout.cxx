@@ -133,6 +133,8 @@ struct ImplATSLayoutData {
 	bool				mbValid;
 	bool				mbGlyphBounds;
 	Rectangle			maGlyphBounds;
+	::std::hash_map< GlyphID, Point >	maVerticalGlyphTranslations;
+	::std::hash_map< GlyphID, long >	maNativeGlyphWidths;
 
 	static void					ClearLayoutDataCache();
 	static void					SetFontFallbacks();
@@ -808,6 +810,8 @@ void ImplATSLayoutData::Destroy()
 	mbValid = false;
 	mbGlyphBounds = false;
 	maGlyphBounds.SetEmpty();
+	maVerticalGlyphTranslations.clear();
+	maNativeGlyphWidths.clear();
 }
 
 // ----------------------------------------------------------------------------
@@ -2081,16 +2085,26 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 	{
 		GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
 
-		ATSGlyphScreenMetrics aVerticalMetrics;
-		ATSGlyphScreenMetrics aHorizontalMetrics;
-		if ( ATSUGlyphGetScreenMetrics( pRet->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( pRet->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
+		::std::hash_map< GlyphID, Point >::const_iterator it = pRet->maVerticalGlyphTranslations.find( nGlyphID );
+		if ( it == pRet->maVerticalGlyphTranslations.end() )
 		{
-			nX = Float32ToLong( ( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
-			if ( nGlyphOrientation == GF_ROTL )
-				nX += pRet->mnBaselineDelta;
-			else
-				nX -= pRet->mnBaselineDelta;
-			nY = Float32ToLong( ( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
+			ATSGlyphScreenMetrics aVerticalMetrics;
+			ATSGlyphScreenMetrics aHorizontalMetrics;
+			if ( ATSUGlyphGetScreenMetrics( pRet->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( pRet->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
+			{
+				nX = Float32ToLong( ( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
+				if ( nGlyphOrientation == GF_ROTL )
+					nX += pRet->mnBaselineDelta;
+				else
+					nX -= pRet->mnBaselineDelta;
+				nY = Float32ToLong( ( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
+			}
+			pRet->maVerticalGlyphTranslations[ nGlyphID ] = Point( nX, nY );
+		}
+		else
+		{
+			nX = it->second.X();
+			nY = it->second.Y();
 		}
 	}
 
@@ -2147,9 +2161,18 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 
 	GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
 
-	ATSGlyphIdealMetrics aIdealMetrics;
-	if ( ATSUGlyphGetIdealMetrics( pLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), &aIdealMetrics ) == noErr )
-		nRet = Float32ToLong( aIdealMetrics.advance.x * pLayoutData->mfFontScaleY * UNITS_PER_PIXEL );
+	::std::hash_map< GlyphID, long >::const_iterator it = pLayoutData->maNativeGlyphWidths.find( nGlyphID );
+	if ( it == pLayoutData->maNativeGlyphWidths.end() )
+	{
+		ATSGlyphIdealMetrics aIdealMetrics;
+		if ( ATSUGlyphGetIdealMetrics( pLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), &aIdealMetrics ) == noErr )
+			nRet = Float32ToLong( aIdealMetrics.advance.x * pLayoutData->mfFontScaleY * UNITS_PER_PIXEL );
+		pLayoutData->maNativeGlyphWidths[ nGlyphID ] = nRet;
+	}
+	else
+	{
+		nRet = it->second;
+	}
 
 	return nRet;
 }
