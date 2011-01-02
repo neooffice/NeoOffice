@@ -6904,8 +6904,17 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         OStringBuffer aKernedLine( 256 ), aUnkernedLine( 256 );
         aKernedLine.append( "[<" );
         aUnkernedLine.append( '<' );
+#ifdef USE_JAVA
+        if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
+            appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
+        appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aKernedLine );
+        if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
+            appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
+        appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
+#else	// USE_JAVA
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aKernedLine );
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aUnkernedLine );
+#endif	// USE_JAVA
 
         aMat.invert();
         bool bNeedKern = false;
@@ -6936,6 +6945,12 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aKernedLine.append( "<" );
             }
 #ifdef USE_JAVA
+            else if ( rGlyphs[nPos].m_bIdentityGlyph || rGlyphs[nPos-1].m_bIdentityGlyph )
+            {
+                bNeedKern = true;
+                aKernedLine.append( "><" );
+            }
+
             if ( rGlyphs[nPos].m_bIdentityGlyph )
                 appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
             appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
@@ -7162,8 +7177,17 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             // Fix bugs 3348 and 3442 by fetching each glyph's actual
             // native unkerned width
             SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
-            if ( pATSLayout && pGlyphs[i] & GF_FONTMASK )
-                pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( pGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+            if ( pGlyphs[i] & GF_FONTMASK )
+            {
+                if ( pATSLayout )
+                    pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( pGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                if ( !pATSLayout )
+                {
+                    MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( &rLayout );
+                    if ( pMultiLayout )
+                        pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( pGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                }
+            }
             sal_Int32 nNativeGlyphWidth = ( pATSLayout ? sal_Int32( ( (double)pATSLayout->GetNativeGlyphWidth( pGlyphs[i], pCharPosAry[i] ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) : 0.0 );
 
             // Do not allow invalid glyphs to be written to the PDF output
