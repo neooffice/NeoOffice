@@ -6848,12 +6848,11 @@ void PDFWriterImpl::drawHorizontalGlyphs(
     aRunEnds.reserve( rGlyphs.size() );
     for( size_t i = 1; i < rGlyphs.size(); i++ )
     {
-#ifdef USE_JAVA
-        // Fix bugs 3348 and 3442 by explicitly setting each glyph's position
-#else	// USE_JAVA
         if( rGlyphs[i].m_nMappedFontId != rGlyphs[i-1].m_nMappedFontId ||
-            rGlyphs[i].m_aPos.Y() != rGlyphs[i-1].m_aPos.Y() )
+#ifdef USE_JAVA
+            rGlyphs[i].m_nMappedFontSubId != rGlyphs[i-1].m_nMappedFontSubId ||
 #endif	// USE_JAVA
+            rGlyphs[i].m_aPos.Y() != rGlyphs[i-1].m_aPos.Y() )
         {
             aRunEnds.push_back(i);
         }
@@ -6862,9 +6861,6 @@ void PDFWriterImpl::drawHorizontalGlyphs(
     aRunEnds.push_back( rGlyphs.size() );
 
     // loop over runs of the same font
-#ifdef USE_JAVA
-    Point aStartPos;
-#endif	// USE_JAVA
     sal_uInt32 nBeginRun = 0;
     for( size_t nRun = 0; nRun < aRunEnds.size(); nRun++ )
     {
@@ -6873,10 +6869,6 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         // back transformation to current coordinate system
         aCurPos = m_pReferenceDevice->PixelToLogic( aCurPos );
         aCurPos += rAlignOffset;
-#ifdef USE_JAVA
-        if( nRun == 0 )
-            aStartPos = aCurPos;
-#endif	// USE_JAVA
         // the first run can be set with "Td" operator
         // subsequent use of that operator would move
         // the texline matrix relative to what was set before
@@ -6898,36 +6890,16 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             rLine.append( " Tm\n" );
         }
         // set up correct font
-#ifdef USE_JAVA
-        // Only set the font if it has changed as the fix for bugs 3348 and
-        // will cause each glyph to always be a separate run
-        if( !nRun || rGlyphs[nRun].m_nMappedFontId != rGlyphs[nRun-1].m_nMappedFontId ||
-            rGlyphs[nRun].m_nMappedFontSubId != rGlyphs[nRun-1].m_nMappedFontSubId ||
-            rGlyphs[nRun].m_aPos.Y() != rGlyphs[nRun-1].m_aPos.Y() )
-        {
-#endif	// USE_JAVA
         rLine.append( "/F" );
-#ifdef USE_JAVA
-        rLine.append( rGlyphs[nRun].m_nMappedFontId );
-        rLine.append( '.' );
-        rLine.append( rGlyphs[nRun].m_nMappedFontSubId );
-#else	// USE_JAVA
         rLine.append( rGlyphs[nBeginRun].m_nMappedFontId );
+#ifdef USE_JAVA
+        rLine.append( '.' );
+        rLine.append( rGlyphs[nBeginRun].m_nMappedFontSubId );
 #endif	// USE_JAVA
         rLine.append( ' ' );
         m_aPages.back().appendMappedLength( nFontHeight, rLine, true );
         rLine.append( " Tf" );
-#ifdef USE_JAVA
-        }
 
-        OStringBuffer aUnkernedLine( 256 );
-        aUnkernedLine.append( '<' );
-        if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
-            appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
-        appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
-        aUnkernedLine.append( ">Tj\n" );
-        rLine.append( aUnkernedLine );
-#else	// USE_JAVA
         // output glyphs using Tj or TJ
         OStringBuffer aKernedLine( 256 ), aUnkernedLine( 256 );
         aKernedLine.append( "[<" );
@@ -6939,6 +6911,15 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         bool bNeedKern = false;
         for( sal_uInt32 nPos = nBeginRun+1; nPos < aRunEnds[nRun]; nPos++ )
         {
+#ifdef USE_JAVA
+            if ( rGlyphs[nPos].m_bIdentityGlyph )
+                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
+            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
+            // check if glyph advance matches with the width of the previous glyph, else adjust
+            double fAdvance = rGlyphs[nPos-1].m_nRealNativeWidth - rGlyphs[nPos-1].m_nNativeWidth;
+            fAdvance *= 1000.0 / (fXScale * nPixelFontHeight);
+            const sal_Int32 nAdjustment = sal_Int32(fAdvance+0.5);
+#else	// USE_JAVA
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aUnkernedLine );
             // check if glyph advance matches with the width of the previous glyph, else adjust
             const Point aThisPos = aMat.transform( rGlyphs[nPos].m_aPos );
@@ -6946,6 +6927,7 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             double fAdvance = aThisPos.X() - aPrevPos.X();
             fAdvance *= 1000.0 / (fXScale * nPixelFontHeight);
             const sal_Int32 nAdjustment = rGlyphs[nPos-1].m_nNativeWidth - sal_Int32(fAdvance+0.5);
+#endif	// USE_JAVA
             if( nAdjustment != 0 )
             {
                 bNeedKern = true;
@@ -6953,12 +6935,17 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aKernedLine.append( nAdjustment );
                 aKernedLine.append( "<" );
             }
+#ifdef USE_JAVA
+            if ( rGlyphs[nPos].m_bIdentityGlyph )
+                appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
+            appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
+#else	// USE_JAVA
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aKernedLine );
+#endif	// USE_JAVA
         }
         aKernedLine.append( ">]TJ\n" );
         aUnkernedLine.append( ">Tj\n" );
         rLine.append( bNeedKern ? aKernedLine : aUnkernedLine );
-#endif	// USE_JAVA
 
         // set beginning of next run
         nBeginRun = aRunEnds[nRun];
@@ -7172,6 +7159,13 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             pGlyphWidths[i] = ( ( nAdvanceWidths[i] + nTotalAdvance ) / rLayout.GetUnitsPerPixel() ) - ( nTotalAdvance / rLayout.GetUnitsPerPixel() );
             nTotalAdvance += nAdvanceWidths[i];
 
+            // Fix bugs 3348 and 3442 by fetching each glyph's actual
+            // native unkerned width
+            SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
+            if ( pATSLayout && pGlyphs[i] & GF_FONTMASK )
+                pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( pGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+            sal_Int32 nNativeGlyphWidth = ( pATSLayout ? sal_Int32( ( (double)pATSLayout->GetNativeGlyphWidth( pGlyphs[i], pCharPosAry[i] ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) : 0.0 );
+
             // Do not allow invalid glyphs to be written to the PDF output
             if( ! ( pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) ) )
 #endif	// USE_JAVA
@@ -7184,6 +7178,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                                          pMappedFontSubObjects[i],
                                          pMappedIdentityGlyphs[i],
                                          pCharPosAry[i],
+                                         nNativeGlyphWidth,
                                          &rLayout ) );
             if( bVertical )
                 aGNGlyphPos.Y() += pGlyphWidths[i];

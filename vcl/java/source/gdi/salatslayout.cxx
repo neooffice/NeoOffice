@@ -2096,3 +2096,60 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 
 	return pRet;
 }
+
+// ----------------------------------------------------------------------------
+
+sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const
+{
+	sal_Int32 nRet = 0;
+
+	if ( !maLayoutData.size() )
+		return nRet;
+
+	unsigned int nRunIndex = 0;
+	ImplATSLayoutData *pLayoutData = maLayoutData[ nRunIndex ];
+	int nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
+	maRuns.ResetPos();
+	while ( !maRuns.PosIsInRun( nCharPos ) )
+	{
+		maRuns.NextRun();
+		nRunIndex++;
+		if ( nRunIndex < maLayoutData.size() )
+		{
+			pLayoutData = maLayoutData[ nRunIndex ];
+			nMinCharPos = maLayoutMinCharPos[ nRunIndex ];
+		}
+		else
+		{
+			pLayoutData = NULL;
+			break;
+		}
+	}
+
+	if ( !pLayoutData )
+		return nRet;
+
+	int nIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinCharPos ];
+	if ( nIndex < 0 )
+		return nRet;
+
+	// Check if this is a mirrored character
+	sal_Unicode nChar = pLayoutData->mpHash->mpStr[ nIndex ];
+	if ( pLayoutData->mpHash->mbRTL )
+	{
+		::std::hash_map< sal_Unicode, ImplATSLayoutData* >::const_iterator mit = maMirroredLayoutData.find( nChar );
+		if ( mit != maMirroredLayoutData.end() )
+		{
+			pLayoutData = mit->second;
+			nIndex = 0;
+		}
+	}
+
+	GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
+
+	ATSGlyphIdealMetrics aIdealMetrics;
+	if ( ATSUGlyphGetIdealMetrics( pLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), &aIdealMetrics ) == noErr )
+		nRet = Float32ToLong( aIdealMetrics.advance.x * pLayoutData->mfFontScaleY * UNITS_PER_PIXEL );
+
+	return nRet;
+}

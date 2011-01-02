@@ -555,6 +555,7 @@ public:
         sal_Int32   m_nMappedFontSubId;
         bool        m_bIdentityGlyph;
         int         m_nCharPos;
+        sal_Int32   m_nRealNativeWidth;
         SalLayout*  m_pLayout;
 #else	// USE_JAVA
         sal_uInt8   m_nMappedGlyphId;
@@ -569,6 +570,7 @@ public:
                   sal_Int32 nFontSubId,
                   bool bIdentityGlyph,
                   int nCharPos,
+                  sal_Int32 nRealNativeWidth,
                   SalLayout *pLayout )
 #else	// USE_JAVA
                   sal_uInt8 nMappedGlyphId )
@@ -579,6 +581,7 @@ public:
           , m_nMappedFontSubId( nFontSubId )
           , m_bIdentityGlyph( bIdentityGlyph )
           , m_nCharPos( nCharPos )
+          , m_nRealNativeWidth( nRealNativeWidth )
           , m_pLayout( pLayout )
 #endif	// USE_JAVA
         {}

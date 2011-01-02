@@ -88,6 +88,7 @@ public:
 	virtual bool		GetOutline( SalGraphics& rGraphics, ::basegfx::B2DPolyPolygonVector& rVector ) const;
 
 	ImplATSLayoutData*	GetVerticalGlyphTranslation( sal_Int32 nGlyph, int nCharPos, long& nX, long& nY ) const;
+	sal_Int32			GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) const;
 
 	void				Destroy();
 };
