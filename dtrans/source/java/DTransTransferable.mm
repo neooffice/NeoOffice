@@ -155,6 +155,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (NSData *)dataForType;
 - (void)dealloc;
 - (void)destroyData;
+- (void)flush:(NSNumber *)pChangeCount;
 - (void)getBMPDataForType:(NSString *)pType;
 - (void)getChangeCount:(id)pObject;
 - (void)getDataForType:(NSString *)pType;
@@ -192,6 +193,33 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 		[mpTypes release];
 
 	[super dealloc];
+}
+
+- (void)flush:(NSNumber *)pChangeCount;
+{
+	if ( mpPasteboardName && pChangeCount )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+		{
+			// While we have ownership, force each type to be rendered
+			NSArray *pTypes = [pPasteboard types];
+			if ( pTypes )
+			{
+				unsigned int nCount = [pTypes count];
+				unsigned int i = 0;
+				for ( ; i < nCount ; i++ )
+				{
+					if ( [pChangeCount intValue] != [pPasteboard changeCount] )
+						break;
+
+					NSString *pType = (NSString *)[pTypes objectAtIndex:i];
+					if ( pType )
+						[pPasteboard dataForType:pType];
+				}
+			}
+		}
+	}
 }
 
 - (void)destroyData
@@ -844,7 +872,20 @@ static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRe
 
 void DTransTransferable::flush()
 {
-	// TODO: Force pasteboard to render data if we still have ownership
+	// Force pasteboard to render data if we still have ownership
+	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD && mnChangeCount >= 0 )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		if ( pHelper )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pHelper performSelectorOnMainThread:@selector(flush:) withObject:[NSNumber numberWithInt:mnChangeCount] waitUntilDone:YES modes:pModes];
+		}
+
+		[pPool release];
+	}
 }
 
 // ============================================================================
@@ -858,7 +899,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
-		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		bool bDataAvailable = false;
 		bool bDataRetrieved = false;
@@ -1241,7 +1282,7 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 
 	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
-		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
 		if ( pHelper )
@@ -1310,7 +1351,7 @@ sal_Bool DTransTransferable::hasOwnership()
 
 	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD && mnChangeCount >= 0 )
 	{
-		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
 		if ( pHelper )
@@ -1338,7 +1379,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
-		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 		const NSString *pRequestedType = nil;
 		Type aRequestedDataType;
@@ -1441,7 +1482,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				}
 			}
 
-			NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 			NSMutableArray *pTypes = [NSMutableArray arrayWithCapacity:nLen];
 			if ( pTypes )
