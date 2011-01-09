@@ -1445,7 +1445,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 // ----------------------------------------------------------------------------
 
-sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
+sal_Bool DTransTransferable:setContents( const Reference< XTransferable > &xTransferable )
 {
 	sal_Bool out = sal_False;
 
@@ -1505,20 +1505,19 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 					}
 				}
 
-				if ( [pTypes count] )
+				// Do not retain as invoking alloc disables autorelease
+				// and the object will be released in the object's
+				// pasteboardChangedOwner: selector. Note that we will pass
+				// a zero length types array as that is needed to clear and
+				// take ownership of the clipboard.
+				DTransPasteboardOwner *pOwner = [[DTransPasteboardOwner alloc] initWithTransferable:this pasteboardType:mnTransferableType types:pTypes];
+				if ( pOwner )
 				{
-					// Do not retain as invoking alloc disables autorelease
-					// and the object will be released in the object's
-					// pasteboardChangedOwner: selector
-					DTransPasteboardOwner *pOwner = [[DTransPasteboardOwner alloc] initWithTransferable:this pasteboardType:mnTransferableType types:pTypes];
-					if ( pOwner )
-					{
-						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-						[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:pOwner waitUntilDone:YES modes:pModes];
-						mnChangeCount = [pOwner changeCount];
-						if ( mnChangeCount >= 0 )
-							out = sal_True;
-					}
+					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+					[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:pOwner waitUntilDone:YES modes:pModes];
+					mnChangeCount = [pOwner changeCount];
+					if ( mnChangeCount >= 0 )
+						out = sal_True;
 				}
 			}
 
