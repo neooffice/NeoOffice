@@ -518,7 +518,6 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 - (void)pasteboardChangedOwner:(NSPasteboard *)pSender
 {
-	// TODO: notify C++ code of ownership change
 	[self release];
 }
 
