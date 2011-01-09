@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#define _DTRANSCLIPBOARD_CXX
-
 #include <list>
 
 #ifndef _DTRANSCLIPBOARD_HXX
@@ -53,8 +51,8 @@
 #include "HtmlFmtFlt.hxx"
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
-#include <QuickTime/QuickTime.h>
+#import <AppKit/AppKit.h>
+#import <QuickTime/QuickTime.h>
 #include <postmac.h>
 
 using namespace com::sun::star::datatransfer;
@@ -66,6 +64,20 @@ using namespace vcl;
 using namespace vos;
 
 static UInt32 nSupportedTypes = 9;
+
+// List of supported native types in priority order
+static const NSString *aSupportedPasteboardTypes[] = {
+	// Mark NSURLPboardType as text to ensure that it is the preferred flavor
+	NSURLPboardType,
+	NSRTFPboardType,
+	NSHTMLPboardType,
+	NSStringPboardType,
+	nil, // NSPasteboard has no matching non-unicode text type
+	NSPDFPboardType,
+	nil, // NSPasteboard has no matching PNG image format until Mac OS X 10.6
+	NSTIFFPboardType,
+	NSPICTPboardType
+};
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
@@ -83,7 +95,7 @@ static FourCharCode aSupportedNativeTypes[] = {
 
 // List of supported types that are text
 static bool aSupportedTextTypes[] = {
-	// Mark 'furl' as text to ensure that it is the preferred flavor
+	// Mark NSURLPboardType as text to ensure that it is the preferred flavor
 	true,
 	true,
 	true,
@@ -123,28 +135,515 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 
 static ::std::list< DTransTransferable* > aTransferableList;
 static DragSendDataUPP pDragSendDataUPP = NULL;
-static ScrapPromiseKeeperUPP pScrapPromiseKeeperUPP = NULL;
+
+static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString *pType );
 
 // ============================================================================
 
-static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransferableType, FlavorType nType, void *pData )
+@interface DTransPasteboardHelper : NSObject
 {
-	OSStatus nErr;
-	if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-		nErr = noTypeErr;
-	else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-		nErr = cantGetFlavorErr;
-	else
-		nErr = noTypeErr;
+	NSData*							mpBMPData;
+	int								mnChangeCount;
+	NSData*							mpData;
+	const NSString*					mpPasteboardName;
+	NSString*						mpString;
+	BOOL							mbTypeAvailable;
+	const NSArray*					mpTypes;
+}
+- (NSData *)BMPDataForType;
+- (int)changeCount;
+- (NSData *)dataForType;
+- (void)dealloc;
+- (void)destroyData;
+- (void)getBMPDataForType:(NSString *)pType;
+- (void)getChangeCount:(id)pObject;
+- (void)getDataForType:(NSString *)pType;
+- (void)getStringForType:(NSString *)pType;
+- (void)getTypeAvailable:(NSString *)pType;
+- (void)getTypes:(id)pObject;
+- (id)initWithPasteboardType:(int)nTransferableType;
+- (BOOL)isTypeAvailable;
+- (NSString *)stringForType;
+- (const NSArray *)types;
+@end
 
-	if ( !Application::IsShutDown() )
+@implementation DTransPasteboardHelper
+
+- (NSData *)BMPDataForType
+{
+	return mpBMPData;
+}
+
+- (int)changeCount
+{
+	return mnChangeCount;
+}
+
+- (NSData *)dataForType
+{
+	return mpData;
+}
+
+- (void)dealloc
+{
+	[self destroyData];
+
+	if ( mpTypes )
+		[mpTypes release];
+
+	[super dealloc];
+}
+
+- (void)destroyData
+{
+	mbTypeAvailable = NO;
+
+	if ( mpBMPData )
+	{
+		[mpBMPData release];
+		mpBMPData = nil;
+	}
+
+	if ( mpData )
+	{
+		[mpData release];
+		mpData = nil;
+	}
+
+	if ( mpString )
+	{
+		[mpString release];
+		mpString = nil;
+	}
+}
+
+- (void)getBMPDataForType:(NSString *)pType
+{
+	[self destroyData];
+
+	if ( mpPasteboardName && pType )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+		{
+			@try
+			{
+				if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+				{
+					mbTypeAvailable = YES;
+
+					NSData *pPasteboardData = [pPasteboard dataForType:pType];
+					if ( pPasteboardData )
+					{
+						NSImage *pImage = [[NSImage alloc] initWithData:pPasteboardData];
+						if ( pImage )
+						{
+							[pImage autorelease];
+
+							NSData *pTIFFData = [pImage TIFFRepresentation];
+							if ( pTIFFData )
+							{
+								NSBitmapImageRep *pImageRep = [NSBitmapImageRep imageRepWithData:pTIFFData];
+								if ( pImageRep )
+									mpBMPData = [pImageRep representationUsingType:NSBMPFileType properties:nil];
+							}
+						}
+					}
+				}
+			}
+			@catch ( NSException *pExc )
+			{
+				NSLog( @"%@", [pExc reason] );
+			}
+
+			if ( mpBMPData )
+			{
+				if ( mbTypeAvailable )
+					[mpBMPData retain];
+				else
+					mpBMPData = nil;
+			}
+		}
+	}
+}
+
+- (void)getChangeCount:(id)pObject
+{
+	if ( mpPasteboardName )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+			mnChangeCount = [pPasteboard changeCount];
+	}
+}
+
+- (void)getDataForType:(NSString *)pType
+{
+	[self destroyData];
+
+	if ( mpPasteboardName && pType )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+		{
+			@try
+			{
+				if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+				{
+					mbTypeAvailable = YES;
+					mpData = [pPasteboard dataForType:pType];
+				}
+			}
+			@catch ( NSException *pExc )
+			{
+				NSLog( @"%@", [pExc reason] );
+			}
+
+			if ( mpData )
+			{
+				if ( mbTypeAvailable )
+					[mpData retain];
+				else
+					mpData = nil;
+			}
+		}
+	}
+}
+
+- (void)getStringForType:(NSString *)pType
+{
+	[self destroyData];
+
+	if ( mpPasteboardName && pType )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+		{
+			@try
+			{
+				if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+				{
+					mbTypeAvailable = YES;
+					mpString = [pPasteboard stringForType:pType];
+				}
+			}
+			@catch ( NSException *pExc )
+			{
+				NSLog( @"%@", [pExc reason] );
+			}
+
+			if ( mpString )
+			{
+				if ( mbTypeAvailable )
+					[mpString retain];
+				else
+					mpString = nil;
+			}
+		}
+	}
+}
+
+- (void)getTypeAvailable:(NSString *)pType
+{
+	mbTypeAvailable = NO;
+
+	if ( mpData )
+	{
+		[mpData release];
+		mpData = nil;
+	}
+
+	if ( mpString )
+	{
+		[mpString release];
+		mpString = nil;
+	}
+
+	if ( mpPasteboardName && pType )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard && [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+			mbTypeAvailable = YES;
+	}
+}
+
+- (void)getTypes:(id)pObject
+{
+	if ( mpTypes )
+	{
+		[mpTypes release];
+		mpTypes = nil;
+	}
+
+	if ( mpPasteboardName )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+		{
+			mpTypes = [pPasteboard types];
+			if ( mpTypes )
+				[mpTypes retain];
+		}
+	}
+}
+
+- (id)initWithPasteboardType:(int)nTransferableType
+{
+	[super init];
+
+	mnChangeCount = -1;
+	mpBMPData = nil;
+	mpData = nil;
+	if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+		mpPasteboardName = NSDragPboard;
+	else
+		mpPasteboardName = NSGeneralPboard;
+	mpString = nil;
+	mbTypeAvailable = NO;
+	mpTypes = nil;
+
+	return self;
+}
+
+- (BOOL)isTypeAvailable
+{
+	return mbTypeAvailable;
+}
+
+- (NSString *)stringForType
+{
+	return mpString;
+}
+
+- (const NSArray*)types
+{
+	return mpTypes;
+}
+
+@end
+
+@interface DTransPasteboardOwner : NSObject
+{
+	int								mnChangeCount;
+	DTransTransferable*				mpTransferable;
+	const NSString*					mpPasteboardName;
+	const NSArray*					mpTypes;
+}
+- (int)changeCount;
+- (void)dealloc;
+- (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardType:(int)nTransferableType types:(const NSArray *)pTypes;
+- (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
+- (void)pasteboardChangedOwner:(NSPasteboard *)pSender;
+- (void)setContents:(id)pObject;
+@end
+
+@implementation DTransPasteboardOwner
+
+- (int)changeCount
+{
+	return mnChangeCount;
+}
+
+- (void)dealloc
+{
+	if ( mpTypes )
+		[mpTypes release];
+	
+	[super dealloc];
+}
+
+- (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardType:(int)nTransferableType types:(const NSArray *)pTypes
+{
+	[super init];
+
+	mnChangeCount = -1;
+	mpTransferable = pTransferable;
+	if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
+		mpPasteboardName = NSDragPboard;
+	else
+		mpPasteboardName = NSGeneralPboard;
+	mpTypes = pTypes;
+	if ( mpTypes )
+		[mpTypes retain];
+
+	return self;
+}
+
+- (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType
+{
+	if ( pSender && pType )
+	{
+		id pData = nil;
+		if ( mpTransferable )
+			pData = ImplGetDataForType( mpTransferable, pType );
+		if ( !pData )
+			pData = [NSData data];
+		if ( pData )
+		{
+			if ( [pData isKindOfClass:[NSString class]] )
+				[pSender setString:(NSString *)pData forType:pType];
+			else if ( [pData isKindOfClass:[NSData class]] )
+				[pSender setData:(NSData *)pData forType:pType];
+		}
+	}
+}
+
+- (void)pasteboardChangedOwner:(NSPasteboard *)pSender
+{
+	// TODO: notify C++ code of ownership change
+	[self release];
+}
+
+- (void)setContents:(id)pObject
+{
+	if ( mpPasteboardName && mpTypes )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+			mnChangeCount = [pPasteboard declareTypes:mpTypes owner:self];
+	}
+}
+
+@end
+
+// ============================================================================
+
+static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString *pType )
+{
+	id pRet = nil;
+
+	if ( pTransferable && pType && !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
 		rSolarMutex.acquire();
 		if ( !Application::IsShutDown() )
 		{
-			DTransTransferable *pTransferable = (DTransTransferable *)pData;
+			bool bTransferableFound = false;
+			if ( pTransferable )
+			{
+				for ( ::std::list< DTransTransferable* >::const_iterator it = aTransferableList.begin(); it != aTransferableList.end(); ++it )
+				{
+					if ( pTransferable == *it )
+					{
+						bTransferableFound = true;
+						break;
+					}
+				}
+			}
 
+			if ( bTransferableFound )
+			{
+				bool bFlavorFound = false;
+				bool bFlavorIsText = false;
+				DataFlavor aFlavor;
+				for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
+					if ( aSupportedPasteboardTypes[ i ] && [aSupportedPasteboardTypes[ i ] isEqualToString:pType] )
+					{
+						aFlavor.MimeType = aSupportedMimeTypes[ i ];
+						aFlavor.DataType = aSupportedDataTypes[ i ];
+						if ( pTransferable->isDataFlavorSupported( aFlavor ) )
+						{
+							bFlavorFound = true;
+							bFlavorIsText = aSupportedTextTypes[ i ];
+							break;
+						}
+					}
+				}
+
+				if ( bFlavorFound )
+				{
+					bool bDataFound = false;
+					Any aValue;
+					try {
+						aValue = pTransferable->getTransferData( aFlavor );
+						bDataFound = true;
+					}
+					catch ( ... )
+					{
+					}
+
+					if ( bDataFound )
+					{
+						if ( aValue.getValueType().equals( getCppuType( ( OUString* )0 ) ) )
+						{
+							OUString aString;
+							aValue >>= aString;
+							sal_Unicode *pArray = (sal_Unicode *)aString.getStr();
+							sal_Int32 nLen = aString.getLength();
+							if ( pArray && nLen )
+							{
+								NSString *pData = [NSString stringWithCharacters:pArray length:nLen];
+								if ( pData )
+									pRet = pData;
+							}
+						}
+						else if ( aValue.getValueType().equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+						{
+							Sequence< sal_Int8 > aData;
+							aValue >>= aData;
+
+							// Fix bug 3640 by not adding the Microsoft Office
+							// HTML headers. Microsoft Office 2004 and 2008 do
+							// not appear to need those headers and the headers
+							// are not understood by other applications.
+							sal_Int8 *pArray = aData.getArray();
+							sal_Int32 nLen = aData.getLength();
+							if ( pArray && nLen )
+							{
+								NSData *pData = [NSData dataWithBytes:pArray length:nLen];
+								if ( pData )
+								{
+									if ( !bFlavorIsText )
+									{
+										// Convert from our BMP data
+										Class aClass = [NSImageRep imageRepClassForPasteboardType:pType];
+										if ( aClass && [aClass canInitWithData:pData] )
+										{
+											NSImageRep *pImageRep = [aClass imageRepWithData:pData];
+											if ( pImageRep )
+											{
+												if ( [pImageRep isKindOfClass:[NSPDFImageRep class]] )
+													pData = [(NSPDFImageRep *)pImageRep PDFRepresentation];
+												else if ( [pImageRep isKindOfClass:[NSEPSImageRep class]] )
+													pData = [(NSEPSImageRep *)pImageRep EPSRepresentation];
+												else if ( [pImageRep isKindOfClass:[NSBitmapImageRep class]] )
+													pData = [(NSBitmapImageRep *)pImageRep TIFFRepresentation];
+												else
+													pData = nil;
+											}
+										}
+									}
+
+									if ( pData )
+										pRet = pData;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			rSolarMutex.release();
+		}
+	}
+
+	return pRet;
+}
+
+// ----------------------------------------------------------------------------
+
+static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRef aItem, DragRef aDrag )
+{
+	OSStatus nErr = cantGetFlavorErr;
+
+	DTransTransferable *pTransferable = (DTransTransferable *)pData;
+
+	if ( pTransferable && !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
 			bool bTransferableFound = false;
 			if ( pTransferable )
 			{
@@ -226,10 +725,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 														aBuf[ j ] = '\r';
 												}
 
-												if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-													nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nBufLen, (const void *)aBuf );
-												else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-													nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
+												nErr = SetDragItemFlavorData( aDrag, (DragItemRef)pData, nType, (const void *)aBuf, nBufLen, 0 );
 												delete aBuf;
 											}
 										}
@@ -240,10 +736,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 								else
 								{
  									nLen *= sizeof( sal_Unicode );
-									if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-										nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)aString.getStr() );
-									else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-										nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
+									nErr = SetDragItemFlavorData( aDrag, (DragItemRef)pData, nType, (const void *)aString.getStr(), nLen, 0 );
 								}
 							}
 						}
@@ -281,10 +774,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 													if ( GraphicsImportGetAsPicture( aImporter, (PicHandle *)&hPict ) == noErr )
 													{
 														HLock( hPict );
-														if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-															nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, GetHandleSize( (Handle)hPict ), (const void *)*hPict );
-														else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-															nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
+														nErr = SetDragItemFlavorData( aDrag, (DragItemRef)pData, nType, (const void *)*hPict, GetHandleSize( (Handle)hPict ), 0 );
 														HUnlock( hPict );
 
 														DisposeHandle( hPict );
@@ -310,10 +800,7 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 																		{
 																			Sequence< sal_Int8 > aExportData( nDataLen );
 																			HLock( hExportData );
-																			if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-																				nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nDataLen, (const void *)*hExportData );
-																			else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-																				nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
+																			nErr = SetDragItemFlavorData( aDrag, (DragItemRef)pData, nType, (const void *)*hExportData, nDataLen, 0 );
 																			HUnlock( hExportData );
 																		}
 																	}
@@ -336,15 +823,9 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 										CloseComponent( aImporter );
 									}
 								}
-								else
+								else if ( pArray && nLen )
 								{
-									if ( pArray && nLen )
-									{
-										if ( nTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
-											nErr = PutScrapFlavor( (ScrapRef)pNativeTransferable, nType, kScrapFlavorMaskNone, nLen, (const void *)pArray );
-										else if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-											nErr = SetDragItemFlavorData( (DragRef)pNativeTransferable, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
-									}
+									nErr = SetDragItemFlavorData( aDrag, (DragItemRef)pData, nType, (const void *)pArray, nLen, 0 );
 								}
 							}
 						}
@@ -359,26 +840,11 @@ static OSStatus ImplSetTransferableData( void *pNativeTransferable, int nTransfe
 	return nErr;
 }
 
-// ----------------------------------------------------------------------------
-
-static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRef aItem, DragRef aDrag )
-{
-	return ImplSetTransferableData( (void *)aDrag, TRANSFERABLE_TYPE_DRAG, nType, pData );
-}
-
-// ----------------------------------------------------------------------------
-
-static OSStatus ImplScrapPromiseKeeperCallback( ScrapRef aScrap, ScrapFlavorType nType, void *pData )
-{
-	return ImplSetTransferableData( (void *)aScrap, TRANSFERABLE_TYPE_CLIPBOARD, nType, pData );
-}
-
 // ============================================================================
 
 void DTransTransferable::flush()
 {
-	if ( hasOwnership() )
-		CallInScrapPromises();
+	// TODO: Force pasteboard to render data if we still have ownership
 }
 
 // ============================================================================
@@ -390,234 +856,339 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 	Any out;
 
-	FourCharCode nRequestedType;
-	memset( &nRequestedType, 0, sizeof( FourCharCode ) );
-	bool bRequestedTypeIsText = false;
-	OSStatus nErr = noErr;
-
-	// Run a loop so that if data type fails, we can try another
-	for ( USHORT i = 0; i < nSupportedTypes; i++ )
+	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
-		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
-		{
-			nRequestedType = aSupportedNativeTypes[ i ];
-			bRequestedTypeIsText = aSupportedTextTypes[ i ];
-		}
-		else
-		{
-			continue;
-		}
+		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
 
-		MacOSSize nSize;
-		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+		bool bDataAvailable = false;
+		bool bDataRetrieved = false;
+		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		if ( pHelper )
 		{
-			nErr = GetScrapFlavorSize( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize );
-		}
-		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && mnItem )
-		{
-			DragItemRef aItem;
-			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, mnItem, &aItem ) == noErr )
-				nErr = GetFlavorDataSize( (DragRef)mpNativeTransferable, aItem, nRequestedType, &nSize );
-		}
-		else
-		{
-			nErr = noTypeErr;
-			nSize = 0;
-		}
+			NSString *pRequestedType = nil;
+			bool bRequestedTypeIsText = false;
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 
-		if ( nErr == noErr && nSize > 0 )
-		{
-			bool bDataFound = false;
-			Handle hData = NewHandle( nSize );
-
-			HLock( hData );
-			if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+			// Run a loop so that if data type fails, we can try another
+			for ( USHORT i = 0; !bDataRetrieved && i < nSupportedTypes; i++ )
 			{
-				bDataFound = ( GetScrapFlavorData( (ScrapRef)mpNativeTransferable, nRequestedType, &nSize, *hData ) == noErr );
-			}
-			else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && mnItem )
-			{
-				DragItemRef aItem;
-				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, mnItem, &aItem ) == noErr )
-					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, *hData, &nSize, 0 ) == noErr );
-			}
-			HUnlock( hData );
+				if ( aSupportedPasteboardTypes[ i ] && aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
+				{
+					pRequestedType = aSupportedPasteboardTypes[ i ];
+					bRequestedTypeIsText = aSupportedTextTypes[ i ];
+				}
+				else
+				{
+					continue;
+				}
 
-			if ( bDataFound )
-			{
 				if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 				{
-					OUString aString;
-					sal_Int32 nLen = nSize;
-					if ( nRequestedType == kQTFileTypeText )
+					[pHelper performSelectorOnMainThread:@selector(getStringForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+					bDataAvailable = [pHelper isTypeAvailable];
+					NSString *pString = [pHelper stringForType];
+					if ( pString )
 					{
-						HLock( hData );
-						if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
-							nLen--;
-						CFStringRef aCFString = CFStringCreateWithBytes( kCFAllocatorDefault, (const UInt8 *)*hData, nLen, CFStringGetSystemEncoding(), false );
-						HUnlock( hData );
-
-						if ( aCFString )
+						const char *pUTF8String = [pString UTF8String];
+						if ( pUTF8String )
 						{
-							CFRange aRange;
-							aRange.location = 0;
-							aRange.length = CFStringGetLength( aCFString );
-							// [ed 3/24/07 Place on to heap, not stack.  Bug #2171
-							UniChar *aBuf = new UniChar[ aRange.length ];
-							if ( aBuf )
+							OUString aString( pUTF8String, strlen( pUTF8String ), RTL_TEXTENCODING_UTF8 );
+
+							// Replace carriage returns with line feeds
+							aString = aString.replace( (sal_Unicode)'\r', (sal_Unicode)'\n' );
+
+							out <<= aString;
+							bDataRetrieved = true;
+						}
+					}
+				}
+				else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+				{
+					if ( bRequestedTypeIsText )
+					{
+						[pHelper performSelectorOnMainThread:@selector(getDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+						bDataAvailable = [pHelper isTypeAvailable];
+						NSData *pData = [pHelper dataForType];
+						if ( pData )
+						{
+							const void *pArray = [pData bytes];
+							unsigned int nLen = [pData length];
+
+							if ( pArray && nLen )
 							{
-								CFStringGetCharacters( aCFString, aRange, aBuf );
-								aString = OUString( (sal_Unicode *)aBuf, aRange.length );
-								CFRelease( aCFString );
-								delete[] aBuf;
+								Sequence< sal_Int8 > aExportData( nLen );
+								memcpy( aExportData.getArray(), pArray, nLen );
+
+								// Replace carriage returns with line feeds
+								sal_Char *pCharArray = (sal_Char *)aExportData.getArray();
+								if ( pCharArray )
+								{
+									for ( unsigned int j = 0; j < nLen; j++ )
+									{
+										if ( pCharArray[ j ] == '\r' )
+											pCharArray[ j ] = '\n';
+									}
+								}
+
+								// Strip out HTML Microsoft Office headers
+								if ( [NSHTMLPboardType isEqualToString:pRequestedType] && isHTMLFormat( aExportData ) )
+									aExportData = HTMLFormatToTextHtml( aExportData );
+
+								out <<= aExportData;
+								bDataRetrieved = true;
 							}
 						}
 					}
 					else
 					{
-						HLock( hData );
-						nLen = nSize / 2;
-						if ( ( (sal_Unicode *)*hData )[ nLen - 1 ] == 0 )
-							nLen--;
-						aString = OUString( (sal_Unicode *)*hData, nLen );
-						HUnlock( hData );
+						[pHelper performSelectorOnMainThread:@selector(getBMPDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+						bDataAvailable = [pHelper isTypeAvailable];
+						NSData *pData = [pHelper BMPDataForType];
+						if ( pData )
+						{
+							const void *pArray = [pData bytes];
+							unsigned int nLen = [pData length];
+
+							if ( pArray && nLen )
+							{
+								Sequence< sal_Int8 > aExportData( nLen );
+								memcpy( aExportData.getArray(), pArray, nLen );
+
+								out <<= aExportData;
+								bDataRetrieved = true;
+							}
+						}
 					}
-
-					// Replace carriage returns with line feeds
-					aString = aString.replace( (sal_Unicode)'\r', (sal_Unicode)'\n' );
-
-					out <<= aString;
 				}
-				else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+			}
+		}
+
+		if ( !bDataRetrieved )
+		{
+			if ( bDataAvailable )
+				throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+			else
+				throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+		}
+
+		[pPool release];
+	}
+	else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && mnItem )
+	{
+		FourCharCode nRequestedType;
+		memset( &nRequestedType, 0, sizeof( FourCharCode ) );
+		bool bRequestedTypeIsText = false;
+		OSStatus nErr = noErr;
+
+		// Run a loop so that if data type fails, we can try another
+		for ( USHORT i = 0; i < nSupportedTypes; i++ )
+		{
+			if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
+			{
+				nRequestedType = aSupportedNativeTypes[ i ];
+				bRequestedTypeIsText = aSupportedTextTypes[ i ];
+			}
+			else
+			{
+				continue;
+			}
+
+			MacOSSize nSize = 0;
+			DragItemRef aItem;
+			if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, mnItem, &aItem ) == noErr )
+				nErr = GetFlavorDataSize( (DragRef)mpNativeTransferable, aItem, nRequestedType, &nSize );
+
+			if ( nErr == noErr && nSize > 0 )
+			{
+				bool bDataFound = false;
+				Handle hData = NewHandle( nSize );
+
+				HLock( hData );
+				DragItemRef aItem;
+				if ( GetDragItemReferenceNumber( (DragRef)mpNativeTransferable, mnItem, &aItem ) == noErr )
+					bDataFound = ( GetFlavorData( (DragRef)mpNativeTransferable, aItem, nRequestedType, *hData, &nSize, 0 ) == noErr );
+				HUnlock( hData );
+
+				if ( bDataFound )
 				{
-					if ( !bRequestedTypeIsText )
+					if ( aFlavor.DataType.equals( getCppuType( ( OUString* )0 ) ) )
 					{
-						// Convert to PNG format
-						if ( nRequestedType == kQTFileTypePNG )
+						OUString aString;
+						sal_Int32 nLen = nSize;
+						if ( nRequestedType == kQTFileTypeText )
 						{
 							HLock( hData );
-							Sequence< sal_Int8 > aExportData( nSize );
-							memcpy( aExportData.getArray(), *hData, nSize );
+							if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
+								nLen--;
+							CFStringRef aCFString = CFStringCreateWithBytes( kCFAllocatorDefault, (const UInt8 *)*hData, nLen, CFStringGetSystemEncoding(), false );
 							HUnlock( hData );
-							out <<= aExportData;
-						}
-						else if ( nRequestedType == kQTFileTypePicture )
-						{
-							ComponentInstance aExporter;
-							if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypePNG, &aExporter ) == noErr )
+
+							if ( aCFString )
 							{
-								if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
+								CFRange aRange;
+								aRange.location = 0;
+								aRange.length = CFStringGetLength( aCFString );
+								// [ed 3/24/07 Place on to heap, not stack.  Bug #2171
+								UniChar *aBuf = new UniChar[ aRange.length ];
+								if ( aBuf )
 								{
-									Handle hExportData = NewHandle( 0 );
-									if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-									{
-										ULONG nDataLen;
-										if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-										{
-											Sequence< sal_Int8 > aExportData( nDataLen );
-											HLock( hExportData );
-											memcpy( aExportData.getArray(), *hExportData, nDataLen );
-											HUnlock( hExportData );
-											out <<= aExportData;
-										}
-									}
-
-									DisposeHandle( hExportData );
+									CFStringGetCharacters( aCFString, aRange, aBuf );
+									aString = OUString( (sal_Unicode *)aBuf, aRange.length );
+									CFRelease( aCFString );
+									delete[] aBuf;
 								}
-
-								CloseComponent( aExporter );
 							}
 						}
 						else
 						{
-							ComponentInstance aImporter;
-							if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
+							HLock( hData );
+							nLen = nSize / 2;
+							if ( ( (sal_Unicode *)*hData )[ nLen - 1 ] == 0 )
+								nLen--;
+							aString = OUString( (sal_Unicode *)*hData, nLen );
+							HUnlock( hData );
+						}
+
+						// Replace carriage returns with line feeds
+						aString = aString.replace( (sal_Unicode)'\r', (sal_Unicode)'\n' );
+
+						out <<= aString;
+					}
+					else if ( aFlavor.DataType.equals( getCppuType( ( Sequence< sal_Int8 >* )0 ) ) )
+					{
+						if ( !bRequestedTypeIsText )
+						{
+							// Convert to PNG format
+							if ( nRequestedType == kQTFileTypePNG )
 							{
-								Rect aBounds;
-								if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
+								HLock( hData );
+								Sequence< sal_Int8 > aExportData( nSize );
+								memcpy( aExportData.getArray(), *hData, nSize );
+								HUnlock( hData );
+								out <<= aExportData;
+							}
+							else if ( nRequestedType == kQTFileTypePicture )
+							{
+								ComponentInstance aExporter;
+								if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypePNG, &aExporter ) == noErr )
 								{
-									GWorldPtr aGWorld;
-									if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
+									if ( GraphicsExportSetInputPicture( aExporter, (PicHandle)hData ) == noErr )
 									{
-										if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
+										Handle hExportData = NewHandle( 0 );
+										if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
 										{
-											ComponentInstance aExporter;
-											if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypePNG, &aExporter ) == noErr )
+											ULONG nDataLen;
+											if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
 											{
-												if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
-												{
-													Handle hExportData = NewHandle( 0 );
-													if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
-													{
-														ULONG nDataLen;
-														if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
-														{
-															Sequence< sal_Int8 > aExportData( nDataLen );
-															HLock( hExportData );
-															memcpy( aExportData.getArray(), *hExportData, nDataLen );
-															HUnlock( hExportData );
-															out <<= aExportData;
-														}
-													}
-
-													DisposeHandle( hExportData );
-												}
-
-												CloseComponent( aExporter );
+												Sequence< sal_Int8 > aExportData( nDataLen );
+												HLock( hExportData );
+												memcpy( aExportData.getArray(), *hExportData, nDataLen );
+												HUnlock( hExportData );
+												out <<= aExportData;
 											}
 										}
 
-										DisposeGWorld( aGWorld );
+										DisposeHandle( hExportData );
 									}
+
+									CloseComponent( aExporter );
 								}
-
-								CloseComponent( aImporter );
 							}
-						}
-					}
-					else
-					{
-						HLock( hData );
-						sal_Int32 nLen = nSize;
-						if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
-							nLen--;
-						Sequence< sal_Int8 > aExportData( nLen );
-						memcpy( aExportData.getArray(), *hData, nLen );
-						HUnlock( hData );
-
-						// Replace carriage returns with line feeds
-						sal_Char *pArray = (sal_Char *)aExportData.getArray();
-						if ( pArray )
-						{
-							for ( int j = 0; j < nLen; j++ )
+							else
 							{
-								if ( pArray[ j ] == '\r' )
-									pArray[ j ] = '\n';
+								ComponentInstance aImporter;
+								if ( OpenADefaultComponent( GraphicsImporterComponentType, nRequestedType, &aImporter ) == noErr )
+								{
+									Rect aBounds;
+									if ( GraphicsImportSetDataHandle( aImporter, hData ) == noErr && GraphicsImportGetNaturalBounds( aImporter, &aBounds ) == noErr )
+									{
+										GWorldPtr aGWorld;
+										if ( QTNewGWorld( &aGWorld, k32ARGBPixelFormat, &aBounds, NULL, NULL, 0 ) == noErr )
+										{
+											if ( GraphicsImportSetGWorld( aImporter, aGWorld, NULL ) == noErr && GraphicsImportDraw( aImporter ) == noErr )
+											{
+												ComponentInstance aExporter;
+												if ( OpenADefaultComponent( GraphicsExporterComponentType, kQTFileTypePNG, &aExporter ) == noErr )
+												{
+													if ( GraphicsExportSetInputGWorld( aExporter, aGWorld ) == noErr )
+													{
+														Handle hExportData = NewHandle( 0 );
+														if ( GraphicsExportSetOutputHandle( aExporter, hExportData ) == noErr )
+														{
+															ULONG nDataLen;
+															if ( GraphicsExportDoExport( aExporter, &nDataLen ) == noErr )
+															{
+																Sequence< sal_Int8 > aExportData( nDataLen );
+																HLock( hExportData );
+																memcpy( aExportData.getArray(), *hExportData, nDataLen );
+																HUnlock( hExportData );
+																out <<= aExportData;
+															}
+														}
+
+														DisposeHandle( hExportData );
+													}
+
+													CloseComponent( aExporter );
+												}
+											}
+
+											DisposeGWorld( aGWorld );
+										}
+									}
+
+									CloseComponent( aImporter );
+								}
 							}
 						}
+						else
+						{
+							HLock( hData );
+							sal_Int32 nLen = nSize;
+							if ( ( (sal_Char *)*hData )[ nLen - 1 ] == 0 )
+								nLen--;
+							Sequence< sal_Int8 > aExportData( nLen );
+							memcpy( aExportData.getArray(), *hData, nLen );
+							HUnlock( hData );
 
-						// Strip out HTML Microsoft Office headers
-						if ( nRequestedType == 'HTML' && isHTMLFormat( aExportData ) )
-							aExportData = HTMLFormatToTextHtml( aExportData );
+							// Replace carriage returns with line feeds
+							sal_Char *pArray = (sal_Char *)aExportData.getArray();
+							if ( pArray )
+							{
+								for ( int j = 0; j < nLen; j++ )
+								{
+									if ( pArray[ j ] == '\r' )
+										pArray[ j ] = '\n';
+								}
+							}
 
-						out <<= aExportData;
+							// Strip out HTML Microsoft Office headers
+							if ( nRequestedType == 'HTML' && isHTMLFormat( aExportData ) )
+								aExportData = HTMLFormatToTextHtml( aExportData );
+
+							out <<= aExportData;
+						}
 					}
+
+					// Force a break from the loop
+					i = nSupportedTypes;
 				}
 
-				// Force a break from the loop
-				i = nSupportedTypes;
+				DisposeHandle( hData );
 			}
+		}
 
-			DisposeHandle( hData );
+		if ( !nRequestedType )
+		{
+			if ( nErr == noTypeErr || nErr == cantGetFlavorErr )
+				throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+			else
+				throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
 		}
 	}
-
-	if ( !nRequestedType )
+	else
 	{
-		if ( nErr == noTypeErr || nErr == cantGetFlavorErr )
-			throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
-		else
-			throw IOException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
+		throw UnsupportedFlavorException( aFlavor.MimeType, static_cast< XTransferable * >( this ) );
 	}
 
 	return out;
@@ -625,11 +1196,25 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 // ----------------------------------------------------------------------------
 
+DTransTransferable::DTransTransferable( int nTransferableType ) :
+	mnChangeCount( -1 ),
+	mpNativeTransferable( NULL ),
+	mnTransferableType( nTransferableType ),
+	mnItem( 0 )
+{
+	aTransferableList.push_back( this );
+}
+
+// ----------------------------------------------------------------------------
+
 DTransTransferable::DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem ) :
+	mnChangeCount( -1 ),
 	mpNativeTransferable( pNativeTransferable ),
 	mnTransferableType( nTransferableType ),
 	mnItem( 0 )
 {
+	aTransferableList.push_back( this );
+
 	if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && nItem )
 	{
 		UInt16 nCount = 0;
@@ -656,18 +1241,24 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 
 	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
-		UInt32 nCount;
-		if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
-		{
-			ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
+		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
 
-			if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
+		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		if ( pHelper )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pHelper performSelectorOnMainThread:@selector(getTypes:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			NSArray *pTypes = [pHelper types];
+			if ( pTypes )
 			{
 				for ( USHORT i = 0; i < nSupportedTypes; i++ )
 				{
-					for ( UInt32 j = 0; j < nCount; j++ )
+					unsigned int nCount = [pTypes count];
+					unsigned int j = 0;
+					for ( ; j < nCount; j++ )
 					{
-						if ( aSupportedNativeTypes[ i ] == pInfo[ j ].flavorType )
+						NSString *pType = (NSString *)[pTypes objectAtIndex:j];
+						if ( pType && aSupportedPasteboardTypes[ i ] && [aSupportedPasteboardTypes[ i ] isEqualToString:pType] )
 						{
 							DataFlavor aFlavor;
 							aFlavor.MimeType = aSupportedMimeTypes[ i ];
@@ -679,9 +1270,9 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 					}
 				}
 			}
-
-			delete[] pInfo;
 		}
+
+		[pPool release];
 	}
 	else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && mnItem )
 	{
@@ -717,12 +1308,20 @@ sal_Bool DTransTransferable::hasOwnership()
 {
 	sal_Bool out = sal_False;
 
-	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD && mnChangeCount >= 0 )
 	{
-		ScrapRef aScrap;
+		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
 
-		if ( GetCurrentScrap( &aScrap ) == noErr && aScrap == (ScrapRef)mpNativeTransferable )
-			out = sal_True;
+		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		if ( pHelper )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pHelper performSelectorOnMainThread:@selector(getChangeCount:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			if ( [pHelper changeCount] == mnChangeCount )
+				out = sal_True;
+		}
+
+		[pPool release];
 	}
 
 	return out;
@@ -737,44 +1336,52 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 	sal_Bool out = sal_False;
 
-	FourCharCode nRequestedType;
-	memset( &nRequestedType, 0, sizeof( FourCharCode ) );
-	Type aRequestedDataType;
-	for ( USHORT i = 0; i < nSupportedTypes; i++ )
+	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 	{
-		if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
-		{
-			nRequestedType = aSupportedNativeTypes[ i ];
-			aRequestedDataType = aSupportedDataTypes[ i ];
-			break;
-		}
-	}
+		NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
 
-	if ( nRequestedType )
-	{
-		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
+		const NSString *pRequestedType = nil;
+		Type aRequestedDataType;
+		for ( USHORT i = 0; i < nSupportedTypes; i++ )
 		{
-			UInt32 nCount;
-			if ( GetScrapFlavorCount( (ScrapRef)mpNativeTransferable, &nCount ) == noErr && nCount > 0 )
+			if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
 			{
-				ScrapFlavorInfo *pInfo = new ScrapFlavorInfo[ nCount ];
-
-				if ( GetScrapFlavorInfoList( (ScrapRef)mpNativeTransferable, &nCount, pInfo ) == noErr )
-				{
-					for ( UInt32 i = 0; i < nCount; i++ )
-					{
-						if ( pInfo[ i ].flavorType == nRequestedType && aFlavor.DataType.equals( aRequestedDataType ) )
-						{
-							out = sal_True;
-							break;
-						}
-					}
-				}
-
-				delete[] pInfo;
+				pRequestedType = aSupportedPasteboardTypes[ i ];
+				aRequestedDataType = aSupportedDataTypes[ i ];
+				break;
 			}
 		}
-		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
+
+		if ( pRequestedType )
+		{
+			DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+			if ( pHelper )
+			{
+				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+				[pHelper performSelectorOnMainThread:@selector(getTypeAvailable:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+				if ( [pHelper isTypeAvailable] )
+					out = sal_True;
+			}
+		}
+
+		[pPool release];
+	}
+	else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
+	{
+		FourCharCode nRequestedType;
+		memset( &nRequestedType, 0, sizeof( FourCharCode ) );
+		Type aRequestedDataType;
+		for ( USHORT i = 0; i < nSupportedTypes; i++ )
+		{
+			if ( aFlavor.MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ i ] ) )
+			{
+				nRequestedType = aSupportedNativeTypes[ i ];
+				aRequestedDataType = aSupportedDataTypes[ i ];
+				break;
+			}
+		}
+
+		if ( nRequestedType )
 		{
 			DragItemRef aItem;
 			UInt16 nCount;
@@ -807,48 +1414,38 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 	{
 		if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD )
 		{
-			ScrapRef aScrap;
-			if ( ClearCurrentScrap() == noErr && GetCurrentScrap( &aScrap ) == noErr )
+			Sequence< DataFlavor > xFlavors;
+			try
 			{
-				// We have now cleared the scrap so we now own it
-				mpNativeTransferable = aScrap;
-				out = sal_True;
+				xFlavors = mxTransferable->getTransferDataFlavors();
+			}
+			catch ( ... )
+			{
+			}
 
-				Sequence< DataFlavor > xFlavors;
-				try
+			// Check if text flavors are supported, if so, exclude any
+			// image flavors since we would be just passing a picture
+			// of text
+			sal_Int32 nLen = xFlavors.getLength();
+			bool bTextOnly = false;
+			sal_Int32 i;
+			for ( i = 0; i < nLen; i++ )
+			{
+				for ( USHORT j = 0; j < nSupportedTypes; j++ )
 				{
-					xFlavors = mxTransferable->getTransferDataFlavors();
-				}
-				catch ( ... )
-				{
-				}
-
-				// Check if text flavors are supported, if so, exclude any
-				// image flavors since we would be just passing a picture
-				// of text
-				sal_Int32 nLen = xFlavors.getLength();
-				bool bTextOnly = false;
-				sal_Int32 i;
-				for ( i = 0; i < nLen; i++ )
-				{
-					for ( USHORT j = 0; j < nSupportedTypes; j++ )
+					if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
 					{
-						if ( xFlavors[ i ].MimeType.equalsIgnoreAsciiCase( aSupportedMimeTypes[ j ] ) && aSupportedTextTypes[ j ] )
-						{
-							bTextOnly = true;
-							break;
-						}
+						bTextOnly = true;
+						break;
 					}
 				}
+			}
 
-				aTransferableList.push_back( this );
+			NSAutoreleasePool *pPool =  [[NSAutoreleasePool alloc] init];
 
-				bool bRenderImmediately = false;
-				if ( !pScrapPromiseKeeperUPP )
-					pScrapPromiseKeeperUPP = NewScrapPromiseKeeperUPP( (ScrapPromiseKeeperProcPtr)ImplScrapPromiseKeeperCallback );
-				if ( !pScrapPromiseKeeperUPP || SetScrapPromiseKeeper( (ScrapRef)mpNativeTransferable, pScrapPromiseKeeperUPP, (const void *)this ) != noErr )
-					bRenderImmediately = true;
-
+			NSMutableArray *pTypes = [NSMutableArray arrayWithCapacity:nLen];
+			if ( pTypes )
+			{
 				for ( i = 0; i < nLen; i++ )
 				{ 
 					for ( USHORT j = 0; j < nSupportedTypes; j++ )
@@ -858,19 +1455,34 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 							if ( bTextOnly && !aSupportedTextTypes[ j ] )
 								continue;
 
-							// Converting to PDF doesn't work (only converting
+							// Converting to PDF does not work (only converting
 							// from PDF works) so don't add the PDF flavor
-							if ( aSupportedNativeTypes[ j ] == kQTFileTypePDF )
+							if ( !aSupportedPasteboardTypes[ j ] || [NSPDFPboardType isEqualToString:aSupportedPasteboardTypes[ j ]] )
 								continue;
 
-							if ( bRenderImmediately )
-								ImplScrapPromiseKeeperCallback( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], (void *)this );
-							else
-								 PutScrapFlavor( (ScrapRef)mpNativeTransferable, aSupportedNativeTypes[ j ], kScrapFlavorMaskNone, kScrapFlavorSizeUnknown, NULL );
+							[pTypes addObject:aSupportedPasteboardTypes[ j ]];
 						}
 					}
 				}
+
+				if ( [pTypes count] )
+				{
+					// Do not retain as invoking alloc disables autorelease
+					// and the object will be released in the object's
+					// pasteboardChangedOwner: selector
+					DTransPasteboardOwner *pOwner = [[DTransPasteboardOwner alloc] initWithTransferable:this pasteboardType:mnTransferableType types:pTypes];
+					if ( pOwner )
+					{
+						NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+						[pOwner performSelectorOnMainThread:@selector(setContents:) withObject:pOwner waitUntilDone:YES modes:pModes];
+						mnChangeCount = [pOwner changeCount];
+						if ( mnChangeCount >= 0 )
+							out = sal_True;
+					}
+				}
 			}
+
+			[pPool release];
 		}
 		else if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG )
 		{
@@ -902,8 +1514,6 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 					}
 				}
 			}
-
-			aTransferableList.push_back( this );
 
 			bool bRenderImmediately = false;
 			if ( !pDragSendDataUPP )

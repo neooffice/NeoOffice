@@ -54,12 +54,14 @@ namespace java {
 class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::datatransfer::XTransferable >
 {
 private:
+	int					mnChangeCount;
 	void*				mpNativeTransferable;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
 	int					mnTransferableType;
 	sal_uInt16			mnItem;
 
 public:
+						DTransTransferable( int nTransferableType );
 						DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem = 0 );
 	virtual				~DTransTransferable();
 

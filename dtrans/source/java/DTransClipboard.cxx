@@ -33,8 +33,6 @@
  *
  ************************************************************************/
 
-#define _DTRANSCLIPBOARD_CXX
-
 #ifndef _DTRANSCLIPBOARD_HXX
 #include "DTransClipboard.hxx"
 #endif
@@ -55,26 +53,14 @@ using namespace rtl;
 
 DTransTransferable *DTransClipboard::getContents()
 {
-	DTransTransferable *out = NULL;
-
-#ifdef MACOSX
-	ScrapRef aScrap;
-	if ( GetCurrentScrap( &aScrap ) == noErr )
-		out = new DTransTransferable( aScrap, TRANSFERABLE_TYPE_CLIPBOARD );
-#else	// MACOSX
-#ifdef DEBUG
-	fprintf( stderr, "DTransClipboard::getContents not implemented\n" );
-#endif
-#endif	// MACOSX
-
-	return out;
+	return new DTransTransferable( TRANSFERABLE_TYPE_CLIPBOARD );
 }
 
 // ----------------------------------------------------------------------------
 
 DTransTransferable *DTransClipboard::setContents( const Reference< XTransferable > &xTransferable )
 {
-	DTransTransferable *out = new DTransTransferable( NULL, TRANSFERABLE_TYPE_CLIPBOARD );
+	DTransTransferable *out = new DTransTransferable( TRANSFERABLE_TYPE_CLIPBOARD );
 
 	if ( !xTransferable.is() || !out->setContents( xTransferable ) )
 	{

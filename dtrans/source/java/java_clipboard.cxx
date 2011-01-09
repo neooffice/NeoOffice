@@ -184,25 +184,11 @@ void SAL_CALL JavaClipboard::setContents( const Reference< XTransferable >& xTra
 		else
 			aOldContents = Reference< XTransferable >();
 
-		// Fix bug 2191 by releasing our mutex so that when the solar mutex
-		// is locked we don't deadlock
-		maMutex.release();
 		pTransferable = DTransClipboard::setContents( xTransferable );
-		maMutex.acquire();
-
-		// Make sure that another thread didn't already change the clipboard
-		// contents while we released our mutex
-		if ( maContents == xTransferable )
-		{
-			if ( pTransferable )
-				maContents = Reference< XTransferable >( pTransferable );
-			else
-				maContents = Reference< XTransferable >();
-		}
+		if ( pTransferable )
+			maContents = Reference< XTransferable >( pTransferable );
 		else
-		{
-			aOldContents = xTransferable;
-		}
+			maContents = Reference< XTransferable >();
 	}
 
 	list< Reference< XClipboardListener > > listeners( maListeners );
