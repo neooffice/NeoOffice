@@ -1445,7 +1445,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 // ----------------------------------------------------------------------------
 
-sal_Bool DTransTransferable:setContents( const Reference< XTransferable > &xTransferable )
+sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTransferable )
 {
 	sal_Bool out = sal_False;
 
