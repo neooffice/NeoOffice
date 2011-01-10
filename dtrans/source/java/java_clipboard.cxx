@@ -72,6 +72,7 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XFlushableClipboard, XClipboardNotifier, XServiceInfo >( maMutex )
 {
 	mbSystemClipboard = bSystemClipboard;
+	mbInGetContents = false;
 }
 
 // ------------------------------------------------------------------------
@@ -108,7 +109,13 @@ void SAL_CALL JavaClipboard::flushClipboard( ) throw( RuntimeException )
 
 Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeException )
 {
-	ClearableMutexGuard aGuard( maMutex );
+	MutexGuard aGuard( maMutex );
+
+	if ( mbInGetContents )
+		return maContents;
+
+	bool bOldInGetContents = mbInGetContents;
+	mbInGetContents = true;
 
 	Reference< XTransferable > aContents( maContents );
 
@@ -144,7 +151,7 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 			list< Reference< XClipboardListener > > listeners( maListeners );
 
-			aGuard.clear();
+			maMutex.release();
 
 			if ( aOldOwner.is() )
 				aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
@@ -156,9 +163,12 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 					listeners.front()->changedContents( aEvent );
 				listeners.pop_front();
 			}
+
+			maMutex.acquire();
 		}
 	}
 
+	mbInGetContents = bOldInGetContents;
 	return aContents;
 }
 
