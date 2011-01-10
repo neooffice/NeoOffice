@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #include <list>
+#include <mach-o/dyld.h>
 
 #ifndef _DTRANSCLIPBOARD_HXX
 #include "DTransClipboard.hxx"
@@ -55,6 +56,9 @@
 #import <QuickTime/QuickTime.h>
 #include <postmac.h>
 
+#define HTML_TYPE_TAG @"HTML"
+#define PDF_TYPE_TAG @"PDF"
+
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
 using namespace com::sun::star::uno;
@@ -65,23 +69,45 @@ using namespace vos;
 
 static UInt32 nSupportedTypes = 9;
 
+// List of supported native type symbol names in priority order. The first
+// item on each line is the deprecated symbol name, the second item is the most
+// current symbol name, and the third item is a pointer to a local static
+// NSString that the symbol address should be assigned to.
+static const NSString *aSupportedPasteboardTypeSymbolNames[] = {
+	// NSPasteboard does not provide the URL type in a format that we can handle
+	nil, nil, nil,
+	@"NSRTFPboardType", @"NSPasteboardTypeRTF", nil,
+	@"NSHTMLPboardType", @"NSPasteboardTypeHTML", HTML_TYPE_TAG,
+	@"NSStringPboardType", @"NSPasteboardTypeString", nil,
+	// NSPasteboard has no matching non-unicode text type
+	nil, nil, nil,
+	@"NSPDFPboardType", @"NSPasteboardTypePDF", PDF_TYPE_TAG,
+	nil, @"NSPasteboardTypePNG", nil,
+	@"NSTIFFPboardType", @"NSPasteboardTypeTIFF", nil,
+	@"NSPICTPboardType", nil, nil
+};
+
+static bool bSupportedPasteboardTypesInitialized = false;
+
+// Special native symbols for conditional checking
+static const NSString *pHTMLPasteboardType = nil;
+static const NSString *pPDFPasteboardType = nil;
+
 // List of supported native types in priority order
 static const NSString *aSupportedPasteboardTypes[] = {
-	// Mark NSURLPboardType as text to ensure that it is the preferred flavor
-	NSURLPboardType,
-	NSRTFPboardType,
-	NSHTMLPboardType,
-	NSStringPboardType,
-	nil, // NSPasteboard has no matching non-unicode text type
-	NSPDFPboardType,
-	nil, // NSPasteboard has no matching PNG image format until Mac OS X 10.6
-	NSTIFFPboardType,
-	NSPICTPboardType
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil,
+	nil
 };
 
 // List of supported native types in priority order
 static FourCharCode aSupportedNativeTypes[] = {
-	// Mark 'furl' as text to ensure that it is the preferred flavor
 	'furl',
 	'RTF ',
 	'HTML',
@@ -95,7 +121,6 @@ static FourCharCode aSupportedNativeTypes[] = {
 
 // List of supported types that are text
 static bool aSupportedTextTypes[] = {
-	// Mark NSURLPboardType as text to ensure that it is the preferred flavor
 	true,
 	true,
 	true,
@@ -130,7 +155,7 @@ static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 )
 };
 
 static ::std::list< DTransTransferable* > aTransferableList;
@@ -142,7 +167,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 @interface DTransPasteboardHelper : NSObject
 {
-	NSData*							mpBMPData;
+	NSData*							mpPNGData;
 	int								mnChangeCount;
 	NSData*							mpData;
 	const NSString*					mpPasteboardName;
@@ -150,13 +175,12 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	BOOL							mbTypeAvailable;
 	const NSArray*					mpTypes;
 }
-- (NSData *)BMPDataForType;
 - (int)changeCount;
 - (NSData *)dataForType;
 - (void)dealloc;
 - (void)destroyData;
 - (void)flush:(NSNumber *)pChangeCount;
-- (void)getBMPDataForType:(NSString *)pType;
+- (void)getPNGDataForType:(NSString *)pType;
 - (void)getChangeCount:(id)pObject;
 - (void)getDataForType:(NSString *)pType;
 - (void)getStringForType:(NSString *)pType;
@@ -166,14 +190,10 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (BOOL)isTypeAvailable;
 - (NSString *)stringForType;
 - (const NSArray *)types;
+- (NSData *)PNGDataForType;
 @end
 
 @implementation DTransPasteboardHelper
-
-- (NSData *)BMPDataForType
-{
-	return mpBMPData;
-}
 
 - (int)changeCount
 {
@@ -226,10 +246,10 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 {
 	mbTypeAvailable = NO;
 
-	if ( mpBMPData )
+	if ( mpPNGData )
 	{
-		[mpBMPData release];
-		mpBMPData = nil;
+		[mpPNGData release];
+		mpPNGData = nil;
 	}
 
 	if ( mpData )
@@ -245,7 +265,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	}
 }
 
-- (void)getBMPDataForType:(NSString *)pType
+- (void)getPNGDataForType:(NSString *)pType
 {
 	[self destroyData];
 
@@ -263,17 +283,24 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 					NSData *pPasteboardData = [pPasteboard dataForType:pType];
 					if ( pPasteboardData )
 					{
-						NSImage *pImage = [[NSImage alloc] initWithData:pPasteboardData];
-						if ( pImage )
-						{
-							[pImage autorelease];
+						NSBitmapImageRep *pPasteboardImageRep = [NSBitmapImageRep imageRepWithData:pPasteboardData];
+						if ( pPasteboardImageRep )
+							mpPNGData = [pPasteboardImageRep representationUsingType:NSPNGFileType properties:nil];
 
-							NSData *pTIFFData = [pImage TIFFRepresentation];
-							if ( pTIFFData )
+						if ( !mpPNGData )
+						{
+							NSImage *pImage = [[NSImage alloc] initWithData:pPasteboardData];
+							if ( pImage )
 							{
-								NSBitmapImageRep *pImageRep = [NSBitmapImageRep imageRepWithData:pTIFFData];
-								if ( pImageRep )
-									mpBMPData = [pImageRep representationUsingType:NSBMPFileType properties:nil];
+								[pImage autorelease];
+
+								NSData *pTIFFData = [pImage TIFFRepresentation];
+								if ( pTIFFData )
+								{
+									NSBitmapImageRep *pTIFFImageRep = [NSBitmapImageRep imageRepWithData:pTIFFData];
+									if ( pTIFFImageRep )
+										mpPNGData = [pTIFFImageRep representationUsingType:NSPNGFileType properties:nil];
+								}
 							}
 						}
 					}
@@ -284,12 +311,12 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 				NSLog( @"%@", [pExc reason] );
 			}
 
-			if ( mpBMPData )
+			if ( mpPNGData )
 			{
 				if ( mbTypeAvailable )
-					[mpBMPData retain];
+					[mpPNGData retain];
 				else
-					mpBMPData = nil;
+					mpPNGData = nil;
 			}
 		}
 	}
@@ -420,7 +447,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	[super init];
 
 	mnChangeCount = -1;
-	mpBMPData = nil;
+	mpPNGData = nil;
 	mpData = nil;
 	if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
 		mpPasteboardName = NSDragPboard;
@@ -446,6 +473,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (const NSArray*)types
 {
 	return mpTypes;
+}
+
+- (NSData *)PNGDataForType
+{
+	return mpPNGData;
 }
 
 @end
@@ -535,6 +567,59 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 // ============================================================================
 
+static void ImplInitializeSupportedPasteboardTypes()
+{
+	if ( bSupportedPasteboardTypesInitialized )
+		return;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSBundle *pBundle = [NSBundle bundleForClass:[NSPasteboard class]];
+	if ( pBundle )
+	{
+		CFBundleRef aBundle = CFBundleGetBundleWithIdentifier( (CFStringRef)[pBundle bundleIdentifier] );
+		if ( aBundle )
+		{
+			for ( USHORT i = 0; i < nSupportedTypes; i++ )
+			{
+				// Try to load oldest supported symbol first
+				const NSString *pSymName = aSupportedPasteboardTypeSymbolNames[ i * 3 ];
+				if ( pSymName )
+				{
+					NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
+					if ( ppType && *ppType )
+						aSupportedPasteboardTypes[ i ] = (const NSString *)*ppType;
+				}
+
+				// Try to load newer supported symbol next
+				pSymName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 1 ];
+				if ( pSymName )
+				{
+					NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
+					if ( ppType && *ppType )
+						aSupportedPasteboardTypes[ i ] = (const NSString *)*ppType;
+				}
+
+				// Assign the symbol to the matching local static NSString
+				const NSString *pLocalName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 2 ];
+				if ( pLocalName )
+				{
+					if ( [HTML_TYPE_TAG isEqualToString:pLocalName] )
+						pHTMLPasteboardType = aSupportedPasteboardTypes[ i ];
+					else if ( [PDF_TYPE_TAG isEqualToString:pLocalName] )
+						pPDFPasteboardType = aSupportedPasteboardTypes[ i ];
+				}
+			}
+		}
+	}
+
+	bSupportedPasteboardTypesInitialized = true;
+
+	[pPool release];
+}
+
+// ----------------------------------------------------------------------------
+
 static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString *pType )
 {
 	id pRet = nil;
@@ -563,7 +648,8 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 				bool bFlavorFound = false;
 				bool bFlavorIsText = false;
 				DataFlavor aFlavor;
-				for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
+				for ( USHORT i = 0; i < nSupportedTypes; i++ )
+				{
 					if ( aSupportedPasteboardTypes[ i ] && [aSupportedPasteboardTypes[ i ] isEqualToString:pType] )
 					{
 						aFlavor.MimeType = aSupportedMimeTypes[ i ];
@@ -689,7 +775,8 @@ static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRe
 				bool bFlavorFound = false;
 				bool bFlavorIsText = false;
 				DataFlavor aFlavor;
-				for ( USHORT i = 0; i < nSupportedTypes; i++ ) {
+				for ( USHORT i = 0; i < nSupportedTypes; i++ )
+				{
 					if ( nType == aSupportedNativeTypes[ i ] )
 					{
 						aFlavor.MimeType = aSupportedMimeTypes[ i ];
@@ -971,7 +1058,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 								}
 
 								// Strip out HTML Microsoft Office headers
-								if ( [NSHTMLPboardType isEqualToString:pRequestedType] && isHTMLFormat( aExportData ) )
+								if ( pHTMLPasteboardType && [pHTMLPasteboardType isEqualToString:pRequestedType] && isHTMLFormat( aExportData ) )
 									aExportData = HTMLFormatToTextHtml( aExportData );
 
 								out <<= aExportData;
@@ -981,9 +1068,13 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 					}
 					else
 					{
-						[pHelper performSelectorOnMainThread:@selector(getBMPDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
+						// Convert to PNG data even though the OpenOffice.org
+						// code asks for BMP data as we have made some changes
+						// to the vcl/source/gdi/bitmap2.cxx code to accept
+						// PNG data
+						[pHelper performSelectorOnMainThread:@selector(getPNGDataForType:) withObject:pRequestedType waitUntilDone:YES modes:pModes];
 						bDataAvailable = [pHelper isTypeAvailable];
-						NSData *pData = [pHelper BMPDataForType];
+						NSData *pData = [pHelper PNGDataForType];
 						if ( pData )
 						{
 							const void *pArray = [pData bytes];
@@ -1242,6 +1333,8 @@ DTransTransferable::DTransTransferable( int nTransferableType ) :
 	mnTransferableType( nTransferableType ),
 	mnItem( 0 )
 {
+	ImplInitializeSupportedPasteboardTypes();
+
 	aTransferableList.push_back( this );
 }
 
@@ -1253,6 +1346,8 @@ DTransTransferable::DTransTransferable( void *pNativeTransferable, int nTransfer
 	mnTransferableType( nTransferableType ),
 	mnItem( 0 )
 {
+	ImplInitializeSupportedPasteboardTypes();
+
 	aTransferableList.push_back( this );
 
 	if ( mnTransferableType == TRANSFERABLE_TYPE_DRAG && nItem )
@@ -1497,7 +1592,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 
 							// Converting to PDF does not work (only converting
 							// from PDF works) so don't add the PDF flavor
-							if ( !aSupportedPasteboardTypes[ j ] || [NSPDFPboardType isEqualToString:aSupportedPasteboardTypes[ j ]] )
+							if ( !aSupportedPasteboardTypes[ j ] || ( pPDFPasteboardType && [pPDFPasteboardType isEqualToString:aSupportedPasteboardTypes[ j ]]  ) )
 								continue;
 
 							[pTypes addObject:aSupportedPasteboardTypes[ j ]];
