@@ -58,6 +58,8 @@
 
 #define HTML_TYPE_TAG @"HTML"
 #define PDF_TYPE_TAG @"PDF"
+#define STRING_TYPE_TAG @"STRING"
+#define URL_TYPE_TAG @"URL"
 
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::io;
@@ -75,16 +77,16 @@ static UInt32 nSupportedTypes = 9;
 // NSString that the symbol address should be assigned to.
 static const NSString *aSupportedPasteboardTypeSymbolNames[] = {
 	// NSPasteboard does not provide the URL type in a format that we can handle
-	nil, nil, nil,
+	@"NSURLPboardType", nil, URL_TYPE_TAG,
 	@"NSRTFPboardType", @"NSPasteboardTypeRTF", nil,
 	@"NSHTMLPboardType", @"NSPasteboardTypeHTML", HTML_TYPE_TAG,
-	@"NSStringPboardType", @"NSPasteboardTypeString", nil,
+	@"NSStringPboardType", @"NSPasteboardTypeString", STRING_TYPE_TAG,
 	// NSPasteboard has no matching non-unicode text type
 	nil, nil, nil,
 	@"NSPDFPboardType", @"NSPasteboardTypePDF", PDF_TYPE_TAG,
 	nil, @"NSPasteboardTypePNG", nil,
 	@"NSTIFFPboardType", @"NSPasteboardTypeTIFF", nil,
-	@"NSPICTPboardType", nil, nil
+	@"NSPICTPboardType", nil, nil 
 };
 
 static bool bSupportedPasteboardTypesInitialized = false;
@@ -92,6 +94,8 @@ static bool bSupportedPasteboardTypesInitialized = false;
 // Special native symbols for conditional checking
 static const NSString *pHTMLPasteboardType = nil;
 static const NSString *pPDFPasteboardType = nil;
+static const NSString *pStringPasteboardType = nil;
+static const NSString *pURLPasteboardType = nil;
 
 // List of supported native types in priority order
 static const NSString *aSupportedPasteboardTypes[] = {
@@ -179,6 +183,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (NSData *)dataForType;
 - (void)dealloc;
 - (void)destroyData;
+- (NSArray *)filteredTypes;
 - (void)flush:(NSNumber *)pChangeCount;
 - (void)getPNGDataForType:(NSString *)pType;
 - (void)getChangeCount:(id)pObject;
@@ -213,6 +218,78 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 		[mpTypes release];
 
 	[super dealloc];
+}
+
+- (NSArray *)filteredTypes
+{
+	NSMutableArray *pRet = nil;
+
+	if ( mpPasteboardName )
+	{
+		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
+		if ( pPasteboard )
+		{
+			NSArray *pTypes = [pPasteboard types];
+			if ( pTypes )
+			{
+				unsigned int nCount = [pTypes count];
+				NSMutableArray *pImageTypes = [NSMutableArray arrayWithCapacity:nCount];
+
+				pRet = [NSMutableArray arrayWithArray:pTypes];
+				if ( pImageTypes && pRet )
+				{
+					bool bImageTypeFound = false;
+					bool bTextTypeFound = false;
+					bool bStringTypeFound = false;
+					bool bURLTypeFound = false;
+
+					unsigned int i = 0;
+					for ( ; i < nCount; i++ )
+					{
+						NSString *pType = [pTypes objectAtIndex:i];
+						if ( pType )
+						{
+							if ( pStringPasteboardType && [pStringPasteboardType isEqualToString:pType] )
+							{
+								bStringTypeFound = true;
+							}
+							else if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
+							{
+								bURLTypeFound = true;
+							}
+							else
+							{
+								// Determine if this is a text or image type
+								for ( USHORT j = 0; j < nSupportedTypes; j++ )
+								{
+									if ( aSupportedPasteboardTypes[ j ] && [aSupportedPasteboardTypes[ j ] isEqualToString:pType] )
+									{
+										if ( aSupportedTextTypes[ j ] )
+										{
+											bTextTypeFound = true;
+										}
+										else
+										{
+											bImageTypeFound = true;
+											[pImageTypes addObject:pType];
+										}
+										break;
+									}
+								}
+							}
+						}
+
+						// Safari sends images as a URL type so filter out the
+						// URL type if the only text type is the URL type
+						if ( bURLTypeFound && bStringTypeFound && bImageTypeFound && !bTextTypeFound )
+							pRet = pImageTypes;
+					}
+				}
+			}
+		}
+	}
+
+	return pRet;
 }
 
 - (void)flush:(NSNumber *)pChangeCount;
@@ -400,24 +477,12 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 - (void)getTypeAvailable:(NSString *)pType
 {
-	mbTypeAvailable = NO;
+	[self destroyData];
 
-	if ( mpData )
+	if ( pType )
 	{
-		[mpData release];
-		mpData = nil;
-	}
-
-	if ( mpString )
-	{
-		[mpString release];
-		mpString = nil;
-	}
-
-	if ( mpPasteboardName && pType )
-	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard && [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+		NSArray *pTypes = [self filteredTypes];
+		if ( pTypes && [pTypes indexOfObject:pType] != NSNotFound )
 			mbTypeAvailable = YES;
 	}
 }
@@ -430,16 +495,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 		mpTypes = nil;
 	}
 
-	if ( mpPasteboardName )
-	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
-		{
-			mpTypes = [pPasteboard types];
-			if ( mpTypes )
-				[mpTypes retain];
-		}
-	}
+	mpTypes = [self filteredTypes];
+	if ( mpTypes )
+		[mpTypes retain];
+	else
+		mpTypes = nil;
 }
 
 - (id)initWithPasteboardType:(int)nTransferableType
@@ -608,6 +668,10 @@ static void ImplInitializeSupportedPasteboardTypes()
 						pHTMLPasteboardType = aSupportedPasteboardTypes[ i ];
 					else if ( [PDF_TYPE_TAG isEqualToString:pLocalName] )
 						pPDFPasteboardType = aSupportedPasteboardTypes[ i ];
+					else if ( [STRING_TYPE_TAG isEqualToString:pLocalName] )
+						pStringPasteboardType = aSupportedPasteboardTypes[ i ];
+					else if ( [URL_TYPE_TAG isEqualToString:pLocalName] )
+						pURLPasteboardType = aSupportedPasteboardTypes[ i ];
 				}
 			}
 		}
