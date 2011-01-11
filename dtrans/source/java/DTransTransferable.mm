@@ -799,9 +799,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 					}
 				}
 			}
-
-			rSolarMutex.release();
 		}
+
+		rSolarMutex.release();
 	}
 
 	return pRet;
@@ -1010,9 +1010,9 @@ static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRe
 					}
 				}
 			}
-
-			rSolarMutex.release();
 		}
+
+		rSolarMutex.release();
 	}
 
 	return nErr;

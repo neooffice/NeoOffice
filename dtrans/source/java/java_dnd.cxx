@@ -243,9 +243,9 @@ static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					}
 				}
 			}
-
-			rSolarMutex.release();
 		}
+
+		rSolarMutex.release();
 	}
 	
 	return noErr;
@@ -306,9 +306,9 @@ static OSErr ImplDropTrackingHandlerCallback( DragTrackingMessage nMessage, Wind
 					ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, PtInRect( aPoint, &aRect ) );
 				}
 			}
-
-			rSolarMutex.release();
 		}
+
+		rSolarMutex.release();
 	}
 
 	return noErr;
@@ -371,9 +371,9 @@ static OSErr ImplDragReceiveHandlerCallback( WindowRef aWindow, void *pData, Dra
 						ImplSetThemeCursor( pTarget->isRejected() ? DNDConstants::ACTION_NONE : nCurrentAction, false );
 				}
 			}
-
-			rSolarMutex.release();
 		}
+
+		rSolarMutex.release();
 	}
 
 	return nRet;
