@@ -49,6 +49,12 @@
 #define TRANSFERABLE_TYPE_CLIPBOARD		0x0
 #define TRANSFERABLE_TYPE_DRAG			0x1
 
+#ifdef __OBJC__
+@class NSArray;
+#else
+struct NSArray;
+#endif
+
 namespace java {
 
 class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::datatransfer::XTransferable >
@@ -61,6 +67,8 @@ private:
 	sal_uInt16			mnItem;
 
 public:
+	static NSArray*		getSupportedPasteboardTypes();
+
 						DTransTransferable( int nTransferableType );
 						DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem = 0 );
 	virtual				~DTransTransferable();

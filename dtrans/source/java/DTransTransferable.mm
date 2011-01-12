@@ -89,7 +89,7 @@ static const NSString *aSupportedPasteboardTypeSymbolNames[] = {
 	@"NSPICTPboardType", nil, nil 
 };
 
-static bool bSupportedPasteboardTypesInitialized = false;
+static NSArray *pSupportedPasteboardTypes = nil;
 
 // Special native symbols for conditional checking
 static const NSString *pHTMLPasteboardType = nil;
@@ -179,6 +179,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	BOOL							mbTypeAvailable;
 	const NSArray*					mpTypes;
 }
++ (id)createWithPasteboardType:(int)nTransferableType;
 - (int)changeCount;
 - (NSData *)dataForType;
 - (void)dealloc;
@@ -199,6 +200,13 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 @end
 
 @implementation DTransPasteboardHelper
+
++ (id)createWithPasteboardType:(int)nTransferableType
+{
+	DTransPasteboardHelper *pRet = [[DTransPasteboardHelper alloc] initWithPasteboardType:nTransferableType];
+	[pRet autorelease];
+	return pRet;
+}
 
 - (int)changeCount
 {
@@ -559,6 +567,13 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 @implementation DTransPasteboardOwner
 
++ (id)createWithTransferable:(DTransTransferable *)pTransferable pasteboardType:(int)nTransferableType types:(const NSArray *)pTypes;
+{
+	DTransPasteboardOwner *pRet = [[DTransPasteboardOwner alloc] initWithTransferable:pTransferable pasteboardType:nTransferableType types:pTypes];
+	[pRet autorelease];
+	return pRet;
+}
+
 - (int)changeCount
 {
 	return mnChangeCount;
@@ -629,55 +644,64 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 static void ImplInitializeSupportedPasteboardTypes()
 {
-	if ( bSupportedPasteboardTypesInitialized )
+	if ( pSupportedPasteboardTypes )
 		return;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	NSBundle *pBundle = [NSBundle bundleForClass:[NSPasteboard class]];
-	if ( pBundle )
+	NSMutableArray *pTypes = [NSMutableArray arrayWithCapacity:nSupportedTypes];
+	if ( pTypes )
 	{
-		CFBundleRef aBundle = CFBundleGetBundleWithIdentifier( (CFStringRef)[pBundle bundleIdentifier] );
-		if ( aBundle )
+		NSBundle *pBundle = [NSBundle bundleForClass:[NSPasteboard class]];
+		if ( pBundle )
 		{
-			for ( USHORT i = 0; i < nSupportedTypes; i++ )
+			CFBundleRef aBundle = CFBundleGetBundleWithIdentifier( (CFStringRef)[pBundle bundleIdentifier] );
+			if ( aBundle )
 			{
-				// Try to load oldest supported symbol first
-				const NSString *pSymName = aSupportedPasteboardTypeSymbolNames[ i * 3 ];
-				if ( pSymName )
+				for ( USHORT i = 0; i < nSupportedTypes; i++ )
 				{
-					NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
-					if ( ppType && *ppType )
-						aSupportedPasteboardTypes[ i ] = (const NSString *)*ppType;
-				}
+					// Try to load oldest supported symbol first
+					const NSString *pSymName = aSupportedPasteboardTypeSymbolNames[ i * 3 ];
+					if ( pSymName )
+					{
+						NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
+						if ( ppType && *ppType )
+							aSupportedPasteboardTypes[ i ] = (const NSString *)*ppType;
+					}
 
-				// Try to load newer supported symbol next
-				pSymName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 1 ];
-				if ( pSymName )
-				{
-					NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
-					if ( ppType && *ppType )
-						aSupportedPasteboardTypes[ i ] = (const NSString *)*ppType;
-				}
+					// Try to load newer supported symbol next
+					pSymName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 1 ];
+					if ( pSymName )
+					{
+						NSString **ppType = (NSString **)CFBundleGetDataPointerForName( aBundle, (CFStringRef)pSymName );
+						if ( ppType && *ppType )
+							aSupportedPasteboardTypes[ i ] = (const NSString *)*ppType;
+					}
 
-				// Assign the symbol to the matching local static NSString
-				const NSString *pLocalName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 2 ];
-				if ( pLocalName )
-				{
-					if ( [HTML_TYPE_TAG isEqualToString:pLocalName] )
-						pHTMLPasteboardType = aSupportedPasteboardTypes[ i ];
-					else if ( [PDF_TYPE_TAG isEqualToString:pLocalName] )
-						pPDFPasteboardType = aSupportedPasteboardTypes[ i ];
-					else if ( [STRING_TYPE_TAG isEqualToString:pLocalName] )
-						pStringPasteboardType = aSupportedPasteboardTypes[ i ];
-					else if ( [URL_TYPE_TAG isEqualToString:pLocalName] )
-						pURLPasteboardType = aSupportedPasteboardTypes[ i ];
+					// Assign the symbol to the matching local static NSString
+					const NSString *pLocalName = aSupportedPasteboardTypeSymbolNames[ ( i * 3 ) + 2 ];
+					if ( pLocalName )
+					{
+						if ( [HTML_TYPE_TAG isEqualToString:pLocalName] )
+							pHTMLPasteboardType = aSupportedPasteboardTypes[ i ];
+						else if ( [PDF_TYPE_TAG isEqualToString:pLocalName] )
+							pPDFPasteboardType = aSupportedPasteboardTypes[ i ];
+						else if ( [STRING_TYPE_TAG isEqualToString:pLocalName] )
+							pStringPasteboardType = aSupportedPasteboardTypes[ i ];
+						else if ( [URL_TYPE_TAG isEqualToString:pLocalName] )
+							pURLPasteboardType = aSupportedPasteboardTypes[ i ];
+					}
+
+					// Add to supported types array
+					if ( aSupportedPasteboardTypes[ i ] )
+						[pTypes addObject:aSupportedPasteboardTypes[ i ]];
 				}
 			}
 		}
-	}
 
-	bSupportedPasteboardTypesInitialized = true;
+		[pTypes retain];
+		pSupportedPasteboardTypes = pTypes;
+	}
 
 	[pPool release];
 }
@@ -1020,6 +1044,15 @@ static OSErr ImplDragSendDataCallback( FlavorType nType, void *pData, DragItemRe
 
 // ============================================================================
 
+NSArray *DTransTransferable::getSupportedPasteboardTypes()
+{
+	ImplInitializeSupportedPasteboardTypes();
+
+	return pSupportedPasteboardTypes;
+}
+
+// ============================================================================
+
 void DTransTransferable::flush()
 {
 	// Force pasteboard to render data if we still have ownership
@@ -1027,7 +1060,7 @@ void DTransTransferable::flush()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
 		if ( pHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1053,7 +1086,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 		bool bDataAvailable = false;
 		bool bDataRetrieved = false;
-		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
 		if ( pHelper )
 		{
 			NSString *pRequestedType = nil;
@@ -1442,7 +1475,7 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
 		if ( pHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1511,7 +1544,7 @@ sal_Bool DTransTransferable::hasOwnership()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
 		if ( pHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1553,7 +1586,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 		if ( pRequestedType )
 		{
-			DTransPasteboardHelper *pHelper = [[DTransPasteboardHelper alloc] initWithPasteboardType:mnTransferableType];
+			DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
 			if ( pHelper )
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1669,7 +1702,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				// pasteboardChangedOwner: selector. Note that we will pass
 				// a zero length types array as that is needed to clear and
 				// take ownership of the clipboard.
-				DTransPasteboardOwner *pOwner = [[DTransPasteboardOwner alloc] initWithTransferable:this pasteboardType:mnTransferableType types:pTypes];
+				DTransPasteboardOwner *pOwner = [DTransPasteboardOwner createWithTransferable:this pasteboardType:mnTransferableType types:pTypes];
 				if ( pOwner )
 				{
 					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
