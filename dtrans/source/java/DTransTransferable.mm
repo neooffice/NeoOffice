@@ -634,7 +634,13 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	{
 		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
 		if ( pPasteboard )
+		{
+			// Retain this object as once it becomes the pasteboard owner, we
+			// must keep this object alive until the pasteboardChangedOwner:
+			// selector is called
+			[self retain];
 			mnChangeCount = [pPasteboard declareTypes:mpTypes owner:self];
+		}
 	}
 }
 
