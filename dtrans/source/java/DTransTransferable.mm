@@ -174,12 +174,12 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	NSData*							mpPNGData;
 	int								mnChangeCount;
 	NSData*							mpData;
-	const NSString*					mpPasteboardName;
+	NSString*						mpPasteboardName;
 	NSString*						mpString;
 	BOOL							mbTypeAvailable;
 	const NSArray*					mpTypes;
 }
-+ (id)createWithPasteboardType:(int)nTransferableType;
++ (id)createWithPasteboardName:(NSString *)pPasteboardName;
 - (int)changeCount;
 - (NSData *)dataForType;
 - (void)dealloc;
@@ -192,18 +192,34 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 - (void)getStringForType:(NSString *)pType;
 - (void)getTypeAvailable:(NSString *)pType;
 - (void)getTypes:(id)pObject;
-- (id)initWithPasteboardType:(int)nTransferableType;
+- (id)initWithPasteboardName:(NSString *)pPasteboardName;
 - (BOOL)isTypeAvailable;
 - (NSString *)stringForType;
 - (const NSArray *)types;
 - (NSData *)PNGDataForType;
 @end
 
+@interface DTransPasteboardOwner : NSObject
+{
+	int								mnChangeCount;
+	DTransTransferable*				mpTransferable;
+	NSString*						mpPasteboardName;
+	NSArray*						mpTypes;
+}
++ (id)createWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
+- (int)changeCount;
+- (void)dealloc;
+- (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes;
+- (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
+- (void)pasteboardChangedOwner:(NSPasteboard *)pSender;
+- (void)setContents:(id)pObject;
+@end
+
 @implementation DTransPasteboardHelper
 
-+ (id)createWithPasteboardType:(int)nTransferableType
++ (id)createWithPasteboardName:(NSString *)pPasteboardName
 {
-	DTransPasteboardHelper *pRet = [[DTransPasteboardHelper alloc] initWithPasteboardType:nTransferableType];
+	DTransPasteboardHelper *pRet = [[DTransPasteboardHelper alloc] initWithPasteboardName:pPasteboardName];
 	[pRet autorelease];
 	return pRet;
 }
@@ -222,109 +238,13 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 {
 	[self destroyData];
 
+	if ( mpPasteboardName )
+		[mpPasteboardName release];
+
 	if ( mpTypes )
 		[mpTypes release];
 
 	[super dealloc];
-}
-
-- (NSArray *)filteredTypes
-{
-	NSMutableArray *pRet = nil;
-
-	if ( mpPasteboardName )
-	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
-		{
-			NSArray *pTypes = [pPasteboard types];
-			if ( pTypes )
-			{
-				unsigned int nCount = [pTypes count];
-				NSMutableArray *pImageTypes = [NSMutableArray arrayWithCapacity:nCount];
-
-				pRet = [NSMutableArray arrayWithArray:pTypes];
-				if ( pImageTypes && pRet )
-				{
-					bool bImageTypeFound = false;
-					bool bTextTypeFound = false;
-					bool bStringTypeFound = false;
-					bool bURLTypeFound = false;
-
-					unsigned int i = 0;
-					for ( ; i < nCount; i++ )
-					{
-						NSString *pType = [pTypes objectAtIndex:i];
-						if ( pType )
-						{
-							if ( pStringPasteboardType && [pStringPasteboardType isEqualToString:pType] )
-							{
-								bStringTypeFound = true;
-							}
-							else if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
-							{
-								bURLTypeFound = true;
-							}
-							else
-							{
-								// Determine if this is a text or image type
-								for ( USHORT j = 0; j < nSupportedTypes; j++ )
-								{
-									if ( aSupportedPasteboardTypes[ j ] && [aSupportedPasteboardTypes[ j ] isEqualToString:pType] )
-									{
-										if ( aSupportedTextTypes[ j ] )
-										{
-											bTextTypeFound = true;
-										}
-										else
-										{
-											bImageTypeFound = true;
-											[pImageTypes addObject:pType];
-										}
-										break;
-									}
-								}
-							}
-						}
-
-						// Safari sends images as a URL type so filter out the
-						// URL type if the only text type is the URL type
-						if ( bURLTypeFound && bStringTypeFound && bImageTypeFound && !bTextTypeFound )
-							pRet = pImageTypes;
-					}
-				}
-			}
-		}
-	}
-
-	return pRet;
-}
-
-- (void)flush:(NSNumber *)pChangeCount;
-{
-	if ( mpPasteboardName && pChangeCount )
-	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
-		{
-			// While we have ownership, force each type to be rendered
-			NSArray *pTypes = [pPasteboard types];
-			if ( pTypes )
-			{
-				unsigned int nCount = [pTypes count];
-				unsigned int i = 0;
-				for ( ; i < nCount ; i++ )
-				{
-					if ( [pChangeCount intValue] != [pPasteboard changeCount] )
-						break;
-
-					NSString *pType = (NSString *)[pTypes objectAtIndex:i];
-					if ( pType )
-						[pPasteboard dataForType:pType];
-				}
-			}
-		}
-	}
 }
 
 - (void)destroyData
@@ -350,102 +270,193 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	}
 }
 
+- (NSArray *)filteredTypes
+{
+	NSMutableArray *pRet = nil;
+
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard )
+	{
+		NSArray *pTypes = [pPasteboard types];
+		if ( pTypes )
+		{
+			unsigned int nCount = [pTypes count];
+			NSMutableArray *pImageTypes = [NSMutableArray arrayWithCapacity:nCount];
+
+			pRet = [NSMutableArray arrayWithArray:pTypes];
+			if ( pImageTypes && pRet )
+			{
+				bool bHTMLTypeFound = false;
+				bool bImageTypeFound = false;
+				bool bTextTypeFound = false;
+				bool bStringTypeFound = false;
+				bool bURLTypeFound = false;
+
+				unsigned int i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSString *pType = [pTypes objectAtIndex:i];
+					if ( pType )
+					{
+						if ( pHTMLPasteboardType && [pHTMLPasteboardType isEqualToString:pType] )
+						{
+							bHTMLTypeFound = true;
+						}
+						else if ( pStringPasteboardType && [pStringPasteboardType isEqualToString:pType] )
+						{
+							bStringTypeFound = true;
+						}
+						else if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
+						{
+							bURLTypeFound = true;
+						}
+						else
+						{
+							// Determine if this is a text or image type
+							for ( USHORT j = 0; j < nSupportedTypes; j++ )
+							{
+								if ( aSupportedPasteboardTypes[ j ] && [aSupportedPasteboardTypes[ j ] isEqualToString:pType] )
+								{
+									if ( aSupportedTextTypes[ j ] )
+									{
+										bTextTypeFound = true;
+									}
+									else
+									{
+										bImageTypeFound = true;
+										[pImageTypes addObject:pType];
+									}
+									break;
+								}
+							}
+						}
+					}
+
+					// Safari sends images as a URL type so filter out the
+					// URL type if the only text type is the URL type. Mozilla
+					// sends images as the URL type and HTML when dragging so
+					// so filter that as well.
+					if ( bURLTypeFound && ( bHTMLTypeFound || bStringTypeFound ) && bImageTypeFound && !bTextTypeFound )
+						pRet = pImageTypes;
+				}
+			}
+		}
+	}
+
+	return pRet;
+}
+
+- (void)flush:(NSNumber *)pChangeCount;
+{
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard && pChangeCount )
+	{
+		// While we have ownership, force each type to be rendered
+		NSArray *pTypes = [pPasteboard types];
+		if ( pTypes )
+		{
+			unsigned int nCount = [pTypes count];
+			unsigned int i = 0;
+			for ( ; i < nCount ; i++ )
+			{
+				if ( [pChangeCount intValue] != [pPasteboard changeCount] )
+					break;
+
+				NSString *pType = (NSString *)[pTypes objectAtIndex:i];
+				if ( pType )
+					[pPasteboard dataForType:pType];
+			}
+		}
+	}
+}
+
 - (void)getPNGDataForType:(NSString *)pType
 {
 	[self destroyData];
 
-	if ( mpPasteboardName && pType )
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard && pType )
 	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
+		@try
 		{
-			@try
+			if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
 			{
-				if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+				mbTypeAvailable = YES;
+
+				NSData *pPasteboardData = [pPasteboard dataForType:pType];
+				if ( pPasteboardData )
 				{
-					mbTypeAvailable = YES;
+					NSBitmapImageRep *pPasteboardImageRep = [NSBitmapImageRep imageRepWithData:pPasteboardData];
+					if ( pPasteboardImageRep )
+						mpPNGData = [pPasteboardImageRep representationUsingType:NSPNGFileType properties:nil];
 
-					NSData *pPasteboardData = [pPasteboard dataForType:pType];
-					if ( pPasteboardData )
+					if ( !mpPNGData )
 					{
-						NSBitmapImageRep *pPasteboardImageRep = [NSBitmapImageRep imageRepWithData:pPasteboardData];
-						if ( pPasteboardImageRep )
-							mpPNGData = [pPasteboardImageRep representationUsingType:NSPNGFileType properties:nil];
-
-						if ( !mpPNGData )
+						NSImage *pImage = [[NSImage alloc] initWithData:pPasteboardData];
+						if ( pImage )
 						{
-							NSImage *pImage = [[NSImage alloc] initWithData:pPasteboardData];
-							if ( pImage )
-							{
-								[pImage autorelease];
+							[pImage autorelease];
 
-								NSData *pTIFFData = [pImage TIFFRepresentation];
-								if ( pTIFFData )
-								{
-									NSBitmapImageRep *pTIFFImageRep = [NSBitmapImageRep imageRepWithData:pTIFFData];
-									if ( pTIFFImageRep )
-										mpPNGData = [pTIFFImageRep representationUsingType:NSPNGFileType properties:nil];
-								}
+							NSData *pTIFFData = [pImage TIFFRepresentation];
+							if ( pTIFFData )
+							{
+								NSBitmapImageRep *pTIFFImageRep = [NSBitmapImageRep imageRepWithData:pTIFFData];
+								if ( pTIFFImageRep )
+									mpPNGData = [pTIFFImageRep representationUsingType:NSPNGFileType properties:nil];
 							}
 						}
 					}
 				}
 			}
-			@catch ( NSException *pExc )
-			{
-				NSLog( @"%@", [pExc reason] );
-			}
+		}
+		@catch ( NSException *pExc )
+		{
+			NSLog( @"%@", [pExc reason] );
+		}
 
-			if ( mpPNGData )
-			{
-				if ( mbTypeAvailable )
-					[mpPNGData retain];
-				else
-					mpPNGData = nil;
-			}
+		if ( mpPNGData )
+		{
+			if ( mbTypeAvailable )
+				[mpPNGData retain];
+			else
+				mpPNGData = nil;
 		}
 	}
 }
 
 - (void)getChangeCount:(id)pObject
 {
-	if ( mpPasteboardName )
-	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
-			mnChangeCount = [pPasteboard changeCount];
-	}
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard )
+		mnChangeCount = [pPasteboard changeCount];
 }
 
 - (void)getDataForType:(NSString *)pType
 {
 	[self destroyData];
 
-	if ( mpPasteboardName && pType )
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard && pType )
 	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
+		@try
 		{
-			@try
+			if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
 			{
-				if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
-				{
-					mbTypeAvailable = YES;
-					mpData = [pPasteboard dataForType:pType];
-				}
+				mbTypeAvailable = YES;
+				mpData = [pPasteboard dataForType:pType];
 			}
-			@catch ( NSException *pExc )
-			{
-				NSLog( @"%@", [pExc reason] );
-			}
+		}
+		@catch ( NSException *pExc )
+		{
+			NSLog( @"%@", [pExc reason] );
+		}
 
-			if ( mpData )
-			{
-				if ( mbTypeAvailable )
-					[mpData retain];
-				else
-					mpData = nil;
-			}
+		if ( mpData )
+		{
+			if ( mbTypeAvailable )
+				[mpData retain];
+			else
+				mpData = nil;
 		}
 	}
 }
@@ -454,31 +465,28 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 {
 	[self destroyData];
 
-	if ( mpPasteboardName && pType )
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard && pType )
 	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
+		@try
 		{
-			@try
+			if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
 			{
-				if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
-				{
-					mbTypeAvailable = YES;
-					mpString = [pPasteboard stringForType:pType];
-				}
+				mbTypeAvailable = YES;
+				mpString = [pPasteboard stringForType:pType];
 			}
-			@catch ( NSException *pExc )
-			{
-				NSLog( @"%@", [pExc reason] );
-			}
+		}
+		@catch ( NSException *pExc )
+		{
+			NSLog( @"%@", [pExc reason] );
+		}
 
-			if ( mpString )
-			{
-				if ( mbTypeAvailable )
-					[mpString retain];
-				else
-					mpString = nil;
-			}
+		if ( mpString )
+		{
+			if ( mbTypeAvailable )
+				[mpString retain];
+			else
+				mpString = nil;
 		}
 	}
 }
@@ -510,17 +518,16 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 		mpTypes = nil;
 }
 
-- (id)initWithPasteboardType:(int)nTransferableType
+- (id)initWithPasteboardName:(NSString *)pPasteboardName
 {
 	[super init];
 
 	mnChangeCount = -1;
 	mpPNGData = nil;
 	mpData = nil;
-	if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-		mpPasteboardName = NSDragPboard;
-	else
-		mpPasteboardName = NSGeneralPboard;
+	mpPasteboardName = pPasteboardName;
+	if ( mpPasteboardName )
+		[mpPasteboardName retain];
 	mpString = nil;
 	mbTypeAvailable = NO;
 	mpTypes = nil;
@@ -550,26 +557,11 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 @end
 
-@interface DTransPasteboardOwner : NSObject
-{
-	int								mnChangeCount;
-	DTransTransferable*				mpTransferable;
-	const NSString*					mpPasteboardName;
-	const NSArray*					mpTypes;
-}
-- (int)changeCount;
-- (void)dealloc;
-- (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardType:(int)nTransferableType types:(const NSArray *)pTypes;
-- (void)pasteboard:(NSPasteboard *)pSender provideDataForType:(NSString *)pType;
-- (void)pasteboardChangedOwner:(NSPasteboard *)pSender;
-- (void)setContents:(id)pObject;
-@end
-
 @implementation DTransPasteboardOwner
 
-+ (id)createWithTransferable:(DTransTransferable *)pTransferable pasteboardType:(int)nTransferableType types:(const NSArray *)pTypes;
++ (id)createWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes
 {
-	DTransPasteboardOwner *pRet = [[DTransPasteboardOwner alloc] initWithTransferable:pTransferable pasteboardType:nTransferableType types:pTypes];
+	DTransPasteboardOwner *pRet = [[DTransPasteboardOwner alloc] initWithTransferable:pTransferable pasteboardName:pPasteboardName types:pTypes];
 	[pRet autorelease];
 	return pRet;
 }
@@ -581,22 +573,24 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 - (void)dealloc
 {
+	if ( mpPasteboardName )
+		[mpPasteboardName release];
+
 	if ( mpTypes )
 		[mpTypes release];
 	
 	[super dealloc];
 }
 
-- (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardType:(int)nTransferableType types:(const NSArray *)pTypes
+- (id)initWithTransferable:(DTransTransferable *)pTransferable pasteboardName:(NSString *)pPasteboardName types:(NSArray *)pTypes
 {
 	[super init];
 
 	mnChangeCount = -1;
 	mpTransferable = pTransferable;
-	if ( nTransferableType == TRANSFERABLE_TYPE_DRAG )
-		mpPasteboardName = NSDragPboard;
-	else
-		mpPasteboardName = NSGeneralPboard;
+	mpPasteboardName = pPasteboardName;
+	if ( mpPasteboardName )
+		[mpPasteboardName retain];
 	mpTypes = pTypes;
 	if ( mpTypes )
 		[mpTypes retain];
@@ -630,17 +624,14 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 
 - (void)setContents:(id)pObject
 {
-	if ( mpPasteboardName && mpTypes )
+	NSPasteboard *pPasteboard = ( mpPasteboardName ? [NSPasteboard pasteboardWithName:mpPasteboardName] : [NSPasteboard generalPasteboard] );
+	if ( pPasteboard )
 	{
-		NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:mpPasteboardName];
-		if ( pPasteboard )
-		{
-			// Retain this object as once it becomes the pasteboard owner, we
-			// must keep this object alive until the pasteboardChangedOwner:
-			// selector is called
-			[self retain];
-			mnChangeCount = [pPasteboard declareTypes:mpTypes owner:self];
-		}
+		// Retain this object as once it becomes the pasteboard owner, we
+		// must keep this object alive until the pasteboardChangedOwner:
+		// selector is called
+		[self retain];
+		mnChangeCount = [pPasteboard declareTypes:mpTypes owner:self];
 	}
 }
 
@@ -1061,12 +1052,12 @@ NSArray *DTransTransferable::getSupportedPasteboardTypes()
 
 void DTransTransferable::flush()
 {
-	// Force pasteboard to render data if we still have ownership
+	// Force transferable to render data if we still have ownership
 	if ( mnTransferableType == TRANSFERABLE_TYPE_CLIPBOARD && mnChangeCount >= 0 )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1092,7 +1083,7 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 		bool bDataAvailable = false;
 		bool bDataRetrieved = false;
-		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
 			NSString *pRequestedType = nil;
@@ -1430,13 +1421,17 @@ Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( Uns
 
 // ----------------------------------------------------------------------------
 
-DTransTransferable::DTransTransferable( int nTransferableType ) :
+DTransTransferable::DTransTransferable( NSString *pPasteboardName ) :
 	mnChangeCount( -1 ),
 	mpNativeTransferable( NULL ),
-	mnTransferableType( nTransferableType ),
+	mpPasteboardName( pPasteboardName ),
+	mnTransferableType( TRANSFERABLE_TYPE_CLIPBOARD ),
 	mnItem( 0 )
 {
 	ImplInitializeSupportedPasteboardTypes();
+
+	if ( mpPasteboardName )
+		[mpPasteboardName retain];
 
 	aTransferableList.push_back( this );
 }
@@ -1446,6 +1441,7 @@ DTransTransferable::DTransTransferable( int nTransferableType ) :
 DTransTransferable::DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem ) :
 	mnChangeCount( -1 ),
 	mpNativeTransferable( pNativeTransferable ),
+	mpPasteboardName( NULL ),
 	mnTransferableType( nTransferableType ),
 	mnItem( 0 )
 {
@@ -1466,6 +1462,9 @@ DTransTransferable::DTransTransferable( void *pNativeTransferable, int nTransfer
 DTransTransferable::~DTransTransferable()
 {
 	aTransferableList.remove( this );
+
+	if ( mpPasteboardName )
+		[mpPasteboardName release];
 }
 
 // ----------------------------------------------------------------------------
@@ -1481,7 +1480,7 @@ Sequence< DataFlavor > DTransTransferable::getTransferDataFlavors() throw ( Runt
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1550,7 +1549,7 @@ sal_Bool DTransTransferable::hasOwnership()
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
+		DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 		if ( pHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1592,7 +1591,7 @@ sal_Bool DTransTransferable::isDataFlavorSupported( const DataFlavor& aFlavor ) 
 
 		if ( pRequestedType )
 		{
-			DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardType:mnTransferableType];
+			DTransPasteboardHelper *pHelper = [DTransPasteboardHelper createWithPasteboardName:mpPasteboardName];
 			if ( pHelper )
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
@@ -1708,7 +1707,7 @@ sal_Bool DTransTransferable::setContents( const Reference< XTransferable > &xTra
 				// pasteboardChangedOwner: selector. Note that we will pass
 				// a zero length types array as that is needed to clear and
 				// take ownership of the clipboard.
-				DTransPasteboardOwner *pOwner = [DTransPasteboardOwner createWithTransferable:this pasteboardType:mnTransferableType types:pTypes];
+				DTransPasteboardOwner *pOwner = [DTransPasteboardOwner createWithTransferable:this pasteboardName:mpPasteboardName types:pTypes];
 				if ( pOwner )
 				{
 					NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
