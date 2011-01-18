@@ -6555,6 +6555,12 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
             mpWindowImpl->mbPaintFrame = TRUE;
             BOOL bNoActivate = (nFlags & (SHOW_NOACTIVATE|SHOW_NOFOCUSCHANGE)) ? TRUE : FALSE;
             mpWindowImpl->mpFrame->Show( TRUE, bNoActivate );
+#ifdef USE_JAVA
+            // We need to restart drag and drop since the window's NSView is
+            // not created until after the window is shown
+            ImplStopDnd();
+            ImplStartDnd();
+#endif	// USE_JAVA
             if( aDogTag.IsDelete() )
                 return;
 
@@ -8511,10 +8517,10 @@ Reference< XDragSource > Window::GetDragSource()
 #elif defined USE_JAVA
                         aDragSourceSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
                         aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget" );
-                        aDragSourceAL[ 0 ] = makeAny( (sal_uInt32) GetSystemData() );
-                        aDragSourceAL[ 1 ] = makeAny( (sal_uInt32) this );
-                        aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) GetSystemData() );
-                        aDropTargetAL[ 1 ] = makeAny( (sal_uInt32) this );
+                        aDragSourceAL[ 0 ] = makeAny( (sal_uInt32)GetSystemData() );
+                        aDragSourceAL[ 1 ] = makeAny( (sal_uInt32)this );
+                        aDropTargetAL[ 0 ] = makeAny( (sal_uInt32)pEnvData->pView );
+                        aDropTargetAL[ 1 ] = makeAny( (sal_uInt32)this );
 #elif defined QUARTZ
 			/* FIXME: Mac OS X specific dnd interface does not exist! *
 			 * Using Windows based dnd as a temporary solution        */

@@ -324,7 +324,24 @@ static BOOL bUsePartialKeyEntryFix = NO;
 static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
+- (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
+- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
+- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
+- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
+- (id)draggingDestinationDelegate;
+- (void)draggingEnded:(id < NSDraggingInfo >)pSender;
+- (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender;
+- (void)draggingExited:(id < NSDraggingInfo >)pSender;
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
+- (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
+- (BOOL)ignoreModifierKeysWhileDragging;
+- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
+- (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
+- (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
+- (void)setDraggingDestinationDelegate:(id)pDelegate;
+- (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
+- (BOOL)wantsPeriodicDraggingUpdates;
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
 
@@ -969,20 +986,249 @@ static VCLResponder *pSharedResponder = nil;
 static BOOL bNSViewAWTInitialized = NO;
 static CFStringRef aTextSelection = nil;
 static CFDataRef aRTFSelection = nil;
+static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 
 @implementation VCLView
 
+- (void)concludeDragOperation:(id < NSDraggingInfo >)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(concludeDragOperation:)])
+		[pDelegate concludeDragOperation:pSender];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(concludeDragOperation:)] )
+		[super concludeDragOperation:pSender];
+}
+
+- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint
+{
+	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:beginAt:)] )
+		[super draggedImage:pImage beganAt:aPoint];
+}
+
+- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
+{
+	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:endedAt:operation:)] )
+		[super draggedImage:pImage endedAt:aPoint operation:nOperation];
+}
+
+- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
+{
+	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:movedTo:)] )
+		[super draggedImage:pImage movedTo:aPoint];
+}
+
+- (id)draggingDestinationDelegate
+{
+	id pRet = nil;
+
+	NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)self];
+	if ( pKey && pDraggingDestinationDelegates )
+	{
+		id pDelegate = [pDraggingDestinationDelegates objectForKey:pKey];
+		if ( pDelegate )
+			pRet = pDelegate;
+	}
+
+	return pRet;
+}
+
+- (void)draggingEnded:(id < NSDraggingInfo >)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEnded:)])
+		[pDelegate draggingEnded:pSender];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggingEnded:)] )
+		[super draggingEnded:pSender];
+}
+
+- (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEntered:)])
+		return [pDelegate draggingEntered:pSender];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggingEntered:)] )
+		return [super draggingEntered:pSender];
+	else
+		return NSDragOperationNone;
+}
+
+- (void)draggingExited:(id < NSDraggingInfo >)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingExited:)])
+		[pDelegate draggingExited:pSender];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggingExited:)] )
+		[super draggingExited:pSender];
+}
+
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
+{
+	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)] )
+		return [super draggingSourceOperationMaskForLocal:bLocal];
+	else
+		return NSDragOperationNone;
+}
+
+- (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingUpdated:)])
+		return [pDelegate draggingUpdated:pSender];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggingUpdated:)] )
+		return [super draggingUpdated:pSender];
+	else
+		return NSDragOperationNone;
+}
+
+- (BOOL)ignoreModifierKeysWhileDragging
+{
+	return NO;
+}
+
 - (id)initWithFrame:(NSRect)aFrame
 {
-	// If the NSViewAWT class has its own services selectors, redirect them to
-	// VCLView's matching selectors
+	// If the NSViewAWT class has its own drag and drop and services selectors,
+	// redirect them to VCLView's matching selectors
 	if ( !bNSViewAWTInitialized && [[self className] isEqualToString:pNSViewAWTString] )
 	{
 		bNSViewAWTInitialized = YES;
 
-		SEL aSelector = @selector(readSelectionFromPasteboard:);
+		// NSDraggingDestination selectors
+
+		SEL aSelector = @selector(concludeDragOperation:);
 		Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(draggingEnded:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(draggingEntered:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(draggingExited:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(draggingUpdated:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(performDragOperation:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(prepareForDragOperation:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(wantsPeriodicDraggingUpdates);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		// if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		if ( aOldMethod && aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		// NSDraggingSource selectors
+
+		aSelector = @selector(draggedImage:beganAt:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(draggedImage:endedAt:operation:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(draggedImage:movedTo:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(draggingSourceOperationMaskForLocal:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(ignoreModifierKeysWhileDragging);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		aSelector = @selector(namesOfPromisedFilesDroppedAtDestination:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+		{
+			aOldMethod->method_types = aNewMethod->method_types;
+			aOldMethod->method_imp = aNewMethod->method_imp;
+		}
+
+		// NSResponder selectors
+
+		aSelector = @selector(readSelectionFromPasteboard:);
+		aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
 		{
 			aOldMethod->method_types = aNewMethod->method_types;
@@ -1009,6 +1255,36 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	return [super initWithFrame:aFrame];
+}
+
+- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
+{
+	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)] )
+		return [super namesOfPromisedFilesDroppedAtDestination:pDropDestination];
+	else
+		return nil;
+}
+
+- (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
+		return [pDelegate performDragOperation:pSender];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(performDragOperation:)] )
+		return [super performDragOperation:pSender];
+	else
+		return NO;
+}
+
+- (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(prepareForDragOperation:)])
+		return [pDelegate prepareForDragOperation:pSender];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(prepareForDragOperation:)] )
+		return [super prepareForDragOperation:pSender];
+	else
+		return NO;
 }
 
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard
@@ -1055,6 +1331,28 @@ static CFDataRef aRTFSelection = nil;
 	return bRet;
 }
 
+- (void)setDraggingDestinationDelegate:(id)pDelegate
+{
+	if ( !pDraggingDestinationDelegates )
+	{
+		pDraggingDestinationDelegates = [NSMutableDictionary dictionaryWithCapacity:10];
+		if ( pDraggingDestinationDelegates )
+			[pDraggingDestinationDelegates retain];
+	}
+
+	if ( pDraggingDestinationDelegates )
+	{
+		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)self];
+		if ( pKey )
+		{
+			if ( pDelegate )
+				[pDraggingDestinationDelegates setObject:pDelegate forKey:pKey];
+			else
+				[pDraggingDestinationDelegates removeObjectForKey:pKey];
+		}
+	}
+}
+
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType
 {
 	// Invoke superclass if this is not an NSViewAWT class
@@ -1096,6 +1394,17 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	return nil;
+}
+
+- (BOOL)wantsPeriodicDraggingUpdates
+{
+	id pDelegate = [self draggingDestinationDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(wantsPeriodicDraggingUpdates)])
+		return [pDelegate wantsPeriodicDraggingUpdates];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(wantsPeriodicDraggingUpdates)] )
+		return [super wantsPeriodicDraggingUpdates];
+	else
+		return NO;
 }
 
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes
