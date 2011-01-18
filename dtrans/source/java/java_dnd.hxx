@@ -63,10 +63,6 @@
 #include <vcl/window.hxx>
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 #define JAVA_DRAGSOURCE_SERVICE_NAME "com.sun.star.datatransfer.dnd.JavaDragSource"
 #define JAVA_DRAGSOURCE_IMPL_NAME "com.sun.star.datatransfer.dnd.JavaDragSource"
 #define JAVA_DRAGSOURCE_REGKEY_NAME "/com.sun.star.datatransfer.dnd.JavaDragSource/UNO/SERVICES/com.sun.star.datatransfer.dnd.JavaDragSource"
@@ -91,11 +87,11 @@ class JavaDragSource : public ::cppu::WeakComponentImplHelper3< ::com::sun::star
 public:
 	sal_Int8				mnActions;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	maContents;
+	id						mpDraggingSource;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >	maListener;
     ::osl::Mutex			maMutex;
-	const SystemEnvData*	mpEnvData;
+	id						mpPasteboardHelper;
 	Window*					mpWindow;
-	WindowRef				maWindowRef;
 
 							DECL_STATIC_LINK( JavaDragSource, dragDropEnd, void* );
 
@@ -110,7 +106,7 @@ public:
 	virtual sal_Int32		SAL_CALL getDefaultCursor( sal_Int8 dragAction ) throw( com::sun::star::lang::IllegalArgumentException, com::sun::star::uno::RuntimeException );
 	virtual void			SAL_CALL startDrag( const ::com::sun::star::datatransfer::dnd::DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< ::com::sun::star::datatransfer::XTransferable >& transferable, const Reference< ::com::sun::star::datatransfer::dnd::XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException );
 
-	WindowRef				getNativeWindow();
+	NSView*					getNSView();
 	void					handleActionChange();
 	void					handleDrag( sal_Int32 nX, sal_Int32 nY );
 };
@@ -125,10 +121,9 @@ public:
 	sal_Int8				mnDefaultActions;
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
+	id						mpPasteboardHelper;
     bool					mbRejected;
-	NSView*					mpView;
 	Window*					mpWindow;
-	WindowRef				maWindowRef;
 
 							JavaDropTarget();
 	virtual					~JavaDropTarget();
@@ -149,16 +144,11 @@ public:
 	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw( com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw( com::sun::star::uno::RuntimeException );
 
-	NSView*					getNSView() { return mpView; }
-	WindowRef				getNativeWindow();
+	NSView*					getNSView();
 	sal_Int8				handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo );
-	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem );
 	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo );
-	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
 	sal_Int8				handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo );
-	void					handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
 	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo );
-	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem );
 	bool					isRejected() { return mbRejected; }
 };
 

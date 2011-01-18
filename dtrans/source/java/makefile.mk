@@ -69,7 +69,6 @@ SLOFILES=\
 	$(SLO)$/HtmlFmtFlt.obj \
 	$(SLO)$/java_clipboard.obj \
 	$(SLO)$/java_dnd.obj \
-	$(SLO)$/java_dnd_cocoa.obj \
 	$(SLO)$/java_dndcontext.obj \
 	$(SLO)$/java_service.obj
 
@@ -83,9 +82,7 @@ SHL1STDLIBS= \
 		$(CPPULIB) 	\
 		$(CPPUHELPERLIB)	\
 		$(COMPHELPERLIB)	\
-		-framework AppKit	\
-		-framework Carbon	\
-		-framework QuickTime
+		-framework AppKit
 
 SHL1DEPN=
 SHL1IMPLIB=		i$(SHL1TARGET) 

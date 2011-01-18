@@ -57,8 +57,6 @@
 #include <vos/mutex.hxx>
 #endif
 
-#include "java_dnd_cocoa.h"
-
 #include <premac.h>
 #import <AppKit/AppKit.h>
 #include <postmac.h>
@@ -74,13 +72,10 @@ using namespace rtl;
 using namespace std;
 using namespace vos;
 
-static EventLoopTimerUPP pTrackDragTimerUPP = NULL;
-static DragTrackingHandlerUPP pDragTrackingHandlerUPP = NULL;
 static ::std::list< ::java::JavaDragSource* > aDragSources;
 static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
-static bool bNoRejectCursor = true;
 
 static Point ImplGetNSPointFromPoint( NSPoint aPoint, NSWindow *pWindow );
 static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
@@ -91,17 +86,23 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 
 @interface NSView (VCLView)
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
+- (void)setDraggingSourceDelegate:(id)pDelegate;
 @end
 
 @interface JavaDNDPasteboardHelper : NSObject
 {
 	NSView*						mpDestination;
 	NSArray*					mpNewTypes;
+	NSView*						mpSource;
 }
-+ (id)createWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes;
+- (NSView *)getDestination;
+- (NSView *)getSource;
 - (id)initWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes;
+- (id)initWithDraggingSource:(NSView *)pSource;
+- (void)registerDragSource:(id)pSender;
 - (void)registerForDraggedTypes:(id)pSender;
-- (void)unregisterDraggedTypes:(id)pSender;
+- (void)unregisterDraggedTypesAndReleaseView:(id)pSender;
+- (void)unregisterDragSourceAndReleaseView:(id)pSender;
 @end
 
 @interface JavaDNDDraggingDestination : NSObject
@@ -121,14 +122,22 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 - (BOOL)wantsPeriodicDraggingUpdates;
 @end
 
-@implementation JavaDNDPasteboardHelper
-
-+ (id)createWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes
+@interface JavaDNDDraggingSource : NSObject
 {
-	JavaDNDPasteboardHelper *pRet = [[JavaDNDPasteboardHelper alloc] initWithDraggingDestination:pDestination newTypes:pNewTypes];
-	[pRet autorelease];
-	return pRet;
+	NSView*						mpSource;
 }
++ (id)createWithView:(NSView *)pSource;
+- (void)dealloc;
+- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
+- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
+- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
+- (BOOL)ignoreModifierKeysWhileDragging;
+- (id)initWithView:(NSView *)pSource;
+- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
+@end
+
+@implementation JavaDNDPasteboardHelper
 
 - (void)dealloc
 {
@@ -138,7 +147,20 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	if ( mpNewTypes )
 		[mpNewTypes release];
 
+	if ( mpSource )
+		[mpSource release];
+
 	[super dealloc];
+}
+
+- (NSView *)getDestination
+{
+	return mpDestination;
+}
+
+- (NSView *)getSource
+{
+	return mpSource;
 }
 
 - (id)initWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes
@@ -151,8 +173,40 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	mpNewTypes = pNewTypes;
 	if ( mpNewTypes )
 		[mpNewTypes retain];
+	mpSource = nil;
 
 	return self;
+}
+
+- (id)initWithDraggingSource:(NSView *)pSource
+{
+	[super init];
+
+	mpDestination = nil;
+	mpNewTypes = nil;
+	mpSource = pSource;
+	if ( mpSource )
+		[mpSource retain];
+
+	return self;
+}
+
+- (void)registerDragSource:(id)pSender
+{
+	if ( mpSource && [mpSource respondsToSelector:@selector(setDraggingSourceDelegate:)] )
+	{
+		JavaDNDDraggingSource *pDragSource = [JavaDNDDraggingSource createWithView:mpSource];
+		if ( pDragSource )
+		{
+			// Drag source object is retained by the view
+			[mpSource setDraggingSourceDelegate:pDragSource];
+		}
+		else
+		{
+			// Any previous drag source object wll be released by the view
+			[mpSource setDraggingSourceDelegate:nil];
+		}
+	}
 }
 
 - (void)registerForDraggedTypes:(id)pSender
@@ -175,12 +229,30 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	}
 }
 
-- (void)unregisterDraggedTypes:(id)pSender
+- (void)unregisterDraggedTypesAndReleaseView:(id)pSender
 {
-	if ( mpDestination && [mpDestination respondsToSelector:@selector(setDraggingDestinationDelegate:)] )
+	if ( mpDestination )
 	{
-		[mpDestination unregisterDraggedTypes];
-		[mpDestination setDraggingDestinationDelegate:nil];
+		if ( [mpDestination respondsToSelector:@selector(setDraggingDestinationDelegate:)] )
+		{
+			[mpDestination unregisterDraggedTypes];
+			[mpDestination setDraggingDestinationDelegate:nil];
+		}
+
+		[mpDestination release];
+		mpDestination = nil;
+	}
+}
+
+- (void)unregisterDragSourceAndReleaseView:(id)pSender
+{
+	if ( mpSource )
+	{
+		if ( [mpSource respondsToSelector:@selector(setDraggingSourceDelegate:)] )
+			[mpSource setDraggingSourceDelegate:nil];
+
+		[mpSource release];
+		mpSource = nil;
 	}
 }
 
@@ -215,7 +287,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 {
 	NSDragOperation nRet = NSDragOperationNone;
 
-	if ( !pSender )
+	if ( !mpDestination || !pSender )
 		return nRet;
 
 	NSWindow *pWindow = [pSender draggingDestinationWindow];
@@ -251,7 +323,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 
 - (void)draggingExited:(id < NSDraggingInfo >)pSender
 {
-	if ( !pSender )
+	if ( !mpDestination || !pSender )
 		return;
 
 	NSWindow *pWindow = [pSender draggingDestinationWindow];
@@ -287,7 +359,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 {
 	NSDragOperation nRet = NSDragOperationNone;
 
-	if ( !pSender )
+	if ( !mpDestination || !pSender )
 		return nRet;
 
 	NSWindow *pWindow = [pSender draggingDestinationWindow];
@@ -336,7 +408,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 {
 	BOOL bRet = NO;
 
-	if ( !pSender )
+	if ( !mpDestination || !pSender )
 		return bRet;
 
 	NSWindow *pWindow = [pSender draggingDestinationWindow];
@@ -380,6 +452,63 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	return NO;
 }
 
+
+@end
+
+@implementation JavaDNDDraggingSource
+
++ (id)createWithView:(NSView *)pSource
+{
+	JavaDNDDraggingSource *pRet = [[JavaDNDDraggingSource alloc] initWithView:pSource];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)dealloc
+{
+	if ( mpSource )
+		[mpSource release];
+
+	[super dealloc];
+}
+
+- (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint
+{
+}
+
+- (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
+{
+}
+
+- (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
+{
+}
+
+- (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
+{
+	return NSDragOperationNone;
+}
+
+- (BOOL)ignoreModifierKeysWhileDragging
+{
+	return NO;
+}
+
+- (id)initWithView:(NSView *)pSource
+{
+	[super init];
+
+	mpSource = pSource;
+	if ( mpSource )
+		[mpSource retain];
+
+	return self;
+}
+
+- (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
+{
+	return nil;
+}
 
 @end
 
@@ -468,259 +597,6 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask )
 	return nRet;
 }
 
-// ------------------------------------------------------------------------
-
-static void ImplSetThemeCursor( sal_Int8 nAction, bool bPointInWindow )
-{
-	if ( bPointInWindow )
-	{
-		if ( !bNoRejectCursor )
-		{
-			if ( nAction & DNDConstants::ACTION_MOVE )
-				SetThemeCursor( kThemeClosedHandCursor );
-			else if ( nAction & DNDConstants::ACTION_COPY )
-				SetThemeCursor( kThemeCopyArrowCursor );
-			else if ( nAction & DNDConstants::ACTION_LINK )
-				SetThemeCursor( kThemeAliasArrowCursor );
-			else
-				SetThemeCursor( kThemeNotAllowedCursor );
-		}
-	}
-	else
-	{
-		SetThemeCursor( kThemeArrowCursor );
-	}
-}
-
-// ------------------------------------------------------------------------
-
-static sal_Int8 ImplGetDragDropAction( DragRef aDrag )
-{
-	sal_Int8 nActions = DNDConstants::ACTION_NONE;
-
-	DragActions nDragActions;
-	if ( GetDragDropAction( aDrag, &nDragActions ) == noErr )
-	{
-		if ( nDragActions & kDragActionMove )
-			nActions = DNDConstants::ACTION_MOVE;
-		else if ( nDragActions & ( kDragActionCopy | kDragActionGeneric ) )
-			nActions = DNDConstants::ACTION_COPY;
-		else if ( nDragActions & kDragActionAlias )
-			nActions = DNDConstants::ACTION_LINK;
-	}
-
-	SInt16 nKeyModifiers;
-	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
-		nActions |= DNDConstants::ACTION_DEFAULT;
-
-	return nActions;
-}
-
-// ------------------------------------------------------------------------
-
-static sal_Int8 ImplGetDragAllowableActions( DragRef aDrag )
-{
-	sal_Int8 nActions = DNDConstants::ACTION_NONE;
-
-	DragActions nDragActions;
-	if ( GetDragAllowableActions( aDrag, &nDragActions ) == noErr )
-	{
-		if ( nDragActions & ( kDragActionMove | kDragActionGeneric ) )
-			nActions |= DNDConstants::ACTION_MOVE;
-		if ( nDragActions & ( kDragActionCopy | kDragActionGeneric ) )
-			nActions |= DNDConstants::ACTION_COPY;
-		if ( nDragActions & ( kDragActionAlias | kDragActionGeneric ) )
-			nActions |= DNDConstants::ACTION_LINK;
-	}
-
-	SInt16 nKeyModifiers;
-	if ( GetDragModifiers( aDrag, &nKeyModifiers, NULL, NULL ) != noErr || ! ( nKeyModifiers & ( shiftKey | cmdKey ) ) )
-		nActions |= DNDConstants::ACTION_DEFAULT;
-
-	return nActions;
-}
-
-// ------------------------------------------------------------------------
-
-static void ImplSetDragAllowableActions( DragRef aDrag, sal_Int8 nActions )
-{
-	DragActions nDragActions = kDragActionGeneric;
-	if ( nActions & DNDConstants::ACTION_MOVE )
-		nDragActions |= kDragActionMove;
-	if ( nActions & DNDConstants::ACTION_COPY )
-		nDragActions |= kDragActionCopy;
-	if ( nActions & DNDConstants::ACTION_LINK )
-		nDragActions |= kDragActionAlias;
-	SetDragAllowableActions( aDrag, nDragActions, false );
-}
-
-// ------------------------------------------------------------------------
-
-static void ImplUpdateCurrentAction( DragRef aDrag )
-{
-	if ( pTrackDragOwner )
-	{
-		sal_Int8 nOldAction = nCurrentAction;
-
-		EventRecord aEventRecord;
-		aEventRecord.what = mouseDown;
-		aEventRecord.message = mouseMovedMessage;
-		GetGlobalMouse( &aEventRecord.where );
-		aEventRecord.modifiers = GetCurrentKeyModifiers();
-
-		if ( ( aEventRecord.modifiers & shiftKey ) && ! ( aEventRecord.modifiers & cmdKey ) )
-			nCurrentAction = DNDConstants::ACTION_MOVE;
-		else if ( ! ( aEventRecord.modifiers & shiftKey ) && ( aEventRecord.modifiers & cmdKey ) )
-			nCurrentAction = DNDConstants::ACTION_COPY;
-		else if ( aEventRecord.modifiers & ( shiftKey | cmdKey ) )
-			nCurrentAction = DNDConstants::ACTION_LINK;
-		else if ( pTrackDragOwner->mnActions & DNDConstants::ACTION_MOVE )
-			nCurrentAction = DNDConstants::ACTION_MOVE;
-		else if ( pTrackDragOwner->mnActions & DNDConstants::ACTION_COPY )
-			nCurrentAction = DNDConstants::ACTION_COPY;
-		else if ( pTrackDragOwner->mnActions & DNDConstants::ACTION_LINK )
-			nCurrentAction = DNDConstants::ACTION_LINK;
-		else 
-			nCurrentAction = DNDConstants::ACTION_NONE;
-
-		if ( ! ( aEventRecord.modifiers & ( shiftKey | cmdKey ) ) )
-			nCurrentAction |= DNDConstants::ACTION_DEFAULT;
-
-		if ( nCurrentAction != nOldAction )
-		{
-			ImplSetDragAllowableActions( aDrag, nCurrentAction );
-			pTrackDragOwner->handleActionChange();
-		}
-	}
-}
-
-// ------------------------------------------------------------------------
-
-static OSErr ImplDragTrackingHandlerCallback( DragTrackingMessage nMessage, WindowRef aWindow, void *pData, DragRef aDrag )
-{
-	if ( !IsValidWindowPtr( aWindow ) )
-		return noErr;
-
-	if ( !Application::IsShutDown() )
-	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			if ( pTrackDragOwner )
-			{
-				JavaDragSource *pSource = NULL;
-				for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
-				{
-					if ( (*it)->getNativeWindow() == aWindow )
-					{
-						pSource = *it;
-						break;
-					}
-				}
-
-				if ( pSource && pSource != pTrackDragOwner )
-				{
-					MacOSPoint aPoint;
-					Rect aRect;
-					WindowRef aTrackDragOwnerWindow = pTrackDragOwner->getNativeWindow();
-					if ( aTrackDragOwnerWindow && GetDragMouse( aDrag, &aPoint, NULL ) == noErr && GetWindowBounds( aTrackDragOwnerWindow, kWindowContentRgn, &aRect ) == noErr )
-					{
-						ImplUpdateCurrentAction( aDrag );
-						pTrackDragOwner->handleDrag( (sal_Int32)( aPoint.h - aRect.left ), (sal_Int32)( aPoint.v - aRect.top ) );
-					}
-				}
-			}
-		}
-
-		rSolarMutex.release();
-	}
-	
-	return noErr;
-}
-
-// ------------------------------------------------------------------------
-
-void TrackDragTimerCallback( EventLoopTimerRef aTimer, void *pData )
-{
-	JavaDragSource *pSource = (JavaDragSource *)pData;
-
-	IMutex& rSolarMutex = Application::GetSolarMutex();
-	rSolarMutex.acquire();
-
-	if ( pSource && pTrackDragOwner == pSource )
-	{
-		DragRef aDrag;
-		if ( NewDrag( &aDrag ) == noErr )
-		{
-			RgnHandle aRegion = NewRgn();
-			if ( aRegion )
-			{
-				bNoRejectCursor = false;
-
-				ImplUpdateCurrentAction( aDrag );
-				ImplSetThemeCursor( nCurrentAction, true );
-
-				aDragSources.push_back( pSource );
-
-				// Set the drag's transferable
-				DTransTransferable *pTransferable = new DTransTransferable( aDrag, TRANSFERABLE_TYPE_DRAG );
-
-				bool bContentsSet = ( pSource->maContents.is() && pTransferable->setContents( pSource->maContents ) );
-
-				// Unlock application mutex while we are in the drag
-				rSolarMutex.release();
-
-				EventRecord aEventRecord;
-				aEventRecord.what = mouseDown;
-				aEventRecord.message = mouseMovedMessage;
-				GetGlobalMouse( &aEventRecord.where );
-				aEventRecord.modifiers = GetCurrentKeyModifiers();
-				bool bTrackDrag = ( bContentsSet && TrackDrag( aDrag, &aEventRecord, aRegion ) == noErr );
-
-				// Relock application mutex. Note that we don't check for
-				// application shutdown as we are now on the hook to clean up
-				// this thread
-				rSolarMutex.acquire();
-
-				if ( pSource && pTrackDragOwner == pSource )
-				{
-					DragSourceDropEvent *pDragEvent = new DragSourceDropEvent();
-					pDragEvent->Source = Reference< XInterface >( static_cast< OWeakObject* >( pSource ) );
-					pDragEvent->DragSource = Reference< XDragSource >( pSource );
-					pDragEvent->DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
-					pDragEvent->DropAction = DNDConstants::ACTION_NONE;
-					pDragEvent->DropSuccess = sal_False;
-
-					if ( bTrackDrag )
-					{
-						nCurrentAction = ImplGetDragDropAction( aDrag );
-						if ( nCurrentAction != DNDConstants::ACTION_NONE )
-						{
-							pDragEvent->DropAction = nCurrentAction;
-							pDragEvent->DropSuccess = sal_True;
-						}
-					}
-
-					// Fix bug 1442 by dispatching and deleting the
-					// DragSourceDropEvent in the VCL event dispatch thread
-					Application::PostUserEvent( STATIC_LINK( NULL, JavaDragSource, dragDropEnd ), pDragEvent );
-				}
-
-				delete pTransferable;
-
-				aDragSources.remove( pSource );
-
-				DisposeRgn( aRegion );
-			}
-
-			DisposeDrag( aDrag );
-		}
-	}
-
-	rSolarMutex.release();
-}
-
 // ========================================================================
 
 namespace java
@@ -790,9 +666,9 @@ IMPL_STATIC_LINK( JavaDragSource, dragDropEnd, void*, pData )
 JavaDragSource::JavaDragSource() :
 	WeakComponentImplHelper3< XDragSource, XInitialization, XServiceInfo >( maMutex ),
 	mnActions( DNDConstants::ACTION_NONE ),
-	mpEnvData( NULL ),
-	mpWindow( NULL ),
-	maWindowRef( NULL )
+	mpDraggingSource( nil ),
+	mpPasteboardHelper( nil ),
+	mpWindow( NULL )
 {
 }
 
@@ -800,9 +676,17 @@ JavaDragSource::JavaDragSource() :
 
 JavaDragSource::~JavaDragSource()
 {
-	// If we own the event loop timer, wait for the timer to finish
-	if ( pTrackDragOwner == this )
-		pTrackDragOwner = NULL;
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpPasteboardHelper )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterDragSourceAndReleaseView:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+
+		[mpPasteboardHelper release];
+	}
+
+	[pPool release];
 
 	aDragSources.remove( this );
 }
@@ -811,26 +695,37 @@ JavaDragSource::~JavaDragSource()
 
 void SAL_CALL JavaDragSource::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
 {
+	NSView *pView = nil;
 	if ( arguments.getLength() > 1 )
 	{
 		sal_Int32 nPtr = 0;
 		arguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
-			mpEnvData = (SystemEnvData *)nPtr;
+			pView = (NSView *)nPtr;
 		arguments.getConstArray()[1] >>= nPtr;
 		if ( nPtr )
 			mpWindow = (Window *)nPtr;
 	}
 
-	if ( !mpEnvData || !mpWindow )
+	if ( !pView || !mpWindow )
 		throw RuntimeException();
 
-	if ( !pDragTrackingHandlerUPP )
+	aDragSources.push_back( this );
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( !mpPasteboardHelper )
 	{
-		pDragTrackingHandlerUPP = NewDragTrackingHandlerUPP( ImplDragTrackingHandlerCallback );
-		if ( pDragTrackingHandlerUPP )
-			InstallTrackingHandler( pDragTrackingHandlerUPP, NULL, NULL );
+		// Do not retain as invoking alloc disables autorelease
+		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingSource:pView];
+		if ( mpPasteboardHelper )
+		{
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[mpPasteboardHelper performSelectorOnMainThread:@selector(registerDragSource:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+		}
 	}
+
+	[pPool release];
 }
 
 // ------------------------------------------------------------------------
@@ -851,6 +746,7 @@ sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 dragAction ) throw
 
 void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException )
 {
+/*
 	DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.DragSource = Reference< XDragSource >( this );
@@ -887,6 +783,7 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 		if ( listener.is() )
 			listener->dragDropEnd( aDragEvent );
 	}
+*/
 }
 
 // ------------------------------------------------------------------------
@@ -918,12 +815,9 @@ Sequence< OUString > SAL_CALL JavaDragSource::getSupportedServiceNames() throw( 
 
 // ------------------------------------------------------------------------
 
-WindowRef JavaDragSource::getNativeWindow()
+NSView *JavaDragSource::getNSView()
 {
-	if ( !maWindowRef && mpEnvData )
-		maWindowRef = (WindowRef)NSView_windowRef( mpEnvData->pView );
-
-	return maWindowRef;
+	return ( mpPasteboardHelper ? [mpPasteboardHelper getSource] : nil );
 }
 
 // ------------------------------------------------------------------------
@@ -968,10 +862,9 @@ JavaDropTarget::JavaDropTarget() :
 	WeakComponentImplHelper3< XDropTarget, XInitialization, XServiceInfo >( maMutex ),
 	mbActive( sal_True ),
 	mnDefaultActions( DNDConstants::ACTION_NONE ),
+	mpPasteboardHelper( nil ),
 	mbRejected( false ),
-	mpView( NULL ),
-	mpWindow( NULL ),
-	maWindowRef( NULL )
+	mpWindow( NULL )
 {
 }
 
@@ -988,17 +881,13 @@ void JavaDropTarget::disposing()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( mpView )
+	if ( mpPasteboardHelper )
 	{
-		JavaDNDPasteboardHelper *pHelper = [JavaDNDPasteboardHelper createWithDraggingDestination:mpView newTypes:nil];
-		if ( pHelper )
-		{
-			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(unregisterDraggedTypes:) withObject:pHelper waitUntilDone:YES modes:pModes];
-		}
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(unregisterDraggedTypesAndReleaseView:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
 
-		[mpView release];
-		mpView = NULL;
+		[mpPasteboardHelper release];
+		mpPasteboardHelper = nil;
 	}
 
 	[pPool release];
@@ -1011,33 +900,34 @@ void JavaDropTarget::disposing()
 
 void SAL_CALL JavaDropTarget::initialize( const Sequence< Any >& arguments ) throw( RuntimeException )
 {
+	NSView *pView = nil;
+
 	if ( arguments.getLength() > 1 )
 	{
 		sal_Int32 nPtr = 0;
 		arguments.getConstArray()[0] >>= nPtr;
 		if ( nPtr )
-			mpView = (NSView *)nPtr;
+			pView = (NSView *)nPtr;
 		arguments.getConstArray()[1] >>= nPtr;
 		if ( nPtr )
 			mpWindow = (Window *)nPtr;
 	}
 
-	if ( !mpView || !mpWindow )
+	if ( !pView || !mpWindow )
 		throw RuntimeException();
 
 	aDropTargets.push_back( this );
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( mpView )
+	if ( !mpPasteboardHelper )
 	{
-		[mpView retain];
-
-		JavaDNDPasteboardHelper *pHelper = [JavaDNDPasteboardHelper createWithDraggingDestination:mpView newTypes:DTransTransferable::getSupportedPasteboardTypes()];
-		if ( pHelper )
+		// Do not retain as invoking alloc disables autorelease
+		mpPasteboardHelper = [[JavaDNDPasteboardHelper alloc] initWithDraggingDestination:pView newTypes:DTransTransferable::getSupportedPasteboardTypes()];
+		if ( mpPasteboardHelper )
 		{
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-			[pHelper performSelectorOnMainThread:@selector(registerForDraggedTypes:) withObject:pHelper waitUntilDone:YES modes:pModes];
+			[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(registerForDraggedTypes:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
 		}
 	}
 
@@ -1115,12 +1005,9 @@ Sequence< OUString > SAL_CALL JavaDropTarget::getSupportedServiceNames() throw( 
 
 // ------------------------------------------------------------------------
 
-WindowRef JavaDropTarget::getNativeWindow()
+NSView *JavaDropTarget::getNSView()
 {
-	if ( !maWindowRef && mpView )
-		maWindowRef = (WindowRef)NSView_windowRef( mpView );
-
-	return maWindowRef;
+	return ( mpPasteboardHelper ? [mpPasteboardHelper getDestination] : nil );
 }
 
 // ------------------------------------------------------------------------
@@ -1183,52 +1070,6 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 
 // ------------------------------------------------------------------------
 
-void JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem )
-{
-	mbRejected = false;
-
-	DropTargetDragEnterEvent aDragEnterEvent;
-	aDragEnterEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
-	aDragEnterEvent.LocationX = nX;
-	aDragEnterEvent.LocationY = nY;
-	aDragEnterEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDragEnterEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	if ( pTrackDragOwner )
-	{
-		aDragEnterEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEnterEvent.DropAction = nCurrentAction;
-		aDragEnterEvent.SupportedDataFlavors = pTrackDragOwner->maContents->getTransferDataFlavors();
-	}
-	else if ( aNativeTransferable )
-	{
-		aDragEnterEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
-		aDragEnterEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
-
-		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG, nItem );
-		if ( pTransferable )
-		{
-			aDragEnterEvent.SupportedDataFlavors = pTransferable->getTransferDataFlavors();
-			delete pTransferable;
-		}
-	}
-
-	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEnterEvent.DropAction );
-	aDragEnterEvent.Context = Reference< XDropTargetDragContext >( pContext );
-
-	list< Reference< XDropTargetListener > > listeners( maListeners );
-
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
-	{
-		if ( (*it).is() )
-			(*it)->dragEnter( aDragEnterEvent );
-	}
-
-	mbRejected = pContext->isRejected();
-}
-
-// ------------------------------------------------------------------------
-
 void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 {
 	mbRejected = false;
@@ -1269,42 +1110,6 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 		if ( (*it).is() )
 			(*it)->dragExit( aDragEvent );
 	}
-}
-
-// ------------------------------------------------------------------------
-
-void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
-{
-	DropTargetDragEvent aDragEvent;
-	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
-	aDragEvent.LocationX = nX;
-	aDragEvent.LocationY = nY;
-	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	if ( pTrackDragOwner )
-	{
-		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEvent.DropAction = nCurrentAction;
-	}
-	else if ( aNativeTransferable )
-	{
-		aDragEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
-		aDragEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
-	}
-
-	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
-	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
-
-	list< Reference< XDropTargetListener > > listeners( maListeners );
-
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
-	{
-		if ( (*it).is() )
-			(*it)->dragExit( aDragEvent );
-	}
-
-	mbRejected = pContext->isRejected();
 }
 
 // ------------------------------------------------------------------------
@@ -1355,42 +1160,6 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 		return DNDConstants::ACTION_NONE;
 	else
 		return aDragEvent.DropAction;
-}
-
-// ------------------------------------------------------------------------
-
-void JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable )
-{
-	DropTargetDragEvent aDragEvent;
-	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
-	aDragEvent.LocationX = nX;
-	aDragEvent.LocationY = nY;
-	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	if ( pTrackDragOwner )
-	{
-		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEvent.DropAction = nCurrentAction;
-	}
-	else if ( aNativeTransferable )
-	{
-		aDragEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
-		aDragEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
-	}
-
-	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
-	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
-
-	list< Reference< XDropTargetListener > > listeners( maListeners );
-
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
-	{
-		if ( (*it).is() )
-			(*it)->dragOver( aDragEvent );
-	}
-
-	mbRejected = pContext->isRejected();
 }
 
 // ------------------------------------------------------------------------
@@ -1459,66 +1228,4 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	bRet = !mbRejected;
 
 	return bRet;
-}
-
-// ------------------------------------------------------------------------
-
-bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem )
-{
-	// Don't set the cursor to the reject cursor since a drop has occurred
-	bNoRejectCursor = true;
-
-	// Reset the pointer to the last pointer set in VCL window
-	if ( mpWindow && mpWindow->IsVisible() )
-	{
-		// We need to toggle the style to make sure that VCL resets the
-		// pointer
-		PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
-		if ( nStyle == POINTER_ARROW )
-			mpWindow->SetPointer( Pointer( POINTER_NULL ) );
-		else
-			mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
-		mpWindow->SetPointer( Pointer( nStyle ) );
-	}
-
-	if ( mbRejected )
-		return false;
-
-	DropTargetDropEvent aDropEvent;
-	aDropEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
-	aDropEvent.LocationX = nX;
-	aDropEvent.LocationY = nY;
-	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDropEvent.DropAction = DNDConstants::ACTION_NONE;
-
-	if ( pTrackDragOwner )
-	{
-		aDropEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDropEvent.DropAction = nCurrentAction;
-		aDropEvent.Transferable = pTrackDragOwner->maContents;
-	}
-	else if ( aNativeTransferable )
-	{
-		aDropEvent.SourceActions = ImplGetDragAllowableActions( aNativeTransferable );
-		aDropEvent.DropAction = ImplGetDragDropAction( aNativeTransferable );
-
-		DTransTransferable *pTransferable = new DTransTransferable( aNativeTransferable, TRANSFERABLE_TYPE_DRAG, nItem );
-		if ( pTransferable )
-			aDropEvent.Transferable = Reference< XTransferable >( pTransferable );
-	}
-
-	DropTargetDropContext *pContext = new DropTargetDropContext( aDropEvent.DropAction );
-	aDropEvent.Context = Reference< XDropTargetDropContext >( pContext );
-
-	list< Reference< XDropTargetListener > > listeners( maListeners );
-
-	for ( list< Reference< XDropTargetListener > >::const_iterator it = listeners.begin(); it != listeners.end(); ++it )
-	{
-		if ( (*it).is() )
-			(*it)->drop( aDropEvent );
-	}
-
-	// One of the listeners may have rejected the drop so use the rejected
-	// flag instead the context's getDropComplete() method
-	return !mbRejected;
 }

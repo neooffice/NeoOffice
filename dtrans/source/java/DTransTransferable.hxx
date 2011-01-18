@@ -63,26 +63,20 @@ class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::da
 {
 private:
 	int					mnChangeCount;
-	void*				mpNativeTransferable;
 	NSString*			mpPasteboardName;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
-	int					mnTransferableType;
-	sal_uInt16			mnItem;
 
 public:
 	static NSArray*		getSupportedPasteboardTypes();
 
 						// Passing NULL uses the system clipboard
 						DTransTransferable( NSString *pPasteboardName = NULL );
-						DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem = 0 );
 	virtual				~DTransTransferable();
 
 	void				flush();
-	void*				getNativeTransferable() { return mpNativeTransferable; }
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	getTransferable() { return mxTransferable; }
 	virtual ::com::sun::star::uno::Any getTransferData( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::datatransfer::UnsupportedFlavorException, ::com::sun::star::io::IOException, ::com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Sequence< ::com::sun::star::datatransfer::DataFlavor > getTransferDataFlavors() throw ( ::com::sun::star::uno::RuntimeException );
-	int					getType() { return mnTransferableType; }
 	sal_Bool			hasOwnership();
 	virtual sal_Bool	isDataFlavorSupported( const ::com::sun::star::datatransfer::DataFlavor& aFlavor ) throw ( ::com::sun::star::uno::RuntimeException );
 	sal_Bool			setContents( const ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable > &xTransferable );
