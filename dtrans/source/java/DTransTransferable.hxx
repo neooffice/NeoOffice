@@ -51,8 +51,10 @@
 
 #ifdef __OBJC__
 @class NSArray;
+@class NSString;
 #else
 struct NSArray;
+struct NSString;
 #endif
 
 namespace java {
@@ -62,6 +64,7 @@ class DTransTransferable : public ::cppu::WeakImplHelper1 < ::com::sun::star::da
 private:
 	int					mnChangeCount;
 	void*				mpNativeTransferable;
+	NSString*			mpPasteboardName;
 	::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::XTransferable >	mxTransferable;
 	int					mnTransferableType;
 	sal_uInt16			mnItem;
@@ -69,7 +72,8 @@ private:
 public:
 	static NSArray*		getSupportedPasteboardTypes();
 
-						DTransTransferable( int nTransferableType );
+						// Passing NULL uses the system clipboard
+						DTransTransferable( NSString *pPasteboardName = NULL );
 						DTransTransferable( void *pNativeTransferable, int nTransferableType, sal_uInt16 nItem = 0 );
 	virtual				~DTransTransferable();
 

@@ -75,6 +75,13 @@
 #define JAVA_DROPTARGET_IMPL_NAME "com.sun.star.datatransfer.dnd.JavaDropTarget"
 #define JAVA_DROPTARGET_REGKEY_NAME "/com.sun.star.datatransfer.dnd.JavaDropTarget/UNO/SERVICES/com.sun.star.datatransfer.dnd.JavaDropTarget"
 
+#ifdef __OBJC__
+@class NSView;
+#else
+typedef void* id;
+struct NSView;
+#endif
+
 using namespace ::com::sun::star::uno;
 
 namespace java {
@@ -119,7 +126,7 @@ public:
 	::std::list< ::com::sun::star::uno::Reference< ::com::sun::star::datatransfer::dnd::XDropTargetListener > >	maListeners;
     ::osl::Mutex			maMutex; 
     bool					mbRejected;
-	const SystemEnvData*	mpEnvData;
+	NSView*					mpView;
 	Window*					mpWindow;
 	WindowRef				maWindowRef;
 
@@ -142,10 +149,15 @@ public:
 	virtual sal_Bool		SAL_CALL supportsService( const ::rtl::OUString& serviceName ) throw( com::sun::star::uno::RuntimeException );
 	virtual ::com::sun::star::uno::Sequence< ::rtl::OUString >	SAL_CALL getSupportedServiceNames() throw( com::sun::star::uno::RuntimeException );
 
+	NSView*					getNSView() { return mpView; }
 	WindowRef				getNativeWindow();
+	sal_Int8				handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo );
 	void					handleDragEnter( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem );
+	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo );
 	void					handleDragExit( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
+	sal_Int8				handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo );
 	void					handleDragOver( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable );
+	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo );
 	bool					handleDrop( sal_Int32 nX, sal_Int32 nY, DragRef aNativeTransferable, sal_uInt16 nItem );
 	bool					isRejected() { return mbRejected; }
 };
