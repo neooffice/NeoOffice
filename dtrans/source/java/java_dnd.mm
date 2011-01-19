@@ -77,32 +77,20 @@ static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
 static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 
-static Point ImplGetNSPointFromPoint( NSPoint aPoint, NSWindow *pWindow );
+static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow );
 static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
 static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 
 // ========================================================================
 
-@interface NSView (VCLView)
-- (void)setDraggingDestinationDelegate:(id)pDelegate;
+@interface NSWindow (VCLWindow )
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 @end
 
-@interface JavaDNDPasteboardHelper : NSObject
-{
-	NSView*						mpDestination;
-	NSArray*					mpNewTypes;
-	NSView*						mpSource;
-}
-- (NSView *)getDestination;
-- (NSView *)getSource;
-- (id)initWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes;
-- (id)initWithDraggingSource:(NSView *)pSource;
-- (void)registerDragSource:(id)pSender;
-- (void)registerForDraggedTypes:(id)pSender;
-- (void)unregisterDraggedTypesAndReleaseView:(id)pSender;
-- (void)unregisterDragSourceAndReleaseView:(id)pSender;
+@interface NSView (VCLView)
+- (void)setDraggingDestinationDelegate:(id)pDelegate;
+- (void)setDraggingSourceDelegate:(id)pDelegate;
 @end
 
 @interface JavaDNDDraggingDestination : NSObject
@@ -126,7 +114,6 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 {
 	NSView*						mpSource;
 }
-+ (id)createWithView:(NSView *)pSource;
 - (void)dealloc;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
@@ -137,12 +124,40 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
 @end
 
+@interface JavaDNDPasteboardHelper : NSObject
+{
+	NSView*						mpDestination;
+	JavaDNDDraggingSource*		mpDraggingSource;
+	NSEvent*					mpLastMouseEvent;
+	NSArray*					mpNewTypes;
+	NSView*						mpSource;
+}
+- (NSView *)getDestination;
+- (NSView *)getSource;
+- (id)initWithDraggingDestination:(NSView *)pDestination newTypes:(NSArray *)pNewTypes;
+- (id)initWithDraggingSource:(NSView *)pSource;
+- (void)mouseDown:(NSEvent *)pEvent;
+- (void)mouseDragged:(NSEvent *)pEvent;
+- (void)registerDragSource:(id)pSender;
+- (void)registerForDraggedTypes:(id)pSender;
+- (void)setLastMouseEvent:(NSEvent *)pEvent;
+- (void)startDrag:(id)pSender;
+- (void)unregisterDraggedTypesAndReleaseView:(id)pSender;
+- (void)unregisterDragSourceAndReleaseView:(id)pSender;
+@end
+
 @implementation JavaDNDPasteboardHelper
 
 - (void)dealloc
 {
 	if ( mpDestination )
 		[mpDestination release];
+
+	if ( mpDraggingSource )
+		[mpDraggingSource release];
+
+	if ( mpLastMouseEvent )
+		[mpLastMouseEvent release];
 
 	if ( mpNewTypes )
 		[mpNewTypes release];
@@ -170,6 +185,8 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	mpDestination = pDestination;
 	if ( mpDestination )
 		[mpDestination retain];
+	mpDraggingSource = nil;
+	mpLastMouseEvent = nil;
 	mpNewTypes = pNewTypes;
 	if ( mpNewTypes )
 		[mpNewTypes retain];
@@ -183,6 +200,8 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	[super init];
 
 	mpDestination = nil;
+	mpDraggingSource = nil;
+	mpLastMouseEvent = nil;
 	mpNewTypes = nil;
 	mpSource = pSource;
 	if ( mpSource )
@@ -191,20 +210,45 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	return self;
 }
 
+- (void)mouseDown:(NSEvent *)pEvent
+{
+	[self setLastMouseEvent:pEvent];
+}
+
+- (void)mouseDragged:(NSEvent *)pEvent
+{
+	[self setLastMouseEvent:pEvent];
+}
+
 - (void)registerDragSource:(id)pSender
 {
-	if ( mpSource && [mpSource respondsToSelector:@selector(setDraggingSourceDelegate:)] )
+	if ( mpSource )
 	{
-		JavaDNDDraggingSource *pDragSource = [JavaDNDDraggingSource createWithView:mpSource];
-		if ( pDragSource )
+		if ( [mpSource respondsToSelector:@selector(setDraggingSourceDelegate:)] )
+		{
+			if ( !mpDraggingSource )
+			{
+				// Do not retain as invoking alloc disables autorelease
+				mpDraggingSource = [[JavaDNDDraggingSource alloc] initWithView:mpSource];
+			}
+
+			if ( mpDraggingSource )
+			{
+				// Drag source object is retained by the view
+				[mpSource setDraggingSourceDelegate:mpDraggingSource];
+			}
+			else
+			{
+				// Any previous drag source object wll be released by the view
+				[mpSource setDraggingSourceDelegate:nil];
+			}
+		}
+
+		NSWindow *pWindow = [mpSource window];
+		if ( pWindow && [pWindow respondsToSelector:@selector(setDraggingSourceDelegate:)] )
 		{
 			// Drag source object is retained by the view
-			[mpSource setDraggingSourceDelegate:pDragSource];
-		}
-		else
-		{
-			// Any previous drag source object wll be released by the view
-			[mpSource setDraggingSourceDelegate:nil];
+			[pWindow setDraggingSourceDelegate:self];
 		}
 	}
 }
@@ -225,6 +269,40 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 			// Any previous drag destination object wll be released by the view
 			[mpDestination unregisterDraggedTypes];
 			[mpDestination setDraggingDestinationDelegate:nil];
+		}
+	}
+}
+
+- (void)setLastMouseEvent:(NSEvent *)pEvent
+{
+	if ( !pEvent )
+		return;
+
+	if ( mpLastMouseEvent )
+	{
+		[mpLastMouseEvent release];
+		mpLastMouseEvent = nil;
+	}
+
+	mpLastMouseEvent = pEvent;
+	[mpLastMouseEvent retain];
+}
+
+- (void)startDrag:(id)pSender
+{
+	if ( mpDraggingSource && mpLastMouseEvent && mpSource )
+	{
+		NSImage *pImage = [[NSImage alloc] initWithSize:NSMakeSize( 1, 1 )];
+		if ( pImage )
+		{
+			[pImage autorelease];
+
+			NSPasteboard *pPasteboard = [NSPasteboard pasteboardWithName:NSDragPboard];
+			if ( pPasteboard )
+			{
+				NSPoint aPoint = [mpSource convertPoint:[mpLastMouseEvent locationInWindow] fromView:nil];
+				[mpSource dragImage:pImage at:aPoint offset:NSMakeSize( 0, 0 ) event:mpLastMouseEvent pasteboard:pPasteboard source:mpDraggingSource slideBack:YES];
+			}
 		}
 	}
 }
@@ -250,6 +328,10 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	{
 		if ( [mpSource respondsToSelector:@selector(setDraggingSourceDelegate:)] )
 			[mpSource setDraggingSourceDelegate:nil];
+
+		NSWindow *pWindow = [mpSource window];
+		if ( pWindow && [pWindow respondsToSelector:@selector(setDraggingSourceDelegate:)] )
+			[pWindow setDraggingSourceDelegate:nil];
 
 		[mpSource release];
 		mpSource = nil;
@@ -294,7 +376,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	if ( !pWindow )
 		return nRet;
 
-	Point aPos( ImplGetNSPointFromPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -330,7 +412,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	if ( !pWindow )
 		return;
 
-	Point aPos( ImplGetNSPointFromPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -366,7 +448,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	if ( !pWindow )
 		return nRet;
 
-	Point aPos( ImplGetNSPointFromPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -415,7 +497,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 	if ( !pWindow )
 		return bRet;
 
-	Point aPos( ImplGetNSPointFromPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -457,13 +539,6 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 
 @implementation JavaDNDDraggingSource
 
-+ (id)createWithView:(NSView *)pSource
-{
-	JavaDNDDraggingSource *pRet = [[JavaDNDDraggingSource alloc] initWithView:pSource];
-	[pRet autorelease];
-	return pRet;
-}
-
 - (void)dealloc
 {
 	if ( mpSource )
@@ -474,19 +549,51 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint
 {
+	if ( !mpSource )
+		return;
+ 
+	NSWindow *pWindow = [mpSource window];
+	if ( !pWindow )
+		return;
+ 
+	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 }
 
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
 {
+	if ( !mpSource )
+		return;
+ 
+	NSWindow *pWindow = [mpSource window];
+	if ( !pWindow )
+		return;
+ 
+	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 }
 
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
 {
+	if ( !mpSource )
+		return;
+ 
+	NSWindow *pWindow = [mpSource window];
+	if ( !pWindow )
+		return;
+ 
+	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
 }
 
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
 {
-	return NSDragOperationNone;
+	NSDragOperation bRet = NSDragOperationNone;
+	if ( !mpSource )
+		return bRet;
+ 
+	NSWindow *pWindow = [mpSource window];
+	if ( !pWindow )
+		return bRet;
+ 
+	return bRet;
 }
 
 - (BOOL)ignoreModifierKeysWhileDragging
@@ -514,7 +621,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 
 // ========================================================================
 
-static Point ImplGetNSPointFromPoint( NSPoint aPoint, NSWindow *pWindow )
+static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow )
 {
 	Point aRet;
 
@@ -523,7 +630,7 @@ static Point ImplGetNSPointFromPoint( NSPoint aPoint, NSWindow *pWindow )
 		NSRect aFrameRect = [pWindow frame];
 		aFrameRect.origin = NSMakePoint( 0, 0 );
 		NSRect aContentRect = [pWindow contentRectForFrameRect:aFrameRect];
-		aRet = Point( (long)( aPoint.x - aContentRect.origin.x ), (long)( aContentRect.origin.y + aContentRect.size.height - aPoint.y ) );
+		aRet = Point( (long)aPoint.x, (long)( aContentRect.size.height - aPoint.y ) );
 	}
 	
 	return aRet;
@@ -676,6 +783,8 @@ JavaDragSource::JavaDragSource() :
 
 JavaDragSource::~JavaDragSource()
 {
+	aDragSources.remove( this );
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpPasteboardHelper )
@@ -687,8 +796,6 @@ JavaDragSource::~JavaDragSource()
 	}
 
 	[pPool release];
-
-	aDragSources.remove( this );
 }
 
 // ------------------------------------------------------------------------
@@ -746,7 +853,6 @@ sal_Int32 SAL_CALL JavaDragSource::getDefaultCursor( sal_Int8 dragAction ) throw
 
 void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_Int8 sourceActions, sal_Int32 cursor, sal_Int32 image, const Reference< XTransferable >& transferable, const Reference< XDragSourceListener >& listener ) throw( com::sun::star::uno::RuntimeException )
 {
-/*
 	DragSourceDropEvent aDragEvent;
 	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.DragSource = Reference< XDragSource >( this );
@@ -766,13 +872,12 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	maContents = transferable;
 	maListener = listener;
 
-	if ( !pTrackDragTimerUPP )
-		pTrackDragTimerUPP = NewEventLoopTimerUPP( TrackDragTimerCallback );
-
-	if ( maContents.is() && pTrackDragTimerUPP )
+	if ( maContents.is() && mpPasteboardHelper )
 	{
 		pTrackDragOwner = this;
-		InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pTrackDragTimerUPP, (void *)this, NULL );
+
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
 	}
 	else
 	{
@@ -783,7 +888,6 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 		if ( listener.is() )
 			listener->dragDropEnd( aDragEvent );
 	}
-*/
 }
 
 // ------------------------------------------------------------------------
@@ -879,6 +983,8 @@ JavaDropTarget::~JavaDropTarget()
 
 void JavaDropTarget::disposing()
 {
+	aDropTargets.remove( this );
+
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( mpPasteboardHelper )
@@ -893,7 +999,6 @@ void JavaDropTarget::disposing()
 	[pPool release];
 
 	mpWindow = NULL;
-	aDropTargets.remove( this );
 }
 
 // --------------------------------------------------------------------------

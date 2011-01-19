@@ -332,6 +332,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (void)draggingEnded:(id < NSDraggingInfo >)pSender;
 - (NSDragOperation)draggingEntered:(id < NSDraggingInfo >)pSender;
 - (void)draggingExited:(id < NSDraggingInfo >)pSender;
+- (id)draggingSourceDelegate;
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
 - (BOOL)ignoreModifierKeysWhileDragging;
@@ -340,6 +341,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
+- (void)setDraggingSourceDelegate:(id)pDelegate;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
 - (BOOL)wantsPeriodicDraggingUpdates;
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
@@ -433,8 +435,10 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 
 @end
 
+static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 static NSMutableArray *pNeedRestoreModalWindows = nil;
 static VCLResponder *pSharedResponder = nil;
+static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 @interface VCLWindow (CocoaAppWindow)
 - (jobject)peer;
@@ -543,6 +547,21 @@ static VCLResponder *pSharedResponder = nil;
 		return;
 
 	[super displayIfNeeded];
+}
+
+- (id)draggingSourceDelegate
+{
+	id pRet = nil;
+
+	NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)self];
+	if ( pKey && pDraggingSourceDelegates )
+	{
+		id pDelegate = [pDraggingSourceDelegates objectForKey:pKey];
+		if ( pDelegate )
+			pRet = pDelegate;
+	}
+
+	return pRet;
 }
 
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder
@@ -937,6 +956,25 @@ static VCLResponder *pSharedResponder = nil;
 			}
 		}
 	}
+
+	// Cache mouse event in dragging source
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate )
+	{
+		switch ( nType )
+		{
+			case NSLeftMouseDown:
+				if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
+					[pDelegate mouseDown:pEvent];
+				break;
+			case NSLeftMouseDragged:
+				if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
+					[pDelegate mouseDragged:pEvent];
+				break;
+			default:
+				break;
+		}
+	}
 }
 
 - (void)setContentView:(NSView *)pView
@@ -972,6 +1010,28 @@ static VCLResponder *pSharedResponder = nil;
 	}
 }
 
+- (void)setDraggingSourceDelegate:(id)pDelegate
+{
+	if ( !pDraggingDestinationDelegates )
+	{
+		pDraggingSourceDelegates = [NSMutableDictionary dictionaryWithCapacity:10];
+		if ( pDraggingSourceDelegates )
+			[pDraggingSourceDelegates retain];
+	}
+
+	if ( pDraggingSourceDelegates )
+	{
+		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)self];
+		if ( pKey )
+		{
+			if ( pDelegate )
+				[pDraggingSourceDelegates setObject:pDelegate forKey:pKey];
+			else
+				[pDraggingSourceDelegates removeObjectForKey:pKey];
+		}
+	}
+}
+
 - (void)setLevel:(int)nWindowLevel
 {
 	// Don't let Java unset our window level changes unless it is modal window
@@ -986,7 +1046,6 @@ static VCLResponder *pSharedResponder = nil;
 static BOOL bNSViewAWTInitialized = NO;
 static CFStringRef aTextSelection = nil;
 static CFDataRef aRTFSelection = nil;
-static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 
 @implementation VCLView
 
@@ -1001,19 +1060,28 @@ static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint
 {
-	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:beginAt:)] )
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:beganAt:)])
+		[pDelegate draggedImage:pImage beganAt:aPoint];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:beginAt:)] )
 		[super draggedImage:pImage beganAt:aPoint];
 }
 
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
 {
-	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:endedAt:operation:)] )
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:endedAt:operation:)])
+		[pDelegate draggedImage:pImage endedAt:aPoint operation:nOperation];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:endedAt:operation:)] )
 		[super draggedImage:pImage endedAt:aPoint operation:nOperation];
 }
 
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
 {
-	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:movedTo:)] )
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:movedTo:)])
+		[pDelegate draggedImage:pImage movedTo:aPoint];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:movedTo:)] )
 		[super draggedImage:pImage movedTo:aPoint];
 }
 
@@ -1061,9 +1129,27 @@ static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 		[super draggingExited:pSender];
 }
 
+- (id)draggingSourceDelegate
+{
+	id pRet = nil;
+
+	NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)self];
+	if ( pKey && pDraggingSourceDelegates )
+	{
+		id pDelegate = [pDraggingSourceDelegates objectForKey:pKey];
+		if ( pDelegate )
+			pRet = pDelegate;
+	}
+
+	return pRet;
+}
+
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
 {
-	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)] )
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)])
+		return [pDelegate draggingSourceOperationMaskForLocal:bLocal];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)] )
 		return [super draggingSourceOperationMaskForLocal:bLocal];
 	else
 		return NSDragOperationNone;
@@ -1082,7 +1168,13 @@ static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 
 - (BOOL)ignoreModifierKeysWhileDragging
 {
-	return NO;
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysWhileDragging)])
+		return [pDelegate ignoreModifierKeysWhileDragging];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(ignoreModifierKeysWhileDragging)] )
+		return [super ignoreModifierKeysWhileDragging];
+	else
+		return NO;
 }
 
 - (id)initWithFrame:(NSRect)aFrame
@@ -1259,7 +1351,10 @@ static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
 {
-	if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)] )
+	id pDelegate = [self draggingSourceDelegate];
+	if ( pDelegate && [pDelegate respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)])
+		return [pDelegate namesOfPromisedFilesDroppedAtDestination:pDropDestination];
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)] )
 		return [super namesOfPromisedFilesDroppedAtDestination:pDropDestination];
 	else
 		return nil;
@@ -1349,6 +1444,28 @@ static NSMutableDictionary *pDraggingDestinationDelegates = nil;
 				[pDraggingDestinationDelegates setObject:pDelegate forKey:pKey];
 			else
 				[pDraggingDestinationDelegates removeObjectForKey:pKey];
+		}
+	}
+}
+
+- (void)setDraggingSourceDelegate:(id)pDelegate
+{
+	if ( !pDraggingDestinationDelegates )
+	{
+		pDraggingSourceDelegates = [NSMutableDictionary dictionaryWithCapacity:10];
+		if ( pDraggingSourceDelegates )
+			[pDraggingSourceDelegates retain];
+	}
+
+	if ( pDraggingSourceDelegates )
+	{
+		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)self];
+		if ( pKey )
+		{
+			if ( pDelegate )
+				[pDraggingSourceDelegates setObject:pDelegate forKey:pKey];
+			else
+				[pDraggingSourceDelegates removeObjectForKey:pKey];
 		}
 	}
 }

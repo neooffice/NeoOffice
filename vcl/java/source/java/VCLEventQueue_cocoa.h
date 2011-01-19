@@ -59,6 +59,7 @@ typedef void* id;
 + (void)restoreModalWindowLevel;
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
+- (id)draggingSourceDelegate;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyWindow;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
@@ -66,6 +67,7 @@ typedef void* id;
 - (void)resignKeyWindow;
 - (void)sendEvent:(NSEvent *)pEvent;
 - (void)setContentView:(NSView *)pView;
+- (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)setLevel:(int)nWindowLevel;
 @end
 #endif
