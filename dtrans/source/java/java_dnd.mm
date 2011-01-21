@@ -75,12 +75,13 @@ using namespace vos;
 static ::std::list< ::java::JavaDragSource* > aDragSources;
 static ::std::list< ::java::JavaDropTarget* > aDropTargets;
 static JavaDragSource *pTrackDragOwner = NULL;
-static sal_Int8 nCurrentAction = DNDConstants::ACTION_NONE;
 
 static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow );
 static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
+static NSDragOperation ImplGetOperationMaskFromActions( sal_Int8 nActions );
 static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
+static sal_Int8 ImplGetDropActionFromActions( sal_Int8 nActions );
 
 // ========================================================================
 
@@ -557,6 +558,28 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 		return;
  
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			JavaDragSource *pSource = NULL;
+			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+			{
+				if ( (*it)->getNSView() == mpSource )
+				{
+					pSource = *it;
+					break;
+				}
+			}
+
+			if ( pSource && pTrackDragOwner == pSource )
+				pSource->handleDrag( aPos.X(), aPos.Y() );
+		}
+
+		rSolarMutex.release();
+	}
 }
 
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation
@@ -569,6 +592,42 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 		return;
  
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			JavaDragSource *pSource = NULL;
+			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+			{
+				if ( (*it)->getNSView() == mpSource )
+				{
+					pSource = *it;
+					break;
+				}
+			}
+
+			if ( pSource && pTrackDragOwner == pSource )
+			{
+				pSource->handleDrag( aPos.X(), aPos.Y() );
+
+				// Dispatch drop event
+				DragSourceDropEvent *pDragEvent = new DragSourceDropEvent();
+				pDragEvent->Source = Reference< XInterface >( static_cast< OWeakObject* >( pSource ) );
+				pDragEvent->DragSource = Reference< XDragSource >( pSource );
+				pDragEvent->DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
+				pDragEvent->DropAction = ImplGetDropActionFromOperationMask( nOperation ) & ~DNDConstants::ACTION_DEFAULT;
+				pDragEvent->DropSuccess = ( pDragEvent->DropAction == DNDConstants::ACTION_NONE ? sal_False : sal_True );
+
+				// Fix bug 1442 by dispatching and deleting the
+				// DragSourceDropEvent in the VCL event dispatch thread
+				Application::PostUserEvent( STATIC_LINK( NULL, JavaDragSource, dragDropEnd ), pDragEvent );
+			}
+		}
+
+		rSolarMutex.release();
+	}
 }
 
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint
@@ -581,19 +640,60 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 		return;
  
 	Point aPos( ImplGetPointFromNSPoint( aPoint, pWindow ) );
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			JavaDragSource *pSource = NULL;
+			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+			{
+				if ( (*it)->getNSView() == mpSource )
+				{
+					pSource = *it;
+					break;
+				}
+			}
+
+			if ( pSource && pTrackDragOwner == pSource )
+				pSource->handleDrag( aPos.X(), aPos.Y() );
+		}
+
+		rSolarMutex.release();
+	}
 }
 
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal
 {
-	NSDragOperation bRet = NSDragOperationNone;
+	NSDragOperation nRet = NSDragOperationNone;
 	if ( !mpSource )
-		return bRet;
+		return nRet;
  
-	NSWindow *pWindow = [mpSource window];
-	if ( !pWindow )
-		return bRet;
- 
-	return bRet;
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( pTrackDragOwner && !Application::IsShutDown() )
+		{
+			JavaDragSource *pSource = NULL;
+			for ( ::std::list< JavaDragSource* >::const_iterator it = aDragSources.begin(); it != aDragSources.end(); ++it )
+			{
+				if ( (*it)->getNSView() == mpSource )
+				{
+					pSource = *it;
+					break;
+				}
+			}
+
+			if ( pSource && pSource == pTrackDragOwner )
+				nRet = ImplGetOperationMaskFromActions( pTrackDragOwner->mnActions );
+		}
+
+		rSolarMutex.release();
+	}
+
+	return nRet;
 }
 
 - (BOOL)ignoreModifierKeysWhileDragging
@@ -659,6 +759,22 @@ static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask )
 
 // ------------------------------------------------------------------------
 
+static NSDragOperation ImplGetOperationMaskFromActions( sal_Int8 nActions )
+{
+	NSDragOperation nRet = NSDragOperationNone;
+
+	if ( nActions & DNDConstants::ACTION_MOVE )
+		nRet |= NSDragOperationMove;
+	if ( nActions & DNDConstants::ACTION_COPY )
+		nRet |= NSDragOperationCopy;
+	if ( nActions & DNDConstants::ACTION_LINK )
+		nRet |= NSDragOperationLink;
+
+	return nRet;
+}
+
+// ------------------------------------------------------------------------
+
 static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions )
 {
 	NSDragOperation nRet = NSDragOperationNone;
@@ -679,26 +795,57 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask )
 {
 	sal_Int8 nRet = DNDConstants::ACTION_NONE;
 
-	int nActions = 0;
+	int nActionCount = 0;
 	if ( nMask & NSDragOperationMove )
 	{
 		nRet = DNDConstants::ACTION_MOVE;
-		nActions++;
+		nActionCount++;
 	}
 	else if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
 	{
 		nRet = DNDConstants::ACTION_COPY;
-		nActions++;
+		nActionCount++;
 	}
 	else if ( nMask & NSDragOperationLink )
 	{
 		nRet = DNDConstants::ACTION_LINK;
-		nActions++;
+		nActionCount++;
 	}
 
 	// If more than one action, add default action to signal that the drop
 	// target needs to decide which action to use
-	if ( nActions > 1 )
+	if ( nActionCount > 1 )
+		nRet |= DNDConstants::ACTION_DEFAULT;
+
+	return nRet;
+}
+
+// ------------------------------------------------------------------------
+
+static sal_Int8 ImplGetDropActionFromActions( sal_Int8 nActions )
+{
+	sal_Int8 nRet = DNDConstants::ACTION_NONE;
+
+	int nActionCount = 0;
+	if ( nActions & DNDConstants::ACTION_MOVE )
+	{
+		nRet = DNDConstants::ACTION_MOVE;
+		nActionCount++;
+	}
+	else if ( nActions & DNDConstants::ACTION_COPY )
+	{
+		nRet = DNDConstants::ACTION_COPY;
+		nActionCount++;
+	}
+	else if ( nActions & DNDConstants::ACTION_LINK )
+	{
+		nRet = DNDConstants::ACTION_LINK;
+		nActionCount++;
+	}
+
+	// If more than one action, add default action to signal that the drop
+	// target needs to decide which action to use
+	if ( nActionCount > 1 )
 		nRet |= DNDConstants::ACTION_DEFAULT;
 
 	return nRet;
@@ -784,6 +931,9 @@ JavaDragSource::JavaDragSource() :
 JavaDragSource::~JavaDragSource()
 {
 	aDragSources.remove( this );
+
+	if ( pTrackDragOwner == this )
+		pTrackDragOwner = NULL;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -872,14 +1022,22 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 	maContents = transferable;
 	maListener = listener;
 
+	bool bDragStarted = false;
 	if ( maContents.is() && mpPasteboardHelper )
 	{
-		pTrackDragOwner = this;
+		DTransTransferable *pTransferable = new DTransTransferable( NSDragPboard );
+		if ( pTransferable )
+		{
+			bDragStarted = true;
+			pTrackDragOwner = this;
+			pTransferable->setContents( maContents );
 
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+		}
 	}
-	else
+
+	if ( !bDragStarted )
 	{
 		mnActions = DNDConstants::ACTION_NONE;
 		maContents.clear();
@@ -926,32 +1084,13 @@ NSView *JavaDragSource::getNSView()
 
 // ------------------------------------------------------------------------
 
-void JavaDragSource::handleActionChange()
-{
-	DragSourceDragEvent aSourceDragEvent;
-	aSourceDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
-	aSourceDragEvent.DragSource = Reference< XDragSource >( this );
-
-	aSourceDragEvent.DropAction = mnActions;
-	aSourceDragEvent.UserAction = nCurrentAction;
-
-	Reference< XDragSourceListener > xListener( maListener );
-
-	// Send source drag event
-	if ( xListener.is() )
-		xListener->dropActionChanged( aSourceDragEvent );
-}
-
-// ------------------------------------------------------------------------
-
 void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 {
 	DragSourceDragEvent aSourceDragEvent;
 	aSourceDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aSourceDragEvent.DragSource = Reference< XDragSource >( this );
-
 	aSourceDragEvent.DropAction = mnActions;
-	aSourceDragEvent.UserAction = nCurrentAction;
+	aSourceDragEvent.UserAction = ImplGetDropActionFromActions( mnActions );
 
 	Reference< XDragSourceListener > xListener( maListener );
 
@@ -1138,7 +1277,7 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	if ( pTrackDragOwner )
 	{
 		aDragEnterEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEnterEvent.DropAction = nCurrentAction;
+		aDragEnterEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions );
 		aDragEnterEvent.SupportedDataFlavors = pTrackDragOwner->maContents->getTransferDataFlavors();
 	}
 	else
@@ -1196,7 +1335,7 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	if ( pTrackDragOwner )
 	{
 		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEvent.DropAction = nCurrentAction;
+		aDragEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions );
 	}
 	else
 	{
@@ -1240,7 +1379,7 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	if ( pTrackDragOwner )
 	{
 		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEvent.DropAction = nCurrentAction;
+		aDragEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions );
 	}
 	else
 	{
@@ -1303,7 +1442,7 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	if ( pTrackDragOwner )
 	{
 		aDropEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDropEvent.DropAction = nCurrentAction;
+		aDropEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions );
 		aDropEvent.Transferable = pTrackDragOwner->maContents;
 	}
 	else
