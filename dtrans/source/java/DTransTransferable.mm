@@ -270,6 +270,7 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 				bool bTextTypeFound = false;
 				bool bStringTypeFound = false;
 				bool bURLTypeFound = false;
+				bool bURLTypeIsFile = false;
 
 				unsigned int i = 0;
 				for ( ; i < nCount; i++ )
@@ -288,6 +289,9 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 						else if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
 						{
 							bURLTypeFound = true;
+							NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
+							if ( pURL && [pURL isFileURL] )
+								bURLTypeIsFile = true;
 						}
 						else
 						{
@@ -317,6 +321,8 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 					// so filter that as well.
 					if ( bURLTypeFound && ( bHTMLTypeFound || bStringTypeFound ) && bImageTypeFound && !bTextTypeFound )
 						pRet = pImageTypes;
+					else if ( bURLTypeFound && !bURLTypeIsFile && pURLPasteboardType)
+						[pRet removeObject:pURLPasteboardType];
 				}
 			}
 		}
@@ -358,7 +364,8 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	{
 		@try
 		{
-			if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+			NSArray *pFilteredTypes = [self filteredTypes];
+			if ( pFilteredTypes && [pFilteredTypes containsObject:pType] )
 			{
 				mbTypeAvailable = YES;
 
@@ -419,7 +426,8 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	{
 		@try
 		{
-			if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+			NSArray *pFilteredTypes = [self filteredTypes];
+			if ( pFilteredTypes && [pFilteredTypes containsObject:pType] )
 			{
 				mbTypeAvailable = YES;
 				if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
@@ -467,7 +475,8 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	{
 		@try
 		{
-			if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
+			NSArray *pFilteredTypes = [self filteredTypes];
+			if ( pFilteredTypes && [pFilteredTypes containsObject:pType] )
 			{
 				mbTypeAvailable = YES;
 				mpString = [pPasteboard stringForType:pType];
