@@ -422,7 +422,25 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 			if ( [pPasteboard availableTypeFromArray:[NSArray arrayWithObject:pType]] )
 			{
 				mbTypeAvailable = YES;
-				mpData = [pPasteboard dataForType:pType];
+				if ( pURLPasteboardType && [pURLPasteboardType isEqualToString:pType] )
+				{
+					NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
+					if ( pURL && [pURL isFileURL] )
+					{
+						NSString *pPath = [pURL path];
+						NSFileManager *pFileManager = [NSFileManager defaultManager];
+						if ( pPath && pFileManager )
+						{
+							const char *pBytes = [pFileManager fileSystemRepresentationWithPath:pPath];
+							if ( pBytes )
+								mpData = [NSData dataWithBytes:pBytes length:strlen( pBytes )];
+						}
+					}
+				}
+				else
+				{
+					mpData = [pPasteboard dataForType:pType];
+				}
 			}
 		}
 		@catch ( NSException *pExc )
