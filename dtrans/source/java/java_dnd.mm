@@ -85,7 +85,7 @@ static Point ImplGetPointFromNSPoint( NSPoint aPoint, NSWindow *pWindow );
 static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
 static NSDragOperation ImplGetOperationMaskFromActions( sal_Int8 nActions );
 static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
-static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
+static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame );
 
 // ========================================================================
 
@@ -626,7 +626,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask );
 				pDragEvent->Source = Reference< XInterface >( static_cast< OWeakObject* >( pSource ) );
 				pDragEvent->DragSource = Reference< XDragSource >( pSource );
 				pDragEvent->DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
-				pDragEvent->DropAction = ImplGetDropActionFromOperationMask( nOperation ) & ~DNDConstants::ACTION_DEFAULT;
+				pDragEvent->DropAction = ImplGetDropActionFromOperationMask( nOperation, true );
 				pDragEvent->DropSuccess = ( pDragEvent->DropAction == DNDConstants::ACTION_NONE ? sal_False : sal_True );
 
 				// Fix bug 1442 by dispatching and deleting the
@@ -753,9 +753,9 @@ static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask )
 
 	if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
 		nRet |= DNDConstants::ACTION_COPY;
-	if ( nMask & ( NSDragOperationMove | NSDragOperationGeneric ) )
+	if ( nMask & ( NSDragOperationMove ) )
 		nRet |= DNDConstants::ACTION_MOVE;
-	if ( nMask & ( NSDragOperationLink | NSDragOperationGeneric ) )
+	if ( nMask & ( NSDragOperationLink ) )
 		nRet |= DNDConstants::ACTION_LINK;
 
 	// If more than one action, add default action to signal that the drop
@@ -800,57 +800,26 @@ static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions )
 
 // ------------------------------------------------------------------------
 
-static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask )
-{
-	sal_Int8 nRet = DNDConstants::ACTION_NONE;
-
-	int nActionCount = 0;
-	if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
-	{
-		nRet = DNDConstants::ACTION_COPY;
-		nActionCount++;
-	}
-	else if ( nMask & NSDragOperationMove )
-	{
-		nRet = DNDConstants::ACTION_MOVE;
-		nActionCount++;
-	}
-	else if ( nMask & NSDragOperationLink )
-	{
-		nRet = DNDConstants::ACTION_LINK;
-		nActionCount++;
-	}
-
-	// If more than one action, add default action to signal that the drop
-	// target needs to decide which action to use
-	if ( nActionCount > 1 )
-		nRet |= DNDConstants::ACTION_DEFAULT;
-
-	return nRet;
-}
-
-// ------------------------------------------------------------------------
-
-static sal_Int8 ImplGetDropActionFromActions( sal_Int8 nActions, bool bSame )
+static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame )
 {
 	sal_Int8 nRet = DNDConstants::ACTION_NONE;
 	int nActionCount = 0;
 
 	// When the source and destination are the same, moving is prefered over
 	// copying
-	if ( bSame)
+	if ( bSame )
 	{
-		if ( nActions & DNDConstants::ACTION_MOVE )
+		if ( nMask & NSDragOperationMove )
 		{
 			nRet = DNDConstants::ACTION_MOVE;
 			nActionCount++;
 		}
-		else if ( nActions & DNDConstants::ACTION_COPY )
+		else if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
 		{
 			nRet = DNDConstants::ACTION_COPY;
 			nActionCount++;
 		}
-		else if ( nActions & DNDConstants::ACTION_LINK )
+		else if ( nMask & NSDragOperationLink )
 		{
 			nRet = DNDConstants::ACTION_LINK;
 			nActionCount++;
@@ -858,17 +827,17 @@ static sal_Int8 ImplGetDropActionFromActions( sal_Int8 nActions, bool bSame )
 	}
 	else
 	{
-		if ( nActions & DNDConstants::ACTION_COPY )
+		if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
 		{
 			nRet = DNDConstants::ACTION_COPY;
 			nActionCount++;
 		}
-		else if ( nActions & DNDConstants::ACTION_MOVE )
+		else if ( nMask & NSDragOperationMove )
 		{
 			nRet = DNDConstants::ACTION_MOVE;
 			nActionCount++;
 		}
-		else if ( nActions & DNDConstants::ACTION_LINK )
+		else if ( nMask & NSDragOperationLink )
 		{
 			nRet = DNDConstants::ACTION_LINK;
 			nActionCount++;
@@ -1377,17 +1346,17 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEnterEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEnterEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	if ( pTrackDragOwner )
+	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
 	{
 		aDragEnterEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEnterEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions, pTrackDragOwner->getNSView() == getNSView() );
 		aDragEnterEvent.SupportedDataFlavors = pTrackDragOwner->maContents->getTransferDataFlavors();
+		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
 	}
 	else
 	{
-		NSDragOperation nMask = [aInfo draggingSourceOperationMask];
 		aDragEnterEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask );
+		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
 		DTransTransferable *pTransferable = new DTransTransferable( [pPasteboard name] );
 		if ( pTransferable )
@@ -1438,16 +1407,16 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	if ( pTrackDragOwner )
+	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
 	{
 		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions, pTrackDragOwner->getNSView() == getNSView() );
+		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
 	}
 	else
 	{
-		NSDragOperation nMask = [aInfo draggingSourceOperationMask];
 		aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask );
+		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 	}
 
 	// Set the cursor
@@ -1485,16 +1454,16 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	if ( pTrackDragOwner )
+	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
 	{
 		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions, pTrackDragOwner->getNSView() == getNSView() );
+		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
 	}
 	else
 	{
-		NSDragOperation nMask = [aInfo draggingSourceOperationMask];
 		aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask );
+		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false);
 	}
 
 	// Set the cursor
@@ -1551,17 +1520,17 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
 	aDropEvent.DropAction = DNDConstants::ACTION_NONE;
 
-	if ( pTrackDragOwner )
+	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
 	{
 		aDropEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDropEvent.DropAction = ImplGetDropActionFromActions( pTrackDragOwner->mnActions, pTrackDragOwner->getNSView() == getNSView() );
+		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
 		aDropEvent.Transferable = pTrackDragOwner->maContents;
 	}
 	else
 	{
-		NSDragOperation nMask = [aInfo draggingSourceOperationMask];
 		aDropEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask );
+		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
 		DTransTransferable *pTransferable = new DTransTransferable( [pPasteboard name] );
 		if ( pTransferable )
