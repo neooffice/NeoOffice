@@ -696,7 +696,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 			}
 
 			if ( pSource && pSource == pTrackDragOwner )
-				nRet = ImplGetOperationMaskFromActions( pTrackDragOwner->mnActions );
+				nRet = ImplGetOperationMaskFromActions( pSource->mnActions );
 		}
 
 		rSolarMutex.release();
@@ -854,12 +854,28 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 
 // ------------------------------------------------------------------------
 
-static void ImplSetCursorFromAction( sal_Int8 nAction )
+static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow )
 {
 	bool bSet = false;
 
 	nAction &= ~DNDConstants::ACTION_DEFAULT;
-	if ( nAction == DNDConstants::ACTION_MOVE )
+	if ( nAction == DNDConstants::ACTION_NONE )
+	{
+		// Reset the pointer to the last pointer set in VCL window
+		if ( pWindow && pWindow->IsVisible() )
+		{
+			// We need to toggle the style to make sure that VCL resets the
+			// pointer
+			PointerStyle nStyle = pWindow->GetPointer().GetStyle();
+			if ( nStyle == POINTER_ARROW )
+				pWindow->SetPointer( Pointer( POINTER_NULL ) );
+			else
+				pWindow->SetPointer( Pointer( POINTER_ARROW ) );
+			pWindow->SetPointer( Pointer( nStyle ) );
+			bSet = true;
+		}
+	}
+	else if ( nAction == DNDConstants::ACTION_MOVE )
 	{
 		NSCursor *pCursor = [NSCursor closedHandCursor];
 		if ( pCursor )
@@ -1343,19 +1359,16 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEnterEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEnterEvent.LocationX = nX;
 	aDragEnterEvent.LocationY = nY;
-	aDragEnterEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDragEnterEvent.DropAction = DNDConstants::ACTION_NONE;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	aDragEnterEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
 	{
-		aDragEnterEvent.SourceActions = pTrackDragOwner->mnActions;
-		aDragEnterEvent.SupportedDataFlavors = pTrackDragOwner->maContents->getTransferDataFlavors();
 		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
+		aDragEnterEvent.SupportedDataFlavors = pTrackDragOwner->maContents->getTransferDataFlavors();
 	}
 	else
 	{
-		aDragEnterEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
 		DTransTransferable *pTransferable = new DTransTransferable( [pPasteboard name] );
@@ -1367,7 +1380,7 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	}
 
 	// Set the cursor
-	ImplSetCursorFromAction( aDragEnterEvent.DropAction );
+	ImplSetCursorFromAction( aDragEnterEvent.DropAction, mpWindow );
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEnterEvent.DropAction );
 	aDragEnterEvent.Context = Reference< XDropTargetDragContext >( pContext );
@@ -1404,23 +1417,16 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
-	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
-	{
-		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
 		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
-	}
 	else
-	{
-		aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
-	}
 
 	// Set the cursor
-	ImplSetCursorFromAction( aDragEvent.DropAction );
+	ImplSetCursorFromAction( aDragEvent.DropAction, mpWindow );
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
 	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
@@ -1451,23 +1457,16 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDragEvent.LocationX = nX;
 	aDragEvent.LocationY = nY;
-	aDragEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDragEvent.DropAction = DNDConstants::ACTION_NONE;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
-	{
-		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
 		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
-	}
 	else
-	{
-		aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false);
-	}
 
 	// Set the cursor
-	ImplSetCursorFromAction( aDragEvent.DropAction );
+	ImplSetCursorFromAction( aDragEvent.DropAction, mpWindow );
 
 	DropTargetDragContext *pContext = new DropTargetDragContext( aDragEvent.DropAction );
 	aDragEvent.Context = Reference< XDropTargetDragContext >( pContext );
@@ -1493,19 +1492,6 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 {
 	bool bRet = false;
 
-	// Reset the pointer to the last pointer set in VCL window
-	if ( mpWindow && mpWindow->IsVisible() )
-	{
-		// We need to toggle the style to make sure that VCL resets the
-		// pointer
-		PointerStyle nStyle = mpWindow->GetPointer().GetStyle();
-		if ( nStyle == POINTER_ARROW )
-			mpWindow->SetPointer( Pointer( POINTER_NULL ) );
-		else
-			mpWindow->SetPointer( Pointer( POINTER_ARROW ) );
-		mpWindow->SetPointer( Pointer( nStyle ) );
-	}
-
 	if ( mbRejected || !aInfo || ![aInfo conformsToProtocol:@protocol(NSDraggingInfo)] )
 		return bRet;
 
@@ -1517,19 +1503,16 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDropEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aDropEvent.LocationX = nX;
 	aDropEvent.LocationY = nY;
-	aDropEvent.SourceActions = DNDConstants::ACTION_NONE;
-	aDropEvent.DropAction = DNDConstants::ACTION_NONE;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
+	aDropEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
 	{
-		aDropEvent.SourceActions = pTrackDragOwner->mnActions;
 		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
 		aDropEvent.Transferable = pTrackDragOwner->maContents;
 	}
 	else
 	{
-		aDropEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
 		DTransTransferable *pTransferable = new DTransTransferable( [pPasteboard name] );
