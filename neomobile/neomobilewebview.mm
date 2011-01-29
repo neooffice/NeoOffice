@@ -991,7 +991,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[theCell setFont:theFont];
 	[theCell setControlSize:NSSmallControlSize];
 	
-	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect([mpcancelButton bounds].size.width, 0, kNMDefaultBrowserWidth-[mpcancelButton bounds].size.width, [mpcancelButton bounds].size.height)];
+	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect([mpcancelButton bounds].size.width, 0, kNMDefaultBrowserWidth-[mpcancelButton bounds].size.width, [theFont boundingRectForFont].size.height)];
 	[mpstatusLabel setEditable:NO];
 	[mpstatusLabel setString:@""];
 	[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
