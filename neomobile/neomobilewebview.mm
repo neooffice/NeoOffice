@@ -111,7 +111,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 @implementation NeoMobileWebView
 
-- (id)initWithFrame:(NSRect)aFrame cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
+- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
 {
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
@@ -141,6 +141,9 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 
 	[super initWithFrame:aFrame frameName:nil groupName:nil];
+	
+	mpPanel = pPanel;
+	[mpPanel retain];
 	
 	mpcancelButton = pCancelButton;
 	[mpcancelButton retain];
@@ -909,6 +912,12 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 	if ( mpPanel )
 		[mpPanel release];
 	
+	if ( mpcancelButton )
+		[mpcancelButton release];
+	
+	if ( mpstatusLabel )
+		[mpstatusLabel release];
+	
 	[super dealloc];
 }
 
@@ -1016,7 +1025,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[bottomView addSubview:mpstatusLabel];
 	[mpcontentView addSubview:bottomView];
 	
-	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, [bottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[bottomView bounds].size.height) cancelButton:mpcancelButton statusLabel:mpstatusLabel userAgent:pUserAgent];
+	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, [bottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[bottomView bounds].size.height) panel:self cancelButton:mpcancelButton statusLabel:mpstatusLabel userAgent:pUserAgent];
 	[mpwebView setAutoresizingMask:(NSViewHeightSizable | NSViewWidthSizable)];
 	[mpcontentView addSubview:mpwebView];
 	[mpcancelButton setTarget:mpwebView];

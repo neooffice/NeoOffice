@@ -90,7 +90,7 @@ static NonRecursiveResponderPanel *pSharedPanel = nil;
 		{
 			// Check for retained user position. If not available, make
 			// relative to the primary frame.
-			NSPoint windowPos={0, 0};
+			NSPoint windowPos={75, 75};
 			NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
 			NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
 			if(xPosStr && yPosStr)
@@ -100,12 +100,12 @@ static NonRecursiveResponderPanel *pSharedPanel = nil;
 			}
 			else
 			{
-				NSWindow *keyWindow=[NSApp mainWindow];
-				if(keyWindow)
+				NSWindow *mainWindow=[NSApp mainWindow];
+				if(mainWindow)
 				{
-					windowPos=[keyWindow frame].origin;
-					windowPos.x+=75;
-					windowPos.y+=75;
+					NSPoint mainWindowPos=[mainWindow frame].origin;
+					windowPos.x+=mainWindowPos.x;
+					windowPos.y+=mainWindowPos.y;
 				}
 			}
 			[pSharedPanel setFrameOrigin:windowPos];

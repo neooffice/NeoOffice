@@ -47,6 +47,8 @@
 #define NO (MacOSBOOL)0
 #endif
 
+@class NonRecursiveResponderPanel;
+
 @interface NeoMobileWebView : WebView
 {
 	NSArray*				mpBaseURLs;
@@ -62,7 +64,7 @@
 	NeoMobileExportFileAppEvent*	mpexportEvent;
 }
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
+- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
 - (void)loadURI:(NSString *)pURI;
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;
