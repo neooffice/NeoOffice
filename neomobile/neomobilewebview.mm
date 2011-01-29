@@ -47,7 +47,6 @@
 
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
-#define kNMBottomViewHeight 24
 
 using namespace rtl;
 
@@ -968,15 +967,15 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 - (id)initWithUserAgent:(NSString *)pUserAgent
 {
-	[super initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+kNMBottomViewHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+	[super initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	[self setFloatingPanel:YES];
 	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 90)];
 	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	
-	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight+kNMBottomViewHeight)];
+	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight)];
 	[mpcontentView setAutoresizesSubviews:YES];
 	
-	mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 100, kNMBottomViewHeight)];
+	mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
 	[mpcancelButton setTitle:GetLocalizedString(NEOMOBILECANCEL)];
 	[mpcancelButton setAction:@selector(cancelButtonPressed)];
 	[mpcancelButton setAutoresizingMask:(NSViewMaxXMargin)];
@@ -984,6 +983,13 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
 	[mpcancelButton setBezelStyle:NSRoundedBezelStyle];
 	[mpcancelButton setKeyEquivalent:@"\r"];
+	[mpcancelButton sizeToFit];
+	NSRect aCancelButtonFrame = [mpcancelButton frame];
+	if(aCancelButtonFrame.size.width<100)
+	{
+		aCancelButtonFrame.size.width=100;
+		[mpcancelButton setFrame:aCancelButtonFrame];
+	}
 	
 	float fontSize=[NSFont systemFontSizeForControlSize:NSSmallControlSize];
 	NSCell *theCell = [mpcancelButton cell];
@@ -991,7 +997,8 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[theCell setFont:theFont];
 	[theCell setControlSize:NSSmallControlSize];
 	
-	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect([mpcancelButton bounds].size.width, 0, kNMDefaultBrowserWidth-[mpcancelButton bounds].size.width, [theFont boundingRectForFont].size.height)];
+	float theFontHeight = [theFont boundingRectForFont].size.height;
+	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect([mpcancelButton bounds].size.width, ([mpcancelButton bounds].size.height-theFontHeight)/2, kNMDefaultBrowserWidth-[mpcancelButton bounds].size.width, theFontHeight)];
 	[mpstatusLabel setEditable:NO];
 	[mpstatusLabel setString:@""];
 	[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
@@ -1009,7 +1016,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[bottomView addSubview:mpstatusLabel];
 	[mpcontentView addSubview:bottomView];
 	
-	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, kNMBottomViewHeight, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight) cancelButton:mpcancelButton statusLabel:mpstatusLabel userAgent:pUserAgent];
+	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, [bottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[bottomView bounds].size.height) cancelButton:mpcancelButton statusLabel:mpstatusLabel userAgent:pUserAgent];
 	[mpwebView setAutoresizingMask:(NSViewHeightSizable | NSViewWidthSizable)];
 	[mpcontentView addSubview:mpwebView];
 	[mpcancelButton setTarget:mpwebView];
