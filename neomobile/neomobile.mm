@@ -57,7 +57,7 @@ const NSString *kNeoMobileVisiblePref = @"nmVisible";
 const NSString *kNeoMobileServerTypePref = @"nmServerType";
 const NSString *kOpenURI = @"/";
 
-static NeoMobileWebView *pSharedWebView = nil;
+static NonRecursiveResponderPanel *pSharedPanel = nil;
 
 @implementation CreateWebViewImpl
 
@@ -80,15 +80,13 @@ static NeoMobileWebView *pSharedWebView = nil;
 
 - (void)showWebView:(id)obj
 {
-	if ( !pSharedWebView )
-		pSharedWebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect( 0, 0, 500, 500 ) frameName:nil groupName:nil userAgent:mpUserAgent];
+	if ( !pSharedPanel )
+		pSharedPanel = [[NonRecursiveResponderPanel alloc] initWithUserAgent:mpUserAgent];
 
-	if(pSharedWebView)
+	if(pSharedPanel)
 	{
 		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-
-		NSWindow *pWindow = [pSharedWebView window];
-		if(pWindow && ![pWindow isVisible])
+		if(![pSharedPanel isVisible])
 		{
 			// Check for retained user position. If not available, make
 			// relative to the primary frame.
@@ -110,7 +108,7 @@ static NeoMobileWebView *pSharedWebView = nil;
 					windowPos.y+=75;
 				}
 			}
-			[pWindow setFrameOrigin:windowPos];
+			[pSharedPanel setFrameOrigin:windowPos];
 
 			NSString *widthStr=[defaults stringForKey:kNeoMobileWidthPref];
 			NSString *heightStr=[defaults stringForKey:kNeoMobileHeightPref];
@@ -119,27 +117,32 @@ static NeoMobileWebView *pSharedWebView = nil;
 				NSSize contentSize={0, 0};
 				contentSize.width=[widthStr intValue];
 				contentSize.height=[heightStr intValue];
-				[pWindow setContentSize:contentSize];
+				[pSharedPanel setContentSize:contentSize];
 			}
 
 			// Make sure window is visible
-			[pWindow orderFront:self];
+			[pSharedPanel orderFront:self];
 
 			[defaults setBool:YES forKey:kNeoMobileVisiblePref];
 			[defaults synchronize];
 		}
 
-		NSString *pURI=mpURI;
-		NSString *pLastURLPref=[defaults stringForKey:kNeoMobileLastURLPref];
-		if(pLastURLPref)
+		NeoMobileWebView *pWebView = [pSharedPanel webView];
+		if(pWebView)
 		{
-			NSURL *pLastURL=[NSURL URLWithString:pLastURLPref];
-			if(pLastURL && [pSharedWebView isNeoMobileURL:pLastURL])
-				pURI=[pLastURL absoluteString];
+			NSString *pURI=mpURI;
+			NSString *pLastURLPref=[defaults stringForKey:kNeoMobileLastURLPref];
+			if(pLastURLPref)
+			{
+				NSURL *pLastURL=[NSURL URLWithString:pLastURLPref];
+				if(pLastURL && [pWebView isNeoMobileURL:pLastURL])
+					pURI=[pLastURL absoluteString];
+			}
+			
+			// Load URI
+			if(pURI)
+				[pWebView loadURI:pURI];
 		}
-
-		// Load URI
-		[pSharedWebView loadURI:pURI];
 	}
 }
 
