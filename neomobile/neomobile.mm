@@ -130,18 +130,29 @@ static NonRecursiveResponderPanel *pSharedPanel = nil;
 		NeoMobileWebView *pWebView = [pSharedPanel webView];
 		if(pWebView)
 		{
-			NSString *pURI=mpURI;
-			NSString *pLastURLPref=[defaults stringForKey:kNeoMobileLastURLPref];
-			if(pLastURLPref)
+			// Use kNeoMobileLastURLPref preference if it is a valid
+			// application URL otherwise use the default application URL
+			NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+			if(defaults)
 			{
-				NSURL *pLastURL=[NSURL URLWithString:pLastURLPref];
-				if(pLastURL && [pWebView isNeoMobileURL:pLastURL])
-					pURI=[pLastURL absoluteString];
+				NSString *loadURLPref = [defaults stringForKey:kNeoMobileLastURLPref];
+				if(loadURLPref && [loadURLPref length])
+				{
+					NSURL *lastLoadURL = [NSURL URLWithString:loadURLPref];
+					if (lastLoadURL && [NeoMobileWebView isNeoMobileURL:lastLoadURL syncServer:YES] && ![NeoMobileWebView isLoginURL:lastLoadURL httpMethod:@"GET"] && ![NeoMobileWebView isDownloadURL:lastLoadURL])
+					{
+						NSMutableURLRequest *loadRequest =(NSMutableURLRequest *)[NSMutableURLRequest requestWithURL:lastLoadURL];
+						if(loadRequest)
+						{
+							[[pWebView mainFrame] loadRequest:loadRequest];
+							return;
+						}
+		 			}
+				}
 			}
-			
-			// Load URI
-			if(pURI)
-				[pWebView loadURI:pURI];
+
+			// Load fallback URI
+			[pWebView loadURI:mpURI]; 
 		}
 	}
 }

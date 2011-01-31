@@ -48,6 +48,10 @@
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
 
+static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
+static const NSString *kDownloadURI = @"/neofiles/download";
+static const NSString *kLoginURI = @"/users/login";
+
 using namespace rtl;
 
 static const NSString *pDevelopmentBaseURLs[] = {
@@ -55,6 +59,8 @@ static const NSString *pDevelopmentBaseURLs[] = {
 };
 
 static const NSString *pTestBaseURLs[] = {
+	// Force automatic server fallback during testing
+	@"https://127.0.0.2",
 #ifndef DEBUG
 	@"https://neomobile-test.neooffice.org/",
 #endif	// !DEBUG
@@ -94,8 +100,6 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
-static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
-
 @interface ZeroHeightDividerSplitView : NSSplitView
 - (float)dividerThickness;
 @end
@@ -109,7 +113,142 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 @end
 
+static unsigned int neoMobileBaseURLEntry = 0;
+static unsigned int neoMobileBaseURLCount = 0;
+static NSArray *neoMobileBaseURLEntries = nil;
+static NSTimeInterval lastBaseURLIncrementTime = 0;
+static unsigned int baseURLIncrements = 0;
+static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
+
 @implementation NeoMobileWebView
+
++ (NSString *)neoMobileURL
+{
+	if (!neoMobileBaseURLEntries)
+	{
+		// Determine which server type to use. The default server type can be
+		// overridden using the following Terminal command:
+		//   defaults write org.neooffice.NeoOffice nmServerType development|test
+		// To use the default server type, use the following Terminal command:
+		//   defaults delete org.neooffice.NeoOffice nmServerType
+		unsigned int nBaseURLCount = 0;
+		const NSString **pBaseURLs = nil;
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		NSString *serverType=[defaults stringForKey:kNeoMobileServerTypePref];
+		if ( serverType )
+		{
+			if ( [serverType caseInsensitiveCompare:@"development"] == NSOrderedSame )
+			{
+				nBaseURLCount = sizeof( pDevelopmentBaseURLs ) / sizeof( NSString* );
+				pBaseURLs = pDevelopmentBaseURLs;
+			}
+			else if ( [serverType caseInsensitiveCompare:@"test"] == NSOrderedSame )
+			{
+				nBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
+				pBaseURLs = pTestBaseURLs;
+			}
+		}
+		if ( !pBaseURLs )
+		{
+#ifdef TEST
+			nBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
+			pBaseURLs = pTestBaseURLs;
+#else	// TEST
+			nBaseURLCount = sizeof( pProductionBaseURLs ) / sizeof( NSString* );
+			pBaseURLs = pProductionBaseURLs;
+#endif	// TEST
+		}
+
+		neoMobileBaseURLEntries = [NSArray arrayWithObjects:pBaseURLs count:nBaseURLCount];
+		if (neoMobileBaseURLEntries)
+		{
+			[neoMobileBaseURLEntries retain];
+			neoMobileBaseURLCount = [neoMobileBaseURLEntries count];
+		}
+		else
+		{
+			neoMobileBaseURLCount = 0;
+		}
+	}
+
+	if (neoMobileBaseURLEntry >= neoMobileBaseURLCount)
+		neoMobileBaseURLEntry = 0;
+
+	return (NSString *)[neoMobileBaseURLEntries objectAtIndex:neoMobileBaseURLEntry];
+}
+
++ (MacOSBOOL)isDownloadURL:(NSURL *)url {
+	if (!url || ![url path] || [[url path] length] < [kDownloadURI length])
+		return(NO);
+	NSRange range = NSMakeRange(0, [kDownloadURI length]);
+	return ([[url path] compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame && [NeoMobileWebView isNeoMobileURL:url syncServer:NO]);
+}
+
++ (MacOSBOOL)isLoginURL:(NSURL *)url httpMethod:(NSString *)httpMethod {
+	if (!url || ![url path])
+		return(NO);
+	if (!httpMethod)
+		httpMethod = @"GET";
+	return ([kLoginURI isEqualToString:[url path]] && [httpMethod caseInsensitiveCompare:@"POST"]!=NSOrderedSame && [NeoMobileWebView isNeoMobileURL:url syncServer:NO]);
+}
+
++ (MacOSBOOL)isNeoMobileURL:(NSURL *)url syncServer:(MacOSBOOL)syncServer
+{
+	// Make sure that the list of servers has been populated
+	[NeoMobileWebView neoMobileURL];
+	if(!neoMobileBaseURLEntries)
+		return(NO);
+
+	if(!url)
+		return(NO);
+
+	NSString *urlHost = [url host];
+	if(!urlHost || ![urlHost length])
+		return(NO);
+
+	for(unsigned int i = 0; i < neoMobileBaseURLCount; i++)
+	{
+		NSURL *neoMobileBaseURL = [NSURL URLWithString:(NSString *)[neoMobileBaseURLEntries objectAtIndex:i]];
+		if(!neoMobileBaseURL)
+			continue;
+		NSString *neoMobileBaseHost = [neoMobileBaseURL host];
+		if(!neoMobileBaseHost || ![neoMobileBaseHost length])
+			continue;
+		else if ([neoMobileBaseHost caseInsensitiveCompare:urlHost] == NSOrderedSame)
+		{
+			if (syncServer)
+			    neoMobileBaseURLEntry = i;
+			return(YES);
+		}
+	}
+
+	return(NO);
+}
+
++ (MacOSBOOL)incrementNeoMobileBaseEntry
+{
+	// Make sure that the list of servers has been populated
+	[NeoMobileWebView neoMobileURL];
+	if(!neoMobileBaseURLEntries)
+		return(NO);
+
+	if (neoMobileBaseURLCount < 2)
+		return(NO);
+	
+	if (++neoMobileBaseURLEntry >= neoMobileBaseURLCount)
+		neoMobileBaseURLEntry = 0;
+	
+    NSTimeInterval oldLastBaseURLIncrementTime = lastBaseURLIncrementTime;
+    lastBaseURLIncrementTime = [NSDate timeIntervalSinceReferenceDate];
+	if (++baseURLIncrements >= neoMobileBaseURLCount)
+	{
+		baseURLIncrements = 0;
+		if (oldLastBaseURLIncrementTime + kBaseURLIncrementInterval > lastBaseURLIncrementTime)
+			return(NO);
+	}
+	
+	return(YES);
+}
 
 - (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
 {
@@ -151,51 +290,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	mpstatusLabel = pStatusLabel;
 	[mpstatusLabel retain];
 
-	// Determine which server type to use. The default server type can be
-	// overridden using the following Terminal command:
-	//   defaults write org.neooffice.NeoOffice nmServerType development|test
-	// To use the default server type, use the following Terminal command:
-	//   defaults delete org.neooffice.NeoOffice nmServerType
-	mnBaseURLCount = 0;
-	const NSString **pBaseURLs = nil;
-	NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-	NSString *serverType=[defaults stringForKey:kNeoMobileServerTypePref];
-	if ( serverType )
-	{
-		if ( [serverType caseInsensitiveCompare:@"development"] == NSOrderedSame )
-		{
-			mnBaseURLCount = sizeof( pDevelopmentBaseURLs ) / sizeof( NSString* );
-			pBaseURLs = pDevelopmentBaseURLs;
-		}
-		else if ( [serverType caseInsensitiveCompare:@"test"] == NSOrderedSame )
-		{
-			mnBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
-			pBaseURLs = pTestBaseURLs;
-		}
-	}
-	if ( !pBaseURLs )
-	{
-#ifdef TEST
-		mnBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
-		pBaseURLs = pTestBaseURLs;
-#else	// TEST
-		mnBaseURLCount = sizeof( pProductionBaseURLs ) / sizeof( NSString* );
-		pBaseURLs = pProductionBaseURLs;
-#endif	// TEST
-	}
-
-	mnBaseURLEntry = 0;
-	mpBaseURLs = [NSArray arrayWithObjects:pBaseURLs count:mnBaseURLCount];
-	if ( mpBaseURLs )
-	{
-		[mpBaseURLs retain];
-		mnBaseURLCount = [mpBaseURLs count];
-	}
-	else
-	{
-		mnBaseURLCount = 0;
-	}
-
 	WebPreferences *pPrefs = [self preferences];
 	if ( pPrefs )
 	{
@@ -235,7 +329,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( !pURI || ![pURI length] )
 		pURI = @"/";
 
-	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
+	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
 	if ( pURL )
 	{
 		NSMutableURLRequest *pRequest = [NSMutableURLRequest requestWithURL:pURL];
@@ -246,15 +340,15 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError
 {
-	int nErr = pError ? [pError code] : 0;
+	int errCode = pError ? [pError code] : 0;
 
-	if ( !nErr || nErr == WebKitErrorFrameLoadInterruptedByPolicyChange )
+	if ( !errCode || errCode == WebKitErrorFrameLoadInterruptedByPolicyChange )
 	{
 		// NOTE: we don't want to trigger the server fallback if we are just
 		// processing a data download we've redirected from the web frame
 		return;
 	}
-	else if ( nErr == NSURLErrorCancelled )
+	else if ( errCode == NSURLErrorCancelled )
 	{
 		// Error code -999 indicates that the WebKit is doing the Back, Reload,
 		// or Forward actions so we don't trigger server fallback. These
@@ -268,118 +362,114 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:@""];
 
-	if ( nErr != NSURLErrorTimedOut && nErr != NSURLErrorCannotFindHost && nErr != NSURLErrorCannotConnectToHost )
+	if ( pWebFrame )
 	{
-		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", GetLocalizedString(NEOMOBILEERROR), [pError localizedDescription]] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
-		if ( pAlert )
-            [pAlert runModal];
-        return;
-    }
-
-	if ( !pWebFrame )
-		return;
-
-	WebDataSource *pDataSource = [pWebFrame provisionalDataSource];
-	if ( !pDataSource )
-	{
-		pDataSource = [pWebFrame dataSource];
+		WebDataSource *pDataSource = [pWebFrame provisionalDataSource];
 		if ( !pDataSource )
-			return;
-	}
-
-	NSMutableURLRequest *pRequest = [pDataSource request];
-	if ( !pRequest )
-		return;
-
-	NSURL *pURL = [pRequest URL];
-	if ( !pURL || ![self isNeoMobileURL:pURL] )
-		return;
-
-	NSMutableString *pURI = [NSMutableString stringWithCapacity:512];
-	if ( !pURI )
-		return;
-
-	NSURL *pRelativeURL = nil;
-	while ( !pRelativeURL && ++mnBaseURLEntry < mnBaseURLCount )
-	{
-		pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
-
-		// Do not reload from the same IP address as the first host
-		if ( pRelativeURL && [[[NSHost hostWithName:[pURL host]] address] isEqualToString:[[NSHost hostWithName:[pRelativeURL host]] address]] )
-			pRelativeURL = nil;
-	}
-
-	if ( !pRelativeURL )
-	{
-		mnBaseURLEntry = 0;
-		return;
-	}
-
-	// Clear all history since we are going to switch to a different server
-	WebView *pWebView = [pWebFrame webView];
-	if ( pWebView )
-	{
-		WebBackForwardList *pHistory = [pWebView backForwardList];
-		if ( pHistory )
+			pDataSource = [pWebFrame dataSource];
+		if ( pDataSource )
 		{
-			int nCapacity = [pHistory capacity];
-			if ( nCapacity )
+			NSMutableURLRequest *pRequest = [pDataSource request];
+			if ( pRequest )
 			{
-				[pHistory setCapacity:0];
-				[pHistory setCapacity:nCapacity];
-
-				// Put the new server in the history list
-				WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
-				if ( pItem )
+				NSURL *pURL = [pRequest URL];
+				// The URL may be empty on first load
+				if ( !pURL || ![[pURL absoluteString] length] )
+					pURL = [NSURL URLWithString:[NeoMobileWebView neoMobileURL]];
+				if ( pURL && [NeoMobileWebView isNeoMobileURL:pURL syncServer:NO] && ( errCode == NSURLErrorTimedOut || errCode == NSURLErrorCannotFindHost || errCode == NSURLErrorCannotConnectToHost ) )
 				{
-					[pItem autorelease];
-					[pHistory addItem:pItem];
+					if ( [NeoMobileWebView incrementNeoMobileBaseEntry] )
+					{
+						// Clear all history since we are going to switch to a
+						// different server
+						WebView *pWebView = [pWebFrame webView];
+						if ( pWebView )
+						{
+							WebBackForwardList *pHistory = [pWebView backForwardList];
+							if ( pHistory )
+							{
+								int nCapacity = [pHistory capacity];
+								if ( nCapacity )
+								{
+									[pHistory setCapacity:0];
+									[pHistory setCapacity:nCapacity];
+
+									// Put the new server in the history list
+									WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[NeoMobileWebView neoMobileURL] title:@"" lastVisitedTimeInterval:0];
+									if ( pItem )
+									{
+										[pItem autorelease];
+										[pHistory addItem:pItem];
+									}
+								}
+							}
+						}
+
+						// Reconstruct URL with current NeoOffice Mobile server
+						NSMutableString *pURI = [NSMutableString stringWithString:[NeoMobileWebView neoMobileURL]];
+						if ( pURI )
+						{
+							NSString *pPath = [pURL path];
+							if ( pPath )
+								[pURI appendString:pPath];
+							NSString *pParams = [pURL parameterString];
+							if ( pParams )
+							{
+								[pURI appendString:@";"];
+								[pURI appendString:pParams];
+							}
+							NSString *pQuery = [pURL query];
+							if ( pQuery )
+							{
+								[pURI appendString:@"?"];
+								[pURI appendString:pQuery];
+							}
+							NSString *pFragment = [pURL fragment];
+							if ( pFragment )
+							{
+								[pURI appendString:@"#"];
+								[pURI appendString:pFragment];
+							}
+
+							NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+							if ( defaults )
+							{
+								// Only reload this activity if we were able to
+								// save the URL. Otherwise we will be in an
+								// endless reload loop.
+								[defaults setObject:pURI forKey:(NSString *)kNeoMobileLastURLPref];
+								[defaults synchronize];
+
+								pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
+								if ( pURL )
+								{
+									NSMutableURLRequest *pNewRequest = [NSMutableURLRequest requestWithURL:pURL cachePolicy:[pRequest cachePolicy] timeoutInterval:[pRequest timeoutInterval]];
+									if ( pNewRequest )
+									{
+										[pNewRequest setAllHTTPHeaderFields:[pRequest allHTTPHeaderFields]];
+										NSData *pBody = [pRequest HTTPBody];
+										if ( pBody )
+											[pNewRequest setHTTPBody:pBody];
+										NSInputStream *pBodyStream = [pRequest HTTPBodyStream];
+										if ( pBodyStream )
+											[pNewRequest setHTTPBodyStream:pBodyStream];
+										[pNewRequest setHTTPMethod:[pRequest HTTPMethod]];
+										[pWebFrame stopLoading];
+										[pWebFrame loadRequest:pNewRequest];
+										return;
+									}
+								}
+							}
+						}
+					}
 				}
 			}
 		}
 	}
 
-	// Try to load next base URL
-	NSString *pPath = [pURL path];
-	if ( pPath )
-		[pURI appendString:pPath];
-	NSString *pParams = [pURL parameterString];
-	if ( pParams )
-	{
-		[pURI appendString:@";"];
-		[pURI appendString:pParams];
-	}
-	NSString *pQuery = [pURL query];
-	if ( pQuery )
-	{
-		[pURI appendString:@"?"];
-		[pURI appendString:pQuery];
-	}
-	NSString *pFragment = [pURL fragment];
-	if ( pFragment )
-	{
-		[pURI appendString:@"#"];
-		[pURI appendString:pFragment];
-	}
-
-	pURL = [NSURL URLWithString:pURI relativeToURL:pRelativeURL];
-	if ( pURL )
-	{
-		NSMutableURLRequest *pNewRequest = [NSMutableURLRequest requestWithURL:pURL cachePolicy:[pRequest cachePolicy] timeoutInterval:[pRequest timeoutInterval]];
-		if ( pNewRequest )
-		{
-			[pNewRequest setAllHTTPHeaderFields:[pRequest allHTTPHeaderFields]];
-			NSData *pBody = [pRequest HTTPBody];
-			if ( pBody )
-				[pNewRequest setHTTPBody:pBody];
-			NSInputStream *pBodyStream = [pRequest HTTPBodyStream];
-			if ( pBodyStream )
-				[pNewRequest setHTTPBodyStream:pBodyStream];
-			[pNewRequest setHTTPMethod:[pRequest HTTPMethod]];
-			[pWebFrame stopLoading];
-			[pWebFrame loadRequest:pNewRequest];
-		}
-	}
+	NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", GetLocalizedString(NEOMOBILEERROR), [pError localizedDescription]] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+	if ( pAlert )
+		[pAlert runModal];
 }
 
 - (void)stopLoading:(id)pSender
@@ -505,7 +595,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				[pHistory setCapacity:0];
 		}
 
-		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]]];
+		NSURL *pSaveURL = [NSURL URLWithString:pSaveURIHeader relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
 		if ( pSaveURL )
 		{
 			NSMutableURLRequest *pURLRequest = [NSMutableURLRequest requestWithURL:pSaveURL];
@@ -572,7 +662,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			[pHistory setCapacity:nCapacity];
 
 			// Put the new server in the history list
-			NSURL *pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+			NSURL *pRelativeURL = [NSURL URLWithString:[NeoMobileWebView neoMobileURL]];
 			if ( pRelativeURL )
 			{
 				WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
@@ -614,9 +704,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
 {
-	if ( mnBaseURLEntry >= mnBaseURLCount )
-		mnBaseURLEntry = 0;
-
 	// Clear the forward history
 	WebBackForwardList *pHistory = [pWebView backForwardList];
 	if ( pHistory )
@@ -631,7 +718,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			// Put the new server in the history list
 			if ( !nBackListCount )
 			{
-				NSURL *pRelativeURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:mnBaseURLEntry]];
+				NSURL *pRelativeURL = [NSURL URLWithString:[NeoMobileWebView neoMobileURL]];
 				if ( pRelativeURL )
 				{
 					WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
@@ -906,9 +993,6 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 
 - (void)dealloc
 {
-	if ( mpBaseURLs )
-		[mpBaseURLs release];
-
 	if ( mpPanel )
 		[mpPanel release];
 	
@@ -919,34 +1003,6 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 		[mpstatusLabel release];
 	
 	[super dealloc];
-}
-
-- (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL
-{
-	// Make sure that the list of servers has been populated
-	if ( !mpBaseURLs )
-		return NO;
-
-	if ( !pURL )
-		return NO;
-
-	NSString *pURLHost = [pURL host];
-	if ( !pURLHost || ![pURLHost length] )
-		return NO;
-
-	for ( unsigned int i = 0; i < mnBaseURLCount; i++ )
-	{
-		NSURL *pBaseURL = [NSURL URLWithString:(NSString *)[mpBaseURLs objectAtIndex:i]];
-		if ( !pBaseURL )
-			continue;
-		NSString *pBaseHost = [pBaseURL host];
-		if(!pBaseHost || ![pBaseHost length])
-			continue;
-		else if ([pBaseHost caseInsensitiveCompare:pURLHost] == NSOrderedSame)
-			return YES;
-	}
-
-	return NO;
 }
 
 @end
@@ -1036,9 +1092,9 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	return self;
 }
 
-- (BOOL)tryToPerform:(SEL)aAction with:(id)aObject
+- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject
 {
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 
 	// Fix bug 3525 by preventing infinite recursion
 	if ( pCurrentPanel == self )

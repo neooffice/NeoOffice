@@ -51,9 +51,6 @@
 
 @interface NeoMobileWebView : WebView
 {
-	NSArray*				mpBaseURLs;
-	unsigned				mnBaseURLCount;
-	unsigned				mnBaseURLEntry;
 	NSObject*				mpDelegate;
 	NSPanel*				mpPanel;
 	NSButton*				mpcancelButton;
@@ -63,6 +60,11 @@
 	unsigned long long		mndownloadBytesReceived;
 	NeoMobileExportFileAppEvent*	mpexportEvent;
 }
++ (NSString *)neoMobileURL;
++ (MacOSBOOL)isDownloadURL:(NSURL *)url;
++ (MacOSBOOL)isLoginURL:(NSURL *)url httpMethod:(NSString *)httpMethod;
++ (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL syncServer:(MacOSBOOL)syncServer;
++ (MacOSBOOL)incrementNeoMobileBaseEntry;
 - (void)dealloc;
 - (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
 - (void)loadURI:(NSString *)pURI;
@@ -88,7 +90,6 @@
 - (void)windowDidMove:(NSNotification *)notification;
 - (void)windowDidResize:(NSNotification *)notification;
 - (void)windowWillClose:(NSNotification *)notification;
-- (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL;
 @end
 
 @interface NonRecursiveResponderPanel : NSPanel
@@ -100,7 +101,7 @@
 }
 - (void)dealloc;
 - (id)initWithUserAgent:(NSString *)pUserAgent;
-- (BOOL)tryToPerform:(SEL)aAction with:(id)aObject;
+- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
 - (NeoMobileWebView *)webView;
 - (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame;
 @end
