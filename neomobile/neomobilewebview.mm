@@ -380,23 +380,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				{
 					if ( [NeoMobileWebView incrementNeoMobileBaseEntry] )
 					{
-						// Clear all history since we are going to switch to a
-						// different server
-						WebView *pWebView = [pWebFrame webView];
-						if ( pWebView )
-						{
-							WebBackForwardList *pHistory = [pWebView backForwardList];
-							if ( pHistory )
-							{
-								int nCapacity = [pHistory capacity];
-								if ( nCapacity )
-								{
-									[pHistory setCapacity:0];
-									[pHistory setCapacity:nCapacity];
-								}
-							}
-						}
-
 						// Reconstruct URL with current NeoOffice Mobile server
 						NSMutableString *pURI = [NSMutableString stringWithString:[NeoMobileWebView neoMobileURL]];
 						if ( pURI )
@@ -446,8 +429,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 										if ( pBodyStream )
 											[pNewRequest setHTTPBodyStream:pBodyStream];
 										[pNewRequest setHTTPMethod:[pRequest HTTPMethod]];
-										[pWebFrame stopLoading];
-										[pWebFrame loadRequest:pNewRequest];
+										[mpPanel createWebView:pNewRequest];
 										return;
 									}
 								}
@@ -992,9 +974,34 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 @implementation NonRecursiveResponderPanel
 
+- (void)createWebView:(NSURLRequest *)pRequest
+{
+	if ( mpwebView )
+	{
+		[[mpwebView mainFrame] stopLoading];
+		[mpcancelButton setTarget:nil];
+		[self setDelegate:nil];
+		[mpwebView removeFromSuperviewWithoutNeedingDisplay];
+		[mpwebView release];
+		mpwebView = nil;
+	}
+
+	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, [mpbottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[mpbottomView bounds].size.height) panel:self cancelButton:mpcancelButton statusLabel:mpstatusLabel userAgent:mpuserAgent];
+	[mpwebView setAutoresizingMask:(NSViewHeightSizable | NSViewWidthSizable)];
+	[mpcontentView addSubview:mpwebView];
+	[mpcancelButton setTarget:mpwebView];
+	[self setDelegate:mpwebView];
+
+	if ( pRequest )
+		[[mpwebView mainFrame] loadRequest:pRequest];
+}
+
 - (void)dealloc
 {
 	[self setContentView:nil];
+
+	if ( mpbottomView )
+		[mpbottomView release];
 
 	if ( mpcontentView )
 		[mpcontentView release];
@@ -1004,6 +1011,9 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 	if ( mpstatusLabel )
 		[mpstatusLabel release];
+
+	if ( mpuserAgent )
+		[mpuserAgent release];
 
 	if ( mpwebView )
 		[mpwebView release];
@@ -1018,6 +1028,10 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 90)];
 	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	
+	mpuserAgent = pUserAgent;
+	if ( mpuserAgent )
+		[mpuserAgent retain];
+
 	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight)];
 	[mpcontentView setAutoresizesSubviews:YES];
 	
@@ -1054,22 +1068,17 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	theFont = [NSFont fontWithName:[theFont fontName] size:fontSize];
 	[mpstatusLabel setFont:theFont];
 	
-	NSView *bottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, [mpcancelButton bounds].size.height)];
-	[bottomView setAutoresizesSubviews:YES];
-	[bottomView setAutoresizingMask:(NSViewWidthSizable)];
+	mpbottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, [mpcancelButton bounds].size.height)];
+	[mpbottomView setAutoresizesSubviews:YES];
+	[mpbottomView setAutoresizingMask:(NSViewWidthSizable)];
 	
-	[bottomView addSubview:mpcancelButton];
-	[bottomView addSubview:mpstatusLabel];
-	[mpcontentView addSubview:bottomView];
+	[mpbottomView addSubview:mpcancelButton];
+	[mpbottomView addSubview:mpstatusLabel];
+	[mpcontentView addSubview:mpbottomView];
 	
-	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, [bottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[bottomView bounds].size.height) panel:self cancelButton:mpcancelButton statusLabel:mpstatusLabel userAgent:pUserAgent];
-	[mpwebView setAutoresizingMask:(NSViewHeightSizable | NSViewWidthSizable)];
-	[mpcontentView addSubview:mpwebView];
-	[mpcancelButton setTarget:mpwebView];
-	
+	[self createWebView:nil];
 	[self setContentView:mpcontentView];
-	[self setDelegate:mpwebView];
-	
+
 	return self;
 }
 

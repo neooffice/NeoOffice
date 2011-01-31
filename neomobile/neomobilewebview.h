@@ -52,7 +52,7 @@
 @interface NeoMobileWebView : WebView
 {
 	NSObject*				mpDelegate;
-	NSPanel*				mpPanel;
+	NonRecursiveResponderPanel*	mpPanel;
 	NSButton*				mpcancelButton;
 	NSText*					mpstatusLabel;
 	NSURLDownload*			mpdownload;
@@ -94,11 +94,14 @@
 
 @interface NonRecursiveResponderPanel : NSPanel
 {
+	NSView*					mpbottomView;
 	NSView*					mpcontentView;
 	NSButton*				mpcancelButton;
 	NSText*					mpstatusLabel;
+	NSString*				mpuserAgent;
 	NeoMobileWebView*		mpwebView;
 }
+- (void)createWebView:(NSURLRequest *)pRequest;
 - (void)dealloc;
 - (id)initWithUserAgent:(NSString *)pUserAgent;
 - (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
