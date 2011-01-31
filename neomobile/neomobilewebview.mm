@@ -393,14 +393,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 								{
 									[pHistory setCapacity:0];
 									[pHistory setCapacity:nCapacity];
-
-									// Put the new server in the history list
-									WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[NeoMobileWebView neoMobileURL] title:@"" lastVisitedTimeInterval:0];
-									if ( pItem )
-									{
-										[pItem autorelease];
-										[pHistory addItem:pItem];
-									}
 								}
 							}
 						}
@@ -437,7 +429,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 								// Only reload this activity if we were able to
 								// save the URL. Otherwise we will be in an
 								// endless reload loop.
-								[defaults setObject:pURI forKey:(NSString *)kNeoMobileLastURLPref];
+								[defaults setObject:pURI forKey:kNeoMobileLastURLPref];
 								[defaults synchronize];
 
 								pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
@@ -658,28 +650,32 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		}
 
 		if ( nCapacity && pHistory )
-		{
 			[pHistory setCapacity:nCapacity];
-
-			// Put the new server in the history list
-			NSURL *pRelativeURL = [NSURL URLWithString:[NeoMobileWebView neoMobileURL]];
-			if ( pRelativeURL )
-			{
-				WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
-				if ( pItem )
-				{
-					[pItem autorelease];
-					[pHistory addItem:pItem];
-				}
-			}
-		}
 	}
 	else if ( !mpexportEvent )
 	{
-		// If not an upload, save last URL preference
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		[defaults setObject:[pURL absoluteString] forKey:kNeoMobileLastURLPref];
-		[defaults synchronize];
+		// If we loaded the login URL, clear the history, otherwise save the URL
+		if ( [NeoMobileWebView isLoginURL:pURL httpMethod:@"GET"] )
+		{
+			int nCapacity = 0;
+			WebBackForwardList *pHistory = [pWebView backForwardList];
+			if ( pHistory )
+			{
+				nCapacity = [pHistory capacity];
+				if ( nCapacity )
+				{
+					[pHistory setCapacity:0];
+					[pHistory setCapacity:nCapacity];
+				}
+			}
+		}
+		else if ( ![NeoMobileWebView isDownloadURL:pURL] )
+		{
+			// If not an upload, save last URL preference
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			[defaults setObject:[pURL absoluteString] forKey:kNeoMobileLastURLPref];
+			[defaults synchronize];
+		}
 	}
 }
 
@@ -714,21 +710,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			int nBackListCount = [pHistory backListCount];
 			[pHistory setCapacity:nBackListCount + 1];
 			[pHistory setCapacity:nCapacity];
-
-			// Put the new server in the history list
-			if ( !nBackListCount )
-			{
-				NSURL *pRelativeURL = [NSURL URLWithString:[NeoMobileWebView neoMobileURL]];
-				if ( pRelativeURL )
-				{
-					WebHistoryItem *pItem = [[WebHistoryItem alloc] initWithURLString:[pRelativeURL absoluteString] title:@"" lastVisitedTimeInterval:0];
-					if ( pItem )
-					{
-						[pItem autorelease];
-						[pHistory addItem:pItem];
-					}
-				}
-			}
 		}
 	}
 
