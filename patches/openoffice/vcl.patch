@@ -238,3 +238,13 @@ diff -u -r1.5 salnativewidgets-none.cxx
  WaitObject::~WaitObject()
  {
      if ( mpWindow )
+--- util/makefile.mk.bak	2009-01-05 06:44:12.000000000 -0800
++++ util/makefile.mk	2011-02-02 07:43:41.000000000 -0800
+@@ -190,6 +190,7 @@
+ 	-lAppleRemote$(DLLPOSTFIX)
+ 
+ SHL1STDLIBS+= \
++             -framework Carbon \
+              -framework QTKit
+ LIB1FILES+= \
+             $(SLB)$/sala11y.lib
