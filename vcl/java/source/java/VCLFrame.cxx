@@ -355,7 +355,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
 
-	jvalue args[8];
+	jvalue args[6];
 	args[0].j = jlong( nSalFrameStyle );
 	args[1].l = GetSalData()->mpEventQueue->getJavaObject();
 	args[2].j = jlong( pFrame );
@@ -363,10 +363,8 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		args[3].l = pParent->mpVCLFrame->getJavaObject();
 	else
 		args[3].l = NULL;
-	args[4].z = jboolean( IsRunningTiger() );
-	args[5].z = jboolean( bShowOnlyMenus );
-	args[6].z = jboolean( bUtilityWindow );
-	args[7].z = jboolean( IsRunningTiger() ? JNI_TRUE : JNI_FALSE );
+	args[4].z = jboolean( bShowOnlyMenus );
+	args[5].z = jboolean( bUtilityWindow );
 	jobject tempObj;
 	tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );

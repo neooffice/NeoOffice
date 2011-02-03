@@ -81,24 +81,6 @@ jstring vcl::StringToJavaString( JNIEnv *pEnv, const ::rtl::OUString& _rTemp )
 
 // ----------------------------------------------------------------------------
 
-bool vcl::IsRunningTiger( )
-{
-	static bool initializedOnce = false;
-	static bool isTiger = false;
-	
-	if ( ! initializedOnce )
-	{
-		long res = 0;
-		Gestalt( gestaltSystemVersion, &res );
-		isTiger = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x4 ) );
-		initializedOnce = true;
-	}
-	
-	return isTiger;
-}
-
-// ----------------------------------------------------------------------------
-
 bool vcl::IsRunningLeopard( )
 {
 	static bool initializedOnce = false;
@@ -131,6 +113,24 @@ bool vcl::IsRunningSnowLeopard( )
 	}
 	
 	return isSnowLeopard;
+}
+
+// ----------------------------------------------------------------------------
+
+bool vcl::IsRunningLion( )
+{
+	static bool initializedOnce = false;
+	static bool isLion = false;
+	
+	if ( ! initializedOnce )
+	{
+		long res = 0;
+		Gestalt( gestaltSystemVersion, &res );
+		isLion = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x7 ) );
+		initializedOnce = true;
+	}
+	
+	return isLion;
 }
 
 // ----------------------------------------------------------------------------

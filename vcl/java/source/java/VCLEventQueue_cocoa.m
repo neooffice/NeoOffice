@@ -319,8 +319,6 @@ static NSString *pCancelInputMethodText = @" ";
 - (void)paste:(id)pSender;
 @end
 
-static BOOL bUseKeyEntryFix = NO;
-static BOOL bUsePartialKeyEntryFix = NO;
 static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
@@ -845,7 +843,6 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	{
 		[pSharedResponder interpretKeyEvents:[NSArray arrayWithObject:pEvent]];
 
-		BOOL bNeedKeyEntryFix = bUseKeyEntryFix;
 		BOOL bHasMarkedText = NO;
 		NSResponder *pResponder = [self firstResponder];
 		if ( pResponder && [pResponder respondsToSelector:@selector(hasMarkedText)] )
@@ -855,38 +852,6 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		short nCommandKey = [(VCLResponder *)pSharedResponder lastCommandKey];
 		if ( nCommandKey && !bHasMarkedText && VCLEventQueue_postCommandEvent( [self peer], nCommandKey, [(VCLResponder *)pSharedResponder lastModifiers], [(VCLResponder *)pSharedResponder lastOriginalKeyChar], [(VCLResponder *)pSharedResponder lastOriginalModifiers] ) )
 			return;
-
-		// We still need the key entry fix if there is marked text otherwise
-		// bug 1429 reoccurs
-		if ( bHasMarkedText && !bNeedKeyEntryFix && bUsePartialKeyEntryFix )
-			bNeedKeyEntryFix = YES;
-
-		if ( bNeedKeyEntryFix )
-		{
-			NSString *pText = [(VCLResponder *)pSharedResponder lastText];
-			if ( pText )
-			{
-				NSApplication *pApp = [NSApplication sharedApplication];
-				int nLen = [pText length];
-				if ( pApp && nLen > 1 )
-				{
-					unichar pChars[ nLen ];
-					[pText getCharacters:pChars];
-
-					int i = 1;
-					for ( ; i < nLen; i++ )
-					{
-						NSString *pChar = [NSString stringWithCharacters:&pChars[i] length:1];
-						if ( pChar )
-						{
-							NSEvent *pNewEvent = [NSEvent keyEventWithType:[pEvent type] location:[pEvent locationInWindow] modifierFlags:[pEvent modifierFlags] timestamp:[pEvent timestamp] windowNumber:[pEvent windowNumber] context:[pEvent context] characters:pChar charactersIgnoringModifiers:pChar isARepeat:[pEvent isARepeat] keyCode:0];
-							if ( pNewEvent )
-								[pApp postEvent:pNewEvent atStart:YES];
-						}
-					}
-				}
-			}
-		}
 	}
 
 	[super sendEvent:pEvent];
@@ -1576,30 +1541,25 @@ static CFDataRef aRTFSelection = nil;
 
 @interface InstallVCLEventQueueClasses : NSObject
 {
-	BOOL					mbUseKeyEntryFix;
-	BOOL					mbUsePartialKeyEntryFix;
 	BOOL					mbUseQuickTimeContentViewHack;
 }
-+ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix;
++ (id)create;
+- (id)init;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-+ (id)installWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
++ (id)create
 {
-	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
+	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] init];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithUseKeyEntryFix:(BOOL)bUseKeyEntryFix usePartialKeyEntryFix:(BOOL)bUsePartialKeyEntryFix
+- (id)init
 {
 	[super init];
-
-	mbUseKeyEntryFix = bUseKeyEntryFix;
-	mbUsePartialKeyEntryFix = bUsePartialKeyEntryFix;
 
 	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
 	// or earlier
@@ -1618,8 +1578,6 @@ static CFDataRef aRTFSelection = nil;
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
 	// Initialize statics
-	bUseKeyEntryFix = mbUseKeyEntryFix;
-	bUsePartialKeyEntryFix = mbUsePartialKeyEntryFix;
 	bUseQuickTimeContentViewHack = mbUseQuickTimeContentViewHack;
 
 	// Do not retain as invoking alloc disables autorelease
@@ -1701,11 +1659,11 @@ void VCLEventQueue_cancelTermination()
 	[pPool release];
 }
 
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseKeyEntryFix, BOOL bUsePartialKeyEntryFix )
+void VCLEventQueue_installVCLEventQueueClasses()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses installWithUseKeyEntryFix:bUseKeyEntryFix usePartialKeyEntryFix:bUsePartialKeyEntryFix];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 

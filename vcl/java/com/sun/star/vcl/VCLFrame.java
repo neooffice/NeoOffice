@@ -1450,11 +1450,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 */
 	private Insets insets = null;
 
-	/** 
-	 * The Tiger flag.
-	 */
-	private boolean isTiger = false;
-
 	/**
 	 * The last Meta modifier released time.
 	 */
@@ -1506,11 +1501,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private long style = 0;
 
 	/**
-	 * The use input method fix flag.
-	 */
-	private boolean useInputMethodFix = false;
-
-	/**
 	 * The native window.
 	 */
 	private Window window = null;
@@ -1532,23 +1522,18 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * @param q the event queue to post events to
 	 * @param f the frame pointer
 	 * @param p the parent frame
-	 * @param b <code>true</code> if the input method fix is needed otherwise
-	 *  <code>false</code>
 	 * @param m <code>true</code> if only menus are to shown and the frame is
 	 *  to always be hidden behind the native menubar otherwise
 	 *  <code>false</code> for normal frame behavior
 	 * @param u <code>true</code> if the frame should use a native utility
 	 *  window
-	 * @param t <code>true</code> if we are running Tiger
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean b, boolean m, boolean u, boolean t) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean m, boolean u) {
 
 		queue = q;
 		frame = f;
-		isTiger = t;
 		showOnlyMenus = m;
 		style = s;
-		useInputMethodFix = b;
 		utility = u;
 
 		// Create the native window
@@ -2235,24 +2220,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			// is never cancelled, there are fixes in the C++ code that post
 			// input method events with the text set to null to indicate that
 			// the uncommitted text should be cancelled.
-			if (lastUncommittedInputMethodEvent != null) {
-				if (useInputMethodFix) {
-					AttributedCharacterIterator lastText = lastUncommittedInputMethodEvent.getText();
-					boolean commitLast = false;
-					int lastCount = 0;
-					for (char c = lastText.first(); c != CharacterIterator.DONE; c = lastText.next()) {
-						// Fix bug 2492 by only committing if there are
-						// uncommitted characters in or below the Indic range
-						if (!commitLast && c < 0x0E00)
-							commitLast = true;
-						lastCount++;
-					}
-
-					if (commitLast)
-						e = new InputMethodEvent((Component)lastUncommittedInputMethodEvent.getSource(), lastUncommittedInputMethodEvent.getID(), lastUncommittedInputMethodEvent.getWhen(), lastText, lastCount, lastUncommittedInputMethodEvent.getCaret(), lastUncommittedInputMethodEvent.getVisiblePosition());
-				}
+			if (lastUncommittedInputMethodEvent != null)
 				lastUncommittedInputMethodEvent = null;
-			}
 		}
 		else if (count == 1 && text.first() == ' ') {
 			e = new InputMethodEvent((Component)e.getSource(), e.getID(), e.getWhen(), defaultAttributedCharacterIterator, 0, TextHitInfo.beforeOffset(0), TextHitInfo.beforeOffset(0));
@@ -2260,13 +2229,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		}
 		else if (count > e.getCommittedCharacterCount()) {
 			lastUncommittedInputMethodEvent = e;
-		}
-		else if (useInputMethodFix) {
-			// Fix bug 2492 by handling when Java duplicates committed input
-			// in a key typed event
-			if (count == 1)
-				lastCommittedInputMethodEvent = e;
-			lastUncommittedInputMethodEvent = null;
 		}
 
 		queue.postCachedEvent(new VCLEvent(e, VCLEvent.SALEVENT_EXTTEXTINPUT, this, 0));
@@ -3542,7 +3504,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility && !frame.isTiger)
+			if (frame.utility)
 				b = true;
 
 			super.setFocusable(b);
@@ -3559,7 +3521,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Never let utility windows not be focusable as on Mac OS X 10.5
 			// that will cause the resize button to not be displayed
-			if (frame.utility && !frame.isTiger)
+			if (frame.utility)
 				b = true;
 
 			super.setFocusableWindowState(b);

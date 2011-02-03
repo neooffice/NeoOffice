@@ -198,7 +198,9 @@ LIB1FILES+= \
 .ENDIF
 
 .IF "$(GUIBASE)"=="java"
-SHL1STDLIBS+= $(TKLIB)
+SHL1STDLIBS+= \
+             $(TKLIB) \
+             -framework Carbon
 .ENDIF
 
 .IF "$(USE_BUILTIN_RASTERIZER)"!=""
@@ -414,23 +416,13 @@ SHL5STDLIBS+= $(XRANDR_LIBS)
 
 .IF "$(GUIBASE)"=="java"
 
-SHL6TARGET= vcljava1
+SHL6TARGET= vcljava2
 SHL6IMPLIB= i$(SHL6TARGET)
 SHL6OBJS=\
     $(SLO)$/AWTFont.obj \
-    $(SLO)$/AWTFont1_cocoa.obj
-SHL6STDLIBS= \
-    $(SALLIB) \
-    -framework AppKit
-
-SHL7TARGET= vcljava2
-SHL7IMPLIB= i$(SHL6TARGET)
-SHL7OBJS=\
-    $(SLO)$/AWTFont.obj \
     $(SLO)$/AWTFont2_cocoa.obj
-SHL7STDLIBS= \
-    $(SALLIB) \
-    -framework AppKit
+SHL6STDLIBS= \
+    $(SALLIB)
 
 JARCLASSDIRS = com
 JARTARGET = $(TARGET).jar
