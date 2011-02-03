@@ -350,7 +350,7 @@ com_sun_star_vcl_VCLFrame::com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, cons
 		return;
 	if ( !mID )
 	{
-		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;JLcom/sun/star/vcl/VCLFrame;ZZZZ)V";
+		char *cSignature = "(JLcom/sun/star/vcl/VCLEventQueue;JLcom/sun/star/vcl/VCLFrame;ZZ)V";
 		mID = t.pEnv->GetMethodID( getMyClass(), "<init>", cSignature );
 	}
 	OSL_ENSURE( mID, "Unknown method id!" );
