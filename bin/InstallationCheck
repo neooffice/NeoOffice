@@ -52,8 +52,8 @@ if [ -x "/usr/bin/sw_vers" ] ; then
 	# Return 96 + 17 if it is a bad version
 	version=`/usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $2 }'`
 	case "$version" in
-		10.[0123]) exit 113;;
-		10.[0123].*) exit 113;;
+		10.[01234]) exit 113;;
+		10.[01234].*) exit 113;;
 	esac
 fi
 
