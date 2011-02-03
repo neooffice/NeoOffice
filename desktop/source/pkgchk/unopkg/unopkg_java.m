@@ -41,7 +41,7 @@
 
 #define TMPDIR "/tmp"
 
-typedef int UnopkgMain_Type();
+typedef int UnopkgMain_Type( int argc, char **argv );
 
 static NSString *GetNSTemporaryDirectory( const char *pProgName )
 {
@@ -251,7 +251,7 @@ int java_main( int argc, char **argv )
 	{
 		UnopkgMain_Type *pUnopkgMain = (UnopkgMain_Type *)dlsym( pUnopkgLib, "unopkg_main" );
 		if ( pUnopkgMain )
-			return pUnopkgMain();
+			return pUnopkgMain( argc, argv );
 	}
 
 	return 0;
