@@ -40,7 +40,7 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define MIN_MACOSX_MAJOR_VERSION 0x4
+#define MIN_MACOSX_MAJOR_VERSION 0x5
 #define MAX_MACOSX_MAJOR_VERSION 0x6
 #define TMPDIR "/tmp"
 
@@ -443,17 +443,6 @@ int java_main( int argc, char **argv )
 
 	// File locking is enabled by default
 	putenv( "SAL_ENABLE_FILE_LOCKING=1" );
-
-	// Set Mono environment variables
-	NSString *pTmpPath = [NSString stringWithFormat:@"MONO_ROOT=%@", pBundlePath];
-	putenv( (char *)[pTmpPath UTF8String] );
-	pTmpPath = [NSString stringWithFormat:@"MONO_CFG_DIR=%@", pBundlePath];
-	putenv( (char *)[pTmpPath UTF8String] );
-	pTmpPath = [NSString stringWithFormat:@"MONO_CONFIG=%@/mono/2.0/machine.config", pBundlePath];
-	putenv( (char *)[pTmpPath UTF8String] );
-	// Fix bug 2394 by turning off shared memory. Note that Mono is picky and
-	// so the value must be set to "yes" to actually disable shared memory.
-	putenv( "MONO_DISABLE_SHM=yes" );
 
 	// Dynamically load soffice_main symbol to improve startup speed
 	NSString *pSofficeLibPath = [NSString stringWithFormat:@"%@/Contents/basis-link/program/libsofficeapp.dylib", pBundlePath];
