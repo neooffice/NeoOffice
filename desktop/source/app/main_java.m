@@ -36,7 +36,6 @@
 #include <dlfcn.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "osl/module.h"
 
 #import <Cocoa/Cocoa.h>
 
