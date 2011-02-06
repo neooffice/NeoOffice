@@ -134,13 +134,16 @@
 
 	@try
 	{
-		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
-		if ( pChecker )
+		if ( [NSSpellChecker sharedSpellCheckerExists] )
 		{
-			// Fix bug 3613 by explicitly specifying the locale
-			NSRange aRange = [pChecker checkSpellingOfString:pString startingAt:0 language:pLocale wrap:NO inSpellDocumentWithTag:0 wordCount:nil];
-			if ( aRange.location != NSNotFound && aRange.length > 0 )
-				[pArgs setResult:[NSNumber numberWithBool:NO]];
+			NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
+			if ( pChecker && [pChecker setLanguage:pLocale] )
+			{
+				// Fix bug 3613 by explicitly specifying the locale
+				NSRange aRange = [pChecker checkSpellingOfString:pString startingAt:0 language:pLocale wrap:NO inSpellDocumentWithTag:0 wordCount:nil];
+				if ( aRange.location != NSNotFound && aRange.length > 0 )
+					[pArgs setResult:[NSNumber numberWithBool:NO]];
+			}
 		}
 	}
 	@catch ( NSException *pExc )
@@ -165,12 +168,15 @@
 
 	@try
 	{
-		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
-		if ( pChecker && [pChecker setLanguage:pLocale] )
+		if ( [NSSpellChecker sharedSpellCheckerExists] )
 		{
-			NSArray *pArray = [pChecker guessesForWord:pString];
-			if ( pArray && [pArray count] )
-				[pArgs setResult:pArray];
+			NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
+			if ( pChecker && [pChecker setLanguage:pLocale] )
+			{
+				NSArray *pArray = [pChecker guessesForWord:pString];
+				if ( pArray && [pArray count] )
+					[pArgs setResult:pArray];
+			}
 		}
 	}
 	@catch ( NSException *pExc )
@@ -191,49 +197,52 @@
 
 	@try
 	{
-		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
-		if ( pChecker )
+		if ( [NSSpellChecker sharedSpellCheckerExists] )
 		{
-			NSBundle *pBundle = [NSBundle bundleWithPath:@"/System/Library/Services/AppleSpell.service"];
-			if ( pBundle )
-				[pLocales addObjectsFromArray:[pBundle localizations]];
-			pBundle = [NSBundle mainBundle];
-			if ( pBundle )
-				[pLocales addObjectsFromArray:[pBundle localizations]];
-
-			NSMutableSet *pCanonicalLocales = [NSMutableSet setWithCapacity:[pLocales count]];
-			if ( pCanonicalLocales )
+			NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
+			if ( pChecker )
 			{
-				NSArray *pLocaleArray = [pLocales allObjects];
-				if ( pLocaleArray )
-				{
-					unsigned nCount = [pLocaleArray count];
-					unsigned i = 0;
-					for ( ; i < nCount; i++ )
-					{
-						NSString *pLocale = [NSLocale canonicalLocaleIdentifierFromString:[pLocaleArray objectAtIndex:i]];
-						if ( pLocale )
-							[pCanonicalLocales addObject:pLocale];
-					}
-				}
+				NSBundle *pBundle = [NSBundle bundleWithPath:@"/System/Library/Services/AppleSpell.service"];
+				if ( pBundle )
+					[pLocales addObjectsFromArray:[pBundle localizations]];
+				pBundle = [NSBundle mainBundle];
+				if ( pBundle )
+					[pLocales addObjectsFromArray:[pBundle localizations]];
 
-				NSMutableArray *pRet = [NSMutableArray arrayWithCapacity:[pCanonicalLocales count]];
-				if ( pRet )
+				NSMutableSet *pCanonicalLocales = [NSMutableSet setWithCapacity:[pLocales count]];
+				if ( pCanonicalLocales )
 				{
-					pLocaleArray = [pCanonicalLocales allObjects];
+					NSArray *pLocaleArray = [pLocales allObjects];
 					if ( pLocaleArray )
 					{
 						unsigned nCount = [pLocaleArray count];
 						unsigned i = 0;
 						for ( ; i < nCount; i++ )
 						{
-							NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
-							if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
-								[pRet addObject:pLocale];
+							NSString *pLocale = [NSLocale canonicalLocaleIdentifierFromString:[pLocaleArray objectAtIndex:i]];
+							if ( pLocale )
+								[pCanonicalLocales addObject:pLocale];
 						}
 					}
 
-					[pArgs setResult:pRet];
+					NSMutableArray *pRet = [NSMutableArray arrayWithCapacity:[pCanonicalLocales count]];
+					if ( pRet )
+					{
+						pLocaleArray = [pCanonicalLocales allObjects];
+						if ( pLocaleArray )
+						{
+							unsigned nCount = [pLocaleArray count];
+							unsigned i = 0;
+							for ( ; i < nCount; i++ )
+							{
+								NSString *pLocale = (NSString *)[pLocaleArray objectAtIndex:i];
+								if ( pLocale && [pChecker setLanguage:(NSString *)pLocale] )
+									[pRet addObject:pLocale];
+							}
+						}
+
+						[pArgs setResult:pRet];
+					}
 				}
 			}
 		}
