@@ -45,10 +45,6 @@ UWINAPILIB =
 
 VERINFONAME=verinfo
 
-.IF "$(GUIBASE)" == "java"
-STDLIB=-framework Cocoa
-.ENDIF		# "$(GUIBASE)" == "java"
-
 # --- Resourcen ----------------------------------------------------
 
 .IF "$(GUI)" == "WNT"
