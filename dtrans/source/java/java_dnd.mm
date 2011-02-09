@@ -1116,12 +1116,19 @@ void SAL_CALL JavaDragSource::startDrag( const DragGestureEvent& trigger, sal_In
 		DTransTransferable *pTransferable = new DTransTransferable( NSDragPboard );
 		if ( pTransferable )
 		{
-			bDragStarted = true;
 			pTrackDragOwner = this;
 			pTransferable->setContents( maContents );
 
+			// Fix bug 3644 by releasing the application mutex so that the drag
+			// code can display tooltip windows and dialogs without hanging
 			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			ULONG nCount = Application::ReleaseSolarMutex();
 			[(JavaDNDPasteboardHelper *)mpPasteboardHelper performSelectorOnMainThread:@selector(startDrag:) withObject:mpPasteboardHelper waitUntilDone:YES modes:pModes];
+			Application::AcquireSolarMutex( nCount );
+
+			// Make sure that we are still the drag owner
+			if ( pTrackDragOwner == this )
+				bDragStarted = true;
 		}
 	}
 
