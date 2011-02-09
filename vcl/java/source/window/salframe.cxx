@@ -342,9 +342,6 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 	// the OOo code in an irrecoverable state.
 	if ( !bVisible )
 	{
-		// Reset the frame's menu update list
-		maUpdateMenuList.clear();
-
 		// Close any attached objects
 		::std::list< JavaSalObject* > aObjects( maVisibleObjects );
 		for ( ::std::list< JavaSalObject* >::const_iterator it = aObjects.begin(); it != aObjects.end(); ++it )
