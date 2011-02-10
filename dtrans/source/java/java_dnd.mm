@@ -386,7 +386,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	if ( !pWindow )
 		return nRet;
 
-	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -422,7 +422,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	if ( !pWindow )
 		return;
 
-	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -458,7 +458,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	if ( !pWindow )
 		return nRet;
 
-	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
@@ -507,7 +507,7 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	if ( !pWindow )
 		return bRet;
 
-	Point aPos( ImplGetPointFromNSPoint( [pSender draggedImageLocation], pWindow ) );
+	Point aPos( ImplGetPointFromNSPoint( [pSender draggingLocation], pWindow ) );
 	if ( !Application::IsShutDown() )
 	{
 		IMutex& rSolarMutex = Application::GetSolarMutex();
