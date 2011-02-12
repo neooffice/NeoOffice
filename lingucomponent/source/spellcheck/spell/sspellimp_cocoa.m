@@ -102,6 +102,10 @@
 
 @end
 
+@interface NSSpellChecker (RunSpellChecker)
+- (NSArray *)guessesForWordRange:(NSRange)aRange inString:(NSString *)pString language:(NSString *)pLanguage inSpellDocumentWithTag:(NSInteger)nTag;
+@end
+
 @interface RunSpellChecker : NSObject
 + (id)create;
 - (void)checkSpellingOfString:(RunSpellCheckerArgs *)pArgs;
@@ -166,9 +170,14 @@
 	@try
 	{
 		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
-		if ( pChecker && [pChecker setLanguage:pLocale] )
+		if ( pChecker )
 		{
-			NSArray *pArray = [pChecker guessesForWord:pString];
+			NSArray *pArray = nil;
+			if ( [pChecker respondsToSelector:@selector(guessesForWordRange:inString:language:inSpellDocumentWithTag:)] )
+				pArray = [pChecker guessesForWordRange:NSMakeRange( 0, [pString length] ) inString:pString language:pLocale inSpellDocumentWithTag:0];
+			else if ( [pChecker setLanguage:pLocale] )
+				pArray = [pChecker guessesForWord:pString];
+
 			if ( pArray && [pArray count] )
 				[pArgs setResult:pArray];
 		}
@@ -194,10 +203,10 @@
 		NSSpellChecker *pChecker = [NSSpellChecker sharedSpellChecker];
 		if ( pChecker )
 		{
-			NSBundle *pBundle = [NSBundle bundleWithPath:@"/System/Library/Services/AppleSpell.service"];
-			if ( pBundle )
-				[pLocales addObjectsFromArray:[pBundle localizations]];
-			pBundle = [NSBundle mainBundle];
+			NSArray *pLanguages = [pChecker availableLanguages];
+			if ( pLanguages)
+				[pLocales addObjectsFromArray:pLanguages];
+			NSBundle *pBundle = [NSBundle mainBundle];
 			if ( pBundle )
 				[pLocales addObjectsFromArray:[pBundle localizations]];
 
