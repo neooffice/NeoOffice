@@ -98,14 +98,9 @@
 #include <comphelper/processfactory.hxx>
 
 #include "premac.h"
-#include <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
-#include <mach-o/dyld.h>
-#import <Foundation/NSObjCRuntime.h>
-#include <CoreFoundation/CoreFoundation.h>
+#include <Carbon/Carbon.h>
 #include "postmac.h"
-
-#define kRemoteControlFrameworkName	"@executable_path/../Frameworks/RemoteControl.framework/Versions/A/RemoteControl"
 
 #define SERVICENAME "org.neooffice.RemoteControl"
 #define IMPLNAME	"org.neooffice.XRemoteControl"
@@ -119,6 +114,8 @@
  
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
+const static NSString *kRemoteControlFrameworkName=@"RemoteControl.framework";
+
 static ::vos::OModule aModule;
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 static NSString *kMainControllerClass = @"MainController";
@@ -242,17 +239,6 @@ Reference< XInterface > SAL_CALL MacOSXRemoteControlImpl_create(
 {
 	Reference< XTypeProvider > xRet;
 
-	// we currently need to be running on 10.3 in order to have the interfaces
-	// for the media brwoser framework.  Check using our gestalt
-	
-	long res=0;
-	if(Gestalt(gestaltSystemVersion, &res)==noErr)
-	{
-		bool isTigerOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
-		if(!isTigerOrHigher)
-			return(xRet);
-	}
-	
 	// Locate libvcl and invoke the ShowOnlyMenusForWindow function
 	if ( !pShowOnlyMenusForWindow )
 	{
@@ -412,39 +398,40 @@ id rcControl;
 		SAL_CALL MacOSXRemoteControlImpl::hasRemoteControl( ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
-	// we currently need to be running on 10.3 in order to have the interfaces
-	// for the media brwoser framework.  Check using our gestalt
-	
-	long res=0;
-	if(Gestalt(gestaltSystemVersion, &res)==noErr)
-	{
-		bool isTigerOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
-		if(!isTigerOrHigher)
-			return(false);
-	}
-	
-	// add a CFPreference to allow users to explicitly disable the remote control
-	// support
-	
+	::sal_Bool bRet = sal_False;
+
+#ifdef DEBUG
 	MacOSBoolean hasKey=false;
-	
 	MacOSBoolean useRemote=CFPreferencesGetAppBooleanValue(CFSTR("remoteEnabled"), kCFPreferencesCurrentApplication, &hasKey);
 	if(hasKey && !useRemote)
-		return(false);
+		return(bRet);
+#endif	// DEBUG
 	
 	// load our framework out of our bundle's directory
 	
-	const struct mach_header * frameworkLib=NSAddImage(kRemoteControlFrameworkName, NSADDIMAGE_OPTION_RETURN_ON_ERROR | NSADDIMAGE_OPTION_WITH_SEARCHING);
-	if(!frameworkLib)
-		return(false);
-	
-	// check to see if we can locate our class after we've loaded the framework
-	
-	Class rcClass=NSClassFromString(kMainControllerClass);
-	if(!rcClass)
-		return(false);
+	NSBundle *mainBundle=[NSBundle mainBundle];
+	if(mainBundle)
+	{
+		NSString *frameworksPath=[mainBundle privateFrameworksPath];
+		if(frameworksPath)
+		{
+			NSString *frameworkLibPath=[frameworksPath stringByAppendingPathComponent:kRemoteControlFrameworkName];
+			if(frameworkLibPath)
+			{
+				NSBundle *frameworkLib=[NSBundle bundleWithPath:frameworkLibPath];
+				if(frameworkLib)
+				{
+					// check to see if we can locate our class after we've loaded the framework
 
-	return(true);
+					Class rcClass=[frameworkLib classNamed:kMainControllerClass];
+					if(rcClass)
+						bRet = sal_True;
+				}
+			}
+		}
+	}
+
+	return(bRet);
 }
 
 /**
@@ -505,14 +492,24 @@ id rcControl;
 
 	// load our framework out of our bundle's directory
 	
-	const struct mach_header * frameworkLib=NSAddImage(kRemoteControlFrameworkName, NSADDIMAGE_OPTION_RETURN_ON_ERROR | NSADDIMAGE_OPTION_WITH_SEARCHING);
-	if(!frameworkLib)
+	Class rcClass=nil;
+	NSBundle *mainBundle=[NSBundle mainBundle];
+	if(mainBundle)
 	{
-		fprintf(stderr, "Unable to load RemoteControl framework\n");
-		return;
+		NSString *frameworksPath=[mainBundle privateFrameworksPath];
+		if(frameworksPath)
+		{
+			NSString *frameworkLibPath=[frameworksPath stringByAppendingPathComponent:kRemoteControlFrameworkName];
+			if(frameworkLibPath)
+			{
+				NSBundle *frameworkLib=[NSBundle bundleWithPath:frameworkLibPath];
+				if(frameworkLib)
+					rcClass=[frameworkLib classNamed:kMainControllerClass];
+			}
+		}
 	}
+
 	
-	Class rcClass=NSClassFromString(kMainControllerClass);
 	if(rcClass)
 	{
 		rcController=[rcClass performSelector:@selector(alloc)];
