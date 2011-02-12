@@ -39,8 +39,8 @@
 
 #import <Cocoa/Cocoa.h>
 
-#define MIN_MACOSX_MAJOR_VERSION 0x5
-#define MAX_MACOSX_MAJOR_VERSION 0x6
+#define MIN_MACOSX_MAJOR_VERSION 5
+#define MAX_MACOSX_MAJOR_VERSION 6
 #define TMPDIR "/tmp"
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
@@ -65,8 +65,13 @@ static BOOL IsSupportedMacOSXVersion()
 		{
 			// Currently we only support Mac OS X 10.4.x through 10.6.x
 			long res = 0;
-			pGestalt( gestaltSystemVersion, &res );
-			bRet = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= MIN_MACOSX_MAJOR_VERSION ) && ( ( ( res >> 4 ) & 0x000F ) <= MAX_MACOSX_MAJOR_VERSION ) );
+			pGestalt( gestaltSystemVersionMajor, &res );
+			if ( res == 10 )
+			{
+				res = 0;
+				pGestalt( gestaltSystemVersionMinor, &res );
+				bRet = ( res >= MIN_MACOSX_MAJOR_VERSION && res <= MAX_MACOSX_MAJOR_VERSION );
+			}
 		}
 
 		dlclose( pLib );
