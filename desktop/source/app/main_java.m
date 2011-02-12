@@ -64,7 +64,7 @@ static BOOL IsSupportedMacOSXVersion()
 		if ( pGestalt )
 		{
 			// Currently we only support Mac OS X 10.4.x through 10.6.x
-			long res = 0;
+			SInt32 res = 0;
 			pGestalt( gestaltSystemVersionMajor, &res );
 			if ( res == 10 )
 			{
