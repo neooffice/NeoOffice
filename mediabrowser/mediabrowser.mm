@@ -93,13 +93,8 @@
 #endif
 
 #include "premac.h"
-#include <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
-#include <mach-o/dyld.h>
-#import <Foundation/NSObjCRuntime.h>
 #include "postmac.h"
-
-#define kMediaBrowserFrameworkName	"@executable_path/../Frameworks/iMediaBrowser.framework/Versions/A/iMediaBrowser"
 
 #define SERVICENAME "org.neooffice.MediaBrowser"
 #define IMPLNAME	"org.neooffice.XMediaBrowser"
@@ -113,6 +108,8 @@
  
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
+const static NSString *kMediaBrowserFrameworkName=@"iMediaBrowser.framework";
+
 static ::vos::OModule aModule;
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
@@ -371,29 +368,30 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	::sal_Bool bRet = sal_False;
 
-	// we currently need to be running on 10.3 in order to have the interfaces
-	// for the media brwoser framework.  Check using our gestalt
-	
-	long res=0;
-	if(Gestalt(gestaltSystemVersion, &res)==noErr)
-	{
-		bool isTigerOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
-		if(!isTigerOrHigher)
-			return(bRet);
-	}
-	
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
 	// load our framework out of our bundle's directory
 	
-	const struct mach_header * frameworkLib=NSAddImage(kMediaBrowserFrameworkName, NSADDIMAGE_OPTION_RETURN_ON_ERROR | NSADDIMAGE_OPTION_WITH_SEARCHING);
-	if(frameworkLib)
+	NSBundle *mainBundle=[NSBundle mainBundle];
+	if(mainBundle)
 	{
-		// check to see if we can locate our class after we've loaded the framework
-	
-		Class mbClass=NSClassFromString(@"iMediaBrowser");
-		if(mbClass)
-			bRet = sal_True;
+		NSString *frameworksPath=[mainBundle privateFrameworksPath];
+		if(frameworksPath)
+		{
+			NSString *frameworkLibPath=[frameworksPath stringByAppendingPathComponent:kMediaBrowserFrameworkName];
+			if(frameworkLibPath)
+			{
+				NSBundle *frameworkLib=[NSBundle bundleWithPath:frameworkLibPath];
+				if(frameworkLib)
+				{
+					// check to see if we can locate our class after we've loaded the framework
+
+					Class mbClass=[frameworkLib classNamed:@"iMediaBrowser"];
+					if(mbClass)
+						bRet = sal_True;
+				}
+			}
+		}
 	}
 
 	[pool release];
