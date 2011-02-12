@@ -165,18 +165,27 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
             Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
             if ( pGestalt )
             {
-                long res = 0;
+                SInt32 res = 0;
                 pGestalt( gestaltSystemVersion, &res );
-                if ( ( ( res >> 8 ) & 0x00FF ) == 0x10 )
-		        {
-                	if ( ( ( res >> 4 ) & 0x000F ) > 0x5 )
-        	        	isLaterThanLeopard = true;
-                	else if ( ( ( res >> 4 ) & 0x000F ) == 0x5 )
-        	        	isLeopard = true;
-		        }
-                initializedOnce = true;
+                if ( res == 10 )
+                {
+                    res = 0;
+                    pGestalt( gestaltSystemVersionMinor, &res );
+                    if ( res > 5 )
+                        isLaterThanLeopard = true;
+                    else if ( res ==  5 )
+                        isLeopard = true;
+                }
+                else
+                {
+                    isLaterThanLeopard = true;
+                }
             }
+
+            dlclose( pLib );
         }
+
+        initializedOnce = true;
     }
 
     // Only run Java 1.5.x on Leopard as Java 1.4.x is crashy and Java 1.6.x
