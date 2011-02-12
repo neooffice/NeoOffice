@@ -65,10 +65,6 @@
 
 #include <stdio.h>
 
-#include "premac.h"
-#import <Carbon/Carbon.h>
-#include "postmac.h"
-
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"
 

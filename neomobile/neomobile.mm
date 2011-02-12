@@ -35,10 +35,6 @@
 #include "neomobilewebview.h"
 #include <unistd.h>
 
-#include "premac.h"
-#import <Carbon/Carbon.h>
-#include "postmac.h"
-
 using namespace rtl;
 
 //========================================================================

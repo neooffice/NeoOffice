@@ -82,7 +82,7 @@ SHL1STDLIBS= \
 	$(VOSLIB)	\
 	$(VCLLIB)
 
-SHL1STDLIBS += -framework AppKit -framework WebKit -framework Carbon
+SHL1STDLIBS += -framework AppKit -framework WebKit
 
 SHL2TARGET=$(TARGET:s/.uno//).office
 SHL2OBJS=$(SLOFILES) \
@@ -92,7 +92,7 @@ SHL2OBJS=$(SLOFILES) \
 SHL2STDLIBS= \
 	$(SALLIB)
 
-SHL2STDLIBS += -framework AppKit -framework WebKit -framework Carbon
+SHL2STDLIBS += -framework AppKit -framework WebKit
 
 # --- Targets ------------------------------------------------------
 
