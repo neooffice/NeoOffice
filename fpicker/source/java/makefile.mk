@@ -72,8 +72,7 @@ SHL1STDLIBS=\
 	$(CPPULIB) \
 	$(SALLIB) \
 	$(VOSLIB) \
-	-framework Cocoa \
-	-framework Carbon
+	-framework AppKit
 
 .ENDIF	# "$(GUIBASE)" != "java"
 

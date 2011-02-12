@@ -67,7 +67,7 @@
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
 #include "svtools/svtools.hrc"
