@@ -50,7 +50,6 @@
 #include "shutdownicon.hxx"
 
 #include <premac.h>
-#import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
