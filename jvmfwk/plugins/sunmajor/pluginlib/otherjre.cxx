@@ -166,7 +166,7 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
             if ( pGestalt )
             {
                 SInt32 res = 0;
-                pGestalt( gestaltSystemVersion, &res );
+                pGestalt( gestaltSystemVersionMajor, &res );
                 if ( res == 10 )
                 {
                     res = 0;
