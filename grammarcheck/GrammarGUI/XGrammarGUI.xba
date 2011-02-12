@@ -53,7 +53,7 @@ Sub Main
 	End If
 	
 	If grammarCheckerService.hasGrammarChecker() = False Then
-		MsgBox &quot;Mac OS X 10.5 is required for grammar checking.&quot;, 0, &quot;Grammar Checker&quot;
+		MsgBox &quot;Grammar checker could not be loaded.&quot;, 0, &quot;Grammar Checker&quot;
 		Exit Sub
 	End If
 	

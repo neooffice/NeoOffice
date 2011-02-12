@@ -95,8 +95,6 @@
 
 #include "premac.h"
 #import <AppKit/AppKit.h>
-#import <Foundation/Foundation.h>
-#import <Carbon/Carbon.h>
 #include "postmac.h"
 
 // Redefine Cocoa YES and NO defines types for convenience
@@ -567,16 +565,5 @@ com::sun::star::uno::Sequence<org::neooffice::GrammarReplacement>
 		SAL_CALL MacOSXGrammarCheckerImpl::hasGrammarChecker( ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
-	// we currently need to be running on 10.5 in order to have a grammar
-	// checker.  Check using our gestalt
-
-	long res=0;
-	if(Gestalt(gestaltSystemVersion, &res)==noErr)
-	{
-		bool isLeopardOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x5 ) );
-		if(!isLeopardOrHigher)
-			return(false);
-	}
-
 	return(true);
 }

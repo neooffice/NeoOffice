@@ -75,7 +75,7 @@ SHL1STDLIBS= \
 	$(COMPHELPERLIB) \
 	$(VOSLIB)
 
-SHL1STDLIBS += -framework AppKit -framework Carbon -framework Foundation
+SHL1STDLIBS += -framework AppKit
 
 # --- Targets ------------------------------------------------------
 
