@@ -36,7 +36,7 @@ Sub Main
 	End If
 	
 	If mbService.hasMediaBrowser() = False Then
-		MsgBox &quot;Mac OS X 10.4 or higher is required to use the Media Browser.&quot;, 0, &quot;Media Browser&quot;
+		MsgBox &quot;Media Browser could not be loaded.&quot;, 0, &quot;Media Browser&quot;
 		Exit Sub
 	End If
 	
