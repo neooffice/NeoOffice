@@ -35,14 +35,17 @@
 
 #ifdef USE_JAVA
 
+#include <dlfcn.h>
 #include "sunversion.hxx"
 #include "diagnostics.h"
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <CoreServices/CoreServices.h>
 #include <postmac.h>
 
 #define OUSTR(x) ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM(x) )
+
+typedef OSErr Gestalt_Type( OSType selector, long *response );
 
 #endif	// USE_JAVA
 
@@ -156,16 +159,24 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
     static bool isLeopard = false;
     if ( ! initializedOnce )
     {
-        long res = 0;
-        Gestalt( gestaltSystemVersion, &res );
-        if ( ( ( res >> 8 ) & 0x00FF ) == 0x10 )
-		{
-        	if ( ( ( res >> 4 ) & 0x000F ) > 0x5 )
-        		isLaterThanLeopard = true;
-        	else if ( ( ( res >> 4 ) & 0x000F ) == 0x5 )
-        		isLeopard = true;
-		}
-        initializedOnce = true;
+        void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+        if ( pLib )
+        {
+            Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+            if ( pGestalt )
+            {
+                long res = 0;
+                pGestalt( gestaltSystemVersion, &res );
+                if ( ( ( res >> 8 ) & 0x00FF ) == 0x10 )
+		        {
+                	if ( ( ( res >> 4 ) & 0x000F ) > 0x5 )
+        	        	isLaterThanLeopard = true;
+                	else if ( ( ( res >> 4 ) & 0x000F ) == 0x5 )
+        	        	isLeopard = true;
+		        }
+                initializedOnce = true;
+            }
+        }
     }
 
     // Only run Java 1.5.x on Leopard as Java 1.4.x is crashy and Java 1.6.x
