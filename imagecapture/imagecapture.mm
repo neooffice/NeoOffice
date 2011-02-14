@@ -380,32 +380,37 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 				thePB.importedImages = &importedImages;
 				thePB.supportedFileTypes = theTypes;
 				ICAError error = pICAImportImage(&thePB, NULL);
-				if((error==noErr) && importedImages && CFArrayGetCount(importedImages))
+				if(thePB.importedImages && *thePB.importedImages)
 				{
-					CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(importedImages, 0);
-					if(theImage)
+					if((error==noErr) && CFArrayGetCount(*thePB.importedImages))
 					{
-						// convert image into TIFF so we can put it on the
-						// pasteboard
-						NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
-						if(theNSImage)
+						CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
+						if(theImage)
 						{
-							NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
-							if(theNSTIFFData)
+							// convert image into TIFF so we can put it on the
+							// pasteboard
+							NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
+							if(theNSImage)
 							{
-								// no need to acquire global mutex now that
-								// libdtransjava does all pasteboard actions on
-								// the main thread
-								[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
-								[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
-								// mark that we've successfully imported the image and
-								// placed it onto the clipboard
-								gotImage=true;
-							}
+								NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
+								if(theNSTIFFData)
+								{
+									// no need to acquire global mutex now that
+									// libdtransjava does all pasteboard actions
+									// on the main thread
+									[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
+									[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
+									// mark that we've successfully imported the
+									// image and placed it onto the clipboard
+									gotImage=true;
+								}
 
-							[theNSImage release];
+								[theNSImage release];
+							}
 						}
 					}
+
+					CFRelease(*thePB.importedImages);
 				}
 			}
 
