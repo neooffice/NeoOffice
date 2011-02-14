@@ -380,9 +380,9 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 				thePB.importedImages = &importedImages;
 				thePB.supportedFileTypes = theTypes;
 				ICAError error = pICAImportImage(&thePB, NULL);
-				if((error==noErr) && thePB.importedImages)
+				if((error==noErr) && importedImages && CFArrayGetCount(importedImages))
 				{
-					CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
+					CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(importedImages, 0);
 					if(theImage)
 					{
 						// convert image into TIFF so we can put it on the
