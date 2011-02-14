@@ -47,6 +47,7 @@
  *************************************************************************/
 
 #include <stdio.h>
+#include <dlfcn.h>
 
 #ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
@@ -99,7 +100,8 @@
 
 #include "premac.h"
 #import <Cocoa/Cocoa.h>
-#include <Carbon/Carbon.h>
+// Need to include for SystemUIMode and SystemUIOptions but we don't link to it
+#import <Carbon/Carbon.h>
 #include "postmac.h"
 
 #define SERVICENAME "org.neooffice.RemoteControl"
@@ -112,6 +114,7 @@
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
  
+typedef void GetSystemUIMode_Type( SystemUIMode *nMode, SystemUIOptions *nOptions );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 const static NSString *kRemoteControlFrameworkName=@"RemoteControl.framework";
@@ -377,6 +380,7 @@ id realAppDelegate;
 id rcController;
 id rcControl;
 }
++ (SystemUIMode)systemUIMode;
 - (id)init;
 - (void)dealloc;
 - (void)bindRemoteControls:(id)obj;
@@ -462,6 +466,21 @@ id rcControl;
 }
 
 @implementation RemoteControlDelegateImpl
+
++ (SystemUIMode)systemUIMode
+{
+	SystemUIMode nRet=kUIModeNormal;
+
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		GetSystemUIMode_Type *pGetSystemUIMode = (GetSystemUIMode_Type *)dlsym( pLib, "GetSystemUIMode" );
+		if ( pGetSystemUIMode )
+			pGetSystemUIMode(&nRet, NULL);
+	}
+
+	return nRet;
+}
 
 - (id)init
 {
@@ -588,11 +607,7 @@ id rcControl;
 	if ( !pKeyWindow )
 		return;
 
-	SystemUIMode outMode;
-	SystemUIOptions outOptions;
-	
-	GetSystemUIMode(&outMode, &outOptions);
-
+	SystemUIMode outMode=[RemoteControlDelegateImpl systemUIMode];
 	if(outMode==kUIModeNormal)
 	{
 		try
@@ -649,11 +664,7 @@ id rcControl;
 	if ( !pKeyWindow )
 		return;
 
-	SystemUIMode outMode;
-	SystemUIOptions outOptions;
-	
-	GetSystemUIMode(&outMode, &outOptions);
-	
+	SystemUIMode outMode=[RemoteControlDelegateImpl systemUIMode];
 	if(outMode==kUIModeAllHidden)
 	{
 		NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
@@ -687,11 +698,7 @@ id rcControl;
 	if ( !pKeyWindow )
 		return;
 
-	SystemUIMode outMode;
-	SystemUIOptions outOptions;
-	
-	GetSystemUIMode(&outMode, &outOptions);
-	
+	SystemUIMode outMode=[RemoteControlDelegateImpl systemUIMode];
 	if(outMode==kUIModeAllHidden)
 	{
 		NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
