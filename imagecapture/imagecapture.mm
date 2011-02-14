@@ -50,6 +50,7 @@
  *************************************************************************/
 
 #include <stdio.h>
+#include <dlfcn.h>
 
 #ifndef _RTL_USTRING_HXX_
 #include <rtl/ustring.hxx>
@@ -96,9 +97,9 @@
 #endif
 
 #include "premac.h"
-#import <Foundation/Foundation.h>
-#include <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
+// Need to include for ICAImportImagePB struct but we don't link to it
+#import <Carbon/Carbon.h>
 #include "postmac.h"
 
 #define SERVICENAME "org.neooffice.ImageCapture"
@@ -111,6 +112,7 @@
 #define DOSTRING( x )			#x
 #define STRING( x )				DOSTRING( x )
  
+typedef ICAError ICAImportImage_Type( ICAImportImagePB *pPB, ICACompletion nCompletion );
 typedef void ShowOnlyMenusForWindow_Type( void*, sal_Bool );
  
 static ::vos::OModule aModule;
@@ -361,48 +363,53 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)doImageCapture: (id)pObj
 {
 	CFArrayRef theTypes = (CFArrayRef)[NSArray arrayWithObjects: @"tif", @"tiff", @"jpg", @"jpeg", @"gif", @"png", @"pdf", @"bmp", NULL];
-	if (!theTypes)
-		return;
-
-	ICAImportImagePB thePB;
-	memset(&thePB, '\0', sizeof(thePB));
-
-	// Fix bug 3641 by passing a pointer to NULL
-	CFArrayRef importedImages = NULL;
-	thePB.importedImages = &importedImages;
-	thePB.supportedFileTypes = theTypes;
-    OSErr error = ICAImportImage(&thePB, NULL);
-	if((error==noErr) && thePB.importedImages)
+	NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
+	if (theTypes && thePasteboard)
 	{
-		CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
-		if(theImage)
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
 		{
-			// convert image into TIFF so we can put it on the clipboard
-			// using the scrap manager
-			NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
-			if(theNSImage)
+			ICAImportImage_Type *pICAImportImage = (ICAImportImage_Type *)dlsym( pLib, "ICAImportImage" );
+			if ( pICAImportImage )
 			{
-				NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
-				if(theNSTIFFData)
+				ICAImportImagePB thePB;
+				memset(&thePB, '\0', sizeof(thePB));
+
+				// Fix bug 3641 by passing a pointer to NULL
+				CFArrayRef importedImages = NULL;
+				thePB.importedImages = &importedImages;
+				thePB.supportedFileTypes = theTypes;
+				ICAError error = pICAImportImage(&thePB, NULL);
+				if((error==noErr) && thePB.importedImages)
 				{
-					IMutex &rSolarMutex = Application::GetSolarMutex();
-					rSolarMutex.acquire();
-
-					NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
-					if(thePasteboard)
+					CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
+					if(theImage)
 					{
-						[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
-						[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
-						// mark that we've successfully imported the image and
-						// placed it onto the clipboard
-						gotImage=true;
+						// convert image into TIFF so we can put it on the
+						// pasteboard
+						NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
+						if(theNSImage)
+						{
+							NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
+							if(theNSTIFFData)
+							{
+								// no need to acquire global mutex now that
+								// libdtransjava does all pasteboard actions on
+								// the main thread
+								[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
+								[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
+								// mark that we've successfully imported the image and
+								// placed it onto the clipboard
+								gotImage=true;
+							}
+
+							[theNSImage release];
+						}
 					}
-
-					rSolarMutex.release();
 				}
-
-				[theNSImage release];
 			}
+
+			dlclose( pLib );
 		}
 	}
 }
