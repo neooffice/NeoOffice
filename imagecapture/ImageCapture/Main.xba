@@ -32,7 +32,7 @@ Sub Main
 	t = CreateUnoService(&quot;org.neooffice.ImageCapture&quot;)
 	
 	If IsNull(t) Then
-		MsgBox &quot;Image Capture could not be loaded.&quot;, 0, &quot;Image Capture&quot;
+		MsgBox &quot;Image Capture is not available for this operating system.&quot;, 0, &quot;NeoOffice Mobile&quot;
 		Exit Sub
 	End If
 	
