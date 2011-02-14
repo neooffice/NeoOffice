@@ -96,8 +96,7 @@
 #endif
 
 #include "premac.h"
-#import <Foundation/Foundation.h>
-#include <Carbon/Carbon.h>
+#import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
@@ -361,7 +360,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 - (void)doImageCapture: (id)pObj
 {
 	CFArrayRef theTypes = (CFArrayRef)[NSArray arrayWithObjects: @"tif", @"tiff", @"jpg", @"jpeg", @"gif", @"png", @"pdf", @"bmp", NULL];
-	if (!theTypes)
+	NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
+	if (!theTypes && thePasteboard)
 		return;
 
 	ICAImportImagePB thePB;
@@ -372,25 +372,24 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	thePB.importedImages = &importedImages;
 	thePB.supportedFileTypes = theTypes;
     OSErr error = ICAImportImage(&thePB, NULL);
-	if((error==noErr) && thePB.importedImages)
+	if(thePB.importedImages && *thePB.importedImages)
 	{
-		CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
-		if(theImage)
+		if((error==noErr) && CFArrayGetCount(*thePB.importedImages))
 		{
-			// convert image into TIFF so we can put it on the clipboard
-			// using the scrap manager
-			NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
-			if(theNSImage)
+			CFDataRef theImage=(CFDataRef)CFArrayGetValueAtIndex(*thePB.importedImages, 0);
+			if(theImage)
 			{
-				NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
-				if(theNSTIFFData)
+				// convert image into TIFF so we can put it on the clipboard
+				// using the scrap manager
+				NSImage *theNSImage=[[NSImage alloc] initWithData:(NSData *)theImage];
+				if(theNSImage)
 				{
-					IMutex &rSolarMutex = Application::GetSolarMutex();
-					rSolarMutex.acquire();
-
-					NSPasteboard *thePasteboard=[NSPasteboard generalPasteboard];
-					if(thePasteboard)
+					NSData *theNSTIFFData=[theNSImage TIFFRepresentation];
+					if(theNSTIFFData)
 					{
+						// no need to acquire global mutex now that
+						// libdtransjava does all pasteboard actions on
+						// the main thread
 						[thePasteboard declareTypes:[NSArray arrayWithObject:NSTIFFPboardType] owner:self];
 						[thePasteboard setData:theNSTIFFData forType:NSTIFFPboardType];
 						// mark that we've successfully imported the image and
@@ -398,12 +397,12 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 						gotImage=true;
 					}
 
-					rSolarMutex.release();
+					[theNSImage release];
 				}
-
-				[theNSImage release];
 			}
 		}
+
+		CFRelease(*thePB.importedImages);
 	}
 }
 
