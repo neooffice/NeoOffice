@@ -124,9 +124,8 @@
 #include "salinst_cocoa.h"
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <Cocoa/Cocoa.h>
 #include <postmac.h>
-#undef check
 
 class JavaSalI18NImeStatus : public SalI18NImeStatus
 {
@@ -146,31 +145,26 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
-// ============================================================================
+@interface VCLMenuBarTrackingHandler : NSObject
+- (void)trackMenuBar:(NSNotification *)pNotification;
+@end
 
-static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef aEvent, void *pData )
+@implementation VCLMenuBarTrackingHandler
+
+- (void)trackMenuBar:(NSNotification *)pNotification
 {
-	EventClass nClass = GetEventClass( aEvent );
-	EventKind nKind = GetEventKind( aEvent );
-
-	if ( nClass == kEventClassMenu && nKind == kEventMenuBeginTracking )
+	if ( pNotification )
 	{
-		// Check if this a menubar event as we don't want to dispatch native
-		// popup menus in modal dialogs and make sure that this is not a
-		// duplicate menu opening event
-		UInt32 nContext;
-		if ( GetEventParameter( aEvent, kEventParamMenuContext, typeUInt32, NULL, sizeof( UInt32 ), NULL, &nContext ) == noErr && nContext & kMenuContextMenuBarTracking )
-		{
-			if ( !VCLInstance_updateNativeMenus() )
-				return userCanceledErr;
-		}
+		NSApplication *pApp = [NSApplication sharedApplication];
+		NSMenu *pObject = [pNotification object];
+		if ( pApp && pObject && pObject == [pApp mainMenu] )
+			VCLInstance_updateNativeMenus();
 	}
-
-	// Always execute the next registered handler
-	return CallNextEventHandler( aNextHandler, aEvent );
 }
 
-// ----------------------------------------------------------------------------
+@end
+
+// ============================================================================
 
 BOOL VCLInstance_updateNativeMenus()
 {
@@ -307,15 +301,19 @@ void InitJavaAWT()
 		{
 			pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
 
-			EventHandlerUPP pEventHandlerUPP = NewEventHandlerUPP( CarbonEventHandler );
-			if ( pEventHandlerUPP )
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			// Set up native event handler
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pNotificationCenter )
 			{
-				// Set up native event handler
-				EventTypeSpec aType;
-				aType.eventClass = kEventClassMenu;
-				aType.eventKind = kEventMenuBeginTracking;
-				InstallApplicationEventHandler( pEventHandlerUPP, 1, &aType, NULL, NULL );
+				// Do not retain as invoking alloc disables autorelease
+				VCLMenuBarTrackingHandler *pVCLMenuBarTrackingHandler = [[VCLMenuBarTrackingHandler alloc] init];
+				if ( pVCLMenuBarTrackingHandler )
+					[pNotificationCenter addObserver:pVCLMenuBarTrackingHandler selector:@selector(trackMenuBar:) name:NSMenuDidBeginTrackingNotification object:nil];
 			}
+
+			[pPool release];
 
 			// Invoke the native shutdown cancelled handler to clear any
 			// pending native open and print events
@@ -435,7 +433,7 @@ ULONG JavaSalInstance::ReleaseYieldMutex()
 	// Never release the mutex in the main thread as it can cause crashing
 	// when dragging when the OOo code's VCL event dispatching thread runs
 	// while we are in the middle of a native drag event
-	if ( !bAllowReleaseYieldMutex && GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( !bAllowReleaseYieldMutex && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		return 0;
 
 	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
@@ -474,7 +472,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 {
 	ULONG nCount = 0;
 	SalData *pSalData = GetSalData();
-	bool bMainEventLoop = ( GetCurrentEventLoop() == GetMainEventLoop() );
+	bool bMainEventLoop = ( CFRunLoopGetCurrent() == CFRunLoopGetMain() );
 
 	// Fix bug 2575 by manually dispatching native events.
 	if ( bMainEventLoop )
@@ -1016,7 +1014,7 @@ void SalYieldMutex::acquire()
 		{
 			return;
 		}
-		else if ( pSalData->mpEventQueue && GetCurrentEventLoop() == GetMainEventLoop() )
+		else if ( pSalData->mpEventQueue && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		{
 			// Wait for other thread to release mutex
 			// We need to let any pending timers run so that we don't deadlock
