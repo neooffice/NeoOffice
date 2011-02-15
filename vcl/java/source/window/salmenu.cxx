@@ -375,7 +375,6 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	// won't be notified when another application puts content.
 	if ( pMenu->mbIsMenuBarMenu && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 	{
-fprintf( stderr, "Here\n" );
 		Window *pWindow = pVCLMenu->GetWindow();
 		if ( pWindow )
 		{
