@@ -100,7 +100,7 @@
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
@@ -130,7 +130,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMain
 {
 	jboolean bRet = JNI_FALSE;
 
-	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 	{
 		bRet = JNI_TRUE;
 		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
@@ -143,7 +143,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_star_vcl_VCLEventQueue_isApplicationMain
 
 JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThreadTimers( JNIEnv *pEnv, jobject object )
 {
-	if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 }
 

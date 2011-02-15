@@ -35,19 +35,67 @@
 
 #define _SV_JAVA_TOOLS_CXX
 
+#include <dlfcn.h>
+
 #ifndef _SV_JAVA_TOOLS_HXX
 #include <java/tools.hxx>
 #endif					
 
-#ifdef __cplusplus
 #include <premac.h>
-#endif
-#include <Carbon/Carbon.h>
-#ifdef __cplusplus
+#include <CoreServices/CoreServices.h>
 #include <postmac.h>
-#endif
+
+typedef OSErr Gestalt_Type( OSType selector, long *response );
+
+static bool isLeopard = false;
+static bool isSnowLeopard = false;
+static bool isLion = false;
 
 using namespace vcl;
+
+// ============================================================================
+
+static void InitializeMacOSXVersion()
+{
+	static bool nInitialized = false;
+
+	if ( nInitialized )
+		return;
+	
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			SInt32 res = 0;
+			pGestalt( gestaltSystemVersionMajor, &res );
+			if ( res == 10 )
+			{
+				res = 0;
+				pGestalt( gestaltSystemVersionMinor, &res );
+				switch ( res )
+				{
+					case 5:
+						isLeopard = true;
+						break;
+					case 6:
+						isSnowLeopard = true;
+						break;
+					case 7:
+						isLion = true;
+						break;
+					default:
+						break;
+				}
+			}
+		}
+
+		dlclose( pLib );
+	}
+
+	nInitialized = true;
+}
 
 // ============================================================================
 
@@ -83,17 +131,7 @@ jstring vcl::StringToJavaString( JNIEnv *pEnv, const ::rtl::OUString& _rTemp )
 
 bool vcl::IsRunningLeopard( )
 {
-	static bool initializedOnce = false;
-	static bool isLeopard = false;
-	
-	if ( ! initializedOnce )
-	{
-		long res = 0;
-		Gestalt( gestaltSystemVersion, &res );
-		isLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x5 ) );
-		initializedOnce = true;
-	}
-	
+	InitializeMacOSXVersion();
 	return isLeopard;
 }
 
@@ -101,17 +139,7 @@ bool vcl::IsRunningLeopard( )
 
 bool vcl::IsRunningSnowLeopard( )
 {
-	static bool initializedOnce = false;
-	static bool isSnowLeopard = false;
-	
-	if ( ! initializedOnce )
-	{
-		long res = 0;
-		Gestalt( gestaltSystemVersion, &res );
-		isSnowLeopard = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x6 ) );
-		initializedOnce = true;
-	}
-	
+	InitializeMacOSXVersion();
 	return isSnowLeopard;
 }
 
@@ -119,17 +147,7 @@ bool vcl::IsRunningSnowLeopard( )
 
 bool vcl::IsRunningLion( )
 {
-	static bool initializedOnce = false;
-	static bool isLion = false;
-	
-	if ( ! initializedOnce )
-	{
-		long res = 0;
-		Gestalt( gestaltSystemVersion, &res );
-		isLion = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) == 0x7 ) );
-		initializedOnce = true;
-	}
-	
+	InitializeMacOSXVersion();
 	return isLion;
 }
 
