@@ -33,14 +33,19 @@
  *
  ************************************************************************/
 
-#import <Cocoa/Cocoa.h>
+#include <dlfcn.h>
+
+// Need to include for SetSystemUIMode constants but we don't link to it
 #import <Carbon/Carbon.h>
+#import <Cocoa/Cocoa.h>
 #import <objc/objc-class.h>
 #import "VCLApplicationDelegate_cocoa.h"
 #import "VCLEventQueue_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 #import "VCLResponder_cocoa.h"
 #import "../app/salinst_cocoa.h"
+
+typedef OSStatus GetMenuTrackingData_Type( MenuRef aMenu, MenuTrackingData *pData );
 
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
@@ -592,11 +597,25 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 {
 	if ( [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
+		bool bTrackingMenuBar = false;
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			GetMenuTrackingData_Type *pGetMenuTrackingData = (GetMenuTrackingData_Type *)dlsym( pLib, "GetMenuTrackingData" );
+			if ( pGetMenuTrackingData )
+			{
+				MenuTrackingData aTrackingData;
+				if ( pGetMenuTrackingData( nil, &aTrackingData ) == noErr )
+					bTrackingMenuBar = true;
+			}
+
+			dlclose( pLib );
+		}
+
 		// Fix bug 2992 by not allowing the key window to change when we are
 		// tracking the menubar and never allow a borderless window to grab
 		// focus
-		MenuTrackingData aTrackingData;
-		if ( GetMenuTrackingData( nil, &aTrackingData ) == noErr && ! ( [self styleMask] & NSTitledWindowMask ) )
+		if ( bTrackingMenuBar && ! ( [self styleMask] & NSTitledWindowMask ) )
 		{
 			return;
 		}
