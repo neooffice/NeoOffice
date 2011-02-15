@@ -37,15 +37,8 @@
 #define __SALOBJ_COCOA_H__
 
 #ifdef __cplusplus
-#include <premac.h>
-#endif
-#include <Carbon/Carbon.h>
-#ifdef __cplusplus
-#include <postmac.h>
 typedef void* id;
-#endif
 
-#ifdef __cplusplus
 BEGIN_C
 #endif
 id VCLChildView_create();

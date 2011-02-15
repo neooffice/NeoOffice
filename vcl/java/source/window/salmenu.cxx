@@ -66,7 +66,7 @@
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
 static ::std::map< JavaSalMenu*, JavaSalMenu* > aMenuMap;
@@ -373,8 +373,9 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	// Force the clipboard service to update itself before we update the
 	// menus as if the native clipboard was cleared when we last checked, we
 	// won't be notified when another application puts content.
-	if ( pMenu->mbIsMenuBarMenu && GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( pMenu->mbIsMenuBarMenu && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 	{
+fprintf( stderr, "Here\n" );
 		Window *pWindow = pVCLMenu->GetWindow();
 		if ( pWindow )
 		{
