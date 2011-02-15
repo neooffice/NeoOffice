@@ -36,7 +36,7 @@
 #ifndef __SALINST_COCOA_H__
 #define __SALINST_COCOA_H__
 
-#ifdef __cplusplus
+#if defined __cplusplus && !defined __OBJC__
 typedef void* id;
 #endif
 
