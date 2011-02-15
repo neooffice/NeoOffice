@@ -55,6 +55,9 @@
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
 #endif
+#ifndef _VOS_MUTEX_HXX_
+#include <vos/mutex.hxx>
+#endif
 
 #ifndef _CPPUHELPER_QUERYINTERFACE_HXX_
 #include <cppuhelper/queryinterface.hxx> // helper for queryInterface() impl
@@ -133,6 +136,7 @@ using namespace ::com::sun::star::frame;
 using namespace ::com::sun::star::beans;
 using namespace ::org::neooffice;
 using namespace ::com::sun::star::task;
+using namespace ::vos;
 
 typedef enum _RemoteControlEventIdentifier {
 	// normal events
@@ -411,6 +415,8 @@ id rcControl;
 		return(bRet);
 #endif	// DEBUG
 	
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+
 	// load our framework out of our bundle's directory
 	
 	NSBundle *mainBundle=[NSBundle mainBundle];
@@ -435,6 +441,8 @@ id rcControl;
 		}
 	}
 
+	[pool release];
+
 	return(bRet);
 }
 
@@ -456,10 +464,8 @@ id rcControl;
 	imp=[[RemoteControlDelegateImpl alloc] init];
 	
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(bindRemoteControls:) withObject:imp waitUntilDone: 1 modes: pModes];
-	Application::AcquireSolarMutex( nCount );
-		
+	
 	[pool release];
 	
 	return(imp!=NULL);
@@ -576,9 +582,7 @@ id rcControl;
 			if(!pressedDown)
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				unsigned long nCount = Application::ReleaseSolarMutex();
 				[self performSelectorOnMainThread:@selector(nextSlide:) withObject:self waitUntilDone: 1 modes: pModes];
-				Application::AcquireSolarMutex( nCount );
 			}
 			break;			
 
@@ -586,9 +590,7 @@ id rcControl;
 			if(!pressedDown)
 			{
 				NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-				unsigned long nCount = Application::ReleaseSolarMutex();
 				[self performSelectorOnMainThread:@selector(previousSlide:) withObject:self waitUntilDone: 1 modes: pModes];
-				Application::AcquireSolarMutex( nCount );
 			}
 			break;			
 
@@ -610,25 +612,35 @@ id rcControl;
 	SystemUIMode outMode=[RemoteControlDelegateImpl systemUIMode];
 	if(outMode==kUIModeNormal)
 	{
-		try
+		if(!Application::IsShutDown())
 		{
-			Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
-			Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
-			Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
-			
-			Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
-			
-			Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
-			Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
-		
-			Reference< XDispatchProvider > rDispatchProvider(rFrame,UNO_QUERY); 
-			
-			Sequence< PropertyValue > args(0);
-			
-			rDispatchHelper->executeDispatch(rDispatchProvider, OUString::createFromAscii(".uno:Presentation"), OUString::createFromAscii(""), 0, args);
-		}
-		catch (...)
-		{
+			IMutex& rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+			if(!Application::IsShutDown())
+			{
+				try
+				{
+					Reference< XComponentContext > component( comphelper_getProcessComponentContext() );
+					Reference< XMultiComponentFactory > rServiceManager = component->getServiceManager();
+					Reference< XInterface > rDesktop = rServiceManager->createInstanceWithContext(OUString::createFromAscii("com.sun.star.frame.Desktop"), component);
+					
+					Reference< XDispatchHelper > rDispatchHelper = Reference< XDispatchHelper >(rServiceManager->createInstanceWithContext(OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" )), component), UNO_QUERY ); 
+					
+					Reference< XDesktop > Desktop(rDesktop,UNO_QUERY);
+					Reference< XFrame > rFrame=Desktop->getCurrentFrame(); 
+				
+					Reference< XDispatchProvider > rDispatchProvider(rFrame,UNO_QUERY); 
+					
+					Sequence< PropertyValue > args(0);
+					
+					rDispatchHelper->executeDispatch(rDispatchProvider, OUString::createFromAscii(".uno:Presentation"), OUString::createFromAscii(""), 0, args);
+				}
+				catch (...)
+				{
+				}
+			}
+
+			rSolarMutex.release();
 		}
 	}
 	else if(outMode==kUIModeAllHidden)
