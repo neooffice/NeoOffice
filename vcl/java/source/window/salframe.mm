@@ -35,6 +35,8 @@
 
 #define _SV_SALFRAME_CXX
 
+#include <dlfcn.h>
+
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
@@ -79,27 +81,107 @@
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#import <AppKit/AppKit.h>
+// Need to include for SetSystemUIMode constants but we don't link to it
+#import <Carbon/Carbon.h>
 #include <postmac.h>
-#undef check
 
-static EventLoopTimerUPP pSetSystemUIModeTimerUPP = NULL;
-static EventLoopTimerUPP pUpdateSystemActivityTimerUPP = NULL;
-static EventLoopTimerRef pUpdateSystemActivityTimerRef = NULL;
+typedef UInt32 GetDblTime_Type();
+typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOptions );
 
 using namespace rtl;
 using namespace vcl;
 
-// =======================================================================
-
-static inline Color RGBColorToColor( RGBColor *theColor )
+@interface VCLSetSystemUIMode : NSObject
 {
-	return Color( (unsigned char)( ( (double)theColor->red / (double)USHRT_MAX ) * (double)0xFF ),
-		(unsigned char)( ( (double)theColor->green / (double)USHRT_MAX ) * (double)0xFF ),
-		(unsigned char)( ( (double)theColor->blue / (double)USHRT_MAX ) * (double)0xFF ) );
+	BOOL					mbFullScreen;
+}
++ (id)createFullScreen:(BOOL)bFullScreen;
+- (id)initFullScreen:(BOOL)bFullScreen;
+- (void)setSystemUIMode:(id)pObject;
+- (void)updateSystemActivity;
+@end
+
+static NSTimer *pUpdateTimer = nil;
+
+@implementation VCLSetSystemUIMode
+
++ (id)createFullScreen:(BOOL)bFullScreen
+{
+	VCLSetSystemUIMode *pRet = [[VCLSetSystemUIMode alloc] initFullScreen:bFullScreen];
+	[pRet autorelease];
+	return pRet;
 }
 
-// -----------------------------------------------------------------------
+- (id)initFullScreen:(BOOL)bFullScreen
+{
+	[super init];
+
+	mbFullScreen = bFullScreen;
+
+	return self;
+}
+
+- (void)setSystemUIMode:(id)pObject
+{
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		SetSystemUIMode_Type *pSetSystemUIMode = (SetSystemUIMode_Type *)dlsym( pLib, "SetSystemUIMode" );
+		if ( pSetSystemUIMode )
+		{
+			if ( mbFullScreen )
+			{
+				pSetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
+
+				// Run the update timer every 15 seconds
+				if ( !pUpdateTimer )
+				{
+					SEL aSelector = @selector(updateSystemActivity);
+					NSMethodSignature *pSignature = [[self class] instanceMethodSignatureForSelector:aSelector];
+					if ( pSignature )
+					{
+						NSInvocation *pInvocation = [NSInvocation invocationWithMethodSignature:pSignature];
+						if ( pInvocation )
+						{
+							[pInvocation setSelector:aSelector];
+							[pInvocation setTarget:self];
+							pUpdateTimer = [NSTimer scheduledTimerWithTimeInterval:15 invocation:pInvocation repeats:YES];
+							if ( pUpdateTimer )
+							{
+								[pUpdateTimer retain];
+								[self updateSystemActivity];
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				pSetSystemUIMode( kUIModeNormal, 0 );
+
+				// Stop the update timer
+				if ( pUpdateTimer )
+				{
+					[pUpdateTimer invalidate];
+					[pUpdateTimer release];
+					pUpdateTimer = nil;
+				}
+			}
+		}
+
+		dlclose( pLib );
+	}
+}
+
+- (void)updateSystemActivity
+{
+	UpdateSystemActivity( OverallAct );
+}
+
+@end
+
+// =======================================================================
 
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
 {
@@ -742,59 +824,6 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 
 // -----------------------------------------------------------------------
 
-/**
- * Timer to prevent sleeping. This should be set to run frequently while
- * presentations are displayed.
- */
-static void UpdateSystemActivityTimerCallback( EventLoopTimerRef aTimer, void *pData )
-{
-	UpdateSystemActivity( OverallAct );
-}
-
-// -----------------------------------------------------------------------
-
-/**
- * Timer routine to toggle the system user interface mode on the
- * thread that is hosting our main runloop.  Starting with 10.3.8, it appears
- * that there is some type of contention that is causing SetSystemUIMode
- * to crash if it is invoked from a thread that is not the carbon runloop.
- *
- * @param aTimer	timer reference structure
- * @param pData		cookie passed to timer;  treated as a boolean value
- *			set to true if we're entering fullscreen presentation
- *			mode, false if we're returning to normal usage mode.
- */
-static void SetSystemUIModeTimerCallback( EventLoopTimerRef aTimer, void *pData )
-{
-	bool enterFullscreen = (bool)pData;
-
-	if ( enterFullscreen )
-		SetSystemUIMode( kUIModeAllHidden, kUIOptionDisableAppleMenu | kUIOptionDisableProcessSwitch );
-	else
-		SetSystemUIMode( kUIModeNormal, 0 );
-
-
-	if ( !pUpdateSystemActivityTimerUPP )
-		pUpdateSystemActivityTimerUPP = NewEventLoopTimerUPP( UpdateSystemActivityTimerCallback );
-
-	// Start or stop sleep prevention timer
-	if ( pUpdateSystemActivityTimerUPP )
-	{
-		if ( enterFullscreen && !pUpdateSystemActivityTimerRef )
-		{
-			// Run timer every 15 seconds
-			InstallEventLoopTimer( GetMainEventLoop(), 0.001, 15, pUpdateSystemActivityTimerUPP, NULL, &pUpdateSystemActivityTimerRef );
-		}
-		else if ( !enterFullscreen && pUpdateSystemActivityTimerRef )
-		{
-			RemoveEventLoopTimer( pUpdateSystemActivityTimerRef );
-			pUpdateSystemActivityTimerRef = NULL;
-		}
-	}
-}
-
-// -----------------------------------------------------------------------
-
 void JavaSalFrame::StartPresentation( BOOL bStart )
 {
 	if ( bStart == mbPresentation )
@@ -826,19 +855,18 @@ void JavaSalFrame::StartPresentation( BOOL bStart )
 		SetPosSize( aWorkArea.nLeft, aWorkArea.nTop, aWorkArea.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration, aWorkArea.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration, nFlags );
 	}
 
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	// [ed] 2/15/05 Change the SystemUIMode via timers so we can trigger
 	// it on the main runloop thread.  Bug 484
 	// Always run the timer to ensure that the remote control feature works
 	// when the presentation window is on a secondary screen
-	if ( !pSetSystemUIModeTimerUPP )
-		pSetSystemUIModeTimerUPP = NewEventLoopTimerUPP( SetSystemUIModeTimerCallback );
-	if ( pSetSystemUIModeTimerUPP )
-	{
-		if ( GetCurrentEventLoop() != GetMainEventLoop() )
-			InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pSetSystemUIModeTimerUPP, (void *)( mbPresentation ? true : false ), NULL );
-		else
-			SetSystemUIModeTimerCallback( NULL, (void *)( mbPresentation ? true : false ) );
-	}
+	VCLSetSystemUIMode *pVCLSetSystemUIMode = [VCLSetSystemUIMode createFullScreen:mbPresentation];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLSetSystemUIMode performSelectorOnMainThread:@selector(setSystemUIMode:) withObject:pVCLSetSystemUIMode waitUntilDone:YES modes:pModes];
+
+	[pPool release];
+
 }
 
 // -----------------------------------------------------------------------
@@ -976,11 +1004,38 @@ XubString JavaSalFrame::GetSymbolKeyName( const XubString&, USHORT nKeyCode )
 
 void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	MouseSettings aMouseSettings = rSettings.GetMouseSettings();
-	ULONG nDblTime = (ULONG)GetDblTime();
-	if ( nDblTime < 25 )
-		nDblTime = 25;
-	aMouseSettings.SetDoubleClickTime( nDblTime * 1000 / CLK_TCK );
+	float fDoubleClickThreshold = 0;
+	NSUserDefaults *pDefaults = [NSUserDefaults standardUserDefaults];
+	if ( pDefaults )
+		fDoubleClickThreshold = [pDefaults floatForKey:@"com.apple.mouse.doubleClickThreshold"];
+
+	if ( fDoubleClickThreshold > 0 )
+	{
+		if ( fDoubleClickThreshold < 0.25 )
+			fDoubleClickThreshold = 0.25;
+		aMouseSettings.SetDoubleClickTime( fDoubleClickThreshold * 1000 );
+	}
+	else
+	{
+		ULONG nDblTime = 25;
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			GetDblTime_Type *pGetDblTime = (GetDblTime_Type *)dlsym( pLib, "GetDblTime" );
+			if ( pGetDblTime )
+			{
+				nDblTime = (ULONG)pGetDblTime();
+				if ( nDblTime < 25 )
+					nDblTime = 25;
+			}
+
+			dlclose( pLib );
+		}
+		aMouseSettings.SetDoubleClickTime( nDblTime * 1000 / CLK_TCK );
+	}
 	aMouseSettings.SetStartDragWidth( 6 );
 	aMouseSettings.SetStartDragHeight( 6 );
 	rSettings.SetMouseSettings( aMouseSettings );
@@ -988,25 +1043,27 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	StyleSettings aStyleSettings( rSettings.GetStyleSettings() );
 
 	long nBlinkRate = 500;
-	CFPropertyListRef aInsertionPointBlinkPref = CFPreferencesCopyValue( CFSTR( "NSTextInsertionPointBlinkPeriod" ), kCFPreferencesAnyApplication, kCFPreferencesCurrentUser, kCFPreferencesAnyHost );
-	if ( aInsertionPointBlinkPref )
+	if ( pDefaults )
 	{
-		if ( CFGetTypeID( aInsertionPointBlinkPref ) == CFNumberGetTypeID() && CFNumberGetValue( (CFNumberRef)aInsertionPointBlinkPref, kCFNumberLongType, &nBlinkRate ) && nBlinkRate < 500 )
+		nBlinkRate = [pDefaults integerForKey:@"NSTextInsertionPointBlinkPeriod"];
+		if ( nBlinkRate < 500 )
 			nBlinkRate = 500;
-		CFRelease( aInsertionPointBlinkPref );
 	}
 	aStyleSettings.SetCursorBlinkTime( nBlinkRate );
-	
-	RGBColor theColor;
-	
+
 	BOOL useThemeDialogColor = FALSE;
 	Color themeDialogColor;
-	if( GetThemeTextColor( kThemeTextColorPushButtonActive /* used for text of all controls */, 32, true, &theColor ) == noErr )
+	NSColor *pControlTextColor = [NSColor controlTextColor];
+	if ( pControlTextColor )
 	{
-		themeDialogColor = RGBColorToColor( &theColor );
-		useThemeDialogColor = TRUE;
+		pControlTextColor = [pControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pControlTextColor )
+		{
+			themeDialogColor = Color( (unsigned char)( [pControlTextColor redComponent] * 0xff ), (unsigned char)( [pControlTextColor greenComponent] * 0xff ), (unsigned char)( [pControlTextColor blueComponent] * 0xff ) );
+			useThemeDialogColor = TRUE;
+		}
 	}
-	
+
 	SalColor nTextTextColor = com_sun_star_vcl_VCLScreen::getTextTextColor();
 	Color aTextColor( SALCOLOR_RED( nTextTextColor ), SALCOLOR_GREEN( nTextTextColor ), SALCOLOR_BLUE( nTextTextColor ) );
 	aStyleSettings.SetDialogTextColor( ( useThemeDialogColor ) ? themeDialogColor : aTextColor );
@@ -1031,14 +1088,19 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	Color aHighlightTextColor( SALCOLOR_RED( nTextHighlightTextColor ), SALCOLOR_GREEN( nTextHighlightTextColor ), SALCOLOR_BLUE( nTextHighlightTextColor ) );
 	aStyleSettings.SetHighlightTextColor( aHighlightTextColor );
 	aStyleSettings.SetMenuHighlightTextColor( aHighlightTextColor );
-	
+
 	useThemeDialogColor = FALSE;
-	if( GetThemeTextColor( kThemeTextColorPushButtonInactive /* used for text of all disabled controls */, 32, true, &theColor ) == noErr )
+	NSColor *pDisabledControlTextColor = [NSColor disabledControlTextColor];
+	if ( pDisabledControlTextColor )
 	{
-		themeDialogColor = RGBColorToColor( &theColor );
-		useThemeDialogColor = TRUE;
+		pDisabledControlTextColor = [pDisabledControlTextColor colorUsingColorSpaceName:NSDeviceRGBColorSpace];
+		if ( pDisabledControlTextColor )
+		{
+			themeDialogColor = Color( (unsigned char)( [pDisabledControlTextColor redComponent] * 0xff ), (unsigned char)( [pDisabledControlTextColor greenComponent] * 0xff ), (unsigned char)( [pDisabledControlTextColor blueComponent] * 0xff ) );
+			useThemeDialogColor = TRUE;
+		}
 	}
-	
+
 	SalColor nControlColor = com_sun_star_vcl_VCLScreen::getControlColor();
 	Color aBackColor( SALCOLOR_RED( nControlColor ), SALCOLOR_GREEN( nControlColor ), SALCOLOR_BLUE( nControlColor ) );
 	aStyleSettings.Set3DColors( aBackColor );
@@ -1062,6 +1124,8 @@ void JavaSalFrame::UpdateSettings( AllSettings& rSettings )
 	}
 
 	rSettings.SetStyleSettings( aStyleSettings );
+
+	[pPool release];
 }
 
 // -----------------------------------------------------------------------
