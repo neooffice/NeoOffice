@@ -38,12 +38,7 @@
 
 #include <jni.h>
 
-#ifdef __cplusplus 
-#include <premac.h>
-#endif
-#include <Carbon/Carbon.h>
 #ifdef __cplusplus
-#include <postmac.h>
 typedef void* id;
 #else
 @interface NSWindow (VCLWindow)

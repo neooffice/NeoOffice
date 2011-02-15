@@ -45,10 +45,6 @@
 #include <saldata.hxx>
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 using namespace rtl;
 using namespace vcl;
 

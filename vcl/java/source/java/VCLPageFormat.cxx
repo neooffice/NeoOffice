@@ -66,10 +66,6 @@
 #include "VCLPageFormat_cocoa.h"
 #include "VCLPrintJob_cocoa.h"
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 #define PAGEFORMAT_KEY CFSTR( "PAGEFORMAT" )
 
 typedef void Java_apple_awt_CPrinterJob_getDefaultPage_Type( JNIEnv *, jobject, jobject );
