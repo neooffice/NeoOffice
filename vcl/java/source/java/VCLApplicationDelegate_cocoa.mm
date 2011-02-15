@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
 #include <list>
 
 #include <saldata.hxx>
@@ -42,9 +43,10 @@
 #include <vos/mutex.hxx>
 
 #include <premac.h>
-#import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
+
+typedef void KeyScript_Type( short nCode );
 
 #include "VCLApplicationDelegate_cocoa.h"
 
@@ -218,7 +220,15 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification
 {
 	// Fix bug 221 by explicitly reenabling all keyboards
-	KeyScript( smKeyEnableKybds );
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		KeyScript_Type *pKeyScript = (KeyScript_Type *)dlsym( pLib, "KeyScript" );
+		if ( pKeyScript )
+			pKeyScript( smKeyEnableKybds );
+
+		dlclose( pLib );
+	}
 }
 
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification

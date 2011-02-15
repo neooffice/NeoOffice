@@ -37,11 +37,6 @@
 #import "VCLPageFormat_cocoa.h"
 #import "VCLPrintJob_cocoa.h"
 
-@interface NSPrintInfo (PMPrintSettings)
-- (PMPrintSettings)PMPrintSettings;
-- (PMPrintSettings)pmPrintSettings;
-@end
-
 @interface ShowPrintDialog : NSObject
 {
 	BOOL					mbFinished;
@@ -133,28 +128,6 @@
 
 - (void)showPrintDialog:(id)pObject
 {
-	// Set the job name from the window title
-	PMPrintSettings aSettings = nil;
-	if ( [mpInfo respondsToSelector:@selector(PMPrintSettings)] )
-		aSettings = (PMPrintSettings)[mpInfo PMPrintSettings];
-	else if ( [mpInfo respondsToSelector:@selector(pmPrintSettings)] )
-
-		aSettings = (PMPrintSettings)[mpInfo pmPrintSettings];
-
-	if ( aSettings )
-	{
-		NSString *pTitle = nil;
-		if ( mpWindow )
-			pTitle = [mpWindow title];
-		if ( pTitle )
-			pTitle = [pTitle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-		else
-			pTitle = [NSString stringWithString:@"Untitled"];
-
-		if ( pTitle)
-			PMSetJobNameCFString( aSettings, (CFStringRef)pTitle );
-	}
-
 	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
 	if ( pPanel )
 	{
@@ -192,6 +165,17 @@
 				NSPrintOperation *pOperation = [VCLPrintOperation printOperationWithView:pView printInfo:mpInfo];
 				if ( pOperation )
 				{
+					// Set the job name from the window title
+					NSString *pTitle = nil;
+					if ( mpWindow )
+						pTitle = [mpWindow title];
+					if ( pTitle )
+						pTitle = [pTitle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+					else
+						pTitle = [NSString stringWithString:@"Untitled"];
+					if ( pTitle)
+						[pOperation setJobTitle:pTitle];
+
 					NSPrintOperation *pOldOperation = [NSPrintOperation currentOperation];
 					[NSPrintOperation setCurrentOperation:pOperation];
 					if ( [pPanel runModal] == NSOKButton )

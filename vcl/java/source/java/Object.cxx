@@ -64,7 +64,7 @@
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
 using namespace vcl;
@@ -127,7 +127,7 @@ void VCLThreadAttach::AttachThread()
 
 	// Fix bug 3425 by manually dispatching any pending native timers and
 	// Java events
-	if ( pEnv && GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( pEnv && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 	{
 		static bool bInAttachThread = false;
 
