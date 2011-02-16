@@ -33,22 +33,27 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
 #import <Cocoa/Cocoa.h>
 #import "VCLPageFormat_cocoa.h"
 #import "VCLPrintJob_cocoa.h"
+
+typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
 
 @interface ShowPrintDialog : NSObject
 {
 	BOOL					mbFinished;
 	NSPrintInfo*			mpInfo;
+	CFStringRef				maJobName;
 	BOOL					mbResult;
 	NSWindow*				mpWindow;
 }
 - (void)dealloc;
 - (BOOL)finished;
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow;
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(CFStringRef)aJobName;
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo;
 - (BOOL)result;
+- (void)setJobTitle;
 - (void)showPrintDialog:(id)pObject;
 @end
 
@@ -58,6 +63,9 @@
 {
 	if ( mpInfo )
 		[mpInfo release];
+
+	if ( maJobName )
+		CFRelease( maJobName );
 
 	if ( mpWindow )
 		[mpWindow release];
@@ -70,7 +78,7 @@
 	return mbFinished;
 }
 
-- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(CFStringRef)aJobName
 {
 	[super init];
 
@@ -78,6 +86,11 @@
 	mpInfo = pInfo;
 	if ( mpInfo )
 		[mpInfo retain];
+	maJobName = aJobName;
+	if ( !maJobName )
+		maJobName = CFSTR( "Untitled" );
+	if ( maJobName )
+		CFRetain( maJobName );
 	mbResult = NO;
 	mpWindow = pWindow;
 	if ( mpWindow )
@@ -126,8 +139,34 @@
 	return mbResult;
 }
 
+- (void)setJobTitle
+{
+	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
+	if ( pOperation )
+		[pOperation setJobTitle:(NSString *)maJobName];
+
+	// Also set the job name via the PMPrintSettings so that the Save As
+	// dialog gets the job name
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		PMSetJobNameCFString_Type *pPMSetJobNameCFString = (PMSetJobNameCFString_Type *)dlsym( pLib, "PMSetJobNameCFString" );
+		if ( pPMSetJobNameCFString )
+		{
+			PMPrintSettings aSettings = (PMPrintSettings)[mpInfo PMPrintSettings];
+			if ( aSettings )
+				pPMSetJobNameCFString( aSettings, maJobName );
+		}
+
+		dlclose( pLib );
+	}
+}
+
 - (void)showPrintDialog:(id)pObject
 {
+	// Set job title
+	[self setJobTitle];
+
 	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
 	if ( pPanel )
 	{
@@ -165,19 +204,10 @@
 				NSPrintOperation *pOperation = [VCLPrintOperation printOperationWithView:pView printInfo:mpInfo];
 				if ( pOperation )
 				{
-					// Set the job name from the window title
-					NSString *pTitle = nil;
-					if ( mpWindow )
-						pTitle = [mpWindow title];
-					if ( pTitle )
-						pTitle = [pTitle stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-					else
-						pTitle = [NSString stringWithString:@"Untitled"];
-					if ( pTitle)
-						[pOperation setJobTitle:pTitle];
-
 					NSPrintOperation *pOldOperation = [NSPrintOperation currentOperation];
 					[NSPrintOperation setCurrentOperation:pOperation];
+					// Copy job title to new current operation
+					[self setJobTitle];
 					if ( [pPanel runModal] == NSOKButton )
 					{
 						// Copy any dictionary changes
@@ -275,7 +305,7 @@ float NSPrintInfo_scale( id pNSPrintInfo )
 	return fRet;
 }
 
-id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
+id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow, CFStringRef aJobName )
 {
 	ShowPrintDialog *pRet = nil;
 
@@ -284,7 +314,7 @@ id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow )
 	if ( pNSPrintInfo )
 	{
 		// Do not retain as invoking alloc disables autorelease
-		pRet = [[ShowPrintDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow];
+		pRet = [[ShowPrintDialog alloc] initWithPrintInfo:(NSPrintInfo *)pNSPrintInfo window:(NSWindow *)pNSWindow jobName:aJobName];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pRet performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pRet waitUntilDone:YES modes:pModes];
 	}

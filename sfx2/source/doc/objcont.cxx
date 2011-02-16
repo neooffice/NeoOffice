@@ -1044,6 +1044,8 @@ BOOL SfxObjectShell::Print
 			pPrintDlg->SetFirstPage( 1 );
 			pPrintDlg->SetLastPage( 9999 );
 			pPrintDlg->EnableCollate();
+			// Pass the print job name to the dialog
+			rPrt.SetJobValue( String::CreateFromAscii( "PRINTJOBNAME" ), String(SfxResId(STR_STYLES)) );
 			pPrintDlg->SetPrinter( &rPrt );
 			short nRet = pPrintDlg->Execute();
 			delete pPrintDlg;

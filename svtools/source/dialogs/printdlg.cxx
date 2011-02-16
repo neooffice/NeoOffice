@@ -778,7 +778,7 @@ short PrintDialog::Execute()
 	// Fix bug 2753 by using a job value to indicate that the native dialog
 	// should be shown
 	mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "true" ) );
-	short nRet = mpPrinter->StartJob( String() );
+	short nRet = mpPrinter->StartJob( mpPrinter->GetJobValue( String::CreateFromAscii( "PRINTJOBNAME" ) ) );
 	mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "" ) );
 	if ( nRet )
 	{

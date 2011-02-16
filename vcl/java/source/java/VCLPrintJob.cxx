@@ -325,7 +325,10 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		// emulate a modal dialog
 		void *pNSPrintInfo = _par0->getNativePrinterJob();
 		ULONG nCount = pFocusFrame ? 0 : Application::ReleaseSolarMutex();
-		void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame ? pFocusFrame->mpVCLFrame->getNativeWindow() : NULL );
+		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, _par1.getStr(), _par1.getLength(), kCFAllocatorNull );
+		void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame ? pFocusFrame->mpVCLFrame->getNativeWindow() : NULL, aString );
+		if ( aString )
+			CFRelease( aString );
 		Application::AcquireSolarMutex( nCount );
 
 		pSalData->mpNativeModalSheetFrame = pFocusFrame;

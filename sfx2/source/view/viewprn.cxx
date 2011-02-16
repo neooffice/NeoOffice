@@ -540,6 +540,10 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
 		                // set printer on dialog and execute
 						pPrintDlg->SetPrinter( pDlgPrinter );
+#ifdef USE_JAVA
+						// Pass the print job name to the dialog
+						pDlgPrinter->SetJobValue( String::CreateFromAscii( "PRINTJOBNAME" ), GetViewFrame()->GetObjectShell()->GetTitle(0) );
+#endif	// USE_JAVA
 		                ::DisableRanges( *pPrintDlg, pDlgPrinter );
 						nDialogRet = pPrintDlg->Execute();
 						if ( pExecutor && pExecutor->GetOptions() )
@@ -678,6 +682,8 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					pPrintDlg->DisableHelp();
 				pPrintDlg->SetPrinter( pPrinter );
 #ifdef USE_JAVA
+				// Pass the print job name to the dialog
+				pPrinter->SetJobValue( String::CreateFromAscii( "PRINTJOBNAME" ), GetViewFrame()->GetObjectShell()->GetTitle(0) );
 				nDialogRet = pPrintDlg->Execute();
 				if ( nDialogRet == RET_CANCEL )
 				{
