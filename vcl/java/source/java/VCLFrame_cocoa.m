@@ -153,14 +153,13 @@
 				if ( pSuperview && [pSuperview respondsToSelector:@selector(_setUtilityWindow:)] )
 				{
 					if ( [pWindow styleMask] & NSTitledWindowMask )
-					{
 						[pWindow setLevel:NSFloatingWindowLevel];
-						[pWindow setHidesOnDeactivate:YES];
-					}
 					else
-					{
 						[pWindow setLevel:NSPopUpMenuWindowLevel];
-					}
+
+					// Fix bug 3098 by making all floating windows hide when
+					// the application is deactivated
+					[pWindow setHidesOnDeactivate:YES];
 
 					// Get the top inset for a utility window
 					NSRect aFrameRect = NSMakeRect( 0, 0, 100, 100 );
