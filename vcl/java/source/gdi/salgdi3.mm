@@ -74,6 +74,7 @@
 
 #include <premac.h>
 #include <Carbon/Carbon.h>
+#include <Cocoa/Cocoa.h>
 #include <postmac.h>
 
 #include "salgdi3_cocoa.h"
@@ -154,7 +155,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						ATSUFontID aATSUFonts[ nCount ];
 						for ( i = 0; i < nCount; i++ )
 						{
-							void *pNSFont = (void *)pFonts[ i ];
+							NSFont *pNSFont = (NSFont *)pFonts[ i ];
 
 							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
 							if ( !aFont )
@@ -313,7 +314,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						// Cache matching bold, italic, and bold italic fonts
 						for ( i = 0; i < nCount; i++ )
 						{
-							void *pNSFont = (void *)pFonts[ i ];
+							NSFont *pNSFont = (NSFont *)pFonts[ i ];
 
 							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
 							if ( !aFont )

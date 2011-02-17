@@ -37,10 +37,6 @@
 #define __SALOGL_COCOA_H__
 
 #ifdef __cplusplus
-typedef void* id;
-#endif
-
-#ifdef __cplusplus
 BEGIN_C
 #endif
 ATSFontRef NSFont_getATSFontRef( id pNSFont );
