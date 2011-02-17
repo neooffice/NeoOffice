@@ -93,6 +93,8 @@
 
 #ifdef USE_JAVA
 
+#include <dlfcn.h>
+
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
 #endif
@@ -101,8 +103,13 @@
 #endif
 
 #include <premac.h>
+#include <ApplicationServices/ApplicationServices.h>
+// Need to include for SetSystemUIMode constants but we don't link to it
 #include <Carbon/Carbon.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+
+typedef EventLoopRef GetMainEventLoop_Type();
 
 using namespace utl;
 
@@ -145,16 +152,15 @@ static BOOL ImplLoadNativeFont( OUString aPath )
 		if ( osl_getSystemPathFromFileURL( aPath.pData, &aSysPath.pData ) == osl_File_E_None )
 		{
 			FSRef aFontPath;
-			FSSpec aFontSpec;
 			OString aUTF8Path( aSysPath.getStr(), aSysPath.getLength(), RTL_TEXTENCODING_UTF8 );
-			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr && FSGetCatalogInfo( &aFontPath, kFSCatInfoNone, NULL, NULL, &aFontSpec, NULL ) == noErr )
+			if ( FSPathMakeRef( (const UInt8 *)aUTF8Path.getStr(), &aFontPath, 0 ) == noErr )
 			{
-				if ( ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL ) == noErr )
+				if ( ATSFontActivateFromFileReference( &aFontPath, kATSFontContextGlobal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL ) == noErr )
 					bRet = TRUE;
 
 				// Loading our private fonts is a bit flaky so try loading
 				// using the local context just to be safe
-				ATSFontActivateFromFileSpecification( &aFontSpec, kATSFontContextLocal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL );
+				ATSFontActivateFromFileReference( &aFontPath, kATSFontContextLocal, kATSFontFormatUnspecified, NULL, kATSOptionFlagsDoNotNotify, NULL );
 			}
 		}
 	}
@@ -296,7 +302,15 @@ BOOL SVMain()
     // Attempt to fix haxie bugs that cause bug 2912 by calling
     // GetMainEventLoop() in the main thread before we have created a
     // secondary thread
-    if ( GetCurrentEventLoop() == GetMainEventLoop() )
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		GetMainEventLoop_Type *pGetMainEventLoop = (GetMainEventLoop_Type *)dlsym( pLib, "GetMainEventLoop" );
+		if ( pGetMainEventLoop )
+			pGetMainEventLoop();
+	}
+
+    if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
     {
         // Activate the fonts in the "user/fonts" directory. Fix bug 2733 on
         // Leopard by loading the fonts before Java is ever loaded.

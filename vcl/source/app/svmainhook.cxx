@@ -53,7 +53,7 @@ BOOL ImplSVMainHook( BOOL * )
 #include <pthread.h>
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
 #define MIN_SVMAIN_STACK_SIZE ( 2 * 1024 * 1024 )
@@ -73,7 +73,7 @@ extern "C" SAL_DLLPUBLIC_EXPORT const pthread_attr_t *NewSVMainThreadAttributes(
 {
     // Fix bug 3573 by setting a higher minimum stack size for the thread
     // that SVMain runs on
-    if ( bInCreateSVMainThread && GetCurrentEventLoop() == GetMainEventLoop() )
+    if ( bInCreateSVMainThread && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
     {
         if ( !pSVMainAttr )
         {
