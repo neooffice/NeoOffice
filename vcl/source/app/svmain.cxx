@@ -308,6 +308,8 @@ BOOL SVMain()
 		GetMainEventLoop_Type *pGetMainEventLoop = (GetMainEventLoop_Type *)dlsym( pLib, "GetMainEventLoop" );
 		if ( pGetMainEventLoop )
 			pGetMainEventLoop();
+
+		dlclose( pLib );
 	}
 
     if ( CFRunLoopGetCurrent() == CFRunLoopGetMain() )
