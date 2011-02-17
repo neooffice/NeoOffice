@@ -65,28 +65,50 @@
 #ifndef _BGFX_POLYGON_B2DPOLYPOLYGON_HXX
 #include <basegfx/polygon/b2dpolypolygon.hxx>
 #endif
-#ifndef _OSL_CONDITN_HXX_
-#include <osl/conditn.hxx>
-#endif
 #ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
-#include <Cocoa/Cocoa.h>
+#import <CoreServices/CoreServices.h>
+#import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
 #include "salgdi3_cocoa.h"
 
+static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void *pData );
+
 static ATSFontNotificationRef aFontNotification = NULL;
-static EventLoopTimerUPP pLoadNativeFontsTimerUPP = NULL;
-static ::osl::Condition aLoadNativeFontsCondition;
+static bool bNativeFontsLoaded = false;
 
 using namespace basegfx;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
+
+@interface VCLLoadNativeFonts : NSObject
+{
+	BOOL					mbFullScreen;
+}
++ (id)create;
+- (void)loadNativeFonts:(id)pObject;
+@end
+
+@implementation VCLLoadNativeFonts
+
++ (id)create
+{
+	VCLLoadNativeFonts *pRet = [[VCLLoadNativeFonts alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)loadNativeFonts:(id)pObject
+{
+	ImplFontListChangedCallback( NULL, NULL );
+}
+
+@end
 
 // ============================================================================
 
@@ -399,38 +421,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 		}
 	}
 
+	bNativeFontsLoaded = true;
 	bInLoad = false;
-}
-
-// -----------------------------------------------------------------------
-
-static void LoadNativeFontsTimerCallback( EventLoopTimerRef aTimer, void *pData )
-{
-	ImplFontListChangedCallback( NULL, NULL );
-
-	// Release any waiting thread
-	aLoadNativeFontsCondition.set();
-}
-
-// -----------------------------------------------------------------------
-
-static void RunNativeFontsTimerCallback()
-{
-	if ( pLoadNativeFontsTimerUPP )
-	{
-		if ( GetCurrentEventLoop() != GetMainEventLoop() )
-		{
-			aLoadNativeFontsCondition.reset();
-			InstallEventLoopTimer( GetMainEventLoop(), 0.001, kEventDurationForever, pLoadNativeFontsTimerUPP, NULL, NULL );
-			ULONG nCount = Application::ReleaseSolarMutex();
-			aLoadNativeFontsCondition.wait();
-			Application::AcquireSolarMutex( nCount );
-		}
-		else
-		{
-			LoadNativeFontsTimerCallback( NULL, NULL );
-		}
-	}
 }
 
 // -----------------------------------------------------------------------
@@ -516,7 +508,16 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 
 IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCallData )
 {
-	RunNativeFontsTimerCallback();
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	ULONG nCount = Application::ReleaseSolarMutex();
+	VCLLoadNativeFonts *pVCLLoadNativeFonts = [VCLLoadNativeFonts create];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLLoadNativeFonts performSelectorOnMainThread:@selector(loadNativeFonts:) withObject:pVCLLoadNativeFonts waitUntilDone:YES modes:pModes];
+	Application::AcquireSolarMutex( nCount );
+
+	[pPool release];
+
 	return 0;
 }
 
@@ -860,12 +861,11 @@ void JavaSalGraphics::GetDevFontList( ImplDevFontList* pList )
 	SalData *pSalData = GetSalData();
 
 	// Only run the timer once since loading fonts is extremely expensive
-	if ( !pLoadNativeFontsTimerUPP )
+	if ( !bNativeFontsLoaded )
 	{
 		// Invoke the native shutdown cancelled handler
 		pSalData->mpEventQueue->setShutdownDisabled( sal_True );
-		pLoadNativeFontsTimerUPP = NewEventLoopTimerUPP( LoadNativeFontsTimerCallback );
-		RunNativeFontsTimerCallback();
+		STATIC_LINK( NULL, JavaImplFontData, RunNativeFontsTimer ).Call( NULL );
 		pSalData->mpEventQueue->setShutdownDisabled( sal_False );
 	}
 

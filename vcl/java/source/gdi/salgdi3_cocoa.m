@@ -43,7 +43,7 @@
 
 ATSFontRef NSFont_getATSFontRef( id pNSFont )
 {
-	ATSFontRef aRet = nil;
+	ATSFontRef aRet = (ATSFontRef)nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -54,9 +54,9 @@ ATSFontRef NSFont_getATSFontRef( id pNSFont )
 			aRet = [pNSFont _atsFontID];
 			if ( aRet )
 			{
-				FSSpec aFile;
-				if ( ATSFontGetFileSpecification( aRet, &aFile ) != noErr )
-					aRet = nil;
+				FSRef aFile;
+				if ( ATSFontGetFileReference( aRet, &aFile ) != noErr )
+					aRet = (ATSFontRef)nil;
 			}
 		}
 	}
@@ -86,7 +86,7 @@ CFStringRef NSFont_familyName( id pNSFont )
 
 ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic )
 {
-	ATSFontRef aRet = nil;
+	ATSFontRef aRet = (ATSFontRef)nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
