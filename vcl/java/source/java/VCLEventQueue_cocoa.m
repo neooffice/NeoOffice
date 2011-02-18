@@ -996,7 +996,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 - (void)setDraggingSourceDelegate:(id)pDelegate
 {
-	if ( !pDraggingDestinationDelegates )
+	if ( !pDraggingSourceDelegates )
 	{
 		pDraggingSourceDelegates = [NSMutableDictionary dictionaryWithCapacity:10];
 		if ( pDraggingSourceDelegates )
