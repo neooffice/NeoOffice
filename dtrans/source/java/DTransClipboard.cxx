@@ -40,10 +40,6 @@
 #include "DTransTransferable.hxx"
 #endif
 
-#include <premac.h>
-#include <Carbon/Carbon.h>
-#include <postmac.h>
-
 using namespace com::sun::star::datatransfer;
 using namespace com::sun::star::uno;
 using namespace java;

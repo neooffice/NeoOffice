@@ -805,41 +805,41 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 	sal_Int8 nRet = DNDConstants::ACTION_NONE;
 	int nActionCount = 0;
 
-	// When the source and destination are the same, moving is prefered over
+	// When the source and destination are the same, moving is preferred over
 	// copying
 	if ( bSame )
 	{
-		if ( nMask & NSDragOperationMove )
-		{
-			nRet = DNDConstants::ACTION_MOVE;
-			nActionCount++;
-		}
-		else if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
-		{
-			nRet = DNDConstants::ACTION_COPY;
-			nActionCount++;
-		}
-		else if ( nMask & NSDragOperationLink )
+		if ( nMask & NSDragOperationLink )
 		{
 			nRet = DNDConstants::ACTION_LINK;
 			nActionCount++;
 		}
-	}
-	else
-	{
 		if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
 		{
 			nRet = DNDConstants::ACTION_COPY;
 			nActionCount++;
 		}
-		else if ( nMask & NSDragOperationMove )
+		if ( nMask & NSDragOperationMove )
 		{
 			nRet = DNDConstants::ACTION_MOVE;
 			nActionCount++;
 		}
-		else if ( nMask & NSDragOperationLink )
+	}
+	else
+	{
+		if ( nMask & NSDragOperationLink )
 		{
 			nRet = DNDConstants::ACTION_LINK;
+			nActionCount++;
+		}
+		if ( nMask & NSDragOperationMove )
+		{
+			nRet = DNDConstants::ACTION_MOVE;
+			nActionCount++;
+		}
+		if ( nMask & ( NSDragOperationCopy | NSDragOperationGeneric ) )
+		{
+			nRet = DNDConstants::ACTION_COPY;
 			nActionCount++;
 		}
 	}
@@ -1184,8 +1184,8 @@ void JavaDragSource::handleDrag( sal_Int32 nX, sal_Int32 nY )
 	DragSourceDragEvent aSourceDragEvent;
 	aSourceDragEvent.Source = Reference< XInterface >( static_cast< OWeakObject* >( this ) );
 	aSourceDragEvent.DragSource = Reference< XDragSource >( this );
-	aSourceDragEvent.DropAction = DNDConstants::ACTION_COPY;
-	aSourceDragEvent.UserAction = DNDConstants::ACTION_COPY;
+	aSourceDragEvent.DropAction = mnActions;
+	aSourceDragEvent.UserAction = ImplGetDropActionFromOperationMask( ImplGetOperationMaskFromActions( mnActions ), true );
 
 	Reference< XDragSourceListener > xListener( maListener );
 
@@ -1368,14 +1368,15 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEnterEvent.LocationY = nY;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
-	aDragEnterEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
+	if ( pTrackDragOwner )
 	{
-		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
+		aDragEnterEvent.SourceActions = pTrackDragOwner->mnActions;
+		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, pTrackDragOwner->getNSView() == getNSView() );
 		aDragEnterEvent.SupportedDataFlavors = pTrackDragOwner->maContents->getTransferDataFlavors();
 	}
 	else
 	{
+		aDragEnterEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDragEnterEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
 		DTransTransferable *pTransferable = new DTransTransferable( [pPasteboard name] );
@@ -1400,6 +1401,9 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 			(*it)->dragEnter( aDragEnterEvent );
 	}
 
+	// Fix bug 3647 by allowing the VCL event dispatch thread to run
+	Application::Reschedule();
+
 	mbRejected = pContext->isRejected();
 	if ( mbRejected )
 		return DNDConstants::ACTION_NONE;
@@ -1411,8 +1415,6 @@ sal_Int8 JavaDropTarget::handleDragEnter( sal_Int32 nX, sal_Int32 nY, id aInfo )
 
 void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 {
-	mbRejected = false;
-
 	if ( !aInfo || ![aInfo conformsToProtocol:@protocol(NSDraggingInfo)] )
 		return;
 
@@ -1426,11 +1428,16 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEvent.LocationY = nY;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
-	aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
-		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
+	if ( pTrackDragOwner )
+	{
+		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
+		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, pTrackDragOwner->getNSView() == getNSView() );
+	}
 	else
+	{
+		aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
+	}
 
 	// Set the cursor
 	ImplSetCursorFromAction( aDragEvent.DropAction, mpWindow );
@@ -1445,14 +1452,15 @@ void JavaDropTarget::handleDragExit( sal_Int32 nX, sal_Int32 nY, id aInfo )
 		if ( (*it).is() )
 			(*it)->dragExit( aDragEvent );
 	}
+
+	// Fix bug 3647 by allowing the VCL event dispatch thread to run
+	Application::Reschedule();
 }
 
 // ------------------------------------------------------------------------
 
 sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 {
-	mbRejected = false;
-
 	if ( !aInfo || ![aInfo conformsToProtocol:@protocol(NSDraggingInfo)] )
 		return DNDConstants::ACTION_NONE;
 
@@ -1466,11 +1474,16 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDragEvent.LocationY = nY;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
-	aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
-		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
+	if ( pTrackDragOwner )
+	{
+		aDragEvent.SourceActions = pTrackDragOwner->mnActions;
+		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, pTrackDragOwner->getNSView() == getNSView() );
+	}
 	else
+	{
+		aDragEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDragEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false);
+	}
 
 	// Set the cursor
 	ImplSetCursorFromAction( aDragEvent.DropAction, mpWindow );
@@ -1485,6 +1498,9 @@ sal_Int8 JavaDropTarget::handleDragOver( sal_Int32 nX, sal_Int32 nY, id aInfo )
 		if ( (*it).is() )
 			(*it)->dragOver( aDragEvent );
 	}
+
+	// Fix bug 3647 by allowing the VCL event dispatch thread to run
+	Application::Reschedule();
 
 	mbRejected = pContext->isRejected();
 	if ( mbRejected )
@@ -1512,14 +1528,15 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 	aDropEvent.LocationY = nY;
 
 	NSDragOperation nMask = [aInfo draggingSourceOperationMask];
-	aDropEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
-	if ( pTrackDragOwner && pTrackDragOwner->getNSView() == getNSView() )
+	if ( pTrackDragOwner )
 	{
-		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, true );
+		aDropEvent.SourceActions = pTrackDragOwner->mnActions;
+		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, pTrackDragOwner->getNSView() == getNSView() );
 		aDropEvent.Transferable = pTrackDragOwner->maContents;
 	}
 	else
 	{
+		aDropEvent.SourceActions = ImplGetActionsFromDragOperationMask( nMask );
 		aDropEvent.DropAction = ImplGetDropActionFromOperationMask( nMask, false );
 
 		DTransTransferable *pTransferable = new DTransTransferable( [pPasteboard name] );
@@ -1537,6 +1554,9 @@ bool JavaDropTarget::handleDrop( sal_Int32 nX, sal_Int32 nY, id aInfo )
 		if ( (*it).is() )
 			(*it)->drop( aDropEvent );
 	}
+
+	// Fix bug 3647 by allowing the VCL event dispatch thread to run
+	Application::Reschedule();
 
 	// One of the listeners may have rejected the drop so use the rejected
 	// flag instead the context's getDropComplete() method

@@ -93,12 +93,9 @@ APP1TARGET=testjavacb
 APP1OBJS=$(SLO)$/test_javacb.obj
 APP1STDLIBS=\
 		$(SALLIB)	\
-		$(TOOLSLIB)	\
 		$(CPPULIB)			\
 		$(CPPUHELPERLIB)	\
-		$(COMPHELPERLIB)	\
-		$(VCLLIB)	\
-		-framework QuickTime
+		$(COMPHELPERLIB)
 
 .ENDIF		# "$(GUIBASE)"!="java"
 
