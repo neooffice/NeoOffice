@@ -1389,12 +1389,7 @@ void ScExternalRefManager::RefCells::moveTable(SCTAB nOldTab, SCTAB nNewTab, boo
         xNewTab->mnIndex = nNewTab;
         maTables.insert(itrNew, xNewTab);
         list<TabItemRef>::iterator itr = itrNew, itrEnd = maTables.end();
-#if SUPD == 310
-        // Fix bug 3648 by ignoring excluding OOo issue 99807 fix in OOo 3.1.x
-        // builds
-#else	// SUPD == 310
         if (itr != itrEnd)  // #i99807# check that itr is not at end already
-#endif	// SUPD == 310
             for (++itr; itr != itrEnd; ++itr)
                 (*itr)->mnIndex += 1;
     }
