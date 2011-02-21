@@ -345,31 +345,9 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			break;
 		}
 		case SALEVENT_DEMINIMIZED:
-		{
-			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
-			{
-				for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
-				{
-					if ( (*it)->mbVisible )
-					{
-						(*it)->Show( FALSE );
-						(*it)->Show( TRUE, TRUE );
-					}
-				}
-			}
-			break;
-		}
 		case SALEVENT_MINIMIZED:
 		{
-			if ( !bDeleteDataOnly && pFrame && pFrame->mbVisible )
-			{
-				for ( ::std::list< JavaSalFrame* >::const_iterator it = pFrame->maChildren.begin(); it != pFrame->maChildren.end(); ++it )
-				{
-					// Hide Java window but leave visible flag set to true
-					if ( (*it)->mbVisible )
-						(*it)->mpVCLFrame->setVisible( sal_False, sal_False );
-				}
-			}
+			// Fix bug 3649 by not hiding any windows when minimizing
 			break;
 		}
 		case SALEVENT_ENDEXTTEXTINPUT:
