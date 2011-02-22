@@ -86,6 +86,7 @@ static sal_Int8 ImplGetActionsFromDragOperationMask( NSDragOperation nMask );
 static NSDragOperation ImplGetOperationMaskFromActions( sal_Int8 nActions );
 static NSDragOperation ImplGetOperationFromActions( sal_Int8 nActions );
 static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool bSame );
+static void ImplSetCursorFromAction( sal_Int8 nAction, Window *pWindow );
 
 // ========================================================================
 
@@ -628,6 +629,9 @@ static sal_Int8 ImplGetDropActionFromOperationMask( NSDragOperation nMask, bool 
 				pDragEvent->DragSourceContext = Reference< XDragSourceContext >( new DragSourceContext() );
 				pDragEvent->DropAction = ImplGetDropActionFromOperationMask( nOperation, true );
 				pDragEvent->DropSuccess = ( pDragEvent->DropAction == DNDConstants::ACTION_NONE ? sal_False : sal_True );
+
+				// Reset cursor to window's VCL pointer
+				ImplSetCursorFromAction( DNDConstants::ACTION_NONE, pTrackDragOwner->mpWindow );
 
 				// Fix bug 1442 by dispatching and deleting the
 				// DragSourceDropEvent in the VCL event dispatch thread
