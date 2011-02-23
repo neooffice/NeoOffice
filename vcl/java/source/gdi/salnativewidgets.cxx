@@ -35,6 +35,8 @@
 
 #define _SV_SALNATIVEWIDGETS_CXX
 
+#include <dlfcn.h>
+
 #ifndef _SV_SVSYS_H
 #include <svsys.h>
 #endif
@@ -73,14 +75,12 @@
 #ifdef __cplusplus
 #include <premac.h>
 #endif
-#include <Carbon/Carbon.h>
 #include <ApplicationServices/ApplicationServices.h>
+// Need to include for HITheme constants but we don't link to it
+#include <Carbon/Carbon.h>
 #ifdef __cplusplus
 #include <postmac.h>
 #endif
-
-using namespace vcl;
-using namespace rtl;
 
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
@@ -106,6 +106,9 @@ using namespace rtl;
 #define CHECKBOX_WIDTH					16
 #define CHECKBOX_HEIGHT					20
 
+using namespace vcl;
+using namespace rtl;
+
 struct VCLBitmapBuffer : BitmapBuffer
 {
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
@@ -121,6 +124,40 @@ struct VCLBitmapBuffer : BitmapBuffer
 	void					ReleaseContext();
 };
 
+typedef OSStatus GetThemeMetric_Type( ThemeMetric nMetric, SInt32 *pMetric);
+typedef OSStatus GetThemeTextColor_Type( ThemeTextColor nColor, SInt16 nDepth, MacOSBoolean nColorDev, RGBColor *pColor );
+typedef OSStatus HIThemeDrawButton_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
+typedef OSStatus HIThemeDrawFrame_Type( const HIRect *pRect, const HIThemeFrameDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
+typedef OSStatus HIThemeDrawGroupBox_Type( const HIRect *pRect, const HIThemeGroupBoxDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation );
+typedef OSStatus HIThemeDrawMenuBackground_Type( const HIRect *pMenuRect, const HIThemeMenuDrawInfo *pMenuDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
+typedef OSStatus HIThemeDrawSeparator_Type( const HIRect *pRect, const HIThemeSeparatorDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
+typedef OSStatus HIThemeDrawTab_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation, HIRect *pLabelRect);
+typedef OSStatus HIThemeDrawTabPane_Type( const HIRect *pRect, const HIThemeTabPaneDrawInfo *pDrawInfo, CGContextRef aContext, HIThemeOrientation nOrientation);
+typedef OSStatus HIThemeDrawTrack_Type( const HIThemeTrackDrawInfo *pDrawInfo, const HIRect *pGhostRect, CGContextRef aContext, HIThemeOrientation nOrientation);
+typedef OSStatus HIThemeGetButtonBackgroundBounds_Type( const HIRect *pBounds, const HIThemeButtonDrawInfo *pDrawInfo, HIRect *pBounds);
+typedef OSStatus HIThemeGetGrowBoxBounds_Type( const HIPoint *pOrigin, const HIThemeGrowBoxDrawInfo *pDrawInfo, HIRect *pBounds);
+typedef OSStatus HIThemeGetScrollBarTrackRect_Type( const HIRect *pBounds, const HIScrollBarTrackInfo *pTrackInfo, MacOSBoolean bIsHoriz, HIRect *pTrackBounds);
+typedef OSStatus HIThemeGetTabShape_Type( const HIRect *pRect, const HIThemeTabDrawInfo *pDrawInfo, HIShapeRef *pShape);
+typedef OSStatus HIThemeGetTrackBounds_Type( const HIThemeTrackDrawInfo *pDrawInfo, HIRect *pBounds);
+typedef OSStatus HIThemeGetTrackPartBounds_Type( const HIThemeTrackDrawInfo *pDrawInfo, ControlPartCode nPartCode, HIRect *pPartBounds);
+
+static bool bHIThemeInitialized = false;
+static GetThemeMetric_Type *pGetThemeMetric = NULL;
+static GetThemeTextColor_Type *pGetThemeTextColor = NULL;
+static HIThemeDrawGroupBox_Type *pHIThemeDrawGroupBox = NULL;
+static HIThemeDrawButton_Type *pHIThemeDrawButton = NULL;
+static HIThemeDrawFrame_Type *pHIThemeDrawFrame = NULL;
+static HIThemeDrawMenuBackground_Type *pHIThemeDrawMenuBackground = NULL;
+static HIThemeDrawSeparator_Type *pHIThemeDrawSeparator = NULL;
+static HIThemeDrawTab_Type *pHIThemeDrawTab = NULL;
+static HIThemeDrawTabPane_Type *pHIThemeDrawTabPane = NULL;
+static HIThemeDrawTrack_Type *pHIThemeDrawTrack = NULL;
+static HIThemeGetButtonBackgroundBounds_Type *pHIThemeGetButtonBackgroundBounds = NULL;
+static HIThemeGetGrowBoxBounds_Type *pHIThemeGetGrowBoxBounds = NULL;
+static HIThemeGetScrollBarTrackRect_Type *pHIThemeGetScrollBarTrackRect = NULL;
+static HIThemeGetTabShape_Type *pHIThemeGetTabShape = NULL;
+static HIThemeGetTrackBounds_Type *pHIThemeGetTrackBounds = NULL;
+static HIThemeGetTrackPartBounds_Type *pHIThemeGetTrackPartBounds = NULL;
 static VCLBitmapBuffer aSharedComboBoxBuffer;
 static VCLBitmapBuffer aSharedListBoxBuffer;
 static VCLBitmapBuffer aSharedHorizontalScrollBarBuffer;
@@ -313,6 +350,58 @@ void VCLBitmapBuffer::ReleaseContext()
 		delete mpData;
 		mpData = NULL;
 	}
+}
+
+// =======================================================================
+
+static void HIThemeInitialize()
+{
+	if ( bHIThemeInitialized )
+		return;
+
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		pGetThemeMetric = (GetThemeMetric_Type *)dlsym( pLib, "GetThemeMetric" );
+		pGetThemeTextColor = (GetThemeTextColor_Type *)dlsym( pLib, "GetThemeTextColor" );
+		pHIThemeDrawButton = (HIThemeDrawButton_Type *)dlsym( pLib, "HIThemeDrawButton" );
+		pHIThemeDrawFrame = (HIThemeDrawFrame_Type *)dlsym( pLib, "HIThemeDrawFrame" );
+		pHIThemeDrawGroupBox = (HIThemeDrawGroupBox_Type *)dlsym( pLib, "HIThemeDrawGroupBox" );
+		pHIThemeDrawMenuBackground = (HIThemeDrawMenuBackground_Type *)dlsym( pLib, "HIThemeDrawMenuBackground" );
+		pHIThemeDrawSeparator = (HIThemeDrawSeparator_Type *)dlsym( pLib, "HIThemeDrawSeparator" );
+		pHIThemeDrawTab = (HIThemeDrawTab_Type *)dlsym( pLib, "HIThemeDrawTab" );
+		pHIThemeDrawTabPane = (HIThemeDrawTabPane_Type *)dlsym( pLib, "HIThemeDrawTabPane" );
+		pHIThemeDrawTrack = (HIThemeDrawTrack_Type *)dlsym( pLib, "HIThemeDrawTrack" );
+		pHIThemeGetButtonBackgroundBounds = (HIThemeGetButtonBackgroundBounds_Type *)dlsym( pLib, "HIThemeGetButtonBackgroundBounds" );
+		pHIThemeGetGrowBoxBounds = (HIThemeGetGrowBoxBounds_Type *)dlsym( pLib, "HIThemeGetGrowBoxBounds" );
+		pHIThemeGetScrollBarTrackRect = (HIThemeGetScrollBarTrackRect_Type *)dlsym( pLib, "HIThemeGetScrollBarTrackRect" );
+		pHIThemeGetTabShape = (HIThemeGetTabShape_Type *)dlsym( pLib, "HIThemeGetTabShape" );
+		pHIThemeGetTrackBounds = (HIThemeGetTrackBounds_Type *)dlsym( pLib, "HIThemeGetTrackBounds" );
+		pHIThemeGetTrackPartBounds = (HIThemeGetTrackPartBounds_Type *)dlsym( pLib, "HIThemeGetTrackPartBounds" );
+
+		dlclose( pLib );
+	}
+
+#ifdef DEBUG
+	fprintf( stderr, "pGetThemeMetric: %p\n", pGetThemeMetric );
+	fprintf( stderr, "pGetThemeTextColor: %p\n", pGetThemeTextColor );
+	fprintf( stderr, "pHIThemeDrawGroupBox: %p\n", pHIThemeDrawGroupBox );
+	fprintf( stderr, "pHIThemeDrawButton: %p\n", pHIThemeDrawButton );
+	fprintf( stderr, "pHIThemeDrawFrame: %p\n", pHIThemeDrawFrame );
+	fprintf( stderr, "pHIThemeDrawMenuBackground: %p\n", pHIThemeDrawMenuBackground );
+	fprintf( stderr, "pHIThemeDrawSeparator: %p\n", pHIThemeDrawSeparator );
+	fprintf( stderr, "pHIThemeDrawTab: %p\n", pHIThemeDrawTab );
+	fprintf( stderr, "pHIThemeDrawTabPane: %p\n", pHIThemeDrawTabPane );
+	fprintf( stderr, "pHIThemeDrawTrack: %p\n", pHIThemeDrawTrack );
+	fprintf( stderr, "pHIThemeGetButtonBackgroundBounds: %p\n", pHIThemeGetButtonBackgroundBounds );
+	fprintf( stderr, "pHIThemeGetGrowBoxBounds: %p\n", pHIThemeGetGrowBoxBounds );
+	fprintf( stderr, "pHIThemeGetScrollBarTrackRect: %p\n", pHIThemeGetScrollBarTrackRect );
+	fprintf( stderr, "pHIThemeGetTabShape: %p\n", pHIThemeGetTabShape );
+	fprintf( stderr, "pHIThemeGetTrackBounds: %p\n", pHIThemeGetTrackBounds );
+	fprintf( stderr, "pHIThemeGetTrackPartBounds: %p\n", pHIThemeGetTrackPartBounds );
+#endif	// DEBUG
+
+	bHIThemeInitialized = true;
 }
 
 // =======================================================================
@@ -802,8 +891,14 @@ static BOOL InitSeparatorDrawInfo( HIThemeSeparatorDrawInfo *pSepInfo, ControlSt
  */
 static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawButton )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedComboBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -817,7 +912,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		destRect.origin.y = FOCUSRING_WIDTH;
 		destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
 		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
-		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -854,8 +949,14 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
  */
 static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawButton )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedListBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -870,7 +971,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		destRect.origin.y = LISTBOX_BUTTON_VERT_TRIMWIDTH + FOCUSRING_WIDTH;
 		destRect.size.width = rDestBounds.GetWidth() - LISTBOX_BUTTON_HORIZ_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
 		destRect.size.height = rDestBounds.GetHeight() - LISTBOX_BUTTON_VERT_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
-		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -897,13 +998,19 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ScrollbarValue *pScrollbarValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawTrack )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer;
 	if ( rDestBounds.GetWidth() > rDestBounds.GetHeight() )
 		pBuffer = &aSharedHorizontalScrollBarBuffer;
 	else
 		pBuffer = &aSharedVerticalScrollBarBuffer;
 
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -926,7 +1033,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		if ( pTrackDrawInfo.enableState == kThemeTrackDisabled )
 			pTrackDrawInfo.enableState = kThemeTrackNothingToScroll;
 
-		bRet = ( HIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -954,13 +1061,19 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
  */
 static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pGetThemeMetric || !pHIThemeDrawButton || !pHIThemeDrawFrame )
+		return bRet;
+
 	SInt32 spinnerThemeHeight;
-	BOOL bRet = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
+	bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
 	if ( !bRet )
 		return bRet;
 
 	SInt32 spinnerThemeWidth;
-	bRet = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+	bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
@@ -984,7 +1097,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
 			arrowRect.size.height = spinnerThemeHeight;
 
-			bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 
 			if( bRet )
 			{
@@ -1015,7 +1128,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 				else
 					aFrameInfo.isFocused = FALSE;
 
-				bRet = ( HIThemeDrawFrame( &editRect, &aFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+				bRet = ( pHIThemeDrawFrame( &editRect, &aFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 			}
 		}
 
@@ -1044,13 +1157,19 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pGetThemeMetric || !pHIThemeDrawButton )
+		return bRet;
+
 	SInt32 spinnerThemeHeight;
-	BOOL bRet = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
+	bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
 	if ( ! bRet )
-		return FALSE;
+		return bRet;
 
 	SInt32 spinnerThemeWidth;
-	bRet = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+	bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
 
 	if ( bRet )
 	{
@@ -1075,7 +1194,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
 			arrowRect.size.height = spinnerThemeHeight;
 
-			bRet = ( HIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 		}
 
 		pBuffer->ReleaseContext();
@@ -1104,8 +1223,14 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
  */
 static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue, BOOL bSmall )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawTrack )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedProgressbarBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1125,7 +1250,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( HIThemeDrawTrack( &aTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawTrack( &aTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1154,8 +1279,14 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, TabitemValue *pValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawTab )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedTabBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1172,7 +1303,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 
 		HIRect labelRect; // ignored
 
-		bRet = ( HIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
+		bRet = ( pHIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1196,8 +1327,14 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
  */
 static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawTabPane )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedTabBoundingBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1212,7 +1349,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( HIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1236,8 +1373,14 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
  */
 static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawGroupBox )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedPrimaryGroupBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1252,7 +1395,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( HIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1274,8 +1417,14 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
  */
 static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawMenuBackground )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedMenuBackgroundBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		HIThemeMenuDrawInfo pMenuDrawInfo;
@@ -1289,7 +1438,7 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( HIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1311,8 +1460,14 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
  */
 static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawFrame )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedEditBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1332,7 +1487,7 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		CGContextSetFillColor( pBuffer->maContext, whiteColor );
 		CGContextFillRect( pBuffer->maContext, destRect );
 		// draw frame around the background
-		bRet = ( HIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1354,8 +1509,14 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawFrame )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedListViewFrameBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1370,7 +1531,7 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 		destRect.size.width = rDestBounds.GetWidth() - 2*LISTVIEWFRAME_TRIMWIDTH;
 		destRect.size.height = rDestBounds.GetHeight() - 2*LISTVIEWFRAME_TRIMWIDTH;
 
-		bRet = ( HIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1398,8 +1559,14 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
  */
 static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, DisclosureBtnValue *pValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawButton )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedDisclosureBtnBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1414,7 +1581,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( HIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1439,8 +1606,14 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
  */
 static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawSeparator )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedSeparatorLineBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1455,7 +1628,7 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( HIThemeDrawSeparator( &destRect, &pSepInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawSeparator( &destRect, &pSepInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1482,8 +1655,14 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
  */
 static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ListViewHeaderValue *pValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pGetThemeMetric || !pHIThemeDrawButton )
+		return bRet;
+
 	SInt32 themeListViewHeaderHeight;
-	BOOL bRet = ( GetThemeMetric( kThemeMetricListHeaderHeight, &themeListViewHeaderHeight ) == noErr );
+	bRet = ( pGetThemeMetric( kThemeMetricListHeaderHeight, &themeListViewHeaderHeight ) == noErr );
 
 	if ( bRet )
 	{
@@ -1503,7 +1682,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 			destRect.size.width = rDestBounds.GetWidth();
 			destRect.size.height = themeListViewHeaderHeight;
 
-			bRet = ( HIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 		}
 
 		pBuffer->ReleaseContext();
@@ -1529,8 +1708,14 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
  */
 static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawButton )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedBevelButtonBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1548,7 +1733,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
-		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1572,8 +1757,14 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
+	BOOL bRet = FALSE;
+
+	HIThemeInitialize();
+	if ( !pHIThemeDrawButton )
+		return bRet;
+
 	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1593,7 +1784,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
-		bRet = ( HIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1619,7 +1810,8 @@ static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, Con
 {
 	Region aRegion( rControlRegion );
 
-	if ( pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
+	HIThemeInitialize();
+	if ( pHIThemeGetGrowBoxBounds && pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
 	{
 		HIPoint origin;
 		origin.x = 0;
@@ -1632,7 +1824,7 @@ static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, Con
 		growBoxInfo.direction = kThemeGrowLeft | kThemeGrowRight | kThemeGrowUp | kThemeGrowDown;
 		growBoxInfo.size = kHIThemeGrowBoxSizeNormal;
 		HIRect bounds;
-		if ( HIThemeGetGrowBoxBounds( &origin, &growBoxInfo, &bounds ) == noErr )
+		if ( pHIThemeGetGrowBoxBounds( &origin, &growBoxInfo, &bounds ) == noErr )
 		{
 			Rectangle boundingRect = aRegion.GetBoundRect();
 			long nExcessWidth = boundingRect.Right() - pGraphics->mpFrame->maGeometry.nWidth + (long)bounds.size.width + 1;
@@ -2135,6 +2327,10 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		return bReturn;
 #endif	// !USE_NATIVE_CONTROLS
 
+	HIThemeInitialize();
+	if ( !pGetThemeMetric || !pHIThemeGetButtonBackgroundBounds || !pHIThemeGetScrollBarTrackRect || !pHIThemeGetTabShape || !pHIThemeGetTrackBounds || !pHIThemeGetTrackPartBounds )
+		return bReturn;
+
 	const Region &rRealControlRegion = GetRegionAdjustedForGrowBox( this, nType, rControlRegion );
 
 	switch( nType )
@@ -2201,7 +2397,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				destRect.origin.y = comboBoxRect.Top();
 				destRect.size.width = comboBoxRect.GetWidth();
 				destRect.size.height = comboBoxRect.GetHeight();
-				if ( HIThemeGetButtonBackgroundBounds( &destRect, &aButtonDrawInfo, &preferredRect ) == noErr )
+				if ( pHIThemeGetButtonBackgroundBounds( &destRect, &aButtonDrawInfo, &preferredRect ) == noErr )
 				{
 					// Vertically center the preferred bounds
 					float fHeightAdjust = ( preferredRect.size.height - destRect.size.height ) / 2;
@@ -2240,7 +2436,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						case PART_SUB_EDIT:
 							{
 								SInt32 editFramePadding;
-								bReturn = ( GetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding) == noErr );
+								bReturn = ( pGetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding) == noErr );
 								if ( ! bReturn )
 									return bReturn;
 
@@ -2272,14 +2468,14 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				switch ( nPart )
 				{
 					case PART_ENTIRE_CONTROL:
-						HIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
+						pHIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
 						break;
 
 					case PART_BUTTON_LEFT:
 						{
 							HIRect trackBounds;
-							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
+							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
 							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
 								bounds.origin.x = trackBounds.origin.y;
@@ -2297,8 +2493,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case PART_BUTTON_UP:
 						{
 							HIRect trackBounds;
-							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
+							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
 							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
 								bounds.origin.y = trackBounds.origin.y;
@@ -2322,8 +2518,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case PART_BUTTON_RIGHT:
 						{
 							HIRect trackBounds;
-							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
+							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
 							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
 								bounds.size.width *= 2;
@@ -2332,7 +2528,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							else
 							{
 								HIRect otherBounds;
-								HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
+								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
 								if ( otherBounds.origin.x <= trackBounds.origin.x )
 								{
 									bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
@@ -2345,8 +2541,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case PART_BUTTON_DOWN:
 						{
 							HIRect trackBounds;
-							HIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
 							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
 								bounds.size.height *= 2;
@@ -2355,7 +2551,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							else
 							{
 								HIRect otherBounds;
-								HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
+								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
 								if ( otherBounds.origin.y <= trackBounds.origin.y )
 								{
 									bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
@@ -2367,37 +2563,37 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					case PART_TRACK_HORZ_LEFT:
 					case PART_TRACK_VERT_UPPER:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
+						pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
 						if( ! bounds.size.width && ! bounds.size.height )
 						{
 							// disabled control or other invalid settings.  Set to the entire
 							// track.
 
-							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 						}
 						break;
 
 					case PART_TRACK_HORZ_RIGHT:
 					case PART_TRACK_VERT_LOWER:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
+						pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
 						if( ! bounds.size.width && ! bounds.size.height )
 						{
 							// disabled control or other invalid settings.  Set to the entire
 							// track.
 
-							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 						}
 						break;
 
 					case PART_THUMB_HORZ:
 					case PART_THUMB_VERT:
-						HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
+						pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
 						if( ! bounds.size.width && ! bounds.size.height )
 						{
 							// disabled control or other invalid settings.  Set to the entire
 							// track.
 
-							HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 						}
 						break;
 					
@@ -2412,33 +2608,33 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect downBounds;
 							HIRect thumbBounds;
 							
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &thumbBounds );
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &thumbBounds );
 							if( ! thumbBounds.size.width && ! thumbBounds.size.height )
 							{
 								// disabled control or other invalid settings.  Set to the entire
 								// track.
 	
-								HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 								break;
 							}
 							
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &downBounds );
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &downBounds );
 							if( ! downBounds.size.width && ! downBounds.size.height )
 							{
 								// disabled control or other invalid settings.  Set to the entire
 								// track.
 	
-								HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 								break;
 							}
 							
-							HIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &upBounds );
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &upBounds );
 							if( ! upBounds.size.width && ! upBounds.size.height )
 							{
 								// disabled control or other invalid settings.  Set to the entire
 								// track.
 	
-								HIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 							}
 							
 							bounds=CGRectUnion(upBounds, thumbBounds);
@@ -2474,12 +2670,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// leave room for left edge adornments
 
 				SInt32 spinnerThemeWidth;
-				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
 				if ( ! bReturn )
 					return bReturn;
 
 				SInt32 spinnerThemeHeight;
-				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
+				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
 				if ( ! bReturn )
 					return bReturn;
 
@@ -2518,7 +2714,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					case PART_SUB_EDIT:
 						{
 							SInt32 editFramePadding;
-							bReturn = ( GetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding) == noErr );
+							bReturn = ( pGetThemeMetric( kThemeMetricEditTextFrameOutset, &editFramePadding) == noErr );
 							if ( ! bReturn )
 								return bReturn;
 
@@ -2538,12 +2734,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// leave room for left edge adornments
 
 				SInt32 spinnerThemeWidth;
-				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
 				if ( ! bReturn )
 					return bReturn;
 
 				SInt32 spinnerThemeHeight;
-				bReturn = ( GetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
+				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
 				if ( ! bReturn )
 					return bReturn;
 
@@ -2596,7 +2792,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				InitProgressbarTrackInfo( &pTrackDrawInfo, nState, controlRect, &aProgressbarValue, nType == CTRL_INTROPROGRESS ? TRUE : FALSE );
 
 				HIRect bounds;
-				HIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
+				pHIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
 
 				Point topLeft( (long)(controlRect.Left()+bounds.origin.x), (long)(controlRect.Top()+bounds.origin.y) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
@@ -2624,7 +2820,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				proposedBounds.size.height = controlRect.Bottom() - controlRect.Top();
 
 				HIShapeRef tabShape;
-				HIThemeGetTabShape( &proposedBounds, (HIThemeTabDrawInfo *)&pTabDrawInfo, &tabShape );
+				pHIThemeGetTabShape( &proposedBounds, (HIThemeTabDrawInfo *)&pTabDrawInfo, &tabShape );
 
 				HIRect preferredRect;
 				HIShapeGetBounds( tabShape, &preferredRect );
@@ -2803,23 +2999,28 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 
 	RGBColor nativeColor;
 
+	HIThemeInitialize();
+	if ( !pGetThemeTextColor )
+		return bReturn;
+
 	switch( nType )
 	{
+
 		case CTRL_PUSHBUTTON:
 		case CTRL_RADIOBUTTON:
 		case CTRL_CHECKBOX:
 			{				
 				if( nState & CTRL_STATE_PRESSED )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorPushButtonPressed, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorPushButtonPressed, 32, true, &nativeColor) == noErr);
 				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorPushButtonInactive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorPushButtonInactive, 32, true, &nativeColor) == noErr);
 				}
 				else
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorPushButtonActive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorPushButtonActive, 32, true, &nativeColor) == noErr);
 				}
 			}
 			break;
@@ -2828,15 +3029,15 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 			{
 				if( nState & CTRL_STATE_PRESSED )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorPopupButtonPressed, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorPopupButtonPressed, 32, true, &nativeColor) == noErr);
 				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorPopupButtonInactive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorPopupButtonInactive, 32, true, &nativeColor) == noErr);
 				}
 				else
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorPopupButtonActive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorPopupButtonActive, 32, true, &nativeColor) == noErr);
 				}
 			}
 			break;
@@ -2845,19 +3046,19 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 			{
 				if( nState & CTRL_STATE_SELECTED )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorTabFrontActive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorTabFrontActive, 32, true, &nativeColor) == noErr);
 				}
 				else if( nState & CTRL_STATE_PRESSED )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorTabNonFrontPressed, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorTabNonFrontPressed, 32, true, &nativeColor) == noErr);
 				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorTabNonFrontInactive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorTabNonFrontInactive, 32, true, &nativeColor) == noErr);
 				}
 				else
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorTabNonFrontActive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorTabNonFrontActive, 32, true, &nativeColor) == noErr);
 				}
 			}
 			break;
@@ -2866,15 +3067,15 @@ BOOL JavaSalGraphics::getNativeControlTextColor( ControlType nType, ControlPart 
 			{
 				if( nState & CTRL_STATE_SELECTED )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorMenuItemSelected , 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorMenuItemSelected , 32, true, &nativeColor) == noErr);
 				}
 				else if ( ! ( nState & CTRL_STATE_ENABLED ) )
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorMenuItemDisabled, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorMenuItemDisabled, 32, true, &nativeColor) == noErr);
 				}
 				else
 				{
-					bReturn = ( GetThemeTextColor(kThemeTextColorMenuItemActive, 32, true, &nativeColor) == noErr);
+					bReturn = ( pGetThemeTextColor(kThemeTextColorMenuItemActive, 32, true, &nativeColor) == noErr);
 				}
 			}
 			break;
