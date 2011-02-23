@@ -6559,6 +6559,7 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
             // We need to restart drag and drop since the window's NSView is
             // not created until after the window is shown
             ImplStopDnd();
+            mpWindowImpl->mxDNDListenerContainer.clear();
             ImplStartDnd();
 #endif	// USE_JAVA
             if( aDogTag.IsDelete() )
