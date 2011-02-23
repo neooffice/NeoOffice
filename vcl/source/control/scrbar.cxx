@@ -58,11 +58,12 @@
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+#import <AppKit/AppKit.h>
 #include <postmac.h>
 
 static ::std::list< ScrollBar* > gScrollBars;
-static EventHandlerUPP pRelayoutScrollBarHandler = NULL;
+
+static void RelayoutScrollBars();
 
 using namespace vos;
 
@@ -90,9 +91,65 @@ using namespace rtl;
 
 #ifdef USE_JAVA
 
+@interface VCLRelayoutScrollBarsHandler : NSObject
+{
+	BOOL					mbInStartHandler;
+}
++ (id)create;
+- (id)init;
+- (void)relayoutScrollBars:(NSNotification *)pNotification;
+- (void)startHandler:(id)pObject;
+@end
+
+static VCLRelayoutScrollBarsHandler *pRelayoutScrollBarsHandler = nil;
+
+@implementation VCLRelayoutScrollBarsHandler
+
++ (id)create
+{
+	VCLRelayoutScrollBarsHandler *pRet = [[VCLRelayoutScrollBarsHandler alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	[super init];
+
+	mbInStartHandler = NO;
+
+	return self;
+}
+
+- (void)relayoutScrollBars:(NSNotification *)pNotification
+{
+	// Don't allow callback during adding of the observer otherwise deadlock
+	// will occur
+	if ( !mbInStartHandler )
+		RelayoutScrollBars();
+}
+
+- (void)startHandler:(id)pObject
+{
+	if ( !pRelayoutScrollBarsHandler )
+	{
+		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+		if ( pNotificationCenter )
+		{
+			mbInStartHandler = YES;
+			[self retain];
+			pRelayoutScrollBarsHandler = self;
+			[pNotificationCenter addObserver:self selector:@selector(relayoutScrollBars:) name:NSUserDefaultsDidChangeNotification object:nil];
+			mbInStartHandler = NO;
+		}
+	}
+}
+
+@end
+
 // =======================================================================
 
-static OSStatus RelayoutScrollBars( EventHandlerCallRef inHandlerCallRef, EventRef inEvent, void * inUserData )
+static void RelayoutScrollBars()
 {
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
@@ -130,8 +187,6 @@ static OSStatus RelayoutScrollBars( EventHandlerCallRef inHandlerCallRef, EventR
 
 		rSolarMutex.release();
 	}
-
-	return noErr;
 }
 
 // =======================================================================
@@ -141,18 +196,18 @@ static void BeginTrackingScrollBar( ScrollBar *toTrack )
 	if ( !toTrack || !toTrack->IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
 		return;
 
-	if ( !pRelayoutScrollBarHandler )
+	if ( !pRelayoutScrollBarsHandler )
 	{
-		pRelayoutScrollBarHandler = NewEventHandlerUPP( RelayoutScrollBars );
-		if ( pRelayoutScrollBarHandler )
-		{
-			EventHandlerRef myRef;
-			EventTypeSpec appearanceScrollEvent = { kEventClassAppearance, kEventAppearanceScrollBarVariantChanged };
-			InstallEventHandler( GetApplicationEventTarget(), pRelayoutScrollBarHandler, 1, &appearanceScrollEvent, NULL, &myRef );
-		}
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLRelayoutScrollBarsHandler *pVCLRelayoutScrollBarsHandler = [VCLRelayoutScrollBarsHandler create];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pVCLRelayoutScrollBarsHandler performSelectorOnMainThread:@selector(startHandler:) withObject:pVCLRelayoutScrollBarsHandler waitUntilDone:YES modes:pModes];
+
+		[pPool release];
 	}
 
-	RelayoutScrollBars( NULL, NULL, NULL );
+	RelayoutScrollBars();
 	gScrollBars.push_back( toTrack );
 }
 
