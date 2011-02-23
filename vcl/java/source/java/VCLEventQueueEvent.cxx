@@ -449,6 +449,14 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pFrame->CallCallback( nID, NULL );
 				}
 
+				// Fix bug 3098 by hiding tooltip windows but leaving the
+				// visible flag set to true
+				for ( ::std::list< JavaSalFrame* >::const_iterator cit = pFrame->maChildren.begin(); cit != pFrame->maChildren.end(); ++cit )
+				{
+					if ( (*cit)->mbVisible && (*cit)->mnStyle & SAL_FRAME_STYLE_TOOLTIP )
+						(*cit)->mpVCLFrame->setVisible( sal_False, sal_False );
+				}
+
 				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 				{
 					if ( pFrame == *it )
