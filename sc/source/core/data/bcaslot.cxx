@@ -174,14 +174,10 @@ void ScBroadcastAreaSlot::EndListeningArea( const ScRange& rRange,
 		if ( !rpArea->GetBroadcaster().HasListeners() )
 		{	// if nobody is listening we can dispose it
 #ifdef USE_JAVA
-			// Fix bug 3648 by delaying removal of the area until after the
-			// current iteration is finished
+			// Fix bug 3648 by marking deletd areas so that the current
+			// iteration can avoid them
 			if ( bInBroadcastIteration )
-			{
 				aAreaRemovalList.push_back( rpArea );
-			}
-			else
-			{
 #endif	// USE_JAVA
 			aBroadcastAreaTbl.erase( aIter);
 			if ( !rpArea->DecRef() )
@@ -189,9 +185,6 @@ void ScBroadcastAreaSlot::EndListeningArea( const ScRange& rRange,
 				delete rpArea;
 				rpArea = NULL;
 			}
-#ifdef USE_JAVA
-			}
-#endif	// USE_JAVA
 		}
 	}
 	else
@@ -202,14 +195,10 @@ void ScBroadcastAreaSlot::EndListeningArea( const ScRange& rRange,
             if (aIter == aBroadcastAreaTbl.end())
                 return;
 #ifdef USE_JAVA
-			// Fix bug 3648 by delaying removal of the area until after the
-			// current iteration is finished
+			// Fix bug 3648 by marking deletd areas so that the current
+			// iteration can avoid them
 			if ( bInBroadcastIteration )
-			{
 				aAreaRemovalList.push_back( rpArea );
-			}
-			else
-			{
 #endif	// USE_JAVA
 			aBroadcastAreaTbl.erase( aIter);
 			if ( !rpArea->DecRef() )
@@ -217,9 +206,6 @@ void ScBroadcastAreaSlot::EndListeningArea( const ScRange& rRange,
 				delete rpArea;
 				rpArea = NULL;
 			}
-#ifdef USE_JAVA
-			}
-#endif	// USE_JAVA
 		}
 	}
 }
@@ -248,6 +234,25 @@ BOOL ScBroadcastAreaSlot::AreaBroadcast( const ScHint& rHint) const
     while (aIter != aBroadcastAreaTbl.end())
     {
         ScBroadcastArea* pArea = *aIter;
+#ifdef USE_JAVA
+        // Fix bug 3648 by breaking if the area is in the removal list
+        if (!aAreaRemovalList.empty())
+        {
+            bool bRemoved = false;
+            ::std::list< ScBroadcastArea* >::const_iterator aRemovalIter(aAreaRemovalList.begin());
+            while (aRemovalIter != aAreaRemovalList.end())
+            {
+                if (pArea == *aRemovalIter)
+                {
+                    bRemoved = true;
+                    break;
+                }
+                ++aRemovalIter;
+            }
+            if (bRemoved)
+                break;
+        }
+#endif	// USE_JAVA
         // A Notify() during broadcast may call EndListeningArea() and thus
         // dispose this area if it was the last listener, which would
         // invalidate the iterator, hence increment before call.
@@ -267,15 +272,7 @@ BOOL ScBroadcastAreaSlot::AreaBroadcast( const ScHint& rHint) const
 #ifdef USE_JAVA
 	bInBroadcastIteration = bOldInBroadcastIteration;
 	if (!bInBroadcastIteration)
-    {
-        while (aAreaRemovalList.size())
-        {
-            ScBroadcastArea *pArea = aAreaRemovalList.front();
-            aAreaRemovalList.pop_front();
-            if (pArea && !pArea->DecRef())
-                delete pArea;
-        }
-    }
+        aAreaRemovalList.clear();
 #endif	// USE_JAVA
 	return bIsBroadcasted;
 }
@@ -296,6 +293,25 @@ BOOL ScBroadcastAreaSlot::AreaBroadcastInRange( const ScRange& rRange,
     while (aIter != aBroadcastAreaTbl.end())
     {
         ScBroadcastArea* pArea = *aIter;
+#ifdef USE_JAVA
+        // Fix bug 3648 by breaking if the area is in the removal list
+        if (!aAreaRemovalList.empty())
+        {
+            bool bRemoved = false;
+            ::std::list< ScBroadcastArea* >::const_iterator aRemovalIter(aAreaRemovalList.begin());
+            while (aRemovalIter != aAreaRemovalList.end())
+            {
+                if (pArea == *aRemovalIter)
+                {
+                    bRemoved = true;
+                    break;
+                }
+                ++aRemovalIter;
+            }
+            if (bRemoved)
+                break;
+        }
+#endif	// USE_JAVA
         // A Notify() during broadcast may call EndListeningArea() and thus
         // dispose this area if it was the last listener, which would
         // invalidate the iterator, hence increment before call.
@@ -315,15 +331,7 @@ BOOL ScBroadcastAreaSlot::AreaBroadcastInRange( const ScRange& rRange,
 #ifdef USE_JAVA
 	bInBroadcastIteration = bOldInBroadcastIteration;
 	if (!bInBroadcastIteration)
-    {
-        while (aAreaRemovalList.size())
-        {
-            ScBroadcastArea *pArea = aAreaRemovalList.front();
-            aAreaRemovalList.pop_front();
-            if (pArea && !pArea->DecRef())
-                delete pArea;
-        }
-    }
+        aAreaRemovalList.clear();
 #endif	// USE_JAVA
 	return bIsBroadcasted;
 }
