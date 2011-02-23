@@ -61,10 +61,14 @@
 #import <AppKit/AppKit.h>
 #include <postmac.h>
 
+static const CFStringRef kAppleScrollBarVariantPref = CFSTR( "AppleScrollBarVariant" );
+static CFStringRef aLastAppleScrollBarVariantValue = NULL;
+static ::osl::Mutex aLastAppleScrollBarVariantMutex;
 static ::std::list< ScrollBar* > gScrollBars;
 
 static void RelayoutScrollBars();
 
+using namespace osl;
 using namespace vos;
 
 #endif	// USE_JAVA
@@ -151,13 +155,40 @@ static VCLRelayoutScrollBarsHandler *pRelayoutScrollBarsHandler = nil;
 
 static void RelayoutScrollBars()
 {
+	// Check if scroll bar preference has changed before we lock the application
+	// mutex as this function will be called every time there is any change in
+	// the user's preferences
+	bool bChanged = false;
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( kAppleScrollBarVariantPref, kCFPreferencesCurrentApplication );
+	if ( aPref )
+	{
+		if ( CFGetTypeID( aPref ) == CFStringGetTypeID() )
+		{
+			MutexGuard aGuard( aLastAppleScrollBarVariantMutex );
+
+			CFStringRef aOldPref = aLastAppleScrollBarVariantValue;
+			aLastAppleScrollBarVariantValue = (CFStringRef)aPref;
+			if ( !aOldPref || CFStringCompare( aLastAppleScrollBarVariantValue, aOldPref, 0 ) != kCFCompareEqualTo )
+				bChanged = true;
+			if ( aOldPref )
+				CFRelease( aOldPref );
+		}
+		else
+		{
+			CFRelease( aPref );
+		}
+	}
+
+	if ( !bChanged )
+		return;
+
 	IMutex& rSolarMutex = Application::GetSolarMutex();
 	rSolarMutex.acquire();
 	if ( !Application::IsShutDown() )
 	{
 		// Check if double scrollbar arrows are enabled
 		bool bDoubleScrollbarArrows = false;
-		CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollBarVariant" ), kCFPreferencesCurrentApplication );
+		aPref = CFPreferencesCopyAppValue( kAppleScrollBarVariantPref, kCFPreferencesCurrentApplication );
 		if ( aPref )
 		{
 			if ( CFGetTypeID( aPref ) == CFStringGetTypeID() && CFStringCompare( (CFStringRef)aPref, CFSTR( "DoubleBoth" ), 0 ) == kCFCompareEqualTo )
