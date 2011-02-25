@@ -226,7 +226,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
 								continue;
 
-							sal_IntPtr nNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
+							sal_IntPtr nNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
 								continue;
 
@@ -342,7 +342,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !aFont )
 								continue;
 
-							sal_IntPtr nNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aFont );
+							sal_IntPtr nNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
 								continue;
 
@@ -357,7 +357,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							ATSFontRef aBoldFont = NSFont_findATSFontWithStyle( pNSFont, TRUE, FALSE );
 							if ( aBoldFont )
 							{
-								sal_IntPtr nBoldNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aBoldFont );
+								sal_IntPtr nBoldNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aBoldFont );
 								if ( nBoldNativeFont && nBoldNativeFont != nNativeFont )
 								{
 									nfit = pSalData->maNativeFontMapping.find( nBoldNativeFont );
@@ -374,7 +374,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							ATSFontRef aItalicFont = NSFont_findATSFontWithStyle( pNSFont, FALSE, TRUE );
 							if ( aItalicFont )
 							{
-								sal_IntPtr nItalicNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aItalicFont );
+								sal_IntPtr nItalicNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
 								if ( nItalicNativeFont && nItalicNativeFont != nNativeFont )
 								{
 									nfit = pSalData->maNativeFontMapping.find( nItalicNativeFont );
@@ -391,7 +391,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							ATSFontRef aBoldItalicFont = NSFont_findATSFontWithStyle( pNSFont, TRUE, TRUE );
 							if ( aBoldItalicFont )
 							{
-								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)FMGetFontFromATSFontRef( aBoldItalicFont );
+								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
 								if ( nBoldItalicNativeFont && nBoldItalicNativeFont != nNativeFont )
 								{
 									nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
@@ -786,7 +786,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		if ( pMetric->mnWidth )
 		{
 			ATSFontMetrics aFontMetrics;
-			ATSFontRef aFont = FMGetATSFontRefFromFont( mpFontData->mnATSUFontID );
+			ATSFontRef aFont = SalATSLayout::GetATSFontRefFromNativeFont( mpFontData->mnATSUFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 			{
 				// Mac OS X seems to overstate the leading for some fonts

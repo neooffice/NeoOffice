@@ -43,6 +43,7 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
 #include <sys/sysctl.h>
 #include <unicode/ubidi.h>
 
@@ -74,6 +75,57 @@
 #else	// USE_SUBPIXEL_TEXT_RENDERING
 #define UNITS_PER_PIXEL 1
 #endif	// USE_SUBPIXEL_TEXT_RENDERING
+
+typedef OSStatus ATSUCalculateBaselineDeltas_Type( ATSUStyle aStyle, BslnBaselineClass nBaselineClass, BslnBaselineRecord aBaselineDeltas );
+typedef OSStatus ATSUCreateAndCopyStyle_Type( ATSUStyle aStyle, ATSUStyle *pStyle );
+typedef OSStatus ATSUCreateFontFallbacks_Type( ATSUFontFallbacks *pFontFallback );
+typedef OSStatus ATSUCreateStyle_Type( ATSUStyle *pStyle );
+typedef OSStatus ATSUCreateTextLayoutWithTextPtr_Type( ConstUniCharArrayPtr aText, UniCharArrayOffset nTextOffset, UniCharCount nTextLength, UniCharCount nTextTotalLength, ItemCount nNumberOfRuns, const UniCharCount aRunLengths[], ATSUStyle aStyles[], ATSUTextLayout *pTextLayout );
+typedef OSStatus ATSUDirectGetLayoutDataArrayPtrFromTextLayout_Type( ATSUTextLayout aTextLayout, UniCharArrayOffset nLineOffset, ATSUDirectDataSelector nDataSelector, void *pLayoutDataArrayPtr[], ItemCount *pLayoutDataCount );
+typedef OSStatus ATSUDirectReleaseLayoutDataArrayPtr_Type( ATSULineRef aLineRef, ATSUDirectDataSelector nDataSelector, void *pLayoutDataArrayPtr[] );
+typedef OSStatus ATSUDisposeFontFallbacks_Type( ATSUFontFallbacks aFontFallbacks );
+typedef OSStatus ATSUDisposeStyle_Type( ATSUStyle aStyle );
+typedef OSStatus ATSUDisposeTextLayout_Type( ATSUTextLayout aTextLayout );
+typedef OSStatus ATSUGetGlyphBounds_Type( ATSUTextLayout aTextLayout, ATSUTextMeasurement fTextBasePointX, ATSUTextMeasurement fTextBasePointY, UniCharArrayOffset nBoundsCharStart, UniCharCount nBoundsCharLength, UInt16 nTypeOfBounds, ItemCount nMaxNumberOfBounds, ATSTrapezoid aGlyphBounds[], ItemCount *pActualNumberOfBounds );
+typedef OSStatus ATSUGetRunStyle_Type( ATSUTextLayout aTextLayout, UniCharArrayOffset nOffset, ATSUStyle *pStyle, UniCharArrayOffset *pRunStart, UniCharCount *pRunLength );
+typedef OSStatus ATSUGlyphGetCubicPaths_Type( ATSUStyle aATSUStyle, GlyphID nGlyphID, ATSCubicMoveToUPP aMoveToProc, ATSCubicLineToUPP aLineToProc, ATSCubicCurveToUPP aCurveToProc, ATSCubicClosePathUPP aClosePathProc, void *pCallbackDataPtr, OSStatus *pCallbackResult );
+typedef OSStatus ATSUGlyphGetIdealMetrics_Type( ATSUStyle nATSUStyle, ItemCount nNumOfGlyphs, GlyphID aGlyphIDs[], ByteOffset nInputOffset, ATSGlyphIdealMetrics aIdealMetrics[] );
+typedef OSStatus ATSUGlyphGetScreenMetrics_Type( ATSUStyle aATSUStyle, ItemCount nNumOfGlyphs, GlyphID aGlyphIDs[], ByteOffset nInputOffset, MacOSBoolean bForcingAntiAlias, MacOSBoolean bAntiAliasSwitch, ATSGlyphScreenMetrics aScreenMetrics[] );
+typedef OSStatus ATSUMatchFontsToText_Type( ATSUTextLayout aTextLayout, UniCharArrayOffset nTextStart, UniCharCount nTextLength, ATSUFontID *pFontID, UniCharArrayOffset *pChangedOffset, UniCharCount *pChangedLength );
+typedef OSStatus ATSUMeasureTextImage_Type( ATSUTextLayout aTextLayout, UniCharArrayOffset nLineOffset, UniCharCount nLineLength, ATSUTextMeasurement fLocationX, ATSUTextMeasurement fLocationY, Rect *pTextImageRect );
+typedef OSStatus ATSUSetAttributes_Type( ATSUStyle aStyle, ItemCount nAttributeCount, const ATSUAttributeTag aTag[], const ByteCount aValueSize[], const ATSUAttributeValuePtr aValue[] );
+typedef OSStatus ATSUSetFontFeatures_Type( ATSUStyle aStyle, ItemCount nFeatureCount, const ATSUFontFeatureType aType[], const ATSUFontFeatureSelector aSelector[] );
+typedef OSStatus ATSUSetLayoutControls_Type( ATSUTextLayout aTextLayout, ItemCount nAttributeCount, const ATSUAttributeTag aTag[], const ByteCount aValueSize[], const ATSUAttributeValuePtr aValue[] );
+typedef OSStatus ATSUSetObjFontFallbacks_Type( ATSUFontFallbacks aFontFallbacks, ItemCount nFontFallbacksCount, const ATSUFontID aFonts[], ATSUFontFallbackMethod nFontFallbackMethod );
+typedef OSStatus ATSUSetRunStyle_Type( ATSUTextLayout aTextLayout, ATSUStyle aStyle, UniCharArrayOffset nRunStart, UniCharCount nRunLength );
+typedef ATSFontRef FMGetATSFontRefFromFont_Type( FMFont nFont );
+typedef FMFont FMGetFontFromATSFontRef_Type( ATSFontRef aFont );
+
+static bool	bATSUIInitialized = false;
+static ATSUCalculateBaselineDeltas_Type *pATSUCalculateBaselineDeltas = NULL;
+static ATSUCreateAndCopyStyle_Type *pATSUCreateAndCopyStyle = NULL;
+static ATSUCreateFontFallbacks_Type *pATSUCreateFontFallbacks = NULL;
+static ATSUCreateStyle_Type *pATSUCreateStyle = NULL;
+static ATSUCreateTextLayoutWithTextPtr_Type *pATSUCreateTextLayoutWithTextPtr = NULL;
+static ATSUDirectGetLayoutDataArrayPtrFromTextLayout_Type *pATSUDirectGetLayoutDataArrayPtrFromTextLayout = NULL;
+static ATSUDirectReleaseLayoutDataArrayPtr_Type *pATSUDirectReleaseLayoutDataArrayPtr = NULL;
+static ATSUDisposeFontFallbacks_Type *pATSUDisposeFontFallbacks = NULL;
+static ATSUDisposeStyle_Type *pATSUDisposeStyle = NULL;
+static ATSUDisposeTextLayout_Type *pATSUDisposeTextLayout = NULL;
+static ATSUGetGlyphBounds_Type *pATSUGetGlyphBounds = NULL;
+static ATSUGetRunStyle_Type *pATSUGetRunStyle = NULL;
+static ATSUGlyphGetCubicPaths_Type *pATSUGlyphGetCubicPaths = NULL;
+static ATSUGlyphGetIdealMetrics_Type *pATSUGlyphGetIdealMetrics = NULL;
+static ATSUGlyphGetScreenMetrics_Type *pATSUGlyphGetScreenMetrics = NULL;
+static ATSUMatchFontsToText_Type *pATSUMatchFontsToText = NULL;
+static ATSUMeasureTextImage_Type *pATSUMeasureTextImage = NULL;
+static ATSUSetAttributes_Type *pATSUSetAttributes = NULL;
+static ATSUSetFontFeatures_Type *pATSUSetFontFeatures = NULL;
+static ATSUSetLayoutControls_Type *pATSUSetLayoutControls = NULL;
+static ATSUSetObjFontFallbacks_Type *pATSUSetObjFontFallbacks = NULL;
+static ATSUSetRunStyle_Type *pATSUSetRunStyle = NULL;
+static FMGetATSFontRefFromFont_Type *pFMGetATSFontRefFromFont = NULL;
+static FMGetFontFromATSFontRef_Type *pFMGetFontFromATSFontRef = NULL;
 
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
@@ -136,6 +188,8 @@ struct ImplATSLayoutData {
 	::std::hash_map< GlyphID, Point >	maVerticalGlyphTranslations;
 	::std::hash_map< GlyphID, long >	maNativeGlyphWidths;
 
+	static ATSFontRef			GetATSFontRefFromNativeFont( sal_IntPtr nFont );
+	static ATSUFontID			GetNativeFontFromATSFontRef( ATSFontRef aFont );
 	static void					ClearLayoutDataCache();
 	static void					SetFontFallbacks();
 	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
@@ -159,6 +213,76 @@ using namespace basegfx;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+
+// ============================================================================
+
+static bool ATSUIInitialize()
+{
+	if ( !bATSUIInitialized )
+	{
+		void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+		if ( pLib )
+		{
+			pATSUCalculateBaselineDeltas = (ATSUCalculateBaselineDeltas_Type *)dlsym( pLib, "ATSUCalculateBaselineDeltas" );
+			pATSUCreateAndCopyStyle = (ATSUCreateAndCopyStyle_Type *)dlsym( pLib, "ATSUCreateAndCopyStyle" );
+			pATSUCreateFontFallbacks = (ATSUCreateFontFallbacks_Type *)dlsym( pLib, "ATSUCreateFontFallbacks" );
+			pATSUCreateStyle = (ATSUCreateStyle_Type *)dlsym( pLib, "ATSUCreateStyle" );
+			pATSUCreateTextLayoutWithTextPtr = (ATSUCreateTextLayoutWithTextPtr_Type *)dlsym( pLib, "ATSUCreateTextLayoutWithTextPtr" );
+			pATSUDirectGetLayoutDataArrayPtrFromTextLayout = (ATSUDirectGetLayoutDataArrayPtrFromTextLayout_Type *)dlsym( pLib, "ATSUDirectGetLayoutDataArrayPtrFromTextLayout" );
+			pATSUDirectReleaseLayoutDataArrayPtr = (ATSUDirectReleaseLayoutDataArrayPtr_Type *)dlsym( pLib, "ATSUDirectReleaseLayoutDataArrayPtr" );
+			pATSUDisposeFontFallbacks = (ATSUDisposeFontFallbacks_Type *)dlsym( pLib, "ATSUDisposeFontFallbacks" );
+			pATSUDisposeStyle = (ATSUDisposeStyle_Type *)dlsym( pLib, "ATSUDisposeStyle" );
+			pATSUDisposeTextLayout = (ATSUDisposeTextLayout_Type *)dlsym( pLib, "ATSUDisposeTextLayout" );
+			pATSUGetGlyphBounds = (ATSUGetGlyphBounds_Type *)dlsym( pLib, "ATSUGetGlyphBounds" );
+			pATSUGetRunStyle = (ATSUGetRunStyle_Type *)dlsym( pLib, "ATSUGetRunStyle" );
+			pATSUGlyphGetCubicPaths = (ATSUGlyphGetCubicPaths_Type *)dlsym( pLib, "ATSUGlyphGetCubicPaths" );
+			pATSUGlyphGetIdealMetrics = (ATSUGlyphGetIdealMetrics_Type *)dlsym( pLib, "ATSUGlyphGetIdealMetrics" );
+			pATSUGlyphGetScreenMetrics = (ATSUGlyphGetScreenMetrics_Type *)dlsym( pLib, "ATSUGlyphGetScreenMetrics" );
+			pATSUMatchFontsToText = (ATSUMatchFontsToText_Type *)dlsym( pLib, "ATSUMatchFontsToText" );
+			pATSUMeasureTextImage = (ATSUMeasureTextImage_Type *)dlsym( pLib, "ATSUMeasureTextImage" );
+			pATSUSetAttributes = (ATSUSetAttributes_Type *)dlsym( pLib, "ATSUSetAttributes" );
+			pATSUSetFontFeatures = (ATSUSetFontFeatures_Type *)dlsym( pLib, "ATSUSetFontFeatures" );
+			pATSUSetLayoutControls = (ATSUSetLayoutControls_Type *)dlsym( pLib, "ATSUSetLayoutControls" );
+			pATSUSetObjFontFallbacks = (ATSUSetObjFontFallbacks_Type *)dlsym( pLib, "ATSUSetObjFontFallbacks" );
+			pATSUSetRunStyle = (ATSUSetRunStyle_Type *)dlsym( pLib, "ATSUSetRunStyle" );
+			pFMGetATSFontRefFromFont = (FMGetATSFontRefFromFont_Type *)dlsym( pLib, "FMGetATSFontRefFromFont" );
+			pFMGetFontFromATSFontRef = (FMGetFontFromATSFontRef_Type *)dlsym( pLib, "FMGetFontFromATSFontRef" );
+
+			dlclose( pLib );
+		}
+
+#ifdef DEBUG
+		fprintf( stderr, "pATSUCalculateBaselineDeltas: %p\n", pATSUCalculateBaselineDeltas );
+		fprintf( stderr, "pATSUCreateAndCopyStyle: %p\n", pATSUCreateAndCopyStyle );
+		fprintf( stderr, "pATSUCreateFontFallbacks: %p\n", pATSUCreateFontFallbacks );
+		fprintf( stderr, "pATSUCreateStyle: %p\n", pATSUCreateStyle );
+		fprintf( stderr, "pATSUCreateTextLayoutWithTextPtr: %p\n", pATSUCreateTextLayoutWithTextPtr );
+		fprintf( stderr, "pATSUDirectGetLayoutDataArrayPtrFromTextLayout: %p\n", pATSUDirectGetLayoutDataArrayPtrFromTextLayout );
+		fprintf( stderr, "pATSUDirectReleaseLayoutDataArrayPtr: %p\n", pATSUDirectReleaseLayoutDataArrayPtr );
+		fprintf( stderr, "pATSUDisposeFontFallbacks: %p\n", pATSUDisposeFontFallbacks );
+		fprintf( stderr, "pATSUDisposeStyle: %p\n", pATSUDisposeStyle );
+		fprintf( stderr, "pATSUDisposeTextLayout: %p\n", pATSUDisposeTextLayout );
+		fprintf( stderr, "pATSUGetGlyphBounds: %p\n", pATSUGetGlyphBounds );
+		fprintf( stderr, "pATSUGetRunStyle: %p\n", pATSUGetRunStyle );
+		fprintf( stderr, "pATSUGlyphGetCubicPaths: %p\n", pATSUGlyphGetCubicPaths );
+		fprintf( stderr, "pATSUGlyphGetIdealMetrics: %p\n", pATSUGlyphGetIdealMetrics );
+		fprintf( stderr, "pATSUGlyphGetScreenMetrics: %p\n", pATSUGlyphGetScreenMetrics );
+		fprintf( stderr, "pATSUMatchFontsToText: %p\n", pATSUMatchFontsToText );
+		fprintf( stderr, "pATSUMeasureTextImage: %p\n", pATSUMeasureTextImage );
+		fprintf( stderr, "pATSUSetAttributes: %p\n", pATSUSetAttributes );
+		fprintf( stderr, "pATSUSetFontFeatures: %p\n", pATSUSetFontFeatures );
+		fprintf( stderr, "pATSUSetLayoutControls: %p\n", pATSUSetLayoutControls );
+		fprintf( stderr, "pATSUSetObjFontFallbacks: %p\n", pATSUSetObjFontFallbacks );
+		fprintf( stderr, "pATSUSetRunStyle: %p\n", pATSUSetRunStyle );
+		fprintf( stderr, "pFMGetATSFontRefFromFont: %p\n", pFMGetATSFontRefFromFont );
+		fprintf( stderr, "pFMGetFontFromATSFontRef: %p\n", pFMGetFontFromATSFontRef );
+#endif	// DEBUG
+
+		bATSUIInitialized = true;
+	}
+
+	return ( pATSUCalculateBaselineDeltas && pATSUCreateAndCopyStyle && pATSUCreateFontFallbacks && pATSUCreateStyle && pATSUCreateTextLayoutWithTextPtr && pATSUDirectGetLayoutDataArrayPtrFromTextLayout && pATSUDirectReleaseLayoutDataArrayPtr && pATSUDisposeFontFallbacks && pATSUDisposeStyle && pATSUDisposeTextLayout && pATSUGetGlyphBounds && pATSUGetRunStyle && pATSUGlyphGetCubicPaths && pATSUGlyphGetIdealMetrics && pATSUGlyphGetScreenMetrics && pATSUMatchFontsToText && pATSUMeasureTextImage && pATSUSetAttributes && pATSUSetFontFeatures && pATSUSetLayoutControls && pATSUSetObjFontFallbacks && pATSUSetRunStyle && pFMGetATSFontRefFromFont && pFMGetFontFromATSFontRef );
+}
 
 // ============================================================================
 
@@ -193,6 +317,26 @@ ATSUFontFallbacks ImplATSLayoutData::maFontFallbacks = NULL;
 
 // ----------------------------------------------------------------------------
 
+ATSFontRef ImplATSLayoutData::GetATSFontRefFromNativeFont( sal_IntPtr nFont )
+{
+	if ( ATSUIInitialize() )
+		return pFMGetATSFontRefFromFont( (ATSUFontID)nFont );
+	else
+		return NULL;
+}
+
+// ----------------------------------------------------------------------------
+
+ATSUFontID ImplATSLayoutData::GetNativeFontFromATSFontRef( ATSFontRef aFont )
+{
+	if ( ATSUIInitialize() )
+		return (ATSUFontID)pFMGetFontFromATSFontRef( aFont );
+	else
+		return kATSUInvalidFontID;
+}
+
+// ----------------------------------------------------------------------------
+
 void ImplATSLayoutData::ClearLayoutDataCache()
 {
 	mnLayoutCacheSize = 0;
@@ -206,7 +350,8 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 
 	if ( maFontFallbacks )
 	{
-		ATSUDisposeFontFallbacks( maFontFallbacks );
+		if ( ATSUIInitialize() )
+			pATSUDisposeFontFallbacks( maFontFallbacks );
 		maFontFallbacks = NULL;
 	}
 }
@@ -217,12 +362,13 @@ void ImplATSLayoutData::SetFontFallbacks()
 {
 	if ( maFontFallbacks )
 	{
-		ATSUDisposeFontFallbacks( maFontFallbacks );
+		if ( ATSUIInitialize() )
+			pATSUDisposeFontFallbacks( maFontFallbacks );
 		maFontFallbacks = NULL;
 	}
 
 	// Initialize font fallbacks list if necessary
-	if ( ATSUCreateFontFallbacks( &maFontFallbacks ) == noErr )
+	if ( ATSUIInitialize() && pATSUCreateFontFallbacks( &maFontFallbacks ) == noErr )
 	{
 		SalData *pSalData = GetSalData();
 		ItemCount nCount = pSalData->maNativeFontMapping.size();
@@ -232,11 +378,11 @@ void ImplATSLayoutData::SetFontFallbacks()
 		for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator it = pSalData->maNativeFontMapping.begin(); it != pSalData->maNativeFontMapping.end(); ++it )
 			aATSUFonts[ nActualCount++ ] = it->first;
 
-		if ( !nActualCount || ATSUSetObjFontFallbacks( maFontFallbacks, nActualCount, aATSUFonts, kATSUSequentialFallbacksExclusive ) != noErr )
+		if ( !nActualCount || pATSUSetObjFontFallbacks( maFontFallbacks, nActualCount, aATSUFonts, kATSUSequentialFallbacksExclusive ) != noErr )
 		{
 			if ( maFontFallbacks )
 			{
-				ATSUDisposeFontFallbacks( maFontFallbacks );
+				pATSUDisposeFontFallbacks( maFontFallbacks );
 				maFontFallbacks = NULL;
 			}
 		}
@@ -248,6 +394,9 @@ void ImplATSLayoutData::SetFontFallbacks()
 ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout )
 {
 	ImplATSLayoutData *pLayoutData = NULL;
+
+	if ( !ATSUIInitialize() )
+		return pLayoutData;
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnLen = nEndCharPos - nMinCharPos;
@@ -366,7 +515,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 	// Create font style
-	if ( ATSUCreateStyle( &maFontStyle ) != noErr )
+	if ( pATSUCreateStyle( &maFontStyle ) != noErr )
 	{
 		Destroy();
 		return;
@@ -377,7 +526,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	ATSUFontFeatureSelector aSelector;
 	aType = kDiacriticsType;
 	aSelector = kDecomposeDiacriticsSelector;
-	if ( ATSUSetFontFeatures( maFontStyle, 1, &aType, &aSelector ) != noErr )
+	if ( pATSUSetFontFeatures( maFontStyle, 1, &aType, &aSelector ) != noErr )
 	{
 		Destroy();
 		return;
@@ -423,7 +572,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	nBytes[3] = sizeof( ATSUVerticalCharacterType );
 	nVals[3] = &nHorizontal;
 
-	if ( ATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
+	if ( pATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
 	{
 		Destroy();
 		return;
@@ -431,14 +580,14 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	if ( mpHash->mbVertical )
 	{
-		if ( ATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr && maVerticalFontStyle )
+		if ( pATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr && maVerticalFontStyle )
 		{
 			ATSUVerticalCharacterType nVertical = kATSUStronglyVertical;
 			nTags[0] = kATSUVerticalCharacterTag;
 			nBytes[0] = sizeof( ATSUVerticalCharacterType );
 			nVals[0] = &nVertical;
 
-			if ( ATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr )
+			if ( pATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr )
 			{
 				Destroy();
 				return ;
@@ -446,7 +595,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	if ( ATSUCreateTextLayoutWithTextPtr( mpHash->mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mpHash->mnLen, 1, (const UniCharCount *)&mpHash->mnLen, &maFontStyle, &maLayout ) != noErr )
+	if ( pATSUCreateTextLayoutWithTextPtr( mpHash->mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mpHash->mnLen, 1, (const UniCharCount *)&mpHash->mnLen, &maFontStyle, &maLayout ) != noErr )
 	{
 		Destroy();
 		return;
@@ -456,7 +605,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		for ( int i = 0; i < mpHash->mnLen; i++ )
 		{
-			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK && ATSUSetRunStyle( maLayout, maVerticalFontStyle, i, 1 ) != noErr )
+			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK && pATSUSetRunStyle( maLayout, maVerticalFontStyle, i, 1 ) != noErr )
 			{
 				Destroy();
 				return;
@@ -477,7 +626,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	nBytes[1] = sizeof( ATSLineLayoutOptions );
 	nVals[1] = &nLineOptions;
 
-	if ( ATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) != noErr )
+	if ( pATSUSetLayoutControls( maLayout, 2, nTags, nBytes, nVals ) != noErr )
 	{
 		Destroy();
 		return;
@@ -488,7 +637,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	// ATSLayoutRecord and, instead, making our own private copy.
 	ByteCount nBufSize;
 	ATSLayoutRecord *pGlyphDataArray = NULL;
-	ATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &mnGlyphCount );
+	pATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &mnGlyphCount );
 	if ( pGlyphDataArray )
 	{
 		if ( mnGlyphCount )
@@ -498,7 +647,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			if ( mpGlyphDataArray )
 				memcpy( mpGlyphDataArray, pGlyphDataArray, nBufSize );
 
-			ATSUDirectReleaseLayoutDataArrayPtr( NULL, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray );
+			pATSUDirectReleaseLayoutDataArrayPtr( NULL, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray );
 		}
 	}
 
@@ -560,7 +709,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		if ( i == (int)mnGlyphCount - 1 )
 		{
 			ATSTrapezoid aTrapezoid;
-			if ( ATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
+			if ( pATSUGetGlyphBounds( maLayout, 0, 0, i, 1, kATSUseFractionalOrigins, 1, &aTrapezoid, NULL ) == noErr )
 				mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( aTrapezoid.upperRight.x - aTrapezoid.upperLeft.x ) * mpHash->mfFontScaleX * mfFontScaleY * UNITS_PER_PIXEL );
 		}
 		else
@@ -622,12 +771,12 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		BslnBaselineRecord aBaseline;
 		memset( aBaseline, 0, sizeof( BslnBaselineRecord ) );
-		if ( ATSUCalculateBaselineDeltas( maVerticalFontStyle, kBSLNRomanBaseline, aBaseline ) == noErr )
+		if ( pATSUCalculateBaselineDeltas( maVerticalFontStyle, kBSLNRomanBaseline, aBaseline ) == noErr )
 			mnBaselineDelta = Float32ToLong( Fix2X( aBaseline[ kBSLNIdeographicCenterBaseline ] ) * mfFontScaleY * UNITS_PER_PIXEL );
 		if ( !mnBaselineDelta )
 		{
 			ATSFontMetrics aFontMetrics;
-			ATSFontRef aFont = FMGetATSFontRefFromFont( mpHash->mnFontID );
+			ATSFontRef aFont = ImplATSLayoutData::GetATSFontRefFromNativeFont( mpHash->mnFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize * UNITS_PER_PIXEL );
 		}
@@ -641,7 +790,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	for ( ; ; )
 	{
 		bool bNeedFontFallbackList = false;
-		OSStatus nErr = ATSUMatchFontsToText( maLayout, nCurrentPos, kATSUToTextEnd, &nFontID, &nCurrentPos, &nOffset );
+		OSStatus nErr = pATSUMatchFontsToText( maLayout, nCurrentPos, kATSUToTextEnd, &nFontID, &nCurrentPos, &nOffset );
 		if ( nErr == kATSUFontsNotMatched )
 		{
 			bNeedFontFallbackList = true;
@@ -685,7 +834,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			nBytes[0] = sizeof( ATSUFontFallbacks );
 			nVals[0] = &ImplATSLayoutData::maFontFallbacks;
 
-			if ( ATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) == noErr )
+			if ( pATSUSetLayoutControls( maLayout, 1, nTags, nBytes, nVals ) == noErr )
 			{
 				bUseFontFallbacksList = true;
 				nCurrentPos = 0;
@@ -720,7 +869,7 @@ const Rectangle& ImplATSLayoutData::GetGlyphBounds()
 	if ( !mbGlyphBounds )
 	{
 		Rect aRect;
-		if ( ATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
+		if ( pATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
 		{
 			maGlyphBounds = Rectangle( Point( Float32ToLong( aRect.left * mpHash->mfFontScaleX * mfFontScaleY ), Float32ToLong( aRect.top * mfFontScaleY ) ), Size( Float32ToLong( ( aRect.right - aRect.left ) * mpHash->mfFontScaleX * mfFontScaleY ), Float32ToLong( ( aRect.bottom - aRect.top ) * mfFontScaleY ) ) );
 			maGlyphBounds.Justify();
@@ -752,7 +901,7 @@ void ImplATSLayoutData::Destroy()
 
 	if ( maFontStyle )
 	{
-		ATSUDisposeStyle( maFontStyle );
+		pATSUDisposeStyle( maFontStyle );
 		maFontStyle = NULL;
 	}
 
@@ -770,7 +919,7 @@ void ImplATSLayoutData::Destroy()
 
 	if ( maLayout )
 	{
-		ATSUDisposeTextLayout( maLayout );
+		pATSUDisposeTextLayout( maLayout );
 		maLayout = NULL;
 	}
 
@@ -802,7 +951,7 @@ void ImplATSLayoutData::Destroy()
 
 	if ( maVerticalFontStyle )
 	{
-		ATSUDisposeStyle( maVerticalFontStyle );
+		pATSUDisposeStyle( maVerticalFontStyle );
 		maVerticalFontStyle = NULL;
 	}
 
@@ -890,13 +1039,27 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
-	if ( nFallbackLevel && rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING )
+	if ( nFallbackLevel && rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING && ATSUIInitialize() )
 		return NULL;
 	else
 		return new SalATSLayout( this, nFallbackLevel );
 }
 
 // ============================================================================
+
+ATSFontRef SalATSLayout::GetATSFontRefFromNativeFont( sal_IntPtr nFont )
+{
+	return ImplATSLayoutData::GetATSFontRefFromNativeFont( nFont );
+}
+
+// ----------------------------------------------------------------------------
+
+sal_IntPtr SalATSLayout::GetNativeFontFromATSFontRef( ATSFontRef aFont )
+{
+	return (sal_IntPtr)ImplATSLayoutData::GetNativeFontFromATSFontRef( aFont );
+}
+
+// ----------------------------------------------------------------------------
 
 void SalATSLayout::ClearLayoutDataCache()
 {
@@ -1938,7 +2101,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			UniCharArrayOffset nRunStart;
 			UniCharCount nRunLen;
 			OSStatus nErr;
-			if ( ATSUGetRunStyle( pCurrentLayoutData->maLayout, nIndex, &aCurrentStyle, &nRunStart, &nRunLen ) != noErr || !aCurrentStyle || ATSUGlyphGetCubicPaths( aCurrentStyle, pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
+			if ( pATSUGetRunStyle( pCurrentLayoutData->maLayout, nIndex, &aCurrentStyle, &nRunStart, &nRunLen ) != noErr || !aCurrentStyle || pATSUGlyphGetCubicPaths( aCurrentStyle, pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
 				continue;
 
 			PolyPolygon aPolyPolygon;
@@ -2090,7 +2253,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 		{
 			ATSGlyphScreenMetrics aVerticalMetrics;
 			ATSGlyphScreenMetrics aHorizontalMetrics;
-			if ( ATSUGlyphGetScreenMetrics( pRet->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && ATSUGlyphGetScreenMetrics( pRet->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
+			if ( pATSUGlyphGetScreenMetrics( pRet->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && pATSUGlyphGetScreenMetrics( pRet->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
 			{
 				nX = Float32ToLong( ( aVerticalMetrics.topLeft.x - aHorizontalMetrics.topLeft.x ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
 				if ( nGlyphOrientation == GF_ROTL )
@@ -2165,7 +2328,7 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 	if ( it == pLayoutData->maNativeGlyphWidths.end() )
 	{
 		ATSGlyphIdealMetrics aIdealMetrics;
-		if ( ATSUGlyphGetIdealMetrics( pLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), &aIdealMetrics ) == noErr )
+		if ( pATSUGlyphGetIdealMetrics( pLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), &aIdealMetrics ) == noErr )
 			nRet = Float32ToLong( aIdealMetrics.advance.x * pLayoutData->mfFontScaleY * UNITS_PER_PIXEL );
 		pLayoutData->maNativeGlyphWidths[ nGlyphID ] = nRet;
 	}

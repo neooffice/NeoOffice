@@ -47,7 +47,8 @@
 #endif
 
 #include <premac.h>
-#include <Carbon/Carbon.h>
+// Need to include for ATSUI constants and data types but we don't link to it
+#include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
 #undef check
 
@@ -75,6 +76,8 @@ class SalATSLayout : public GenericSalLayout
 	float				mfGlyphScaleX;
 
 public:
+	static ATSFontRef	GetATSFontRefFromNativeFont( sal_IntPtr nFont );
+	static sal_IntPtr	GetNativeFontFromATSFontRef( ATSFontRef aFont );
 	static void			SetFontFallbacks();
 	static void			ClearLayoutDataCache();
 

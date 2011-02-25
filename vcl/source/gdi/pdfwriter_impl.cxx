@@ -12525,7 +12525,7 @@ void PDFWriterImpl::encodeGlyphs()
     // Create font objects using Mac OS X's PDF rendering APIs
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
-        ATSFontRef aATSFont = FMGetATSFontRefFromFont( it->first );
+        ATSFontRef aATSFont = SalATSLayout::GetATSFontRefFromNativeFont( it->first );
         if ( !aATSFont )
             continue;
 

@@ -38,6 +38,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
+#ifndef _SV_SALATSLAYOUT_HXX
+#include <salatslayout.hxx>
+#endif
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
@@ -132,7 +135,7 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
 					if ( aFont )
 					{
-						mnNativeFont = (int)FMGetFontFromATSFontRef( aFont );
+						mnNativeFont = (int)SalATSLayout::GetNativeFontFromATSFontRef( aFont );
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 					}
 
