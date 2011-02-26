@@ -46,8 +46,11 @@
 #include <com/sun/star/vcl/VCLFont.hxx>
 #endif
 
+// Comment out the following line to use the older ATSUI-based text rendering
+// APIs
+#define USE_CORETEXT_TEXT_RENDERING
+
 #include <premac.h>
-// Need to include for ATSUI constants and data types but we don't link to it
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
 #undef check
