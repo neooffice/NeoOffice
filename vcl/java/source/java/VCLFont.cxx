@@ -138,6 +138,7 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 					{
 						mnNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aFont, NULL );
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
+						CFRelease( aFont );
 					}
 #else	// USE_CORETEXT_TEXT_RENDERING
 					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );

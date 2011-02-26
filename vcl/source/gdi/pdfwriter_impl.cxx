@@ -12526,14 +12526,20 @@ void PDFWriterImpl::encodeGlyphs()
     for ( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
     {
 #ifdef USE_CORETEXT_TEXT_RENDERING
-        ATSFontRef aATSFont = (ATSFontRef)it->first;
+        CGFontRef aFont = NULL;
+        CTFontRef aCTFont = CTFontCreateWithPlatformFont( (ATSFontRef)it->first, 0, NULL, NULL );
+        if ( aCTFont )
+        {
+            aFont = CTFontCopyGraphicsFont( aCTFont, NULL );
+            CFRelease( aCTFont );
+        }
 #else	// USE_CORETEXT_TEXT_RENDERING
         ATSFontRef aATSFont = SalATSLayout::GetATSFontRefFromNativeFont( it->first );
-#endif	// USE_CORETEXT_TEXT_RENDERING
         if ( !aATSFont )
             continue;
 
         CGFontRef aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
         if ( !aFont )
             continue;
 

@@ -841,7 +841,11 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		if ( pMetric->mnWidth )
 		{
 			ATSFontMetrics aFontMetrics;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			ATSFontRef aFont = (ATSFontRef)mpFontData->mnNativeFontID;
+#else	// USE_CORETEXT_TEXT_RENDERING
 			ATSFontRef aFont = SalATSLayout::GetATSFontRefFromNativeFont( mpFontData->mnNativeFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 			{
 				// Mac OS X seems to overstate the leading for some fonts

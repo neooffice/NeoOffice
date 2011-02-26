@@ -141,7 +141,11 @@ inline bool IsNonprintingChar( sal_Unicode nChar ) { return ( nChar == 0x00b6 ||
 
 struct ImplATSLayoutDataHash {
 	int					mnLen;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	ATSFontRef			mnFontID;
+#else	// USE_CORETEXT_TEXT_RENDERING
 	ATSUFontID			mnFontID;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	float				mfFontSize;
 	double				mfFontScaleX;
 	bool				mbAntialiased;
@@ -188,8 +192,10 @@ struct ImplATSLayoutData {
 	::std::hash_map< GlyphID, Point >	maVerticalGlyphTranslations;
 	::std::hash_map< GlyphID, long >	maNativeGlyphWidths;
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	static ATSFontRef			GetATSFontRefFromNativeFont( sal_IntPtr nFont );
 	static ATSUFontID			GetNativeFontFromATSFontRef( ATSFontRef aFont );
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 	static void					ClearLayoutDataCache();
 	static void					SetFontFallbacks();
 	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
@@ -317,6 +323,8 @@ ATSUFontFallbacks ImplATSLayoutData::maFontFallbacks = NULL;
 
 // ----------------------------------------------------------------------------
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
+
 ATSFontRef ImplATSLayoutData::GetATSFontRefFromNativeFont( sal_IntPtr nFont )
 {
 	if ( ATSUIInitialize() )
@@ -334,6 +342,8 @@ ATSUFontID ImplATSLayoutData::GetNativeFontFromATSFontRef( ATSFontRef aFont )
 	else
 		return kATSUInvalidFontID;
 }
+
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
 
@@ -400,7 +410,11 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
 	pLayoutHash->mnLen = nEndCharPos - nMinCharPos;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	pLayoutHash->mnFontID = (ATSFontRef)pVCLFont->getNativeFont();
+#else	// USE_CORETEXT_TEXT_RENDERING
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	pLayoutHash->mfFontSize = pVCLFont->getSize();
 	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
 	pLayoutHash->mbAntialiased = pVCLFont->isAntialiased();
@@ -776,7 +790,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		if ( !mnBaselineDelta )
 		{
 			ATSFontMetrics aFontMetrics;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			ATSFontRef aFont = mpHash->mnFontID;
+#else	// USE_CORETEXT_TEXT_RENDERING
 			ATSFontRef aFont = ImplATSLayoutData::GetATSFontRefFromNativeFont( mpHash->mnFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize * UNITS_PER_PIXEL );
 		}
@@ -1047,6 +1065,8 @@ SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackL
 
 // ============================================================================
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
+
 ATSFontRef SalATSLayout::GetATSFontRefFromNativeFont( sal_IntPtr nFont )
 {
 	return ImplATSLayoutData::GetATSFontRefFromNativeFont( nFont );
@@ -1058,6 +1078,8 @@ sal_IntPtr SalATSLayout::GetNativeFontFromATSFontRef( ATSFontRef aFont )
 {
 	return (sal_IntPtr)ImplATSLayoutData::GetNativeFontFromATSFontRef( aFont );
 }
+
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
 

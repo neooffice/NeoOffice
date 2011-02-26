@@ -161,23 +161,37 @@ static void CacheGlyphData( jlong nData )
 
 static CGFontRef CacheCGFont( sal_IntPtr nFont )
 {
-	CGFontRef aFont = NULL;
+	CGFontRef aRet = NULL;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( !nFont )
+#else	// USE_CORETEXT_TEXT_RENDERING
 	if ( nFont != kATSUInvalidFontID )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	{
 		::std::map< sal_IntPtr, CGFontRef >::const_iterator it = aNativeFontMap.find( nFont );
 		if ( it == aNativeFontMap.end() )
 		{
-			aFont = CGFontCreateWithPlatformFont( (void *)&nFont );
-			if ( aFont )
-				aNativeFontMap[ nFont ] = aFont;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			CTFont aCTFont = CTFontCreateWithPlatformFont( (ATSFontRef)nFont, 0, NULL, NULL );
+			if ( aCTFont )
+			{
+				aRet = CTFontCopyGraphicsFont( aCTFont, NULL );
+				[CFRelease aCTFont];
+			}
+#else	// USE_CORETEXT_TEXT_RENDERING
+			aRet = CGFontCreateWithPlatformFont( (void *)&nFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
+			if ( aRet )
+				aNativeFontMap[ nFont ] = aRet;
 		}
 		else
 		{
-			aFont = it->second;
+			aRet = it->second;
 		}
 	}
 
-	return aFont;
+	return aRet;
 }
 
 // ----------------------------------------------------------------------------
