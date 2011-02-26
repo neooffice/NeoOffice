@@ -132,12 +132,21 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPSName.getStr(), aPSName.getLength(), kCFAllocatorNull );
 				if ( aString )
 				{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+					CTFontRef aFont = CTFontCreateWithName( aString, 0, NULL );
+					if ( aFont )
+					{
+						mnNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aFont, NULL );
+						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
+					}
+#else	// USE_CORETEXT_TEXT_RENDERING
 					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
 					if ( aFont )
 					{
 						mnNativeFont = (int)SalATSLayout::GetNativeFontFromATSFontRef( aFont );
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 					}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 					CFRelease( aString );
 				}
