@@ -123,7 +123,7 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 			::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
 			if ( jit != pSalData->maJavaFontNameMapping.end() )
 			{
-				mnNativeFont = jit->second->mnATSUFontID;
+				mnNativeFont = jit->second->mnNativeFontID;
 				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 			}
 			else

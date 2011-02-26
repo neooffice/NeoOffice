@@ -72,7 +72,7 @@ static ::osl::Mutex aBitmapBufferMutex;
 static ::std::map< BitmapBuffer*, USHORT > aBitmapBufferMap;
 static ::std::list< jlong > aEPSDataList;
 static ::std::list< jlong > aGlyphDataList;
-static ::std::map< ATSUFontID, CGFontRef > aATSFontMap;
+static ::std::map< sal_IntPtr, CGFontRef > aNativeFontMap;
 
 using namespace osl;
 using namespace rtl;
@@ -159,17 +159,17 @@ static void CacheGlyphData( jlong nData )
 
 // ----------------------------------------------------------------------------
 
-static CGFontRef CacheCGFont( ATSUFontID nFont )
+static CGFontRef CacheCGFont( sal_IntPtr nFont )
 {
 	CGFontRef aFont = NULL;
 	if ( nFont != kATSUInvalidFontID )
 	{
-		::std::map< ATSUFontID, CGFontRef >::const_iterator it = aATSFontMap.find( nFont );
-		if ( it == aATSFontMap.end() )
+		::std::map< sal_IntPtr, CGFontRef >::const_iterator it = aNativeFontMap.find( nFont );
+		if ( it == aNativeFontMap.end() )
 		{
 			aFont = CGFontCreateWithPlatformFont( (void *)&nFont );
 			if ( aFont )
-				aATSFontMap[ nFont ] = aFont;
+				aNativeFontMap[ nFont ] = aFont;
 		}
 		else
 		{
@@ -474,9 +474,9 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 		}
 
 		// Reuse CGFonts throughout the entire document
-		for ( ::std::map< ATSUFontID, CGFontRef >::const_iterator it = aATSFontMap.begin(); it != aATSFontMap.end(); ++it )
+		for ( ::std::map< sal_IntPtr, CGFontRef >::const_iterator it = aNativeFontMap.begin(); it != aNativeFontMap.end(); ++it )
 			CGFontRelease( it->second );
-		aATSFontMap.clear();
+		aNativeFontMap.clear();
 	}
 }
 
@@ -509,7 +509,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 
 	// Convert and cache font as a CGFontRef to reduce the number of font
 	// subsets in the PDF
-	ATSUFontID nFont = (ATSUFontID)_par5;
+	sal_IntPtr nFont = (sal_IntPtr)_par5;
 	CGFontRef aFont = CacheCGFont( nFont );
 	if ( aFont && _par3 && _par4 )
 		CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, _par8, _par9, _par10, _par11, _par12, aPath, _par14, _par15, _par16, _par17, _par18, _par19 );

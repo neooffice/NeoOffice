@@ -174,7 +174,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							nCount++;
 
 						sal_uInt32 nActualCount = 0;
-						ATSUFontID aATSUFonts[ nCount ];
+						sal_IntPtr aNativeFonts[ nCount ];
 						for ( i = 0; i < nCount; i++ )
 						{
 							NSFont *pNSFont = (NSFont *)pFonts[ i ];
@@ -231,8 +231,8 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								continue;
 
 							// Fix bug 3446 by skipping bad native fonts
-							::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaImplFontData::maBadATUSFontIDMap.find( nNativeFont );
-							if ( bit != JavaImplFontData::maBadATUSFontIDMap.end() )
+							::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaImplFontData::maBadNativeFontIDMap.find( nNativeFont );
+							if ( bit != JavaImplFontData::maBadNativeFontIDMap.end() )
 								continue;
 
 							// Get the ATS font name as the Cocoa name on some
@@ -330,7 +330,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pSalData->maNativeFontMapping[ nNativeFont ] = pFontData;
 							pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
 
-							aATSUFonts[ nActualCount++ ] = nNativeFont;
+							aNativeFonts[ nActualCount++ ] = nNativeFont;
 						}
 
 						// Cache matching bold, italic, and bold italic fonts
@@ -464,7 +464,7 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 
 // =======================================================================
 
-::std::map< sal_IntPtr, sal_IntPtr > JavaImplFontData::maBadATUSFontIDMap;
+::std::map< sal_IntPtr, sal_IntPtr > JavaImplFontData::maBadNativeFontIDMap;
 
 // -----------------------------------------------------------------------
 
@@ -475,11 +475,11 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 
 	// Fix bug 3446 by reloading native fonts without any known bad fonts
 	bool bReloadFonts = false;
-	::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = maBadATUSFontIDMap.find( pFontData->mnATSUFontID );
-	if ( bit == maBadATUSFontIDMap.end() )
+	::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = maBadNativeFontIDMap.find( pFontData->mnNativeFontID );
+	if ( bit == maBadNativeFontIDMap.end() )
 	{
 		bReloadFonts = true;
-		maBadATUSFontIDMap[ pFontData->mnATSUFontID ] = pFontData->mnATSUFontID;
+		maBadNativeFontIDMap[ pFontData->mnNativeFontID ] = pFontData->mnNativeFontID;
 	}
 
 	// Find any fonts that have the same family as the current font and mark
@@ -489,11 +489,11 @@ void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 	{
 		if ( it->second->maFamilyName == pFontData->maFamilyName )
 		{
-			bit = maBadATUSFontIDMap.find( it->second->mnATSUFontID );
-			if ( bit == maBadATUSFontIDMap.end() )
+			bit = maBadNativeFontIDMap.find( it->second->mnNativeFontID );
+			if ( bit == maBadNativeFontIDMap.end() )
 			{
 				bReloadFonts = true;
-				maBadATUSFontIDMap[ it->second->mnATSUFontID ] = it->second->mnATSUFontID;
+				maBadNativeFontIDMap[ it->second->mnNativeFontID ] = it->second->mnNativeFontID;
 			}
 		}
 	}
@@ -523,7 +523,7 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCall
 
 // -----------------------------------------------------------------------
 
-JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, const OUString& rVCLFontName, sal_IntPtr nATSUFontID, const OUString& rFamilyName ) : ImplFontData( rAttributes, 0 ), maVCLFontName( rVCLFontName ), mnATSUFontID( nATSUFontID ), maFamilyName( rFamilyName )
+JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, const OUString& rVCLFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : ImplFontData( rAttributes, 0 ), maVCLFontName( rVCLFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName )
 {
 
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
@@ -555,14 +555,14 @@ ImplFontEntry* JavaImplFontData::CreateFontInstance( ImplFontSelectData& rData )
 
 ImplFontData* JavaImplFontData::Clone() const
 {
-	return new JavaImplFontData( *this, maVCLFontName, mnATSUFontID, maFamilyName );
+	return new JavaImplFontData( *this, maVCLFontName, mnNativeFontID, maFamilyName );
 }
 
 // -----------------------------------------------------------------------
 
 sal_IntPtr JavaImplFontData::GetFontId() const
 {
-	return mnATSUFontID;
+	return mnNativeFontID;
 }
 
 // =======================================================================
@@ -694,7 +694,7 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 	maFallbackFonts[ nFallbackLevel ] = new com_sun_star_vcl_VCLFont( pFontData->maVCLFontName, pFont->mfExactHeight, pFont->mnOrientation, !pFont->mbNonAntialiased, pFont->mbVertical, pFont->mnWidth ? (double)pFont->mnWidth / (double)pFont->mfExactHeight : 1.0 );
 
 	// Update the native font as Java may be using a different font
-	pFontData->mnATSUFontID = maFallbackFonts[ nFallbackLevel ]->getNativeFont();
+	pFontData->mnNativeFontID = maFallbackFonts[ nFallbackLevel ]->getNativeFont();
 
 	if ( !nFallbackLevel )
 	{
@@ -723,8 +723,8 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 			// If the font is a bad font, select a different font
 			ImplFontMetricData aMetricData( *pFont );
 			GetFontMetric( &aMetricData );
-			::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaImplFontData::maBadATUSFontIDMap.find( mpVCLFont->getNativeFont() );
-			if ( bit != JavaImplFontData::maBadATUSFontIDMap.end() )
+			::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaImplFontData::maBadNativeFontIDMap.find( mpVCLFont->getNativeFont() );
+			if ( bit != JavaImplFontData::maBadNativeFontIDMap.end() )
 			{
 				for ( ::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator jfnit = pSalData->maJavaFontNameMapping.begin(); jfnit != pSalData->maJavaFontNameMapping.end(); ++jfnit )
 				{
@@ -739,8 +739,8 @@ USHORT JavaSalGraphics::SetFont( ImplFontSelectData* pFont, int nFallbackLevel )
 					mpFontData = (JavaImplFontData *)pFontData->Clone();
 
 					GetFontMetric( &aMetricData );
-					bit = JavaImplFontData::maBadATUSFontIDMap.find( mpVCLFont->getNativeFont() );
-					if ( bit == JavaImplFontData::maBadATUSFontIDMap.end() )
+					bit = JavaImplFontData::maBadNativeFontIDMap.find( mpVCLFont->getNativeFont() );
+					if ( bit == JavaImplFontData::maBadNativeFontIDMap.end() )
 						break;
 				}
 			}
@@ -786,7 +786,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		if ( pMetric->mnWidth )
 		{
 			ATSFontMetrics aFontMetrics;
-			ATSFontRef aFont = SalATSLayout::GetATSFontRefFromNativeFont( mpFontData->mnATSUFontID );
+			ATSFontRef aFont = SalATSLayout::GetATSFontRefFromNativeFont( mpFontData->mnNativeFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 			{
 				// Mac OS X seems to overstate the leading for some fonts
