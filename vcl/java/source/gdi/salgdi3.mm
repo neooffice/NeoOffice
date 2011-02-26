@@ -145,8 +145,10 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 				VCLThreadAttach t;
 				if ( t.pEnv )
 				{
+					NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 					// Update cached fonts
-					long *pFonts = NSFontManager_getAllFonts();
+					NSArray *pFonts = NSFontManager_getAllFonts();
 					if ( pFonts )
 					{
 						const OUString aCourier( OUString::createFromAscii( "Courier" ) );
@@ -168,20 +170,23 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						const OUString aTimes( OUString::createFromAscii( "Times" ) );
 						const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
 
-						int i;
-						int nCount = 0;
-						for ( i = 0; pFonts[ i ]; i++ )
-							nCount++;
+						unsigned int i = 0;
+						unsigned int nCount = [pFonts count];
 
 						sal_uInt32 nActualCount = 0;
 						sal_IntPtr aNativeFonts[ nCount ];
 						for ( i = 0; i < nCount; i++ )
 						{
-							NSFont *pNSFont = (NSFont *)pFonts[ i ];
-
+							NSFont *pNSFont = [pFonts objectAtIndex:i];
+							if ( !pNSFont )
+								continue;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CTFontRef aFont = (CTFontRef)pNSFont;
+#else	// USE_CORETEXT_TEXT_RENDERING
 							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
 							if ( !aFont )
 								continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 							// Get font attributes
 							FontWeight nWeight = (FontWeight)NSFontManager_weightOfFont( pNSFont );
@@ -189,9 +194,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							FontWidth nWidth = (FontWidth)NSFontManager_widthOfFont( pNSFont );
 							FontPitch nPitch = ( NSFontManager_isFixedPitch( pNSFont ) ? PITCH_FIXED : PITCH_VARIABLE );
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
+#else	// USE_CORETEXT_TEXT_RENDERING
 							CFStringRef aPSString;
 							if ( ATSFontGetPostScriptName( aFont, kATSOptionFlagsDefault, &aPSString ) != noErr )
 								continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 							OUString aPSName;
 							if ( aPSString )
@@ -209,7 +218,11 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								continue;
 
 							// Get the font family name
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CFStringRef aFamilyString = CTFontCopyFamilyName( aFont );
+#else	// USE_CORETEXT_TEXT_RENDERING
 							CFStringRef aFamilyString = NSFont_familyName( pNSFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 							if ( !aFamilyString )
 								continue;
 
@@ -226,20 +239,32 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							if ( !aFamilyName.getLength() || aFamilyName.toChar() == (sal_Unicode)'.' )
 								continue;
 
-							sal_IntPtr nNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aFont );
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							sal_IntPtr nNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aFont, NULL );
+							if ( !nNativeFont )
+								continue;
+#else	// USE_CORETEXT_TEXT_RENDERING
+							sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
 								continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 							// Fix bug 3446 by skipping bad native fonts
 							::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaImplFontData::maBadNativeFontIDMap.find( nNativeFont );
 							if ( bit != JavaImplFontData::maBadNativeFontIDMap.end() )
 								continue;
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CFStringRef aDisplayString = CTFontCopyFullName( aFont );
+							if ( !aDisplayString )
+								continue;
+#else	// USE_CORETEXT_TEXT_RENDERING
 							// Get the ATS font name as the Cocoa name on some
 							// Mac OS X versions adds extraneous words
 							CFStringRef aDisplayString;
 							if ( ATSFontGetName( aFont, kATSOptionFlagsDefault, &aDisplayString ) != noErr )
 								continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 							CFIndex nDisplayLen = CFStringGetLength( aDisplayString );
 							CFRange aDisplayRange = CFRangeMake( 0, nDisplayLen );
@@ -336,15 +361,23 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						// Cache matching bold, italic, and bold italic fonts
 						for ( i = 0; i < nCount; i++ )
 						{
-							NSFont *pNSFont = (NSFont *)pFonts[ i ];
-
+							NSFont *pNSFont = [pFonts objectAtIndex:i];
+							if ( !pNSFont )
+								continue;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							CTFontRef aFont = (CTFontRef)pNSFont;
+							sal_IntPtr nNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aFont, NULL );
+							if ( !nNativeFont )
+								continue;
+#else	// USE_CORETEXT_TEXT_RENDERING
 							ATSFontRef aFont = NSFont_getATSFontRef( pNSFont );
 							if ( !aFont )
 								continue;
 
-							sal_IntPtr nNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aFont );
+							sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
 								continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 							::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nfit = pSalData->maNativeFontMapping.find( nNativeFont );
 							if ( nfit == pSalData->maNativeFontMapping.end() )
@@ -354,10 +387,16 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							bool bIsPlainFont = ( pFontData->meWeight <= WEIGHT_MEDIUM && pFontData->meItalic != ITALIC_OBLIQUE && pFontData->meItalic != ITALIC_NORMAL );
 
 							// Try bold
-							ATSFontRef aBoldFont = NSFont_findATSFontWithStyle( pNSFont, TRUE, FALSE );
-							if ( aBoldFont )
+							NSFont *pBoldFont = NSFont_findFontWithStyle( pNSFont, TRUE, FALSE );
+							if ( pBoldFont )
 							{
-								sal_IntPtr nBoldNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aBoldFont );
+#ifdef USE_CORETEXT_TEXT_RENDERING
+								CTFontRef aBoldFont = (CTFontRef)pBoldFont;
+								sal_IntPtr nBoldNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aBoldFont, NULL );
+#else	// USE_CORETEXT_TEXT_RENDERING
+								ATSFontRef aBoldFont = NSFont_getATSFontRef( pBoldFont );
+								sal_IntPtr nBoldNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 								if ( nBoldNativeFont && nBoldNativeFont != nNativeFont )
 								{
 									nfit = pSalData->maNativeFontMapping.find( nBoldNativeFont );
@@ -368,13 +407,20 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 											pSalData->maPlainNativeFontMapping[ nBoldNativeFont ] = pFontData;
 									}
 								}
+
+								[pBoldFont release];
 							}
 
 							// Try italic
-							ATSFontRef aItalicFont = NSFont_findATSFontWithStyle( pNSFont, FALSE, TRUE );
-							if ( aItalicFont )
+							NSFont *pItalicFont = NSFont_findFontWithStyle( pNSFont, FALSE, TRUE );
+							if ( pItalicFont )
 							{
-								sal_IntPtr nItalicNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
+#ifdef USE_CORETEXT_TEXT_RENDERING
+								CTFontRef aItalicFont = (CTFontRef)pItalicFont;
+								sal_IntPtr nItalicNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aItalicFont, NULL );
+#else	// USE_CORETEXT_TEXT_RENDERING
+								sal_IntPtr nItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 								if ( nItalicNativeFont && nItalicNativeFont != nNativeFont )
 								{
 									nfit = pSalData->maNativeFontMapping.find( nItalicNativeFont );
@@ -385,13 +431,20 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 											pSalData->maPlainNativeFontMapping[ nItalicNativeFont ] = pFontData;
 									}
 								}
+
+								[pItalicFont release];
 							}
 
 							// Try bold italic
-							ATSFontRef aBoldItalicFont = NSFont_findATSFontWithStyle( pNSFont, TRUE, TRUE );
-							if ( aBoldItalicFont )
+							NSFont *pBoldItalicFont = NSFont_findFontWithStyle( pNSFont, TRUE, TRUE );
+							if ( pBoldItalicFont )
 							{
-								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
+#ifdef USE_CORETEXT_TEXT_RENDERING
+								CTFontRef aBoldItalicFont = (CTFontRef)pBoldItalicFont;
+								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aBoldItalicFont, NULL );
+#else	// USE_CORETEXT_TEXT_RENDERING
+								sal_IntPtr nBoldItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 								if ( nBoldItalicNativeFont && nBoldItalicNativeFont != nNativeFont )
 								{
 									nfit = pSalData->maNativeFontMapping.find( nBoldItalicNativeFont );
@@ -402,11 +455,13 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 											pSalData->maPlainNativeFontMapping[ nBoldItalicNativeFont ] = pFontData;
 									}
 								}
+
+								[pBoldItalicFont release];
 							}
 						}
-
-						NSFontManager_releaseAllFonts( pFonts );
 					}
+
+					[pPool release];
 				}
 			}
 

@@ -39,15 +39,16 @@
 #ifdef __cplusplus
 BEGIN_C
 #endif
-ATSFontRef NSFont_getATSFontRef( id pNSFont );
-CFStringRef NSFont_familyName( id pNSFont );
-ATSFontRef NSFont_findATSFontWithStyle( id pNSFont, BOOL bBold, BOOL bItalic );
-long *NSFontManager_getAllFonts();
-BOOL NSFontManager_isFixedPitch( id pNSFont );
-BOOL NSFontManager_isItalic( id pNSFont );
-void NSFontManager_releaseAllFonts( long *pFonts );
-int NSFontManager_widthOfFont( id pNSFont );
-int NSFontManager_weightOfFont( id pNSFont );
+#ifndef USE_CORETEXT_TEXT_RENDERING
+ATSFontRef NSFont_getATSFontRef( NSFont *pNSFont );
+CFStringRef NSFont_familyName( NSFont *pNSFont );
+#endif	// !USE_CORETEXT_TEXT_RENDERING
+NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic );
+NSArray *NSFontManager_getAllFonts();
+BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
+BOOL NSFontManager_isItalic( NSFont *pNSFont );
+int NSFontManager_widthOfFont( NSFont *pNSFont );
+int NSFontManager_weightOfFont( NSFont *pNSFont );
 #ifdef __cplusplus
 END_C
 #endif
