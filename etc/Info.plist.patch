@@ -2,8 +2,13 @@
 <!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!--
+		Note: CFBundleIdentifier must be different than the main installer's
+		identifier or else the main installer's files will be deleted on
+		Mac OS X 10.6 and higher
+	-->
 	<key>CFBundleIdentifier</key>
-	<string>org.neooffice.$(PRODUCT_DIR_NAME).pkg</string>
+	<string>org.neooffice.$(PRODUCT_DIR_NAME)_patch.pkg</string>
 	<key>IFMajorVersion</key>
 	<integer>1</integer>
 	<key>IFMinorVersion</key>
