@@ -1175,74 +1175,49 @@ static CFDataRef aRTFSelection = nil;
 		Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(draggingEnded:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(draggingEntered:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(draggingExited:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(draggingUpdated:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(performDragOperation:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(prepareForDragOperation:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(wantsPeriodicDraggingUpdates);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		// if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		if ( aOldMethod && aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		// NSDraggingSource selectors
 
@@ -1250,55 +1225,37 @@ static CFDataRef aRTFSelection = nil;
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(draggedImage:endedAt:operation:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(draggedImage:movedTo:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(draggingSourceOperationMaskForLocal:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(ignoreModifierKeysWhileDragging);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(namesOfPromisedFilesDroppedAtDestination:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		// NSResponder selectors
 
@@ -1306,28 +1263,19 @@ static CFDataRef aRTFSelection = nil;
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(validRequestorForSendType:returnType:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 
 		aSelector = @selector(writeSelectionToPasteboard:types:);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		{
-			aOldMethod->method_types = aNewMethod->method_types;
-			aOldMethod->method_imp = aNewMethod->method_imp;
-		}
+			method_exchangeImplementations( aOldMethod, aNewMethod );
 	}
 
 	return [super initWithFrame:aFrame];
