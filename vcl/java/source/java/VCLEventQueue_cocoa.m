@@ -1253,8 +1253,7 @@ static CFDataRef aRTFSelection = nil;
 		aSelector = @selector(wantsPeriodicDraggingUpdates);
 		aOldMethod = class_getInstanceMethod( [self class], aSelector );
 		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		// if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-		if ( aOldMethod && aNewMethod )
+		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
 		{
 			aOldMethod->method_types = aNewMethod->method_types;
 			aOldMethod->method_imp = aNewMethod->method_imp;
