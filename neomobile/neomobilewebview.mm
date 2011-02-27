@@ -265,13 +265,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 				NSMethodSignature *pSignature = [NSWindowController instanceMethodSignatureForSelector:aSelector];
 				if ( pSignature )
 				{
-					// Do not free method list
-					struct objc_method_list *pMethods = (struct objc_method_list *)malloc( sizeof( struct objc_method_list ) );
-					pMethods->method_count = 1;
-					pMethods->method_list[ 0 ].method_name = aSelector;
-					pMethods->method_list[ 0 ].method_types = (char *)[pSignature methodReturnType];
-					pMethods->method_list[ 0 ].method_imp = WebJavaScriptTextInputPanel_windowDidLoadIMP;
-					class_addMethods( aClass, pMethods );
+					class_addMethod( aClass, aSelector, WebJavaScriptTextInputPanel_windowDidLoadIMP, [pSignature methodReturnType] );
 
 					bWebJavaScriptTextInputPanelSwizzeled = YES;
 				}
