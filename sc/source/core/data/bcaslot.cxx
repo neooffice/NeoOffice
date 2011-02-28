@@ -235,23 +235,9 @@ BOOL ScBroadcastAreaSlot::AreaBroadcast( const ScHint& rHint) const
     {
         ScBroadcastArea* pArea = *aIter;
 #ifdef USE_JAVA
-        // Fix bug 3648 by breaking if the area is in the removal list
+        // Fix bug 3648 by breaking if any areas are in the removal list
         if (!aAreaRemovalList.empty())
-        {
-            bool bRemoved = false;
-            ::std::list< ScBroadcastArea* >::const_iterator aRemovalIter(aAreaRemovalList.begin());
-            while (aRemovalIter != aAreaRemovalList.end())
-            {
-                if (pArea == *aRemovalIter)
-                {
-                    bRemoved = true;
-                    break;
-                }
-                ++aRemovalIter;
-            }
-            if (bRemoved)
-                break;
-        }
+            break;
 #endif	// USE_JAVA
         // A Notify() during broadcast may call EndListeningArea() and thus
         // dispose this area if it was the last listener, which would
@@ -294,23 +280,9 @@ BOOL ScBroadcastAreaSlot::AreaBroadcastInRange( const ScRange& rRange,
     {
         ScBroadcastArea* pArea = *aIter;
 #ifdef USE_JAVA
-        // Fix bug 3648 by breaking if the area is in the removal list
+        // Fix bug 3648 by breaking if any areas are in the removal list
         if (!aAreaRemovalList.empty())
-        {
-            bool bRemoved = false;
-            ::std::list< ScBroadcastArea* >::const_iterator aRemovalIter(aAreaRemovalList.begin());
-            while (aRemovalIter != aAreaRemovalList.end())
-            {
-                if (pArea == *aRemovalIter)
-                {
-                    bRemoved = true;
-                    break;
-                }
-                ++aRemovalIter;
-            }
-            if (bRemoved)
-                break;
-        }
+            break;
 #endif	// USE_JAVA
         // A Notify() during broadcast may call EndListeningArea() and thus
         // dispose this area if it was the last listener, which would
