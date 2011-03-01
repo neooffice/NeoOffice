@@ -844,7 +844,6 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 			CTFontRef aFont = CTFontCreateWithPlatformFont( (ATSFontRef)mpFontData->mnNativeFontID, pMetric->mnWidth, NULL, NULL );
 			if ( aFont )
 			{
-CFShow( aFont );
 				// Mac OS X seems to overstate the leading for some fonts
 				// (usually CJK fonts like Hiragino) so fix fix bugs 2827 and
 				// 2847 by adding combining the leading with descent
