@@ -186,6 +186,7 @@ struct ImplATSLayoutData {
 	CTFontRef			maFont;
 	CTTypesetterRef		maTypesetter;
 	CTLineRef			maLine;
+	CGGlyph*			mpGlyphs;
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	ATSUTextLayout		maLayout;
 #ifdef USE_CORETEXT_TEXT_RENDERING
@@ -194,8 +195,8 @@ struct ImplATSLayoutData {
 	ItemCount			mnGlyphCount;
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	ATSLayoutRecord*	mpGlyphDataArray;
-	int*				mpCharsToChars;
 	int*				mpCharsToGlyphs;
+	int*				mpCharsToChars;
 	long*				mpGlyphAdvances;
 	ATSUStyle			maVerticalFontStyle;
 	long				mnBaselineDelta;
@@ -538,12 +539,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	maFont( NULL ),
 	maTypesetter( NULL ),
 	maLine( NULL ),
+	mpGlyphs( NULL ),
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	maLayout( NULL ),
 	mnGlyphCount( 0 ),
 	mpGlyphDataArray( NULL ),
-	mpCharsToChars( NULL ),
 	mpCharsToGlyphs( NULL ),
+	mpCharsToChars( NULL ),
 	mpGlyphAdvances( NULL ),
 	maVerticalFontStyle( NULL ),
 	mnBaselineDelta( 0 ),
@@ -813,6 +815,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
 #ifdef USE_CORETEXT_TEXT_RENDERING
+	nBufSize = mnGlyphCount * sizeof( CGGlyph );
+	mpGlyphs = (CGGlyph *)rtl_allocateMemory( nBufSize );
+	memset( mpGlyphs, 0, nBufSize );
+
 	nBufSize = mnGlyphCount * sizeof( long );
 	int *pGlyphsToChars = (int *)rtl_allocateMemory( nBufSize );
 	for ( i = 0; i < mnGlyphCount; i++ )
@@ -829,12 +835,15 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
 			{
 				CFIndex aIndices[ nGlyphRunCount ];
+				CGGlyph aGlyphs[ nGlyphRunCount ];
 				CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
+				CTRunGetGlyphs( aGlyphRun, CFRangeMake( 0, 0 ), aGlyphs );
 				i = nGlyphsProcessed;
 				CFIndex j = 0;
 				for ( ; j < nGlyphRunCount; i++, j++ )
 				{
 					CFIndex nIndex = aIndices[ j ];
+					mpGlyphs[ i ] = aGlyphs[ j ];
 					pGlyphsToChars[ i ] = nIndex;
 					if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
 						mpCharsToGlyphs[ nIndex ] = i;
@@ -946,7 +955,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		// force the cursor to the end of the ligature instead of the beginning.
 		// Fix bug 3621 by treating negative width glyphs like ligatured glyphs.
 		long nWidthAdjust = 0;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		if ( ( mpGlyphs[ i ] == 0xffff || mpGlyphAdvances[ i ] < 0 ) && !IsNonprintingChar( mpHash->mpStr[ nIndex ] ) && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+#else	// USE_CORETEXT_TEXT_RENDERING
 		if ( ( mpGlyphDataArray[ i ].glyphID == 0xffff || mpGlyphAdvances[ i ] < 0 ) && !IsNonprintingChar( mpHash->mpStr[ nIndex ] ) && !pCurrentLayout->IsSpacingGlyph( mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		{
 			if ( nLastNonSpacingGlyph >= 0 && nLastNonSpacingGlyph != i && nLastNonSpacingIndex != nIndex )
 			{
@@ -1167,6 +1180,12 @@ void ImplATSLayoutData::Destroy()
 	{
 		CFRelease( maLine );
 		maLine = NULL;
+	}
+
+	if ( mpGlyphs )
+	{
+		rtl_freeMemory( mpGlyphs );
+		mpGlyphs = NULL;
 	}
 #endif	// USE_CORETEXT_TEXT_RENDERING
 
@@ -2584,9 +2603,14 @@ sal_Int32 SalATSLayout::GetNativeGlyphWidth( sal_Int32 nGlyph, int nCharPos ) co
 	::std::hash_map< GlyphID, long >::const_iterator it = pLayoutData->maNativeGlyphWidths.find( nGlyphID );
 	if ( it == pLayoutData->maNativeGlyphWidths.end() )
 	{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		CGGlyph aGlyph = (CGGlyph)nGlyphID;
+		nRet = Float32ToLong( CTFontGetAdvancesForGlyphs( pLayoutData->maFont, kCTFontHorizontalOrientation, &aGlyph, NULL, 1 ) * UNITS_PER_PIXEL );
+#else	// USE_CORETEXT_TEXT_RENDERING
 		ATSGlyphIdealMetrics aIdealMetrics;
 		if ( pATSUGlyphGetIdealMetrics( pLayoutData->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), &aIdealMetrics ) == noErr )
 			nRet = Float32ToLong( aIdealMetrics.advance.x * pLayoutData->mfFontScaleY * UNITS_PER_PIXEL );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		pLayoutData->maNativeGlyphWidths[ nGlyphID ] = nRet;
 	}
 	else
