@@ -805,95 +805,19 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
-	// Cache mapping of characters to glyph character indices
-	nBufSize = mpHash->mnLen * sizeof( int );
-	mpCharsToChars = (int *)rtl_allocateMemory( nBufSize );
-
-	CFIndex i;
-	for ( i = 0; i < mpHash->mnLen; i++ )
-		mpCharsToChars[ i ] = -1;
-	if ( mpHash->mbRTL )
-	{
-#ifdef USE_CORETEXT_TEXT_RENDERING
-		for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
-		{
-			CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
-			if ( aGlyphRun )
-			{
-				CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
-				CFRange aRange = CTRunGetStringRange( aGlyphRun );
-				if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
-				{
-					CFIndex aIndices[ nGlyphRunCount ];
-					CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
-					i = aRange.location + aRange.length - 1;
-					CFIndex j = 0;
-					while ( i >= 0 && j < nGlyphRunCount )
-					{
-						CFIndex nIndex = aIndices[ j++ ];
-						for ( ; j < nGlyphRunCount && aIndices[ j ] == nIndex; j++ )
-							;
-						mpCharsToChars[ i-- ] = nIndex;
-					}
-				}
-			}
-		}
-#else	// USE_CORETEXT_TEXT_RENDERING
-		i = 0;
-		for ( int j = mpHash->mnLen - 1; j >= 0 && i < (int)mnGlyphCount && mpGlyphDataArray; j-- )
-		{
-			unsigned int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
-			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
-				;
-		}
-#endif	// USE_CORETEXT_TEXT_RENDERING
-	}
-	else
-	{
-#ifdef USE_CORETEXT_TEXT_RENDERING
-		for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
-		{
-			CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
-			if ( aGlyphRun )
-			{
-				CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
-				CFRange aRange = CTRunGetStringRange( aGlyphRun );
-				if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
-				{
-					CFIndex aIndices[ nGlyphRunCount ];
-					CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
-					i = aRange.location;
-					CFIndex j = 0;
-					while ( i < mpHash->mnLen && j < nGlyphRunCount )
-					{
-						CFIndex nIndex = aIndices[ j++ ];
-						for ( ; j < nGlyphRunCount && aIndices[ j ] == nIndex; j++ )
-							;
-						mpCharsToChars[ i++ ] = nIndex;
-					}
-				}
-			}
-		}
-#else	// USE_CORETEXT_TEXT_RENDERING
-		i = 0;
-		for ( int j = 0; j < mpHash->mnLen && i < (int)mnGlyphCount && mpGlyphDataArray; j++ )
-		{
-			unsigned int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
-			mpCharsToChars[ j ] = nIndex;
-			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
-				;
-		}
-#endif	// USE_CORETEXT_TEXT_RENDERING
-	}
-
 	// Cache mapping of characters to glyphs
 	nBufSize = mpHash->mnLen * sizeof( int );
 	mpCharsToGlyphs = (int *)rtl_allocateMemory( nBufSize );
 
+	CFIndex i;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
 #ifdef USE_CORETEXT_TEXT_RENDERING
+	nBufSize = mnGlyphCount * sizeof( long );
+	int *pGlyphsToChars = (int *)rtl_allocateMemory( nBufSize );
+	for ( i = 0; i < mnGlyphCount; i++ )
+		pGlyphsToChars[ i ] = -1;
+
 	nGlyphsProcessed = 0;
 	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
 	{
@@ -911,6 +835,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				for ( ; j < nGlyphRunCount; i++, j++ )
 				{
 					CFIndex nIndex = aIndices[ j ];
+					pGlyphsToChars[ i ] = nIndex;
 					if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
 						mpCharsToGlyphs[ nIndex ] = i;
 				}
@@ -925,6 +850,45 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 		if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
 			mpCharsToGlyphs[ nIndex ] = i;
+	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
+	// Cache mapping of characters to glyph character indices
+	nBufSize = mpHash->mnLen * sizeof( int );
+	mpCharsToChars = (int *)rtl_allocateMemory( nBufSize );
+
+	for ( i = 0; i < mpHash->mnLen; i++ )
+		mpCharsToChars[ i ] = -1;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	for ( i = 0; i < mpHash->mnLen; i++ )
+	{
+		int nIndex = mpCharsToGlyphs[ i ];
+		if ( nIndex >= 0 )
+			mpCharsToChars[ i ] = pGlyphsToChars[ nIndex ];
+	}
+	rtl_freeMemory( pGlyphsToChars );
+#else	// USE_CORETEXT_TEXT_RENDERING
+	if ( mpHash->mbRTL )
+	{
+		i = 0;
+		for ( int j = mpHash->mnLen - 1; j >= 0 && i < (int)mnGlyphCount && mpGlyphDataArray; j-- )
+		{
+			unsigned int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
+			mpCharsToChars[ j ] = nIndex;
+			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				;
+		}
+	}
+	else
+	{
+		i = 0;
+		for ( int j = 0; j < mpHash->mnLen && i < (int)mnGlyphCount && mpGlyphDataArray; j++ )
+		{
+			unsigned int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
+			mpCharsToChars[ j ] = nIndex;
+			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
+				;
+		}
 	}
 #endif	// USE_CORETEXT_TEXT_RENDERING
 
