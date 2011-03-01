@@ -143,7 +143,6 @@ struct ImplATSLayoutDataHash {
 	int					mnLen;
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	ATSFontRef			mnFontID;
-	CTFontRef			maFont;
 #else	// USE_CORETEXT_TEXT_RENDERING
 	ATSUFontID			mnFontID;
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -154,6 +153,10 @@ struct ImplATSLayoutDataHash {
 	bool				mbVertical;
 	sal_Unicode*		mpStr;
 	sal_Int32			mnStrHash;
+	bool				mbOwnsStr;
+
+						ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont );
+						~ImplATSLayoutDataHash();
 };
 
 struct ImplATSLayoutDataHashHash
@@ -180,6 +183,7 @@ struct ImplATSLayoutData {
 	bool*				mpNeedFallback;
 	::vcl::com_sun_star_vcl_VCLFont*	mpFallbackFont;
 #ifdef USE_CORETEXT_TEXT_RENDERING
+	CTFontRef			maFont;
 	CTTypesetterRef		maTypesetter;
 	CTLineRef			maLine;
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -301,6 +305,34 @@ static bool ATSUIInitialize()
 
 // ============================================================================
 
+ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, com_sun_star_vcl_VCLFont *pVCLFont ) :
+	mnLen( nEndCharPos - nMinCharPos ),
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	mnFontID( (ATSFontRef)pVCLFont->getNativeFont() ),
+#else	// USE_CORETEXT_TEXT_RENDERING
+	mnFontID( (ATSUFontID)pVCLFont->getNativeFont() ),
+#endif	// USE_CORETEXT_TEXT_RENDERING
+	mfFontSize( pVCLFont->getSize() ),
+	mfFontScaleX( pVCLFont->getScaleX() ),
+	mbAntialiased( pVCLFont->isAntialiased() ),
+	mbRTL( nFlags & SAL_LAYOUT_BIDI_RTL ),
+	mbVertical( nFlags & SAL_LAYOUT_VERTICAL ),
+	mpStr( (sal_Unicode *)( pStr + nMinCharPos ) ),
+	mnStrHash( rtl_ustr_hashCode_WithLength( mpStr, mnLen ) ),
+	mbOwnsStr( false )
+{
+}
+
+// ----------------------------------------------------------------------------
+
+ImplATSLayoutDataHash::~ImplATSLayoutDataHash()
+{
+	if ( mbOwnsStr && mpStr )
+		rtl_freeMemory( mpStr );
+}
+
+// ============================================================================
+
 bool ImplATSLayoutDataHashEquality::operator()( const ImplATSLayoutDataHash *p1, const ImplATSLayoutDataHash *p2 ) const
 {
 	return ( p1->mnLen == p2->mnLen &&
@@ -417,22 +449,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 	if ( !ATSUIInitialize() )
 		return pLayoutData;
 
-	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash();
-	pLayoutHash->mnLen = nEndCharPos - nMinCharPos;
-#ifdef USE_CORETEXT_TEXT_RENDERING
-	pLayoutHash->mnFontID = (ATSFontRef)pVCLFont->getNativeFont();
-	pLayoutHash->maFont = NULL;
-#else	// USE_CORETEXT_TEXT_RENDERING
-	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
-#endif	// USE_CORETEXT_TEXT_RENDERING
-	pLayoutHash->mfFontSize = pVCLFont->getSize();
-	pLayoutHash->mfFontScaleX = pVCLFont->getScaleX();
-	pLayoutHash->mbAntialiased = pVCLFont->isAntialiased();
-	pLayoutHash->mbRTL = ( nFlags & SAL_LAYOUT_BIDI_RTL );
-	pLayoutHash->mbVertical = ( nFlags & SAL_LAYOUT_VERTICAL );
-
-	pLayoutHash->mpStr = (sal_Unicode *)( pStr + nMinCharPos );
-	pLayoutHash->mnStrHash = rtl_ustr_hashCode_WithLength( pLayoutHash->mpStr, pLayoutHash->mnLen );
+	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash( pStr, nLen, nMinCharPos, nEndCharPos, nFlags, pVCLFont );
 
 	// Search cache for matching layout
 	::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >::const_iterator it = maLayoutCache.find( pLayoutHash );
@@ -445,17 +462,16 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 
 	if ( !pLayoutData )
 	{
-#ifdef USE_CORETEXT_TEXT_RENDERING
-		// Create the native font
-		pLayoutHash->maFont = CTFontCreateWithPlatformFont( pLayoutHash->mnFontID, pLayoutHash->mfFontSize, NULL, NULL );
-#endif	// USE_CORETEXT_TEXT_RENDERING
-		// Copy the string so that we can cache it
+		pLayoutHash->mbOwnsStr = true;
 		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 		memcpy( pLayoutHash->mpStr, pStr + nMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 		pLayoutData = new ImplATSLayoutData( pLayoutHash, nFallbackLevel, pVCLFont, pCurrentLayout );
 
 		if ( !pLayoutData )
+		{
+			delete pLayoutHash;
 			return NULL;
+		}
 
 		if ( !pLayoutData->IsValid() )
 		{
@@ -519,6 +535,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mpNeedFallback( NULL ),
 	mpFallbackFont( NULL ),
 #ifdef USE_CORETEXT_TEXT_RENDERING
+	maFont( NULL ),
 	maTypesetter( NULL ),
 	maLine( NULL ),
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -628,6 +645,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
+	maFont = CTFontCreateWithPlatformFont( mpHash->mnFontID, mpHash->mfFontSize, NULL, NULL );
+	if ( !maFont )
+	{
+		Destroy();
+		return;
+	}
+
 	CFStringRef aString =  CFStringCreateWithCharactersNoCopy( NULL, mpHash->mpStr, mpHash->mnLen, kCFAllocatorNull );
 	if ( !aString )
 	{
@@ -651,7 +675,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-	CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( 0, mpHash->mnLen ), kCTFontAttributeName, mpHash->maFont );
+	CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( 0, mpHash->mnLen ), kCTFontAttributeName, maFont );
 
 	CTParagraphStyleSetting aSetting;
 	CTWritingDirection nCTDirection;
@@ -1134,12 +1158,6 @@ void ImplATSLayoutData::Destroy()
 {
 	if ( mpHash )
 	{
-		if ( mpHash->mpStr )
-			rtl_freeMemory( mpHash->mpStr );
-#ifdef USE_CORETEXT_TEXT_RENDERING
-		if ( mpHash->maFont )
-			CFRelease( mpHash->maFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 		delete mpHash;
 		mpHash = NULL;
 	}
@@ -1169,6 +1187,12 @@ void ImplATSLayoutData::Destroy()
 	}
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( maFont )
+	{
+		CFRelease( maFont );
+		maFont = NULL;
+	}
+
 	if ( maTypesetter )
 	{
 		CFRelease( maTypesetter );
