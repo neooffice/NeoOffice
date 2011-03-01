@@ -143,6 +143,7 @@ struct ImplATSLayoutDataHash {
 	int					mnLen;
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	ATSFontRef			mnFontID;
+	CTFontRef			maFont;
 #else	// USE_CORETEXT_TEXT_RENDERING
 	ATSUFontID			mnFontID;
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -178,8 +179,16 @@ struct ImplATSLayoutData {
 	float				mfFontScaleY;
 	bool*				mpNeedFallback;
 	::vcl::com_sun_star_vcl_VCLFont*	mpFallbackFont;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	CTTypesetterRef		maTypesetter;
+	CTLineRef			maLine;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	ATSUTextLayout		maLayout;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	CFIndex				mnGlyphCount;
+#else	// USE_CORETEXT_TEXT_RENDERING
 	ItemCount			mnGlyphCount;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	ATSLayoutRecord*	mpGlyphDataArray;
 	int*				mpCharsToChars;
 	int*				mpCharsToGlyphs;
@@ -412,6 +421,7 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 	pLayoutHash->mnLen = nEndCharPos - nMinCharPos;
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	pLayoutHash->mnFontID = (ATSFontRef)pVCLFont->getNativeFont();
+	pLayoutHash->maFont = NULL;
 #else	// USE_CORETEXT_TEXT_RENDERING
 	pLayoutHash->mnFontID = (ATSUFontID)pVCLFont->getNativeFont();
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -435,6 +445,10 @@ ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, in
 
 	if ( !pLayoutData )
 	{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		// Create the native font
+		pLayoutHash->maFont = CTFontCreateWithPlatformFont( pLayoutHash->mnFontID, pLayoutHash->mfFontSize, NULL, NULL );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		// Copy the string so that we can cache it
 		pLayoutHash->mpStr = (sal_Unicode *)rtl_allocateMemory( pLayoutHash->mnLen * sizeof( sal_Unicode ) );
 		memcpy( pLayoutHash->mpStr, pStr + nMinCharPos, pLayoutHash->mnLen * sizeof( sal_Unicode ) );
@@ -504,6 +518,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mfFontScaleY( 1.0f ),
 	mpNeedFallback( NULL ),
 	mpFallbackFont( NULL ),
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	maTypesetter( NULL ),
+	maLine( NULL ),
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	maLayout( NULL ),
 	mnGlyphCount( 0 ),
 	mpGlyphDataArray( NULL ),
@@ -609,6 +627,85 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		}
 	}
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	CFStringRef aString =  CFStringCreateWithCharactersNoCopy( NULL, mpHash->mpStr, mpHash->mnLen, kCFAllocatorNull );
+	if ( !aString )
+	{
+		Destroy();
+		return;
+	}
+
+	CFAttributedStringRef aAttrString = CFAttributedStringCreate( NULL, aString, NULL );
+	CFRelease( aString );
+	if ( !aAttrString )
+	{
+		Destroy();
+		return;
+	}
+
+	CFMutableAttributedStringRef aMutableAttrString = CFAttributedStringCreateMutableCopy( NULL, 0, aAttrString );
+	CFRelease( aAttrString );
+	if ( !aMutableAttrString )
+	{
+		Destroy();
+		return;
+	}
+
+	CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( 0, mpHash->mnLen ), kCTFontAttributeName, mpHash->maFont );
+
+	CTParagraphStyleSetting aSetting;
+	CTWritingDirection nCTDirection;
+	if ( mpHash->mbRTL )
+		nCTDirection = kCTWritingDirectionRightToLeft;
+	else
+		nCTDirection = kCTWritingDirectionLeftToRight;
+	aSetting.spec = kCTParagraphStyleSpecifierBaseWritingDirection;
+	aSetting.valueSize = sizeof( CTWritingDirection );
+	aSetting.value = &nCTDirection;
+
+	CTParagraphStyleRef aParaStyle = CTParagraphStyleCreate( &aSetting, 1 );
+	if ( !aParaStyle )
+	{
+		CFRelease( aMutableAttrString );
+		Destroy();
+		return;
+	}
+
+	CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( 0, mpHash->mnLen ), kCTParagraphStyleAttributeName, aParaStyle );
+	CFRelease( aParaStyle );
+
+	if ( mpHash->mbVertical )
+	{
+		for ( int i = 0; i < mpHash->mnLen; i++ )
+		{
+			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK )
+				CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( i, 1 ), kCTVerticalFormsAttributeName, kCFBooleanTrue );
+		}
+	}
+
+	maTypesetter = CTTypesetterCreateWithAttributedString ( aMutableAttrString );
+	CFRelease( aMutableAttrString );
+	if ( !maTypesetter )
+	{
+		Destroy();
+		return;
+	}
+
+	CTLineRef maLine = CTTypesetterCreateLine( maTypesetter, CFRangeMake( 0, 0 ) );
+	if ( !maLine )
+	{
+		Destroy();
+		return;
+	}
+
+	CFArrayRef aLineGlyphRuns = CTLineGetGlyphRuns( maLine );
+	if ( !aLineGlyphRuns )
+	{
+		Destroy();
+		return;
+	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
 	if ( pATSUCreateTextLayoutWithTextPtr( mpHash->mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mpHash->mnLen, 1, (const UniCharCount *)&mpHash->mnLen, &maFontStyle, &maLayout ) != noErr )
 	{
 		Destroy();
@@ -646,12 +743,31 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	CFIndex nLineGlyphRuns = CFArrayGetCount( aLineGlyphRuns );
+	CFIndex nGlyphsProcessed = 0;
+	CFIndex nCurrentGlyphRun;
+	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
+	{
+		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		if ( aGlyphRun )
+			nGlyphsProcessed += CTRunGetGlyphCount( aGlyphRun );
+	}
+
+	mnGlyphCount = nGlyphsProcessed;
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
 	// Fix bug 2919 by still producing a valid text layout even if no glyphs
 	// can be retrieved. Also, fix bug 3063 by not holding onto the
 	// ATSLayoutRecord and, instead, making our own private copy.
 	ByteCount nBufSize;
 	ATSLayoutRecord *pGlyphDataArray = NULL;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	ItemCount nGlyphCount = 0;
+	pATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &nGlyphCount );
+#else	// USE_CORETEXT_TEXT_RENDERING
 	pATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &mnGlyphCount );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	if ( pGlyphDataArray )
 	{
 		if ( mnGlyphCount )
@@ -669,11 +785,36 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	nBufSize = mpHash->mnLen * sizeof( int );
 	mpCharsToChars = (int *)rtl_allocateMemory( nBufSize );
 
-	int i;
+	CFIndex i;
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToChars[ i ] = -1;
 	if ( mpHash->mbRTL )
 	{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
+		{
+			CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+			if ( aGlyphRun )
+			{
+				CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
+				CFRange aRange = CTRunGetStringRange( aGlyphRun );
+				if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
+				{
+					CFIndex aIndices[ nGlyphRunCount ];
+					CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
+					i = aRange.location + aRange.length - 1;
+					CFIndex j = 0;
+					while ( i >= 0 && j < nGlyphRunCount )
+					{
+						CFIndex nIndex = aIndices[ j++ ];
+						for ( ; j < nGlyphRunCount && aIndices[ j ] == nIndex; j++ )
+							;
+						mpCharsToChars[ i-- ] = nIndex;
+					}
+				}
+			}
+		}
+#else	// USE_CORETEXT_TEXT_RENDERING
 		i = 0;
 		for ( int j = mpHash->mnLen - 1; j >= 0 && i < (int)mnGlyphCount && mpGlyphDataArray; j-- )
 		{
@@ -682,9 +823,35 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				;
 		}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	}
 	else
 	{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
+		{
+			CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+			if ( aGlyphRun )
+			{
+				CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
+				CFRange aRange = CTRunGetStringRange( aGlyphRun );
+				if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
+				{
+					CFIndex aIndices[ nGlyphRunCount ];
+					CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
+					i = aRange.location;
+					CFIndex j = 0;
+					while ( i < mpHash->mnLen && j < nGlyphRunCount )
+					{
+						CFIndex nIndex = aIndices[ j++ ];
+						for ( ; j < nGlyphRunCount && aIndices[ j ] == nIndex; j++ )
+							;
+						mpCharsToChars[ i++ ] = nIndex;
+					}
+				}
+			}
+		}
+#else	// USE_CORETEXT_TEXT_RENDERING
 		i = 0;
 		for ( int j = 0; j < mpHash->mnLen && i < (int)mnGlyphCount && mpGlyphDataArray; j++ )
 		{
@@ -693,6 +860,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			for ( ; i < (int)mnGlyphCount && ( mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				;
 		}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	}
 
 	// Cache mapping of characters to glyphs
@@ -701,12 +869,40 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	for ( i = 0; i < mpHash->mnLen; i++ )
 		mpCharsToGlyphs[ i ] = -1;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	nGlyphsProcessed = 0;
+	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
+	{
+		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		if ( aGlyphRun )
+		{
+			CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
+			CFRange aRange = CTRunGetStringRange( aGlyphRun );
+			if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
+			{
+				CFIndex aIndices[ nGlyphRunCount ];
+				CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
+				i = nGlyphsProcessed;
+				CFIndex j = 0;
+				for ( ; j < nGlyphRunCount; i++, j++ )
+				{
+					CFIndex nIndex = aIndices[ j ];
+					if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
+						mpCharsToGlyphs[ nIndex ] = i;
+				}
+
+				nGlyphsProcessed += nGlyphRunCount;
+			}
+		}
+	}
+#else	// USE_CORETEXT_TEXT_RENDERING
 	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
 		if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
 			mpCharsToGlyphs[ nIndex ] = i;
 	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	// Cache glyph widths
 	nBufSize = mnGlyphCount * sizeof( long );
@@ -717,6 +913,31 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mfFontScaleY = fSize / fAdjustedSize;
 	int nLastNonSpacingIndex = -1;
 	int nLastNonSpacingGlyph = -1;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	nGlyphsProcessed = 0;
+	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
+	{
+		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		if ( aGlyphRun )
+		{
+			CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
+			CFRange aRange = CTRunGetStringRange( aGlyphRun );
+			if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
+			{
+				CFIndex aIndices[ nGlyphRunCount ];
+				CGPoint aPositions[ nGlyphRunCount ];
+				CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
+				CTRunGetPositions( aGlyphRun, CFRangeMake( 0, 0 ), aPositions );
+				i = nGlyphsProcessed;
+				CFIndex j = 0;
+				for ( ; j < nGlyphRunCount; i++, j++ )
+				{
+					int nIndex = aIndices[ j ];
+					if ( j == nGlyphRunCount - 1 )
+						mpGlyphAdvances[ i ] += Float32ToLong( ( CTRunGetTypographicBounds( aGlyphRun, CFRangeMake( 0, 0 ), NULL, NULL, NULL ) - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+					else
+						mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+#else	// USE_CORETEXT_TEXT_RENDERING
 	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
@@ -730,6 +951,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		{
 			mpGlyphAdvances[ i ] += Float32ToLong( Fix2X( mpGlyphDataArray[ i + 1 ].realPos - mpGlyphDataArray[ i ].realPos ) * mpHash->mfFontScaleX * mfFontScaleY * UNITS_PER_PIXEL );
 		}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 		// Make sure that ligature glyphs get all of the width and that their
 		// attached spacing glyphs have zero width so that the OOo code will
@@ -779,6 +1001,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				nWidthAdjust = 0;
 			}
 		}
+#ifdef USE_CORETEXT_TEXT_RENDERING
+				}
+
+				nGlyphsProcessed += nGlyphRunCount;
+			}
+		}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	}
 
 	if ( maVerticalFontStyle )
@@ -907,6 +1136,10 @@ void ImplATSLayoutData::Destroy()
 	{
 		if ( mpHash->mpStr )
 			rtl_freeMemory( mpHash->mpStr );
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		if ( mpHash->maFont )
+			CFRelease( mpHash->maFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		delete mpHash;
 		mpHash = NULL;
 	}
@@ -934,6 +1167,20 @@ void ImplATSLayoutData::Destroy()
 		delete mpFallbackFont;
 		mpFallbackFont = NULL;
 	}
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( maTypesetter )
+	{
+		CFRelease( maTypesetter );
+		maTypesetter = NULL;
+	}
+
+	if ( maLine )
+	{
+		CFRelease( maLine );
+		maLine = NULL;
+	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	if ( maLayout )
 	{
