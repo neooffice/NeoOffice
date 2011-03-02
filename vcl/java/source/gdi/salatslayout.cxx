@@ -710,6 +710,10 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK )
 				CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( i, 1 ), kCTVerticalFormsAttributeName, kCFBooleanTrue );
 		}
+
+		float fAscent = fabs( CTFontGetAscent( maFont ) );
+		float fDescent = fabs( CTFontGetDescent( maFont ) );
+		mnBaselineDelta = Float32ToLong( ( ( ( fAscent + fDescent ) / 2 ) - fDescent ) * UNITS_PER_PIXEL );
 	}
 
 	maTypesetter = CTTypesetterCreateWithAttributedString ( aMutableAttrString );
@@ -919,19 +923,41 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			CFRange aRange = CTRunGetStringRange( aGlyphRun );
 			if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
 			{
+				// Determine if this is a vertical run
+				bool bVerticalRun = false;
+				CFDictionaryRef aDict = CTRunGetAttributes( aGlyphRun );
+				if ( aDict )
+				{
+					const CFBooleanRef aValue = (const CFBooleanRef)CFDictionaryGetValue( aDict, kCTVerticalFormsAttributeName );
+					if ( aValue == kCFBooleanTrue )
+						bVerticalRun = true;
+				}
+
 				CFIndex aIndices[ nGlyphRunCount ];
 				CGPoint aPositions[ nGlyphRunCount ];
+				CGGlyph aGlyphs[ nGlyphRunCount ];
 				CTRunGetStringIndices( aGlyphRun, CFRangeMake( 0, 0 ), aIndices );
 				CTRunGetPositions( aGlyphRun, CFRangeMake( 0, 0 ), aPositions );
+				CTRunGetGlyphs( aGlyphRun, CFRangeMake( 0, 0 ), aGlyphs );
 				i = nGlyphsProcessed;
 				CFIndex j = 0;
 				for ( ; j < nGlyphRunCount; i++, j++ )
 				{
-					int nIndex = aIndices[ j ];
+					CFIndex nIndex = aIndices[ j ];
 					if ( j == nGlyphRunCount - 1 )
-						mpGlyphAdvances[ i ] += Float32ToLong( ( CTRunGetTypographicBounds( aGlyphRun, CFRangeMake( 0, 0 ), NULL, NULL, NULL ) - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+					{
+						if ( bVerticalRun )
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontVerticalOrientation, &aGlyphs[ j ], NULL, 1 ) * UNITS_PER_PIXEL );
+						else
+							mpGlyphAdvances[ i ] += Float32ToLong( CTFontGetAdvancesForGlyphs( maFont, kCTFontHorizontalOrientation, &aGlyphs[ j ], NULL, 1 ) * UNITS_PER_PIXEL );
+					}
 					else
-						mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+					{
+						if ( bVerticalRun )
+							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j ].y - aPositions[ j + 1 ].y ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+						else
+							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
+					}
 #else	// USE_CORETEXT_TEXT_RENDERING
 	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
@@ -1009,6 +1035,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	}
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	if ( maVerticalFontStyle )
 	{
 		BslnBaselineRecord aBaseline;
@@ -1018,15 +1045,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		if ( !mnBaselineDelta )
 		{
 			ATSFontMetrics aFontMetrics;
-#ifdef USE_CORETEXT_TEXT_RENDERING
 			ATSFontRef aFont = mpHash->mnFontID;
-#else	// USE_CORETEXT_TEXT_RENDERING
 			ATSFontRef aFont = ImplATSLayoutData::GetATSFontRefFromNativeFont( mpHash->mnFontID );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize * UNITS_PER_PIXEL );
 		}
 	}
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 	// Find positions that require fallback fonts
 	bool bUseFontFallbacksList = false;
@@ -2585,6 +2610,17 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 		::std::hash_map< GlyphID, Point >::const_iterator it = pRet->maVerticalGlyphTranslations.find( nGlyphID );
 		if ( it == pRet->maVerticalGlyphTranslations.end() )
 		{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			CGGlyph aGlyph = (CGGlyph)nGlyphID;
+			CGSize aTranslation = CGSizeMake( 0, 0 );
+			CTFontGetVerticalTranslationsForGlyphs( pRet->maFont, &aGlyph, &aTranslation, 1 );
+			nX = Float32ToLong( aTranslation.width * UNITS_PER_PIXEL );
+			if ( nGlyphOrientation == GF_ROTL )
+				nX += pRet->mnBaselineDelta;
+			else
+				nX -= pRet->mnBaselineDelta;
+			nY = Float32ToLong( aTranslation.height * -1 * UNITS_PER_PIXEL );
+#else	// USE_CORETEXT_TEXT_RENDERING
 			ATSGlyphScreenMetrics aVerticalMetrics;
 			ATSGlyphScreenMetrics aHorizontalMetrics;
 			if ( pATSUGlyphGetScreenMetrics( pRet->maVerticalFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aVerticalMetrics ) == noErr && pATSUGlyphGetScreenMetrics( pRet->maFontStyle, 1, &nGlyphID, sizeof( GlyphID ), pRet->mpHash->mbAntialiased, pRet->mpHash->mbAntialiased, &aHorizontalMetrics ) == noErr )
@@ -2596,6 +2632,7 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 					nX -= pRet->mnBaselineDelta;
 				nY = Float32ToLong( ( aHorizontalMetrics.topLeft.y - aVerticalMetrics.topLeft.y ) * pRet->mfFontScaleY * UNITS_PER_PIXEL );
 			}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 			pRet->maVerticalGlyphTranslations[ nGlyphID ] = Point( nX, nY );
 		}
 		else
