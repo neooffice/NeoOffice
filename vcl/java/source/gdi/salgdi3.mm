@@ -174,7 +174,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						unsigned int nCount = [pFonts count];
 
 						sal_uInt32 nActualCount = 0;
-						sal_IntPtr aNativeFonts[ nCount ];
 						for ( i = 0; i < nCount; i++ )
 						{
 							NSFont *pNSFont = [pFonts objectAtIndex:i];
@@ -240,9 +239,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								continue;
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
-							sal_IntPtr nNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aFont, NULL );
-							if ( !nNativeFont )
-								continue;
+							sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
 #else	// USE_CORETEXT_TEXT_RENDERING
 							sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
 							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
@@ -355,7 +352,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							pSalData->maNativeFontMapping[ nNativeFont ] = pFontData;
 							pSalData->maJavaFontNameMapping[ aPSName ] = pFontData;
 
-							aNativeFonts[ nActualCount++ ] = nNativeFont;
+							nActualCount++;
 						}
 
 						// Cache matching bold, italic, and bold italic fonts
