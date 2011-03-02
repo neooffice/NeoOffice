@@ -76,6 +76,7 @@
 #define UNITS_PER_PIXEL 1
 #endif	// USE_SUBPIXEL_TEXT_RENDERING
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 typedef OSStatus ATSUCalculateBaselineDeltas_Type( ATSUStyle aStyle, BslnBaselineClass nBaselineClass, BslnBaselineRecord aBaselineDeltas );
 typedef OSStatus ATSUCreateAndCopyStyle_Type( ATSUStyle aStyle, ATSUStyle *pStyle );
 typedef OSStatus ATSUCreateFontFallbacks_Type( ATSUFontFallbacks *pFontFallback );
@@ -126,6 +127,7 @@ static ATSUSetObjFontFallbacks_Type *pATSUSetObjFontFallbacks = NULL;
 static ATSUSetRunStyle_Type *pATSUSetRunStyle = NULL;
 static FMGetATSFontRefFromFont_Type *pFMGetATSFontRefFromFont = NULL;
 static FMGetFontFromATSFontRef_Type *pFMGetFontFromATSFontRef = NULL;
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 static const String aGeezaPro( RTL_CONSTASCII_USTRINGPARAM( "Geeza Pro" ) );
 static const String aHelvetica( RTL_CONSTASCII_USTRINGPARAM( "Helvetica" ) );
@@ -173,13 +175,13 @@ struct ImplATSLayoutData {
 	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 	static int			mnLayoutCacheSize;
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	static ATSUFontFallbacks	maFontFallbacks;
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 	mutable int			mnRefCount;
 	ImplATSLayoutDataHash*	mpHash;
 	::vcl::com_sun_star_vcl_VCLFont*	mpVCLFont;
-	ATSUStyle			maFontStyle;
-	float				mfFontScaleY;
 	bool*				mpNeedFallback;
 	::vcl::com_sun_star_vcl_VCLFont*	mpFallbackFont;
 #ifdef USE_CORETEXT_TEXT_RENDERING
@@ -188,18 +190,18 @@ struct ImplATSLayoutData {
 	CTLineRef			maLine;
 	CGGlyph*			mpGlyphs;
 	int*				mpGlyphsToChars;
-#endif	// USE_CORETEXT_TEXT_RENDERING
-	ATSUTextLayout		maLayout;
-#ifdef USE_CORETEXT_TEXT_RENDERING
 	CFIndex				mnGlyphCount;
 #else	// USE_CORETEXT_TEXT_RENDERING
-	ItemCount			mnGlyphCount;
+	float				mfFontScaleY;
+	ATSUStyle			maFontStyle;
+	ATSUTextLayout		maLayout;
 	ATSLayoutRecord*	mpGlyphDataArray;
+	ATSUStyle			maVerticalFontStyle;
+	ItemCount			mnGlyphCount;
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	int*				mpCharsToGlyphs;
 	int*				mpCharsToChars;
 	long*				mpGlyphAdvances;
-	ATSUStyle			maVerticalFontStyle;
 	long				mnBaselineDelta;
 	bool				mbValid;
 	bool				mbGlyphBounds;
@@ -210,9 +212,9 @@ struct ImplATSLayoutData {
 #ifndef USE_CORETEXT_TEXT_RENDERING
 	static ATSFontRef			GetATSFontRefFromNativeFont( sal_IntPtr nFont );
 	static ATSUFontID			GetNativeFontFromATSFontRef( ATSFontRef aFont );
+	static void					SetFontFallbacks();
 #endif	// !USE_CORETEXT_TEXT_RENDERING
 	static void					ClearLayoutDataCache();
-	static void					SetFontFallbacks();
 	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
 
 						ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
@@ -225,15 +227,19 @@ struct ImplATSLayoutData {
 	void				Release() const;
 };
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 static ATSCubicMoveToUPP pATSCubicMoveToUPP = NULL;
 static ATSCubicLineToUPP pATSCubicLineToUPP = NULL;
 static ATSCubicCurveToUPP pATSCubicCurveToUPP = NULL;
 static ATSCubicClosePathUPP pATSCubicClosePathUPP = NULL;
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 using namespace basegfx;
 using namespace osl;
 using namespace rtl;
 using namespace vcl;
+
+#ifndef USE_CORETEXT_TEXT_RENDERING
 
 // ============================================================================
 
@@ -305,6 +311,8 @@ static bool ATSUIInitialize()
 	return ( pATSUCalculateBaselineDeltas && pATSUCreateAndCopyStyle && pATSUCreateFontFallbacks && pATSUCreateStyle && pATSUCreateTextLayoutWithTextPtr && pATSUDirectGetLayoutDataArrayPtrFromTextLayout && pATSUDirectReleaseLayoutDataArrayPtr && pATSUDisposeFontFallbacks && pATSUDisposeStyle && pATSUDisposeTextLayout && pATSUGetGlyphBounds && pATSUGetRunStyle && pATSUGlyphGetCubicPaths && pATSUGlyphGetIdealMetrics && pATSUGlyphGetScreenMetrics && pATSUMatchFontsToText && pATSUMeasureTextImage && pATSUSetAttributes && pATSUSetFontFeatures && pATSUSetLayoutControls && pATSUSetObjFontFallbacks && pATSUSetRunStyle && pFMGetATSFontRefFromFont && pFMGetFontFromATSFontRef );
 }
 
+#endif	// !USE_CORETEXT_TEXT_RENDERING
+
 // ============================================================================
 
 ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, com_sun_star_vcl_VCLFont *pVCLFont ) :
@@ -360,9 +368,13 @@ bool ImplATSLayoutDataHashEquality::operator()( const ImplATSLayoutDataHash *p1,
 
 int ImplATSLayoutData::mnLayoutCacheSize = 0;
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
+
 // ----------------------------------------------------------------------------
 
 ATSUFontFallbacks ImplATSLayoutData::maFontFallbacks = NULL;
+
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
 
@@ -401,13 +413,17 @@ void ImplATSLayoutData::ClearLayoutDataCache()
 		maLayoutCacheList.pop_back();
 	}
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	if ( maFontFallbacks )
 	{
 		if ( ATSUIInitialize() )
 			pATSUDisposeFontFallbacks( maFontFallbacks );
 		maFontFallbacks = NULL;
 	}
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 }
+
+#ifndef USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
 
@@ -442,14 +458,18 @@ void ImplATSLayoutData::SetFontFallbacks()
 	}
 }
 
+#endif	// !USE_CORETEXT_TEXT_RENDERING
+
 // ----------------------------------------------------------------------------
 
 ImplATSLayoutData *ImplATSLayoutData::GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout )
 {
 	ImplATSLayoutData *pLayoutData = NULL;
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	if ( !ATSUIInitialize() )
 		return pLayoutData;
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 	ImplATSLayoutDataHash *pLayoutHash = new ImplATSLayoutDataHash( pStr, nLen, nMinCharPos, nEndCharPos, nFlags, pVCLFont );
 
@@ -532,8 +552,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mnRefCount( 1 ),
 	mpHash( pLayoutHash ),
 	mpVCLFont( NULL ),
-	maFontStyle( NULL ),
-	mfFontScaleY( 1.0f ),
 	mpNeedFallback( NULL ),
 	mpFallbackFont( NULL ),
 #ifdef USE_CORETEXT_TEXT_RENDERING
@@ -541,16 +559,17 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	maTypesetter( NULL ),
 	maLine( NULL ),
 	mpGlyphs( NULL ),
-#endif	// USE_CORETEXT_TEXT_RENDERING
+#else	// USE_CORETEXT_TEXT_RENDERING
+	mfFontScaleY( 1.0f ),
+	maFontStyle( NULL ),
 	maLayout( NULL ),
-	mnGlyphCount( 0 ),
-#ifndef USE_CORETEXT_TEXT_RENDERING
 	mpGlyphDataArray( NULL ),
-#endif	// !USE_CORETEXT_TEXT_RENDERING
+	maVerticalFontStyle( NULL ),
+#endif	// USE_CORETEXT_TEXT_RENDERING
+	mnGlyphCount( 0 ),
 	mpCharsToGlyphs( NULL ),
 	mpCharsToChars( NULL ),
 	mpGlyphAdvances( NULL ),
-	maVerticalFontStyle( NULL ),
 	mnBaselineDelta( 0 ),
 	mbValid( false ),
 	mbGlyphBounds( false )
@@ -566,87 +585,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		Destroy();
 		return;
-	}
-
-	// Create font style
-	if ( pATSUCreateStyle( &maFontStyle ) != noErr )
-	{
-		Destroy();
-		return;
-	}
-
-	// Fix bug 1595 by allowing rare ligatures
-	ATSUFontFeatureType aType;
-	ATSUFontFeatureSelector aSelector;
-	aType = kDiacriticsType;
-	aSelector = kDecomposeDiacriticsSelector;
-	if ( pATSUSetFontFeatures( maFontStyle, 1, &aType, &aSelector ) != noErr )
-	{
-		Destroy();
-		return;
-	}
-
-	ATSUAttributeTag nTags[4];
-	ByteCount nBytes[4];
-	ATSUAttributeValuePtr nVals[4];
-
-	// Set font
-	nTags[0] = kATSUFontTag;
-	nBytes[0] = sizeof( ATSUFontID );
-	nVals[0] = &mpHash->mnFontID;
-
-	// The OOo code will often layout fonts at unrealistically large sizes so
-	// we need to use a more reasonably sized font or else we will exceed the
-	// 32K Fixed data type limit that the ATSTrapezoid struct uses so we
-	// preemptively limit font size to a size that is most likely to fit the
-	// within the 32K limit
-	float fSize = mpHash->mfFontSize;
-	float fAdjustedSize;
-	if ( (long)( mpHash->mfFontSize * mpHash->mnLen * 4 ) > 0x00007fff )
-		fAdjustedSize = (float)( 0x00007fff / ( mpHash->mnLen * 4 ) );
-	else
-		fAdjustedSize = fSize;
-	Fixed fCurrentSize = X2Fix( fAdjustedSize );
-	nTags[1] = kATSUSizeTag;
-	nBytes[1] = sizeof( Fixed );
-	nVals[1] = &fCurrentSize;
-
-	// Set antialiasing
-	ATSStyleRenderingOptions nOptions;
-	if ( mpHash->mbAntialiased )
-		nOptions = kATSStyleApplyAntiAliasing;
-	else
-		nOptions = kATSStyleNoAntiAliasing;
-	nTags[2] = kATSUStyleRenderingOptionsTag;
-	nBytes[2] = sizeof( ATSStyleRenderingOptions );
-	nVals[2] = &nOptions;
-
-	ATSUVerticalCharacterType nHorizontal = kATSUStronglyHorizontal;
-	nTags[3] = kATSUVerticalCharacterTag;
-	nBytes[3] = sizeof( ATSUVerticalCharacterType );
-	nVals[3] = &nHorizontal;
-
-	if ( pATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
-	{
-		Destroy();
-		return;
-	}
-
-	if ( mpHash->mbVertical )
-	{
-		if ( pATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr && maVerticalFontStyle )
-		{
-			ATSUVerticalCharacterType nVertical = kATSUStronglyVertical;
-			nTags[0] = kATSUVerticalCharacterTag;
-			nBytes[0] = sizeof( ATSUVerticalCharacterType );
-			nVals[0] = &nVertical;
-
-			if ( pATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr )
-			{
-				Destroy();
-				return ;
-			}
-		}
 	}
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
@@ -737,7 +675,100 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		Destroy();
 		return;
 	}
-#endif	// USE_CORETEXT_TEXT_RENDERING
+
+	CFIndex nLineGlyphRuns = CFArrayGetCount( aLineGlyphRuns );
+	CFIndex nGlyphsProcessed = 0;
+	CFIndex nCurrentGlyphRun;
+	CFIndex nBufSize;
+	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
+	{
+		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		if ( aGlyphRun )
+			nGlyphsProcessed += CTRunGetGlyphCount( aGlyphRun );
+	}
+
+	mnGlyphCount = nGlyphsProcessed;
+#else	// USE_CORETEXT_TEXT_RENDERING
+	// Create font style
+	if ( pATSUCreateStyle( &maFontStyle ) != noErr )
+	{
+		Destroy();
+		return;
+	}
+
+	// Fix bug 1595 by allowing rare ligatures
+	ATSUFontFeatureType aType;
+	ATSUFontFeatureSelector aSelector;
+	aType = kDiacriticsType;
+	aSelector = kDecomposeDiacriticsSelector;
+	if ( pATSUSetFontFeatures( maFontStyle, 1, &aType, &aSelector ) != noErr )
+	{
+		Destroy();
+		return;
+	}
+
+	ATSUAttributeTag nTags[4];
+	ByteCount nBytes[4];
+	ATSUAttributeValuePtr nVals[4];
+
+	// Set font
+	nTags[0] = kATSUFontTag;
+	nBytes[0] = sizeof( ATSUFontID );
+	nVals[0] = &mpHash->mnFontID;
+
+	// The OOo code will often layout fonts at unrealistically large sizes so
+	// we need to use a more reasonably sized font or else we will exceed the
+	// 32K Fixed data type limit that the ATSTrapezoid struct uses so we
+	// preemptively limit font size to a size that is most likely to fit the
+	// within the 32K limit
+	float fSize = mpHash->mfFontSize;
+	float fAdjustedSize;
+	if ( (long)( mpHash->mfFontSize * mpHash->mnLen * 4 ) > 0x00007fff )
+		fAdjustedSize = (float)( 0x00007fff / ( mpHash->mnLen * 4 ) );
+	else
+		fAdjustedSize = fSize;
+	Fixed fCurrentSize = X2Fix( fAdjustedSize );
+	nTags[1] = kATSUSizeTag;
+	nBytes[1] = sizeof( Fixed );
+	nVals[1] = &fCurrentSize;
+
+	// Set antialiasing
+	ATSStyleRenderingOptions nOptions;
+	if ( mpHash->mbAntialiased )
+		nOptions = kATSStyleApplyAntiAliasing;
+	else
+		nOptions = kATSStyleNoAntiAliasing;
+	nTags[2] = kATSUStyleRenderingOptionsTag;
+	nBytes[2] = sizeof( ATSStyleRenderingOptions );
+	nVals[2] = &nOptions;
+
+	ATSUVerticalCharacterType nHorizontal = kATSUStronglyHorizontal;
+	nTags[3] = kATSUVerticalCharacterTag;
+	nBytes[3] = sizeof( ATSUVerticalCharacterType );
+	nVals[3] = &nHorizontal;
+
+	if ( pATSUSetAttributes( maFontStyle, 4, nTags, nBytes, nVals ) != noErr )
+	{
+		Destroy();
+		return;
+	}
+
+	if ( mpHash->mbVertical )
+	{
+		if ( pATSUCreateAndCopyStyle( maFontStyle, &maVerticalFontStyle ) == noErr && maVerticalFontStyle )
+		{
+			ATSUVerticalCharacterType nVertical = kATSUStronglyVertical;
+			nTags[0] = kATSUVerticalCharacterTag;
+			nBytes[0] = sizeof( ATSUVerticalCharacterType );
+			nVals[0] = &nVertical;
+
+			if ( pATSUSetAttributes( maVerticalFontStyle, 1, nTags, nBytes, nVals ) != noErr )
+			{
+				Destroy();
+				return ;
+			}
+		}
+	}
 
 	if ( pATSUCreateTextLayoutWithTextPtr( mpHash->mpStr, kATSUFromTextBeginning, kATSUToTextEnd, mpHash->mnLen, 1, (const UniCharCount *)&mpHash->mnLen, &maFontStyle, &maLayout ) != noErr )
 	{
@@ -776,20 +807,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-#ifdef USE_CORETEXT_TEXT_RENDERING
-	CFIndex nLineGlyphRuns = CFArrayGetCount( aLineGlyphRuns );
-	CFIndex nGlyphsProcessed = 0;
-	CFIndex nCurrentGlyphRun;
-	CFIndex nBufSize;
-	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
-	{
-		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
-		if ( aGlyphRun )
-			nGlyphsProcessed += CTRunGetGlyphCount( aGlyphRun );
-	}
-
-	mnGlyphCount = nGlyphsProcessed;
-#else	// USE_CORETEXT_TEXT_RENDERING
 	// Fix bug 2919 by still producing a valid text layout even if no glyphs
 	// can be retrieved. Also, fix bug 3063 by not holding onto the
 	// ATSLayoutRecord and, instead, making our own private copy.
@@ -908,8 +925,6 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mpGlyphAdvances = (long *)rtl_allocateMemory( nBufSize );
 	memset( mpGlyphAdvances, 0, nBufSize );
 
-	// Fix bug 448 by eliminating subpixel advances.
-	mfFontScaleY = fSize / fAdjustedSize;
 	int nLastNonSpacingIndex = -1;
 	int nLastNonSpacingGlyph = -1;
 #ifdef USE_CORETEXT_TEXT_RENDERING
@@ -959,6 +974,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 							mpGlyphAdvances[ i ] += Float32ToLong( ( aPositions[ j + 1 ].x - aPositions[ j ].x ) * mpHash->mfFontScaleX * UNITS_PER_PIXEL );
 					}
 #else	// USE_CORETEXT_TEXT_RENDERING
+	// Fix bug 448 by eliminating subpixel advances.
+	mfFontScaleY = fSize / fAdjustedSize;
 	for ( i = 0; i < (int)mnGlyphCount && mpGlyphDataArray; i++ )
 	{
 		int nIndex = mpGlyphDataArray[ i ].originalOffset / 2;
@@ -1035,7 +1052,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	}
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	// TODO: Reimplement fallback font matching using CoreText APIs
+#else	// USE_CORETEXT_TEXT_RENDERING
 	if ( maVerticalFontStyle )
 	{
 		BslnBaselineRecord aBaseline;
@@ -1045,13 +1064,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		if ( !mnBaselineDelta )
 		{
 			ATSFontMetrics aFontMetrics;
-			ATSFontRef aFont = mpHash->mnFontID;
 			ATSFontRef aFont = ImplATSLayoutData::GetATSFontRefFromNativeFont( mpHash->mnFontID );
 			if ( ATSFontGetHorizontalMetrics( aFont, kATSOptionFlagsDefault, &aFontMetrics ) == noErr )
 				mnBaselineDelta = Float32ToLong( ( ( ( fabs( aFontMetrics.descent ) + fabs( aFontMetrics.ascent ) ) / 2 ) - fabs( aFontMetrics.descent ) ) * fSize * UNITS_PER_PIXEL );
 		}
 	}
-#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 	// Find positions that require fallback fonts
 	bool bUseFontFallbacksList = false;
@@ -1122,6 +1139,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			}
 		}
 	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	mbValid = true;
 }
@@ -1139,12 +1157,16 @@ const Rectangle& ImplATSLayoutData::GetGlyphBounds()
 {
 	if ( !mbGlyphBounds )
 	{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		// TODO: Reimplement glyph bounds query using CoreText APIs
+#else	// USE_CORETEXT_TEXT_RENDERING
 		Rect aRect;
 		if ( pATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
 		{
 			maGlyphBounds = Rectangle( Point( Float32ToLong( aRect.left * mpHash->mfFontScaleX * mfFontScaleY ), Float32ToLong( aRect.top * mfFontScaleY ) ), Size( Float32ToLong( ( aRect.right - aRect.left ) * mpHash->mfFontScaleX * mfFontScaleY ), Float32ToLong( ( aRect.bottom - aRect.top ) * mfFontScaleY ) ) );
 			maGlyphBounds.Justify();
 		}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 		mbGlyphBounds = true;
 	}
@@ -1166,12 +1188,6 @@ void ImplATSLayoutData::Destroy()
 	{
 		delete mpVCLFont;
 		mpVCLFont = NULL;
-	}
-
-	if ( maFontStyle )
-	{
-		pATSUDisposeStyle( maFontStyle );
-		maFontStyle = NULL;
 	}
 
 	if ( mpNeedFallback )
@@ -1216,13 +1232,33 @@ void ImplATSLayoutData::Destroy()
 		rtl_freeMemory( mpGlyphsToChars );
 		mpGlyphsToChars = NULL;
 	}
-#endif	// USE_CORETEXT_TEXT_RENDERING
+#else	// USE_CORETEXT_TEXT_RENDERING
+	mfFontScaleY = 1.0f;
+
+	if ( maFontStyle )
+	{
+		pATSUDisposeStyle( maFontStyle );
+		maFontStyle = NULL;
+	}
 
 	if ( maLayout )
 	{
 		pATSUDisposeTextLayout( maLayout );
 		maLayout = NULL;
 	}
+
+	if ( mpGlyphDataArray )
+	{
+		rtl_freeMemory( mpGlyphDataArray );
+		mpGlyphDataArray = NULL;
+	}
+
+	if ( maVerticalFontStyle )
+	{
+		pATSUDisposeStyle( maVerticalFontStyle );
+		maVerticalFontStyle = NULL;
+	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	mnGlyphCount = 0;
 
@@ -1231,14 +1267,6 @@ void ImplATSLayoutData::Destroy()
 		rtl_freeMemory( mpCharsToChars );
 		mpCharsToChars = NULL;
 	}
-
-#ifndef USE_CORETEXT_TEXT_RENDERING
-	if ( mpGlyphDataArray )
-	{
-		rtl_freeMemory( mpGlyphDataArray );
-		mpGlyphDataArray = NULL;
-	}
-#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 	if ( mpCharsToGlyphs )
 	{
@@ -1250,12 +1278,6 @@ void ImplATSLayoutData::Destroy()
 	{
 		rtl_freeMemory( mpGlyphAdvances );
 		mpGlyphAdvances = NULL;
-	}
-
-	if ( maVerticalFontStyle )
-	{
-		pATSUDisposeStyle( maVerticalFontStyle );
-		maVerticalFontStyle = NULL;
 	}
 
 	mnBaselineDelta = 0;
@@ -1283,6 +1305,8 @@ void ImplATSLayoutData::Release() const
 	// const_cast because some compilers violate ANSI C++ spec
 	delete const_cast<ImplATSLayoutData*>( this );
 }
+
+#ifndef USE_CORETEXT_TEXT_RENDERING
 
 // ============================================================================
 
@@ -1338,11 +1362,17 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 	return noErr;
 }
 
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
 // ============================================================================
 
 SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
 {
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( nFallbackLevel && rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING )
+#else	// USE_CORETEXT_TEXT_RENDERING
 	if ( nFallbackLevel && rArgs.mnFlags & SAL_LAYOUT_DISABLE_GLYPH_PROCESSING && ATSUIInitialize() )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		return NULL;
 	else
 		return new SalATSLayout( this, nFallbackLevel );
@@ -1364,6 +1394,13 @@ sal_IntPtr SalATSLayout::GetNativeFontFromATSFontRef( ATSFontRef aFont )
 	return (sal_IntPtr)ImplATSLayoutData::GetNativeFontFromATSFontRef( aFont );
 }
 
+// ----------------------------------------------------------------------------
+
+void SalATSLayout::SetFontFallbacks()
+{
+	ImplATSLayoutData::SetFontFallbacks();
+}
+
 #endif	// !USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
@@ -1371,13 +1408,6 @@ sal_IntPtr SalATSLayout::GetNativeFontFromATSFontRef( ATSFontRef aFont )
 void SalATSLayout::ClearLayoutDataCache()
 {
 	ImplATSLayoutData::ClearLayoutDataCache();
-}
-
-// ----------------------------------------------------------------------------
-
-void SalATSLayout::SetFontFallbacks()
-{
-	ImplATSLayoutData::SetFontFallbacks();
 }
 
 // ----------------------------------------------------------------------------
@@ -2054,7 +2084,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					if ( nGlyph == 3 && mbSpecialSpacingGlyph && !IsSpacingGlyph( nChar | GF_ISCHAR ) )
 						mbSpecialSpacingGlyph = false;
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+					if ( pCurrentLayoutData->mpHash->mbVertical )
+#else	// USE_CORETEXT_TEXT_RENDERING
 					if ( pCurrentLayoutData->maVerticalFontStyle )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 						nGlyph |= GetVerticalFlags( nChar );
 
 					int nGlyphFlags = bFirstGlyph ? 0 : GlyphItem::IS_IN_CLUSTER;
@@ -2348,6 +2382,9 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 	if ( !maLayoutData.size() )
 		return bRet;
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	// TODO: Reimplement glyph outline queries using CoreText APIs
+#else	// USE_CORETEXT_TEXT_RENDERING
 	if ( !pATSCubicMoveToUPP )
 		pATSCubicMoveToUPP = NewATSCubicMoveToUPP( SalATSCubicMoveToCallback );
 	if ( !pATSCubicLineToUPP )
@@ -2513,6 +2550,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			break;
 		}
 	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	return bRet;
 }
@@ -2603,7 +2641,11 @@ ImplATSLayoutData *SalATSLayout::GetVerticalGlyphTranslation( sal_Int32 nGlyph, 
 
 	sal_Int32 nGlyphOrientation = nGlyph & GF_ROTMASK;
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( pRet->mpHash->mbVertical && nGlyphOrientation & GF_ROTMASK )
+#else	// USE_CORETEXT_TEXT_RENDERING
 	if ( pRet->maVerticalFontStyle && nGlyphOrientation & GF_ROTMASK )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	{
 		GlyphID nGlyphID = (GlyphID)( nGlyph & GF_IDXMASK );
 

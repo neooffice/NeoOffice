@@ -82,8 +82,8 @@ public:
 #ifndef USE_CORETEXT_TEXT_RENDERING
 	static ATSFontRef	GetATSFontRefFromNativeFont( sal_IntPtr nFont );
 	static sal_IntPtr	GetNativeFontFromATSFontRef( ATSFontRef aFont );
-#endif	// !USE_CORETEXT_TEXT_RENDERING
 	static void			SetFontFallbacks();
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 	static void			ClearLayoutDataCache();
 
 						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );

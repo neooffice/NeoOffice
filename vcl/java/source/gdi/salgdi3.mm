@@ -419,6 +419,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								CTFontRef aItalicFont = (CTFontRef)pItalicFont;
 								sal_IntPtr nItalicNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aItalicFont, NULL );
 #else	// USE_CORETEXT_TEXT_RENDERING
+								ATSFontRef aItalicFont = NSFont_getATSFontRef( pItalicFont );
 								sal_IntPtr nItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
 #endif	// USE_CORETEXT_TEXT_RENDERING
 								if ( nItalicNativeFont && nItalicNativeFont != nNativeFont )
@@ -443,6 +444,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								CTFontRef aBoldItalicFont = (CTFontRef)pBoldItalicFont;
 								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aBoldItalicFont, NULL );
 #else	// USE_CORETEXT_TEXT_RENDERING
+								ATSFontRef aBoldItalicFont = NSFont_getATSFontRef( pBoldItalicFont );
 								sal_IntPtr nBoldItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
 #endif	// USE_CORETEXT_TEXT_RENDERING
 								if ( nBoldItalicNativeFont && nBoldItalicNativeFont != nNativeFont )
@@ -469,7 +471,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			if ( !aFontNotification )
 				ATSFontNotificationSubscribe( ImplFontListChangedCallback, kATSFontNotifyOptionDefault, NULL, &aFontNotification );
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 			SalATSLayout::SetFontFallbacks();
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 			OutputDevice::ImplUpdateAllFontData( true );
 
 			rSolarMutex.release();
