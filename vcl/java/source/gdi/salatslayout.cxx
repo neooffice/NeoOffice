@@ -187,14 +187,15 @@ struct ImplATSLayoutData {
 	CTTypesetterRef		maTypesetter;
 	CTLineRef			maLine;
 	CGGlyph*			mpGlyphs;
+	int*				mpGlyphsToChars;
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	ATSUTextLayout		maLayout;
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	CFIndex				mnGlyphCount;
 #else	// USE_CORETEXT_TEXT_RENDERING
 	ItemCount			mnGlyphCount;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 	ATSLayoutRecord*	mpGlyphDataArray;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	int*				mpCharsToGlyphs;
 	int*				mpCharsToChars;
 	long*				mpGlyphAdvances;
@@ -543,7 +544,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 #endif	// USE_CORETEXT_TEXT_RENDERING
 	maLayout( NULL ),
 	mnGlyphCount( 0 ),
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	mpGlyphDataArray( NULL ),
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 	mpCharsToGlyphs( NULL ),
 	mpCharsToChars( NULL ),
 	mpGlyphAdvances( NULL ),
@@ -773,6 +776,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	CFIndex nLineGlyphRuns = CFArrayGetCount( aLineGlyphRuns );
 	CFIndex nGlyphsProcessed = 0;
 	CFIndex nCurrentGlyphRun;
+	CFIndex nBufSize;
 	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
 	{
 		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
@@ -781,19 +785,13 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 	mnGlyphCount = nGlyphsProcessed;
-#endif	// USE_CORETEXT_TEXT_RENDERING
-
+#else	// USE_CORETEXT_TEXT_RENDERING
 	// Fix bug 2919 by still producing a valid text layout even if no glyphs
 	// can be retrieved. Also, fix bug 3063 by not holding onto the
 	// ATSLayoutRecord and, instead, making our own private copy.
 	ByteCount nBufSize;
 	ATSLayoutRecord *pGlyphDataArray = NULL;
-#ifdef USE_CORETEXT_TEXT_RENDERING
-	ItemCount nGlyphCount = 0;
-	pATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &nGlyphCount );
-#else	// USE_CORETEXT_TEXT_RENDERING
 	pATSUDirectGetLayoutDataArrayPtrFromTextLayout( maLayout, 0, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray, &mnGlyphCount );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 	if ( pGlyphDataArray )
 	{
 		if ( mnGlyphCount )
@@ -806,6 +804,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 			pATSUDirectReleaseLayoutDataArrayPtr( NULL, kATSUDirectDataLayoutRecordATSLayoutRecordCurrent, (void **)&pGlyphDataArray );
 		}
 	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	// Cache mapping of characters to glyphs
 	nBufSize = mpHash->mnLen * sizeof( int );
@@ -820,9 +819,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	memset( mpGlyphs, 0, nBufSize );
 
 	nBufSize = mnGlyphCount * sizeof( long );
-	int *pGlyphsToChars = (int *)rtl_allocateMemory( nBufSize );
+	mpGlyphsToChars = (int *)rtl_allocateMemory( nBufSize );
 	for ( i = 0; i < mnGlyphCount; i++ )
-		pGlyphsToChars[ i ] = -1;
+		mpGlyphsToChars[ i ] = -1;
 
 	nGlyphsProcessed = 0;
 	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
@@ -844,7 +843,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 				{
 					CFIndex nIndex = aIndices[ j ];
 					mpGlyphs[ i ] = aGlyphs[ j ];
-					pGlyphsToChars[ i ] = nIndex;
+					mpGlyphsToChars[ i ] = nIndex;
 					if ( mpCharsToGlyphs[ nIndex ] < 0 || i < mpCharsToGlyphs[ nIndex ] )
 						mpCharsToGlyphs[ nIndex ] = i;
 				}
@@ -873,9 +872,8 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	{
 		int nIndex = mpCharsToGlyphs[ i ];
 		if ( nIndex >= 0 )
-			mpCharsToChars[ i ] = pGlyphsToChars[ nIndex ];
+			mpCharsToChars[ i ] = mpGlyphsToChars[ nIndex ];
 	}
-	rtl_freeMemory( pGlyphsToChars );
 #else	// USE_CORETEXT_TEXT_RENDERING
 	if ( mpHash->mbRTL )
 	{
@@ -1187,6 +1185,12 @@ void ImplATSLayoutData::Destroy()
 		rtl_freeMemory( mpGlyphs );
 		mpGlyphs = NULL;
 	}
+
+	if ( mpGlyphsToChars )
+	{
+		rtl_freeMemory( mpGlyphsToChars );
+		mpGlyphsToChars = NULL;
+	}
 #endif	// USE_CORETEXT_TEXT_RENDERING
 
 	if ( maLayout )
@@ -1203,11 +1207,13 @@ void ImplATSLayoutData::Destroy()
 		mpCharsToChars = NULL;
 	}
 
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	if ( mpGlyphDataArray )
 	{
 		rtl_freeMemory( mpGlyphDataArray );
 		mpGlyphDataArray = NULL;
 	}
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 	if ( mpCharsToGlyphs )
 	{
@@ -1411,8 +1417,13 @@ void SalATSLayout::AdjustLayout( ImplLayoutArgs& rArgs )
 	if ( rArgs.mnFlags & SAL_LAYOUT_KERNING_ASIAN && ! ( rArgs.mnFlags & SAL_LAYOUT_VERTICAL ) )
 		ApplyAsianKerning( rArgs.mpStr, rArgs.mnLength );
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData && mpKashidaLayoutData->mnGlyphCount )
+		KashidaJustify( mpKashidaLayoutData->mpGlyphs[ 0 ], mpKashidaLayoutData->mpGlyphAdvances[ 0 ] );
+#else	// USE_CORETEXT_TEXT_RENDERING
 	if ( rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && rArgs.mpDXArray && mpKashidaLayoutData && mpKashidaLayoutData->mpGlyphDataArray )
 		KashidaJustify( mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID, mpKashidaLayoutData->mpGlyphAdvances[ 0 ] );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // ----------------------------------------------------------------------------
@@ -1636,7 +1647,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( mpKashidaLayoutData )
 				{
 					bool bHasArabicFontSupport = true;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+					if ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont )
+#else	// USE_CORETEXT_TEXT_RENDERING
 					if ( !mpKashidaLayoutData->mpGlyphDataArray || ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont ) )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 					{
 						bHasArabicFontSupport = false;
 					}
@@ -1649,17 +1664,29 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						// support Arabic properly.
 						for ( int i = 0; i < (int)mpKashidaLayoutData->mnGlyphCount; i++ )
 						{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							if ( !mpKashidaLayoutData->mpGlyphs[ i ] )
+#else	// USE_CORETEXT_TEXT_RENDERING
 							if ( !mpKashidaLayoutData->mpGlyphDataArray[ i ].glyphID )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 							{
 								bHasArabicFontSupport = false;
 								break;
 							}
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							else if ( i && mpKashidaLayoutData->mpGlyphs[ i ] == mpKashidaLayoutData->mpGlyphs[ i - 1 ] )
+#else	// USE_CORETEXT_TEXT_RENDERING
 							else if ( i && mpKashidaLayoutData->mpGlyphDataArray[ i ].glyphID == mpKashidaLayoutData->mpGlyphDataArray[ i - 1 ].glyphID )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 							{
 								bHasArabicFontSupport = false;
 								break;
 							}
+#ifdef USE_CORETEXT_TEXT_RENDERING
+							else if ( mpKashidaLayoutData->mpGlyphs[ i ] == 0xffff )
+#else	// USE_CORETEXT_TEXT_RENDERING
 							else if ( mpKashidaLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 							{
 								break;
 							}
@@ -1746,7 +1773,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( nIndex >= 0 && !IsNonprintingChar( pLayoutData->mpHash->mpStr[ nIndex ] ) && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
 					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
+#ifdef USE_CORETEXT_TEXT_RENDERING
+					if ( i >= 0 && pLayoutData->mpGlyphs[ i ] == 0xffff )
+#else	// USE_CORETEXT_TEXT_RENDERING
 					if ( i >= 0 && pLayoutData->mpGlyphDataArray && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 					{
 						nMinFallbackCharPos = nMinCharPos;
 						bRelayout = true;
@@ -1760,7 +1791,11 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				if ( nIndex >= 0 && !IsNonprintingChar( pLayoutData->mpHash->mpStr[ nIndex ] ) && !IsSpacingGlyph( pLayoutData->mpHash->mpStr[ nIndex ] | GF_ISCHAR ) )
 				{
 					int i = pLayoutData->mpCharsToGlyphs[ nIndex ];
+#ifdef USE_CORETEXT_TEXT_RENDERING
+					if ( i >= 0 && pLayoutData->mpGlyphs[ i ] == 0xffff )
+#else	// USE_CORETEXT_TEXT_RENDERING
 					if ( i >= 0 && pLayoutData->mpGlyphDataArray && pLayoutData->mpGlyphDataArray[ i ].glyphID == 0xffff )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 					{
 						nEndFallbackCharPos = nEndCharPos;
 						bRelayout = true;
@@ -1845,10 +1880,17 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 					}
 				}
  
+#ifdef USE_CORETEXT_TEXT_RENDERING
+				for ( CFIndex i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphsToChars[ i ] == nIndex; i++ )
+				{
+					long nGlyphWidth = pCurrentLayoutData->mpGlyphAdvances[ i ];
+					sal_Int32 nGlyph = (sal_Int32)pCurrentLayoutData->mpGlyphs[ i ];
+#else	// USE_CORETEXT_TEXT_RENDERING
 				for ( ItemCount i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && (int)( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 				{
 					long nGlyphWidth = pCurrentLayoutData->mpGlyphAdvances[ i ];
 					sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 					// Fix bug 3588 by setting fallback glyph IDs to zero
 					if ( nGlyph && pLayoutData->mpNeedFallback && pLayoutData->mpNeedFallback[ nIndex ] )
@@ -2348,7 +2390,11 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		ImplATSLayoutData *pCurrentLayoutData = pLayoutData;
 
 		// Check if this is a kashida glyph
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		if ( mpKashidaLayoutData && (CGGlyph)( aGlyphArray[ 0 ] & GF_IDXMASK ) == mpKashidaLayoutData->mpGlyphs[ 0 ] )
+#else	// USE_CORETEXT_TEXT_RENDERING
 		if ( mpKashidaLayoutData && mpKashidaLayoutData->mpGlyphDataArray && (sal_Int32)( aGlyphArray[ 0 ] & GF_IDXMASK ) == mpKashidaLayoutData->mpGlyphDataArray[ 0 ].glyphID )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		{
 			pCurrentLayoutData = mpKashidaLayoutData;
 			nIndex = mpKashidaLayoutData->mpHash->mnLen - 1;
@@ -2365,11 +2411,19 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			}
 		}
 
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		for ( CFIndex i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphsToChars[ i ] == nIndex; i++ )
+		{
+			CGGlyph nGlyph = pCurrentLayoutData->mpGlyphs[ i ];
+			if ( (CGGlyph)( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
+				continue;
+#else	// USE_CORETEXT_TEXT_RENDERING
 		for ( ItemCount i = pCurrentLayoutData->mpCharsToGlyphs[ nIndex ]; i >= 0 && i < pCurrentLayoutData->mnGlyphCount && pCurrentLayoutData->mpGlyphDataArray && (int)( pCurrentLayoutData->mpGlyphDataArray[ i ].originalOffset / 2 ) == nIndex; i++ )
 		{
 			sal_Int32 nGlyph = pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID;
 			if ( (sal_Int32)( aGlyphArray[ 0 ] & GF_IDXMASK ) != nGlyph )
 				continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 			// Fix bug 2390 by ignoring the value of nErr passed by reference
 			::std::list< Polygon > aPolygonList;
@@ -2377,7 +2431,11 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			UniCharArrayOffset nRunStart;
 			UniCharCount nRunLen;
 			OSStatus nErr;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			if ( pATSUGetRunStyle( pCurrentLayoutData->maLayout, nIndex, &aCurrentStyle, &nRunStart, &nRunLen ) != noErr || !aCurrentStyle || pATSUGlyphGetCubicPaths( aCurrentStyle, pCurrentLayoutData->mpGlyphs[ i ], pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
+#else	// USE_CORETEXT_TEXT_RENDERING
 			if ( pATSUGetRunStyle( pCurrentLayoutData->maLayout, nIndex, &aCurrentStyle, &nRunStart, &nRunLen ) != noErr || !aCurrentStyle || pATSUGlyphGetCubicPaths( aCurrentStyle, pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 				continue;
 
 			PolyPolygon aPolyPolygon;
