@@ -38,6 +38,9 @@
 #include <list>
 #include <map>
 
+#ifndef _SV_SALATSLAYOUT_HXX
+#include <salatslayout.hxx>
+#endif
 #ifndef _SV_SALBMP_H
 #include <salbmp.h>
 #endif
@@ -163,7 +166,7 @@ static CGFontRef CacheCGFont( sal_IntPtr nFont )
 {
 	CGFontRef aRet = NULL;
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	if ( !nFont )
+	if ( nFont )
 #else	// USE_CORETEXT_TEXT_RENDERING
 	if ( nFont != kATSUInvalidFontID )
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -172,18 +175,17 @@ static CGFontRef CacheCGFont( sal_IntPtr nFont )
 		if ( it == aNativeFontMap.end() )
 		{
 #ifdef USE_CORETEXT_TEXT_RENDERING
-			CTFont aCTFont = CTFontCreateWithPlatformFont( (ATSFontRef)nFont, 0, NULL, NULL );
-			if ( aCTFont )
+			aRet = CTFontCopyGraphicsFont( (CTFontRef)nFont, NULL );
+			if ( aRet )
 			{
-				aRet = CTFontCopyGraphicsFont( aCTFont, NULL );
-				[CFRelease aCTFont];
+				aNativeFontMap[ nFont ] = aRet;
+				CFRetain( (CTFontRef)nFont );
 			}
 #else	// USE_CORETEXT_TEXT_RENDERING
 			aRet = CGFontCreateWithPlatformFont( (void *)&nFont );
-#endif	// USE_CORETEXT_TEXT_RENDERING
-
 			if ( aRet )
 				aNativeFontMap[ nFont ] = aRet;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		}
 		else
 		{
@@ -489,7 +491,12 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_releaseNativeBitmaps( J
 
 		// Reuse CGFonts throughout the entire document
 		for ( ::std::map< sal_IntPtr, CGFontRef >::const_iterator it = aNativeFontMap.begin(); it != aNativeFontMap.end(); ++it )
+		{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			CFRelease( (CTFontRef)it->first );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 			CGFontRelease( it->second );
+		}
 		aNativeFontMap.clear();
 	}
 }
@@ -508,7 +515,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawEPS0( JNIEnv *pEnv,
 
 // ----------------------------------------------------------------------------
 
-JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jint _par5, jfloat _par6, jint _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jlong _par13, jboolean _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
+JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEnv *pEnv, jobject object, jint _par0, jint _par1, jint _par2, jlong _par3, jlong _par4, jlong _par5, jfloat _par6, jint _par7, jfloat _par8, jfloat _par9, jfloat _par10, jfloat _par11, jfloat _par12, jlong _par13, jboolean _par14, jfloat _par15, jfloat _par16, jfloat _par17, jfloat _par18, jfloat _par19 )
 {
 	// Mark the glyph data for deletion in case the Java drawing method
 	// never calls any of the native methods
@@ -523,8 +530,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0( JNIEn
 
 	// Convert and cache font as a CGFontRef to reduce the number of font
 	// subsets in the PDF
-	sal_IntPtr nFont = (sal_IntPtr)_par5;
-	CGFontRef aFont = CacheCGFont( nFont );
+	CGFontRef aFont = CacheCGFont( (sal_IntPtr)_par5 );
 	if ( aFont && _par3 && _par4 )
 		CGContext_drawGlyphs( _par0, _par1, _par2, (CGGlyph *)_par3, (CGSize*)_par4, aFont, _par6, _par7, _par8, _par9, _par10, _par11, _par12, aPath, _par14, _par15, _par16, _par17, _par18, _par19 );
 }
@@ -733,7 +739,7 @@ jclass com_sun_star_vcl_VCLGraphics::getMyClass()
 			pMethods[2].signature = "(JJFFFFJZFFFFF)V";
 			pMethods[2].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawEPS0;
 			pMethods[3].name = "drawGlyphBuffer0";
-			pMethods[3].signature = "(IIIJJIFIFFFFFJZFFFFF)V";
+			pMethods[3].signature = "(IIIJJJFIFFFFFJZFFFFF)V";
 			pMethods[3].fnPtr = (void *)Java_com_sun_star_vcl_VCLGraphics_drawGlyphBuffer0;
 			pMethods[4].name = "drawLine0";
 			pMethods[4].signature = "(FFFFIJZFFFFF)V";
@@ -991,6 +997,10 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 	// never calls any of the native methods
 	CacheGlyphData( (jlong)_par4 );
 
+	// Mark the native font for deletion in case the Java drawing method
+	// never calls any of the native methods
+	CacheCGFont( (sal_IntPtr)_par5->getNativeFont() );
+
 	// Mark the clip path for deletion in case the Java drawing method
 	// never calls any of the native methods
 	CacheCGPath( _par12 );
@@ -1001,7 +1011,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(IIIJJIFDIIIFFFJ)V";
+			char *cSignature = "(IIIJJJFDIIIFFFJ)V";
 			mID = t.pEnv->GetMethodID( getMyClass(), "drawGlyphBuffer", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
@@ -1013,7 +1023,7 @@ void com_sun_star_vcl_VCLGraphics::drawGlyphBuffer( int _par0, int _par1, int _p
 			args[2].i = jint( _par2 );
 			args[3].j = jlong( _par3 );
 			args[4].j = jlong( _par4 );
-			args[5].i = jint( _par5->getNativeFont() );
+			args[5].j = jlong( _par5->getNativeFont() );
 			args[6].f = jfloat( _par5->getSize() );
 			args[7].d = jdouble( _par5->getScaleX() );
 			args[8].i = jint( _par6 );

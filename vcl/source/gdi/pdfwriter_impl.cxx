@@ -12527,12 +12527,8 @@ void PDFWriterImpl::encodeGlyphs()
     {
 #ifdef USE_CORETEXT_TEXT_RENDERING
         CGFontRef aFont = NULL;
-        CTFontRef aCTFont = CTFontCreateWithPlatformFont( (ATSFontRef)it->first, 0, NULL, NULL );
-        if ( aCTFont )
-        {
-            aFont = CTFontCopyGraphicsFont( aCTFont, NULL );
-            CFRelease( aCTFont );
-        }
+        if ( it->first )
+            aFont = CTFontCopyGraphicsFont( (CTFontRef)it->first, NULL );
 #else	// USE_CORETEXT_TEXT_RENDERING
         ATSFontRef aATSFont = SalATSLayout::GetATSFontRefFromNativeFont( it->first );
         if ( !aATSFont )

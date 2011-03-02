@@ -144,7 +144,7 @@ inline bool IsNonprintingChar( sal_Unicode nChar ) { return ( nChar == 0x00b6 ||
 struct ImplATSLayoutDataHash {
 	int					mnLen;
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	ATSFontRef			mnFontID;
+	CTFontRef			mnFontID;
 #else	// USE_CORETEXT_TEXT_RENDERING
 	ATSUFontID			mnFontID;
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -318,7 +318,7 @@ static bool ATSUIInitialize()
 ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, com_sun_star_vcl_VCLFont *pVCLFont ) :
 	mnLen( nEndCharPos - nMinCharPos ),
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	mnFontID( (ATSFontRef)pVCLFont->getNativeFont() ),
+	mnFontID( (CTFontRef)pVCLFont->getNativeFont() ),
 #else	// USE_CORETEXT_TEXT_RENDERING
 	mnFontID( (ATSUFontID)pVCLFont->getNativeFont() ),
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -331,12 +331,21 @@ ImplATSLayoutDataHash::ImplATSLayoutDataHash( const sal_Unicode *pStr, int nLen,
 	mnStrHash( rtl_ustr_hashCode_WithLength( mpStr, mnLen ) ),
 	mbOwnsStr( false )
 {
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnFontID )
+		CFRetain( (CTFontRef)mnFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // ----------------------------------------------------------------------------
 
 ImplATSLayoutDataHash::~ImplATSLayoutDataHash()
 {
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnFontID )
+		CFRelease( (CTFontRef)mnFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
 	if ( mbOwnsStr && mpStr )
 		rtl_freeMemory( mpStr );
 }
@@ -574,7 +583,11 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	mbValid( false ),
 	mbGlyphBounds( false )
 {
-	if ( !mpHash )
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( !mpHash || !mpHash->mnFontID )
+#else	// USE_CORETEXT_TEXT_RENDERING
+	if ( !mpHash || mpHash->mnFontID == kATSUInvalidFontID )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	{
 		Destroy();
 		return;
@@ -588,7 +601,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	maFont = CTFontCreateWithPlatformFont( mpHash->mnFontID, mpHash->mfFontSize, NULL, NULL );
+	maFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpHash->mnFontID, mpHash->mfFontSize, NULL, NULL );
 	if ( !maFont )
 	{
 		Destroy();

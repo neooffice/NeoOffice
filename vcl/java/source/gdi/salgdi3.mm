@@ -70,7 +70,6 @@
 #endif
 
 #include <premac.h>
-#import <CoreServices/CoreServices.h>
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
@@ -130,11 +129,16 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			SalData *pSalData = GetSalData();
 
 			// Clean out caches
-			for ( ::std::map< String, JavaImplFontData* >::const_iterator fnit = pSalData->maFontNameMapping.begin(); fnit != pSalData->maFontNameMapping.end(); ++fnit )
-				delete fnit->second;
+			for ( ::std::map< String, JavaImplFontData* >::const_iterator dfnit = pSalData->maFontNameMapping.begin(); dfnit != pSalData->maFontNameMapping.end(); ++dfnit )
+				delete dfnit->second;
 			pSalData->maFontNameMapping.clear();
-			pSalData->maNativeFontMapping.clear();
 			pSalData->maJavaFontNameMapping.clear();
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator dnfit = pSalData->maNativeFontMapping.begin(); dnfit != pSalData->maNativeFontMapping.end(); ++dnfit )
+				CFRelease( (CTFontRef)dnfit->second );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+			pSalData->maNativeFontMapping.clear();
+			pSalData->maPlainNativeFontMapping.clear();
 			pSalData->maBoldNativeFontMapping.clear();
 			pSalData->maItalicNativeFontMapping.clear();
 			pSalData->maBoldItalicNativeFontMapping.clear();
@@ -581,6 +585,10 @@ IMPL_STATIC_LINK_NOINSTANCE( JavaImplFontData, RunNativeFontsTimer, void*, pCall
 
 JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, const OUString& rVCLFontName, sal_IntPtr nNativeFontID, const OUString& rFamilyName ) : ImplFontData( rAttributes, 0 ), maVCLFontName( rVCLFontName ), mnNativeFontID( nNativeFontID ), maFamilyName( rFamilyName )
 {
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnNativeFontID )
+		CFRetain( (CTFontRef)mnNativeFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
 	// as zero. The single size zero causes higher-level font elements to treat
@@ -598,6 +606,11 @@ JavaImplFontData::~JavaImplFontData()
 		delete maChildren.front();
 		maChildren.pop_front();
 	}
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnNativeFontID )
+		CFRelease( (CTFontRef)mnNativeFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // -----------------------------------------------------------------------
@@ -842,7 +855,7 @@ void JavaSalGraphics::GetFontMetric( ImplFontMetricData* pMetric )
 		if ( pMetric->mnWidth )
 		{
 #ifdef USE_CORETEXT_TEXT_RENDERING
-			CTFontRef aFont = CTFontCreateWithPlatformFont( (ATSFontRef)mpFontData->mnNativeFontID, pMetric->mnWidth, NULL, NULL );
+			CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)mpFontData->mnNativeFontID, pMetric->mnWidth, NULL, NULL );
 			if ( aFont )
 			{
 				// Mac OS X seems to overstate the leading for some fonts

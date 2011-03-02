@@ -99,6 +99,20 @@ com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, float fSize,
 
 com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont ) : java_lang_Object( (jobject)pVCLFont->getJavaObject() ), maName( pVCLFont->maName ), mnNativeFont( pVCLFont->mnNativeFont ), mnOrientation( pVCLFont->mnOrientation ), mfScaleX( pVCLFont->mfScaleX ), mfSize( pVCLFont->mfSize ), mbAntialiased( pVCLFont->mbAntialiased ), mbVertical( pVCLFont->mbVertical )
 {
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnNativeFont )
+		CFRetain( (CTFontRef)mnNativeFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLFont::~com_sun_star_vcl_VCLFont()
+{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnNativeFont )
+		CFRelease( (CTFontRef)mnNativeFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // ----------------------------------------------------------------------------
@@ -121,10 +135,12 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 		if ( it == pSalData->maJavaNativeFontMapping.end() )
 		{
 			::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
-			if ( jit != pSalData->maJavaFontNameMapping.end() )
+			if ( jit != pSalData->maJavaFontNameMapping.end() && jit->second->mnNativeFontID )
 			{
 				mnNativeFont = jit->second->mnNativeFontID;
+				CFRetain( (CTFontRef)mnNativeFont );
 				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
+				CFRetain( (CTFontRef)mnNativeFont );
 			}
 			else
 			{
@@ -136,9 +152,9 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 					CTFontRef aFont = CTFontCreateWithName( aString, 0, NULL );
 					if ( aFont )
 					{
-						mnNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aFont, NULL );
+						mnNativeFont = (sal_IntPtr)aFont;
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
-						CFRelease( aFont );
+						CFRetain( (CTFontRef)mnNativeFont );
 					}
 #else	// USE_CORETEXT_TEXT_RENDERING
 					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
@@ -156,6 +172,7 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 		else
 		{
 			mnNativeFont = it->second;
+			CFRetain( (CTFontRef)mnNativeFont );
 		}
 	}
 

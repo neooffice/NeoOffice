@@ -68,7 +68,7 @@ public:
 
 						com_sun_star_vcl_VCLFont( ::rtl::OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
 						com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont );
-	virtual				~com_sun_star_vcl_VCLFont() {};
+	virtual				~com_sun_star_vcl_VCLFont();
 
 	com_sun_star_vcl_VCLFont*	clone();
 	::rtl::OUString		getName();
