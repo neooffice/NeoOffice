@@ -175,9 +175,12 @@ struct ImplATSLayoutData {
 	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 	static int			mnLayoutCacheSize;
-#ifndef USE_CORETEXT_TEXT_RENDERING
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	static BYTE*		mpSharedContextData;
+	static CGContextRef	maSharedContext;
+#else	// USE_CORETEXT_TEXT_RENDERING
 	static ATSUFontFallbacks	maFontFallbacks;
-#endif	// !USE_CORETEXT_TEXT_RENDERING
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	mutable int			mnRefCount;
 	ImplATSLayoutDataHash*	mpHash;
@@ -209,11 +212,13 @@ struct ImplATSLayoutData {
 	::std::hash_map< GlyphID, Point >	maVerticalGlyphTranslations;
 	::std::hash_map< GlyphID, long >	maNativeGlyphWidths;
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	static CGContextRef			GetSharedContext();
+#else	// USE_CORETEXT_TEXT_RENDERING
 	static ATSFontRef			GetATSFontRefFromNativeFont( sal_IntPtr nFont );
 	static ATSUFontID			GetNativeFontFromATSFontRef( ATSFontRef aFont );
 	static void					SetFontFallbacks();
-#endif	// !USE_CORETEXT_TEXT_RENDERING
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	static void					ClearLayoutDataCache();
 	static ImplATSLayoutData*	GetLayoutData( const sal_Unicode *pStr, int nLen, int nMinCharPos, int nEndCharPos, int nFlags, int nFallbackLevel, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, const SalATSLayout *pCurrentLayout );
 
@@ -377,17 +382,52 @@ bool ImplATSLayoutDataHashEquality::operator()( const ImplATSLayoutDataHash *p1,
 
 int ImplATSLayoutData::mnLayoutCacheSize = 0;
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
+// ----------------------------------------------------------------------------
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+
+BYTE *ImplATSLayoutData::mpSharedContextData = NULL;
 
 // ----------------------------------------------------------------------------
+
+CGContextRef ImplATSLayoutData::maSharedContext = NULL;
+
+#else	// USE_CORETEXT_TEXT_RENDERING
 
 ATSUFontFallbacks ImplATSLayoutData::maFontFallbacks = NULL;
 
-#endif	// !USE_CORETEXT_TEXT_RENDERING
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
+#ifdef USE_CORETEXT_TEXT_RENDERING
+
+CGContextRef ImplATSLayoutData::GetSharedContext()
+{
+	if ( !maSharedContext )
+	{
+		if ( !mpSharedContextData )
+			mpSharedContextData = (BYTE *)rtl_allocateMemory( 4 );
+		
+		if ( mpSharedContextData )
+		{
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
+			{
+#ifdef POWERPC
+				maSharedContext = CGBitmapContextCreate( mpSharedContextData, 1, 1, 8, 4, aColorSpace, kCGImageAlphaPremultipliedFirst );
+#else	// POWERPC
+				maSharedContext = CGBitmapContextCreate( mpSharedContextData, 1, 1, 8, 4, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+#endif	// POWERPC
+				CGColorSpaceRelease( aColorSpace );
+			}
+		}
+	}
+
+	return maSharedContext;
+}
+
+#else	// USE_CORETEXT_TEXT_RENDERING
 
 ATSFontRef ImplATSLayoutData::GetATSFontRefFromNativeFont( sal_IntPtr nFont )
 {
@@ -407,7 +447,7 @@ ATSUFontID ImplATSLayoutData::GetNativeFontFromATSFontRef( ATSFontRef aFont )
 		return kATSUInvalidFontID;
 }
 
-#endif	// !USE_CORETEXT_TEXT_RENDERING
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
 
@@ -608,7 +648,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-	CFStringRef aString =  CFStringCreateWithCharactersNoCopy( NULL, mpHash->mpStr, mpHash->mnLen, kCFAllocatorNull );
+	CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, mpHash->mpStr, mpHash->mnLen, kCFAllocatorNull );
 	if ( !aString )
 	{
 		Destroy();
@@ -675,7 +715,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 		return;
 	}
 
-	CTLineRef maLine = CTTypesetterCreateLine( maTypesetter, CFRangeMake( 0, 0 ) );
+	maLine = CTTypesetterCreateLine( maTypesetter, CFRangeMake( 0, 0 ) );
 	if ( !maLine )
 	{
 		Destroy();
@@ -1171,7 +1211,16 @@ const Rectangle& ImplATSLayoutData::GetGlyphBounds()
 	if ( !mbGlyphBounds )
 	{
 #ifdef USE_CORETEXT_TEXT_RENDERING
-		// TODO: Reimplement glyph bounds query using CoreText APIs
+		CGContextRef aContext = ImplATSLayoutData::GetSharedContext();
+		if ( aContext )
+		{
+			CGRect aRect = CTLineGetImageBounds( maLine, aContext );
+			if ( !CGRectIsNull( aRect ) )
+			{
+				maGlyphBounds = Rectangle( Point( Float32ToLong( aRect.origin.x * mpHash->mfFontScaleX ), Float32ToLong( ( aRect.origin.y + aRect.size.height ) * -1 ) ), Size( Float32ToLong( aRect.size.width * mpHash->mfFontScaleX ), Float32ToLong( aRect.size.height ) ) );
+				maGlyphBounds.Justify();
+			}
+		}
 #else	// USE_CORETEXT_TEXT_RENDERING
 		Rect aRect;
 		if ( pATSUMeasureTextImage( maLayout, kATSUFromTextBeginning, kATSUToTextEnd, 0, 0, &aRect ) == noErr )
@@ -2359,7 +2408,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 {
-GenericSalLayout::GetBoundRect( rGraphics, rRect );
 	rRect.SetEmpty();
 
 	Rectangle aRect;
