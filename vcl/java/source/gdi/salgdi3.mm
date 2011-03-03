@@ -133,10 +133,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 				delete dfnit->second;
 			pSalData->maFontNameMapping.clear();
 			pSalData->maJavaFontNameMapping.clear();
-#ifdef USE_CORETEXT_TEXT_RENDERING
-			for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator dnfit = pSalData->maNativeFontMapping.begin(); dnfit != pSalData->maNativeFontMapping.end(); ++dnfit )
-				CFRelease( (CTFontRef)dnfit->second );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 			pSalData->maNativeFontMapping.clear();
 			pSalData->maPlainNativeFontMapping.clear();
 			pSalData->maBoldNativeFontMapping.clear();
