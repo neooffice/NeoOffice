@@ -1806,7 +1806,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) const
 {
-GenericSalLayout::GetBoundRect( rGraphics, rRect );
 	rRect.SetEmpty();
 
 	Rectangle aRect;
