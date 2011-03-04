@@ -39,38 +39,41 @@
 #include <osl/mutex.hxx>
 #endif
 
-#import <Cocoa/Cocoa.h>
+#import <AppKit/AppKit.h>
 #include <jni.h>
 
-static ::std::map< ATSFontRef, CGFontRef > aATSFontMap;
-static ::osl::Mutex aATSFontMutex;
+static ::std::map< CTFontRef, CGFontRef > aFontMap;
+static ::osl::Mutex aFontMutex;
 
 using namespace osl;
 
 // ============================================================================
 
-CGFontRef CreateCachedCGFont( ATSFontRef aATSFont )
+static CGFontRef CreateCachedCGFont( CTFontRef aFont )
 {
-	CGFontRef aFont = NULL;
+	CGFontRef aRet = NULL;
 
-	MutexGuard aGuard( aATSFontMutex );
+	MutexGuard aGuard( aFontMutex );
 
-	::std::map< ATSFontRef, CGFontRef >::iterator it = aATSFontMap.find( aATSFont );
-	if ( it != aATSFontMap.end() )
+	::std::map< CTFontRef, CGFontRef >::iterator it = aFontMap.find( aFont );
+	if ( it != aFontMap.end() )
 	{
-		aFont = it->second;
+		aRet = it->second;
 	}
 	else
 	{
-		aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
-		if ( aFont )
-			aATSFontMap[ aATSFont ] = aFont;
+		aRet = CTFontCopyGraphicsFont( aFont, NULL );
+		if ( aRet )
+		{
+			CFRetain( aFont );
+			aFontMap[ aFont ] = aRet;
+		}
 	}
 
-	if ( aFont )
-		CGFontRetain( aFont );
+	if ( aRet )
+		CGFontRetain( aRet );
 
-	return aFont;
+	return aRet;
 }
 
 // Fix for bug 1928. Java 1.5 and higher will try to set its own arbitrary
@@ -79,10 +82,6 @@ CGFontRef CreateCachedCGFont( ATSFontRef aATSFont )
 // Note: this file should only be loaded on Mac OS X 10.5 or higher.
 
 static jmethodID mGetPSNameID = nil;
-
-@interface NSFont (AWTFontRef)
-- (ATSFontRef)_atsFontID;
-@end
 
 @interface AWTFont : NSObject
 {
@@ -166,8 +165,7 @@ static jmethodID mGetPSNameID = nil;
 		[fFont retain];
 
 		// Fix bug 1990 by caching and reusing CGFontRefs
-		if ( [fFont respondsToSelector:@selector(_atsFontID)] )
-            fNativeCGFont = CreateCachedCGFont( [fFont _atsFontID] );
+		fNativeCGFont = CreateCachedCGFont( (CTFontRef)fFont );
 	}
 
 	fIsFakeItalic = NO;
@@ -178,7 +176,19 @@ static jmethodID mGetPSNameID = nil;
 - (void)dealloc
 {
 	if ( fFont )
+	{
+		MutexGuard aGuard( aFontMutex );
+
+		::std::map< CTFontRef, CGFontRef >::iterator it = aFontMap.find( (CTFontRef)fFont );
+		if ( it != aFontMap.end() )
+		{
+			CFRelease( it->first);
+			CGFontRelease( it->second );
+			aFontMap.erase( it );
+		}
+
 		[fFont release];
+	}
 
 	CGFontRelease( fNativeCGFont );
 
@@ -188,7 +198,10 @@ static jmethodID mGetPSNameID = nil;
 - (void)finalize
 {
 	if ( fFont )
+	{
+		
 		[fFont release];
+	}
 
 	CGFontRelease( fNativeCGFont );
 
