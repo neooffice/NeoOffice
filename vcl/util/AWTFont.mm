@@ -33,9 +33,45 @@
  *
  ************************************************************************/
 
+#include <map>
+
+#ifndef _OSL_MUTEX_HXX_
+#include <osl/mutex.hxx>
+#endif
+
 #import <Cocoa/Cocoa.h>
-#import <jni.h>
-#import "AWTFont_cocoa.h"
+#include <jni.h>
+
+static ::std::map< ATSFontRef, CGFontRef > aATSFontMap;
+static ::osl::Mutex aATSFontMutex;
+
+using namespace osl;
+
+// ============================================================================
+
+CGFontRef CreateCachedCGFont( ATSFontRef aATSFont )
+{
+	CGFontRef aFont = NULL;
+
+	MutexGuard aGuard( aATSFontMutex );
+
+	::std::map< ATSFontRef, CGFontRef >::iterator it = aATSFontMap.find( aATSFont );
+	if ( it != aATSFontMap.end() )
+	{
+		aFont = it->second;
+	}
+	else
+	{
+		aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+		if ( aFont )
+			aATSFontMap[ aATSFont ] = aFont;
+	}
+
+	if ( aFont )
+		CGFontRetain( aFont );
+
+	return aFont;
+}
 
 // Fix for bug 1928. Java 1.5 and higher will try to set its own arbitrary
 // italic angle so we create a custom implementation of the JVM's private
@@ -86,21 +122,21 @@ static jmethodID mGetPSNameID = nil;
 
 	if ( aFont && pEnv )
 	{
-		jclass aFontClass = (*pEnv)->GetObjectClass( pEnv, aFont );
+		jclass aFontClass = pEnv->GetObjectClass( aFont );
         if ( aFontClass )
         {
 			if ( !mGetPSNameID )
 			{
 				char *cSignature = "()Ljava/lang/String;";
-				mGetPSNameID = (*pEnv)->GetMethodID( pEnv, aFontClass, "getPSName", cSignature );
+				mGetPSNameID = pEnv->GetMethodID( aFontClass, "getPSName", cSignature );
 			}
 			if ( mGetPSNameID )
 			{
-				jstring tempObj = (jstring)( (*pEnv)->CallObjectMethod( pEnv, aFont, mGetPSNameID ) );
+				jstring tempObj = (jstring)( pEnv->CallObjectMethod( aFont, mGetPSNameID ) );
 				if ( tempObj )
 				{
 					jboolean bCopy = JNI_FALSE;
-					const char *pChars = (*pEnv)->GetStringUTFChars( pEnv, tempObj, &bCopy );
+					const char *pChars = pEnv->GetStringUTFChars( tempObj, &bCopy );
 					if ( pChars )
 					{
 						NSString *pName = [NSString stringWithUTF8String:pChars];
@@ -108,10 +144,10 @@ static jmethodID mGetPSNameID = nil;
 							pRet = [NSFont fontWithName:pName size:(float)12];
 					}
 				}
-				else if ( pEnv && (*pEnv)->ExceptionCheck( pEnv ) )
+				else if ( pEnv && pEnv->ExceptionCheck() )
 				{
-					(*pEnv)->ExceptionDescribe( pEnv );
-					(*pEnv)->ExceptionClear( pEnv );
+					pEnv->ExceptionDescribe();
+					pEnv->ExceptionClear();
 				}
 			}
 		}
