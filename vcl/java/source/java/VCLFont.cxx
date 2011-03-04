@@ -137,10 +137,15 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 			::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
 			if ( jit != pSalData->maJavaFontNameMapping.end() && jit->second->mnNativeFontID )
 			{
+#ifdef USE_CORETEXT_TEXT_RENDERING
 				mnNativeFont = jit->second->mnNativeFontID;
 				CFRetain( (CTFontRef)mnNativeFont );
 				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 				CFRetain( (CTFontRef)mnNativeFont );
+#else	// USE_CORETEXT_TEXT_RENDERING
+				mnNativeFont = jit->second->mnNativeFontID;
+				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 			}
 			else
 			{
@@ -172,7 +177,9 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 		else
 		{
 			mnNativeFont = it->second;
+#ifdef USE_CORETEXT_TEXT_RENDERING
 			CFRetain( (CTFontRef)mnNativeFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
 		}
 	}
 
