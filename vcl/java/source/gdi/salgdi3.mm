@@ -363,7 +363,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 								continue;
 #ifdef USE_CORETEXT_TEXT_RENDERING
 							CTFontRef aFont = (CTFontRef)pNSFont;
-							sal_IntPtr nNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aFont, NULL );
+							sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
 							if ( !nNativeFont )
 								continue;
 #else	// USE_CORETEXT_TEXT_RENDERING
@@ -389,7 +389,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							{
 #ifdef USE_CORETEXT_TEXT_RENDERING
 								CTFontRef aBoldFont = (CTFontRef)pBoldFont;
-								sal_IntPtr nBoldNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aBoldFont, NULL );
+								sal_IntPtr nBoldNativeFont = (sal_IntPtr)aBoldFont;
 #else	// USE_CORETEXT_TEXT_RENDERING
 								ATSFontRef aBoldFont = NSFont_getATSFontRef( pBoldFont );
 								sal_IntPtr nBoldNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldFont );
@@ -414,7 +414,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							{
 #ifdef USE_CORETEXT_TEXT_RENDERING
 								CTFontRef aItalicFont = (CTFontRef)pItalicFont;
-								sal_IntPtr nItalicNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aItalicFont, NULL );
+								sal_IntPtr nItalicNativeFont = (sal_IntPtr)aItalicFont;
 #else	// USE_CORETEXT_TEXT_RENDERING
 								ATSFontRef aItalicFont = NSFont_getATSFontRef( pItalicFont );
 								sal_IntPtr nItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aItalicFont );
@@ -439,7 +439,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							{
 #ifdef USE_CORETEXT_TEXT_RENDERING
 								CTFontRef aBoldItalicFont = (CTFontRef)pBoldItalicFont;
-								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)CTFontGetPlatformFont( aBoldItalicFont, NULL );
+								sal_IntPtr nBoldItalicNativeFont = (sal_IntPtr)aBoldItalicFont;
 #else	// USE_CORETEXT_TEXT_RENDERING
 								ATSFontRef aBoldItalicFont = NSFont_getATSFontRef( pBoldItalicFont );
 								sal_IntPtr nBoldItalicNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aBoldItalicFont );
