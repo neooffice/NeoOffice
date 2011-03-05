@@ -138,6 +138,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			pSalData->maBoldNativeFontMapping.clear();
 			pSalData->maItalicNativeFontMapping.clear();
 			pSalData->maBoldItalicNativeFontMapping.clear();
+			JavaImplFontData::maBadNativeFontIDMap.clear();
 			SalATSLayout::ClearLayoutDataCache();
 
 			if ( !Application::IsShutDown() )
@@ -240,22 +241,15 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
 							sal_IntPtr nNativeFont = (sal_IntPtr)aFont;
-#else	// USE_CORETEXT_TEXT_RENDERING
-							sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
-							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
-								continue;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
-							// Fix bug 3446 by skipping bad native fonts
-							::std::map< sal_IntPtr, sal_IntPtr >::const_iterator bit = JavaImplFontData::maBadNativeFontIDMap.find( nNativeFont );
-							if ( bit != JavaImplFontData::maBadNativeFontIDMap.end() )
-								continue;
-
-#ifdef USE_CORETEXT_TEXT_RENDERING
 							CFStringRef aDisplayString = CTFontCopyFullName( aFont );
 							if ( !aDisplayString )
 								continue;
 #else	// USE_CORETEXT_TEXT_RENDERING
+							sal_IntPtr nNativeFont = SalATSLayout::GetNativeFontFromATSFontRef( aFont );
+							if ( (ATSUFontID)nNativeFont == kATSUInvalidFontID )
+								continue;
+
 							// Get the ATS font name as the Cocoa name on some
 							// Mac OS X versions adds extraneous words
 							CFStringRef aDisplayString;

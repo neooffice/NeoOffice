@@ -1106,7 +1106,99 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 	}
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	// TODO: Reimplement fallback font matching using CoreText APIs
+	// Find positions that require fallback fonts
+	for ( nCurrentGlyphRun = 0; nCurrentGlyphRun < nLineGlyphRuns; nCurrentGlyphRun++ )
+	{
+		CTRunRef aGlyphRun = (CTRunRef)CFArrayGetValueAtIndex( aLineGlyphRuns, nCurrentGlyphRun );
+		if ( aGlyphRun )
+		{
+			CFIndex nGlyphRunCount = CTRunGetGlyphCount( aGlyphRun );
+			CFRange aRange = CTRunGetStringRange( aGlyphRun );
+			if ( nGlyphRunCount && aRange.location != kCFNotFound && aRange.length > 0 )
+			{
+				CFDictionaryRef aDict = CTRunGetAttributes( aGlyphRun );
+				if ( aDict )
+				{
+					CTFontRef aFont = (CTFontRef)CFDictionaryGetValue( aDict, kCTFontAttributeName );
+					if ( !aFont )
+					{
+						// No fallback font exists so don't bother looking
+					}
+					else if ( aFont != maFont )
+					{
+						if ( !mpNeedFallback )
+						{
+							nBufSize = mpHash->mnLen * sizeof( bool );
+							mpNeedFallback = (bool *)rtl_allocateMemory( nBufSize );
+							memset( mpNeedFallback, 0, nBufSize );
+						}
+
+						CFIndex j;
+						for ( j = 0; j < aRange.length; j++ )
+							mpNeedFallback[ aRange.location + j ] = true;
+
+						// Update font for next pass through
+						if ( !mpFallbackFont )
+						{
+							SalData *pSalData = GetSalData();
+							if ( aFont )
+							{
+								OUString aPSName;
+								CFStringRef aPSString = CTFontCopyPostScriptName( aFont );
+								if ( aPSString )
+								{
+									CFIndex nPSLen = CFStringGetLength( aPSString );
+									CFRange aPSRange = CFRangeMake( 0, nPSLen );
+									sal_Unicode pPSBuffer[ nPSLen + 1 ];
+									CFStringGetCharacters( aPSString, aPSRange, pPSBuffer );
+									pPSBuffer[ nPSLen ] = 0;
+									CFRelease( aPSString );
+									aPSName = OUString( pPSBuffer );
+								}
+
+								::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::const_iterator ffit = pSalData->maJavaFontNameMapping.find( aPSName );
+								if ( ffit != pSalData->maJavaFontNameMapping.end() )
+									mpFallbackFont = new com_sun_star_vcl_VCLFont( ffit->second->maVCLFontName, mpHash->mfFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+							}
+
+							if ( !mpVCLFont )
+							{
+								// Look through our application font list for
+								// a font that has glyphs for the current char
+								for ( ::std::hash_map< sal_IntPtr, JavaImplFontData* >::const_iterator nit = pSalData->maNativeFontMapping.begin(); !mpFallbackFont && nit != pSalData->maNativeFontMapping.end(); nit++ )
+								{
+									for ( j = 0; j < aRange.length; j++ )
+									{
+										UniChar nChar = mpHash->mpStr[ aRange.location + j ];
+										CGGlyph nGlyph;
+										if ( CTFontGetGlyphsForCharacters( (CTFontRef)nit->first, &nChar, &nGlyph, 1 ) )
+										{
+											mpFallbackFont = new com_sun_star_vcl_VCLFont( nit->second->maVCLFontName, mpHash->mfFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
+											break;
+										}
+									}
+								}
+
+								if ( !mpFallbackFont )
+								{
+									if ( mpNeedFallback )
+									{
+										rtl_freeMemory( mpNeedFallback );
+										mpNeedFallback = NULL;
+									}
+									if ( mpFallbackFont )
+									{
+										delete mpFallbackFont;
+										mpFallbackFont = NULL;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 #else	// USE_CORETEXT_TEXT_RENDERING
 	if ( maVerticalFontStyle )
 	{
