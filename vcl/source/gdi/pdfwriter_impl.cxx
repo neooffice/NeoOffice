@@ -6728,16 +6728,25 @@ void PDFWriterImpl::drawVerticalGlyphs(
             fDeltaAngle = M_PI/2.0;
 #ifdef USE_JAVA
             SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
-            if ( pATSLayout && rGlyphs[i].m_nGlyphId & GF_FONTMASK )
-                 pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+            if ( rGlyphs[i].m_nGlyphId & GF_FONTMASK )
+            {
+                if ( pATSLayout )
+                    pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                if ( !pATSLayout )
+                {
+                    MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
+                    if ( pMultiLayout )
+                        pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                }
+            }
 
             if ( pATSLayout )
             {
                 long nX;
                 long nY;
                 pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, nX, nY );
-                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( nY );
-                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 ) + 0.5 ) );
+                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (double)nY / pATSLayout->GetUnitsPerPixel() );
+                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
             }
             else
             {
@@ -6757,16 +6766,25 @@ void PDFWriterImpl::drawVerticalGlyphs(
             fDeltaAngle = -M_PI/2.0;
 #ifdef USE_JAVA
             SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
-            if ( pATSLayout && rGlyphs[i].m_nGlyphId & GF_FONTMASK )
-                 pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+            if ( rGlyphs[i].m_nGlyphId & GF_FONTMASK )
+            {
+                if ( pATSLayout )
+                    pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                if ( !pATSLayout )
+                {
+                    MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
+                    if ( pMultiLayout )
+                        pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+                }
+            }
 
             if ( pATSLayout )
             {
                 long nX;
                 long nY;
                 pATSLayout->GetVerticalGlyphTranslation( rGlyphs[i].m_nGlyphId, rGlyphs[i].m_nCharPos, nX, nY );
-                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (long)( ( (double)rGlyphs[i].m_nNativeWidth / pATSLayout->GetUnitsPerPixel() ) - nY + 0.5 ) );
-                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 ) + 0.5 ) );
+                aDeltaPos.X() = m_pReferenceDevice->ImplDevicePixelToLogicHeight( (long)( ( (double)( rGlyphs[i].m_nNativeWidth - nY ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
+                aDeltaPos.Y() = m_pReferenceDevice->ImplDevicePixelToLogicWidth( (long)( ( fXScale * nX * -1 / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) );
             }
             else
             {
