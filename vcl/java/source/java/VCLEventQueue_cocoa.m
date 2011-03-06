@@ -45,6 +45,7 @@
 #import "VCLResponder_cocoa.h"
 #import "../app/salinst_cocoa.h"
 
+typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef OSStatus GetMenuTrackingData_Type( MenuRef aMenu, MenuTrackingData *pData );
 
 static BOOL bFontManagerLocked = NO;
@@ -1530,11 +1531,20 @@ static CFDataRef aRTFSelection = nil;
 
 	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
 	// or earlier
-	long res = 0;
-	if ( Gestalt( gestaltQuickTime, &res ) == noErr && res >= 0x07500000 )
-		mbUseQuickTimeContentViewHack = NO;
-	else
-		mbUseQuickTimeContentViewHack = YES;
+	mbUseQuickTimeContentViewHack = NO;
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+		if ( pGestalt )
+		{
+			SInt32 res = 0;
+			if ( Gestalt( gestaltQuickTime, &res ) == noErr && res < 0x07500000 )
+				mbUseQuickTimeContentViewHack = YES;
+		}
+
+		dlclose( pLib );
+	}
 
 	return self;
 }
