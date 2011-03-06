@@ -1460,9 +1460,63 @@ void ImplATSLayoutData::Release() const
 	delete const_cast<ImplATSLayoutData*>( this );
 }
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
-
 // ============================================================================
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+static void SalCGPathApplier( void *pInfo, const CGPathElement *pElement )
+{
+	::std::list< Polygon > *pPolygonList = (::std::list< Polygon > *)pInfo;
+
+	switch ( pElement->type )
+	{
+		case kCGPathElementMoveToPoint:
+		{
+			Point aPoint( Float32ToLong( pElement->points[ 0 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 0 ].y * -1 * UNITS_PER_PIXEL ) );
+			pPolygonList->push_back( Polygon( 1, &aPoint ) );
+			break;
+		}
+		case kCGPathElementAddLineToPoint:
+		{
+			pPolygonList->back().Insert( pPolygonList->back().GetSize(), Point( Float32ToLong( pElement->points[ 0 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 0 ].y * -1 * UNITS_PER_PIXEL ) ) );
+			break;
+		}
+		case kCGPathElementAddQuadCurveToPoint:
+		{
+			USHORT nSize = pPolygonList->back().GetSize();
+			if ( nSize )
+			{
+				Point aStart( pPolygonList->back().GetPoint( nSize - 1 ) );
+				Point aOffCurve( Float32ToLong( pElement->points[ 0 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 0 ].y * -1 * UNITS_PER_PIXEL ) );
+				Point aEnd( Float32ToLong( pElement->points[ 1 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 1 ].y * -1 * UNITS_PER_PIXEL ) );
+
+				pPolygonList->back().Insert( nSize++, aStart, POLY_CONTROL );
+				pPolygonList->back().Insert( nSize++, aOffCurve, POLY_CONTROL );
+				pPolygonList->back().Insert( nSize, aEnd );
+			}
+			break;
+		}
+		case kCGPathElementAddCurveToPoint:
+		{
+			Point aStart( Float32ToLong( pElement->points[ 0 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 0 ].y * -1 * UNITS_PER_PIXEL ) );
+			Point aOffCurve( Float32ToLong( pElement->points[ 1 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 1 ].y * -1 * UNITS_PER_PIXEL ) );
+			Point aEnd( Float32ToLong( pElement->points[ 2 ].x * UNITS_PER_PIXEL ), Float32ToLong( pElement->points[ 2 ].y * -1 * UNITS_PER_PIXEL ) );
+			USHORT nSize = pPolygonList->back().GetSize();
+			pPolygonList->back().Insert( nSize++, aStart, POLY_CONTROL );
+			pPolygonList->back().Insert( nSize++, aOffCurve, POLY_CONTROL );
+			pPolygonList->back().Insert( nSize, aEnd );
+			break;
+		}
+		case kCGPathElementCloseSubpath:
+		{
+			USHORT nSize = pPolygonList->back().GetSize();
+			if ( nSize > 1 )
+				pPolygonList->back().Insert( nSize, Point( pPolygonList->back().GetPoint( 0 ) ) );
+			break;
+		}
+	}
+}
+
+#else	// USE_CORETEXT_TEXT_RENDERING
 
 static OSStatus SalATSCubicMoveToCallback( const Float32Point *pPoint, void *pData )
 {
@@ -2530,14 +2584,14 @@ bool SalATSLayout::GetBoundRect( SalGraphics& rGraphics, Rectangle& rRect ) cons
 
 bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVector ) const
 {
-	bool bRet = false;
+	// Always return true so that the OOo code doesn't execute its
+	// "draw the glyph and see which pixels are black" code
+	bool bRet = true;
 
 	if ( !maLayoutData.size() )
 		return bRet;
 
-#ifdef USE_CORETEXT_TEXT_RENDERING
-	// TODO: Reimplement glyph outline queries using CoreText APIs
-#else	// USE_CORETEXT_TEXT_RENDERING
+#ifndef USE_CORETEXT_TEXT_RENDERING
 	if ( !pATSCubicMoveToUPP )
 		pATSCubicMoveToUPP = NewATSCubicMoveToUPP( SalATSCubicMoveToCallback );
 	if ( !pATSCubicLineToUPP )
@@ -2548,6 +2602,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 		pATSCubicClosePathUPP = NewATSCubicClosePathUPP( SalATSCubicClosePathCallback );
 	if ( !pATSCubicMoveToUPP || !pATSCubicLineToUPP || !pATSCubicCurveToUPP  || !pATSCubicClosePathUPP )
 		return bRet;
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 
 	int nMaxGlyphs( 1 );
 	sal_GlyphId aGlyphArray[ nMaxGlyphs ];
@@ -2567,10 +2622,7 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			break;
 
 		if ( aGlyphArray[ 0 ] & GF_ISCHAR )
-		{
-			bRet = true;
 			continue;
-		}
 
 		if ( !maRuns.PosIsInRun( aCharPosArray[ 0 ] ) )
 		{
@@ -2642,21 +2694,28 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 
 			// Fix bug 2390 by ignoring the value of nErr passed by reference
 			::std::list< Polygon > aPolygonList;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			CGPathRef aPath = CTFontCreatePathForGlyph( pCurrentLayoutData->maFont, pCurrentLayoutData->mpGlyphs[ i ], NULL );
+			if ( !aPath )
+				continue;
+
+			CGPathApply( aPath, (void *)&aPolygonList, SalCGPathApplier );
+			CGPathRelease( aPath );
+#else	// USE_CORETEXT_TEXT_RENDERING
 			ATSUStyle aCurrentStyle = NULL;
 			UniCharArrayOffset nRunStart;
 			UniCharCount nRunLen;
 			OSStatus nErr;
-#ifdef USE_CORETEXT_TEXT_RENDERING
-			if ( pATSUGetRunStyle( pCurrentLayoutData->maLayout, nIndex, &aCurrentStyle, &nRunStart, &nRunLen ) != noErr || !aCurrentStyle || pATSUGlyphGetCubicPaths( aCurrentStyle, pCurrentLayoutData->mpGlyphs[ i ], pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
-#else	// USE_CORETEXT_TEXT_RENDERING
 			if ( pATSUGetRunStyle( pCurrentLayoutData->maLayout, nIndex, &aCurrentStyle, &nRunStart, &nRunLen ) != noErr || !aCurrentStyle || pATSUGlyphGetCubicPaths( aCurrentStyle, pCurrentLayoutData->mpGlyphDataArray[ i ].glyphID, pATSCubicMoveToUPP, pATSCubicLineToUPP, pATSCubicCurveToUPP, pATSCubicClosePathUPP, (void *)&aPolygonList, &nErr ) != noErr )
-#endif	// USE_CORETEXT_TEXT_RENDERING
 				continue;
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 			PolyPolygon aPolyPolygon;
 			while ( aPolygonList.size() )
 			{
+#ifndef USE_CORETEXT_TEXT_RENDERING
 				aPolygonList.front().Scale( pCurrentLayoutData->mfFontScaleY, pCurrentLayoutData->mfFontScaleY );
+#endif	// !USE_CORETEXT_TEXT_RENDERING
 				aPolyPolygon.Insert( aPolygonList.front() );
 				aPolygonList.pop_front();
 			}
@@ -2672,7 +2731,11 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			aPolyPolygon.Move( aPos.X() * UNITS_PER_PIXEL, aPos.Y() * UNITS_PER_PIXEL );
 
 			sal_Int32 nGlyphOrientation = aGlyphArray[ 0 ] & GF_ROTMASK;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+			if ( pCurrentLayoutData->mpHash->mbVertical )
+#else	// USE_CORETEXT_TEXT_RENDERING
 			if ( pCurrentLayoutData->maVerticalFontStyle )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 			{
 				long nX;
 				long nY;
@@ -2699,11 +2762,9 @@ bool SalATSLayout::GetOutline( SalGraphics& rGraphics, B2DPolyPolygonVector& rVe
 			aPolyPolygon.Move( nTranslateX, nTranslateY );
 
 			rVector.push_back( aPolyPolygon.getB2DPolyPolygon() );
-			bRet = true;
 			break;
 		}
 	}
-#endif	// USE_CORETEXT_TEXT_RENDERING
 
 	return bRet;
 }
