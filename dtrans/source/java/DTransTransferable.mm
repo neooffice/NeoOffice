@@ -843,7 +843,7 @@ NSArray *DTransTransferable::getSupportedPasteboardTypes()
 	return pSupportedPasteboardTypes;
 }
 
-// ============================================================================
+// ----------------------------------------------------------------------------
 
 void DTransTransferable::flush()
 {
@@ -863,7 +863,14 @@ void DTransTransferable::flush()
 	}
 }
 
-// ============================================================================
+// ----------------------------------------------------------------------------
+
+int DTransTransferable::getChangeCount()
+{
+	return mnChangeCount;
+}
+
+// ----------------------------------------------------------------------------
 
 Any DTransTransferable::getTransferData( const DataFlavor& aFlavor ) throw ( UnsupportedFlavorException, IOException, RuntimeException )
 {

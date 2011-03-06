@@ -72,7 +72,6 @@ Sequence< OUString > SAL_CALL JavaClipboard_getSupportedServiceNames()
 JavaClipboard::JavaClipboard( bool bSystemClipboard ) : WeakComponentImplHelper4< XClipboardEx, XFlushableClipboard, XClipboardNotifier, XServiceInfo >( maMutex )
 {
 	mbSystemClipboard = bSystemClipboard;
-	mbInGetContents = false;
 }
 
 // ------------------------------------------------------------------------
@@ -111,12 +110,6 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 {
 	MutexGuard aGuard( maMutex );
 
-	if ( mbInGetContents )
-		return maContents;
-
-	bool bOldInGetContents = mbInGetContents;
-	mbInGetContents = true;
-
 	Reference< XTransferable > aContents( maContents );
 
 	if ( mbSystemClipboard )
@@ -149,26 +142,35 @@ Reference< XTransferable > SAL_CALL JavaClipboard::getContents() throw( RuntimeE
 
 			aContents = maContents;
 
-			list< Reference< XClipboardListener > > listeners( maListeners );
-
-			maMutex.release();
-
-			if ( aOldOwner.is() )
-				aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
-
-			ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
-			while ( listeners.begin() != listeners.end() )
+			// Fix bug 3650 by not sending lost ownership notifications to
+			// transferables that were never pushed to the system clipboard
+			// by our application
+			if ( aOldContents.is() )
 			{
-				if( listeners.front().is() )
-					listeners.front()->changedContents( aEvent );
-				listeners.pop_front();
-			}
+				pTransferable = (DTransTransferable *)aOldContents.get();
+				if ( pTransferable && pTransferable->getChangeCount() >= 0 )
+				{
+					list< Reference< XClipboardListener > > listeners( maListeners );
 
-			maMutex.acquire();
+					maMutex.release();
+
+					if ( aOldOwner.is() )
+						aOldOwner->lostOwnership( static_cast< XClipboard* >( this ), aOldContents );
+
+					ClipboardEvent aEvent( static_cast< OWeakObject* >( this ), aContents );
+					while ( listeners.begin() != listeners.end() )
+					{
+						if( listeners.front().is() )
+							listeners.front()->changedContents( aEvent );
+						listeners.pop_front();
+					}
+
+					maMutex.acquire();
+				}
+			}
 		}
 	}
 
-	mbInGetContents = bOldInGetContents;
 	return aContents;
 }
 
