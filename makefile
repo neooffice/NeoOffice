@@ -473,6 +473,16 @@ endif
 	chmod -Rf a-w,a+r "$(INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(INSTALL_HOME)/package"
+ifeq ("$(PRODUCT_NAME)","NeoOffice")
+	rm -Rf "$(INSTALL_HOME)/tmp"
+	mkdir -p "$(INSTALL_HOME)/tmp"
+	cp "etc/package/ship_icon_folder.dmg" "$(INSTALL_HOME)/tmp/ship_icon_folder.dmg"
+	sh -e -c 'if [ -d "/Volumes/ship_icon_folder" ] ; then hdiutil unmount "/Volumes/ship_icon_folder" ; fi'
+	hdiutil mount "$(INSTALL_HOME)/tmp/ship_icon_folder.dmg"
+	mv "/Volumes/ship_icon_folder/ship_icon_folder.pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).pkg"
+	hdiutil unmount "/Volumes/ship_icon_folder"
+	rm -Rf "$(INSTALL_HOME)/tmp"
+endif
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).pkg/Contents/Resources"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; cp "$(PWD)/etc/package/ship.tiff" "background.tiff"
@@ -510,12 +520,12 @@ build.patch_package_shared:
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
-	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
+#	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
 #	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/formula/$(UOUTPUTDIR)/lib/libfor$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libmsword$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/formula/$(UOUTPUTDIR)/lib/libfor$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libmsword$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
-	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "basis-link/program/classes"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/package/Info.plist" | sed 's#$$(PRODUCT_DIR_NAME)#$(PRODUCT_DIR_NAME)#g' | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_TRADEMARKED_NAME)#$(PRODUCT_TRADEMARKED_NAME)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(ULONGNAME)#$(ULONGNAME)#g' | sed 's#$$(BUILD_MACHINE)#$(BUILD_MACHINE)#g' | sed 's#$$(PRODUCT_FILETYPE)#$(PRODUCT_FILETYPE)#g' > "Info.plist"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#'  | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "MacOS/bootstraprc"
@@ -529,6 +539,17 @@ build.patch_package_shared:
 	chmod -Rf a-w,a+r "$(PATCH_INSTALL_HOME)/package"
 	echo "Running sudo to chown installation files..."
 	sudo chown -Rf root:admin "$(PATCH_INSTALL_HOME)/package"
+ifeq ("$(PRODUCT_NAME)","NeoOffice")
+	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
+	mkdir -p "$(PATCH_INSTALL_HOME)/tmp"
+	cp "etc/package/ship_icon_folder.dmg" "$(PATCH_INSTALL_HOME)/tmp/ship_icon_folder.dmg"
+	sh -e -c 'if [ -d "/Volumes/ship_icon_folder" ] ; then hdiutil unmount "/Volumes/ship_icon_folder" ; fi'
+	hdiutil mount "$(PATCH_INSTALL_HOME)/tmp/ship_icon_folder.dmg"
+	mv "/Volumes/ship_icon_folder/ship_icon_folder.pkg" "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg"
+	hdiutil unmount "/Volumes/ship_icon_folder"
+	rm -Rf "$(PATCH_INSTALL_HOME)/tmp"
+endif
+	mkdir -p "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources"
 	mkdir -p "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources"
 	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
 	cd "$(PATCH_INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_PATCH_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; cp "$(PWD)/etc/package/ship.tiff" "background.tiff"
@@ -574,6 +595,16 @@ build.package_%: $(INSTALL_HOME)/package_%
 	chmod -Rf a-w,a+r "$<"
 	echo "Running sudo to chown $(@:build.package_%=%) installation files..."
 	sudo chown -Rf root:admin "$<"
+ifeq ("$(PRODUCT_NAME)","NeoOffice")
+	rm -Rf "$(INSTALL_HOME)/tmp"
+	mkdir -p "$(INSTALL_HOME)/tmp"
+	cp "etc/package/ship_icon_folder.dmg" "$(INSTALL_HOME)/tmp/ship_icon_folder.dmg"
+	sh -e -c 'if [ -d "/Volumes/ship_icon_folder" ] ; then hdiutil unmount "/Volumes/ship_icon_folder" ; fi'
+	hdiutil mount "$(INSTALL_HOME)/tmp/ship_icon_folder.dmg"
+	mv "/Volumes/ship_icon_folder/ship_icon_folder.pkg" "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME).pkg"
+	hdiutil unmount "/Volumes/ship_icon_folder"
+	rm -Rf "$(INSTALL_HOME)/tmp"
+endif
 	mkdir -p "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME).pkg/Contents/Resources"
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; sh -e -c 'for i in `cd "/Applications/Utilities/Installer.app/Contents/Resources" ; find . -type d -name "*.lproj" -maxdepth 1` ; do mkdir -p "$${i}" ; done'
 	cd "$(INSTALL_HOME)/$(PRODUCT_DIR_NAME)-$(PRODUCT_DIR_VERSION)-$(PRODUCT_DIR_LANG_PACK_VERSION)-$(ULONGNAME).pkg/Contents/Resources" ; cp "$(PWD)/etc/package/ship.tiff" "background.tiff"
