@@ -133,7 +133,7 @@ PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL=http://neowiki.neooffice.org/index.php
 PRODUCT_DOCUMENTATION_SPELLCHECK_URL=http://neowiki.neooffice.org/index.php/Activating_Dictionaries_and_Configuring_Spellcheck
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
 PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser neomobile remotecontrol
-PRODUCT_COMPONENT_PATCH_MODULES=imagecapture neomobile
+PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
