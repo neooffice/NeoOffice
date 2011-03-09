@@ -1911,7 +1911,7 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 				{
 					bool bHasArabicFontSupport = true;
 #ifdef USE_CORETEXT_TEXT_RENDERING
-					if ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont )
+					if ( !mpKashidaLayoutData->mnGlyphCount || ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont ) )
 #else	// USE_CORETEXT_TEXT_RENDERING
 					if ( !mpKashidaLayoutData->mpGlyphDataArray || ( mpKashidaLayoutData->mpNeedFallback && mpKashidaLayoutData->mpFallbackFont ) )
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -2305,10 +2305,20 @@ bool SalATSLayout::LayoutText( ImplLayoutArgs& rArgs )
 						nGlyphFlags |= GlyphItem::IS_RTL_GLYPH;
 
 						// Note characters that we can append kashidas onto
+#ifdef USE_CORETEXT_TEXT_RENDERING
+						if ( bFirstGlyph && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && nIndex )
+						{
+							// Fix reoccurrence of bug 823 by setting the
+							// previous index from the current index instead of
+							// the char position
+							int nPreviousIndex = nIndex - 1;
+							if ( nPreviousIndex >= 0 )
+#else	// USE_CORETEXT_TEXT_RENDERING
 						if ( bFirstGlyph && rArgs.mnFlags & SAL_LAYOUT_KASHIDA_JUSTIFICATON && nCharPos > nMinFallbackCharPos )
 						{
 							int nPreviousIndex = pLayoutData->mpCharsToChars[ nCharPos - nMinFallbackCharPos - 1 ];
 							if ( nPreviousIndex >= 0 )
+#endif	// USE_CORETEXT_TEXT_RENDERING
 							{
 								UJoiningType nTypeLeft = (UJoiningType)u_getIntPropertyValue( nChar, UCHAR_JOINING_TYPE );
 								UJoiningType nTypeRight = (UJoiningType)u_getIntPropertyValue( pCurrentLayoutData->mpHash->mpStr[ nPreviousIndex ], UCHAR_JOINING_TYPE );
