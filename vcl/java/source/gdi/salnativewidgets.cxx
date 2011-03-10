@@ -1711,7 +1711,8 @@ static const Region GetRegionAdjustedForGrowBox( JavaSalGraphics *pGraphics, Con
 {
 	Region aRegion( rControlRegion );
 
-	if ( pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
+	// Only adjust for grow box on pre-Mac OS X 10.7 releases
+	if ( ( IsRunningLeopard() || IsRunningSnowLeopard() ) && pGraphics->mpFrame && pGraphics->mpFrame->mnStyle & SAL_FRAME_STYLE_SIZEABLE )
 	{
 		HIPoint origin;
 		origin.x = 0;
