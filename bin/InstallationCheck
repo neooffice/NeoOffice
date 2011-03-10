@@ -70,19 +70,9 @@ if [ "$target_machine" != "$machine" ] ; then
 	esac
 fi
 
-# Check that the user has a supported Java version
-javafound=
-for i in `find -L "/System/Library/Frameworks/JavaVM.framework/Versions" -type d -maxdepth 1` ; do
-	if [ -r "$i/Libraries/libjvm.dylib" ] ; then
-		case `basename "$i"` in
-			1.4.[23]*) javafound="$i" ; break;;
-			1.5.*) javafound="$i" ; break;;
-			1.6.*) javafound="$i" ; break;;
-		esac
-	fi
-done
-if [ -z "$javafound" ] ; then
-	# Return 96 + 24 if we didn't find a supported Java version
+# Check that the user has at least one Java version on their machine
+if [ ! -x "/System/Library/Frameworks/JavaVM.framework/Versions/Current/Commands/java" ] ; then
+	# Return 96 + 24 if we didn't find any Java installed
 	exit 120;
 fi
 
