@@ -12666,7 +12666,11 @@ void PDFWriterImpl::encodeGlyphs()
                 }
 
                 // Map font IDs to objects
-                OString aFontIDTag( "/F" );
+                OString aFontIDTag;
+                if ( IsRunningLeopard() || IsRunningSnowLeopard() )
+                    aFontIDTag = OString( "/F" );
+                else
+                    aFontIDTag = OString( "/TT" );
                 sal_Int32 nFontIDTagLen = aFontIDTag.getLength();
                 if ( nProcSetObjID )
                 {
