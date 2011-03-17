@@ -1048,7 +1048,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:beganAt:)])
 		[pDelegate draggedImage:pImage beganAt:aPoint];
-	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:beginAt:)] )
+	else if ( ![[self className] isEqualToString:pNSViewAWTString] && ![[self className] isEqualToString:pNSWindowViewAWTString] && [super respondsToSelector:@selector(draggedImage:beganAt:)] )
 		[super draggedImage:pImage beganAt:aPoint];
 }
 
@@ -1539,7 +1539,7 @@ static CFDataRef aRTFSelection = nil;
 		if ( pGestalt )
 		{
 			SInt32 res = 0;
-			if ( Gestalt( gestaltQuickTime, &res ) == noErr && res < 0x07500000 )
+			if ( pGestalt( gestaltQuickTime, &res ) == noErr && res < 0x07500000 )
 				mbUseQuickTimeContentViewHack = YES;
 		}
 
