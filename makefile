@@ -116,11 +116,7 @@ PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
 PRODUCT_SUPPORT_URL=http://www.neooffice.org/neojava/contact.php
 PRODUCT_SUPPORT_URL_TEXT:=$(PRODUCT_NAME) Support
-ifneq ($(findstring Beta,$(PRODUCT_VERSION)),)
-PRODUCT_DOWNLOAD_URL=http://www.neooffice.org/neojava/newdownload.php?fragment=download
-else
 PRODUCT_DOWNLOAD_URL=http://www.neooffice.org/neojava/download.php?fragment=download
-endif
 PRODUCT_DOWNLOAD_URL_TEXT=$(PRODUCT_NAME) Downloads
 ifneq ($(findstring Beta,$(PRODUCT_VERSION)),)
 PRODUCT_DOWNLOADLANGPACK_URL=http://www.neooffice.org/neojava/newlangpackdownload.php
@@ -534,10 +530,11 @@ build.patch_package_shared:
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
-#	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
 #	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/help"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/lib/libsofficeapp.dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/dtrans/$(UOUTPUTDIR)/lib/libdtransjava$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/formula/$(UOUTPUTDIR)/lib/libfor$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sfx2/$(UOUTPUTDIR)/lib/libsfx$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sc/$(UOUTPUTDIR)/lib/libsc$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libmsword$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sw/$(UOUTPUTDIR)/lib/libsw$(DLLSUFFIX).dylib" "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "basis-link/program/classes"
@@ -545,8 +542,9 @@ build.patch_package_shared:
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed '/Location=.*$$/d' "$(PWD)/etc/program/bootstraprc" | sed 's#UserInstallation=.*$$#UserInstallation=$$SYSUSERCONFIG/$(PRODUCT_DIR_NAME)-$(PRODUCT_VERSION_FAMILY)#' | sed 's#ProductKey=.*$$#ProductKey=$(PRODUCT_NAME) $(PRODUCT_VERSION)#'  | sed 's#ProductPatch=.*$$#ProductPatch=$(PRODUCT_PATCH_VERSION)#' > "../../out" ; mv -f "../../out" "MacOS/bootstraprc"
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g' "$(PWD)/etc/program/versionrc" | sed 's#$$(PRODUCT_VERSION)#$(PRODUCT_VERSION)#g' | sed 's#$$(PRODUCT_PATCH_VERSION)#$(PRODUCT_PATCH_VERSION)#g' | sed 's#$$(PRODUCT_UPDATE_CHECK_URL)#$(PRODUCT_UPDATE_CHECK_URL)#g' | sed 's# #%20#g' | sed 's#^buildid=.*$$#buildid=$(PRODUCT_PATCH_VERSION)#' > "MacOS/versionrc"
 # Add Mac OS X localized resources
-	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" ; gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
-	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g" > "$${i}" ; done'
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; ( ( cd "$(PWD)/etc/package/l10n" ; gnutar cvf - --exclude CVS --exclude "*.html" . ) | gnutar xvf - )
+#	cd "$(PATCH_INSTALL_HOME)/package/Contents/Resources" ; sh -e -c 'for i in `cd "$(PWD)/etc/package/l10n" ; find . -name "*.html"` ; do sed "s#\$$(PRODUCT_NAME)#$(PRODUCT_NAME)#g" "$(PWD)/etc/package/l10n/$${i}" | sed "s#\$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g" > "$${i}" ; done'
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sed 's#$$(OO_PRODUCT_NAME)#$(OO_PRODUCT_NAME)#g' "$(PWD)/etc/help/main_transform.xsl" | sed 's#$$(PRODUCT_SUPPORT_URL)#$(PRODUCT_SUPPORT_URL)#g' | sed 's#$$(PRODUCT_SUPPORT_URL_TEXT)#$(PRODUCT_SUPPORT_URL_TEXT)#g' | sed 's#$$(PRODUCT_DOWNLOAD_URL)#$(PRODUCT_DOWNLOAD_URL)#g' | sed 's#$$(PRODUCT_DOWNLOAD_URL_TEXT)#$(PRODUCT_DOWNLOAD_URL_TEXT)#g' | sed 's#$$(PRODUCT_DOWNLOADLANGPACK_URL)#$(PRODUCT_DOWNLOADLANGPACK_URL)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_URL)#$(PRODUCT_DOCUMENTATION_URL)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_URL_TEXT)#$(PRODUCT_DOCUMENTATION_URL_TEXT)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)#$(PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL)#g' | sed 's#$$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)#$(PRODUCT_DOCUMENTATION_SPELLCHECK_URL)#g' > "basis-link/help/main_transform.xsl"
 # With gcc 4.x, we must fully strip executables
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.bin"` ; do strip "$$i" ; done'
 	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; sh -e -c 'for i in `find . -type f -name "*.dylib*"` ; do strip -S -x "$$i" ; done'
