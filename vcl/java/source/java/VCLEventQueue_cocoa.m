@@ -1183,9 +1183,125 @@ static CFDataRef aRTFSelection = nil;
 	{
 		bNSViewAWTInitialized = YES;
 
+		// NSDraggingDestination selectors
+
+		SEL aSelector = @selector(concludeDragOperation:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(draggingEnded:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(draggingEntered:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(draggingExited:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(draggingUpdated:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(performDragOperation:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(prepareForDragOperation:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(wantsPeriodicDraggingUpdates);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		// NSDraggingSource selectors
+
+		aSelector = @selector(draggedImage:beganAt:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(draggedImage:endedAt:operation:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(draggedImage:movedTo:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(draggingSourceOperationMaskForLocal:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(ignoreModifierKeysWhileDragging);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
+		aSelector = @selector(namesOfPromisedFilesDroppedAtDestination:);
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
 		// NSResponder selectors
 
-		SEL aSelector = @selector(readSelectionFromPasteboard:);
+		aSelector = @selector(readSelectionFromPasteboard:);
 		if ( [[self class] instancesRespondToSelector:aSelector] )
 		{
 			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
