@@ -120,7 +120,7 @@ static bool aSupportedTextTypes[] = {
 
 // List of supported mime types in priority order
 static OUString aSupportedMimeTypes[] = {
-	OUString::createFromAscii( "application/x-openoffice-file;windows_formatname=\"FileName\"" ),
+	OUString::createFromAscii( "text/plain;charset=utf-16" ),
 	OUString::createFromAscii( "text/richtext" ),
 	OUString::createFromAscii( "text/html" ),
 	OUString::createFromAscii( "text/plain;charset=utf-16" ),
@@ -132,7 +132,7 @@ static OUString aSupportedMimeTypes[] = {
 
 // List of supported data types in priority order
 static ::com::sun::star::uno::Type aSupportedDataTypes[] = {
-	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
+	getCppuType( ( OUString* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( ::com::sun::star::uno::Sequence< sal_Int8 >* )0 ),
 	getCppuType( ( OUString* )0 ),
@@ -478,8 +478,20 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 			NSArray *pFilteredTypes = [self filteredTypes];
 			if ( pFilteredTypes && [pFilteredTypes containsObject:pType] )
 			{
-				mbTypeAvailable = YES;
-				mpString = [pPasteboard stringForType:pType];
+				if ( pType == pURLPasteboardType )
+				{
+					NSURL *pURL = [NSURL URLFromPasteboard:pPasteboard];
+					if ( pURL )
+					{
+						mbTypeAvailable = YES;
+						mpString = [pURL absoluteString];
+					}
+				}
+				else
+				{
+					mbTypeAvailable = YES;
+					mpString = [pPasteboard stringForType:pType];
+				}
 			}
 		}
 		@catch ( NSException *pExc )
