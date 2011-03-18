@@ -329,6 +329,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
+- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
 - (void)draggedImage:(NSImage *)pImage endedAt:(NSPoint)aPoint operation:(NSDragOperation)nOperation;
 - (void)draggedImage:(NSImage *)pImage movedTo:(NSPoint)aPoint;
@@ -1043,6 +1044,18 @@ static CFDataRef aRTFSelection = nil;
 		[super concludeDragOperation:pSender];
 }
 
+- (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack
+{
+	// Fix bug 3652 by locking the application mutex and never letting it get
+	// released during a native drag session. This prevents drag events from
+	// getting dispatched out of order when we release and reacquire the mutex.
+	if ( VCLInstance_setDragLock( YES ) )
+	{
+		[super dragImage:pImage at:aImageLocation offset:aMouseOffset event:pEvent pasteboard:pPasteboard source:pSourceObject slideBack:bSlideBack];
+		VCLInstance_setDragLock( NO );
+	}
+}
+
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint
 {
 	id pDelegate = [self draggingSourceDelegate];
@@ -1170,61 +1183,11 @@ static CFDataRef aRTFSelection = nil;
 	{
 		bNSViewAWTInitialized = YES;
 
-		// NSDraggingDestination selectors
-
-		SEL aSelector = @selector(concludeDragOperation:);
-		Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
-		aSelector = @selector(draggingEnded:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
-		aSelector = @selector(draggingEntered:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
-		aSelector = @selector(draggingExited:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
-		aSelector = @selector(draggingUpdated:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
-		aSelector = @selector(performDragOperation:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
-		aSelector = @selector(prepareForDragOperation:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
-		aSelector = @selector(wantsPeriodicDraggingUpdates);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
-
 		// NSResponder selectors
 
-		aSelector = @selector(readSelectionFromPasteboard:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		SEL aSelector = @selector(readSelectionFromPasteboard:);
+		Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
 			method_exchangeImplementations( aOldMethod, aNewMethod );
 
