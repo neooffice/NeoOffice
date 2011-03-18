@@ -1186,22 +1186,31 @@ static CFDataRef aRTFSelection = nil;
 		// NSResponder selectors
 
 		SEL aSelector = @selector(readSelectionFromPasteboard:);
-		Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
+		if ( [[self class] instancesRespondToSelector:aSelector] )
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
 
 		aSelector = @selector(validRequestorForSendType:returnType:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
+		if ( [[self class] instancesRespondToSelector:aSelector] )
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
 
 		aSelector = @selector(writeSelectionToPasteboard:types:);
-		aOldMethod = class_getInstanceMethod( [self class], aSelector );
-		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
-		if ( aOldMethod && aNewMethod && aOldMethod != aNewMethod )
-			method_exchangeImplementations( aOldMethod, aNewMethod );
+		if ( [[self class] instancesRespondToSelector:aSelector] )
+		{
+			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
+			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
 	}
 
 	return [super initWithFrame:aFrame];
