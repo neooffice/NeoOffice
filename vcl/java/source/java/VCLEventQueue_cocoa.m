@@ -1106,7 +1106,7 @@ static CFDataRef aRTFSelection = nil;
 	if ( pKey && pDraggingDestinationDelegates )
 	{
 		id pDelegate = [pDraggingDestinationDelegates objectForKey:pKey];
-		if ( pDelegate )
+		if ( pDelegate && !NSApplication_getModalWindow() )
 			pRet = pDelegate;
 	}
 
