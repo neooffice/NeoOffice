@@ -46,6 +46,7 @@ BEGIN_C
 void NSApplication_dispatchPendingEvents();
 id NSApplication_getModalWindow();
 void NSApplication_setHelpMenu();
+BOOL VCLInstance_setDragLock( BOOL bLock );
 BOOL VCLInstance_updateNativeMenus();
 #ifdef __cplusplus
 END_C

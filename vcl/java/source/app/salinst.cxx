@@ -139,6 +139,7 @@ public:
 };
 
 static bool bAllowReleaseYieldMutex = false;
+static bool bInNativeDrag = false;
 static SalYieldMutex aEventQueueMutex;
 static ULONG nCurrentTimeout = 0;
 
@@ -172,13 +173,48 @@ static OSStatus CarbonEventHandler( EventHandlerCallRef aNextHandler, EventRef a
 
 // ----------------------------------------------------------------------------
 
+BOOL VCLInstance_setDragLock( BOOL bLock )
+{
+	BOOL bRet = FALSE;
+
+	if ( bLock )
+	{
+		if ( !Application::IsShutDown() && !bInNativeDrag )
+		{
+			IMutex& rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+			if ( !Application::IsShutDown() )
+			{	
+				bInNativeDrag = TRUE;
+				bRet = TRUE;
+			}
+			else
+			{
+				rSolarMutex.release();
+				return bRet;
+			}
+		}
+	}
+	else if ( bInNativeDrag )
+	{
+		bInNativeDrag = FALSE;
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.release();
+		bRet = TRUE;
+	}
+
+	return bRet;
+}
+
+// ----------------------------------------------------------------------------
+
 BOOL VCLInstance_updateNativeMenus()
 {
 	BOOL bRet = FALSE;
 
 	// Check if there is a native modal window as we will deadlock when a
 	// native modal window is showing
-	if ( Application::IsShutDown() || NSApplication_getModalWindow() )
+	if ( Application::IsShutDown() || bInNativeDrag || NSApplication_getModalWindow() )
 		return bRet;
 
 	SalData *pSalData = GetSalData();
@@ -435,7 +471,7 @@ ULONG JavaSalInstance::ReleaseYieldMutex()
 	// Never release the mutex in the main thread as it can cause crashing
 	// when dragging when the OOo code's VCL event dispatching thread runs
 	// while we are in the middle of a native drag event
-	if ( !bAllowReleaseYieldMutex && GetCurrentEventLoop() == GetMainEventLoop() )
+	if ( ( !bAllowReleaseYieldMutex || bInNativeDrag ) && GetCurrentEventLoop() == GetMainEventLoop() )
 		return 0;
 
 	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
