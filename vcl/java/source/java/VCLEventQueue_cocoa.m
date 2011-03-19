@@ -1090,8 +1090,10 @@ static CFDataRef aRTFSelection = nil;
 	NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)self];
 	if ( pKey && pDraggingDestinationDelegates )
 	{
+		// If the dragging is occurring while a native modal window or sheet
+		// is visible, ignore all drag destination events to prevent deadlock
 		id pDelegate = [pDraggingDestinationDelegates objectForKey:pKey];
-		if ( pDelegate )
+		if ( pDelegate && !NSApplication_getModalWindow() )
 			pRet = pDelegate;
 	}
 
