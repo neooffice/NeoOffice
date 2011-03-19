@@ -469,7 +469,7 @@ ULONG JavaSalInstance::ReleaseYieldMutex()
 	// Never release the mutex in the main thread as it can cause crashing
 	// when dragging when the OOo code's VCL event dispatching thread runs
 	// while we are in the middle of a native drag event
-	if ( !bAllowReleaseYieldMutex && !bInNativeDrag && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
+	if ( ( !bAllowReleaseYieldMutex || bInNativeDrag ) && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 		return 0;
 
 	SalYieldMutex* pYieldMutex = mpSalYieldMutex;
