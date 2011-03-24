@@ -34,6 +34,7 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
+#import <objc/objc-class.h>
 #import "VCLPageFormat_cocoa.h"
 
 @implementation VCLPrintOperation
@@ -64,7 +65,19 @@
 		}
 	}
 
-	return [[VCLPrintOperation superclass] printOperationWithView:pView printInfo:pPrintInfo];
+	return [VCLPrintOperation poseAsPrintOperationWithView:pView printInfo:pPrintInfo];
+}
+
++ (NSPrintOperation *)poseAsPrintOperationWithView:(NSView *)pView
+{
+	// This should never be executed and should be swizzled out to superclass
+	return nil;
+}
+
++ (NSPrintOperation *)poseAsPrintOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo
+{
+	// This should never be executed and should be swizzled out to superclass
+	return nil;
 }
 
 @end
@@ -85,7 +98,40 @@
 
 - (void)installVCLPrintClasses:(id)pObject
 {
-	[VCLPrintOperation poseAsClass:[NSPrintOperation class]];
+	// VCLPrintOperation selectors
+
+	SEL aSelector = @selector(printOperationWithView:);
+	SEL aPoseAsSelector = @selector(poseAsPrintOperationWithView:);
+	Method aOldMethod = class_getClassMethod( [NSPrintOperation class], aSelector );
+	Method aNewMethod = class_getClassMethod( [VCLPrintOperation class], aSelector );
+	Method aPoseAsMethod = class_getClassMethod( [VCLPrintOperation class], aPoseAsSelector );
+	if ( aOldMethod && aNewMethod && aPoseAsMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP )
+		{
+			method_setImplementation( aPoseAsMethod, aOldIMP );
+			method_setImplementation( aOldMethod, aNewIMP );
+		}
+	}
+
+	aSelector = @selector(printOperationWithView:printInfo:);
+	aPoseAsSelector = @selector(poseAsPrintOperationWithView:printInfo:);
+	aOldMethod = class_getClassMethod( [NSPrintOperation class], aSelector );
+	aNewMethod = class_getClassMethod( [VCLPrintOperation class], aSelector );
+	aPoseAsMethod = class_getClassMethod( [VCLPrintOperation class], aPoseAsSelector );
+	if ( aOldMethod && aNewMethod && aPoseAsMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP )
+		{
+			method_setImplementation( aPoseAsMethod, aOldIMP );
+			method_setImplementation( aOldMethod, aNewIMP );
+		}
+	}
+
 }
 
 @end

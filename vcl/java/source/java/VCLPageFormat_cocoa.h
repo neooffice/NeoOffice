@@ -42,6 +42,8 @@ typedef void* id;
 @interface VCLPrintOperation : NSPrintOperation
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView;
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
++ (NSPrintOperation *)poseAsPrintOperationWithView:(NSView *)pView;
++ (NSPrintOperation *)poseAsPrintOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
 @end
 #endif
 

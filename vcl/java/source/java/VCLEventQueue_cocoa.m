@@ -198,6 +198,10 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 
 @end
 
+@interface NSApplication (VCLApplicationPoseAs)
+- (void)poseAsSetDelegate:(id)pDelegate;
+@end
+
 @interface VCLApplication : NSApplication
 - (void)setDelegate:(id)pDelegate;
 @end
@@ -217,27 +221,35 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 		}
 	}
 
-	[super setDelegate:pDelegate];
+	if ( [super respondsToSelector:@selector(poseAsSetDelegate:)] )
+		[super poseAsSetDelegate:pDelegate];
 }
 
 @end
 
 @interface VCLBundle : NSBundle
 + (BOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
++ (BOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone;
 @end
 
 @implementation VCLBundle
 
 + (BOOL)loadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
 {
-	BOOL bRet = [[VCLBundle superclass] loadNibFile:pFileName externalNameTable:pContext withZone:pZone];
+	BOOL bRet = [VCLBundle poseAsLoadNibFile:pFileName externalNameTable:pContext withZone:pZone];
 
-	// Fix bug 3563 by trying to load Java's English nib file isf the requested
+	// Fix bug 3563 by trying to load Java's English nib file if the requested
 	// nib file is nil
 	if ( !bRet && !pFileName )
-		bRet = [[VCLBundle superclass] loadNibFile:@"/System/Library/Frameworks/JavaVM.framework/Versions/Current/Resources/English.lproj/DefaultApp.nib" externalNameTable:pContext withZone:pZone];
+		bRet = [VCLBundle poseAsLoadNibFile:@"/System/Library/Frameworks/JavaVM.framework/Versions/Current/Resources/English.lproj/DefaultApp.nib" externalNameTable:pContext withZone:pZone];
 
 	return bRet;
+}
+
++ (BOOL)poseAsLoadNibFile:(NSString *)pFileName externalNameTable:(NSDictionary *)pContext withZone:(NSZone *)pZone
+{
+	// This should never be executed and should be swizzled out to superclass
+	return NO;
 }
 
 @end
@@ -247,6 +259,11 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 // name and style. We fix these bugs by prepending the font names to the
 // list of font family names so that Java will think that each font's
 // family name is the same as its font name.
+
+@interface NSFontManager (VCLFontManagerPoseAs)
+- (NSArray *)poseAsAvailableFontFamilies;
+- (NSArray *)poseAsAvailableMembersOfFontFamily:(NSString *)family;
+@end
 
 @interface VCLFontManager : NSFontManager
 - (NSArray *)availableFontFamilies;
@@ -264,13 +281,14 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 
 	if ( bFontManagerLocked )
 	{
-		pRet = [NSMutableArray arrayWithArray:[super availableFontFamilies]];
+		if ( [super respondsToSelector:@selector(poseAsAvailableFontFamilies)] )
+			pRet = [NSMutableArray arrayWithArray:[super poseAsAvailableFontFamilies]];
 	}
 	else
 	{
 		pRet = [NSMutableArray arrayWithArray:[super availableFonts]];
-		if ( pRet )
-			[pRet addObjectsFromArray:[super availableFontFamilies]];
+		if ( pRet && [super respondsToSelector:@selector(poseAsAvailableFontFamilies)] )
+			[pRet addObjectsFromArray:[super poseAsAvailableFontFamilies]];
 	}
 
 	if ( pFontManagerLock )
@@ -288,7 +306,8 @@ static BOOL EventMatchesShortcutKey( NSEvent *pEvent, unsigned int nKey )
 
 	if ( bFontManagerLocked )
 	{
-		pRet = [super availableMembersOfFontFamily:family];
+		if ( [super respondsToSelector:@selector(poseAsAvailableMembersOfFontFamily:)] )
+			pRet = [super poseAsAvailableMembersOfFontFamily:family];
 	}
 	else
 	{
@@ -1638,9 +1657,64 @@ static CFDataRef aRTFSelection = nil;
 	// Do not retain as invoking alloc disables autorelease
 	pSharedResponder = [[VCLResponder alloc] init];
 
-	[VCLApplication poseAsClass:[NSApplication class]];
-	[VCLBundle poseAsClass:[NSBundle class]];
-	[VCLFontManager poseAsClass:[NSFontManager class]];
+	// VCLApplication selectors
+
+	SEL aSelector = @selector(setDelegate:);
+	SEL aPoseAsSelector = @selector(poseAsSetDelegate:);
+	Method aOldMethod = class_getInstanceMethod( [NSApplication class], aSelector );
+	Method aNewMethod = class_getInstanceMethod( [VCLApplication class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSApplication class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	// VCLBundle selectors
+
+	aSelector = @selector(loadNibFile:externalNameTable:withZone:);
+	aPoseAsSelector = @selector(poseAsLoadNibFile:externalNameTable:withZone:);
+	aOldMethod = class_getClassMethod( [NSBundle class], aSelector );
+	aNewMethod = class_getClassMethod( [VCLBundle class], aSelector );
+	Method aPoseAsMethod = class_getClassMethod( [VCLBundle class], aPoseAsSelector );
+	if ( aOldMethod && aNewMethod && aPoseAsMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP )
+		{
+			method_setImplementation( aPoseAsMethod, aOldIMP );
+			method_setImplementation( aOldMethod, aNewIMP );
+		}
+	}
+
+	// VCLFontManager selectors
+
+	aSelector = @selector(availableFontFamilies);
+	aPoseAsSelector = @selector(poseAsAvailableFontFamilies);
+	aOldMethod = class_getInstanceMethod( [NSFontManager class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLFontManager class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSFontManager class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(availableMembersOfFontFamily:);
+	aPoseAsSelector = @selector(poseAsAvailableMembersOfFontFamily:);
+	aOldMethod = class_getInstanceMethod( [NSFontManager class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLFontManager class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSFontManager class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
 	[VCLWindow poseAsClass:[NSWindow class]];
 	[VCLView poseAsClass:[NSView class]];
 }
