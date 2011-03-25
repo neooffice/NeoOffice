@@ -74,6 +74,7 @@ import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.event.WindowStateListener;
 import java.awt.font.TextHitInfo;
+import java.awt.geom.GeneralPath;
 import java.awt.im.InputContext;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
@@ -680,6 +681,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * The native utility window insets.
 	 */
 	private static Insets utilityWindowInsets = null;
+
+	/** 
+	 * The window bottom arc pixels.
+	 */
+	private static int windowBottomArc = 0;
 
 	/** 
 	 * The visible frame list.
@@ -1486,6 +1492,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	private boolean resizable = false;
 
 	/**
+	 * The rounded flag.
+	 */
+	private boolean rounded = false;
+
+	/**
 	 * The show only menus flag.
 	 */
 	private boolean showOnlyMenus = false;
@@ -1527,11 +1538,13 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 *  <code>false</code> for normal frame behavior
 	 * @param u <code>true</code> if the frame should use a native utility
 	 *  window
+	 * @param r <code>true</code> if the frame bottom is rounded
 	 */
-	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean m, boolean u) {
+	public VCLFrame(long s, VCLEventQueue q, long f, VCLFrame p, boolean m, boolean u, boolean r) {
 
 		queue = q;
 		frame = f;
+		rounded = r;
 		showOnlyMenus = m;
 		style = s;
 		utility = u;
@@ -3659,8 +3672,33 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		NoPaintPanel(VCLFrame f) {
 
 			frame = f;
-			setBackground(Color.white);
+			setBackground(new Color(0x00ffffff, true));
 			enableInputMethods(frame.showOnlyMenus ? false : true);
+
+		}
+
+		public Graphics getGraphics() {
+
+			Graphics g = super.getGraphics();
+
+			// Clip to match rounded bottom corners of window
+			if (rounded && !frame.undecorated && !frame.utility) {
+				Rectangle b = new Rectangle(getSize());
+				int curve = 6;
+				if (b.width >= curve * 2 && b.height >= curve) {
+					GeneralPath path = new GeneralPath();
+					path.moveTo(b.x, b.y);
+					path.lineTo(b.x, b.y + b.height - curve);
+					path.curveTo(b.x, b.y + b.height - curve, b.x, b.height, b.x + curve, b.height);
+					path.lineTo(b.x + b.width - curve, b.height);
+					path.curveTo(b.x + b.width - curve, b.y + b.height, b.x + b.width, b.y + b.height, b.x + b.width, b.y + b.height - curve);
+					path.lineTo(b.x + b.width, 0);
+					path.closePath();
+					((Graphics2D)g).setClip(path);
+				}
+			}
+
+			return g;
 
 		}
 
@@ -3701,7 +3739,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		void setFullScreenMode(boolean b) {
 
 			// Set background to black in full screen mode
-			setBackground(b ? Color.black : Color.white);
+			setBackground(b ? new Color(0x00000000, true) : new Color(0x00ffffff, true));
 
 		}
 

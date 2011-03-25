@@ -749,7 +749,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				g.setComposite(VCLGraphics.createCopyComposite);
-				g.setClip(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
+				g.clipRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
 				g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
 				img = new VCLImage(VCLGraphics.createCopyComposite.getRaster());
 			}
@@ -879,16 +879,18 @@ public final class VCLGraphics {
 							g.setComposite(VCLGraphics.xorImageComposite);
 							VCLGraphics.xorImageComposite.setXORMode(Color.black);
 						}
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+							g.setClip(oldClip);
 						}
 						if (userPolygonClip)
 							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.drawImage(img, destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
 				}
@@ -902,14 +904,16 @@ public final class VCLGraphics {
 			Graphics2D g = getGraphics();
 			if (g != null) {
 				try {
+					Shape oldClip = g.getClip();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						// Some versions of the JVM ignore clip in copyArea()
 						// so limit copying to the clip area
 						Rectangle clipRect = (Rectangle)clipRects.next();
 						// Fix bug 2439 by explicitly setting the clip
-						g.setClip(clipRect);
+						g.clip(clipRect);
 						g.copyArea(srcX + clipRect.x - destX, srcY + clipRect.y - destY, clipRect.width, clipRect.height, destX - srcX, destY - srcY);
+						g.setClip(oldClip);
 					}
 				}
 				catch (Throwable t) {
@@ -974,7 +978,7 @@ public final class VCLGraphics {
 
 					g.setComposite(VCLGraphics.copyComposite);
 					VCLGraphics.copyComposite.setData(buffer, currentDestBounds, dataWidth, dataHeight);
-					g.setClip(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
+					g.clipRect(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
 					g.fillRect(srcBounds.x, srcBounds.y + offsetY, currentDestBounds.width, currentDestBounds.height);
 				}
 				catch (Throwable t) {
@@ -1060,16 +1064,18 @@ public final class VCLGraphics {
 							g.setComposite(VCLGraphics.xorImageComposite);
 							VCLGraphics.xorImageComposite.setXORMode(Color.black);
 						}
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
+							g.setClip(oldClip);
 						}
 						if (userPolygonClip)
 							throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.drawImage(bmp.getImage(), destX, destY, destX + destWidth, destY + destHeight, srcBounds.x, srcBounds.y, srcBounds.x + srcBounds.width, srcBounds.y + srcBounds.height, null);
 					}
 				}
@@ -1415,7 +1421,7 @@ public final class VCLGraphics {
 				Iterator clipRects = clipList.iterator();
 				while (clipRects.hasNext()) {
 					g2 = (Graphics2D)g.create();
-					g2.setClip((Rectangle)clipRects.next());
+					g2.clip((Rectangle)clipRects.next());
 					g2.translate(x, y);
 
 					// Set rotation
@@ -1497,14 +1503,16 @@ public final class VCLGraphics {
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.drawLine(x1, y1, x2, y2);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.drawLine(x1, y1, x2, y2);
 					}
 				}
@@ -1605,17 +1613,19 @@ public final class VCLGraphics {
 					if (antialiased)
 						g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							if (fill)
 								g.fill(shape);
 							else
 								g.draw(shape);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						if (fill)
 							g.fill(shape);
 						else
@@ -1723,14 +1733,16 @@ public final class VCLGraphics {
 					if (antialiased)
 						g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.draw(shape);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.draw(shape);
 					}
 				}
@@ -1841,17 +1853,19 @@ public final class VCLGraphics {
 					}
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							if (fill)
 								g.fillPolygon(polygon);
 							else
 								g.drawPolygon(polygon);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						if (fill)
 							g.fillPolygon(polygon);
 						else
@@ -1952,14 +1966,16 @@ public final class VCLGraphics {
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.drawPolyline(xpoints, ypoints, npoints);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.drawPolyline(xpoints, ypoints, npoints);
 					}
 				}
@@ -2074,17 +2090,19 @@ public final class VCLGraphics {
 
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							if (fill)
 								g.fill(area);
 							else
 								g.draw(area);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						if (fill)
 							g.fill(area);
 						else
@@ -2186,17 +2204,19 @@ public final class VCLGraphics {
 						g.setXORMode(color == 0xff000000 ? Color.white : Color.black);
 					g.setColor(new Color(color, true));
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							if (fill)
 								g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
 							else
 								g.drawRect(x, y, width - 1, height - 1);
+							g.setClip(null);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						if (fill)
 							g.fillRect(destBounds.x, destBounds.y, destBounds.width, destBounds.height);
 						else
@@ -2306,16 +2326,18 @@ public final class VCLGraphics {
 				else {
 					VCLGraphics.button.setSize(bounds.width, bounds.height);
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.translate(bounds.x, bounds.y);
 							VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
 							g.translate(bounds.x * -1, bounds.y * -1);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.translate(bounds.x, bounds.y);
 						VCLGraphics.button.getUI().paint(g, VCLGraphics.button);
 						g.translate(bounds.x * -1, bounds.y * -1);
@@ -2439,16 +2461,18 @@ public final class VCLGraphics {
 				else {
 					VCLGraphics.radioButton.setSize(d.width, d.height);
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.translate(bounds.x, bounds.y);
 							VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
 							g.translate(bounds.x * -1, bounds.y * -1);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.translate(bounds.x, bounds.y);
 						VCLGraphics.radioButton.getUI().paint(g, VCLGraphics.radioButton);
 						g.translate(bounds.x * -1, bounds.y * -1);
@@ -2647,7 +2671,7 @@ public final class VCLGraphics {
 		if (g != null) {
 			try {
 				g.setComposite(VCLGraphics.createCopyComposite);
-				g.setClip(x, y, 1, 1);
+				g.clipRect(x, y, 1, 1);
 				g.fillRect(x, y, 1, 1);
 				int[] srcData = new int[1];
 				srcData = (int[])VCLGraphics.createCopyComposite.getRaster().getDataElements(0, 0, srcData.length, 1, srcData);
@@ -2743,14 +2767,16 @@ public final class VCLGraphics {
 					// draws dashed strokes one pixel above the
 					// specified y coordinate
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.drawRect(x, y + 1, width - 1, height - 2);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.drawRect(x, y + 1, width - 1, height - 2);
 					}
 				}
@@ -2765,11 +2791,13 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.invertComposite);
+					Shape oldClip = g.getClip();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
 						Rectangle clipRect = (Rectangle)clipRects.next();
-						g.setClip(clipRect);
+						g.clip(clipRect);
 						g.fillRect(clipRect.x, clipRect.y, clipRect.width, clipRect.height);
+						g.setClip(oldClip);
 					}
 					if (userPolygonClip)
 						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
@@ -2850,14 +2878,16 @@ public final class VCLGraphics {
 					g.setXORMode(Color.white);
 					g.setColor(Color.black);
 					if (!userPolygonClip) {
+						Shape oldClip = g.getClip();
 						Iterator clipRects = clipList.iterator();
 						while (clipRects.hasNext()) {
-							g.setClip((Rectangle)clipRects.next());
+							g.clip((Rectangle)clipRects.next());
 							g.drawPolyline(xpoints, ypoints, npoints);
+							g.setClip(oldClip);
 						}
 					}
 					else {
-						g.setClip(userClip);
+						g.clip(userClip);
 						g.drawPolyline(xpoints, ypoints, npoints);
 					}
 				}
@@ -2872,10 +2902,12 @@ public final class VCLGraphics {
 			if (g != null) {
 				try {
 					g.setComposite(VCLGraphics.invertComposite);
+					Shape oldClip = g.getClip();
 					Iterator clipRects = clipList.iterator();
 					while (clipRects.hasNext()) {
-						g.setClip((Rectangle)clipRects.next());
+						g.clip((Rectangle)clipRects.next());
 						g.fillPolygon(polygon);
+						g.setClip(oldClip);
 					}
 					if (userPolygonClip)
 						throw new PolygonClipException("Polygonal clip not supported for this drawing operation");
