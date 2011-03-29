@@ -37,6 +37,7 @@
 #include <list>
 
 #include <saldata.hxx>
+#include <salframe.h>
 #include <com/sun/star/vcl/VCLEvent.hxx>
 #include <rtl/ustring.hxx>
 #include <vcl/svapp.hxx>
@@ -172,6 +173,32 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 	return nRet;
 }
 
+static void HandleDidChangeScreenParametersRequest()
+{
+	if ( !Application::IsShutDown() )
+	{
+		// If no Java event queue exists yet, ignore event as we are likely to
+		// deadlock
+		SalData *pSalData = GetSalData();
+		if ( pSalData && pSalData->mpEventQueue )
+		{
+			IMutex& rSolarMutex = Application::GetSolarMutex();
+			rSolarMutex.acquire();
+
+			if ( !Application::IsShutDown() )
+			{
+				for ( std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+				{
+					if ( (*it)->mbVisible )
+						(*it)->SetPosSize( 0, 0, 0, 0, 0 );
+				}
+			}
+
+			rSolarMutex.release();
+		}
+	}
+}
+
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @implementation VCLApplicationDelegate
@@ -235,6 +262,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 {
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationDidChangeScreenParameters:)] )
 		[mpDelegate applicationDidChangeScreenParameters:pNotification];
+
+	// Fix bug 3559 by making sure that the frame fits in the work area
+	// if the screen size has changed
+	HandleDidChangeScreenParametersRequest();
 }
 
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag
