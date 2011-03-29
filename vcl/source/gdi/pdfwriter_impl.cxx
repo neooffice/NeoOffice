@@ -12661,7 +12661,7 @@ void PDFWriterImpl::encodeGlyphs()
 
                 // Map font IDs to objects
                 OString aFontIDTag;
-                if ( IsRunningLeopard() || IsRunningSnowLeopard() )
+                if ( IsRunningTiger() || IsRunningLeopard() || IsRunningSnowLeopard() )
                     aFontIDTag = OString( "/F" );
                 else
                     aFontIDTag = OString( "/TT" );
