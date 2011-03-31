@@ -1161,7 +1161,7 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 									mpFallbackFont = new com_sun_star_vcl_VCLFont( ffit->second->maVCLFontName, mpHash->mfFontSize, mpVCLFont->getOrientation(), mpHash->mbAntialiased, mpHash->mbVertical, mpHash->mfFontScaleX );
 							}
 
-							if ( !mpVCLFont )
+							if ( !mpFallbackFont )
 							{
 								// Look through our application font list for
 								// a font that has glyphs for the current char
