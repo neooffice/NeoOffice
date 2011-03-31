@@ -129,6 +129,9 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			SalData *pSalData = GetSalData();
 
 			// Clean out caches
+			SalATSLayout::ClearLayoutDataCache();
+			com_sun_star_vcl_VCLFont::clearNativeFonts();
+			JavaImplFontData::ClearNativeFonts();
 			for ( ::std::map< String, JavaImplFontData* >::const_iterator dfnit = pSalData->maFontNameMapping.begin(); dfnit != pSalData->maFontNameMapping.end(); ++dfnit )
 				delete dfnit->second;
 			pSalData->maFontNameMapping.clear();
@@ -138,8 +141,6 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 			pSalData->maBoldNativeFontMapping.clear();
 			pSalData->maItalicNativeFontMapping.clear();
 			pSalData->maBoldItalicNativeFontMapping.clear();
-			JavaImplFontData::maBadNativeFontIDMap.clear();
-			SalATSLayout::ClearLayoutDataCache();
 
 			if ( !Application::IsShutDown() )
 			{
@@ -518,6 +519,28 @@ static const JavaImplFontData *ImplGetFontVariant( const JavaImplFontData *pFont
 
 // -----------------------------------------------------------------------
 
+::std::map< JavaImplFontData*, JavaImplFontData* > JavaImplFontData::maInstancesMap;
+
+// -----------------------------------------------------------------------
+
+void JavaImplFontData::ClearNativeFonts()
+{
+	JavaImplFontData::maBadNativeFontIDMap.clear();
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	for ( ::std::map< JavaImplFontData*, JavaImplFontData* >::const_iterator it = JavaImplFontData::maInstancesMap.begin(); it != JavaImplFontData::maInstancesMap.end(); ++it )
+	{
+		if ( it->second->mnNativeFontID )
+		{
+			CFRelease( (CTFontRef)it->second->mnNativeFontID );
+			it->second->mnNativeFontID = 0;
+		}
+	}
+#endif	// USE_CORETEXT_TEXT_RENDERING
+}
+
+// -----------------------------------------------------------------------
+
 void JavaImplFontData::HandleBadFont( JavaImplFontData *pFontData )
 {
 	if ( !pFontData )
@@ -578,6 +601,8 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, co
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	if ( mnNativeFontID )
 		CFRetain( (CTFontRef)mnNativeFontID );
+
+	JavaImplFontData::maInstancesMap[ this ] = this;
 #endif	// USE_CORETEXT_TEXT_RENDERING
 
 	// [ed] 11/1/04 Scalable fonts should always report their width and height
@@ -591,16 +616,20 @@ JavaImplFontData::JavaImplFontData( const ImplDevFontAttributes& rAttributes, co
 
 JavaImplFontData::~JavaImplFontData()
 {
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	::std::map< JavaImplFontData*, JavaImplFontData* >::iterator it = JavaImplFontData::maInstancesMap.find( this );
+	if ( it != JavaImplFontData::maInstancesMap.end() )
+		JavaImplFontData::maInstancesMap.erase( it );
+
+	if ( mnNativeFontID )
+		CFRelease( (CTFontRef)mnNativeFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
 	while ( maChildren.size() )
 	{
 		delete maChildren.front();
 		maChildren.pop_front();
 	}
-
-#ifdef USE_CORETEXT_TEXT_RENDERING
-	if ( mnNativeFontID )
-		CFRelease( (CTFontRef)mnNativeFontID );
-#endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
 // -----------------------------------------------------------------------

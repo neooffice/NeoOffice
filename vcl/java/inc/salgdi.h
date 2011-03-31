@@ -75,6 +75,9 @@ class com_sun_star_vcl_VCLGraphics;
 
 class JavaImplFontData : public ImplFontData
 {
+protected:
+	static ::std::map< JavaImplFontData*, JavaImplFontData* >	maInstancesMap;
+
 public:
 	static ::std::map< sal_IntPtr, sal_IntPtr >	maBadNativeFontIDMap;
 	::rtl::OUString			maVCLFontName;
@@ -82,6 +85,7 @@ public:
 	::std::list< JavaImplFontData* >	maChildren;
 	::rtl::OUString			maFamilyName;
 
+	static void				ClearNativeFonts();
 	static void				HandleBadFont( JavaImplFontData *pFontData );
 	DECL_STATIC_LINK( JavaImplFontData, RunNativeFontsTimer, void* );
 

@@ -57,6 +57,28 @@ jclass com_sun_star_vcl_VCLFont::theClass = NULL;
 
 // ----------------------------------------------------------------------------
 
+::std::map< com_sun_star_vcl_VCLFont*, com_sun_star_vcl_VCLFont* >com_sun_star_vcl_VCLFont::maInstancesMap;
+
+// ----------------------------------------------------------------------------
+
+void com_sun_star_vcl_VCLFont::clearNativeFonts()
+{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	for ( ::std::map< com_sun_star_vcl_VCLFont*, com_sun_star_vcl_VCLFont* >::const_iterator vfit = com_sun_star_vcl_VCLFont::maInstancesMap.begin(); vfit != com_sun_star_vcl_VCLFont::maInstancesMap.end(); ++vfit )
+	{
+		if ( vfit->second->mnNativeFont )
+		{
+			CFRelease( (CTFontRef)vfit->second->mnNativeFont );
+			vfit->second->mnNativeFont = 0;
+		}
+	}
+
+	GetSalData()->maJavaNativeFontMapping.clear();
+#endif	// USE_CORETEXT_TEXT_RENDERING
+}
+
+// ----------------------------------------------------------------------------
+
 jclass com_sun_star_vcl_VCLFont::getMyClass()
 {
 	if ( !theClass )
@@ -74,6 +96,10 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 
 com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : java_lang_Object( (jobject)NULL ), maName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical )
 {
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	com_sun_star_vcl_VCLFont::maInstancesMap[ this ] = this;
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( !t.pEnv )
@@ -102,6 +128,8 @@ com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pV
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	if ( mnNativeFont )
 		CFRetain( (CTFontRef)mnNativeFont );
+
+	com_sun_star_vcl_VCLFont::maInstancesMap[ this ] = this;
 #endif	// USE_CORETEXT_TEXT_RENDERING
 }
 
@@ -110,6 +138,10 @@ com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pV
 com_sun_star_vcl_VCLFont::~com_sun_star_vcl_VCLFont()
 {
 #ifdef USE_CORETEXT_TEXT_RENDERING
+	::std::map< com_sun_star_vcl_VCLFont*, com_sun_star_vcl_VCLFont* >::iterator it = com_sun_star_vcl_VCLFont::maInstancesMap.find( this );
+	if ( it != com_sun_star_vcl_VCLFont::maInstancesMap.end() )
+		com_sun_star_vcl_VCLFont::maInstancesMap.erase( it );
+
 	if ( mnNativeFont )
 		CFRelease( (CTFontRef)mnNativeFont );
 #endif	// USE_CORETEXT_TEXT_RENDERING
@@ -137,15 +169,8 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 			::std::hash_map< OUString, JavaImplFontData*, OUStringHash >::iterator jit = pSalData->maJavaFontNameMapping.find( aPSName );
 			if ( jit != pSalData->maJavaFontNameMapping.end() && jit->second->mnNativeFontID )
 			{
-#ifdef USE_CORETEXT_TEXT_RENDERING
-				mnNativeFont = jit->second->mnNativeFontID;
-				CFRetain( (CTFontRef)mnNativeFont );
-				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
-				CFRetain( (CTFontRef)mnNativeFont );
-#else	// USE_CORETEXT_TEXT_RENDERING
 				mnNativeFont = jit->second->mnNativeFontID;
 				pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
-#endif	// USE_CORETEXT_TEXT_RENDERING
 			}
 			else
 			{
@@ -159,7 +184,6 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 					{
 						mnNativeFont = (sal_IntPtr)aFont;
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
-						CFRetain( (CTFontRef)mnNativeFont );
 					}
 #else	// USE_CORETEXT_TEXT_RENDERING
 					ATSFontRef aFont = ATSFontFindFromPostScriptName( aString, kATSOptionFlagsDefault );
@@ -177,10 +201,15 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 		else
 		{
 			mnNativeFont = it->second;
+		}
+
 #ifdef USE_CORETEXT_TEXT_RENDERING
+		// Fix bug 3653 by always retaining any native font as even when
+		// CTFontCreateWithName() is called, the returned font will be
+		// released if Mac OS X removes or disables the underlying font
+		if ( mnNativeFont )
 			CFRetain( (CTFontRef)mnNativeFont );
 #endif	// USE_CORETEXT_TEXT_RENDERING
-		}
 	}
 
 	return mnNativeFont;

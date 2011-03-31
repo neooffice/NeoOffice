@@ -62,8 +62,11 @@ class com_sun_star_vcl_VCLFont : public java_lang_Object
 
 protected:
 	static jclass		theClass;
+	static ::std::map< ::vcl::com_sun_star_vcl_VCLFont*, ::vcl::com_sun_star_vcl_VCLFont* >	maInstancesMap;
+
 
 public:
+	static void			clearNativeFonts();
 	static jclass		getMyClass();
 
 						com_sun_star_vcl_VCLFont( ::rtl::OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX );
