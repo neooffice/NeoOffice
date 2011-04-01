@@ -68,7 +68,8 @@ void com_sun_star_vcl_VCLFont::clearNativeFonts()
 	{
 		if ( vfit->second->mnNativeFont )
 		{
-			CFRelease( (CTFontRef)vfit->second->mnNativeFont );
+			if ( vfit->second->mbNativeFontOwner )
+				CFRelease( (CTFontRef)vfit->second->mnNativeFont );
 			vfit->second->mnNativeFont = 0;
 		}
 	}
@@ -94,7 +95,7 @@ jclass com_sun_star_vcl_VCLFont::getMyClass()
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : java_lang_Object( (jobject)NULL ), maName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical )
+com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, float fSize, short nOrientation, sal_Bool bAntialiased, sal_Bool bVertical, double fScaleX ) : java_lang_Object( (jobject)NULL ), maName( aName ), mnNativeFont( 0 ), mnOrientation( nOrientation ), mfScaleX( fScaleX ), mfSize( fSize ), mbAntialiased( bAntialiased ), mbVertical( bVertical ), mbNativeFontOwner( sal_True )
 {
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	com_sun_star_vcl_VCLFont::maInstancesMap[ this ] = this;
@@ -123,7 +124,7 @@ com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( OUString aName, float fSize,
 
 // ----------------------------------------------------------------------------
 
-com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont ) : java_lang_Object( (jobject)pVCLFont->getJavaObject() ), maName( pVCLFont->maName ), mnNativeFont( pVCLFont->mnNativeFont ), mnOrientation( pVCLFont->mnOrientation ), mfScaleX( pVCLFont->mfScaleX ), mfSize( pVCLFont->mfSize ), mbAntialiased( pVCLFont->mbAntialiased ), mbVertical( pVCLFont->mbVertical )
+com_sun_star_vcl_VCLFont::com_sun_star_vcl_VCLFont( com_sun_star_vcl_VCLFont *pVCLFont ) : java_lang_Object( (jobject)pVCLFont->getJavaObject() ), maName( pVCLFont->maName ), mnNativeFont( pVCLFont->mnNativeFont ), mnOrientation( pVCLFont->mnOrientation ), mfScaleX( pVCLFont->mfScaleX ), mfSize( pVCLFont->mfSize ), mbAntialiased( pVCLFont->mbAntialiased ), mbVertical( pVCLFont->mbVertical ), mbNativeFontOwner( sal_True )
 {
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	if ( mnNativeFont )
@@ -142,7 +143,7 @@ com_sun_star_vcl_VCLFont::~com_sun_star_vcl_VCLFont()
 	if ( it != com_sun_star_vcl_VCLFont::maInstancesMap.end() )
 		com_sun_star_vcl_VCLFont::maInstancesMap.erase( it );
 
-	if ( mnNativeFont )
+	if ( mnNativeFont && mbNativeFontOwner )
 		CFRelease( (CTFontRef)mnNativeFont );
 #endif	// USE_CORETEXT_TEXT_RENDERING
 }
@@ -182,6 +183,10 @@ sal_IntPtr com_sun_star_vcl_VCLFont::getNativeFont()
 					CTFontRef aFont = CTFontCreateWithName( aString, 0, NULL );
 					if ( aFont )
 					{
+						// Fix bug 3653 by never releasing this font as this
+						// is a font loaded by internally by Java and Java will
+						// release the font out from underneath us
+						mbNativeFontOwner = sal_False;
 						mnNativeFont = (sal_IntPtr)aFont;
 						pSalData->maJavaNativeFontMapping[ aPSName ] = mnNativeFont;
 					}

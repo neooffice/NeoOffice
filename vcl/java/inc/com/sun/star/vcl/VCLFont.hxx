@@ -59,6 +59,7 @@ class com_sun_star_vcl_VCLFont : public java_lang_Object
 	float				mfSize;
 	sal_Bool			mbAntialiased;
 	sal_Bool			mbVertical;
+	sal_Bool			mbNativeFontOwner;
 
 protected:
 	static jclass		theClass;
