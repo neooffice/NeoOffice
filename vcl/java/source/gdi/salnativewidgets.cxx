@@ -87,7 +87,7 @@
 
 #define COMBOBOX_BUTTON_WIDTH			25
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
-#define COMBOBOX_HEIGHT					28
+#define COMBOBOX_HEIGHT					( IsRunningLion() ? 29 : 28 )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
 #define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
