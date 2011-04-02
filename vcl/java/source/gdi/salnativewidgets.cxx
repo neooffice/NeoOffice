@@ -85,9 +85,10 @@
 // Comment out the following line to disable native controls
 #define USE_NATIVE_CONTROLS
 
-#define COMBOBOX_BUTTON_WIDTH			25
+#define COMBOBOX_BUTTON_WIDTH			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 25 : 24 )
+#define COMBOBOX_BUTTON_WIDTH_SLOP		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1  )
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
-#define COMBOBOX_HEIGHT					( IsRunningLion() ? 29 : 28 )
+#define COMBOBOX_HEIGHT					( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 28 : 29 )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
 #define EDITBOX_HEIGHT					( 24 * Application::GetSettings().GetStyleSettings().GetToolFont().GetHeight() / 10 )
@@ -100,10 +101,10 @@
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
 #define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
-#define SCROLLBAR_WIDTH_SLOP			( IsRunningLion() ? 1 : 0  )
+#define SCROLLBAR_WIDTH_SLOP			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1  )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
-#define PROGRESS_HEIGHT_SLOP			( IsRunningLion() ? 1 : 0 )
+#define PROGRESS_HEIGHT_SLOP			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1 )
 #define TABITEM_HEIGHT_SLOP				4
 #define CHECKBOX_WIDTH					16
 #define CHECKBOX_HEIGHT					20
@@ -911,7 +912,20 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		destRect.origin.y = FOCUSRING_WIDTH;
 		destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
 		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
+
+		CGContextSaveGState( pBuffer->maContext );
+		CGContextClipToRect( pBuffer->maContext, CGRectMake( 0, 0, rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
 		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		CGContextRestoreGState( pBuffer->maContext );
+
+		if ( bRet )
+		{
+			CGContextSaveGState( pBuffer->maContext );
+			CGContextClipToRect( pBuffer->maContext, CGRectMake( rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, 0, COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
+			destRect.origin.y += COMBOBOX_BUTTON_WIDTH_SLOP;
+			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			CGContextRestoreGState( pBuffer->maContext );
+		}
 	}
 
 	pBuffer->ReleaseContext();
