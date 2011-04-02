@@ -100,6 +100,7 @@
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
 #define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
+#define SCROLLBAR_WIDTH_SLOP			( IsRunningLion() ? 1 : 0  )
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
 #define PROGRESS_HEIGHT_SLOP			( IsRunningLion() ? 1 : 0 )
@@ -990,11 +991,17 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ScrollbarValue *pScrollbarValue )
 {
+	BOOL bHorizontal = FALSE;
 	VCLBitmapBuffer *pBuffer;
 	if ( rDestBounds.GetWidth() > rDestBounds.GetHeight() )
+	{
 		pBuffer = &aSharedHorizontalScrollBarBuffer;
+		bHorizontal = TRUE;
+	}
 	else
+	{
 		pBuffer = &aSharedVerticalScrollBarBuffer;
+	}
 
 	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
@@ -1014,6 +1021,10 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 
 		HIThemeTrackDrawInfo pTrackDrawInfo;
 		InitScrollBarTrackInfo( &pTrackDrawInfo, NULL, nState, rDestBounds, pScrollbarValue );
+		if ( bHorizontal )
+			pTrackDrawInfo.bounds.size.width -= SCROLLBAR_WIDTH_SLOP;
+		else
+			pTrackDrawInfo.bounds.origin.x += SCROLLBAR_WIDTH_SLOP;
 
 		// Fix bug 3359 by drawing disabled scrollbar as nothing to scroll
 		if ( pTrackDrawInfo.enableState == kThemeTrackDisabled )
