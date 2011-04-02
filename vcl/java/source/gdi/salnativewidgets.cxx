@@ -102,6 +102,7 @@
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
+#define PROGRESS_HEIGHT_SLOP			( IsRunningLion() ? 1 : 0 )
 #define TABITEM_HEIGHT_SLOP				4
 #define CHECKBOX_WIDTH					16
 #define CHECKBOX_HEIGHT					20
@@ -2702,6 +2703,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				HIRect bounds;
 				pHIThemeGetTrackBounds( &pTrackDrawInfo, &bounds );
+
+				bounds.size.height += PROGRESS_HEIGHT_SLOP;
 
 				Point topLeft( (long)(controlRect.Left()+bounds.origin.x), (long)(controlRect.Top()+bounds.origin.y) );
 				Size boundsSize( (long)bounds.size.width, (long)bounds.size.height );
