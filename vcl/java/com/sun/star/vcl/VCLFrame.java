@@ -3568,9 +3568,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 
 			// Fix bug 3003 by setting the menubar while the AWT tree lock
 			// is synchronized. Fix bugs 3379 and 3425 by running on the
-			// current thread.
+			// current thread. On Mac OS X 10.7 and higher, always never set
+			// the hidden menu bar or else it will not be set on the first
+			// window that opens.
 			MenuBar oldMenuBar = getMenuBar();
-			boolean active = isActive();
+			boolean active = (frame.rounded || isActive() ? true : false);
 
 			synchronized (frame) {
 				if (active) {
