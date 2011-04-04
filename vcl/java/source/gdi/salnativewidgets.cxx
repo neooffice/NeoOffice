@@ -86,7 +86,7 @@
 #define USE_NATIVE_CONTROLS
 
 #define COMBOBOX_BUTTON_WIDTH			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 25 : 24 )
-#define COMBOBOX_BUTTON_WIDTH_SLOP		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1  )
+#define COMBOBOX_BUTTON_HEIGHT_SLOP		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1  )
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
 #define COMBOBOX_HEIGHT					( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 28 : 29 )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
@@ -913,18 +913,25 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
 		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
 
-		CGContextSaveGState( pBuffer->maContext );
-		CGContextClipToRect( pBuffer->maContext, CGRectMake( 0, 0, rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
-		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
-		CGContextRestoreGState( pBuffer->maContext );
-
-		if ( bRet )
+		if ( COMBOBOX_BUTTON_HEIGHT_SLOP )
 		{
 			CGContextSaveGState( pBuffer->maContext );
-			CGContextClipToRect( pBuffer->maContext, CGRectMake( rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, 0, COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
-			destRect.origin.y += COMBOBOX_BUTTON_WIDTH_SLOP;
+			CGContextClipToRect( pBuffer->maContext, CGRectMake( 0, 0, rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
 			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 			CGContextRestoreGState( pBuffer->maContext );
+
+			if ( bRet )
+			{
+				CGContextSaveGState( pBuffer->maContext );
+				CGContextClipToRect( pBuffer->maContext, CGRectMake( rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, 0, COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
+				destRect.origin.y += COMBOBOX_BUTTON_HEIGHT_SLOP;
+				bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+				CGContextRestoreGState( pBuffer->maContext );
+			}
+		}
+		else
+		{
+			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
 		}
 	}
 
