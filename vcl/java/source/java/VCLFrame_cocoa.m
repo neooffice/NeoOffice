@@ -302,6 +302,28 @@
 
 @end
 
+@interface RefreshMenuBar : NSObject
++ (id)create;
+- (void)refreshMenuBar:(id)pObject;
+@end
+
+@implementation RefreshMenuBar
+
++ (id)create
+{
+	RefreshMenuBar *pRet = [[RefreshMenuBar alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)refreshMenuBar:(id)pObject
+{
+	if ( [NSMenu menuBarVisible] )
+		[NSMenu setMenuBarVisible:YES];
+}
+
+@end
+
 id CWindow_getNSWindow( id pCWindow )
 {
 	NSWindow *pRet = nil;
@@ -396,6 +418,16 @@ void CWindow_updateLocation( id pCWindow )
 		UpdateLocation *pUpdateLocation = [UpdateLocation createWithCWindow:pCWindow];
 		[pUpdateLocation performSelectorOnMainThread:@selector(updateLocation:) withObject:pUpdateLocation waitUntilDone:NO];
 	}
+
+	[pPool release];
+}
+
+void NSMenuBar_refresh()
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	RefreshMenuBar *pRefreshMenuBar = [RefreshMenuBar create];
+	[pRefreshMenuBar performSelectorOnMainThread:@selector(refreshMenuBar:) withObject:pRefreshMenuBar waitUntilDone:NO];
 
 	[pPool release];
 }

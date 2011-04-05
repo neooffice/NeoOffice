@@ -53,16 +53,38 @@
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
+#ifndef _VOS_MODULE_HXX_
+#include <vos/module.hxx>
+#endif
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
 #endif
 
 #include "VCLFrame_cocoa.h"
 
+typedef jboolean Java_apple_awt_CFrame_nativeSetMenuBar_Type( JNIEnv *, jobject, jlong, jlong );
+
+static ::vos::OModule aModule;
+static Java_apple_awt_CFrame_nativeSetMenuBar_Type *pNativeSetMenuBar = NULL;
+
 using namespace vcl;
 using namespace vos;
 
 // ============================================================================
+
+static void JNICALL Java_apple_awt_CFrame_nativeSetMenuBar( JNIEnv *pEnv, jobject object, jlong _par0, jlong _par1 )
+{
+	if ( pNativeSetMenuBar )
+	{
+		pNativeSetMenuBar( pEnv, object, _par0, _par1 );
+
+		// Refresh the Mac OS X menubar since changes will not be immediately
+		// shown on Mac OS X 10.7
+		NSMenuBar_refresh();
+	}
+}
+
+// ----------------------------------------------------------------------------
 
 static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getTextLocation0( JNIEnv *pEnv, jobject object, jlong _par0 )
 {
@@ -293,6 +315,53 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 	{
 		VCLThreadAttach t;
 		if ( !t.pEnv ) return (jclass)NULL;
+
+		if ( !IsRunningLeopard() && !IsRunningSnowLeopard() )
+		{
+			// Cache existing functions from libawt.jnilib
+			jclass systemClass = t.pEnv->FindClass( "java/lang/System" );
+			if ( systemClass )
+			{
+				// Find libawt.jnilib
+				jmethodID mID = NULL;
+				OUString aJavaHomePath;
+				if ( !mID )
+				{
+					char *cSignature = "(Ljava/lang/String;)Ljava/lang/String;";
+					mID = t.pEnv->GetStaticMethodID( systemClass, "getProperty", cSignature );
+				}
+				OSL_ENSURE( mID, "Unknown method id!" );
+				if ( mID )
+				{
+					jvalue args[1];
+					args[0].l = StringToJavaString( t.pEnv, OUString::createFromAscii( "java.home" ) );
+					jstring out = (jstring)t.pEnv->CallStaticObjectMethodA( systemClass, mID, args );
+					if ( out )
+						aJavaHomePath = JavaString2String( t.pEnv, out );
+				}
+
+				if ( aJavaHomePath.getLength() )
+				{
+					OUString aAWTPath( aJavaHomePath );
+					aAWTPath += OUString::createFromAscii( "/../Libraries/libawt.jnilib" );
+					if ( aModule.load( aAWTPath ) )
+						pNativeSetMenuBar = (Java_apple_awt_CFrame_nativeSetMenuBar_Type *)aModule.getSymbol( OUString::createFromAscii( "Java_apple_awt_CFrame_nativeSetMenuBar" ) );
+				}
+			}
+
+			// Override the CFrame.nativeSetMenuBar() method to explicity
+			// refresh the Mac OS X menu bar as it will not immediately
+			// update when new menus are added or removed
+			jclass cFrameClass = t.pEnv->FindClass( "apple/awt/CFrame" );
+			if ( cFrameClass )
+			{
+				JNINativeMethod aMethod;
+				aMethod.name = "nativeSetMenuBar";
+				aMethod.signature = "(JJ)V";
+				aMethod.fnPtr = (void *)Java_apple_awt_CFrame_nativeSetMenuBar;
+				t.pEnv->RegisterNatives( cFrameClass, &aMethod, 1 );
+			}
+		}
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLFrame" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
