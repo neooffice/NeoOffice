@@ -47,6 +47,8 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#import "../app/salinst_cocoa.h"
+
 typedef void KeyScript_Type( short nCode );
 
 #include "VCLApplicationDelegate_cocoa.h"
@@ -212,6 +214,30 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return pSharedAppDelegate;
 }
 
+- (void)addMenuBarItem:(NSNotification *)pNotification
+{
+	if ( pNotification )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		NSMenu *pObject = [pNotification object];
+		if ( pApp && pObject && pObject == [pApp mainMenu] )
+		{
+			NSUInteger i = 0;
+			NSUInteger nCount = [pObject numberOfItems];
+			for ( ; i < nCount; i++ )
+			{
+				NSMenuItem *pItem = [pObject itemAtIndex:i];
+				if ( pItem )
+				{
+					NSMenu *pSubmenu = [pItem submenu];
+					if ( pSubmenu )
+						[pSubmenu setDelegate:self];
+				}
+			}
+		}
+	}
+}
+
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename
 {
 	if ( mbInTermination || !pFilename )
@@ -309,6 +335,22 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)dealloc
 {
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( pApp )
+	{
+		NSMenu *pMainMenu = [pApp mainMenu];
+		if ( pMainMenu )
+		{
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pNotificationCenter )
+			{
+				[pNotificationCenter removeObserver:self name:NSMenuDidAddItemNotification object:pMainMenu];
+				[pNotificationCenter removeObserver:self name:NSMenuDidBeginTrackingNotification object:pMainMenu];
+				[pNotificationCenter removeObserver:self name:NSMenuDidEndTrackingNotification object:pMainMenu];
+			}
+		}
+	}
+
 	if ( mpDelegate )
 		[mpDelegate release];
 
@@ -321,6 +363,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 	mpDelegate = nil;
 	mbInTermination = NO;
+	mbInTracking = NO;
+	mbUpdateMenus = NO;
 
 	// Set the application delegate as the delegate for the application menu so
 	// that the Java menu item target and selector can be replaced with our own
@@ -328,14 +372,25 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	if ( pApp )
 	{
 		NSMenu *pMainMenu = [pApp mainMenu];
-		if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
+		if ( pMainMenu )
 		{
-			NSMenuItem *pItem = [pMainMenu itemAtIndex:0];
-			if ( pItem )
+			if ( [pMainMenu numberOfItems] > 0 )
 			{
-				NSMenu *pAppMenu = [pItem submenu];
-				if ( pAppMenu )
-					[pAppMenu setDelegate:self];
+				NSMenuItem *pItem = [pMainMenu itemAtIndex:0];
+				if ( pItem )
+				{
+					NSMenu *pAppMenu = [pItem submenu];
+					if ( pAppMenu )
+						[pAppMenu setDelegate:self];
+				}
+			}
+		
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if ( pNotificationCenter )
+			{
+				[pNotificationCenter addObserver:self selector:@selector(addMenuBarItem:) name:NSMenuDidAddItemNotification object:pMainMenu];
+				[pNotificationCenter addObserver:self selector:@selector(trackMenuBar:) name:NSMenuDidBeginTrackingNotification object:pMainMenu];
+				[pNotificationCenter addObserver:self selector:@selector(trackMenuBar:) name:NSMenuDidEndTrackingNotification object:pMainMenu];
 			}
 		}
 	}
@@ -347,6 +402,24 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 {
 	if ( pMenu )
 	{
+		if ( mbInTracking && mbUpdateMenus )
+		{
+			NSApplication *pApp = [NSApplication sharedApplication];
+			if ( pApp )
+			{
+				NSMenu *pMainMenu = [pApp mainMenu];
+				if ( pMainMenu && [pMenu supermenu] == pMainMenu )
+				{
+					mbUpdateMenus = NO;
+					if ( !VCLInstance_updateNativeMenus() )
+					{
+						[pMainMenu cancelTracking];
+						return;
+					}
+				}
+			}
+		}
+
 		int nItems = [pMenu numberOfItems];
 		int i = 0;
 		for ( ; i < nItems; i++ )
@@ -409,6 +482,28 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		HandlePreferencesRequest();
 }
 
+- (void)trackMenuBar:(NSNotification *)pNotification
+{
+	if ( pNotification )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		NSMenu *pObject = [pNotification object];
+		if ( pApp && pObject && pObject == [pApp mainMenu] )
+		{
+			NSString *pName = [pNotification name];
+			if ( [NSMenuDidBeginTrackingNotification isEqualToString:pName] )
+			{
+				mbInTracking = YES;
+				mbUpdateMenus = YES;
+			}
+			else if ( [NSMenuDidEndTrackingNotification isEqualToString:pName] )
+			{
+				mbInTracking = NO;
+				mbUpdateMenus = NO;
+			}
+		}
+	}
+}
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem
 {
 	return !mbInTermination;

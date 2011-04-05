@@ -40,8 +40,11 @@
 {
 	id					mpDelegate;
 	BOOL				mbInTermination;
+	BOOL				mbInTracking;
+	BOOL				mbUpdateMenus;
 }
 + (VCLApplicationDelegate *)sharedDelegate;
+- (void)addMenuBarItem:(NSNotification *)pNotification;
 - (BOOL)application:(NSApplication *)pApplication openFile:(NSString *)pFilename;
 - (BOOL)application:(NSApplication *)pApplication printFile:(NSString *)pFilename;
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification;
@@ -56,6 +59,7 @@
 - (void)setDelegate:(id)pDelegate;
 - (void)showAbout;
 - (void)showPreferences;
+- (void)trackMenuBar:(NSNotification *)pNotification;
 - (BOOL)validateMenuItem:(NSMenuItem *)pMenuItem;
 @end
 

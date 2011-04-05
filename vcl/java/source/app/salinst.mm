@@ -123,10 +123,6 @@
 #include "salinst.hrc"
 #include "salinst_cocoa.h"
 
-#include <premac.h>
-#include <Cocoa/Cocoa.h>
-#include <postmac.h>
-
 class JavaSalI18NImeStatus : public SalI18NImeStatus
 {
 public:
@@ -145,25 +141,6 @@ static ULONG nCurrentTimeout = 0;
 using namespace rtl;
 using namespace vcl;
 using namespace vos;
-
-@interface VCLMenuBarTrackingHandler : NSObject
-- (void)trackMenuBar:(NSNotification *)pNotification;
-@end
-
-@implementation VCLMenuBarTrackingHandler
-
-- (void)trackMenuBar:(NSNotification *)pNotification
-{
-	if ( pNotification )
-	{
-		NSApplication *pApp = [NSApplication sharedApplication];
-		NSMenu *pObject = [pNotification object];
-		if ( pApp && pObject && pObject == [pApp mainMenu] )
-			VCLInstance_updateNativeMenus();
-	}
-}
-
-@end
 
 // ============================================================================
 
@@ -336,20 +313,6 @@ void InitJavaAWT()
 		if ( !pSalData->mpEventQueue )
 		{
 			pSalData->mpEventQueue = new com_sun_star_vcl_VCLEventQueue( NULL );
-
-			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-			// Set up native event handler
-			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-			if ( pNotificationCenter )
-			{
-				// Do not retain as invoking alloc disables autorelease
-				VCLMenuBarTrackingHandler *pVCLMenuBarTrackingHandler = [[VCLMenuBarTrackingHandler alloc] init];
-				if ( pVCLMenuBarTrackingHandler )
-					[pNotificationCenter addObserver:pVCLMenuBarTrackingHandler selector:@selector(trackMenuBar:) name:NSMenuDidBeginTrackingNotification object:nil];
-			}
-
-			[pPool release];
 
 			// Invoke the native shutdown cancelled handler to clear any
 			// pending native open and print events
