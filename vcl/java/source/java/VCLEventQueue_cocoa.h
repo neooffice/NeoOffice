@@ -52,9 +52,12 @@ typedef void* id;
 @interface VCLWindow : NSWindow
 + (void)clearModalWindowLevel;
 + (void)restoreModalWindowLevel;
++ (void)swizzleSelectors:(NSWindow *)pWindow;
 - (void)becomeKeyWindow;
 - (void)displayIfNeeded;
 - (id)draggingSourceDelegate;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder;
 - (void)makeKeyWindow;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;

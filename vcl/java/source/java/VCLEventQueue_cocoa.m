@@ -41,6 +41,7 @@
 #import <objc/objc-class.h>
 #import "VCLApplicationDelegate_cocoa.h"
 #import "VCLEventQueue_cocoa.h"
+#import "VCLFont_cocoa.h"
 #import "VCLGraphics_cocoa.h"
 #import "VCLResponder_cocoa.h"
 #import "../app/salinst_cocoa.h"
@@ -50,6 +51,7 @@ typedef OSStatus GetMenuTrackingData_Type( MenuRef aMenu, MenuTrackingData *pDat
 
 static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
+static NSString *pAWTFontString = @"AWTFont";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
 static NSString *pNSViewAWTString = @"NSViewAWT";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
@@ -347,6 +349,7 @@ static NSString *pCancelInputMethodText = @" ";
 static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
++ (void)swizzleSelectors:(NSView *)pView;
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender;
 - (void)dragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
 - (void)draggedImage:(NSImage *)pImage beganAt:(NSPoint)aPoint;
@@ -360,6 +363,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
 - (BOOL)ignoreModifierKeysWhileDragging;
+- (id)initWithFrame:(NSRect)aFrame;
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
 - (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
@@ -469,6 +473,8 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 - (void)setStyleMask:(unsigned int)nStyleMask;
 @end
 
+static BOOL bAWTFontInitialized = NO;
+
 @implementation VCLWindow
 
 + (void)clearModalWindowLevel
@@ -532,6 +538,64 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	[pNeedRestoreModalWindows removeAllObjects];
 }
 
++ (void)swizzleSelectors:(NSWindow *)pWindow
+{
+	// Load Java's AWTFont class and redirect them to VCLFont's matching
+	// selectors
+	if ( pWindow && !bAWTFontInitialized && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
+	{
+		bAWTFontInitialized = YES;
+
+		// AWTFont selectors
+
+		NSBundle *pBundle = [NSBundle bundleForClass:[pWindow class]];
+		if ( pBundle )
+		{
+			Class aClass = [pBundle classNamed:pAWTFontString];
+			if ( aClass )
+			{
+				SEL aSelector = @selector(awtFontForName:style:isFakeItalic:);
+				Method aOldMethod = class_getClassMethod( aClass, aSelector );
+				Method aNewMethod = class_getClassMethod( [VCLFont class], aSelector );
+				if ( aOldMethod && aNewMethod )
+				{
+					IMP aNewIMP = method_getImplementation( aNewMethod );
+					if ( aNewIMP )
+						method_setImplementation( aOldMethod, aNewIMP );
+				}
+
+				aSelector = @selector(nsFontForJavaFont:env:);
+				aOldMethod = class_getClassMethod( aClass, aSelector );
+				aNewMethod = class_getClassMethod( [VCLFont class], aSelector );
+				if ( aOldMethod && aNewMethod )
+				{
+					IMP aNewIMP = method_getImplementation( aNewMethod );
+					if ( aNewIMP )
+						method_setImplementation( aOldMethod, aNewIMP );
+				}
+
+				aSelector = @selector(initWithFont:isFakeItalic:);
+				aOldMethod = class_getInstanceMethod( aClass, aSelector );
+				IMP aNewIMP = [[VCLFont class] instanceMethodForSelector:aSelector];
+				if ( aOldMethod && aNewIMP )
+					method_setImplementation( aOldMethod, aNewIMP );
+
+				aSelector = @selector(dealloc);
+				aOldMethod = class_getInstanceMethod( aClass, aSelector );
+				aNewIMP = [[VCLFont class] instanceMethodForSelector:aSelector];
+				if ( aOldMethod && aNewIMP )
+					method_setImplementation( aOldMethod, aNewIMP );
+
+				aSelector = @selector(finalize);
+				aOldMethod = class_getInstanceMethod( aClass, aSelector );
+				aNewIMP = [[VCLFont class] instanceMethodForSelector:aSelector];
+				if ( aOldMethod && aNewIMP )
+					method_setImplementation( aOldMethod, aNewIMP );
+			}
+		}
+	}
+}
+
 - (void)becomeKeyWindow
 {
 	[VCLWindow restoreModalWindowLevel];
@@ -587,6 +651,20 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	}
 
 	return pRet;
+}
+
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation
+{
+	[VCLWindow swizzleSelectors:self];
+
+	return [super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
+}
+
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen
+{
+	[VCLWindow swizzleSelectors:self];
+
+	return [super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
 }
 
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder
@@ -1080,6 +1158,127 @@ static CFDataRef aRTFSelection = nil;
 
 @implementation VCLView
 
++ (void)swizzleSelectors:(NSView *)pView
+{
+	// If the NSViewAWT class has its own drag and drop and services selectors,
+	// redirect them to VCLView's matching selectors
+	if ( pView && !bNSViewAWTInitialized && [[pView className] isEqualToString:pNSViewAWTString] )
+	{
+		bNSViewAWTInitialized = YES;
+
+		// NSDraggingDestination selectors
+
+		SEL aSelector = @selector(concludeDragOperation:);
+		Method aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(draggingEnded:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(draggingEntered:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(draggingExited:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(draggingUpdated:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(performDragOperation:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(prepareForDragOperation:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(wantsPeriodicDraggingUpdates);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		// NSDraggingSource selectors
+
+		aSelector = @selector(draggedImage:beganAt:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(draggedImage:endedAt:operation:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(draggedImage:movedTo:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(draggingSourceOperationMaskForLocal:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(ignoreModifierKeysWhileDragging);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(namesOfPromisedFilesDroppedAtDestination:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		// NSResponder selectors
+
+		aSelector = @selector(readSelectionFromPasteboard:);
+		if ( [[pView class] instancesRespondToSelector:aSelector] )
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(validRequestorForSendType:returnType:);
+		if ( [[pView class] instancesRespondToSelector:aSelector] )
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(writeSelectionToPasteboard:types:);
+		if ( [[pView class] instancesRespondToSelector:aSelector] )
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+}
+
 - (void)concludeDragOperation:(id < NSDraggingInfo >)pSender
 {
 	id pDelegate = [self draggingDestinationDelegate];
@@ -1224,157 +1423,7 @@ static CFDataRef aRTFSelection = nil;
 
 - (id)initWithFrame:(NSRect)aFrame
 {
-	// If the NSViewAWT class has its own drag and drop and services selectors,
-	// redirect them to VCLView's matching selectors
-	if ( !bNSViewAWTInitialized && [[self className] isEqualToString:pNSViewAWTString] )
-	{
-		bNSViewAWTInitialized = YES;
-
-		// NSDraggingDestination selectors
-
-		SEL aSelector = @selector(concludeDragOperation:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(draggingEnded:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(draggingEntered:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(draggingExited:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(draggingUpdated:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(performDragOperation:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(prepareForDragOperation:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(wantsPeriodicDraggingUpdates);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		// NSDraggingSource selectors
-
-		aSelector = @selector(draggedImage:beganAt:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(draggedImage:endedAt:operation:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(draggedImage:movedTo:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(draggingSourceOperationMaskForLocal:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(ignoreModifierKeysWhileDragging);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(namesOfPromisedFilesDroppedAtDestination:);
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		// NSResponder selectors
-
-		aSelector = @selector(readSelectionFromPasteboard:);
-		if ( [[self class] instancesRespondToSelector:aSelector] )
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(validRequestorForSendType:returnType:);
-		if ( [[self class] instancesRespondToSelector:aSelector] )
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
-		aSelector = @selector(writeSelectionToPasteboard:types:);
-		if ( [[self class] instancesRespondToSelector:aSelector] )
-		{
-			Method aOldMethod = class_getInstanceMethod( [self class], aSelector );
-			IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-	}
+	[VCLView swizzleSelectors:self];
 
 	return [super initWithFrame:aFrame];
 }

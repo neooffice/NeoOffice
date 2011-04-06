@@ -62,6 +62,7 @@ SLOFILES = \
 	$(SLO)/VCLEventQueue_cocoa.obj \
 	$(SLO)/VCLEventQueueEvent.obj \
 	$(SLO)/VCLFont.obj \
+	$(SLO)/VCLFont_cocoa.obj \
 	$(SLO)/VCLFrame.obj \
 	$(SLO)/VCLFrame_cocoa.obj \
 	$(SLO)/VCLGraphics.obj \

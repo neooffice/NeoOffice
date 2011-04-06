@@ -47,11 +47,10 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include "VCLApplicationDelegate_cocoa.h"
 #import "../app/salinst_cocoa.h"
 
 typedef void KeyScript_Type( short nCode );
-
-#include "VCLApplicationDelegate_cocoa.h"
 
 struct ImplPendingOpenPrintFileRequest
 {

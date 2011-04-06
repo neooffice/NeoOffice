@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Patrick Luby, June 2007
+ *  Patrick Luby, April 2010
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2007 Planamesa Inc.
+ *  Copyright 2011 Planamesa Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -34,13 +34,14 @@
  ************************************************************************/
 
 #include <map>
+#include <jni.h>
 
 #ifndef _OSL_MUTEX_HXX_
 #include <osl/mutex.hxx>
 #endif
 
-#import <AppKit/AppKit.h>
-#include <jni.h>
+#import <Cocoa/Cocoa.h>
+#import "VCLFont_cocoa.h"
 
 static ::std::map< CTFontRef, CGFontRef > aFontMap;
 static ::osl::Mutex aFontMutex;
@@ -78,36 +79,23 @@ static CGFontRef CreateCachedCGFont( CTFontRef aFont )
 
 // Fix for bug 1928. Java 1.5 and higher will try to set its own arbitrary
 // italic angle so we create a custom implementation of the JVM's private
-// AWTFont class to ignore the custom transform that Java passes in.
+// VCLFont class to ignore the custom transform that Java passes in.
 // Note: this file should only be loaded on Mac OS X 10.5 or higher.
 
 static jmethodID mGetPSNameID = nil;
 
-@interface AWTFont : NSObject
-{
-	NSFont*				fFont;
-	CGFontRef			fNativeCGFont;
-	BOOL				fIsFakeItalic;
-}
-+ (id)awtFontForName:(NSString *)pName style:(int)nStyle isFakeItalic:(BOOL)bFakeItalic;
-+ (id)nsFontForJavaFont:(jobject)aFont env:(JNIEnv *)pEnv;
-- (id)initWithFont:(NSFont *)pFont isFakeItalic:(BOOL)bFakeItalic;
-- (void)dealloc;
-- (void)finalize;
-@end
-
-@implementation AWTFont
+@implementation VCLFont
 
 + (id)awtFontForName:(NSString *)pName style:(int)nStyle isFakeItalic:(BOOL)bFakeItalic
 {
-	AWTFont *pRet = nil;
+	VCLFont *pRet = nil;
 
 	if ( pName )
 	{
 		NSFont *pFont = [NSFont fontWithName:pName size:(float)12];
 		if ( pFont )
 		{
-			pRet = [[AWTFont alloc] initWithFont:pFont isFakeItalic:bFakeItalic];
+			pRet = [[VCLFont alloc] initWithFont:pFont isFakeItalic:bFakeItalic];
 			[pRet autorelease];
 		}
 	}

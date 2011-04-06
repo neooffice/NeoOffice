@@ -68,9 +68,6 @@
 #ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
 #endif
-#ifndef _VOS_MODULE_HXX_
-#include <vos/module.hxx>
-#endif
 #ifndef _COM_SUN_STAR_AWT_XWINDOW_HDL_
 #include <com/sun/star/awt/XWindow.hpp>
 #endif
@@ -104,8 +101,6 @@
 #include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
-
-static ::vos::OModule aAWTFontModule;
 
 using namespace com::sun::star::awt;
 using namespace com::sun::star::beans;
@@ -403,10 +398,6 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
 		VCLEventQueue_installVCLEventQueueClasses();
-
-		// Load our AWTFont replacement class
-		OUString aVCLJavaLibName( RTL_CONSTASCII_USTRINGPARAM( "libvcljava2.dylib" ) );
-		aAWTFontModule.load( aVCLJavaLibName, SAL_LOADMODULE_GLOBAL | SAL_LOADMODULE_NOW );
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );
