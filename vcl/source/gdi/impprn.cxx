@@ -301,13 +301,6 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 
 		if( !bExecuted && pAct )
 			pAct->Execute( this );
-
-#ifndef USE_JAVA
-		// The JVM has locked the native event loop so avoid invoking any
-		// pending events or timers
-        if( ! ImplGetSVData()->maGDIData.mbPrinterPullModel )
-            Application::Reschedule();
-#endif	// !USE_JAVA
 	}
 }
 
@@ -429,19 +422,9 @@ ULONG ImplQPrinter::GetPrintPageCount() const
 
 IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 {
-#ifdef USE_JAVA
-	// Don't allow printing to occur until the last page is added to the queue.
-	// This is necessary because the JVM will lock the native event loop and
-	// we need to print all pages in one run. Otherwise, other operations such
-	// as showing or hiding a window will deadlock waiting for the JVM to
-	// unlock the native event loop.
-	while( IsPrinting() && !mpParent->IsJobActive() && maQueue.size() )
-	{
-#else	// USE_JAVA
 	// Ist Drucken abgebrochen wurden?
 	if( !IsPrinting() || ( mpParent->IsJobActive() && ( maQueue.size() < (ULONG)mpParent->GetPageQueueSize() ) ) )
 		return 0;
-#endif	// USE_JAVA
 
 	// Druck-Job zuende?
 	QueuePage* pActPage = maQueue.front();
@@ -456,14 +439,7 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		if( ! EndJob() )
             mpParent->Error();
         if( ! aDel.isDeleted() )
-#ifdef USE_JAVA
-        {
             mpParent->ImplEndPrint();
-            break;
-        }
-#else	// USE_JAVA
-            mpParent->ImplEndPrint();
-#endif	// USE_JAVA
 	}
 	else
 	{
@@ -509,18 +485,8 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 		mbDestroyAllowed = TRUE;
 
 		if( mbDestroyed )
-#ifdef USE_JAVA
-		{
-#endif	// USE_JAVA
 			Destroy();
-#ifdef USE_JAVA
-			break;
-		}
-#endif	// USE_JAVA
 	}
-#ifdef USE_JAVA
-	}
-#endif	// USE_JAVA
 
 	return 0;
 }
