@@ -335,20 +335,12 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)dealloc
 {
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
+	NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+	if ( pNotificationCenter )
 	{
-		NSMenu *pMainMenu = [pApp mainMenu];
-		if ( pMainMenu )
-		{
-			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
-			if ( pNotificationCenter )
-			{
-				[pNotificationCenter removeObserver:self name:NSMenuDidAddItemNotification object:pMainMenu];
-				[pNotificationCenter removeObserver:self name:NSMenuDidBeginTrackingNotification object:pMainMenu];
-				[pNotificationCenter removeObserver:self name:NSMenuDidEndTrackingNotification object:pMainMenu];
-			}
-		}
+		[pNotificationCenter removeObserver:self name:NSMenuDidAddItemNotification object:nil];
+		[pNotificationCenter removeObserver:self name:NSMenuDidBeginTrackingNotification object:nil];
+		[pNotificationCenter removeObserver:self name:NSMenuDidEndTrackingNotification object:nil];
 	}
 
 	if ( mpDelegate )
@@ -388,9 +380,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 			if ( pNotificationCenter )
 			{
-				[pNotificationCenter addObserver:self selector:@selector(addMenuBarItem:) name:NSMenuDidAddItemNotification object:pMainMenu];
-				[pNotificationCenter addObserver:self selector:@selector(trackMenuBar:) name:NSMenuDidBeginTrackingNotification object:pMainMenu];
-				[pNotificationCenter addObserver:self selector:@selector(trackMenuBar:) name:NSMenuDidEndTrackingNotification object:pMainMenu];
+				[pNotificationCenter addObserver:self selector:@selector(addMenuBarItem:) name:NSMenuDidAddItemNotification object:nil];
+				[pNotificationCenter addObserver:self selector:@selector(trackMenuBar:) name:NSMenuDidBeginTrackingNotification object:nil];
+				[pNotificationCenter addObserver:self selector:@selector(trackMenuBar:) name:NSMenuDidEndTrackingNotification object:nil];
 			}
 		}
 	}
@@ -400,59 +392,73 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)menuNeedsUpdate:(NSMenu *)pMenu
 {
-	if ( pMenu )
-	{
-		if ( mbInTracking && mbUpdateMenus )
-		{
-			NSApplication *pApp = [NSApplication sharedApplication];
-			if ( pApp )
-			{
-				NSMenu *pMainMenu = [pApp mainMenu];
-				if ( pMainMenu && [pMenu supermenu] == pMainMenu )
-				{
-					mbUpdateMenus = NO;
-					if ( !VCLInstance_updateNativeMenus() )
-					{
-						[pMainMenu cancelTracking];
-						return;
-					}
-				}
-			}
-		}
+	if ( !pMenu || !mbInTracking )
+		return;
 
-		int nItems = [pMenu numberOfItems];
-		int i = 0;
-		for ( ; i < nItems; i++ )
+	NSMenu *pSupermenu = [pMenu supermenu];
+	if ( !pSupermenu )
+		return;
+
+	NSApplication *pApp = [NSApplication sharedApplication];
+	if ( !pApp )
+		return;
+
+	NSMenu *pMainMenu = [pApp mainMenu];
+	if ( !pMainMenu || ![pMainMenu numberOfItems] || pSupermenu != pMainMenu )
+		return;
+
+	if ( mbUpdateMenus )
+	{
+		mbUpdateMenus = NO;
+		if ( !VCLInstance_updateNativeMenus() )
 		{
-			NSMenuItem *pItem = [pMenu itemAtIndex:i];
-			if ( pItem )
+			mbInTracking = NO;
+			[pMainMenu cancelTracking];
+			return;
+		}
+	}
+
+	NSMenuItem *pAppItem = [pMainMenu itemAtIndex:0];
+	if ( !pAppItem )
+		return;
+
+	NSMenu *pSubmenu = [pAppItem submenu];
+	if ( !pSubmenu || pMenu != pSubmenu )
+		return;
+
+	int nItems = [pMenu numberOfItems];
+	int i = 0;
+	for ( ; i < nItems; i++ )
+	{
+		NSMenuItem *pItem = [pMenu itemAtIndex:i];
+		if ( pItem )
+		{
+			NSObject *pTarget = [pItem target];
+			if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
 			{
-				NSObject *pTarget = [pItem target];
-				if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
+				NSString *pAction = NSStringFromSelector( [pItem action] );
+				if ( pAction )
 				{
-					NSString *pAction = NSStringFromSelector( [pItem action] );
-					if ( pAction )
+					NSRange aRange = [pAction rangeOfString:@"about" options:NSCaseInsensitiveSearch];
+					if ( aRange.location != NSNotFound && aRange.length > 0 )
 					{
-						NSRange aRange = [pAction rangeOfString:@"about" options:NSCaseInsensitiveSearch];
+						[pItem setTarget:self];
+						[pItem setAction:@selector(showAbout)];
+					}
+					else
+					{
+						aRange = [pAction rangeOfString:@"preferences" options:NSCaseInsensitiveSearch];
 						if ( aRange.location != NSNotFound && aRange.length > 0 )
 						{
 							[pItem setTarget:self];
-							[pItem setAction:@selector(showAbout)];
-						}
-						else
-						{
-							aRange = [pAction rangeOfString:@"preferences" options:NSCaseInsensitiveSearch];
-							if ( aRange.location != NSNotFound && aRange.length > 0 )
-							{
-								[pItem setTarget:self];
-								[pItem setAction:@selector(showPreferences)];
-							}
+							[pItem setAction:@selector(showPreferences)];
 						}
 					}
 				}
 			}
 		}
 	}
+CFShow( pMenu );
 }
 
 - (void)setDelegate:(id)pDelegate
