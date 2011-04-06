@@ -41,13 +41,6 @@
 #ifdef __cplusplus
 typedef void* id;
 #else
-@interface NSWindow (VCLWindow)
-- (void)_clearModalWindowLevel;
-- (BOOL)_isUtilityWindow;
-- (void)_restoreModalWindowLevel;
-- (void)_setModalWindowLevel;
-- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
-@end
 
 @interface VCLWindow : NSWindow
 + (void)clearModalWindowLevel;

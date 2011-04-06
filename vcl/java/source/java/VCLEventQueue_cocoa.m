@@ -463,10 +463,28 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 
 @end
 
-static NSMutableDictionary *pDraggingDestinationDelegates = nil;
-static NSMutableArray *pNeedRestoreModalWindows = nil;
-static VCLResponder *pSharedResponder = nil;
-static NSMutableDictionary *pDraggingSourceDelegates = nil;
+@interface NSWindow (VCLWindow)
+- (void)_clearModalWindowLevel;
+- (BOOL)_isUtilityWindow;
+- (void)_restoreModalWindowLevel;
+- (void)_setModalWindowLevel;
+- (void)_setUtilityWindow:(BOOL)bUtilityWindow;
+@end
+
+@interface NSWindow (VCLWindowPoseAs)
+- (void)poseAsBecomeKeyWindow;
+- (void)poseAsDisplayIfNeeded;
+- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation;
+- (id)poseAsInitWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (BOOL)poseAsMakeFirstResponder:(NSResponder *)pResponder;
+- (void)poseAsMakeKeyWindow;
+- (void)poseAsOrderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
+- (BOOL)poseAsPerformKeyEquivalent:(NSEvent *)pEvent;
+- (void)poseAsResignKeyWindow;
+- (void)poseAsSendEvent:(NSEvent *)pEvent;
+- (void)poseAsSetContentView:(NSView *)pView;
+- (void)poseAsSetLevel:(int)nWindowLevel;
+@end
 
 @interface VCLWindow (CocoaAppWindow)
 - (jobject)peer;
@@ -474,6 +492,10 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 @end
 
 static BOOL bAWTFontInitialized = NO;
+static NSMutableDictionary *pDraggingDestinationDelegates = nil;
+static NSMutableArray *pNeedRestoreModalWindows = nil;
+static VCLResponder *pSharedResponder = nil;
+static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 @implementation VCLWindow
 
@@ -593,6 +615,26 @@ static BOOL bAWTFontInitialized = NO;
 					method_setImplementation( aOldMethod, aNewIMP );
 			}
 		}
+
+		// NSDraggingSource selectors
+
+		SEL aSelector = @selector(draggingSourceDelegate);
+		Method aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+
+		aSelector = @selector(setDraggingSourceDelegate:);
+		aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
 	}
 }
 
@@ -600,7 +642,8 @@ static BOOL bAWTFontInitialized = NO;
 {
 	[VCLWindow restoreModalWindowLevel];
 
-	[super becomeKeyWindow];
+	if ( [super respondsToSelector:@selector(poseAsBecomeKeyWindow)] )
+		[super poseAsBecomeKeyWindow];
 
 	if ( [self isVisible] )
 	{
@@ -635,7 +678,8 @@ static BOOL bAWTFontInitialized = NO;
 	if ( ![self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
 		return;
 
-	[super displayIfNeeded];
+	if ( [super respondsToSelector:@selector(poseAsDisplayIfNeeded)] )
+		[super poseAsDisplayIfNeeded];
 }
 
 - (id)draggingSourceDelegate
@@ -657,20 +701,29 @@ static BOOL bAWTFontInitialized = NO;
 {
 	[VCLWindow swizzleSelectors:self];
 
-	return [super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
+	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:)] )
+		return [super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation];
+	else
+		return self;
 }
 
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nStyle backing:(NSBackingStoreType)nBufferingType defer:(BOOL)bDeferCreation screen:(NSScreen *)pScreen
 {
 	[VCLWindow swizzleSelectors:self];
 
-	return [super initWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
+	if ( [super respondsToSelector:@selector(poseAsInitWithContentRect:styleMask:backing:defer:screen:)] )
+		return [super poseAsInitWithContentRect:aContentRect styleMask:nStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
+	else
+		return self;
 }
 
 - (BOOL)makeFirstResponder:(NSResponder *)pResponder
 {
 	NSResponder *pOldResponder = [self firstResponder];
-	BOOL bRet = [super makeFirstResponder:pResponder];
+
+	BOOL bRet = NO;
+	if ( [super respondsToSelector:@selector(poseAsMakeFirstResponder:)] )
+		bRet = [super poseAsMakeFirstResponder:pResponder];
 
 	// Fix bug 1819 by forcing cancellation of the input method
 	if ( bRet && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
@@ -729,12 +782,14 @@ static BOOL bAWTFontInitialized = NO;
 		}
 	}
 
-	[super makeKeyWindow];
+	if ( [super respondsToSelector:@selector(poseAsMakeKeyWindow)] )
+		[super poseAsMakeKeyWindow];
 }
 
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
 {
-	[super orderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
+	if ( [super respondsToSelector:@selector(poseAsOrderWindow:relativeTo:)] )
+		[super poseAsOrderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 
 	if ( [self level] == NSFloatingWindowLevel && [self styleMask] & NSTitledWindowMask && [[self className] isEqualToString:pCocoaAppWindowString] )
 	{
@@ -889,7 +944,9 @@ static BOOL bAWTFontInitialized = NO;
 			return YES;
 	}
 
-	BOOL bRet = [super performKeyEquivalent:pEvent];
+	BOOL bRet = NO;
+	if ( [super respondsToSelector:@selector(poseAsPerformKeyEquivalent:)] )
+		bRet = [super poseAsPerformKeyEquivalent:pEvent];
 
 	// Fix bug 1751 by responding to Command-c, Command-v, and Command-x keys
 	// for non-Java windows. Fix bug 3561 by responding to Command-w keys for
@@ -969,7 +1026,8 @@ static BOOL bAWTFontInitialized = NO;
 		}
 	}
 
-	[super resignKeyWindow];
+	if ( [super respondsToSelector:@selector(poseAsResignKeyWindow)] )
+		[super poseAsResignKeyWindow];
 
 	[VCLWindow clearModalWindowLevel];
 }
@@ -998,7 +1056,8 @@ static BOOL bAWTFontInitialized = NO;
 			return;
 	}
 
-	[super sendEvent:pEvent];
+	if ( [super respondsToSelector:@selector(poseAsSendEvent:)] )
+		[super poseAsSendEvent:pEvent];
 
 	if ( ( nType == NSLeftMouseDown || nType == NSLeftMouseUp ) && [[self className] isEqualToString:pCocoaAppWindowString] && [self respondsToSelector:@selector(peer)] )
 	{
@@ -1088,7 +1147,8 @@ static BOOL bAWTFontInitialized = NO;
 
 - (void)setContentView:(NSView *)pView
 {
-	[super setContentView:pView];
+	if ( [super respondsToSelector:@selector(poseAsSetContentView:)] )
+		[super poseAsSetContentView:pView];
 
 	// It was found that with QuickTime 7.4 on G4 systems running ATI RAGE 128
 	// graphics cards, QTMovieView will misplace the movie if the window's
@@ -1107,7 +1167,8 @@ static BOOL bAWTFontInitialized = NO;
 				// Retain current content view just to be safe
 				[pNewContentView retain];
 
-				[super setContentView:pNewContentView];
+				if ( [super respondsToSelector:@selector(poseAsSetContentView:)] )
+					[super poseAsSetContentView:pNewContentView];
 				aFrame.origin.x = 0;
 				aFrame.origin.y = 0;
 				[pContentView setFrame:aFrame];
@@ -1147,7 +1208,8 @@ static BOOL bAWTFontInitialized = NO;
 	if ( [self level] > nWindowLevel && [self level] != NSModalPanelWindowLevel && [[self className] isEqualToString:pCocoaAppWindowString] )
 		return;
 
-	[super setLevel:nWindowLevel];
+	if ( [super respondsToSelector:@selector(poseAsSetLevel:)] )
+		[super poseAsSetLevel:nWindowLevel];
 }
 
 @end
@@ -1764,7 +1826,152 @@ static CFDataRef aRTFSelection = nil;
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
 
-	[VCLWindow poseAsClass:[NSWindow class]];
+	// VCLWindow selectors
+
+	aSelector = @selector(becomeKeyWindow);
+	aPoseAsSelector = @selector(poseAsBecomeKeyWindow);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(displayIfNeeded);
+	aPoseAsSelector = @selector(poseAsDisplayIfNeeded);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(initWithContentRect:styleMask:backing:defer:);
+	aPoseAsSelector = @selector(poseAsInitWithContentRect:styleMask:backing:defer:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(initWithContentRect:styleMask:backing:defer:screen:);
+	aPoseAsSelector = @selector(poseAsInitWithContentRect:styleMask:backing:defer:screen:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(makeFirstResponder:);
+	aPoseAsSelector = @selector(poseAsMakeFirstResponder:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(makeKeyWindow);
+	aPoseAsSelector = @selector(poseAsMakeKeyWindow);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(orderWindow:relativeTo:);
+	aPoseAsSelector = @selector(poseAsOrderWindow:relativeTo:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(performKeyEquivalent:);
+	aPoseAsSelector = @selector(poseAsPerformKeyEquivalent:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(resignKeyWindow);
+	aPoseAsSelector = @selector(poseAsResignKeyWindow);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(sendEvent:);
+	aPoseAsSelector = @selector(poseAsSendEvent:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(setContentView:);
+	aPoseAsSelector = @selector(poseAsSetContentView:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(setLevel:);
+	aPoseAsSelector = @selector(poseAsSetLevel:);
+	aOldMethod = class_getInstanceMethod( [NSWindow class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSWindow class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
 	[VCLView poseAsClass:[NSView class]];
 }
 
