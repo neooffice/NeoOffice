@@ -392,7 +392,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)menuNeedsUpdate:(NSMenu *)pMenu
 {
-	if ( !pMenu || !mbInTracking )
+	if ( !pMenu )
 		return;
 
 	NSMenu *pSupermenu = [pMenu supermenu];
@@ -407,12 +407,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	if ( !pMainMenu || ![pMainMenu numberOfItems] || pSupermenu != pMainMenu )
 		return;
 
-	if ( mbUpdateMenus )
+	if ( mbInTracking && mbUpdateMenus )
 	{
 		mbUpdateMenus = NO;
 		if ( !VCLInstance_updateNativeMenus() )
 		{
-			mbInTracking = NO;
 			[pMainMenu cancelTracking];
 			return;
 		}
@@ -458,7 +457,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 			}
 		}
 	}
-CFShow( pMenu );
 }
 
 - (void)setDelegate:(id)pDelegate
