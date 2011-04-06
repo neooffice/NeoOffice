@@ -346,6 +346,11 @@ static NSString *pCancelInputMethodText = @" ";
 - (void)paste:(id)pSender;
 @end
 
+@interface NSView (VCLViewPoseAs)
+- (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
+- (id)poseAsInitWithFrame:(NSRect)aFrame;
+@end
+
 static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
@@ -616,7 +621,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 			}
 		}
 
-		// NSDraggingSource selectors
+		// VCLWindow drag source selectors
 
 		SEL aSelector = @selector(draggingSourceDelegate);
 		Method aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
@@ -1228,9 +1233,49 @@ static CFDataRef aRTFSelection = nil;
 	{
 		bNSViewAWTInitialized = YES;
 
+		// VCLView drag destination selectors
+
+		SEL aSelector = @selector(draggingDestinationDelegate);
+		Method aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+
+		aSelector = @selector(setDraggingDestinationDelegate:);
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+
+		// VCLView drag source selectors
+
+		aSelector = @selector(draggingSourceDelegate);
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+
+		aSelector = @selector(setDraggingSourceDelegate:);
+		aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+		if ( aNewMethod )
+		{
+			IMP aNewIMP = method_getImplementation( aNewMethod );
+			if ( aNewIMP )
+				class_addMethod( [NSView class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
+		}
+
 		// NSDraggingDestination selectors
 
-		SEL aSelector = @selector(concludeDragOperation:);
+		aSelector = @selector(concludeDragOperation:);
 		Method aOldMethod = class_getInstanceMethod( [pView class], aSelector );
 		IMP aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
@@ -1346,7 +1391,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(concludeDragOperation:)])
 		[pDelegate concludeDragOperation:pSender];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(concludeDragOperation:)] )
+	else if ( [super respondsToSelector:@selector(concludeDragOperation:)] )
 		[super concludeDragOperation:pSender];
 }
 
@@ -1357,7 +1402,8 @@ static CFDataRef aRTFSelection = nil;
 	// getting dispatched out of order when we release and reacquire the mutex.
 	if ( VCLInstance_setDragLock( YES ) )
 	{
-		[super dragImage:pImage at:aImageLocation offset:aMouseOffset event:pEvent pasteboard:pPasteboard source:pSourceObject slideBack:bSlideBack];
+		if ( [super respondsToSelector:@selector(poseAsDragImage:at:offset:event:pasteboard:source:slideBack:)] )
+			[super poseAsDragImage:pImage at:aImageLocation offset:aMouseOffset event:pEvent pasteboard:pPasteboard source:pSourceObject slideBack:bSlideBack];
 		VCLInstance_setDragLock( NO );
 	}
 }
@@ -1367,7 +1413,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:beganAt:)])
 		[pDelegate draggedImage:pImage beganAt:aPoint];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggedImage:beganAt:)] )
+	else if ( [super respondsToSelector:@selector(draggedImage:beganAt:)] )
 		[super draggedImage:pImage beganAt:aPoint];
 }
 
@@ -1376,7 +1422,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:endedAt:operation:)])
 		[pDelegate draggedImage:pImage endedAt:aPoint operation:nOperation];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggedImage:endedAt:operation:)] )
+	else if ( [super respondsToSelector:@selector(draggedImage:endedAt:operation:)] )
 		[super draggedImage:pImage endedAt:aPoint operation:nOperation];
 }
 
@@ -1385,7 +1431,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggedImage:movedTo:)])
 		[pDelegate draggedImage:pImage movedTo:aPoint];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggedImage:movedTo:)] )
+	else if ( [super respondsToSelector:@selector(draggedImage:movedTo:)] )
 		[super draggedImage:pImage movedTo:aPoint];
 }
 
@@ -1411,7 +1457,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEnded:)])
 		[pDelegate draggingEnded:pSender];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggingEnded:)] )
+	else if ( [super respondsToSelector:@selector(draggingEnded:)] )
 		[super draggingEnded:pSender];
 }
 
@@ -1420,7 +1466,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingEntered:)])
 		return [pDelegate draggingEntered:pSender];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggingEntered:)] )
+	else if ( [super respondsToSelector:@selector(draggingEntered:)] )
 		return [super draggingEntered:pSender];
 	else
 		return NSDragOperationNone;
@@ -1431,7 +1477,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingExited:)])
 		[pDelegate draggingExited:pSender];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggingExited:)] )
+	else if ( [super respondsToSelector:@selector(draggingExited:)] )
 		[super draggingExited:pSender];
 }
 
@@ -1455,7 +1501,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)])
 		return [pDelegate draggingSourceOperationMaskForLocal:bLocal];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggingSourceOperationMaskForLocal:)] )
+	else if ( [super respondsToSelector:@selector(draggingSourceOperationMaskForLocal:)] )
 		return [super draggingSourceOperationMaskForLocal:bLocal];
 	else
 		return NSDragOperationNone;
@@ -1466,7 +1512,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(draggingUpdated:)])
 		return [pDelegate draggingUpdated:pSender];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(draggingUpdated:)] )
+	else if ( [super respondsToSelector:@selector(draggingUpdated:)] )
 		return [super draggingUpdated:pSender];
 	else
 		return NSDragOperationNone;
@@ -1477,7 +1523,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(ignoreModifierKeysWhileDragging)])
 		return [pDelegate ignoreModifierKeysWhileDragging];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(ignoreModifierKeysWhileDragging)] )
+	else if ( [super respondsToSelector:@selector(ignoreModifierKeysWhileDragging)] )
 		return [super ignoreModifierKeysWhileDragging];
 	else
 		return NO;
@@ -1487,7 +1533,10 @@ static CFDataRef aRTFSelection = nil;
 {
 	[VCLView swizzleSelectors:self];
 
-	return [super initWithFrame:aFrame];
+	if ( [super respondsToSelector:@selector(poseAsInitWithFrame:)] )
+		return [super poseAsInitWithFrame:aFrame];
+	else
+		return self;
 }
 
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
@@ -1495,7 +1544,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingSourceDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)])
 		return [pDelegate namesOfPromisedFilesDroppedAtDestination:pDropDestination];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)] )
+	else if ( [super respondsToSelector:@selector(namesOfPromisedFilesDroppedAtDestination:)] )
 		return [super namesOfPromisedFilesDroppedAtDestination:pDropDestination];
 	else
 		return nil;
@@ -1506,7 +1555,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(performDragOperation:)])
 		return [pDelegate performDragOperation:pSender];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(performDragOperation:)] )
+	else if ( [super respondsToSelector:@selector(performDragOperation:)] )
 		return [super performDragOperation:pSender];
 	else
 		return NO;
@@ -1517,7 +1566,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(prepareForDragOperation:)])
 		return [pDelegate prepareForDragOperation:pSender];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(prepareForDragOperation:)] )
+	else if ( [super respondsToSelector:@selector(prepareForDragOperation:)] )
 		return [super prepareForDragOperation:pSender];
 	else
 		return NO;
@@ -1530,7 +1579,7 @@ static CFDataRef aRTFSelection = nil;
 	// Invoke superclass if this is not an NSViewAWT class
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
 	{
-		if ( [VCLView instancesRespondToSelector:@selector(readSelectionFromPasteboard:)] )
+		if ( [super respondsToSelector:@selector(readSelectionFromPasteboard:)] )
 			bRet = (BOOL)[super readSelectionFromPasteboard:pPasteboard];
 		return bRet;
 	}
@@ -1617,7 +1666,7 @@ static CFDataRef aRTFSelection = nil;
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
 	{
 		id pRet = nil;
-		if ( [VCLView instancesRespondToSelector:@selector(validRequestorForSendType:returnType:)] )
+		if ( [super respondsToSelector:@selector(validRequestorForSendType:returnType:)] )
 			pRet = [super validRequestorForSendType:pSendType returnType:pReturnType];
 		return pRet;
 	}
@@ -1659,7 +1708,7 @@ static CFDataRef aRTFSelection = nil;
 	id pDelegate = [self draggingDestinationDelegate];
 	if ( pDelegate && [pDelegate respondsToSelector:@selector(wantsPeriodicDraggingUpdates)])
 		return [pDelegate wantsPeriodicDraggingUpdates];
-	else if ( [[VCLView superclass] instancesRespondToSelector:@selector(wantsPeriodicDraggingUpdates)] )
+	else if ( [super respondsToSelector:@selector(wantsPeriodicDraggingUpdates)] )
 		return [super wantsPeriodicDraggingUpdates];
 	else
 		return NO;
@@ -1672,7 +1721,7 @@ static CFDataRef aRTFSelection = nil;
 	// Invoke superclass if this is not an NSViewAWT class
 	if ( ![[self className] isEqualToString:pNSViewAWTString] )
 	{
-		if ( [VCLView instancesRespondToSelector:@selector(writeSelectionToPasteboard:types:types:)] )
+		if ( [super respondsToSelector:@selector(writeSelectionToPasteboard:types:types:)] )
 			bRet = (BOOL)[super writeSelectionToPasteboard:pPasteboard types:pTypes];
 		return bRet;
 	}
@@ -1972,7 +2021,31 @@ static CFDataRef aRTFSelection = nil;
 			method_setImplementation( aOldMethod, aNewIMP );
 	}
 
-	[VCLView poseAsClass:[NSView class]];
+	// VCLView selectors
+
+	aSelector = @selector(dragImage:at:offset:event:pasteboard:source:slideBack:);
+	aPoseAsSelector = @selector(poseAsDragImage:at:offset:event:pasteboard:source:slideBack:);
+	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(initWithFrame:);
+	aPoseAsSelector = @selector(poseAsInitWithFrame:);
+	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
 }
 
 @end
