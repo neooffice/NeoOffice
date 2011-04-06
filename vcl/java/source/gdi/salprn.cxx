@@ -38,6 +38,9 @@
 #ifndef _SV_SALPRN_H
 #include <salprn.h>
 #endif
+#ifndef _SV_SALDATA_HXX
+#include <saldata.hxx>
+#endif
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
@@ -292,6 +295,8 @@ JavaSalPrinter::JavaSalPrinter()
 
 JavaSalPrinter::~JavaSalPrinter()
 {
+	if ( mbStarted )
+		GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
 	if ( mpGraphics )
 		delete mpGraphics;
 	if ( mpVCLPageFormat )
@@ -335,6 +340,9 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 	maJobName = XubString( rJobName );
 	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), fScaleFactor, !bFirstPass ? sal_True : mbStarted );
 
+	if ( mbStarted )
+		GetSalData()->mpEventQueue->setShutdownDisabled( sal_True );
+
 	return mbStarted;
 }
 
@@ -343,6 +351,7 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 BOOL JavaSalPrinter::EndJob()
 {
 	mpVCLPrintJob->endJob();
+	GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
 	mbStarted = FALSE;
 	return TRUE;
 }
