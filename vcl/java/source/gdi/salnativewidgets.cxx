@@ -101,7 +101,7 @@
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
 #define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
-#define SCROLLBAR_WIDTH_SLOP			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1  )
+#define SCROLLBAR_WIDTH_SLOP			0
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
 #define PROGRESS_HEIGHT_SLOP			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1 )
