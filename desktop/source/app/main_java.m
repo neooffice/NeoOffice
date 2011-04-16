@@ -33,6 +33,7 @@
  *
  ************************************************************************/
 
+#include <crt_externs.h>
 #include <dlfcn.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -80,7 +81,7 @@ static BOOL IsSupportedMacOSXVersion()
 	return bRet;
 }
 
-static NSString *GetNSTemporaryDirectory( const char *pProgName )
+static NSString *GetNSTemporaryDirectory()
 {
 	NSString *pTempDir = nil;
 
@@ -103,9 +104,10 @@ static NSString *GetNSTemporaryDirectory( const char *pProgName )
 				if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
 				{
 					// Append program name to cache path
-					if ( pProgName )
+					char **pProgName = _NSGetProgname();
+					if (pProgName && *pProgName)
 					{
-						pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:pProgName]];
+						pCachePath = [pCachePath stringByAppendingPathComponent:[NSString stringWithUTF8String:(const char *)*pProgName]];
 						bDir = NO;
 						if ( ( [pFileManager fileExistsAtPath:pCachePath isDirectory:&bDir] && bDir ) || [pFileManager createDirectoryAtPath:pCachePath attributes:pDict] )
 						{
@@ -208,7 +210,7 @@ int java_main( int argc, char **argv )
 	// Fix bug 3631 by setting the temporary directory to something other
 	// than /tmp if we can since Mac OS X will clear out the /tmp directory
 	// periodically
-	NSString *pTmpDir = GetNSTemporaryDirectory( argv[ 0 ] );
+	NSString *pTmpDir = GetNSTemporaryDirectory();
 	NSString *pTmpEnv = [NSString stringWithFormat:@"TMPDIR=%@", pTmpDir];
 	putenv( (char *)[pTmpEnv UTF8String] );
 	pTmpEnv = [NSString stringWithFormat:@"TMP=%@", pTmpDir];
