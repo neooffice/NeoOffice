@@ -6727,18 +6727,12 @@ void PDFWriterImpl::drawVerticalGlyphs(
         {
             fDeltaAngle = M_PI/2.0;
 #ifdef USE_JAVA
-            SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
-            if ( rGlyphs[i].m_nGlyphId & GF_FONTMASK )
-            {
-                if ( pATSLayout )
-                    pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
-                if ( !pATSLayout )
-                {
-                    MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
-                    if ( pMultiLayout )
-                        pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
-                }
-            }
+            SalATSLayout *pATSLayout = NULL;
+            MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
+            if ( pMultiLayout )
+                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+            if ( !pATSLayout )
+                pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
 
             if ( pATSLayout )
             {
@@ -6765,18 +6759,12 @@ void PDFWriterImpl::drawVerticalGlyphs(
         {
             fDeltaAngle = -M_PI/2.0;
 #ifdef USE_JAVA
-            SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
-            if ( rGlyphs[i].m_nGlyphId & GF_FONTMASK )
-            {
-                if ( pATSLayout )
-                    pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
-                if ( !pATSLayout )
-                {
-                    MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
-                    if ( pMultiLayout )
-                        pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
-                }
-            }
+            SalATSLayout *pATSLayout = NULL;
+            MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
+            if ( pMultiLayout )
+                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( rGlyphs[i].m_nGlyphId & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+            if ( !pATSLayout )
+                pATSLayout = dynamic_cast<SalATSLayout*>( rGlyphs[i].m_pLayout );
 
             if ( pATSLayout )
             {
@@ -6942,14 +6930,19 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             if ( rGlyphs[nPos].m_bIdentityGlyph )
                 appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
             appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
+#else	// USE_JAVA
+            appendHex( rGlyphs[nPos].m_nMappedGlyphId, aUnkernedLine );
+#endif	// USE_JAVA
             // check if glyph advance matches with the width of the previous glyph, else adjust
-            double fAdvance = rGlyphs[nPos-1].m_nRealNativeWidth - rGlyphs[nPos-1].m_nNativeWidth;
+            const Point aThisPos = aMat.transform( rGlyphs[nPos].m_aPos );
+#ifdef USE_JAVA
+            // Fix bug 3659 by subtracting the real native width from the
+            // OOo kerning positions
+            const Point aPrevPos = aMat.transform( Point( rGlyphs[nPos-1].m_aPos.X() + (long)( ( fXScale * rGlyphs[nPos-1].m_nRealNativeWidth ) + 0.5 ), rGlyphs[nPos-1].m_aPos.Y() ) );
+            double fAdvance = aPrevPos.X() - aThisPos.X();
             fAdvance *= 1000.0 / (fXScale * nPixelFontHeight);
             const sal_Int32 nAdjustment = sal_Int32(fAdvance+0.5);
 #else	// USE_JAVA
-            appendHex( rGlyphs[nPos].m_nMappedGlyphId, aUnkernedLine );
-            // check if glyph advance matches with the width of the previous glyph, else adjust
-            const Point aThisPos = aMat.transform( rGlyphs[nPos].m_aPos );
             const Point aPrevPos = aMat.transform( rGlyphs[nPos-1].m_aPos );
             double fAdvance = aThisPos.X() - aPrevPos.X();
             fAdvance *= 1000.0 / (fXScale * nPixelFontHeight);
@@ -7194,18 +7187,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
             // Fix bugs 3348 and 3442 by fetching each glyph's actual
             // native unkerned width
-            SalATSLayout *pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
-            if ( pGlyphs[i] & GF_FONTMASK )
-            {
-                if ( pATSLayout )
-                    pATSLayout = dynamic_cast<SalATSLayout*>( ((MultiSalLayout *)pATSLayout)->GetLayout( ( pGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
-                if ( !pATSLayout )
-                {
-                    MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( &rLayout );
-                    if ( pMultiLayout )
-                        pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( pGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
-                }
-            }
+            SalATSLayout *pATSLayout = NULL;
+            MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( &rLayout );
+            if ( pMultiLayout )
+                pATSLayout = dynamic_cast<SalATSLayout*>( pMultiLayout->GetLayout( ( pGlyphs[i] & GF_FONTMASK ) >> GF_FONTSHIFT ) );
+            if ( !pATSLayout )
+                pATSLayout = dynamic_cast<SalATSLayout*>( &rLayout );
             sal_Int32 nNativeGlyphWidth = ( pATSLayout ? sal_Int32( ( (double)pATSLayout->GetNativeGlyphWidth( pGlyphs[i], pCharPosAry[i] ) / pATSLayout->GetUnitsPerPixel() ) + 0.5 ) : 0.0 );
 
             // Do not allow invalid glyphs to be written to the PDF output
