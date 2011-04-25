@@ -38,10 +38,11 @@
 
 @interface VCLApplicationDelegate : NSObject
 {
+	BOOL				mbAppMenuInitialized;
+	BOOL				mbCancelTracking;
 	id					mpDelegate;
 	BOOL				mbInTermination;
 	BOOL				mbInTracking;
-	BOOL				mbUpdateMenus;
 }
 + (VCLApplicationDelegate *)sharedDelegate;
 - (void)addMenuBarItem:(NSNotification *)pNotification;

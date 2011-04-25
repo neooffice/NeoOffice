@@ -352,10 +352,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 {
 	[super init];
 
+	mbAppMenuInitialized = NO;
+	mbCancelTracking = NO;
 	mpDelegate = nil;
 	mbInTermination = NO;
 	mbInTracking = NO;
-	mbUpdateMenus = NO;
 
 	// Set the application delegate as the delegate for the application menu so
 	// that the Java menu item target and selector can be replaced with our own
@@ -391,71 +392,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)menuNeedsUpdate:(NSMenu *)pMenu
 {
-	if ( !pMenu )
-		return;
-
-	NSMenu *pSupermenu = [pMenu supermenu];
-	if ( !pSupermenu )
-		return;
-
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( !pApp )
-		return;
-
-	NSMenu *pMainMenu = [pApp mainMenu];
-	if ( !pMainMenu || ![pMainMenu numberOfItems] || pSupermenu != pMainMenu )
-		return;
-
-	if ( mbInTracking && mbUpdateMenus )
-	{
-		mbUpdateMenus = NO;
-		if ( !VCLInstance_updateNativeMenus() )
-		{
-			[pMainMenu cancelTracking];
-			return;
-		}
-	}
-
-	NSMenuItem *pAppItem = [pMainMenu itemAtIndex:0];
-	if ( !pAppItem )
-		return;
-
-	NSMenu *pSubmenu = [pAppItem submenu];
-	if ( !pSubmenu || pMenu != pSubmenu )
-		return;
-
-	int nItems = [pMenu numberOfItems];
-	int i = 0;
-	for ( ; i < nItems; i++ )
-	{
-		NSMenuItem *pItem = [pMenu itemAtIndex:i];
-		if ( pItem )
-		{
-			NSObject *pTarget = [pItem target];
-			if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
-			{
-				NSString *pAction = NSStringFromSelector( [pItem action] );
-				if ( pAction )
-				{
-					NSRange aRange = [pAction rangeOfString:@"about" options:NSCaseInsensitiveSearch];
-					if ( aRange.location != NSNotFound && aRange.length > 0 )
-					{
-						[pItem setTarget:self];
-						[pItem setAction:@selector(showAbout)];
-					}
-					else
-					{
-						aRange = [pAction rangeOfString:@"preferences" options:NSCaseInsensitiveSearch];
-						if ( aRange.location != NSNotFound && aRange.length > 0 )
-						{
-							[pItem setTarget:self];
-							[pItem setAction:@selector(showPreferences)];
-						}
-					}
-				}
-			}
-		}
-	}
+	if ( pMenu && ( !mbInTracking || mbCancelTracking ) )
+		[pMenu cancelTracking];
 }
 
 - (void)setDelegate:(id)pDelegate
@@ -491,18 +429,70 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
 		NSMenu *pObject = [pNotification object];
-		if ( pApp && pObject && pObject == [pApp mainMenu] )
+		if ( pApp )
 		{
-			NSString *pName = [pNotification name];
-			if ( [NSMenuDidBeginTrackingNotification isEqualToString:pName] )
+			NSMenu *pMainMenu = [pApp mainMenu];
+			if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
 			{
-				mbInTracking = YES;
-				mbUpdateMenus = YES;
+				NSString *pName = [pNotification name];
+				if ( [NSMenuDidBeginTrackingNotification isEqualToString:pName] )
+				{
+					if ( !mbAppMenuInitialized )
+					{
+						NSMenuItem *pItem = [pMainMenu itemAtIndex:0];
+						if ( pItem )
+						{
+							NSMenu *pAppMenu = [pItem submenu];
+							if ( pAppMenu )
+							{
+								mbAppMenuInitialized = YES;
+
+								int nItems = [pAppMenu numberOfItems];
+								int i = 0;
+								for ( ; i < nItems; i++ )
+								{
+									NSMenuItem *pItem = [pAppMenu itemAtIndex:i];
+									if ( pItem )
+									{
+										NSObject *pTarget = [pItem target];
+										if ( pTarget && [[pTarget className] isEqualToString:pApplicationDelegateString] )
+										{
+											NSString *pAction = NSStringFromSelector( [pItem action] );
+											if ( pAction )
+											{
+												NSRange aRange = [pAction rangeOfString:@"about" options:NSCaseInsensitiveSearch];
+												if ( aRange.location != NSNotFound && aRange.length > 0 )
+												{
+													[pItem setTarget:self];
+													[pItem setAction:@selector(showAbout)];
+												}
+												else
+												{
+													aRange = [pAction rangeOfString:@"preferences" options:NSCaseInsensitiveSearch];
+													if ( aRange.location != NSNotFound && aRange.length > 0 )
+													{
+														[pItem setTarget:self];
+														[pItem setAction:@selector(showPreferences)];
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
 			}
-			else if ( [NSMenuDidEndTrackingNotification isEqualToString:pName] )
+
+			if ( pObject && pObject == pMainMenu )
 			{
+				mbCancelTracking = NO;
 				mbInTracking = NO;
-				mbUpdateMenus = NO;
+				if ( VCLInstance_updateNativeMenus() )
+					mbInTracking = YES;
+				else
+					mbCancelTracking = YES;
 			}
 		}
 	}
