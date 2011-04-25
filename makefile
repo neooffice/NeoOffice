@@ -530,11 +530,11 @@ build.patch_package_shared:
 	sh -e -c 'if [ -d "$(PATCH_INSTALL_HOME)" ] ; then echo "Running sudo to delete previous installation files..." ; sudo rm -Rf "$(PWD)/$(PATCH_INSTALL_HOME)" ; fi'
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/MacOS"
 	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/Resources"
-#	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
+	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/program/classes"
 #	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/ure-link/lib"
 #	mkdir -p "$(PATCH_INSTALL_HOME)/package/Contents/basis-link/help"
 	chmod -Rf u+w,a+r "$(PATCH_INSTALL_HOME)/package"
-#	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
+	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/lib/libvcl$(DLLSUFFIX).dylib" "basis-link/program"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/sal/$(UOUTPUTDIR)/lib/libuno_sal.dylib.3" "basis-link/ure-link/lib"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(OOO-BUILD_BUILD_HOME)/desktop/$(UOUTPUTDIR)/bin/soffice" "MacOS/soffice.bin" ; chmod a+x "MacOS/soffice.bin"
 #	cd "$(PATCH_INSTALL_HOME)/package/Contents" ; cp "$(PWD)/$(BUILD_BUILD_HOME)/vcl/$(UOUTPUTDIR)/class/vcl.jar" "basis-link/program/classes"
