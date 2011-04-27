@@ -432,7 +432,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		if ( pApp )
 		{
 			NSMenu *pMainMenu = [pApp mainMenu];
-			if ( pMainMenu && [pMainMenu numberOfItems] > 0 )
+			if ( pObject && pObject == pMainMenu )
 			{
 				NSString *pName = [pNotification name];
 				if ( [NSMenuDidBeginTrackingNotification isEqualToString:pName] )
@@ -482,17 +482,19 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 							}
 						}
 					}
-				}
-			}
 
-			if ( pObject && pObject == pMainMenu )
-			{
-				mbCancelTracking = NO;
-				mbInTracking = NO;
-				if ( VCLInstance_updateNativeMenus() )
-					mbInTracking = YES;
-				else
+					mbCancelTracking = NO;
+					mbInTracking = NO;
+					if ( VCLInstance_updateNativeMenus() )
+						mbInTracking = YES;
+					else
+						mbCancelTracking = YES;
+				}
+				else if ( [NSMenuDidEndTrackingNotification isEqualToString:pName] )
+				{
 					mbCancelTracking = YES;
+					mbInTracking = NO;
+				}
 			}
 		}
 	}
