@@ -139,7 +139,7 @@ static NSString *pBlankItem = @" ";
 - (void)dealloc;
 - (void)deleteItem:(ShowFileDialogArgs *)pArgs;
 - (NSString *)directory:(ShowFileDialogArgs *)pArgs;
-- (NSArray *)filenames:(ShowFileDialogArgs *)pArgs;
+- (NSArray *)URLs:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)items:(ShowFileDialogArgs *)pArgs;
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
 - (void)initialize:(id)pObject;
@@ -326,21 +326,21 @@ static NSString *pBlankItem = @" ";
 	return pRet;
 }
 
-- (NSArray *)filenames:(ShowFileDialogArgs *)pArgs
+- (NSArray *)URLs:(ShowFileDialogArgs *)pArgs
 {
 	NSArray *pRet = nil;
 
 	if ( mbUseFileOpenDialog )
 	{
-		NSArray *pArray = [(NSOpenPanel *)mpFilePanel filenames];
+		NSArray *pArray = [(NSOpenPanel *)mpFilePanel URLs];
 		if ( pArray )
 			pRet = [NSArray arrayWithArray:pArray];
 	}
 	else
 	{
-		NSString *pFileName = [mpFilePanel filename];
-		if ( pFileName )
-			pRet = [NSArray arrayWithObject:pFileName];
+		NSURL *pURL = [mpFilePanel URL];
+		if ( pURL )
+			pRet = [NSArray arrayWithObject:pURL];
 	}
 
 	if ( pArgs )
@@ -1410,7 +1410,7 @@ CFStringRef NSFileDialog_directory( id pDialog )
 	return aRet;
 }
 
-CFStringRef *NSFileDialog_fileNames( id pDialog )
+CFStringRef *NSFileDialog_URLs( id pDialog )
 {
 	CFStringRef *pRet = nil;
 
@@ -1420,11 +1420,11 @@ CFStringRef *NSFileDialog_fileNames( id pDialog )
 	{
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(filenames:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSArray *pFileNames = (NSArray *)[pArgs result];
-		if ( pFileNames )
+		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(URLs:) withObject:pArgs waitUntilDone:YES modes:pModes];
+		NSArray *pURLs = (NSArray *)[pArgs result];
+		if ( pURLs )
 		{
-			unsigned nCount = [pFileNames count];
+			unsigned nCount = [pURLs count];
 			if ( nCount )
 			{
 				pRet = (CFStringRef *)malloc( ( nCount + 1 ) * sizeof( CFStringRef ) );
@@ -1434,11 +1434,15 @@ CFStringRef *NSFileDialog_fileNames( id pDialog )
 					unsigned i = 0;
 					for ( ; i < nCount; i++ )
 					{
-						NSString *pCurrentName = (NSString *)[pFileNames objectAtIndex:i];
-						if ( pCurrentName )
+						NSURL *pCurrentURL = (NSURL *)[pURLs objectAtIndex:i];
+						if ( pCurrentURL )
 						{
-							[pCurrentName retain];
-							pRet[ nIndex++ ] = (CFStringRef)pCurrentName;
+							NSString *pCurrentName = [pCurrentURL absoluteString];
+							if ( pCurrentName )
+							{
+								[pCurrentName retain];
+								pRet[ nIndex++ ] = (CFStringRef)pCurrentName;
+							}
 						}
 					}
 
@@ -1554,16 +1558,16 @@ void NSFileDialog_release( id pDialog )
 	[pPool release];
 }
 
-void NSFileManager_releaseFileNames( CFStringRef *pFileNames )
+void NSFileManager_releaseURLs( CFStringRef *pURLs )
 {           
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pFileNames )
+	if ( pURLs )
 	{
 		unsigned nIndex = 0;
-		for ( ; pFileNames [ nIndex ]; nIndex++ )
-			CFRelease( pFileNames[ nIndex ] );
-		free( pFileNames );
+		for ( ; pURLs[ nIndex ]; nIndex++ )
+			CFRelease( pURLs[ nIndex ] );
+		free( pURLs );
 	}
 
 	[pPool release];

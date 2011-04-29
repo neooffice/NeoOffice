@@ -343,24 +343,23 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 
 	implInit();
 
-	CFStringRef *pFileNames = NSFileDialog_fileNames( mpDialog );
-	if ( pFileNames )
+	CFStringRef *pURLs = NSFileDialog_URLs( mpDialog );
+	if ( pURLs )
 	{
 		int nCount = 0;
-		for ( ; pFileNames[ nCount ]; nCount++ )
+		for ( ; pURLs[ nCount ]; nCount++ )
 			;
 
 		if ( nCount == 1 )
 		{
 			aRet = Sequence< OUString >( nCount );
-			CFStringRef aString = pFileNames[ 0 ];
+			CFStringRef aString = pURLs[ 0 ];
 			CFIndex nLen = CFStringGetLength( aString );
 			CFRange aRange = CFRangeMake( 0, nLen );
 			sal_Unicode pBuffer[ nLen + 1 ];
 			CFStringGetCharacters( aString, aRange, pBuffer ); 
 			pBuffer[ nLen ] = 0;
-			OUString aPath( pBuffer );
-			File::getFileURLFromSystemPath( aPath, aRet[ 0 ] );
+			aRet[ 0 ] = OUString( pBuffer );
 		}
 		else if ( nCount > 1 )
 		{
@@ -370,7 +369,7 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 			aRet = Sequence< OUString >( ++nCount );
 			for ( int i = 0; i < nCount; i++ )
 			{
-				CFStringRef aString = pFileNames[ i ? i - 1 : 0 ];
+				CFStringRef aString = pURLs[ i ? i - 1 : 0 ];
 				CFRange aSearchRange;
 				aSearchRange.location = 0;
 				aSearchRange.length = CFStringGetLength( aString );
@@ -399,17 +398,13 @@ Sequence< OUString > SAL_CALL JavaFilePicker::getFiles() throw( RuntimeException
 						CFStringGetCharacters( aSplitString, aRange, pBuffer ); 
 						pBuffer[ nLen ] = 0;
 						CFRelease( aSplitString );
-						OUString aPath( pBuffer );
-						if ( i )
-							aRet[ i ] = aPath;
-						else
-							File::getFileURLFromSystemPath( aPath, aRet[ i ] );
+						aRet[ i ] = OUString( pBuffer );
 					}
 				}
 			}
 		}
 
-		NSFileManager_releaseFileNames( pFileNames );
+		NSFileManager_releaseURLs( pURLs );
 	}
 
 	return aRet;

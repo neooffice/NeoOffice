@@ -170,26 +170,21 @@ OUString SAL_CALL JavaFolderPicker::getDirectory() throw( RuntimeException )
 {
 	OUString aRet;
 
-	CFStringRef *pFileNames = NSFileDialog_fileNames( mpDialog );
-	if ( pFileNames )
+	CFStringRef *pURLs = NSFileDialog_URLs( mpDialog );
+	if ( pURLs )
 	{
-		if ( pFileNames[ 0 ] )
+		if ( pURLs[ 0 ] )
 		{
-			CFStringRef aString = pFileNames[ 0 ];
+			CFStringRef aString = pURLs[ 0 ];
 			CFIndex nLen = CFStringGetLength( aString );
 			CFRange aRange = CFRangeMake( 0, nLen );
 			sal_Unicode pBuffer[ nLen + 1 ];
 			CFStringGetCharacters( aString, aRange, pBuffer ); 
 			pBuffer[ nLen ] = 0;
-			OUString aPath( pBuffer );
-
-			OUString aURL;
-			File::getFileURLFromSystemPath( aPath, aURL );
-			if ( aURL.getLength() )
-				aRet = aURL;
+			aRet = OUString( pBuffer );
 		}
 
-		NSFileManager_releaseFileNames( pFileNames );
+		NSFileManager_releaseURLs( pURLs );
 	}
 
 	return aRet;
