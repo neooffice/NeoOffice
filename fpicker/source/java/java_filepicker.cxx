@@ -298,11 +298,9 @@ void SAL_CALL JavaFilePicker::setDisplayDirectory( const OUString& aDirectory ) 
 {
 	implInit();
 
-	OUString aPath;
-	File::getSystemPathFromFileURL( aDirectory, aPath );
-	if ( aPath.getLength() )
+	if ( aDirectory.getLength() )
 	{
-		CFStringRef aString = CFStringCreateWithCharacters( NULL, aPath.getStr(), aPath.getLength() );
+		CFStringRef aString = CFStringCreateWithCharacters( NULL, aDirectory.getStr(), aDirectory.getLength() );
 		if ( aString )
 		{
 			NSFileDialog_setDirectory( mpDialog, aString );
@@ -328,8 +326,7 @@ OUString SAL_CALL JavaFilePicker::getDisplayDirectory() throw( RuntimeException 
 		CFStringGetCharacters( aString, aRange, pBuffer );
 		pBuffer[ nLen ] = 0;
 		CFRelease( aString );
-		OUString aPath( pBuffer );
-		File::getFileURLFromSystemPath( aPath, aRet );
+		aRet = OUString( pBuffer );
 	}
 
 	return aRet;

@@ -44,9 +44,6 @@
 #ifndef _COM_SUN_STAR_LANG_NULLPOINTEREXCEPTION_HPP_
 #include <com/sun/star/lang/NullPointerException.hpp>
 #endif
-#ifndef _OSL_FILE_HXX_
-#include <osl/file.hxx>
-#endif
 #ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
 #endif
@@ -129,11 +126,9 @@ sal_Int16 SAL_CALL JavaFolderPicker::execute() throw( RuntimeException )
 
 void SAL_CALL JavaFolderPicker::setDisplayDirectory( const OUString& aDirectory ) throw( IllegalArgumentException, RuntimeException )
 {
-	OUString aPath;
-	File::getSystemPathFromFileURL( aDirectory, aPath );
-	if ( aPath.getLength() )
+	if ( aDirectory.getLength() )
 	{
-		CFStringRef aString = CFStringCreateWithCharacters( NULL, aPath.getStr(), aPath.getLength() );
+		CFStringRef aString = CFStringCreateWithCharacters( NULL, aDirectory.getStr(), aDirectory.getLength() );
 		if ( aString )
 		{
 			NSFileDialog_setDirectory( mpDialog, aString );
@@ -157,8 +152,7 @@ OUString SAL_CALL JavaFolderPicker::getDisplayDirectory() throw( RuntimeExceptio
 		CFStringGetCharacters( aString, aRange, pBuffer );
 		pBuffer[ nLen ] = 0;
 		CFRelease( aString );
-		OUString aPath( pBuffer );
-		File::getFileURLFromSystemPath( aPath, aRet );
+		aRet = OUString( pBuffer );
 	}
 
 	return aRet;

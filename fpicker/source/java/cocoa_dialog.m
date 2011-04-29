@@ -113,6 +113,11 @@ static NSString *pBlankItem = @" ";
 - (NSURL *)filePathURL;
 @end
 
+@interface NSSavePanel (ShowFileDialog)
+- (NSURL *)directoryURL;
+- (void)setDirectoryURL:(NSURL *)pURL;
+@end
+
 @interface ShowFileDialog : NSObject
 {
 	BOOL					mbChooseFiles;
@@ -138,7 +143,7 @@ static NSString *pBlankItem = @" ";
 - (void)cancel:(id)pObject;
 - (void)dealloc;
 - (void)deleteItem:(ShowFileDialogArgs *)pArgs;
-- (NSString *)directory:(ShowFileDialogArgs *)pArgs;
+- (NSURL *)directory:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)URLs:(ShowFileDialogArgs *)pArgs;
 - (NSArray *)items:(ShowFileDialogArgs *)pArgs;
 - (id)initWithPicker:(void *)pPicker useFileOpenDialog:(BOOL)bUseFileOpenDialog chooseFiles:(BOOL)bChooseFiles showAutoExtension:(BOOL)bShowAutoExtension showFilterOptions:(BOOL)bShowFilterOptions showImageTemplate:(BOOL)bShowImageTemplate showLink:(BOOL)bShowLink showPassword:(BOOL)bShowPassword showReadOnly:(BOOL)bShowReadOnly showSelection:(BOOL)bShowSelection showTemplate:(BOOL)bShowTemplate showVersion:(BOOL)bShowVersion;
@@ -316,9 +321,20 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
-- (NSString *)directory:(ShowFileDialogArgs *)pArgs
+- (NSURL *)directory:(ShowFileDialogArgs *)pArgs
 {
-	NSString *pRet = [mpFilePanel directory];
+	NSURL *pRet = nil;
+
+	if ( [mpFilePanel respondsToSelector:@selector(directoryURL)] )
+	{
+		pRet = [mpFilePanel directoryURL];
+	}
+	else
+	{
+		NSString *pPath = [mpFilePanel directory];
+		if ( pPath )
+			pRet = [NSURL URLWithString:pPath];
+	}
 
 	if ( pArgs )
 		[pArgs setResult:pRet];
@@ -724,16 +740,38 @@ static NSString *pBlankItem = @" ";
 
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL
 {
-	if ( pURL && ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
+	if ( !pURL )
+		return;
+
+	if ( ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
 		pURL = [pURL filePathURL];
 
 	// Fix bug 3568 by forcefully setting the directory when it has been
-	// changed by the user
+	// changed by the user. Note that we only do this if the file URL is
+	// different than the panel's directory URL or else on Mac OS X 10.7 the
+	// file list will go into a infinite repainting loop.
 	if ( pURL && [pURL isFileURL] )
 	{
-		NSString *pPath = [pURL path];
-		if ( pPath )
-			[mpFilePanel setDirectory:[pURL path]];
+		if ( [mpFilePanel respondsToSelector:@selector(directoryURL)] && [mpFilePanel respondsToSelector:@selector(setDirectoryURL:)] )
+		{
+			NSString *pPath = [pURL absoluteString];
+			if ( pPath )
+			{
+				NSURL *pCurrentURL = [mpFilePanel directoryURL];
+				if ( !pCurrentURL || ![pPath isEqualToString:[pCurrentURL absoluteString]] )
+					[mpFilePanel setDirectoryURL:pURL];
+			}
+		}
+		else
+		{
+			NSString *pPath = [pURL path];
+			if ( pPath )
+			{
+				NSString *pCurrentPath = [mpFilePanel directory];
+				if ( !pCurrentPath || ![pPath isEqualToString:pCurrentPath] )
+					[mpFilePanel setDirectory:pPath];
+			}
+		}
 	}
 }
 
@@ -960,7 +998,28 @@ static NSString *pBlankItem = @" ";
 	if ( !pDirectory )
 		return;
 
-	[mpFilePanel setDirectory:pDirectory];
+	NSURL *pURL = [NSURL URLWithString:pDirectory];
+	if ( !pURL )
+		return;
+
+	if ( ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
+		pURL = [pURL filePathURL];
+
+	// Fix bug 3568 by forcefully setting the directory when it has been
+	// changed by the user
+	if ( pURL && [pURL isFileURL] )
+	{
+		if ( [mpFilePanel respondsToSelector:@selector(setDirectoryURL:)] )
+		{
+			[mpFilePanel setDirectoryURL:pURL];
+		}
+		else
+		{
+			NSString *pPath = [pURL path];
+			if ( pPath )
+				[mpFilePanel setDirectory:pPath];
+		}
+	}
 }
 
 - (void)setEnabled:(ShowFileDialogArgs *)pArgs
@@ -1397,11 +1456,15 @@ CFStringRef NSFileDialog_directory( id pDialog )
 		ShowFileDialogArgs *pArgs = [ShowFileDialogArgs argsWithArgs:nil];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[(ShowFileDialog *)pDialog performSelectorOnMainThread:@selector(directory:) withObject:pArgs waitUntilDone:YES modes:pModes];
-		NSString *pDirectory = (NSString *)[pArgs result];
-		if ( pDirectory )
+		NSURL *pURL = (NSURL *)[pArgs result];
+		if ( pURL )
 		{
-			[pDirectory retain];
-			aRet = (CFStringRef)pDirectory;
+			NSString *pDirectory = [pURL absoluteString];
+			if ( pDirectory )
+			{
+				[pDirectory retain];
+				aRet = (CFStringRef)pDirectory;
+			}
 		}
 	}
 
