@@ -786,6 +786,8 @@ static NSString *pBlankItem = @" ";
 
 	if ( pURL && [pURL isFileURL] )
 		bRet = [self panel:pObject shouldShowFilename:[pURL path]];
+	else
+		bRet = YES;
 
 	return bRet;
 }
