@@ -361,6 +361,8 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 			return;
 	}
 
+	pFrame->maUpdateMenuList.remove( pMenu );
+
 	// Check that menu has not been deleted
 	::std::map< JavaSalMenu*, JavaSalMenu* >::const_iterator it = aMenuMap.find( pMenu );
 	if ( it == aMenuMap.end() )
@@ -375,6 +377,9 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	// won't be notified when another application puts content.
 	if ( pMenu->mbIsMenuBarMenu && CFRunLoopGetCurrent() == CFRunLoopGetMain() )
 	{
+		// Reset the frame's menu update list
+		pFrame->maUpdateMenuList.clear();
+
 		Window *pWindow = pVCLMenu->GetWindow();
 		if ( pWindow )
 		{
@@ -389,15 +394,17 @@ void UpdateMenusForFrame( JavaSalFrame *pFrame, JavaSalMenu *pMenu, bool bUpdate
 	com_sun_star_vcl_VCLEvent aActivateEvent( SALEVENT_MENUACTIVATE, pFrame, pActivateEvent );
 	aActivateEvent.dispatch();
 
-	if ( bUpdateSubmenus )
+	USHORT nCount = pVCLMenu->GetItemCount();
+	for( USHORT i = 0; i < nCount; i++ )
 	{
-		USHORT nCount = pVCLMenu->GetItemCount();
-		for( USHORT i = 0; i < nCount; i++ )
+		// If this menu item has a submenu, fix that submenu up
+		JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
+		if ( pSalMenuItem && pSalMenuItem->mpSalSubmenu )
 		{
-			// If this menu item has a submenu, fix that submenu up
-			JavaSalMenuItem *pSalMenuItem = (JavaSalMenuItem *)pVCLMenu->GetItemSalItem( i );
-			if ( pSalMenuItem && pSalMenuItem->mpSalSubmenu )
+			if ( bUpdateSubmenus )
 				UpdateMenusForFrame( pFrame, pSalMenuItem->mpSalSubmenu, true );
+			else
+				pFrame->maUpdateMenuList.push_back( pSalMenuItem->mpSalSubmenu );
 		}
 	}
 

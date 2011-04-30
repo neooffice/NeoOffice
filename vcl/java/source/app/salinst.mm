@@ -535,6 +535,14 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
 			com_sun_star_vcl_VCLFrame::flushAllFrames();
+
+			// Reduce noticeable pause when opening a new document by delaying
+			// update of submenus until next available timer timeout
+			if ( pSalData->maNativeEventCondition.check() && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+			{
+				for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
+					UpdateMenusForFrame( pSalData->mpFocusFrame, pSalData->mpFocusFrame->maUpdateMenuList.front(), false );
+			}
 		}
 	}
 
