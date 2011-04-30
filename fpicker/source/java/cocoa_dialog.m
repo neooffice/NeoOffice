@@ -116,6 +116,7 @@ static NSString *pBlankItem = @" ";
 @interface NSSavePanel (ShowFileDialog)
 - (NSURL *)directoryURL;
 - (void)setDirectoryURL:(NSURL *)pURL;
+- (void)setNameFieldStringValue:(NSString *)pValue;
 @end
 
 @interface ShowFileDialog : NSObject
@@ -152,6 +153,7 @@ static NSString *pBlankItem = @" ";
 - (NSString *)label:(ShowFileDialogArgs *)pArgs;
 - (NSSavePanel *)panel;
 - (void)panel:(id)pObject didChangeToDirectoryURL:(NSURL *)pURL;
+- (BOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL;
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename;
 - (void *)picker;
 - (void)release:(id)pObject;
@@ -775,6 +777,19 @@ static NSString *pBlankItem = @" ";
 	}
 }
 
+- (BOOL)panel:(id)pObject shouldEnableURL:(NSURL *)pURL
+{
+	BOOL bRet = NO;
+
+	if ( ![pURL isFileURL] && [pURL respondsToSelector:@selector(filePathURL)] )
+		pURL = [pURL filePathURL];
+
+	if ( pURL && [pURL isFileURL] )
+		bRet = [self panel:pObject shouldShowFilename:[pURL path]];
+
+	return bRet;
+}
+
 - (BOOL)panel:(id)pObject shouldShowFilename:(NSString *)pFilename
 {
 	BOOL bRet = NO;
@@ -1278,14 +1293,23 @@ static NSString *pBlankItem = @" ";
 			[self setSelectedFilter:pSelectedFilterArgs];
 		}
 
-		if ( mbUseFileOpenDialog )
+		if ( [mpFilePanel respondsToSelector:@selector(setNameFieldStringValue:)] )
 		{
-			NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
-			nRet = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:nil];
+			if ( mpDefaultName )
+				[mpFilePanel setNameFieldStringValue:mpDefaultName];
+			nRet = [mpFilePanel runModal];
 		}
 		else
 		{
-			nRet = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
+			if ( mbUseFileOpenDialog )
+			{
+				NSOpenPanel *pOpenPanel = (NSOpenPanel *)mpFilePanel;
+				nRet = [pOpenPanel runModalForDirectory:[pOpenPanel directory] file:mpDefaultName types:nil];
+			}
+			else
+			{
+				nRet = [mpFilePanel runModalForDirectory:[mpFilePanel directory] file:mpDefaultName];
+			}
 		}
 
 		[mpFilePanel setAccessoryView:pOldAccessoryView];
