@@ -733,7 +733,11 @@ static NSString *pBlankItem = @" ";
 	{
 		NSString *pPath = [pURL path];
 		if ( pPath )
-			[mpFilePanel setDirectory:[pURL path]];
+		{
+			NSString *pCurrentPath = [mpFilePanel directory];
+			if ( !pCurrentPath || ![pPath isEqualToString:pCurrentPath] )
+				[mpFilePanel setDirectory:pPath];
+		}
 	}
 }
 
