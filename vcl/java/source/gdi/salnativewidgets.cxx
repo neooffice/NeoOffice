@@ -86,7 +86,7 @@
 #define USE_NATIVE_CONTROLS
 
 #define COMBOBOX_BUTTON_WIDTH			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 25 : 24 )
-#define COMBOBOX_BUTTON_HEIGHT_SLOP		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1  )
+#define COMBOBOX_BUTTON_HEIGHT_SLOP		0
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
 #define COMBOBOX_HEIGHT					( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 28 : 29 )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
