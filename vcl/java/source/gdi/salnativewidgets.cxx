@@ -88,6 +88,7 @@
 #define COMBOBOX_BUTTON_WIDTH			( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 25 : 24 )
 #define COMBOBOX_BUTTON_HEIGHT_SLOP		0
 #define COMBOBOX_BUTTON_TRIMWIDTH		3
+#define COMBOBOX_BUTTON_TRIMHEIGHT		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1 )
 #define COMBOBOX_HEIGHT					( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 28 : 29 )
 #define CONTROL_TAB_PANE_TOP_OFFSET		12
 // Fix bug 3378 by reducing the editbox height for low screen resolutions
@@ -909,7 +910,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 
 		HIRect destRect;
 		destRect.origin.x = FOCUSRING_WIDTH;
-		destRect.origin.y = FOCUSRING_WIDTH;
+		destRect.origin.y = FOCUSRING_WIDTH + COMBOBOX_BUTTON_TRIMHEIGHT;
 		destRect.size.width = rDestBounds.GetWidth() - COMBOBOX_BUTTON_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
 		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
 
