@@ -41,6 +41,10 @@
 - (NSWindow *)getNSWindow;
 @end
 
+@interface NSWindow (VCLWindow)
+- (void)_setModalWindowLevel;
+@end
+
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;
