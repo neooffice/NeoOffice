@@ -47,7 +47,6 @@ int CWindow_makeFloatingWindow( id pCWindow );
 void CWindow_makeModalWindow( id pCWindow );
 void CWindow_makeUnshadowedWindow( id pCWindow );
 void CWindow_updateLocation( id pCWindow );
-void NSMenuBar_refresh();
 #ifdef __cplusplus
 END_C
 #endif
