@@ -735,6 +735,12 @@ SalFrame* JavaSalInstance::CreateFrame( SalFrame* pParent, ULONG nSalFrameStyle 
 		{
 			nWidth = (long)( nWidth * 0.8 );
 			nHeight = (long)( nHeight * 0.8 );
+
+			// Don't let width be too much wider than height as it can look too
+			// wide on many LCD screens
+			long nMaxWidth = (long)( nHeight * 4 / 3 );
+			if ( nWidth > nMaxWidth )
+				nWidth = nMaxWidth;
 		}
 		if ( !pFrame->mpParent )
 		{
