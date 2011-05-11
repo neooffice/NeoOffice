@@ -1209,8 +1209,9 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 
 - (void)setLevel:(int)nWindowLevel
 {
-	// Don't let Java unset our window level changes unless it is modal window
-	if ( [self level] > nWindowLevel && [self level] != NSModalPanelWindowLevel && [[self className] isEqualToString:pCocoaAppWindowString] )
+	// Don't let Java unset our window level changes unless it is modal window or
+	// the window has been set to the "revert document" window level
+	if ( [self level] > nWindowLevel && [self level] != NSModalPanelWindowLevel && [self level] != 2 && [[self className] isEqualToString:pCocoaAppWindowString] )
 		return;
 
 	if ( [super respondsToSelector:@selector(poseAsSetLevel:)] )
