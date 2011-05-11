@@ -88,7 +88,9 @@ SLOFILES =	\
         $(SLO)$/querytemplate.obj
 
 .IF "$(GUIBASE)" == "java"
-SLOFILES += $(SLO)$/objmisc_cocoa.obj
+SLOFILES +=	\
+		$(SLO)$/objmisc_cocoa.obj \
+		$(SLO)$/objstor_cocoa.obj
 .ENDIF
 
 # --- Tagets -------------------------------------------------------

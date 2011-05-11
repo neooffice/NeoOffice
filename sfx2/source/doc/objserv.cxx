@@ -108,6 +108,20 @@
 
 #include "guisaveas.hxx"
 
+#ifdef USE_JAVA
+
+#include <vcl/sysdata.hxx>
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+#include "objstor_cocoa.h"
+
+class NSView;
+
+#endif	// USE_JAVA
+
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::lang;
 using namespace ::com::sun::star::uno;
@@ -440,6 +454,30 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                 return;
             }
 
+#ifdef USE_JAVA
+			if ( NSDocument_versionsEnabled() )
+			{
+				NSView *pView = pFrame->GetWindow().GetSystemData()->pView;
+				::rtl::OUString aBaseURL( GetMedium()->GetBaseURL( true ) );
+				if ( !pView || !aBaseURL.getLength() || IsReadOnlyMedium() )
+					return;
+
+				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aBaseURL.getStr(), aBaseURL.getLength(), kCFAllocatorNull );
+				if ( aString )
+				{
+					CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
+					if ( aURL )
+					{
+						NSDocument_revertDocumentToSaved( pView, aURL );
+						CFRelease( aURL );
+					}
+
+					CFRelease( aString );
+				}
+			}
+			else
+			{
+#endif	// USE_JAVA
 			if ( !IsOwnStorageFormat_Impl( *GetMedium() ) )
 				return;
 
@@ -447,6 +485,9 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 			pDlg->Execute();
 			SetSaveVersionOnClose( pDlg->IsSaveVersionOnClose() );
 			delete pDlg;
+#ifdef USE_JAVA
+			}
+#endif	// USE_JAVA
             rReq.Done();
             return;
 		}
@@ -1015,10 +1056,23 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 						}
 					}
 
+#ifdef USE_JAVA
+					if ( NSDocument_versionsEnabled() )
+					{
+						if ( !pFrame || !pDoc->GetMedium()->GetBaseURL( true ).getLength() || IsReadOnlyMedium() )
+							rSet.DisableItem( nWhich );
+						rSet.Put(SfxStringItem(nWhich, String::CreateFromAscii("Revert to Saved")));
+					}
+					else
+					{
+#endif	// USE_JAVA
 					if ( !pFrame || !pDoc->HasName() ||
 						!IsOwnStorageFormat_Impl( *pDoc->GetMedium() ) )
 //REMOVE							|| pDoc->GetMedium()->GetStorage()->GetVersion() < SOFFICE_FILEFORMAT_50 )
 						rSet.DisableItem( nWhich );
+#ifdef USE_JAVA
+					}
+#endif	// USE_JAVA
 					break;
 				}
 			case SID_SAVEDOC:
