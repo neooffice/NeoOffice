@@ -45,9 +45,6 @@ class NSView;
 class SfxTopViewFrame;
 #endif
 
-// Uncomment out the following line to enable native versions support
-// #define USE_NATIVE_VERSIONS
-
 #ifdef __cplusplus
 extern "C" {
 #endif

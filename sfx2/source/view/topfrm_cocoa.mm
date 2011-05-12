@@ -42,6 +42,9 @@
 #include <postmac.h>
 #import "topfrm_cocoa.h"
 
+// Uncomment out the following line to enable native versions support
+// #define USE_NATIVE_VERSIONS
+
 using namespace vos;
 
 static const NSString *pWritableTypeEntries[] = {
