@@ -33,9 +33,16 @@
  *
  ************************************************************************/
 
+#include <vcl/svapp.hxx>
+#include <vos/mutex.hxx>
+
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
-#import <objc/objc-class.h>
-#import "objstor_cocoa.h"
+#import <objc/objc-runtime.h>
+#include <postmac.h>
+#import "topfrm_cocoa.h"
+
+using namespace vos;
 
 static const NSString *pWritableTypeEntries[] = {
 	#ifdef PRODUCT_NAME
@@ -65,23 +72,66 @@ static NSArray *pWritableTypes = nil;
 
 @interface SFXDocument : NSDocument
 {
+	SfxTopViewFrame*		mpFrame;
 	NSWindowController*		mpWinController;
 	NSWindow*				mpWindow;
 }
 + (BOOL)autosavesInPlace;
 - (void)dealloc;
 - (void)encodeRestorableStateWithCoder:(NSCoder *)pCoder;
-- (id)initWithContentsOfURL:(NSURL *)pURL window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError;
+- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation;
 @end
 
+static NSMutableDictionary *pFrameDict = nil;
+
+static SFXDocument *GetDocumentForFrame( SfxTopViewFrame *pFrame )
+{
+	SFXDocument *pRet = nil;
+
+	if ( pFrame && pFrameDict )
+	{
+		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
+		if ( pKey )
+			pRet = [pFrameDict objectForKey:pKey];
+	}
+
+	return pRet;
+}
+
+static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
+{
+	if ( !pFrame )
+		return;
+
+	if ( !pFrameDict )
+	{
+		// Do not retain as invoking alloc disables autorelease
+		pFrameDict = [NSMutableDictionary dictionaryWithCapacity:10];
+		if ( pFrameDict )
+			[pFrameDict retain];
+	}
+
+	if ( pFrameDict )
+	{
+		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
+		if ( pKey )
+		{
+			if ( pDoc )
+				[pFrameDict setObject:pDoc forKey:pKey];
+			else
+				[pFrameDict removeObjectForKey:pKey];
+		}
+	}
+}
+
 @implementation SFXDocument
 
 + (BOOL)autosavesInPlace
 {
-	return YES;
+	return NSDocument_versionsSupported();
 }
 
 - (void)dealloc
@@ -107,10 +157,11 @@ static NSArray *pWritableTypes = nil;
 	// Do not trigger automatic restoration of the document when launching
 }
 
-- (id)initWithContentsOfURL:(NSURL *)pURL window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError
+- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError
 {
 	[super initWithContentsOfURL:pURL ofType:pTypeName error:pError];
 
+	mpFrame = pFrame;
 	mpWinController = nil;
 	mpWindow = pWindow;
 	if ( mpWindow )
@@ -142,9 +193,21 @@ static NSArray *pWritableTypes = nil;
 
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError
 {
-	CFShow( pURL );
 	if ( pError )
 		pError = nil;
+
+	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+			if ( pDoc == self )
+				SFXDocument_reload( mpFrame );
+		}
+		rSolarMutex.release();
+	}
 
 	return YES;
 }
@@ -168,68 +231,66 @@ static NSArray *pWritableTypes = nil;
 
 @end
 
-@interface RunDocumentVersions : NSObject
+@interface RunSFXDocument : NSObject
 {
+	SfxTopViewFrame*		mpFrame;
 	NSURL*					mpURL;
 	NSView*					mpView;
 }
-+ (id)createWithView:(NSView *)pView URL:(NSURL *)pURL;
-- (id)initWithView:(NSView *)pView URL:(NSURL *)pURL;
++ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL;
+- (void)createDocument:(id)pObject;
+- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL;
 - (void)revertDocumentToSaved:(id)pObject;
 @end
 
-@implementation RunDocumentVersions
+@implementation RunSFXDocument
 
-+ (id)createWithView:(NSView *)pView URL:(NSURL *)pURL
++ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL
 {
-	RunDocumentVersions *pRet = [[RunDocumentVersions alloc] initWithView:pView URL:pURL];
+	RunSFXDocument *pRet = [[RunSFXDocument alloc] initWithFrame:pFrame view:pView URL:pURL];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithView:(NSView *)pView URL:(NSURL *)pURL
+- (void)createDocument:(id)pObject
+{
+	if ( mpFrame && mpView && mpURL )
+	{
+		NSWindow *pWindow = [mpView window];
+		if ( pWindow && [pWindow isVisible] )
+		{
+			NSError *pError = nil;
+			SFXDocument *pDoc = [[SFXDocument alloc] initWithContentsOfURL:mpURL frame:mpFrame window:pWindow ofType:@"" error:&pError];
+			if ( pDoc )
+				SetDocumentForFrame( mpFrame, pDoc );
+		}
+	}
+}
+
+- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL
 {
 	[super init];
 
+	mpFrame = pFrame;
 	mpURL = pURL;
 	mpView = pView;
 
 	return self;
 }
 
+- (void)release:(id)pObject
+{
+	SetDocumentForFrame( mpFrame, nil );
+}
+
 - (void)revertDocumentToSaved:(id)pObject
 {
-	if ( mpView )
-	{
-		NSWindow *pWindow = [mpView window];
-		if ( pWindow && [pWindow isVisible] )
-		{
-			NSError *pError = nil;
-			SFXDocument *pDoc = [[SFXDocument alloc] initWithContentsOfURL:mpURL window:pWindow ofType:@"" error:&pError];
-			if ( pDoc )
-			{
-				[pDoc revertDocumentToSaved:self];
-				[pDoc release];
-			}
-		}
-	}
+	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+	if ( pDoc )
+		[pDoc revertDocumentToSaved:self];
 }
 
 @end
-
-void NSDocument_revertDocumentToSaved( NSView *pView, CFURLRef aURL )
-{
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	if ( pView && aURL )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunDocumentVersions *pRunDocumentVersions = [RunDocumentVersions createWithView:pView URL:(NSURL *)aURL];
-		[pRunDocumentVersions performSelectorOnMainThread:@selector(revertDocumentToSaved:) withObject:pRunDocumentVersions waitUntilDone:YES modes:pModes];
-	}
-
-	[pPool release];
-}
 
 BOOL NSDocument_versionsEnabled()
 {
@@ -258,4 +319,39 @@ BOOL NSDocument_versionsSupported()
 #else	// USE_NATIVE_VERSIONS
 	return NO;
 #endif	// USE_NATIVE_VERSIONS
+}
+
+void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL )
+{
+	if ( pFrame && pView && aURL )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:pView URL:(NSURL *)aURL];
+		[pRunSFXDocument performSelectorOnMainThread:@selector(createDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+	}
+}
+
+void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pFrame )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:nil URL:nil];
+		[pRunSFXDocument performSelectorOnMainThread:@selector(release:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+	}
+
+	[pPool release];
+}
+
+void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:nil URL:nil];
+	[pRunSFXDocument performSelectorOnMainThread:@selector(revertDocumentToSaved:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+
+	[pPool release];
 }

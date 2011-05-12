@@ -112,11 +112,7 @@
 
 #include <vcl/sysdata.hxx>
 
-#include <premac.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include <postmac.h>
-
-#include "objstor_cocoa.h"
+#include "../view/topfrm_cocoa.h"
 
 class NSView;
 
@@ -455,25 +451,9 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
             }
 
 #ifdef USE_JAVA
-			if ( NSDocument_versionsEnabled() )
+			if ( NSDocument_versionsEnabled() && pFrame->GetTopViewFrame() && !IsReadOnlyMedium() )
 			{
-				NSView *pView = pFrame->GetWindow().GetSystemData()->pView;
-				::rtl::OUString aBaseURL( GetMedium()->GetBaseURL( true ) );
-				if ( !pView || !aBaseURL.getLength() || IsReadOnlyMedium() )
-					return;
-
-				CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aBaseURL.getStr(), aBaseURL.getLength(), kCFAllocatorNull );
-				if ( aString )
-				{
-					CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
-					if ( aURL )
-					{
-						NSDocument_revertDocumentToSaved( pView, aURL );
-						CFRelease( aURL );
-					}
-
-					CFRelease( aString );
-				}
+				SFXDocument_revertDocumentToSaved( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
 			}
 			else
 			{

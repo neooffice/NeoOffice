@@ -11,11 +11,11 @@
  *
  *         - GNU General Public License Version 2.1
  *
- *  Edward Peterlin, February 2008
+ *  Patrick Luby, May 2011
  *
  *  GNU General Public License Version 2.1
  *  =============================================
- *  Copyright 2008 Planamesa Inc.
+ *  Copyright 2011 Planamesa Inc.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU General Public
@@ -36,16 +36,27 @@
 #ifndef __TOPFRM_COCOA_H__
 #define __TOPFRM_COCOA_H__
 
-#ifdef __cplusplus
+#if defined __cplusplus && !defined __OBJC__
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
-
-extern "C" {
+class NSView;
+#elif defined __OBJC__
+class SfxTopViewFrame;
 #endif
 
-void DoCocoaSetRepresentedFilename( void *pView, CFStringRef path );
+// Uncomment out the following line to enable native versions support
+// #define USE_NATIVE_VERSIONS
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+BOOL NSDocument_versionsEnabled();
+BOOL NSDocument_versionsSupported();
+void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL );
+void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );
+void SFXDocument_reload( SfxTopViewFrame *pFrame );
+void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame );
 #ifdef __cplusplus
 }
 #endif

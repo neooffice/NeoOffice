@@ -141,6 +141,19 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
     return sVar;
 }
 
+#ifdef USE_JAVA
+
+void SFXDocument_reload( SfxTopViewFrame *pFrame )
+{
+	if ( pFrame )
+	{
+		SfxRequest aReloadReq( pFrame, SID_RELOAD );
+		pFrame->ExecReload_Impl( aReloadReq, sal_True );
+	}
+}
+
+#endif	// USE_JAVA
+
 class SfxTopFrame_Impl
 {
 public:
@@ -1125,22 +1138,31 @@ String SfxTopViewFrame::UpdateTitle()
     Window* pWindow = GetTopFrame_Impl()->GetTopWindow_Impl();
     if ( pWindow )
     {
-        ::rtl::OUString aName;
-        ::rtl::OUString aPath;
         SfxObjectShell *pDoc = GetObjectShell();
         if ( pDoc )
         {
             SfxMedium *pMedium = pDoc->GetMedium();
             if ( pMedium )
-                aName = ::rtl::OUString( pMedium->GetName() );
-        }
-        ::osl::File::getSystemPathFromFileURL( aName, aPath );
+            {
+                ::rtl::OUString aBaseURL( pMedium->GetBaseURL( true ) );
+                NSView *pView = pWindow->GetSystemData()->pView;
+                if ( pView && aBaseURL.getLength() )
+                {
+                    CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aBaseURL.getStr(), aBaseURL.getLength(), kCFAllocatorNull );
+                    if ( aString )
+                    {
+                        CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
+                        if ( aURL )
+                        {
+                            SFXDocument_createDocument( this, pView, aURL );
+                            CFRelease( aURL );
+                        }
 
-        // Pass CFStringRef even if NULL
-        CFStringRef aString = CFStringCreateWithCharacters( NULL, aPath.getStr(), aPath.getLength() );
-        DoCocoaSetRepresentedFilename( pWindow->GetSystemData()->pView, aString );
-        if ( aString )
-            CFRelease( aString );
+                        CFRelease( aString );
+                    }
+                }
+            }
+        }
     }
 #endif	// USE_JAVA
 	return aTitle;
@@ -1293,6 +1315,10 @@ SfxTopViewFrame::SfxTopViewFrame
 SfxTopViewFrame::~SfxTopViewFrame()
 {
 	DBG_DTOR(SfxTopViewFrame, 0);
+
+#ifdef USE_JAVA
+    SFXDocument_releaseDocument( this );
+#endif	// USE_JAVA
 
 	SetDowning_Impl();
 
