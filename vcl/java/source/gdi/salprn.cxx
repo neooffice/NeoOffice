@@ -377,10 +377,20 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 	if ( bNewJobData )
 	{
 		bool bEndJob = false;
-		if ( pSetupData->mePaperFormat != mePaperFormat )
+		if ( pSetupData->mePaperFormat == PAPER_USER && ( !pSetupData->mnPaperWidth || !pSetupData->mnPaperHeight ) )
+		{
+			// Fix bug 3660 by ignoring custom paper size with no width or
+			// height as that indicates that the OpenOffice.org code is
+			// automatically inserting a page
+		}
+		else if ( pSetupData->mePaperFormat != mePaperFormat )
+		{
 			bEndJob = true;
+		}
 		else if ( pSetupData->mePaperFormat == PAPER_USER && ( pSetupData->mnPaperWidth != mnPaperWidth || pSetupData->mnPaperHeight != mnPaperHeight ) )
+		{
 			bEndJob = true;
+		}
 
 		if ( bEndJob )
 		{
