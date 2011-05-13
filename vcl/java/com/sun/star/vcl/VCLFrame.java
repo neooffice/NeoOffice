@@ -3692,7 +3692,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 					path.curveTo(b.x, b.y + b.height - curve, b.x, b.height, b.x + curve, b.height);
 					path.lineTo(b.x + b.width - curve, b.height);
 					path.curveTo(b.x + b.width - curve, b.y + b.height, b.x + b.width, b.y + b.height, b.x + b.width, b.y + b.height - curve);
-					path.lineTo(b.x + b.width, 0);
+					path.lineTo(b.x + b.width, b.y);
 					path.closePath();
 					((Graphics2D)g).setClip(path);
 				}
