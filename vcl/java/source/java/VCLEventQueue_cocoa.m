@@ -1365,21 +1365,18 @@ static CFDataRef aRTFSelection = nil;
 		// NSResponder selectors
 
 		aSelector = @selector(readSelectionFromPasteboard:);
-		if ( [[pView class] instancesRespondToSelector:aSelector] )
 		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
 
 		aSelector = @selector(validRequestorForSendType:returnType:);
-		if ( [[pView class] instancesRespondToSelector:aSelector] )
 		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
 
 		aSelector = @selector(writeSelectionToPasteboard:types:);
-		if ( [[pView class] instancesRespondToSelector:aSelector] )
 		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
