@@ -45,6 +45,12 @@
 // Uncomment out the following line to enable native versions support
 // #define USE_NATIVE_VERSIONS
 
+@class NSIBObjectData;
+@class NSNibConnector;
+
+static NSString *pRevertDocumentToSavedLabel = @"revertDocumentToSaved:";
+
+using namespace rtl;
 using namespace vos;
 
 static const NSString *pWritableTypeEntries[] = {
@@ -72,6 +78,8 @@ static const NSString *pWritableTypeEntries[] = {
 };
 
 static NSArray *pWritableTypes = nil;
+static OUString aRevertToSavedLocalizedString;
+static OUString aSaveAVersionLocalizedString;
 
 @interface SFXDocument : NSDocument
 {
@@ -234,23 +242,62 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 @end
 
+@interface NSObject (NSIBObjectData)
+- (NSArray *)allKeys;
+- (NSArray *)connections;
+- (NSMapTable *)objectTable;
+@end
+
+@interface NSObject (NSNibConnector)
+- (void)establishConnection;
+- (NSString *)label;
+@end
+
+@interface NSBundle (RunSFXDocument)
++ (NSBundle *)bundleWithURL:(NSURL *)pURL;
+@end
+
 @interface RunSFXDocument : NSObject
 {
+	SFXDocument*			mpDoc;
 	SfxTopViewFrame*		mpFrame;
+	BOOL					mbReadOnly;
+	NSString*				mpRevertToSavedLocalizedString;
 	NSURL*					mpURL;
 	NSView*					mpView;
 }
-+ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL;
++ (id)create;
++ (id)createWithFrame:(SfxTopViewFrame *)pFrame;
++ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
 - (void)createDocument:(id)pObject;
-- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL;
+- (void)dealloc;
+- (SFXDocument *)document;
+- (void)getDocument:(id)pObject;
+- (void)getRevertToSavedLocalizedString:(id)pObject;
+- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly;
 - (void)revertDocumentToSaved:(id)pObject;
+- (NSString *)revertToSavedLocalizedString;
 @end
 
 @implementation RunSFXDocument
 
-+ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL
++ (id)create
 {
-	RunSFXDocument *pRet = [[RunSFXDocument alloc] initWithFrame:pFrame view:pView URL:pURL];
+	RunSFXDocument *pRet = [[RunSFXDocument alloc] initWithFrame:nil view:nil URL:nil readOnly:YES];
+	[pRet autorelease];
+	return pRet;
+}
+
++ (id)createWithFrame:(SfxTopViewFrame *)pFrame
+{
+	RunSFXDocument *pRet = [[RunSFXDocument alloc] initWithFrame:pFrame view:nil URL:nil readOnly:YES];
+	[pRet autorelease];
+	return pRet;
+}
+
++ (id)createWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
+{
+	RunSFXDocument *pRet = [[RunSFXDocument alloc] initWithFrame:pFrame view:pView URL:pURL readOnly:bReadOnly];
 	[pRet autorelease];
 	return pRet;
 }
@@ -260,23 +307,133 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	if ( mpFrame && mpView && mpURL )
 	{
 		NSWindow *pWindow = [mpView window];
-		if ( pWindow && [pWindow isVisible] )
+		if ( pWindow )
 		{
-			NSError *pError = nil;
-			SFXDocument *pDoc = [[SFXDocument alloc] initWithContentsOfURL:mpURL frame:mpFrame window:pWindow ofType:@"" error:&pError];
-			if ( pDoc )
-				SetDocumentForFrame( mpFrame, pDoc );
+			if ( mbReadOnly )
+			{
+				[pWindow setRepresentedURL:mpURL];
+			}
+			else if ( [pWindow isVisible] )
+			{
+				NSError *pError = nil;
+				SFXDocument *pDoc = [[SFXDocument alloc] initWithContentsOfURL:mpURL frame:mpFrame window:pWindow ofType:@"" error:&pError];
+				if ( pDoc )
+					SetDocumentForFrame( mpFrame, pDoc );
+			}
 		}
 	}
 }
 
-- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL
+- (void)dealloc
+{
+	if ( mpDoc )
+		[mpDoc release];
+	if ( mpRevertToSavedLocalizedString )
+		[mpRevertToSavedLocalizedString release];
+	if ( mpURL )
+		[mpURL release];
+	if ( mpView )
+		[mpView release];
+
+	[super dealloc];
+}
+
+- (SFXDocument *)document
+{
+	return mpDoc;
+}
+
+- (void)getDocument:(id)pObject
+{
+	if ( !mpDoc )
+	{
+		mpDoc = GetDocumentForFrame( mpFrame );
+		if ( mpDoc )
+			[mpDoc retain];
+	}
+}
+
+- (void)getRevertToSavedLocalizedString:(id)pObject
+{
+	if ( !mpRevertToSavedLocalizedString && class_getClassMethod( [NSBundle class], @selector(bundleWithURL:) ) )
+	{
+		CFURLRef aURL = NULL;
+		if ( LSFindApplicationForInfo( kLSUnknownCreator, CFSTR( "com.apple.TextEdit" ), nil, nil, &aURL ) == noErr && aURL )
+		{
+			NSBundle *pBundle = [NSBundle bundleWithURL:(NSURL *)aURL];
+			CFRelease( aURL );
+
+			if ( pBundle )
+			{
+				NSString *pNibPath = [pBundle pathForResource:@"Edit" ofType:@"nib"];
+				if ( pNibPath )
+				{
+					NSData *pNibData = [[NSData alloc] initWithContentsOfFile:pNibPath];
+					if ( pNibData )
+					{
+						NSKeyedUnarchiver *pUnarchiver = [[NSKeyedUnarchiver alloc] initForReadingWithData:pNibData];
+						[pUnarchiver autorelease];
+						NSIBObjectData *pObjData = [pUnarchiver decodeObjectForKey:@"IB.objectdata"];
+						if ( pObjData && [pObjData respondsToSelector:@selector(objectTable)] )
+						{
+							NSArray *pArray = [pObjData connections];
+							if ( pArray )
+							{
+								NSUInteger i = 0;
+								NSUInteger nCount = [pArray count];
+								for ( ; i < nCount; i++ )
+								{
+									NSObject *pObject = [pArray objectAtIndex:i];
+									if ( pObject && [pObject respondsToSelector:@selector(establishConnection)] && [pRevertDocumentToSavedLabel isEqualToString:[pObject label]] )
+									{
+										[pObject establishConnection];
+										break;
+									}
+								}
+							}
+
+							NSMapTable *pTable = [pObjData objectTable];
+							if ( pTable)
+							{
+								SEL aRevertDocumentToSavedSelector = NSSelectorFromString( pRevertDocumentToSavedLabel );
+								NSArray *pArray = [pTable allKeys];
+								NSUInteger i = 0;
+								NSUInteger nCount = [pArray count];
+								for ( ; i < nCount; i++ )
+								{
+									NSObject *pObject = [pArray objectAtIndex:i];
+									if ( pObject && [pObject isKindOfClass:[NSMenuItem class]] )
+									{
+										NSMenuItem *pItem = (NSMenuItem *)pObject;
+										if ( pItem && [pItem action] == aRevertDocumentToSavedSelector )
+										{
+											CFShow( [pItem title] );
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+- (id)initWithFrame:(SfxTopViewFrame *)pFrame view:(NSView *)pView URL:(NSURL *)pURL readOnly:(BOOL)bReadOnly
 {
 	[super init];
 
 	mpFrame = pFrame;
 	mpURL = pURL;
+	if ( mpURL )
+		[mpURL retain];
+	mbReadOnly = bReadOnly;
+	mpRevertToSavedLocalizedString = nil;
 	mpView = pView;
+	if ( mpView )
+		[mpView retain];
 
 	return self;
 }
@@ -293,7 +450,70 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		[pDoc revertDocumentToSaved:self];
 }
 
+- (NSString *)revertToSavedLocalizedString
+{
+CFShow( mpRevertToSavedLocalizedString );
+	return mpRevertToSavedLocalizedString;
+}
+
 @end
+
+OUString NSDocument_revertToSavedLocalizedString()
+{
+	if ( !aRevertToSavedLocalizedString.getLength() )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument create];
+		[pRunSFXDocument performSelectorOnMainThread:@selector(getRevertToSavedLocalizedString:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+		NSString *pLocalizedString = [pRunSFXDocument revertToSavedLocalizedString];
+		if ( !pLocalizedString )
+			pLocalizedString = @"Revert to Saved";
+
+		NSUInteger nLen = [pLocalizedString length];
+		if ( nLen )
+		{
+			sal_Unicode aBuf[ nLen + 1 ];
+			[pLocalizedString getCharacters:aBuf];
+			aBuf[ nLen ] = 0;
+			aRevertToSavedLocalizedString = OUString( aBuf );
+		}
+
+		[pPool release];
+	}
+
+	return aRevertToSavedLocalizedString;
+}
+
+OUString NSDocument_saveAVersionLocalizedString()
+{
+	if ( !aSaveAVersionLocalizedString.getLength() )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		NSString *pKey = @"Save a Version";
+		NSString *pLocalizedString = nil;
+		NSBundle *pBundle = [NSBundle bundleWithPath:@"/System/Library/Frameworks/AppKit.framework"];
+		if ( pBundle )
+			pLocalizedString = [pBundle localizedStringForKey:pKey value:pKey table:@"Document"];
+		if ( !pLocalizedString )
+			pLocalizedString = pKey;
+
+		NSUInteger nLen = [pLocalizedString length];
+		if ( nLen )
+		{
+			sal_Unicode aBuf[ nLen + 1 ];
+			[pLocalizedString getCharacters:aBuf];
+			aBuf[ nLen ] = 0;
+			aSaveAVersionLocalizedString = OUString( aBuf );
+		}
+
+		[pPool release];
+	}
+
+	return aSaveAVersionLocalizedString;
+}
 
 BOOL NSDocument_versionsEnabled()
 {
@@ -324,14 +544,37 @@ BOOL NSDocument_versionsSupported()
 #endif	// USE_NATIVE_VERSIONS
 }
 
-void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL )
+void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly )
 {
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 	if ( pFrame && pView && aURL )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:pView URL:(NSURL *)aURL];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:pView URL:(NSURL *)aURL readOnly:bReadOnly];
 		[pRunSFXDocument performSelectorOnMainThread:@selector(createDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
 	}
+
+	[pPool release];
+}
+
+BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame )
+{
+	BOOL bRet = NO;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pFrame )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
+		[pRunSFXDocument performSelectorOnMainThread:@selector(getDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
+		bRet = ( [pRunSFXDocument document] ? YES : NO );
+	}
+
+	[pPool release];
+
+	return bRet;
 }
 
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
@@ -341,7 +584,7 @@ void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame )
 	if ( pFrame )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:nil URL:nil];
+		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
 		[pRunSFXDocument performSelectorOnMainThread:@selector(release:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
 	}
 
@@ -353,7 +596,7 @@ void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:nil URL:nil];
+	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
 	[pRunSFXDocument performSelectorOnMainThread:@selector(revertDocumentToSaved:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
 
 	[pPool release];

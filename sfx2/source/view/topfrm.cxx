@@ -1154,7 +1154,7 @@ String SfxTopViewFrame::UpdateTitle()
                         CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
                         if ( aURL )
                         {
-                            SFXDocument_createDocument( this, pView, aURL );
+                            SFXDocument_createDocument( this, pView, aURL, pDoc->IsReadOnlyMedium() );
                             CFRelease( aURL );
                         }
 

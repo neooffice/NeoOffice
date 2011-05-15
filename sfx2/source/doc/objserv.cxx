@@ -451,7 +451,7 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
             }
 
 #ifdef USE_JAVA
-			if ( NSDocument_versionsEnabled() && pFrame->GetTopViewFrame() && !IsReadOnlyMedium() )
+			if ( NSDocument_versionsEnabled() )
 			{
 				SFXDocument_revertDocumentToSaved( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
 			}
@@ -1039,9 +1039,11 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 #ifdef USE_JAVA
 					if ( NSDocument_versionsEnabled() )
 					{
-						if ( !pFrame || !pDoc->GetMedium()->GetBaseURL( true ).getLength() || IsReadOnlyMedium() )
+						::rtl::OUString aLocalizedString( NSDocument_revertToSavedLocalizedString() );
+						if ( aLocalizedString.getLength() )
+							rSet.Put( SfxStringItem( nWhich, aLocalizedString ) );
+                    	if ( !pFrame || IsReadOnlyMedium() || !SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
 							rSet.DisableItem( nWhich );
-						rSet.Put(SfxStringItem(nWhich, String::CreateFromAscii("Revert to Saved")));
 					}
 					else
 					{
@@ -1058,11 +1060,43 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 			case SID_SAVEDOC:
 	            {
 					BOOL bMediumRO = IsReadOnlyMedium();
+#ifdef USE_JAVA
+					if ( NSDocument_versionsEnabled() )
+					{
+						::rtl::OUString aLocalizedString( NSDocument_saveAVersionLocalizedString() );
+						if ( aLocalizedString.getLength() )
+							rSet.Put( SfxStringItem( nWhich, aLocalizedString ) );
+
+                    	if ( bMediumRO || !IsModified() )
+						{
+							SfxObjectShell *pDoc = this;
+							SfxViewFrame* pFrame = GetFrame();
+							if ( !pFrame )
+								pFrame = SfxViewFrame::GetFirst( this );
+							if ( pFrame  )
+							{
+								if ( pFrame->GetFrame()->GetParentFrame() )
+								{
+									pFrame = pFrame->GetTopViewFrame();
+									pDoc = pFrame->GetObjectShell();
+								}
+							}
+
+							if ( !pFrame || !SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
+								rSet.DisableItem( nWhich );
+						}
+					}
+					else
+					{
+#endif	// USE_JAVA
                     if ( !bMediumRO && GetMedium() && IsModified() )
 						rSet.Put(SfxStringItem(
 							nWhich, String(SfxResId(STR_SAVEDOC))));
 					else
                     	rSet.DisableItem(nWhich);
+#ifdef USE_JAVA
+					}
+#endif	// USE_JAVA
 				}
 				break;
 

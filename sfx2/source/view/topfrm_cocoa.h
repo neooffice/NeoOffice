@@ -48,9 +48,12 @@ class SfxTopViewFrame;
 #ifdef __cplusplus
 extern "C" {
 #endif
+::rtl::OUString NSDocument_revertToSavedLocalizedString();
+::rtl::OUString NSDocument_saveAVersionLocalizedString();
 BOOL NSDocument_versionsEnabled();
 BOOL NSDocument_versionsSupported();
-void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL );
+void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly );
+BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_reload( SfxTopViewFrame *pFrame );
 void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame );
