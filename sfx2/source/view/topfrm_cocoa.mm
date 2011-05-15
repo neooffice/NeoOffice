@@ -407,7 +407,9 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 										NSMenuItem *pItem = (NSMenuItem *)pObject;
 										if ( pItem && [pItem action] == aRevertDocumentToSavedSelector )
 										{
-											CFShow( [pItem title] );
+											mpRevertToSavedLocalizedString = [pItem title];
+											if ( mpRevertToSavedLocalizedString )
+												[mpRevertToSavedLocalizedString retain];
 											break;
 										}
 									}
