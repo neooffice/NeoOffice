@@ -8,11 +8,12 @@
 					<value>macro:///MediaBrowser.XMediaBrowser.Main</value>
 				</prop>
 				<prop oor:name="Title" oor:type="xs:string">
+					<value xml:lang="de">Media Browser einblenden</value>
 					<value xml:lang="en-US">Show Media Browser</value>
+					<value xml:lang="es">Mostrar visualizador multimedia</value>
 					<value xml:lang="fr">Afficher le navigateur multimédia</value>
 					<value xml:lang="nl">Toon mediakiezer</value>
 					<value xml:lang="sv">Visa mediebläddrare</value>
-					<value xml:lang="es">Mostrar visualizador multimedia</value>
 				</prop>
 				<prop oor:name="ImageIdentifier" oor:type="xs:string">
 					<value/>
