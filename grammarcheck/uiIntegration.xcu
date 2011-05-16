@@ -5,6 +5,7 @@
 		<node oor:name="AddonMenu">
 			<node oor:name="org.neooffice.grammarchecker.grammarchecker" oor:op="replace">
 				<prop oor:name="Title" oor:type="xs:string">
+					<value xml:lang="de">Grammatik prüfen</value>
 					<value xml:lang="en-US">Check Grammar</value>
 					<value xml:lang="es">Revisar gramática</value>
 					<value xml:lang="fr">Vérifier la grammaire</value>
@@ -19,6 +20,7 @@
 							<value>macro:///GrammarGUI.XGrammarGUI.CheckDocument</value>
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
+							<value xml:lang="de">Gesamtes Dokument</value>
 							<value xml:lang="en-US">Entire Document</value>
 							<value xml:lang="es">A todo el documento</value>
 							<value xml:lang="fr">Document entier</value>
@@ -39,6 +41,7 @@
 							<value>macro:///GrammarGUI.XGrammarGUI.CheckSelection</value>
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
+							<value xml:lang="de">Ausgewählter Text</value>
 							<value xml:lang="en-US">Selected Text</value>
 							<value xml:lang="es">Al texto seleccionado</value>
 							<value xml:lang="fr">Sélection</value>

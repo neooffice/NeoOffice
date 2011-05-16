@@ -11,6 +11,7 @@
 					<value>_self</value>
 				</prop>
 				<prop oor:name="Title" oor:type="xs:string">
+					<value xml:lang="ds">Mobile</value>
 					<value xml:lang="en-US">Mobile</value>
 					<value xml:lang="es">Móvil</value>
 					<value xml:lang="nl">Mobiel</value>
@@ -28,6 +29,7 @@
 							<value>_self</value>
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
+							<value xml:lang="de">Was ist NeoOffice Mobile?</value>
 							<value xml:lang="en-US">What is NeoOffice Mobile?</value>
 							<value xml:lang="es">¿Qué es NeoOffice Móvil?</value>
 							<value xml:lang="fr">Qu'est-ce que NeoOffice Mobile ?</value>
@@ -50,6 +52,7 @@
 							<value>_self</value>
 						</prop>
 						<prop oor:name="Title" oor:type="xs:string">
+							<value xml:lang="de">Öffne NeoOffice Mobile</value>
 							<value xml:lang="en-US">Open NeoOffice Mobile</value>
 							<value xml:lang="es">Abrir NeoOffice Móvil</value>
 							<value xml:lang="fr">Ouvrir NeoOffice Mobile</value>
