@@ -37,6 +37,7 @@
 
 String STR_OPENATLAUNCH
 {
+	Text [ de ] = "Beim Starten Öffnen";
 	Text [ en-US ] = "Open at Launch";
 	Text [ es ] = "Abrir al iniciar";
 	Text [ fr ] = "Document par défaut";
@@ -45,6 +46,7 @@ String STR_OPENATLAUNCH
 
 String STR_MACOSXOPTIONS
 {
+	Text [ de ] = "Mac OS X Optionen";
 	Text [ en-US ] = "Mac OS X Options";
 	Text [ es ] = "Opciones de Mac OS X";
 	Text [ fr ] = "Options liées à Mac OS X";
@@ -53,6 +55,7 @@ String STR_MACOSXOPTIONS
 
 String STR_IGNORETRACKPADGESTURES
 {
+	Text [ de ] = "Ignoriere Trackpad Gesten";
 	Text [ en-US ] = "Ignore Trackpad Gestures";
 	Text [ es ] = "Ignorar los gestos del trackpad";
 	Text [ fr ] = "Ignorer les gestes du trackpad";
@@ -61,6 +64,7 @@ String STR_IGNORETRACKPADGESTURES
 
 String STR_DISABLEMACOSXSERVICESMENU
 {
+	Text [ de ] = "Deaktiviere Mac OS X Dienste Menü";
 	Text [ en-US ] = "Disable Mac OS X Services Menu";
 	Text [ es ] = "Deshabilitar el menú Servicios del Mac OS X";
 	Text [ fr ] = "Désactiver le menu Services de Mac OS X";
@@ -69,6 +73,7 @@ String STR_DISABLEMACOSXSERVICESMENU
 
 String STR_DISABLEMACOSXTEXTHIGHLIGHTING
 {
+	Text [ de ] = "Deaktiviere Mac OS X Text Hervorhebung";
 	Text [ en-US ] = "Disable Mac OS X Text Highlighting";
 	Text [ es ] = "Deshabilitar el color de resaltado de texto del Mac OS X";
 	Text [ fr ] = "Désactiver le surlignage de texte Mac OS X";
@@ -77,6 +82,7 @@ String STR_DISABLEMACOSXTEXTHIGHLIGHTING
 
 String STR_DISABLEQUICKLOOKSUPPORT
 {
+	Text [ de ] = "Deaktiviere Übersicht Unterstützung in Dokumente";
 	Text [ en-US ] = "Disable Quick Look Support in Documents";
 	Text [ es ] = "Deshabilitar el soporte de Quick Look en documentos";
 	Text [ fr ] = "Désactiver la prise en charge de Quick Look pour les documents";
