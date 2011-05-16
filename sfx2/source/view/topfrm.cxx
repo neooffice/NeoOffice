@@ -1138,30 +1138,37 @@ String SfxTopViewFrame::UpdateTitle()
     Window* pWindow = GetTopFrame_Impl()->GetTopWindow_Impl();
     if ( pWindow )
     {
-        SfxObjectShell *pDoc = GetObjectShell();
-        if ( pDoc )
+        NSView *pView = pWindow->GetSystemData()->pView;
+        if ( pView )
         {
-            SfxMedium *pMedium = pDoc->GetMedium();
-            if ( pMedium )
+            ::rtl::OUString aPath;
+            SfxObjectShell *pDoc = GetObjectShell();
+            if ( pDoc )
             {
-                ::rtl::OUString aBaseURL( pMedium->GetBaseURL( true ) );
-                NSView *pView = pWindow->GetSystemData()->pView;
-                if ( pView && aBaseURL.getLength() )
+                SfxMedium *pMedium = pDoc->GetMedium();
+                if ( pMedium )
                 {
-                    CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aBaseURL.getStr(), aBaseURL.getLength(), kCFAllocatorNull );
-                    if ( aString )
-                    {
-                        CFURLRef aURL = CFURLCreateWithString( NULL, aString, NULL );
-                        if ( aURL )
-                        {
-                            SFXDocument_createDocument( this, pView, aURL, pDoc->IsReadOnlyMedium() );
-                            CFRelease( aURL );
-                        }
-
-                        CFRelease( aString );
-                    }
+                    ::rtl::OUString aBaseURL( pMedium->GetBaseURL( true ) );
+                    if ( aBaseURL.getLength() )
+                        ::osl::File::getSystemPathFromFileURL( aBaseURL, aPath );
                 }
             }
+
+            CFURLRef aURL = nil;
+            if ( aPath.getLength() )
+            {
+                CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, aPath.getStr(), aPath.getLength(), kCFAllocatorNull );
+                if ( aString )
+                {
+                    aURL = CFURLCreateWithFileSystemPath( NULL, aString, kCFURLPOSIXPathStyle, false );
+                    CFRelease( aString );
+                }
+            }
+
+            // Invoke even if URL is NULL
+            SFXDocument_createDocument( this, pView, aURL, pDoc->IsReadOnlyMedium() );
+            if ( aURL )
+                CFRelease( aURL );
         }
     }
 #endif	// USE_JAVA

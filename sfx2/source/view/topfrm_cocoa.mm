@@ -119,7 +119,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 	if ( !pFrameDict )
 	{
-		// Do not retain as invoking alloc disables autorelease
 		pFrameDict = [NSMutableDictionary dictionaryWithCapacity:10];
 		if ( pFrameDict )
 			[pFrameDict retain];
@@ -130,10 +129,21 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		NSNumber *pKey = [NSNumber numberWithUnsignedLong:(unsigned long)pFrame];
 		if ( pKey )
 		{
+			// If we are replacing an existing document, close the old document
+			// otherwise it will never get released by its controllers
+			SFXDocument *pOldDoc = [pFrameDict objectForKey:pKey];
+			if ( pOldDoc )
+				[pOldDoc close];
+
 			if ( pDoc )
+			{
+
 				[pFrameDict setObject:pDoc forKey:pKey];
+			}
 			else
+			{
 				[pFrameDict removeObjectForKey:pKey];
+			}
 		}
 	}
 }
@@ -161,6 +171,10 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		[pDocController removeDocument:self];
 
 	[super dealloc];
+}
+
+- (void)destroy
+{
 }
 
 - (void)encodeRestorableStateWithCoder:(NSCoder *)pCoder
@@ -304,21 +318,30 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (void)createDocument:(id)pObject
 {
-	if ( mpFrame && mpView && mpURL )
+	if ( mpFrame && mpView )
 	{
 		NSWindow *pWindow = [mpView window];
 		if ( pWindow )
 		{
-			if ( mbReadOnly )
+			if ( mbReadOnly || !NSDocument_versionsSupported() )
 			{
 				[pWindow setRepresentedURL:mpURL];
 			}
 			else if ( [pWindow isVisible] )
 			{
-				NSError *pError = nil;
-				SFXDocument *pDoc = [[SFXDocument alloc] initWithContentsOfURL:mpURL frame:mpFrame window:pWindow ofType:@"" error:&pError];
-				if ( pDoc )
+				SFXDocument *pOldDoc = GetDocumentForFrame( mpFrame );
+				if ( pOldDoc )
+				{
+					[pOldDoc setFileURL:mpURL];
+				}
+				else if ( mpURL )
+				{
+					NSError *pError = nil;
+					SFXDocument *pDoc = [[SFXDocument alloc] initWithContentsOfURL:mpURL frame:mpFrame window:pWindow ofType:@"" error:&pError];
 					SetDocumentForFrame( mpFrame, pDoc );
+					// The document will be retained by SetDocumentForFrame()
+					[pDoc release];
+				}
 			}
 		}
 	}
@@ -454,7 +477,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (NSString *)revertToSavedLocalizedString
 {
-CFShow( mpRevertToSavedLocalizedString );
 	return mpRevertToSavedLocalizedString;
 }
 
@@ -550,7 +572,7 @@ void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRe
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( pFrame && pView && aURL )
+	if ( pFrame && pView )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame view:pView URL:(NSURL *)aURL readOnly:bReadOnly];
