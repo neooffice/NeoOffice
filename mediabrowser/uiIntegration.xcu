@@ -8,7 +8,7 @@
 					<value>macro:///MediaBrowser.XMediaBrowser.Main</value>
 				</prop>
 				<prop oor:name="Title" oor:type="xs:string">
-					<value xml:lang="de">Media Browser einblenden</value>
+					<value xml:lang="de">Zeige Medien Übersicht</value>
 					<value xml:lang="en-US">Show Media Browser</value>
 					<value xml:lang="es">Mostrar visualizador multimedia</value>
 					<value xml:lang="fr">Afficher le navigateur multimédia</value>
