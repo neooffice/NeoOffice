@@ -347,6 +347,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)revertDocumentToSaved:(id)pObject;
 - (NSString *)revertToSavedLocalizedString;
 - (void)saveVersionOfDocument:(id)pObject;
+- (void)setDocumentModified:(id)pObject;
 @end
 
 @implementation RunSFXDocument
@@ -540,11 +541,23 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)saveVersionOfDocument:(id)pObject
 {
 	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-	if ( pDoc )
+	if ( pDoc && [pDoc respondsToSelector:@selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:)] )
 	{
 		NSDocumentVersion *pNewVersion = nil;
 		NSError *pError = nil;
 		mbSaved = [pDoc _preserveContentsIfNecessaryAfterWriting:YES toURL:[pDoc fileURL] forSaveOperation:NSSaveOperation version:&pNewVersion error:&pError];
+	}
+}
+
+- (void)setDocumentModified:(id)pObject
+{
+	SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+	if ( pDoc )
+	{
+		if ( pObject && [pObject isKindOfClass:[NSNumber class]] && [(NSNumber *)pObject boolValue] )
+			[pDoc updateChangeCount:NSChangeDone];
+		else
+			[pDoc updateChangeCount:NSChangeCleared];
 	}
 }
 
@@ -686,5 +699,16 @@ void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame )
 	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
 	[pRunSFXDocument performSelectorOnMainThread:@selector(saveVersionOfDocument:) withObject:pRunSFXDocument waitUntilDone:YES modes:pModes];
 
+	[pPool release];
+}
+
+void SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSNumber *pNumber = [NSNumber numberWithBool:bModified];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	RunSFXDocument *pRunSFXDocument = [RunSFXDocument createWithFrame:pFrame];
+	[pRunSFXDocument performSelectorOnMainThread:@selector(setDocumentModified:) withObject:pNumber waitUntilDone:YES modes:pModes];
 	[pPool release];
 }

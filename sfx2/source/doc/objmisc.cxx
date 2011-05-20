@@ -87,9 +87,13 @@
 
 #ifdef USE_JAVA
 
+#include <sfx2/topfrm.hxx>
+
 // [ed] 4/26/07 Includes for invoking NSWindow setDocumentEdited
 #include <vcl/sysdata.hxx>
+
 #include "objmisc_cocoa.h"
+#include "../view/topfrm_cocoa.h"
 
 #endif	// USE_JAVA
 
@@ -397,11 +401,15 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 
 #ifdef USE_JAVA
 	// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
-	SfxViewFrame* pFrame = SfxViewFrame::GetFirst( this );
-	while( pFrame )
+	SfxViewFrame* pFrame = GetFrame();
+	if ( !pFrame )
+		pFrame = SfxViewFrame::GetFirst( this );
+	if ( pFrame )
 	{
-		DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
-		pFrame = SfxViewFrame::GetNext( *pFrame, this );
+    	if ( NSDocument_versionsEnabled() )
+			SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() );
+		else
+			DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
 	}
 #endif	// USE_JAVA
 }

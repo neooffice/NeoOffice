@@ -58,6 +58,7 @@ void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_reload( SfxTopViewFrame *pFrame );
 void SFXDocument_revertDocumentToSaved( SfxTopViewFrame *pFrame );
 void SFXDocument_saveVersionOfDocument( SfxTopViewFrame *pFrame );
+void SFXDocument_setDocumentModified( SfxTopViewFrame *pFrame, BOOL bModified );
 #ifdef __cplusplus
 }
 #endif
