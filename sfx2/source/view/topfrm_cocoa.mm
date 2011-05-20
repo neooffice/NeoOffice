@@ -97,6 +97,7 @@ static OUString aSaveAVersionLocalizedString;
 + (BOOL)autosavesInPlace;
 - (void)dealloc;
 - (void)encodeRestorableStateWithCoder:(NSCoder *)pCoder;
+- (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
 - (void)revertDocumentToSaved:(id)pObject;
@@ -208,6 +209,12 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)encodeRestorableStateWithCoder:(NSCoder *)pCoder
 {
 	// Do not trigger automatic restoration of the document when launching
+}
+
+- (BOOL)hasUnautosavedChanges
+{
+	// Don't allow NSDocument to do the autosaving
+	return NO;
 }
 
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError
