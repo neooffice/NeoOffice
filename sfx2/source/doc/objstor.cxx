@@ -142,6 +142,8 @@
 
 #ifdef USE_JAVA
 
+#include <sfx2/topfrm.hxx>
+
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
@@ -153,6 +155,7 @@
 #include <vcl/fixed.hxx>
 #endif
 
+#include "../view/topfrm_cocoa.h"
 #include "../../../build/ooo-build-3.1.1.1/build/ooo310-m19/sw/inc/statstr.hrc"
 
 #endif	// USE_JAVA
@@ -1420,6 +1423,15 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 
 #ifdef USE_JAVA
     rMedium.CheckForMovedFile( this );
+
+    if ( NSDocument_versionsEnabled() )
+    {
+        SfxViewFrame* pFrame = GetFrame();
+        if ( !pFrame )
+            pFrame = SfxViewFrame::GetFirst( this );
+        if ( pFrame )
+            SFXDocument_saveVersionOfDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
+    }
 #endif	// USE_JAVA
 
     ModifyBlocker_Impl aMod(this);
