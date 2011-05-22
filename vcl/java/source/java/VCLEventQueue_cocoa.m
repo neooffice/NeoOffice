@@ -349,6 +349,7 @@ static NSString *pCancelInputMethodText = @" ";
 @interface NSView (VCLViewPoseAs)
 - (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
 - (id)poseAsInitWithFrame:(NSRect)aFrame;
+- (BOOL)poseAsIsOpaque;
 @end
 
 static BOOL bUseQuickTimeContentViewHack = NO;
@@ -369,6 +370,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
 - (BOOL)ignoreModifierKeysWhileDragging;
 - (id)initWithFrame:(NSRect)aFrame;
+- (BOOL)isOpaque;
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination;
 - (BOOL)performDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
@@ -376,6 +378,8 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
+- (void)viewDidEndLiveResize;
+- (void)viewWillStartLiveResize;
 - (BOOL)wantsPeriodicDraggingUpdates;
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
@@ -1381,6 +1385,18 @@ static CFDataRef aRTFSelection = nil;
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(viewDidEndLiveResize);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+		aSelector = @selector(viewWillStartLiveResize);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
 	}
 }
 
@@ -1535,6 +1551,16 @@ static CFDataRef aRTFSelection = nil;
 		return [super poseAsInitWithFrame:aFrame];
 	else
 		return self;
+}
+
+- (BOOL)isOpaque
+{
+	if ( [[self className] isEqualToString:pNSViewAWTString] )
+		return YES;
+	else if ( [super respondsToSelector:@selector(poseAsIsOpaque)] )
+		return [super poseAsIsOpaque];
+	else
+		return NO;
 }
 
 - (NSArray *)namesOfPromisedFilesDroppedAtDestination:(NSURL *)pDropDestination
@@ -1699,6 +1725,16 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	return nil;
+}
+
+- (void)viewWillStartLiveResize
+{
+	// Do nothing to prevent Java from clearing view
+}
+
+- (void)viewDidEndLiveResize
+{
+	// Do nothing to prevent Java from clearing view
 }
 
 - (BOOL)wantsPeriodicDraggingUpdates
@@ -2035,6 +2071,18 @@ static CFDataRef aRTFSelection = nil;
 
 	aSelector = @selector(initWithFrame:);
 	aPoseAsSelector = @selector(poseAsInitWithFrame:);
+	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
+	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
+	if ( aOldMethod && aNewMethod )
+	{
+		IMP aOldIMP = method_getImplementation( aOldMethod );
+		IMP aNewIMP = method_getImplementation( aNewMethod );
+		if ( aOldIMP && aNewIMP && class_addMethod( [NSView class], aPoseAsSelector, aOldIMP, method_getTypeEncoding( aOldMethod ) ) )
+			method_setImplementation( aOldMethod, aNewIMP );
+	}
+
+	aSelector = @selector(isOpaque);
+	aPoseAsSelector = @selector(poseAsIsOpaque);
 	aOldMethod = class_getInstanceMethod( [NSView class], aSelector );
 	aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 	if ( aOldMethod && aNewMethod )
