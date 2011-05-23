@@ -100,6 +100,7 @@ static OUString aSaveAVersionLocalizedString;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
+- (void)restoreStateWithCoder:(NSCoder *)pCoder;
 - (void)revertDocumentToSaved:(id)pObject;
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation;
@@ -250,6 +251,11 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		pError = nil;
 
 	return YES;
+}
+
+- (void)restoreStateWithCoder:(NSCoder *)pCoder
+{
+	// Don't allow NSDocument to do the restoration
 }
 
 - (void)revertDocumentToSaved:(id)pObject
