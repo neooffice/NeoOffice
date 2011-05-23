@@ -1133,21 +1133,24 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 	}
 
 	// Cache mouse event in dragging source
-	id pDelegate = [self draggingSourceDelegate];
-	if ( pDelegate )
+	if ( [self respondsToSelector:@selector(draggingSourceDelegate)] )
 	{
-		switch ( nType )
+		id pDelegate = [self draggingSourceDelegate];
+		if ( pDelegate )
 		{
-			case NSLeftMouseDown:
-				if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
-					[pDelegate mouseDown:pEvent];
-				break;
-			case NSLeftMouseDragged:
-				if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
-					[pDelegate mouseDragged:pEvent];
-				break;
-			default:
-				break;
+			switch ( nType )
+			{
+				case NSLeftMouseDown:
+					if ( [pDelegate respondsToSelector:@selector(mouseDown:)] )
+						[pDelegate mouseDown:pEvent];
+					break;
+				case NSLeftMouseDragged:
+					if ( [pDelegate respondsToSelector:@selector(mouseDragged:)] )
+						[pDelegate mouseDragged:pEvent];
+					break;
+				default:
+					break;
+			}
 		}
 	}
 }
