@@ -378,8 +378,6 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (id)validRequestorForSendType:(NSString *)pSendType returnType:(NSString *)pReturnType;
-- (void)viewDidEndLiveResize;
-- (void)viewWillStartLiveResize;
 - (BOOL)wantsPeriodicDraggingUpdates;
 - (BOOL)writeSelectionToPasteboard:(NSPasteboard *)pPasteboard types:(NSArray *)pTypes;
 @end
@@ -1385,18 +1383,6 @@ static CFDataRef aRTFSelection = nil;
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(viewDidEndLiveResize);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
-
-		aSelector = @selector(viewWillStartLiveResize);
-		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-		if ( aOldMethod && aNewIMP )
-			method_setImplementation( aOldMethod, aNewIMP );
 	}
 }
 
@@ -1725,16 +1711,6 @@ static CFDataRef aRTFSelection = nil;
 	}
 
 	return nil;
-}
-
-- (void)viewWillStartLiveResize
-{
-	// Do nothing to prevent Java from clearing view
-}
-
-- (void)viewDidEndLiveResize
-{
-	// Do nothing to prevent Java from clearing view
 }
 
 - (BOOL)wantsPeriodicDraggingUpdates

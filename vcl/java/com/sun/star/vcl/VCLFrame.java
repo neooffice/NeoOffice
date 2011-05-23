@@ -1720,6 +1720,8 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			window.addWindowListener(this);
 		}
 
+		paint(new Rectangle(panel.getSize()));
+
 	}
 
 	/**
@@ -3720,15 +3722,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void paint(Graphics g) {
-
-			Shape clip = g.getClip();
-			if (clip != null)
-				frame.paint(clip.getBounds());
-			else
-				frame.paint(new Rectangle(getSize()));
-
-		}
+		public void paint(Graphics g) {}
 
 		/**
 		 * Set the native panel to show or hide in full screen mode.
@@ -3749,11 +3743,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		 *
 		 * @param g the <code>Graphics</code>
 		 */
-		public void update(Graphics g) {
-
-			paint(g);
-
-		}
+		public void update(Graphics g) {}
 
 	}
 
