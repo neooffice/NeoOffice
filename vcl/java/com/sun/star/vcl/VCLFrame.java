@@ -1954,6 +1954,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			Point p = window.getLocationOnScreen();
 			if (p != null && (p.x != bounds.x || p.y != bounds.y))
 				bounds = new Rectangle(p.x, p.y, bounds.width, bounds.height);
+
+			Dimension size = getSize0(getPeer());
+			if (size != null && (size.width != size.width || size.height != bounds.height))
+				bounds = new Rectangle(bounds.x, bounds.y, size.width, size.height);
 		}
 
 		return bounds;
@@ -2131,6 +2135,14 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		return VCLFrame.defaultAttributedCharacterIterator;
 
 	}
+
+	/**
+	 * Returns the size of the native window.
+	 *
+	 * @param p the <code>ComponentPeer</code>
+	 * @return the size of the native window
+	 */
+	native Dimension getSize0(ComponentPeer p);
 
 	/**
 	 * Returns the state of the native window.

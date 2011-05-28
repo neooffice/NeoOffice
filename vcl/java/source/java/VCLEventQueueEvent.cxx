@@ -654,66 +654,77 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 				if ( !pPosSize )
 					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds() );
 
-				// Fix bug 3252 by always comparing the bounds against the
-				// work area
-				bool bForceResize = false;
-				if ( pFrame->mbInShow )
+				// If width and height are negative, we are in a live resize
+				if ( pPosSize->GetWidth() < 0 || pPosSize->GetHeight() < 0 )
 				{
-					Rectangle aRect( *pPosSize );
-					pFrame->GetWorkArea( aRect );
-					if ( aRect == *pPosSize )
-						bForceResize = true;
+					SalPaintEvent *pPaintEvent = new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
+					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, pFrame, pPaintEvent );
+					aEvent.dispatch();
 				}
-
-				bool bPosChanged = false;
-				int nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
-				if ( pFrame->maGeometry.nX != nX )
+				else
 				{
-					bPosChanged = true;
-					pFrame->maGeometry.nX = nX;
-				}
-				int nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
-				if ( pFrame->maGeometry.nY != nY )
-				{
-					bPosChanged = true;
-					pFrame->maGeometry.nY = nY;
-				}
-
-				bool bSizeChanged = false;
-				unsigned int nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
-				if ( pFrame->maGeometry.nWidth != nWidth )
-				{
-					bSizeChanged = true;
-					pFrame->maGeometry.nWidth = nWidth;
-				}
-				unsigned int nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
-				if ( pFrame->maGeometry.nHeight != nHeight )
-				{
-					bSizeChanged = true;
-					pFrame->maGeometry.nHeight = nHeight;
-				}
-
-				// Fix bug 3045 by setting the event ID to the actual changes
-				// that have occurred. This also fixes the autodocking of
-				// native utility windows problem described in bug 3035
-				if ( bForceResize || bPosChanged || bSizeChanged )
-				{
-					if ( bPosChanged && bSizeChanged )
-						nID = SALEVENT_MOVERESIZE;
-					else if ( bPosChanged )
-						nID = SALEVENT_MOVE;
-					else
-						nID = SALEVENT_RESIZE;
-
-					// Reset graphics
-					com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
-					if ( pVCLGraphics )
+					// Fix bug 3252 by always comparing the bounds against the
+					// work area
+					bool bForceResize = false;
+					if ( pFrame->mbInShow )
 					{
-						pVCLGraphics->resetGraphics();
-						delete pVCLGraphics;
+						Rectangle aRect( *pPosSize );
+						pFrame->GetWorkArea( aRect );
+						if ( aRect == *pPosSize )
+							bForceResize = true;
 					}
 
-					pFrame->CallCallback( nID, NULL );
+					bool bPosChanged = false;
+					int nX = pPosSize->nLeft + pFrame->maGeometry.nLeftDecoration;
+					if ( pFrame->maGeometry.nX != nX )
+					{
+						bPosChanged = true;
+						pFrame->maGeometry.nX = nX;
+					}
+					int nY = pPosSize->nTop + pFrame->maGeometry.nTopDecoration;
+					if ( pFrame->maGeometry.nY != nY )
+					{
+						bPosChanged = true;
+						pFrame->maGeometry.nY = nY;
+					}
+
+					bool bSizeChanged = false;
+					unsigned int nWidth = pPosSize->GetWidth() - pFrame->maGeometry.nLeftDecoration - pFrame->maGeometry.nRightDecoration;
+					if ( pFrame->maGeometry.nWidth != nWidth )
+					{
+						bSizeChanged = true;
+						pFrame->maGeometry.nWidth = nWidth;
+					}
+					unsigned int nHeight = pPosSize->GetHeight() - pFrame->maGeometry.nTopDecoration - pFrame->maGeometry.nBottomDecoration;
+					if ( pFrame->maGeometry.nHeight != nHeight )
+					{
+						bSizeChanged = true;
+						pFrame->maGeometry.nHeight = nHeight;
+					}
+
+					// Fix bug 3045 by setting the event ID to the actual
+					// changes that have occurred. This also fixes the
+					// autodocking of native utility windows problem described
+					// in bug 3035
+					if ( bForceResize || bPosChanged || bSizeChanged )
+					{
+						if ( bPosChanged && bSizeChanged )
+							nID = SALEVENT_MOVERESIZE;
+						else if ( bPosChanged )
+							nID = SALEVENT_MOVE;
+						else
+							nID = SALEVENT_RESIZE;
+
+						// Reset graphics
+						com_sun_star_vcl_VCLGraphics *pVCLGraphics = pFrame->mpVCLFrame->getGraphics();
+						if ( pVCLGraphics )
+						{
+							pVCLGraphics->resetGraphics();
+							delete pVCLGraphics;
+						}
+
+						pFrame->CallCallback( nID, NULL );
+					}
 				}
 			}
 			if ( pPosSize )

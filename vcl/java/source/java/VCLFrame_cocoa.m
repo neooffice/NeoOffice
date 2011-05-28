@@ -43,17 +43,20 @@
 
 @interface NSWindow (VCLWindow)
 - (void)_setModalWindowLevel;
+- (BOOL)inLiveResize;
 @end
 
 @interface GetNSWindow : NSObject
 {
 	id					mpCWindow;
+	NSRect				maFrame;
 	NSView*				mpView;
 	NSWindow*			mpWindow;
 	WindowRef			maWindowRef;
 }
 + (id)createWithCWindow:(id)pCWindow;
 - (NSView *)contentView;
+- (NSRect)frame;
 - (void)getNSWindow:(id)pObject;
 - (id)initWithCWindow:(id)pCWindow;
 - (NSWindow *)window;
@@ -73,6 +76,11 @@
 	return mpView;
 }
 
+- (NSRect)frame
+{
+	return maFrame;
+}
+
 - (void)getNSWindow:(id)pObject
 {
 	if ( [mpCWindow respondsToSelector:@selector(getNSWindow)] )
@@ -80,6 +88,11 @@
 		mpWindow = (NSWindow *)[mpCWindow getNSWindow];
 		if ( mpWindow )
 		{
+			if ( [mpWindow respondsToSelector:@selector(inLiveResize)] && [mpWindow inLiveResize] )
+				maFrame = NSMakeRect( 0, 0, -1, -1 );
+			else
+				maFrame = [mpWindow frame];
+
 			mpView = [mpWindow contentView];
 
 			// Create the NSWindow's WindowRef as we need it in the dtrans
@@ -94,6 +107,7 @@
 	[super init];
 
 	mpCWindow = pCWindow;
+	maFrame = NSMakeRect( 0, 0, 0, 0 );
 	mpView = nil;
 	mpWindow = nil;
 	maWindowRef = nil;
@@ -342,6 +356,30 @@ id CWindow_getNSWindowContentView( id pCWindow )
 	[pPool release];
 
 	return pRet;
+}
+
+void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight )
+{
+	if ( pWidth )
+		*pWidth = 0;
+	if ( pHeight )
+		*pHeight = 0;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pCWindow )
+	{
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
+		NSRect aRect = [pGetNSWindow frame];
+		if ( pWidth )
+			*pWidth = aRect.size.width;
+		if ( pHeight )
+			*pHeight = aRect.size.height;
+	}
+
+	[pPool release];
 }
 
 int CWindow_makeFloatingWindow( id pCWindow )

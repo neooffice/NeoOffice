@@ -43,6 +43,7 @@ BEGIN_C
 #endif
 id CWindow_getNSWindow( id pCWindow );
 id CWindow_getNSWindowContentView( id pCWindow );
+void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight );
 int CWindow_makeFloatingWindow( id pCWindow );
 void CWindow_makeModalWindow( id pCWindow );
 void CWindow_makeUnshadowedWindow( id pCWindow );
