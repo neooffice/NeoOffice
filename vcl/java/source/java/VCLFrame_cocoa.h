@@ -36,6 +36,9 @@
 #ifndef __VCLFRAME_COCOA_H__
 #define __VCLFRAME_COCOA_H__
 
+// Uncomment the following line to enable rounded bottom corners in Java frames
+// #define USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+
 #ifdef __cplusplus
 typedef void* id;
 
