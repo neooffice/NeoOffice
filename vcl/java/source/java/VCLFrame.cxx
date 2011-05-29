@@ -64,7 +64,7 @@ using namespace vos;
 
 // ============================================================================
 
-static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getSize0( JNIEnv *pEnv, jobject object, jobject _par0 )
+static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getSize0( JNIEnv *pEnv, jobject object, jobject _par0, jlong _par1 )
 {
 	jobject out = NULL;
 
@@ -109,11 +109,10 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getSize0( JNIEnv *pEnv, jo
 					{
 						float fWidth = 0;
 						float fHeight = 0;
-
 						if ( bReturnsInt )
-							CWindow_getNSWindowSize( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ), &fWidth, &fHeight );
+							CWindow_getNSWindowSize( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ), &fWidth, &fHeight, (BOOL *)_par1 );
 						else
-							CWindow_getNSWindowSize( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ), &fWidth, &fHeight );
+							CWindow_getNSWindowSize( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ), &fWidth, &fHeight, (BOOL *)_par1 );
 
 						jvalue args[2];
 						args[0].i = jint( fWidth > 0 ? fWidth + 0.5 : fWidth );
@@ -368,7 +367,7 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 			// Register the native methods for our class
 			JNINativeMethod pMethods[5];
 			pMethods[0].name = "getSize0";
-			pMethods[0].signature = "(Ljava/awt/peer/ComponentPeer;)Ljava/awt/Dimension;";
+			pMethods[0].signature = "(Ljava/awt/peer/ComponentPeer;J)Ljava/awt/Dimension;";
 			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_getSize0;
 			pMethods[1].name = "getTextLocation0";
 			pMethods[1].signature = "(J)Ljava/awt/Rectangle;";
@@ -489,7 +488,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 
 // ----------------------------------------------------------------------------
 
-const Rectangle com_sun_star_vcl_VCLFrame::getBounds()
+const Rectangle com_sun_star_vcl_VCLFrame::getBounds( sal_Bool *_par0 )
 {
 	static jmethodID mID = NULL;
 	static jfieldID fIDX = NULL;
@@ -502,13 +501,15 @@ const Rectangle com_sun_star_vcl_VCLFrame::getBounds()
 	{
 		if ( !mID )
 		{
-			char *cSignature = "()Ljava/awt/Rectangle;";
+			char *cSignature = "(J)Ljava/awt/Rectangle;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jobject tempObj = t.pEnv->CallNonvirtualObjectMethod( object, getMyClass(), mID );
+			jvalue args[1];
+			args[0].i = jlong( _par0 );
+			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
 			{
 				jclass tempObjClass = t.pEnv->GetObjectClass( tempObj );

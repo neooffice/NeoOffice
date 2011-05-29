@@ -64,7 +64,7 @@ public:
 
 	void				addChild( JavaSalFrame *_par0 );
 	void				dispose();
-	const Rectangle		getBounds();
+	const Rectangle		getBounds( sal_Bool *_par0 = NULL );
 	com_sun_star_vcl_VCLGraphics*	getGraphics();
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );

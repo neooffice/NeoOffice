@@ -651,11 +651,12 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 			if ( pFrame )
 			{
 				// Update size
+				sal_Bool bInLiveResize = sal_False;
 				if ( !pPosSize )
-					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds() );
+					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds( &bInLiveResize ) );
 
-				// If width and height are negative, we are in a live resize
-				if ( pPosSize->GetWidth() < 0 || pPosSize->GetHeight() < 0 )
+				// If in live resize, ignore event and just repaint
+				if ( bInLiveResize )
 				{
 					SalPaintEvent *pPaintEvent = new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
 					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, pFrame, pPaintEvent );

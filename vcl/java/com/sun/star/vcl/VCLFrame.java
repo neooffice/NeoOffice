@@ -1938,9 +1938,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	/**
 	 * Returns the bounds of the native window.
 	 *
+	 * @param r the in live resize pointer
 	 * @return the bounds of the native window
 	 */
-	public Rectangle getBounds() {
+	public Rectangle getBounds(long r) {
 
 		if (showOnlyMenus && showOnlyMenusBounds != null)
 			return showOnlyMenusBounds;
@@ -1955,7 +1956,7 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 			if (p != null && (p.x != bounds.x || p.y != bounds.y))
 				bounds = new Rectangle(p.x, p.y, bounds.width, bounds.height);
 
-			Dimension size = getSize0(getPeer());
+			Dimension size = getSize0(getPeer(), r);
 			if (size != null && (size.width != size.width || size.height != bounds.height))
 				bounds = new Rectangle(bounds.x, bounds.y, size.width, size.height);
 		}
@@ -2140,9 +2141,10 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Returns the size of the native window.
 	 *
 	 * @param p the <code>ComponentPeer</code>
+	 * @param r the in live resize pointer
 	 * @return the size of the native window
 	 */
-	native Dimension getSize0(ComponentPeer p);
+	native Dimension getSize0(ComponentPeer p, long r);
 
 	/**
 	 * Returns the state of the native window.

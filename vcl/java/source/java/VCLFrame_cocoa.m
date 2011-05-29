@@ -50,6 +50,7 @@
 {
 	id					mpCWindow;
 	NSRect				maFrame;
+	BOOL				mbInLiveResize;
 	NSView*				mpView;
 	NSWindow*			mpWindow;
 	WindowRef			maWindowRef;
@@ -88,11 +89,11 @@
 		mpWindow = (NSWindow *)[mpCWindow getNSWindow];
 		if ( mpWindow )
 		{
+			maFrame = [mpWindow frame];
 			if ( [mpWindow respondsToSelector:@selector(inLiveResize)] && [mpWindow inLiveResize] )
-				maFrame = NSMakeRect( 0, 0, -1, -1 );
+				mbInLiveResize = YES;
 			else
-				maFrame = [mpWindow frame];
-
+				mbInLiveResize = NO;
 			mpView = [mpWindow contentView];
 
 			// Create the NSWindow's WindowRef as we need it in the dtrans
@@ -108,11 +109,17 @@
 
 	mpCWindow = pCWindow;
 	maFrame = NSMakeRect( 0, 0, 0, 0 );
+	mbInLiveResize = NO;
 	mpView = nil;
 	mpWindow = nil;
 	maWindowRef = nil;
 
 	return self;
+}
+
+- (BOOL)inLiveResize
+{
+	return mbInLiveResize;
 }
 
 - (NSWindow *)window
@@ -358,12 +365,14 @@ id CWindow_getNSWindowContentView( id pCWindow )
 	return pRet;
 }
 
-void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight )
+void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight, BOOL *pInLiveResize )
 {
 	if ( pWidth )
 		*pWidth = 0;
 	if ( pHeight )
 		*pHeight = 0;
+	if ( pInLiveResize )
+		*pInLiveResize = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -377,6 +386,8 @@ void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight )
 			*pWidth = aRect.size.width;
 		if ( pHeight )
 			*pHeight = aRect.size.height;
+		if ( pInLiveResize )
+			*pInLiveResize = [pGetNSWindow inLiveResize];
 	}
 
 	[pPool release];
