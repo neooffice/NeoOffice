@@ -54,9 +54,11 @@ static BOOL bFontManagerLocked = NO;
 static NSRecursiveLock *pFontManagerLock = nil;
 static NSString *pAWTFontString = @"AWTFont";
 static NSString *pCocoaAppWindowString = @"CocoaAppWindow";
-static NSString *pNSThemeFrameString = @"NSThemeFrame";
 static NSString *pNSViewAWTString = @"NSViewAWT";
 static NSString *pNSWindowViewAWTString = @"NSWindowViewAWT";
+#ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
+static NSString *pNSThemeFrameString = @"NSThemeFrame";
+#endif	// USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
 inline long Float32ToLong( Float32 f ) { return (long)( f == 0 ? f : f < 0 ? f - 1.0 : f + 1.0 ); }
 
@@ -352,7 +354,7 @@ static NSString *pCancelInputMethodText = @" ";
 - (void)poseAsDragImage:(NSImage *)pImage at:(NSPoint)aImageLocation offset:(NSSize)aMouseOffset event:(NSEvent *)pEvent pasteboard:(NSPasteboard *)pPasteboard source:(id)pSourceObject slideBack:(BOOL)bSlideBack;
 - (id)poseAsInitWithFrame:(NSRect)aFrame;
 - (BOOL)poseAsIsOpaque;
-- (float)poseAsRoundedCornerRadius;
+- (NSSize)poseAsBottomCornerSize;
 @end
 
 static BOOL bUseQuickTimeContentViewHack = NO;
@@ -379,7 +381,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (BOOL)prepareForDragOperation:(id < NSDraggingInfo >)pSender;
 - (BOOL)readSelectionFromPasteboard:(NSPasteboard *)pPasteboard;
 #ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-- (float)roundedCornerRadius;
+- (NSSize)_bottomCornerSize;
 #endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 - (void)setDraggingDestinationDelegate:(id)pDelegate;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
@@ -1592,15 +1594,15 @@ static CFDataRef aRTFSelection = nil;
 }
 
 #ifndef USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
-- (float)roundedCornerRadius
+- (NSSize)_bottomCornerSize
 {
 	NSWindow *pWindow = [self window];
 	if ( pWindow && [[pWindow className] isEqualToString:pCocoaAppWindowString] )
-		return 0;
-	else if ( [self respondsToSelector:@selector(poseAsRoundedCornerRadius)] )
-		return [self poseAsRoundedCornerRadius];
+		return NSMakeSize( 0, 0 );
+	else if ( [self respondsToSelector:@selector(poseAsBottomCornerSize)] )
+		return [self poseAsBottomCornerSize];
 	else
-		return 0;
+		return NSMakeSize( 0, 0 );
 }
 #endif	// !USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
@@ -2100,8 +2102,8 @@ static CFDataRef aRTFSelection = nil;
 		Class aClass = [pBundle classNamed:pNSThemeFrameString];
 		if ( aClass )
 		{
-			aSelector = @selector(roundedCornerRadius);
-			aPoseAsSelector = @selector(poseAsRoundedCornerRadius);
+			aSelector = @selector(_bottomCornerSize);
+			aPoseAsSelector = @selector(poseAsBottomCornerSize);
 			aOldMethod = class_getInstanceMethod( aClass, aSelector );
 			aNewMethod = class_getInstanceMethod( [VCLView class], aSelector );
 			if ( aOldMethod && aNewMethod )
