@@ -50,6 +50,9 @@
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
+#ifndef _SALJAVA_H
+#include <saljava.h>
+#endif
 #ifndef _SV_EVENT_HXX
 #include <vcl/event.hxx>
 #endif
@@ -656,14 +659,32 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 					pPosSize = new Rectangle( pFrame->mpVCLFrame->getBounds( &bInLiveResize ) );
 
 				// If in live resize, ignore event and just repaint
+				bool bSkipEvent = false;
 				if ( bInLiveResize )
 				{
-					SalPaintEvent *pPaintEvent = new SalPaintEvent( 0, 0, pFrame->maGeometry.nWidth, pFrame->maGeometry.nHeight );
-					com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, pFrame, pPaintEvent );
-					aEvent.dispatch();
+					timeval aCurrentTime;
+					gettimeofday( &aCurrentTime, NULL );
+					if ( pSalData->mpLastResizeFrame == pFrame && pSalData->maLastResizeTime >= aCurrentTime )
+						bSkipEvent = true;
+				}
+
+				// If too little time has passed since the last "in live resize"
+				// event, skip it and repost this event
+				if ( bSkipEvent )
+				{
+					com_sun_star_vcl_VCLEvent aEvent( nID, pFrame, NULL );
+					pSalData->mpEventQueue->postCachedEvent( &aEvent );
 				}
 				else
 				{
+					// Update resize timer
+					pSalData->mpLastResizeFrame = ( bInLiveResize ? pFrame : NULL );
+					if ( pSalData->mpLastResizeFrame )
+					{
+						gettimeofday( &pSalData->maLastResizeTime, NULL );
+						pSalData->maLastResizeTime += 250;
+					}
+
 					// Fix bug 3252 by always comparing the bounds against the
 					// work area
 					bool bForceResize = false;

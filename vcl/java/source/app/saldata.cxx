@@ -71,6 +71,9 @@ SalData::SalData()
 	mbInSignalHandler = false;
 	mbDoubleScrollbarArrows = false;
 	mpCaptureFrame = NULL;
+	mpLastResizeFrame = NULL;
+	maLastResizeTime.tv_sec = 0;
+	maLastResizeTime.tv_usec = 0;
 
 	// Set condition so that they don't block
 	maNativeEventCondition.set();
