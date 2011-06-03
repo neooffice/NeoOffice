@@ -246,7 +246,6 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)restoreStateWithCoder:(NSCoder *)pCoder
 {
 	// Don't allow NSDocument to do the restoration
-fprintf( stderr, "restore\n" );
 }
 
 - (void)revertDocumentToSaved:(id)pObject
