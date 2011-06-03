@@ -200,7 +200,45 @@ static void HandleDidChangeScreenParametersRequest()
 	}
 }
 
+@interface VCLDocumentController : NSDocumentController
+- (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+@end
+
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
+
+@implementation VCLDocumentController
+
+- (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError
+{
+	if ( ppError )
+		*ppError = nil;
+
+	if ( pSharedAppDelegate && pAbsoluteURL && [pAbsoluteURL isFileURL] )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		NSString *pPath = [pAbsoluteURL path];
+		if ( pApp && pPath )
+		{
+			BOOL bResume = YES;
+			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
+			if ( aPref )
+			{
+				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+					bResume = NO;
+				CFRelease( aPref );
+			}
+
+			if ( bResume )
+				[pSharedAppDelegate application:pApp openFile:pPath];
+		}
+	}
+
+	NSDocument *pDoc = [[NSDocument alloc] init];
+	[pDoc autorelease];
+	return pDoc;
+}
+
+@end
 
 @implementation VCLApplicationDelegate
 
@@ -298,6 +336,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return NO;
 }
 
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender
+{
+	return NO;
+}
+
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
 	if ( mbInTermination || ( pApplication && [pApplication modalWindow] ) )
@@ -309,6 +352,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification
 {
+	// Make our NSDocumentController subclass the shared controller by creating
+	// an instance of our subclass before AppKit does
+	[[VCLDocumentController alloc] init];
+
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillFinishLaunching:)] )
 		[mpDelegate applicationWillFinishLaunching:pNotification];
 }

@@ -96,15 +96,14 @@ static OUString aSaveAVersionLocalizedString;
 }
 + (BOOL)autosavesInPlace;
 - (void)dealloc;
-- (void)encodeRestorableStateWithCoder:(NSCoder *)pCoder;
 - (BOOL)hasUnautosavedChanges;
-- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError;
-- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
+- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 - (void)revertDocumentToSaved:(id)pObject;
-- (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
+- (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation;
-- (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError;
+- (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
 
 static NSMutableDictionary *pFrameDict = nil;
@@ -203,24 +202,15 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	[super dealloc];
 }
 
-- (void)destroy
-{
-}
-
-- (void)encodeRestorableStateWithCoder:(NSCoder *)pCoder
-{
-	// Do not trigger automatic restoration of the document when launching
-}
-
 - (BOOL)hasUnautosavedChanges
 {
 	// Don't allow NSDocument to do the autosaving
 	return NO;
 }
 
-- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)pError
+- (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
-	[super initWithContentsOfURL:pURL ofType:pTypeName error:pError];
+	[super initWithContentsOfURL:pURL ofType:pTypeName error:ppError];
 
 	mpFrame = pFrame;
 	mbInRevert = NO;
@@ -245,10 +235,10 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	return self;
 }
 
-- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
-	if ( pError )
-		pError = nil;
+	if ( ppError )
+		*ppError = nil;
 
 	return YES;
 }
@@ -256,6 +246,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 - (void)restoreStateWithCoder:(NSCoder *)pCoder
 {
 	// Don't allow NSDocument to do the restoration
+fprintf( stderr, "restore\n" );
 }
 
 - (void)revertDocumentToSaved:(id)pObject
@@ -268,10 +259,10 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	mbInRevert = NO;
 }
 
-- (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError
+- (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
-	if ( pError )
-		pError = nil;
+	if ( ppError )
+		*ppError = nil;
 
 	if ( NSDocument_versionsSupported() && !mbInRevert && !Application::IsShutDown() )
 	{
@@ -306,10 +297,10 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	return pWritableTypes;
 }
 
-- (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)pError
+- (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
-	if ( pError )
-		pError = nil;
+	if ( ppError )
+		*ppError = nil;
 
 	return NO;
 }
