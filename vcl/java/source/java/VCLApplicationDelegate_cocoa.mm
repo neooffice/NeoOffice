@@ -200,11 +200,33 @@ static void HandleDidChangeScreenParametersRequest()
 	}
 }
 
+@interface VCLDocument : NSDocument
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (void)restoreStateWithCoder:(NSCoder *)pCoder;
+@end
+
 @interface VCLDocumentController : NSDocumentController
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
 
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
+
+@implementation VCLDocument
+
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
+{
+	if ( ppError )
+		*ppError = nil;
+
+	return YES;
+}
+
+- (void)restoreStateWithCoder:(NSCoder *)pCoder
+{
+	// Don't allow NSDocument to do the restoration
+}
+
+@end
 
 @implementation VCLDocumentController
 
@@ -233,7 +255,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 		}
 	}
 
-	NSDocument *pDoc = [[NSDocument alloc] init];
+	VCLDocument *pDoc = [[VCLDocument alloc] init];
 	[pDoc autorelease];
 	return pDoc;
 }
