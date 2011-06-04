@@ -760,15 +760,16 @@ extern "C" void java_init_systray()
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
 
-#ifdef USE_NATIVE_VERSIONS
-	aDesc = GetJavaResString( STR_DISABLEVERSIONSSUPPORT );
-	aDesc.EraseAllChars( '~' );
-	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
+	if ( NSDocument_versionsSupported() )
+	{
+		aDesc = GetJavaResString( STR_DISABLEVERSIONSSUPPORT );
+		aDesc.EraseAllChars( '~' );
+		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
 
-	aDesc = GetJavaResString( STR_DISABLERESUMESUPPORT );
-	aDesc.EraseAllChars( '~' );
-	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, FALSE ) );
-#endif	// USE_NATIVE_VERSIONS
+		aDesc = GetJavaResString( STR_DISABLERESUMESUPPORT );
+		aDesc.EraseAllChars( '~' );
+		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, FALSE ) );
+	}
 
 	// Insert the Mac OS X submenu
 	aDesc = GetJavaResString( STR_MACOSXOPTIONS );
