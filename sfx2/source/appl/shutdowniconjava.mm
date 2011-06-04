@@ -53,6 +53,8 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#include "../view/topfrm_cocoa.h"
+
 #define WRITER_COMMAND_ID				'SDI1'
 #define CALC_COMMAND_ID					'SDI2'
 #define IMPRESS_COMMAND_ID				'SDI3'
@@ -757,6 +759,16 @@ extern "C" void java_init_systray()
 	aDesc = GetJavaResString( STR_DISABLEQUICKLOOKSUPPORT );
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
+
+#ifdef USE_NATIVE_VERSIONS
+	aDesc = GetJavaResString( STR_DISABLEVERSIONSSUPPORT );
+	aDesc.EraseAllChars( '~' );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
+
+	aDesc = GetJavaResString( STR_DISABLERESUMESUPPORT );
+	aDesc.EraseAllChars( '~' );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableResume" ), kCFBooleanTrue, FALSE ) );
+#endif	// USE_NATIVE_VERSIONS
 
 	// Insert the Mac OS X submenu
 	aDesc = GetJavaResString( STR_MACOSXOPTIONS );
