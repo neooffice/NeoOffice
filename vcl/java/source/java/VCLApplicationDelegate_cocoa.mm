@@ -50,6 +50,9 @@
 #include "VCLApplicationDelegate_cocoa.h"
 #import "../app/salinst_cocoa.h"
 
+// Uncomment out the following line to enable native resume support
+// #define USE_NATIVE_RESUME
+
 typedef void KeyScript_Type( short nCode );
 
 struct ImplPendingOpenPrintFileRequest
@@ -200,6 +203,10 @@ static void HandleDidChangeScreenParametersRequest()
 	}
 }
 
+static VCLApplicationDelegate *pSharedAppDelegate = nil;
+
+#ifdef USE_NATIVE_RESUME
+
 @interface VCLDocument : NSDocument
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
@@ -208,8 +215,6 @@ static void HandleDidChangeScreenParametersRequest()
 @interface VCLDocumentController : NSDocumentController
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
-
-static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @implementation VCLDocument
 
@@ -261,6 +266,8 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 }
 
 @end
+
+#endif	// USE_NATIVE_RESUME
 
 @implementation VCLApplicationDelegate
 
@@ -374,9 +381,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification
 {
+#ifdef USE_NATIVE_RESUME
 	// Make our NSDocumentController subclass the shared controller by creating
 	// an instance of our subclass before AppKit does
 	[[VCLDocumentController alloc] init];
+#endif	// USE_NATIVE_RESUME
 
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillFinishLaunching:)] )
 		[mpDelegate applicationWillFinishLaunching:pNotification];
