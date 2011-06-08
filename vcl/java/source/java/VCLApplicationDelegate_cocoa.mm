@@ -50,6 +50,9 @@
 #include "VCLApplicationDelegate_cocoa.h"
 #import "../app/salinst_cocoa.h"
 
+// Uncomment out the following line to enable native resume support
+// #define USE_NATIVE_RESUME
+
 typedef void KeyScript_Type( short nCode );
 
 struct ImplPendingOpenPrintFileRequest
@@ -202,6 +205,70 @@ static void HandleDidChangeScreenParametersRequest()
 
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
+#ifdef USE_NATIVE_RESUME
+
+@interface VCLDocument : NSDocument
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (void)restoreStateWithCoder:(NSCoder *)pCoder;
+@end
+
+@interface VCLDocumentController : NSDocumentController
+- (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+@end
+
+@implementation VCLDocument
+
+- (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
+{
+	if ( ppError )
+		*ppError = nil;
+
+	return YES;
+}
+
+- (void)restoreStateWithCoder:(NSCoder *)pCoder
+{
+	// Don't allow NSDocument to do the restoration
+}
+
+@end
+
+@implementation VCLDocumentController
+
+- (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError
+{
+	if ( ppError )
+		*ppError = nil;
+
+	if ( pSharedAppDelegate && pAbsoluteURL && [pAbsoluteURL isFileURL] )
+	{
+		NSApplication *pApp = [NSApplication sharedApplication];
+		NSString *pPath = [pAbsoluteURL path];
+		if ( pApp && pPath )
+		{
+			BOOL bResume = YES;
+			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisableResume" ), kCFPreferencesCurrentApplication );
+			if ( aPref )
+			{
+				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
+					bResume = NO;
+				CFRelease( aPref );
+			}
+
+			if ( bResume )
+				[pSharedAppDelegate application:pApp openFile:pPath];
+		}
+	}
+
+	VCLDocument *pDoc = [[VCLDocument alloc] init];
+	[pDoc autorelease];
+	return pDoc;
+}
+
+@end
+
+#endif	// USE_NATIVE_RESUME
+
 @implementation VCLApplicationDelegate
 
 + (VCLApplicationDelegate *)sharedDelegate
@@ -298,6 +365,11 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 	return NO;
 }
 
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender
+{
+	return NO;
+}
+
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication
 {
 	if ( mbInTermination || ( pApplication && [pApplication modalWindow] ) )
@@ -309,6 +381,12 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification
 {
+#ifdef USE_NATIVE_RESUME
+	// Make our NSDocumentController subclass the shared controller by creating
+	// an instance of our subclass before AppKit does
+	[[VCLDocumentController alloc] init];
+#endif	// USE_NATIVE_RESUME
+
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillFinishLaunching:)] )
 		[mpDelegate applicationWillFinishLaunching:pNotification];
 }

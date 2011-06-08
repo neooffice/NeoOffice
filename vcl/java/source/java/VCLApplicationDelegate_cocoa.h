@@ -51,6 +51,7 @@
 - (void)applicationDidBecomeActive:(NSNotification *)pNotification;
 - (void)applicationDidChangeScreenParameters:(NSNotification *)pNotification;
 - (BOOL)applicationShouldHandleReopen:(NSApplication *)pApplication hasVisibleWindows:(BOOL)bFlag;
+- (BOOL)applicationShouldOpenUntitledFile:(NSApplication *)pSender;
 - (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)pApplication;
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification;
 - (void)cancelTermination;
