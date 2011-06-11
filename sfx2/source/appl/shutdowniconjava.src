@@ -91,12 +91,12 @@ String STR_DISABLEQUICKLOOKSUPPORT
 
 String STR_DISABLEVERSIONSSUPPORT
 {
-	Text [ de ] = "Deaktiviere Mac OS X Funktion „Versionen”";
+	Text [ de ] = "Deaktiviere Mac OS X Versionen";
 	Text [ en-US ] = "Disable Mac OS X Versions";
 };
 
 String STR_DISABLERESUMESUPPORT
 {
-	Text [ de ] = "Deaktiviere Mac OS X Funktion „Resume”";
+	Text [ de ] = "Deaktiviere Mac OS X Resume";
 	Text [ en-US ] = "Disable Mac OS X Resume";
 };
