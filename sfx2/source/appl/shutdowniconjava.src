@@ -82,7 +82,7 @@ String STR_DISABLEMACOSXTEXTHIGHLIGHTING
 
 String STR_DISABLEQUICKLOOKSUPPORT
 {
-	Text [ de ] = "Deaktiviere Übersicht Unterstützung in Dokumente";
+	Text [ de ] = "Deaktiviere die Übersicht Unterstützung für Dokumente";
 	Text [ en-US ] = "Disable Quick Look Support in Documents";
 	Text [ es ] = "Deshabilitar el soporte de Quick Look en documentos";
 	Text [ fr ] = "Désactiver la prise en charge de Quick Look pour les documents";
