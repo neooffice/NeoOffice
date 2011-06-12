@@ -111,6 +111,7 @@ static NSString *pBlankItem = @" ";
 
 @interface NSURL (ShowFileDialog)
 - (NSURL *)filePathURL;
+- (NSURL *)URLByStandardizingPath;
 @end
 
 @interface NSSavePanel (ShowFileDialog)
@@ -357,6 +358,10 @@ static NSString *pBlankItem = @" ";
 	else
 	{
 		NSURL *pURL = [mpFilePanel URL];
+		// Fix bug 3662 by ensuring that the save panel does not append a
+		// trailing "/" character
+		if ( pURL && [pURL isFileURL] && [pURL respondsToSelector:@selector(URLByStandardizingPath)] )
+			pURL = [pURL URLByStandardizingPath];
 		if ( pURL )
 			pRet = [NSArray arrayWithObject:pURL];
 	}
