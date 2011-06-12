@@ -148,6 +148,7 @@ void SFXDocument_reload( SfxTopViewFrame *pFrame )
 	if ( pFrame )
 	{
 		SfxRequest aReloadReq( pFrame, SID_RELOAD );
+		aReloadReq.AppendItem( SfxBoolItem( SID_SILENT, sal_True ) );
 		pFrame->ExecReload_Impl( aReloadReq, sal_True );
 	}
 }
