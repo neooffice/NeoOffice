@@ -397,21 +397,21 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 	{
 		pImp->m_bIsModified = bModifiedP;
 		ModifyChanged();
-	}
 
 #ifdef USE_JAVA
-	// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
-	SfxViewFrame* pFrame = GetFrame();
-	if ( !pFrame )
-		pFrame = SfxViewFrame::GetFirst( this );
-	if ( pFrame )
-	{
-    	if ( NSDocument_versionsEnabled() )
-			SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() );
-		else
-			DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
-	}
+		// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
+		SfxViewFrame* pFrame = GetFrame();
+		if ( !pFrame )
+			pFrame = SfxViewFrame::GetFirst( this );
+		if ( pFrame )
+		{
+			if ( NSDocument_versionsEnabled() )
+				SFXDocument_setDocumentModified( (SfxTopViewFrame *)pFrame->GetTopViewFrame(), IsModified() );
+			else
+				DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
+		}
 #endif	// USE_JAVA
+	}
 }
 
 //-------------------------------------------------------------------------

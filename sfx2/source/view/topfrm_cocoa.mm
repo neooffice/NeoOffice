@@ -81,6 +81,7 @@ static OUString aSaveAVersionLocalizedString;
 @class NSDocumentVersion;
 
 @interface NSDocument (SFXDocument)
+- (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
 - (BOOL)_preserveContentsIfNecessaryAfterWriting:(BOOL)bAfter toURL:(NSURL *)pURL forSaveOperation:(NSUInteger)nSaveOperation version:(NSDocumentVersion **)ppVersion error:(NSError **)ppError;
 @end
 
@@ -96,11 +97,22 @@ static OUString aSaveAVersionLocalizedString;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+- (void)reloadFrame;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 - (void)revertDocumentToSaved:(id)pObject;
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (NSArray *)writableTypesForSaveOperation:(NSSaveOperationType)nSaveOperation;
 - (BOOL)writeToURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
+@end
+
+@interface SFXUndoManager : NSUndoManager
+{
+	SFXDocument*			mpDoc;
+}
++ (id)createWithDocument:(SFXDocument *)pDoc;
+- (void)dealloc;
+- (id)initWithDocument:(SFXDocument *)pDoc;
+- (void)undo;
 @end
 
 static NSMutableDictionary *pFrameDict = nil;
@@ -183,6 +195,9 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 - (void)dealloc
 {
+	// Release our custom undo manager
+	[self setUndoManager:nil];
+
 	if ( mpWinController )
 	{
 		[self removeWindowController:mpWinController];
@@ -229,6 +244,9 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		}
 	}
 
+	// Set our own custom undo manager
+	[self setUndoManager:[SFXUndoManager createWithDocument:self]];
+
 	return self;
 }
 
@@ -238,6 +256,22 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		*ppError = nil;
 
 	return YES;
+}
+
+- (void)reloadFrame
+{
+	if ( NSDocument_versionsSupported() && !mbInRevert && !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+			if ( pDoc == self )
+				SFXDocument_reload( mpFrame );
+		}
+		rSolarMutex.release();
+	}
 }
 
 - (void)restoreStateWithCoder:(NSCoder *)pCoder
@@ -260,18 +294,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	if ( ppError )
 		*ppError = nil;
 
-	if ( NSDocument_versionsSupported() && !mbInRevert && !Application::IsShutDown() )
-	{
-		IMutex& rSolarMutex = Application::GetSolarMutex();
-		rSolarMutex.acquire();
-		if ( !Application::IsShutDown() )
-		{
-			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
-			if ( pDoc == self )
-				SFXDocument_reload( mpFrame );
-		}
-		rSolarMutex.release();
-	}
+	[self reloadFrame];
 
 	return YES;
 }
@@ -299,6 +322,46 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		*ppError = nil;
 
 	return NO;
+}
+
+@end
+
+@implementation SFXUndoManager
+
++ (id)createWithDocument:(SFXDocument *)pDoc
+{
+	SFXUndoManager *pRet = [[SFXUndoManager alloc] initWithDocument:pDoc];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)dealloc
+{
+	if ( mpDoc )
+		[mpDoc release];
+
+	[super dealloc];
+}
+
+- (id)initWithDocument:(SFXDocument *)pDoc
+{
+	[super init];
+
+	mpDoc = pDoc;
+	if ( mpDoc )
+		[mpDoc retain];
+
+	return self;
+}
+
+- (void)undo
+{
+	[super undo];
+
+	// This selector is called when the document is locked and the user cancels
+	// unlocking so revert any changes
+	if ( mpDoc )
+		[mpDoc reloadFrame];
 }
 
 @end
@@ -548,9 +611,16 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	if ( pDoc )
 	{
 		if ( pObject && [pObject isKindOfClass:[NSNumber class]] && [(NSNumber *)pObject boolValue] )
-			[pDoc updateChangeCount:NSChangeDone];
+		{
+			if ( [pDoc respondsToSelector:@selector(_checkAutosavingThenUpdateChangeCount:)] )
+				[pDoc _checkAutosavingThenUpdateChangeCount:NSChangeDone];
+			else
+				[pDoc updateChangeCount:NSChangeDone];
+		}
 		else
+		{
 			[pDoc updateChangeCount:NSChangeCleared];
+		}
 	}
 }
 
