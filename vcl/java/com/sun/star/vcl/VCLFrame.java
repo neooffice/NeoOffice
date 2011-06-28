@@ -1939,9 +1939,11 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 	 * Returns the bounds of the native window.
 	 *
 	 * @param r the in live resize pointer
+	 * @param f <code>true</code> to get the original bounds if in Mac OS X's
+	 *  full screen mode or <code>false</code> to get the actual size
 	 * @return the bounds of the native window
 	 */
-	public Rectangle getBounds(long r) {
+	public Rectangle getBounds(long r, boolean f) {
 
 		if (showOnlyMenus && showOnlyMenusBounds != null)
 			return showOnlyMenusBounds;
@@ -1952,18 +1954,31 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// as the cached bounds may be incorrect with certain multiple monitor
 		// configurations
 		if (window.isShowing()) {
-			Point p = window.getLocationOnScreen();
-			if (p != null && (p.x != bounds.x || p.y != bounds.y))
-				bounds = new Rectangle(p.x, p.y, bounds.width, bounds.height);
-
-			Dimension size = getSize0(getPeer(), r);
-			if (size != null && (size.width != size.width || size.height != bounds.height))
-				bounds = new Rectangle(bounds.x, bounds.y, size.width, size.height);
+			Rectangle nativeBounds = getBounds0(getPeer(), r, f);
+			if (nativeBounds != null) {
+				bounds = nativeBounds;
+			}
+			else {
+				Point p = window.getLocationOnScreen();
+				if (p != null)
+					bounds = new Rectangle(p.x, p.y, bounds.width, bounds.height);
+			}
 		}
 
 		return bounds;
 
 	}
+
+	/**
+	 * Returns the size of the native window.
+	 *
+	 * @param p the <code>ComponentPeer</code>
+	 * @param r the in live resize pointer
+	 * @param f <code>true</code> to get the original bounds if in Mac OS X's
+	 *  full screen mode or <code>false</code> to get the actual size
+	 * @return the size of the native window
+	 */
+	native Rectangle getBounds0(ComponentPeer p, long r, boolean f);
 
 	/**
 	 * Gets an iterator providing access to the entire text and attributes
@@ -2136,15 +2151,6 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		return VCLFrame.defaultAttributedCharacterIterator;
 
 	}
-
-	/**
-	 * Returns the size of the native window.
-	 *
-	 * @param p the <code>ComponentPeer</code>
-	 * @param r the in live resize pointer
-	 * @return the size of the native window
-	 */
-	native Dimension getSize0(ComponentPeer p, long r);
 
 	/**
 	 * Returns the state of the native window.

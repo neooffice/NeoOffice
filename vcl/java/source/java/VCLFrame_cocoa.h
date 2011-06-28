@@ -45,8 +45,8 @@ typedef void* id;
 BEGIN_C
 #endif
 id CWindow_getNSWindow( id pCWindow );
+void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen );
 id CWindow_getNSWindowContentView( id pCWindow );
-void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight, BOOL *pInLiveResize );
 int CWindow_makeFloatingWindow( id pCWindow );
 void CWindow_makeModalWindow( id pCWindow );
 void CWindow_makeUnshadowedWindow( id pCWindow );

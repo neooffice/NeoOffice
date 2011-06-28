@@ -42,6 +42,7 @@
 @end
 
 @interface NSWindow (VCLWindow)
+- (NSRect)_frameOnExitFromFullScreen;
 - (void)_setModalWindowLevel;
 - (BOOL)inLiveResize;
 @end
@@ -50,24 +51,25 @@
 {
 	id					mpCWindow;
 	NSRect				maFrame;
+	BOOL				mbFullScreen;
 	BOOL				mbInLiveResize;
 	NSView*				mpView;
 	NSWindow*			mpWindow;
 	WindowRef			maWindowRef;
 }
-+ (id)createWithCWindow:(id)pCWindow;
++ (id)createWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen;
 - (NSView *)contentView;
 - (NSRect)frame;
 - (void)getNSWindow:(id)pObject;
-- (id)initWithCWindow:(id)pCWindow;
+- (id)initWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen;
 - (NSWindow *)window;
 @end
 
 @implementation GetNSWindow
 
-+ (id)createWithCWindow:(id)pCWindow
++ (id)createWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen
 {
-	GetNSWindow *pRet = [[GetNSWindow alloc] initWithCWindow:pCWindow];
+	GetNSWindow *pRet = [[GetNSWindow alloc] initWithCWindow:pCWindow fullScreen:bFullScreen];
 	[pRet autorelease];
 	return pRet;
 }
@@ -89,11 +91,30 @@
 		mpWindow = (NSWindow *)[mpCWindow getNSWindow];
 		if ( mpWindow )
 		{
+			// Get flipped coordinates
 			maFrame = [mpWindow frame];
+			if ( mbFullScreen && [mpWindow respondsToSelector:@selector(_frameOnExitFromFullScreen)] )
+				maFrame = [mpWindow _frameOnExitFromFullScreen];
+			NSRect aRect = NSMakeRect( 0, 0, 0, 0 );
+			NSArray *pScreens = [NSScreen screens];
+			if ( pScreens )
+			{
+				NSUInteger i = 0;
+				NSUInteger nCount = [pScreens count];
+				for ( ; i < nCount; i++ )
+				{
+					NSScreen *pScreen = (NSScreen *)[pScreens objectAtIndex:i];
+					if ( pScreen )
+						aRect = NSUnionRect( aRect, [pScreen frame] );
+				}
+			}
+			maFrame.origin.y = aRect.origin.y + aRect.size.height - maFrame.origin.y - maFrame.size.height;
+
 			if ( [mpWindow respondsToSelector:@selector(inLiveResize)] && [mpWindow inLiveResize] )
 				mbInLiveResize = YES;
 			else
 				mbInLiveResize = NO;
+
 			mpView = [mpWindow contentView];
 
 			// Create the NSWindow's WindowRef as we need it in the dtrans
@@ -103,12 +124,13 @@
 	}
 }
 
-- (id)initWithCWindow:(id)pCWindow
+- (id)initWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen
 {
 	[super init];
 
 	mpCWindow = pCWindow;
 	maFrame = NSMakeRect( 0, 0, 0, 0 );
+	mbFullScreen = bFullScreen;
 	mbInLiveResize = NO;
 	mpView = nil;
 	mpWindow = nil;
@@ -335,7 +357,7 @@ id CWindow_getNSWindow( id pCWindow )
 
 	if ( pCWindow )
 	{
-		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow];
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:NO];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
 		pRet = [pGetNSWindow window];
@@ -346,27 +368,12 @@ id CWindow_getNSWindow( id pCWindow )
 	return pRet;
 }
 
-id CWindow_getNSWindowContentView( id pCWindow )
+void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen )
 {
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	NSView *pRet = nil;
-
-	if ( pCWindow )
-	{
-		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
-		pRet = [pGetNSWindow contentView];
-	}
-
-	[pPool release];
-
-	return pRet;
-}
-
-void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight, BOOL *pInLiveResize )
-{
+	if ( pX )
+		*pX = 0;
+	if ( pY )
+		*pY = 0;
 	if ( pWidth )
 		*pWidth = 0;
 	if ( pHeight )
@@ -378,10 +385,14 @@ void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight, BOOL *
 
 	if ( pCWindow )
 	{
-		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow];
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:bFullScreen];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
 		NSRect aRect = [pGetNSWindow frame];
+		if ( pX )
+			*pX = aRect.origin.x;
+		if ( pY )
+			*pY = aRect.origin.y;
 		if ( pWidth )
 			*pWidth = aRect.size.width;
 		if ( pHeight )
@@ -391,6 +402,25 @@ void CWindow_getNSWindowSize( id pCWindow, float *pWidth, float *pHeight, BOOL *
 	}
 
 	[pPool release];
+}
+
+id CWindow_getNSWindowContentView( id pCWindow )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSView *pRet = nil;
+
+	if ( pCWindow )
+	{
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:NO];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
+		pRet = [pGetNSWindow contentView];
+	}
+
+	[pPool release];
+
+	return pRet;
 }
 
 int CWindow_makeFloatingWindow( id pCWindow )

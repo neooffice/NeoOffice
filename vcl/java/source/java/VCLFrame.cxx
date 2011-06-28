@@ -64,7 +64,7 @@ using namespace vos;
 
 // ============================================================================
 
-static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getSize0( JNIEnv *pEnv, jobject object, jobject _par0, jlong _par1 )
+static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getBounds0( JNIEnv *pEnv, jobject object, jobject _par0, jlong _par1, jboolean _par2 )
 {
 	jobject out = NULL;
 
@@ -72,13 +72,13 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getSize0( JNIEnv *pEnv, jo
 	{
 		static jmethodID mID = NULL;
 
-		jclass dimensionClass = pEnv->FindClass( "java/awt/Dimension" );
-		if ( dimensionClass )
+		jclass rectangleClass = pEnv->FindClass( "java/awt/Rectangle" );
+		if ( rectangleClass )
 		{
 			if ( !mID )
 			{
-				char *cSignature = "(II)V";
-				mID = pEnv->GetMethodID( dimensionClass, "<init>", cSignature );
+				char *cSignature = "(IIII)V";
+				mID = pEnv->GetMethodID( rectangleClass, "<init>", cSignature );
 			}
 			OSL_ENSURE( mID, "Unknown method id!" );
 			if ( mID )
@@ -87,37 +87,26 @@ static jobject JNICALL Java_com_sun_star_vcl_VCLFrame_getSize0( JNIEnv *pEnv, jo
 				if ( tempClass && pEnv->IsInstanceOf( _par0, tempClass ) )
 				{
 					static jmethodID mIDGetModelPtr = NULL;
-					static bool bReturnsInt = false;
 					if ( !mIDGetModelPtr )
 					{
 						char *cSignature = "()J";
 						mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-						if ( !mIDGetModelPtr )
-						{
-							// Java 1.4.1 has a different signature so check
-							// for it if we cannot find the first signature
-							if ( pEnv->ExceptionCheck() )
-								pEnv->ExceptionClear();
-							cSignature = "()I";
-							mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-							if ( mIDGetModelPtr )
-								bReturnsInt = true;
-						}
 					}
 					OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
 					if ( mIDGetModelPtr )
 					{
+						float fX = 0;
+						float fY = 0;
 						float fWidth = 0;
 						float fHeight = 0;
-						if ( bReturnsInt )
-							CWindow_getNSWindowSize( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ), &fWidth, &fHeight, (BOOL *)_par1 );
-						else
-							CWindow_getNSWindowSize( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ), &fWidth, &fHeight, (BOOL *)_par1 );
+						CWindow_getNSWindowBounds( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ), &fX, &fY, &fWidth, &fHeight, (BOOL *)_par1, _par2 );
 
-						jvalue args[2];
-						args[0].i = jint( fWidth > 0 ? fWidth + 0.5 : fWidth );
-						args[1].i = jint( fHeight > 0 ? fHeight + 0.5 : fHeight );
-						out = pEnv->NewObjectA( dimensionClass, mID, args );
+						jvalue args[4];
+						args[0].i = jint( fX > 0 ? fX + 0.5 : fX );
+						args[1].i = jint( fY > 0 ? fY + 0.5 : fY );
+						args[2].i = jint( fWidth > 0 ? fWidth + 0.5 : fWidth );
+						args[3].i = jint( fHeight > 0 ? fHeight + 0.5 : fHeight );
+						out = pEnv->NewObjectA( rectangleClass, mID, args );
 					}
 				}
 			}
@@ -209,22 +198,10 @@ static jint JNICALL Java_com_sun_star_vcl_VCLFrame_makeFloatingWindow( JNIEnv *p
 		{
 			static jmethodID mIDGetModelPtr = NULL;
 			static jfieldID fIDInsets = NULL;
-			static bool bReturnsInt = false;
 			if ( !mIDGetModelPtr )
 			{
 				char *cSignature = "()J";
 				mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-				if ( !mIDGetModelPtr )
-				{
-					// Java 1.4.1 has a different signature so check
-					// for it if we cannot find the first signature
-					if ( pEnv->ExceptionCheck() )
-						pEnv->ExceptionClear();
-					cSignature = "()I";
-					mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-					if ( mIDGetModelPtr )
-						bReturnsInt = true;
-				}
 			}
 			OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
 			if ( !fIDInsets )
@@ -250,11 +227,7 @@ static jint JNICALL Java_com_sun_star_vcl_VCLFrame_makeFloatingWindow( JNIEnv *p
 						OSL_ENSURE( fIDInsets, "Unknown field id!" );
 						if ( fIDTop )
 						{
-							if ( bReturnsInt )
-								nRet = (jint)CWindow_makeFloatingWindow( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
-							else
-								nRet = (jint)CWindow_makeFloatingWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
-
+							nRet = (jint)CWindow_makeFloatingWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
 							if ( nRet > 0 )
 								pEnv->SetIntField( tempObj, fIDTop, nRet );
 						}
@@ -278,31 +251,14 @@ static void JNICALL Java_com_sun_star_vcl_VCLFrame_makeUnshadowedWindow( JNIEnv 
 		if ( tempClass && tempClass2 && pEnv->IsInstanceOf( _par0, tempClass ) && pEnv->IsInstanceOf( _par0, tempClass2 ) )
 		{
 			static jmethodID mIDGetModelPtr = NULL;
-			static bool bReturnsInt = false;
 			if ( !mIDGetModelPtr )
 			{
 				char *cSignature = "()J";
 				mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-				if ( !mIDGetModelPtr )
-				{
-					// Java 1.4.1 has a different signature so check
-					// for it if we cannot find the first signature
-					if ( pEnv->ExceptionCheck() )
-						pEnv->ExceptionClear();
-					cSignature = "()I";
-					mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-					if ( mIDGetModelPtr )
-						bReturnsInt = true;
-				}
 			}
 			OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
 			if ( mIDGetModelPtr )
-			{
-				if ( bReturnsInt )
-					CWindow_makeUnshadowedWindow( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
-				else
-					CWindow_makeUnshadowedWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
-			}
+				CWindow_makeUnshadowedWindow( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
 		}
 	}
 }
@@ -317,31 +273,14 @@ static void JNICALL Java_com_sun_star_vcl_VCLFrame_updateLocation( JNIEnv *pEnv,
 		if ( tempClass && pEnv->IsInstanceOf( _par0, tempClass ) )
 		{
 			static jmethodID mIDGetModelPtr = NULL;
-			static bool bReturnsInt = false;
 			if ( !mIDGetModelPtr )
 			{
 				char *cSignature = "()J";
 				mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-				if ( !mIDGetModelPtr )
-				{
-					// Java 1.4.1 has a different signature so check
-					// for it if we cannot find the first signature
-					if ( pEnv->ExceptionCheck() )
-						pEnv->ExceptionClear();
-					cSignature = "()I";
-					mIDGetModelPtr = pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-					if ( mIDGetModelPtr )
-						bReturnsInt = true;
-				}
 			}
 			OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
 			if ( mIDGetModelPtr )
-			{
-				if ( bReturnsInt )
-					CWindow_updateLocation( (void *) pEnv->CallIntMethod( _par0, mIDGetModelPtr ) );
-				else
-					CWindow_updateLocation( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
-			}
+				CWindow_updateLocation( (void *) pEnv->CallLongMethod( _par0, mIDGetModelPtr ) );
 		}
 	}
 }
@@ -366,9 +305,9 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 		{
 			// Register the native methods for our class
 			JNINativeMethod pMethods[5];
-			pMethods[0].name = "getSize0";
-			pMethods[0].signature = "(Ljava/awt/peer/ComponentPeer;J)Ljava/awt/Dimension;";
-			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_getSize0;
+			pMethods[0].name = "getBounds0";
+			pMethods[0].signature = "(Ljava/awt/peer/ComponentPeer;JZ)Ljava/awt/Rectangle;";
+			pMethods[0].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_getBounds0;
 			pMethods[1].name = "getTextLocation0";
 			pMethods[1].signature = "(J)Ljava/awt/Rectangle;";
 			pMethods[1].fnPtr = (void *)Java_com_sun_star_vcl_VCLFrame_getTextLocation0;
@@ -488,7 +427,7 @@ void com_sun_star_vcl_VCLFrame::dispose()
 
 // ----------------------------------------------------------------------------
 
-const Rectangle com_sun_star_vcl_VCLFrame::getBounds( sal_Bool *_par0 )
+const Rectangle com_sun_star_vcl_VCLFrame::getBounds( sal_Bool *_par0, sal_Bool _par1 )
 {
 	static jmethodID mID = NULL;
 	static jfieldID fIDX = NULL;
@@ -501,14 +440,15 @@ const Rectangle com_sun_star_vcl_VCLFrame::getBounds( sal_Bool *_par0 )
 	{
 		if ( !mID )
 		{
-			char *cSignature = "(J)Ljava/awt/Rectangle;";
+			char *cSignature = "(JZ)Ljava/awt/Rectangle;";
 			mID = t.pEnv->GetMethodID( getMyClass(), "getBounds", cSignature );
 		}
 		OSL_ENSURE( mID, "Unknown method id!" );
 		if ( mID )
 		{
-			jvalue args[1];
+			jvalue args[2];
 			args[0].i = jlong( _par0 );
+			args[1].z = jboolean( _par1 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )
 			{
@@ -698,31 +638,14 @@ void *com_sun_star_vcl_VCLFrame::getPeer()
 				if ( tempClass && t.pEnv->IsInstanceOf( tempObj, tempClass ) )
 				{
 					static jmethodID mIDGetModelPtr = NULL;
-					static bool bReturnsInt = false;
 					if ( !mIDGetModelPtr )
 					{
 						char *cSignature = "()J";
 						mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-						if ( !mIDGetModelPtr )
-						{
-							// Java 1.4.1 has a different signature so check
-							// for it if we cannot find the first signature
-							if ( t.pEnv->ExceptionCheck() )
-								t.pEnv->ExceptionClear();
-							cSignature = "()I";
-							mIDGetModelPtr = t.pEnv->GetMethodID( tempClass, "getModelPtr", cSignature );
-							if ( mIDGetModelPtr )
-								bReturnsInt = true;
-						}
 					}
 					OSL_ENSURE( mIDGetModelPtr, "Unknown method id!" );
 					if ( mIDGetModelPtr )
-					{
-						if ( bReturnsInt )
-							out = (void *)t.pEnv->CallIntMethod( tempObj, mIDGetModelPtr );
-						else
-							out = (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr );
-					}
+						out = (void *)t.pEnv->CallLongMethod( tempObj, mIDGetModelPtr );
 				}
 			}
 		}
