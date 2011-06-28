@@ -45,6 +45,7 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
+#include <objc/objc-runtime.h>
 #include <postmac.h>
 
 #include "VCLApplicationDelegate_cocoa.h"
@@ -205,14 +206,17 @@ static void HandleDidChangeScreenParametersRequest()
 
 static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
-#ifdef USE_NATIVE_RESUME
-
 @interface VCLDocument : NSDocument
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (void)restoreStateWithCoder:(NSCoder *)pCoder;
 @end
 
+@interface NSDocumentController (VCLDocumentController)
+- (void)_docController:(NSDocumentController *)pDocController shouldTerminate:(BOOL)bShouldTerminate;
+@end
+
 @interface VCLDocumentController : NSDocumentController
+- (void)_closeAllDocumentsWithDelegate:(id)pDelegate shouldTerminateSelector:(SEL)aShouldTerminateSelector;
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
 @end
 
@@ -235,11 +239,18 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @implementation VCLDocumentController
 
+- (void)_closeAllDocumentsWithDelegate:(id)pDelegate shouldTerminateSelector:(SEL)aShouldTerminateSelector
+{
+	if ( pDelegate && [pDelegate respondsToSelector:aShouldTerminateSelector] && sel_isEqual( aShouldTerminateSelector, @selector(_docController:shouldTerminate:) ) )
+		[pDelegate _docController:self shouldTerminate:YES];
+}
+
 - (id)makeDocumentWithContentsOfURL:(NSURL *)pAbsoluteURL ofType:(NSString *)pTypeName error:(NSError **)ppError
 {
 	if ( ppError )
 		*ppError = nil;
 
+#ifdef USE_NATIVE_RESUME
 	if ( pSharedAppDelegate && pAbsoluteURL && [pAbsoluteURL isFileURL] )
 	{
 		NSApplication *pApp = [NSApplication sharedApplication];
@@ -259,6 +270,7 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 				[pSharedAppDelegate application:pApp openFile:pPath];
 		}
 	}
+#endif	// USE_NATIVE_RESUME
 
 	VCLDocument *pDoc = [[VCLDocument alloc] init];
 	[pDoc autorelease];
@@ -266,8 +278,6 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 }
 
 @end
-
-#endif	// USE_NATIVE_RESUME
 
 @implementation VCLApplicationDelegate
 
@@ -381,11 +391,9 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 - (void)applicationWillFinishLaunching:(NSNotification *)pNotification
 {
-#ifdef USE_NATIVE_RESUME
 	// Make our NSDocumentController subclass the shared controller by creating
 	// an instance of our subclass before AppKit does
 	[[VCLDocumentController alloc] init];
-#endif	// USE_NATIVE_RESUME
 
 	if ( mpDelegate && [mpDelegate respondsToSelector:@selector(applicationWillFinishLaunching:)] )
 		[mpDelegate applicationWillFinishLaunching:pNotification];
