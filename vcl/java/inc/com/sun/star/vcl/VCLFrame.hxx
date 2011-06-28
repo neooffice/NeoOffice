@@ -69,7 +69,7 @@ public:
 	const Rectangle		getInsets();
 	::rtl::OUString		getKeyName( USHORT _par0 );
 	void*				getNativeWindow();
-	void*				getNativeWindowContentView();
+	void*				getNativeWindowContentView( sal_Bool _par0 );
 	void*				getPeer();
 	ULONG				getState();
 	void				makeModal();

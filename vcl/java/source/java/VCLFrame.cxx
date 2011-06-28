@@ -609,9 +609,9 @@ void *com_sun_star_vcl_VCLFrame::getNativeWindow()
 
 // ----------------------------------------------------------------------------
 
-void *com_sun_star_vcl_VCLFrame::getNativeWindowContentView()
+void *com_sun_star_vcl_VCLFrame::getNativeWindowContentView( sal_Bool _par0 )
 {
-	return (void *)CWindow_getNSWindowContentView( getPeer() );
+	return (void *)CWindow_getNSWindowContentView( getPeer(), _par0 );
 }
 
 // ----------------------------------------------------------------------------

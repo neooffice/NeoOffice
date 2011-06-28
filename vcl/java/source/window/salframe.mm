@@ -502,7 +502,18 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 		// Get native window's content view since it won't be created until
 		// first shown
-		maSysData.pView = (NSView *)mpVCLFrame->getNativeWindowContentView();
+		sal_Bool bTopLevelWindow = sal_False;
+		if ( !mpParent && !IsFloatingFrame() && !IsUtilityWindow() )
+		{
+			Window *pWindow = Application::GetFirstTopLevelWindow();
+			while ( pWindow && pWindow->ImplGetFrame() != this )
+				pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+			if ( pWindow )
+				bTopLevelWindow = sal_True;
+		}
+
+		maSysData.pView = (NSView *)mpVCLFrame->getNativeWindowContentView( bTopLevelWindow );
 		mbCenter = FALSE;
 
 		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_MOVERESIZE, this, NULL );

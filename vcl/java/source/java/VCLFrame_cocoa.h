@@ -46,7 +46,7 @@ BEGIN_C
 #endif
 id CWindow_getNSWindow( id pCWindow );
 void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen );
-id CWindow_getNSWindowContentView( id pCWindow );
+id CWindow_getNSWindowContentView( id pCWindow, BOOL bTopLevelWindow );
 int CWindow_makeFloatingWindow( id pCWindow );
 void CWindow_makeModalWindow( id pCWindow );
 void CWindow_makeUnshadowedWindow( id pCWindow );

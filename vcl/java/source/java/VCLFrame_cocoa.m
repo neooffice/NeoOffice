@@ -37,6 +37,10 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLFrame_cocoa.h"
 
+#ifndef NSWindowCollectionBehaviorFullScreenPrimary
+#define NSWindowCollectionBehaviorFullScreenPrimary ( 1 << 7 )
+#endif
+
 @interface NSObject (CWindow)
 - (NSWindow *)getNSWindow;
 @end
@@ -53,23 +57,24 @@
 	NSRect				maFrame;
 	BOOL				mbFullScreen;
 	BOOL				mbInLiveResize;
+	BOOL				mbTopLevelWindow;
 	NSView*				mpView;
 	NSWindow*			mpWindow;
 	WindowRef			maWindowRef;
 }
-+ (id)createWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen;
++ (id)createWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen topLevelWindow:(BOOL)bTopLevelWindow;
 - (NSView *)contentView;
 - (NSRect)frame;
 - (void)getNSWindow:(id)pObject;
-- (id)initWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen;
+- (id)initWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen topLevelWindow:(BOOL)bTopLevelWindow;
 - (NSWindow *)window;
 @end
 
 @implementation GetNSWindow
 
-+ (id)createWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen
++ (id)createWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen topLevelWindow:(BOOL)bTopLevelWindow
 {
-	GetNSWindow *pRet = [[GetNSWindow alloc] initWithCWindow:pCWindow fullScreen:bFullScreen];
+	GetNSWindow *pRet = [[GetNSWindow alloc] initWithCWindow:pCWindow fullScreen:bFullScreen topLevelWindow:bTopLevelWindow];
 	[pRet autorelease];
 	return pRet;
 }
@@ -117,14 +122,14 @@
 
 			mpView = [mpWindow contentView];
 
-			// Create the NSWindow's WindowRef as we need it in the dtrans
-			// module and it will not created until we make the following call
-			maWindowRef = [mpWindow windowRef];
+			// Enable full screen feature for normal windows
+			if ( mbTopLevelWindow )
+				[mpWindow setCollectionBehavior:[mpWindow collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary];
 		}
 	}
 }
 
-- (id)initWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen
+- (id)initWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen topLevelWindow:(BOOL)bTopLevelWindow
 {
 	[super init];
 
@@ -132,6 +137,7 @@
 	maFrame = NSMakeRect( 0, 0, 0, 0 );
 	mbFullScreen = bFullScreen;
 	mbInLiveResize = NO;
+	mbTopLevelWindow = bTopLevelWindow;
 	mpView = nil;
 	mpWindow = nil;
 	maWindowRef = nil;
@@ -357,7 +363,7 @@ id CWindow_getNSWindow( id pCWindow )
 
 	if ( pCWindow )
 	{
-		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:NO];
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:NO topLevelWindow:NO];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
 		pRet = [pGetNSWindow window];
@@ -385,7 +391,7 @@ void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth
 
 	if ( pCWindow )
 	{
-		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:bFullScreen];
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:bFullScreen topLevelWindow:NO];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
 		NSRect aRect = [pGetNSWindow frame];
@@ -404,7 +410,7 @@ void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth
 	[pPool release];
 }
 
-id CWindow_getNSWindowContentView( id pCWindow )
+id CWindow_getNSWindowContentView( id pCWindow, BOOL bTopLevelWindow )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -412,7 +418,7 @@ id CWindow_getNSWindowContentView( id pCWindow )
 
 	if ( pCWindow )
 	{
-		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:NO];
+		GetNSWindow *pGetNSWindow = [GetNSWindow createWithCWindow:pCWindow fullScreen:NO topLevelWindow:bTopLevelWindow];
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		[pGetNSWindow performSelectorOnMainThread:@selector(getNSWindow:) withObject:pGetNSWindow waitUntilDone:YES modes:pModes];
 		pRet = [pGetNSWindow contentView];
