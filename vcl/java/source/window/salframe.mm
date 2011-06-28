@@ -781,10 +781,10 @@ BOOL JavaSalFrame::GetWindowState( SalFrameState* pState )
 {
 	Rectangle aBounds( mpVCLFrame->getBounds( NULL, sal_True ) );
 	pState->mnMask = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT | SAL_FRAMESTATE_MASK_STATE;
-	pState->mnX = aBounds.Left() - maGeometry.nLeftDecoration;
-	pState->mnY = aBounds.Top() - maGeometry.nTopDecoration;
-	pState->mnWidth = aBounds.GetWidth();
-	pState->mnHeight = aBounds.GetHeight();
+	pState->mnX = aBounds.Left();
+	pState->mnY = aBounds.Top();
+	pState->mnWidth = aBounds.GetWidth() - maGeometry.nLeftDecoration - maGeometry.nRightDecoration;
+	pState->mnHeight = aBounds.GetHeight() - maGeometry.nTopDecoration - maGeometry.nBottomDecoration;
 	pState->mnState = mpVCLFrame->getState();
 
 	// Fix bug 3012 by returning false if the frame size is not larger than
