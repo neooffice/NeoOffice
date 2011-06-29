@@ -37,6 +37,13 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLFrame_cocoa.h"
 
+// Uncomment out the following line to enable full screen mode
+// #define USE_NATIVE_FULL_SCREEN_MODE
+
+#ifndef NSFullScreenWindowMask
+#define NSFullScreenWindowMask ( 1 << 14 )
+#endif
+
 #ifndef NSWindowCollectionBehaviorFullScreenPrimary
 #define NSWindowCollectionBehaviorFullScreenPrimary ( 1 << 7 )
 #endif
@@ -66,6 +73,7 @@
 - (NSRect)frame;
 - (void)getNSWindow:(id)pObject;
 - (id)initWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen topLevelWindow:(BOOL)bTopLevelWindow;
+- (BOOL)inLiveResize;
 - (NSWindow *)window;
 @end
 
@@ -97,8 +105,24 @@
 		{
 			// Get flipped coordinates
 			maFrame = [mpWindow frame];
-			if ( mbFullScreen && [mpWindow respondsToSelector:@selector(_frameOnExitFromFullScreen)] )
-				maFrame = [mpWindow _frameOnExitFromFullScreen];
+
+#ifdef USE_NATIVE_FULL_SCREEN_MODE
+			// Check if we are in full screen mode
+			if ( [mpWindow styleMask] & NSFullScreenWindowMask && [mpWindow respondsToSelector:@selector(_frameOnExitFromFullScreen)] )
+			{
+				if ( mbFullScreen )
+				{
+					NSRect aFrame = [mpWindow _frameOnExitFromFullScreen];
+					if ( !NSIsEmptyRect( aFrame ) )
+						maFrame = aFrame;
+				}
+				else
+				{
+					maFrame = [NSWindow frameRectForContentRect:maFrame styleMask:[mpWindow styleMask] & ~NSFullScreenWindowMask];
+				}
+			}
+#endif	// USE_NATIVE_FULL_SCREEN_MODE
+
 			NSRect aRect = NSMakeRect( 0, 0, 0, 0 );
 			NSArray *pScreens = [NSScreen screens];
 			if ( pScreens )
@@ -121,9 +145,11 @@
 
 			mpView = [mpWindow contentView];
 
+#ifdef USE_NATIVE_FULL_SCREEN_MODE
 			// Enable full screen feature for normal windows
 			if ( mbTopLevelWindow )
 				[mpWindow setCollectionBehavior:[mpWindow collectionBehavior] | NSWindowCollectionBehaviorFullScreenPrimary];
+#endif	// USE_NATIVE_FULL_SCREEN_MODE
 		}
 	}
 }

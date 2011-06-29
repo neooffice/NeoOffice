@@ -447,7 +447,7 @@ const Rectangle com_sun_star_vcl_VCLFrame::getBounds( sal_Bool *_par0, sal_Bool 
 		if ( mID )
 		{
 			jvalue args[2];
-			args[0].i = jlong( _par0 );
+			args[0].j = jlong( _par0 );
 			args[1].z = jboolean( _par1 );
 			jobject tempObj = t.pEnv->CallNonvirtualObjectMethodA( object, getMyClass(), mID, args );
 			if ( tempObj )

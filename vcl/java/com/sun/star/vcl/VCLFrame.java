@@ -1955,8 +1955,12 @@ public final class VCLFrame implements ComponentListener, FocusListener, KeyList
 		// configurations
 		if (window.isShowing()) {
 			Rectangle nativeBounds = getBounds0(getPeer(), r, f);
-			if (nativeBounds != null) {
+			if (nativeBounds != null && !nativeBounds.isEmpty()) {
 				bounds = nativeBounds;
+
+				// Force resetting of the panel bounds as when in full screen
+				// mode, Java does not adjust for the change in style mask
+				panel.setBounds(insets.left, insets.top, bounds.width, bounds.height);
 			}
 			else {
 				Point p = window.getLocationOnScreen();
