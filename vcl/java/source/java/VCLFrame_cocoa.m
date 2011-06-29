@@ -60,7 +60,6 @@
 	BOOL				mbTopLevelWindow;
 	NSView*				mpView;
 	NSWindow*			mpWindow;
-	WindowRef			maWindowRef;
 }
 + (id)createWithCWindow:(id)pCWindow fullScreen:(BOOL)bFullScreen topLevelWindow:(BOOL)bTopLevelWindow;
 - (NSView *)contentView;
@@ -140,7 +139,6 @@
 	mbTopLevelWindow = bTopLevelWindow;
 	mpView = nil;
 	mpWindow = nil;
-	maWindowRef = nil;
 
 	return self;
 }
