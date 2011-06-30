@@ -60,6 +60,8 @@ typedef void* id;
 - (void)setContentView:(NSView *)pView;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)setLevel:(int)nWindowLevel;
+- (void)windowDidEnterFullScreen:(NSNotification *)pNotification;
+- (void)windowWillExitFullScreen:(NSNotification *)pNotification;
 @end
 #endif
 

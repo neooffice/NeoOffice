@@ -37,9 +37,6 @@
 #import "VCLEventQueue_cocoa.h"
 #import "VCLFrame_cocoa.h"
 
-// Uncomment out the following line to enable full screen mode
-// #define USE_NATIVE_FULL_SCREEN_MODE
-
 #ifndef NSFullScreenWindowMask
 #define NSFullScreenWindowMask ( 1 << 14 )
 #endif
