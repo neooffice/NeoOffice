@@ -109,8 +109,8 @@ PRODUCT_DIR_VERSION=$(PRODUCT_VERSION_BASE)
 PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
-PRODUCT_PATCH_VERSION=Patch 4
-PRODUCT_DIR_PATCH_VERSION=Patch-4
+PRODUCT_PATCH_VERSION=Patch 5
+PRODUCT_DIR_PATCH_VERSION=Patch-5
 PRODUCT_FILETYPE=NO%F
 PRODUCT_BASE_URL=http://www.neooffice.org/neojava
 PRODUCT_REGISTRATION_URL=http://trinity.neooffice.org/modules.php?name=Your_Account\&amp\;redirect=index
@@ -142,7 +142,7 @@ YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-3_2-4
+NEO_TAG:=NeoOffice-3_2-5
 
 all: build.all
 
