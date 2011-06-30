@@ -94,6 +94,7 @@ static OUString aSaveAVersionLocalizedString;
 }
 + (BOOL)autosavesInPlace;
 - (void)dealloc;
+- (void)duplicateDocument:(id)pObject;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
 - (BOOL)readFromURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError;
@@ -212,6 +213,22 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		[pDocController removeDocument:self];
 
 	[super dealloc];
+}
+
+- (void)duplicateDocument:(id)pObject
+{
+	if ( NSDocument_versionsSupported() && !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+		if ( !Application::IsShutDown() )
+		{
+			SFXDocument *pDoc = GetDocumentForFrame( mpFrame );
+			if ( pDoc == self )
+				SFXDocument_duplicate( mpFrame );
+		}
+		rSolarMutex.release();
+	}
 }
 
 - (BOOL)hasUnautosavedChanges

@@ -56,6 +56,7 @@ extern "C" {
 BOOL NSDocument_versionsEnabled();
 BOOL NSDocument_versionsSupported();
 void SFXDocument_createDocument( SfxTopViewFrame *pFrame, NSView *pView, CFURLRef aURL, BOOL bReadOnly );
+void SFXDocument_duplicate( SfxTopViewFrame *pFrame );
 BOOL SFXDocument_hasDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_releaseDocument( SfxTopViewFrame *pFrame );
 void SFXDocument_reload( SfxTopViewFrame *pFrame );

@@ -143,6 +143,11 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 #ifdef USE_JAVA
 
+void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
+{
+	fprintf( stderr, "SFXDocument_duplicate not implemented\n" );
+}
+
 void SFXDocument_reload( SfxTopViewFrame *pFrame )
 {
 	if ( pFrame )
