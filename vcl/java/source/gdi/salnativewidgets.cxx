@@ -2421,7 +2421,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
 							if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
-								bounds.origin.x = trackBounds.origin.y;
+								bounds.origin.x = trackBounds.origin.x;
 								bounds.size.width *= 2;
 							}
 							else
