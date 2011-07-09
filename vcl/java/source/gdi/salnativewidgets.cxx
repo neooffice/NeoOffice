@@ -102,6 +102,9 @@
 #define SCROLLBAR_ARROW_TRIMWIDTH		11
 #define SCROLLBAR_ARROW_TOP_TRIMHEIGHT	10
 #define SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT	13
+#define SCROLLBAR_THUMB_MIN_WIDTH		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 20 )
+#define SCROLLBAR_THUMB_TRIMWIDTH		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? 0 : 1 )
+#define SCROLLBAR_SUPPRESS_ARROWS		( ( IsRunningLeopard() || IsRunningSnowLeopard() ) ? false : true )
 #define SCROLLBAR_WIDTH_SLOP			0
 #define SPINNER_TRIMWIDTH				3
 #define SPINNER_TRIMHEIGHT				1
@@ -182,6 +185,8 @@ static VCLBitmapBuffer aSharedSeparatorLineBuffer;
 static VCLBitmapBuffer aSharedListViewHeaderBuffer;
 static VCLBitmapBuffer aSharedBevelButtonBuffer;
 static VCLBitmapBuffer aSharedCheckboxBuffer;
+
+inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
 
@@ -2408,6 +2413,69 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 				HIRect bounds;
 
+				bool bHorizontal = ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false );
+				long nStart = 0;
+				long nVisibleSize = 0;
+				if ( SCROLLBAR_SUPPRESS_ARROWS )
+				{
+					pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, bHorizontal, &bounds );
+					if ( pValue )
+					{
+						if ( bHorizontal )
+						{
+							nStart = Float32ToLong( bounds.origin.x + ( ( bounds.size.width * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin ) ) );
+							nVisibleSize = Float32ToLong( ( bounds.size.width * pValue->mnVisibleSize ) / ( pValue->mnMax - pValue->mnMin ) ) + SCROLLBAR_THUMB_TRIMWIDTH;
+
+							if ( nVisibleSize > bounds.size.width )
+							{
+								nVisibleSize = bounds.size.width;
+							}
+							else if ( nVisibleSize < SCROLLBAR_THUMB_MIN_WIDTH )
+							{
+								nStart -= Float32ToLong( ( (float)SCROLLBAR_THUMB_MIN_WIDTH - nVisibleSize ) / 2 );
+								nVisibleSize = SCROLLBAR_THUMB_MIN_WIDTH;
+							}
+
+							if ( nStart < bounds.origin.x )
+								nStart = bounds.origin.x;
+							else if ( nStart > bounds.origin.x + bounds.size.width )
+								nStart = bounds.origin.x + bounds.size.width;
+							if ( nStart + nVisibleSize > bounds.origin.x + bounds.size.width )
+								nStart = bounds.origin.x + bounds.size.width - nVisibleSize;
+						}
+						else
+						{
+							nStart = Float32ToLong( bounds.origin.y + ( ( bounds.size.height * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin ) ) );
+							nVisibleSize = Float32ToLong( ( bounds.size.height * pValue->mnVisibleSize ) / ( pValue->mnMax - pValue->mnMin ) ) + SCROLLBAR_THUMB_TRIMWIDTH;
+
+							if ( nVisibleSize > bounds.size.height )
+							{
+								nVisibleSize = bounds.size.height;
+							}
+							else if ( nVisibleSize < SCROLLBAR_THUMB_MIN_WIDTH )
+							{
+								nStart -= Float32ToLong( (float)( ( SCROLLBAR_THUMB_MIN_WIDTH - nVisibleSize - SCROLLBAR_THUMB_TRIMWIDTH ) * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin - pValue->mnVisibleSize ) );
+								nVisibleSize = SCROLLBAR_THUMB_MIN_WIDTH;
+							}
+
+							if ( nStart < bounds.origin.y )
+								nStart = bounds.origin.y;
+							else if ( nStart > bounds.origin.y + bounds.size.height )
+								nStart = bounds.origin.y + bounds.size.height;
+
+							if ( nStart + nVisibleSize > bounds.origin.y + bounds.size.height )
+								nStart = bounds.origin.y + bounds.size.height - nVisibleSize;
+						}
+					}
+					else
+					{
+						if ( bHorizontal )
+							nStart = bounds.origin.x;
+						else
+							nStart = bounds.origin.y;
+					}
+				}
+
 				switch ( nPart )
 				{
 					case PART_ENTIRE_CONTROL:
@@ -2419,7 +2487,12 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							HIRect trackBounds;
 							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
 							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &bounds );
-							if ( GetSalData()->mbDoubleScrollbarArrows )
+							if ( SCROLLBAR_SUPPRESS_ARROWS )
+							{
+								bounds.origin.x = trackBounds.origin.x;
+								bounds.size.width = 0;
+							}
+							else if ( GetSalData()->mbDoubleScrollbarArrows )
 							{
 								bounds.origin.x = trackBounds.origin.x;
 								bounds.size.width *= 2;
@@ -2437,22 +2510,30 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						{
 							HIRect trackBounds;
 							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
-							if ( GetSalData()->mbDoubleScrollbarArrows )
+							if ( SCROLLBAR_SUPPRESS_ARROWS )
 							{
 								bounds.origin.y = trackBounds.origin.y;
-								bounds.size.height *= 2;
+								bounds.size.height = 0;
 							}
 							else
 							{
-								if ( bounds.origin.y > trackBounds.origin.y )
+								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &bounds );
+								if ( GetSalData()->mbDoubleScrollbarArrows )
 								{
-									bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-									bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+									bounds.origin.y = trackBounds.origin.y;
+									bounds.size.height *= 2;
 								}
 								else
 								{
-									bounds.size.height -= SCROLLBAR_ARROW_TOP_TRIMHEIGHT;
+									if ( bounds.origin.y > trackBounds.origin.y )
+									{
+										bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
+										bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+									}
+									else
+									{
+										bounds.size.height -= SCROLLBAR_ARROW_TOP_TRIMHEIGHT;
+									}
 								}
 							}
 						}
@@ -2462,20 +2543,28 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						{
 							HIRect trackBounds;
 							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
-							if ( GetSalData()->mbDoubleScrollbarArrows )
+							if ( SCROLLBAR_SUPPRESS_ARROWS )
 							{
-								bounds.size.width *= 2;
-								bounds.origin.x = trackBounds.origin.x + trackBounds.size.width - bounds.size.width;
+								bounds.origin.x = trackBounds.origin.x + trackBounds.size.width;
+								bounds.size.width = 0;
 							}
 							else
 							{
-								HIRect otherBounds;
-								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
-								if ( otherBounds.origin.x <= trackBounds.origin.x )
+								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartRightButton, &bounds );
+								if ( GetSalData()->mbDoubleScrollbarArrows )
 								{
-									bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
-									bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+									bounds.size.width *= 2;
+									bounds.origin.x = trackBounds.origin.x + trackBounds.size.width - bounds.size.width;
+								}
+								else
+								{
+									HIRect otherBounds;
+									pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartLeftButton, &otherBounds );
+									if ( otherBounds.origin.x <= trackBounds.origin.x )
+									{
+										bounds.origin.x += SCROLLBAR_ARROW_TRIMX;
+										bounds.size.width -= SCROLLBAR_ARROW_TRIMWIDTH;
+									}
 								}
 							}
 						}
@@ -2485,20 +2574,28 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						{
 							HIRect trackBounds;
 							pHIThemeGetTrackBounds( &pTrackDrawInfo, &trackBounds );
-							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
-							if ( GetSalData()->mbDoubleScrollbarArrows )
+							if ( SCROLLBAR_SUPPRESS_ARROWS )
 							{
-								bounds.size.height *= 2;
-								bounds.origin.y = trackBounds.origin.y + trackBounds.size.height - bounds.size.height;
+								bounds.origin.y = trackBounds.origin.y + trackBounds.size.height;
+								bounds.size.height = 0;
 							}
 							else
 							{
-								HIRect otherBounds;
-								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
-								if ( otherBounds.origin.y <= trackBounds.origin.y )
+								pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartDownButton, &bounds );
+								if ( GetSalData()->mbDoubleScrollbarArrows )
 								{
-									bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
-									bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+									bounds.size.height *= 2;
+									bounds.origin.y = trackBounds.origin.y + trackBounds.size.height - bounds.size.height;
+								}
+								else
+								{
+									HIRect otherBounds;
+									pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartUpButton, &otherBounds );
+									if ( otherBounds.origin.y <= trackBounds.origin.y )
+									{
+										bounds.origin.y += SCROLLBAR_ARROW_TRIMY;
+										bounds.size.height -= SCROLLBAR_ARROW_BOTTOM_TRIMHEIGHT;
+									}
 								}
 							}
 						}
@@ -2506,37 +2603,79 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 
 					case PART_TRACK_HORZ_LEFT:
 					case PART_TRACK_VERT_UPPER:
-						pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
-						if( ! bounds.size.width && ! bounds.size.height )
+						if ( SCROLLBAR_SUPPRESS_ARROWS )
 						{
-							// disabled control or other invalid settings.  Set to the entire
-							// track.
+							if ( bHorizontal )
+								bounds.size.width = nStart;
+							else
+								bounds.size.height = nStart;
+						}
+						else
+						{
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageUpArea, &bounds );
+							if( ! bounds.size.width && ! bounds.size.height )
+							{
+								// disabled control or other invalid settings.  Set to the entire
+								// track.
 
-							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+							}
 						}
 						break;
 
 					case PART_TRACK_HORZ_RIGHT:
 					case PART_TRACK_VERT_LOWER:
-						pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
-						if( ! bounds.size.width && ! bounds.size.height )
+						if ( SCROLLBAR_SUPPRESS_ARROWS )
 						{
-							// disabled control or other invalid settings.  Set to the entire
-							// track.
+							if ( bHorizontal )
+							{
+								bounds.size.width -= nStart + nVisibleSize - bounds.origin.x;
+								bounds.origin.x = nStart + nVisibleSize;
+							}
+							else
+							{
+								bounds.size.height -= nStart + nVisibleSize - bounds.origin.y;
+								bounds.origin.y = nStart + nVisibleSize;
+							}
+						}
+						else
+						{
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartPageDownArea, &bounds );
+							if( ! bounds.size.width && ! bounds.size.height )
+							{
+								// disabled control or other invalid settings.  Set to the entire
+								// track.
 
-							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+							}
 						}
 						break;
 
 					case PART_THUMB_HORZ:
 					case PART_THUMB_VERT:
-						pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
-						if( ! bounds.size.width && ! bounds.size.height )
+						if ( SCROLLBAR_SUPPRESS_ARROWS )
 						{
-							// disabled control or other invalid settings.  Set to the entire
-							// track.
+							if ( bHorizontal )
+							{
+								bounds.origin.x = nStart;
+								bounds.size.width = nVisibleSize;
+							}
+							else
+							{
+								bounds.origin.y = nStart;
+								bounds.size.height = nVisibleSize;
+							}
+						}
+						else
+						{
+							pHIThemeGetTrackPartBounds( &pTrackDrawInfo, kAppearancePartIndicator, &bounds );
+							if( ! bounds.size.width && ! bounds.size.height )
+							{
+								// disabled control or other invalid settings.  Set to the entire
+								// track.
 
-							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
+							}
 						}
 						break;
 					
@@ -2546,6 +2685,11 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 						// entire track area.  This includes page up area,
 						// page down area, and thumb area.
 						
+						if ( SCROLLBAR_SUPPRESS_ARROWS )
+						{
+							pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, bHorizontal, &bounds );
+						}
+						else
 						{
 							HIRect upBounds;
 							HIRect downBounds;
@@ -2556,7 +2700,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								// disabled control or other invalid settings.  Set to the entire
 								// track.
-	
+
 								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 								break;
 							}
@@ -2566,7 +2710,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								// disabled control or other invalid settings.  Set to the entire
 								// track.
-	
+
 								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 								break;
 							}
@@ -2576,7 +2720,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							{
 								// disabled control or other invalid settings.  Set to the entire
 								// track.
-	
+
 								pHIThemeGetScrollBarTrackRect( &pTrackDrawInfo.bounds, &pScrollBarTrackInfo, ( ( comboBoxRect.GetWidth() > comboBoxRect.GetHeight() ) ? true : false ), &bounds );
 							}
 							
