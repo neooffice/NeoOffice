@@ -2432,7 +2432,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 							}
 							else if ( nVisibleSize < SCROLLBAR_THUMB_MIN_WIDTH )
 							{
-								nStart -= Float32ToLong( ( (float)SCROLLBAR_THUMB_MIN_WIDTH - nVisibleSize ) / 2 );
+								nStart -= Float32ToLong( (float)( ( SCROLLBAR_THUMB_MIN_WIDTH - nVisibleSize - SCROLLBAR_THUMB_TRIMWIDTH ) * pValue->mnCur ) / ( pValue->mnMax - pValue->mnMin - pValue->mnVisibleSize ) );
 								nVisibleSize = SCROLLBAR_THUMB_MIN_WIDTH;
 							}
 
