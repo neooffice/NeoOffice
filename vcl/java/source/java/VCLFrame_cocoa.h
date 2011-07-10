@@ -40,7 +40,7 @@
 // #define USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
 // Uncomment out the following line to enable full screen mode
-// #define USE_NATIVE_FULL_SCREEN_MODE
+#define USE_NATIVE_FULL_SCREEN_MODE
 
 #ifdef __cplusplus
 typedef void* id;

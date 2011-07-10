@@ -52,7 +52,7 @@
 #import "../app/salinst_cocoa.h"
 
 // Uncomment out the following line to enable native resume support
-// #define USE_NATIVE_RESUME
+#define USE_NATIVE_RESUME
 
 typedef void KeyScript_Type( short nCode );
 
