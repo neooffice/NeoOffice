@@ -39,7 +39,7 @@
 // Uncomment the following line to enable rounded bottom corners in Java frames
 // #define USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
-// Uncomment out the following line to enable full screen mode
+// Comment out the following line to disable full screen mode
 #define USE_NATIVE_FULL_SCREEN_MODE
 
 #ifdef __cplusplus
