@@ -1214,11 +1214,11 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                     }
 
                     // Reset save and versions menu item text based on whether or
-                    // native version support is enabled
+                    // native version support is enabled. Note that for the save
+                    // menu, we always reset to the OOo label and let the code in
+                    // sfx2/source/doc/objserv.cxx change the text.
                     String aItemText;
-                	if ( aCommand == aSaveCommand && pNSDocument_saveAVersionLocalizedString )
-                	     aItemText = String( pNSDocument_saveAVersionLocalizedString() );
-                	else if ( aCommand == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
+                	if ( aCommand == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
                 	     aItemText = String( pNSDocument_revertToSavedLocalizedString() );
 
                     if ( !aItemText.Len() )
