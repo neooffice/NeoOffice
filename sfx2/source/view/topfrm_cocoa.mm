@@ -81,6 +81,7 @@ static OUString aSaveAVersionLocalizedString;
 @class NSDocumentVersion;
 
 @interface NSDocument (SFXDocument)
+- (void)_browseVersions;
 - (void)_checkAutosavingThenUpdateChangeCount:(NSDocumentChangeType)nChangeType;
 - (BOOL)_preserveContentsIfNecessaryAfterWriting:(BOOL)bAfter toURL:(NSURL *)pURL forSaveOperation:(NSUInteger)nSaveOperation version:(NSDocumentVersion **)ppVersion error:(NSError **)ppError;
 @end
@@ -301,9 +302,12 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 	if ( mbInRevert )
 		return;
 
-	mbInRevert = YES;
-	[super revertDocumentToSaved:pObject];
-	mbInRevert = NO;
+	if ( [super respondsToSelector:@selector(_browseVersions)] )
+	{
+		mbInRevert = YES;
+		[super _browseVersions];
+		mbInRevert = NO;
+	}
 }
 
 - (BOOL)revertToContentsOfURL:(NSURL *)pURL ofType:(NSString *)pTypeName error:(NSError **)ppError
