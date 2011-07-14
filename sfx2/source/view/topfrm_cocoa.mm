@@ -645,6 +645,9 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 OUString NSDocument_revertToSavedLocalizedString()
 {
+	if ( !NSDocument_versionsEnabled() )
+		return OUString();
+
 	if ( !aRevertToSavedLocalizedString.getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -665,6 +668,9 @@ OUString NSDocument_revertToSavedLocalizedString()
 
 OUString NSDocument_saveAVersionLocalizedString()
 {
+	if ( !NSDocument_versionsEnabled() )
+		return OUString();
+
 	if ( !aSaveAVersionLocalizedString.getLength() )
 	{
 		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
