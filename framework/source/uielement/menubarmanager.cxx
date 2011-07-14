@@ -114,10 +114,17 @@
 #define STRING( x )				DOSTRING( x )
 
 typedef sal_Bool IsShowOnlyMenusWindow_Type( void* );
+typedef ::rtl::OUString NSDocument_revertToSavedLocalizedString_Type();
+typedef ::rtl::OUString NSDocument_saveAVersionLocalizedString_Type();
 
-static ::vos::OModule aModule;
+static ::vos::OModule aVCLModule;
+static ::vos::OModule aSFXModule;
+static const String aSaveCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:Save" ) );
+static const String aVersionsCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:VersionDialog" ) );
 
 static IsShowOnlyMenusWindow_Type *pIsShowOnlyMenusWindow = NULL;
+static NSDocument_revertToSavedLocalizedString_Type *pNSDocument_revertToSavedLocalizedString = NULL;
+static NSDocument_saveAVersionLocalizedString_Type *pNSDocument_saveAVersionLocalizedString = NULL;
 
 #endif	// USE_JAVA
 
@@ -982,8 +989,8 @@ void MenuBarManager::UpdateSpecialWindowMenu( Menu* pMenu )
                         ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
                         aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
                         aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
-                        if ( aModule.load( aLibName ) )
-                            pIsShowOnlyMenusWindow = (IsShowOnlyMenusWindow_Type *)aModule.getSymbol( ::rtl::OUString::createFromAscii( "IsShowOnlyMenusWindow" ) );
+                        if ( aVCLModule.load( aLibName ) )
+                            pIsShowOnlyMenusWindow = (IsShowOnlyMenusWindow_Type *)aVCLModule.getSymbol( ::rtl::OUString::createFromAscii( "IsShowOnlyMenusWindow" ) );
                     }
 
                     if ( !pIsShowOnlyMenusWindow || !pIsShowOnlyMenusWindow( pWin ) )
@@ -1187,6 +1194,40 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                 if ( aCommand.Len() > 0 )
                     pMenu->SetItemText( nItemId, RetrieveLabelFromCommand( aCommand ));
             }
+#ifdef USE_JAVA
+            else if ( pMenu->GetItemType( nPos ) != MENUITEM_SEPARATOR )
+            {
+                String aCommand = pMenu->GetItemCommand( nItemId );
+                if ( aCommand == aSaveCommand || aCommand == aVersionsCommand )
+                {
+                    // Local libvcl and invoke the IsShowOnlyMenusWindow function
+                    if ( !pNSDocument_revertToSavedLocalizedString && !pNSDocument_saveAVersionLocalizedString )
+                    {
+                        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libsfx" );
+                        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+                        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+                        if ( aSFXModule.load( aLibName ) )
+                        {
+                            pNSDocument_revertToSavedLocalizedString = (NSDocument_revertToSavedLocalizedString_Type *)aSFXModule.getSymbol( ::rtl::OUString::createFromAscii( "NSDocument_revertToSavedLocalizedString" ) );
+                            pNSDocument_saveAVersionLocalizedString = (NSDocument_saveAVersionLocalizedString_Type *)aSFXModule.getSymbol( ::rtl::OUString::createFromAscii( "NSDocument_saveAVersionLocalizedString" ) );
+                        }
+                    }
+
+                    // Reset save and versions menu item text based on whether or
+                    // native version support is enabled
+                    String aItemText;
+                	if ( aCommand == aSaveCommand && pNSDocument_saveAVersionLocalizedString )
+                	     aItemText = String( pNSDocument_saveAVersionLocalizedString() );
+                	else if ( aCommand == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
+                	     aItemText = String( pNSDocument_revertToSavedLocalizedString() );
+
+                    if ( !aItemText.Len() )
+                	    aItemText = RetrieveLabelFromCommand( aCommand );
+
+                    pMenu->SetItemText( nItemId, aItemText );
+                }
+            }
+#endif	// USE_JAVA
         }
 
         // Try to set accelerator keys
