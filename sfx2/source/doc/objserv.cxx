@@ -1036,67 +1036,46 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 						}
 					}
 
-#ifdef USE_JAVA
-					if ( NSDocument_versionsEnabled() )
-					{
-						::rtl::OUString aLocalizedString( NSDocument_revertToSavedLocalizedString() );
-						if ( aLocalizedString.getLength() )
-							rSet.Put( SfxStringItem( nWhich, aLocalizedString ) );
-                    	if ( !pFrame || IsReadOnlyMedium() || !SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
-							rSet.DisableItem( nWhich );
-					}
-					else
-					{
-#endif	// USE_JAVA
 					if ( !pFrame || !pDoc->HasName() ||
 						!IsOwnStorageFormat_Impl( *pDoc->GetMedium() ) )
 //REMOVE							|| pDoc->GetMedium()->GetStorage()->GetVersion() < SOFFICE_FILEFORMAT_50 )
 						rSet.DisableItem( nWhich );
-#ifdef USE_JAVA
-					}
-#endif	// USE_JAVA
 					break;
 				}
 			case SID_SAVEDOC:
 	            {
 					BOOL bMediumRO = IsReadOnlyMedium();
+                    if ( !bMediumRO && GetMedium() && IsModified() )
 #ifdef USE_JAVA
-					if ( NSDocument_versionsEnabled() )
 					{
-						::rtl::OUString aLocalizedString( NSDocument_saveAVersionLocalizedString() );
-						if ( aLocalizedString.getLength() )
-							rSet.Put( SfxStringItem( nWhich, aLocalizedString ) );
-
-                    	if ( bMediumRO || !IsModified() )
+						if ( NSDocument_versionsEnabled() )
 						{
-							SfxObjectShell *pDoc = this;
+							String aSaveString( SfxResId( STR_SAVEDOC ) );
 							SfxViewFrame* pFrame = GetFrame();
 							if ( !pFrame )
 								pFrame = SfxViewFrame::GetFirst( this );
 							if ( pFrame  )
 							{
 								if ( pFrame->GetFrame()->GetParentFrame() )
-								{
 									pFrame = pFrame->GetTopViewFrame();
-									pDoc = pFrame->GetObjectShell();
-								}
 							}
 
-							if ( !pFrame || !SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
-								rSet.DisableItem( nWhich );
+							if ( pFrame && SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
+								aSaveString = String( NSDocument_saveAVersionLocalizedString() );
+
+							rSet.Put( SfxStringItem( nWhich, aSaveString ) );
 						}
-					}
-					else
-					{
+						else
+						{
 #endif	// USE_JAVA
-                    if ( !bMediumRO && GetMedium() && IsModified() )
 						rSet.Put(SfxStringItem(
 							nWhich, String(SfxResId(STR_SAVEDOC))));
-					else
-                    	rSet.DisableItem(nWhich);
 #ifdef USE_JAVA
+						}
 					}
 #endif	// USE_JAVA
+					else
+                    	rSet.DisableItem(nWhich);
 				}
 				break;
 
