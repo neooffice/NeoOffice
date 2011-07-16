@@ -43,6 +43,7 @@
 #include <tools/link.hxx>
 #include <tools/rcid.h>
 #include <vcl/svapp.hxx>
+#include <vos/mutex.hxx>
 
 #define USE_APP_SHORTCUTS
 #include "app.hrc"
@@ -85,6 +86,7 @@ static ResMgr *pJavaResMgr = NULL;
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
 using namespace rtl;
+using namespace vos;
 
 static XubString GetJavaResString( int nId )
 {
@@ -433,13 +435,19 @@ void ProcessShutdownIconCommand( int nCommand )
 					// SID_SAVEDOC and SID_VERSION slots
 					if ( [pPrefName isEqualToString:(const NSString *)kDisableVersions] )
 					{
-						SfxViewShell *pViewShell = SfxViewShell::GetFirst();
-						while ( pViewShell )
+						IMutex& rSolarMutex = Application::GetSolarMutex();
+						rSolarMutex.acquire();
+						if ( !Application::IsShutDown() )
 						{
-							pViewShell->Invalidate( SID_SAVEDOC );
-							pViewShell->Invalidate( SID_VERSION );
-							pViewShell = SfxViewShell::GetNext( *pViewShell );
+							SfxViewShell *pViewShell = SfxViewShell::GetFirst();
+							while ( pViewShell )
+							{
+								pViewShell->Invalidate( SID_SAVEDOC );
+								pViewShell->Invalidate( SID_VERSION );
+								pViewShell = SfxViewShell::GetNext( *pViewShell );
+							}
 						}
+						rSolarMutex.release();
 					}
 				}
 				else if ( pPrefStringValue )
