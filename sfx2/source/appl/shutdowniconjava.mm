@@ -37,6 +37,7 @@
 
 #include <comphelper/sequenceashashmap.hxx>
 #include <sfx2/app.hxx>
+#include <sfx2/viewsh.hxx>
 #include <svtools/dynamicmenuoptions.hxx>
 #include <svtools/moduleoptions.hxx>
 #include <tools/link.hxx>
@@ -74,6 +75,7 @@
 typedef void VCLOpenPrintFileHandler_Type( const char *pPath, sal_Bool bPrint );
 typedef void VCLRequestShutdownHandler_Type();
 
+static const CFStringRef kDisableVersions = CFSTR( "DisableVersions" );
 static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
@@ -426,6 +428,19 @@ void ProcessShutdownIconCommand( int nCommand )
 					BOOL bValue = [pPrefBooleanValue boolValue];
 					[pDefaults setBool:( [pMenuItem state] == NSOffState ? bValue : !bValue ) forKey:pPrefName];
 					[pDefaults synchronize];
+
+					// If updating native versions preferences, invalidate the
+					// SID_SAVEDOC and SID_VERSION slots
+					if ( [pPrefName isEqualToString:(const NSString *)kDisableVersions] )
+					{
+						SfxViewShell *pViewShell = SfxViewShell::GetFirst();
+						while ( pViewShell )
+						{
+							pViewShell->Invalidate( SID_SAVEDOC );
+							pViewShell->Invalidate( SID_VERSION );
+							pViewShell = SfxViewShell::GetNext( *pViewShell );
+						}
+					}
 				}
 				else if ( pPrefStringValue )
 				{
@@ -764,7 +779,7 @@ extern "C" void java_init_systray()
 	{
 		aDesc = GetJavaResString( STR_DISABLEVERSIONSSUPPORT );
 		aDesc.EraseAllChars( '~' );
-		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
+		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, kDisableVersions, kCFBooleanTrue, FALSE ) );
 
 		aDesc = GetJavaResString( STR_DISABLERESUMESUPPORT );
 		aDesc.EraseAllChars( '~' );
