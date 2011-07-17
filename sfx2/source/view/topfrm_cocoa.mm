@@ -717,8 +717,7 @@ BOOL NSDocument_versionsEnabled()
 BOOL NSDocument_versionsSupported()
 {
 #ifdef USE_NATIVE_VERSIONS
-	// return ( class_getClassMethod( [NSDocument class], @selector(restorableStateKeyPaths) ) ? YES : NO );
-	return YES;
+	return ( class_getClassMethod( [NSDocument class], @selector(restorableStateKeyPaths) ) ? YES : NO );
 #else	// USE_NATIVE_VERSIONS
 	return NO;
 #endif	// USE_NATIVE_VERSIONS
