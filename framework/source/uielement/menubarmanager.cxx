@@ -115,6 +115,7 @@
 
 typedef sal_Bool IsShowOnlyMenusWindow_Type( void* );
 typedef ::rtl::OUString NSDocument_revertToSavedLocalizedString_Type();
+typedef ::rtl::OUString NSDocument_saveAVersionLocalizedString_Type();
 
 static ::vos::OModule aVCLModule;
 static ::vos::OModule aSFXModule;
@@ -123,6 +124,7 @@ static const String aVersionsCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:Version
 
 static IsShowOnlyMenusWindow_Type *pIsShowOnlyMenusWindow = NULL;
 static NSDocument_revertToSavedLocalizedString_Type *pNSDocument_revertToSavedLocalizedString = NULL;
+static NSDocument_saveAVersionLocalizedString_Type *pNSDocument_saveAVersionLocalizedString = NULL;
 
 #endif	// USE_JAVA
 
@@ -1192,38 +1194,6 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                 if ( aCommand.Len() > 0 )
                     pMenu->SetItemText( nItemId, RetrieveLabelFromCommand( aCommand ));
             }
-#ifdef USE_JAVA
-            else if ( pMenu->GetItemType( nPos ) != MENUITEM_SEPARATOR )
-            {
-                String aCommand = pMenu->GetItemCommand( nItemId );
-                if ( aCommand == aSaveCommand || aCommand == aVersionsCommand )
-                {
-                    // Local libvcl and invoke the IsShowOnlyMenusWindow function
-                    if ( !pNSDocument_revertToSavedLocalizedString )
-                    {
-                        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libsfx" );
-                        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
-                        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
-                        if ( aSFXModule.load( aLibName ) )
-                            pNSDocument_revertToSavedLocalizedString = (NSDocument_revertToSavedLocalizedString_Type *)aSFXModule.getSymbol( ::rtl::OUString::createFromAscii( "NSDocument_revertToSavedLocalizedString" ) );
-                    }
-
-                    // Reset save and versions menu item text based on whether
-                    // native version support is enabled. Note that for the save
-                    // menu, we always reset to the OOo label and let the code in
-                    // sfx2/source/doc/objserv.cxx change the text.
-                    String aItemText;
-                	if ( aCommand == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
-                	     aItemText = String( pNSDocument_revertToSavedLocalizedString() );
-
-                    if ( !aItemText.Len() )
-                	    aItemText = RetrieveLabelFromCommand( aCommand );
-
-                    if ( aItemText.Len() )
-                    	pMenu->SetItemText( nItemId, aItemText );
-                }
-            }
-#endif	// USE_JAVA
         }
 
         // Try to set accelerator keys
@@ -1364,6 +1334,46 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                 }
 			}
 		}
+
+#ifdef USE_JAVA
+        for ( USHORT nPos = 0; nPos < pMenu->GetItemCount(); nPos++ )
+        {
+            if ( pMenu->GetItemType( nPos ) != MENUITEM_SEPARATOR )
+            {
+                USHORT nItemId = pMenu->GetItemId( nPos );
+                String aCommand = pMenu->GetItemCommand( nItemId );
+                if ( aCommand == aSaveCommand || aCommand == aVersionsCommand )
+                {
+                    // Local libvcl and invoke the IsShowOnlyMenusWindow function
+                    if ( !pNSDocument_revertToSavedLocalizedString && !pNSDocument_saveAVersionLocalizedString )
+                    {
+                        ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libsfx" );
+                        aLibName += ::rtl::OUString::createFromAscii( STRING( DLLPOSTFIX ) );
+                        aLibName += ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( ".dylib" ) );
+                        if ( aSFXModule.load( aLibName ) )
+                        {
+                            pNSDocument_revertToSavedLocalizedString = (NSDocument_revertToSavedLocalizedString_Type *)aSFXModule.getSymbol( ::rtl::OUString::createFromAscii( "NSDocument_revertToSavedLocalizedString" ) );
+                            pNSDocument_saveAVersionLocalizedString = (NSDocument_saveAVersionLocalizedString_Type *)aSFXModule.getSymbol( ::rtl::OUString::createFromAscii( "NSDocument_saveAVersionLocalizedString" ) );
+                        }
+                    }
+
+                    // Reset save and versions menu item text based on whether
+                    // native version support is enabled
+                    String aItemText;
+                	if ( aCommand == aSaveCommand && pNSDocument_saveAVersionLocalizedString )
+                	     aItemText = String( pNSDocument_saveAVersionLocalizedString() );
+                	else if ( aCommand == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
+                	     aItemText = String( pNSDocument_revertToSavedLocalizedString() );
+
+                    if ( !aItemText.Len() )
+                	    aItemText = RetrieveLabelFromCommand( aCommand );
+
+                    if ( aItemText.Len() )
+                    	pMenu->SetItemText( nItemId, aItemText );
+                }
+            }
+        }
+#endif	// USE_JAVA
 	}
 
 	return 1;

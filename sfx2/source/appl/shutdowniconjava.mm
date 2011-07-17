@@ -37,13 +37,11 @@
 
 #include <comphelper/sequenceashashmap.hxx>
 #include <sfx2/app.hxx>
-#include <sfx2/viewsh.hxx>
 #include <svtools/dynamicmenuoptions.hxx>
 #include <svtools/moduleoptions.hxx>
 #include <tools/link.hxx>
 #include <tools/rcid.h>
 #include <vcl/svapp.hxx>
-#include <vos/mutex.hxx>
 
 #define USE_APP_SHORTCUTS
 #include "app.hrc"
@@ -76,7 +74,6 @@
 typedef void VCLOpenPrintFileHandler_Type( const char *pPath, sal_Bool bPrint );
 typedef void VCLRequestShutdownHandler_Type();
 
-static const CFStringRef kDisableVersions = CFSTR( "DisableVersions" );
 static const NSString *kMenuItemPrefNameKey = @"MenuItemPrefName";
 static const NSString *kMenuItemPrefBooleanValueKey = @"MenuItemPrefBooleanValue";
 static const NSString *kMenuItemPrefStringValueKey = @"MenuItemPrefStringValue";
@@ -86,7 +83,6 @@ static ResMgr *pJavaResMgr = NULL;
 using namespace com::sun::star::beans;
 using namespace com::sun::star::uno;
 using namespace rtl;
-using namespace vos;
 
 static XubString GetJavaResString( int nId )
 {
@@ -430,25 +426,6 @@ void ProcessShutdownIconCommand( int nCommand )
 					BOOL bValue = [pPrefBooleanValue boolValue];
 					[pDefaults setBool:( [pMenuItem state] == NSOffState ? bValue : !bValue ) forKey:pPrefName];
 					[pDefaults synchronize];
-
-					// If updating native versions preferences, invalidate the
-					// SID_SAVEDOC and SID_VERSION slots
-					if ( [pPrefName isEqualToString:(const NSString *)kDisableVersions] )
-					{
-						IMutex& rSolarMutex = Application::GetSolarMutex();
-						rSolarMutex.acquire();
-						if ( !Application::IsShutDown() )
-						{
-							SfxViewShell *pViewShell = SfxViewShell::GetFirst();
-							while ( pViewShell )
-							{
-								pViewShell->Invalidate( SID_SAVEDOC );
-								pViewShell->Invalidate( SID_VERSION );
-								pViewShell = SfxViewShell::GetNext( *pViewShell );
-							}
-						}
-						rSolarMutex.release();
-					}
 				}
 				else if ( pPrefStringValue )
 				{
@@ -787,7 +764,7 @@ extern "C" void java_init_systray()
 	{
 		aDesc = GetJavaResString( STR_DISABLEVERSIONSSUPPORT );
 		aDesc.EraseAllChars( '~' );
-		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, kDisableVersions, kCFBooleanTrue, FALSE ) );
+		aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisableVersions" ), kCFBooleanTrue, FALSE ) );
 
 		aDesc = GetJavaResString( STR_DISABLERESUMESUPPORT );
 		aDesc.EraseAllChars( '~' );

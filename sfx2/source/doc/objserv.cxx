@@ -1046,34 +1046,8 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 	            {
 					BOOL bMediumRO = IsReadOnlyMedium();
                     if ( !bMediumRO && GetMedium() && IsModified() )
-#ifdef USE_JAVA
-					{
-						if ( NSDocument_versionsEnabled() )
-						{
-							String aSaveString( SfxResId( STR_SAVEDOC ) );
-							SfxViewFrame* pFrame = GetFrame();
-							if ( !pFrame )
-								pFrame = SfxViewFrame::GetFirst( this );
-							if ( pFrame  )
-							{
-								if ( pFrame->GetFrame()->GetParentFrame() )
-									pFrame = pFrame->GetTopViewFrame();
-							}
-
-							if ( pFrame && SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) )
-								aSaveString = String( NSDocument_saveAVersionLocalizedString() );
-
-							rSet.Put( SfxStringItem( nWhich, aSaveString ) );
-						}
-						else
-						{
-#endif	// USE_JAVA
 						rSet.Put(SfxStringItem(
 							nWhich, String(SfxResId(STR_SAVEDOC))));
-#ifdef USE_JAVA
-						}
-					}
-#endif	// USE_JAVA
 					else
                     	rSet.DisableItem(nWhich);
 				}
