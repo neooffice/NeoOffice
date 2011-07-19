@@ -647,7 +647,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 @end
 
-OUString NSDocument_revertToSavedLocalizedString()
+OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
 {
 	if ( !NSDocument_versionsEnabled() )
 		return OUString();
@@ -670,7 +670,7 @@ OUString NSDocument_revertToSavedLocalizedString()
 	return aRevertToSavedLocalizedString;
 }
 
-OUString NSDocument_saveAVersionLocalizedString()
+OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 {
 	if ( !NSDocument_versionsEnabled() )
 		return OUString();

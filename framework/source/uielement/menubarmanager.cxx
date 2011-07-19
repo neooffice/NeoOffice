@@ -114,8 +114,8 @@
 #define STRING( x )				DOSTRING( x )
 
 typedef sal_Bool IsShowOnlyMenusWindow_Type( void* );
-typedef ::rtl::OUString NSDocument_revertToSavedLocalizedString_Type();
-typedef ::rtl::OUString NSDocument_saveAVersionLocalizedString_Type();
+typedef ::rtl::OUString NSDocument_revertToSavedLocalizedString_Type( Window *pWindow );
+typedef ::rtl::OUString NSDocument_saveAVersionLocalizedString_Type( Window *pWindow );
 
 static ::vos::OModule aVCLModule;
 static ::vos::OModule aSFXModule;
@@ -1360,16 +1360,19 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                     // Reset save and versions menu item text based on whether
                     // native version support is enabled
                     String aItemText;
-                	if ( aCommand == aSaveCommand && pNSDocument_saveAVersionLocalizedString )
-                	     aItemText = String( pNSDocument_saveAVersionLocalizedString() );
-                	else if ( aCommand == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
-                	     aItemText = String( pNSDocument_revertToSavedLocalizedString() );
+                    Window* pWindow = NULL;
+                    if ( m_xFrame.is() )
+                        pWindow = VCLUnoHelper::GetWindow( m_xFrame->getContainerWindow() );
+                    if ( aCommand == aSaveCommand && pNSDocument_saveAVersionLocalizedString )
+                         aItemText = String( pNSDocument_saveAVersionLocalizedString( pWindow ) );
+                    else if ( aCommand == aVersionsCommand && pNSDocument_revertToSavedLocalizedString )
+                         aItemText = String( pNSDocument_revertToSavedLocalizedString( pWindow ) );
 
                     if ( !aItemText.Len() )
-                	    aItemText = RetrieveLabelFromCommand( aCommand );
+                        aItemText = RetrieveLabelFromCommand( aCommand );
 
                     if ( aItemText.Len() )
-                    	pMenu->SetItemText( nItemId, aItemText );
+                        pMenu->SetItemText( nItemId, aItemText );
                 }
             }
         }
