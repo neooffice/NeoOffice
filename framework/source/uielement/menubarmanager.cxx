@@ -983,7 +983,7 @@ void MenuBarManager::UpdateSpecialWindowMenu( Menu* pMenu )
                 if ( pWin && pWin->IsVisible() )
                 {
 #ifdef USE_JAVA
-                    // Local libvcl and invoke the IsShowOnlyMenusWindow function
+                    // Load libvcl and invoke the IsShowOnlyMenusWindow function
                     if ( !pIsShowOnlyMenusWindow )
                     {
                         ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libvcl" );
@@ -1344,7 +1344,6 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                 String aCommand = pMenu->GetItemCommand( nItemId );
                 if ( aCommand == aSaveCommand || aCommand == aVersionsCommand )
                 {
-                    // Local libvcl and invoke the IsShowOnlyMenusWindow function
                     if ( !pNSDocument_revertToSavedLocalizedString && !pNSDocument_saveAVersionLocalizedString )
                     {
                         ::rtl::OUString aLibName = ::rtl::OUString::createFromAscii( "libsfx" );
