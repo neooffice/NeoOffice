@@ -33,6 +33,9 @@
  *
  ************************************************************************/
 
+#include <sfx2/docfile.hxx>
+#include <sfx2/objsh.hxx>
+#include <sfx2/topfrm.hxx>
 #include <vcl/svapp.hxx>
 #include <vos/mutex.hxx>
 
@@ -649,7 +652,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
 {
-	if ( !NSDocument_versionsEnabled() )
+	if ( !pWindow || !NSDocument_versionsEnabled() )
 		return OUString();
 
 	if ( !aRevertToSavedLocalizedString.getLength() )
@@ -672,7 +675,7 @@ OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
 
 OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 {
-	if ( !NSDocument_versionsEnabled() )
+	if ( !pWindow || !NSDocument_versionsEnabled() )
 		return OUString();
 
 	if ( !aSaveAVersionLocalizedString.getLength() )
@@ -689,6 +692,28 @@ OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 		aSaveAVersionLocalizedString = NSStringToOUString( pLocalizedString );
 
 		[pPool release];
+	}
+
+	SfxViewFrame *pFrame = SfxViewFrame::GetFirst();
+	while ( pFrame )
+	{
+		SfxTopViewFrame *pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
+		if ( pTopViewFrame && pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl() == pWindow )
+		{
+			SfxObjectShell *pDoc = pTopViewFrame->GetObjectShell();
+			if ( pDoc )
+			{
+				SfxMedium *pMedium = pDoc->GetMedium();
+				if ( pMedium )
+				{
+					if ( !pMedium->GetBaseURL( true ).getLength() )
+						return OUString();
+				}
+			}
+			break;
+		}
+
+		pFrame = SfxViewFrame::GetNext( *pFrame );
 	}
 
 	return aSaveAVersionLocalizedString;
