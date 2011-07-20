@@ -53,6 +53,34 @@ static NSString *pRevertDocumentToSavedLabel = @"revertDocumentToSaved:";
 using namespace rtl;
 using namespace vos;
 
+static BOOL HasNativeVersion( Window *pWindow )
+{
+	SfxViewFrame *pFrame = SfxViewFrame::GetFirst();
+	while ( pFrame )
+	{
+		SfxTopViewFrame *pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
+		if ( pTopViewFrame && pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl() == pWindow )
+		{
+			SfxObjectShell *pDoc = pTopViewFrame->GetObjectShell();
+			if ( pDoc )
+			{
+				SfxMedium *pMedium = pDoc->GetMedium();
+				if ( pMedium )
+				{
+					if ( !pMedium->GetBaseURL( true ).getLength() )
+						return NO;
+				}
+			}
+
+			return YES;
+		}
+
+		pFrame = SfxViewFrame::GetNext( *pFrame );
+	}
+
+	return NO;
+}
+
 static const NSString *pWritableTypeEntries[] = {
 	#ifdef PRODUCT_NAME
 	@PRODUCT_NAME" Chart Document",
@@ -652,7 +680,7 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 
 OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
 {
-	if ( !pWindow || !NSDocument_versionsEnabled() )
+	if ( !pWindow || !NSDocument_versionsEnabled() || !HasNativeVersion( pWindow ) )
 		return OUString();
 
 	if ( !aRevertToSavedLocalizedString.getLength() )
@@ -675,7 +703,7 @@ OUString NSDocument_revertToSavedLocalizedString( Window *pWindow )
 
 OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 {
-	if ( !pWindow || !NSDocument_versionsEnabled() )
+	if ( !pWindow || !NSDocument_versionsEnabled() || !HasNativeVersion( pWindow ) )
 		return OUString();
 
 	if ( !aSaveAVersionLocalizedString.getLength() )
@@ -692,28 +720,6 @@ OUString NSDocument_saveAVersionLocalizedString( Window *pWindow )
 		aSaveAVersionLocalizedString = NSStringToOUString( pLocalizedString );
 
 		[pPool release];
-	}
-
-	SfxViewFrame *pFrame = SfxViewFrame::GetFirst();
-	while ( pFrame )
-	{
-		SfxTopViewFrame *pTopViewFrame = (SfxTopViewFrame *)pFrame->GetTopViewFrame();
-		if ( pTopViewFrame && pTopViewFrame->GetTopFrame_Impl()->GetTopWindow_Impl() == pWindow )
-		{
-			SfxObjectShell *pDoc = pTopViewFrame->GetObjectShell();
-			if ( pDoc )
-			{
-				SfxMedium *pMedium = pDoc->GetMedium();
-				if ( pMedium )
-				{
-					if ( !pMedium->GetBaseURL( true ).getLength() )
-						return OUString();
-				}
-			}
-			break;
-		}
-
-		pFrame = SfxViewFrame::GetNext( *pFrame );
 	}
 
 	return aSaveAVersionLocalizedString;
