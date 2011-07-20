@@ -99,8 +99,12 @@
 
 #ifdef USE_JAVA
 
+#include <comphelper/mediadescriptor.hxx>
+#include <sfx2/app.hxx>
 #include <osl/file.hxx>
+#include <unotools/tempfile.hxx>
 #include <vcl/sysdata.hxx>
+#include <com/sun/star/frame/XComponentLoader.hpp>
 
 #include "topfrm_cocoa.h"
 
@@ -145,7 +149,38 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
 
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
 {
-	fprintf( stderr, "SFXDocument_duplicate not implemented\n" );
+	if ( pFrame )
+	{
+		SfxObjectShell *pObjShell = pFrame->GetObjectShell();
+		if ( pObjShell )
+		{
+			String aTempURL = String( ::utl::TempFile().GetURL() );
+			if ( aTempURL.Len() )
+			{
+				SfxMedium *pMedium = new SfxMedium( aTempURL, ( STREAM_STD_WRITE | STREAM_SHARE_DENYALL ) );
+				if ( pMedium )
+				{
+					sal_Bool bSaved = pObjShell->DoSaveAs( *pMedium );
+					delete pMedium;
+					if ( bSaved )
+					{
+						Sequence < com::sun::star::beans::PropertyValue > aSeq( 1 );
+						aSeq[0].Name = ::comphelper::MediaDescriptor::PROP_ASTEMPLATE();
+						aSeq[0].Value <<= sal_True;
+						Reference < XComponentLoader > xLoader( ::comphelper::getProcessServiceFactory()->createInstance( ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM("com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+						if ( xLoader.is() )
+							xLoader->loadComponentFromURL( aTempURL, ::rtl::OUString( RTL_CONSTASCII_USTRINGPARAM( "_blank" ) ), 0, aSeq );
+					}
+				}
+				else
+				{
+					ULONG lErr = pObjShell->GetErrorCode();
+					if ( lErr )
+						ErrorHandler::HandleError( lErr );
+				}
+			}
+		}
+	}
 }
 
 void SFXDocument_reload( SfxTopViewFrame *pFrame )
