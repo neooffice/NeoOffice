@@ -126,6 +126,7 @@ static OUString aSaveAVersionLocalizedString;
 }
 + (BOOL)autosavesInPlace;
 - (void)dealloc;
+- (NSDocument *)duplicateAndReturnError:(NSError **)ppError;
 - (void)duplicateDocument:(id)pObject;
 - (BOOL)hasUnautosavedChanges;
 - (id)initWithContentsOfURL:(NSURL *)pURL frame:(SfxTopViewFrame *)pFrame window:(NSWindow *)pWindow ofType:(NSString *)pTypeName error:(NSError **)ppError;
@@ -245,6 +246,16 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 		[pDocController removeDocument:self];
 
 	[super dealloc];
+}
+
+- (NSDocument *)duplicateAndReturnError:(NSError **)ppError
+{
+	if ( ppError )
+		*ppError = nil;
+
+	[self duplicateDocument:self];
+
+	return self;
 }
 
 - (void)duplicateDocument:(id)pObject
