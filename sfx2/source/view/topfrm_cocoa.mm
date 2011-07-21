@@ -508,7 +508,13 @@ static void SetDocumentForFrame( SfxTopViewFrame *pFrame, SFXDocument *pDoc )
 				SFXDocument *pOldDoc = GetDocumentForFrame( mpFrame );
 				if ( pOldDoc )
 				{
+					NSURL *pOldURL = [pOldDoc fileURL];
 					[pOldDoc setFileURL:mpURL];
+
+					// If the URL has changed, disconnect the document from
+					// the old URL's version history
+					if ( !mpURL || !pOldURL || ![pOldURL isEqual:mpURL] )
+						[pOldDoc updateChangeCount:NSChangeCleared];
 				}
 				else if ( mpURL )
 				{
