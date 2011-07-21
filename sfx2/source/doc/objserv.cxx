@@ -1037,6 +1037,9 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 					}
 
 					if ( !pFrame || !pDoc->HasName() ||
+#ifdef USE_JAVA
+						NSDocument_versionsEnabled() ? !SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) :
+#endif	// USE_JAVA
 						!IsOwnStorageFormat_Impl( *pDoc->GetMedium() ) )
 //REMOVE							|| pDoc->GetMedium()->GetStorage()->GetVersion() < SOFFICE_FILEFORMAT_50 )
 						rSet.DisableItem( nWhich );
