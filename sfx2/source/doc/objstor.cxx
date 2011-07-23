@@ -1424,9 +1424,11 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 #ifdef USE_JAVA
     rMedium.CheckForMovedFile( this );
 
-    if ( NSDocument_versionsEnabled() )
+    BOOL bVersionsEnabled = NSDocument_versionsEnabled();
+    if (  bVersionsEnabled )
     {
-        SfxViewFrame* pFrame = GetFrame();
+    	SfxViewFrame* pFrame = NULL;
+        pFrame = GetFrame();
         if ( !pFrame )
             pFrame = SfxViewFrame::GetFirst( this );
         if ( pFrame )
@@ -2168,6 +2170,18 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 				ConnectTmpStorage_Impl( pImp->m_xDocStorage, NULL );
 		}
     }
+
+#ifdef USE_JAVA
+    if (  bVersionsEnabled )
+    {
+    	SfxViewFrame* pFrame = NULL;
+        pFrame = GetFrame();
+        if ( !pFrame )
+            pFrame = SfxViewFrame::GetFirst( this );
+        if ( pFrame )
+            SFXDocument_saveVersionOfDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
+    }
+#endif	// USE_JAVA
 
     // unlock user interface
     Lock_Impl( this, sal_False );
