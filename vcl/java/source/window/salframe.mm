@@ -181,6 +181,56 @@ static NSTimer *pUpdateTimer = nil;
 
 @end
 
+@interface NSWindow (VCLToggleFullScreen)
+- (void)toggleFullScreen:(id)pObject;
+@end
+
+@interface VCLToggleFullScreen : NSObject
+{
+	NSWindow*				mpWindow;
+}
++ (id)createToggleFullScreen:(NSWindow *)pWindow;
+- (id)initToggleFullScreen:(NSWindow *)pWindow;
+- (void)dealloc;
+- (void)toggleFullScreen:(id)pObject;
+@end
+
+@implementation VCLToggleFullScreen
+
++ (id)createToggleFullScreen:(NSWindow *)pWindow
+{
+	VCLToggleFullScreen *pRet = [[VCLToggleFullScreen alloc] initToggleFullScreen:pWindow];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initToggleFullScreen:(NSWindow *)pWindow
+{
+	[super init];
+
+	mpWindow = pWindow;
+	if ( mpWindow )
+		[mpWindow retain];
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( mpWindow )
+		[mpWindow release];
+
+	[super dealloc];
+}
+
+- (void)toggleFullScreen:(id)pObject
+{
+	if ( mpWindow && [mpWindow respondsToSelector:@selector(toggleFullScreen:)] )
+		[mpWindow toggleFullScreen:self];
+}
+
+@end
+
 // =======================================================================
 
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
@@ -271,6 +321,8 @@ JavaSalFrame::JavaSalFrame()
 	mbInShow = FALSE;
 	mbShowOnlyMenus = FALSE;
 	mbInShowOnlyMenus = FALSE;
+	mbInWindowDidExitFullScreen = FALSE;
+	mbInWindowWillEnterFullScreen = FALSE;
 }
 
 // -----------------------------------------------------------------------
@@ -812,6 +864,22 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 {
 	if ( bFullScreen == mbFullScreen )
 		return;
+
+	if ( !mbInWindowDidExitFullScreen && !mbInWindowWillEnterFullScreen && ( mbFullScreen || !IsFloatingFrame() ) && !IsUtilityWindow() )
+	{
+		NSWindow *pNSWindow = (NSWindow *)mpVCLFrame->getNativeWindow();
+		if ( pNSWindow )
+		{
+			VCLToggleFullScreen *pVCLToggleFullScreen = [VCLToggleFullScreen createToggleFullScreen:pNSWindow];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		    ULONG nCount = Application::ReleaseSolarMutex();
+			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
+		    Application::AcquireSolarMutex( nCount );
+
+			if ( bFullScreen == mbFullScreen )
+				return;
+		}
+	}
 
 	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
 	if ( bFullScreen )

@@ -92,6 +92,8 @@ public:
 	BOOL					mbShowOnlyMenus;
 	BOOL					mbInShowOnlyMenus;
 	::std::list< JavaSalMenu* >	maUpdateMenuList;
+	BOOL					mbInWindowDidExitFullScreen;
+	BOOL					mbInWindowWillEnterFullScreen;
 
 							JavaSalFrame();
 	virtual					~JavaSalFrame();

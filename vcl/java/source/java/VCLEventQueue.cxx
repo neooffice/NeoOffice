@@ -144,6 +144,89 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLEventQueue_runApplicationMainThr
 
 // ============================================================================
 
+void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen )
+{
+	if ( !Application::IsShutDown() )
+	{
+		IMutex& rSolarMutex = Application::GetSolarMutex();
+		rSolarMutex.acquire();
+
+		if ( !Application::IsShutDown() )
+		{
+			JavaSalFrame *pFrame = NULL;
+			SalData *pSalData = GetSalData();
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible && (*it)->mpVCLFrame->getNativeWindow() == pNSWindow )
+				{
+					pFrame = *it;
+					break;
+				}
+			}
+
+			if ( pFrame && bFullScreen != pFrame->mbFullScreen )
+			{
+				Window *pWindow = Application::GetFirstTopLevelWindow();
+				while ( pWindow && pWindow->ImplGetFrame() != pFrame )
+					pWindow = Application::GetNextTopLevelWindow( pWindow );
+
+				if ( pWindow )
+				{
+					Reference< XFramesSupplier > xFramesSupplier( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.Desktop" ) ) ), UNO_QUERY );
+					if ( xFramesSupplier.is() )
+					{
+						Reference< XIndexAccess > xList( xFramesSupplier->getFrames(), UNO_QUERY );
+						if ( xList.is() )
+						{
+							sal_Int32 nCount = xList->getCount();
+							for ( sal_Int32 i = 0; i < nCount; i++ )
+							{
+								Reference< XFrame > xFrame;
+								xList->getByIndex( i ) >>= xFrame;
+								if ( xFrame.is() )
+								{
+									Reference< XWindow > xWindow = xFrame->getComponentWindow();
+									if ( xWindow.is() )
+									{
+										Window *pCurrentWindow = VCLUnoHelper::GetWindow( xWindow );
+										while ( pCurrentWindow && pCurrentWindow != pWindow && pCurrentWindow->GetParent() )
+											pCurrentWindow = pCurrentWindow->GetParent();
+										if ( pCurrentWindow == pWindow )
+										
+										{
+											Reference< XDispatchProvider > xDispatchProvider( xFrame, UNO_QUERY );
+											if ( xDispatchProvider.is() )
+											{
+												Reference< XDispatchHelper > xDispatchHelper( ::comphelper::getProcessServiceFactory()->createInstance( OUString( RTL_CONSTASCII_USTRINGPARAM( "com.sun.star.frame.DispatchHelper" ) ) ), UNO_QUERY );
+												if ( xDispatchHelper.is() )
+												{
+													pFrame->mbInWindowDidExitFullScreen = !bFullScreen;
+													pFrame->mbInWindowWillEnterFullScreen = bFullScreen;
+
+													Any aRet = xDispatchHelper->executeDispatch( xDispatchProvider, OUString( RTL_CONSTASCII_USTRINGPARAM( ".uno:FullScreen" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "_self" ) ), 0, Sequence< PropertyValue >() );
+
+													pFrame->mbInWindowDidExitFullScreen = FALSE;
+													pFrame->mbInWindowWillEnterFullScreen = FALSE;
+												}
+											}
+
+											break;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		rSolarMutex.release();
+	}
+}
+
+// ----------------------------------------------------------------------------
+
 void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection )
 {
 	if ( !pTextSelection && !pRTFSelection )

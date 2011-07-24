@@ -651,7 +651,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 		}
 
-		aSelector = @selector(windowDidEnterFullScreen:);
+		aSelector = @selector(windowWillEnterFullScreen:);
 		aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 		if ( aNewMethod )
 		{
@@ -660,7 +660,7 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 				class_addMethod( [NSWindow class], aSelector, aNewIMP, method_getTypeEncoding( aNewMethod ) );
 		}
 
-		aSelector = @selector(windowWillExitFullScreen:);
+		aSelector = @selector(windowDidExitFullScreen:);
 		aNewMethod = class_getInstanceMethod( [VCLWindow class], aSelector );
 		if ( aNewMethod )
 		{
@@ -827,8 +827,8 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
 		{
-			[pNotificationCenter addObserver:self selector:@selector(windowDidEnterFullScreen:) name:@"NSWindowDidEnterFullScreenNotification" object:nil];
-			[pNotificationCenter addObserver:self selector:@selector(windowWillExitFullScreen:) name:@"NSWindowDidExitFullScreenNotification" object:nil];
+			[pNotificationCenter addObserver:self selector:@selector(windowDidExitFullScreen:) name:@"NSWindowDidExitFullScreenNotification" object:nil];
+			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:nil];
 		}
 	}
 	else if ( nOrderingMode == NSWindowOut && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
@@ -1270,17 +1270,19 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		[super poseAsSetLevel:nWindowLevel];
 }
 
-- (void)windowDidEnterFullScreen:(NSNotification *)pNotification
+- (void)windowDidExitFullScreen:(NSNotification *)pNotification
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-	fprintf( stderr, "windowDidEnterFullScreen not implemented\n" );
+	if ( [self isVisible] )
+		VCLEventQueue_fullScreen( self, NO );
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
 
-- (void)windowWillExitFullScreen:(NSNotification *)pNotification
+- (void)windowWillEnterFullScreen:(NSNotification *)pNotification
 {
 #ifdef USE_NATIVE_FULL_SCREEN_MODE
-	fprintf( stderr, "windowWillExitFullScreen not implemented\n" );
+	if ( [self isVisible] )
+		VCLEventQueue_fullScreen( self, YES );
 #endif	// USE_NATIVE_FULL_SCREEN_MODE
 }
 

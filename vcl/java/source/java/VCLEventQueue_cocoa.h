@@ -60,8 +60,8 @@ typedef void* id;
 - (void)setContentView:(NSView *)pView;
 - (void)setDraggingSourceDelegate:(id)pDelegate;
 - (void)setLevel:(int)nWindowLevel;
-- (void)windowDidEnterFullScreen:(NSNotification *)pNotification;
-- (void)windowWillExitFullScreen:(NSNotification *)pNotification;
+- (void)windowDidExitFullScreen:(NSNotification *)pNotification;
+- (void)windowWillEnterFullScreen:(NSNotification *)pNotification;
 @end
 #endif
 
@@ -69,6 +69,7 @@ typedef void* id;
 BEGIN_C
 #endif
 void VCLEventQueue_cancelTermination();
+void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen );
 void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
 BOOL VCLEventQueue_paste( void *pNSWindow );
 BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers, jchar nOriginalKeyChar, short nOriginalModifiers );
