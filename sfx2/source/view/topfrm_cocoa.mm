@@ -765,7 +765,7 @@ BOOL NSDocument_versionsEnabled()
 BOOL NSDocument_versionsSupported()
 {
 #ifdef USE_NATIVE_VERSIONS
-	return ( class_getClassMethod( [NSDocument class], @selector(restorableStateKeyPaths) ) ? YES : NO );
+	return ( class_getInstanceMethod( [NSDocument class], @selector(_browseVersions) ) && class_getInstanceMethod( [NSDocument class], @selector(_checkAutosavingThenUpdateChangeCount:) ) && class_getInstanceMethod( [NSDocument class], @selector(_preserveContentsIfNecessaryAfterWriting:toURL:forSaveOperation:version:error:) ) ? YES : NO );
 #else	// USE_NATIVE_VERSIONS
 	return NO;
 #endif	// USE_NATIVE_VERSIONS
