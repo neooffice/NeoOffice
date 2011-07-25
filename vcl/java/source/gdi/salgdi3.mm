@@ -86,9 +86,6 @@ using namespace vcl;
 using namespace vos;
 
 @interface VCLLoadNativeFonts : NSObject
-{
-	BOOL					mbFullScreen;
-}
 + (id)create;
 - (void)loadNativeFonts:(id)pObject;
 @end
