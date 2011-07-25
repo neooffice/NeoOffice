@@ -827,8 +827,8 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
 		{
-			[pNotificationCenter addObserver:self selector:@selector(windowDidExitFullScreen:) name:@"NSWindowDidExitFullScreenNotification" object:nil];
-			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:nil];
+			[pNotificationCenter addObserver:self selector:@selector(windowDidExitFullScreen:) name:@"NSWindowDidExitFullScreenNotification" object:self];
+			[pNotificationCenter addObserver:self selector:@selector(windowWillEnterFullScreen:) name:@"NSWindowWillEnterFullScreenNotification" object:self];
 		}
 	}
 	else if ( nOrderingMode == NSWindowOut && [self isVisible] && [[self className] isEqualToString:pCocoaAppWindowString] )
@@ -836,8 +836,8 @@ static NSMutableDictionary *pDraggingSourceDelegates = nil;
 		NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
 		if ( pNotificationCenter )
 		{
-			[pNotificationCenter removeObserver:self name:@"NSWindowDidEnterFullScreenNotification" object:nil];
-			[pNotificationCenter removeObserver:self name:@"NSWindowWillExitFullScreenNotification" object:nil];
+			[pNotificationCenter removeObserver:self name:@"NSWindowDidEnterFullScreenNotification" object:self];
+			[pNotificationCenter removeObserver:self name:@"NSWindowWillExitFullScreenNotification" object:self];
 		}
 	}
 #endif	// USE_NATIVE_FULL_SCREEN_MODE

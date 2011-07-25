@@ -321,6 +321,7 @@ JavaSalFrame::JavaSalFrame()
 	mbInShow = FALSE;
 	mbShowOnlyMenus = FALSE;
 	mbInShowOnlyMenus = FALSE;
+	mbInShowFullScreen = FALSE;
 	mbInWindowDidExitFullScreen = FALSE;
 	mbInWindowWillEnterFullScreen = FALSE;
 }
@@ -862,10 +863,11 @@ BOOL JavaSalFrame::GetWindowState( SalFrameState* pState )
 
 void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 {
-	if ( bFullScreen == mbFullScreen )
+	if ( mbInShowFullScreen || bFullScreen == mbFullScreen )
 		return;
 
-	if ( !mbInWindowDidExitFullScreen && !mbInWindowWillEnterFullScreen && ( mbFullScreen || !IsFloatingFrame() ) && !IsUtilityWindow() )
+	mbInShowFullScreen = TRUE;
+	if ( !mbInWindowDidExitFullScreen && !mbInWindowWillEnterFullScreen )
 	{
 		NSWindow *pNSWindow = (NSWindow *)mpVCLFrame->getNativeWindow();
 		if ( pNSWindow )
@@ -875,9 +877,6 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 		    ULONG nCount = Application::ReleaseSolarMutex();
 			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
 		    Application::AcquireSolarMutex( nCount );
-
-			if ( bFullScreen == mbFullScreen )
-				return;
 		}
 	}
 
@@ -903,6 +902,7 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 
 	mpVCLFrame->setFullScreenMode( bFullScreen );
 	mbFullScreen = bFullScreen;
+	mbInShowFullScreen = FALSE;
 }
 
 // -----------------------------------------------------------------------

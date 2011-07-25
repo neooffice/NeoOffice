@@ -164,7 +164,7 @@ void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen )
 				}
 			}
 
-			if ( pFrame && bFullScreen != pFrame->mbFullScreen )
+			if ( pFrame && !pFrame->mbInShowFullScreen && bFullScreen != pFrame->mbFullScreen )
 			{
 				Window *pWindow = Application::GetFirstTopLevelWindow();
 				while ( pWindow && pWindow->ImplGetFrame() != pFrame )
