@@ -237,6 +237,10 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 
 @end
 
+@interface NSApplication (VCLApplicationDelegate)
+- (void)setHelpMenu:(NSMenu *)pHelpMenu;
+@end
+
 @implementation VCLDocumentController
 
 - (void)_closeAllDocumentsWithDelegate:(id)pDelegate shouldTerminateSelector:(SEL)aShouldTerminateSelector
@@ -307,7 +311,13 @@ static VCLApplicationDelegate *pSharedAppDelegate = nil;
 				{
 					NSMenu *pSubmenu = [pItem submenu];
 					if ( pSubmenu )
+					{
 						[pSubmenu setDelegate:self];
+
+						// Set help menu
+						if ( i == nCount - 1 && [pApp respondsToSelector:@selector(setHelpMenu:)] )
+							[pApp setHelpMenu:pSubmenu];
+					}
 				}
 			}
 		}

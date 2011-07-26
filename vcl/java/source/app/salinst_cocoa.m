@@ -98,49 +98,6 @@
 
 @end
 
-@interface NSApplication (SetHelpMenu)
-- (void)setHelpMenu:(NSMenu *)pHelpMenu;
-@end
-
-@interface SetHelpMenu : NSObject
-+ (id)create;
-- (void)setHelpMenu:(id)pObject;
-@end
-
-@implementation SetHelpMenu
-
-+ (id)create
-{
-	SetHelpMenu *pRet = [[SetHelpMenu alloc] init];
-	[pRet autorelease];
-	return pRet;
-}
-
-- (void)setHelpMenu:(id)pObject
-{
-	NSApplication *pApp = [NSApplication sharedApplication];
-	if ( pApp )
-	{
-		NSMenu *pMainMenu = [pApp mainMenu];
-		if ( pMainMenu )
-		{
-			unsigned int nCount = [pMainMenu numberOfItems];
-			if ( nCount > 1 )
-			{
-				NSMenuItem *pItem = [pMainMenu itemAtIndex:nCount - 1];
-				if ( pItem )
-				{
-					NSMenu *pHelpMenu = [pItem submenu];
-					if ( pHelpMenu && [pApp respondsToSelector:@selector(setHelpMenu:)] )
-						[pApp setHelpMenu:pHelpMenu];
-				}
-			}
-		}
-	}
-}
-
-@end
-
 void NSApplication_dispatchPendingEvents()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
@@ -170,15 +127,4 @@ id NSApplication_getModalWindow()
 	[pPool release];
 
 	return pModalWindow;
-}
-
-void NSApplication_setHelpMenu()
-{
-	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-	SetHelpMenu *pSetHelpMenu = [SetHelpMenu create];
-	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-	[pSetHelpMenu performSelectorOnMainThread:@selector(setHelpMenu:) withObject:pSetHelpMenu waitUntilDone:YES modes:pModes];
-
-	[pPool release];
 }
