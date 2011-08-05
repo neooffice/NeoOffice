@@ -1,7 +1,7 @@
 Intructions for Building NeoOffice
 ----------------------------------
 
-At this time, the NeoOffice build only supports building on Mac OS X 10.4 (Tiger).
+At this time, the NeoOffice build only supports building on Mac OS X 10.5 (Leopard).
 
 WARNING: Building under Mac OS X 10.6 and higher will not work, and as a result isn't supported.
 
