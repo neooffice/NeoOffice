@@ -1,13 +1,11 @@
 Intructions for Building NeoOffice
 ----------------------------------
 
-At this time, the NeoOffice build only supports building on Mac OS X 10.5 (Leopard).
 
-WARNING: Building under Mac OS X 10.6 and higher will not work, and as a result isn't supported.
-
-
-Steps for building on 10.5 (Leopard) for Intel
+Steps for building on 10.5 Leopard for Intel
 ----------------------------------------------
+
+At this time, the NeoOffice build only supports building on Mac OS X 10.5 Leopard for Intel only. Building on Mac OS X 10.6 and higher will not work, and as a result isn't supported.
 
 1. Make sure that you have downloaded and installed the following dependencies from http://connect.apple.com/ website:
 
@@ -37,3 +35,22 @@ Steps for building on 10.5 (Leopard) for Intel
    cd $NEO_HOME
    make GNUCP=</absolute/path/of/your/gcp/command> LIBIDL_CONFIG=</absolute/path/of/your/libIDL-config-2/command> PKG_CONFIG=</absolute/path/of/your/pkg-config/command>
 
+
+Steps for building on Windows XP or Vista
+-----------------------------------------
+
+Although building on Windows will not work, in theory the Go-oo portion of the build supports building on Windows. Although we have not successfully build the Go-oo code using the NeoOffice makefile, we have listed the dependencies that we know of at the end of this file for anyone who may be interested in porting NeoOffice to Windows.
+
+Important note is you are running Vista: you will normally need to install these dependencies using the "Run as Administrator" option.
+
+1. Download and install Cygwin here:
+
+   http://www.cygwin.com/
+
+2. Download and install the "vcsetup.exe" installer for Visual C++ 9.0 Express Edition from the following URL. Note: newer versions of this software will not work:
+
+   http://www.microsoft.com/downloads/info.aspx?na=41&srcfamilyid=a22341ee-21db-43aa-8431-40be78461ee0&srcdisplaylang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2fd%2fc%2f3%2fdc3439e7-5533-4f4c-9ba0-8577685b6e7e%2fvcsetup.exe
+
+3. Download and install the DirectX 9 SDK from the following URL. Note: newer versions of this SDK will not work:
+
+   http://download.microsoft.com/download/5/8/2/58223f79-689d-47ae-bdd0-056116ee8d16/DXSDK_Nov08.exe
