@@ -43,8 +43,12 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 
 1. Download and install Cygwin from http://www.cygwin.com/. When installing, be sure to enable installation of the following tools that Cygwin does not install by default:
 
+   Archive :: cabextract
    Devel :: cvs
+   Devel :: flex
    Devel :: make
+   Devel :: pkg-config
+   Gnome :: libIDL_0
    Editors :: vim or Emacs
    Net :: openssh
    Shells :: tcsh
@@ -56,3 +60,7 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 3. Download and install the DirectX 9 SDK from the following URL. Note: newer versions of this SDK will not work. Also you will need to install this software using the "Run as Administrator" option:
 
    http://download.microsoft.com/download/5/8/2/58223f79-689d-47ae-bdd0-056116ee8d16/DXSDK_Nov08.exe
+
+4. Download and install the latest Java Development Kit (JDK) from the following URL:
+
+   http://www.oracle.com/technetwork/java/javase/downloads
