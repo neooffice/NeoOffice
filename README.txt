@@ -41,16 +41,18 @@ Steps for building on Windows XP or Vista
 
 Although building on Windows will not work, in theory the Go-oo portion of the build supports building on Windows. Although we have not successfully build the Go-oo code using the NeoOffice makefile, we have listed the dependencies that we know of at the end of this file for anyone who may be interested in porting NeoOffice to Windows.
 
-Important note is you are running Vista: you will normally need to install these dependencies using the "Run as Administrator" option.
+1. Download and install Cygwin from http://www.cygwin.com/. When installing, be sure to enable installation of the following tools that Cygwin does not install by default:
 
-1. Download and install Cygwin here:
+   Devel :: cvs
+   Devel :: make
+   Editors :: vim or Emacs
+   Net :: openssh
+   Shells :: tcsh
 
-   http://www.cygwin.com/
-
-2. Download and install the "vcsetup.exe" installer for Visual C++ 9.0 Express Edition from the following URL. Note: newer versions of this software will not work:
+2. Download and install the "vcsetup.exe" installer for Visual C++ 9.0 Express Edition from the following URL. Note: newer versions of this software will not work. Also you will need to install this software using the "Run as Administrator" option:
 
    http://www.microsoft.com/downloads/info.aspx?na=41&srcfamilyid=a22341ee-21db-43aa-8431-40be78461ee0&srcdisplaylang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2fd%2fc%2f3%2fdc3439e7-5533-4f4c-9ba0-8577685b6e7e%2fvcsetup.exe
 
-3. Download and install the DirectX 9 SDK from the following URL. Note: newer versions of this SDK will not work:
+3. Download and install the DirectX 9 SDK from the following URL. Note: newer versions of this SDK will not work. Also you will need to install this software using the "Run as Administrator" option:
 
    http://download.microsoft.com/download/5/8/2/58223f79-689d-47ae-bdd0-056116ee8d16/DXSDK_Nov08.exe
