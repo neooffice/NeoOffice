@@ -55,7 +55,7 @@ TMP:=/tmp
 endif
 SHELL:=/bin/tcsh
 UNAME:=$(shell uname -p)
-ifeq ($(shell uname -s),"Darwin")
+ifeq ("$(shell uname -s)","Darwin")
 OS_TYPE=MacOSX
 OS_MAJOR_VERSION:=$(shell /usr/bin/sw_vers | grep '^ProductVersion:' | awk '{ print $$2 }' | awk -F. '{ print $$1 "." $$2 }')
 ifeq ("$(UNAME)","powerpc")
@@ -164,7 +164,7 @@ build.ooo-build_configure: build.ooo-build_checkout
 # Include OpenOffice.org extenstions and templates. Note that we exclude the
 # wiki-publisher.oxt file as it has been found to have buggy network
 # connectivity.
-ifeq ($(OS_TYPE),"MacOSX")
+ifeq ("$(OS_TYPE)","MacOSX")
 	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 else
 	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; unsetenv LD_LIBRARY_PATH ; ./configure TMP=$(TMP) --with-distro=Win32 --disable-cairo --disable-gtk --disable-odk --with-lang="$(OO_LANGUAGES)" --disable-access --enable-binfilter --enable-extensions --with-sun-templates )
