@@ -167,7 +167,7 @@ build.ooo-build_configure: build.ooo-build_checkout
 ifeq ("$(OS_TYPE)","MacOSX")
 	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home=/System/Library/Frameworks/JavaVM.framework/Home --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 else
-	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; unsetenv LD_LIBRARY_PATH ; ./configure TMP=$(TMP) --with-distro=Win32 --disable-cairo --disable-gtk --disable-odk --with-lang="$(OO_LANGUAGES)" --disable-access --enable-binfilter --enable-extensions --with-sun-templates )
+	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; unsetenv LD_LIBRARY_PATH ; ./configure TMP=$(TMP) WGET=/usr/bin/wget --with-distro=Win32 --disable-cairo --disable-gtk --disable-odk --with-lang="$(OO_LANGUAGES)" --disable-access --enable-binfilter --enable-extensions --with-sun-templates )
 endif
 	touch "$@"
 

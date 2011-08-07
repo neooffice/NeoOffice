@@ -52,6 +52,8 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
    Editors :: vim or Emacs
    Net :: openssh
    Shells :: tcsh
+   Utils :: patch
+   Web :: wget
 
 2. Download and install the "vcsetup.exe" installer for Visual C++ 9.0 Express Edition from the following URL. Note: newer versions of this software will not work. Also you will need to install this software using the "Run as Administrator" option:
 
@@ -64,3 +66,13 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 4. Download and install the latest Java Development Kit (JDK) from the following URL:
 
    http://www.oracle.com/technetwork/java/javase/downloads
+
+5. Download and install the Visual C++ 2003 Runtime and the .NET 1.1 SDK from the following URL. These are needed to use the pre-built Mozilla libraries provided by OpenOffice.org:
+
+   http://www.microsoft.com/downloads/en/details.aspx?familyid=262d25e3-f589-4842-8157-034d1e7cf3a3&displaylang=en
+   http://www.microsoft.com/downloads/en/details.aspx?FamilyID=9b3a2ca6-3647-4070-9f41-a333c6b9181d
+
+6. Download and run the installer to unpack the GDI+ gdiplus.dll file. Note the folder that you had the installer it to as you will need to copy the asms\10\msft\windows\gdiplus\gdiplus.dll file if the build fails because it cannot find gdiplus.dll:
+
+   http://www.microsoft.com/download/en/details.aspx?id=18909
+
