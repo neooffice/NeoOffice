@@ -46,6 +46,7 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
    Archive :: cabextract
    Devel :: cvs
    Devel :: flex
+   Devel :: gcc-g++
    Devel :: make
    Devel :: pkg-config
    Gnome :: libIDL_0
@@ -76,3 +77,6 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 
    http://www.microsoft.com/download/en/details.aspx?id=18909
 
+7. Make the /usr/bin/awk symlink a real file by executing the following command:
+
+   rm /usr/bin/awk ; cp /usr/bin/gawk.exe /usr/bin/awk.exe
