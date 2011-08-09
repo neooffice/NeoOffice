@@ -93,3 +93,7 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
    Archive::Zip
    URI
    XML::Parser
+
+10. Download and install NSIS from the following URL:
+
+    http://nsis.sourceforge.net/Download
