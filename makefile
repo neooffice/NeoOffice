@@ -78,6 +78,8 @@ TARGET_FILE_TYPE=Mach-O executable i386
 endif
 else
 OS_TYPE=Win32
+UOUTPUTDIR=wntmsci12.pro
+DLLSUFFIX=mxp
 endif
 COMPILERDIR=$(BUILD_HOME)/solenv/`basename $(UOUTPUTDIR) .pro`/bin
 BUILD_MACHINE=$(shell echo `id -nu`:`hostname`.`domainname`)
@@ -231,7 +233,14 @@ endif
 	touch "$@"
 
 build.ooo-build_all: build.oo_patches
+ifeq ("$(OS_TYPE)","MacOSX")
 	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; "$(MAKE)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" build
+else
+# Copy Visual Studio 9.0 dbghelp.ddl
+	cp "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/Common7/IDE/dbghelp.dll" "$(OOO-BUILD_BUILD_HOME)/external/dbghelp"
+# Prepend Visual Studio 9.0 tools to path
+	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "/cygdrive/c/Program Files/Microsoft Visual Studio 9.0/VC/bin:$$PATH" ; "$(MAKE)" build
+endif
 	touch "$@"
 
 build.ooo-build_%_patch: $(OOO-BUILD_PATCHES_HOME)/%.patch build.ooo-build_configure

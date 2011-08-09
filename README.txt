@@ -44,9 +44,12 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 1. Download and install Cygwin from http://www.cygwin.com/. When installing, be sure to enable installation of the following tools that Cygwin does not install by default:
 
    Archive :: cabextract
+   Archive :: unzip
+   Archive :: zip
    Devel :: cvs
    Devel :: flex
    Devel :: gcc-g++
+   Devel :: gperf
    Devel :: make
    Devel :: pkg-config
    Gnome :: libIDL_0
@@ -56,9 +59,9 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
    Utils :: patch
    Web :: wget
 
-2. Download and install the "vcsetup.exe" installer for Visual C++ 9.0 Express Edition from the following URL. Note: newer versions of this software will not work. Also you will need to install this software using the "Run as Administrator" option:
+2. Download and install the Visual C++ 2008 Express Edition with SP1 from the following URL. Note: newer versions of this software will not work. Also you will need to install this software using the "Run as Administrator" option:
 
-   http://www.microsoft.com/downloads/info.aspx?na=41&srcfamilyid=a22341ee-21db-43aa-8431-40be78461ee0&srcdisplaylang=en&u=http%3a%2f%2fdownload.microsoft.com%2fdownload%2fd%2fc%2f3%2fdc3439e7-5533-4f4c-9ba0-8577685b6e7e%2fvcsetup.exe
+   http://www.microsoft.com/visualstudio/en-us/products/2008-editions/express
 
 3. Download and install the DirectX 9 SDK from the following URL. Note: newer versions of this SDK will not work. Also you will need to install this software using the "Run as Administrator" option:
 
@@ -73,10 +76,20 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
    http://www.microsoft.com/downloads/en/details.aspx?familyid=262d25e3-f589-4842-8157-034d1e7cf3a3&displaylang=en
    http://www.microsoft.com/downloads/en/details.aspx?FamilyID=9b3a2ca6-3647-4070-9f41-a333c6b9181d
 
-6. Download and run the installer to unpack the GDI+ gdiplus.dll file. Note the folder that you had the installer it to as you will need to copy the asms\10\msft\windows\gdiplus\gdiplus.dll file if the build fails because it cannot find gdiplus.dll:
+6. Download and install the Windows SDK for Windows Server 2008 and .NET Framework 3.5 from the following URL. These are needed to build the native installer:
+
+   http://www.microsoft.com/download/en/details.aspx?displaylang=en&id=11310
+
+7. Download and run the installer to unpack the GDI+ gdiplus.dll file. Note the folder that you had the installer it to as you will need to copy the asms\10\msft\windows\gdiplus\gdiplus.dll file if the build fails because it cannot find gdiplus.dll:
 
    http://www.microsoft.com/download/en/details.aspx?id=18909
 
-7. Make the /usr/bin/awk symlink a real file by executing the following command:
+8. Make the /usr/bin/awk symlink a real file by executing the following command:
 
    rm /usr/bin/awk ; cp /usr/bin/gawk.exe /usr/bin/awk.exe
+
+9. Make sure that you have downloaded and installed the following Perl module from the http://www.cpan.org/modules/index.html website. Note that you will need to follow the instructions on the website to download and install the following modules:
+
+   Archive::Zip
+   URI
+   XML::Parser
