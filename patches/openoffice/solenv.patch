@@ -30,3 +30,22 @@
  	PSPLIB=-lpsp
  .ELSE
  	STDLIBCUIMT= CPPRUNTIME -lm
+--- bin/deliver.pl	2011-08-08 12:06:01.445046400 -0700
++++ bin/deliver.pl	2011-08-09 13:14:56.864985600 -0700
+@@ -114,7 +114,15 @@
+ if ($^O ne 'cygwin') {              # iz59477 - cygwin needes a dot "." at the end of filenames to disable
+   $maybedot     = '';               # some .exe transformation magic.
+ } else {
+-  $maybedot     = '.';
++    my $cygvernum = `uname -r`;
++    my @cygvernum = split( /\./, $cygvernum);
++    $cygvernum = shift @cygvernum;
++    $cygvernum .= shift @cygvernum;
++    if ( $cygvernum < 17 ) {
++        $maybedot     = '.';
++    } else {
++        $maybedot     = '';               # no longer works with cygwin 1.7. other magic below.
++    }
+ }
+ 
+ ($gui		= lc($ENV{GUI})) 		|| die "Can't determine 'GUI'. Please set environment.\n";
