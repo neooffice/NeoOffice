@@ -67,7 +67,7 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 
    http://download.microsoft.com/download/5/8/2/58223f79-689d-47ae-bdd0-056116ee8d16/DXSDK_Nov08.exe
 
-4. Download and install the latest Java Development Kit (JDK) from the following URL:
+4. Download and install the Java 1.6 Development Kit (JDK) from the following URL. Note: do not use the Java 1.7 JDK:
 
    http://www.oracle.com/technetwork/java/javase/downloads
 
@@ -96,4 +96,4 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 
 10. Download and install NSIS from the following URL:
 
-    http://nsis.sourceforge.net/Download
+   http://nsis.sourceforge.net/Download
