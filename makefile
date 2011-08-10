@@ -44,7 +44,7 @@ PKG_CONFIG_PATH=$(EXTRA_PATH)/../lib/pkgconfig/
 ifeq ("$(shell uname -s)","Darwin")
 JDK_HOME=/System/Library/Frameworks/JavaVM.framework/Home
 else
-JDK_HOME=/cygdrive/c/Program Files/Java/jdk1.7.0
+JDK_HOME=/cygdrive/c/Program Files/Java/jdk1.6.0_26
 endif
 PRODUCT_NAME=My Untested Office Suite
 PRODUCT_DIR_NAME=My_Untested_Office_Suite
