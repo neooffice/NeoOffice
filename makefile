@@ -180,6 +180,7 @@ endif
 
 build.ooo-build_patches: \
 	build.ooo-build_apply_patch \
+	build.ooo-build_update_patch \
 	build.ooo-build_cws-ooxml03-opc-svx-and-ptt-split.diff_patch
 	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; ./download
 	cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; $(MAKE) build.prepare
