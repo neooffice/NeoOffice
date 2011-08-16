@@ -12,3 +12,13 @@
  	print_message("zipping '$path' ...") if $extra_verbose;
  	if ( !$zip->addFile($path, $_) ) {
  	    print_error("can't add file '$path' to config zip archive: $!", 5);
+--- rebase/no_rebase.txt	2008-06-25 05:03:44.000000000 -0700
++++ rebase/no_rebase.txt	2011-08-16 10:11:41.298472000 -0700
+@@ -9,6 +9,7 @@
+ policy.1.0.cli_cppuhelper.dll
+ policy.1.0.cli_basetypes.dll
+ unicows.dll
++dbghelp.dll
+ gdiplus.dll
+ mingwm10.dll
+ msvcm80d.dll
