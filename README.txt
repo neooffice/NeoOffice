@@ -97,3 +97,7 @@ Although building on Windows will not work, in theory the Go-oo portion of the b
 10. Download and install NSIS from the following URL:
 
    http://nsis.sourceforge.net/Download
+
+    After installing NSIS, go to the following URL and download the latest "Vietnamese.nlf" and "Vietnamese.nsh" files. Once you have downloaded them, move or copy them into your "C:\Program Files\NSIS\Contrib\Language files\" folder:
+
+   http://nsis.svn.sourceforge.net/viewvc/nsis/NSIS/trunk/Contrib/Language%20files/
