@@ -96,12 +96,17 @@ OOO-BUILD_PACKAGE=ooo-build-3.1.1.1
 OOO-BUILD_BUILD_HOME=$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)/build/ooo310-m19
 IMEDIA_PATCHES_HOME:=patches/imedia
 REMOTECONTROL_PATCHES_HOME:=patches/remotecontrol
+ifeq ("$(OS_TYPE)","MacOSX")
 ifeq ("$(UNAME)","powerpc")
 OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/MacOSXPPCEnv.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXPPCEnvJava.Set
 else
 OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/MacOSXX86Env.Set
 OO_ENV_JAVA:=$(BUILD_HOME)/MacOSXX86EnvJava.Set
+endif
+else
+OO_ENV_AQUA:=$(OOO-BUILD_BUILD_HOME)/winenv.set
+OO_ENV_JAVA:=$(BUILD_HOME)/winenv.set
 endif
 OO_LANGUAGES:=$(shell cat $(PWD)/etc/supportedlanguages.txt | sed '/^\#.*$$/d' | sed 's/\#.*$$//' | awk -F, '{ print $$1 }')
 NEOLIGHT_MDIMPORTER_URL:=http://trinity.neooffice.org/downloads/neolight.mdimporter.tgz
@@ -140,7 +145,10 @@ PRODUCT_DOCUMENTATION_URL_TEXT=$(PRODUCT_NAME) Wiki
 PRODUCT_DOCUMENTATION_LAUNCHSHORTCUTS_URL=http://neowiki.neooffice.org/index.php/NeoOffice_Launch_Shortcuts
 PRODUCT_DOCUMENTATION_SPELLCHECK_URL=http://neowiki.neooffice.org/index.php/Activating_Dictionaries_and_Configuring_Spellcheck
 PRODUCT_UPDATE_CHECK_URL=$(PRODUCT_BASE_URL)/patchcheck.php
-PRODUCT_COMPONENT_MODULES=grammarcheck imagecapture mediabrowser neomobile remotecontrol
+PRODUCT_COMPONENT_MODULES=
+ifeq ("$(OS_TYPE)","MacOSX")
+PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture mediabrowser neomobile remotecontrol
+endif
 PRODUCT_COMPONENT_PATCH_MODULES=
 
 # CVS macros
@@ -301,7 +309,12 @@ build.neo_patches: build.ooo-build_all \
 
 build.neo_%_patch: % build.neo_configure
 	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do mkdir -p "$$i" ; done'
-	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+ifeq ("$(OS_TYPE)","MacOSX")
+	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+else
+# Use hardlinks for Windows
+	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+endif
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
 
@@ -329,23 +342,33 @@ build.imedia_src_untar: $(IMEDIA_PATCHES_HOME)/additional_source build.imedia_ch
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj *.plist *.xcodeproj ) | tar xvf -
 	touch "$@"
 
+ifeq ("$(OS_TYPE)","MacOSX")
 build.imedia_patches: $(IMEDIA_PATCHES_HOME)/imedia.patch build.imedia_src_untar
 	-( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug clean
 	cd "$(BUILD_HOME)/$(IMEDIA_PACKAGE)" ; xcodebuild -target iMediaBrowser -configuration Debug
 	touch "$@"
+else
+build.imedia_patches:
+	touch "$@"
+endif
 
 build.remotecontrol_src_untar: $(REMOTECONTROL_PATCHES_HOME)/additional_source build.remotecontrol_checkout
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; ( cd "$(PWD)/$<" ; tar cf - *.h *.m *.png *.lproj *.plist *.xcodeproj ) | tar xvf -
 	touch "$@"
 
+ifeq ("$(OS_TYPE)","MacOSX")
 build.remotecontrol_patches: $(REMOTECONTROL_PATCHES_HOME)/remotecontrol.patch build.remotecontrol_src_untar
 	-( cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; patch -b -R -p0 -N -r "/dev/null" ) < "$<"
 	( cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; patch -b -p0 -N -r "$(PWD)/patch.rej" ) < "$<"
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release clean
 	cd "$(BUILD_HOME)/$(REMOTECONTROL_PACKAGE)" ; xcodebuild -project RemoteControlFramework.xcodeproj -target RemoteControl -configuration Release
 	touch "$@"
+else
+build.remotecontrol_patches:
+	touch "$@"
+endif
 	
 # End of converted make rules
 
