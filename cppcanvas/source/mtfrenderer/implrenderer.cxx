@@ -1740,7 +1740,7 @@ namespace cppcanvas
                         getState( rStates ).transform.scale( (double)rSize.Width() / aMtfSizePix.Width(),
                                                              (double)rSize.Height() / aMtfSizePix.Height() );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                         // Fix bug 2218 by rendering EPS to a bitmap
                         VirtualDevice aVDev;
                         if ( aVDev.SetOutputSizePixel( aMtfSizePix ) )
@@ -1753,11 +1753,11 @@ namespace cppcanvas
                             aTmpMtf.AddAction( pBmpExScaleAction );
                             createActions( aTmpMtf, rFactoryParms, bSubsettableActions );
                         }
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                         createActions( const_cast<GDIMetaFile&>(pAct->GetSubstitute()),
                                        rFactoryParms,
                                        bSubsettableActions );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
                         rVDev.Pop();
                         popState( rStates );
