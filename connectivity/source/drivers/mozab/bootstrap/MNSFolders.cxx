@@ -67,12 +67,12 @@ namespace
         ::osl::Security   aSecurity;
         ::rtl::OUString   aConfigPath;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         // Fix bug 3393 by using the HOME directory
         aSecurity.getHomeDir( aConfigPath );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         aSecurity.getConfigDir( aConfigPath );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         return aConfigPath + ::rtl::OUString::createFromAscii( "/" );
     }
 
