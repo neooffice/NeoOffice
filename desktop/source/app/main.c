@@ -29,19 +29,19 @@
 
 #include "sal/config.h"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include "main_java.h"
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 #include "sal/main.h"
 
 #include "sofficemain.h"
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 int main( int argc, char **argv ) {
     return java_main( argc, argv );
-#else // USE_JAVA
+#else	// USE_JAVA && MACOSX
 SAL_IMPLEMENT_MAIN() {
     return soffice_main();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }

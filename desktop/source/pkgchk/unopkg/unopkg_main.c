@@ -29,17 +29,17 @@
 
 #include "sal/config.h"
 
-#ifndef USE_JAVA
-#include "unopkg_java.h"
-#endif	// USE_JAVA
-
+#if defined USE_JAVA && defined MACOSX
 #include "unopkg_java.h"
 
-#ifdef USE_JAVA
 int main( int argc, char **argv ) {
     return java_main( argc, argv );
-#else // USE_JAVA
+#else // USE_JAVA && MACOSX
+#include "sal/main.h"
+
+#include "unopkg_main.h"
+
 SAL_IMPLEMENT_MAIN() {
     return unopkg_main();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }

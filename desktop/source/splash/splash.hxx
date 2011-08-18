@@ -108,9 +108,9 @@ private:
     double _fXPos, _fYPos;
     double _fWidth, _fHeight;
     const long _xoffset, _yoffset;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     sal_Int32   _iLastProgressPainted;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 public:
     static const char* interfaces[];

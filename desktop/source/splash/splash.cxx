@@ -79,9 +79,9 @@ SplashScreen::SplashScreen(const Reference< XMultiServiceFactory >& rSMgr)
     , _fHeight(-1.0)
     , _xoffset(12)
 	, _yoffset(18)
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	, _iLastProgressPainted(-1)
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 {
 	_rFactory = rSMgr;
 
@@ -115,9 +115,9 @@ void SAL_CALL SplashScreen::end()
 	throw (RuntimeException)
 {
     _iProgress = _iMax;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     _iLastProgressPainted = -1;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     if (_bVisible )
     {
         if ( _eBitmapMode == BM_FULLSCREEN )
@@ -594,11 +594,11 @@ void SplashScreen::Paint( const Rectangle&)
     // in case of native controls we need to draw directly to the window
     if( IsNativeControlSupported( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL ) )
     {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         // Elminate unnecessary repainting
         if( _iLastProgressPainted == _iProgress )
     		return;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
         DrawBitmap( Point(), _aIntroBmp );
         
@@ -617,16 +617,16 @@ void SplashScreen::Paint( const Rectangle&)
               aControlRegion = Region( aDrawRect );
         }
         
-#ifdef USE_JAVA 
+#if defined USE_JAVA && defined MACOSX
         SetFillColor();
-#endif	// USE_JAVA 
+#endif	// USE_JAVA && MACOSX
 
         if( (bNativeOK = DrawNativeControl( CTRL_INTROPROGRESS, PART_ENTIRE_CONTROL, aControlRegion,
                                                      CTRL_STATE_ENABLED, aValue, rtl::OUString() )) != FALSE ) 
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             _iLastProgressPainted = _iProgress;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             return;
         }
     }

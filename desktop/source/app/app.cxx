@@ -184,9 +184,9 @@ namespace desktop
 
 static SalMainPipeExchangeSignalHandler* pSignalHandler = 0;
 static sal_Bool _bCrashReporterEnabled = sal_True;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 static bool _bSuppressOpenDefault = false;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 static const ::rtl::OUString CFG_PACKAGE_COMMON_HELP   ( RTL_CONSTASCII_USTRINGPARAM( "org.openoffice.Office.Common/Help"));
 static const ::rtl::OUString CFG_PATH_REG              ( RTL_CONSTASCII_USTRINGPARAM( "Registration"                     ));
@@ -1195,7 +1195,7 @@ USHORT Desktop::Exception(USHORT nError)
 
 void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( rAppEvent.IsOpenEvent() || rAppEvent.IsPrintEvent() )
     {
         CommandLineArgs* pCmdLineArgs = GetCommandLineArgs();
@@ -1225,7 +1225,7 @@ void Desktop::AppEvent( const ApplicationEvent& rAppEvent )
 
         return;
 	}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     HandleAppEvent( rAppEvent );
 }
@@ -1800,11 +1800,11 @@ sal_Bool Desktop::InitializeQuickstartMode( Reference< XMultiServiceFactory >& r
         // this will only be activated if -quickstart was specified on cmdline
         RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) createInstance com.sun.star.office.Quickstart" );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         sal_Bool bQuickstart = sal_True;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         sal_Bool bQuickstart = GetCommandLineArgs()->IsQuickstart();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         Sequence< Any > aSeq( 1 );
         aSeq[0] <<= bQuickstart;
 
@@ -2609,10 +2609,10 @@ void Desktop::OpenDefault()
 
     RTL_LOGFILE_CONTEXT( aLog, "desktop (cd100003) ::Desktop::OpenDefault" );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !_bSuppressOpenDefault )
     {
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ::rtl::OUString        aName;
     SvtModuleOptions    aOpt;
 
@@ -2660,10 +2660,10 @@ void Desktop::OpenDefault()
 	aRequest.pcProcessed = NULL;
     aRequest.aOpenList   = aName;
     OfficeIPCThread::ExecuteCmdLineRequests( aRequest );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     }
     _bSuppressOpenDefault = true;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 

@@ -36,11 +36,11 @@
 extern "C" {
 #endif
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 int unopkg_main( int argc, char **argv );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 int unopkg_main(void);
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 #if defined __cplusplus
 }

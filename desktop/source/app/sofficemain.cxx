@@ -35,24 +35,24 @@
 #include <rtl/logfile.hxx>
 #include <tools/extendapplicationenvironment.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include "sal/main.h"
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 BOOL SVMain();
 
 // -=-= main() -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 // All references to main() need to be redefined to soffice_main()
 #define main soffice_main
 extern "C"
 {
 SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
 #undef main
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 extern "C" int soffice_main()
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 {
     tools::extendApplicationEnvironment();
 
@@ -63,13 +63,13 @@ extern "C" int soffice_main()
     aDesktop.SetAppName( rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("soffice")) );
     SVMain();
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Force exit since some JVMs won't shutdown when only exit() is invoked
     _exit( 0 );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     return 0;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX

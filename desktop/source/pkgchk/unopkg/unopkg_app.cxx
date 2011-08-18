@@ -208,16 +208,16 @@ void disposeBridges(Reference<css::uno::XComponentContext> ctx)
 }
 
 //##############################################################################
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 // All references to main() need to be redefined to soffice_main()
 #define main unopkg_main
 extern "C"
 {
 SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
 #undef main
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 extern "C" int unopkg_main()
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 {
     tools::extendApplicationEnvironment();
     DisposeGuard disposeGuard;
@@ -520,8 +520,8 @@ extern "C" int unopkg_main()
     disposeBridges(xLocalComponentContext);
     return 1;
 }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 
