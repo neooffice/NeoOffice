@@ -165,7 +165,7 @@ namespace vclcanvas
 
 					// bitmasks are much faster than alphamasks on some platforms
 					// so convert to bitmask if useful
-#if !defined QUARTZ || defined USE_JAVA
+#if !defined QUARTZ || ( defined USE_JAVA && defined MACOSX )
                     if( aMask.GetBitCount() != 1 )
                     {
                         OSL_ENSURE(false,
@@ -173,7 +173,7 @@ namespace vclcanvas
                                    "monochrome (performance!)");
                         aMask.MakeMono(255);
                     }
-#endif
+#endif	// !QUARTZ || ( USE_JAVA && MACOSX )
 
                     // Note: since we retrieved aBmp and aMask
                     // directly from an OutDev, it's already a

@@ -748,7 +748,7 @@ namespace vclcanvas
 #else // QUARTZ && !defined USE_JAVA  TODO: remove once doing the XOR-trick in the canvas-layer becomes redundant
             {
                 // output gradient the hard way: XORing out the polygon
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 MapMode aVDevMap;
                 VirtualDevice aVDev( rOutDev );
                 if ( aVDev.SetOutputSizePixel( aPolygonDeviceRectOrig.GetSize() ) )
@@ -814,7 +814,7 @@ namespace vclcanvas
                         p2ndOutDev->Pop();
                     }
                 }
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                 rOutDev.Push( PUSH_RASTEROP );
                 rOutDev.SetRasterOp( ROP_XOR );
                 doGradientFill( rOutDev,
@@ -865,7 +865,7 @@ namespace vclcanvas
                                     true );
                     p2ndOutDev->Pop();
                 }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             }
 #endif // QUARTZ && !defined USE_JAVA complex-clipping vs. XOR-trick
 
