@@ -911,12 +911,12 @@ PluginDescription XPlugin_Impl::fitDescription( const OUString& rURL )
     }
 
     Sequence< PluginDescription > aDescrs = xPMgr->getPluginDescriptions();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // With WebKit, there is only one plugin type so return the first plugin
     // description
     if ( aDescrs.getLength() )
         return aDescrs[ 0 ];
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     const PluginDescription* pDescrs = aDescrs.getConstArray();
 
     for( int nArg = 0; nArg < m_nArgs; nArg++ )
@@ -945,7 +945,7 @@ PluginDescription XPlugin_Impl::fitDescription( const OUString& rURL )
             }
         }
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return PluginDescription();
 }
 

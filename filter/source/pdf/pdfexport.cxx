@@ -1323,7 +1323,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 				case( META_EPS_ACTION ):
 				{
 					const MetaEPSAction*	pA = (const MetaEPSAction*) pAction;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 					const Point& rPos = pA->GetPoint();
 					const Size& rSize = pA->GetSize();
 
@@ -1346,7 +1346,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 						}
 						delete pVDev;
 					}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 					const GDIMetaFile		aSubstitute( pA->GetSubstitute() );
 
 					rWriter.Push();
@@ -1363,7 +1363,7 @@ sal_Bool PDFExport::ImplWriteActions( PDFWriter& rWriter, PDFExtOutDevData* pPDF
 					ImplWriteActions( rWriter, NULL, aSubstitute, rDummyVDev );
 					rDummyVDev.Pop();
 					rWriter.Pop();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 				}
 				break;
 
