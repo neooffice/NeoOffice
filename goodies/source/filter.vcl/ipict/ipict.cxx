@@ -38,13 +38,13 @@
 #include <svtools/fltcall.hxx>
 #include <math.h>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // MT: NOOLDSV, someone should change the code...
 enum PenStyle { PEN_NULL, PEN_SOLID, PEN_DOT, PEN_DASH, PEN_DASHDOT };
@@ -1315,6 +1315,7 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 		if (nUSHORT==2010)
 			aActFont.SetCharSet( RTL_TEXTENCODING_APPLE_ROMAN );
 
+#ifdef MACOSX
 		Str255 aPascalName;
 		*aPascalName = '\0';
 		GetFontName( nUSHORT, aPascalName );
@@ -1325,7 +1326,9 @@ ULONG PictReader::ReadData(USHORT nOpcode)
 			sFontName[ *aPascalName ] = '\0';
 			aActFont.SetName( String( sFontName, gsl_getSystemTextEncoding() ) );
 		}
-		else if (nUSHORT==2515)
+		else
+#endif	// MACOSX
+			if (nUSHORT==2515)
 		{
 			aActFont.SetName( aMTExtraFontName );
 		}
