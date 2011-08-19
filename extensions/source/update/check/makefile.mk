@@ -85,9 +85,9 @@ SHL1STDLIBS=    \
         $(SHELL32LIB) \
         $(OLE32LIB)
 
-.IF "$(GUIBASE)" == "java"
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 SHL1STDLIBS+= $(UNOTOOLSLIB)
-.ENDIF		# "$(GUIBASE)" == "java"
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
         
 SHL1VERSIONMAP=..$/exports.map
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
