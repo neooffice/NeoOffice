@@ -1490,7 +1490,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
         return css::uno::Reference< css::frame::XFrame >();
 
     css::uno::Reference< css::frame::XFramesSupplier > xSupplier(m_xSMGR->createInstance(SERVICENAME_DESKTOP), css::uno::UNO_QUERY);
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
     FrameListAnalyzer aTasksAnalyzer(xSupplier, css::uno::Reference< css::frame::XFrame >(), FrameListAnalyzer::E_BACKINGCOMPONENT);
     if (aTasksAnalyzer.m_xBackingComponent.is())
     {
@@ -1501,7 +1501,7 @@ css::uno::Reference< css::frame::XFrame > LoadEnv::impl_searchRecycleTarget()
             return aTasksAnalyzer.m_xBackingComponent;
         }
     }
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA && !MACOSX
 
     // These states indicates the wishing for creation of a new view in general.
     if (

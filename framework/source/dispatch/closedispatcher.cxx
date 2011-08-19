@@ -300,13 +300,13 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
     css::uno::Reference< css::frame::XFramesSupplier > xDesktop(xSMGR->createInstance(SERVICENAME_DESKTOP), css::uno::UNO_QUERY_THROW);
     FrameListAnalyzer aCheck1(xDesktop, xCloseFrame, FrameListAnalyzer::E_HELP | FrameListAnalyzer::E_BACKINGCOMPONENT);
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Do not close the backing window under any circumstances
     if (aCheck1.m_bReferenceIsBacking)
         bEstablishBackingMode = sal_True;
     else
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     // a) If the curent frame (where the close dispatch was requested for) does not have
     //    any parent frame ... it will close this frame only. Such frame isnt part of the
     //    global desktop tree ... and such frames are used as "implementation details" only.
@@ -368,7 +368,7 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
             //     application or establish the backing mode now.
             //     And that depends from the dispatched URL ...
             {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 // Fix bug 3004 by not creating more than one backing window.
                 // Fix multiple backing windows in Window menu by closing any
                 // extra backing windows.
@@ -377,14 +377,14 @@ IMPL_LINK( CloseDispatcher, impl_asyncCallback, void*, EMPTYARG )
                     bEstablishBackingMode = sal_True;
                 else
                     bCloseFrame = sal_True;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                 if (eOperation == E_CLOSE_FRAME)
                     bTerminateApp = sal_True;
                 else if( SvtModuleOptions().IsModuleInstalled(SvtModuleOptions::E_SSTARTMODULE) )
                     bEstablishBackingMode = sal_True;
                 else
                     bTerminateApp = sal_True;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             }
         }
     }

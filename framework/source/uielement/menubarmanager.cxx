@@ -100,7 +100,7 @@
 #include <uielement/menubarmerger.hxx>
 #include <dispatch/uieventloghelper.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
@@ -126,7 +126,7 @@ static IsShowOnlyMenusWindow_Type *pIsShowOnlyMenusWindow = NULL;
 static NSDocument_revertToSavedLocalizedString_Type *pNSDocument_revertToSavedLocalizedString = NULL;
 static NSDocument_saveAVersionLocalizedString_Type *pNSDocument_saveAVersionLocalizedString = NULL;
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 //_________________________________________________________________________________________________________________
 //	namespace
@@ -982,7 +982,7 @@ void MenuBarManager::UpdateSpecialWindowMenu( Menu* pMenu )
                 Window* pWin = VCLUnoHelper::GetWindow( xFrame->getContainerWindow() );
                 if ( pWin && pWin->IsVisible() )
                 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                     // Load libvcl and invoke the IsShowOnlyMenusWindow function
                     if ( !pIsShowOnlyMenusWindow )
                     {
@@ -995,12 +995,12 @@ void MenuBarManager::UpdateSpecialWindowMenu( Menu* pMenu )
 
                     if ( !pIsShowOnlyMenusWindow || !pIsShowOnlyMenusWindow( pWin ) )
                     {
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                     aNewWindowListVector.push_back( pWin->GetText() );
                     ++nItemId;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                 }
             }
 		}
@@ -1036,14 +1036,14 @@ void MenuBarManager::UpdateSpecialWindowMenu( Menu* pMenu )
 			}
 		}
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Disable the "close window" menu item if there are no windows listed
 		if ( pMenu->GetItemCount() > 1 )
 		{
 			sal_uInt16 nCloseItemId = pMenu->GetItemId( 1 );
 			pMenu->EnableItem( nCloseItemId, aNewWindowListVector.size() > 0 );
 		}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	}
 }
 
@@ -1335,7 +1335,7 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
 			}
 		}
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         for ( USHORT nPos = 0; nPos < pMenu->GetItemCount(); nPos++ )
         {
             if ( pMenu->GetItemType( nPos ) != MENUITEM_SEPARATOR )
@@ -1375,7 +1375,7 @@ IMPL_LINK( MenuBarManager, Activate, Menu *, pMenu )
                 }
             }
         }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	}
 
 	return 1;
@@ -1451,12 +1451,12 @@ IMPL_LINK( MenuBarManager, Select, Menu *, pMenu )
                         Reference< XFrame > xFrame;
                         aItem >>= xFrame;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                         // Fix bug 3577 by skipping any "show only menus"
                         // windows
                         if ( xFrame.is() && pIsShowOnlyMenusWindow && pIsShowOnlyMenusWindow( VCLUnoHelper::GetWindow( xFrame->getContainerWindow() ) ) )
                             continue;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
                         if ( xFrame.is() && nTaskId == nCurItemId )
 						{

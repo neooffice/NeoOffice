@@ -113,7 +113,7 @@
 
 #include <vcl/menu.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef __FRAMEWORK_SERVICES_BACKINGCOMP_HXX_
 #include <services/backingcomp.hxx>
@@ -136,7 +136,7 @@ static ::vos::OModule aModule;
 
 static ShowOnlyMenusForWindow_Type *pShowOnlyMenusForWindow = NULL;
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 //_________________________________________________________________________________________________________________
 //	namespace
@@ -1482,7 +1482,7 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
     aWriteLock.unlock();
     /* } SAFE */
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     aReadLock.lock();
 
     // Local libvcl and invoke the ShowOnlyMenusForWindow function
@@ -1515,7 +1515,7 @@ sal_Bool SAL_CALL Frame::setComponent(  const   css::uno::Reference< css::awt::X
     }
 
     aReadLock.unlock();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     //_____________________________________________________________________________________________________
 	// notifies all interest listener, that current component was changed or a new one was loaded
