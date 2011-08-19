@@ -81,6 +81,6 @@ BUILD_ACTION=$(ANT) -Dbuild.label="build-$(RSCREVISION)" -Dant.build.javac.sourc
 .INCLUDE : tg_ext.mk
 .ENDIF
 
-.IF "$(GUIBASE)" == "java"
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 BACK_PATH:=$(PWD)$/
-.ENDIF		# "$(GUIBASE)" == "java"
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
