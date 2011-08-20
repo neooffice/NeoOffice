@@ -48,8 +48,10 @@
 
 // Redefine class name to avoid having to link to libsd
 #define SdPrintDialog SdPrintOptionsDialog
-// Enable special print dialog code
+#ifdef MACOSX
+// Enable special Mac OS X print dialog code
 #define USE_PRINT_DIALOG_IN_PRINT_OPTIONS
+#endif	// MACOSX
 #include "printdialog.cxx"
 
 #endif	// USE_JAVA
@@ -103,9 +105,9 @@ SdPrintOptions::SdPrintOptions( Window* pParent, const SfxItemSet& rInAttrs ) :
 		aCbxPaperbin            ( this, SdResId( CBX_PAPERBIN ) ),
 
 		rOutAttrs				( rInAttrs )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 		, bImpress				( true )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 {
 	FreeResource();
 
@@ -136,10 +138,10 @@ SdPrintOptions::~SdPrintOptions()
 
 BOOL SdPrintOptions::FillItemSet( SfxItemSet& rAttrs )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 	BOOL bRet = FALSE;
 	SdOptionsPrintItem aOptions( ATTR_OPTIONS_PRINT );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 
 	if( aCbxDraw.GetSavedValue() != aCbxDraw.IsChecked() ||
 		aCbxNotes.GetSavedValue() != aCbxNotes.IsChecked() ||
@@ -159,9 +161,9 @@ BOOL SdPrintOptions::FillItemSet( SfxItemSet& rAttrs )
 		aRbtGrayscale.GetSavedValue() != aRbtGrayscale.IsChecked() ||
 		aRbtBlackWhite.GetSavedValue() != aRbtBlackWhite.IsChecked() )
 	{
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 		SdOptionsPrintItem aOptions( ATTR_OPTIONS_PRINT );
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 
 		aOptions.GetOptionsPrint().SetDraw( aCbxDraw.IsChecked() );
 		aOptions.GetOptionsPrint().SetNotes( aCbxNotes.IsChecked() );
@@ -185,15 +187,15 @@ BOOL SdPrintOptions::FillItemSet( SfxItemSet& rAttrs )
 			nQuality = 2;
 		aOptions.GetOptionsPrint().SetOutputQuality( nQuality );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 		bRet = TRUE;
-#else	// USE_JAVA
+#else	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 		rAttrs.Put( aOptions );
 
 		return( TRUE );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 	}
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 	if ( bImpress )
 	{
 		SdPrintOptionsDialog *pPrintDlg = SdPrintOptionsDialog::Create( this, true );
@@ -213,9 +215,9 @@ BOOL SdPrintOptions::FillItemSet( SfxItemSet& rAttrs )
 		rAttrs.Put( aOptions );
 
 	return bRet;
-#else	// USE_JAVA
+#else	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 	return( FALSE );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 }
 
 // -----------------------------------------------------------------------
@@ -367,15 +369,15 @@ void SdPrintOptions::PageCreated (SfxAllItemSet
 	{
 		UINT32 nFlags=pFlagItem->GetValue();
 		if ( ( nFlags & SD_DRAW_MODE ) == SD_DRAW_MODE )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 			bImpress = false;
-#else	// USE_JAVA
+#else	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 			SetDrawMode();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 	}
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 	SetDrawMode();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && USE_PRINT_DIALOG_IN_PRINT_OPTIONS
 #else
 	SetDrawMode();
 #endif
