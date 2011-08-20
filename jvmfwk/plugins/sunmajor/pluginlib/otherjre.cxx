@@ -33,7 +33,7 @@
 #include "osl/thread.h"
 #include "otherjre.hxx"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <dlfcn.h>
 #include "sunversion.hxx"
@@ -47,7 +47,7 @@
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace rtl;
 using namespace std;
@@ -139,13 +139,13 @@ char const* const* OtherInfo::getLibraryPaths(int* size)
 #endif
 }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 int OtherInfo::compareVersions(const rtl::OUString& sSecond) const
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     OUString sFirst = getVersion();
       
     SunVersion version1(sFirst);
@@ -207,13 +207,13 @@ int OtherInfo::compareVersions(const rtl::OUString& /*sSecond*/) const
         return 1;
     else
         return -1;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     //Need to provide an own algorithm for comparing version. 
     //Because this function returns always 0, which means the version of
     //this JRE and the provided version "sSecond" are equal, one cannot put
     //any excludeVersion entries in the javavendors.xml file.
     return 0;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 }

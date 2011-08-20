@@ -491,7 +491,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
          return JFW_PLUGIN_E_VM_CREATION_FAILED;
      }
 
-#ifdef UNX
+#if defined UNX || defined USE_JAVA
     //Setting the JAVA_HOME is needed for awt
     rtl::OUString javaHome(RTL_CONSTASCII_USTRINGPARAM("JAVA_HOME="));
     rtl::OUString sPathLocation;
@@ -505,13 +505,13 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     typedef jint JNICALL JNI_InitArgs_Type(void *);
     typedef jint JNICALL JNI_CreateVM_Type(JavaVM **, JNIEnv **, void *);
     rtl::OUString sSymbolCreateJava(
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             // Fix bug 1257 by explicitly loading the JVM instead of loading the
             // shared JavaVM library
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM_Impl"));
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             RTL_CONSTASCII_USTRINGPARAM("JNI_CreateJavaVM"));
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         
     JNI_CreateVM_Type * pCreateJavaVM = (JNI_CreateVM_Type *) osl_getFunctionSymbol(
         moduleRt, sSymbolCreateJava.pData);
@@ -548,7 +548,11 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 
     boost::scoped_array<JavaVMOption> sarOptions(
 #ifdef USE_JAVA
+#ifdef MACOSX
         new JavaVMOption[cOptions + 9]);
+#else	// MACOSX
+        new JavaVMOption[cOptions + 6]);
+#endif	// MACOSX
 #else	// USE_JAVA
         new JavaVMOption[cOptions + 1]);
 #endif	// USE_JAVA
@@ -606,13 +610,15 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #endif
     }
 
-#ifdef MACOSX
 #ifdef USE_JAVA
+    OString aPathDelimiter( SAL_PATHDELIMITER );
+    OString aPathSeparator( SAL_PATHSEPARATOR );
+
     // Limit the directories that extensions can be loaded from to prevent
     // random JVM crashing
     rtl::OString aExtPath( "-Djava.ext.dirs=" );
     aExtPath += rtl::OUStringToOString( sPathLocation, osl_getThreadTextEncoding() );
-    aExtPath += rtl::OString( "/lib/ext" );
+    aExtPath += aPathDelimiter + rtl::OString( "lib" ) + aPathDelimiter + rtl::OString( "ext" );
     options[i+1].optionString = strdup( (char *)aExtPath.getStr() );
     options[i+1].extraInfo = NULL;
 
@@ -623,42 +629,59 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OUString aExeSysPath;
     if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
     {
-        rtl::OString aDirPath = rtl::OString( aExeSysPath, aExeSysPath.lastIndexOf('/'), RTL_TEXTENCODING_UTF8 );
-        aDirPath += rtl::OString( "/classes/" );
-        aBootPath += aDirPath;
-        aBootPath += rtl::OString( "serializer.jar:" );
-        aBootPath += aDirPath;
-        aBootPath += rtl::OString( "xalan.jar:" );
-        aBootPath += aDirPath;
-        aBootPath += rtl::OString( "xercesImpl.jar:" );
-        aBootPath += aDirPath;
-        aBootPath += rtl::OString( "xml-apis.jar" );
+        rtl::OString aDirPath = rtl::OString( aExeSysPath, aExeSysPath.lastIndexOf( SAL_PATHDELIMITER ), RTL_TEXTENCODING_UTF8 );
+        aDirPath += aPathDelimiter + rtl::OString( "classes" ) + aPathDelimiter;
+        aBootPath += aDirPath + rtl::OString( "serializer.jar" );
+        aBootPath += aPathSeparator;
+        aBootPath += aDirPath + rtl::OString( "xalan.jar" );
+        aBootPath += aPathSeparator;
+        aBootPath += aDirPath + rtl::OString( "xercesImpl.jar" );
+        aBootPath += aPathSeparator;
+        aBootPath += aDirPath + rtl::OString( "xml-apis.jar" );
     }
     options[i+2].optionString = strdup( (char *)aBootPath.getStr() );
     options[i+2].extraInfo = NULL;
 
-    rtl::OString aLibPath( "-Djava.library.path=/usr/lib/java" );
+    rtl::OString aLibPath( "-Djava.library.path=" );
+#ifdef MACOSX
+    aLibPath += aPathDelimiter + rtl::OString( "usr" ) + aPathDelimiter + rtl::OString( "lib" ) + aPathDelimiter + rtl::OString( "java" );
+#else	// MACOSX
+    aLibPath += aPathDelimiter + rtl::OString( "C:" ) + aPathDelimiter + rtl::OString( "Windows" ) + aPathDelimiter + rtl::OString( "System32" );
+#endif	// MACOSX
     rtl::OUString aJavaLibPath( pInfo->sLocation );
-    aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf('/') );
-    aJavaLibPath += OUString::createFromAscii( "/Libraries" );
+    aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf( SAL_PATHDELIMITER ) );
+#ifdef MACOSX
+    aJavaLibPath += OUString::createFromAscii( aPathDelimiter ) + OUString::createFromAscii( "Libraries" );
+#else	// MACOSX
+    aJavaLibPath += OUString::createFromAscii( aPathDelimiter ) + OUString::createFromAscii( "bin" );
+#endif	// MACOSX
     rtl::OUString aJavaLibSysPath;
     if ( osl_getSystemPathFromFileURL( aJavaLibPath.pData, &aJavaLibSysPath.pData ) == osl_File_E_None )
     {
-        aLibPath += ":";
+        aLibPath += aPathSeparator;
         aLibPath += rtl::OUStringToOString( aJavaLibSysPath, RTL_TEXTENCODING_UTF8 );
     }
+#ifdef MACOSX
     rtl::OString aEnvLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
     if  ( aEnvLibPath.getLength() )
     {
-        aLibPath += ":";
+        aLibPath += aPathSeparator;
         aLibPath += aEnvLibPath;
     }
     rtl::OString aEnvFallbackLibPath( getenv( "DYLD_FALLBACK_LIBRARY_PATH" ) );
     if ( aEnvFallbackLibPath.getLength() )
     {
-        aLibPath += ":";
+        aLibPath += aPathSeparator;
         aLibPath += aEnvFallbackLibPath;
     }
+#else	// MACOSX
+    rtl::OString aEnvPath( getenv( "PATH" ) );
+    if  ( aEnvPath.getLength() )
+    {
+        aLibPath += aPathSeparator;
+        aLibPath += aLibPath;
+    }
+#endif	// MACOSX
 
     // Set the library path to include the executable path but none of the
     // extensions
@@ -669,34 +692,41 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     options[i+4].optionString = "-Xrs";
     options[i+4].extraInfo = NULL;
 
-    // We need to turn off some of Java 1.4's graphics optimizations as
-    // they cause full screen window positioning, clipping, and image
-    // drawing speed to get messed up
-    options[i+5].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
-    options[i+5].extraInfo = NULL;
-
-    // Fix bug 1800 by explicitly setting the look and feel to Aqua
-    options[i+6].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
-    options[i+6].extraInfo = NULL;
-
-    // Java 1.5 and higher on Leopard needs Quartz to be explicitly turned on
-    options[i+7].optionString = "-Dapple.awt.graphics.UseQuartz=true";
-    options[i+7].extraInfo = NULL;
-
     size_t nUserMem = 256;
     rtl::OStringBuffer aBuf( "-Xmx" );
     aBuf.append( (sal_Int32)nUserMem );
     aBuf.append( "m" );
-    options[i+8].optionString = strdup( (char *)aBuf.makeStringAndClear().getStr() );
+    options[i+5].optionString = strdup( (char *)aBuf.makeStringAndClear().getStr() );
+    options[i+5].extraInfo = NULL;
+
+#ifdef MACOSX
+    // We need to turn off some of Java 1.4's graphics optimizations as
+    // they cause full screen window positioning, clipping, and image
+    // drawing speed to get messed up
+    options[i+6].optionString = "-Dapple.awt.window.position.forceSafeProgrammaticPositioning=false";
+    options[i+6].extraInfo = NULL;
+
+    // Fix bug 1800 by explicitly setting the look and feel to Aqua
+    options[i+7].optionString = "-Dswing.defaultlaf=apple.laf.AquaLookAndFeel";
+    options[i+7].extraInfo = NULL;
+
+    // Java 1.5 and higher on Leopard needs Quartz to be explicitly turned on
+    options[i+8].optionString = "-Dapple.awt.graphics.UseQuartz=true";
     options[i+8].extraInfo = NULL;
+#endif	// MACOSX
 #endif	// USE_JAVA
+#if defined MACOSX || defined USE_JAVA
     vm_args.version= JNI_VERSION_1_4; // issue 88987
 #else
     vm_args.version= JNI_VERSION_1_2;
 #endif
     vm_args.options= options;
 #ifdef USE_JAVA
+#ifdef MACOSX
     vm_args.nOptions= cOptions + 9;
+#else	// MACOSX
+    vm_args.nOptions= cOptions + 6;
+#endif	// MACOSX
 #else	// USE_JAVA
     vm_args.nOptions= cOptions + 1;
 #endif	// USE_JAVA
