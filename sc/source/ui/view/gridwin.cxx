@@ -169,9 +169,11 @@ extern USHORT nScFillModeMouseModifier;				// global.cxx
 
 #ifdef USE_JAVA
 
+#ifdef MACOSX
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+#endif	// MACOSX
 
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
@@ -180,6 +182,7 @@ static bool UseMacHighlightColor()
 {
 	bool bUseMacHighlightColor = true;
 
+#ifdef MACOSX
     CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
     if( aPref ) 
     {
@@ -187,6 +190,7 @@ static bool UseMacHighlightColor()
             bUseMacHighlightColor = false;
         CFRelease( aPref );
     }
+#endif	// MACOSX
 
 	return bUseMacHighlightColor;
 }
