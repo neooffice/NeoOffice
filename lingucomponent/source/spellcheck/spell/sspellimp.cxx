@@ -60,9 +60,9 @@
 #include <list>
 #include <set>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include <unistd.h>
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace utl;
 using namespace osl;
@@ -77,7 +77,7 @@ using namespace linguistic;
 // XML-header of SPELLML queries
 #define SPELLML_HEADER "<?xml?>"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 static OUString aDelimiter = OUString::createFromAscii( "_" );
  
@@ -97,7 +97,7 @@ static OUString ImplGetLocaleString( Locale aLocale )
 	return aLocaleString;
 }
 
-#endif // USE_JAVA
+#endif // USE_JAVA && MACOSX
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -111,18 +111,18 @@ SpellChecker::SpellChecker() :
 	bDisposing = FALSE;
 	pPropHelper = NULL;
         numdict = 0;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	maLocales = NULL;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 
 SpellChecker::~SpellChecker()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	if ( maLocales )
 		CFRelease( maLocales );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
   if (aDicts) {
      for (int i = 0; i < numdict; i++) { 
@@ -166,11 +166,11 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
     // this routine should return the locales supported by the installed
     // dictionaries.
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if (!numdict && !maLocales)
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     if (!numdict) 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     {
         SvtLinguConfig aLinguCfg;
 
@@ -284,7 +284,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
             aSuppLocales.realloc(0);
         }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		::std::list< Locale > aAppLocalesList;
 		CFMutableArrayRef aAppLocales = CFArrayCreateMutable( kCFAllocatorDefault, 0, &kCFTypeArrayCallBacks );
 		if ( aAppLocales )
@@ -520,7 +520,7 @@ Sequence< Locale > SAL_CALL SpellChecker::getLocales()
 
 		if ( aAppLocales )
 			CFRelease( aAppLocales );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     }    
 
 	return aSuppLocales;
@@ -537,7 +537,7 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 		getLocales();
 
 	INT32 nLen = aSuppLocales.getLength();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	// Check native locales first 
 	OUString aLocaleString( ImplGetLocaleString( rLocale ) );
 	if ( aLocaleString.getLength() )
@@ -605,7 +605,7 @@ sal_Bool SAL_CALL SpellChecker::hasLocale(const Locale& rLocale)
 			}
 		}
 	}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	for (INT32 i = 0;  i < nLen;  ++i)
 	{
@@ -643,7 +643,7 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 
 	if (n)
 	{
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		bool bHandled = false;
 		bool bFound = false;
 		OUString aLocaleString( ImplGetLocaleString( rLocale ) );
@@ -654,7 +654,7 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 		}
 		else
 		{
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             for (sal_Int32 i = 0; i < numdict; ++i) {
 	        pMS = NULL;
                 aEnc = 0;
@@ -700,9 +700,9 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 		}
 	        if (pMS)
                 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 				bHandled = true;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		    OString aWrd(OU2ENC(nWord,aEnc));
 	            int rVal = pMS->spell((char*)aWrd.getStr());
  	            if (rVal != 1)
@@ -715,7 +715,7 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 	        }
 	    }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		}
 
 		if ( !bHandled )
@@ -738,7 +738,7 @@ INT16 SpellChecker::GetSpellFailure( const OUString &rWord, const Locale &rLocal
 				}
 			}
 		}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	}
 
 	return nRes;
@@ -826,7 +826,7 @@ Reference< XSpellAlternatives >
 
 	    Sequence< OUString > aStr( 0 );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		bool bHandled = false;
 		bool bFound = false;
 		OUString aLocaleString( ImplGetLocaleString( rLocale ) );
@@ -837,7 +837,7 @@ Reference< XSpellAlternatives >
 		}
 		else
 		{
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             for (int i =0; i < numdict; i++) {
 	        pMS = NULL;
                 aEnc = 0;
@@ -851,9 +851,9 @@ Reference< XSpellAlternatives >
 
 	        if (pMS)
 	        {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 				bHandled = true;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	            char ** suglst = NULL;
 		    OString aWrd(OU2ENC(nWord,aEnc));
                     count = pMS->suggest(&suglst, (const char *) aWrd.getStr());
@@ -874,7 +874,7 @@ Reference< XSpellAlternatives >
                     }
 		}
 	    }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		}
 
 		if ( !bHandled )
@@ -927,7 +927,7 @@ Reference< XSpellAlternatives >
 				}
 			}
 		}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 			
             // now return an empty alternative for no suggestions or the list of alternatives if some found
 	    SpellAlternatives *pAlt = new SpellAlternatives;
@@ -955,7 +955,7 @@ Reference< XSpellAlternatives > SAL_CALL
 #ifdef USE_JAVA
 	// If the locale is empty, spellcheck using the current locale
  	if ( !rWord.getLength() )
-#else 	// USE_JAVA
+#else	// USE_JAVA
  	if (rLocale == Locale()  ||  !rWord.getLength())
 #endif	// USE_JAVA
 		return NULL;

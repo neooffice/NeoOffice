@@ -48,12 +48,12 @@
 #include <linguistic/misc.hxx>
 #include "sprophelp.hxx"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <map>
 #include "sspellimp_cocoa.h"
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::rtl;
 using namespace ::com::sun::star::uno;
@@ -83,11 +83,11 @@ class SpellChecker :
         OUString *                         aDNames;
         sal_Int32                          numdict;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	CFArrayRef								maLocales;
 	::std::map< ::rtl::OUString, CFStringRef >	maPrimaryNativeLocaleMap;
 	::std::map< ::rtl::OUString, CFStringRef >	maSecondaryNativeLocaleMap;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	::cppu::OInterfaceContainerHelper		aEvtListeners;
 	Reference< XPropertyChangeListener >	xPropHelper;
 	PropertyHelper_Spell *			 		pPropHelper;
