@@ -389,7 +389,7 @@ short PrinterSetupDialog::Execute()
 	ImplSetInfo();
 	maStatusTimer.Start();
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	short nRet = TRUE;
 
 	// Display options dialog if set
@@ -436,10 +436,10 @@ short PrinterSetupDialog::Execute()
 		else
 			nRet = mpPrinter->Setup();
 	}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 	// Dialog starten
 	short nRet = ModalDialog::Execute();
-#endif	// USE_JAVA 
+#endif	// USE_JAVA && MACOSX
 
 	// Wenn Dialog mit OK beendet wurde, dann die Daten updaten
 	if ( nRet == TRUE )

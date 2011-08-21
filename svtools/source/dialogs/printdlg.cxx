@@ -774,7 +774,7 @@ short PrintDialog::Execute()
     maNumCopies.SetSelection( Selection( 0, maNumCopies.GetText().Len() ) );
 	ImplModifyControlHdl( NULL );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	// Fix bug 2753 by using a job value to indicate that the native dialog
 	// should be shown
 	mpPrinter->SetJobValue( String::CreateFromAscii( "SHOWPRINTDIALOG" ), String::CreateFromAscii( "true" ) );
@@ -794,10 +794,10 @@ short PrintDialog::Execute()
 	{
 		mpPrinter->EndJob();
 	}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     // Dialog starten
 	short nRet = ModalDialog::Execute();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	// Wenn Dialog mit OK beendet wurde, dann die Daten updaten
 	if( nRet == TRUE )
