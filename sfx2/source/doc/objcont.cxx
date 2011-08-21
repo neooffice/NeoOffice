@@ -85,11 +85,11 @@
 #include "openflag.hxx"
 #include "querytemplate.hxx"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <svtools/printdlg.hxx>
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -1036,7 +1036,7 @@ BOOL SfxObjectShell::Print
 			if ( !pStyle )
 				return TRUE;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			// Fix bug 1279 by forcing the print dialog to be shown
 			PrintDialog *pPrintDlg = new PrintDialog( NULL, false );
 			if ( !pPrintDlg )
@@ -1051,7 +1051,7 @@ BOOL SfxObjectShell::Print
 			delete pPrintDlg;
 			if ( nRet != RET_OK )
 				return FALSE;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 			if ( !rPrt.StartJob(String(SfxResId(STR_STYLES))) )
 			{

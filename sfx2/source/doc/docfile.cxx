@@ -147,7 +147,7 @@ using namespace ::com::sun::star::io;
 
 //#include "xmlversion.hxx"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _OSL_FILE_H_
 #include <osl/file.h>
@@ -168,7 +168,7 @@ typedef ::rtl::OUString osl_getOpenFilePath_Type( ::rtl::OUString& );
 static ::vos::OModule aModule;
 static osl_getOpenFilePath_Type *pGetOpenFilePath = NULL;
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 #define MAX_REDIRECT 5
 
@@ -4403,7 +4403,7 @@ sal_Bool SfxMedium::SwitchDocumentToFile( ::rtl::OUString aURL )
     return bResult;
 }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
 {
@@ -4438,4 +4438,4 @@ void SfxMedium::CheckForMovedFile( SfxObjectShell *pDoc )
     }
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX

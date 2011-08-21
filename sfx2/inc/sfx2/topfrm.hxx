@@ -39,9 +39,9 @@
 #include <sfx2/frame.hxx>
 #include <sfx2/viewfrm.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include <vcl/timer.hxx>
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 class SfxViewShell;
 class SfxTopFrame;
@@ -95,9 +95,9 @@ friend class SfxTopViewFrame_Impl;
 
 	SfxTopViewFrame_Impl*	pImp;
     svtools::AsynchronLink* pCloser;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     Timer					aTimer;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 protected:
 
@@ -116,9 +116,9 @@ public:
     virtual void            SetZoomFactor( const Fraction &rZoomX, const Fraction &rZoomY );
 	SAL_DLLPRIVATE virtual BOOL SetBorderPixelImpl( const SfxViewShell *pSh, const SvBorder &rBorder );
 	virtual String			UpdateTitle();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	DECL_LINK( CheckForMovedFile, void* );
-#endif  // USE_JAVA
+#endif  // USE_JAVA && MACOSX
 
 //#if 0 // _SOLAR__PRIVATE
 	SAL_DLLPRIVATE void Exec_Impl(SfxRequest &);

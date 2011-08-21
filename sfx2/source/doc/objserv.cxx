@@ -108,7 +108,7 @@
 
 #include "guisaveas.hxx"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <vcl/sysdata.hxx>
 
@@ -450,14 +450,14 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
                 return;
             }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			if ( NSDocument_versionsEnabled() )
 			{
 				SFXDocument_revertDocumentToSaved( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
 			}
 			else
 			{
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 			if ( !IsOwnStorageFormat_Impl( *GetMedium() ) )
 				return;
 
@@ -465,9 +465,9 @@ void SfxObjectShell::ExecFile_Impl(SfxRequest &rReq)
 			pDlg->Execute();
 			SetSaveVersionOnClose( pDlg->IsSaveVersionOnClose() );
 			delete pDlg;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             rReq.Done();
             return;
 		}
@@ -1037,9 +1037,9 @@ void SfxObjectShell::GetState_Impl(SfxItemSet &rSet)
 					}
 
 					if ( !pFrame || !pDoc->HasName() ||
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 						NSDocument_versionsEnabled() ? !SFXDocument_hasDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() ) :
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 						!IsOwnStorageFormat_Impl( *pDoc->GetMedium() ) )
 //REMOVE							|| pDoc->GetMedium()->GetStorage()->GetVersion() < SOFFICE_FILEFORMAT_50 )
 						rSet.DisableItem( nWhich );

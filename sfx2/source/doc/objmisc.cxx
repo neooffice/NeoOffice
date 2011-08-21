@@ -85,7 +85,7 @@
 #include <com/sun/star/security/XDocumentDigitalSignatures.hpp>
 #include <com/sun/star/frame/XModel.hpp>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <sfx2/topfrm.hxx>
 
@@ -95,7 +95,7 @@
 #include "objmisc_cocoa.h"
 #include "../view/topfrm_cocoa.h"
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -398,7 +398,7 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 		pImp->m_bIsModified = bModifiedP;
 		ModifyChanged();
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// [ed] 4/26/07 Set the dirty bit of the underlying window to match.
 		SfxViewFrame* pFrame = GetFrame();
 		if ( !pFrame )
@@ -410,7 +410,7 @@ void SfxObjectShell::SetModified( sal_Bool bModifiedP )
 			else
 				DoCocoaSetWindowModifiedBit( pFrame->GetWindow().GetSystemData()->pView, IsModified() );
 		}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	}
 }
 

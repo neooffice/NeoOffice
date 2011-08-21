@@ -91,9 +91,9 @@ private:
 	SfxViewShell*           pViewSh;
 	SfxItemSet*             pOptions;
 	SfxTabPage*             pPage;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	bool					bShowPrintSetupDialog;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 public:
 							SfxPrintOptionsDialog( Window *pParent,

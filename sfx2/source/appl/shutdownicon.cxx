@@ -624,12 +624,12 @@ void SAL_CALL ShutdownIcon::disposing( const ::com::sun::star::lang::EventObject
 void SAL_CALL ShutdownIcon::queryTermination( const ::com::sun::star::lang::EventObject& )
 throw(::com::sun::star::frame::TerminationVetoException, ::com::sun::star::uno::RuntimeException)
 {
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
 	::osl::ClearableMutexGuard	aGuard(	m_aMutex );
 
 	if ( m_bVeto )
 		throw ::com::sun::star::frame::TerminationVetoException();
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 }
 
 

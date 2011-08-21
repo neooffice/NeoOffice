@@ -49,9 +49,9 @@
 #include "sfxresid.hxx"
 #include "view.hrc"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include <svtools/prnsetup.hxx>
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 #ifdef MSC
 // der ist buggy
@@ -542,9 +542,9 @@ SfxPrintOptionsDialog::SfxPrintOptionsDialog( Window *pParent,
 	pViewSh		( pViewShell ),
 	pOptions	( pSet->Clone() ),
 	pPage		( NULL )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	, bShowPrintSetupDialog	( true )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 {
 	SetText( SfxResId( STR_PRINT_OPTIONS_TITLE ) );
@@ -612,7 +612,7 @@ long SfxPrintOptionsDialog::Notify( NotifyEvent& rNEvt )
 		if ( rNEvt.GetKeyEvent()->GetKeyCode().GetCode() == KEY_F1 && pDlgImpl->mbHelpDisabled )
 			return 1; // help disabled -> <F1> does nothing
 	}
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	else if ( bShowPrintSetupDialog && rNEvt.GetType() == EVENT_GETFOCUS )
 	{
 		PrinterSetupDialog *pSetupDlg = dynamic_cast< PrinterSetupDialog* >( GetParent() );
@@ -638,7 +638,7 @@ long SfxPrintOptionsDialog::Notify( NotifyEvent& rNEvt )
 			}
 		}
 	}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	return ModalDialog::Notify( rNEvt );
 }

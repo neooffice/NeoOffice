@@ -186,12 +186,12 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
                                                              _pViewSh, _pOptions );
 	if ( _bHelpDisabled )
 		pDlg->DisableHelp();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	long nRet;
 	if ( ( nRet = pDlg->Execute() ) == RET_OK )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 	if ( pDlg->Execute() == RET_OK )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	{
 		delete _pOptions;
 		_pOptions = pDlg->GetOptions().Clone();
@@ -208,11 +208,11 @@ IMPL_LINK( SfxDialogExecutor_Impl, Execute, void *, EMPTYARG )
 	}
 	delete pDlg;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	return nRet;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 	return 0;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 //-------------------------------------------------------------------------
@@ -509,13 +509,13 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	        // if no arguments are given, retrieve them from a dialog
 	        if ( !bIsAPI )
 			{
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 				// Don't make a copy as we need to run StartJob() multiple times
 				SfxPrinter* pDlgPrinter = pPrinter;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 	            // PrinterDialog needs a temporary printer
 				SfxPrinter* pDlgPrinter = pPrinter->Clone();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 				nDialogRet = 0;
 				if ( SID_PRINTDOC == nId )
 				{
@@ -540,20 +540,20 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 
 		                // set printer on dialog and execute
 						pPrintDlg->SetPrinter( pDlgPrinter );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 						// Pass the print job name to the dialog
 						pDlgPrinter->SetJobValue( String::CreateFromAscii( "PRINTJOBNAME" ), GetViewFrame()->GetObjectShell()->GetTitle(0) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		                ::DisableRanges( *pPrintDlg, pDlgPrinter );
 						nDialogRet = pPrintDlg->Execute();
 						if ( pExecutor && pExecutor->GetOptions() )
 						{
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
 							if ( nDialogRet == RET_OK )
 		                        // remark: have to be recorded if possible!
 								pDlgPrinter->SetOptions( *pExecutor->GetOptions() );
 							else
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 							{
 								pPrinter->SetOptions( *pExecutor->GetOptions() );
 								SetPrinter( pPrinter, SFX_PRINTER_OPTIONS );
@@ -592,14 +592,14 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                         }
                     }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                     // Force view to update the orientation and paper size set
                     // in the setup dialog. Note that these flags should only
                     // change the attributes of the current printer, not the
                     // printer itself.
                     if ( nDialogRet == RET_OK )
                         SetPrinter( pDlgPrinter, SFX_PRINTER_CHG_ORIENTATION | SFX_PRINTER_CHG_SIZE );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	                DELETEZ( pPrintSetupDlg );
 
@@ -617,10 +617,10 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 	                    aReq.Done();
 	                }
 
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
 	                // take the changes made in the dialog
 					pPrinter = SetPrinter_Impl( pDlgPrinter );
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
 	                // forget new printer, it was taken over (as pPrinter) or deleted
 	                pDlgPrinter = NULL;
@@ -639,11 +639,11 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				}
 				else
 	            {
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
 	                // PrinterDialog is used to transfer information on printing,
 	                // so it will only be deleted here if dialog was cancelled
 	                DELETEZ( pDlgPrinter );
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 	                DELETEZ( pPrintDlg );
 	                rReq.Ignore();
 					if ( SID_PRINTDOC == nId )
@@ -681,7 +681,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 				if ( bPrintOnHelp )
 					pPrintDlg->DisableHelp();
 				pPrintDlg->SetPrinter( pPrinter );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 				// Pass the print job name to the dialog
 				pPrinter->SetJobValue( String::CreateFromAscii( "PRINTJOBNAME" ), GetViewFrame()->GetObjectShell()->GetTitle(0) );
 				nDialogRet = pPrintDlg->Execute();
@@ -691,7 +691,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					rReq.Ignore();
 					break;
 				}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 				::DisableRanges( *pPrintDlg, pPrinter );
 
 	            // PrintToFile requested?
@@ -766,7 +766,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					pPrintDlg->SetFirstPage( nFrom );
 					pPrintDlg->SetLastPage( nTo );
 				}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 			}
 
 	        // intentionally no break for SID_PRINTDOC
@@ -805,7 +805,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					return;
 	            }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 				// Redirect slot to make sure that the print dialog is shown
 				if ( !pPrintDlg )
 				{
@@ -816,7 +816,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					pImp->bHasPrintOptions = bPrintOptions;
 					return;
 				}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 	            if( pPrinter->IsOriginal() && pPrinter->GetName() != Printer::GetDefaultPrinterName() )
 	            {
 	                // redirect slot to call the print dialog
@@ -825,7 +825,7 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
 					ExecPrint_Impl( rReq );
 					return;
 	            }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                 
                 pPrinter->SetNextJobIsQuick();
 	        }
@@ -861,15 +861,15 @@ void SfxViewShell::ExecPrint_Impl( SfxRequest &rReq )
                 now.GetDay(), now.GetMonth(), now.GetYear() ) );
 
 			GetObjectShell()->Broadcast( SfxPrintingHint( -1, pPrintDlg, pPrinter ) );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			ErrCode nError;
 			if ( pPrintDlg->IsRangeChecked( PRINTDIALOG_RANGE ) )
 				nError = DoPrint( pPrinter, pPrintDlg, bSilent, bIsAPI );
 			else
 				nError = DoPrint( pPrinter, NULL, FALSE, bIsAPI );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             ErrCode nError = DoPrint( pPrinter, pPrintDlg, bSilent, bIsAPI );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 			if ( nError == PRINTER_OK )
 			{
 				Invalidate( SID_PRINTDOC );

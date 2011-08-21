@@ -97,7 +97,7 @@
 #include "statcach.hxx"
 #include <sfx2/event.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <comphelper/mediadescriptor.hxx>
 #include <sfx2/app.hxx>
@@ -108,7 +108,7 @@
 
 #include "topfrm_cocoa.h"
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -145,7 +145,7 @@ static ::rtl::OUString GetModuleName_Impl( const ::rtl::OUString& sDocService )
     return sVar;
 }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 void SFXDocument_duplicate( SfxTopViewFrame *pFrame )
 {
@@ -193,7 +193,7 @@ void SFXDocument_reload( SfxTopViewFrame *pFrame )
 	}
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 class SfxTopFrame_Impl
 {
@@ -1175,7 +1175,7 @@ String SfxTopViewFrame::UpdateTitle()
     if ( pWindow && pWindow->GetText() != aTitle )
         pWindow->SetText( aTitle );
     */
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     Window* pWindow = GetTopFrame_Impl()->GetTopWindow_Impl();
     if ( pWindow )
     {
@@ -1212,7 +1212,7 @@ String SfxTopViewFrame::UpdateTitle()
                 CFRelease( aURL );
         }
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	return aTitle;
 }
 
@@ -1289,10 +1289,10 @@ SfxTopViewFrame::SfxTopViewFrame
 {
 	DBG_CTOR(SfxTopViewFrame, 0);
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	aTimer.SetTimeoutHdl( LINK( this, SfxTopViewFrame, CheckForMovedFile ) );
 	aTimer.SetTimeout( 15000 );
-#endif        // USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	pCloser = 0;
 	pImp = new SfxTopViewFrame_Impl;
@@ -1364,9 +1364,9 @@ SfxTopViewFrame::~SfxTopViewFrame()
 {
 	DBG_DTOR(SfxTopViewFrame, 0);
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     SFXDocument_releaseDocument( this );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	SetDowning_Impl();
 
@@ -1699,7 +1699,7 @@ void SfxTopViewFrame::Activate( sal_Bool bMDI )
         pImp->bActive = sal_True;
 //(mba): hier evtl. wie in Beanframe NotifyEvent ?!
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     SfxObjectShell *pDoc = GetObjectShell();
     if ( pDoc )
     {
@@ -1709,7 +1709,7 @@ void SfxTopViewFrame::Activate( sal_Bool bMDI )
     }
 
     aTimer.Start();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 void SfxTopViewFrame::Deactivate( sal_Bool bMDI )
@@ -1719,7 +1719,7 @@ void SfxTopViewFrame::Deactivate( sal_Bool bMDI )
         pImp->bActive = sal_False;
 //(mba): hier evtl. wie in Beanframe NotifyEvent ?!
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     SfxObjectShell *pDoc = GetObjectShell();
     if ( pDoc )
     {
@@ -1729,10 +1729,10 @@ void SfxTopViewFrame::Deactivate( sal_Bool bMDI )
     }
 
     aTimer.Stop();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 IMPL_LINK( SfxTopViewFrame, CheckForMovedFile, void*, EMPTYARG )
 {
@@ -1756,7 +1756,7 @@ IMPL_LINK( SfxTopViewFrame, CheckForMovedFile, void*, EMPTYARG )
     return 0;
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 void SfxTopFrame::CheckMenuCloser_Impl( MenuBar* pMenuBar )
 {

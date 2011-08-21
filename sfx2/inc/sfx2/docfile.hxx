@@ -261,9 +261,9 @@ public:
     ::rtl::OUString     GetBaseURL( bool bForSaving=false );
 
     sal_Bool            SupportsActiveStreaming( const rtl::OUString &rName ) const;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	void				CheckForMovedFile( SfxObjectShell *pDoc );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 #if _SOLAR__PRIVATE
 //REMOVE		// the storage will be truncated, if it is still not open then the stream will be truncated

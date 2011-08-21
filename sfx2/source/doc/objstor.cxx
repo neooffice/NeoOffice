@@ -142,11 +142,13 @@
 
 #ifdef USE_JAVA
 
+#ifdef MACOSX
 #include <sfx2/topfrm.hxx>
 
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+#endif	// MACOSX
 
 #ifndef _UTL_BOOTSTRAP_HXX
 #include <unotools/bootstrap.hxx>
@@ -155,7 +157,9 @@
 #include <vcl/fixed.hxx>
 #endif
 
+#ifdef MACOSX
 #include "../view/topfrm_cocoa.h"
+#endif	// MACOSX
 #include "../../../build/ooo-build-3.1.1.1/build/ooo310-m19/sw/inc/statstr.hrc"
 
 #endif	// USE_JAVA
@@ -1421,7 +1425,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 {
 	RTL_LOGFILE_CONTEXT( aLog, "sfx2 (mv76033) SfxObjectShell::SaveTo_Impl" );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     rMedium.CheckForMovedFile( this );
 
     BOOL bVersionsEnabled = NSDocument_versionsEnabled();
@@ -1434,7 +1438,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
         if ( pFrame )
             SFXDocument_saveVersionOfDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     ModifyBlocker_Impl aMod(this);
 
@@ -1754,6 +1758,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 #ifdef USE_JAVA
 			// Allow disabling of PDF thumbnail support
 			bool bDisablePDF = false;
+#ifdef MACOSX
 			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisablePDFThumbnailSupport" ), kCFPreferencesCurrentApplication );
 			if ( aPref )
 			{
@@ -1761,6 +1766,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 					bDisablePDF = true;
 				CFRelease( aPref );
 			}
+#endif	// MACOSX
 
 			::rtl::OUString aUserInstallURL;
 			if ( !bDisablePDF && ::utl::Bootstrap::locateUserInstallation( aUserInstallURL ) == ::utl::Bootstrap::PATH_EXISTS && !rMedium.GetName().EqualsIgnoreCaseAscii( aUserInstallURL.getStr(), 0, aUserInstallURL.getLength() ) )
@@ -2171,7 +2177,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 		}
     }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if (  bVersionsEnabled )
     {
     	SfxViewFrame* pFrame = NULL;
@@ -2181,7 +2187,7 @@ sal_Bool SfxObjectShell::SaveTo_Impl
         if ( pFrame )
             SFXDocument_saveVersionOfDocument( (SfxTopViewFrame *)pFrame->GetTopViewFrame() );
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     // unlock user interface
     Lock_Impl( this, sal_False );
