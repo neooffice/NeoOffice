@@ -76,26 +76,30 @@
 
 #ifdef USE_JAVA
 
+#ifdef MACOSX
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+#endif	// MACOSX
 
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
-static bool UseMacHighlightColor()
+static bool UseNativeHighlightColor()
 {
-	bool bUseMacHighlightColor = true;
+	bool bUseNativeHighlightColor = true;
 
-	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
+#ifdef MACOSX
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseNativeHighlightColor" ), kCFPreferencesCurrentApplication );
 	if( aPref ) 
 	{
 		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
-			bUseMacHighlightColor = false;
+			bUseNativeHighlightColor = false;
 		CFRelease( aPref );
 	}
+#endif	// MACOSX
 
-	return bUseMacHighlightColor;
+	return bUseNativeHighlightColor;
 }
 
 #endif	// USE_JAVA
@@ -2008,7 +2012,7 @@ void SvxTableController::updateSelectionOverlay()
 				if( pPaintWindow )
 				{
 #ifdef USE_JAVA
-					if ( UseMacHighlightColor() )
+					if ( UseNativeHighlightColor() )
 					{
 						Window *pWin = dynamic_cast< Window* >( &pPaintWindow->GetOutputDevice() );
 						if ( pWin )
@@ -2600,7 +2604,7 @@ Rectangle SvxTableController::GetNativeHighlightColorRect()
 	Rectangle aSelectedRect;
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	if ( mbCellSelectionMode && UseMacHighlightColor() )
+	if ( mbCellSelectionMode && UseNativeHighlightColor() )
 	{
 		::std::map< SvxTableController*, SdrTableObj* >::const_iterator it = SvxTableController::maTableControllerMap.find( this );
 		if ( it != SvxTableController::maTableControllerMap.end() )
@@ -2634,7 +2638,7 @@ bool SvxTableController::IsNativeHighlightColorCellPos( CellPos aPos )
 	bool bIsSelectedCell = false;
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	if ( mbCellSelectionMode && UseMacHighlightColor() )
+	if ( mbCellSelectionMode && UseNativeHighlightColor() )
 	{
 		CellPos aStart, aEnd;
 		getSelectedCells( aStart, aEnd );

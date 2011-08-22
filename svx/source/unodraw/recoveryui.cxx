@@ -299,9 +299,9 @@ sal_Bool RecoveryUI::impl_doEmergencySave()
 //===============================================
 void RecoveryUI::impl_doRecovery()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     sal_Bool bRecoveryOnly( sal_True );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     sal_Bool bRecoveryOnly( sal_False );
 
     ::rtl::OUString CFG_PACKAGE_RECOVERY( RTL_CONSTASCII_USTRINGPARAM  ( "org.openoffice.Office.Recovery/" ));
@@ -317,7 +317,7 @@ void RecoveryUI::impl_doRecovery()
                                 ::comphelper::ConfigurationHelper::E_READONLY);
     aVal >>= bCrashRepEnabled;
     bRecoveryOnly = !bCrashRepEnabled;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     
     // create core service, which implements the real "emergency save" algorithm.
     svxdr::RecoveryCore* pCore = new svxdr::RecoveryCore(m_xSMGR, sal_False);

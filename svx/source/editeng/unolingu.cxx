@@ -451,7 +451,7 @@ BOOL SvxLinguConfigUpdate::IsNeedUpdateAll( sal_Bool bForceCheck )
 {
     RTL_LOGFILE_CONTEXT( aLog, "svx: SvxLinguConfigUpdate::IsNeedUpdateAll" );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Force an update on the first run to ensure that we get the native
     // spellcheckers locales
     if ( nNeedUpdating == -1 )
@@ -459,7 +459,7 @@ BOOL SvxLinguConfigUpdate::IsNeedUpdateAll( sal_Bool bForceCheck )
         nNeedUpdating = 1;
         bForceCheck = sal_False;
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     if (nNeedUpdating == -1 || bForceCheck )    // need to check if updating is necessary
     {

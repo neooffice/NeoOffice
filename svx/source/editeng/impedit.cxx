@@ -71,9 +71,11 @@ using namespace ::com::sun::star::linguistic2;
 
 #ifdef USE_JAVA
 
+#ifdef MACOSX
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+#endif	// MACOSX
 
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
@@ -82,6 +84,7 @@ static bool UseMacHighlightColor()
 {
 	bool bUseMacHighlightColor = true;
 
+#ifdef MACOSX
 	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
 	if( aPref ) 
 	{
@@ -89,6 +92,7 @@ static bool UseMacHighlightColor()
 			bUseMacHighlightColor = false;
 		CFRelease( aPref );
 	}
+#endif	// MACOSX
 
 	return bUseMacHighlightColor;
 }
@@ -1531,14 +1535,14 @@ void ImpEditView::HideDDCursor()
 {
 	if ( pDragAndDropInfo && pDragAndDropInfo->bVisCursor )
 	{
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Clear drag cursor from last ShowDDCursor() call
 		if ( !pDragAndDropInfo->aCurSavedCursor.IsEmpty() )
 			GetWindow()->Invalidate( pDragAndDropInfo->aCurSavedCursor );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 		GetWindow()->DrawOutDev( pDragAndDropInfo->aCurSavedCursor.TopLeft(), pDragAndDropInfo->aCurSavedCursor.GetSize(),
 							Point(0,0), pDragAndDropInfo->aCurSavedCursor.GetSize(),*pDragAndDropInfo->pBackground );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		pDragAndDropInfo->bVisCursor = sal_False;
 	}
 }
@@ -1580,14 +1584,14 @@ void ImpEditView::ShowDDCursor( const Rectangle& rRect )
 
 		aSaveRec = GetWindow()->PixelToLogic( aSaveRec );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Clear drag cursor from last ShowDDCursor() call
 		if ( !pDragAndDropInfo->aCurSavedCursor.IsEmpty() )
 			GetWindow()->Invalidate( pDragAndDropInfo->aCurSavedCursor );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 		pDragAndDropInfo->pBackground->DrawOutDev( Point(0,0), aSaveRec.GetSize(),
 									aSaveRec.TopLeft(), aSaveRec.GetSize(), *GetWindow() );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		pDragAndDropInfo->aCurSavedCursor = aSaveRec;
 
 		// Cursor malen...

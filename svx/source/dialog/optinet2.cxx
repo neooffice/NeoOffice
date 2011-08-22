@@ -2335,11 +2335,11 @@ IMPL_LINK(  SvxEMailTabPage, FileDialogHdl_Impl, PushButton*, pButton )
             WB_OPEN );
         String sPath = aMailerURLED.GetText();
         if ( !sPath.Len() )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             sPath.AppendAscii("/Applications");
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             sPath.AppendAscii("/usr/bin");
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
         String sUrl;
         ::utl::LocalFileHelper::ConvertPhysicalNameToURL(sPath,sUrl);

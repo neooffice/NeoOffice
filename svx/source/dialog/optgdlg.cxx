@@ -212,7 +212,7 @@ OfaMiscTabPage::OfaMiscTabPage(Window* pParent, const SfxItemSet& rSet ) :
 
     //system fileopen only available in Windows and with gtk vclplug based
     //picker and on MacOSX (aqua version)
-#if !defined( WNT ) && !defined( ENABLE_GTK ) && (!(defined(MACOSX) && defined(QUARTZ)) || defined(USE_JAVA))
+#if ( !defined( WNT ) && !defined( ENABLE_GTK ) && (!(defined(MACOSX) && defined(QUARTZ)) ) || defined(USE_JAVA)
     aFileDlgFL.Hide();
     aFileDlgCB.Hide();
 #else
