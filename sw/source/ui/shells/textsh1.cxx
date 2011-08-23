@@ -1365,8 +1365,8 @@ void SwTextShell::Execute(SfxRequest &rReq)
                 }
             }
         }
-    }
 #endif	 // MACOSX
+    }
     break;
 #endif	 // USE_JAVA
     default:
