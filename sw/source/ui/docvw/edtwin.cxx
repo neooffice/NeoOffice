@@ -156,7 +156,7 @@
 #include "PostItMgr.hxx"
 #include "postit.hxx"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <ndtxt.hxx>
 #include <sfx2/mnumgr.hxx>
@@ -164,7 +164,7 @@
 #include <macdictlookup.hxx>
 #include "macdictlookup.hrc"
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 //JP 11.10.2001: enable test code for bug fix 91313
 #if !defined( PRODUCT ) && (OSL_DEBUG_LEVEL > 1)
@@ -4838,7 +4838,7 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
                         delete pROPopup;
                     }
 					else if ( !rView.ExecSpellPopup( aDocPos ) )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 					{
 						SfxPopupMenuManager *pPopupMenuManager = GetView().GetViewFrame()->GetDispatcher()->Popup( 0, this, &aPixPos );
 						if ( pPopupMenuManager )
@@ -4897,9 +4897,9 @@ void SwEditWin::Command( const CommandEvent& rCEvt )
 							delete pPopupMenuManager;
 						}
 					}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 						GetView().GetViewFrame()->GetDispatcher()->ExecutePopup( 0, this, &aPixPos);
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 				}
 				else if (pApplyTempl->bUndo)
 					rSh.Do(SwWrtShell::UNDO);

@@ -112,9 +112,9 @@
 #include "swabstdlg.hxx" //CHINA001
 #include "misc.hrc"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include <macdictlookup.hxx>
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -608,6 +608,7 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 #ifdef USE_JAVA
 		case FN_LOOKUP_IN_MACOSX_DICTIONARY:
 			{
+#ifdef MACOSX
 				ESelection aSel( pOLV->GetEditView().GetSelection() );
 				String aText( pOLV->GetEditView().GetEditEngine()->GetWord( aSel.nStartPara, aSel.nStartPos ) );
 				if ( aText.Len() )
@@ -621,6 +622,7 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 					LookupInMacDict( aText );
 				}
 			}
+#endif	// MACOSX
 			break;
 #endif	// USE_JAVA
 

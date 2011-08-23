@@ -85,29 +85,33 @@ MapMode* SwSelPaintRects::pMapMode = 0;
 
 #ifdef USE_JAVA
 
+#ifdef MACOSX
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
+#endif	// MACOSX
 
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
-static std::map< SwSelPaintRects*, bool > aUseMacHighlightColorMap;
+static std::map< SwSelPaintRects*, bool > aUseNativeHighlightColorMap;
 static std::map< SwSelPaintRects*, Window* > aWindowMap;
 
-static bool UseMacHighlightColor()
+static bool UseNativeHighlightColor()
 {
-	bool bUseMacHighlightColor = true;
+	bool bUseNativeHighlightColor = true;
 
-    CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
+#ifdef MACOSX
+    CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseNativeHighlightColor" ), kCFPreferencesCurrentApplication );
     if( aPref ) 
     {
         if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
-            bUseMacHighlightColor = false;
+            bUseNativeHighlightColor = false;
         CFRelease( aPref );
     }
+#endif	// MACOSX
 
-	return bUseMacHighlightColor;
+	return bUseNativeHighlightColor;
 }
 
 #endif	// USE_JAVA
@@ -745,7 +749,7 @@ SwSelPaintRects::SwSelPaintRects( const SwCrsrShell& rCSh )
 	mpCursorOverlay(0)
 {
 #ifdef USE_JAVA
-	aUseMacHighlightColorMap[ this ] = UseMacHighlightColor();
+	aUseNativeHighlightColorMap[ this ] = UseNativeHighlightColor();
 #endif	// USE_JAVA
 }
 
@@ -754,9 +758,9 @@ SwSelPaintRects::~SwSelPaintRects()
 	Hide();
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
-	if ( it != aUseMacHighlightColorMap.end() )
-		aUseMacHighlightColorMap.erase( this );
+	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
+	if ( it != aUseNativeHighlightColorMap.end() )
+		aUseNativeHighlightColorMap.erase( this );
 
 	std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
 	if ( wit != aWindowMap.end() )
@@ -791,8 +795,8 @@ void SwSelPaintRects::Hide()
 
 #ifdef USE_JAVA
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
-	if ( it != aUseMacHighlightColorMap.end() && it->second )
+	std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
+	if ( it != aUseNativeHighlightColorMap.end() && it->second )
 	{
 		std::map< SwSelPaintRects*, Window* >::const_iterator wit = aWindowMap.find( this );
 		if ( wit != aWindowMap.end() )
@@ -838,14 +842,14 @@ void SwSelPaintRects::Show()
 		std::vector< basegfx::B2DRange > aNewRanges;
 
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-		std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
-		if ( it != aUseMacHighlightColorMap.end() && it->second != UseMacHighlightColor() )
+		std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
+		if ( it != aUseNativeHighlightColorMap.end() && it->second != UseNativeHighlightColor() )
 		{
 			SwSelPaintRects::Hide();
-			aUseMacHighlightColorMap[ this ] = UseMacHighlightColor();
+			aUseNativeHighlightColorMap[ this ] = UseNativeHighlightColor();
 		}
 
-		if ( it != aUseMacHighlightColorMap.end() && it->second )
+		if ( it != aUseNativeHighlightColorMap.end() && it->second )
 		{
 			Window* pWin = GetShell()->GetWin();
 			if ( pWin && !GetShell()->IsPreView() )
@@ -1227,8 +1231,8 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 			{
 				if ( pWin == wit->second )
 				{
-					std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( wit->first );
-					if ( it != aUseMacHighlightColorMap.end() && it->second )
+					std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( wit->first );
+					if ( it != aUseNativeHighlightColorMap.end() && it->second )
 					{
 						SwSelPaintRects *pSelPaintRects = wit->first;
 						for( USHORT n = 0; n < pSelPaintRects->Count(); ++n )
@@ -1242,8 +1246,8 @@ void SwShellCrsr::GetNativeHightlightColorRects( std::vector< Rectangle >& rPixe
 		}
 		else
 		{
-			std::map< SwSelPaintRects*, bool >::const_iterator it = aUseMacHighlightColorMap.find( this );
-			if ( it != aUseMacHighlightColorMap.end() && it->second )
+			std::map< SwSelPaintRects*, bool >::const_iterator it = aUseNativeHighlightColorMap.find( this );
+			if ( it != aUseNativeHighlightColorMap.end() && it->second )
 			{
 				for( USHORT n = 0; n < Count(); ++n )
 				{

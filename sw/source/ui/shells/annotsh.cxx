@@ -130,9 +130,9 @@
 
 #include <langhelper.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include <macdictlookup.hxx>
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 using namespace ::com::sun::star::uno;
@@ -562,6 +562,7 @@ void SwAnnotationShell::Exec( SfxRequest &rReq )
 #ifdef USE_JAVA
 		case FN_LOOKUP_IN_MACOSX_DICTIONARY:
 		{
+#ifdef MACOSX
 			ESelection aSel( pOLV->GetEditView().GetSelection() );
 			String aText( pOLV->GetEditView().GetEditEngine()->GetWord( aSel.nStartPara, aSel.nStartPos ) );
 			if ( aText.Len() )
@@ -574,6 +575,7 @@ void SwAnnotationShell::Exec( SfxRequest &rReq )
 
 				LookupInMacDict( aText );
 			}
+#endif	 // MACOSX
 			break;
 		}
 #endif	// USE_JAVA

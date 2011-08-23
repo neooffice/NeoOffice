@@ -116,12 +116,12 @@
 #include <ndtxt.hxx>
 #include <langhelper.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <macdictlookup.hxx>
 #include "macdictlookup.hrc"
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 
@@ -390,7 +390,7 @@ void PostItTxt::Command( const CommandEvent& rCEvt )
 
             ((PopupMenu*)aMgr->GetSVMenu())->SetSelectHdl( LINK(this, PostItTxt, Select) );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     		if ( mpOutlinerView )
     		{
 				((PopupMenu *)aMgr->GetSVMenu())->InsertSeparator( 0 );
@@ -402,7 +402,7 @@ void PostItTxt::Command( const CommandEvent& rCEvt )
 				if ( aText.Len() )
 					((PopupMenu *)aMgr->GetSVMenu())->EnableItem( FN_LOOKUP_IN_MACOSX_DICTIONARY, TRUE );
 			}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 			if (rCEvt.IsMouseEvent())
 				((PopupMenu*)aMgr->GetSVMenu())->Execute(this,rCEvt.GetMousePosPixel());

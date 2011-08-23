@@ -129,9 +129,9 @@
 
 #include <langhelper.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #include <macdictlookup.hxx>
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::com::sun::star;
 
@@ -1321,6 +1321,7 @@ void SwTextShell::Execute(SfxRequest &rReq)
 #ifdef USE_JAVA
     case FN_LOOKUP_IN_MACOSX_DICTIONARY:
     {
+#ifdef MACOSX
         SwWrtShell &rSh = GetShell();
         SwPosition aPoint( *rSh.GetCrsr()->GetPoint() );
         const SwTxtNode *pNode = aPoint.nNode.GetNode().GetTxtNode();
@@ -1365,6 +1366,7 @@ void SwTextShell::Execute(SfxRequest &rReq)
             }
         }
     }
+#endif	 // MACOSX
     break;
 #endif	 // USE_JAVA
     default:
