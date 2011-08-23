@@ -1542,6 +1542,7 @@ MOVEPAGE:
 		case SID_PRINTDOCDIRECT:
 		case SID_PRINTDOC:
 #ifdef USE_JAVA
+		{
 			// If we are printing while in Preview mode, get the page
 			// orientation as it will have changed if brochure printing is
 			// enabled
@@ -1559,6 +1560,9 @@ MOVEPAGE:
 			bNormalPrint = TRUE;
 			SfxViewShell::ExecuteSlot( rReq, SfxViewShell::GetInterface() );
 			return;
+#ifdef USE_JAVA
+		}
+#endif	// USE_JAVA
         case FN_CLOSE_PAGEPREVIEW:
         case SID_PRINTPREVIEW:
 			//	print preview is now always in the same frame as the tab view
