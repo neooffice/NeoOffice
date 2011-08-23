@@ -178,21 +178,21 @@ extern USHORT nScFillModeMouseModifier;				// global.cxx
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
-static bool UseMacHighlightColor()
+static bool UseNativeHighlightColor()
 {
-	bool bUseMacHighlightColor = true;
+	bool bUseNativeHighlightColor = true;
 
 #ifdef MACOSX
-    CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
+    CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseNativeHighlightColor" ), kCFPreferencesCurrentApplication );
     if( aPref ) 
     {
         if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
-            bUseMacHighlightColor = false;
+            bUseNativeHighlightColor = false;
         CFRelease( aPref );
     }
 #endif	// MACOSX
 
-	return bUseMacHighlightColor;
+	return bUseNativeHighlightColor;
 }
 
 #endif	// USE_JAVA
@@ -5399,8 +5399,8 @@ void ScGridWindow::UpdateCursorOverlay()
 #ifdef USE_JAVA
             // Revert to highlighting used in OOo 2.x as using the transparent
             // highlight color is barely visible on Mac OS X unless the user
-            // enables the UseMacHighlightColor preference
-            ScOverlayType eType = bOld || !UseMacHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
+            // enables the UseNativeHighlightColor preference
+            ScOverlayType eType = bOld || !UseNativeHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
 #else	// USE_JAVA
             ScOverlayType eType = bOld ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
 #endif	// USE_JAVA
@@ -5459,7 +5459,7 @@ void ScGridWindow::UpdateSelectionOverlay()
     if ( aPixelRects.size() && pViewData->IsActive() )
     {
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
-		if ( UseMacHighlightColor() )
+		if ( UseNativeHighlightColor() )
 		{
 			for ( std::vector< Rectangle >::const_iterator it = aPixelRects.begin(); it != aPixelRects.end(); ++it )
 				Invalidate( PixelToLogic( *it ) );
@@ -5507,8 +5507,8 @@ void ScGridWindow::UpdateSelectionOverlay()
 #ifdef USE_JAVA
             // Revert to highlighting used in OOo 2.x as using the transparent
             // highlight color is barely visible on Mac OS X unless the user
-            // enables the UseMacHighlightColor preference
-            ScOverlayType eType = aConverter.bOld || !UseMacHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_BORDER_TRANSPARENT;
+            // enables the UseNativeHighlightColor preference
+            ScOverlayType eType = aConverter.bOld || !UseNativeHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_BORDER_TRANSPARENT;
 #else	// USE_JAVA
             ScOverlayType eType = aConverter.bOld ? SC_OVERLAY_INVERT : SC_OVERLAY_BORDER_TRANSPARENT;
 #endif	// USE_JAVA
@@ -5599,8 +5599,8 @@ void ScGridWindow::UpdateAutoFillOverlay()
 #ifdef USE_JAVA
             // Revert to highlighting used in OOo 2.x as using the transparent
             // highlight color is barely visible on Mac OS X unless the user
-            // enables the UseMacHighlightColor preference
-            ScOverlayType eType = bOld || !UseMacHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
+            // enables the UseNativeHighlightColor preference
+            ScOverlayType eType = bOld || !UseNativeHighlightColor() ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
 #else	// USE_JAVA
             ScOverlayType eType = bOld ? SC_OVERLAY_INVERT : SC_OVERLAY_SOLID;
 #endif	// USE_JAVA
@@ -5737,7 +5737,7 @@ void ScGridWindow::UpdateDragRectOverlay()
 			Color aHighlight = GetSettings().GetStyleSettings().GetHighlightColor();
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
             // Fix bug 3619 by using a solid overlay for native highlighting
-            if ( UseMacHighlightColor() )
+            if ( UseNativeHighlightColor() )
             {
                 eType = SC_OVERLAY_SOLID;
                 aHighlight = Color( COL_BLACK );
@@ -5796,7 +5796,7 @@ void ScGridWindow::UpdateHeaderOverlay()
             Color aHighlight = GetSettings().GetStyleSettings().GetHighlightColor();
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
             // Fix bug 3599 by using a solid overlay for native highlighting
-            if ( UseMacHighlightColor() )
+            if ( UseNativeHighlightColor() )
             {
                 eType = SC_OVERLAY_SOLID;
                 aHighlight = Color( COL_BLACK );
@@ -5878,7 +5878,7 @@ void ScGridWindow::UpdateShrinkOverlay()
             Color aHighlight = GetSettings().GetStyleSettings().GetHighlightColor();
 #if defined USE_JAVA && defined USE_NATIVE_HIGHLIGHT_COLOR
             // Fix bug 3619 by using a solid overlay for native highlighting
-            if ( UseMacHighlightColor() )
+            if ( UseNativeHighlightColor() )
             {
                 eType = SC_OVERLAY_SOLID;
                 aHighlight = Color( COL_BLACK );
@@ -5934,7 +5934,7 @@ void ScGridWindow::GetNativeHightlightColorRects( ::std::vector< Rectangle >& rP
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
 	// Fix bug 3602 by using the cached selection rectangles
-	if ( UseMacHighlightColor() )
+	if ( UseNativeHighlightColor() )
 		rPixelRects = aLastSelectionPixelRects;
 #endif	// USE_NATIVE_HIGHLIGHT_COLOR
 }
