@@ -621,8 +621,8 @@ void SwDrawTextShell::ExecDraw(SfxRequest &rReq)
 
 					LookupInMacDict( aText );
 				}
-			}
 #endif	// MACOSX
+			}
 			break;
 #endif	// USE_JAVA
 
