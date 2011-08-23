@@ -80,21 +80,21 @@ using namespace ::com::sun::star::linguistic2;
 // Comment out the following line to disable our custom native highlighting code
 #define USE_NATIVE_HIGHLIGHT_COLOR
 
-static bool UseMacHighlightColor()
+static bool UseNativeHighlightColor()
 {
-	bool bUseMacHighlightColor = true;
+	bool bUseNativeHighlightColor = true;
 
 #ifdef MACOSX
-	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseMacHighlightColor" ), kCFPreferencesCurrentApplication );
+	CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "UseNativeHighlightColor" ), kCFPreferencesCurrentApplication );
 	if( aPref ) 
 	{
 		if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanFalse )
-			bUseMacHighlightColor = false;
+			bUseNativeHighlightColor = false;
 		CFRelease( aPref );
 	}
 #endif	// MACOSX
 
-	return bUseMacHighlightColor;
+	return bUseNativeHighlightColor;
 }
 
 #endif	// USE_JAVA
@@ -372,7 +372,7 @@ void ImpEditView::ImplDrawHighlightRect( Window* _pOutWin, const Point& rDocPosT
 		else
 		{
 #ifdef USE_JAVA
-			if ( UseMacHighlightColor() )
+			if ( UseNativeHighlightColor() )
 			{
 				// Prevent infinite repainting by ignoring new repaint requests
 				// when this view is already in paint mode
@@ -2074,7 +2074,7 @@ PolyPolygon ImpEditView::GetNativeHighlightColorPolyPolygon()
 	PolyPolygon aPolyPoly;
 
 #ifdef USE_NATIVE_HIGHLIGHT_COLOR
-	if ( UseMacHighlightColor() )
+	if ( UseNativeHighlightColor() )
 	{
 		Region *pRegion = CalcSelectedRegion();
 		if ( pRegion && pRegion->HasPolyPolygon() )
