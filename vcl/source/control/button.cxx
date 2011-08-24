@@ -59,7 +59,7 @@
 #include <tools/rc.h>
 #endif
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _SV_IMPBMP_HXX
 #include <vcl/impbmp.hxx>
@@ -83,7 +83,7 @@
 #include <vcl/salvd.hxx>
 #endif
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 
 // =======================================================================
