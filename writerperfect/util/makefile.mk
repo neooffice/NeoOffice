@@ -5,9 +5,9 @@ TARGET=writerperfect
 .INCLUDE :  settings.mk
 
 
-.IF "$(GUIBASE)"=="java"
+.IF "$(GUIBASE)"=="java" || "$(GUIBASE)"=="WIN"
 SOLARLIB := -L$(PRJ)$/..$/libwpd$/$(ROUT)$/lib $(SOLARLIB)
-.ENDIF		# "$(GUIBASE)"=="java"
+.ENDIF		# "$(GUIBASE)"=="java" || "$(GUIBASE)"=="WIN"
 
 .IF "$(GUI)"=="UNX" || "$(GUI)$(COM)"=="WNTGCC"
 
