@@ -645,7 +645,7 @@ void StatusBar::ImplDrawProgress( BOOL bPaint,
 	}
 
 #ifdef USE_JAVA
-	if ( IsNativeControlSupported( CTRL_PROGRESS, PART_ENTIRE_CONTROL ) )
+	if ( bNative )
 	{
 		ProgressbarValue aProgressbarValue;
 		aProgressbarValue.mdPercentComplete = (double)nPercent2;
@@ -1582,14 +1582,14 @@ void StatusBar::StartProgressMode( const XubString& rText )
 {
 	DBG_ASSERT( !mbProgressMode, "StatusBar::StartProgressMode(): progress mode is active" );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	if ( IsReallyVisible() )
 	{
 		// Always force the window out of backing window mode if we are
 		// displaying a progress bar
 		ShowOnlyMenusForWindow( this, sal_False );
 	}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 	mbProgressMode	= TRUE;
 	mnPercent		= 0;
@@ -1624,11 +1624,11 @@ void StatusBar::SetProgressValue( USHORT nNewPercent )
 	&&   IsReallyVisible()
 	&&   (!mnPercent || (mnPercent != nNewPercent)) )
 	{
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Always force the window out of backing window mode if we are
 		// displaying a progress bar
 		ShowOnlyMenusForWindow( this, sal_False );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 		Update();
 		SetLineColor();
@@ -1651,12 +1651,12 @@ void StatusBar::EndProgressMode()
 	SetFillColor( GetSettings().GetStyleSettings().GetFaceColor() );
 	if ( IsReallyVisible() )
 	{
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		// Always force the window into backing window mode if we are
 		// displaying a progress bar. Note that this will not override
 		// any setting set by the OOo upper application layers.
 		ShowOnlyMenusForWindow( this, sal_True );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 		Invalidate();
 		Update();

@@ -971,11 +971,11 @@ void Menu::ImplInit()
     mpLayoutData	= NULL;
 
     // Native-support: returns NULL if not supported
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     mpSalMenu = ImplGetSVData()->mpDefInst->CreateMenu( bIsMenuBar, this );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     mpSalMenu = ImplGetSVData()->mpDefInst->CreateMenu( bIsMenuBar );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 Menu* Menu::ImplGetStartedFrom() const

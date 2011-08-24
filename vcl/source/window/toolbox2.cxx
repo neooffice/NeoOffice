@@ -48,7 +48,7 @@
 #include <vcl/unohelp.hxx>
 #include <unotools/confignode.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
@@ -71,7 +71,7 @@ static const XubString aVersionsCommand( RTL_CONSTASCII_USTRINGPARAM( ".uno:Vers
 static NSDocument_revertToSavedLocalizedString_Type *pNSDocument_revertToSavedLocalizedString = NULL;
 static NSDocument_saveAVersionLocalizedString_Type *pNSDocument_saveAVersionLocalizedString = NULL;
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace vcl;
 using namespace rtl;
@@ -1916,7 +1916,7 @@ const XubString& ToolBox::GetQuickHelpText( USHORT nItemId ) const
 	ImplToolItem* pItem = ImplGetItem( nItemId );
 
 	if ( pItem )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	{
 		if ( pItem->maCommandStr == aSaveCommand || pItem->maCommandStr == aVersionsCommand )
 		{
@@ -1955,11 +1955,11 @@ const XubString& ToolBox::GetQuickHelpText( USHORT nItemId ) const
         		}
         	}
         }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		return pItem->maQuickHelpText;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 	else
 		return ImplGetSVEmptyStr();
 }

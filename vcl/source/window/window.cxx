@@ -6555,13 +6555,13 @@ void Window::Show( BOOL bVisible, USHORT nFlags )
             mpWindowImpl->mbPaintFrame = TRUE;
             BOOL bNoActivate = (nFlags & (SHOW_NOACTIVATE|SHOW_NOFOCUSCHANGE)) ? TRUE : FALSE;
             mpWindowImpl->mpFrame->Show( TRUE, bNoActivate );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             // We need to restart drag and drop since the window's NSView is
             // not created until after the window is shown
             ImplStopDnd();
             mpWindowImpl->mxDNDListenerContainer.clear();
             ImplStartDnd();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             if( aDogTag.IsDelete() )
                 return;
 
@@ -8515,7 +8515,7 @@ Reference< XDragSource > Window::GetDragSource()
                         aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.OleDropTarget" );
                         aDragSourceAL[ 1 ] = makeAny( (sal_uInt32) pEnvData->hWnd );
                         aDropTargetAL[ 0 ] = makeAny( (sal_uInt32) pEnvData->hWnd );
-#elif defined USE_JAVA
+#elif defined USE_JAVA && defined MACOSX
                         aDragSourceSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDragSource" );
                         aDropTargetSN = OUString::createFromAscii( "com.sun.star.datatransfer.dnd.JavaDropTarget" );
                         aDragSourceAL[ 0 ] = makeAny( (sal_uInt32)pEnvData->pView );

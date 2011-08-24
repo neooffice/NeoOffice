@@ -91,7 +91,7 @@
 #include "rtl/strbuf.hxx"
 #endif
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <dlfcn.h>
 
@@ -113,14 +113,14 @@ typedef EventLoopRef GetMainEventLoop_Type();
 
 using namespace utl;
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace ::rtl;
 using namespace ::com::sun::star::uno;
 using namespace ::com::sun::star::lang;
 
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 static BOOL ImplLoadNativeFont( OUString aPath )
 {
@@ -168,7 +168,7 @@ static BOOL ImplLoadNativeFont( OUString aPath )
 	return bRet;
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // =======================================================================
 
@@ -214,9 +214,9 @@ public:
         if ( nVCLException )
         {
             bIn = TRUE;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             GetAppSalData()->mbInSignalHandler = true;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         
             ::vos::OGuard aLock(&Application::GetSolarMutex());
         
@@ -230,9 +230,9 @@ public:
                 pSVData->mpApp->Exception( nVCLException );
                 Application::SetSystemWindowMode( nOldMode );
             }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             GetAppSalData()->mbInSignalHandler = false;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             bIn = FALSE;
 
             return vos::OSignalHandler::TAction_CallNextHandler;
@@ -298,7 +298,7 @@ BOOL SVMain()
     // #i47888# allow for alternative initialization as required for e.g. MacOSX
     extern BOOL ImplSVMainHook( BOOL* );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Attempt to fix haxie bugs that cause bug 2912 by calling
     // GetMainEventLoop() in the main thread before we have created a
     // secondary thread
@@ -343,7 +343,7 @@ BOOL SVMain()
 		if ( bNotify )
 			ATSFontNotify( kATSFontNotifyActionFontsChanged, NULL );
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     BOOL bInit;
     if( ImplSVMainHook( &bInit ) )

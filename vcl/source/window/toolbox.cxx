@@ -1871,16 +1871,6 @@ static void ImplAddButtonBorder( long &rWidth, long& rHeight, USHORT aOutStyle, 
         rWidth += 2;
         rHeight += 4;
     }
-
-#ifndef USE_JAVA
-    // Fix bug 2230 by not changing the button sizes
-    if( bNativeButtons )
-    {
-        // give more border space for rounded buttons
-        rWidth += 2;
-        rHeight += 4;
-    }
-#endif	// !USE_JAVA
 }
 
 // -----------------------------------------------------------------------

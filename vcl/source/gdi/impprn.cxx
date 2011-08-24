@@ -42,13 +42,13 @@
 #include "vcl/svdata.hxx"
 #include "vcl/salprn.hxx"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // -----------
 // - Defines -
@@ -232,7 +232,7 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 
             bExecuted = sal_True;
         }
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
         else if( nType == META_TRANSPARENT_ACTION )
 		{
             MetaTransparentAction* 	pTransAct = static_cast<MetaTransparentAction*>(pAct);
@@ -297,7 +297,7 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 
 			bExecuted = sal_True;
 		}
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
 		if( !bExecuted && pAct )
 			pAct->Execute( this );
@@ -309,15 +309,15 @@ void ImplQPrinter::ImplPrintMtf( GDIMetaFile& rPrtMtf, long nMaxBmpDPIX, long nM
 void ImplQPrinter::PrePrintPage( QueuePage* pPage )
 {
     mnRestoreDrawMode = GetDrawMode();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Prevent downscaling of images if reduce bitmaps is turned off
     // by setting the max resolution to negative
     mnMaxBmpDPIX = -1;
     mnMaxBmpDPIY = -1;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     mnMaxBmpDPIX = mnDPIX;
     mnMaxBmpDPIY = mnDPIY;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     const PrinterOptions&   rPrinterOptions = GetPrinterOptions();
 
@@ -326,33 +326,33 @@ void ImplQPrinter::PrePrintPage( QueuePage* pPage )
         // calculate maximum resolution for bitmap graphics
         if( PRINTER_BITMAP_OPTIMAL == rPrinterOptions.GetReducedBitmapMode() )
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             mnMaxBmpDPIX = Max( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
             mnMaxBmpDPIY = Max( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             mnMaxBmpDPIX = Min( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
             mnMaxBmpDPIY = Min( (long) OPTIMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         }
         else if( PRINTER_BITMAP_NORMAL == rPrinterOptions.GetReducedBitmapMode() )
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             mnMaxBmpDPIX = Max( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
             mnMaxBmpDPIY = Max( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             mnMaxBmpDPIX = Min( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIX );
             mnMaxBmpDPIY = Min( (long) NORMAL_BMP_RESOLUTION, mnMaxBmpDPIY );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         }
         else
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             mnMaxBmpDPIX = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIX );
             mnMaxBmpDPIY = Max( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIY );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             mnMaxBmpDPIX = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIX );
             mnMaxBmpDPIY = Min( (long) rPrinterOptions.GetReducedBitmapResolution(), mnMaxBmpDPIY );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         }
     }
 
@@ -472,11 +472,11 @@ IMPL_LINK( ImplQPrinter, ImplPrintHdl, Timer*, EMPTYARG )
 			else
 				break;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			// If the native print job ended or aborted, abort the parent job
 			if ( mnError == PRINTER_ABORT )
 				mpParent->AbortJob();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		}
 
         PostPrintPage();

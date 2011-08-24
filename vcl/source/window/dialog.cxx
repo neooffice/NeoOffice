@@ -51,7 +51,7 @@
 
 #include <vcl/unowrap.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
@@ -60,7 +60,7 @@
 #include <vcl/salframe.hxx>
 #endif
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 
 // =======================================================================
@@ -642,13 +642,13 @@ BOOL Dialog::ImplStartExecuteModal()
     }
 #endif
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	// Do not attempt to run a modal dialog while we are in a signal handler as
 	// it will deadlock. Also, fix bug 1108 by not running it if a native sheet
 	// is being displayed.
 	if ( GetAppSalData()->mbInSignalHandler || GetAppSalData()->mbInNativeModalSheet )
 		return FALSE;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     ImplSVData* pSVData = ImplGetSVData();
 
@@ -678,10 +678,10 @@ BOOL Dialog::ImplStartExecuteModal()
     
     Show();
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	// Force modal windows to the front
 	mpWindowImpl->mpFrame->ToTop( SAL_FRAME_TOTOP_GRABFOCUS | SAL_FRAME_TOTOP_GRABFOCUS_ONLY );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     pSVData->maAppData.mnModalMode++;
     return TRUE;

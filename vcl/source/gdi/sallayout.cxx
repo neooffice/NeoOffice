@@ -64,11 +64,11 @@
 
 #ifdef USE_JAVA
 
-#ifndef USE_SUBPIXEL_TEXT_RENDERING
+#if !defined USE_SUBPIXEL_TEXT_RENDERING && defined MACOSX
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
 #endif
-#endif	// USE_SUBPIXEL_TEXT_RENDERING
+#endif	// !USE_SUBPIXEL_TEXT_RENDERING && MACOSX
 
 #endif	// USE_JAVA
 

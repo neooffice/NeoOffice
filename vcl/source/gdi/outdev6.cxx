@@ -57,9 +57,11 @@
 
 #ifdef USE_JAVA
 
+#ifdef MACOSX
 #ifndef _SV_SALGDI_H
 #include <salgdi.h>
 #endif
+#endif	// MACOSX
 
 #define MAX_TRANSPARENT_GRADIENT_BMP_PIXELS ( 2 * 1024 * 1024 )
 #define MIN_TRANSPARENT_GRADIENT_RESOLUTION 72
@@ -331,7 +333,7 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 		GDIMetaFile* pOldMetaFile = mpMetaFile;
 		mpMetaFile = NULL;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		if ( !mpGraphics )
 			ImplGetGraphics();
 		if ( mpGraphics )

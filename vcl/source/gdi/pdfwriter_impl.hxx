@@ -275,14 +275,14 @@ public:
     struct GlyphEmit
     {
         sal_Ucs		m_aUnicode;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         sal_uInt16	m_nSubsetGlyphID;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         sal_uInt8	m_nSubsetGlyphID;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     };
     typedef std::map< sal_GlyphId, GlyphEmit > FontEmitMapping;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     struct PDFEmitObject
     {
         sal_Int32			m_nID;
@@ -294,34 +294,34 @@ public:
         PDFEmitObject() : m_nID( 0 ), m_bStream( false ), m_nStreamPos( 0 ), m_nStreamLen( 0 ) {}
     };
     typedef std::map< sal_Int32, PDFEmitObject > PDFObjectMapping;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     struct FontEmit
     {
         sal_Int32			m_nFontID;
         FontEmitMapping		m_aMapping;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         rtl::OUString		m_aFontFileName;
         std::map< long, sal_uInt16 >	m_aGlyphEncoding;
         PDFObjectMapping	m_aObjectMapping;
         std::map< rtl::OString, sal_Int32 > m_aFontSubIDMapping;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
         FontEmit( sal_Int32 nID ) : m_nFontID( nID ) {}
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         ~FontEmit() { osl_removeFile( m_aFontFileName.pData ); }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     };
     typedef std::list< FontEmit > FontEmitList;
     struct Glyph
     {
         sal_Int32	m_nFontID;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         sal_Int32	m_nFontSubID;
         bool		m_bIdentityGlyph;
         sal_uInt16	m_nSubsetGlyphID;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         sal_uInt8	m_nSubsetGlyphID;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     };
     typedef std::map< sal_GlyphId, Glyph > FontMapping;
     struct FontSubset
@@ -329,11 +329,11 @@ public:
         FontEmitList		m_aSubsets;
         FontMapping			m_aMapping;
     };
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     typedef std::map< sal_IntPtr, FontSubset > FontSubsetData;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     typedef std::map< const ImplFontData*, FontSubset > FontSubsetData;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     struct EmbedCode
     {
         sal_Ucs				m_aUnicode;
@@ -550,40 +550,40 @@ public:
         sal_Int32   m_nNativeWidth;
         sal_Int32   m_nGlyphId;
         sal_Int32   m_nMappedFontId;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         sal_uInt16  m_nMappedGlyphId;
         sal_Int32   m_nMappedFontSubId;
         bool        m_bIdentityGlyph;
         int         m_nCharPos;
         sal_Int32   m_nRealNativeWidth;
         SalLayout*  m_pLayout;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         sal_uInt8   m_nMappedGlyphId;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         
         PDFGlyph( const Point& rPos,
                   sal_Int32 nNativeWidth,
                   sal_Int32 nGlyphId,
                   sal_Int32 nFontId,
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                   sal_uInt16 nMappedGlyphId,
                   sal_Int32 nFontSubId,
                   bool bIdentityGlyph,
                   int nCharPos,
                   sal_Int32 nRealNativeWidth,
                   SalLayout *pLayout )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                   sal_uInt8 nMappedGlyphId )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         : m_aPos( rPos ), m_nNativeWidth( nNativeWidth ), m_nGlyphId( nGlyphId ),
           m_nMappedFontId( nFontId ), m_nMappedGlyphId( nMappedGlyphId )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
           , m_nMappedFontSubId( nFontSubId )
           , m_bIdentityGlyph( bIdentityGlyph )
           , m_nCharPos( nCharPos )
           , m_nRealNativeWidth( nRealNativeWidth )
           , m_pLayout( pLayout )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         {}
     };
 
@@ -790,10 +790,10 @@ private:
     std::list< GraphicsState >				m_aGraphicsStack;
     GraphicsState							m_aCurrentPDFState;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     PDFWriterImpl*				            m_pParentWriter;
     GDIMetaFile								m_aReplayMtf;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     ZCodec*									m_pCodec;
     SvMemoryStream*							m_pMemStream;
@@ -929,11 +929,11 @@ i12626
 	void appendLiteralStringEncrypt( rtl::OStringBuffer& rInString, const sal_Int32 nInObjectNumber, rtl::OStringBuffer& rOutBuffer );
 
     /* creates fonts and subsets that will be emitted later */
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Ucs* pUnicodes, sal_uInt16* pMappedGlyphs, bool* pMappedIdentityGlyphs, sal_Int32* pMappedFontObjects, sal_Int32* pMappedFontSubObjects, const ImplFontData* pFallbackFonts[] );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     void registerGlyphs( int nGlyphs, sal_GlyphId* pGlyphs, sal_Int32* pGlpyhWidths, sal_Ucs* pUnicodes, sal_uInt8* pMappedGlyphs, sal_Int32* pMappedFontObjects, const ImplFontData* pFallbackFonts[] );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     /*  emits a text object according to the passed layout */
     /* TODO: remove rText as soon as SalLayout will change so that rText is not necessary anymore */
@@ -1105,11 +1105,11 @@ i12626
      */
     bool checkEmitStructure();
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     sal_Int32 getNextPDFObject( oslFileHandle aFile, PDFObjectMapping& rObjectMapping );
     sal_Int32 writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle aFile, PDFObjectMapping& rObjMapping, sal_Int32 nFontID, std::map< sal_Int32, sal_Int32 >& rIDMapping );
     void encodeGlyphs();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     /* draws an emphasis mark */
     void drawEmphasisMark(  long nX, long nY, const PolyPolygon& rPolyPoly, BOOL bPolyLine, const Rectangle& rRect1, const Rectangle& rRect2 );
@@ -1131,11 +1131,11 @@ methods for PDF security
 	void computeUDictionaryValue();
 
 public:
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, PDFWriterImpl *pParentWriter = NULL );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ~PDFWriterImpl();
 
     /*	for OutputDevice so the reference device can have a list
@@ -1391,12 +1391,12 @@ public:
 #endif
     }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     void addAction( MetaAction *pAction );
     const PDFWriter::PDFWriterContext& getContext() { return m_aContext; }
     const GDIMetaFile& getReplayMetaFile() { return m_aReplayMtf; }
     bool isReplayWriter() { return ( m_pParentWriter ? true : false ); }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 };
 
 }

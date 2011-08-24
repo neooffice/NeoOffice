@@ -68,7 +68,7 @@
 #include "cppuhelper/implbase1.hxx"
 #include <icc/sRGB-IEC61966-2.1.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
@@ -79,7 +79,7 @@
 
 #include <unotools/tempfile.hxx>
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace vcl;
 using namespace rtl;
@@ -1489,11 +1489,11 @@ void PDFWriterImpl::PDFPage::appendWaveLine( sal_Int32 nWidth, sal_Int32 nY, sal
  *  class PDFWriterImpl
  */
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext, PDFWriterImpl *pParentWriter )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         :
         m_pReferenceDevice( NULL ),
         m_aMapMode( MAP_POINT, Point(), Fraction( 1L, pointToPixel(1) ), Fraction( 1L, pointToPixel(1) ) ),
@@ -1509,9 +1509,9 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
         m_nCurrentPage( -1 ),
         m_nResourceDict( -1 ),
         m_nFontDictObject( -1 ),
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         m_pParentWriter( pParentWriter ),
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         m_pCodec( NULL ),
         m_aDocDigest( rtl_digest_createMD5() ),
 		m_aCipher( (rtlCipher)NULL ),
@@ -1546,13 +1546,13 @@ PDFWriterImpl::PDFWriterImpl( const PDFWriter::PDFWriterContext& rContext )
     aState.m_aFont			= aFont;
     m_aGraphicsStack.push_front( aState );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( isReplayWriter() )
     {
         m_aSubsets = m_pParentWriter->m_aSubsets;
         m_nNextFID = m_pParentWriter->m_nNextFID;
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     oslFileError  aError = osl_openFile( m_aContext.URL.pData, &m_aFile, osl_File_OpenFlag_Write | osl_File_OpenFlag_Create );
     if( aError != osl_File_E_None )
@@ -1894,10 +1894,10 @@ bool PDFWriterImpl::writeBuffer( const void* pBuffer, sal_uInt64 nBytes )
     if( ! m_bOpen ) // we are already down the drain
         return false;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !isReplayWriter() )
         return true;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     if( ! nBytes ) // huh ?
         return true;
@@ -2021,10 +2021,10 @@ ImplFontEntry* ImplPdfBuiltinFontData::CreateFontInstance( ImplFontSelectData& r
 
 ImplDevFontList* PDFWriterImpl::filterDevFontList( ImplDevFontList* pFontList )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Fix bug 3481 by not using a separate font list
     return pFontList;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     DBG_ASSERT( m_aSubsets.size() == 0, "Fonts changing during PDF generation, document will be invalid" );
     ImplDevFontList* pFiltered = pFontList->Clone( true, true );
 
@@ -2036,7 +2036,7 @@ ImplDevFontList* PDFWriterImpl::filterDevFontList( ImplDevFontList* pFontList )
             pFiltered->Add( pNewData );
         }
     return pFiltered;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 bool PDFWriterImpl::isBuiltinFont( const ImplFontData* pFont ) const
@@ -3655,13 +3655,13 @@ bool PDFWriterImpl::emitFonts()
         return false;
 
     OStringBuffer aLine( 1024 );
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
     char buf[8192];
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
     std::map< sal_Int32, sal_Int32 > aFontIDToObject;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Encode the glyphs using the native font encoding before outputting the
     // subsets to the PDF file
     encodeGlyphs();
@@ -3710,7 +3710,7 @@ bool PDFWriterImpl::emitFonts()
             osl_closeFile( aFontFile );
         }
     }
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     OUString aTmpName;
     osl_createTempFile( NULL, NULL, &aTmpName.pData );
     for( FontSubsetData::iterator it = m_aSubsets.begin(); it != m_aSubsets.end(); ++it )
@@ -3877,7 +3877,7 @@ bool PDFWriterImpl::emitFonts()
         }
     }
     osl_removeFile( aTmpName.pData );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     // emit embedded fonts
     for( FontEmbedData::iterator eit = m_aEmbeddedFonts.begin(); eit != m_aEmbeddedFonts.end(); ++eit )
@@ -3895,11 +3895,11 @@ bool PDFWriterImpl::emitFonts()
     aFontDict.append( " 0 obj\n"
                       "<<" );
     int ni = 0;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     for( std::map< OString, sal_Int32 >::iterator mit = aFontStrToObject.begin(); mit != aFontStrToObject.end(); ++mit )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     for( std::map< sal_Int32, sal_Int32 >::iterator mit = aFontIDToObject.begin(); mit != aFontIDToObject.end(); ++mit )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     {
         aFontDict.append( "/F" );
         aFontDict.append( mit->first );
@@ -6405,7 +6405,7 @@ std::set< PDFWriter::ErrorCode > PDFWriterImpl::getErrors()
 }
 
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 void PDFWriterImpl::registerGlyphs( int nGlyphs,
                                     sal_GlyphId* pGlyphs,
                                     sal_Ucs* pUnicodes,
@@ -6414,7 +6414,7 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                                     sal_Int32* pMappedFontObjects,
                                     sal_Int32* pMappedFontSubObjects,
                                     const ImplFontData* pFallbackFonts[] )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 void PDFWriterImpl::registerGlyphs( int nGlyphs,
                                     sal_GlyphId* pGlyphs,
                                     sal_Int32* pGlyphWidths,
@@ -6422,18 +6422,18 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                                     sal_uInt8* pMappedGlyphs,
                                     sal_Int32* pMappedFontObjects,
                                     const ImplFontData* pFallbackFonts[] )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 {
     const ImplFontData* pDevFont = m_pReferenceDevice->mpFontEntry->maFontSelData.mpFontData;
     for( int i = 0; i < nGlyphs; i++ )
     {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         if( ! pGlyphs[i] || pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) )
             continue;
         const int nFontGlyphId = pGlyphs[i] & GF_IDXMASK;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         const int nFontGlyphId = pGlyphs[i] & (GF_IDXMASK | GF_ISCHAR | GF_GSUB);
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         const ImplFontData* pCurrentFont = pFallbackFonts[i] ? pFallbackFonts[i] : pDevFont;
 
         if( isBuiltinFont( pCurrentFont ) )
@@ -6449,39 +6449,39 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                 m_aEmbeddedFonts[ pCurrentFont ].m_nNormalFontID = nFontID;
             }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             pMappedGlyphs[ i ] = sal::static_int_cast<sal_uInt16>( nFontGlyphId );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             pGlyphWidths[ i ] = 0;
             pMappedGlyphs[ i ] = sal::static_int_cast<sal_Int8>( nFontGlyphId );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             pMappedFontObjects[ i ] = nFontID;
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
             const ImplPdfBuiltinFontData* pFD = GetPdfFontData( pCurrentFont );
             if( pFD )
             {
                 const BuiltinFont* pBuiltinFont = pFD->GetBuiltinFont();
                 pGlyphWidths[i] = pBuiltinFont->m_aWidths[ nFontGlyphId & 0x00ff ];
             }
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
         }
         else if( pCurrentFont->mbSubsettable )
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             FontSubset& rSubset = m_aSubsets[ pCurrentFont->GetFontId() ];
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             FontSubset& rSubset = m_aSubsets[ pCurrentFont ];
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             // search for font specific glyphID
             FontMapping::iterator it = rSubset.m_aMapping.find( nFontGlyphId );
             if( it != rSubset.m_aMapping.end() )
             {
                 pMappedFontObjects[i] = it->second.m_nFontID;
                 pMappedGlyphs[i] = it->second.m_nSubsetGlyphID;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 pMappedFontSubObjects[i] = it->second.m_nFontSubID;
                 pMappedIdentityGlyphs[i] = it->second.m_bIdentityGlyph;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             }
             else
             {
@@ -6495,11 +6495,11 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                 // copy font id
                 pMappedFontObjects[i] = rSubset.m_aSubsets.back().m_nFontID;
                 // create new glyph in subset
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 sal_uInt16 nNewId = 0;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                 sal_uInt8 nNewId = sal::static_int_cast<sal_uInt8>(rSubset.m_aSubsets.back().m_aMapping.size()+1);
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                 pMappedGlyphs[i] = nNewId;
 
                 // add new glyph to emitted font subset
@@ -6511,21 +6511,21 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
                 Glyph& rNewGlyph = rSubset.m_aMapping[ nFontGlyphId ];
                 rNewGlyph.m_nFontID = pMappedFontObjects[i];
                 rNewGlyph.m_nSubsetGlyphID = nNewId;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 rNewGlyph.m_nFontSubID = nNewId;
                 rNewGlyph.m_bIdentityGlyph = false;
                 pMappedFontSubObjects[i] = rNewGlyph.m_nFontSubID;
                 pMappedIdentityGlyphs[i] = rNewGlyph.m_bIdentityGlyph;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             }
             getReferenceDevice()->ImplGetGraphics();
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
             const bool bVertical = ((pGlyphs[i] & GF_ROTMASK) != 0);
             pGlyphWidths[i] = m_aFontCache.getGlyphWidth( pCurrentFont,
                                                           nFontGlyphId,
                                                           bVertical,
                                                           m_pReferenceDevice->mpGraphics );
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
         }
         else if( pCurrentFont->IsEmbeddable() )
         {
@@ -6611,12 +6611,12 @@ void PDFWriterImpl::registerGlyphs( int nGlyphs,
 
             pMappedGlyphs[ i ] = (sal_Int8)cChar;
             pMappedFontObjects[ i ] = nCurFontID;
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
             pGlyphWidths[ i ] = m_aFontCache.getGlyphWidth( pCurrentFont,
                                                             (pEncoding ? pUnicodes[i] : cChar) | GF_ISCHAR,
                                                             false,
                                                             m_pReferenceDevice->mpGraphics );
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
         }
     }
 }
@@ -6726,7 +6726,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         if( ( rGlyphs[i].m_nGlyphId & GF_ROTMASK ) == GF_ROTL )
         {
             fDeltaAngle = M_PI/2.0;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             SalATSLayout *pATSLayout = NULL;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
             if ( pMultiLayout )
@@ -6744,12 +6744,12 @@ void PDFWriterImpl::drawVerticalGlyphs(
             }
             else
             {
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             aDeltaPos.X() = m_pReferenceDevice->GetFontMetric().GetAscent();
             aDeltaPos.Y() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent() * fXScale);
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             fYScale = fXScale;
             fTempXScale = 1.0;
             fSkewA = -fSkewB;
@@ -6758,7 +6758,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         else if( ( rGlyphs[i].m_nGlyphId & GF_ROTMASK ) == GF_ROTR )
         {
             fDeltaAngle = -M_PI/2.0;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             SalATSLayout *pATSLayout = NULL;
             MultiSalLayout *pMultiLayout = dynamic_cast<MultiSalLayout*>( rGlyphs[i].m_pLayout );
             if ( pMultiLayout )
@@ -6776,12 +6776,12 @@ void PDFWriterImpl::drawVerticalGlyphs(
             }
             else
             {
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             aDeltaPos.X() = (int)((double)m_pReferenceDevice->GetFontMetric().GetDescent()*fXScale);
             aDeltaPos.Y() = -m_pReferenceDevice->GetFontMetric().GetAscent();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             fYScale = fXScale;
             fTempXScale = 1.0;
             fSkewA = fSkewB;
@@ -6803,7 +6803,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         aMat.translate( aCurPos.X()+aDeltaPos.X(), aCurPos.Y()+aDeltaPos.Y() );
         aMat.append( m_aPages.back(), rLine );
         rLine.append( " Tm" );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         if( i == 0 || rGlyphs[i-1].m_nMappedFontId != rGlyphs[i].m_nMappedFontId || rGlyphs[i-1].m_nMappedFontSubId != rGlyphs[i].m_nMappedFontSubId )
         {
             rLine.append( " /F" );
@@ -6818,7 +6818,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         if ( rGlyphs[i].m_bIdentityGlyph )
             appendHex( (sal_Int8)( ( rGlyphs[i].m_nMappedGlyphId & 0xff00 ) >> 8 ), rLine );
         appendHex( (sal_Int8)( rGlyphs[i].m_nMappedGlyphId & 0x00ff ), rLine );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         if( i == 0 || rGlyphs[i-1].m_nMappedFontId != rGlyphs[i].m_nMappedFontId )
         {
             rLine.append( " /F" );
@@ -6829,7 +6829,7 @@ void PDFWriterImpl::drawVerticalGlyphs(
         }
         rLine.append( "<" );
         appendHex( rGlyphs[i].m_nMappedGlyphId, rLine );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         rLine.append( ">Tj\n" );
     }
 }
@@ -6855,9 +6855,9 @@ void PDFWriterImpl::drawHorizontalGlyphs(
     for( size_t i = 1; i < rGlyphs.size(); i++ )
     {
         if( rGlyphs[i].m_nMappedFontId != rGlyphs[i-1].m_nMappedFontId ||
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             rGlyphs[i].m_nMappedFontSubId != rGlyphs[i-1].m_nMappedFontSubId ||
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             rGlyphs[i].m_aPos.Y() != rGlyphs[i-1].m_aPos.Y() )
         {
             aRunEnds.push_back(i);
@@ -6898,10 +6898,10 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         // set up correct font
         rLine.append( "/F" );
         rLine.append( rGlyphs[nBeginRun].m_nMappedFontId );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         rLine.append( '.' );
         rLine.append( rGlyphs[nBeginRun].m_nMappedFontSubId );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         rLine.append( ' ' );
         m_aPages.back().appendMappedLength( nFontHeight, rLine, true );
         rLine.append( " Tf" );
@@ -6910,44 +6910,44 @@ void PDFWriterImpl::drawHorizontalGlyphs(
         OStringBuffer aKernedLine( 256 ), aUnkernedLine( 256 );
         aKernedLine.append( "[<" );
         aUnkernedLine.append( '<' );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
             appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
         appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aKernedLine );
         if ( rGlyphs[nBeginRun].m_bIdentityGlyph )
             appendHex( (sal_Int8)( ( rGlyphs[nBeginRun].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
         appendHex( (sal_Int8)( rGlyphs[nBeginRun].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aKernedLine );
         appendHex( rGlyphs[nBeginRun].m_nMappedGlyphId, aUnkernedLine );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
         aMat.invert();
         bool bNeedKern = false;
         for( sal_uInt32 nPos = nBeginRun+1; nPos < aRunEnds[nRun]; nPos++ )
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             if ( rGlyphs[nPos].m_bIdentityGlyph )
                 appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aUnkernedLine );
             appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aUnkernedLine );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aUnkernedLine );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             // check if glyph advance matches with the width of the previous glyph, else adjust
             const Point aThisPos = aMat.transform( rGlyphs[nPos].m_aPos );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             // Fix bug 3659 by subtracting the real native width from the
             // OOo kerning positions
             const Point aPrevPos = aMat.transform( Point( rGlyphs[nPos-1].m_aPos.X() + (long)( ( fXScale * rGlyphs[nPos-1].m_nRealNativeWidth ) + 0.5 ), rGlyphs[nPos-1].m_aPos.Y() ) );
             double fAdvance = aPrevPos.X() - aThisPos.X();
             fAdvance *= 1000.0 / (fXScale * nPixelFontHeight);
             const sal_Int32 nAdjustment = sal_Int32(fAdvance+0.5);
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             const Point aPrevPos = aMat.transform( rGlyphs[nPos-1].m_aPos );
             double fAdvance = aThisPos.X() - aPrevPos.X();
             fAdvance *= 1000.0 / (fXScale * nPixelFontHeight);
             const sal_Int32 nAdjustment = rGlyphs[nPos-1].m_nNativeWidth - sal_Int32(fAdvance+0.5);
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             if( nAdjustment != 0 )
             {
                 bNeedKern = true;
@@ -6955,7 +6955,7 @@ void PDFWriterImpl::drawHorizontalGlyphs(
                 aKernedLine.append( nAdjustment );
                 aKernedLine.append( "<" );
             }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             else if ( rGlyphs[nPos].m_bIdentityGlyph || rGlyphs[nPos-1].m_bIdentityGlyph )
             {
                 bNeedKern = true;
@@ -6965,9 +6965,9 @@ void PDFWriterImpl::drawHorizontalGlyphs(
             if ( rGlyphs[nPos].m_bIdentityGlyph )
                 appendHex( (sal_Int8)( ( rGlyphs[nPos].m_nMappedGlyphId & 0xff00 ) >> 8 ), aKernedLine );
             appendHex( (sal_Int8)( rGlyphs[nPos].m_nMappedGlyphId & 0x00ff ), aKernedLine );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             appendHex( rGlyphs[nPos].m_nMappedGlyphId, aKernedLine );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         }
         aKernedLine.append( ">]TJ\n" );
         aUnkernedLine.append( ">Tj\n" );
@@ -6995,16 +6995,16 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
     sal_GlyphId pGlyphs[nMaxGlyphs];
     sal_Int32 pGlyphWidths[nMaxGlyphs];
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     sal_uInt16 pMappedGlyphs[nMaxGlyphs];
     bool pMappedIdentityGlyphs[nMaxGlyphs];
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     sal_uInt8 pMappedGlyphs[nMaxGlyphs];
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     sal_Int32 pMappedFontObjects[nMaxGlyphs];
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     sal_Int32 pMappedFontSubObjects[nMaxGlyphs];
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     sal_Ucs   pUnicodes[nMaxGlyphs];
     int pCharPosAry[nMaxGlyphs];
     sal_Int32 nAdvanceWidths[nMaxGlyphs];
@@ -7036,7 +7036,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         m_pReferenceDevice->ImplNewFont();
     }
 
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
     // perform artificial italics if necessary
     if( ( m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_NORMAL ||
           m_aCurrentPDFState.m_aFont.GetItalic() == ITALIC_OBLIQUE ) &&
@@ -7046,7 +7046,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
     {
         fSkew = M_PI/12.0;
     }
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
     // if the mapmode is distorted we need to adjust for that also
     if( m_aCurrentPDFState.m_aMapMode.GetScaleX() != m_aCurrentPDFState.m_aMapMode.GetScaleY() )
@@ -7068,7 +7068,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
     bool bPop = false;
     bool bABold = false;
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
     // artificial bold necessary ?
     if( m_pReferenceDevice->mpFontEntry->maFontSelData.mpFontData->GetWeight() <= WEIGHT_MEDIUM &&
         m_pReferenceDevice->mpFontEntry->maFontSelData.GetWeight() > WEIGHT_MEDIUM )
@@ -7078,7 +7078,7 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
         bPop = true;
         bABold = true;
     }
-#endif	 // !USE_JAVA
+#endif	 // !USE_JAVA || !MACOSX
     // setup text colors (if necessary)
     Color aStrokeColor( COL_TRANSPARENT );
     Color aNonStrokeColor( COL_TRANSPARENT );
@@ -7168,19 +7168,19 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
             // mapping is possible
         }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         registerGlyphs( nGlyphs, pGlyphs, pUnicodes, pMappedGlyphs, pMappedIdentityGlyphs, pMappedFontObjects, pMappedFontSubObjects, pFallbackFonts );
         if ( !isReplayWriter() )
             continue;
 
         sal_Int32 nTotalAdvance = 0;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         registerGlyphs( nGlyphs, pGlyphs, pGlyphWidths, pUnicodes, pMappedGlyphs, pMappedFontObjects, pFallbackFonts );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
         for( int i = 0; i < nGlyphs; i++ )
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             // Use the same units for glyph width as is used for position
             pGlyphWidths[i] = ( ( nAdvanceWidths[i] + nTotalAdvance ) / rLayout.GetUnitsPerPixel() ) - ( nTotalAdvance / rLayout.GetUnitsPerPixel() );
             nTotalAdvance += nAdvanceWidths[i];
@@ -7197,12 +7197,12 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
 
             // Do not allow invalid glyphs to be written to the PDF output
             if( ! ( pGlyphs[i] & ( GF_ISCHAR | GF_GSUB ) ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             aGlyphs.push_back( PDFGlyph( aGNGlyphPos,
                                          pGlyphWidths[i],
                                          pGlyphs[i],
                                          pMappedFontObjects[i],
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                                          pMappedGlyphs[i],
                                          pMappedFontSubObjects[i],
                                          pMappedIdentityGlyphs[i],
@@ -7213,13 +7213,13 @@ void PDFWriterImpl::drawLayout( SalLayout& rLayout, const String& rText, bool bT
                 aGNGlyphPos.Y() += pGlyphWidths[i];
             else
                 aGNGlyphPos.X() += pGlyphWidths[i];
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                                          pMappedGlyphs[i] ) );
             if( bVertical )
                 aGNGlyphPos.Y() += nAdvanceWidths[i]/rLayout.GetUnitsPerPixel();
             else
                 aGNGlyphPos.X() += nAdvanceWidths[i]/rLayout.GetUnitsPerPixel();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         }
     }
 
@@ -9527,11 +9527,11 @@ bool PDFWriterImpl::writeBitmapObject( BitmapEmit& rObject, bool bMask )
 
     checkAndEnableStreamEncryption(  rObject.m_nObject );
     beginCompression();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if( ! bTrueColor )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     if( ! bTrueColor || pAccess->GetScanlineFormat() == BMP_FORMAT_24BIT_TC_RGB )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     {
         const int nScanLineBytes = 1 + ( pAccess->GetBitCount() * ( pAccess->Width() - 1 ) / 8U );
 
@@ -9597,10 +9597,10 @@ void PDFWriterImpl::drawJPGBitmap( SvStream& rDCTData, bool bIsTrueColor, const 
     if( ! (rSizePixel.Width() && rSizePixel.Height()) )
         return;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !isReplayWriter() )
         return;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     SvMemoryStream* pStream = new SvMemoryStream;
     rDCTData.Seek( 0 );
@@ -11821,11 +11821,11 @@ bool PDFWriterImpl::endControlAppearance( PDFWriter::WidgetState eState )
 
 void PDFWriterImpl::addStream( const String& rMimeType, PDFOutputStream* pStream, bool bCompress )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     // Avoid deletion of streams in first pass
     if ( !isReplayWriter() )
         return;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     if( pStream )
     {
@@ -12104,7 +12104,7 @@ according to the table 3.15, pdf v 1.4 */
 }
 /* end i12626 methods */
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 sal_Int32 PDFWriterImpl::getNextPDFObject( oslFileHandle aFile, PDFObjectMapping& rObjectMapping )
 {
@@ -12995,4 +12995,4 @@ void PDFWriterImpl::addAction( MetaAction *pAction )
         m_aReplayMtf.AddAction( pAction );
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX

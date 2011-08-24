@@ -147,7 +147,7 @@ BOOL ImplDrawNativeSpinfield( Window *pWin, const SpinbuttonValue& rSpinbuttonVa
         }
     }
 #ifdef USE_JAVA
-	// on Mac OS X, render spinfields with dropdowns as combo boxes
+	// render spinfields with dropdowns as combo boxes
 	else if( (pWin->GetStyle() & WB_DROPDOWN) && pWin->IsNativeControlSupported(CTRL_COMBOBOX, PART_ENTIRE_CONTROL) )
 	{
 		Window *pBorder = pWin->GetWindow( WINDOW_BORDER );

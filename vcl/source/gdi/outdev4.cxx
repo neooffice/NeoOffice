@@ -1001,7 +1001,7 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 					EnableMapMode( FALSE );
 
 					pVDev->DrawOutDev( Point(), aDstSize, aDstRect.TopLeft(), aDstSize, *this );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                     const RasterOp eOldROP = GetRasterOp();
 					DrawGradient( aBoundRect, aGradient );
 					pVDev->SetRasterOp( ROP_XOR );
@@ -1016,7 +1016,7 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 					SetRasterOp( ROP_XOR );
 					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, *pVDev );
                     SetRasterOp( eOldROP );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 					pVDev->SetRasterOp( ROP_XOR );
 					aVDevMap.SetOrigin( Point( -aDstRect.Left(), -aDstRect.Top() ) );
 					pVDev->SetMapMode( aVDevMap );
@@ -1029,7 +1029,7 @@ void OutputDevice::DrawGradient( const PolyPolygon& rPolyPoly,
 					aVDevMap.SetOrigin( Point() );
 					pVDev->SetMapMode( aVDevMap );
 					DrawOutDev( aDstRect.TopLeft(), aDstSize, Point(), aDstSize, *pVDev );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 					EnableMapMode( bOldMap );
 				}

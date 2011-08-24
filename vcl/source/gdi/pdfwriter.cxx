@@ -34,7 +34,7 @@
 #include <vcl/bitmapex.hxx>
 #include <vcl/image.hxx>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _SV_GDIMTF_HXX
 #include <vcl/gdimtf.hxx>
@@ -600,11 +600,11 @@ public:
     bool				IsCompress() const { return mbCompress; }
 };
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 using namespace vcl;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
 {
@@ -1192,7 +1192,7 @@ static void ReplayMetaFile( PDFWriter &aWriter, GDIMetaFile& rMtf )
     }
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 PDFWriter::AnyWidget::~AnyWidget()
 {
@@ -1216,16 +1216,16 @@ OutputDevice* PDFWriter::GetReferenceDevice()
 
 sal_Int32 PDFWriter::NewPage( sal_Int32 nPageWidth, sal_Int32 nPageHeight, Orientation eOrientation )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaNewPagePDFAction( nPageWidth, nPageHeight, eOrientation ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->newPage( nPageWidth, nPageHeight, eOrientation );
 }
 
 bool PDFWriter::Emit()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     bool bRet = false;
 
     // Replay meta actions
@@ -1256,9 +1256,9 @@ bool PDFWriter::Emit()
     }
 
     return bRet;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->emit();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 PDFWriter::PDFVersion PDFWriter::GetVersion() const
@@ -1268,10 +1268,10 @@ PDFWriter::PDFVersion PDFWriter::GetVersion() const
 
 void PDFWriter::SetDocInfo( const PDFDocInfo& rInfo )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetDocInfoPDFAction( rInfo ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setDocInfo( rInfo );
 }
 
@@ -1282,28 +1282,28 @@ const PDFDocInfo& PDFWriter::GetDocInfo() const
 
 void PDFWriter::SetDocumentLocale( const com::sun::star::lang::Locale& rLoc )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLocalePDFAction( rLoc ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setDocumentLocale( rLoc );
 }
 
 void PDFWriter::SetFont( const Font& rFont )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaFontAction( rFont ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setFont( rFont );
 }
 
 void PDFWriter::DrawText( const Point& rPos, const String& rText )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextAction( rPos, rText, 0, STRING_LEN ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawText( rPos, rText );
 }
 
@@ -1315,10 +1315,10 @@ void PDFWriter::DrawTextLine(
                              FontUnderline eOverline,
                              BOOL bUnderlineAbove )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLinePDFAction( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawTextLine( rPos, nWidth, eStrikeout, eUnderline, eOverline, bUnderlineAbove );
 }
 
@@ -1329,10 +1329,10 @@ void PDFWriter::DrawTextArray(
                               xub_StrLen nIndex,
                               xub_StrLen nLen )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextArrayAction( rStartPt, rStr, pDXAry, nIndex, nLen ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawTextArray( rStartPt, rStr, pDXAry, nIndex, nLen );
 }
 
@@ -1343,10 +1343,10 @@ void PDFWriter::DrawStretchText(
                                 xub_StrLen nIndex,
                                 xub_StrLen nLen )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaStretchTextAction( rStartPt, nWidth, rStr, nIndex, nLen ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawStretchText( rStartPt, nWidth, rStr, nIndex, nLen );
 }
 
@@ -1355,145 +1355,145 @@ void PDFWriter::DrawText(
                          const XubString& rStr,
                          USHORT nStyle )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextRectAction( rRect, rStr, nStyle ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawText( rRect, rStr, nStyle );
 }
 
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineAction( rStart, rStop ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawLine( rStart, rStop );
 }
 
 void PDFWriter::DrawLine( const Point& rStart, const Point& rStop, const LineInfo& rInfo )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineAction( rStart, rStop, rInfo ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawLine( rStart, rStop, rInfo );
 }
 
 void PDFWriter::DrawPolygon( const Polygon& rPoly )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolygonAction( rPoly ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPolygon( rPoly );
 }
 
 void PDFWriter::DrawPolyLine( const Polygon& rPoly )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLineAction( rPoly ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly );
 }
 
 void PDFWriter::DrawRect( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaRectAction( rRect ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawRectangle( rRect );
 }
 
 void PDFWriter::DrawRect( const Rectangle& rRect, ULONG nHorzRound, ULONG nVertRound )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaRoundRectAction( rRect, nHorzRound, nVertRound ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawRectangle( rRect, nHorzRound, nVertRound );
 }
 
 void PDFWriter::DrawEllipse( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEllipseAction( rRect ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawEllipse( rRect );
 }
 
 void PDFWriter::DrawArc( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaArcAction( rRect, rStart, rStop ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, false, false );
 }
 
 void PDFWriter::DrawPie( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPieAction( rRect, rStart, rStop ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, true, false );
 }
 
 void PDFWriter::DrawChord( const Rectangle& rRect, const Point& rStart, const Point& rStop )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaChordAction( rRect, rStart, rStop ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawArc( rRect, rStart, rStop, false, true );
 }
 
 void PDFWriter::DrawPolyLine( const Polygon& rPoly, const LineInfo& rInfo )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLineAction( rPoly, rInfo ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly, rInfo );
 }
 
 void PDFWriter::DrawPolyLine( const Polygon& rPoly, const ExtLineInfo& rInfo )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyLinePDFAction( rPoly, rInfo ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPolyLine( rPoly, rInfo );
 }
 
 void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyPolygonAction( rPolyPoly ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPolyPolygon( rPolyPoly );
 }
 
 void PDFWriter::DrawPixel( const Point& rPos, const Color& rColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPixelAction( rPos, rColor ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPixel( rPos, rColor );
 }
 
 void PDFWriter::DrawPixel( const Polygon& rPts, const Color* pColors )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPixelPDFAction( rPts, pColors ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPixel( rPts, pColors );
 }
 
@@ -1502,19 +1502,19 @@ void PDFWriter::DrawBitmap( const Point& rDestPt, const Bitmap& rBitmap )
     Size aSize = OutputDevice::LogicToLogic( rBitmap.GetPrefSize(),
                                              rBitmap.GetPrefMapMode(),
                                              ((PDFWriterImpl*)pImplementation)->getMapMode() );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpAction( rDestPt, rBitmap ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, aSize, rBitmap );
 }
 
 void PDFWriter::DrawBitmap( const Point& rDestPt, const Size& rDestSize, const Bitmap& rBitmap )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpScaleAction( rDestPt, rDestSize, rBitmap ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, rBitmap );
 }
 
@@ -1522,10 +1522,10 @@ void PDFWriter::DrawBitmap( const Point& rDestPt, const Size& rDestSize, const P
 {
     Bitmap aBitmap( rBitmap );
     aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpScaleAction( rDestPt, rDestSize, aBitmap ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
 }
 
@@ -1534,19 +1534,19 @@ void PDFWriter::DrawBitmapEx( const Point& rDestPt, const BitmapEx& rBitmap )
     Size aSize = OutputDevice::LogicToLogic( rBitmap.GetPrefSize(),
                                              rBitmap.GetPrefMapMode(),
                                              ((PDFWriterImpl*)pImplementation)->getMapMode() );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExAction( rDestPt, rBitmap ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, aSize, rBitmap );
 }
 
 void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const BitmapEx& rBitmap )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, rBitmap ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, rBitmap );
 }
 
@@ -1554,10 +1554,10 @@ void PDFWriter::DrawBitmapEx( const Point& rDestPt, const Size& rDestSize, const
 {
     BitmapEx aBitmap( rBitmap );
     aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBmpExScaleAction( rDestPt, rDestSize, aBitmap ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawBitmap( rDestPt, rDestSize, aBitmap );
 }
 
@@ -1566,19 +1566,19 @@ void PDFWriter::DrawMask( const Point& rDestPt, const Bitmap& rBitmap, const Col
     Size aSize = OutputDevice::LogicToLogic( rBitmap.GetPrefSize(),
                                              rBitmap.GetPrefMapMode(),
                                              ((PDFWriterImpl*)pImplementation)->getMapMode() );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskAction( rDestPt, rBitmap, rMaskColor ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, aSize, rBitmap, rMaskColor );
 }
 
 void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Bitmap& rBitmap, const Color& rMaskColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskScaleAction( rDestPt, rDestSize, rBitmap, rMaskColor ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, rDestSize, rBitmap, rMaskColor );
 }
 
@@ -1586,43 +1586,43 @@ void PDFWriter::DrawMask( const Point& rDestPt, const Size& rDestSize, const Poi
 {
     Bitmap aBitmap( rBitmap );
     aBitmap.Crop( Rectangle( rSrcPtPixel, rSrcSizePixel ) );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMaskScaleAction( rDestPt, rDestSize, aBitmap, rMaskColor ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawMask( rDestPt, rDestSize, aBitmap, rMaskColor );
 }
 
 void PDFWriter::DrawGradient( const Rectangle& rRect, const Gradient& rGradient )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaGradientAction( rRect, rGradient ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawGradient( rRect, rGradient );
 }
 
 void PDFWriter::DrawGradient( const PolyPolygon& rPolyPoly, const Gradient& rGradient )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaGradientExAction( rPolyPoly, rGradient ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawGradient( rPolyPoly, rGradient );
 }
 
 void PDFWriter::DrawHatch( const PolyPolygon& rPolyPoly, const Hatch& rHatch )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaHatchAction( rPolyPoly, rHatch ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawHatch( rPolyPoly, rHatch );
 }
 
 void PDFWriter::DrawWallpaper( const Rectangle& rRect, const Wallpaper& rWallpaper )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaWallpaperAction( rRect, rWallpaper ) );
 #endif	// USE_JAVA 
@@ -1631,97 +1631,97 @@ void PDFWriter::DrawWallpaper( const Rectangle& rRect, const Wallpaper& rWallpap
 
 void PDFWriter::DrawTransparent( const PolyPolygon& rPolyPoly, USHORT nTransparencePercent )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTransparentAction( rPolyPoly, nTransparencePercent ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawTransparent( rPolyPoly, nTransparencePercent );
 }
 
 void PDFWriter::BeginTransparencyGroup()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginTransparencyGroupPDFAction() );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->beginTransparencyGroup();
 }
 
 void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, USHORT nTransparentPercent )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndTransparencyGroupPDFAction( rRect, nTransparentPercent ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->endTransparencyGroup( rRect, nTransparentPercent );
 }
 
 void PDFWriter::EndTransparencyGroup( const Rectangle& rRect, const Bitmap& rAlphaMask )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndTransparencyGroupMaskPDFAction( rRect, rAlphaMask ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->endTransparencyGroup( rRect, rAlphaMask );
 }
 
 void PDFWriter::Push( USHORT nFlags )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPushAction( nFlags ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->push( nFlags );
 }
 
 void PDFWriter::Pop()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPopAction() ); 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->pop();
 }
 
 void PDFWriter::SetMapMode( const MapMode& rMapMode )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMapModeAction( rMapMode ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setMapMode( rMapMode );
 }
 
 void PDFWriter::SetMapMode()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMapModeAction( ((PDFWriterImpl*)pImplementation)->getMapMode() ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setMapMode();
 }
 
 void PDFWriter::SetLineColor( const Color& rColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLineColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setLineColor( rColor );
 }
 
 void PDFWriter::SetFillColor( const Color& rColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaFillColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setFillColor( rColor );
 }
 
 void PDFWriter::SetClipRegion()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region(), FALSE ) );
 #endif	// USE_JAVA 
@@ -1730,271 +1730,271 @@ void PDFWriter::SetClipRegion()
 
 void PDFWriter::SetClipRegion( const Region& rRegion )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( rRegion, TRUE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setClipRegion( rRegion );
 }
 
 void PDFWriter::MoveClipRegion( long nHorzMove, long nVertMove )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaMoveClipRegionAction( nHorzMove, nVertMove ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->moveClipRegion( nHorzMove, nVertMove );
 }
 
 void PDFWriter::IntersectClipRegion( const Region& rRegion )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRegionClipRegionAction( rRegion ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRegion );
 }
 
 void PDFWriter::IntersectClipRegion( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaISectRectClipRegionAction( rRect ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->intersectClipRegion( rRect );
 }
 
 void PDFWriter::SetAntialiasing( USHORT nMode )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaAntiAliasPDFAction( nMode ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setAntiAlias( (sal_Int32)nMode );
 }
 
 void PDFWriter::SetLayoutMode( ULONG nMode )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaLayoutModeAction( nMode ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setLayoutMode( (sal_Int32)nMode );
 }
 
 void PDFWriter::SetDigitLanguage( LanguageType eLang )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaDigitLanguagePDFAction( eLang ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setDigitLanguage( eLang );
 }
 
 void PDFWriter::SetTextColor( const Color& rColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextColorAction( rColor ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextColor( rColor );
 }
 
 void PDFWriter::SetTextFillColor()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( Color( COL_TRANSPARENT ), FALSE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextFillColor();
 }
 
 void PDFWriter::SetTextFillColor( const Color& rColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextFillColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextFillColor( rColor );
 }
 
 void PDFWriter::SetTextLineColor()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextLineColor();
 }
 
 void PDFWriter::SetTextLineColor( const Color& rColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextLineColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextLineColor( rColor );
 }
 
 void PDFWriter::SetOverlineColor()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( Color( COL_TRANSPARENT ), FALSE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setOverlineColor();
 }
 
 void PDFWriter::SetOverlineColor( const Color& rColor )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaOverlineColorAction( rColor, TRUE ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setOverlineColor( rColor );
 }
 
 void PDFWriter::SetTextAlign( ::TextAlign eAlign )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaTextAlignAction( eAlign ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setTextAlign( eAlign );
 }
 
 void PDFWriter::DrawJPGBitmap( SvStream& rStreamData, bool bIsTrueColor, const Size& rSrcSizePixel, const Rectangle& rTargetArea, const Bitmap& rMask )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaJpgPDFAction( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawJPGBitmap( rStreamData, bIsTrueColor, rSrcSizePixel, rTargetArea, rMask );
 }
 
 sal_Int32 PDFWriter::CreateLink( const Rectangle& rRect, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateLinkPDFAction( rRect, nPageNr ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->createLink( rRect, nPageNr );
 }
 //--->i56629
 sal_Int32 PDFWriter::CreateNamedDest( const rtl::OUString& sDestName, const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateNamedDestPDFAction( sDestName, rRect, nPageNr, eType ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->createNamedDest( sDestName, rRect, nPageNr, eType );
 }
 //<---
 sal_Int32 PDFWriter::CreateDest( const Rectangle& rRect, sal_Int32 nPageNr, PDFWriter::DestAreaType eType )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateDestPDFAction( rRect, nPageNr, eType ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->createDest( rRect, nPageNr, eType );
 }
 
 sal_Int32 PDFWriter::SetLinkDest( sal_Int32 nLinkId, sal_Int32 nDestId )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkDestPDFAction( nLinkId, nDestId ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->setLinkDest( nLinkId, nDestId );
 }
 
 sal_Int32 PDFWriter::SetLinkURL( sal_Int32 nLinkId, const rtl::OUString& rURL )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkUrlPDFAction( nLinkId, rURL ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->setLinkURL( nLinkId, rURL );
 }
 
 void PDFWriter::SetLinkPropertyID( sal_Int32 nLinkId, sal_Int32 nPropertyId )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetLinkPropertyIdPDFAction( nLinkId, nPropertyId ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setLinkPropertyId( nLinkId, nPropertyId );
 }
 
 sal_Int32 PDFWriter::CreateOutlineItem( sal_Int32 nParent, const rtl::OUString& rText, sal_Int32 nDestID )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateOutlineItemPDFAction( nParent, rText, nDestID ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->createOutlineItem( nParent, rText, nDestID );
 }
 
 sal_Int32 PDFWriter::SetOutlineItemParent( sal_Int32 nItem, sal_Int32 nNewParent )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemParentPDFAction( nItem, nNewParent ) ); 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->setOutlineItemParent( nItem, nNewParent );
 }
 
 sal_Int32 PDFWriter::SetOutlineItemText( sal_Int32 nItem, const rtl::OUString& rText )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemTextPDFAction( nItem, rText ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return  ((PDFWriterImpl*)pImplementation)->setOutlineItemText( nItem, rText );
 }
 
 sal_Int32 PDFWriter::SetOutlineItemDest( sal_Int32 nItem, sal_Int32 nDest )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetOutlineItemDestPDFAction( nItem, nDest ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->setOutlineItemDest( nItem, nDest );
 }
 
 void PDFWriter::CreateNote( const Rectangle& rRect, const PDFNote& rNote, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateNotePDFAction( rRect, rNote, nPageNr ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->createNote( rRect, rNote, nPageNr );
 }
 
 sal_Int32 PDFWriter::BeginStructureElement( PDFWriter::StructElement eType, const rtl::OUString& rAlias )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginStructureElementPDFAction( eType ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->beginStructureElement( eType, rAlias );
 }
 
 void PDFWriter::EndStructureElement()
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndStructureElementPDFAction() );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->endStructureElement();
 }
 
 bool PDFWriter::SetCurrentStructureElement( sal_Int32 nID )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetCurrentStructureElementPDFAction( nID ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->setCurrentStructureElement( nID );
 }
 
@@ -2014,64 +2014,64 @@ bool PDFWriter::SetStructureAttribute( enum StructAttribute eAttr, enum StructAt
 
 bool PDFWriter::SetStructureAttributeNumerical( enum StructAttribute eAttr, sal_Int32 nValue )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureAttributeNumericalPDFAction( eAttr, nValue ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->setStructureAttributeNumerical( eAttr, nValue );
 }
 
 void PDFWriter::SetStructureBoundingBox( const Rectangle& rRect )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureBoundingBoxPDFAction( rRect ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setStructureBoundingBox( rRect );
 }
 
 void PDFWriter::SetActualText( const String& rText )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetActualTextPDFAction( rText ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setActualText( rText );
 }
 
 void PDFWriter::SetAlternateText( const String& rText )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetAlternateTextPDFAction( rText ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setAlternateText( rText );
 }
 
 void PDFWriter::SetAutoAdvanceTime( sal_uInt32 nSeconds, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetAutoAdvanceTimePDFAction( nSeconds, nPageNr ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setAutoAdvanceTime( nSeconds, nPageNr );
 }
 
 void PDFWriter::SetPageTransition( PDFWriter::PageTransition eType, sal_uInt32 nMilliSec, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetPageTransitionPDFAction( eType, nMilliSec, nPageNr ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->setPageTransition( eType, nMilliSec, nPageNr );
 }
 
 sal_Int32 PDFWriter::CreateControl( const PDFWriter::AnyWidget& rControl, sal_Int32 nPageNr )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaCreateControlPDFAction( rControl, nPageNr ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->createControl( rControl, nPageNr );
 }
 
@@ -2081,37 +2081,37 @@ PDFOutputStream::~PDFOutputStream()
 
 void PDFWriter::AddStream( const String& rMimeType, PDFOutputStream* pStream, bool bCompress )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaAddStreamPDFAction( rMimeType, pStream, bCompress ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->addStream( rMimeType, pStream, bCompress );
 }
 
 void PDFWriter::BeginPattern( const Rectangle& rCellRect )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaBeginPatternPDFAction( rCellRect ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->beginPattern( rCellRect );
 }
 
 sal_Int32 PDFWriter::EndPattern( const SvtGraphicFill::Transform& rTransform )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaEndPatternPDFAction( rTransform ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->endPattern( rTransform );
 }
 
 void PDFWriter::DrawPolyPolygon( const PolyPolygon& rPolyPoly, sal_Int32 nPattern, bool bEOFill )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaPolyPolygonPDFAction( rPolyPoly, nPattern, bEOFill ) );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawPolyPolygon( rPolyPoly, nPattern, bEOFill );
 }
 

@@ -61,7 +61,7 @@ void TabPage::ImplInit( Window* pParent, WinBits nStyle )
     // otherwise they will paint with a wrong background
     if( IsNativeControlSupported(CTRL_TAB_BODY, PART_ENTIRE_CONTROL) && GetParent() && (GetParent()->GetType() == WINDOW_TABCONTROL) )
         EnableChildTransparentMode( TRUE );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	else if ( IsNativeControlSupported( CTRL_FIXEDBORDER, PART_ENTIRE_CONTROL ) && GetParent() )
 	{
 		if ( GetParent()->GetType() == WINDOW_FIXEDBORDER )
@@ -91,7 +91,7 @@ void TabPage::ImplInit( Window* pParent, WinBits nStyle )
 			}
 		}
 	}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------

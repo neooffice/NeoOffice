@@ -1943,9 +1943,9 @@ BOOL AllSettings::GetLayoutRTL() const
 
     if( nUIMirroring == -1 )
     {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         nUIMirroring = 2; // mirroring is not compatible with Aqua controls
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         nUIMirroring = 0; // ask configuration only once
         utl::OConfigurationNode aNode = utl::OConfigurationTreeRoot::tryCreateWithServiceFactory(
             vcl::unohelper::GetMultiServiceFactory(),
@@ -1960,7 +1960,7 @@ BOOL AllSettings::GetLayoutRTL() const
                 nUIMirroring = bTmp ? 1 : 2;
             }
         }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     }
 
     if( nUIMirroring == 0 )  // no config found (eg, setup) or default (nil) was set: check language

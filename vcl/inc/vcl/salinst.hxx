@@ -60,9 +60,9 @@ struct SalItemParams;
 class SalSession;
 struct SystemGraphicsData;
 struct SystemWindowData;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 class Menu;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 namespace vos { class IMutex; }
 
@@ -144,11 +144,11 @@ public:
     virtual bool				AnyInput( USHORT nType ) = 0;
 
                             // Menues
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     virtual SalMenu*        CreateMenu( BOOL bMenuBar, Menu* pVCLMenu ) = 0;
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     virtual SalMenu*        CreateMenu( BOOL bMenuBar ) = 0;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     virtual void            DestroyMenu( SalMenu* pMenu) = 0;
     virtual SalMenuItem*    CreateMenuItem( const SalItemParams* pItemData ) = 0;
     virtual void            DestroyMenuItem( SalMenuItem* pItem ) = 0;

@@ -40,7 +40,7 @@
 #include "rtl/string.hxx"
 #include "tools/rc.h"
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #include <list>
 
@@ -71,7 +71,7 @@ static void RelayoutScrollBars();
 using namespace osl;
 using namespace vos;
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 
 using namespace rtl;
@@ -93,7 +93,7 @@ using namespace rtl;
     only small deviations feasible.
 */
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 @interface VCLRelayoutScrollBarsHandler : NSObject
 {
@@ -249,7 +249,7 @@ static void EndTrackingScrollBar( ScrollBar *toTrack )
 	gScrollBars.remove( toTrack );
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // =======================================================================
 
@@ -279,10 +279,10 @@ static long ImplMulDiv( long nNumber, long nNumerator, long nDenominator )
 #define SCRBAR_STATE_PAGE2_DOWN     ((USHORT)0x0020)
 #define SCRBAR_STATE_THUMB_DOWN     ((USHORT)0x0040)
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 #define SCRBAR_STATE_BTN1_INSIDE    ((USHORT)0x0100)
 #define SCRBAR_STATE_BTN2_INSIDE    ((USHORT)0x0200)
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 #define SCRBAR_VIEW_STYLE           (WB_3DLOOK | WB_HORZ | WB_VERT)
 
@@ -291,10 +291,10 @@ struct ImplScrollBarData
 	AutoTimer		maTimer;			// Timer
     BOOL            mbHide;
 	Rectangle		maTrackRect; // TODO: move to ScrollBar class when binary incompatibility of ScrollBar class is no longer problematic
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     BOOL            mbHasEntireControlRect;
     Rectangle       maEntireControlRect;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 };
 
 // =======================================================================
@@ -332,9 +332,9 @@ void ScrollBar::ImplInit( Window* pParent, WinBits nStyle )
     long nScrollSize = GetSettings().GetStyleSettings().GetScrollBarSize();
     SetSizePixel( Size( nScrollSize, nScrollSize ) );
     SetBackground();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	BeginTrackingScrollBar( this );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -375,9 +375,9 @@ ScrollBar::~ScrollBar()
 {
     if( mpData )
         delete mpData;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	EndTrackingScrollBar( this );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 }
 
 // -----------------------------------------------------------------------
@@ -404,13 +404,13 @@ void ScrollBar::ImplLoadRes( const ResId& rResId )
 
 void ScrollBar::ImplUpdateRects( BOOL bUpdate )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	if( IsNativeControlSupported( CTRL_SCROLLBAR, PART_ENTIRE_CONTROL ) )
 	{
 		ImplUpdateRectsNative( bUpdate );
 		return;
 	}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     USHORT      nOldStateFlags  = mnStateFlags;
     Rectangle   aOldPage1Rect = maPage1Rect;
@@ -512,7 +512,7 @@ void ScrollBar::ImplUpdateRects( BOOL bUpdate )
     }
 }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 // -----------------------------------------------------------------------
 
@@ -617,7 +617,7 @@ void ScrollBar::ImplUpdateRectsNative( BOOL bUpdate )
     }
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // -----------------------------------------------------------------------
 
@@ -871,14 +871,14 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
             scrValue.maButton1Rect = maBtn1Rect;
             scrValue.maButton2Rect = maBtn2Rect;
             scrValue.mnButton1State = ((mnStateFlags & SCRBAR_STATE_BTN1_DOWN) ? CTRL_STATE_PRESSED : 0) |
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
            	                    ((mnStateFlags & SCRBAR_STATE_BTN1_INSIDE) ? CTRL_STATE_SELECTED : 0) |
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 								((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? CTRL_STATE_ENABLED : 0);
             scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0) |
 #ifdef USE_JAVA
            	                    ((mnStateFlags & SCRBAR_STATE_BTN2_INSIDE) ? CTRL_STATE_SELECTED : 0) |
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 								((!(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)) ? CTRL_STATE_ENABLED : 0);
             scrValue.mnThumbState = nState | ((mnStateFlags & SCRBAR_STATE_THUMB_DOWN) ? CTRL_STATE_PRESSED : 0);
             scrValue.mnPage1State = nState | ((mnStateFlags & SCRBAR_STATE_PAGE1_DOWN) ? CTRL_STATE_PRESSED : 0);
@@ -906,7 +906,7 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 
 #if 1
             Region aCtrlRegion;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			if( mpData && mpData->mbHasEntireControlRect )
 			{
 				// use platform specific preferred boudns
@@ -916,15 +916,15 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 			{
 				// approximate valid full control by what we need to cover all
 				// hit test areas
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             aCtrlRegion.Union( maBtn1Rect );
             aCtrlRegion.Union( maBtn2Rect );
             aCtrlRegion.Union( maPage1Rect );
             aCtrlRegion.Union( maPage2Rect );
             aCtrlRegion.Union( maThumbRect );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 			}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 #else
 			const Region aCtrlRegion( Rectangle( Point(0,0), GetOutputSizePixel() ) );
 #endif
@@ -1271,9 +1271,9 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
     switch ( meScrollType )
     {
         case SCROLL_LINEUP:
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             mnStateFlags &= ~SCRBAR_STATE_BTN1_INSIDE;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_LEFT: PART_BUTTON_UP,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
@@ -1282,7 +1282,7 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_BTN1_DOWN;
             }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_LEFT: PART_BUTTON_UP,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
@@ -1292,15 +1292,15 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
                 mnStateFlags &= ~SCRBAR_STATE_BTN1_DOWN;
                 mnStateFlags |= SCRBAR_STATE_BTN2_DOWN | SCRBAR_STATE_BTN2_INSIDE;
             }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             else
                 mnStateFlags &= ~SCRBAR_STATE_BTN1_DOWN;
             break;
 
         case SCROLL_LINEDOWN:
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             mnStateFlags &= ~SCRBAR_STATE_BTN2_INSIDE;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_RIGHT: PART_BUTTON_DOWN,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
@@ -1309,7 +1309,7 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_BTN2_DOWN;
             }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             else if ( GetSalData()->mbDoubleScrollbarArrows && ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_BUTTON_RIGHT: PART_BUTTON_DOWN,
                         aControlRegion, rMousePos, bIsInside )?
                     bIsInside:
@@ -1319,21 +1319,21 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
                 mnStateFlags &= ~SCRBAR_STATE_BTN2_DOWN;
                 mnStateFlags |= SCRBAR_STATE_BTN1_DOWN | SCRBAR_STATE_BTN1_INSIDE;
             }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             else
                 mnStateFlags &= ~SCRBAR_STATE_BTN2_DOWN;
             break;
 
         case SCROLL_PAGEUP:
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             if ( maPage1Rect.IsInside( rMousePos ) )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             // HitTestNativeControl, see remark at top of file
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT: PART_TRACK_VERT_UPPER,
                                        Region( maPage1Rect ), rMousePos, bIsInside )?
                     bIsInside:
                     maPage1Rect.IsInside( rMousePos ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_PAGE1_DOWN;
@@ -1343,15 +1343,15 @@ void ScrollBar::ImplDoMouseAction( const Point& rMousePos, BOOL bCallAction )
             break;
 
         case SCROLL_PAGEDOWN:
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             if ( maPage2Rect.IsInside( rMousePos ) )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             // HitTestNativeControl, see remark at top of file
             if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_RIGHT: PART_TRACK_VERT_LOWER,
                                        Region( maPage2Rect ), rMousePos, bIsInside )?
                     bIsInside:
                     maPage2Rect.IsInside( rMousePos ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             {
                 bAction = bCallAction;
                 mnStateFlags |= SCRBAR_STATE_PAGE2_DOWN;
@@ -1389,12 +1389,12 @@ void ScrollBar::ImplDragThumb( const Point& rMousePos )
             mnThumbPixPos = mnThumbPixRange-mnThumbPixSize;
         long nOldPos = mnThumbPos;
         mnThumbPos = ImplCalcThumbPos( mnThumbPixPos );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         // Fix bug 1649 by forcing a full size recalculation before drawing
         ImplCalc();
-#else	// !USE_JAVA
+#else	// USE_JAVA && MACOSX
         ImplUpdateRects();
-#endif	// !USE_JAVA
+#endif	// USE_JAVA && MACOSX
         if ( mbFullDrag && (nOldPos != mnThumbPos) )
         {
             mnDelta = mnThumbPos-nOldPos;
@@ -1427,13 +1427,13 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
             if ( !(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE) )
             {
                 nTrackFlags     = STARTTRACK_BUTTONREPEAT;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 if ( GetSalData()->mbDoubleScrollbarArrows &&
                       ( ( bHorizontal && rMousePos.X() > maBtn1Rect.Left() + ( maBtn1Rect.GetWidth() / 2 ) ) ||
                      ( !bHorizontal && rMousePos.Y() > maBtn1Rect.Top() + ( maBtn1Rect.GetHeight() / 2 ) ) ) )
                     meScrollType    = SCROLL_LINEDOWN;
                 else
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                 meScrollType    = SCROLL_LINEUP;
                 mnDragDraw      = SCRBAR_DRAW_BTN1;
             }
@@ -1448,13 +1448,13 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
             if ( !(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE) )
             {
                 nTrackFlags     = STARTTRACK_BUTTONREPEAT;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 if ( GetSalData()->mbDoubleScrollbarArrows &&
                      ( ( bHorizontal && rMousePos.X() <= maBtn2Rect.Left() + ( maBtn2Rect.GetWidth() / 2 ) ) ||
                      ( !bHorizontal && rMousePos.Y() <= maBtn2Rect.Top() + ( maBtn2Rect.GetHeight() / 2 ) ) ) )
                     meScrollType    = SCROLL_LINEUP;
                 else
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                 meScrollType    = SCROLL_LINEDOWN;
                 mnDragDraw      = SCRBAR_DRAW_BTN2;
             }
@@ -1463,7 +1463,7 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
         }
         else
         {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             // Fix bug 3306 by updating scrollbar paging behavior
             bool bScrollbarJumpPage = false;
             CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "AppleScrollerPagingBehavior" ), kCFPreferencesCurrentApplication );
@@ -1474,7 +1474,7 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                 CFRelease( aPref );
             }
             ImplGetSVData()->maNWFData.mbScrollbarJumpPage = bScrollbarJumpPage;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
             bool bThumbHit = HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_THUMB_HORZ : PART_THUMB_VERT,
                                                    Region( maThumbRect ), rMousePos, bIsInside )
@@ -1518,25 +1518,25 @@ void ScrollBar::MouseButtonDown( const MouseEvent& rMEvt )
                 else
                     Sound::Beep( SOUND_DISABLE, this );
             }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
             else
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
             else if( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_AREA : PART_TRACK_VERT_AREA,
                                            aControlRegion, rMousePos, bIsInside )?
                 bIsInside : TRUE )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
             {
                 nTrackFlags = STARTTRACK_BUTTONREPEAT;
     
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
                 if ( maPage1Rect.IsInside( rMousePos ) )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                 // HitTestNativeControl, see remark at top of file
                 if ( HitTestNativeControl( CTRL_SCROLLBAR, bHorizontal? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
                                            Region( maPage1Rect ), rMousePos, bIsInside )?
                     bIsInside:                
                     maPage1Rect.IsInside( rMousePos ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
                 {
                     meScrollType    = SCROLL_PAGEUP;
                     mnDragDraw      = SCRBAR_DRAW_PAGE1;
@@ -1577,9 +1577,9 @@ void ScrollBar::Tracking( const TrackingEvent& rTEvt )
         mnStateFlags &= ~(SCRBAR_STATE_BTN1_DOWN | SCRBAR_STATE_BTN2_DOWN |
                           SCRBAR_STATE_PAGE1_DOWN | SCRBAR_STATE_PAGE2_DOWN |
                           SCRBAR_STATE_THUMB_DOWN);
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         mnStateFlags &= ~(SCRBAR_STATE_BTN1_INSIDE | SCRBAR_STATE_BTN2_INSIDE);
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         if ( nOldStateFlags != mnStateFlags )
             ImplDraw( mnDragDraw, this );
         mnDragDraw = 0;
@@ -1725,22 +1725,22 @@ void ScrollBar::ImplInvert()
 void ScrollBar::GetFocus()
 {
     if( !mpData )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     	ImplNewImplScrollBarData();
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     {
 	    mpData = new ImplScrollBarData;
 		mpData->maTimer.SetTimeoutHdl( LINK( this, ScrollBar, ImplAutoTimerHdl ) );
         mpData->mbHide = FALSE;
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     ImplInvert();   // react immediately
 	mpData->maTimer.SetTimeout( GetSettings().GetStyleSettings().GetCursorBlinkTime() );
     mpData->maTimer.Start();
     Control::GetFocus();
 }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 // -----------------------------------------------------------------------
 
@@ -1752,7 +1752,7 @@ void ScrollBar::ImplNewImplScrollBarData()
 	mpData->mbHasEntireControlRect = FALSE;
 }
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // -----------------------------------------------------------------------
 
@@ -1842,35 +1842,35 @@ Rectangle* ScrollBar::ImplFindPartRect( const Point& rPt )
             bIsInside:
             maBtn2Rect.IsInside( rPt ) )
         return &maBtn2Rect;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     else if( maPage1Rect.IsInside( rPt ) )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     // HitTestNativeControl, see remark at top of file
     else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_LEFT : PART_TRACK_VERT_UPPER,
                 Region( maPage1Rect ), rPt, bIsInside)?
             bIsInside:
             maPage1Rect.IsInside( rPt ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         return &maPage1Rect;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     else if( maPage2Rect.IsInside( rPt ) )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     // HitTestNativeControl, see remark at top of file
     else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_TRACK_HORZ_RIGHT : PART_TRACK_VERT_LOWER,
                 Region( maPage2Rect ), rPt, bIsInside)?
             bIsInside:
             maPage2Rect.IsInside( rPt ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         return &maPage2Rect;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     else if( maThumbRect.IsInside( rPt ) )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     // HitTestNativeControl, see remark at top of file
     else if( HitTestNativeControl( CTRL_SCROLLBAR,  bHorizontal ? PART_THUMB_HORZ : PART_THUMB_VERT,
                 Region( maThumbRect ), rPt, bIsInside)?
              bIsInside:
              maThumbRect.IsInside( rPt ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         return &maThumbRect;
     else
         return NULL;

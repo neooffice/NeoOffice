@@ -1439,7 +1439,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 	if ( !mnPageQueueSize )
 	{
 		ImplSVData* pSVData = ImplGetSVData();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		BOOL bFirstPass = ( GetJobValue( XubString::CreateFromAscii( "SHOWPRINTDIALOG" ) ).Len() ? TRUE : FALSE );
 		if ( bFirstPass )
 		{
@@ -1451,9 +1451,9 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		{
 			mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
 		}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 		mpPrinter = pSVData->mpDefInst->CreatePrinter( mpInfoPrinter );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 		if ( !mpPrinter )
 			return FALSE;
@@ -1464,7 +1464,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		else
 			pPrintFile = NULL;
 
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
         // #125075# StartJob can Reschedule on Windows, sfx
         // depends on IsPrinting() in case of closing a document
         BOOL bSaveNewJobSetup   = mbNewJobSetup;
@@ -1474,7 +1474,7 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		mnCurPage		        = 1;
 		mnCurPrintPage	        = 1;
 		mbPrinting		        = TRUE;
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
         if( ! ImplGetSVData()->maGDIData.mbPrinterPullModel )
         {
@@ -1482,29 +1482,29 @@ BOOL Printer::StartJob( const XubString& rJobName )
             // we have collected all pages to be printed
             if ( !mpPrinter->StartJob( pPrintFile, rJobName, Application::GetDisplayName(),
                                        nCopies, bCollateCopy,
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 								       maJobSetup.ImplGetConstData(), bFirstPass ) )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
                                        maJobSetup.ImplGetConstData() ) )
-#endif	// !USE_JAVA
+#endif	// USE_JAVA && MACOSX
             {
                 mnError = ImplSalPrinterErrorCodeToVCL( mpPrinter->GetErrorCode() );
                 if ( !mnError )
                     mnError = PRINTER_GENERALERROR;
                 pSVData->mpDefInst->DestroyPrinter( mpPrinter );
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
                 mbNewJobSetup	    = bSaveNewJobSetup;
                 maJobName		    = aSaveJobName;
                 mnCurPage		    = 0;
                 mnCurPrintPage	    = 0;
                 mbPrinting		    = FALSE;
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
                 mpPrinter = NULL;
                 return FALSE;
             }
         }
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		if ( bFirstPass )
 			return TRUE;
 
@@ -1513,13 +1513,13 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		mnCurPage = 1;
 		mnCurPrintPage = 1;
 		mbPrinting = TRUE;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		mbJobActive 	        = TRUE;
 		StartPrint();
 	}
 	else
 	{
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		BOOL bFirstPass = ( GetJobValue( XubString::CreateFromAscii( "SHOWPRINTDIALOG" ) ).Len() ? TRUE : FALSE );
 		if ( bFirstPass )
 		{
@@ -1536,16 +1536,16 @@ BOOL Printer::StartJob( const XubString& rJobName )
 				mpQPrinter = new ImplQPrinter( this );
 			mpQPrinter->SetJobSetup( GetJobSetup() );
 		}
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 		mpQPrinter = new ImplQPrinter( this );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         if( mpInfoPrinter )
             mpQPrinter->Compat_OldPrinterMetrics( mpInfoPrinter->m_bCompatMetrics );
 		mpQPrinter->SetDigitLanguage( GetDigitLanguage() );
 		mpQPrinter->SetUserCopy( bUserCopy );
         mpQPrinter->SetPrinterOptions( *mpPrinterOptions );
 
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
         // #125075# StartJob can Reschedule on Windows, sfx
         // depends on IsPrinting() in case of closing a document
         BOOL bSaveNewJobSetup   = mbNewJobSetup;
@@ -1554,34 +1554,34 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		maJobName		        = rJobName;
 		mnCurPage		        = 1;
 		mbPrinting		        = TRUE;
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		if ( mpQPrinter->StartJob( rJobName ) && !bFirstPass )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
 		if ( mpQPrinter->StartJob( rJobName ) )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		{
             mbJobActive             = TRUE;
 			StartPrint();
 			mpQPrinter->StartQueuePrint();
 		}
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 		else if ( mpQPrinter->mpPrinter )
 		{
 			// Get and store the page range
 			SetJobValue( XubString::CreateFromAscii( "PAGERANGE" ), mpQPrinter->mpPrinter->GetPageRange() );
 			return TRUE;
 		}
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 		else
 		{
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
 			mbNewJobSetup	= bSaveNewJobSetup;
 			maJobName		= aSaveJobName;
 			mnCurPage		= 0;
 			mbPrinting		= FALSE;
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 			mnError = mpQPrinter->GetErrorCode();
 			mpQPrinter->Destroy();
 			mpQPrinter = NULL;
@@ -1589,14 +1589,14 @@ BOOL Printer::StartJob( const XubString& rJobName )
 		}
 	}
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	mbNewJobSetup	= FALSE;
 	maJobName		= rJobName;
 	mnCurPage		= 1;
 	mnCurPrintPage	= 1;
 	mbJobActive		= TRUE;
 	mbPrinting		= TRUE;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     
 	return TRUE;
 }

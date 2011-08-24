@@ -654,7 +654,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
 
 	rOutMtf.Clear();
 
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
     if( ! bReduceTransparency || bTransparencyAutoMode )
     {
         // watch for transparent drawing actions
@@ -677,7 +677,7 @@ bool OutputDevice::RemoveTransparenciesFromMetaFile( const GDIMetaFile& rInMtf, 
             }
         }
     }
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
     // #i10613# Determine set of connected components containing transparent objects. These are 
     // then processed as bitmaps, the original actions are removed from the metafile.
@@ -1336,11 +1336,11 @@ Bitmap OutputDevice::GetDownsampledBitmap( const Size& rDstSz,
 {
     Bitmap aBmp( rBmp );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if( !aBmp.IsEmpty() && nMaxBmpDPIX > 0 && nMaxBmpDPIY > 0 )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     if( !aBmp.IsEmpty() )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     {
         Point           aPoint;
         const Rectangle aBmpRect( aPoint, aBmp.GetSizePixel() );
@@ -1409,11 +1409,11 @@ BitmapEx OutputDevice::GetDownsampledBitmapEx( const Size& rDstSz,
 {
     BitmapEx aBmpEx( rBmpEx );
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if( !aBmpEx.IsEmpty() && nMaxBmpDPIX > 0 && nMaxBmpDPIY > 0 )
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
     if( !aBmpEx.IsEmpty() )
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     {
         Point           aPoint;
         const Rectangle aBmpRect( aPoint, aBmpEx.GetSizePixel() );

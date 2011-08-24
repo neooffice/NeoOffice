@@ -80,9 +80,11 @@
 
 #ifdef USE_JAVA
 
+#ifdef MACOSX
 #ifndef _SV_JAVA_TOOLS_HXX
 #include <java/tools.hxx>
 #endif
+#endif	// MACOSX
 
 static const ImplCvtChar* pDefaultSymbolConversion = ImplGetRecodeData( String( RTL_CONSTASCII_USTRINGPARAM( "symbol" ) ), String( RTL_CONSTASCII_USTRINGPARAM( "opensymbol" ) ) );
 
@@ -4678,10 +4680,10 @@ void OutputDevice::ImplDrawTextLines( SalLayout& rSalLayout,
 
 void OutputDevice::ImplDrawMnemonicLine( long nX, long nY, long nWidth )
 {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 	if( ! vcl::IsFullKeyboardAccessEnabled() )
 		return;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
     long nBaseX = nX;
     if( /*ImplHasMirroredGraphics() &&*/ IsRTLEnabled() )
@@ -6581,10 +6583,10 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
     // try if fallback fonts support the missing unicodes
     for( int nFallbackLevel = 1; nFallbackLevel < MAX_FALLBACK; ++nFallbackLevel )
     {
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         // SetFont() will push the fallback font into aFontSelData
         mpGraphics->SetFont( &aFontSelData, nFallbackLevel );
-#else	// USE_JAVA
+#else	// USE_JAVA && MACOSX
         // find a font family suited for glyph fallback
 #ifndef FONTFALLBACK_HOOKS_DISABLED 
         // GetGlyphFallbackFont() needs a valid aFontSelData.mpFontEntry
@@ -6620,7 +6622,7 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
 #endif
 
         pFallbackFont->mnSetFontFlags = mpGraphics->SetFont( &aFontSelData, nFallbackLevel );
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
         // create and add glyph fallback layout to multilayout
         rLayoutArgs.ResetPos();
@@ -6643,9 +6645,9 @@ SalLayout* OutputDevice::ImplGlyphFallbackLayout( SalLayout* pSalLayout, ImplLay
             }
         }
 
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
         mpFontCache->Release( pFallbackFont );
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
         // break when this fallback was sufficient
         if( !rLayoutArgs.PrepareFallback() )
@@ -7961,7 +7963,7 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
 
         if( bRet )
         {
-#ifndef USE_JAVA
+#if !defined USE_JAVA || !defined MACOSX
             int nWidthFactor = pSalLayout->GetUnitsPerPixel();
 
             if( nWidthFactor > 1 )
@@ -7976,7 +7978,7 @@ BOOL OutputDevice::GetTextBoundRect( Rectangle& rRect,
                 aPixelRect.Bottom()
                     = static_cast< long >(aPixelRect.Bottom() * fFactor);
             }
-#endif	// !USE_JAVA
+#endif	// !USE_JAVA || !MACOSX
 
             Point aRotatedOfs( mnTextOffX, mnTextOffY );
             aRotatedOfs -= pSalLayout->GetDrawPosition( Point( nXOffset, 0 ) );
