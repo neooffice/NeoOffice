@@ -44,13 +44,13 @@
 #include <vcl/virdev.hxx>
 #include <vcl/window.h>
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
 
 #ifndef _SV_SALFRAME_H
 #include <salframe.h>
 #endif
 
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 // =======================================================================
 
