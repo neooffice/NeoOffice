@@ -2494,13 +2494,13 @@ if ( bNativeOK == FALSE )
             nStyle |= BUTTON_DRAW_DISABLED;
         if ( mbChecked )
             nStyle |= BUTTON_DRAW_CHECKED;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = !IsNativeWidgetEnabled();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         Image aImage = GetRadioImage( GetSettings(), nStyle );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = false;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         if ( IsZoom() )
             DrawImage( maStateRect.TopLeft(), maStateRect.GetSize(), aImage );
         else
@@ -3376,15 +3376,15 @@ Size RadioButton::ImplGetRadioImageSize() const
         }
     }
     if( bDefaultSize )
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     {
         ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = !IsNativeWidgetEnabled();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         aSize = GetRadioImage( GetSettings(), 0 ).GetSizePixel();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         ImplGetSVData()->maCtrlData.mbUseNonNativeRadioImgList = false;
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return aSize;
 }
 
@@ -3459,7 +3459,7 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
 				 ResId( SV_RESID_BITMAP_RADIO+nStyle, *pResMgr ), 6 );
 	pSVData->maCtrlData.mnRadioStyle = nStyle;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         USHORT nItems = pSVData->maCtrlData.mpRadioImgList->GetImageCount();
         Size aBmpSize( pSVData->maCtrlData.mpRadioImgList->GetImageSize() );
         if ( nItems > 0 && aBmpSize.Width() > 0 && aBmpSize.Height() > 0 )
@@ -3569,7 +3569,7 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
                 pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
             }
         }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     }
 
     USHORT nId;
@@ -3594,11 +3594,11 @@ Image RadioButton::GetRadioImage( const AllSettings& rSettings, USHORT nFlags )
         else
             nId = 1;
     }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( pSVData->maCtrlData.mbUseNonNativeRadioImgList )
         return pSVData->maCtrlData.mpNonNativeRadioImgList->GetImage( nId );
     else
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return pSVData->maCtrlData.mpRadioImgList->GetImage( nId );
 }
 
@@ -3839,13 +3839,13 @@ void CheckBox::ImplDrawCheckBoxState()
             nStyle |= BUTTON_DRAW_DONTKNOW;
         else if ( meState == STATE_CHECK )
             nStyle |= BUTTON_DRAW_CHECKED;
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = !IsNativeWidgetEnabled();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         Image aImage = GetCheckImage( GetSettings(), nStyle );
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = false;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         if ( IsZoom() )
             DrawImage( maStateRect.TopLeft(), maStateRect.GetSize(), aImage );
         else
@@ -4477,15 +4477,15 @@ Size CheckBox::ImplGetCheckImageSize() const
         }
     }
     if( bDefaultSize ) 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     {
         ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = !IsNativeWidgetEnabled();
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
         aSize = GetCheckImage( GetSettings(), 0 ).GetSizePixel();
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         ImplGetSVData()->maCtrlData.mbUseNonNativeCheckImgList = false;
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return aSize;
 }
 
@@ -4519,7 +4519,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
 				 ResId( SV_RESID_BITMAP_CHECK+nStyle, *pResMgr ), 9 );
         pSVData->maCtrlData.mnCheckStyle = nStyle;
 
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
         USHORT nItems = pSVData->maCtrlData.mpCheckImgList->GetImageCount();
         Size aBmpSize( pSVData->maCtrlData.mpCheckImgList->GetImageSize() );
         if ( nItems > 0 && aBmpSize.Width() > 0 && aBmpSize.Height() > 0 )
@@ -4659,7 +4659,7 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
                 pSVData->mpDefInst->DestroyVirtualDevice( pSalVirDev );
             }
         }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     }
 
     USHORT nId;
@@ -4690,11 +4690,11 @@ Image CheckBox::GetCheckImage( const AllSettings& rSettings, USHORT nFlags )
         else
             nId = 1;
     }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( pSVData->maCtrlData.mbUseNonNativeCheckImgList )
         return pSVData->maCtrlData.mpNonNativeCheckImgList->GetImage( nId );
     else
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     return pSVData->maCtrlData.mpCheckImgList->GetImage( nId );
 }
 

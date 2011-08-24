@@ -569,7 +569,7 @@ void DeInitVCL()
         delete pSVData->maCtrlData.mpSplitVArwImgList;
         pSVData->maCtrlData.mpSplitVArwImgList = NULL;
     }
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     if ( pSVData->maCtrlData.mpNonNativeCheckImgList )
     {
         delete pSVData->maCtrlData.mpNonNativeCheckImgList;
@@ -580,7 +580,7 @@ void DeInitVCL()
         delete pSVData->maCtrlData.mpNonNativeRadioImgList;
         pSVData->maCtrlData.mpNonNativeRadioImgList = NULL;
     }
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
     if ( pSVData->mpDefaultWin )
     {
         delete pSVData->mpDefaultWin;

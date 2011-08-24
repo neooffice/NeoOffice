@@ -256,12 +256,12 @@ struct ImplSVCtrlData
     ULONG                   mnLastRadioFColor;  // Letzte FaceColor fuer RadioImage
     ULONG                   mnLastRadioWColor;  // Letzte WindowColor fuer RadioImage
     ULONG                   mnLastRadioLColor;  // Letzte LightColor fuer RadioImage
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
     ImageList*              mpNonNativeCheckImgList;  // ImageList for CheckBoxes
     bool					mbUseNonNativeCheckImgList;
     ImageList*              mpNonNativeRadioImgList;  // ImageList for RadioButtons
     bool					mbUseNonNativeRadioImgList;
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 };
 
 
