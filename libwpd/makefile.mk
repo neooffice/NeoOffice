@@ -45,11 +45,11 @@ TARGET=wpd
 .ENDIF
 
 TARFILE_NAME=libwpd-0.8.14
-.IF "$(GUIBASE)" == "java"
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 PATCH_FILE_NAME=$(TARFILE_NAME).diff
-.ELSE		# "$(GUIBASE)" == "java"
+.ELSE		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 #PATCH_FILE_NAME=$(TARFILE_NAME).diff
-.ENDIF		# "$(GUIBASE)" == "java"
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 BUILD_ACTION=dmake $(MFLAGS) $(CALLMACROS)
 BUILD_DIR=src$/lib
 
@@ -59,6 +59,6 @@ BUILD_DIR=src$/lib
 .INCLUDE :	target.mk
 .INCLUDE :	tg_ext.mk
 
-.IF "$(GUIBASE)" == "java"
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 BACK_PATH:=$(PWD)$/
-.ENDIF		# "$(GUIBASE)" == "java"
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"

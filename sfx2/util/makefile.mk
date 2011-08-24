@@ -38,10 +38,10 @@ GEN_HID=TRUE
 GEN_HID_OTHER=TRUE
 USE_DEFFILE=TRUE
 
-.IF "$(GUIBASE)"=="java"
+.IF "$(GUIBASE)"=="java" || "$(GUIBASE)"=="WIN"
 # Link to modified libsysshell.a
 SOLARLIB:=-L$(PRJ)$/..$/shell$/$(INPATH)$/slb $(SOLARLIB)
-.ENDIF
+.ENDIF		# "$(GUIBASE)"=="java" || "$(GUIBASE)"=="WIN"
 
 # --- Settings -----------------------------------------------------
 
