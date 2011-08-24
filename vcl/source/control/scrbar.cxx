@@ -876,7 +876,7 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 #endif	// USE_JAVA && MACOSX
 								((!(mnStateFlags & SCRBAR_STATE_BTN1_DISABLE)) ? CTRL_STATE_ENABLED : 0);
             scrValue.mnButton2State = ((mnStateFlags & SCRBAR_STATE_BTN2_DOWN) ? CTRL_STATE_PRESSED : 0) |
-#ifdef USE_JAVA
+#if defined USE_JAVA && defined MACOSX
            	                    ((mnStateFlags & SCRBAR_STATE_BTN2_INSIDE) ? CTRL_STATE_SELECTED : 0) |
 #endif	// USE_JAVA && MACOSX
 								((!(mnStateFlags & SCRBAR_STATE_BTN2_DISABLE)) ? CTRL_STATE_ENABLED : 0);

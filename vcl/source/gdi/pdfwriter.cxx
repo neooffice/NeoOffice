@@ -1625,7 +1625,7 @@ void PDFWriter::DrawWallpaper( const Rectangle& rRect, const Wallpaper& rWallpap
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaWallpaperAction( rRect, rWallpaper ) );
-#endif	// USE_JAVA 
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->drawWallpaper( rRect, rWallpaper );
 }
 
@@ -1724,7 +1724,7 @@ void PDFWriter::SetClipRegion()
 #if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaClipRegionAction( Region(), FALSE ) );
-#endif	// USE_JAVA 
+#endif	// USE_JAVA && MACOSX
     ((PDFWriterImpl*)pImplementation)->clearClipRegion();
 }
 
@@ -2005,10 +2005,10 @@ sal_Int32 PDFWriter::GetCurrentStructureElement()
 
 bool PDFWriter::SetStructureAttribute( enum StructAttribute eAttr, enum StructAttributeValue eVal )
 {
-#ifdef USE_JAVA     
+#if defined USE_JAVA && defined MACOSX
     if ( !((PDFWriterImpl*)pImplementation)->isReplayWriter() )
         ((PDFWriterImpl*)pImplementation)->addAction( new MetaSetStructureAttributePDFAction( eAttr, eVal ) );          
-#endif	// USE_JAVA 
+#endif	// USE_JAVA && MACOSX
     return ((PDFWriterImpl*)pImplementation)->setStructureAttribute( eAttr, eVal );
 }
 
