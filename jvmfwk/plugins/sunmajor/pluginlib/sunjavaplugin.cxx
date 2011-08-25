@@ -627,17 +627,22 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     rtl::OUString aExe;
     osl_getExecutableFile( &aExe.pData );
     rtl::OUString aExeSysPath;
-    if ( aExe.getLength() && osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
+    sal_Int32 lastIndex = aExe.lastIndexOf( '/' );
+    if ( lastIndex > 0 )
     {
-        rtl::OString aDirPath = rtl::OString( aExeSysPath, aExeSysPath.lastIndexOf( SAL_PATHDELIMITER ), RTL_TEXTENCODING_UTF8 );
-        aDirPath += aPathDelimiter + rtl::OString( "classes" ) + aPathDelimiter;
-        aBootPath += aDirPath + rtl::OString( "serializer.jar" );
-        aBootPath += aPathSeparator;
-        aBootPath += aDirPath + rtl::OString( "xalan.jar" );
-        aBootPath += aPathSeparator;
-        aBootPath += aDirPath + rtl::OString( "xercesImpl.jar" );
-        aBootPath += aPathSeparator;
-        aBootPath += aDirPath + rtl::OString( "xml-apis.jar" );
+        aExe = aExe.copy( 0, lastIndex );
+        if ( osl_getSystemPathFromFileURL( aExe.pData, &aExeSysPath.pData ) == osl_File_E_None )
+        {
+            rtl::OString aDirPath = rtl::OUStringToOString( aExeSysPath, osl_getThreadTextEncoding() );
+            aDirPath += aPathDelimiter + rtl::OString( "classes" ) + aPathDelimiter;
+            aBootPath += aDirPath + rtl::OString( "serializer.jar" );
+            aBootPath += aPathSeparator;
+            aBootPath += aDirPath + rtl::OString( "xalan.jar" );
+            aBootPath += aPathSeparator;
+            aBootPath += aDirPath + rtl::OString( "xercesImpl.jar" );
+            aBootPath += aPathSeparator;
+            aBootPath += aDirPath + rtl::OString( "xml-apis.jar" );
+        }
     }
     options[i+2].optionString = strdup( (char *)aBootPath.getStr() );
     options[i+2].extraInfo = NULL;
@@ -648,18 +653,18 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
 #else	// MACOSX
     aLibPath += aPathDelimiter + rtl::OString( "C:" ) + aPathDelimiter + rtl::OString( "Windows" ) + aPathDelimiter + rtl::OString( "System32" );
 #endif	// MACOSX
-    rtl::OUString aJavaLibPath( pInfo->sLocation );
-    aJavaLibPath = rtl::OUString( aJavaLibPath, aJavaLibPath.lastIndexOf( SAL_PATHDELIMITER ) );
-#ifdef MACOSX
-    aJavaLibPath += OUString::createFromAscii( aPathDelimiter ) + OUString::createFromAscii( "Libraries" );
-#else	// MACOSX
-    aJavaLibPath += OUString::createFromAscii( aPathDelimiter ) + OUString::createFromAscii( "bin" );
-#endif	// MACOSX
-    rtl::OUString aJavaLibSysPath;
-    if ( osl_getSystemPathFromFileURL( aJavaLibPath.pData, &aJavaLibSysPath.pData ) == osl_File_E_None )
+    lastIndex = sPathLocation.lastIndexOf( SAL_PATHDELIMITER );
+    if ( lastIndex > 0 )
     {
+        rtl::OString aJavaLibPath = rtl::OUStringToOString( sPathLocation.copy( 0, lastIndex ), osl_getThreadTextEncoding() );
+        aJavaLibPath += aPathDelimiter;
+#ifdef MACOSX
+        aJavaLibPath += rtl::OString( "Libraries" );
+#else	// MACOSX
+        aJavaLibPath += rtl::OString( "bin" );
+#endif	// MACOSX
         aLibPath += aPathSeparator;
-        aLibPath += rtl::OUStringToOString( aJavaLibSysPath, RTL_TEXTENCODING_UTF8 );
+        aLibPath += aJavaLibPath;
     }
 #ifdef MACOSX
     rtl::OString aEnvLibPath( getenv( "DYLD_LIBRARY_PATH" ) );
