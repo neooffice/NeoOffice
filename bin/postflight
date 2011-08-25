@@ -169,14 +169,12 @@ if [ -d "$2" ]; then
 		touch -f "$2/Contents/$i"
 	done
 
-	sudo_user=
+	# Touch file to save timestamp for update check
+	touch -f "$2/Contents/MacOS/.installed"
+
+	sudouser=
 	if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
 		sudouser="$USER"
-	fi
-
-	if [ ! -z "$sudouser" ] ; then
-		sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$2/Contents/MacOS/soffice.bin\""
-		sleep 15
 	fi
 
 	lsregister="/System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
@@ -216,6 +214,10 @@ if [ -d "$2" ]; then
 		fi
 	fi
 
+	# Launch installation
+	if [ ! -z "$sudouser" ] ; then
+		sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$2/Contents/MacOS/soffice.bin\""
+	fi
 fi
 
 exit 0
