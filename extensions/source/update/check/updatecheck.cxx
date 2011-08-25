@@ -541,6 +541,25 @@ UpdateCheckThread::run()
             // last == 0 means check immediately
             bool checkNow = ! (last > 0);
             
+#ifdef USE_JAVA
+            // Check if installation is newer than last check
+            if ( !checkNow )
+            {
+                rtl::OUString aInstalled;
+                osl_getExecutableFile( &aInstalled.pData );
+                rtl::OUString aInstalledSysPath;
+                sal_uInt32 lastIndex = aInstalled.lastIndexOf('/');
+                if ( lastIndex > 0 )
+                {
+                    aInstalled = aInstalled.copy( 0, lastIndex ) + UNISTRING( "/.installed" );
+                    osl::DirectoryItem aDirItem;
+                    osl::FileStatus aFileStatus( FileStatusMask_ModifyTime );
+                    if ( osl::DirectoryItem::get( aInstalled, aDirItem ) == osl::FileBase::E_None && aDirItem.getFileStatus( aFileStatus ) == osl::FileBase::E_None && aFileStatus.getModifyTime().Seconds >= last )
+                        checkNow = true;
+                }
+            }
+#endif	// USE_JAVA
+
             // Reset the condition to avoid busy loops 
             if( osl::Condition::result_ok == aResult )
             {
