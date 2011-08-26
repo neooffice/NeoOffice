@@ -684,7 +684,7 @@ javaPluginError jfw_plugin_startJavaVirtualMachine(
     if  ( aEnvPath.getLength() )
     {
         aLibPath += aPathSeparator;
-        aLibPath += aEnvPath;
+        aLibPath += aLibPath;
     }
 #endif	// MACOSX
 
