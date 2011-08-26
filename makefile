@@ -121,9 +121,9 @@ OO_PRODUCT_VERSION=3.1.1
 OO_REGISTRATION_URL=http://survey.services.openoffice.org/user/index.php
 PRODUCT_VERSION_FAMILY=3.0
 PRODUCT_VERSION_BASE=3.2
-PRODUCT_VERSION=$(PRODUCT_VERSION_BASE).1 Beta
-PRODUCT_DIR_VERSION=$(PRODUCT_VERSION_BASE).1_Beta
-PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION)
+PRODUCT_VERSION=$(PRODUCT_VERSION_BASE).1
+PRODUCT_DIR_VERSION=$(PRODUCT_VERSION_BASE).1
+PREVIOUS_PRODUCT_VERSION=$(PRODUCT_VERSION).1 Beta
 PRODUCT_LANG_PACK_VERSION=Language Pack
 PRODUCT_DIR_LANG_PACK_VERSION=Language_Pack
 PRODUCT_PATCH_VERSION=Patch 0
@@ -162,7 +162,7 @@ YOURSWAYCREATEDMG_PACKAGE=jaeggir-yoursway-create-dmg-a22ac11
 YOURSWAYCREATEDMG_SOURCE_FILENAME=yoursway-create-dmg.zip
 NEO_CVSROOT:=:pserver:anoncvs@anoncvs.neooffice.org:/cvs
 NEO_PACKAGE:=NeoOffice
-NEO_TAG:=NeoOffice-3_2_1_Beta
+NEO_TAG:=NeoOffice-3_2_1
 
 all: build.all
 
@@ -308,6 +308,7 @@ build.neo_patches: build.ooo-build_all \
 	touch "$@"
 
 build.neo_%_patch: % build.neo_configure
+	rm -Rf "$(PWD)/$</$(UOUTPUTDIR)"
 	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . -type d | grep -v /CVS$$ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do mkdir -p "$$i" ; done'
 ifeq ("$(OS_TYPE)","MacOSX")
 	cd "$<" ; sh -e -c 'for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
