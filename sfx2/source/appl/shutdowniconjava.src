@@ -102,3 +102,33 @@ String STR_DISABLERESUMESUPPORT
 	Text [ en-US ] = "Disable Mac OS X Resume";
 	Text [ nl ] = "Schakel Mac OS X Resume uit";
 };
+
+String STR_QUICKLOOKSUPPORT
+{
+	Text [ de ] = "Übersicht Unterstützung für Dokumente";
+	Text [ en-US ] = "Quick Look Support in Documents";
+	Text [ es ] = "El soporte de Quick Look en documentos";
+	Text [ fr ] = "La prise en charge de Quick Look pour les documents";
+	Text [ nl ] = "Ondersteuning voor Quick Look in documenten";
+};
+
+String STR_QUICKLOOKDISABLED
+{
+	Text [ de ] = "Deaktiviert";
+	Text [ en-US ] = "Disabled";
+	Text [ nl ] = "Uitgeschakeld";
+};
+
+String STR_QUICKLOOKFIRSTPAGEONLY
+{
+	Text [ de ] = "Nur die erste Seite";
+	Text [ en-US ] = "Only the first page";
+	Text [ nl ] = "Alleen de eerste pagina";
+};
+
+String STR_QUICKLOOKALLPAGES
+{
+	Text [ de ] = "Alle Seiten";
+	Text [ en-US ] = "All pages";
+	Text [ nl ] = "Alle pagina's";
+};

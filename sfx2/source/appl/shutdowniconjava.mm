@@ -756,9 +756,24 @@ extern "C" void java_init_systray()
 	aDesc.EraseAllChars( '~' );
 	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseMacHighlightColor" ), kCFBooleanFalse, FALSE ) );
 
-	aDesc = GetJavaResString( STR_DISABLEQUICKLOOKSUPPORT );
+	// Insert the Quick Look submenu entries
+	::std::vector< QuickstartMenuItemDescriptor > aQuickLookSubmenuItems;
+
+	aDesc = GetJavaResString( STR_QUICKLOOKDISABLED );
 	aDesc.EraseAllChars( '~' );
-	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
+	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanTrue, FALSE ) );
+
+	aDesc = GetJavaResString( STR_QUICKLOOKFIRSTPAGEONLY );
+	aDesc.EraseAllChars( '~' );
+	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), kCFBooleanFalse, TRUE ) );
+
+	aDesc = GetJavaResString( STR_QUICKLOOKALLPAGES );
+	aDesc.EraseAllChars( '~' );
+	aQuickLookSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "DisablePDFThumbnailSupport" ), CFSTR( "All" ), TRUE ) );
+
+	aDesc = GetJavaResString( STR_QUICKLOOKSUPPORT );
+	aDesc.EraseAllChars( '~' );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( aQuickLookSubmenuItems, aDesc ) );
 
 	if ( NSDocument_versionsSupported() )
 	{

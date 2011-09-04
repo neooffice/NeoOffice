@@ -1758,12 +1758,15 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 #ifdef USE_JAVA
 			// Allow disabling of PDF thumbnail support
 			bool bDisablePDF = false;
+			bool bAllPages = false;
 #ifdef MACOSX
 			CFPropertyListRef aPref = CFPreferencesCopyAppValue( CFSTR( "DisablePDFThumbnailSupport" ), kCFPreferencesCurrentApplication );
 			if ( aPref )
 			{
 				if ( CFGetTypeID( aPref ) == CFBooleanGetTypeID() && (CFBooleanRef)aPref == kCFBooleanTrue )
 					bDisablePDF = true;
+				else if ( CFGetTypeID( aPref ) == CFStringGetTypeID() && CFStringCompare( (CFStringRef)aPref, CFSTR( "All" ), 0 ) == kCFCompareEqualTo )
+					bAllPages = true;
 				CFRelease( aPref );
 			}
 #endif	// MACOSX
@@ -1832,15 +1835,19 @@ sal_Bool SfxObjectShell::SaveTo_Impl
 								uno::Reference< document::XFilter > xFilter( xExporter, uno::UNO_QUERY_THROW );
 								xExporter->setSourceDocument( xComp );
 
-								// Only save the first page. Note that the PDF
+								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 5 );
+								// Only save the first page unless the user
+								// overrides to all pages. Note that the PDF
 								// filter library requires that the page range
 								// must be set before the output stream in the
 								// property value sequence or else the the page
 								// range will be ignored. Also, turn off
 								// extraneous features that are on by default.
-								com::sun::star::uno::Sequence< com::sun::star::beans::PropertyValue > aFilterData( 5 );
 								aFilterData[0].Name = ::rtl::OUString::createFromAscii( "PageRange" );
-								aFilterData[0].Value <<= ::rtl::OUString::createFromAscii( "1-1" );
+								if ( bAllPages )
+									aFilterData[0].Value <<= ::rtl::OUString::createFromAscii( "" );
+								else
+									aFilterData[0].Value <<= ::rtl::OUString::createFromAscii( "1-1" );
 								aFilterData[1].Name = ::rtl::OUString::createFromAscii( "ExportNotes" );
 								aFilterData[1].Value <<= sal_False;
 								aFilterData[2].Name = ::rtl::OUString::createFromAscii( "UseTransitionEffects" );
