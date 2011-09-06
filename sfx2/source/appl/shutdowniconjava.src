@@ -122,13 +122,13 @@ String STR_QUICKLOOKDISABLED
 String STR_QUICKLOOKFIRSTPAGEONLY
 {
 	Text [ de ] = "Nur die erste Seite";
-	Text [ en-US ] = "Only the first page";
+	Text [ en-US ] = "Only the First Page";
 	Text [ nl ] = "Alleen de eerste pagina";
 };
 
 String STR_QUICKLOOKALLPAGES
 {
 	Text [ de ] = "Alle Seiten";
-	Text [ en-US ] = "All pages";
+	Text [ en-US ] = "All Pages";
 	Text [ nl ] = "Alle pagina's";
 };
