@@ -315,7 +315,7 @@ ifeq ("$(OS_TYPE)","MacOSX")
 	cd "$<" ; sh -e -c '( cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | sed "s/ /\\ /g" | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do if [ ! -f "$$i" ] ; then ln -sf "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 else
 # Use hardlinks for Windows
-	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; for i in `cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime` ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
+	cd "$<" ; sh -e -c 'CYGWIN=winsymlinks ; export CYGWIN ; ( cd "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$<" ; find . ! -type d | grep -v /CVS/ | grep -v /$(UOUTPUTDIR) | grep -v /quicktime ) | while read i ; do if [ ! -f "$$i" ] ; then ln -f "$(PWD)/$(OOO-BUILD_BUILD_HOME)/$</$$i" "$$i" 2>/dev/null ; fi ; done'
 endif
 	source "$(OO_ENV_JAVA)" ; cd "$<" ; `alias build` $(NEO_BUILD_ARGS)
 	touch "$@"
