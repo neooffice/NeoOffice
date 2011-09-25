@@ -696,12 +696,9 @@ ImplATSLayoutData::ImplATSLayoutData( ImplATSLayoutDataHash *pLayoutHash, int nF
 
 	if ( mpHash->mbVertical )
 	{
-		for ( int i = 0; i < mpHash->mnLen; i++ )
-		{
-			if ( GetVerticalFlags( mpHash->mpStr[ i ] ) & GF_ROTMASK )
-				CFAttributedStringSetAttribute( aMutableAttrString, CFRangeMake( i, 1 ), kCTVerticalFormsAttributeName, kCFBooleanTrue );
-		}
-
+		// Fix bug 3666 by not using the kCTVerticalFormsAttributeName
+		// attribute as it will cause zero glyphs to be used for most
+		// ideographic fonts on Mac OS X 10.7 Lion
 		float fAscent = fabs( CTFontGetAscent( maFont ) );
 		float fDescent = fabs( CTFontGetDescent( maFont ) );
 		mnBaselineDelta = Float32ToLong( ( ( ( fAscent + fDescent ) / 2 ) - fDescent ) * UNITS_PER_PIXEL );
