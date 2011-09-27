@@ -79,7 +79,7 @@
 
 #include <unotools/tempfile.hxx>
 
-endif	// USE_JAVA && MACOSX
+#endif	// USE_JAVA && MACOSX
 
 using namespace vcl;
 using namespace rtl;
