@@ -79,7 +79,7 @@
 
 #include <unotools/tempfile.hxx>
 
-#endif	// USE_JAVA && MACOSX
+endif	// USE_JAVA && MACOSX
 
 using namespace vcl;
 using namespace rtl;
@@ -12400,6 +12400,8 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
 
     // Copy content and perform any required substitutions
     OString aRefTag( "0 R " );
+    OString aDescendantFontsTag( "/DescendantFonts" );
+    OString aDescendantFontsRefTag( " 0 R]" );
     OString aFontNameTag( "/FontName " );
     OString aBaseFontTag( "/BaseFont " );
     const sal_Char *pBuf = rObj.m_aContent.getStr();
@@ -12437,7 +12439,36 @@ sal_Int32 PDFWriterImpl::writePDFObjectTree( PDFEmitObject& rObj, oslFileHandle 
                 aLine.append( aStr );
             }
         }
-        else if ( rObj.m_aContent.match( aFontNameTag, nCurrentPos ) || rObj.m_aContent.match( aBaseFontTag, nCurrentPos ) )
+        else if ( aStr.match( aDescendantFontsTag ) )
+        {
+            aLine.append( aStr );
+            if ( nNextPos < nContentLen && ( nNextNextPos = rObj.m_aContent.indexOf( ']', nNextPos ) ) >= 0 )
+            {
+                nNextNextPos++;
+
+                sal_Int32 nNextContentLen = nNextNextPos - nNextPos;
+                const sal_Char *pNextBuf = rObj.m_aContent.getStr() + nNextPos;
+                if ( nNextContentLen > aDescendantFontsRefTag.getLength() + 1 && pNextBuf[0] == '[' )
+                {
+                    OString aSubStr( pNextBuf + 1, nNextContentLen - 2 );
+                    sal_Int32 nSubNum = aSubStr.toInt32();
+                    if ( !nSubNum )
+                        return 0;
+                    PDFEmitObject& rRefObj = rObjMapping[ nSubNum ];
+                    sal_Int32 nRefID = writePDFObjectTree( rRefObj, aFile, rObjMapping, nFontID, rIDMapping );
+                    if ( !nRefID )
+                        return 0;
+                    aLine.append( '[' );
+                    aLine.append( nRefID );
+                    aLine.append( aDescendantFontsRefTag );
+                    aLine.append( ' ' );
+                }
+
+                nNextPos = nNextNextPos + 1;
+                nCurrentLen = nNextPos - nCurrentPos;
+            }
+        }
+        else if ( aStr.match( aFontNameTag ) || aStr.match( aBaseFontTag ) )
         {
             aLine.append( aStr );
             if ( nNextPos < nContentLen && ( nNextNextPos = rObj.m_aContent.indexOf( ' ', nNextPos ) ) >= 0 )
@@ -12653,12 +12684,14 @@ void PDFWriterImpl::encodeGlyphs()
                 }
 
                 // Map font IDs to objects
-                OString aFontIDTag;
-                if ( IsRunningLeopard() || IsRunningSnowLeopard() )
-                    aFontIDTag = OString( "/F" );
-                else
-                    aFontIDTag = OString( "/TT" );
-                sal_Int32 nFontIDTagLen = aFontIDTag.getLength();
+                OString aFontIDTagC = OString( "/C" );
+                OString aFontIDTagF = OString( "/F" );
+                OString aFontIDTagG = OString( "/G" );
+                OString aFontIDTagTT = OString( "/TT" );
+                sal_Int32 nFontIDTagLenC = aFontIDTagC.getLength();
+                sal_Int32 nFontIDTagLenF = aFontIDTagF.getLength();
+                sal_Int32 nFontIDTagLenG = aFontIDTagG.getLength();
+                sal_Int32 nFontIDTagLenTT = aFontIDTagTT.getLength();
                 if ( nProcSetObjID )
                 {
                     PDFEmitObject& rObj = rEmit.m_aObjectMapping[ nProcSetObjID ];
@@ -12666,6 +12699,11 @@ void PDFWriterImpl::encodeGlyphs()
                     sal_Int32 nFontStartTagLen = aFontStartTag.getLength();
                     OString aFontEndTag( " >> " );
                     sal_Int32 nCurrentPos = 0;
+                    sal_Int32 nCurrentPosC = 0;
+                    sal_Int32 nCurrentPosF = 0;
+                    sal_Int32 nCurrentPosG = 0;
+                    sal_Int32 nCurrentPosTT = 0;
+                    sal_Int32 nCurrentFontIDTagLen;
                     sal_Int32 nFontStartPos;
                     if ( ( nFontStartPos = rObj.m_aContent.indexOf( aFontStartTag, nCurrentPos ) ) >= 0 )
                     {
@@ -12676,9 +12714,38 @@ void PDFWriterImpl::encodeGlyphs()
                         {
                             nCurrentPos = nFontStartPos + nFontStartTagLen;
 
-                            while ( ( nCurrentPos = rObj.m_aContent.indexOf( aFontIDTag, nCurrentPos ) ) >= 0 && nCurrentPos < nFontEndPos )
+                            while ( ( nCurrentPosC = rObj.m_aContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 || ( nCurrentPosF = rObj.m_aContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 || ( nCurrentPosG = rObj.m_aContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 || ( nCurrentPosTT = rObj.m_aContent.indexOf( aFontIDTagTT, nCurrentPos ) ) >= 0 )
                             {
-                                nCurrentPos += nFontIDTagLen;
+                                if ( nCurrentPosC >= 0 )
+                                {
+                                    nCurrentPos = nCurrentPosC;
+                                    nCurrentFontIDTagLen = nFontIDTagLenC;
+                                }
+                                else if ( nCurrentPosF >= 0 )
+                                {
+                                    nCurrentPos = nCurrentPosF;
+                                    nCurrentFontIDTagLen = nFontIDTagLenF;
+                                }
+                                else if ( nCurrentPosG >= 0 )
+                                {
+                                    nCurrentPos = nCurrentPosG;
+                                    nCurrentFontIDTagLen = nFontIDTagLenG;
+                                }
+                                else if ( nCurrentPosTT >= 0 )
+                                {
+                                    nCurrentPos = nCurrentPosTT;
+                                    nCurrentFontIDTagLen = nFontIDTagLenTT;
+                                }
+                                else
+                                {
+                                    nCurrentPos = nFontEndPos;;
+                                    nCurrentFontIDTagLen = 0;
+                                }
+
+                                if ( nCurrentPos >= nFontEndPos )
+                                    break;
+
+                                nCurrentPos += nCurrentFontIDTagLen;
 
                                 sal_Int32 nNextPos = rObj.m_aContent.indexOf( ' ', nCurrentPos );
                                 if ( nNextPos < 0 )
@@ -12777,9 +12844,20 @@ void PDFWriterImpl::encodeGlyphs()
                             sal_Int32 nNextFontPos;
                             sal_Int32 nNextAltFontPos;
                             sal_Int32 nTextPos;
+                            sal_Int32 nCurrentFontIDTagLen;
                             while ( nCurrentGlyph < nGlyphIDs )
                             {
-                                nNextFontIDPos = aPageContent.indexOf( aFontIDTag, nCurrentPos );
+                                if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagC, nCurrentPos ) ) >= 0 )
+                                    nCurrentFontIDTagLen = nFontIDTagLenC;
+                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagF, nCurrentPos ) ) >= 0 )
+                                    nCurrentFontIDTagLen = nFontIDTagLenF;
+                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagG, nCurrentPos ) ) >= 0 )
+                                    nCurrentFontIDTagLen = nFontIDTagLenG;
+                                else if ( ( nNextFontIDPos = aPageContent.indexOf( aFontIDTagTT, nCurrentPos ) ) >= 0 )
+                                    nCurrentFontIDTagLen = nFontIDTagLenTT;
+                                else
+                                    nCurrentFontIDTagLen = 0;
+
                                 bool bIsTextRun = false;
                                 if ( aCurrentFontID.getLength() )
                                 {
@@ -12805,7 +12883,7 @@ void PDFWriterImpl::encodeGlyphs()
 
                                 if ( nNextFontIDPos >= 0 && ( nNextFontPos < 0 || nNextFontIDPos < nNextFontPos ) && ( nNextAltFontPos < 0 || nNextFontIDPos < nNextAltFontPos ) )
                                 {
-                                    nCurrentPos = nNextFontIDPos + nFontIDTagLen;
+                                    nCurrentPos = nNextFontIDPos + nCurrentFontIDTagLen;
                                     if ( ( nFontIDPos = aPageContent.indexOf( ' ', nCurrentPos ) ) < 0 )
                                         continue;
 
