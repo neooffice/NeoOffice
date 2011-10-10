@@ -1,28 +1,27 @@
 /* -*- Mode: C++; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- */
 /*************************************************************************
  *
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- * 
  * Copyright 2000, 2010 Oracle and/or its affiliates.
  *
- * OpenOffice.org - a multi-platform office productivity suite
+ * This file is part of NeoOffice.
  *
- * This file is part of OpenOffice.org.
- *
- * OpenOffice.org is free software: you can redistribute it and/or modify
- * it under the terms of the GNU Lesser General Public License version 3
+ * NeoOffice is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License version 3
  * only, as published by the Free Software Foundation.
  *
- * OpenOffice.org is distributed in the hope that it will be useful,
+ * NeoOffice is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU Lesser General Public License version 3 for more details
+ * GNU General Public License version 3 for more details
  * (a copy is included in the LICENSE file that accompanied this code).
  *
- * You should have received a copy of the GNU Lesser General Public License
- * version 3 along with OpenOffice.org.  If not, see
- * <http://www.openoffice.org/license.html>
- * for a copy of the LGPLv3 License.
+ * You should have received a copy of the GNU General Public License
+ * version 3 along with NeoOffice.  If not, see
+ * <http://www.gnu.org/licenses/gpl-3.0.txt>
+ * for a copy of the GPLv3 License.
+ *
+ * Modified October 2011 by Patrick Luby. NeoOffice is distributed under
+ * GPL only under modification term 2 of the LGPL.
  *
  ************************************************************************/
 #include <stdlib.h>
@@ -44,7 +43,11 @@
 #include <cppuhelper/implbase1.hxx>
 #include <cppuhelper/implbase2.hxx>
 
+#if defined SYSTEM_EXPAT && SUPD == 310
 #include <expat.h>
+#else
+#include "expat/xmlparse.h"
+#endif
 
 using namespace ::rtl;
 using namespace ::std;
