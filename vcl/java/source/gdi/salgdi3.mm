@@ -165,6 +165,7 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 						const OUString aNeoSymbol( OUString::createFromAscii( "Neo Symbol" ) );
 						const OUString aNeo3Symbol( OUString::createFromAscii( "Neo3Symbol" ) );
 						const OUString aOpenSymbol( OUString::createFromAscii( "OpenSymbol" ) );
+						const OUString aRegular( OUString::createFromAscii( " Regular" ) );
 						const OUString aStarSymbol( OUString::createFromAscii( "StarSymbol" ) );
 						const OUString aTimes( OUString::createFromAscii( "Times" ) );
 						const OUString aTimesRoman( OUString::createFromAscii( "Times Roman" ) );
@@ -296,6 +297,12 @@ static void ImplFontListChangedCallback( ATSFontNotificationInfoRef aInfo, void 
 							else if ( aDisplayName == aTimesRoman )
 							{
 								aMapName += aFontSeparator + aTimes;
+							}
+							else if ( aDisplayName == aFamilyName + aRegular )
+							{
+								// Fix bug 3668 by adding family name to map
+								// for "regular" fonts
+								aMapName += aFontSeparator + aFamilyName;
 							}
 
 							String aXubMapName( aMapName );

@@ -1798,7 +1798,12 @@ void ImplDevFontListData::UpdateCloneFontList( ImplDevFontList& rDevFontList,
 
 ImplDevFontList::ImplDevFontList()
 :   mbMatchData( false )
+#ifdef USE_JAVA
+    // Fix bug 3668 by reenabling map names
+,   mbMapNames( true )
+#else	// USE_JAVA
 ,   mbMapNames( false )
+#endif	// USE_JAVA
 ,   mpPreMatchHook( NULL )
 ,   mpFallbackHook( NULL )
 ,   mpFallbackList( NULL )
@@ -2067,6 +2072,10 @@ void ImplDevFontList::Add( ImplFontData* pNewData )
 {
     int nAliasQuality = pNewData->mnQuality - 100;
     String aMapNames = pNewData->maMapNames;
+#ifdef USE_JAVA
+    // Fix bug 3668 by reenabling map names
+    if ( !mbMapNames )
+#endif	// USE_JAVA
     pNewData->maMapNames = String();
 
     bool bKeepNewData = false;
@@ -2137,7 +2146,12 @@ ImplDevFontListData* ImplDevFontList::ImplFindByAliasName( const String& rSearch
     // use the font's alias names to find the font
     // TODO: get rid of linear search
     DevFontList::const_iterator it = maDevFontList.begin();
+#ifdef USE_JAVA
+    // Fix infinite loop by incrementing iterator
+    for ( ; it != maDevFontList.end(); ++it )
+#else	// USE_JAVA
     while( it != maDevFontList.end() )
+#endif	// USE_JAVA
     {
         ImplDevFontListData* pData = (*it).second;
         if( !pData->maMapNames.Len() )
