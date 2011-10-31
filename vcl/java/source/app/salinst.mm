@@ -534,8 +534,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			com_sun_star_vcl_VCLFrame::flushAllFrames();
 
 			// Reduce noticeable pause when opening a new document by delaying
-			// update of submenus until next available timer timeout
-			if ( pSalData->maNativeEventCondition.check() && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible )
+			// update of submenus until next available timer timeout.
+			// Fix bug 3669 by not invoking menu updates while dragging.
+			if ( pSalData->maNativeEventCondition.check() && pSalData->mpFocusFrame && pSalData->mpFocusFrame->mbVisible && !pSalData->mpLastDragFrame )
 			{
 				for ( int i = 0; pSalData->mpFocusFrame->maUpdateMenuList.size() && i < 8; i++ )
 					UpdateMenusForFrame( pSalData->mpFocusFrame, pSalData->mpFocusFrame->maUpdateMenuList.front(), false );
