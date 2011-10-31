@@ -754,7 +754,7 @@ extern "C" void java_init_systray()
 
 	aDesc = GetJavaResString( STR_DISABLEMACOSXTEXTHIGHLIGHTING );
 	aDesc.EraseAllChars( '~' );
-	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseMacHighlightColor" ), kCFBooleanFalse, FALSE ) );
+	aMacOSXSubmenuItems.push_back( QuickstartMenuItemDescriptor( @selector(handlePreferenceChangeCommand:), aDesc, CFSTR( "UseNativeHighlightColor" ), kCFBooleanFalse, FALSE ) );
 
 	// Insert the Quick Look submenu entries
 	::std::vector< QuickstartMenuItemDescriptor > aQuickLookSubmenuItems;
