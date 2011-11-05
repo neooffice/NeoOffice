@@ -187,7 +187,6 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 			[pDictionary removeObjectForKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
 		}
 
-		mbFinished = NO;
 		NSPrinter *pPrinter = [NSPrintInfo defaultPrinter];
 		if ( pPrinter )
 			[mpInfo setPrinter:pPrinter];
@@ -239,12 +238,11 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 					[NSPrintOperation setCurrentOperation:pOldOperation];
 				}
 			}
-
-			mbFinished = YES;
 		}
 		else
 		{
 			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
+			mbFinished = NO;
 		}
 	}
 }

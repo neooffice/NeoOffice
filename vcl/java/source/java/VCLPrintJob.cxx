@@ -323,6 +323,8 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 
 		// Ignore any AWT events while the print dialog is showing to
 		// emulate a modal dialog
+		pSalData->mpNativeModalSheetFrame = pFocusFrame;
+		pSalData->mbInNativeModalSheet = true;
 		void *pNSPrintInfo = _par0->getNativePrinterJob();
 		ULONG nCount = pFocusFrame ? 0 : Application::ReleaseSolarMutex();
 		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, _par1.getStr(), _par1.getLength(), kCFAllocatorNull );
@@ -331,8 +333,6 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 			CFRelease( aString );
 		Application::AcquireSolarMutex( nCount );
 
-		pSalData->mpNativeModalSheetFrame = pFocusFrame;
-		pSalData->mbInNativeModalSheet = true;
 		while ( !NSPrintPanel_finished( pDialog ) )
 			Application::Yield();
 		pSalData->mbInNativeModalSheet = false;
