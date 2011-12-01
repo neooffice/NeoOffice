@@ -47,6 +47,7 @@
 
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
+#define kNMMaxInZoomHeight 310
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
 static const NSString *kDownloadURI = @"/neofiles/download";
@@ -886,29 +887,39 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 - (void)windowDidMove:(NSNotification *)notification
 {
 	NSWindow *window=[notification object];
-	if(window && (window==mpPanel) && ![window isZoomed])
+	if(window && window==mpPanel && ![mpPanel isInZoom])
 	{
-		NSPoint windowPos=[window frame].origin;
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kNeoMobileXPosPref];
-		[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kNeoMobileYPosPref];
-		[defaults synchronize];
+		NSRect aFrame = [window frame];
+		NSRect aZoomFrame = [window windowWillUseStandardFrame:window defaultFrame:aFrame];
+		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		{
+			NSPoint windowPos=[window frame].origin;
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kNeoMobileXPosPref];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kNeoMobileYPosPref];
+			[defaults synchronize];
+		}
 	}
 }
 
 - (void)windowDidResize:(NSNotification *)notification
 {
 	NSWindow *window=[notification object];
-	if(window && (window==mpPanel) && ![window isZoomed])
+	if(window && window==mpPanel && ![mpPanel isInZoom])
 	{
-		NSView *pContentView = [window contentView];
-		if(pContentView)
+		NSRect aFrame = [window frame];
+		NSRect aZoomFrame = [window windowWillUseStandardFrame:window defaultFrame:aFrame];
+		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
 		{
-			NSSize contentSize=[pContentView frame].size;
-			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kNeoMobileWidthPref];
-			[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kNeoMobileHeightPref];
-			[defaults synchronize];
+			NSView *pContentView = [window contentView];
+			if(pContentView)
+			{
+				NSSize contentSize=[pContentView frame].size;
+				NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kNeoMobileWidthPref];
+				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kNeoMobileHeightPref];
+				[defaults synchronize];
+			}
 		}
 	}
 }
@@ -916,7 +927,7 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 - (void)windowWillClose:(NSNotification *)notification
 {
 	NSWindow *window=[notification object];
-	if(window && (window==mpPanel))
+	if(window && window==mpPanel)
 	{
 		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
 		[defaults setBool:NO forKey:kNeoMobileVisiblePref];
@@ -1019,9 +1030,10 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 {
 	[super initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	[self setFloatingPanel:YES];
-	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 90)];
+	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 0)];
 	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	
+	mbinZoom = NO;
 	mpuserAgent = pUserAgent;
 	if ( mpuserAgent )
 		[mpuserAgent retain];
@@ -1074,6 +1086,11 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[self setContentView:mpcontentView];
 
 	return self;
+}
+
+- (MacOSBOOL)isInZoom
+{
+	return mbinZoom;
 }
 
 - (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject
@@ -1143,6 +1160,61 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	}
 
 	return aRet;
+}
+
+- (void)zoom:(id)aObject
+{
+	if ( mbinZoom )
+		return;
+	mbinZoom = YES;
+
+	BOOL bZoomed = YES;
+	NSRect aFrame = [self frame];
+	NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
+	if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		bZoomed = NO;
+
+	[super zoom:aObject];
+
+	// On Mac OS X 10.6 and higher the window can get stuck in a zoomed state
+	// after the zoomed window has been moved. In such cases we manually resize
+	// to the last saved unzoomed size.
+	if (bZoomed)
+	{
+		aFrame = [self frame];
+		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+			bZoomed = NO;
+	}
+
+	if (bZoomed)
+	{
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
+		NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
+		if(xPosStr && yPosStr)
+		{
+			NSPoint windowPos=[self frame].origin;
+			windowPos.x=[xPosStr intValue];
+			windowPos.y=[yPosStr intValue];
+			[self setFrameOrigin:windowPos];
+		}
+
+		NSView *pContentView = [self contentView];
+		if(pContentView)
+		{
+			NSString *widthStr=[defaults stringForKey:kNeoMobileWidthPref];
+			NSString *heightStr=[defaults stringForKey:kNeoMobileHeightPref];
+ 			if(widthStr && heightStr)
+			{
+				NSSize contentSize=[pContentView frame].size;
+				contentSize.width=[widthStr intValue];
+				contentSize.height=[heightStr intValue];
+				[self setContentSize:contentSize];
+			}
+		}
+	}
+
+	mbinZoom = NO;
 }
 
 @end

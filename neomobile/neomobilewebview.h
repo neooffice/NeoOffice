@@ -97,6 +97,7 @@
 	NSView*					mpbottomView;
 	NSView*					mpcontentView;
 	NSButton*				mpcancelButton;
+	MacOSBOOL				mbinZoom;
 	NSText*					mpstatusLabel;
 	NSString*				mpuserAgent;
 	NeoMobileWebView*		mpwebView;
@@ -104,8 +105,10 @@
 - (void)createWebView:(NSURLRequest *)pRequest;
 - (void)dealloc;
 - (id)initWithUserAgent:(NSString *)pUserAgent;
+- (MacOSBOOL)isInZoom;
 - (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
 - (NeoMobileWebView *)webView;
 - (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame;
+- (void)zoom:(id)aObject;
 @end
 
