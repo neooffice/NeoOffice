@@ -149,7 +149,7 @@ PRODUCT_COMPONENT_MODULES=
 ifeq ("$(OS_TYPE)","MacOSX")
 PRODUCT_COMPONENT_MODULES+=grammarcheck imagecapture mediabrowser neomobile remotecontrol
 endif
-PRODUCT_COMPONENT_PATCH_MODULES=
+PRODUCT_COMPONENT_PATCH_MODULES=neomobile
 
 # CVS macros
 MOZ_SOURCE_URL=ftp://ftp.mozilla.org/pub/mozilla.org/mozilla/releases/mozilla1.7.5/source/mozilla-source-1.7.5.tar.gz
