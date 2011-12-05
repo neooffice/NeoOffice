@@ -34,6 +34,7 @@
 #include "neomobile.hxx"
 #include "neomobilei18n.hxx"
 #include "neomobilewebview.h"
+#include "NSWindow_Flipr.h"
 
 #include <map>
 
@@ -731,6 +732,16 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	// TODO: set header value to applications's name and version
 	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
 		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
+
+#ifdef USE_FLIPPED_WINDOW
+	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:@"GET"] )
+	{
+		NSPanel *pFlipPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+		[pFlipPanel setFloatingPanel:YES];
+		[pFlipPanel setFrame:[mpPanel frame] display:NO];
+		[mpPanel flipToShowWindow:pFlipPanel forward:YES];
+	}
+#endif	// USE_FLIPPED_WINDOW
 
 	return pRequest;
 }

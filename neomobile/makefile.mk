@@ -63,8 +63,10 @@ UNOTYPES= \
 UNOUCRDEP=$(OUT)$/ucr$/$(TARGET).db
 
 SLOFILES= \
+	$(SLO)$/NSWindow_Flipr.obj \
 	$(SLO)$/neomobile.obj \
 	$(SLO)$/neomobileappevent.obj \
+	$(SLO)$/neomobileflipsideview.obj \
 	$(SLO)$/neomobilei18n.obj \
 	$(SLO)$/neomobilewebview.obj
 
@@ -82,7 +84,7 @@ SHL1STDLIBS= \
 	$(VOSLIB)	\
 	$(VCLLIB)
 
-SHL1STDLIBS += -framework AppKit -framework WebKit
+SHL1STDLIBS += -framework AppKit -framework QuartzCore -framework WebKit
 
 SHL2TARGET=$(TARGET:s/.uno//).office
 SHL2OBJS=$(SLOFILES) \
@@ -92,7 +94,7 @@ SHL2OBJS=$(SLOFILES) \
 SHL2STDLIBS= \
 	$(SALLIB)
 
-SHL2STDLIBS += -framework AppKit -framework WebKit
+SHL2STDLIBS += -framework AppKit -framework QuartzCore -framework WebKit
 
 # --- Targets ------------------------------------------------------
 

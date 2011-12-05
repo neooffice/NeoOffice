@@ -1,0 +1,18 @@
+{
+    IBClasses = (
+        {
+            ACTIONS = {flipAction = id; }; 
+            CLASS = AppDelegate; 
+            LANGUAGE = ObjC; 
+            OUTLETS = {
+                text1 = NSTextView; 
+                text2 = NSTextView; 
+                window1 = NSWindow; 
+                window2 = NSWindow; 
+            }; 
+            SUPERCLASS = NSObject; 
+        }, 
+        {CLASS = FirstResponder; LANGUAGE = ObjC; SUPERCLASS = NSObject; }
+    ); 
+    IBVersion = 1; 
+}
