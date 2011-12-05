@@ -1162,14 +1162,16 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mploadingIndicator setHidden:YES];
 	[mploadingIndicator setAutoresizingMask:(NSViewMinXMargin)];
 	
-	float maxButtonHeight = MAX([mploadingIndicator frame].origin.y+[mploadingIndicator frame].size.height-kNMBottomViewPadding, [mpbackButton frame].origin.y+[mpbackButton frame].size.height-kNMBottomViewPadding);
+	float maxButtonHeight=MAX([mploadingIndicator frame].origin.y+[mploadingIndicator frame].size.height-kNMBottomViewPadding, [mpbackButton frame].origin.y+[mpbackButton frame].size.height-kNMBottomViewPadding);
 	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(kNMBottomViewPadding, kNMBottomViewPadding, [mploadingIndicator frame].origin.x-(kNMBottomViewPadding*2), maxButtonHeight)];
 	[mpstatusLabel setEditable:NO];
 	[mpstatusLabel setString:@""];
 	[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
 	[mpstatusLabel setDrawsBackground:NO];
-	[mpstatusLabel setFont:[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:16]];
-	[mpstatusLabel setFrameOrigin:NSMakePoint([mpstatusLabel frame].origin.x, [mpstatusLabel frame].origin.y+([[mpstatusLabel font] boundingRectForFont].size.height-[mpstatusLabel frame].size.height)/2)];
+
+	NSFont *statusLabelFont=[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:16];
+	[mpstatusLabel setFont:statusLabelFont];
+	[mpstatusLabel setFrameOrigin:NSMakePoint([mpstatusLabel frame].origin.x, [mpstatusLabel frame].origin.y+([statusLabelFont ascender]-[statusLabelFont descender]+[statusLabelFont leading]-[mpstatusLabel frame].size.height)/2)];
 
 	mpbottomView=[[NeoMobileStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, maxButtonHeight+(kNMBottomViewPadding*2))];
 	[mpbottomView setAutoresizesSubviews:YES];
