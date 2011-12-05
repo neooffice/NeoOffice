@@ -1023,6 +1023,10 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 
 static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
+@interface NSWindow (NonRecursiveResponderPanel)
+- (NSRect)_growBoxRect;
+@end
+
 @implementation NonRecursiveResponderPanel
 
 - (void)createWebView:(NSURLRequest *)pRequest
@@ -1137,7 +1141,12 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	if ( focusView )
 		[focusView lockFocus];
 
-	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(kNMDefaultBrowserWidth-buttonSize.width-kNMBottomViewPadding, kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	NSSize growBoxSize=NSMakeSize( 0, 0 );
+	if ( [self respondsToSelector:@selector(_growBoxRect)] )
+		growBoxSize=[self _growBoxRect].size;
+	growBoxSize.width /= 2;
+
+	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(kNMDefaultBrowserWidth-buttonSize.width-MAX(kNMBottomViewPadding, growBoxSize.width), kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpcancelButton setToolTip:GetLocalizedString(NEOMOBILECANCEL)];
 	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
