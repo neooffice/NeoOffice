@@ -47,6 +47,7 @@ using namespace rtl;
  * Translated strings for en_US locale
  */
 static const sal_Char *pEntries_en_US[] = {
+	NEOMOBILEBACK, "Back",
 	NEOMOBILECANCEL, "Cancel",
 	NEOMOBILEDOWNLOADCANCELED, "Download canceled",
 	NEOMOBILEDOWNLOADFAILED, "Download failed",
@@ -82,6 +83,7 @@ static const sal_Char *pEntries_es[] = {
  * Translated strings for fr locale
  */
 static const sal_Char *pEntries_fr[] = {
+	NEOMOBILEBACK, "Arrière",
 	NEOMOBILECANCEL, "Annuler",
 	NEOMOBILEDOWNLOADCANCELED, "Téléchargement annulé",
 	NEOMOBILEDOWNLOADFAILED, "Echec du téléchargement",

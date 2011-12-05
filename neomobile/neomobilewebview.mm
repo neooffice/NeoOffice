@@ -48,6 +48,7 @@
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
 #define kNMMaxInZoomHeight 310
+#define kNMBottomViewPadding 2
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
 static const NSString *kDownloadURI = @"/neofiles/download";
@@ -101,15 +102,23 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
-@interface ZeroHeightDividerSplitView : NSSplitView
-- (float)dividerThickness;
+@interface NeoMobileStatusBarView : NSView
+- (void)drawRect:(NSRect)dirtyRect;
 @end
 
-@implementation ZeroHeightDividerSplitView
+@implementation NeoMobileStatusBarView
 
-- (float)dividerThickness
+- (void)drawRect:(NSRect)dirtyRect
 {
-	return 0;
+	[super drawRect:dirtyRect];
+
+	NSRect bounds = [self bounds];
+	[[NSColor blackColor] set];
+	NSBezierPath *bezierPath = [NSBezierPath bezierPath];
+	[bezierPath setLineWidth:0.5];
+	[bezierPath moveToPoint:NSMakePoint( bounds.origin.x, bounds.origin.y + bounds.size.height - 0.5 )];
+	[bezierPath lineToPoint:NSMakePoint( bounds.origin.x + bounds.size.width, bounds.origin.y + bounds.size.height - 0.5 )];
+	[bezierPath stroke];
 }
 
 @end
@@ -251,7 +260,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	return(YES);
 }
 
-- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
+- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
 {
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
@@ -279,8 +288,14 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	mpPanel = pPanel;
 	[mpPanel retain];
 	
+	mpbackButton = pBackButton;
+	[mpbackButton retain];
+	
 	mpcancelButton = pCancelButton;
 	[mpcancelButton retain];
+	
+	mploadingIndicator = pLoadingIndicator;
+	[mploadingIndicator retain];
 	
 	mpstatusLabel = pStatusLabel;
 	[mpstatusLabel retain];
@@ -309,6 +324,18 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	mpexportEvent=NULL;
 
 	return self;
+}
+
+- (void)backButtonPressed
+{
+#ifdef DEBUG
+	fprintf(stderr, "NeoMobile Back Button Clicked\n");
+#endif
+	[self stopLoading:self];
+	if ([self canGoBack])
+		[self goBack];
+	else
+		[self loadURI:@"/"];
 }
 
 - (void)cancelButtonPressed
@@ -354,6 +381,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		return;
 	}
 
+	[mploadingIndicator setHidden:YES];
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:@""];
 
@@ -449,6 +477,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		
 		[mpdownload cancel];
 		mpdownload=nil;
+		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
 	}
@@ -463,6 +492,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 	else
 	{
+		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
 	}
@@ -507,6 +537,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
 {
+	[mploadingIndicator setHidden:YES];
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:@""];
 	
@@ -583,11 +614,14 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody, pMimeTypes );
 					mpexportEvent=&aEvent;
 
+					[mploadingIndicator setHidden:NO];
+					[mploadingIndicator startAnimation:self];
 					[mpcancelButton setEnabled:YES];
 					[mpstatusLabel setString:GetLocalizedString(NEOMOBILEEXPORTINGFILE)];
 
 					aEvent.Execute();
 
+					[mploadingIndicator setHidden:YES];
 					[mpcancelButton setEnabled:NO];
 					[mpstatusLabel setString:@""];
 
@@ -658,6 +692,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)webView:(WebView *)pWebView didStartProvisionalLoadForFrame:(WebFrame *)pFrame
 {
+	[mploadingIndicator setHidden:NO];
+	[mploadingIndicator startAnimation:self];
 	[mpcancelButton setEnabled:YES];
 
 	if ( !pWebView || !pFrame )
@@ -828,6 +864,8 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 #endif
 
 	mpdownload=download;
+	[mploadingIndicator setHidden:NO];
+	[mploadingIndicator startAnimation:self];
 	[mpcancelButton setEnabled:YES];
 	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
 }
@@ -869,6 +907,7 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 	}
 	
 	mpdownload=nil;
+	[mploadingIndicator setHidden:YES];
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:@""];
 }
@@ -879,6 +918,7 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 	NSLog( @"Download didFailWithError: %@", error );
 #endif
 	mpdownload=nil;
+	[mploadingIndicator setHidden:YES];
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
@@ -964,8 +1004,14 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 	if ( mpPanel )
 		[mpPanel release];
 	
+	if ( mpbackButton )
+		[mpbackButton release];
+	
 	if ( mpcancelButton )
 		[mpcancelButton release];
+	
+	if ( mploadingIndicator )
+		[mploadingIndicator release];
 	
 	if ( mpstatusLabel )
 		[mpstatusLabel release];
@@ -984,6 +1030,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	if ( mpwebView )
 	{
 		[[mpwebView mainFrame] stopLoading];
+		[mpbackButton setTarget:nil];
 		[mpcancelButton setTarget:nil];
 		[self setDelegate:nil];
 		[mpwebView removeFromSuperviewWithoutNeedingDisplay];
@@ -991,10 +1038,13 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 		mpwebView = nil;
 	}
 
-	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, [mpbottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[mpbottomView bounds].size.height) panel:self cancelButton:mpcancelButton statusLabel:mpstatusLabel userAgent:mpuserAgent];
+	mpwebView = [[NeoMobileWebView alloc] initWithFrame:NSMakeRect(0, [mpbottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[mpbottomView bounds].size.height) panel:self backButton:mpbackButton cancelButton:mpcancelButton loadingIndicator:mploadingIndicator statusLabel:mpstatusLabel userAgent:mpuserAgent];
 	[mpwebView setAutoresizingMask:(NSViewHeightSizable | NSViewWidthSizable)];
 	[mpcontentView addSubview:mpwebView];
+	[mpbackButton setTarget:mpwebView];
+	[mpbackButton setAction:@selector(backButtonPressed)];
 	[mpcancelButton setTarget:mpwebView];
+	[mpcancelButton setAction:@selector(cancelButtonPressed)];
 	[self setDelegate:mpwebView];
 
 	if ( pRequest )
@@ -1005,15 +1055,21 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 {
 	[self setContentView:nil];
 
+	if ( mpbackButton )
+		[mpbackButton release];
+	
 	if ( mpbottomView )
 		[mpbottomView release];
-
-	if ( mpcontentView )
-		[mpcontentView release];
 
 	if ( mpcancelButton )
 		[mpcancelButton release];
 
+	if ( mpcontentView )
+		[mpcontentView release];
+
+	if ( mploadingIndicator )
+		[mploadingIndicator release];
+	
 	if ( mpstatusLabel )
 		[mpstatusLabel release];
 
@@ -1041,45 +1097,88 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight)];
 	[mpcontentView setAutoresizesSubviews:YES];
 	
-	mpcancelButton=[[NSButton alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
-	[mpcancelButton setTitle:GetLocalizedString(NEOMOBILECANCEL)];
-	[mpcancelButton setAction:@selector(cancelButtonPressed)];
-	[mpcancelButton setAutoresizingMask:(NSViewMaxXMargin)];
-	[mpcancelButton setEnabled:NO];
+	NSSize buttonSize = NSMakeSize( 30, 30 );
+	NSImage *backImage = [[NSImage alloc] initWithSize:buttonSize];
+	[backImage autorelease];
+	NSImage *cancelImage = [[NSImage alloc] initWithSize:buttonSize];
+	[cancelImage autorelease];
+
+	NSView *focusView = [NSView focusView];
+	if ( focusView )
+		[focusView unlockFocus];
+
+	[backImage lockFocus];
+	[[NSColor blackColor] set];
+	NSBezierPath *bezierPath = [NSBezierPath bezierPath];
+	[bezierPath moveToPoint:NSMakePoint( 10, 15 )];
+	[bezierPath lineToPoint:NSMakePoint( 20, 10 )];
+	[bezierPath lineToPoint:NSMakePoint( 20, 20 )];
+	[bezierPath closePath];
+	NSAffineTransform *imageTransform = [NSAffineTransform transform];
+	[imageTransform translateXBy:-1 yBy:-1];
+	[bezierPath transformUsingAffineTransform:imageTransform];
+	[bezierPath fill];
+	[backImage unlockFocus];
+
+	[cancelImage lockFocus];
+	[[NSColor blackColor] set];
+	bezierPath = [NSBezierPath bezierPath];
+	[bezierPath setLineWidth:2];
+	[bezierPath moveToPoint:NSMakePoint( 10, 10 )];
+	[bezierPath lineToPoint:NSMakePoint( 20, 20 )];
+	[bezierPath moveToPoint:NSMakePoint( 10, 20 )];
+	[bezierPath lineToPoint:NSMakePoint( 20, 10 )];
+	imageTransform = [NSAffineTransform transform];
+	[imageTransform translateXBy:0 yBy:-1];
+	[bezierPath transformUsingAffineTransform:imageTransform];
+	[bezierPath stroke];
+	[cancelImage unlockFocus];
+
+	if ( focusView )
+		[focusView lockFocus];
+
+	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(kNMDefaultBrowserWidth-buttonSize.width-kNMBottomViewPadding, kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	[mpcancelButton setToolTip:GetLocalizedString(NEOMOBILECANCEL)];
+	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
-	[mpcancelButton setBezelStyle:NSRoundedBezelStyle];
-	[mpcancelButton setKeyEquivalent:@"\r"];
-	[mpcancelButton sizeToFit];
-	NSRect aCancelButtonFrame = [mpcancelButton frame];
-	if(aCancelButtonFrame.size.width<100)
-	{
-		aCancelButtonFrame.size.width=100;
-		[mpcancelButton setFrame:aCancelButtonFrame];
-	}
+	[mpcancelButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mpcancelButton setImage:cancelImage];
+	[mpcancelButton setImagePosition:NSImageOnly];
+	[[mpcancelButton cell] setImageScaling:NSImageScaleNone];
+	[mpcancelButton setAutoresizingMask:(NSViewMinXMargin)];
 	
-	float fontSize=[NSFont systemFontSizeForControlSize:NSSmallControlSize];
-	NSCell *theCell = [mpcancelButton cell];
-	NSFont *theFont = [NSFont fontWithName:[[theCell font] fontName] size:fontSize];
-	[theCell setFont:theFont];
-	[theCell setControlSize:NSSmallControlSize];
+	mpbackButton = [[NSButton alloc] initWithFrame:NSMakeRect([mpcancelButton frame].origin.x-buttonSize.width-kNMBottomViewPadding, kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	[mpbackButton setToolTip:GetLocalizedString(NEOMOBILEBACK)];
+	[mpbackButton setEnabled:YES];
+	[mpbackButton setButtonType:NSMomentaryPushInButton];
+	[mpbackButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mpbackButton setImage:backImage];
+	[mpbackButton setImagePosition:NSImageOnly];
+	[[mpbackButton cell] setImageScaling:NSImageScaleNone];
+	[mpbackButton setAutoresizingMask:(NSViewMinXMargin)];
 	
-	float theFontHeight = [theFont boundingRectForFont].size.height;
-	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect([mpcancelButton bounds].size.width, ([mpcancelButton bounds].size.height-theFontHeight)/2, kNMDefaultBrowserWidth-[mpcancelButton bounds].size.width, theFontHeight)];
+	mploadingIndicator = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect([mpbackButton frame].origin.x-buttonSize.width-kNMBottomViewPadding, kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	[mploadingIndicator setStyle:NSProgressIndicatorSpinningStyle];
+	[mploadingIndicator setHidden:YES];
+	[mploadingIndicator setAutoresizingMask:(NSViewMinXMargin)];
+	
+	float maxButtonHeight = MAX([mploadingIndicator frame].origin.y+[mploadingIndicator frame].size.height-kNMBottomViewPadding, [mpbackButton frame].origin.y+[mpbackButton frame].size.height-kNMBottomViewPadding);
+	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(kNMBottomViewPadding, kNMBottomViewPadding, [mploadingIndicator frame].origin.x-(kNMBottomViewPadding*2), maxButtonHeight)];
 	[mpstatusLabel setEditable:NO];
 	[mpstatusLabel setString:@""];
 	[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
 	[mpstatusLabel setDrawsBackground:NO];
-	
-	fontSize=[NSFont systemFontSize];
-	theFont = [NSFont fontWithName:[theFont fontName] size:fontSize];
-	[mpstatusLabel setFont:theFont];
-	
-	mpbottomView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, [mpcancelButton bounds].size.height)];
+	[mpstatusLabel setFont:[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:16]];
+	[mpstatusLabel setFrameOrigin:NSMakePoint([mpstatusLabel frame].origin.x, [mpstatusLabel frame].origin.y+([[mpstatusLabel font] boundingRectForFont].size.height-[mpstatusLabel frame].size.height)/2)];
+
+	mpbottomView=[[NeoMobileStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, maxButtonHeight+(kNMBottomViewPadding*2))];
 	[mpbottomView setAutoresizesSubviews:YES];
 	[mpbottomView setAutoresizingMask:(NSViewWidthSizable)];
 	
-	[mpbottomView addSubview:mpcancelButton];
 	[mpbottomView addSubview:mpstatusLabel];
+	[mpbottomView addSubview:mploadingIndicator];
+	[mpbottomView addSubview:mpbackButton];
+	[mpbottomView addSubview:mpcancelButton];
 	[mpcontentView addSubview:mpbottomView];
 	
 	[self createWebView:nil];

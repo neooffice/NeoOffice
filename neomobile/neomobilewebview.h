@@ -53,7 +53,9 @@
 {
 	NSObject*				mpDelegate;
 	NonRecursiveResponderPanel*	mpPanel;
+	NSButton*				mpbackButton;
 	NSButton*				mpcancelButton;
+	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
 	NSURLDownload*			mpdownload;
 	unsigned long long		mndownloadSize;
@@ -66,7 +68,7 @@
 + (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL syncServer:(MacOSBOOL)syncServer;
 + (MacOSBOOL)incrementNeoMobileBaseEntry;
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel cancelButton:(NSButton *)pCancelButton statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
+- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
 - (void)loadURI:(NSString *)pURI;
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;
@@ -86,6 +88,7 @@
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
         request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener;
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener;
+- (void)backButtonPressed;
 - (void)cancelButtonPressed;
 - (void)windowDidMove:(NSNotification *)notification;
 - (void)windowDidResize:(NSNotification *)notification;
@@ -94,10 +97,12 @@
 
 @interface NonRecursiveResponderPanel : NSPanel
 {
+	NSButton*				mpbackButton;
 	NSView*					mpbottomView;
 	NSView*					mpcontentView;
 	NSButton*				mpcancelButton;
 	MacOSBOOL				mbinZoom;
+	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
 	NSString*				mpuserAgent;
 	NeoMobileWebView*		mpwebView;

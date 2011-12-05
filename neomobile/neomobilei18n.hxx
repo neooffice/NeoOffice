@@ -41,6 +41,7 @@
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
+#define NEOMOBILEBACK "back"
 #define NEOMOBILECANCEL "cancel"
 #define NEOMOBILEDOWNLOADCANCELED "download.canceled"
 #define NEOMOBILEDOWNLOADFAILED "download.failed"
