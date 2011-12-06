@@ -51,9 +51,9 @@ const NSString *kNeoMobileWidthPref = @"nmWidth";
 const NSString *kNeoMobileHeightPref = @"nmHeight";
 const NSString *kNeoMobileVisiblePref = @"nmVisible";
 const NSString *kNeoMobileServerTypePref = @"nmServerType";
-const NSString *kOpenURI = @"/";
+const NSString *kOpenURI = @"";
 
-static NonRecursiveResponderPanel *pSharedPanel = nil;
+static NonRecursiveResponderWebPanel *pSharedPanel = nil;
 
 @implementation CreateWebViewImpl
 
@@ -77,7 +77,7 @@ static NonRecursiveResponderPanel *pSharedPanel = nil;
 - (void)showWebView:(id)obj
 {
 	if ( !pSharedPanel )
-		pSharedPanel = [[NonRecursiveResponderPanel alloc] initWithUserAgent:mpUserAgent];
+		pSharedPanel = [[NonRecursiveResponderWebPanel alloc] initWithUserAgent:mpUserAgent];
 
 	if(pSharedPanel)
 	{

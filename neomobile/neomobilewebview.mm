@@ -261,7 +261,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	return(YES);
 }
 
-- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
+- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
 {
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
@@ -336,7 +336,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ([self canGoBack])
 		[self goBack];
 	else
-		[self loadURI:@"/"];
+		[self loadURI:@""];
 }
 
 - (void)cancelButtonPressed
@@ -349,8 +349,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)loadURI:(NSString *)pURI
 {
-	if ( !pURI || ![pURI length] )
-		pURI = @"/";
+	if ( !pURI )
+		pURI = @"";
 
 	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
 	if ( pURL )
@@ -734,9 +734,9 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
 
 #ifdef USE_FLIPPED_WINDOW
-	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:@"GET"] )
+	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:[pRequest HTTPMethod]] )
 	{
-		NSPanel *pFlipPanel = [[NSPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+		NonRecursiveResponderPanel *pFlipPanel = [[NonRecursiveResponderPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 		[pFlipPanel setFloatingPanel:YES];
 		[pFlipPanel setFrame:[mpPanel frame] display:NO];
 		[mpPanel flipToShowWindow:pFlipPanel forward:YES];
@@ -935,57 +935,6 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
 }
 
-- (void)windowDidMove:(NSNotification *)notification
-{
-	NSWindow *window=[notification object];
-	if(window && window==mpPanel && ![mpPanel isInZoom])
-	{
-		NSRect aFrame = [window frame];
-		NSRect aZoomFrame = [window windowWillUseStandardFrame:window defaultFrame:aFrame];
-		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
-		{
-			NSPoint windowPos=[window frame].origin;
-			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-			[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.x] forKey:kNeoMobileXPosPref];
-			[defaults setObject:[NSString stringWithFormat:@"%d", (int)windowPos.y] forKey:kNeoMobileYPosPref];
-			[defaults synchronize];
-		}
-	}
-}
-
-- (void)windowDidResize:(NSNotification *)notification
-{
-	NSWindow *window=[notification object];
-	if(window && window==mpPanel && ![mpPanel isInZoom])
-	{
-		NSRect aFrame = [window frame];
-		NSRect aZoomFrame = [window windowWillUseStandardFrame:window defaultFrame:aFrame];
-		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
-		{
-			NSView *pContentView = [window contentView];
-			if(pContentView)
-			{
-				NSSize contentSize=[pContentView frame].size;
-				NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kNeoMobileWidthPref];
-				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kNeoMobileHeightPref];
-				[defaults synchronize];
-			}
-		}
-	}
-}
-
-- (void)windowWillClose:(NSNotification *)notification
-{
-	NSWindow *window=[notification object];
-	if(window && window==mpPanel)
-	{
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		[defaults setBool:NO forKey:kNeoMobileVisiblePref];
-		[defaults synchronize];
-	}
-}
-
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
         request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
 {
@@ -1034,11 +983,211 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 
 static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
-@interface NSWindow (NonRecursiveResponderPanel)
+@implementation NonRecursiveResponderPanel
+
+- (void)dealloc
+{
+	[self setContentView:nil];
+
+	[super dealloc];
+}
+
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation
+{
+	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation];
+
+	mbinZoom = NO;
+	[self setDelegate:self];
+
+	return self;
+}
+
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
+{
+	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
+
+	mbinZoom = NO;
+	[self setDelegate:self];
+
+	return self;
+}
+
+- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject
+{
+	MacOSBOOL bRet = NO;
+
+	// Fix bug 3525 by preventing infinite recursion
+	if ( pCurrentPanel == self )
+		return bRet;
+
+	pCurrentPanel = self;
+	bRet = [super tryToPerform:aAction with:aObject];
+	pCurrentPanel = nil;
+
+	return bRet;
+}
+
+- (void)windowDidMove:(NSNotification *)notification
+{
+	if([notification object]==self && !mbinZoom)
+	{
+		NSRect aFrame = [self frame];
+		NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
+		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		{
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)aFrame.origin.x] forKey:kNeoMobileXPosPref];
+			[defaults setObject:[NSString stringWithFormat:@"%d", (int)aFrame.origin.y] forKey:kNeoMobileYPosPref];
+			[defaults synchronize];
+		}
+	}
+}
+
+- (void)windowDidResize:(NSNotification *)notification
+{
+	if([notification object]==self && !mbinZoom)
+	{
+		NSRect aFrame = [self frame];
+		NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
+		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		{
+			NSView *pContentView = [self contentView];
+			if(pContentView)
+			{
+				NSSize contentSize=[pContentView frame].size;
+				NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.width] forKey:kNeoMobileWidthPref];
+				[defaults setObject:[NSString stringWithFormat:@"%d", (int)contentSize.height] forKey:kNeoMobileHeightPref];
+				[defaults synchronize];
+			}
+		}
+	}
+}
+
+- (void)windowWillClose:(NSNotification *)notification
+{
+	if([notification object]==self && !mbinZoom)
+	{
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		[defaults setBool:NO forKey:kNeoMobileVisiblePref];
+		[defaults synchronize];
+	}
+}
+
+- (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame
+{
+	NSRect aRet = aFrame;
+
+	if ( pWindow == self )
+	{
+		aRet = [pWindow frame];
+
+		NSView *pContentView = [pWindow contentView];
+		if ( pContentView )
+		{
+			// Make the window only big enough to show the bottom view
+			NSView *pBottomView = nil;
+			NSArray *pSubviews = [pContentView subviews];
+			if ( pSubviews )
+			{
+				unsigned int nCount = [pSubviews count];
+				unsigned int i = 0;
+				for ( ; i < nCount; i++ )
+				{
+					NSView *pView = (NSView *)[pSubviews objectAtIndex:i];
+					if ( pView && ( !pBottomView || [pView frame].origin.y < [pBottomView frame].origin.y ) )
+						pBottomView = pView;
+				}
+			}
+
+			NSRect aContentFrame = [pContentView frame];
+			aContentFrame.origin.x += aRet.origin.x;
+			aContentFrame.origin.y += aRet.origin.y + aContentFrame.size.height;
+			if ( pBottomView )
+			{
+				NSRect aBottomFrame = [pBottomView frame];
+				aContentFrame.origin.y -= aBottomFrame.size.height;
+				aContentFrame.size.height = aBottomFrame.origin.y + aBottomFrame.size.height;
+			}
+			else
+			{
+				aContentFrame.size.height = 0;
+			}
+				
+			aRet = [NSWindow frameRectForContentRect:aContentFrame styleMask:[pWindow styleMask]];
+
+			
+		}
+	}
+
+	return aRet;
+}
+
+- (void)zoom:(id)aObject
+{
+	if ( mbinZoom )
+		return;
+	mbinZoom = YES;
+
+	BOOL bZoomed = YES;
+	NSRect aFrame = [self frame];
+	NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
+	if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		bZoomed = NO;
+
+	[super zoom:aObject];
+
+	// On Mac OS X 10.6 and higher the window can get stuck in a zoomed state
+	// after the zoomed window has been moved. In such cases we manually resize
+	// to the last saved unzoomed size.
+	if (bZoomed)
+	{
+		aFrame = [self frame];
+		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+			bZoomed = NO;
+	}
+
+	if (bZoomed)
+	{
+		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+		NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
+		NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
+		if(xPosStr && yPosStr)
+		{
+			NSPoint windowPos=[self frame].origin;
+			windowPos.x=[xPosStr intValue];
+			windowPos.y=[yPosStr intValue];
+			[self setFrameOrigin:windowPos];
+		}
+
+		NSView *pContentView = [self contentView];
+		if(pContentView)
+		{
+			NSSize contentSize=[pContentView frame].size;
+			NSString *widthStr=[defaults stringForKey:kNeoMobileWidthPref];
+			NSString *heightStr=[defaults stringForKey:kNeoMobileHeightPref];
+ 			if(widthStr)
+				contentSize.width=[widthStr intValue];
+			else
+				contentSize.width=kNMDefaultBrowserWidth;
+ 			if(heightStr)
+				contentSize.height=[heightStr intValue];
+			else
+				contentSize.height=kNMDefaultBrowserHeight;
+			[self setContentSize:contentSize];
+		}
+	}
+
+	mbinZoom = NO;
+}
+
+@end
+
+@interface NSWindow (NonRecursiveResponderWebPanel)
 - (NSRect)_growBoxRect;
 @end
 
-@implementation NonRecursiveResponderPanel
+@implementation NonRecursiveResponderWebPanel
 
 - (void)createWebView:(NSURLRequest *)pRequest
 {
@@ -1047,7 +1196,6 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 		[[mpwebView mainFrame] stopLoading];
 		[mpbackButton setTarget:nil];
 		[mpcancelButton setTarget:nil];
-		[self setDelegate:nil];
 		[mpwebView removeFromSuperviewWithoutNeedingDisplay];
 		[mpwebView release];
 		mpwebView = nil;
@@ -1060,7 +1208,6 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mpbackButton setAction:@selector(backButtonPressed)];
 	[mpcancelButton setTarget:mpwebView];
 	[mpcancelButton setAction:@selector(cancelButtonPressed)];
-	[self setDelegate:mpwebView];
 
 	if ( pRequest )
 		[[mpwebView mainFrame] loadRequest:pRequest];
@@ -1068,8 +1215,6 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 - (void)dealloc
 {
-	[self setContentView:nil];
-
 	if ( mpbackButton )
 		[mpbackButton release];
 	
@@ -1104,7 +1249,6 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 0)];
 	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	
-	mbinZoom = NO;
 	mpuserAgent = pUserAgent;
 	if ( mpuserAgent )
 		[mpuserAgent retain];
@@ -1209,133 +1353,9 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	return self;
 }
 
-- (MacOSBOOL)isInZoom
-{
-	return mbinZoom;
-}
-
-- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject
-{
-	MacOSBOOL bRet = NO;
-
-	// Fix bug 3525 by preventing infinite recursion
-	if ( pCurrentPanel == self )
-		return bRet;
-
-	pCurrentPanel = self;
-	bRet = [super tryToPerform:aAction with:aObject];
-	pCurrentPanel = nil;
-
-	return bRet;
-}
-
 - (NeoMobileWebView *)webView
 {
 	return mpwebView;
-}
-
-- (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame
-{
-	NSRect aRet = aFrame;
-
-	if ( pWindow == self )
-	{
-		aRet = [pWindow frame];
-
-		NSView *pContentView = [pWindow contentView];
-		if ( pContentView )
-		{
-			// Make the window only big enough to show the bottom view
-			NSView *pBottomView = nil;
-			NSArray *pSubviews = [pContentView subviews];
-			if ( pSubviews )
-			{
-				unsigned int nCount = [pSubviews count];
-				unsigned int i = 0;
-				for ( ; i < nCount; i++ )
-				{
-					NSView *pView = (NSView *)[pSubviews objectAtIndex:i];
-					if ( pView && ( !pBottomView || [pView frame].origin.y < [pBottomView frame].origin.y ) )
-						pBottomView = pView;
-				}
-			}
-
-			NSRect aContentFrame = [pContentView frame];
-			aContentFrame.origin.x += aRet.origin.x;
-			aContentFrame.origin.y += aRet.origin.y + aContentFrame.size.height;
-			if ( pBottomView )
-			{
-				NSRect aBottomFrame = [pBottomView frame];
-				aContentFrame.origin.y -= aBottomFrame.size.height;
-				aContentFrame.size.height = aBottomFrame.origin.y + aBottomFrame.size.height;
-			}
-			else
-			{
-				aContentFrame.size.height = 0;
-			}
-				
-			aRet = [NSWindow frameRectForContentRect:aContentFrame styleMask:[pWindow styleMask]];
-
-			
-		}
-	}
-
-	return aRet;
-}
-
-- (void)zoom:(id)aObject
-{
-	if ( mbinZoom )
-		return;
-	mbinZoom = YES;
-
-	BOOL bZoomed = YES;
-	NSRect aFrame = [self frame];
-	NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
-	if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
-		bZoomed = NO;
-
-	[super zoom:aObject];
-
-	// On Mac OS X 10.6 and higher the window can get stuck in a zoomed state
-	// after the zoomed window has been moved. In such cases we manually resize
-	// to the last saved unzoomed size.
-	if (bZoomed)
-	{
-		aFrame = [self frame];
-		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
-			bZoomed = NO;
-	}
-
-	if (bZoomed)
-	{
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		NSString *xPosStr=[defaults stringForKey:kNeoMobileXPosPref];
-		NSString *yPosStr=[defaults stringForKey:kNeoMobileYPosPref];
-		if(xPosStr && yPosStr)
-		{
-			NSPoint windowPos=[self frame].origin;
-			windowPos.x=[xPosStr intValue];
-			windowPos.y=[yPosStr intValue];
-			[self setFrameOrigin:windowPos];
-		}
-
-		NSView *pContentView = [self contentView];
-		if(pContentView)
-		{
-			NSString *widthStr=[defaults stringForKey:kNeoMobileWidthPref];
-			NSString *heightStr=[defaults stringForKey:kNeoMobileHeightPref];
- 			if(widthStr && heightStr)
-			{
-				NSSize contentSize=[pContentView frame].size;
-				contentSize.width=[widthStr intValue];
-				contentSize.height=[heightStr intValue];
-				[self setContentSize:contentSize];
-			}
-		}
-	}
-
-	mbinZoom = NO;
 }
 
 @end

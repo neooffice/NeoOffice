@@ -47,12 +47,12 @@
 #define NO (MacOSBOOL)0
 #endif
 
-@class NonRecursiveResponderPanel;
+@class NonRecursiveResponderWebPanel;
 
 @interface NeoMobileWebView : WebView
 {
 	NSObject*				mpDelegate;
-	NonRecursiveResponderPanel*	mpPanel;
+	NonRecursiveResponderWebPanel*	mpPanel;
 	NSButton*				mpbackButton;
 	NSButton*				mpcancelButton;
 	NSProgressIndicator*	mploadingIndicator;
@@ -68,7 +68,7 @@
 + (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL syncServer:(MacOSBOOL)syncServer;
 + (MacOSBOOL)incrementNeoMobileBaseEntry;
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
+- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
 - (void)loadURI:(NSString *)pURI;
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;
@@ -85,23 +85,33 @@
 - (void)download:(NSURLDownload *)download didReceiveDataOfLength:(unsigned long)length;
 - (void)downloadDidFinish: (NSURLDownload*)download;
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error;
-- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
-        request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener;
+- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener;
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener;
 - (void)backButtonPressed;
 - (void)cancelButtonPressed;
-- (void)windowDidMove:(NSNotification *)notification;
-- (void)windowDidResize:(NSNotification *)notification;
-- (void)windowWillClose:(NSNotification *)notification;
 @end
 
 @interface NonRecursiveResponderPanel : NSPanel
+{
+	MacOSBOOL				mbinZoom;
+}
+- (void)dealloc;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
+- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
+- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
+- (void)windowDidMove:(NSNotification *)notification;
+- (void)windowDidResize:(NSNotification *)notification;
+- (void)windowWillClose:(NSNotification *)notification;
+- (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame;
+- (void)zoom:(id)aObject;
+@end
+
+@interface NonRecursiveResponderWebPanel : NonRecursiveResponderPanel
 {
 	NSButton*				mpbackButton;
 	NSView*					mpbottomView;
 	NSView*					mpcontentView;
 	NSButton*				mpcancelButton;
-	MacOSBOOL				mbinZoom;
 	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
 	NSString*				mpuserAgent;
@@ -110,10 +120,6 @@
 - (void)createWebView:(NSURLRequest *)pRequest;
 - (void)dealloc;
 - (id)initWithUserAgent:(NSString *)pUserAgent;
-- (MacOSBOOL)isInZoom;
-- (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
 - (NeoMobileWebView *)webView;
-- (NSRect)windowWillUseStandardFrame:(NSWindow *)pWindow defaultFrame:(NSRect)aFrame;
-- (void)zoom:(id)aObject;
 @end
 
