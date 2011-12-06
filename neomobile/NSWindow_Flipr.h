@@ -31,6 +31,7 @@
  *
  *************************************************************************/
 
+// Redefine class name to avoid namespace conflict with the iMedia browser
 #define NSWindow_Flipr NeoMobileFlipperWindow
 
 #include "premac.h"
