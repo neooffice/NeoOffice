@@ -46,6 +46,9 @@
 #define NSDownloadsDirectory ((NSSearchPathDirectory)15)
 #endif
 
+// Uncomment the following line to enable the native login window
+// #define USE_NATIVE_LOGIN_WINDOW
+
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
 #define kNMMaxInZoomHeight 310
@@ -733,15 +736,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
 		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
 
-#ifdef USE_FLIPPED_WINDOW
+#ifdef USE_NATIVE_LOGIN_WINDOW
 	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:[pRequest HTTPMethod]] )
 	{
-		NonRecursiveResponderPanel *pFlipPanel = [[NonRecursiveResponderPanel alloc] initWithContentRect:NSMakeRect( 0, 0, 1, 1 ) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
-		[pFlipPanel setFloatingPanel:YES];
-		[pFlipPanel setFrame:[mpPanel frame] display:NO];
-		[mpPanel flipToShowWindow:pFlipPanel forward:YES];
+		NonRecursiveResponderLoginPanel *pLoginPanel = [[NonRecursiveResponderLoginPanel alloc] initWithWebPanel:mpPanel];
+		[mpPanel flipToShowWindow:pLoginPanel forward:YES];
 	}
-#endif	// USE_FLIPPED_WINDOW
+#endif	// USE_NATIVE_LOGIN_WINDOW
 
 	return pRequest;
 }
@@ -985,29 +986,16 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 @implementation NonRecursiveResponderPanel
 
-- (void)dealloc
-{
-	[self setContentView:nil];
-
-	[super dealloc];
-}
-
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation
 {
 	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation];
-
-	mbinZoom = NO;
+	[self setFloatingPanel:YES];
+	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 0)];
+	[self setBackgroundColor:[NSColor whiteColor]];
+	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	[self setDelegate:self];
 
-	return self;
-}
-
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen
-{
-	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation screen:pScreen];
-
 	mbinZoom = NO;
-	[self setDelegate:self];
 
 	return self;
 }
@@ -1215,6 +1203,8 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 - (void)dealloc
 {
+	[self setContentView:nil];
+
 	if ( mpbackButton )
 		[mpbackButton release];
 	
@@ -1245,15 +1235,13 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 - (id)initWithUserAgent:(NSString *)pUserAgent
 {
 	[super initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
-	[self setFloatingPanel:YES];
-	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 0)];
-	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	
 	mpuserAgent = pUserAgent;
 	if ( mpuserAgent )
 		[mpuserAgent retain];
 
-	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight)];
+	NSSize contentSize=[self contentRectForFrameRect:[self frame]].size;
+	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect( 0, 0, contentSize.width, contentSize.height )];
 	[mpcontentView setAutoresizesSubviews:YES];
 	
 	NSSize buttonSize = NSMakeSize( 30, 30 );
@@ -1356,6 +1344,32 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 - (NeoMobileWebView *)webView
 {
 	return mpwebView;
+}
+
+@end
+
+@implementation NonRecursiveResponderLoginPanel
+
+- (void)dealloc
+{
+	[self setContentView:nil];
+
+	if ( mpcontentView )
+		[mpcontentView release];
+
+	[super dealloc];
+}
+
+- (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel
+{
+	[super initWithContentRect:[pWebPanel frame] styleMask:[pWebPanel styleMask] backing:NSBackingStoreBuffered defer:YES];
+
+	NSSize contentSize=[self contentRectForFrameRect:[self frame]].size;
+	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect( 0, 0, contentSize.width, contentSize.height )];
+	[mpcontentView setAutoresizesSubviews:YES];
+	[self setContentView:mpcontentView];
+
+	return self;
 }
 
 @end

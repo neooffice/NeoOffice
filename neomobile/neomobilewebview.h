@@ -95,9 +95,7 @@
 {
 	MacOSBOOL				mbinZoom;
 }
-- (void)dealloc;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
-- (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation screen:(NSScreen *)pScreen;
 - (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
 - (void)windowDidMove:(NSNotification *)notification;
 - (void)windowDidResize:(NSNotification *)notification;
@@ -123,3 +121,11 @@
 - (NeoMobileWebView *)webView;
 @end
 
+@interface NonRecursiveResponderLoginPanel : NonRecursiveResponderPanel
+{
+	NonRecursiveResponderWebPanel*	mpWebPanel;
+	NSView*					mpcontentView;
+}
+- (void)dealloc;
+- (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel;
+@end
