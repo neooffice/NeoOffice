@@ -49,6 +49,8 @@
 #define NEOMOBILEERROR "error"
 #define NEOMOBILEEXPORTINGFILE "exporting.file"
 #define NEOMOBILELOADING "loading"
+#define NEOMOBILELOGIN "login"
+#define NEOMOBILELOGINTITLE "login.title"
 #define NEOMOBILEPRODUCTNAME "product.name"
 #define NEOMOBILEUPLOAD "upload"
 #define NEOMOBILEUPLOADCONTINUE "upload.continue"

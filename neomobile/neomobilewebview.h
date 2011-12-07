@@ -87,8 +87,8 @@
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error;
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener;
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener;
-- (void)backButtonPressed;
-- (void)cancelButtonPressed;
+- (IBAction)backButtonPressed;
+- (IBAction)cancelButtonPressed;
 @end
 
 @interface NonRecursiveResponderPanel : NSPanel
@@ -117,15 +117,8 @@
 }
 - (void)createWebView:(NSURLRequest *)pRequest;
 - (void)dealloc;
+- (void)dismissLoginPanel;
 - (id)initWithUserAgent:(NSString *)pUserAgent;
+- (void)showLoginPanel;
 - (NeoMobileWebView *)webView;
-@end
-
-@interface NonRecursiveResponderLoginPanel : NonRecursiveResponderPanel
-{
-	NonRecursiveResponderWebPanel*	mpWebPanel;
-	NSView*					mpcontentView;
-}
-- (void)dealloc;
-- (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel;
 @end

@@ -106,6 +106,21 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
+@interface NonRecursiveResponderLoginPanel : NonRecursiveResponderPanel
+{
+	NonRecursiveResponderWebPanel*	mpWebPanel;
+	NSView*					mpcontentView;
+	NSButton*				mploginButton;
+	NSSecureTextField*		mppasswordEdit;
+	NSText*					mptitleLabel;
+	NSView*					mptitleView;
+	NSTextField*			mpusernameEdit;
+}
+- (void)dealloc;
+- (IBAction)doLogin;
+- (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel;
+@end
+
 @interface NeoMobileStatusBarView : NSView
 - (void)drawRect:(NSRect)dirtyRect;
 @end
@@ -330,7 +345,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	return self;
 }
 
-- (void)backButtonPressed
+- (IBAction)backButtonPressed
 {
 #ifdef DEBUG
 	fprintf(stderr, "NeoMobile Back Button Clicked\n");
@@ -339,10 +354,10 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ([self canGoBack])
 		[self goBack];
 	else
-		[self loadURI:@""];
+		[self loadURI:kOpenURI];
 }
 
-- (void)cancelButtonPressed
+- (IBAction)cancelButtonPressed
 {
 #ifdef DEBUG
 	fprintf(stderr, "NeoMobile Cancel Button Clicked\n");
@@ -352,7 +367,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)loadURI:(NSString *)pURI
 {
-	if ( !pURI )
+	if ( !pURI || [pURI isEqualToString:@"/"] )
 		pURI = @"";
 
 	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
@@ -736,13 +751,8 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
 		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
 
-#ifdef USE_NATIVE_LOGIN_WINDOW
 	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:[pRequest HTTPMethod]] )
-	{
-		NonRecursiveResponderLoginPanel *pLoginPanel = [[NonRecursiveResponderLoginPanel alloc] initWithWebPanel:mpPanel];
-		[mpPanel flipToShowWindow:pLoginPanel forward:YES];
-	}
-#endif	// USE_NATIVE_LOGIN_WINDOW
+		[mpPanel showLoginPanel];
 
 	return pRequest;
 }
@@ -991,7 +1001,6 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation];
 	[self setFloatingPanel:YES];
 	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 0)];
-	[self setBackgroundColor:[NSColor whiteColor]];
 	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	[self setDelegate:self];
 
@@ -1175,6 +1184,8 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 - (NSRect)_growBoxRect;
 @end
 
+static NonRecursiveResponderLoginPanel* sharedLoginPanel = nil;
+
 @implementation NonRecursiveResponderWebPanel
 
 - (void)createWebView:(NSURLRequest *)pRequest
@@ -1232,6 +1243,14 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[super dealloc];
 }
 
+- (void)dismissLoginPanel
+{
+#ifdef USE_NATIVE_LOGIN_WINDOW
+	if ( sharedLoginPanel )
+		[sharedLoginPanel flipToShowWindow:self forward:NO];
+#endif	// USE_NATIVE_LOGIN_WINDOW
+}
+
 - (id)initWithUserAgent:(NSString *)pUserAgent
 {
 	[super initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
@@ -1240,14 +1259,16 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	if ( mpuserAgent )
 		[mpuserAgent retain];
 
-	NSSize contentSize=[self contentRectForFrameRect:[self frame]].size;
-	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect( 0, 0, contentSize.width, contentSize.height )];
+	mpcontentView=[[NSView alloc] initWithFrame:[[self contentView] frame]];
 	[mpcontentView setAutoresizesSubviews:YES];
 	
+	NSSize contentSize=[mpcontentView bounds].size;
 	NSSize buttonSize = NSMakeSize( 30, 30 );
 	NSImage *backImage = [[NSImage alloc] initWithSize:buttonSize];
-	[backImage autorelease];
 	NSImage *cancelImage = [[NSImage alloc] initWithSize:buttonSize];
+
+	// Autorelease images as they will be retained by their respective buttons
+	[backImage autorelease];
 	[cancelImage autorelease];
 
 	NSView *focusView = [NSView focusView];
@@ -1289,7 +1310,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 		growBoxSize=[self _growBoxRect].size;
 	growBoxSize.width /= 2;
 
-	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(kNMDefaultBrowserWidth-buttonSize.width-MAX(kNMBottomViewPadding, growBoxSize.width), kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-MAX(kNMBottomViewPadding, growBoxSize.width), kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpcancelButton setToolTip:GetLocalizedString(NEOMOBILECANCEL)];
 	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
@@ -1323,9 +1344,9 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 	NSFont *statusLabelFont=[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:16];
 	[mpstatusLabel setFont:statusLabelFont];
-	[mpstatusLabel setFrameOrigin:NSMakePoint([mpstatusLabel frame].origin.x, [mpstatusLabel frame].origin.y+([statusLabelFont ascender]-[statusLabelFont descender]+[statusLabelFont leading]-[mpstatusLabel frame].size.height)/2)];
+	[mpstatusLabel setFrameSize:NSMakeSize([mpstatusLabel frame].size.width, [mpstatusLabel frame].size.height-(([mpstatusLabel frame].size.height-[statusLabelFont pointSize])/4))];
 
-	mpbottomView=[[NeoMobileStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, kNMDefaultBrowserWidth, maxButtonHeight+(kNMBottomViewPadding*2))];
+	mpbottomView=[[NeoMobileStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, maxButtonHeight+(kNMBottomViewPadding*2))];
 	[mpbottomView setAutoresizesSubviews:YES];
 	[mpbottomView setAutoresizingMask:(NSViewWidthSizable)];
 	
@@ -1341,9 +1362,36 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	return self;
 }
 
+- (void)showLoginPanel
+{
+#ifdef USE_NATIVE_LOGIN_WINDOW
+	if ( !sharedLoginPanel )
+		sharedLoginPanel = [[NonRecursiveResponderLoginPanel alloc] initWithWebPanel:self];
+
+	if ( sharedLoginPanel )
+		[self flipToShowWindow:sharedLoginPanel forward:YES];
+#endif	// USE_NATIVE_LOGIN_WINDOW
+}
+
 - (NeoMobileWebView *)webView
 {
 	return mpwebView;
+}
+
+@end
+
+@interface NeoMobileLoginTitleView : NSView
+- (void)drawRect:(NSRect)dirtyRect;
+@end
+
+@implementation NeoMobileLoginTitleView
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+	[super drawRect:dirtyRect];
+
+	NSGradient *pGradient = [[NSGradient alloc] initWithColors:[NSArray arrayWithObjects:[NSColor blackColor], [NSColor darkGrayColor], nil]];
+	[pGradient drawInRect:[self bounds] angle:90];
 }
 
 @end
@@ -1354,20 +1402,115 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 {
 	[self setContentView:nil];
 
+	if ( mpWebPanel )
+		[mpWebPanel release];
+
 	if ( mpcontentView )
 		[mpcontentView release];
 
+	if ( mploginButton )
+		[mploginButton release];
+
+	if ( mptitleLabel )
+		[mptitleLabel release];
+
+	if ( mptitleView )
+		[mptitleView release];
+
 	[super dealloc];
+}
+
+- (IBAction)doLogin
+{
+	// Dismiss our panel
+	[mpWebPanel dismissLoginPanel];
+
+	// Have web view perform a post request
+	NeoMobileWebView *webView = [mpWebPanel webView];
+	if ( !webView )
+		return;
+
+	NSURL *pBaseURL = [NSURL URLWithString:[NeoMobileWebView neoMobileURL]];
+	if (!pBaseURL)
+		return;
+
+	NSURL *pURL = [NSURL URLWithString:(NSString *)kLoginURI relativeToURL:pBaseURL];
+	if (!pURL)
+		return;
+
+	NSMutableURLRequest *pURLRequest = [NSMutableURLRequest requestWithURL:pURL];
+	if (!pURLRequest)
+		return;
+
+	[pURLRequest setHTTPMethod:@"POST"];
+
+	NSData *postData=[[NSString stringWithFormat:@"data[User][username]=%@&data[User][password]=%@", [[mpusernameEdit stringValue] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding], [[mppasswordEdit stringValue] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]] dataUsingEncoding:NSUTF8StringEncoding];
+	
+	[pURLRequest setValue:[NSString stringWithFormat:@"%d", [postData length]] forHTTPHeaderField:@"Content-Length"];
+	[pURLRequest setValue:@"application/x-www-form-urlencoded" forHTTPHeaderField:@"Content-Type"];
+	[pURLRequest setHTTPBody:postData];
+	
+	[[webView mainFrame] loadRequest:pURLRequest];
 }
 
 - (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel
 {
 	[super initWithContentRect:[pWebPanel frame] styleMask:[pWebPanel styleMask] backing:NSBackingStoreBuffered defer:YES];
+	[self setBackgroundColor:[NSColor whiteColor]];
 
-	NSSize contentSize=[self contentRectForFrameRect:[self frame]].size;
-	mpcontentView=[[NSView alloc] initWithFrame:NSMakeRect( 0, 0, contentSize.width, contentSize.height )];
+	mpWebPanel = pWebPanel;
+	[mpWebPanel retain];
+
+	mpcontentView=[[NSView alloc] initWithFrame:[[self contentView] frame]];
 	[mpcontentView setAutoresizesSubviews:YES];
+
+	NSSize contentSize=[mpcontentView bounds].size;
+	float buttonHeight=75;
+	float textHeight=50;
+
+	mptitleView=[[NeoMobileLoginTitleView alloc] initWithFrame:NSMakeRect(0, contentSize.height-textHeight, contentSize.width, textHeight)];
+	[mptitleView setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
+
+	mptitleLabel=[[NSText alloc] initWithFrame:[mptitleView bounds]];
+	[mptitleLabel setEditable:NO];
+	[mptitleLabel setString:GetLocalizedString(NEOMOBILELOGINTITLE)];
+	[mptitleLabel setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
+	[mptitleLabel setAlignment:NSCenterTextAlignment];
+	[mptitleLabel setDrawsBackground:NO];
+	[mptitleLabel setTextColor:[NSColor whiteColor]];
+
+	NSFont *titleLabelFont=[[NSFontManager sharedFontManager] convertFont:[mptitleLabel font] toSize:30];
+	titleLabelFont=[[NSFontManager sharedFontManager] convertFont:titleLabelFont toHaveTrait:NSBoldFontMask];
+	[mptitleLabel setFont:titleLabelFont];
+	[mptitleLabel setFrameSize:NSMakeSize([mptitleLabel frame].size.width, [mptitleLabel frame].size.height-(([mptitleLabel frame].size.height-[titleLabelFont pointSize])/4))];
+	[mptitleView addSubview:mptitleLabel];
+
+	mpusernameEdit = [[NSTextField alloc] initWithFrame:NSMakeRect(kNMBottomViewPadding, [mptitleView frame].origin.y-textHeight-kNMBottomViewPadding, contentSize.width-(kNMBottomViewPadding*2), textHeight)];
+	[mpusernameEdit setEditable:YES];
+
+	mppasswordEdit = [[NSSecureTextField alloc] initWithFrame:NSMakeRect(kNMBottomViewPadding, [mpusernameEdit frame].origin.y-textHeight-kNMBottomViewPadding, contentSize.width-(kNMBottomViewPadding*2), textHeight)];
+	[mppasswordEdit setEditable:YES];
+
+	mploginButton = [[NSButton alloc] initWithFrame:NSMakeRect(kNMBottomViewPadding, [mppasswordEdit frame].origin.y-buttonHeight-kNMBottomViewPadding, contentSize.width-(kNMBottomViewPadding*2), buttonHeight)];
+	[mploginButton setTitle:GetLocalizedString(NEOMOBILELOGIN)];
+	[mploginButton setEnabled:YES];
+	[mploginButton setButtonType:NSMomentaryPushInButton];
+	[mploginButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mploginButton setImagePosition:NSNoImage];
+	[mploginButton setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
+
+	NSFont *loginButtonFont=[[NSFontManager sharedFontManager] convertFont:[mploginButton font] toSize:18];
+	loginButtonFont=[[NSFontManager sharedFontManager] convertFont:loginButtonFont toHaveTrait:NSBoldFontMask];
+	[mploginButton setFont:loginButtonFont];
+	[mploginButton setTarget:self];
+	[mploginButton setAction:@selector(doLogin)];
+
+	[mpcontentView addSubview:mpusernameEdit];
+	[mpcontentView addSubview:mppasswordEdit];
+	[mpcontentView addSubview:mptitleView];
+	[mpcontentView addSubview:mploginButton];
 	[self setContentView:mpcontentView];
+	[self setDefaultButtonCell:[mploginButton cell]];
 
 	return self;
 }

@@ -44,6 +44,16 @@ using namespace com::sun::star::lang;
 using namespace rtl;
 
 /**
+ * Translated strings for de locale
+ */
+static const sal_Char *pEntries_de[] = {
+	NEOMOBILEBACK, "Zurück",
+	NEOMOBILECANCEL, "Abbrechen",
+	NEOMOBILELOGIN, "Anmelden",
+	nil, nil
+};
+
+/**
  * Translated strings for en_US locale
  */
 static const sal_Char *pEntries_en_US[] = {
@@ -55,6 +65,8 @@ static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exporting file…",
 	NEOMOBILELOADING, "Loading…",
+	NEOMOBILELOGIN, "Login",
+	NEOMOBILELOGINTITLE, "NeoOffice Mobile Login",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILEUPLOADCONTINUE, "Do you still want to upload this document?",
 	NEOMOBILEUPLOADINGFILE, "Uploading file…",
@@ -74,6 +86,7 @@ static const sal_Char *pEntries_es[] = {
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exportando archivo…",
 	NEOMOBILELOADING, "Cargando…",
+	NEOMOBILELOGIN, "Iniciar sesión",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Móvil",
 	NEOMOBILEUPLOADINGFILE, "Subiendo archivo…",
 	nil, nil
@@ -91,6 +104,8 @@ static const sal_Char *pEntries_fr[] = {
 	NEOMOBILEERROR, "Erreur :",
 	NEOMOBILEEXPORTINGFILE, "Exportation du fichier…",
 	NEOMOBILELOADING, "Chargement…",
+	NEOMOBILELOGIN, "Connexion",
+	NEOMOBILELOGINTITLE, "NeoOffice Mobile Connexion",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILEUPLOADCONTINUE, "Souhaitez-vous quand-même envoyer ce document vers le serveur ?",
 	NEOMOBILEUPLOADPASSWORDPROTECTED, "Ce fichier sera enregistré sur le serveur sans protection par mot de passe",
@@ -209,6 +224,7 @@ NSString *GetLocalizedString( const sal_Char *key )
 	if ( !aLocalizationMap.size() )
 	{
 		// Initialize dictionaries
+		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "de" ) ), OUString(), OUString() ) ), pEntries_de );
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "en" ) ), OUString( RTL_CONSTASCII_USTRINGPARAM( "US" ) ), OUString() ) ), pEntries_en_US );
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "es" ) ), OUString(), OUString() ) ), pEntries_es );
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "fr" ) ), OUString(), OUString() ) ), pEntries_fr );
