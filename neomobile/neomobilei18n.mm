@@ -50,6 +50,8 @@ static const sal_Char *pEntries_de[] = {
 	NEOMOBILEBACK, "Zurück",
 	NEOMOBILECANCEL, "Abbrechen",
 	NEOMOBILELOGIN, "Anmelden",
+	NEOMOBILEPASSWORD, "Passwort:",
+	NEOMOBILEUSERNAME, "Benutzername:",
 	nil, nil
 };
 
@@ -67,11 +69,13 @@ static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILELOADING, "Loading…",
 	NEOMOBILELOGIN, "Login",
 	NEOMOBILELOGINTITLE, "NeoOffice Mobile Login",
+	NEOMOBILEPASSWORD, "Password:",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILEUPLOADCONTINUE, "Do you still want to upload this document?",
 	NEOMOBILEUPLOADINGFILE, "Uploading file…",
 	NEOMOBILEUPLOADPASSWORDPROTECTED, "This document will be uploaded without any password protection",
 	NEOMOBILEUPLOAD, "Upload",
+	NEOMOBILEUSERNAME, "User name:",
 	nil, nil
 };
 
@@ -106,11 +110,13 @@ static const sal_Char *pEntries_fr[] = {
 	NEOMOBILELOADING, "Chargement…",
 	NEOMOBILELOGIN, "Connexion",
 	NEOMOBILELOGINTITLE, "NeoOffice Mobile Connexion",
+	NEOMOBILEPASSWORD, "Mot de passe :",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILEUPLOADCONTINUE, "Souhaitez-vous quand-même envoyer ce document vers le serveur ?",
 	NEOMOBILEUPLOADPASSWORDPROTECTED, "Ce fichier sera enregistré sur le serveur sans protection par mot de passe",
 	NEOMOBILEUPLOADINGFILE, "Envoi du fichier vers le serveur…",
 	NEOMOBILEUPLOAD, "Envoyer",
+	NEOMOBILEUSERNAME, "Nom d'utilisateur :",
 	nil, nil
 };
 

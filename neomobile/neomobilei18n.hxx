@@ -51,11 +51,13 @@
 #define NEOMOBILELOADING "loading"
 #define NEOMOBILELOGIN "login"
 #define NEOMOBILELOGINTITLE "login.title"
+#define NEOMOBILEPASSWORD "password"
 #define NEOMOBILEPRODUCTNAME "product.name"
 #define NEOMOBILEUPLOAD "upload"
 #define NEOMOBILEUPLOADCONTINUE "upload.continue"
 #define NEOMOBILEUPLOADINGFILE "uploading.file"
 #define NEOMOBILEUPLOADPASSWORDPROTECTED "upload.password.protected"
+#define NEOMOBILEUSERNAME "username"
 
 /**
  * Returns the application's locale.
