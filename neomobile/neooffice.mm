@@ -338,6 +338,15 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
+	// Have Mac OS X open the about URL
+	NSURL *pURL = [NSURL URLWithString:kAboutURL];
+	if ( pURL )
+	{
+		NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+		if ( pWorkspace )
+			[pWorkspace openURL:pURL];
+	}
+
 	// Display about webpage in the default web browser
 	[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:kAboutURL, nil]];
 

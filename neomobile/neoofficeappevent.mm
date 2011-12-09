@@ -69,7 +69,7 @@ using namespace com::sun::star::uno;
 using namespace org::neooffice;
 using namespace vos;
 
-bool IsRunningInNeoOffice()
+static bool IsRunningInNeoOffice()
 {
 	// Locate libvcl and invoke the ShowOnlyMenusForWindow function
 	if ( !pShowOnlyMenusForWindow )

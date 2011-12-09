@@ -47,7 +47,7 @@
 #endif
 
 // Uncomment the following line to enable the native login window
-// #define USE_NATIVE_LOGIN_WINDOW
+#define USE_NATIVE_LOGIN_WINDOW
 
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
@@ -56,10 +56,10 @@
 #define kNMLoginPanelPadding 20
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
+static const NSString *kCreateAccountURI = @"/signup/planselection";
 static const NSString *kDownloadURI = @"/neofiles/download";
+static const NSString *kForgotPasswordURI = @"/users/forgotpassword";
 static const NSString *kLoginURI = @"/users/login";
-
-using namespace rtl;
 
 static const NSString *pDevelopmentBaseURLs[] = {
 	@"http://localhost/"
@@ -89,6 +89,8 @@ static const NSString *pProductionBaseURLs[] = {
 };
 #endif	// !TEST
 
+using namespace rtl;
+
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
  * set the JavaScript prompt dialog to have no title like the other JavaScript
@@ -107,47 +109,54 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
-static void CenterTextInNSText( NSText *pText )
+static void CenterTextInTextView( NSText *pTextView )
 {
-	if ( pText )
+	if ( pTextView )
 	{
-		NSFont *pFont = [pText font];
+		NSFont *pFont = [pTextView font];
 		if ( pFont )
 		{
 			// Count the descender twice as the descender is used as the
 			// padding for the first line
-			NSRect aFrame = [pText frame];
+			NSRect aFrame = [pTextView frame];
 			aFrame.size.height -= ( aFrame.size.height - [pFont ascender] - fabs( [pFont descender] * 2 ) ) / 2;
-			[pText setFrame:aFrame];
+			[pTextView setFrame:aFrame];
 		}
 	}
 }
 
-static void AdjustBottomOfNSTextFieldToBottomOfFirstLine( NSTextField *pTextField )
+static void AdjustBottomOfControlToTextHeight( NSControl *pControl )
 {
-	if ( pTextField )
+	if ( pControl )
 	{
-		NSRect aFrame = [pTextField frame];
-		float fHeightAdjustment = aFrame.size.height-[[pTextField cell] cellSize].height;
+		NSRect aFrame = [pControl frame];
+		float fHeightAdjustment = aFrame.size.height-[[pControl cell] cellSize].height;
 		aFrame.origin.y += fHeightAdjustment;
 		aFrame.size.height -= fHeightAdjustment;
-		[pTextField setFrame:aFrame];
+		[pControl setFrame:aFrame];
 	}
 }
 
 @interface NonRecursiveResponderLoginPanel : NonRecursiveResponderPanel
 {
 	NonRecursiveResponderWebPanel*	mpWebPanel;
+	NSButton*				mpaboutButton;
 	NSView*					mpcontentView;
+	NSButton*				mpcreateAccountButton;
+	NSButton*				mpforgotPasswordButton;
 	NSButton*				mploginButton;
 	NSSecureTextField*		mppasswordEdit;
 	NSText*					mppasswordLabel;
+	NSButton*				mpsavePasswordButton;
 	NSText*					mptitleLabel;
 	NSView*					mptitleView;
 	NSTextField*			mpusernameEdit;
 	NSText*					mpusernameLabel;
 }
 - (void)dealloc;
+- (IBAction)doAbout;
+- (IBAction)doCreateAccount;
+- (IBAction)doForgotPassword;
 - (IBAction)doLogin;
 - (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel;
 @end
@@ -1381,7 +1390,7 @@ static NonRecursiveResponderLoginPanel* sharedLoginPanel = nil;
 
 	NSFont *statusLabelFont=[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:16];
 	[mpstatusLabel setFont:statusLabelFont];
-	CenterTextInNSText(mpstatusLabel);
+	CenterTextInTextView(mpstatusLabel);
 
 	mpbottomView=[[NeoMobileStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, maxButtonHeight+(kNMBottomViewPadding*2))];
 	[mpbottomView setAutoresizesSubviews:YES];
@@ -1467,6 +1476,9 @@ static NonRecursiveResponderLoginPanel* sharedLoginPanel = nil;
 	if ( mppasswordLabel )
 		[mppasswordLabel release];
 
+	if ( mpsavePasswordButton )
+		[mpsavePasswordButton release];
+
 	if ( mptitleLabel )
 		[mptitleLabel release];
 
@@ -1480,6 +1492,40 @@ static NonRecursiveResponderLoginPanel* sharedLoginPanel = nil;
 		[mpusernameLabel release];
 
 	[super dealloc];
+}
+
+- (IBAction)doAbout
+{
+	// Have Mac OS X open the about URL
+	NSURL *pURL = [NSURL URLWithString:kAboutURL];
+	if ( pURL )
+	{
+		NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
+		if ( pWorkspace )
+			[pWorkspace openURL:pURL];
+	}
+}
+
+- (IBAction)doCreateAccount
+{
+	// Dismiss our panel
+	[mpWebPanel dismissLoginPanel];
+
+	// Have web view load URI
+	NeoMobileWebView *webView = [mpWebPanel webView];
+	if ( webView )
+		[webView loadURI:kCreateAccountURI];
+}
+
+- (IBAction)doForgotPassword
+{
+	// Dismiss our panel
+	[mpWebPanel dismissLoginPanel];
+
+	// Have web view load URI
+	NeoMobileWebView *webView = [mpWebPanel webView];
+	if ( webView )
+		[webView loadURI:kForgotPasswordURI];
 }
 
 - (IBAction)doLogin
@@ -1528,6 +1574,7 @@ static NonRecursiveResponderLoginPanel* sharedLoginPanel = nil;
 
 	NSSize contentSize=[mpcontentView bounds].size;
 	float defaultHeight=50;
+	float verticalCenterLine=kNMDefaultBrowserWidth*0.5;
 
 	mptitleView=[[NeoMobileLoginTitleView alloc] initWithFrame:NSMakeRect(0, contentSize.height-defaultHeight, contentSize.width, defaultHeight)];
 	[mptitleView setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
@@ -1543,43 +1590,53 @@ static NonRecursiveResponderLoginPanel* sharedLoginPanel = nil;
 	NSFont *titleLabelFont=[[NSFontManager sharedFontManager] convertFont:[mptitleLabel font] toSize:30];
 	titleLabelFont=[[NSFontManager sharedFontManager] convertFont:titleLabelFont toHaveTrait:NSBoldFontMask];
 	[mptitleLabel setFont:titleLabelFont];
-	CenterTextInNSText(mptitleLabel);
+	CenterTextInTextView(mptitleLabel);
 
 	[mptitleView addSubview:mptitleLabel];
 
-	mpusernameEdit=[[NSTextField alloc] initWithFrame:NSMakeRect((kNMDefaultBrowserWidth/2)+kNMLoginPanelPadding, [mptitleView frame].origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-(kNMDefaultBrowserWidth/2)-(kNMLoginPanelPadding*2), defaultHeight)];
+	mpusernameEdit=[[NSTextField alloc] initWithFrame:NSMakeRect(verticalCenterLine+kNMLoginPanelPadding, [mptitleView frame].origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-verticalCenterLine-(kNMLoginPanelPadding*2), defaultHeight)];
 	[mpusernameEdit setEditable:YES];
 	[mpusernameEdit setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
 
 	NSFont *usernameEditFont=[[NSFontManager sharedFontManager] convertFont:[mpusernameEdit font] toSize:18];
 	usernameEditFont=[[NSFontManager sharedFontManager] convertFont:usernameEditFont toHaveTrait:NSBoldFontMask];
 	[mpusernameEdit setFont:usernameEditFont];
-	AdjustBottomOfNSTextFieldToBottomOfFirstLine(mpusernameEdit);
+	AdjustBottomOfControlToTextHeight(mpusernameEdit);
 
 	NSRect usernameEditFrame=[mpusernameEdit frame];
-	mpusernameLabel=[[NSText alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding, usernameEditFrame.origin.y, (kNMDefaultBrowserWidth/2)-kNMLoginPanelPadding, usernameEditFrame.size.height)];
+	mpusernameLabel=[[NSText alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding, usernameEditFrame.origin.y, verticalCenterLine-kNMLoginPanelPadding, usernameEditFrame.size.height)];
 	[mpusernameLabel setEditable:NO];
 	[mpusernameLabel setString:GetLocalizedString(NEOMOBILEUSERNAME)];
 	[mpusernameLabel setAutoresizingMask:NSViewMinYMargin];
-	[mpusernameLabel setFont:[mpusernameEdit font]];
+	[mpusernameLabel setFont:usernameEditFont];
 	[mpusernameLabel setDrawsBackground:NO];
-	CenterTextInNSText(mpusernameLabel);
+	CenterTextInTextView(mpusernameLabel);
 
 	mppasswordEdit=[[NSSecureTextField alloc] initWithFrame:NSMakeRect(usernameEditFrame.origin.x, usernameEditFrame.origin.y-usernameEditFrame.size.height-kNMLoginPanelPadding, usernameEditFrame.size.width, usernameEditFrame.size.height)];
 	[mppasswordEdit setEditable:YES];
 	[mppasswordEdit setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
-	[mppasswordEdit setFont:[mpusernameEdit font]];
+	[mppasswordEdit setFont:usernameEditFont];
 
 	NSRect passwordEditFrame=[mppasswordEdit frame];
-	mppasswordLabel=[[NSText alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding, passwordEditFrame.origin.y, (kNMDefaultBrowserWidth/2)-kNMLoginPanelPadding, passwordEditFrame.size.height)];
+	mppasswordLabel=[[NSText alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding, passwordEditFrame.origin.y, verticalCenterLine-kNMLoginPanelPadding, passwordEditFrame.size.height)];
 	[mppasswordLabel setEditable:NO];
 	[mppasswordLabel setString:GetLocalizedString(NEOMOBILEPASSWORD)];
 	[mppasswordLabel setAutoresizingMask:NSViewMinYMargin];
-	[mppasswordLabel setFont:[mppasswordEdit font]];
+	[mppasswordLabel setFont:usernameEditFont];
 	[mppasswordLabel setDrawsBackground:NO];
-	CenterTextInNSText(mppasswordLabel);
+	CenterTextInTextView(mppasswordLabel);
 
-	mploginButton = [[NSButton alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding, passwordEditFrame.origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-(kNMLoginPanelPadding*2), defaultHeight)];
+	mpsavePasswordButton=[[NSButton alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding*2, passwordEditFrame.origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-(kNMLoginPanelPadding*4), defaultHeight)];
+	[mpsavePasswordButton setTitle:GetLocalizedString(NEOMOBILESAVEPASSWORD)];
+	[mpsavePasswordButton setEnabled:YES];
+	[mpsavePasswordButton setButtonType:NSSwitchButton];
+	[mploginButton setImagePosition:NSNoImage];
+	[mpsavePasswordButton setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
+	[mpsavePasswordButton setFont:usernameEditFont];
+	AdjustBottomOfControlToTextHeight(mpsavePasswordButton);
+
+	NSRect savePasswordButtonFrame=[mpsavePasswordButton frame];
+	mploginButton=[[NSButton alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding, savePasswordButtonFrame.origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-(kNMLoginPanelPadding*2), defaultHeight)];
 	[mploginButton setTitle:GetLocalizedString(NEOMOBILELOGIN)];
 	[mploginButton setEnabled:YES];
 	[mploginButton setButtonType:NSMomentaryPushInButton];
@@ -1593,18 +1650,62 @@ static NonRecursiveResponderLoginPanel* sharedLoginPanel = nil;
 	[mploginButton setTarget:self];
 	[mploginButton setAction:@selector(doLogin)];
 
+	NSRect loginButtonFrame=[mploginButton frame];
+	mpcreateAccountButton=[[NSButton alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding*2, loginButtonFrame.origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-(kNMLoginPanelPadding*4), defaultHeight)];
+	[mpcreateAccountButton setTitle:GetLocalizedString(NEOMOBILECREATEACCOUNT)];
+	[mpcreateAccountButton setEnabled:YES];
+	[mpcreateAccountButton setButtonType:NSMomentaryPushInButton];
+	[mpcreateAccountButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mpcreateAccountButton setImagePosition:NSNoImage];
+	[mpcreateAccountButton setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
+	[mpcreateAccountButton setFont:loginButtonFont];
+	[mpcreateAccountButton setTarget:self];
+	[mpcreateAccountButton setAction:@selector(doCreateAccount)];
+
+	NSRect createAccountButtonFrame=[mpcreateAccountButton frame];
+	mpforgotPasswordButton=[[NSButton alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding*2, createAccountButtonFrame.origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-(kNMLoginPanelPadding*4), defaultHeight)];
+	[mpforgotPasswordButton setTitle:GetLocalizedString(NEOMOBILEFORGOTPASSWORD)];
+	[mpforgotPasswordButton setEnabled:YES];
+	[mpforgotPasswordButton setButtonType:NSMomentaryPushInButton];
+	[mpforgotPasswordButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mpforgotPasswordButton setImagePosition:NSNoImage];
+	[mpforgotPasswordButton setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
+	[mpforgotPasswordButton setFont:loginButtonFont];
+	[mpforgotPasswordButton setTarget:self];
+	[mpforgotPasswordButton setAction:@selector(doForgotPassword)];
+
+	NSRect forgotPasswordButtonFrame=[mpforgotPasswordButton frame];
+	mpaboutButton=[[NSButton alloc] initWithFrame:NSMakeRect(kNMLoginPanelPadding*2, forgotPasswordButtonFrame.origin.y-defaultHeight-kNMLoginPanelPadding, contentSize.width-(kNMLoginPanelPadding*4), defaultHeight)];
+	[mpaboutButton setTitle:GetLocalizedString(NEOMOBILEABOUT)];
+	[mpaboutButton setEnabled:YES];
+	[mpaboutButton setButtonType:NSMomentaryPushInButton];
+	[mpaboutButton setBezelStyle:NSRegularSquareBezelStyle];
+	[mpaboutButton setImagePosition:NSNoImage];
+	[mpaboutButton setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
+	[mpaboutButton setFont:loginButtonFont];
+	[mpaboutButton setTarget:self];
+	[mpaboutButton setAction:@selector(doAbout)];
+
+	[mpcontentView addSubview:mptitleView];
 	[mpcontentView addSubview:mpusernameEdit];
 	[mpcontentView addSubview:mpusernameLabel];
 	[mpcontentView addSubview:mppasswordEdit];
 	[mpcontentView addSubview:mppasswordLabel];
-	[mpcontentView addSubview:mptitleView];
+	[mpcontentView addSubview:mpsavePasswordButton];
 	[mpcontentView addSubview:mploginButton];
+	[mpcontentView addSubview:mpcreateAccountButton];
+	[mpcontentView addSubview:mpforgotPasswordButton];
+	[mpcontentView addSubview:mpaboutButton];
 	[self setContentView:mpcontentView];
 
 	// Limit tabbing to only active controls
 	[mpusernameEdit setNextKeyView:mppasswordEdit];
-	[mppasswordEdit setNextKeyView:mploginButton];
-	[mploginButton setNextKeyView:mpusernameEdit];
+	[mppasswordEdit setNextKeyView:mpsavePasswordButton];
+	[mpsavePasswordButton setNextKeyView:mploginButton];
+	[mploginButton setNextKeyView:mpcreateAccountButton];
+	[mpcreateAccountButton setNextKeyView:mpforgotPasswordButton];
+	[mpforgotPasswordButton setNextKeyView:mpaboutButton];
+	[mpaboutButton setNextKeyView:mpusernameEdit];
 
 	[self setInitialFirstResponder:mpusernameEdit];
 	[self setDefaultButtonCell:[mploginButton cell]];

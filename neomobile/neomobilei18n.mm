@@ -47,10 +47,14 @@ using namespace rtl;
  * Translated strings for de locale
  */
 static const sal_Char *pEntries_de[] = {
+	NEOMOBILEABOUT, "Über NeoOffice Mobile",
 	NEOMOBILEBACK, "Zurück",
 	NEOMOBILECANCEL, "Abbrechen",
+	NEOMOBILECREATEACCOUNT, "Neues Benutzerkonto erstellen",
+	NEOMOBILEFORGOTPASSWORD, "Passwort vergessen?",
 	NEOMOBILELOGIN, "Anmelden",
 	NEOMOBILEPASSWORD, "Passwort:",
+	NEOMOBILESAVEPASSWORD, "Passwort speichern",
 	NEOMOBILEUSERNAME, "Benutzername:",
 	nil, nil
 };
@@ -59,18 +63,22 @@ static const sal_Char *pEntries_de[] = {
  * Translated strings for en_US locale
  */
 static const sal_Char *pEntries_en_US[] = {
+	NEOMOBILEABOUT, "About NeoOffice Mobile",
 	NEOMOBILEBACK, "Back",
 	NEOMOBILECANCEL, "Cancel",
+	NEOMOBILECREATEACCOUNT, "Create a new account",
 	NEOMOBILEDOWNLOADCANCELED, "Download canceled",
 	NEOMOBILEDOWNLOADFAILED, "Download failed",
 	NEOMOBILEDOWNLOADINGFILE, "Downloading file…",
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exporting file…",
+	NEOMOBILEFORGOTPASSWORD, "Forgot password?",
 	NEOMOBILELOADING, "Loading…",
 	NEOMOBILELOGIN, "Login",
 	NEOMOBILELOGINTITLE, "NeoOffice Mobile Login",
 	NEOMOBILEPASSWORD, "Password:",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILESAVEPASSWORD, "Save password",
 	NEOMOBILEUPLOADCONTINUE, "Do you still want to upload this document?",
 	NEOMOBILEUPLOADINGFILE, "Uploading file…",
 	NEOMOBILEUPLOADPASSWORDPROTECTED, "This document will be uploaded without any password protection",
@@ -100,18 +108,22 @@ static const sal_Char *pEntries_es[] = {
  * Translated strings for fr locale
  */
 static const sal_Char *pEntries_fr[] = {
+	NEOMOBILEABOUT, "À propos de NeoOffice Mobile",
 	NEOMOBILEBACK, "Arrière",
 	NEOMOBILECANCEL, "Annuler",
+	NEOMOBILECREATEACCOUNT, "Créer un nouveau compte",
 	NEOMOBILEDOWNLOADCANCELED, "Téléchargement annulé",
 	NEOMOBILEDOWNLOADFAILED, "Echec du téléchargement",
 	NEOMOBILEDOWNLOADINGFILE, "Téléchargement du fichier…",
 	NEOMOBILEERROR, "Erreur :",
 	NEOMOBILEEXPORTINGFILE, "Exportation du fichier…",
+	NEOMOBILEFORGOTPASSWORD, "Mot de passe oublié ?",
 	NEOMOBILELOADING, "Chargement…",
 	NEOMOBILELOGIN, "Connexion",
 	NEOMOBILELOGINTITLE, "NeoOffice Mobile Connexion",
 	NEOMOBILEPASSWORD, "Mot de passe :",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
+	NEOMOBILESAVEPASSWORD, "Enregistrer mot de passe",
 	NEOMOBILEUPLOADCONTINUE, "Souhaitez-vous quand-même envoyer ce document vers le serveur ?",
 	NEOMOBILEUPLOADPASSWORDPROTECTED, "Ce fichier sera enregistré sur le serveur sans protection par mot de passe",
 	NEOMOBILEUPLOADINGFILE, "Envoi du fichier vers le serveur…",
