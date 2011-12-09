@@ -31,8 +31,8 @@
  *
  *************************************************************************/
 
-#include "neomobilei18n.hxx"
-#include <vcl/svapp.hxx>
+#import "neomobilei18n.hxx"
+#import <vcl/svapp.hxx>
 
 using namespace com::sun::star::lang;
 

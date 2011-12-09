@@ -40,30 +40,30 @@
  *************************************************************************
  *************************************************************************/
 
-#include "neomobile.hxx"
-#include "neomobilewebview.h"
+#import "neomobile.hxx"
+#import "neomobilewebview.h"
 
-#include <com/sun/star/beans/PropertyValue.hpp>
-#include <com/sun/star/beans/XPropertySet.hpp>
-#include <com/sun/star/beans/XPropertyContainer.hpp>
-#include <com/sun/star/document/XDocumentInfoSupplier.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
-#include <com/sun/star/frame/XStorable.hpp>
-#include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#include <com/sun/star/lang/XServiceInfo.hpp>
-#include <com/sun/star/registry/XRegistryKey.hpp>
-#include <com/sun/star/task/XJob.hpp>
-#include <comphelper/processfactory.hxx>
-#include <cppuhelper/bootstrap.hxx>
-#include <cppuhelper/factory.hxx>
-#include <cppuhelper/implbase3.hxx>
-#include <cppuhelper/implementationentry.hxx>
-#include <cppuhelper/queryinterface.hxx>
-#include <org/neooffice/XNeoOfficeMobile.hpp>
-#include <unotools/bootstrap.hxx>
-#include <vcl/svapp.hxx>
+#import <com/sun/star/beans/PropertyValue.hpp>
+#import <com/sun/star/beans/XPropertySet.hpp>
+#import <com/sun/star/beans/XPropertyContainer.hpp>
+#import <com/sun/star/document/XDocumentInfoSupplier.hpp>
+#import <com/sun/star/frame/XFrame.hpp>
+#import <com/sun/star/frame/XStorable.hpp>
+#import <com/sun/star/lang/XMultiServiceFactory.hpp>
+#import <com/sun/star/lang/XServiceInfo.hpp>
+#import <com/sun/star/registry/XRegistryKey.hpp>
+#import <com/sun/star/task/XJob.hpp>
+#import <comphelper/processfactory.hxx>
+#import <cppuhelper/bootstrap.hxx>
+#import <cppuhelper/factory.hxx>
+#import <cppuhelper/implbase3.hxx>
+#import <cppuhelper/implementationentry.hxx>
+#import <cppuhelper/queryinterface.hxx>
+#import <org/neooffice/XNeoOfficeMobile.hpp>
+#import <unotools/bootstrap.hxx>
+#import <vcl/svapp.hxx>
 
-#include <stdio.h>
+#import <stdio.h>
 
 #define SERVICENAME "org.neooffice.NeoOfficeMobile"
 #define IMPLNAME	"org.neooffice.XNeoOfficeMobile"

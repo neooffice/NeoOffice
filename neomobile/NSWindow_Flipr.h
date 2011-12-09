@@ -35,5 +35,5 @@
 #define NSWindow_Flipr NeoMobileFlipperWindow
 
 #include "premac.h"
-#include "Flipr/NSWindow_Flipr.h"
+#import "Flipr/NSWindow_Flipr.h"
 #include "postmac.h"

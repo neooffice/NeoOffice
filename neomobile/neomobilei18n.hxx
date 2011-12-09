@@ -34,8 +34,8 @@
 #ifndef _NEOMOBILEI18N_HXX
 #define _NEOMOBILEI18N_HXX
 
-#include <com/sun/star/lang/Locale.hpp>
-#include <sal/types.h>
+#import <com/sun/star/lang/Locale.hpp>
+#import <sal/types.h>
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>

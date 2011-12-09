@@ -31,24 +31,29 @@
  *
  *************************************************************************/
 
-#include "premac.h"
-#import <Cocoa/Cocoa.h>
-#import <WebKit/WebKit.h>
-#include "postmac.h"
-#include "neomobileappevent.hxx"
+#import "neomobilewebview.h"
 
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
-
-@interface NeoMobileFlipsideView : NSView
+@interface NonRecursiveResponderFlipsidePanel : NonRecursiveResponderPanel
 {
+	NonRecursiveResponderWebPanel*	mpWebPanel;
+	NSButton*				mpaboutButton;
+	NSView*					mpcontentView;
+	NSButton*				mpcreateAccountButton;
+	NSButton*				mpforgotPasswordButton;
+	NSButton*				mploginButton;
+	NSSecureTextField*		mppasswordEdit;
+	NSText*					mppasswordLabel;
+	NSButton*				mpsavePasswordButton;
+	NSText*					mptitleLabel;
+	NSView*					mptitleView;
+	NSTextField*			mpusernameEdit;
+	NSText*					mpusernameLabel;
 }
+- (void)dealloc;
+- (IBAction)doAbout;
+- (IBAction)doCreateAccount;
+- (IBAction)doForgotPassword;
+- (IBAction)doLogin;
+- (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel;
 @end
 

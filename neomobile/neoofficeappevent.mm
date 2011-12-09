@@ -31,21 +31,21 @@
  *
  *************************************************************************/
 
-#include "neomobile.hxx"
-#include "neomobileappevent.hxx"
-#include "neomobilei18n.hxx"
+#import "neomobile.hxx"
+#import "neomobileappevent.hxx"
+#import "neomobilei18n.hxx"
 
-#include <com/sun/star/frame/XDesktop.hpp>
-#include <com/sun/star/frame/XFrame.hpp>
-#include <com/sun/star/registry/XRegistryKey.hpp>
-#include <comphelper/processfactory.hxx>
-#include <cppuhelper/factory.hxx>
-#include <cppuhelper/implementationentry.hxx>
-#include <cppuhelper/queryinterface.hxx>
-#include <org/neooffice/XNeoOfficeMobile.hpp>
-#include <vcl/svapp.hxx>
-#include <vos/module.hxx>
-#include <vos/mutex.hxx>
+#import <com/sun/star/frame/XDesktop.hpp>
+#import <com/sun/star/frame/XFrame.hpp>
+#import <com/sun/star/registry/XRegistryKey.hpp>
+#import <comphelper/processfactory.hxx>
+#import <cppuhelper/factory.hxx>
+#import <cppuhelper/implementationentry.hxx>
+#import <cppuhelper/queryinterface.hxx>
+#import <org/neooffice/XNeoOfficeMobile.hpp>
+#import <vcl/svapp.hxx>
+#import <vos/module.hxx>
+#import <vos/mutex.hxx>
 
 #ifndef DLLPOSTFIX
 #error DLLPOSTFIX must be defined in makefile.mk

@@ -31,7 +31,7 @@
  *
  *************************************************************************/
 
-#include "neomobile.hxx"
+#import "neomobile.hxx"
 
 using namespace rtl;
 

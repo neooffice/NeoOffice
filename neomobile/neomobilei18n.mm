@@ -31,8 +31,8 @@
  *
  *************************************************************************/
 
-#include "neomobilei18n.hxx"
-#include <map>
+#import "neomobilei18n.hxx"
+#import <map>
 
 static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
 static NSDictionary*pDefaultLocaleDict = nil;
@@ -53,6 +53,7 @@ static const sal_Char *pEntries_de[] = {
 	NEOMOBILECREATEACCOUNT, "Neues Benutzerkonto erstellen",
 	NEOMOBILEFORGOTPASSWORD, "Passwort vergessen?",
 	NEOMOBILELOGIN, "Anmelden",
+	NEOMOBILELOGINTITLE, "NeoOffice Mobile Anmelden",
 	NEOMOBILEPASSWORD, "Passwort:",
 	NEOMOBILESAVEPASSWORD, "Passwort speichern",
 	NEOMOBILEUSERNAME, "Benutzername:",

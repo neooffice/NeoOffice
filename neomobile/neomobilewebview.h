@@ -35,7 +35,7 @@
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
 #include "postmac.h"
-#include "neomobileappevent.hxx"
+#import "neomobileappevent.hxx"
 
 // Redefine Cocoa YES and NO defines types for convenience
 #ifdef YES
@@ -46,6 +46,9 @@
 #undef NO
 #define NO (MacOSBOOL)0
 #endif
+
+#define kNMDefaultBrowserWidth	430
+#define kNMDefaultBrowserHeight	620
 
 @class NonRecursiveResponderWebPanel;
 
@@ -95,6 +98,8 @@
 {
 	MacOSBOOL				mbinZoom;
 }
+- (void)adjustBottomOfControlToTextHeight:(NSControl *)pControl;
+- (void)centerTextInTextView:(NSText *)pTextView;
 - (id)initWithContentRect:(NSRect)aContentRect styleMask:(NSUInteger)nWindowStyle backing:(NSBackingStoreType)nBufferingType defer:(MacOSBOOL)bDeferCreation;
 - (MacOSBOOL)tryToPerform:(SEL)aAction with:(id)aObject;
 - (void)windowDidMove:(NSNotification *)notification;
@@ -117,8 +122,8 @@
 }
 - (void)createWebView:(NSURLRequest *)pRequest;
 - (void)dealloc;
-- (void)dismissLoginPanel;
+- (void)dismissFlipsidePanel;
 - (id)initWithUserAgent:(NSString *)pUserAgent;
-- (void)showLoginPanel;
+- (void)showFlipsidePanel;
 - (NeoMobileWebView *)webView;
 @end

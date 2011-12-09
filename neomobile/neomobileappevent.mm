@@ -31,10 +31,10 @@
  *
  *************************************************************************/
 
-#include <crt_externs.h>
-#include "neomobile.hxx"
-#include "neomobileappevent.hxx"
-#include "neomobilei18n.hxx"
+#import <crt_externs.h>
+#import "neomobile.hxx"
+#import "neomobileappevent.hxx"
+#import "neomobilei18n.hxx"
 
 using namespace ::rtl;
 

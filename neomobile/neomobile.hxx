@@ -34,13 +34,14 @@
 #ifndef _NEOMOBILE_HXX
 #define _NEOMOBILE_HXX
 
-#include <rtl/ustring.hxx>
+#import <rtl/ustring.hxx>
 
 #include "premac.h"
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
 extern const NSString *kAboutURL;
+extern const NSString *kLoginURI;
 extern const NSString *kNeoMobileLastURLPref;
 extern const NSString *kNeoMobileXPosPref;
 extern const NSString *kNeoMobileYPosPref;

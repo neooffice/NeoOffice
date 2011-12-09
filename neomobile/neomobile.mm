@@ -31,9 +31,9 @@
  *
  *************************************************************************/
 
-#include "neomobile.hxx"
-#include "neomobilewebview.h"
-#include <unistd.h>
+#import "neomobile.hxx"
+#import "neomobilewebview.h"
+#import <unistd.h>
 
 using namespace rtl;
 
@@ -44,6 +44,7 @@ const NSString *kAboutURL = @"http://www-test.neooffice.org/neomobile/";
 #else	// TEST
 const NSString *kAboutURL = @"http://www.neooffice.org/neomobile/";
 #endif	// TEST
+const NSString *kLoginURI = @"/users/login";
 const NSString *kNeoMobileLastURLPref = @"nmLastURL";
 const NSString *kNeoMobileXPosPref = @"nmXPos";
 const NSString *kNeoMobileYPosPref = @"nmYPos";

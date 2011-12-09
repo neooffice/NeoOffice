@@ -31,7 +31,7 @@
  *
  *************************************************************************/
 
-#include "neomobilei18n.hxx"
+#import "neomobilei18n.hxx"
 
 using namespace com::sun::star::lang;
 

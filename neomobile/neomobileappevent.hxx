@@ -34,10 +34,10 @@
 #ifndef _NEOMOBILEAPPEVENT_HXX
 #define _NEOMOBILEAPPEVENT_HXX
 
-#include <tools/link.hxx>
+#import <tools/link.hxx>
 
 #include <premac.h>
-#include <Foundation/Foundation.h>
+#import <Foundation/Foundation.h>
 #include <postmac.h>
 
 // Redefine Cocoa YES and NO defines types for convenience
