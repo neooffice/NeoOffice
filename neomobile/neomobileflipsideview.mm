@@ -239,6 +239,7 @@ static const NSString *kUsernamePref = @"nmUsername";
 	[mpsavePasswordButton setTitle:GetLocalizedString(NEOMOBILESAVEPASSWORD)];
 	[mpsavePasswordButton setEnabled:YES];
 	[mpsavePasswordButton setButtonType:NSSwitchButton];
+	[mpsavePasswordButton setState:NSOnState];
 	[mploginButton setImagePosition:NSNoImage];
 	[mpsavePasswordButton setAutoresizingMask:(NSViewWidthSizable|NSViewMinYMargin)];
 	[mpsavePasswordButton setFont:usernameEditFont];
@@ -345,7 +346,7 @@ static const NSString *kUsernamePref = @"nmUsername";
 			const char *serviceName = [[NeoMobileWebView neoMobileServiceName] UTF8String];
 			unsigned int serviceNameLen = strlen(serviceName);
 
-			const char *username = [usernamePref UTF8String];
+			const char *username = (usernamePref ? [usernamePref UTF8String] : "");
 			unsigned int usernameLen = strlen(username);
 
 			SecKeychainAttribute aAttributes[2];
