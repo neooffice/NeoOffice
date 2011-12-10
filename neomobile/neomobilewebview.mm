@@ -47,14 +47,15 @@
 #define NSDownloadsDirectory ((NSSearchPathDirectory)15)
 #endif
 
-// Uncomment the following line to enable the native login window
-// #define USE_NATIVE_LOGIN_WINDOW
+// Comment out the following line to disaable the native login window
+#define USE_NATIVE_LOGIN_WINDOW
 
 #define kNMMaxInZoomHeight ( kNMDefaultBrowserHeight / 2 )
 #define kNMBottomViewPadding 2
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
 static const NSString *kDownloadURI = @"/neofiles/download";
+static const NSString *kKeychainBaseServiceName = @"NeoOffice Mobile";
 
 static const NSString *pDevelopmentBaseURLs[] = {
 	@"http://localhost/"
@@ -128,12 +129,24 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 static unsigned int neoMobileBaseURLEntry = 0;
 static unsigned int neoMobileBaseURLCount = 0;
 static NSArray *neoMobileBaseURLEntries = nil;
+static NSString *neoMobileServerType = nil;
 static NSTimeInterval lastBaseURLIncrementTime = 0;
 static unsigned int baseURLIncrements = 0;
 static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 @implementation NeoMobileWebView
 
++ (const NSString *)neoMobileServiceName
+{
+	[NeoMobileWebView neoMobileURL];
+
+	const NSString *serviceName = kKeychainBaseServiceName;
+	if (neoMobileServerType && [neoMobileServerType length])
+		serviceName = [serviceName stringByAppendingFormat:@" %@", neoMobileServerType];
+
+	return serviceName;
+}
+		
 + (NSString *)neoMobileURL
 {
 	if (!neoMobileBaseURLEntries)
@@ -153,11 +166,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 			{
 				nBaseURLCount = sizeof( pDevelopmentBaseURLs ) / sizeof( NSString* );
 				pBaseURLs = pDevelopmentBaseURLs;
+				neoMobileServerType = @"development";
 			}
 			else if ( [serverType caseInsensitiveCompare:@"test"] == NSOrderedSame )
 			{
 				nBaseURLCount = sizeof( pTestBaseURLs ) / sizeof( NSString* );
 				pBaseURLs = pTestBaseURLs;
+				neoMobileServerType = @"test";
 			}
 		}
 		if ( !pBaseURLs )
@@ -728,14 +743,17 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		}
 	}
 
+	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:[pRequest HTTPMethod]] )
+	{
+		[mpPanel showFlipsidePanel];
+		return nil;
+	}
+
 	// Always add a special header with the name and version of the application
 	// that this web view is running in
 	// TODO: set header value to applications's name and version
 	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
 		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
-
-	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:[pRequest HTTPMethod]] )
-		[mpPanel showFlipsidePanel];
 
 	return pRequest;
 }

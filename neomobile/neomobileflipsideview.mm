@@ -35,10 +35,14 @@
 #import "neomobilei18n.hxx"
 #import "neomobileflipsideview.h"
 
+#import <Security/Security.h>
+
 #define kNMFlipsidePanelPadding 20
 
 static const NSString *kCreateAccountURI = @"/signup/planselection";
 static const NSString *kForgotPasswordURI = @"/users/forgotpassword";
+static const NSString *kSavePasswordPref = @"nmSavePassword";
+static const NSString *kUsernamePref = @"nmUsername";
 
 @interface NeoMobileLoginTitleView : NSView
 - (void)drawRect:(NSRect)dirtyRect;
@@ -60,6 +64,10 @@ static const NSString *kForgotPasswordURI = @"/users/forgotpassword";
 
 - (void)dealloc
 {
+	NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+	if ( pNotificationCenter )
+		[pNotificationCenter removeObserver:self name:NSApplicationWillTerminateNotification object:nil];
+
 	[self setContentView:nil];
 
 	if ( mpWebPanel )
@@ -312,6 +320,130 @@ static const NSString *kForgotPasswordURI = @"/users/forgotpassword";
 	[self setDefaultButtonCell:[mploginButton cell]];
 
 	return self;
+}
+
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
+{
+	[super orderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
+
+	if (nOrderingMode == NSWindowOut)
+	{
+		[self storeLoginInfo];
+	}
+	else
+	{
+		// Load in the stored username and password into the entry fields
+		NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+		if(defaults)
+		{
+			MacOSBOOL savePassword = [defaults boolForKey:(NSString *)kSavePasswordPref];
+			NSString *usernamePref = [defaults stringForKey:(NSString *)kUsernamePref];
+			[mpusernameEdit setStringValue:(usernamePref ? usernamePref : @"")];
+			[mpsavePasswordButton setState:(savePassword ? NSOnState : NSOffState)];
+;
+
+			// Get password from keychain
+			NSString *passwordPref = nil;
+			const char *serviceName = [[NeoMobileWebView neoMobileServiceName] UTF8String];
+			unsigned int serviceNameLen = strlen(serviceName);
+
+			const char *username = [usernamePref UTF8String];
+			unsigned int usernameLen = strlen(username);
+
+			SecKeychainAttribute aAttributes[2];
+			aAttributes[0].tag = kSecServiceItemAttr;
+			aAttributes[0].length = serviceNameLen;
+			aAttributes[0].data = (void *)serviceName;
+			aAttributes[1].tag = kSecAccountItemAttr;
+			aAttributes[1].length = usernameLen;
+			aAttributes[1].data = (void *)username;
+			SecKeychainAttributeList aAttributeList;
+			aAttributeList.count = 2;
+			aAttributeList.attr = aAttributes;
+			SecKeychainSearchRef aSearch = NULL;
+			SecKeychainSearchCreateFromAttributes(NULL, kSecGenericPasswordItemClass, &aAttributeList, &aSearch);
+			if (aSearch)
+			{
+				SecKeychainItemRef aSearchItem = NULL;
+				if (SecKeychainSearchCopyNext(aSearch, &aSearchItem) != errSecItemNotFound && aSearchItem)
+				{
+					UInt32 passwordLen = 0;
+					char *password = NULL;
+					SecKeychainItemCopyAttributesAndData(aSearchItem, NULL, NULL, NULL, &passwordLen, (void **)&password);
+					if (passwordLen && password)
+						passwordPref = [NSString stringWithUTF8String:password];
+
+					CFRelease(aSearchItem);
+				}
+
+				CFRelease(aSearch);
+			}
+
+			[mppasswordEdit setStringValue:(passwordPref ? passwordPref : @"")];
+		}
+	}
+}
+
+- (IBAction)storeLoginInfo
+{
+	NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
+	if(defaults)
+	{
+		MacOSBOOL savePassword = ([mpsavePasswordButton state] == NSOnState);
+		[defaults setObject:[mpusernameEdit stringValue] forKey:(NSString *)kUsernamePref];
+		[defaults setBool:savePassword forKey:(NSString *)kSavePasswordPref];
+		[defaults synchronize];
+
+		// Update password in keychain
+		const char *serviceName = [[NeoMobileWebView neoMobileServiceName] UTF8String];
+		unsigned int serviceNameLen = strlen(serviceName);
+
+		const char *username = [[mpusernameEdit stringValue] UTF8String];
+		const char *password = (savePassword ? [[mppasswordEdit stringValue] UTF8String] : "");
+		unsigned int usernameLen = strlen(username);
+		unsigned int passwordLen = strlen(password);
+
+		MacOSBOOL keyChainUpdated = NO;
+		SecKeychainAttribute aServiceAttribute;
+		aServiceAttribute.tag = kSecServiceItemAttr;
+		aServiceAttribute.length = serviceNameLen;
+		aServiceAttribute.data = (void *)serviceName;
+		SecKeychainAttributeList aServiceAttributeList;
+		aServiceAttributeList.count = 1;
+		aServiceAttributeList.attr = &aServiceAttribute;
+		SecKeychainSearchRef aSearch = NULL;
+		SecKeychainSearchCreateFromAttributes(NULL, kSecGenericPasswordItemClass, &aServiceAttributeList, &aSearch);
+		if (aSearch)
+		{
+			SecKeychainItemRef aSearchItem = NULL;
+			if (SecKeychainSearchCopyNext(aSearch, &aSearchItem) != errSecItemNotFound && aSearchItem)
+			{
+				if (savePassword)
+				{
+					SecKeychainAttribute aAccountAttribute;
+					aAccountAttribute.tag = kSecAccountItemAttr;
+					aAccountAttribute.length = usernameLen;
+					aAccountAttribute.data = (void *)username;
+					SecKeychainAttributeList aAccountAttributeList;
+					aAccountAttributeList.count = 1;
+					aAccountAttributeList.attr = &aAccountAttribute;
+					SecKeychainItemModifyAttributesAndData(aSearchItem, &aAccountAttributeList, passwordLen, password);
+				}
+				else
+				{
+					SecKeychainItemDelete(aSearchItem);
+				}
+
+				keyChainUpdated = YES;
+				CFRelease(aSearchItem);
+			}
+
+			CFRelease(aSearch);
+		}
+
+		if (savePassword && !keyChainUpdated)
+			SecKeychainAddGenericPassword(NULL, serviceNameLen, serviceName, usernameLen, username, passwordLen, password, NULL);
+	}
 }
 
 @end

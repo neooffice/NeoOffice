@@ -84,7 +84,7 @@ SHL1STDLIBS= \
 	$(VOSLIB)	\
 	$(VCLLIB)
 
-SHL1STDLIBS += -framework AppKit -framework QuartzCore -framework WebKit
+SHL1STDLIBS += -framework AppKit -framework QuartzCore -framework Security -framework WebKit
 
 SHL2TARGET=$(TARGET:s/.uno//).office
 SHL2OBJS=$(SLOFILES) \
@@ -94,7 +94,7 @@ SHL2OBJS=$(SLOFILES) \
 SHL2STDLIBS= \
 	$(SALLIB)
 
-SHL2STDLIBS += -framework AppKit -framework QuartzCore -framework WebKit
+SHL2STDLIBS += -framework AppKit -framework QuartzCore -framework Security -framework WebKit
 
 # --- Targets ------------------------------------------------------
 

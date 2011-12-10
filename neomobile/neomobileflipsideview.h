@@ -55,5 +55,7 @@
 - (IBAction)doForgotPassword;
 - (IBAction)doLogin;
 - (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel;
+- (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
+- (IBAction)storeLoginInfo;
 @end
 
