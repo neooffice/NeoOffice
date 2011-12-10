@@ -166,6 +166,28 @@ static NSApplicationTerminateReply HandleTerminationRequest()
 				pSalData->mpEventQueue->postCachedEvent( &aEvent );
 				while ( !Application::IsShutDown() && !aEvent.isShutdownCancelled() && !pSalData->mpEventQueue->isShutdownDisabled() )
 					Application::Yield();
+
+				if ( Application::IsShutDown() )
+				{
+					// Close any windows still showing so that all windows
+					// get the appropriate window closing delegate calls
+					NSApplication *pApp = [NSApplication sharedApplication];
+					if ( pApp )
+					{
+						NSArray *pWindows = [pApp windows];
+						if ( pWindows )
+						{
+							unsigned int i = 0;
+							unsigned int nCount = [pWindows count];
+							for ( ; i < nCount ; i++ )
+							{
+								NSWindow *pWindow = [pWindows objectAtIndex:i];
+								if ( pWindow )
+									[pWindow orderOut:pWindow];
+							}
+						}
+					}
+				}
 			}
 
 			rSolarMutex.release();
