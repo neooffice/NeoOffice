@@ -324,13 +324,11 @@ static const NSString *kUsernamePref = @"nmUsername";
 
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber
 {
-	[super orderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
-
 	if (nOrderingMode == NSWindowOut)
 	{
 		[self storeLoginInfo];
 	}
-	else
+	else if (![self isVisible])
 	{
 		// Load in the stored username and password into the entry fields
 		NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -386,8 +384,15 @@ static const NSString *kUsernamePref = @"nmUsername";
 			}
 
 			[mppasswordEdit setStringValue:(passwordPref ? passwordPref : @"")];
+
+			if ([[mpusernameEdit stringValue] length])
+				[self makeFirstResponder:mppasswordEdit];
+			else
+				[self makeFirstResponder:mpusernameEdit];
 		}
 	}
+
+	[super orderWindow:nOrderingMode relativeTo:nOtherWindowNumber];
 }
 
 - (IBAction)storeLoginInfo
