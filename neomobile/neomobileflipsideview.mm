@@ -370,8 +370,11 @@ static const NSString *kUsernamePref = @"nmUsername";
 					UInt32 passwordLen = 0;
 					char *password = NULL;
 					SecKeychainItemCopyAttributesAndData(aSearchItem, NULL, NULL, NULL, &passwordLen, (void **)&password);
-					if (passwordLen && password)
+					if (password)
+					{
 						passwordPref = [NSString stringWithUTF8String:password];
+						SecKeychainItemFreeAttributesAndData(NULL, password);
+					}
 
 					CFRelease(aSearchItem);
 				}
