@@ -55,7 +55,6 @@
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
 static const NSString *kDownloadURI = @"/neofiles/download";
-static const NSString *kKeychainBaseServiceName = @"NeoOffice Mobile";
 
 static const NSString *pDevelopmentBaseURLs[] = {
 	@"http://localhost/"
@@ -136,16 +135,17 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 @implementation NeoMobileWebView
 
-+ (const NSString *)neoMobileServiceName
++ (const NSString *)appendNeoMobileServerNameToString:(const NSString *)pString
 {
+	const NSString *pRet = ( pString ? pString : @"" );
+
 	[NeoMobileWebView neoMobileURL];
-
-	const NSString *serviceName = kKeychainBaseServiceName;
 	if (neoMobileServerType && [neoMobileServerType length])
-		serviceName = [serviceName stringByAppendingFormat:@" %@", neoMobileServerType];
+		pRet = [pRet stringByAppendingFormat:@" %@", neoMobileServerType];
 
-	return serviceName;
+	return pRet;
 }
+
 		
 + (NSString *)neoMobileURL
 {
@@ -216,7 +216,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		return(NO);
 	if (!httpMethod)
 		httpMethod = @"GET";
-	return ([kLoginURI isEqualToString:[url path]] && [httpMethod caseInsensitiveCompare:@"POST"]!=NSOrderedSame && [NeoMobileWebView isNeoMobileURL:url syncServer:NO]);
+	return ([kNeoMobileLoginURI isEqualToString:[url path]] && [httpMethod caseInsensitiveCompare:@"POST"]!=NSOrderedSame && [NeoMobileWebView isNeoMobileURL:url syncServer:NO]);
 }
 
 + (MacOSBOOL)isNeoMobileURL:(NSURL *)url syncServer:(MacOSBOOL)syncServer
@@ -352,7 +352,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ([self canGoBack])
 		[self goBack];
 	else
-		[self loadURI:kOpenURI];
+		[self loadURI:kNeoMobileOpenURI];
 }
 
 - (IBAction)cancelButtonPressed
@@ -425,7 +425,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 						if ( pURI )
 						{
 							NSString *pPath = [pURL path];
-							if ( pPath )
+							if ( pPath && ![pPath isEqualToString:@"/"] )
 								[pURI appendString:pPath];
 							NSString *pParams = [pURL parameterString];
 							if ( pParams )
@@ -452,7 +452,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 								// Only reload this activity if we were able to
 								// save the URL. Otherwise we will be in an
 								// endless reload loop.
-								[defaults setObject:pURI forKey:kNeoMobileLastURLPref];
+								[defaults setObject:pURI forKey:[NeoMobileWebView appendNeoMobileServerNameToString:kNeoMobileLastURLPref]];
 								[defaults synchronize];
 
 								pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
@@ -701,7 +701,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		{
 			// If not an upload, save last URL preference
 			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-			[defaults setObject:[pURL absoluteString] forKey:kNeoMobileLastURLPref];
+			[defaults setObject:[pURL absoluteString] forKey:[NeoMobileWebView appendNeoMobileServerNameToString:kNeoMobileLastURLPref]];
 			[defaults synchronize];
 		}
 	}

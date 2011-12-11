@@ -65,7 +65,7 @@
 	unsigned long long		mndownloadBytesReceived;
 	NeoMobileExportFileAppEvent*	mpexportEvent;
 }
-+ (const NSString *)neoMobileServiceName;
++ (const NSString *)appendNeoMobileServerNameToString:(const NSString *)pString;
 + (NSString *)neoMobileURL;
 + (MacOSBOOL)isDownloadURL:(NSURL *)url;
 + (MacOSBOOL)isLoginURL:(NSURL *)url httpMethod:(NSString *)httpMethod;

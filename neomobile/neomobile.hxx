@@ -40,8 +40,8 @@
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
-extern const NSString *kAboutURL;
-extern const NSString *kLoginURI;
+extern const NSString *kNeoMobileAboutURL;
+extern const NSString *kNeoMobileLoginURI;
 extern const NSString *kNeoMobileLastURLPref;
 extern const NSString *kNeoMobileXPosPref;
 extern const NSString *kNeoMobileYPosPref;
@@ -49,7 +49,7 @@ extern const NSString *kNeoMobileWidthPref;
 extern const NSString *kNeoMobileHeightPref;
 extern const NSString *kNeoMobileVisiblePref;
 extern const NSString *kNeoMobileServerTypePref;
-extern const NSString *kOpenURI;
+extern const NSString *kNeoMobileOpenURI;
 
 @interface CreateWebViewImpl : NSObject
 {

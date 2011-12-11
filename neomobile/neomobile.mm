@@ -40,11 +40,11 @@ using namespace rtl;
 //========================================================================
 
 #ifdef TEST
-const NSString *kAboutURL = @"http://www-test.neooffice.org/neomobile/";
+const NSString *kNeoMobileAboutURL = @"http://www-test.neooffice.org/neomobile/";
 #else	// TEST
-const NSString *kAboutURL = @"http://www.neooffice.org/neomobile/";
+const NSString *kNeoMobileAboutURL = @"http://www.neooffice.org/neomobile/";
 #endif	// TEST
-const NSString *kLoginURI = @"/users/login";
+const NSString *kNeoMobileLoginURI = @"/users/login";
 const NSString *kNeoMobileLastURLPref = @"nmLastURL";
 const NSString *kNeoMobileXPosPref = @"nmXPos";
 const NSString *kNeoMobileYPosPref = @"nmYPos";
@@ -52,7 +52,7 @@ const NSString *kNeoMobileWidthPref = @"nmWidth";
 const NSString *kNeoMobileHeightPref = @"nmHeight";
 const NSString *kNeoMobileVisiblePref = @"nmVisible";
 const NSString *kNeoMobileServerTypePref = @"nmServerType";
-const NSString *kOpenURI = @"/";
+const NSString *kNeoMobileOpenURI = @"/";
 
 static NonRecursiveResponderWebPanel *pSharedPanel = nil;
 
@@ -132,7 +132,7 @@ static NonRecursiveResponderWebPanel *pSharedPanel = nil;
 			NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 			if(defaults)
 			{
-				NSString *loadURLPref = [defaults stringForKey:kNeoMobileLastURLPref];
+				NSString *loadURLPref = [defaults stringForKey:[NeoMobileWebView appendNeoMobileServerNameToString:kNeoMobileLastURLPref]];
 				if(loadURLPref && [loadURLPref length])
 				{
 					NSURL *lastLoadURL = [NSURL URLWithString:loadURLPref];

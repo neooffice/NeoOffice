@@ -41,6 +41,7 @@
 
 static const NSString *kCreateAccountURI = @"/signup/planselection";
 static const NSString *kForgotPasswordURI = @"/users/forgotpassword";
+static const NSString *kKeychainServiceName = @"NeoOffice Mobile";
 static const NSString *kSavePasswordPref = @"nmSavePassword";
 static const NSString *kUsernamePref = @"nmUsername";
 
@@ -106,7 +107,7 @@ static const NSString *kUsernamePref = @"nmUsername";
 - (IBAction)doAbout
 {
 	// Have Mac OS X open the about URL
-	NSURL *pURL = [NSURL URLWithString:kAboutURL];
+	NSURL *pURL = [NSURL URLWithString:kNeoMobileAboutURL];
 	if ( pURL )
 	{
 		NSWorkspace *pWorkspace = [NSWorkspace sharedWorkspace];
@@ -151,7 +152,7 @@ static const NSString *kUsernamePref = @"nmUsername";
 	if (!pBaseURL)
 		return;
 
-	NSURL *pURL = [NSURL URLWithString:(NSString *)kLoginURI relativeToURL:pBaseURL];
+	NSURL *pURL = [NSURL URLWithString:(NSString *)kNeoMobileLoginURI relativeToURL:pBaseURL];
 	if (!pURL)
 		return;
 
@@ -335,17 +336,16 @@ static const NSString *kUsernamePref = @"nmUsername";
 		NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
 		if(defaults)
 		{
-			MacOSBOOL savePassword = [defaults boolForKey:(NSString *)kSavePasswordPref];
-			NSString *usernamePref = [defaults stringForKey:(NSString *)kUsernamePref];
+			MacOSBOOL savePassword = [defaults boolForKey:(NSString *)[NeoMobileWebView appendNeoMobileServerNameToString:kSavePasswordPref]];
+			NSString *usernamePref = [defaults stringForKey:(NSString *)[NeoMobileWebView appendNeoMobileServerNameToString:kUsernamePref]];
 			[mpusernameEdit setStringValue:(usernamePref ? usernamePref : @"")];
 			[mpsavePasswordButton setState:(savePassword ? NSOnState : NSOffState)];
 ;
 
 			// Get password from keychain
 			NSString *passwordPref = nil;
-			const char *serviceName = [[NeoMobileWebView neoMobileServiceName] UTF8String];
+			const char *serviceName = [[NeoMobileWebView appendNeoMobileServerNameToString:kKeychainServiceName] UTF8String];
 			unsigned int serviceNameLen = strlen(serviceName);
-
 			const char *username = (usernamePref ? [usernamePref UTF8String] : "");
 			unsigned int usernameLen = strlen(username);
 
@@ -402,14 +402,13 @@ static const NSString *kUsernamePref = @"nmUsername";
 	if(defaults)
 	{
 		MacOSBOOL savePassword = ([mpsavePasswordButton state] == NSOnState);
-		[defaults setObject:[mpusernameEdit stringValue] forKey:(NSString *)kUsernamePref];
-		[defaults setBool:savePassword forKey:(NSString *)kSavePasswordPref];
+		[defaults setObject:[mpusernameEdit stringValue] forKey:(NSString *)[NeoMobileWebView appendNeoMobileServerNameToString:kUsernamePref]];
+		[defaults setBool:savePassword forKey:(NSString *)[NeoMobileWebView appendNeoMobileServerNameToString:kSavePasswordPref]];
 		[defaults synchronize];
 
 		// Update password in keychain
-		const char *serviceName = [[NeoMobileWebView neoMobileServiceName] UTF8String];
+		const char *serviceName = [[NeoMobileWebView appendNeoMobileServerNameToString:kKeychainServiceName] UTF8String];
 		unsigned int serviceNameLen = strlen(serviceName);
-
 		const char *username = [[mpusernameEdit stringValue] UTF8String];
 		const char *password = (savePassword ? [[mppasswordEdit stringValue] UTF8String] : "");
 		unsigned int usernameLen = strlen(username);
