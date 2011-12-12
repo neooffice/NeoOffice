@@ -62,10 +62,12 @@ static const NSString *pDevelopmentBaseURLs[] = {
 
 static const NSString *pTestBaseURLs[] = {
 	// Force automatic server fallback during testing
+/*
 	@"https://127.0.0.2",
 #ifndef DEBUG
 	@"https://neomobile-test.neooffice.org/",
 #endif	// !DEBUG
+*/
 	@"https://neomobile-test-primary.neooffice.org/",
 	@"https://neomobile-test-backup.neooffice.org/",
 	@"https://neomobile-test-backup2.neooffice.org/",
@@ -958,16 +960,17 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener
 {
-	if([type rangeOfString: @"vnd.oasis.opendocument"].location != NSNotFound)
+	if([type rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [type rangeOfString: @"application/ms"].location != NSNotFound)
 	{
 		[listener download];
 	}
+	else if([WebView canShowMIMEType:type])
+	{
+		[listener use];
+	}
 	else
 	{
-		if([WebView canShowMIMEType:type]==YES)
-			[listener use];
-		else
-			[listener ignore];
+		[listener download];
 	}
 }
 
