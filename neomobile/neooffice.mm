@@ -364,7 +364,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:kNeoMobileOpenURI userAgent:GetUserAgent()];
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:@"" userAgent:GetUserAgent()];
 
 	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
@@ -384,7 +384,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
-	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:kNeoMobileOpenURI userAgent:GetUserAgent()];
+	CreateWebViewImpl *imp=[CreateWebViewImpl createWithURI:@"" userAgent:GetUserAgent()];
 
 	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(showWebViewOnlyIfVisible:) withObject:imp waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];

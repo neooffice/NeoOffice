@@ -49,7 +49,6 @@ extern const NSString *kNeoMobileWidthPref;
 extern const NSString *kNeoMobileHeightPref;
 extern const NSString *kNeoMobileVisiblePref;
 extern const NSString *kNeoMobileServerTypePref;
-extern const NSString *kNeoMobileOpenURI;
 
 @interface CreateWebViewImpl : NSObject
 {

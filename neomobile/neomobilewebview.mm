@@ -352,7 +352,7 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ([self canGoBack])
 		[self goBack];
 	else
-		[self loadURI:kNeoMobileOpenURI];
+		[self loadURI:@""];
 }
 
 - (IBAction)cancelButtonPressed

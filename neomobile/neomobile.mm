@@ -52,7 +52,6 @@ const NSString *kNeoMobileWidthPref = @"nmWidth";
 const NSString *kNeoMobileHeightPref = @"nmHeight";
 const NSString *kNeoMobileVisiblePref = @"nmVisible";
 const NSString *kNeoMobileServerTypePref = @"nmServerType";
-const NSString *kNeoMobileOpenURI = @"/";
 
 static NonRecursiveResponderWebPanel *pSharedPanel = nil;
 
