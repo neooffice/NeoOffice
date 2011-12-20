@@ -44,7 +44,7 @@ PKG_CONFIG_PATH=$(EXTRA_PATH)/../lib/pkgconfig/
 ifeq ("$(shell uname -s)","Darwin")
 JDK_HOME=/System/Library/Frameworks/JavaVM.framework/Home
 else
-JDK_HOME=/cygdrive/c/Program Files/Java/jdk1.6.0_26
+# JDK_HOME must be defined in custom.mk
 endif
 PRODUCT_NAME=My Untested Office Suite
 PRODUCT_DIR_NAME=My_Untested_Office_Suite
@@ -186,6 +186,10 @@ build.ooo-build_configure: build.ooo-build_checkout build.sun-template_checkout
 ifeq ("$(OS_TYPE)","MacOSX")
 	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; setenv PATH "$(PWD)/$(COMPILERDIR):/bin:/sbin:/usr/bin:/usr/sbin:$(EXTRA_PATH)" ; unsetenv DYLD_LIBRARY_PATH ; ./configure CC=$(CC) CXX=$(CXX) LIBIDL_CONFIG="$(LIBIDL_CONFIG)" PKG_CONFIG="$(PKG_CONFIG)" PKG_CONFIG_PATH="$(PKG_CONFIG_PATH)" TMP=$(TMP) --with-distro=MacOSX --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.4 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-mozilla-toolkit=xlib --with-gnu-cp="$(GNUCP)" --with-system-curl --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-crashdump=no --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 else
+ifndef JDK_HOME
+	@echo "JDK_HOME must be defined in custom.mk" ; exit 1
+endif
+	@sh -c -e 'if [ ! -r "$(JDK_HOME)/lib/tools.jar" ] ; then echo "You must set JDK_HOME to the path of a valid Java Development Kit" ; exit 1 ; fi'
 	( cd "$(BUILD_HOME)/$(OOO-BUILD_PACKAGE)" ; unsetenv LD_LIBRARY_PATH ; ./configure TMP=$(TMP) WGET=/usr/bin/wget --with-distro=Win32 --disable-atl --disable-activex --disable-layout --with-java --with-jdk-home="$(JDK_HOME)" --with-java-target-version=1.5 --with-epm=internal --disable-cairo --disable-cups --disable-gtk --disable-odk --without-nas --with-lang="$(OO_LANGUAGES)" --disable-access --disable-headless --disable-pasf --disable-fontconfig --without-fonts --without-ppds --without-afms --enable-binfilter --enable-extensions --enable-minimizer --enable-presenter-console --enable-pdfimport --enable-ogltrans --enable-report-builder --with-sun-templates )
 endif
 	touch "$@"
