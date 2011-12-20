@@ -205,6 +205,7 @@ build.ooo-build_patches: \
 build.oo_patches: \
 	build.oo_configure.in_patch \
 	build.oo_set_soenv.in_patch \
+	build.oo_bean_patch \
 	build.oo_cppu_patch \
 	build.oo_cppuhelper_patch \
 	build.oo_cpputools_patch \
@@ -218,6 +219,7 @@ build.oo_patches: \
 	build.oo_postprocess_patch \
 	build.oo_qadevOOo_patch \
 	build.oo_reportbuilder_patch \
+	build.oo_scp2_patch \
 	build.oo_solenv_patch \
 	build.oo_sw_patch \
 	build.oo_testshl2_patch \
