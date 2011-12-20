@@ -29,10 +29,10 @@
  
  File gid_File_Jar_Officebean
      TXT_FILE_BODY;
-@@ -490,6 +490,7 @@
+@@ -490,6 +490,6 @@
  End
  
- #endif
+-#endif
 +#endif	// !MACOSX && !WNT
  
  #endif
