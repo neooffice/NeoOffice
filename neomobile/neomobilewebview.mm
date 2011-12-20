@@ -743,11 +743,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 		}
 	}
 
+#ifdef USE_NATIVE_LOGIN_WINDOW
 	if ( pRequest && [NeoMobileWebView isLoginURL:[pRequest URL] httpMethod:[pRequest HTTPMethod]] )
 	{
 		[mpPanel showFlipsidePanel];
 		return nil;
 	}
+#endif	// USE_NATIVE_LOGIN_WINDOW
 
 	// Always add a special header with the name and version of the application
 	// that this web view is running in
@@ -1407,7 +1409,6 @@ static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 
 - (void)showFlipsidePanel
 {
-#ifdef USE_NATIVE_LOGIN_WINDOW
 	if ( !sharedFlipsidePanel )
 		sharedFlipsidePanel = [[NonRecursiveResponderFlipsidePanel alloc] initWithWebPanel:self];
 
@@ -1419,7 +1420,6 @@ static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 		NSString *javaScriptCode = @"document.body.innerHTML = ''";
 		[mpwebView stringByEvaluatingJavaScriptFromString:javaScriptCode];
 	}
-#endif	// USE_NATIVE_LOGIN_WINDOW
 }
 
 - (NeoMobileWebView *)webView
