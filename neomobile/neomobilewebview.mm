@@ -815,17 +815,10 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	NSString *basePath = nil;
 	NSArray *downloadPaths = nil;
 
-	// Use NSDownloadsDirectory only if we are running Leopard or higher,
-	// otherwise use NSDesktopDirectory
-	long res = 0;
-	if (Gestalt(gestaltSystemVersion, &res) == noErr)
-	{
-		bool isLeopardOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x5 ) );
-		if (isLeopardOrHigher)
-			downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
-		else
-			downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
-	}
+	// Use NSDownloadsDirectory
+	downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
+    if (!downloadPaths)
+		downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
 
 	if (downloadPaths && fileManager)
 	{
@@ -859,7 +852,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	}
 	
 	[download setDestination:filePath allowOverwrite:YES];
-	mndownloadSize=0;	// initialize only if we receive a response
 }
 
 static std::map< NSURLDownload *, OString > gDownloadPathMap;
