@@ -115,9 +115,9 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 - (unsigned long)bytesReceived;
 - (void)dealloc;
 - (long long)expectedContentLength;
-- (id)initWithDownload:(NSURLDownload *)pDownload path:(NSString *)pPath;
+- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength;
 - (NSString *)path;
-- (void)setExpectedContentLength:(long long)nLength;
+- (void)setPath:(NSString *)pPath;
 @end
 
 @implementation NeoMobileDownloadData
@@ -147,7 +147,7 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return mnExpectedContentLength;
 }
 
-- (id)initWithDownload:(NSURLDownload *)pDownload path:(NSString *)pPath
+- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength
 {
 	[super init];
 
@@ -155,10 +155,8 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	if (mpDownload)
 		[mpDownload retain];
 	mnBytesReceived = 0;
-	mnExpectedContentLength = 0;
-	mpPath = pPath;
-	if (mpPath)
-		[mpPath retain];
+	mnExpectedContentLength = nExpectedContentLength;
+	mpPath = nil;
 
 	return self;
 }
@@ -168,9 +166,11 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return mpPath;
 }
 
-- (void)setExpectedContentLength:(long long)nLength;
+- (void)setPath:(NSString *)pPath;
 {
-	mnExpectedContentLength = nLength;
+	mpPath = pPath;
+	if (mpPath)
+		[mpPath retain];
 }
 
 @end
@@ -921,7 +921,7 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 			filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [decodedFilename stringByDeletingPathExtension], (++i), [decodedFilename pathExtension]]];
 	}
 	
-	[download setDestination:filePath allowOverwrite:YES];
+	[download setDestination:filePath allowOverwrite:NO];
 }
 
 - (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
@@ -929,10 +929,10 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 #ifdef DEBUG
 	fprintf( stderr, "Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
-		[it->second release];
-	aDownloadDataMap[download]=[[NeoMobileDownloadData alloc] initWithDownload:download path:path];
+		[it->second setPath:path];
 }
 
 - (void) download: (NSURLDownload *) download didReceiveResponse: (NSURLResponse *) response
@@ -941,9 +941,10 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 	fprintf( stderr, "NeoMobile Download didReceiveResponse\n");
 #endif
 
-	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
-		[it->second setExpectedContentLength:[response expectedContentLength]];
+		[it->second release];
+	aDownloadDataMap[download]=[[NeoMobileDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength]];
 }
 
 - (void)downloadDidBegin: (NSURLDownload *)download
@@ -996,10 +997,15 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
-		[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
+		NSString *path = [it->second path];
+		if (path)
+		{
+			[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
 #ifdef DEBUG
-		fprintf( stderr, "Opening file: %s\n", [[it->second path] cStringUsingEncoding:NSUTF8StringEncoding] );
+			fprintf( stderr, "Opening file: %s\n", [[it->second path] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+		}
+
 		[it->second release];
 		aDownloadDataMap.erase(it);
 	}
