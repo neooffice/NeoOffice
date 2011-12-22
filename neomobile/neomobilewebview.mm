@@ -854,14 +854,19 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[download setDestination:filePath allowOverwrite:YES];
 }
 
-static std::map< NSURLDownload *, OString > gDownloadPathMap;
+static std::map< NSURLDownload*, NSString* > gDownloadPathMap;
 
 - (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
 {
 #ifdef DEBUG
 	fprintf( stderr, "Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	gDownloadPathMap[download]=OString([path cStringUsingEncoding:NSUTF8StringEncoding]);
+	[download retain];
+	[path retain];
+	std::map< NSURLDownload*, NSString* >::const_iterator it = gDownloadPathMap.find(download);
+	if(it!=gDownloadPathMap.end())
+		[it->second release];
+	gDownloadPathMap[download]=path;
 }
 
 - (void) download: (NSURLDownload *) download didReceiveResponse: (NSURLResponse *) response
@@ -912,15 +917,16 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 #ifdef DEBUG
 	fprintf( stderr, "Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	char outBuf[2*PATH_MAX];
-	if(gDownloadPathMap.count(download)>0)
+	std::map< NSURLDownload*, NSString* >::iterator it = gDownloadPathMap.find(download);
+	if(it!=gDownloadPathMap.end())
 	{
-		sprintf(outBuf, "/usr/bin/open -a \"%s\" \"%s\"", [[[NSBundle mainBundle] bundlePath] cStringUsingEncoding:NSUTF8StringEncoding], gDownloadPathMap[download].getStr());
+		[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], it->second, nil]];
 #ifdef DEBUG
-		fprintf( stderr, "Opening using: %s\n", outBuf );
+		fprintf( stderr, "Opening file: %s\n", [it->second cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-		system(outBuf); // +++ REPLACE WITH APP EVENT
-		gDownloadPathMap.erase(download);
+		[it->first release];
+		[it->second release];
+		gDownloadPathMap.erase(it);
 	}
 	
 	mpdownload=nil;
@@ -938,6 +944,15 @@ static std::map< NSURLDownload *, OString > gDownloadPathMap;
 	[mploadingIndicator setHidden:YES];
 	[mpcancelButton setEnabled:NO];
 	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
+
+	std::map< NSURLDownload*, NSString* >::iterator it = gDownloadPathMap.find(download);
+	if(it!=gDownloadPathMap.end())
+	{
+		[it->first release];
+		[it->second release];
+		gDownloadPathMap.erase(it);
+	}
+	
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
 }
 
