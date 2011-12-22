@@ -104,6 +104,77 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
+@interface NeoMobileDownloadData : NSObject
+{
+	unsigned long			mnBytesReceived;
+	NSURLDownload*			mpDownload;
+	long long				mnExpectedContentLength;
+	NSString*				mpPath;
+}
+- (void)addBytesReceived:(unsigned long)nBytesReceived;
+- (unsigned long)bytesReceived;
+- (void)dealloc;
+- (long long)expectedContentLength;
+- (id)initWithDownload:(NSURLDownload *)pDownload path:(NSString *)pPath;
+- (NSString *)path;
+- (void)setExpectedContentLength:(long long)nLength;
+@end
+
+@implementation NeoMobileDownloadData
+
+- (void)addBytesReceived:(unsigned long)nBytesReceived
+{
+	mnBytesReceived += nBytesReceived;
+}
+
+- (unsigned long)bytesReceived
+{
+	return mnBytesReceived;
+}
+
+- (void)dealloc
+{
+	if (mpDownload)
+		[mpDownload release];
+	if (mpPath)
+		[mpPath release];
+
+	[super dealloc];
+}
+
+- (long long)expectedContentLength
+{
+	return mnExpectedContentLength;
+}
+
+- (id)initWithDownload:(NSURLDownload *)pDownload path:(NSString *)pPath
+{
+	[super init];
+
+	mpDownload = pDownload;
+	if (mpDownload)
+		[mpDownload retain];
+	mnBytesReceived = 0;
+	mnExpectedContentLength = 0;
+	mpPath = pPath;
+	if (mpPath)
+		[mpPath retain];
+
+	return self;
+}
+
+- (NSString *)path
+{
+	return mpPath;
+}
+
+- (void)setExpectedContentLength:(long long)nLength;
+{
+	mnExpectedContentLength = nLength;
+}
+
+@end
+
 @interface NeoMobileStatusBarView : NSView
 - (void)drawRect:(NSRect)dirtyRect;
 @end
@@ -132,6 +203,7 @@ static NSString *neoMobileServerType = nil;
 static NSTimeInterval lastBaseURLIncrementTime = 0;
 static unsigned int baseURLIncrements = 0;
 static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
+static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 
 @implementation NeoMobileWebView
 
@@ -335,9 +407,6 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	if ( pUserAgent && [pUserAgent length] )
 		[self setCustomUserAgent:pUserAgent];
 
-	mpdownload=nil;
-	mndownloadSize=0;
-	mndownloadBytesReceived=0;
 	mpexportEvent=NULL;
 
 	return self;
@@ -488,12 +557,13 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 
 - (void)stopLoading:(id)pSender
 {
-	if(mpdownload)
+	if(aDownloadDataMap.size())
 	{
-		// a file download is in progress, cancel it
+		// file downloads in progress, so cancel them
 		
-		[mpdownload cancel];
-		mpdownload=nil;
+		for(std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
+			[it->first cancel];
+
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
@@ -854,19 +924,15 @@ static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 	[download setDestination:filePath allowOverwrite:YES];
 }
 
-static std::map< NSURLDownload*, NSString* > gDownloadPathMap;
-
 - (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
 {
 #ifdef DEBUG
 	fprintf( stderr, "Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	[download retain];
-	[path retain];
-	std::map< NSURLDownload*, NSString* >::const_iterator it = gDownloadPathMap.find(download);
-	if(it!=gDownloadPathMap.end())
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
 		[it->second release];
-	gDownloadPathMap[download]=path;
+	aDownloadDataMap[download]=[[NeoMobileDownloadData alloc] initWithDownload:download path:path];
 }
 
 - (void) download: (NSURLDownload *) download didReceiveResponse: (NSURLResponse *) response
@@ -875,8 +941,9 @@ static std::map< NSURLDownload*, NSString* > gDownloadPathMap;
 	fprintf( stderr, "NeoMobile Download didReceiveResponse\n");
 #endif
 
-	mndownloadSize=[response expectedContentLength];
-	mndownloadBytesReceived=0;
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
+		[it->second setExpectedContentLength:[response expectedContentLength]];
 }
 
 - (void)downloadDidBegin: (NSURLDownload *)download
@@ -885,30 +952,39 @@ static std::map< NSURLDownload*, NSString* > gDownloadPathMap;
 	fprintf( stderr, "Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 
-	mpdownload=download;
-	[mploadingIndicator setHidden:NO];
-	[mploadingIndicator startAnimation:self];
-	[mpcancelButton setEnabled:YES];
-	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
+	{
+		[mploadingIndicator setHidden:NO];
+		[mploadingIndicator startAnimation:self];
+		[mpcancelButton setEnabled:YES];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
+	}
 }
 
 - (void)download:(NSURLDownload *)download didReceiveDataOfLength:(unsigned long)length
 {
 #ifdef DEBUG
-	fprintf( stderr, "NeoMobile Download didReiveDataOfLength\n");
+	fprintf( stderr, "NeoMobile Download didReceiveDataOfLength\n");
 #endif
 
-	mndownloadBytesReceived+=length;
-	
-	if(mndownloadSize > 0)
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
 	{
-		// we got a response from the server, so we can compute a percentage
-		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (int)((double)mndownloadBytesReceived/(double)mndownloadSize*100)]];
-	}
-	else
-	{
-		// no expected size received from the server, just show Kb download
-		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (long)(mndownloadBytesReceived/1024)]];
+		[it->second addBytesReceived:length];
+
+		unsigned long nBytesReceived=[it->second bytesReceived];
+		long long nExpectedContentLength=[it->second expectedContentLength];
+		if(nExpectedContentLength > 0)
+		{
+			// we got a response from the server, so we can compute a percentage
+			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (int)((double)nBytesReceived/(double)nExpectedContentLength*100)]];
+		}
+		else
+		{
+			// no expected size received from the server, just show Kb download
+			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (long)(nBytesReceived/1024)]];
+		}
 	}
 }
 
@@ -917,22 +993,23 @@ static std::map< NSURLDownload*, NSString* > gDownloadPathMap;
 #ifdef DEBUG
 	fprintf( stderr, "Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-	std::map< NSURLDownload*, NSString* >::iterator it = gDownloadPathMap.find(download);
-	if(it!=gDownloadPathMap.end())
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
 	{
-		[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], it->second, nil]];
+		[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
 #ifdef DEBUG
-		fprintf( stderr, "Opening file: %s\n", [it->second cStringUsingEncoding:NSUTF8StringEncoding] );
+		fprintf( stderr, "Opening file: %s\n", [[it->second path] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
-		[it->first release];
 		[it->second release];
-		gDownloadPathMap.erase(it);
+		aDownloadDataMap.erase(it);
 	}
-	
-	mpdownload=nil;
-	[mploadingIndicator setHidden:YES];
-	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:@""];
+
+	if(!aDownloadDataMap.size())
+	{
+		[mploadingIndicator setHidden:YES];
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+	}
 }
 
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
@@ -940,17 +1017,19 @@ static std::map< NSURLDownload*, NSString* > gDownloadPathMap;
 #ifdef DEBUG
 	NSLog( @"Download didFailWithError: %@", error );
 #endif
-	mpdownload=nil;
-	[mploadingIndicator setHidden:YES];
-	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 
-	std::map< NSURLDownload*, NSString* >::iterator it = gDownloadPathMap.find(download);
-	if(it!=gDownloadPathMap.end())
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
 	{
-		[it->first release];
 		[it->second release];
-		gDownloadPathMap.erase(it);
+		aDownloadDataMap.erase(it);
+	}
+
+	if(!aDownloadDataMap.size())
+	{
+		[mploadingIndicator setHidden:YES];
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 	}
 	
 	// +++ ADD SERVER FALLBACK DOWNLOAD HERE

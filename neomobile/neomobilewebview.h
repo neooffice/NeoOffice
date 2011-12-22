@@ -60,9 +60,6 @@
 	NSButton*				mpcancelButton;
 	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
-	NSURLDownload*			mpdownload;
-	unsigned long long		mndownloadSize;
-	unsigned long long		mndownloadBytesReceived;
 	NeoMobileExportFileAppEvent*	mpexportEvent;
 }
 + (const NSString *)appendNeoMobileServerNameToString:(const NSString *)pString;
