@@ -562,7 +562,11 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 		// file downloads in progress, so cancel them
 		
 		for(std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
+		{
 			[it->first cancel];
+			[it->second release];
+		}
+		aDownloadDataMap.clear();
 
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
@@ -1020,6 +1024,7 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
 {
+fprintf( stderr, "There: %p\n", download );
 #ifdef DEBUG
 	NSLog( @"Download didFailWithError: %@", error );
 #endif
