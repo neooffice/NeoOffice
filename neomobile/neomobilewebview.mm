@@ -62,7 +62,7 @@ static const NSString *pDevelopmentBaseURLs[] = {
 
 static const NSString *pTestBaseURLs[] = {
 	// Force automatic server fallback during testing
-	@"https://127.0.0.2",
+	@"https://127.0.0.2/",
 #ifndef DEBUG
 	@"https://neomobile-test.neooffice.org/",
 #endif	// !DEBUG
@@ -258,9 +258,23 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 #endif	// TEST
 		}
 
-		neoMobileBaseURLEntries = [NSArray arrayWithObjects:pBaseURLs count:nBaseURLCount];
-		if (neoMobileBaseURLEntries)
+		NSMutableArray *pNewURLEntries = [NSMutableArray arrayWithCapacity:nBaseURLCount];
+		if ( pNewURLEntries )
 		{
+			unsigned int i = 0;
+			for ( ; i < nBaseURLCount; i++ )
+			{
+				if ( pBaseURLs[ i ] )
+				{
+					NSString *pBaseURL = [pBaseURLs[ i ] stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding];
+					unsigned int len = [pBaseURL length];
+					if ( len && [pBaseURL characterAtIndex:len - 1] != (unichar)'/' )
+						pBaseURL = [pBaseURL stringByAppendingString:@"/"];
+					[pNewURLEntries addObject:pBaseURL];
+				}
+			}
+
+			neoMobileBaseURLEntries = pNewURLEntries;
 			[neoMobileBaseURLEntries retain];
 			neoMobileBaseURLCount = [neoMobileBaseURLEntries count];
 		}
@@ -494,25 +508,29 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 						if ( pURI )
 						{
 							NSString *pPath = [pURL path];
-							if ( pPath && ![pPath isEqualToString:@"/"] )
-								[pURI appendString:pPath];
+							if ( pPath && [pPath length] )
+							{
+								while ( [pPath characterAtIndex:0] == (unichar)'/' )
+									pPath = [pPath substringFromIndex:1];
+								[pURI appendString:[pPath stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
+							}
 							NSString *pParams = [pURL parameterString];
 							if ( pParams )
 							{
 								[pURI appendString:@";"];
-								[pURI appendString:pParams];
+								[pURI appendString:[pParams stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 							}
 							NSString *pQuery = [pURL query];
 							if ( pQuery )
 							{
 								[pURI appendString:@"?"];
-								[pURI appendString:pQuery];
+								[pURI appendString:[pQuery stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 							}
 							NSString *pFragment = [pURL fragment];
 							if ( pFragment )
 							{
 								[pURI appendString:@"#"];
-								[pURI appendString:pFragment];
+								[pURI appendString:[pFragment stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 							}
 
 							NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
@@ -523,8 +541,8 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 								// endless reload loop.
 								[defaults setObject:pURI forKey:[NeoMobileWebView appendNeoMobileServerNameToString:kNeoMobileLastURLPref]];
 								[defaults synchronize];
-
-								pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
+		
+								pURL = [NSURL URLWithString:pURI];
 								if ( pURL )
 								{
 									NSMutableURLRequest *pNewRequest = [NSMutableURLRequest requestWithURL:pURL cachePolicy:[pRequest cachePolicy] timeoutInterval:[pRequest timeoutInterval]];
@@ -1024,7 +1042,6 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
 {
-fprintf( stderr, "There: %p\n", download );
 #ifdef DEBUG
 	NSLog( @"Download didFailWithError: %@", error );
 #endif
@@ -1036,14 +1053,15 @@ fprintf( stderr, "There: %p\n", download );
 		aDownloadDataMap.erase(it);
 	}
 
+	// Display error dialog
+	[self reloadFrameWithNextServer:nil reason:error];
+
 	if(!aDownloadDataMap.size())
 	{
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 	}
-	
-	// +++ ADD SERVER FALLBACK DOWNLOAD HERE
 }
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
