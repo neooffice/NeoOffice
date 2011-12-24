@@ -403,6 +403,10 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 	mpstatusLabel = pStatusLabel;
 	[mpstatusLabel retain];
 
+	NSHTTPCookieStorage *pCookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+	if ( pCookieStorage )
+		[pCookieStorage setCookieAcceptPolicy:NSHTTPCookieAcceptPolicyAlways];
+
 	WebPreferences *pPrefs = [self preferences];
 	if ( pPrefs )
 	{
@@ -548,6 +552,17 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 									NSMutableURLRequest *pNewRequest = [NSMutableURLRequest requestWithURL:pURL cachePolicy:[pRequest cachePolicy] timeoutInterval:[pRequest timeoutInterval]];
 									if ( pNewRequest )
 									{
+										NSHTTPCookieStorage *pCookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
+										if ( pCookieStorage )
+										{
+											NSArray *pCookies = [pCookieStorage cookiesForURL:[pRequest URL]];
+											if ( pCookies )
+											{
+												NSDictionary *pCookieHeaders = [NSHTTPCookie requestHeaderFieldsWithCookies:pCookies];
+												if ( pCookieHeaders )
+													[pNewRequest setAllHTTPHeaderFields:pCookieHeaders];
+											}
+										}
 										[pNewRequest setAllHTTPHeaderFields:[pRequest allHTTPHeaderFields]];
 										NSData *pBody = [pRequest HTTPBody];
 										if ( pBody )
