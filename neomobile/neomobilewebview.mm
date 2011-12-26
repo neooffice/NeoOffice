@@ -222,6 +222,7 @@ static NSTimeInterval lastBaseURLIncrementTime = 0;
 static unsigned int baseURLIncrements = 0;
 static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
+static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 @implementation NeoMobileWebView
 
@@ -1062,12 +1063,38 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 					}
 				}
 
+				NSString *pURLPath = [[[download request] URL] absoluteString];
 				if (!bFileHasAllBits)
 				{
 					[pFileManager removeItemAtPath:path error:nil];
-					NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
-					[self download:download didFailWithError:pError];
+
+					if (!pRetryDownloadURLs)
+					{
+						pRetryDownloadURLs = [NSMutableDictionary dictionaryWithCapacity:1];
+						if (pRetryDownloadURLs)
+							[pRetryDownloadURLs retain];
+					}
+
+					if (pRetryDownloadURLs && ![pRetryDownloadURLs objectForKey:pURLPath])
+					{
+						[pRetryDownloadURLs setObject:pURLPath forKey:pURLPath];
+						[[self mainFrame] loadRequest:[download request]];
+						[it->second release];
+						aDownloadDataMap.erase(it);
+					}
+					else
+					{
+						if (pRetryDownloadURLs)
+							[pRetryDownloadURLs removeObjectForKey:pURLPath];
+						NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
+						[self download:download didFailWithError:pError];
+					}
+
 					return;
+				}
+				else if (pRetryDownloadURLs)
+				{
+					[pRetryDownloadURLs removeObjectForKey:pURLPath];
 				}
 			}
 
