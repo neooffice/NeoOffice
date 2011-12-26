@@ -602,6 +602,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	{
 		// file downloads in progress, so cancel them
 		
+		if (pRetryDownloadURLs)
+			[pRetryDownloadURLs removeAllObjects];
+
 		for(std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
 		{
 			[it->first cancel];
@@ -1067,29 +1070,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				if (!bFileHasAllBits)
 				{
 					[pFileManager removeItemAtPath:path error:nil];
-
-					if (!pRetryDownloadURLs)
-					{
-						pRetryDownloadURLs = [NSMutableDictionary dictionaryWithCapacity:1];
-						if (pRetryDownloadURLs)
-							[pRetryDownloadURLs retain];
-					}
-
-					if (pRetryDownloadURLs && ![pRetryDownloadURLs objectForKey:pURLPath])
-					{
-						[pRetryDownloadURLs setObject:pURLPath forKey:pURLPath];
-						[[self mainFrame] loadRequest:[download request]];
-						[it->second release];
-						aDownloadDataMap.erase(it);
-					}
-					else
-					{
-						if (pRetryDownloadURLs)
-							[pRetryDownloadURLs removeObjectForKey:pURLPath];
-						NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
-						[self download:download didFailWithError:pError];
-					}
-
+					NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
+					[self download:download didFailWithError:pError];
 					return;
 				}
 				else if (pRetryDownloadURLs)
@@ -1129,12 +1111,35 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
+		if (!pRetryDownloadURLs)
+		{
+			pRetryDownloadURLs = [NSMutableDictionary dictionaryWithCapacity:1];
+			if (pRetryDownloadURLs)
+				[pRetryDownloadURLs retain];
+		}
+
+		MacOSBOOL bRetry = NO;
+		NSString *pURLPath = [[[download request] URL] absoluteString];
+		if (pRetryDownloadURLs && ![pRetryDownloadURLs objectForKey:pURLPath])
+		{
+			[pRetryDownloadURLs setObject:pURLPath forKey:pURLPath];
+			[[self mainFrame] loadRequest:[download request]];
+			bRetry = YES;
+		}
+		else
+		{
+			[pRetryDownloadURLs removeObjectForKey:pURLPath];
+		}
+
 		[it->second release];
 		aDownloadDataMap.erase(it);
-	}
 
-	// Display error dialog
-	[self reloadFrameWithNextServer:nil reason:error];
+		// Display error dialog
+		if (bRetry)
+			return;
+		else
+			[self reloadFrameWithNextServer:nil reason:error];
+	}
 
 	if(!aDownloadDataMap.size())
 	{
