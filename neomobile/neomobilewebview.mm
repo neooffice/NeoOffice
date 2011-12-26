@@ -1043,6 +1043,34 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 		NSString *path = [it->second path];
 		if (path)
 		{
+			// Check if downloaded file size matches content length header
+			long long nExpectedContentLength=[it->second expectedContentLength];
+			NSFileManager *pFileManager = [NSFileManager defaultManager];
+			if(nExpectedContentLength > 0 && pFileManager)
+			{
+				MacOSBOOL bFileHasAllBits = NO;
+				NSDictionary *pFileAttrs = [pFileManager attributesOfItemAtPath:path error:nil];
+				if (pFileAttrs)
+				{
+					// Downloaded file should never be directory or softlink
+					NSString *pFileType = [pFileAttrs fileType];
+					if ([pFileType isEqualToString:NSFileTypeRegular])
+					{
+						unsigned long long nFileSize = [pFileAttrs fileSize];
+						if (nFileSize == (unsigned long long)nExpectedContentLength)
+							bFileHasAllBits = YES;
+					}
+				}
+
+				if (!bFileHasAllBits)
+				{
+					[pFileManager removeItemAtPath:path error:nil];
+					NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
+					[self download:download didFailWithError:pError];
+					return;
+				}
+			}
+
 			NSString *MIMEType = [it->second MIMEType];
 			if([MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound)
 				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
