@@ -86,6 +86,12 @@ static const NSString *pProductionBaseURLs[] = {
 
 using namespace rtl;
 
+static NSString *GetUploadErrorURI(int error, NSString *uuid) {
+	if (!uuid)
+		uuid = @"";
+	return [NSString stringWithFormat:@"/uploads/clienterror?errorCode=%d&uuid=%@", error, uuid];
+}
+
 /**
  * Overrides WebKit's [WebJavaScriptTextInputPanel windowDidLoad] selector to
  * set the JavaScript prompt dialog to have no title like the other JavaScript
@@ -452,7 +458,7 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 
 - (void)loadURI:(NSString *)pURI
 {
-	if ( !pURI || [pURI isEqualToString:@"/"] )
+	if ( !pURI )
 		pURI = @"";
 
 	NSURL *pURL = [NSURL URLWithString:pURI relativeToURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
@@ -742,22 +748,21 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 					{
 						// display unsupported doc type error to user and
 						// pass UUID back to server.
-						
-						[self loadURI:[NSString stringWithFormat: @"/uploads/clienterror?errorCode=4&uuid=%@", pSaveUUIDHeader]];						
+						[self loadURI:GetUploadErrorURI(4, pSaveUUIDHeader)];
 					}
 					else if(aEvent.IsCanceled())
 					{
 						// display canceled error to user and pass URI back to
 						// server
 						
-						[self loadURI:[NSString stringWithFormat: @"/uploads/clienterror?errorCode=3&uuid=%@", pSaveUUIDHeader]];
+						[self loadURI:GetUploadErrorURI(3, pSaveUUIDHeader)];
 					}
 					else if(aEvent.GetErrorCode()!=0)
 					{
 						// other error code;  pass along to the server for
 						// display
 						
-						[self loadURI:[NSString stringWithFormat: @"/uploads/clienterror?errorCode=%d&uuid=%@", aEvent.GetErrorCode(), pSaveUUIDHeader]];
+						[self loadURI:GetUploadErrorURI(aEvent.GetErrorCode(), pSaveUUIDHeader)];
 					}
 					else
 					{
