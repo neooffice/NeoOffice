@@ -115,13 +115,15 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	unsigned long			mnBytesReceived;
 	NSURLDownload*			mpDownload;
 	long long				mnExpectedContentLength;
+	NSString*				mpMIMEType;
 	NSString*				mpPath;
 }
 - (void)addBytesReceived:(unsigned long)nBytesReceived;
 - (unsigned long)bytesReceived;
 - (void)dealloc;
 - (long long)expectedContentLength;
-- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength;
+- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType;
+- (NSString *)MIMEType;
 - (NSString *)path;
 - (void)setPath:(NSString *)pPath;
 @end
@@ -142,6 +144,8 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 {
 	if (mpDownload)
 		[mpDownload release];
+	if (mpMIMEType)
+		[mpMIMEType release];
 	if (mpPath)
 		[mpPath release];
 
@@ -153,7 +157,7 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return mnExpectedContentLength;
 }
 
-- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength
+- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType
 {
 	[super init];
 
@@ -162,9 +166,17 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 		[mpDownload retain];
 	mnBytesReceived = 0;
 	mnExpectedContentLength = nExpectedContentLength;
+	mpMIMEType = pMIMEType;
+	if (mpMIMEType)
+		[pMIMEType retain];
 	mpPath = nil;
 
 	return self;
+}
+
+- (NSString *)MIMEType
+{
+	return mpMIMEType;
 }
 
 - (NSString *)path
@@ -966,7 +978,7 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 		[it->second setPath:path];
 }
 
-- (void) download: (NSURLDownload *) download didReceiveResponse: (NSURLResponse *) response
+- (void)download: (NSURLDownload *) download didReceiveResponse: (NSURLResponse *) response
 {
 #ifdef DEBUG
 	fprintf( stderr, "NeoMobile Download didReceiveResponse\n");
@@ -975,7 +987,7 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 		[it->second release];
-	aDownloadDataMap[download]=[[NeoMobileDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength]];
+	aDownloadDataMap[download]=[[NeoMobileDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
 }
 
 - (void)downloadDidBegin: (NSURLDownload *)download
@@ -1031,7 +1043,11 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 		NSString *path = [it->second path];
 		if (path)
 		{
-			[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
+			NSString *MIMEType = [it->second MIMEType];
+			if([MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound)
+				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
+			else
+				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:[it->second path], nil]];
 #ifdef DEBUG
 			fprintf( stderr, "Opening file: %s\n", [[it->second path] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
@@ -1084,7 +1100,7 @@ static std::map< NSURLDownload*, NeoMobileDownloadData* > aDownloadDataMap;
 
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener
 {
-	if([type rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [type rangeOfString: @"application/ms"].location != NSNotFound)
+	if([type rangeOfString: @"application/"].location != NSNotFound)
 	{
 		[listener download];
 	}
