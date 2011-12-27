@@ -510,7 +510,18 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if ( pWebFrame )
 	{
+		MacOSBOOL bShowErrorAfterReload = NO;
 		WebDataSource *pDataSource = [pWebFrame provisionalDataSource];
+		if ( pDataSource )
+		{
+			// Don't reload downloads as it will leave a blank screen
+			NSMutableURLRequest *pRequest = [pDataSource request];
+			if ( !pRequest || [NeoMobileWebView isDownloadURL:[pRequest URL]] )
+			{
+				bShowErrorAfterReload = YES;
+				pDataSource = nil;
+			}
+		}
 		if ( !pDataSource )
 			pDataSource = [pWebFrame dataSource];
 		if ( pDataSource )
@@ -522,7 +533,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				// The URL may be empty on first load
 				if ( !pURL || ![[pURL absoluteString] length] )
 					pURL = [NSURL URLWithString:[NeoMobileWebView neoMobileURL]];
-				if ( pURL && [NeoMobileWebView isNeoMobileURL:pURL syncServer:NO] && ( errCode == NSURLErrorTimedOut || errCode == NSURLErrorCannotFindHost || errCode == NSURLErrorCannotConnectToHost ) )
+				if ( pURL && [NeoMobileWebView isNeoMobileURL:pURL syncServer:NO] && ![NeoMobileWebView isDownloadURL:pURL] && ( errCode == NSURLErrorTimedOut || errCode == NSURLErrorCannotFindHost || errCode == NSURLErrorCannotConnectToHost ) )
 				{
 					if ( [NeoMobileWebView incrementNeoMobileBaseEntry] )
 					{
@@ -533,7 +544,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 							NSString *pPath = [pURL path];
 							if ( pPath && [pPath length] )
 							{
-								while ( [pPath characterAtIndex:0] == (unichar)'/' )
+								while ( [pPath length] && [pPath characterAtIndex:0] == (unichar)'/' )
 									pPath = [pPath substringFromIndex:1];
 								[pURI appendString:[pPath stringByAddingPercentEscapesUsingEncoding:NSUTF8StringEncoding]];
 							}
@@ -580,7 +591,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 											[pNewRequest setHTTPBodyStream:pBodyStream];
 										[pNewRequest setHTTPMethod:[pRequest HTTPMethod]];
 										[mpPanel createWebView:pNewRequest];
-										return;
+										if ( !bShowErrorAfterReload )
+											return;
 									}
 								}
 							}
@@ -1138,7 +1150,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		if (bRetry)
 			return;
 		else
-			[self reloadFrameWithNextServer:nil reason:error];
+			[self reloadFrameWithNextServer:[self mainFrame] reason:error];
 	}
 
 	if(!aDownloadDataMap.size())
