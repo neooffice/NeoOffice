@@ -91,7 +91,7 @@ ModalDialog RID_DEFAULTABOUT
 		Pos = MAP_APPFONT ( 54 , 25 ) ;
 		Size = MAP_APPFONT ( 168 , 51 ) ;
 // #ifdef USE_JAVA
- 		Text = "Copyright 2003-2011 Planamesa Inc.\nwith portions copyright 2000-2009 Sun Microsystems Inc.\nThis product has been created based on OpenOffice.org.";
+ 		Text = "Copyright Planamesa Inc.\nwith portions copyright Oracle and/or its affiliates.\nThis product has been created based on OpenOffice.org.";
 // #endif	// USE_JAVA
 		WordBreak = TRUE ;
 	};
