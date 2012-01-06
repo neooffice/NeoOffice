@@ -542,7 +542,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 						if ( pURI )
 						{
 							NSString *pPath = [pURL path];
-							if ( pPath && [pPath length] )
+							if ( pPath )
 							{
 								while ( [pPath length] && [pPath characterAtIndex:0] == (unichar)'/' )
 									pPath = [pPath substringFromIndex:1];
