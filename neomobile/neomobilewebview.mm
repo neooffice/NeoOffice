@@ -1492,9 +1492,20 @@ static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 #ifdef USE_NATIVE_LOGIN_WINDOW
 	if ( sharedFlipsidePanel && [sharedFlipsidePanel isVisible] )
 	{
-		// Clear web view content
+		// Clear web view content and history list
 		NSString *javaScriptCode = @"document.body.innerHTML = ''";
 		[mpwebView stringByEvaluatingJavaScriptFromString:javaScriptCode];
+
+		WebBackForwardList *pHistory = [mpwebView backForwardList];
+		if ( pHistory )
+		{
+			int nCapacity = [pHistory capacity];
+			if ( nCapacity )
+			{
+				[pHistory setCapacity:0];
+				[pHistory setCapacity:nCapacity];
+			}
+		}
 
 		[sharedFlipsidePanel flipToShowWindow:self forward:NO];
 	}
@@ -1628,9 +1639,20 @@ static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 	{
 		[self flipToShowWindow:sharedFlipsidePanel forward:YES];
 
-		// Clear web view content
+		// Clear web view content and history list
 		NSString *javaScriptCode = @"document.body.innerHTML = ''";
 		[mpwebView stringByEvaluatingJavaScriptFromString:javaScriptCode];
+
+		WebBackForwardList *pHistory = [mpwebView backForwardList];
+		if ( pHistory )
+		{
+			int nCapacity = [pHistory capacity];
+			if ( nCapacity )
+			{
+				[pHistory setCapacity:0];
+				[pHistory setCapacity:nCapacity];
+			}
+		}
 	}
 }
 
