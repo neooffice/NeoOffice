@@ -53,13 +53,13 @@ const NSString *kNeoMobileHeightPref = @"nmHeight";
 const NSString *kNeoMobileVisiblePref = @"nmVisible";
 const NSString *kNeoMobileServerTypePref = @"nmServerType";
 
-static NonRecursiveResponderWebPanel *pSharedPanel = nil;
+static NeoMobileNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
-@implementation CreateWebViewImpl
+@implementation NeoMobileCreateWebViewImpl
 
 + (id)createWithURI:(const NSString *)pURI userAgent:(const NSString *)pUserAgent
 {
-	CreateWebViewImpl *pRet = [[CreateWebViewImpl alloc] initWithURI:pURI userAgent:pUserAgent];
+	NeoMobileCreateWebViewImpl *pRet = [[NeoMobileCreateWebViewImpl alloc] initWithURI:pURI userAgent:pUserAgent];
 	[pRet autorelease];
 	return pRet;
 }
@@ -77,7 +77,7 @@ static NonRecursiveResponderWebPanel *pSharedPanel = nil;
 - (void)showWebView:(id)obj
 {
 	if ( !pSharedPanel )
-		pSharedPanel = [[NonRecursiveResponderWebPanel alloc] initWithUserAgent:mpUserAgent];
+		pSharedPanel = [[NeoMobileNonRecursiveResponderWebPanel alloc] initWithUserAgent:mpUserAgent];
 
 	if(pSharedPanel)
 	{

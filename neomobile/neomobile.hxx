@@ -50,7 +50,7 @@ extern const NSString *kNeoMobileHeightPref;
 extern const NSString *kNeoMobileVisiblePref;
 extern const NSString *kNeoMobileServerTypePref;
 
-@interface CreateWebViewImpl : NSObject
+@interface NeoMobileCreateWebViewImpl : NSObject
 {
 	const NSString*				mpURI;
 	const NSString*				mpUserAgent;

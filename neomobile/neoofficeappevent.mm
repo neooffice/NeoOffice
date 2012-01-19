@@ -162,7 +162,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			if(neoOfficeMobile->isPasswordProtected(rFrame))
 			{
 				NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
-				RunPasswordProtectionAlertOnMainThread *passwordProtection=[[RunPasswordProtectionAlertOnMainThread alloc] init];
+				NeoMobileRunPasswordProtectionAlertOnMainThread *passwordProtection=[[NeoMobileRunPasswordProtectionAlertOnMainThread alloc] init];
 				[passwordProtection performSelectorOnMainThread:@selector(runModal:) withObject:passwordProtection waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 				if([passwordProtection cancelled])
 					mbCanceled = true;
@@ -176,7 +176,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// get a unique temporary base filename
 			
 			NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
-			DoFileManagerOnMainThread *fileMgr=nil;
+			NeoMobileDoFileManagerOnMainThread *fileMgr=nil;
 			
 			OString pdfExportURLutf8;
 			OString openDocExportURLutf8;
@@ -185,7 +185,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			
 			try
 			{
-			fileMgr=[[DoFileManagerOnMainThread alloc] init];
+			fileMgr=[[NeoMobileDoFileManagerOnMainThread alloc] init];
 			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 			
 			NSString *filePath=[fileMgr filePath];

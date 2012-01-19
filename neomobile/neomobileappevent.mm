@@ -38,7 +38,7 @@
 
 using namespace ::rtl;
 
-@implementation RunPasswordProtectionAlertOnMainThread
+@implementation NeoMobileRunPasswordProtectionAlertOnMainThread
 
 - (MacOSBOOL)cancelled
 {
@@ -62,7 +62,7 @@ using namespace ::rtl;
 
 @end
 
-@implementation DoFileManagerOnMainThread
+@implementation NeoMobileDoFileManagerOnMainThread
 
 - (id)init
 {

@@ -35,7 +35,7 @@
 
 @interface NonRecursiveResponderFlipsidePanel : NonRecursiveResponderPanel
 {
-	NonRecursiveResponderWebPanel*	mpWebPanel;
+	NeoMobileNonRecursiveResponderWebPanel*	mpWebPanel;
 	NSButton*				mpaboutButton;
 	NSView*					mpcontentView;
 	NSButton*				mpcreateAccountButton;
@@ -54,7 +54,7 @@
 - (IBAction)doCreateAccount;
 - (IBAction)doForgotPassword;
 - (IBAction)doLogin;
-- (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel;
+- (id)initWithWebPanel:(NeoMobileNonRecursiveResponderWebPanel *)pWebPanel;
 - (void)orderWindow:(NSWindowOrderingMode)nOrderingMode relativeTo:(int)nOtherWindowNumber;
 - (IBAction)storeLoginInfo;
 @end

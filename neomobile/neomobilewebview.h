@@ -50,12 +50,12 @@
 #define kNMDefaultBrowserWidth	430
 #define kNMDefaultBrowserHeight	620
 
-@class NonRecursiveResponderWebPanel;
+@class NeoMobileNonRecursiveResponderWebPanel;
 
 @interface NeoMobileWebView : WebView
 {
 	NSObject*				mpDelegate;
-	NonRecursiveResponderWebPanel*	mpPanel;
+	NeoMobileNonRecursiveResponderWebPanel*	mpPanel;
 	NSButton*				mpbackButton;
 	NSButton*				mpcancelButton;
 	NSProgressIndicator*	mploadingIndicator;
@@ -69,7 +69,7 @@
 + (MacOSBOOL)isNeoMobileURL:(NSURL *)pURL syncServer:(MacOSBOOL)syncServer;
 + (MacOSBOOL)incrementNeoMobileBaseEntry;
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
+- (id)initWithFrame:(NSRect)aFrame panel:(NeoMobileNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
 - (void)loadURI:(NSString *)pURI;
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;
@@ -107,7 +107,7 @@
 - (void)zoom:(id)aObject;
 @end
 
-@interface NonRecursiveResponderWebPanel : NonRecursiveResponderPanel
+@interface NeoMobileNonRecursiveResponderWebPanel : NonRecursiveResponderPanel
 {
 	NSButton*				mpbackButton;
 	NSView*					mpbottomView;

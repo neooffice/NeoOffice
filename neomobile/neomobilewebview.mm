@@ -382,7 +382,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return(YES);
 }
 
-- (id)initWithFrame:(NSRect)aFrame panel:(NonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
+- (id)initWithFrame:(NSRect)aFrame panel:(NeoMobileNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
 {
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
@@ -1424,13 +1424,13 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 @end
 
-@interface NSWindow (NonRecursiveResponderWebPanel)
+@interface NSWindow (NeoMobileNonRecursiveResponderWebPanel)
 - (NSRect)_growBoxRect;
 @end
 
 static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 
-@implementation NonRecursiveResponderWebPanel
+@implementation NeoMobileNonRecursiveResponderWebPanel
 
 - (void)createWebView:(NSURLRequest *)pRequest
 {

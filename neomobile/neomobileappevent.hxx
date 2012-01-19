@@ -50,7 +50,7 @@
 #define NO (MacOSBOOL)0
 #endif
 
-@interface RunPasswordProtectionAlertOnMainThread : NSObject
+@interface NeoMobileRunPasswordProtectionAlertOnMainThread : NSObject
 {
 	MacOSBOOL mcancelled;
 }
@@ -59,7 +59,7 @@
 - (MacOSBOOL)cancelled;
 @end
 
-@interface DoFileManagerOnMainThread : NSObject
+@interface NeoMobileDoFileManagerOnMainThread : NSObject
 {
 	NSString *mpath;
 }

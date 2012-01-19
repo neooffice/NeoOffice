@@ -171,7 +171,7 @@ static const NSString *kUsernamePref = @"nmUsername";
 	[[webView mainFrame] loadRequest:pURLRequest];
 }
 
-- (id)initWithWebPanel:(NonRecursiveResponderWebPanel *)pWebPanel
+- (id)initWithWebPanel:(NeoMobileNonRecursiveResponderWebPanel *)pWebPanel
 {
 	[super initWithContentRect:[pWebPanel frame] styleMask:[pWebPanel styleMask] backing:NSBackingStoreBuffered defer:YES];
 	[self setBackgroundColor:[NSColor whiteColor]];
