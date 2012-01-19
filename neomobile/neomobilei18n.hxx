@@ -72,6 +72,6 @@
  * Lookup a string and retrieve a translated string.  If no translation
  * is available, default to english.
  */
-NSString *GetLocalizedString( const sal_Char *key );
+NSString *NeoMobileGetLocalizedString( const sal_Char *key );
 
 #endif	// _NEOMOBILEI18N_HXX

@@ -55,7 +55,7 @@ using namespace ::rtl;
 
 - (void)runModal:(id)arg;
 {
-	NSAlert *alert = [NSAlert alertWithMessageText:GetLocalizedString(NEOMOBILEUPLOADPASSWORDPROTECTED) defaultButton:GetLocalizedString(NEOMOBILEUPLOAD) alternateButton:GetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:GetLocalizedString(NEOMOBILEUPLOADCONTINUE)];
+	NSAlert *alert = [NSAlert alertWithMessageText:NeoMobileGetLocalizedString(NEOMOBILEUPLOADPASSWORDPROTECTED) defaultButton:NeoMobileGetLocalizedString(NEOMOBILEUPLOAD) alternateButton:NeoMobileGetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:NeoMobileGetLocalizedString(NEOMOBILEUPLOADCONTINUE)];
 	if(alert && [alert runModal] == NSAlertDefaultReturn)
 		mcancelled = NO;
 }

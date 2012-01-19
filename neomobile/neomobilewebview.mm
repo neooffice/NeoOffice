@@ -603,7 +603,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 	}
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", GetLocalizedString(NEOMOBILEERROR), [pError localizedDescription]] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+	NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", NeoMobileGetLocalizedString(NEOMOBILEERROR), [pError localizedDescription]] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
 	if ( pAlert )
 		[pAlert runModal];
 }
@@ -626,7 +626,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
+		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
 	}
 	else if(mpexportEvent)
 	{
@@ -764,7 +764,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					[mploadingIndicator setHidden:NO];
 					[mploadingIndicator startAnimation:self];
 					[mpcancelButton setEnabled:YES];
-					[mpstatusLabel setString:GetLocalizedString(NEOMOBILEEXPORTINGFILE)];
+					[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEEXPORTINGFILE)];
 
 					aEvent.Execute();
 
@@ -852,9 +852,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		pRequest = [pDataSource request];
 	
 	if ( mpexportEvent && pRequest && [[pRequest HTTPMethod] isEqualToString:@"POST"] )
-		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEUPLOADINGFILE)];
+		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEUPLOADINGFILE)];
 	else
-		[mpstatusLabel setString:GetLocalizedString(NEOMOBILELOADING)];
+		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILELOADING)];
 }
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
@@ -914,7 +914,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( !pWindow || ![pWindow isVisible] )
 		return bRet;
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:GetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:@""];
+	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:NeoMobileGetLocalizedString(NEOMOBILECANCEL) otherButton:nil informativeTextWithFormat:@""];
 	if ( pAlert && [pAlert runModal] == NSAlertDefaultReturn )
 		bRet = YES;
 
@@ -1018,7 +1018,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[mploadingIndicator setHidden:NO];
 		[mploadingIndicator startAnimation:self];
 		[mpcancelButton setEnabled:YES];
-		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
+		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
 	}
 }
 
@@ -1038,12 +1038,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		if(nExpectedContentLength > 0)
 		{
 			// we got a response from the server, so we can compute a percentage
-			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (int)((double)nBytesReceived/(double)nExpectedContentLength*100)]];
+			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (int)((double)nBytesReceived/(double)nExpectedContentLength*100)]];
 		}
 		else
 		{
 			// no expected size received from the server, just show Kb download
-			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", GetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (long)(nBytesReceived/1024)]];
+			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADINGFILE), (long)(nBytesReceived/1024)]];
 		}
 	}
 }
@@ -1157,7 +1157,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	{
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:GetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
+		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 	}
 }
 
@@ -1245,7 +1245,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation];
 	[self setFloatingPanel:YES];
 	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 0)];
-	[self setTitle: GetLocalizedString(NEOMOBILEPRODUCTNAME)];
+	[self setTitle: NeoMobileGetLocalizedString(NEOMOBILEPRODUCTNAME)];
 	[self setDelegate:self];
 
 	mbinZoom = NO;
@@ -1370,7 +1370,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 		return;
 	mbinZoom = YES;
 
-	BOOL bZoomed = YES;
+	MacOSBOOL bZoomed = YES;
 	NSRect aFrame = [self frame];
 	NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
 	if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
@@ -1572,7 +1572,7 @@ static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 	growBoxSize.width /= 2;
 
 	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-MAX(kNMBottomViewPadding, growBoxSize.width), kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
-	[mpcancelButton setToolTip:GetLocalizedString(NEOMOBILECANCEL)];
+	[mpcancelButton setToolTip:NeoMobileGetLocalizedString(NEOMOBILECANCEL)];
 	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
 	[mpcancelButton setBezelStyle:NSRegularSquareBezelStyle];
@@ -1582,7 +1582,7 @@ static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 	[mpcancelButton setAutoresizingMask:(NSViewMinXMargin)];
 	
 	mpbackButton = [[NSButton alloc] initWithFrame:NSMakeRect([mpcancelButton frame].origin.x-buttonSize.width-kNMBottomViewPadding, kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
-	[mpbackButton setToolTip:GetLocalizedString(NEOMOBILEBACK)];
+	[mpbackButton setToolTip:NeoMobileGetLocalizedString(NEOMOBILEBACK)];
 	[mpbackButton setEnabled:YES];
 	[mpbackButton setButtonType:NSMomentaryPushInButton];
 	[mpbackButton setBezelStyle:NSRegularSquareBezelStyle];
