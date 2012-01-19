@@ -758,7 +758,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					if ( pSaveMimeTypesHeader )
 						pMimeTypes = [pSaveMimeTypesHeader componentsSeparatedByString:@", "];
 
-					NeoMobileExportFileAppEvent aEvent( NSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody, pMimeTypes );
+					NeoMobileExportFileAppEvent aEvent( NeoMobileNSStringToOUString( pSaveUUIDHeader ), pFileManager, pPostBody, pMimeTypes );
 					mpexportEvent=&aEvent;
 
 					[mploadingIndicator setHidden:NO];

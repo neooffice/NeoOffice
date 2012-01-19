@@ -161,7 +161,7 @@ static NonRecursiveResponderWebPanel *pSharedPanel = nil;
 }
 @end
 
-OUString NSStringToOUString( NSString *pString )
+OUString NeoMobileNSStringToOUString( NSString *pString )
 {
 	if ( !pString )
 		return OUString();
@@ -180,7 +180,7 @@ OUString NSStringToOUString( NSString *pString )
 /**
  * Check if the we have full WebView support available
  */
-::sal_Bool IsSupportedMacOSXVersion() 
+::sal_Bool NeoMobileIsSupportedMacOSXVersion() 
 {
 	// we currently need to be running on 10.4 in order to have full WebView
 	// support.  Check using our gestalt.
@@ -206,7 +206,7 @@ OUString NSStringToOUString( NSString *pString )
  *						suffix will be added.
  * @return sal_True if the zip operation succeeded, sal_False on error.
  */
-::sal_Bool ZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
+::sal_Bool NeoMobileZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath ) 
 {
 	try
 	{

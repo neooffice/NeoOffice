@@ -61,10 +61,10 @@ extern const NSString *kNeoMobileServerTypePref;
 - (void)showWebViewOnlyIfVisible:(id)obj;
 @end
 
-NSArray *GetPerformSelectorOnMainThreadModes();
-NSString *GetUserAgent();
-::rtl::OUString NSStringToOUString( NSString *pString );
-::sal_Bool IsSupportedMacOSXVersion();
-::sal_Bool ZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath );
+NSArray *NeoMobileGetPerformSelectorOnMainThreadModes();
+NSString *NeoMobileGetUserAgent();
+::rtl::OUString NeoMobileNSStringToOUString( NSString *pString );
+::sal_Bool NeoMobileIsSupportedMacOSXVersion();
+::sal_Bool NeoMobileZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath );
 
 #endif	// _NEOMOBILE_HXX

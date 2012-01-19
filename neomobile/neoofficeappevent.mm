@@ -163,7 +163,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			{
 				NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 				RunPasswordProtectionAlertOnMainThread *passwordProtection=[[RunPasswordProtectionAlertOnMainThread alloc] init];
-				[passwordProtection performSelectorOnMainThread:@selector(runModal:) withObject:passwordProtection waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+				[passwordProtection performSelectorOnMainThread:@selector(runModal:) withObject:passwordProtection waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 				if([passwordProtection cancelled])
 					mbCanceled = true;
 				[passwordProtection release];
@@ -186,10 +186,10 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			try
 			{
 			fileMgr=[[DoFileManagerOnMainThread alloc] init];
-			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+			[fileMgr performSelectorOnMainThread:@selector(makeBasePath:) withObject:fileMgr waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 			
 			NSString *filePath=[fileMgr filePath];
-			OUString oufilePath(NSStringToOUString(filePath));
+			OUString oufilePath(NeoMobileNSStringToOUString(filePath));
 			
 #ifdef DEBUG
 			fprintf(stderr, "NeoMobileExportFileAppEvent::ExportFile exporting to '%s'\n", [filePath UTF8String]);
@@ -281,7 +281,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 
 			if(htmlMimeType.getLength())
 			{
-				[fileMgr performSelectorOnMainThread:@selector(createDir:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+				[fileMgr performSelectorOnMainThread:@selector(createDir:) withObject:filePath waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 							
 				OUString htmlExportURL=OUString::createFromAscii("file://");
 				htmlExportURL+=oufilePath;
@@ -294,7 +294,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #endif	// DEBUG
 					// remove temporary directory used to create zip file
 				
-					[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+					[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 					mnErrorCode=1;
 					throw this;
 				}
@@ -303,7 +303,7 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 				{
 					// remove temporary directory used to create zip file
 				
-					[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+					[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 					throw this;
 				}
 				
@@ -318,14 +318,14 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 #ifdef DEBUG
 					fprintf( stderr, "NeoMobileExportFileAppEvent::ExportFile unable to create HTML zip file\n" );
 #endif	// DEBUG
-					[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+					[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 					mnErrorCode=1;
 					throw this;
 				}
 						
 				// remove temporary directory used to create zip file
 				
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:filePath waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 			}
 
 			if ( mbCanceled )
@@ -427,13 +427,13 @@ IMPL_LINK( NeoMobileExportFileAppEvent, ExportFile, void*, EMPTY_ARG )
 			// our post in memory
 			
 			if(pdfExportURLutf8.getLength())
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: pdfExportURLutf8.getStr()]] path] waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 			if(htmlExportZipFileutf8.getLength())
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[NSString stringWithUTF8String: htmlExportZipFileutf8.getStr()] waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 			if(openDocExportURLutf8.getLength())
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: openDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 			if(officeDocExportURLutf8.getLength())
-				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: officeDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:GetPerformSelectorOnMainThreadModes()];
+				[fileMgr performSelectorOnMainThread:@selector(removeItem:) withObject:[[NSURL URLWithString:[NSString stringWithUTF8String: officeDocExportURLutf8.getStr()]] path] waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
 			
 			[fileMgr release];
 				

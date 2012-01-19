@@ -37,12 +37,12 @@ using namespace rtl;
 
 //========================================================================
 
-NSArray *GetPerformSelectorOnMainThreadModes()
+NSArray *NeoMobileGetPerformSelectorOnMainThreadModes()
 {
 	return [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, nil];
 }
 
-NSString *GetUserAgent()
+NSString *NeoMobileGetUserAgent()
 {
 	return nil;
 }
