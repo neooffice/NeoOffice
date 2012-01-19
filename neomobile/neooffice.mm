@@ -765,7 +765,7 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 		SAL_CALL MacOSXNeoOfficeMobileImpl::hasNeoOfficeMobile( ) 
 		throw (::com::sun::star::uno::RuntimeException)
 {
-	return(NeoMobileIsSupportedMacOSXVersion());
+	return(sal_True);
 }
 
 /**

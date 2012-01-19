@@ -64,7 +64,6 @@ extern const NSString *kNeoMobileServerTypePref;
 NSArray *NeoMobileGetPerformSelectorOnMainThreadModes();
 NSString *NeoMobileGetUserAgent();
 ::rtl::OUString NeoMobileNSStringToOUString( NSString *pString );
-::sal_Bool NeoMobileIsSupportedMacOSXVersion();
 ::sal_Bool NeoMobileZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath );
 
 #endif	// _NEOMOBILE_HXX

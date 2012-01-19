@@ -178,25 +178,6 @@ OUString NeoMobileNSStringToOUString( NSString *pString )
 }
 
 /**
- * Check if the we have full WebView support available
- */
-::sal_Bool NeoMobileIsSupportedMacOSXVersion() 
-{
-	// we currently need to be running on 10.4 in order to have full WebView
-	// support.  Check using our gestalt.
-	
-	long res=0;
-	if(Gestalt(gestaltSystemVersion, &res)==noErr)
-	{
-		bool isTigerOrHigher = ( ( ( ( res >> 8 ) & 0x00FF ) == 0x10 ) && ( ( ( res >> 4 ) & 0x000F ) >= 0x4 ) );
-		if(!isTigerOrHigher)
-			return(sal_False);
-	}
-	
-	return(sal_True);
-}
-
-/**
  * Zip the contents of a directory into new selfcontained zip file.
  *
  * @param dirPath	absolute path to the directory whose contents should be
