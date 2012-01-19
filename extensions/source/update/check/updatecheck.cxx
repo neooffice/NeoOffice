@@ -67,6 +67,13 @@
 #include "updateprotocol.hxx"
 #include "updatecheckconfig.hxx"
 
+// Uncomment this to enable downloads using a native webview
+#define USE_NATIVE_DOWNLOAD_WEBVIEW
+
+#ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
+#include "update_cocoa.hxx"
+#endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
+
 namespace awt = com::sun::star::awt ;
 namespace beans = com::sun::star::beans ;
 namespace container = com::sun::star::container ;
@@ -1473,6 +1480,17 @@ UpdateCheck::getUIState(const UpdateInfo& rInfo)
 void 
 UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
 {
+#ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
+#if defined USE_JAVA && defined MACOSX
+    osl::ClearableMutexGuard aGuard(m_aMutex);
+    rtl::Reference< UpdateHandler > aUpdateHandler(((UpdateCheck *)this)->getUpdateHandler());
+    aGuard.clear();
+    
+	UpdateShowNativeDownloadWebView(rURL, aUpdateHandler->getDownloadingText());
+	return;
+#endif	// USE_JAVA && MACOSX
+#endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
+
     const uno::Reference< c3s::XSystemShellExecute > xShellExecute(
         createService( UNISTRING( "com.sun.star.system.SystemShellExecute" ), m_xContext ),
         uno::UNO_QUERY );

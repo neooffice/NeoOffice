@@ -71,6 +71,13 @@ SLOFILES=\
 	$(SLO)$/updateprotocol.obj \
 	$(SLO)$/updatehdl.obj
         
+.IF "$(GUIBASE)" == "java"
+SLOFILES += \
+	$(SLO)$/update_cocoa.obj \
+	$(SLO)$/updatei18n_cocoa.obj \
+	$(SLO)$/updatewebview_cocoa.obj
+.ENDIF		# "$(GUIBASE)" == "java"
+
 SHL1NOCHECK=TRUE
 SHL1TARGET=$(TARGET).uno   
 SHL1OBJS=$(SLOFILES)
@@ -86,9 +93,16 @@ SHL1STDLIBS=    \
         $(OLE32LIB)
 
 .IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
-SHL1STDLIBS+= $(UNOTOOLSLIB)
+SHL1STDLIBS += \
+	$(UNOTOOLSLIB) \
+	$(VCLLIB)
+.IF "$(GUIBASE)" == "java"
+SHL1STDLIBS += -framework Cocoa -framework WebKit
+.ENDIF		# "$(GUIBASE)" == "java"
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
         
+.IF "$(GUIBASE)" == "java"
+.ENDIF		# "$(GUIBASE)" == "java"
 SHL1VERSIONMAP=..$/exports.map
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)

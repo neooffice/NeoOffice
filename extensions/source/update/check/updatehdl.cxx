@@ -304,6 +304,20 @@ rtl::OUString UpdateHandler::getDefaultInstErrMsg()
     return substVariables( msInstallError );
 }
 
+#ifdef USE_JAVA
+
+//--------------------------------------------------------------------
+rtl::OUString UpdateHandler::getDownloadingText()
+{
+    osl::MutexGuard aGuard( maMutex );
+
+    loadStrings();
+
+    return substVariables( msDownloading );
+}
+
+#endif  // USE_JAVA
+
 // XActionListener
 //--------------------------------------------------------------------
 void SAL_CALL UpdateHandler::disposing( const lang::EventObject& rEvt )
