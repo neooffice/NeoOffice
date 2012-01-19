@@ -252,7 +252,7 @@ NSString *NeoMobileGetLocalizedString( const sal_Char *key )
 		InitializeLocale( ImplGetLocaleString( Locale( OUString( RTL_CONSTASCII_USTRINGPARAM( "pt" ) ), OUString(), OUString() ) ), pEntries_pt );
 
 		// Set locale dictionaries based on default locale
-		Locale aLocale( GetApplicationLocale() );
+		Locale aLocale( NeoMobileGetApplicationLocale() );
 
 		// Check if locale exists in our list of locales. Note that we ignore
 		// variant at this time as no variant-specific localizations are

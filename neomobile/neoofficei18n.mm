@@ -36,7 +36,7 @@
 
 using namespace com::sun::star::lang;
 
-Locale GetApplicationLocale()
+Locale NeoMobileGetApplicationLocale()
 {
 	return Application::GetSettings().GetUILocale();
 }

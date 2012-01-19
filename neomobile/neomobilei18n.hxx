@@ -66,7 +66,7 @@
 /**
  * Returns the application's locale.
  */
-::com::sun::star::lang::Locale GetApplicationLocale();
+::com::sun::star::lang::Locale NeoMobileGetApplicationLocale();
 
 /**
  * Lookup a string and retrieve a translated string.  If no translation

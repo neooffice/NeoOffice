@@ -35,7 +35,7 @@
 
 using namespace com::sun::star::lang;
 
-Locale GetApplicationLocale()
+Locale NeoMobileGetApplicationLocale()
 {
 #ifdef DEBUG
 	fprintf( stderr, "GetApplicationLocale not implemented\n" );
