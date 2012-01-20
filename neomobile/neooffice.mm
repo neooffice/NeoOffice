@@ -103,7 +103,7 @@ NSString *NeoMobileGetUserAgent()
 #else	// POWERPC
 			aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " (Intel" ) );
 #endif	// POWERPC
-		aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " Mac OS X)" ) );
+			aProductKey += OUString( RTL_CONSTASCII_USTRINGPARAM( " Mac OS X)" ) );
 #endif	// MACOSX
 			pUserAgent = [NSString stringWithCharacters:aProductKey.getStr() length:aProductKey.getLength()];
 			if ( pUserAgent )
