@@ -233,9 +233,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	{
 		// Determine which server type to use. The default server type can be
 		// overridden using the following Terminal command:
-		//   defaults write org.neooffice.NeoOffice nmServerType development|test
+		//   defaults write org.neooffice.NeoOffice updateServerType development|test
 		// To use the default server type, use the following Terminal command:
-		//   defaults delete org.neooffice.NeoOffice nmServerType
+		//   defaults delete org.neooffice.NeoOffice updateServerType
 		unsigned int nBaseURLCount = 0;
 		const NSString **pBaseURLs = nil;
 		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
@@ -403,10 +403,20 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	mploadingIndicator = pLoadingIndicator;
 	[mploadingIndicator retain];
 	
-	mpstartingURL = nil;
-
 	mpstatusLabel = pStatusLabel;
 	[mpstatusLabel retain];
+
+	mpstartingURL = nil;
+
+	if ( pUserAgent && [pUserAgent length] )
+	{
+		mpuserAgent = pUserAgent;
+		[mpuserAgent retain];
+	}
+	else
+	{
+		mpuserAgent = nil;
+	}
 
 	NSHTTPCookieStorage *pCookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
 	if ( pCookieStorage )
@@ -426,9 +436,16 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	[self setDownloadDelegate:self];
 	[self setPolicyDelegate:self];
 
-	// Set custom user agent
-	if ( pUserAgent && [pUserAgent length] )
-		[self setCustomUserAgent:pUserAgent];
+	// Append custom user agent onto standard user agent
+	if ( mpuserAgent )
+	{
+		NSString *pNewUserAgent = [self userAgentForURL:[NSURL URLWithString:[UpdateWebView updateURL]]];
+		if ( pNewUserAgent )
+		{
+			pNewUserAgent = [NSString stringWithFormat:@"%@ %@", pNewUserAgent, mpuserAgent];
+			[self setCustomUserAgent:pNewUserAgent];
+		}
+	}
 
 	return self;
 }
@@ -749,7 +766,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	// that this web view is running in
 	// TODO: set header value to applications's name and version
 	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
-		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
+		[(NSMutableURLRequest *)pRequest addValue:( mpuserAgent ? mpuserAgent : @"Update-Application-Version" ) forHTTPHeaderField:@"Update-Application-Version"];
 
 	return pRequest;
 }

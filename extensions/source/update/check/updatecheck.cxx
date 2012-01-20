@@ -72,6 +72,7 @@
 
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
 #include "update_cocoa.hxx"
+#include <unotools/bootstrap.hxx>
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
 
 namespace awt = com::sun::star::awt ;
@@ -1481,7 +1482,6 @@ void
 UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
 {
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
-#if defined USE_JAVA && defined MACOSX
     osl::ClearableMutexGuard aGuard(m_aMutex);
     rtl::Reference< UpdateHandler > aUpdateHandler(((UpdateCheck *)this)->getUpdateHandler());
     aGuard.clear();
@@ -1491,9 +1491,29 @@ UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
     sal_Int32 nIndex;
     while ((nIndex = aDownloadText.indexOf(aEllipses)) >= 0)
         aDownloadText = aDownloadText.replaceAt(nIndex, aEllipses.getLength(), rtl::OUString());
-	UpdateShowNativeDownloadWebView(rURL, aDownloadText);
+
+    static rtl::OUString aUserAgent;
+    if ( !aUserAgent.getLength() )
+    {
+        rtl::OUString aProductKey = utl::Bootstrap::getProductKey();
+        if ( aProductKey.getLength() )
+        {
+#ifdef MACOSX
+#ifdef POWERPC
+            aProductKey += UNISTRING( " (PPC" );
+#else   // POWERPC
+            aProductKey += UNISTRING( " (Intel" );
+#endif  // POWERPC
+            aProductKey += UNISTRING( " Mac OS X)" );
+#endif  // MACOSX
+            aUserAgent = aProductKey;
+        }
+    }
+
+#ifdef MACOSX
+	UpdateShowNativeDownloadWebView(rURL, aUserAgent, aDownloadText);
 	return;
-#endif	// USE_JAVA && MACOSX
+#endif	// MACOSX
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
 
     const uno::Reference< c3s::XSystemShellExecute > xShellExecute(

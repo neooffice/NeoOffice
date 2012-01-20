@@ -144,16 +144,17 @@ OUString UpdateNSStringToOUString( NSString *pString )
 	return OUString( aBuf );
 }
 
-void UpdateShowNativeDownloadWebView( OUString aURL, OUString aTitle )
+void UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle )
 {
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
 	NSString *pURL = [NSString stringWithCharacters:aURL.getStr() length:aURL.getLength()];
+	NSString *pUserAgent = [NSString stringWithCharacters:aUserAgent.getStr() length:aUserAgent.getLength()];
 	NSString *pTitle = [NSString stringWithCharacters:aTitle.getStr() length:aTitle.getLength()];
 	if ( pURL )
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		UpdateCreateWebViewImpl *pImp = [UpdateCreateWebViewImpl createWithURL:pURL userAgent:nil title:pTitle];
+		UpdateCreateWebViewImpl *pImp = [UpdateCreateWebViewImpl createWithURL:pURL userAgent:pUserAgent title:pTitle];
 
 		unsigned long nCount = Application::ReleaseSolarMutex();
 		[pImp performSelectorOnMainThread:@selector(showWebView:) withObject:pImp waitUntilDone:YES modes:pModes];

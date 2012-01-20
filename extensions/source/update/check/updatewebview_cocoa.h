@@ -60,6 +60,7 @@
 	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
 	NSURL*					mpstartingURL;
+	NSString*				mpuserAgent;
 }
 + (const NSString *)appendUpdateServerNameToString:(const NSString *)pString;
 + (NSString *)updateURL;

@@ -69,6 +69,6 @@ typedef void* id;
 
 #endif	// __OBJC__
 
-void UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aTitle );
+void UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle );
 
 #endif	// _UPDATE_COCOA_HXX
