@@ -1031,6 +1031,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
+		// Reenabled the cancel button as it may have been cancelled by 
+        // clicking on a link
+		[mpcancelButton setEnabled:YES];
+
 		[it->second addBytesReceived:length];
 
 		unsigned long nBytesReceived=[it->second bytesReceived];
