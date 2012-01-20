@@ -82,6 +82,16 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 		{
 			// Check for retained user position. If not available, make
 			// relative to the primary frame.
+			NSString *widthStr=[defaults stringForKey:kUpdateWidthPref];
+			NSString *heightStr=[defaults stringForKey:kUpdateHeightPref];
+			if(widthStr && heightStr)
+			{
+				NSSize contentSize={0, 0};
+				contentSize.width=[widthStr intValue];
+				contentSize.height=[heightStr intValue];
+				[pSharedPanel setContentSize:contentSize];
+			}
+
 			NSPoint windowPos={75, 75};
 			NSString *xPosStr=[defaults stringForKey:kUpdateXPosPref];
 			NSString *yPosStr=[defaults stringForKey:kUpdateYPosPref];
@@ -92,25 +102,17 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 			}
 			else
 			{
+				// Center on top of main window
 				NSWindow *mainWindow=[NSApp mainWindow];
 				if(mainWindow)
 				{
-					NSPoint mainWindowPos=[mainWindow frame].origin;
-					windowPos.x+=mainWindowPos.x;
-					windowPos.y+=mainWindowPos.y;
+					NSRect mainWindowFrame=[mainWindow frame];
+					NSSize sharedPanelSize=[pSharedPanel frame].size;
+					windowPos.x=mainWindowFrame.origin.x+((mainWindowFrame.size.width-sharedPanelSize.width)/2);
+					windowPos.y=mainWindowFrame.origin.y+((mainWindowFrame.size.height-sharedPanelSize.height)/2);
 				}
 			}
 			[pSharedPanel setFrameOrigin:windowPos];
-
-			NSString *widthStr=[defaults stringForKey:kUpdateWidthPref];
-			NSString *heightStr=[defaults stringForKey:kUpdateHeightPref];
-			if(widthStr && heightStr)
-			{
-				NSSize contentSize={0, 0};
-				contentSize.width=[widthStr intValue];
-				contentSize.height=[heightStr intValue];
-				[pSharedPanel setContentSize:contentSize];
-			}
 
 			// Make sure window is visible
 			[pSharedPanel orderFront:self];

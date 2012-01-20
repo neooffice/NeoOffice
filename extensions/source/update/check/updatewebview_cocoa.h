@@ -46,8 +46,8 @@
 #define NO (MacOSBOOL)0
 #endif
 
-#define kNMDefaultBrowserWidth	430
-#define kNMDefaultBrowserHeight	620
+#define kUpdateDefaultBrowserWidth	800
+#define kUpdateDefaultBrowserHeight	620
 
 @class UpdateNonRecursiveResponderWebPanel;
 

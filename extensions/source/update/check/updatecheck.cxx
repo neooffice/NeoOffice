@@ -1486,7 +1486,12 @@ UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
     rtl::Reference< UpdateHandler > aUpdateHandler(((UpdateCheck *)this)->getUpdateHandler());
     aGuard.clear();
     
-	UpdateShowNativeDownloadWebView(rURL, aUpdateHandler->getDownloadingText());
+    rtl::OUString aDownloadText(aUpdateHandler->getDownloadingText());
+    rtl::OUString aEllipses(UNISTRING( "..."));
+    sal_Int32 nIndex;
+    while ((nIndex = aDownloadText.indexOf(aEllipses)) >= 0)
+        aDownloadText = aDownloadText.replaceAt(nIndex, aEllipses.getLength(), rtl::OUString());
+	UpdateShowNativeDownloadWebView(rURL, aDownloadText);
 	return;
 #endif	// USE_JAVA && MACOSX
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW

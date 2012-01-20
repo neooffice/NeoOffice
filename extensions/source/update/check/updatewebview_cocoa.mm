@@ -45,8 +45,8 @@
 #define NSDownloadsDirectory ((NSSearchPathDirectory)15)
 #endif
 
-#define kNMMaxInZoomHeight ( kNMDefaultBrowserHeight / 2 )
-#define kNMBottomViewPadding 2
+#define kUpdateMaxInZoomHeight ( kUpdateDefaultBrowserHeight / 2 )
+#define kUpdateBottomViewPadding 2
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
 static const NSString *kDownloadURI = @".dmg";
@@ -1112,7 +1112,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 {
 	[super initWithContentRect:aContentRect styleMask:nWindowStyle backing:nBufferingType defer:bDeferCreation];
 	[self setFloatingPanel:YES];
-	[self setMinSize: NSMakeSize(kNMDefaultBrowserWidth, 0)];
+	[self setMinSize: NSMakeSize(kUpdateDefaultBrowserWidth, 0)];
 	[self setDelegate:self];
 
 	mbinZoom = NO;
@@ -1141,7 +1141,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	{
 		NSRect aFrame = [self frame];
 		NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
-		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		if(aFrame.size.height > kUpdateMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
 		{
 			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
 			[defaults setObject:[NSString stringWithFormat:@"%d", (int)aFrame.origin.x] forKey:kUpdateXPosPref];
@@ -1157,7 +1157,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	{
 		NSRect aFrame = [self frame];
 		NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
-		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		if(aFrame.size.height > kUpdateMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
 		{
 			NSView *pContentView = [self contentView];
 			if(pContentView)
@@ -1240,7 +1240,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	MacOSBOOL bZoomed = YES;
 	NSRect aFrame = [self frame];
 	NSRect aZoomFrame = [self windowWillUseStandardFrame:self defaultFrame:aFrame];
-	if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+	if(aFrame.size.height > kUpdateMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
 		bZoomed = NO;
 
 	[super zoom:aObject];
@@ -1251,7 +1251,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	if (bZoomed)
 	{
 		aFrame = [self frame];
-		if(aFrame.size.height > kNMMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
+		if(aFrame.size.height > kUpdateMaxInZoomHeight && aFrame.size.height > aZoomFrame.size.height)
 			bZoomed = NO;
 	}
 
@@ -1277,11 +1277,11 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
  			if(widthStr)
 				contentSize.width=[widthStr intValue];
 			else
-				contentSize.width=kNMDefaultBrowserWidth;
+				contentSize.width=kUpdateDefaultBrowserWidth;
  			if(heightStr)
 				contentSize.height=[heightStr intValue];
 			else
-				contentSize.height=kNMDefaultBrowserHeight;
+				contentSize.height=kUpdateDefaultBrowserHeight;
 			[self setContentSize:contentSize];
 		}
 	}
@@ -1354,7 +1354,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 
 - (id)initWithUserAgent:(NSString *)pUserAgent title:(NSString *)pTitle
 {
-	[super initWithContentRect:NSMakeRect(0, 0, kNMDefaultBrowserWidth, kNMDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
+	[super initWithContentRect:NSMakeRect(0, 0, kUpdateDefaultBrowserWidth, kUpdateDefaultBrowserHeight) styleMask:NSTitledWindowMask | NSClosableWindowMask | NSResizableWindowMask | NSUtilityWindowMask backing:NSBackingStoreBuffered defer:YES];
 	if ( pTitle )
 		[self setTitle:pTitle];
 	
@@ -1413,7 +1413,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 		growBoxSize=[self _growBoxRect].size;
 	growBoxSize.width /= 2;
 
-	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-MAX(kNMBottomViewPadding, growBoxSize.width), kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-MAX(kUpdateBottomViewPadding, growBoxSize.width), kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpcancelButton setToolTip:UpdateGetLocalizedString(UPDATECANCEL)];
 	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
@@ -1423,7 +1423,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[[mpcancelButton cell] setImageScaling:NSImageScaleNone];
 	[mpcancelButton setAutoresizingMask:(NSViewMinXMargin)];
 	
-	mpbackButton = [[NSButton alloc] initWithFrame:NSMakeRect([mpcancelButton frame].origin.x-buttonSize.width-kNMBottomViewPadding, kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	mpbackButton = [[NSButton alloc] initWithFrame:NSMakeRect([mpcancelButton frame].origin.x-buttonSize.width-kUpdateBottomViewPadding, kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mpbackButton setToolTip:UpdateGetLocalizedString(UPDATEBACK)];
 	[mpbackButton setEnabled:YES];
 	[mpbackButton setButtonType:NSMomentaryPushInButton];
@@ -1433,13 +1433,13 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[[mpbackButton cell] setImageScaling:NSImageScaleNone];
 	[mpbackButton setAutoresizingMask:(NSViewMinXMargin)];
 	
-	mploadingIndicator = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect([mpbackButton frame].origin.x-buttonSize.width-kNMBottomViewPadding, kNMBottomViewPadding, buttonSize.width, buttonSize.height)];
+	mploadingIndicator = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect([mpbackButton frame].origin.x-buttonSize.width-kUpdateBottomViewPadding, kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
 	[mploadingIndicator setStyle:NSProgressIndicatorSpinningStyle];
 	[mploadingIndicator setHidden:YES];
 	[mploadingIndicator setAutoresizingMask:(NSViewMinXMargin)];
 	
-	float maxButtonHeight=MAX([mploadingIndicator frame].origin.y+[mploadingIndicator frame].size.height-kNMBottomViewPadding, [mpbackButton frame].origin.y+[mpbackButton frame].size.height-kNMBottomViewPadding);
-	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(kNMBottomViewPadding, kNMBottomViewPadding, [mploadingIndicator frame].origin.x-(kNMBottomViewPadding*2), maxButtonHeight)];
+	float maxButtonHeight=MAX([mploadingIndicator frame].origin.y+[mploadingIndicator frame].size.height-kUpdateBottomViewPadding, [mpbackButton frame].origin.y+[mpbackButton frame].size.height-kUpdateBottomViewPadding);
+	mpstatusLabel=[[NSText alloc] initWithFrame:NSMakeRect(kUpdateBottomViewPadding, kUpdateBottomViewPadding, [mploadingIndicator frame].origin.x-(kUpdateBottomViewPadding*2), maxButtonHeight)];
 	[mpstatusLabel setEditable:NO];
 	[mpstatusLabel setString:@""];
 	[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
@@ -1449,7 +1449,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mpstatusLabel setFont:statusLabelFont];
 	[self centerTextInTextView:mpstatusLabel];
 
-	mpbottomView=[[UpdateStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, maxButtonHeight+(kNMBottomViewPadding*2))];
+	mpbottomView=[[UpdateStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, maxButtonHeight+(kUpdateBottomViewPadding*2))];
 	[mpbottomView setAutoresizesSubviews:YES];
 	[mpbottomView setAutoresizingMask:(NSViewWidthSizable)];
 	
