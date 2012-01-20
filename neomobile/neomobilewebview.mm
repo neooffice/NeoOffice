@@ -422,6 +422,16 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	mpstatusLabel = pStatusLabel;
 	[mpstatusLabel retain];
 
+	if ( pUserAgent && [pUserAgent length] )
+	{
+		mpuserAgent = pUserAgent;
+		[mpuserAgent retain];
+	}
+	else
+	{
+		mpuserAgent = nil;
+	}
+
 	NSHTTPCookieStorage *pCookieStorage = [NSHTTPCookieStorage sharedHTTPCookieStorage];
 	if ( pCookieStorage )
 		[pCookieStorage setCookieAcceptPolicy:NSHTTPCookieAcceptPolicyAlways];
@@ -440,9 +450,16 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	[self setDownloadDelegate:self];
 	[self setPolicyDelegate:self];
 
-	// Set custom user agent
-	if ( pUserAgent && [pUserAgent length] )
-		[self setCustomUserAgent:pUserAgent];
+	// Append custom user agent onto standard user agent
+	if ( mpuserAgent )
+	{
+		NSString *pNewUserAgent = [self userAgentForURL:[NSURL URLWithString:[NeoMobileWebView neoMobileURL]]];
+		if ( pNewUserAgent )
+		{
+			pNewUserAgent = [NSString stringWithFormat:@"%@ %@", pNewUserAgent, mpuserAgent];
+			[self setCustomUserAgent:pNewUserAgent];
+		}
+	}
 
 	mpexportEvent=NULL;
 
@@ -884,7 +901,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	// that this web view is running in
 	// TODO: set header value to applications's name and version
 	if ( pRequest && [pRequest isKindOfClass:[NSMutableURLRequest class]] )
-		[(NSMutableURLRequest *)pRequest addValue:@"Neomobile-Application-Version" forHTTPHeaderField:@"Neomobile-Application-Version"];
+		[(NSMutableURLRequest *)pRequest addValue:( mpuserAgent ? mpuserAgent : @"Neomobile-Application-Version" ) forHTTPHeaderField:@"Neomobile-Application-Version"];
 
 	return pRequest;
 }

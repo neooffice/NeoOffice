@@ -60,6 +60,7 @@
 	NSButton*				mpcancelButton;
 	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
+	NSString*				mpuserAgent;
 	NeoMobileExportFileAppEvent*	mpexportEvent;
 }
 + (const NSString *)appendNeoMobileServerNameToString:(const NSString *)pString;
