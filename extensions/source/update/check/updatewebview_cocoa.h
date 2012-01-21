@@ -91,7 +91,7 @@
 - (IBAction)cancelButtonPressed;
 @end
 
-@interface NonRecursiveResponderPanel : NSPanel
+@interface UpdateNonRecursiveResponderPanel : NSPanel
 {
 	MacOSBOOL				mbinZoom;
 }
@@ -106,7 +106,7 @@
 - (void)zoom:(id)aObject;
 @end
 
-@interface UpdateNonRecursiveResponderWebPanel : NonRecursiveResponderPanel
+@interface UpdateNonRecursiveResponderWebPanel : UpdateNonRecursiveResponderPanel
 {
 	NSButton*				mpbackButton;
 	NSView*					mpbottomView;

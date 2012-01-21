@@ -61,7 +61,7 @@ static const NSString *kUsernamePref = @"nmUsername";
 
 @end
 
-@implementation NonRecursiveResponderFlipsidePanel
+@implementation NeoMobileNonRecursiveResponderFlipsidePanel
 
 - (void)dealloc
 {

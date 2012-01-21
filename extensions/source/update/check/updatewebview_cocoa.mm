@@ -1097,9 +1097,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 @end
 
-static NonRecursiveResponderPanel *pCurrentPanel = nil;
+static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
-@implementation NonRecursiveResponderPanel
+@implementation UpdateNonRecursiveResponderPanel
 
 - (void)adjustBottomOfControlToTextHeight:(NSControl *)pControl
 {

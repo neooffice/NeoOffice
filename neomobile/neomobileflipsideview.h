@@ -33,7 +33,7 @@
 
 #import "neomobilewebview.h"
 
-@interface NonRecursiveResponderFlipsidePanel : NonRecursiveResponderPanel
+@interface NeoMobileNonRecursiveResponderFlipsidePanel : NeoMobileNonRecursiveResponderPanel
 {
 	NeoMobileNonRecursiveResponderWebPanel*	mpWebPanel;
 	NSButton*				mpaboutButton;

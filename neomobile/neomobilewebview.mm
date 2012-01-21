@@ -1229,9 +1229,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 @end
 
-static NonRecursiveResponderPanel *pCurrentPanel = nil;
+static NeoMobileNonRecursiveResponderPanel *pCurrentPanel = nil;
 
-@implementation NonRecursiveResponderPanel
+@implementation NeoMobileNonRecursiveResponderPanel
 
 - (void)adjustBottomOfControlToTextHeight:(NSControl *)pControl
 {
@@ -1449,7 +1449,7 @@ static NonRecursiveResponderPanel *pCurrentPanel = nil;
 - (NSRect)_growBoxRect;
 @end
 
-static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
+static NeoMobileNonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 
 @implementation NeoMobileNonRecursiveResponderWebPanel
 
@@ -1654,7 +1654,7 @@ static NonRecursiveResponderFlipsidePanel *sharedFlipsidePanel = nil;
 - (void)showFlipsidePanel
 {
 	if ( !sharedFlipsidePanel )
-		sharedFlipsidePanel = [[NonRecursiveResponderFlipsidePanel alloc] initWithWebPanel:self];
+		sharedFlipsidePanel = [[NeoMobileNonRecursiveResponderFlipsidePanel alloc] initWithWebPanel:self];
 
 	if ( sharedFlipsidePanel )
 	{
