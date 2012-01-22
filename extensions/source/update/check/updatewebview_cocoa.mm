@@ -99,6 +99,30 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
+static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
+{
+	MacOSBOOL bRet = NO;
+
+	NSFileManager *pFileManager = [NSFileManager defaultManager];
+	if(nExpectedContentLength > 0 && pPath && pFileManager)
+	{
+		NSDictionary *pFileAttrs = [pFileManager attributesOfItemAtPath:pPath error:nil];
+		if (pFileAttrs)
+		{
+			// Downloaded file should never be directory or softlink
+			NSString *pFileType = [pFileAttrs fileType];
+			if ([pFileType isEqualToString:NSFileTypeRegular])
+			{
+				unsigned long long nFileSize = [pFileAttrs fileSize];
+				if (nFileSize == (unsigned long long)nExpectedContentLength)
+					bRet = YES;
+			}
+		}
+	}
+
+	return bRet;
+}
+
 @interface UpdateDownloadData : NSObject
 {
 	unsigned long			mnBytesReceived;
@@ -854,15 +878,59 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			basePath = @"/tmp";
 	}
 
+	MacOSBOOL bCancelDownload = NO;
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
-	if (fileManager)
+	if (fileManager && [fileManager fileExistsAtPath:filePath])
 	{
-		int i=0;
-		while ([fileManager fileExistsAtPath:filePath])
-			filePath = [basePath stringByAppendingPathComponent:[NSString stringWithFormat:@"%@ %d.%@", [decodedFilename stringByDeletingPathExtension], (++i), [decodedFilename pathExtension]]];
+		// Check if a previous download successfully downloaded the same file
+		std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
+		if(it!=aDownloadDataMap.end())
+		{
+			if (HasAllBytes([it->second expectedContentLength], filePath))
+				bCancelDownload = YES;
+		}
+
+		// Check if another download to the same file is in progress
+		if(!bCancelDownload)
+		{
+			for(it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
+			{
+				if(it->first != download)
+				{
+					NSString *savePath = [it->second path];
+					if(savePath && [fileManager contentsEqualAtPath:savePath andPath:filePath])
+					{
+						bCancelDownload = YES;
+						break;
+					}
+				}
+			}
+		}
 	}
-	
-	[download setDestination:filePath allowOverwrite:NO];
+
+	if(bCancelDownload)
+		filePath = @"/dev/null";
+
+	[download setDestination:filePath allowOverwrite:YES];
+
+	if(bCancelDownload)
+	{
+		[download cancel];
+
+		std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
+		if(it!=aDownloadDataMap.end())
+		{
+			[it->second release];
+			aDownloadDataMap.erase(it);
+		}
+
+		if(!aDownloadDataMap.size())
+		{
+			[mploadingIndicator setHidden:YES];
+			[mpcancelButton setEnabled:NO];
+			[mpstatusLabel setString:@""];
+		}
+	}
 }
 
 - (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
@@ -886,6 +954,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(it!=aDownloadDataMap.end())
 		[it->second release];
 	aDownloadDataMap[download]=[[UpdateDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
+	[download setDeletesFileUponFailure:NO];
 }
 
 - (void)downloadDidBegin: (NSURLDownload *)download
@@ -950,22 +1019,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			NSFileManager *pFileManager = [NSFileManager defaultManager];
 			if(nExpectedContentLength > 0 && pFileManager)
 			{
-				MacOSBOOL bFileHasAllBits = NO;
-				NSDictionary *pFileAttrs = [pFileManager attributesOfItemAtPath:path error:nil];
-				if (pFileAttrs)
-				{
-					// Downloaded file should never be directory or softlink
-					NSString *pFileType = [pFileAttrs fileType];
-					if ([pFileType isEqualToString:NSFileTypeRegular])
-					{
-						unsigned long long nFileSize = [pFileAttrs fileSize];
-						if (nFileSize == (unsigned long long)nExpectedContentLength)
-							bFileHasAllBits = YES;
-					}
-				}
-
 				NSString *pURLPath = [[[download request] URL] absoluteString];
-				if (!bFileHasAllBits)
+				if (!HasAllBytes(nExpectedContentLength, path))
 				{
 					[pFileManager removeItemAtPath:path error:nil];
 					NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
