@@ -521,9 +521,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		return;
 	}
 
-	[mploadingIndicator setHidden:YES];
-	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:@""];
+	if ( !aDownloadDataMap.size() )
+	{
+		[mploadingIndicator setHidden:YES];
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+	}
 
 	if ( pWebFrame )
 	{
@@ -641,8 +644,6 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 		aDownloadDataMap.clear();
 
-		[mploadingIndicator setHidden:YES];
-		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
 	}
 	else if(mpexportEvent)
@@ -656,10 +657,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 	else
 	{
-		[mploadingIndicator setHidden:YES];
-		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
 	}
+
+	[mpcancelButton setEnabled:NO];
+	[mploadingIndicator setHidden:YES];
 
 	[super stopLoading:pSender];
 }
@@ -701,9 +703,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
 {
-	[mploadingIndicator setHidden:YES];
-	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:@""];
+	if ( !aDownloadDataMap.size() )
+	{
+		[mploadingIndicator setHidden:YES];
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+	}
 	
 	if ( !pWebView || !pWebFrame )
 		return;
@@ -785,9 +790,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 					aEvent.Execute();
 
-					[mploadingIndicator setHidden:YES];
-					[mpcancelButton setEnabled:NO];
-					[mpstatusLabel setString:@""];
+					if ( !aDownloadDataMap.size() )
+					{
+						[mploadingIndicator setHidden:YES];
+						[mpcancelButton setEnabled:NO];
+						[mpstatusLabel setString:@""];
+					}
 
 					if(aEvent.IsUnsupportedComponentType())
 					{
@@ -1017,10 +1025,21 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	fprintf( stderr, "NeoMobile Download didReceiveResponse\n");
 #endif
 
-	std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
+	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
+	{
+		aDownloadDataMap.erase(it);
 		[it->second release];
-	aDownloadDataMap[download]=[[NeoMobileDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
+	}
+
+	NeoMobileDownloadData *pDownloadData=[[NeoMobileDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
+	if(pDownloadData)
+	{
+		aDownloadDataMap[download]=pDownloadData;
+
+		[mploadingIndicator setHidden:NO];
+		[mploadingIndicator startAnimation:self];
+	}
 }
 
 - (void)downloadDidBegin: (NSURLDownload *)download
@@ -1032,8 +1051,6 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
-		[mploadingIndicator setHidden:NO];
-		[mploadingIndicator startAnimation:self];
 		[mpcancelButton setEnabled:YES];
 		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
 	}
