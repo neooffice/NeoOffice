@@ -652,16 +652,16 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 		aDownloadDataMap.clear();
 
-		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:UpdateGetLocalizedString(UPDATEDOWNLOADCANCELED)];
 	}
 	else
 	{
-		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
 	}
+
+	[mploadingIndicator setHidden:YES];
 
 	[super stopLoading:pSender];
 }
@@ -703,9 +703,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)webView:(WebView *)pWebView didFinishLoadForFrame:(WebFrame *)pWebFrame
 {
-	[mploadingIndicator setHidden:YES];
-	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:@""];
+	if ( !aDownloadDataMap.size() )
+	{
+		[mploadingIndicator setHidden:YES];
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+	}
 	
 	if ( !pWebView || !pWebFrame )
 		return;
@@ -915,6 +918,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if(bCancelDownload)
 	{
+		if (pRetryDownloadURLs)
+		{
+			NSString *pURLPath = [[[download request] URL] absoluteString];
+			[pRetryDownloadURLs removeObjectForKey:pURLPath];
+		}
+
 		[download cancel];
 
 		std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
@@ -950,11 +959,22 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	fprintf( stderr, "Update Download didReceiveResponse\n");
 #endif
 
-	std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
+	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
+	{
+		aDownloadDataMap.erase(it);
 		[it->second release];
-	aDownloadDataMap[download]=[[UpdateDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
-	[download setDeletesFileUponFailure:NO];
+	}
+
+	UpdateDownloadData *pDownloadData=[[UpdateDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
+	if(pDownloadData)
+	{
+		aDownloadDataMap[download]=pDownloadData;
+		[download setDeletesFileUponFailure:NO];
+
+		[mploadingIndicator setHidden:NO];
+		[mploadingIndicator startAnimation:self];
+	}
 }
 
 - (void)downloadDidBegin: (NSURLDownload *)download
@@ -966,8 +986,6 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
-		[mploadingIndicator setHidden:NO];
-		[mploadingIndicator startAnimation:self];
 		[mpcancelButton setEnabled:YES];
 		[mpstatusLabel setString:UpdateGetLocalizedString(UPDATEDOWNLOADINGFILE)];
 	}
@@ -1019,7 +1037,6 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			NSFileManager *pFileManager = [NSFileManager defaultManager];
 			if(nExpectedContentLength > 0 && pFileManager)
 			{
-				NSString *pURLPath = [[[download request] URL] absoluteString];
 				if (!HasAllBytes(nExpectedContentLength, path))
 				{
 					[pFileManager removeItemAtPath:path error:nil];
@@ -1029,6 +1046,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				}
 				else if (pRetryDownloadURLs)
 				{
+					NSString *pURLPath = [[[download request] URL] absoluteString];
 					[pRetryDownloadURLs removeObjectForKey:pURLPath];
 				}
 			}
