@@ -532,9 +532,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		return;
 	}
 
-	[mploadingIndicator setHidden:YES];
-	[mpcancelButton setEnabled:NO];
-	[mpstatusLabel setString:@""];
+	if ( !aDownloadDataMap.size() )
+	{
+		[mploadingIndicator setHidden:YES];
+		[mpcancelButton setEnabled:NO];
+		[mpstatusLabel setString:@""];
+	}
 
 	if ( pWebFrame )
 	{
@@ -652,15 +655,14 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 		aDownloadDataMap.clear();
 
-		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:UpdateGetLocalizedString(UPDATEDOWNLOADCANCELED)];
 	}
 	else
 	{
-		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
 	}
 
+	[mpcancelButton setEnabled:NO];
 	[mploadingIndicator setHidden:YES];
 
 	[super stopLoading:pSender];
