@@ -47,6 +47,7 @@
 
 #define kUpdateMaxInZoomHeight ( kUpdateDefaultBrowserHeight / 2 )
 #define kUpdateBottomViewPadding 2
+#define kUpdateStatusLabelFontHeight 16.0f
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
 static const NSString *kDownloadURI = @".dmg";
@@ -496,6 +497,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 	}
 
+	// Hide downloading indicator by default
+	[self setDownloadingIndicatorHidden:YES];
+
 	return self;
 }
 
@@ -538,6 +542,33 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 }
 
+- (void)setDownloadingIndicatorHidden:(MacOSBOOL)bHidden
+{
+	if ( bHidden != [mpdownloadingIndicator isHidden] )
+	{
+		[mpdownloadingIndicator setHidden:bHidden];
+
+		// Adjust the font size and position of the status label
+		NSFont *pFont = [mpstatusLabel font];
+		if ( pFont )
+		{
+			// Shrink the font if the downloading indicator is visible
+			NSPoint aPoint = NSMakePoint( [mpstatusLabel frame].origin.x, [mpdownloadingIndicator frame].origin.y );
+			float fFontHeight = kUpdateStatusLabelFontHeight;
+			if ( !bHidden )
+			{
+				float fAdjust = [mpdownloadingIndicator frame].size.height/2;
+				aPoint.y += fAdjust;
+				fFontHeight -= fAdjust/2;
+				if ( fFontHeight < kUpdateStatusLabelFontHeight/2 )
+					fFontHeight = kUpdateStatusLabelFontHeight/2;
+			}
+			[mpstatusLabel setFrameOrigin:aPoint];
+			[mpstatusLabel setFont:[[NSFontManager sharedFontManager] convertFont:pFont toSize:fFontHeight]];
+		}
+	}
+}
+
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError
 {
 	int errCode = pError ? [pError code] : 0;
@@ -559,7 +590,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if ( !aDownloadDataMap.size() )
 	{
-		[mpdownloadingIndicator setHidden:YES];
+		[self setDownloadingIndicatorHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
@@ -689,7 +720,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 
 	[mpcancelButton setEnabled:NO];
-	[mpdownloadingIndicator setHidden:YES];
+	[self setDownloadingIndicatorHidden:YES];
 	[mploadingIndicator setHidden:YES];
 
 	[super stopLoading:pSender];
@@ -734,7 +765,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 {
 	if ( !aDownloadDataMap.size() )
 	{
-		[mpdownloadingIndicator setHidden:YES];
+		[self setDownloadingIndicatorHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
@@ -965,7 +996,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 		if(!aDownloadDataMap.size())
 		{
-			[mpdownloadingIndicator setHidden:YES];
+			[self setDownloadingIndicatorHidden:YES];
 			[mploadingIndicator setHidden:YES];
 			[mpcancelButton setEnabled:NO];
 			[mpstatusLabel setString:@""];
@@ -1045,7 +1076,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		{
 			// we got a response from the server, so we can compute a percentage
 			[mpdownloadingIndicator setDoubleValue:(double)nBytesReceived/(double)nExpectedContentLength*100];
-			[mpdownloadingIndicator setHidden:NO];
+			[self setDownloadingIndicatorHidden:NO];
 		}
 		else if(![mpdownloadingIndicator isHidden])
 		{
@@ -1059,7 +1090,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				}
 			}
 
-			[mpdownloadingIndicator setHidden:bHide];
+			[self setDownloadingIndicatorHidden:bHide];
 		}
 
 		// add MB downloaded
@@ -1116,7 +1147,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if(!aDownloadDataMap.size())
 	{
-		[mpdownloadingIndicator setHidden:YES];
+		[self setDownloadingIndicatorHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
@@ -1164,7 +1195,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if(!aDownloadDataMap.size())
 	{
-		[mpdownloadingIndicator setHidden:YES];
+		[self setDownloadingIndicatorHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:UpdateGetLocalizedString(UPDATEDOWNLOADFAILED)];
@@ -1596,12 +1627,11 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mpstatusLabel setAutoresizingMask:(NSViewWidthSizable)];
 	[mpstatusLabel setDrawsBackground:NO];
 
-	NSFont *statusLabelFont=[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:16];
-	[mpstatusLabel setFont:statusLabelFont];
+	[mpstatusLabel setFont:[[NSFontManager sharedFontManager] convertFont:[mpstatusLabel font] toSize:kUpdateStatusLabelFontHeight]];
 	[self centerTextInTextView:mpstatusLabel];
 
 	// Have downloading indicator overlaying most of status label
-	mpdownloadingIndicator = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect([mpstatusLabel frame].origin.x + ([mpstatusLabel frame].size.width*2/3), kUpdateBottomViewPadding, [mpstatusLabel frame].size.width/3, buttonSize.height)];
+	mpdownloadingIndicator = [[NSProgressIndicator alloc] initWithFrame:[mpstatusLabel frame]];
 	NSRect downloadingIndicatorFrame=[mpdownloadingIndicator frame];
 	[mpdownloadingIndicator setStyle:NSProgressIndicatorBarStyle];
 	[mpdownloadingIndicator setControlSize:NSSmallControlSize];
@@ -1609,9 +1639,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mpdownloadingIndicator setMinValue:0.0];
 	[mpdownloadingIndicator setMaxValue:100.0];
 	[mpdownloadingIndicator setDoubleValue:0.0];
-	[mpdownloadingIndicator setHidden:YES];
 	[mpdownloadingIndicator sizeToFit];
-	[mpdownloadingIndicator setFrameOrigin:NSMakePoint(downloadingIndicatorFrame.origin.x, downloadingIndicatorFrame.origin.y + ((downloadingIndicatorFrame.size.height-[mpdownloadingIndicator frame].size.height)/2))];
 	[mpdownloadingIndicator setAutoresizingMask:(NSViewWidthSizable)];
 	
 	mpbottomView=[[UpdateStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, maxButtonHeight+(kUpdateBottomViewPadding*2))];
