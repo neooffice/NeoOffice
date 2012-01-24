@@ -1632,7 +1632,6 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 	// Have downloading indicator overlaying most of status label
 	mpdownloadingIndicator = [[NSProgressIndicator alloc] initWithFrame:[mpstatusLabel frame]];
-	NSRect downloadingIndicatorFrame=[mpdownloadingIndicator frame];
 	[mpdownloadingIndicator setStyle:NSProgressIndicatorBarStyle];
 	[mpdownloadingIndicator setControlSize:NSSmallControlSize];
 	[mpdownloadingIndicator setIndeterminate:NO];
