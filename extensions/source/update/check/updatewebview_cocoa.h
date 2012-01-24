@@ -57,6 +57,7 @@
 	UpdateNonRecursiveResponderWebPanel*	mpPanel;
 	NSButton*				mpbackButton;
 	NSButton*				mpcancelButton;
+	NSProgressIndicator*	mpdownloadingIndicator;
 	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
 	NSURL*					mpstartingURL;
@@ -68,7 +69,7 @@
 + (MacOSBOOL)isUpdateURL:(NSURL *)pURL syncServer:(MacOSBOOL)syncServer;
 + (MacOSBOOL)incrementUpdateBaseEntry;
 - (void)dealloc;
-- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
+- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton downloadingIndicator:(NSProgressIndicator *)pDownloadingIndicator loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent;
 - (void)loadStartingURL:(NSURL *)pStartingURL;
 - (void)reloadFrameWithNextServer:(WebFrame *)pWebFrame reason:(NSError *)pError;
 - (void)webView:(WebView *)pWebView decidePolicyForNewWindowAction:(NSDictionary *)pActionInformation request:(NSURLRequest *)pRequest newFrameName:(NSString *)pFrameName decisionListener:(id < WebPolicyDecisionListener >)pListener;
@@ -112,6 +113,7 @@
 	NSView*					mpbottomView;
 	NSView*					mpcontentView;
 	NSButton*				mpcancelButton;
+	NSProgressIndicator*	mpdownloadingIndicator;
 	NSProgressIndicator*	mploadingIndicator;
 	NSText*					mpstatusLabel;
 	NSString*				mpuserAgent;

@@ -48,6 +48,7 @@
 #define UPDATEDOWNLOADINGFILE "downloading.file"
 #define UPDATEERROR "error"
 #define UPDATELOADING "loading"
+#define UPDATEMEGABYTE "megabyte"
 
 /**
  * Returns the application's locale.
@@ -59,5 +60,6 @@
  * is available, default to english.
  */
 NSString *UpdateGetLocalizedString( const sal_Char *key );
+NSString *UpdateGetLocalizedDecimalSeparator();
 
 #endif	// _UPDATEI18N_COCOA_HXX

@@ -33,13 +33,15 @@
 
 #import "updatei18n_cocoa.hxx"
 #import <map>
+#import <unotools/localedatawrapper.hxx>
 #import <vcl/svapp.hxx>
 
 static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
-static NSDictionary*pDefaultLocaleDict = nil;
-static NSDictionary*pPrimaryLocaleDict = nil;
-static NSDictionary*pSecondaryLocaleDict = nil;
-static NSDictionary*pTertiaryLocaleDict = nil;
+static NSDictionary *pDefaultLocaleDict = nil;
+static NSDictionary *pPrimaryLocaleDict = nil;
+static NSDictionary *pSecondaryLocaleDict = nil;
+static NSDictionary *pTertiaryLocaleDict = nil;
+static NSString *pDecimalSep = nil;
 
 using namespace com::sun::star::lang;
 using namespace rtl;
@@ -61,9 +63,10 @@ static const sal_Char *pEntries_en_US[] = {
 	UPDATECANCEL, "Cancel",
 	UPDATEDOWNLOADCANCELED, "Download canceled",
 	UPDATEDOWNLOADFAILED, "Download failed",
-	UPDATEDOWNLOADINGFILE, "Downloading file…",
+	UPDATEDOWNLOADINGFILE, "Downloading file",
 	UPDATEERROR, "Error:",
 	UPDATELOADING, "Loading…",
+	UPDATEMEGABYTE, "MB",
 	nil, nil
 };
 
@@ -74,7 +77,7 @@ static const sal_Char *pEntries_es[] = {
 	UPDATECANCEL, "Cancelar",
 	UPDATEDOWNLOADCANCELED, "Descarga cancelada",
 	UPDATEDOWNLOADFAILED, "Falló la descarga",
-	UPDATEDOWNLOADINGFILE, "Descargando archivo…",
+	UPDATEDOWNLOADINGFILE, "Descargando archivo",
 	UPDATEERROR, "Error:",
 	UPDATELOADING, "Cargando…",
 	nil, nil
@@ -88,9 +91,10 @@ static const sal_Char *pEntries_fr[] = {
 	UPDATECANCEL, "Annuler",
 	UPDATEDOWNLOADCANCELED, "Téléchargement annulé",
 	UPDATEDOWNLOADFAILED, "Echec du téléchargement",
-	UPDATEDOWNLOADINGFILE, "Téléchargement du fichier…",
+	UPDATEDOWNLOADINGFILE, "Téléchargement du fichier",
 	UPDATEERROR, "Erreur :",
 	UPDATELOADING, "Chargement…",
+	UPDATEMEGABYTE, "Mo",
 	nil, nil
 };
 
@@ -101,7 +105,7 @@ static const sal_Char *pEntries_it[] = {
 	UPDATECANCEL, "Cancella",
 	UPDATEDOWNLOADCANCELED, "Trasferimento cancellato ",
 	UPDATEDOWNLOADFAILED, "Trasferimento fallito",
-	UPDATEDOWNLOADINGFILE, "Trasferimento del file…",
+	UPDATEDOWNLOADINGFILE, "Trasferimento del file",
 	UPDATEERROR, "Errore:",
 	UPDATELOADING, "Caricamento…",
 	nil, nil
@@ -114,7 +118,7 @@ static const sal_Char *pEntries_nl[] = {
 	UPDATECANCEL, "Annuleren",
 	UPDATEDOWNLOADCANCELED, "Ophalen geannuleerd",
 	UPDATEDOWNLOADFAILED, "Ophalen mislukt",
-	UPDATEDOWNLOADINGFILE, "Bestand ophalen…",
+	UPDATEDOWNLOADINGFILE, "Bestand ophalen",
 	UPDATEERROR, "Fout:",
 	UPDATELOADING, "Laden…",
 	nil, nil
@@ -127,7 +131,7 @@ static const sal_Char *pEntries_pt[] = {
 	UPDATECANCEL, "Cancelar ",
 	UPDATEDOWNLOADCANCELED, "Transferência de arquivo cancelada",
 	UPDATEDOWNLOADFAILED, "Falha na transferência de arquivo",
-	UPDATEDOWNLOADINGFILE, "Transferindo arquivo…",
+	UPDATEDOWNLOADINGFILE, "Transferindo arquivo",
 	UPDATEERROR, "Erro:",
 	UPDATELOADING, "Carregando…",
 	nil, nil
@@ -243,4 +247,19 @@ NSString *UpdateGetLocalizedString( const sal_Char *key )
 		pRet = pKey;
 
 	return pRet;
+}
+
+NSString *UpdateGetLocalizedDecimalSeparator()
+{
+	if ( !pDecimalSep )
+	{
+		OUString aDecimalSep( Application::GetAppLocaleDataWrapper().getNumDecimalSep() );
+		if ( !aDecimalSep.getLength() )
+			aDecimalSep = OUString( RTL_CONSTASCII_USTRINGPARAM( "." ) );
+		pDecimalSep = [NSString stringWithCharacters:aDecimalSep.getStr() length:aDecimalSep.getLength()];
+		if ( pDecimalSep )
+			[pDecimalSep retain];
+	}
+
+	return pDecimalSep;
 }

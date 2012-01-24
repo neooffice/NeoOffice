@@ -128,6 +128,7 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 	unsigned long			mnBytesReceived;
 	NSURLDownload*			mpDownload;
 	long long				mnExpectedContentLength;
+	NSString*				mpFileName;
 	NSString*				mpMIMEType;
 	NSString*				mpPath;
 }
@@ -135,6 +136,7 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 - (unsigned long)bytesReceived;
 - (void)dealloc;
 - (long long)expectedContentLength;
+- (NSString *)fileName;
 - (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType;
 - (NSString *)MIMEType;
 - (NSString *)path;
@@ -157,6 +159,8 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 {
 	if (mpDownload)
 		[mpDownload release];
+	if (mpFileName)
+		[mpFileName release];
 	if (mpMIMEType)
 		[mpMIMEType release];
 	if (mpPath)
@@ -170,6 +174,11 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 	return mnExpectedContentLength;
 }
 
+- (NSString *)fileName
+{
+	return mpFileName;
+}
+
 - (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType
 {
 	[super init];
@@ -179,6 +188,7 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 		[mpDownload retain];
 	mnBytesReceived = 0;
 	mnExpectedContentLength = nExpectedContentLength;
+	mpFileName = nil;
 	mpMIMEType = pMIMEType;
 	if (mpMIMEType)
 		[pMIMEType retain];
@@ -199,9 +209,21 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 
 - (void)setPath:(NSString *)pPath;
 {
-	mpPath = pPath;
+	if (mpFileName)
+		[mpFileName release];
 	if (mpPath)
+		[mpPath release];
+
+	mpFileName = nil;
+	mpPath = pPath;
+
+	if (mpPath)
+	{
 		[mpPath retain];
+		mpFileName = [mpPath lastPathComponent];
+		if (mpFileName)
+			[mpFileName retain];
+	}
 }
 
 @end
@@ -390,7 +412,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	return(YES);
 }
 
-- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
+- (id)initWithFrame:(NSRect)aFrame panel:(UpdateNonRecursiveResponderWebPanel *)pPanel backButton:(NSButton *)pBackButton cancelButton:(NSButton *)pCancelButton downloadingIndicator:(NSProgressIndicator *)pDownloadingIndicator loadingIndicator:(NSProgressIndicator *)pLoadingIndicator statusLabel:(NSText *)pStatusLabel userAgent:(const NSString *)pUserAgent
 {
 	if ( !bWebJavaScriptTextInputPanelSwizzeled )
 	{
@@ -423,6 +445,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	
 	mpcancelButton = pCancelButton;
 	[mpcancelButton retain];
+	
+	mpdownloadingIndicator = pDownloadingIndicator;
+	[mpdownloadingIndicator retain];
 	
 	mploadingIndicator = pLoadingIndicator;
 	[mploadingIndicator retain];
@@ -534,6 +559,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if ( !aDownloadDataMap.size() )
 	{
+		[mpdownloadingIndicator setHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
@@ -663,6 +689,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 
 	[mpcancelButton setEnabled:NO];
+	[mpdownloadingIndicator setHidden:YES];
 	[mploadingIndicator setHidden:YES];
 
 	[super stopLoading:pSender];
@@ -707,6 +734,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 {
 	if ( !aDownloadDataMap.size() )
 	{
+		[mpdownloadingIndicator setHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
@@ -937,6 +965,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 		if(!aDownloadDataMap.size())
 		{
+			[mpdownloadingIndicator setHidden:YES];
 			[mploadingIndicator setHidden:YES];
 			[mpcancelButton setEnabled:NO];
 			[mpstatusLabel setString:@""];
@@ -973,9 +1002,6 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	{
 		aDownloadDataMap[download]=pDownloadData;
 		[download setDeletesFileUponFailure:NO];
-
-		[mploadingIndicator setHidden:NO];
-		[mploadingIndicator startAnimation:self];
 	}
 }
 
@@ -988,8 +1014,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
+		[mploadingIndicator setHidden:NO];
+		[mploadingIndicator startAnimation:self];
 		[mpcancelButton setEnabled:YES];
-		[mpstatusLabel setString:UpdateGetLocalizedString(UPDATEDOWNLOADINGFILE)];
 	}
 }
 
@@ -999,7 +1026,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	fprintf( stderr, "Update Download didReceiveDataOfLength\n");
 #endif
 
-	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
 		// Reenabled the cancel button as it may have been cancelled by
@@ -1008,18 +1035,38 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 		[it->second addBytesReceived:length];
 
+		NSString *pDownloadLabel=[it->second fileName];
+		if(!pDownloadLabel && ![pDownloadLabel length])
+			pDownloadLabel=UpdateGetLocalizedString(UPDATEDOWNLOADINGFILE);
+
 		unsigned long nBytesReceived=[it->second bytesReceived];
 		long long nExpectedContentLength=[it->second expectedContentLength];
 		if(nExpectedContentLength > 0)
 		{
 			// we got a response from the server, so we can compute a percentage
-			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %d%%", UpdateGetLocalizedString(UPDATEDOWNLOADINGFILE), (int)((double)nBytesReceived/(double)nExpectedContentLength*100)]];
+			[mpdownloadingIndicator setDoubleValue:(double)nBytesReceived/(double)nExpectedContentLength*100];
+			[mpdownloadingIndicator setHidden:NO];
 		}
-		else
+		else if(![mpdownloadingIndicator isHidden])
 		{
-			// no expected size received from the server, just show Kb download
-			[mpstatusLabel setString:[NSString stringWithFormat:@"%@ %ldK", UpdateGetLocalizedString(UPDATEDOWNLOADINGFILE), (long)(nBytesReceived/1024)]];
+			MacOSBOOL bHide = YES;
+			for(std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator dit = aDownloadDataMap.begin(); dit != aDownloadDataMap.end(); ++dit)
+			{
+				if([dit->second expectedContentLength] > 0)
+				{
+					bHide = NO;
+					break;
+				}
+			}
+
+			[mpdownloadingIndicator setHidden:bHide];
 		}
+
+		// add MB downloaded
+		float fMBReceived = (float)nBytesReceived/(float)(1024*1024);
+		long nMBReceived = (long)fMBReceived;
+		long n10thMBReceived = (long)((fMBReceived-nMBReceived)*10);
+		[mpstatusLabel setString:[NSString stringWithFormat:@"%@ - %ld%@%ld %@", pDownloadLabel, nMBReceived, UpdateGetLocalizedDecimalSeparator(), n10thMBReceived, UpdateGetLocalizedString(UPDATEMEGABYTE)]];
 	}
 }
 
@@ -1069,6 +1116,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if(!aDownloadDataMap.size())
 	{
+		[mpdownloadingIndicator setHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
@@ -1116,6 +1164,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	if(!aDownloadDataMap.size())
 	{
+		[mpdownloadingIndicator setHidden:YES];
 		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:UpdateGetLocalizedString(UPDATEDOWNLOADFAILED)];
@@ -1157,6 +1206,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	
 	if ( mpcancelButton )
 		[mpcancelButton release];
+	
+	if ( mpdownloadingIndicator )
+		[mpdownloadingIndicator release];
 	
 	if ( mploadingIndicator )
 		[mploadingIndicator release];
@@ -1405,7 +1457,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 		mpwebView = nil;
 	}
 
-	mpwebView = [[UpdateWebView alloc] initWithFrame:NSMakeRect(0, [mpbottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[mpbottomView bounds].size.height) panel:self backButton:mpbackButton cancelButton:mpcancelButton loadingIndicator:mploadingIndicator statusLabel:mpstatusLabel userAgent:mpuserAgent];
+	mpwebView = [[UpdateWebView alloc] initWithFrame:NSMakeRect(0, [mpbottomView bounds].size.height, [mpcontentView bounds].size.width, [mpcontentView bounds].size.height-[mpbottomView bounds].size.height) panel:self backButton:mpbackButton cancelButton:mpcancelButton downloadingIndicator:mpdownloadingIndicator loadingIndicator:mploadingIndicator statusLabel:mpstatusLabel userAgent:mpuserAgent];
 	[mpwebView setAutoresizingMask:(NSViewHeightSizable | NSViewWidthSizable)];
 	[mpcontentView addSubview:mpwebView];
 	[mpbackButton setTarget:mpwebView];
@@ -1433,6 +1485,9 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	if ( mpcontentView )
 		[mpcontentView release];
 
+	if ( mpdownloadingIndicator )
+		[mpdownloadingIndicator release];
+	
 	if ( mploadingIndicator )
 		[mploadingIndicator release];
 	
@@ -1545,6 +1600,20 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mpstatusLabel setFont:statusLabelFont];
 	[self centerTextInTextView:mpstatusLabel];
 
+	// Have downloading indicator overlaying most of status label
+	mpdownloadingIndicator = [[NSProgressIndicator alloc] initWithFrame:NSMakeRect([mpstatusLabel frame].origin.x + ([mpstatusLabel frame].size.width*2/3), kUpdateBottomViewPadding, [mpstatusLabel frame].size.width/3, buttonSize.height)];
+	NSRect downloadingIndicatorFrame=[mpdownloadingIndicator frame];
+	[mpdownloadingIndicator setStyle:NSProgressIndicatorBarStyle];
+	[mpdownloadingIndicator setControlSize:NSSmallControlSize];
+	[mpdownloadingIndicator setIndeterminate:NO];
+	[mpdownloadingIndicator setMinValue:0.0];
+	[mpdownloadingIndicator setMaxValue:100.0];
+	[mpdownloadingIndicator setDoubleValue:0.0];
+	[mpdownloadingIndicator setHidden:YES];
+	[mpdownloadingIndicator sizeToFit];
+	[mpdownloadingIndicator setFrameOrigin:NSMakePoint(downloadingIndicatorFrame.origin.x, downloadingIndicatorFrame.origin.y + ((downloadingIndicatorFrame.size.height-[mpdownloadingIndicator frame].size.height)/2))];
+	[mpdownloadingIndicator setAutoresizingMask:(NSViewWidthSizable)];
+	
 	mpbottomView=[[UpdateStatusBarView alloc] initWithFrame:NSMakeRect(0, 0, contentSize.width, maxButtonHeight+(kUpdateBottomViewPadding*2))];
 	[mpbottomView setAutoresizesSubviews:YES];
 	[mpbottomView setAutoresizingMask:(NSViewWidthSizable)];
@@ -1553,6 +1622,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	[mpbottomView addSubview:mploadingIndicator];
 	[mpbottomView addSubview:mpbackButton];
 	[mpbottomView addSubview:mpcancelButton];
+	[mpbottomView addSubview:mpdownloadingIndicator];
 	[mpcontentView addSubview:mpbottomView];
 	
 	[self createWebView:nil];
