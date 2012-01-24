@@ -42,3 +42,8 @@ Locale NeoMobileGetApplicationLocale()
 #endif	// DEBUG
 	return Locale();
 }
+
+NSString *NeoMobileGetLocalizedDecimalSeparator()
+{
+	return nil;
+}

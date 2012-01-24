@@ -35,10 +35,10 @@
 #import <map>
 
 static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
-static NSDictionary*pDefaultLocaleDict = nil;
-static NSDictionary*pPrimaryLocaleDict = nil;
-static NSDictionary*pSecondaryLocaleDict = nil;
-static NSDictionary*pTertiaryLocaleDict = nil;
+static NSDictionary *pDefaultLocaleDict = nil;
+static NSDictionary *pPrimaryLocaleDict = nil;
+static NSDictionary *pSecondaryLocaleDict = nil;
+static NSDictionary *pTertiaryLocaleDict = nil;
 
 using namespace com::sun::star::lang;
 using namespace rtl;
@@ -70,13 +70,14 @@ static const sal_Char *pEntries_en_US[] = {
 	NEOMOBILECREATEACCOUNT, "Create a new account",
 	NEOMOBILEDOWNLOADCANCELED, "Download canceled",
 	NEOMOBILEDOWNLOADFAILED, "Download failed",
-	NEOMOBILEDOWNLOADINGFILE, "Downloading file…",
+	NEOMOBILEDOWNLOADINGFILE, "Downloading file",
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exporting file…",
 	NEOMOBILEFORGOTPASSWORD, "Forgot password?",
 	NEOMOBILELOADING, "Loading…",
 	NEOMOBILELOGIN, "Login",
 	NEOMOBILELOGINTITLE, "NeoOffice Mobile Login",
+	NEOMOBILEMEGABYTE, "MB",
 	NEOMOBILEPASSWORD, "Password:",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILESAVEPASSWORD, "Save password",
@@ -95,7 +96,7 @@ static const sal_Char *pEntries_es[] = {
 	NEOMOBILECANCEL, "Cancelar",
 	NEOMOBILEDOWNLOADCANCELED, "Descarga cancelada",
 	NEOMOBILEDOWNLOADFAILED, "Falló la descarga",
-	NEOMOBILEDOWNLOADINGFILE, "Descargando archivo…",
+	NEOMOBILEDOWNLOADINGFILE, "Descargando archivo",
 	NEOMOBILEERROR, "Error:",
 	NEOMOBILEEXPORTINGFILE, "Exportando archivo…",
 	NEOMOBILELOADING, "Cargando…",
@@ -115,13 +116,14 @@ static const sal_Char *pEntries_fr[] = {
 	NEOMOBILECREATEACCOUNT, "Créer un nouveau compte",
 	NEOMOBILEDOWNLOADCANCELED, "Téléchargement annulé",
 	NEOMOBILEDOWNLOADFAILED, "Echec du téléchargement",
-	NEOMOBILEDOWNLOADINGFILE, "Téléchargement du fichier…",
+	NEOMOBILEDOWNLOADINGFILE, "Téléchargement du fichier",
 	NEOMOBILEERROR, "Erreur :",
 	NEOMOBILEEXPORTINGFILE, "Exportation du fichier…",
 	NEOMOBILEFORGOTPASSWORD, "Mot de passe oublié ?",
 	NEOMOBILELOADING, "Chargement…",
 	NEOMOBILELOGIN, "Connexion",
 	NEOMOBILELOGINTITLE, "NeoOffice Mobile Connexion",
+	NEOMOBILEMEGABYTE, "Mo",
 	NEOMOBILEPASSWORD, "Mot de passe :",
 	NEOMOBILEPRODUCTNAME, "NeoOffice Mobile",
 	NEOMOBILESAVEPASSWORD, "Enregistrer mot de passe",
@@ -140,7 +142,7 @@ static const sal_Char *pEntries_it[] = {
 	NEOMOBILECANCEL, "Cancella",
 	NEOMOBILEDOWNLOADCANCELED, "Trasferimento cancellato ",
 	NEOMOBILEDOWNLOADFAILED, "Trasferimento fallito",
-	NEOMOBILEDOWNLOADINGFILE, "Trasferimento del file…",
+	NEOMOBILEDOWNLOADINGFILE, "Trasferimento del file",
 	NEOMOBILEERROR, "Errore:",
 	NEOMOBILEEXPORTINGFILE, "Esportazione del file…",
 	NEOMOBILELOADING, "Caricamento…",
@@ -156,7 +158,7 @@ static const sal_Char *pEntries_nl[] = {
 	NEOMOBILECANCEL, "Annuleren",
 	NEOMOBILEDOWNLOADCANCELED, "Ophalen geannuleerd",
 	NEOMOBILEDOWNLOADFAILED, "Ophalen mislukt",
-	NEOMOBILEDOWNLOADINGFILE, "Bestand ophalen…",
+	NEOMOBILEDOWNLOADINGFILE, "Bestand ophalen",
 	NEOMOBILEERROR, "Fout:",
 	NEOMOBILEEXPORTINGFILE, "Bestand exporteren…",
 	NEOMOBILELOADING, "Laden…",
@@ -175,7 +177,7 @@ static const sal_Char *pEntries_pt[] = {
 	NEOMOBILECANCEL, "Cancelar ",
 	NEOMOBILEDOWNLOADCANCELED, "Transferência de arquivo cancelada",
 	NEOMOBILEDOWNLOADFAILED, "Falha na transferência de arquivo",
-	NEOMOBILEDOWNLOADINGFILE, "Transferindo arquivo…",
+	NEOMOBILEDOWNLOADINGFILE, "Transferindo arquivo",
 	NEOMOBILEERROR, "Erro:",
 	NEOMOBILEEXPORTINGFILE, "Exportando arquivo…",
 	NEOMOBILELOADING, "Carregando…",

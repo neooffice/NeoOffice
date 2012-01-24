@@ -32,11 +32,30 @@
  *************************************************************************/
 
 #import "neomobilei18n.hxx"
+#import <unotools/localedatawrapper.hxx>
 #import <vcl/svapp.hxx>
 
+static NSString *pDecimalSep = nil;
+
 using namespace com::sun::star::lang;
+using namespace rtl;
 
 Locale NeoMobileGetApplicationLocale()
 {
 	return Application::GetSettings().GetUILocale();
+}
+
+NSString *NeoMobileGetLocalizedDecimalSeparator()
+{
+	if ( !pDecimalSep )
+	{
+		OUString aDecimalSep( Application::GetAppLocaleDataWrapper().getNumDecimalSep() );
+		if ( !aDecimalSep.getLength() )
+			aDecimalSep = OUString( RTL_CONSTASCII_USTRINGPARAM( "." ) );
+		pDecimalSep = [NSString stringWithCharacters:aDecimalSep.getStr() length:aDecimalSep.getLength()];
+		if ( pDecimalSep )
+			[pDecimalSep retain];
+	}
+
+	return pDecimalSep;
 }

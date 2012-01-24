@@ -54,6 +54,7 @@
 #define NEOMOBILELOADING "loading"
 #define NEOMOBILELOGIN "login"
 #define NEOMOBILELOGINTITLE "login.title"
+#define NEOMOBILEMEGABYTE "megabyte"
 #define NEOMOBILEPASSWORD "password"
 #define NEOMOBILEPRODUCTNAME "product.name"
 #define NEOMOBILESAVEPASSWORD "save.password"
@@ -73,5 +74,6 @@
  * is available, default to english.
  */
 NSString *NeoMobileGetLocalizedString( const sal_Char *key );
+NSString *NeoMobileGetLocalizedDecimalSeparator();
 
 #endif	// _NEOMOBILEI18N_HXX
