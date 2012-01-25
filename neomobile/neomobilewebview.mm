@@ -534,6 +534,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( bHidden != [mpdownloadingIndicator isHidden] )
 	{
 		[mpdownloadingIndicator setHidden:bHidden];
+		if ( !bHidden )
+		{
+			[mpdownloadingIndicator startAnimation:self];
+			[mploadingIndicator setHidden:YES];
+		}
 
 		// Adjust the font size and position of the status label
 		NSFont *pFont = [mpstatusLabel font];
@@ -580,10 +585,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( !aDownloadDataMap.size() )
 	{
 		[self setDownloadingIndicatorHidden:YES];
-		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
 	}
+
+	[mploadingIndicator setHidden:YES];
 
 	if ( pWebFrame )
 	{
@@ -764,11 +770,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( !aDownloadDataMap.size() )
 	{
 		[self setDownloadingIndicatorHidden:YES];
-		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
 	}
-	
+
+	[mploadingIndicator setHidden:YES];
+
 	if ( !pWebView || !pWebFrame )
 		return;
 
@@ -852,10 +859,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					if ( !aDownloadDataMap.size() )
 					{
 						[self setDownloadingIndicatorHidden:YES];
-						[mploadingIndicator setHidden:YES];
 						[mpcancelButton setEnabled:NO];
 						[mpstatusLabel setString:@""];
 					}
+
+					[mploadingIndicator setHidden:YES];
 
 					if(aEvent.IsUnsupportedComponentType())
 					{
@@ -1141,22 +1149,28 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		{
 			// we got a response from the server, so we can compute a percentage
 			[mpdownloadingIndicator setDoubleValue:(double)nBytesReceived/(double)nExpectedContentLength*100];
-			[self setDownloadingIndicatorHidden:NO];
+			if([mpdownloadingIndicator isIndeterminate])
+				[self setDownloadingIndicatorHidden:YES];
+			[mpdownloadingIndicator setIndeterminate:NO];
 		}
-		else if(![mpdownloadingIndicator isHidden])
+		else if(![mpdownloadingIndicator isIndeterminate])
 		{
-			MacOSBOOL bHide = YES;
+			MacOSBOOL bIndeterminate = YES;
 			for(std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator dit = aDownloadDataMap.begin(); dit != aDownloadDataMap.end(); ++dit)
 			{
 				if([dit->second expectedContentLength] > 0)
 				{
-					bHide = NO;
+					bIndeterminate = NO;
 					break;
 				}
 			}
 
-			[self setDownloadingIndicatorHidden:bHide];
+			if(bIndeterminate != [mpdownloadingIndicator isIndeterminate])
+				[self setDownloadingIndicatorHidden:YES];
+			[mpdownloadingIndicator setIndeterminate:bIndeterminate];
 		}
+
+		[self setDownloadingIndicatorHidden:NO];
 
 		// add MB downloaded
 		float fMBReceived = (float)nBytesReceived/(float)(1024*1024);
@@ -1227,10 +1241,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(!aDownloadDataMap.size())
 	{
 		[self setDownloadingIndicatorHidden:YES];
-		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:@""];
 	}
+
+	[mploadingIndicator setHidden:YES];
 }
 
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
@@ -1275,10 +1290,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(!aDownloadDataMap.size())
 	{
 		[self setDownloadingIndicatorHidden:YES];
-		[mploadingIndicator setHidden:YES];
 		[mpcancelButton setEnabled:NO];
 		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADFAILED)];
 	}
+
+	[mploadingIndicator setHidden:YES];
 }
 
 - (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
