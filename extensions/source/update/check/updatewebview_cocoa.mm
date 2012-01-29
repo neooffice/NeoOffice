@@ -50,6 +50,7 @@
 #define kUpdateStatusLabelFontHeight 16.0f
 
 static const NSTimeInterval kBaseURLIncrementInterval = 5 * 60;
+static const NSString *kDownloadBytesReceivedKey = @"NSURLDownloadBytesReceived";
 static const NSString *kDownloadURI = @".dmg";
 
 static const NSString *pDevelopmentBaseURLs[] = {
@@ -80,6 +81,18 @@ static const NSString *pProductionBaseURLs[] = {
 };
 #endif	// !TEST
 
+#ifndef NSPropertyListReadOptions 
+typedef NSUInteger NSPropertyListReadOptions;
+#endif
+#ifndef typedef NSUInteger NSPropertyListWriteOptions;
+typedef NSUInteger NSPropertyListWriteOptions;
+#endif
+
+@interface NSPropertyListSerialization (UpdateWebView)
++ (NSData *)dataWithPropertyList:(id)plist format:(NSPropertyListFormat)format options:(NSPropertyListWriteOptions)opt error:(NSError **)error;
++ (id)propertyListWithData:(NSData *)data options:(NSPropertyListReadOptions)opt format:(NSPropertyListFormat *)format error:(NSError **)error;
+@end
+
 using namespace rtl;
 
 /**
@@ -100,45 +113,80 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
-static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
+static unsigned long long GetFileSize(NSString *pPath)
 {
-	MacOSBOOL bRet = NO;
+	long long nRet = 0;
 
-	NSFileManager *pFileManager = [NSFileManager defaultManager];
-	if(nExpectedContentLength > 0 && pPath && pFileManager)
+	if (pPath && [pPath length])
 	{
-		NSDictionary *pFileAttrs = [pFileManager attributesOfItemAtPath:pPath error:nil];
-		if (pFileAttrs)
+		NSFileManager *pFileManager = [NSFileManager defaultManager];
+		if(pFileManager)
 		{
-			// Downloaded file should never be directory or softlink
-			NSString *pFileType = [pFileAttrs fileType];
-			if ([pFileType isEqualToString:NSFileTypeRegular])
+			NSDictionary *pFileAttrs = [pFileManager attributesOfItemAtPath:pPath error:nil];
+			if (pFileAttrs)
 			{
-				unsigned long long nFileSize = [pFileAttrs fileSize];
-				if (nFileSize == (unsigned long long)nExpectedContentLength)
-					bRet = YES;
+				// Downloaded file should never be directory or softlink
+				NSString *pFileType = [pFileAttrs fileType];
+				if ([pFileType isEqualToString:NSFileTypeRegular])
+					nRet = [pFileAttrs fileSize];
 			}
 		}
 	}
 
-	return bRet;
+	return nRet;
+}
+
+static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
+{
+	NSData *pRet = nil;
+
+	unsigned long long nFileSize = GetFileSize(pPath);
+	if (pDownload && nFileSize > 0)
+	{
+		[pDownload cancel];
+
+		NSData *pResumeData = [pDownload resumeData];
+		if (pResumeData)
+		{
+			NSPropertyListFormat nFormat = 0;
+			NSMutableDictionary *pResumeDict = nil;
+			if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
+				pResumeDict = [NSPropertyListSerialization propertyListWithData:pResumeData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
+			if (!pResumeDict && class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListFromData:mutabilityOption:format:errorDescription:)))
+{
+				pResumeDict = [NSPropertyListSerialization propertyListFromData:pResumeData mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&nFormat errorDescription:nil];
+}
+			if (pResumeDict && [pResumeDict isKindOfClass:[NSMutableDictionary class]] && [pResumeDict objectForKey:kDownloadBytesReceivedKey])
+			{
+				[pResumeDict setObject:[NSNumber numberWithUnsignedLongLong:nFileSize] forKey:kDownloadBytesReceivedKey];
+				if (class_getClassMethod([NSPropertyListSerialization class], @selector(dataWithPropertyList:format:options:error:)))
+					pRet = [NSPropertyListSerialization dataWithPropertyList:pResumeDict format:nFormat options:0 error:nil];
+				if (!pRet && class_getClassMethod([NSPropertyListSerialization class], @selector(dataFromPropertyList:format:errorDescription:)))
+					pRet = [NSPropertyListSerialization dataFromPropertyList:pResumeDict format:nFormat errorDescription:nil];
+			}
+		}
+	}
+
+	return pRet;
 }
 
 @interface UpdateDownloadData : NSObject
 {
-	unsigned long			mnBytesReceived;
+	long long				mnBytesReceived;
 	NSURLDownload*			mpDownload;
-	long long				mnExpectedContentLength;
+	unsigned long long		mnExpectedContentLength;
 	NSString*				mpFileName;
+	NSDictionary*			mpHeaders;
 	NSString*				mpMIMEType;
 	NSString*				mpPath;
+	NSURL*					mpURL;
 }
 - (void)addBytesReceived:(unsigned long)nBytesReceived;
-- (unsigned long)bytesReceived;
+- (long long)bytesReceived;
 - (void)dealloc;
-- (long long)expectedContentLength;
+- (unsigned long long)expectedContentLength;
 - (NSString *)fileName;
-- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType;
+- (id)initWithDownload:(NSURLDownload *)pDownload response:(NSURLResponse *)pResponse startingByte:(long long)nStartingByte;
 - (NSString *)MIMEType;
 - (NSString *)path;
 - (void)setPath:(NSString *)pPath;
@@ -151,7 +199,7 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 	mnBytesReceived += nBytesReceived;
 }
 
-- (unsigned long)bytesReceived
+- (long long)bytesReceived
 {
 	return mnBytesReceived;
 }
@@ -162,15 +210,19 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 		[mpDownload release];
 	if (mpFileName)
 		[mpFileName release];
+	if (mpHeaders)
+		[mpHeaders release];
 	if (mpMIMEType)
 		[mpMIMEType release];
 	if (mpPath)
 		[mpPath release];
+	if (mpURL)
+		[mpURL release];
 
 	[super dealloc];
 }
 
-- (long long)expectedContentLength
+- (unsigned long long)expectedContentLength
 {
 	return mnExpectedContentLength;
 }
@@ -180,20 +232,35 @@ static MacOSBOOL HasAllBytes(long long nExpectedContentLength, NSString *pPath)
 	return mpFileName;
 }
 
-- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType
+- (id)initWithDownload:(NSURLDownload *)pDownload response:(NSURLResponse *)pResponse startingByte:(long long)nStartingByte
 {
 	[super init];
 
 	mpDownload = pDownload;
 	if (mpDownload)
 		[mpDownload retain];
-	mnBytesReceived = 0;
-	mnExpectedContentLength = nExpectedContentLength;
+	if (nStartingByte > 0)
+		mnBytesReceived = nStartingByte;
+	else
+		mnBytesReceived = 0;
+	long long nExpectedContentLength = [pResponse expectedContentLength];
+	if (nExpectedContentLength > 0)
+		mnExpectedContentLength = nExpectedContentLength + mnBytesReceived;
 	mpFileName = nil;
-	mpMIMEType = pMIMEType;
+	mpHeaders = nil;
+	if ([pResponse isKindOfClass:[NSHTTPURLResponse class]])
+	{
+		mpHeaders = [(NSHTTPURLResponse *)pResponse allHeaderFields];
+		if (mpHeaders)
+			[mpHeaders retain];
+	}
+	mpMIMEType = [pResponse MIMEType];
 	if (mpMIMEType)
-		[pMIMEType retain];
+		[mpMIMEType retain];
 	mpPath = nil;
+	mpURL = [pResponse URL];
+	if (mpURL)
+		[mpURL retain];
 
 	return self;
 }
@@ -586,7 +653,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 	else if ( errCode == NSURLErrorCancelled )
 	{
-		// Error code -999 indicates that the WebKit is doing the Back, Reload,
+		// Error code 999 indicates that the WebKit is doing the Back, Reload,
 		// or Forward actions so we don't trigger server fallback. These
 		// actions are incompatible with our export event code so cancel
 		// the current export event
@@ -707,16 +774,15 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(aDownloadDataMap.size())
 	{
 		// file downloads in progress, so cancel them
-		
-		if (pRetryDownloadURLs)
-			[pRetryDownloadURLs removeAllObjects];
-
 		for(std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
 		{
 			[it->first cancel];
 			[it->second release];
 		}
 		aDownloadDataMap.clear();
+
+		if (pRetryDownloadURLs)
+			[pRetryDownloadURLs removeAllObjects];
 
 		[mpstatusLabel setString:UpdateGetLocalizedString(UPDATEDOWNLOADCANCELED)];
 	}
@@ -786,7 +852,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		return;
 
 	NSHTTPURLResponse *pResponse = (NSHTTPURLResponse *)[pDataSource response];
-	if ( !pResponse )
+	if ( !pResponse && [(NSURLResponse *)pResponse isKindOfClass:[NSHTTPURLResponse class]] )
 		return;
 
 	NSURL *pURL = [pResponse URL];
@@ -840,6 +906,35 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		pRequest = [pDataSource request];
 	
 	[mpstatusLabel setString:UpdateGetLocalizedString(UPDATELOADING)];
+}
+
+- (void)download: (NSURLDownload *)download willResumeWithResponse:(NSURLResponse *) response fromByte:(long long)startingByte
+{
+#ifdef DEBUG
+	fprintf( stderr, "Update Download willResumeWithResponse\n");
+#endif
+
+	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
+	{
+		aDownloadDataMap.erase(it);
+		[it->second release];
+	}
+
+	UpdateDownloadData *pDownloadData=[[UpdateDownloadData alloc] initWithDownload:download response:response startingByte:startingByte];
+	if(pDownloadData)
+	{
+		aDownloadDataMap[download]=pDownloadData;
+		[download setDeletesFileUponFailure:NO];
+
+		// Determine path that is being resumed
+		if (pRetryDownloadURLs)
+		{
+			NSArray *pPaths = [pRetryDownloadURLs allKeysForObject:download];
+			if (pPaths && [pPaths count])
+				[pDownloadData setPath:[pPaths objectAtIndex:0]];
+		}
+	}
 }
 
 - (NSURLRequest *)webView:(WebView *)pWebView resource:(id)aIdentifier willSendRequest:(NSURLRequest *)pRequest redirectResponse:(NSURLResponse *)pRedirectResponse fromDataSource:(WebDataSource *)pDataSource
@@ -949,59 +1044,100 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			basePath = @"/tmp";
 	}
 
-	MacOSBOOL bCancelDownload = NO;
+	MacOSBOOL bCompleteDownload = NO;
+	MacOSBOOL bPartialDownload = NO;
+	MacOSBOOL bOtherDownload = NO;
 	NSString *filePath = [basePath stringByAppendingPathComponent:decodedFilename];
-	if (fileManager && [fileManager fileExistsAtPath:filePath])
+	if (fileManager && [fileManager fileExistsAtPath:filePath] && [fileManager isWritableFileAtPath:filePath])
 	{
 		// Check if a previous download successfully downloaded the same file
 		std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
 		if(it!=aDownloadDataMap.end())
 		{
-			if (HasAllBytes([it->second expectedContentLength], filePath))
-				bCancelDownload = YES;
+			unsigned long long nExpectedContentLength = [it->second expectedContentLength];
+			if (nExpectedContentLength > 0)
+			{
+				if (GetFileSize(filePath) == nExpectedContentLength)
+					bCompleteDownload = YES;
+				else
+					bPartialDownload = YES;
+			}
 		}
 
 		// Check if another download to the same file is in progress
-		if(!bCancelDownload)
+		for(it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
 		{
-			for(it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
+			if(it->first != download)
 			{
-				if(it->first != download)
+				NSString *savePath = [it->second path];
+				if(savePath && [fileManager contentsEqualAtPath:savePath andPath:filePath])
 				{
-					NSString *savePath = [it->second path];
-					if(savePath && [fileManager contentsEqualAtPath:savePath andPath:filePath])
-					{
-						bCancelDownload = YES;
-						break;
-					}
+					bOtherDownload = YES;
+					break;
 				}
 			}
 		}
 	}
 
-	if(bCancelDownload)
-		filePath = @"/dev/null";
+	// Cancel the download if there are other downloads are running or there is
+	// no retry data
+	MacOSBOOL bCancelDownload = (bCompleteDownload || bOtherDownload);
+	if(!bCancelDownload && bPartialDownload && (!pRetryDownloadURLs || ![pRetryDownloadURLs objectForKey:filePath]))
+		bCancelDownload = YES;
 
-	[download setDestination:filePath allowOverwrite:YES];
+	if (bCancelDownload)
+		[download setDestination:@"/dev/null" allowOverwrite:YES];
+	else
+		[download setDestination:filePath allowOverwrite:YES];
 
-	if(bCancelDownload)
+	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
+	if(it!=aDownloadDataMap.end())
+		[it->second setPath:filePath];
+
+	if (bCancelDownload)
 	{
-		if (pRetryDownloadURLs)
-		{
-			NSString *pURLPath = [[[download request] URL] absoluteString];
-			[pRetryDownloadURLs removeObjectForKey:pURLPath];
-		}
-
 		[download cancel];
 
-		std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
+		if(!bOtherDownload)
+		{
+			if(bCompleteDownload)
+			{
+				[self downloadDidFinish:download];
+				return;
+			}
+			else if(bPartialDownload)
+			{
+				// Try to restart the download if we can
+				if (!pRetryDownloadURLs)
+				{
+					pRetryDownloadURLs = [NSMutableDictionary dictionaryWithCapacity:1];
+					if (pRetryDownloadURLs)
+						[pRetryDownloadURLs retain];
+				}
+
+				if (pRetryDownloadURLs)
+				{
+					NSData *pResumeData = GetResumeDataForFile(download, filePath);
+					if (pResumeData)
+					{
+						[pRetryDownloadURLs setObject:[[[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:filePath] autorelease] forKey:filePath];
+					}
+					else
+					{
+						[[[NSURLDownload alloc] initWithRequest:[download request] delegate:self] autorelease];
+						[pRetryDownloadURLs setObject:[NSNull null] forKey:filePath];
+					}
+				}
+			}
+		}
+
 		if(it!=aDownloadDataMap.end())
 		{
 			[it->second release];
 			aDownloadDataMap.erase(it);
 		}
 
-		if(!aDownloadDataMap.size())
+		if(!aDownloadDataMap.size() && (!pRetryDownloadURLs || ![pRetryDownloadURLs objectForKey:filePath]))
 		{
 			[self setDownloadingIndicatorHidden:YES];
 			[mpcancelButton setEnabled:NO];
@@ -1036,7 +1172,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[it->second release];
 	}
 
-	UpdateDownloadData *pDownloadData=[[UpdateDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
+	UpdateDownloadData *pDownloadData=[[UpdateDownloadData alloc] initWithDownload:download response:response startingByte:0];
 	if(pDownloadData)
 	{
 		aDownloadDataMap[download]=pDownloadData;
@@ -1078,8 +1214,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		if(!pDownloadLabel && ![pDownloadLabel length])
 			pDownloadLabel=UpdateGetLocalizedString(UPDATEDOWNLOADINGFILE);
 
-		unsigned long nBytesReceived=[it->second bytesReceived];
-		long long nExpectedContentLength=[it->second expectedContentLength];
+		unsigned long long nBytesReceived=[it->second bytesReceived];
+		unsigned long long nExpectedContentLength=[it->second expectedContentLength];
 		if(nExpectedContentLength > 0)
 		{
 			// we got a response from the server, so we can compute a percentage
@@ -1127,31 +1263,25 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		if (path)
 		{
 			// Check if downloaded file size matches content length header
-			long long nExpectedContentLength=[it->second expectedContentLength];
+			unsigned long long nExpectedContentLength=[it->second expectedContentLength];
 			NSFileManager *pFileManager = [NSFileManager defaultManager];
-			if(nExpectedContentLength > 0 && pFileManager)
+			if(nExpectedContentLength > 0 && pFileManager && GetFileSize(path) != nExpectedContentLength)
 			{
-				if (!HasAllBytes(nExpectedContentLength, path))
-				{
-					[pFileManager removeItemAtPath:path error:nil];
-					NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
-					[self download:download didFailWithError:pError];
-					return;
-				}
-				else if (pRetryDownloadURLs)
-				{
-					NSString *pURLPath = [[[download request] URL] absoluteString];
-					[pRetryDownloadURLs removeObjectForKey:pURLPath];
-				}
+				NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
+				[self download:download didFailWithError:pError];
+				return;
 			}
+
+			if (pRetryDownloadURLs)
+				[pRetryDownloadURLs removeObjectForKey:path];
 
 			NSString *MIMEType = [it->second MIMEType];
 			if([MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound)
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
+				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
 			else
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:[it->second path], nil]];
+				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
 #ifdef DEBUG
-			fprintf( stderr, "Opening file: %s\n", [[it->second path] cStringUsingEncoding:NSUTF8StringEncoding] );
+			fprintf( stderr, "Opening file: %s\n", [path cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 		}
 
@@ -1186,16 +1316,27 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 
 		MacOSBOOL bRetry = NO;
-		NSString *pURLPath = [[[download request] URL] absoluteString];
-		if (pRetryDownloadURLs && ![pRetryDownloadURLs objectForKey:pURLPath])
+		NSString *pPath = [it->second path];
+		if (pPath && pRetryDownloadURLs)
 		{
-			[pRetryDownloadURLs setObject:pURLPath forKey:pURLPath];
-			[[self mainFrame] loadRequest:[download request]];
-			bRetry = YES;
-		}
-		else
-		{
-			[pRetryDownloadURLs removeObjectForKey:pURLPath];
+			NSObject *pValue = [pRetryDownloadURLs objectForKey:pPath];
+			if (!pValue || ![pValue isKindOfClass:[NSNull class]])
+			{
+				NSData *pResumeData = GetResumeDataForFile(download, pPath);
+				if (pResumeData)
+				{
+					[pRetryDownloadURLs setObject:[[[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:pPath] autorelease] forKey:pPath];
+				}
+				else
+				{
+					[[[NSURLDownload alloc] initWithRequest:[download request] delegate:self] autorelease];
+					[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
+				}
+				bRetry = YES;
+			}
+
+			if (!bRetry)
+				[pRetryDownloadURLs removeObjectForKey:pPath];
 		}
 
 		[it->second release];
