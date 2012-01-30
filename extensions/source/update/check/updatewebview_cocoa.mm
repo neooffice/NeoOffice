@@ -153,9 +153,8 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 			if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
 				pResumeDict = [NSPropertyListSerialization propertyListWithData:pResumeData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
 			if (!pResumeDict && class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListFromData:mutabilityOption:format:errorDescription:)))
-{
 				pResumeDict = [NSPropertyListSerialization propertyListFromData:pResumeData mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&nFormat errorDescription:nil];
-}
+
 			if (pResumeDict && [pResumeDict isKindOfClass:[NSMutableDictionary class]] && [pResumeDict objectForKey:kDownloadBytesReceivedKey])
 			{
 				[pResumeDict setObject:[NSNumber numberWithUnsignedLongLong:nFileSize] forKey:kDownloadBytesReceivedKey];
@@ -172,7 +171,7 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 
 @interface UpdateDownloadData : NSObject
 {
-	long long				mnBytesReceived;
+	unsigned long long		mnBytesReceived;
 	NSURLDownload*			mpDownload;
 	unsigned long long		mnExpectedContentLength;
 	NSString*				mpFileName;
@@ -182,7 +181,7 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 	NSURL*					mpURL;
 }
 - (void)addBytesReceived:(unsigned long)nBytesReceived;
-- (long long)bytesReceived;
+- (unsigned long long)bytesReceived;
 - (void)dealloc;
 - (unsigned long long)expectedContentLength;
 - (NSString *)fileName;
@@ -199,7 +198,7 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 	mnBytesReceived += nBytesReceived;
 }
 
-- (long long)bytesReceived
+- (unsigned long long)bytesReceived
 {
 	return mnBytesReceived;
 }
@@ -447,7 +446,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		else if ([updateBaseHost caseInsensitiveCompare:urlHost] == NSOrderedSame)
 		{
 			if (syncServer)
-			    updateBaseURLEntry = i;
+				updateBaseURLEntry = i;
 			return(YES);
 		}
 	}
@@ -468,8 +467,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (++updateBaseURLEntry >= updateBaseURLCount)
 		updateBaseURLEntry = 0;
 	
-    NSTimeInterval oldLastBaseURLIncrementTime = lastBaseURLIncrementTime;
-    lastBaseURLIncrementTime = [NSDate timeIntervalSinceReferenceDate];
+	NSTimeInterval oldLastBaseURLIncrementTime = lastBaseURLIncrementTime;
+	lastBaseURLIncrementTime = [NSDate timeIntervalSinceReferenceDate];
 	if (++baseURLIncrements >= updateBaseURLCount)
 	{
 		baseURLIncrements = 0;
@@ -653,10 +652,9 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 	else if ( errCode == NSURLErrorCancelled )
 	{
-		// Error code 999 indicates that the WebKit is doing the Back, Reload,
-		// or Forward actions so we don't trigger server fallback. These
-		// actions are incompatible with our export event code so cancel
-		// the current export event
+		// Error code NSURLErrorCancelled indicates that the WebKit is doing
+		// the Back, Reload, or Forward actions so we don't trigger server
+		// fallback.
 		return;
 	}
 
@@ -852,7 +850,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		return;
 
 	NSHTTPURLResponse *pResponse = (NSHTTPURLResponse *)[pDataSource response];
-	if ( !pResponse && [(NSURLResponse *)pResponse isKindOfClass:[NSHTTPURLResponse class]] )
+	if ( !pResponse || ![(NSURLResponse *)pResponse isKindOfClass:[NSHTTPURLResponse class]] )
 		return;
 
 	NSURL *pURL = [pResponse URL];
@@ -996,7 +994,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)download:(NSURLDownload *)download decideDestinationWithSuggestedFilename:(NSString *)filename
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "Update Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 
 	// Fix broken WebKit handling of the Content-Disposition header by assuming
@@ -1018,7 +1016,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	// Use NSDownloadsDirectory
 	downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
-    if (!downloadPaths)
+	if (!downloadPaths)
 		downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
 
 	if (downloadPaths && fileManager)
@@ -1151,7 +1149,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "Update Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 
 	std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
@@ -1183,7 +1181,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)downloadDidBegin: (NSURLDownload *)download
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "Update Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 
 	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
@@ -1254,7 +1252,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)downloadDidFinish: (NSURLDownload*)download
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "Update Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
@@ -1302,7 +1300,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
 {
 #ifdef DEBUG
-	NSLog( @"Download didFailWithError: %@", error );
+	NSLog( @"Update Download didFailWithError: %@", error );
 #endif
 
 	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
@@ -1359,8 +1357,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	[mploadingIndicator setHidden:YES];
 }
 
-- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
-        request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
+- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
 {
 #ifdef DEBUG
 	fprintf( stderr, "Update Loading URL: %s\n", [[[request URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
