@@ -68,6 +68,8 @@ using namespace rtl;
 using namespace vcl;
 using namespace vos;
 
+const NSString *kNeoOfficeInternalPboardType = @"NeoOfficeInternalPboardType";
+
 static UInt32 nSupportedTypes = 8;
 
 // List of supported native type symbol names in priority order. The first
@@ -83,7 +85,7 @@ static const NSString *aSupportedPasteboardTypeSymbolNames[] = {
 	@"NSPDFPboardType", @"NSPasteboardTypePDF", PDF_TYPE_TAG,
 	nil, @"NSPasteboardTypePNG", nil,
 	@"NSTIFFPboardType", @"NSPasteboardTypeTIFF", nil,
-	@"NSPICTPboardType", nil, nil 
+	@"NSPICTPboardType", nil, nil
 };
 
 static NSArray *pSupportedPasteboardTypes = nil;
@@ -598,6 +600,10 @@ static id ImplGetDataForType( DTransTransferable *pTransferable, const NSString 
 	if ( mpPasteboardName )
 		[mpPasteboardName retain];
 	mpTypes = pTypes;
+	// Fix bug 3673 by adding a custom type when the list of native drag types
+	// is empty
+	if ( ( !mpTypes || ![mpTypes count] ) && mpPasteboardName && [mpPasteboardName isEqualToString:NSDragPboard] )
+		mpTypes = [NSArray arrayWithObject:kNeoOfficeInternalPboardType];
 	if ( mpTypes )
 		[mpTypes retain];
 
@@ -701,6 +707,9 @@ static void ImplInitializeSupportedPasteboardTypes()
 				}
 			}
 		}
+
+		// Fix bug 3673 by adding a custom type to the list of native types
+		[pTypes addObject:kNeoOfficeInternalPboardType];
 
 		[pTypes retain];
 		pSupportedPasteboardTypes = pTypes;
