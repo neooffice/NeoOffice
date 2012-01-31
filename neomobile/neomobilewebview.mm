@@ -1292,7 +1292,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			NSObject *pValue = [pRetryDownloadURLs objectForKey:pPath];
 			if (!pValue || ![pValue isKindOfClass:[NSNull class]])
 			{
-				[[[NSURLDownload alloc] initWithRequest:[download request] delegate:self] autorelease];
+				[[self mainFrame] loadRequest:[download request]];
 				[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
 				bRetry = YES;
 			}
