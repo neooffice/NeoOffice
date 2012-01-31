@@ -111,21 +111,46 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return pThis;
 }
 
+static unsigned long long GetFileSize(NSString *pPath)
+{
+	long long nRet = 0;
+
+	if (pPath && [pPath length])
+	{
+		NSFileManager *pFileManager = [NSFileManager defaultManager];
+		if(pFileManager)
+		{
+			NSDictionary *pFileAttrs = [pFileManager attributesOfItemAtPath:pPath error:nil];
+			if (pFileAttrs)
+			{
+				// Downloaded file should never be directory or softlink
+				NSString *pFileType = [pFileAttrs fileType];
+				if ([pFileType isEqualToString:NSFileTypeRegular])
+					nRet = [pFileAttrs fileSize];
+			}
+		}
+	}
+
+	return nRet;
+}
+
 @interface NeoMobileDownloadData : NSObject
 {
-	unsigned long			mnBytesReceived;
+	unsigned long long		mnBytesReceived;
 	NSURLDownload*			mpDownload;
-	long long				mnExpectedContentLength;
+	unsigned long long		mnExpectedContentLength;
 	NSString*				mpFileName;
+	NSDictionary*			mpHeaders;
 	NSString*				mpMIMEType;
 	NSString*				mpPath;
+	NSURL*					mpURL;
 }
 - (void)addBytesReceived:(unsigned long)nBytesReceived;
-- (unsigned long)bytesReceived;
+- (unsigned long long)bytesReceived;
 - (void)dealloc;
-- (long long)expectedContentLength;
+- (unsigned long long)expectedContentLength;
 - (NSString *)fileName;
-- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType;
+- (id)initWithDownload:(NSURLDownload *)pDownload response:(NSURLResponse *)pResponse;
 - (NSString *)MIMEType;
 - (NSString *)path;
 - (void)setPath:(NSString *)pPath;
@@ -138,7 +163,7 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	mnBytesReceived += nBytesReceived;
 }
 
-- (unsigned long)bytesReceived
+- (unsigned long long)bytesReceived
 {
 	return mnBytesReceived;
 }
@@ -149,15 +174,19 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 		[mpDownload release];
 	if (mpFileName)
 		[mpFileName release];
+	if (mpHeaders)
+		[mpHeaders release];
 	if (mpMIMEType)
 		[mpMIMEType release];
 	if (mpPath)
 		[mpPath release];
+	if (mpURL)
+		[mpURL release];
 
 	[super dealloc];
 }
 
-- (long long)expectedContentLength
+- (unsigned long long)expectedContentLength
 {
 	return mnExpectedContentLength;
 }
@@ -167,7 +196,7 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	return mpFileName;
 }
 
-- (id)initWithDownload:(NSURLDownload *)pDownload expectedContentLength:(long long)nExpectedContentLength MIMEType:(NSString *)pMIMEType
+- (id)initWithDownload:(NSURLDownload *)pDownload response:(NSURLResponse *)pResponse
 {
 	[super init];
 
@@ -175,12 +204,24 @@ static id WebJavaScriptTextInputPanel_windowDidLoadIMP( id pThis, SEL aSelector,
 	if (mpDownload)
 		[mpDownload retain];
 	mnBytesReceived = 0;
-	mnExpectedContentLength = nExpectedContentLength;
+	long long nExpectedContentLength = [pResponse expectedContentLength];
+	if (nExpectedContentLength > 0)
+		mnExpectedContentLength = nExpectedContentLength;
 	mpFileName = nil;
-	mpMIMEType = pMIMEType;
+	mpHeaders = nil;
+	if ([pResponse isKindOfClass:[NSHTTPURLResponse class]])
+	{
+		mpHeaders = [(NSHTTPURLResponse *)pResponse allHeaderFields];
+		if (mpHeaders)
+			[mpHeaders retain];
+	}
+	mpMIMEType = [pResponse MIMEType];
 	if (mpMIMEType)
-		[pMIMEType retain];
+		[mpMIMEType retain];
 	mpPath = nil;
+	mpURL = [pResponse URL];
+	if (mpURL)
+		[mpURL retain];
 
 	return self;
 }
@@ -372,7 +413,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		else if ([neoMobileBaseHost caseInsensitiveCompare:urlHost] == NSOrderedSame)
 		{
 			if (syncServer)
-			    neoMobileBaseURLEntry = i;
+				neoMobileBaseURLEntry = i;
 			return(YES);
 		}
 	}
@@ -393,8 +434,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (++neoMobileBaseURLEntry >= neoMobileBaseURLCount)
 		neoMobileBaseURLEntry = 0;
 	
-    NSTimeInterval oldLastBaseURLIncrementTime = lastBaseURLIncrementTime;
-    lastBaseURLIncrementTime = [NSDate timeIntervalSinceReferenceDate];
+	NSTimeInterval oldLastBaseURLIncrementTime = lastBaseURLIncrementTime;
+	lastBaseURLIncrementTime = [NSDate timeIntervalSinceReferenceDate];
 	if (++baseURLIncrements >= neoMobileBaseURLCount)
 	{
 		baseURLIncrements = 0;
@@ -573,10 +614,10 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 	else if ( errCode == NSURLErrorCancelled )
 	{
-		// Error code -999 indicates that the WebKit is doing the Back, Reload,
-		// or Forward actions so we don't trigger server fallback. These
-		// actions are incompatible with our export event code so cancel
-		// the current export event
+		// Error code NSURLErrorCancelled indicates that the WebKit is doing
+		// the Back, Reload, or Forward actions so we don't trigger server
+		// fallback. These actions are incompatible with our export event code
+		// so cancel the current export event.
 		if ( mpexportEvent )
 			mpexportEvent->Cancel();
 		return;
@@ -696,16 +737,15 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(aDownloadDataMap.size())
 	{
 		// file downloads in progress, so cancel them
-		
-		if (pRetryDownloadURLs)
-			[pRetryDownloadURLs removeAllObjects];
-
 		for(std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
 		{
 			[it->first cancel];
 			[it->second release];
 		}
 		aDownloadDataMap.clear();
+
+		if (pRetryDownloadURLs)
+			[pRetryDownloadURLs removeAllObjects];
 
 		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADCANCELED)];
 	}
@@ -784,7 +824,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		return;
 
 	NSHTTPURLResponse *pResponse = (NSHTTPURLResponse *)[pDataSource response];
-	if ( !pResponse )
+	if ( !pResponse || ![(NSURLResponse *)pResponse isKindOfClass:[NSHTTPURLResponse class]] )
 		return;
 
 	NSURL *pURL = [pResponse URL];
@@ -1017,7 +1057,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)download:(NSURLDownload *)download decideDestinationWithSuggestedFilename:(NSString *)filename
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "NeoMobile Download downloadRequestReceived: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 
 	// Fix broken WebKit handling of the Content-Disposition header by assuming
@@ -1039,7 +1079,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 	// Use NSDownloadsDirectory
 	downloadPaths = NSSearchPathForDirectoriesInDomains(NSDownloadsDirectory, NSUserDomainMask, YES);
-    if (!downloadPaths)
+	if (!downloadPaths)
 		downloadPaths = NSSearchPathForDirectoriesInDomains(NSDesktopDirectory, NSUserDomainMask, YES);
 
 	if (downloadPaths && fileManager)
@@ -1079,7 +1119,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)download:(NSURLDownload *)download didCreateDestination:(NSString *)path
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "NeoMobile Download didCreateDestination: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::const_iterator it = aDownloadDataMap.find(download);
@@ -1100,27 +1140,23 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[it->second release];
 	}
 
-	NeoMobileDownloadData *pDownloadData=[[NeoMobileDownloadData alloc] initWithDownload:download expectedContentLength:[response expectedContentLength] MIMEType:[response MIMEType]];
+	NeoMobileDownloadData *pDownloadData=[[NeoMobileDownloadData alloc] initWithDownload:download response:response];
 	if(pDownloadData)
-	{
 		aDownloadDataMap[download]=pDownloadData;
-
-		[mploadingIndicator setHidden:NO];
-		[mploadingIndicator startAnimation:self];
-	}
 }
 
 - (void)downloadDidBegin: (NSURLDownload *)download
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "NeoMobile Download File Did Begin: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
+		[mploadingIndicator setHidden:NO];
+		[mploadingIndicator startAnimation:self];
 		[mpcancelButton setEnabled:YES];
-		[mpstatusLabel setString:NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADINGFILE)];
 	}
 }
 
@@ -1134,7 +1170,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if(it!=aDownloadDataMap.end())
 	{
 		// Reenabled the cancel button as it may have been cancelled by 
-        // clicking on a link
+		// clicking on a link
 		[mpcancelButton setEnabled:YES];
 
 		[it->second addBytesReceived:length];
@@ -1143,8 +1179,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		if(!pDownloadLabel && ![pDownloadLabel length])
 			pDownloadLabel=NeoMobileGetLocalizedString(NEOMOBILEDOWNLOADINGFILE);
 
-		unsigned long nBytesReceived=[it->second bytesReceived];
-		long long nExpectedContentLength=[it->second expectedContentLength];
+		unsigned long long nBytesReceived=[it->second bytesReceived];
+		unsigned long long nExpectedContentLength=[it->second expectedContentLength];
 		if(nExpectedContentLength > 0)
 		{
 			// we got a response from the server, so we can compute a percentage
@@ -1183,7 +1219,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)downloadDidFinish: (NSURLDownload*)download
 {
 #ifdef DEBUG
-	fprintf( stderr, "Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
+	fprintf( stderr, "NeoMobile Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
@@ -1192,45 +1228,25 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		if (path)
 		{
 			// Check if downloaded file size matches content length header
-			long long nExpectedContentLength=[it->second expectedContentLength];
+			unsigned long long nExpectedContentLength=[it->second expectedContentLength];
 			NSFileManager *pFileManager = [NSFileManager defaultManager];
-			if(nExpectedContentLength > 0 && pFileManager)
+			if(nExpectedContentLength > 0 && pFileManager && GetFileSize(path) != nExpectedContentLength)
 			{
-				MacOSBOOL bFileHasAllBits = NO;
-				NSDictionary *pFileAttrs = [pFileManager attributesOfItemAtPath:path error:nil];
-				if (pFileAttrs)
-				{
-					// Downloaded file should never be directory or softlink
-					NSString *pFileType = [pFileAttrs fileType];
-					if ([pFileType isEqualToString:NSFileTypeRegular])
-					{
-						unsigned long long nFileSize = [pFileAttrs fileSize];
-						if (nFileSize == (unsigned long long)nExpectedContentLength)
-							bFileHasAllBits = YES;
-					}
-				}
-
-				NSString *pURLPath = [[[download request] URL] absoluteString];
-				if (!bFileHasAllBits)
-				{
-					[pFileManager removeItemAtPath:path error:nil];
-					NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
-					[self download:download didFailWithError:pError];
-					return;
-				}
-				else if (pRetryDownloadURLs)
-				{
-					[pRetryDownloadURLs removeObjectForKey:pURLPath];
-				}
+				NSError *pError = [NSError errorWithDomain:@"NSURLErrorDomain" code:NSURLErrorNetworkConnectionLost userInfo:nil];
+				[self download:download didFailWithError:pError];
+				return;
 			}
+
+			if (pRetryDownloadURLs)
+				[pRetryDownloadURLs removeObjectForKey:path];
 
 			NSString *MIMEType = [it->second MIMEType];
 			if([MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound)
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], [it->second path], nil]];
+				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
 			else
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:[it->second path], nil]];
+				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
 #ifdef DEBUG
-			fprintf( stderr, "Opening file: %s\n", [[it->second path] cStringUsingEncoding:NSUTF8StringEncoding] );
+			fprintf( stderr, "Opening file: %s\n", [path cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
 		}
 
@@ -1251,7 +1267,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 - (void)download:(NSURLDownload *)download didFailWithError:(NSError *)error
 {
 #ifdef DEBUG
-	NSLog( @"Download didFailWithError: %@", error );
+	NSLog( @"NeoMobile Download didFailWithError: %@", error );
 #endif
 
 	std::map< NSURLDownload*, NeoMobileDownloadData* >::iterator it = aDownloadDataMap.find(download);
@@ -1265,16 +1281,24 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		}
 
 		MacOSBOOL bRetry = NO;
-		NSString *pURLPath = [[[download request] URL] absoluteString];
-		if (pRetryDownloadURLs && ![pRetryDownloadURLs objectForKey:pURLPath])
+		NSString *pPath = [it->second path];
+		if (pPath && pRetryDownloadURLs)
 		{
-			[pRetryDownloadURLs setObject:pURLPath forKey:pURLPath];
-			[[self mainFrame] loadRequest:[download request]];
-			bRetry = YES;
-		}
-		else
-		{
-			[pRetryDownloadURLs removeObjectForKey:pURLPath];
+			// Delete the file in case automatic deletion fails
+			NSFileManager *pFileManager = [NSFileManager defaultManager];
+			if (pFileManager)
+				[pFileManager removeItemAtPath:pPath error:nil];
+
+			NSObject *pValue = [pRetryDownloadURLs objectForKey:pPath];
+			if (!pValue || ![pValue isKindOfClass:[NSNull class]])
+			{
+				[[[NSURLDownload alloc] initWithRequest:[download request] delegate:self] autorelease];
+				[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
+				bRetry = YES;
+			}
+
+			if (!bRetry)
+				[pRetryDownloadURLs removeObjectForKey:pPath];
 		}
 
 		[it->second release];
@@ -1297,8 +1321,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	[mploadingIndicator setHidden:YES];
 }
 
-- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation
-        request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
+- (void)webView:(WebView *)sender decidePolicyForNavigationAction:(NSDictionary *)actionInformation request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id)listener
 {
 #ifdef DEBUG
 	fprintf( stderr, "NeoMobile Loading URL: %s\n", [[[request URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
