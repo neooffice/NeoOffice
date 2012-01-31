@@ -141,7 +141,7 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 	NSData *pRet = nil;
 
 	unsigned long long nFileSize = GetFileSize(pPath);
-	if (pDownload && nFileSize > 0)
+	if (pDownload && [@"GET" isEqualToString:[[pDownload request] HTTPMethod]] && nFileSize > 0)
 	{
 		[pDownload cancel];
 
@@ -418,7 +418,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (!path || [path length] < [kDownloadURI length])
 		return(NO);
 	NSRange range = NSMakeRange([path length] - [kDownloadURI length], [kDownloadURI length]);
-	return ([[url path] compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame && [UpdateWebView isUpdateURL:url syncServer:NO]);
+	return ([path compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame && [UpdateWebView isUpdateURL:url syncServer:NO]);
 }
 
 + (MacOSBOOL)isUpdateURL:(NSURL *)url syncServer:(MacOSBOOL)syncServer
@@ -893,16 +893,6 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	[mploadingIndicator setHidden:NO];
 	[mploadingIndicator startAnimation:self];
 	[mpcancelButton setEnabled:YES];
-
-	if ( !pWebView || !pFrame )
-		return;
-
-	WebDataSource *pDataSource = [pFrame provisionalDataSource];
-	
-	NSMutableURLRequest *pRequest = nil;
-	if ( pDataSource )
-		pRequest = [pDataSource request];
-	
 	[mpstatusLabel setString:UpdateGetLocalizedString(UPDATELOADING)];
 }
 
@@ -1115,14 +1105,21 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 				if (pRetryDownloadURLs)
 				{
+					NSURLDownload *pNewDownload = nil;
 					NSData *pResumeData = GetResumeDataForFile(download, filePath);
 					if (pResumeData)
 					{
-						[pRetryDownloadURLs setObject:[[[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:filePath] autorelease] forKey:filePath];
+						pNewDownload = [[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:filePath];
+						if (pNewDownload)
+						{
+							[pNewDownload autorelease];
+							[pNewDownload setDeletesFileUponFailure:NO];
+							[pRetryDownloadURLs setObject:pNewDownload forKey:filePath];
+						}
 					}
-					else
+					if (!pNewDownload)
 					{
-						[[[NSURLDownload alloc] initWithRequest:[download request] delegate:self] autorelease];
+						[[self mainFrame] loadRequest:[download request]];
 						[pRetryDownloadURLs setObject:[NSNull null] forKey:filePath];
 					}
 				}
@@ -1304,7 +1301,24 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 #endif
 
 	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
-	if(it!=aDownloadDataMap.end())
+	if(it==aDownloadDataMap.end())
+	{
+		if (pRetryDownloadURLs)
+		{
+			NSArray *pKeys = [pRetryDownloadURLs allKeysForObject:download];
+			if (pKeys && [pKeys count])
+			{
+				NSString *pPath = [pKeys objectAtIndex:0];
+				if (pPath)
+				{
+					[[self mainFrame] loadRequest:[download request]];
+					[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
+					return;
+				}
+			}
+		}
+	}
+	else
 	{
 		if (!pRetryDownloadURLs)
 		{
@@ -1320,15 +1334,27 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			NSObject *pValue = [pRetryDownloadURLs objectForKey:pPath];
 			if (!pValue || ![pValue isKindOfClass:[NSNull class]])
 			{
+				NSURLDownload *pNewDownload = nil;
 				NSData *pResumeData = GetResumeDataForFile(download, pPath);
 				if (pResumeData)
 				{
-					[pRetryDownloadURLs setObject:[[[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:pPath] autorelease] forKey:pPath];
+					pNewDownload = [[NSURLDownload alloc] initWithResumeData:pResumeData delegate:self path:pPath];
+					if (pNewDownload)
+					{
+						[pNewDownload autorelease];
+						[pNewDownload setDeletesFileUponFailure:NO];
+						[pRetryDownloadURLs setObject:pNewDownload forKey:pPath];
+					}
 				}
-				else
+				if (!pNewDownload)
 				{
-					[[[NSURLDownload alloc] initWithRequest:[download request] delegate:self] autorelease];
-					[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
+					pNewDownload = [[NSURLDownload alloc] initWithRequest:[download request] delegate:self];
+					if (pNewDownload)
+					{
+						[pNewDownload autorelease];
+						[pNewDownload setDeletesFileUponFailure:NO];
+						[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
+					}
 				}
 				bRetry = YES;
 			}
