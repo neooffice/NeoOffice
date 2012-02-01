@@ -1493,13 +1493,24 @@ static NeoMobileNonRecursiveResponderPanel *pCurrentPanel = nil;
 			NSArray *pSubviews = [pContentView subviews];
 			if ( pSubviews )
 			{
+				// Use the top view instead of the bottom view if this is a
+				// flipside panel
+				MacOSBOOL bUseTopView = ( [self isKindOfClass:[NeoMobileNonRecursiveResponderFlipsidePanel class]] );
+
 				unsigned int nCount = [pSubviews count];
 				unsigned int i = 0;
 				for ( ; i < nCount; i++ )
 				{
 					NSView *pView = (NSView *)[pSubviews objectAtIndex:i];
-					if ( pView && ( !pBottomView || [pView frame].origin.y < [pBottomView frame].origin.y ) )
-						pBottomView = pView;
+					if ( pView )
+					{
+						if ( !pBottomView )
+							pBottomView = pView;
+						else if ( bUseTopView && [pView frame].origin.y + [pView frame].size.height > [pBottomView frame].origin.y + [pBottomView frame].size.height )
+							pBottomView = pView;
+						else if ( !bUseTopView && [pView frame].origin.y < [pBottomView frame].origin.y )
+							pBottomView = pView;
+					}
 				}
 			}
 
@@ -1510,7 +1521,7 @@ static NeoMobileNonRecursiveResponderPanel *pCurrentPanel = nil;
 			{
 				NSRect aBottomFrame = [pBottomView frame];
 				aContentFrame.origin.y -= aBottomFrame.size.height;
-				aContentFrame.size.height = aBottomFrame.origin.y + aBottomFrame.size.height;
+				aContentFrame.size.height = aBottomFrame.size.height;
 			}
 			else
 			{
