@@ -1562,8 +1562,13 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 				for ( ; i < nCount; i++ )
 				{
 					NSView *pView = (NSView *)[pSubviews objectAtIndex:i];
-					if ( pView && ( !pBottomView || [pView frame].origin.y < [pBottomView frame].origin.y ) )
-						pBottomView = pView;
+					if ( pView )
+					{
+						if ( !pBottomView )
+							pBottomView = pView;
+						else if ( [pView frame].origin.y < [pBottomView frame].origin.y )
+							pBottomView = pView;
+					}
 				}
 			}
 
@@ -1574,7 +1579,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 			{
 				NSRect aBottomFrame = [pBottomView frame];
 				aContentFrame.origin.y -= aBottomFrame.size.height;
-				aContentFrame.size.height = aBottomFrame.origin.y + aBottomFrame.size.height;
+				aContentFrame.size.height = aBottomFrame.size.height;
 			}
 			else
 			{
