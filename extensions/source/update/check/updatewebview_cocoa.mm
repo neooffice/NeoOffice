@@ -1533,11 +1533,21 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-	if([notification object]==self && !mbinZoom)
+	if([notification object]==self)
 	{
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		[defaults setBool:NO forKey:kUpdateVisiblePref];
-		[defaults synchronize];
+ 		if (!mbinZoom)
+		{
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			[defaults setBool:NO forKey:kUpdateVisiblePref];
+			[defaults synchronize];
+		}
+
+		if ([self isKindOfClass:[UpdateNonRecursiveResponderWebPanel class]])
+		{
+			UpdateWebView *pWebView = [(UpdateNonRecursiveResponderWebPanel *)self webView];
+			if (pWebView)
+				[pWebView stopLoading:self];
+		}
 	}
 }
 
