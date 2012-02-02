@@ -1469,11 +1469,21 @@ static NeoMobileNonRecursiveResponderPanel *pCurrentPanel = nil;
 
 - (void)windowWillClose:(NSNotification *)notification
 {
-	if([notification object]==self && !mbinZoom)
+	if([notification object]==self)
 	{
-		NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
-		[defaults setBool:NO forKey:kNeoMobileVisiblePref];
-		[defaults synchronize];
+		if (!mbinZoom)
+		{
+			NSUserDefaults *defaults=[NSUserDefaults standardUserDefaults];
+			[defaults setBool:NO forKey:kNeoMobileVisiblePref];
+			[defaults synchronize];
+		}
+
+		if ([self isKindOfClass:[NeoMobileNonRecursiveResponderWebPanel class]])
+		{
+			NeoMobileWebView *pWebView = [(NeoMobileNonRecursiveResponderWebPanel *)self webView];
+			if (pWebView)
+				[pWebView stopLoading:self];
+		}
 	}
 }
 
