@@ -97,12 +97,13 @@ SHL1STDLIBS += \
 	$(UNOTOOLSLIB) \
 	$(VCLLIB)
 .IF "$(GUIBASE)" == "java"
+SHL1STDLIBS += \
+	$(SFXLIB) \
+	$(TOOLSLIB)
 SHL1STDLIBS += -framework Cocoa -framework WebKit
 .ENDIF		# "$(GUIBASE)" == "java"
 .ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
         
-.IF "$(GUIBASE)" == "java"
-.ENDIF		# "$(GUIBASE)" == "java"
 SHL1VERSIONMAP=..$/exports.map
 SHL1DEF=$(MISC)$/$(SHL1TARGET).def
 DEF1NAME=$(SHL1TARGET)

@@ -183,6 +183,7 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 - (void)addBytesReceived:(unsigned long)nBytesReceived;
 - (unsigned long long)bytesReceived;
 - (void)dealloc;
+- (NSURLDownload *)download;
 - (unsigned long long)expectedContentLength;
 - (NSString *)fileName;
 - (id)initWithDownload:(NSURLDownload *)pDownload response:(NSURLResponse *)pResponse startingByte:(long long)nStartingByte;
@@ -219,6 +220,11 @@ static NSData *GetResumeDataForFile(NSURLDownload *pDownload, NSString *pPath)
 		[mpURL release];
 
 	[super dealloc];
+}
+
+- (NSURLDownload *)download
+{
+	return mpDownload;
 }
 
 - (unsigned long long)expectedContentLength
@@ -324,6 +330,7 @@ static NSTimeInterval lastBaseURLIncrementTime = 0;
 static unsigned int baseURLIncrements = 0;
 static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
 static std::map< NSURLDownload*, UpdateDownloadData* > aDownloadDataMap;
+static std::map< NSFileHandle*, UpdateDownloadData* > aFileHandleDataMap;
 static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 @implementation UpdateWebView
@@ -974,7 +981,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if ( !pWindow || ![pWindow isVisible] )
 		return bRet;
 
-	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:UpdateGetLocalizedString(UPDATECANCEL) otherButton:nil informativeTextWithFormat:@""];
+	NSAlert *pAlert = [NSAlert alertWithMessageText:pMessage defaultButton:nil alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL) otherButton:nil informativeTextWithFormat:@""];
 	if ( pAlert && [pAlert runModal] == NSAlertDefaultReturn )
 		bRet = YES;
 
@@ -1251,6 +1258,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 #ifdef DEBUG
 	fprintf( stderr, "Update Download File Did End: %s\n", [[[[download request] URL] absoluteString] cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+	NSString *pOpeningFile = nil;
 	std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.find(download);
 	if(it!=aDownloadDataMap.end())
 	{
@@ -1270,14 +1278,109 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if (pRetryDownloadURLs)
 				[pRetryDownloadURLs removeObjectForKey:path];
 
+			MacOSBOOL bUseHdiUtil = NO;
+			if ([path length] >= [kDownloadURI length])
+			{
+				NSRange range = NSMakeRange([path length] - [kDownloadURI length], [kDownloadURI length]);
+				bUseHdiUtil = ([path compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame);
+			}
+
+			NSString *pErrorMessage = nil;
 			NSString *MIMEType = [it->second MIMEType];
-			if([MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound)
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
+			if(bUseHdiUtil)
+			{
+				NSFileHandle *pStdoutHandle = nil;
+				@try
+				{
+					NSTask *pHdiUtilTask = [[NSTask alloc] init];
+					NSPipe *pStdoutPipe = [NSPipe pipe];
+					if (pHdiUtilTask && pStdoutPipe)
+					{
+						NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+						pStdoutHandle = [pStdoutPipe fileHandleForReading];
+						if (pNotificationCenter && pStdoutHandle)
+						{
+							std::map< NSFileHandle*, UpdateDownloadData* >::iterator fhit = aFileHandleDataMap.find(pStdoutHandle);
+							if(fhit!=aFileHandleDataMap.end())
+							{
+								[fhit->second release];
+								aFileHandleDataMap.erase(fhit);
+							}
+							[it->second retain];
+							aFileHandleDataMap[pStdoutHandle]=it->second;
+
+							[pNotificationCenter addObserver:self selector:@selector(readToEndOfHdiUtilTaskOutput:) name:NSFileHandleReadToEndOfFileCompletionNotification object:pStdoutHandle];
+							[pStdoutHandle readToEndOfFileInBackgroundAndNotify];
+
+							[pHdiUtilTask setLaunchPath:@"/usr/bin/hdiutil"];
+							[pHdiUtilTask setArguments:[NSArray arrayWithObjects:@"attach", @"-plist", path, nil]];
+							[pHdiUtilTask setStandardOutput:pStdoutPipe];
+							[pHdiUtilTask launch];
+
+							pOpeningFile = [NSString stringWithFormat:UpdateGetLocalizedString(UPDATEOPENINGFILE), [it->second fileName]];
+						}
+					}
+				}
+				@catch (NSException *pExc)
+				{
+					if (pStdoutHandle)
+					{
+						NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+						if (pNotificationCenter)
+							[pNotificationCenter removeObserver:self name:NSFileHandleReadToEndOfFileCompletionNotification object:pStdoutHandle];
+
+						std::map< NSFileHandle*, UpdateDownloadData* >::iterator fhit = aFileHandleDataMap.find(pStdoutHandle);
+						if(fhit!=aFileHandleDataMap.end())
+						{
+							[fhit->second release];
+							aFileHandleDataMap.erase(fhit);
+						}
+					}
+
+					if (pExc)
+						pErrorMessage = [pExc reason];
+					else
+						pErrorMessage = @"";
+				}
+			}
+			else if(MIMEType && ([MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound))
+			{
+				@try
+				{
+					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
+				}
+				@catch (NSException *pExc)
+				{
+					if (pExc)
+						pErrorMessage = [pExc reason];
+					else
+						pErrorMessage = @"";
+				}
+			}
 			else
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
+			{
+				@try
+				{
+					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
+				}
+				@catch (NSException *pExc)
+				{
+					if (pExc)
+						pErrorMessage = [pExc reason];
+					else
+						pErrorMessage = @"";
+				}
+			}
 #ifdef DEBUG
 			fprintf( stderr, "Opening file: %s\n", [path cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+
+			if (pErrorMessage)
+			{
+				NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", UpdateGetLocalizedString(UPDATEERROR), pErrorMessage] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+				if (pAlert)
+					[pAlert runModal];
+			}
 		}
 
 		[it->second release];
@@ -1288,7 +1391,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	{
 		[self setDownloadingIndicatorHidden:YES];
 		[mpcancelButton setEnabled:NO];
-		[mpstatusLabel setString:@""];
+		[mpstatusLabel setString:pOpeningFile ? pOpeningFile : @""];
 	}
 
 	[mploadingIndicator setHidden:YES];
@@ -1431,6 +1534,102 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 		[mpstatusLabel release];
 	
 	[super dealloc];
+}
+
+- (void)readToEndOfHdiUtilTaskOutput:(NSNotification *)pNotification
+{
+	if (pNotification)
+	{
+		NSFileHandle *pFileHandle = [pNotification object];
+		if (pFileHandle)
+		{
+			NSNotificationCenter *pNotificationCenter = [NSNotificationCenter defaultCenter];
+			if (pNotificationCenter)
+				[pNotificationCenter removeObserver:self name:NSFileHandleReadToEndOfFileCompletionNotification object:[pNotification object]];
+
+			std::map< NSFileHandle*, UpdateDownloadData* >::iterator fhit = aFileHandleDataMap.find(pFileHandle);
+			if(fhit!=aFileHandleDataMap.end())
+			{
+				MacOSBOOL bOK = NO;
+				NSDictionary *pUserInfo = [pNotification userInfo];
+				if (pUserInfo)
+				{
+					NSData *pData = [pUserInfo objectForKey:NSFileHandleNotificationDataItem];
+					if (pData && [pData length])
+					{
+						NSPropertyListFormat nFormat = 0;
+						NSMutableDictionary *pDict = nil;
+						if (class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListWithData:options:format:error:)))
+							pDict = [NSPropertyListSerialization propertyListWithData:pData options:NSPropertyListMutableContainersAndLeaves format:&nFormat error:nil];
+						if (!pDict && class_getClassMethod([NSPropertyListSerialization class], @selector(propertyListFromData:mutabilityOption:format:errorDescription:)))
+							pDict = [NSPropertyListSerialization propertyListFromData:pData mutabilityOption:NSPropertyListMutableContainersAndLeaves format:&nFormat errorDescription:nil];
+
+						if (pDict && [pDict isKindOfClass:[NSMutableDictionary class]])
+						{
+							NSArray *pArray = [pDict objectForKey:@"system-entities"];
+							if (pArray && [pArray isKindOfClass:[NSArray class]])
+							{
+								unsigned int i = 0;
+								unsigned int nCount = [pArray count];
+								for (; i < nCount; i++)
+								{
+									NSDictionary *pDictElement = [pArray objectAtIndex:i];
+									if (pDictElement && [pDictElement isKindOfClass:[NSDictionary class]])
+									{
+										NSString *pMountPoint = [pDictElement objectForKey:@"mount-point"];
+										if (pMountPoint)
+										{
+											// TODO: saving and running installer in mount point
+											bOK = YES;
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+
+				if (!bOK)
+				{
+					NSFileManager *pFileManager = [NSFileManager defaultManager];
+					NSURLDownload *pDownload = [fhit->second download];
+					NSString *pFileName = [fhit->second fileName];
+					NSString *pPath = [fhit->second path];
+					if (pFileManager && pDownload && pFileName && pPath)
+					{
+						NSString *pOpenFileFailed = [NSString stringWithFormat:UpdateGetLocalizedString(UPDATEOPENFILEFAILED), pFileName];
+						NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pOpenFileFailed, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)] defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
+						if (pAlert && [pAlert runModal] == NSAlertDefaultReturn)
+						{
+							// Skip redownload if another download for the
+							// same file is already in progress
+							for (std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
+							{
+								NSString *pOtherDownloadPath = [it->second path];
+								if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
+								{
+									bOK = YES;
+									break;
+								}
+							}
+
+							if (!bOK)
+							{
+								[pFileManager removeItemAtPath:pPath error:nil];
+								[[self mainFrame] loadRequest:[pDownload request]];
+							}
+						}
+					}
+				}
+
+				[fhit->second release];
+				aFileHandleDataMap.erase(fhit);
+
+				if(!aDownloadDataMap.size() && !aFileHandleDataMap.size())
+					[mpstatusLabel setString:@""];
+			}
+		}
+	}
 }
 
 @end
@@ -1791,7 +1990,7 @@ static UpdateNonRecursiveResponderPanel *pCurrentPanel = nil;
 	growBoxSize.width /= 2;
 
 	mpcancelButton = [[NSButton alloc] initWithFrame:NSMakeRect(contentSize.width-buttonSize.width-MAX(kUpdateBottomViewPadding, growBoxSize.width), kUpdateBottomViewPadding, buttonSize.width, buttonSize.height)];
-	[mpcancelButton setToolTip:UpdateGetLocalizedString(UPDATECANCEL)];
+	[mpcancelButton setToolTip:UpdateGetVCLResString(SV_BUTTONTEXT_CANCEL)];
 	[mpcancelButton setEnabled:YES];
 	[mpcancelButton setButtonType:NSMomentaryPushInButton];
 	[mpcancelButton setBezelStyle:NSRegularSquareBezelStyle];

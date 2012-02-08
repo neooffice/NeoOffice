@@ -92,6 +92,7 @@
 - (void)webView:(WebView *)sender decidePolicyForMIMEType:(NSString *)type request:(NSURLRequest *)request frame:(WebFrame *)frame decisionListener:(id < WebPolicyDecisionListener >)listener;
 - (IBAction)backButtonPressed;
 - (IBAction)cancelButtonPressed;
+- (void)readToEndOfHdiUtilTaskOutput:(NSNotification *)pNotification;
 @end
 
 @interface UpdateNonRecursiveResponderPanel : NSPanel

@@ -36,19 +36,22 @@
 
 #import <com/sun/star/lang/Locale.hpp>
 #import <sal/types.h>
+#import "../../../../vcl/inc/vcl/svids.hrc"
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
 
 #define UPDATEBACK "back"
-#define UPDATECANCEL "cancel"
 #define UPDATEDOWNLOADCANCELED "download.canceled"
 #define UPDATEDOWNLOADFAILED "download.failed"
 #define UPDATEDOWNLOADINGFILE "downloading.file"
 #define UPDATEERROR "error"
 #define UPDATELOADING "loading"
 #define UPDATEMEGABYTE "megabyte"
+#define UPDATEOPENFILEFAILED "open.file.failed"
+#define UPDATEOPENINGFILE "opening.file"
+#define UPDATEREDOWNLOADFILE "redownload.file"
 
 /**
  * Returns the application's locale.
@@ -61,5 +64,6 @@
  */
 NSString *UpdateGetLocalizedString( const sal_Char *key );
 NSString *UpdateGetLocalizedDecimalSeparator();
+NSString *UpdateGetVCLResString( int nId );
 
 #endif	// _UPDATEI18N_COCOA_HXX

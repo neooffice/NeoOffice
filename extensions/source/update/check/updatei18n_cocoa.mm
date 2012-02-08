@@ -33,6 +33,8 @@
 
 #import "updatei18n_cocoa.hxx"
 #import <map>
+#import <sfx2/app.hxx>
+#import <tools/rcid.h>
 #import <unotools/localedatawrapper.hxx>
 #import <vcl/svapp.hxx>
 
@@ -42,6 +44,7 @@ static NSDictionary *pPrimaryLocaleDict = nil;
 static NSDictionary *pSecondaryLocaleDict = nil;
 static NSDictionary *pTertiaryLocaleDict = nil;
 static NSString *pDecimalSep = nil;
+static ResMgr *pVCLResMgr = NULL;
 
 using namespace com::sun::star::lang;
 using namespace rtl;
@@ -51,7 +54,6 @@ using namespace rtl;
  */
 static const sal_Char *pEntries_de[] = {
 	UPDATEBACK, "Zurück",
-	UPDATECANCEL, "Abbrechen",
 	nil, nil
 };
 
@@ -60,13 +62,15 @@ static const sal_Char *pEntries_de[] = {
  */
 static const sal_Char *pEntries_en_US[] = {
 	UPDATEBACK, "Back",
-	UPDATECANCEL, "Cancel",
 	UPDATEDOWNLOADCANCELED, "Download canceled",
 	UPDATEDOWNLOADFAILED, "Download failed",
 	UPDATEDOWNLOADINGFILE, "Downloading file",
 	UPDATEERROR, "Error:",
 	UPDATELOADING, "Loading…",
 	UPDATEMEGABYTE, "MB",
+	UPDATEOPENFILEFAILED, "Cannot open %@",
+	UPDATEOPENINGFILE, "Opening %@…",
+	UPDATEREDOWNLOADFILE, "Do you want to redownload the file?",
 	nil, nil
 };
 
@@ -74,7 +78,6 @@ static const sal_Char *pEntries_en_US[] = {
  * Translated strings for es locale
  */
 static const sal_Char *pEntries_es[] = {
-	UPDATECANCEL, "Cancelar",
 	UPDATEDOWNLOADCANCELED, "Descarga cancelada",
 	UPDATEDOWNLOADFAILED, "Falló la descarga",
 	UPDATEDOWNLOADINGFILE, "Descargando archivo",
@@ -88,7 +91,6 @@ static const sal_Char *pEntries_es[] = {
  */
 static const sal_Char *pEntries_fr[] = {
 	UPDATEBACK, "Arrière",
-	UPDATECANCEL, "Annuler",
 	UPDATEDOWNLOADCANCELED, "Téléchargement annulé",
 	UPDATEDOWNLOADFAILED, "Echec du téléchargement",
 	UPDATEDOWNLOADINGFILE, "Téléchargement du fichier",
@@ -102,7 +104,6 @@ static const sal_Char *pEntries_fr[] = {
  * Translated strings for it locale
  */
 static const sal_Char *pEntries_it[] = {
-	UPDATECANCEL, "Cancella",
 	UPDATEDOWNLOADCANCELED, "Trasferimento cancellato ",
 	UPDATEDOWNLOADFAILED, "Trasferimento fallito",
 	UPDATEDOWNLOADINGFILE, "Trasferimento del file",
@@ -115,7 +116,6 @@ static const sal_Char *pEntries_it[] = {
  * Translated strings for nl locale
  */
 static const sal_Char *pEntries_nl[] = {
-	UPDATECANCEL, "Annuleren",
 	UPDATEDOWNLOADCANCELED, "Ophalen geannuleerd",
 	UPDATEDOWNLOADFAILED, "Ophalen mislukt",
 	UPDATEDOWNLOADINGFILE, "Bestand ophalen",
@@ -128,7 +128,6 @@ static const sal_Char *pEntries_nl[] = {
  * Translated strings for pt locale
  */
 static const sal_Char *pEntries_pt[] = {
-	UPDATECANCEL, "Cancelar ",
 	UPDATEDOWNLOADCANCELED, "Transferência de arquivo cancelada",
 	UPDATEDOWNLOADFAILED, "Falha na transferência de arquivo",
 	UPDATEDOWNLOADINGFILE, "Transferindo arquivo",
@@ -262,4 +261,23 @@ NSString *UpdateGetLocalizedDecimalSeparator()
 	}
 
 	return pDecimalSep;
+}
+
+NSString *UpdateGetVCLResString( int nId )
+{
+	if ( !pVCLResMgr )
+	{
+		pVCLResMgr = SfxApplication::CreateResManager( "vcl" );
+		if ( !pVCLResMgr )
+			return @"";
+	}
+
+	ResId aResId( nId, *pVCLResMgr );
+	aResId.SetRT( RSC_STRING );
+	if ( !pVCLResMgr->IsAvailable( aResId ) )
+		return @"";
+ 
+	XubString aResString( ResId( nId, *pVCLResMgr ) );
+	aResString.EraseAllChars('~');
+	return [NSString stringWithCharacters:aResString.GetBuffer() length:aResString.Len()];
 }
