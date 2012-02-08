@@ -93,6 +93,8 @@
 - (IBAction)backButtonPressed;
 - (IBAction)cancelButtonPressed;
 - (void)readToEndOfHdiUtilTaskOutput:(NSNotification *)pNotification;
+- (void)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription;
+
 @end
 
 @interface UpdateNonRecursiveResponderPanel : NSPanel

@@ -425,7 +425,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	if (!path || [path length] < [kDownloadURI length])
 		return(NO);
 	NSRange range = NSMakeRange([path length] - [kDownloadURI length], [kDownloadURI length]);
-	return ([path compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame && [UpdateWebView isUpdateURL:url syncServer:NO]);
+	return ([path compare:(NSString *)kDownloadURI options:0 range:range]==NSOrderedSame);
 }
 
 + (MacOSBOOL)isUpdateURL:(NSURL *)url syncServer:(MacOSBOOL)syncServer
@@ -1451,19 +1451,18 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				}
 				if (!pNewDownload)
 				{
-					pNewDownload = [[NSURLDownload alloc] initWithRequest:[download request] delegate:self];
-					if (pNewDownload)
-					{
-						[pNewDownload autorelease];
-						[pNewDownload setDeletesFileUponFailure:NO];
-						[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
-					}
+					[[self mainFrame] loadRequest:[download request]];
+					[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
 				}
 				bRetry = YES;
 			}
 
 			if (!bRetry)
+			{
 				[pRetryDownloadURLs removeObjectForKey:pPath];
+				[self redownloadFile:download path:pPath description:UpdateGetLocalizedString(UPDATEDOWNLOADFAILED)];
+				bRetry = YES;
+			}
 		}
 
 		[it->second release];
@@ -1590,37 +1589,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				}
 
 				if (!bOK)
-				{
-					NSFileManager *pFileManager = [NSFileManager defaultManager];
-					NSURLDownload *pDownload = [fhit->second download];
-					NSString *pFileName = [fhit->second fileName];
-					NSString *pPath = [fhit->second path];
-					if (pFileManager && pDownload && pFileName && pPath)
-					{
-						NSString *pOpenFileFailed = [NSString stringWithFormat:UpdateGetLocalizedString(UPDATEOPENFILEFAILED), pFileName];
-						NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pOpenFileFailed, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)] defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
-						if (pAlert && [pAlert runModal] == NSAlertDefaultReturn)
-						{
-							// Skip redownload if another download for the
-							// same file is already in progress
-							for (std::map< NSURLDownload*, UpdateDownloadData* >::const_iterator it = aDownloadDataMap.begin(); it != aDownloadDataMap.end(); ++it)
-							{
-								NSString *pOtherDownloadPath = [it->second path];
-								if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
-								{
-									bOK = YES;
-									break;
-								}
-							}
-
-							if (!bOK)
-							{
-								[pFileManager removeItemAtPath:pPath error:nil];
-								[[self mainFrame] loadRequest:[pDownload request]];
-							}
-						}
-					}
-				}
+					[self redownloadFile:[fhit->second download] path:[fhit->second path] description:[NSString stringWithFormat:UpdateGetLocalizedString(UPDATEOPENFILEFAILED), [fhit->second fileName]]];
 
 				[fhit->second release];
 				aFileHandleDataMap.erase(fhit);
@@ -1628,6 +1597,47 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				if(!aDownloadDataMap.size() && !aFileHandleDataMap.size())
 					[mpstatusLabel setString:@""];
 			}
+		}
+	}
+}
+
+- (void)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription
+{
+	NSFileManager *pFileManager = [NSFileManager defaultManager];
+
+	if (pFileManager && pDownload && pPath && pDescription)
+	{
+		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pDescription, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)] defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
+		if (pAlert && [pAlert runModal] == NSAlertDefaultReturn)
+		{
+			// Cancel any other downloads for the same file that are already
+			// in progress
+			std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.begin();
+			while (it != aDownloadDataMap.end())
+			{
+				if (it->first != pDownload)
+				{
+					NSString *pOtherDownloadPath = [it->second path];
+					if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
+					{
+						if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
+						{
+							[it->first cancel];
+							[it->second release];
+							it = aDownloadDataMap.begin();
+							continue;
+						}
+					}
+				}
+
+				++it;
+			}
+
+			if (pRetryDownloadURLs)
+				[pRetryDownloadURLs removeObjectForKey:pPath];
+
+			[pFileManager removeItemAtPath:pPath error:nil];
+			[[self mainFrame] loadRequest:[pDownload request]];
 		}
 	}
 }
