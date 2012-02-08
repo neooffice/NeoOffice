@@ -1240,14 +1240,46 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if (pRetryDownloadURLs)
 				[pRetryDownloadURLs removeObjectForKey:path];
 
+			NSString *pErrorMessage = nil;
 			NSString *MIMEType = [it->second MIMEType];
-			if([MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound)
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
+			if(MIMEType && [MIMEType rangeOfString: @"application/vnd.oasis.opendocument"].location != NSNotFound || [MIMEType rangeOfString: @"application/ms"].location != NSNotFound)
+			{
+				@try
+				{
+					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:@"-a", [[NSBundle mainBundle] bundlePath], path, nil]];
+				}
+				@catch (NSException *pExc)
+				{
+					if (pExc)
+						pErrorMessage = [pExc reason];
+					else
+						pErrorMessage = @"";
+				}
+			}
 			else
-				[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
+			{
+				@try
+				{
+					[NSTask launchedTaskWithLaunchPath:@"/usr/bin/open" arguments:[NSArray arrayWithObjects:path, nil]];
+				}
+				@catch (NSException *pExc)
+				{
+					if (pExc)
+						pErrorMessage = [pExc reason];
+					else
+						pErrorMessage = @"";
+				}
+			}
 #ifdef DEBUG
 			fprintf( stderr, "Opening file: %s\n", [path cStringUsingEncoding:NSUTF8StringEncoding] );
 #endif
+
+			if (pErrorMessage)
+			{
+				NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@", NeoMobileGetLocalizedString(NEOMOBILEERROR), pErrorMessage] defaultButton:nil alternateButton:nil otherButton:nil informativeTextWithFormat:@""];
+				if (pAlert)
+					[pAlert runModal];
+			}
 		}
 
 		[it->second release];
