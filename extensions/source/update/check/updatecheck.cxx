@@ -1512,6 +1512,7 @@ UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
 
 #ifdef MACOSX
 	UpdateShowNativeDownloadWebView(rURL, aUserAgent, aDownloadText);
+    ((UpdateCheck *)this)->getUpdateHandler()->setVisible(false);
 	return;
 #endif	// MACOSX
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
