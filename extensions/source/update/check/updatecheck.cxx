@@ -67,9 +67,6 @@
 #include "updateprotocol.hxx"
 #include "updatecheckconfig.hxx"
 
-// Uncomment this to enable downloads using a native webview
-#define USE_NATIVE_DOWNLOAD_WEBVIEW
-
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
 #include "update_cocoa.hxx"
 #include <unotools/bootstrap.hxx>

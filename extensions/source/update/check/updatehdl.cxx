@@ -705,6 +705,16 @@ void UpdateHandler::loadStrings()
     msNoUpdFound    = loadString( xBundle, RID_UPDATE_STR_NO_UPD_FOUND );
 
     msUpdFound      = loadString( xBundle, RID_UPDATE_STR_UPD_FOUND );
+#ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
+    rtl::OUString aBlankLine = UNISTRING( "\n\n" );
+    sal_Int32 nIndex = msUpdFound.indexOf( aBlankLine );
+    if ( nIndex >= 0 )
+    {
+        nIndex = msUpdFound.indexOf( aBlankLine, nIndex + aBlankLine.getLength() );
+        if ( nIndex >= 0 )
+            msUpdFound = msUpdFound.copy( 0, nIndex );
+    }
+#endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
     setFullVersion( msUpdFound );
 
     msDlgTitle      = loadString( xBundle, RID_UPDATE_STR_DLG_TITLE );
@@ -713,6 +723,11 @@ void UpdateHandler::loadStrings()
     msDownloadWarning = loadString( xBundle, RID_UPDATE_STR_DOWNLOAD_WARN );
     msDownloadDescr =  loadString( xBundle, RID_UPDATE_STR_DOWNLOAD_DESCR );
     msDownloadNotAvail = loadString( xBundle, RID_UPDATE_STR_DOWNLOAD_UNAVAIL );
+#ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
+    nIndex = msDownloadNotAvail.indexOf( aBlankLine );
+    if ( nIndex >= 0 )
+        msDownloadNotAvail = msDownloadNotAvail.copy( nIndex + aBlankLine.getLength() );
+#endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
     msDownloading   = loadString( xBundle, RID_UPDATE_STR_DOWNLOADING );
     msReady2Install = loadString( xBundle, RID_UPDATE_STR_READY_INSTALL );
     msCancelTitle   = loadString( xBundle, RID_UPDATE_STR_CANCEL_TITLE );
@@ -1019,8 +1034,13 @@ bool UpdateHandler::showOverwriteWarning() const
 #define BUTTON_BAR_Y_POS    ( EDIT2_Y_POS + DIALOG_BORDER + BOX_HEIGHT2 )
 #define BUTTON_Y_POS        ( BUTTON_BAR_Y_POS + 8 )
 #define CLOSE_BTN_X         ( DIALOG_WIDTH - DIALOG_BORDER - BUTTON_WIDTH )
+#ifdef USE_JAVA
+#define DOWNLOAD_BTN_X      ( CLOSE_BTN_X - 2 * BUTTON_X_OFFSET - BUTTON_WIDTH )
+#define INSTALL_BTN_X       ( DOWNLOAD_BTN_X - BUTTON_X_OFFSET - BUTTON_WIDTH )
+#else	// USE_JAVA
 #define INSTALL_BTN_X       ( CLOSE_BTN_X - 2 * BUTTON_X_OFFSET - BUTTON_WIDTH )
 #define DOWNLOAD_BTN_X      ( INSTALL_BTN_X - BUTTON_X_OFFSET - BUTTON_WIDTH )
+#endif	// USE_JAVA
 #define PROGRESS_WIDTH      80
 #define PROGRESS_HEIGHT     10
 #define PROGRESS_X_POS      ( DIALOG_BORDER + 8 )
@@ -1254,6 +1274,7 @@ void UpdateHandler::createDialog()
                              awt::Rectangle( CLOSE_BTN_X, BUTTON_Y_POS, BUTTON_WIDTH, BUTTON_HEIGHT ),
                              aProps );
     }
+#ifndef USE_JAVA
     {   // install button
         uno::Sequence< beans::NamedValue > aProps(5);
 
@@ -1267,6 +1288,7 @@ void UpdateHandler::createDialog()
                              awt::Rectangle( INSTALL_BTN_X, BUTTON_Y_POS, BUTTON_WIDTH, BUTTON_HEIGHT ),
                              aProps );
     }
+#endif	// !USE_JAVA
     {   // download button
         uno::Sequence< beans::NamedValue > aProps(5);
 

@@ -50,16 +50,26 @@
 
 #include "actionlistener.hxx"
 
+#if defined USE_JAVA && defined MACOSX
+// Comment this out to disable downloads using a native webview
+#define USE_NATIVE_DOWNLOAD_WEBVIEW
+#endif	// USE_JAVA && MACOSX
+
 enum DialogControls
 {
     CANCEL_BUTTON = 0,
     PAUSE_BUTTON,
     RESUME_BUTTON,
+#ifndef USE_JAVA
     INSTALL_BUTTON,
+#endif	// !USE_JAVA
     DOWNLOAD_BUTTON,
     CLOSE_BUTTON,
     HELP_BUTTON,
     BUTTON_COUNT,
+#ifdef USE_JAVA
+    INSTALL_BUTTON,
+#endif	// USE_JAVA
     THROBBER_CTRL,
     PROGRESS_CTRL
 };
