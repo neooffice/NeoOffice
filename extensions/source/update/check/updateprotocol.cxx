@@ -49,6 +49,12 @@
 
 #include <cppuhelper/implbase1.hxx>
 
+#if defined USE_JAVA && defined MACOSX
+#include <premac.h>
+#include <CoreServices/CoreServices.h>
+#include <postmac.h>
+#endif	// USE_JAVA && MACOSX
+
 namespace css = com::sun::star ;
 namespace container = css::container ;
 namespace deployment = css::deployment ;
@@ -117,6 +123,58 @@ checkForUpdates(
     
     if( ! ( getBootstrapData(aRepositoryList, aBuildID, aInstallSetID) && (aRepositoryList.getLength() > 0) ) )
         return false;
+
+#if defined USE_JAVA && defined MACOSX
+    // If there is a local admin group and the user is not in it, do not run
+    // update check as the user must have admin privileges to install updates
+    CFArrayRef aGroupIdentities = NULL;
+    CSIdentityQueryRef aGroupQuery = CSIdentityQueryCreateForName(NULL, CFSTR("admin"), kCSIdentityQueryStringEquals, kCSIdentityClassGroup, CSGetLocalIdentityAuthority());
+    if (aGroupQuery)
+	{
+        if (CSIdentityQueryExecute(aGroupQuery, 0, NULL))
+            aGroupIdentities = CSIdentityQueryCopyResults(aGroupQuery);
+        CFRelease(aGroupQuery);
+    }
+  
+    if (aGroupIdentities)
+    {
+        bool bIsAdminUser = false;
+        CFArrayRef aUserIdentities = NULL;
+        CSIdentityQueryRef aUserQuery = CSIdentityQueryCreateForCurrentUser(NULL);
+        if (aUserQuery)
+        {
+            if (CSIdentityQueryExecute(aUserQuery, 0, NULL))
+                aUserIdentities = CSIdentityQueryCopyResults(aUserQuery);
+            CFRelease(aUserQuery);
+        }
+
+        if (aUserIdentities)
+        {
+            CFIndex nGroupCount = CFArrayGetCount(aGroupIdentities);
+            CFIndex nUserCount = CFArrayGetCount(aUserIdentities);
+            for (CFIndex i = 0; !bIsAdminUser && i < nGroupCount; i++)
+            {
+                const CSIdentityRef aGroupIdentity = (const CSIdentityRef)CFArrayGetValueAtIndex(aGroupIdentities, i);
+                if (aGroupIdentity)
+                {
+                    for (CFIndex j = 0; !bIsAdminUser && j < nUserCount; j++)
+                    {
+                        const CSIdentityRef aUserIdentity = (const CSIdentityRef)CFArrayGetValueAtIndex(aUserIdentities, j);
+                        if (aUserIdentity && CSIdentityIsMemberOfGroup(aUserIdentity, aGroupIdentity))
+                            bIsAdminUser = true;
+                    }
+                }
+            }
+
+            CFRelease(aUserIdentities);
+        }
+
+        CFRelease(aGroupIdentities);
+
+        if (!bIsAdminUser)
+    		return true;
+    }
+#endif	// USE_JAVA && MACOSX
 
     if( !rxContext.is() )
         throw uno::RuntimeException( 
