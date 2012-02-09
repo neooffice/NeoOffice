@@ -1125,10 +1125,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 						}
 					}
 					if (!pNewDownload)
-					{
-						[[self mainFrame] loadRequest:[download request]];
-						[pRetryDownloadURLs setObject:[NSNull null] forKey:filePath];
-					}
+						[self reloadDownload:download path:filePath];
 				}
 			}
 		}
@@ -1414,8 +1411,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				NSString *pPath = [pKeys objectAtIndex:0];
 				if (pPath)
 				{
-					[[self mainFrame] loadRequest:[download request]];
-					[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
+					[self reloadDownload:download path:pPath];
 					return;
 				}
 			}
@@ -1450,10 +1446,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					}
 				}
 				if (!pNewDownload)
-				{
-					[[self mainFrame] loadRequest:[download request]];
-					[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
-				}
+					[self reloadDownload:download path:pPath];
 				bRetry = YES;
 			}
 
@@ -1603,9 +1596,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 - (void)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription
 {
-	NSFileManager *pFileManager = [NSFileManager defaultManager];
-
-	if (pFileManager && pDownload && pPath && pDescription)
+	if (pDownload && pPath && pDescription)
 	{
 		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pDescription, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)] defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
 		if (pAlert && [pAlert runModal] == NSAlertDefaultReturn)
@@ -1615,14 +1606,14 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.begin();
 			while (it != aDownloadDataMap.end())
 			{
-				if (it->first != pDownload)
+				NSString *pOtherDownloadPath = [it->second path];
+				if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
 				{
-					NSString *pOtherDownloadPath = [it->second path];
 					if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
 					{
-						if (pOtherDownloadPath && [pOtherDownloadPath isEqualToString:pPath])
+						[it->first cancel];
+						if (it->first != pDownload)
 						{
-							[it->first cancel];
 							[it->second release];
 							it = aDownloadDataMap.begin();
 							continue;
@@ -1636,8 +1627,32 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if (pRetryDownloadURLs)
 				[pRetryDownloadURLs removeObjectForKey:pPath];
 
-			[pFileManager removeItemAtPath:pPath error:nil];
-			[[self mainFrame] loadRequest:[pDownload request]];
+			[self reloadDownload:pDownload path:pPath];
+		}
+	}
+}
+
+- (void)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath
+{
+	if (pDownload && pPath)
+	{
+		if (!pRetryDownloadURLs)
+		{
+			pRetryDownloadURLs = [NSMutableDictionary dictionaryWithCapacity:1];
+			if (pRetryDownloadURLs)
+				[pRetryDownloadURLs retain];
+		}
+
+		if (!pRetryDownloadURLs)
+		{
+			NSMutableURLRequest *pRequest = [[pDownload request] mutableCopyWithZone:nil];
+			if (pRequest)
+			{
+				[pRequest setValue:nil forHTTPHeaderField:@"Range"];
+				[pRequest setValue:nil forHTTPHeaderField:@"If-Range"];
+				[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
+				[[self mainFrame] loadRequest:pRequest];
+			}
 		}
 	}
 }
