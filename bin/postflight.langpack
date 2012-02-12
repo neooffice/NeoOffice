@@ -82,6 +82,20 @@ if [ -d "$scriptdir" -a -f "$scriptdir/installutils" ] ; then
 `( echo "$lastcontentshome" ; find -L "$volume/Applications" -type d -maxdepth 4 -name "*.app" -prune 2>/dev/null ) | sort -u`
 !
 
+	if check_installation "$lastcontentshome" ; then
+		sudouser=
+		if [ ! -z "$USER" -a `id -u "$USER"` != "0" ] ; then
+			sudouser="$USER"
+		fi
+
+		# Launch installation
+		if [ ! -z "$sudouser" ] ; then
+			launch=`sudo -H -u "$sudouser" /bin/sh -l -c "defaults read 'org.neooffice.$(PRODUCT_DIR_NAME)' updateSuppressLaunchAfterInstallation 2>/dev/null"`
+			if [ -z "$launch" -o "$launch" = "0" ] ; then
+				sudo -H -u "$sudouser" /bin/sh -l -c "/usr/bin/open -a \"$lastcontentshome/Contents/MacOS/soffice.bin\""
+			fi
+		fi
+	fi
 fi
 
 exit 0

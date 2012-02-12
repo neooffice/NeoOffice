@@ -163,14 +163,11 @@ update_installation() {
 		sudouser="$USER"
 	fi
 
-	lsregister="/System/Library/Frameworks/ApplicationServices.framework/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
-	if [ ! -x "$lsregister" ] ; then
-		lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
-		if [ -x "$lsregister" ] ; then
-			lsregisterargs="-f -r -all s,d,u"
-		else
-			lsregister=
-		fi
+	lsregister="/System/Library/Frameworks/CoreServices.framework/Versions/Current/Frameworks/LaunchServices.framework/Versions/Current/Support/lsregister"
+	if [ -x "$lsregister" ] ; then
+		lsregisterargs="-f -r -all s,d,u"
+	else
+		lsregister=
 	fi
 
 	if [ ! -z "$lsregister" ] ; then
