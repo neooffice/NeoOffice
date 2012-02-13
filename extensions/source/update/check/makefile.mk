@@ -31,6 +31,7 @@ PRJ=..$/..$/..
 
 PRJNAME=extensions
 TARGET=updchk
+TARGETTYPE=CUI
 PACKAGE=org.openoffice.Office
 
 LIBTARGET=NO
@@ -54,6 +55,12 @@ NO_INSPECTION=TRUE
 DLLPRE =
 
 # --- Files ---
+
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+APP1TARGET=$(TARGET)runinstallers
+APP1OBJS=$(OBJ)$/updateruninstallers.obj
+APP1STDLIBS=$(SALLIB)
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
 SRS2NAME=$(TARGET)
 SRC2FILES=\
