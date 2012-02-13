@@ -69,16 +69,24 @@
 
 #ifdef USE_JAVA
 
+#ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
+
+#include "update_cocoa.hxx"
+#include <unotools/bootstrap.hxx>
+
+static const rtl::OUString aNoLoadInAppParam( RTL_CONSTASCII_USTRINGPARAM( "noloadurlinapp=" ) );
+
+#endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
+
+#ifdef MACOSX
+
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <postmac.h>
 
-#define UPDATESUPPRESSLAUNCHAFTERINSTALLATIONPREF "updateSuppressLaunchAfterInstallation"
+static const CFStringRef kUpdateSuppressLaunchAfterInstallationPref = CFSTR( "updateSuppressLaunchAfterInstallation" );
 
-#ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
-#include "update_cocoa.hxx"
-#include <unotools/bootstrap.hxx>
-#endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
+#endif	// MACOSX
 
 #endif	// USE_JAVA
 
@@ -815,7 +823,7 @@ UpdateCheck::initialize(const uno::Sequence< beans::NamedValue >& rValues,
     if( NOT_INITIALIZED == m_eState )
     {
 #if defined USE_JAVA && defined MACOSX
-        CFPreferencesSetAppValue( CFSTR( UPDATESUPPRESSLAUNCHAFTERINSTALLATIONPREF ), NULL, kCFPreferencesCurrentApplication );
+        CFPreferencesSetAppValue( kUpdateSuppressLaunchAfterInstallationPref, NULL, kCFPreferencesCurrentApplication );
         CFPreferencesAppSynchronize( kCFPreferencesCurrentApplication );
 #endif	// USE_JAVA && MACOSX
 
@@ -1494,39 +1502,46 @@ void
 UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
 {
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
-    osl::ClearableMutexGuard aGuard(m_aMutex);
-    rtl::Reference< UpdateHandler > aUpdateHandler(((UpdateCheck *)this)->getUpdateHandler());
-    aGuard.clear();
-    
-    rtl::OUString aDownloadText(aUpdateHandler->getDownloadingText());
-    rtl::OUString aEllipses(UNISTRING( "..."));
-    sal_Int32 nIndex;
-    while ((nIndex = aDownloadText.indexOf(aEllipses)) >= 0)
-        aDownloadText = aDownloadText.replaceAt(nIndex, aEllipses.getLength(), rtl::OUString());
-
-    static rtl::OUString aUserAgent;
-    if ( !aUserAgent.getLength() )
+    // If the URL has the "no load in app" query parameter set, do not use
+    // the native download web view
+    if (rURL.indexOf(aNoLoadInAppParam) < 0)
     {
-        rtl::OUString aProductKey = utl::Bootstrap::getProductKey();
-        if ( aProductKey.getLength() )
+        osl::ClearableMutexGuard aGuard(m_aMutex);
+        rtl::Reference< UpdateHandler > aUpdateHandler(((UpdateCheck *)this)->getUpdateHandler());
+        aGuard.clear();
+    
+        rtl::OUString aDownloadText(aUpdateHandler->getDownloadingText());
+        rtl::OUString aEllipses(UNISTRING( "..."));
+        sal_Int32 nIndex;
+        while ((nIndex = aDownloadText.indexOf(aEllipses)) >= 0)
+            aDownloadText = aDownloadText.replaceAt(nIndex, aEllipses.getLength(), rtl::OUString());
+
+        static rtl::OUString aUserAgent;
+        if ( !aUserAgent.getLength() )
         {
+            rtl::OUString aProductKey = utl::Bootstrap::getProductKey();
+            if ( aProductKey.getLength() )
+            {
 #ifdef MACOSX
 #ifdef POWERPC
-            aProductKey += UNISTRING( " (PPC" );
+                aProductKey += UNISTRING( " (PPC" );
 #else   // POWERPC
-            aProductKey += UNISTRING( " (Intel" );
+                aProductKey += UNISTRING( " (Intel" );
 #endif  // POWERPC
-            aProductKey += UNISTRING( " Mac OS X)" );
+                aProductKey += UNISTRING( " Mac OS X)" );
 #endif  // MACOSX
             aUserAgent = aProductKey;
+            }
         }
-    }
 
 #ifdef MACOSX
-	UpdateShowNativeDownloadWebView(rURL, aUserAgent, aDownloadText);
-    ((UpdateCheck *)this)->getUpdateHandler()->setVisible(false);
-	return;
+        if (UpdateShowNativeDownloadWebView(rURL, aUserAgent, aDownloadText))
+        {
+            ((UpdateCheck *)this)->getUpdateHandler()->setVisible(false);
+            return;
+        }
 #endif	// MACOSX
+    }
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
 
     const uno::Reference< c3s::XSystemShellExecute > xShellExecute(

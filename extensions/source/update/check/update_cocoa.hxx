@@ -55,9 +55,11 @@ extern const NSString *kUpdateServerTypePref;
 	const NSString*				mpTitle;
 	const NSString*				mpURL;
 	const NSString*				mpUserAgent;
+	MacOSBOOL					mbWebViewShowing;
 }
 + (id)createWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle;
 - (id)initWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle;
+- (MacOSBOOL)isWebViewShowing;
 - (void)showWebView:(id)obj;
 @end
 
@@ -69,6 +71,6 @@ typedef void* id;
 
 #endif	// __OBJC__
 
-void UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle );
+sal_Bool UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle );
 
 #endif	// _UPDATE_COCOA_HXX

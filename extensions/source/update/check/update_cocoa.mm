@@ -66,12 +66,24 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 	mpTitle = pTitle;
 	mpURL = pURL;
 	mpUserAgent = pUserAgent;
+	mbWebViewShowing = NO;
 
 	return(self);
 }
 
+- (MacOSBOOL)isWebViewShowing
+{
+	return mbWebViewShowing;
+}
+
 - (void)showWebView:(id)obj
 {
+	// If the OOo update check URL is out of sync with the server type that
+	// the web view is using, do not use the web view to handle updates
+	NSURL *pURL = [NSURL URLWithString:mpURL];
+	if ( !pURL || ![UpdateWebView isUpdateURL:pURL syncServer:NO] )
+		return;
+
 	if ( !pSharedPanel )
 		pSharedPanel = [[UpdateNonRecursiveResponderWebPanel alloc] initWithUserAgent:mpUserAgent title:mpTitle];
 
@@ -123,7 +135,9 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
 		UpdateWebView *pWebView = [pSharedPanel webView];
 		if(pWebView)
-			[pWebView loadStartingURL:[NSURL URLWithString:mpURL]];
+			[pWebView loadStartingURL:pURL];
+
+		mbWebViewShowing = YES;
 	}
 }
 @end
@@ -144,8 +158,10 @@ OUString UpdateNSStringToOUString( NSString *pString )
 	return OUString( aBuf );
 }
 
-void UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle )
+sal_Bool UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle )
 {
+	sal_Bool bRet = sal_False;
+
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 
 	NSString *pURL = [NSString stringWithCharacters:aURL.getStr() length:aURL.getLength()];
@@ -158,8 +174,11 @@ void UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUse
 
 		unsigned long nCount = Application::ReleaseSolarMutex();
 		[pImp performSelectorOnMainThread:@selector(showWebView:) withObject:pImp waitUntilDone:YES modes:pModes];
+		bRet = (sal_Bool)[pImp isWebViewShowing];
 		Application::AcquireSolarMutex( nCount );
 	}
 
 	[pool release];
+
+	return bRet;
 }
