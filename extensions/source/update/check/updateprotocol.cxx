@@ -49,11 +49,14 @@
 
 #include <cppuhelper/implbase1.hxx>
 
-#if defined USE_JAVA && defined MACOSX
+// Uncomment this to disable patch checking for non-admin users
+// #define USE_NATIVE_ADMIN_USER_CHECK
+
+#if defined USE_NATIVE_ADMIN_USER_CHECK && defined MACOSX
 #include <premac.h>
 #include <CoreServices/CoreServices.h>
 #include <postmac.h>
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_NATIVE_ADMIN_USER_CHECK && MACOSX
 
 namespace css = com::sun::star ;
 namespace container = css::container ;
@@ -124,7 +127,7 @@ checkForUpdates(
     if( ! ( getBootstrapData(aRepositoryList, aBuildID, aInstallSetID) && (aRepositoryList.getLength() > 0) ) )
         return false;
 
-#if defined USE_JAVA && defined MACOSX
+#if defined USE_NATIVE_ADMIN_USER_CHECK && defined MACOSX
     // If there is a local admin group and the user is not in it, do not run
     // update check as the user must have admin privileges to install updates
     CFArrayRef aGroupIdentities = NULL;
@@ -174,7 +177,7 @@ checkForUpdates(
         if (!bIsAdminUser)
     		return true;
     }
-#endif	// USE_JAVA && MACOSX
+#endif	// USE_NATIVE_ADMIN_USER_CHECK && MACOSX
 
     if( !rxContext.is() )
         throw uno::RuntimeException( 
