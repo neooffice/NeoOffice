@@ -67,10 +67,20 @@
 #include "updateprotocol.hxx"
 #include "updatecheckconfig.hxx"
 
+#ifdef USE_JAVA
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+#define UPDATESUPPRESSLAUNCHAFTERINSTALLATIONPREF "updateSuppressLaunchAfterInstallation"
+
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
 #include "update_cocoa.hxx"
 #include <unotools/bootstrap.hxx>
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
+
+#endif	// USE_JAVA
 
 namespace awt = com::sun::star::awt ;
 namespace beans = com::sun::star::beans ;
@@ -804,6 +814,11 @@ UpdateCheck::initialize(const uno::Sequence< beans::NamedValue >& rValues,
     
     if( NOT_INITIALIZED == m_eState )
     {
+#if defined USE_JAVA && defined MACOSX
+        CFPreferencesSetAppValue( CFSTR( UPDATESUPPRESSLAUNCHAFTERINSTALLATIONPREF ), NULL, kCFPreferencesCurrentApplication );
+        CFPreferencesAppSynchronize( kCFPreferencesCurrentApplication );
+#endif	// USE_JAVA && MACOSX
+
         NamedValueByNameAccess aNameAccess(rValues);
         UpdateCheckROModel aModel( aNameAccess );
         m_xContext = xContext;
