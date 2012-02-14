@@ -1293,6 +1293,18 @@ UpdateCheck::showDialog(bool forceCheck)
     }
 }
 
+#ifdef USE_JAVA
+//------------------------------------------------------------------------------
+
+void UpdateCheck::onCloseApp()
+{
+#ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
+    // TODO: Display dialog if the user selected the "install later" option
+    // after downloading one or more installers 
+#endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
+}
+#endif	// USE_JAVA
+
 //------------------------------------------------------------------------------
 
 void 
@@ -1537,7 +1549,7 @@ UpdateCheck::showReleaseNote(const rtl::OUString& rURL) const
 #ifdef MACOSX
         if (UpdateShowNativeDownloadWebView(rURL, aUserAgent, aDownloadText))
         {
-            ((UpdateCheck *)this)->getUpdateHandler()->setVisible(false);
+            aUpdateHandler->setVisible(false);
             return;
         }
 #endif	// MACOSX
