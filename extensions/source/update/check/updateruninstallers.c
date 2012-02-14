@@ -36,11 +36,9 @@
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
-#include <sal/main.h>
+#include <sys/wait.h>
 
-extern "C"
-{
-SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
+int main( int argc, char **argv )
 {
 	// Wait until parent process exits by waiting until stdin has closed
 	char pBuf[ BUFSIZ ];
@@ -78,6 +76,3 @@ SAL_IMPLEMENT_MAIN_WITH_ARGS( argc, argv )
 
 	return 0;
 }
-}
-
-
