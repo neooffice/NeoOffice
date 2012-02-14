@@ -67,13 +67,13 @@
 /**
  * Returns the application's locale.
  */
-::com::sun::star::lang::Locale NeoMobileGetApplicationLocale();
+SAL_DLLPRIVATE ::com::sun::star::lang::Locale NeoMobileGetApplicationLocale();
 
 /**
  * Lookup a string and retrieve a translated string.  If no translation
  * is available, default to english.
  */
-NSString *NeoMobileGetLocalizedString( const sal_Char *key );
-NSString *NeoMobileGetLocalizedDecimalSeparator();
+SAL_DLLPRIVATE NSString *NeoMobileGetLocalizedString( const sal_Char *key );
+SAL_DLLPRIVATE NSString *NeoMobileGetLocalizedDecimalSeparator();
 
 #endif	// _NEOMOBILEI18N_HXX

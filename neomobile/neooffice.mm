@@ -116,7 +116,7 @@ NSString *NeoMobileGetUserAgent()
 
 //========================================================================
 
-class MacOSXNeoOfficeMobileImpl
+class SAL_DLLPRIVATE MacOSXNeoOfficeMobileImpl
 	: public ::cppu::WeakImplHelper3< XServiceInfo, XJob, XNeoOfficeMobile >
 {
 	// to obtain other services if needed
@@ -234,7 +234,7 @@ Sequence< OUString > SAL_CALL MacOSXNeoOfficeMobileImpl::getSupportedServiceName
  * Function to create a new component instance; is needed by factory helper implementation.
  * @param xMgr service manager to if the components needs other component instances
  */
-Reference< XInterface > SAL_CALL MacOSXNeoOfficeMobileImpl_create(
+SAL_DLLPRIVATE Reference< XInterface > SAL_CALL MacOSXNeoOfficeMobileImpl_create(
 	const Reference< XComponentContext > & xContext )
 {
 	return static_cast< XTypeProvider* >(new MacOSXNeoOfficeMobileImpl(xContext));

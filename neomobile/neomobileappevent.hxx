@@ -71,7 +71,7 @@
 - (void)removeItem:(NSString *)path;
 @end
 
-class NeoMobileExportFileAppEvent
+class SAL_DLLPRIVATE NeoMobileExportFileAppEvent
 {
 	int						mnErrorCode;
 	NSFileManager*			mpFileManager;

@@ -61,9 +61,9 @@ extern const NSString *kNeoMobileServerTypePref;
 - (void)showWebViewOnlyIfVisible:(id)obj;
 @end
 
-NSArray *NeoMobileGetPerformSelectorOnMainThreadModes();
-NSString *NeoMobileGetUserAgent();
-::rtl::OUString NeoMobileNSStringToOUString( NSString *pString );
-::sal_Bool NeoMobileZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath );
+SAL_DLLPRIVATE NSArray *NeoMobileGetPerformSelectorOnMainThreadModes();
+SAL_DLLPRIVATE NSString *NeoMobileGetUserAgent();
+SAL_DLLPRIVATE ::rtl::OUString NeoMobileNSStringToOUString( NSString *pString );
+SAL_DLLPRIVATE ::sal_Bool NeoMobileZipDirectory( const rtl::OUString& dirPath, const rtl::OUString& zipFilePath );
 
 #endif	// _NEOMOBILE_HXX

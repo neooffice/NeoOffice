@@ -40,18 +40,18 @@ using namespace rtl;
 //========================================================================
 
 #ifdef TEST
-const NSString *kNeoMobileAboutURL = @"http://www-test.neooffice.org/neomobile/";
+SAL_DLLPRIVATE const NSString *kNeoMobileAboutURL = @"http://www-test.neooffice.org/neomobile/";
 #else	// TEST
-const NSString *kNeoMobileAboutURL = @"http://www.neooffice.org/neomobile/";
+SAL_DLLPRIVATE const NSString *kNeoMobileAboutURL = @"http://www.neooffice.org/neomobile/";
 #endif	// TEST
-const NSString *kNeoMobileLoginURI = @"/users/login";
-const NSString *kNeoMobileLastURLPref = @"nmLastURL";
-const NSString *kNeoMobileXPosPref = @"nmXPos";
-const NSString *kNeoMobileYPosPref = @"nmYPos";
-const NSString *kNeoMobileWidthPref = @"nmWidth";
-const NSString *kNeoMobileHeightPref = @"nmHeight";
-const NSString *kNeoMobileVisiblePref = @"nmVisible";
-const NSString *kNeoMobileServerTypePref = @"nmServerType";
+SAL_DLLPRIVATE const NSString *kNeoMobileLoginURI = @"/users/login";
+SAL_DLLPRIVATE const NSString *kNeoMobileLastURLPref = @"nmLastURL";
+SAL_DLLPRIVATE const NSString *kNeoMobileXPosPref = @"nmXPos";
+SAL_DLLPRIVATE const NSString *kNeoMobileYPosPref = @"nmYPos";
+SAL_DLLPRIVATE const NSString *kNeoMobileWidthPref = @"nmWidth";
+SAL_DLLPRIVATE const NSString *kNeoMobileHeightPref = @"nmHeight";
+SAL_DLLPRIVATE const NSString *kNeoMobileVisiblePref = @"nmVisible";
+SAL_DLLPRIVATE const NSString *kNeoMobileServerTypePref = @"nmServerType";
 
 static NeoMobileNonRecursiveResponderWebPanel *pSharedPanel = nil;
 
