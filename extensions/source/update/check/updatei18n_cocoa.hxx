@@ -56,14 +56,14 @@
 /**
  * Returns the application's locale.
  */
-::com::sun::star::lang::Locale GetApplicationLocale();
+SAL_DLLPRIVATE ::com::sun::star::lang::Locale GetApplicationLocale();
 
 /**
  * Lookup a string and retrieve a translated string.  If no translation
  * is available, default to english.
  */
-NSString *UpdateGetLocalizedString( const sal_Char *key );
-NSString *UpdateGetLocalizedDecimalSeparator();
-NSString *UpdateGetVCLResString( int nId );
+SAL_DLLPRIVATE NSString *UpdateGetLocalizedString( const sal_Char *key );
+SAL_DLLPRIVATE NSString *UpdateGetLocalizedDecimalSeparator();
+SAL_DLLPRIVATE NSString *UpdateGetVCLResString( int nId );
 
 #endif	// _UPDATEI18N_COCOA_HXX
