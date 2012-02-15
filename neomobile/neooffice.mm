@@ -61,7 +61,6 @@
 #import <cppuhelper/queryinterface.hxx>
 #import <org/neooffice/XNeoOfficeMobile.hpp>
 #import <unotools/bootstrap.hxx>
-#import <vcl/svapp.hxx>
 
 #import <stdio.h>
 
@@ -365,11 +364,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
 	NeoMobileCreateWebViewImpl *imp=[NeoMobileCreateWebViewImpl createWithURI:@"" userAgent:NeoMobileGetUserAgent()];
-
-	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(showWebView:) withObject:imp waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
-	Application::AcquireSolarMutex( nCount );
-		
+	
 	[pool release];
 	
 	return(sal_True);
@@ -385,11 +381,8 @@ extern "C" void * SAL_CALL component_getFactory(const sal_Char * pImplName, XMul
 	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
 	
 	NeoMobileCreateWebViewImpl *imp=[NeoMobileCreateWebViewImpl createWithURI:@"" userAgent:NeoMobileGetUserAgent()];
-
-	unsigned long nCount = Application::ReleaseSolarMutex();
 	[imp performSelectorOnMainThread:@selector(showWebViewOnlyIfVisible:) withObject:imp waitUntilDone:YES modes:NeoMobileGetPerformSelectorOnMainThreadModes()];
-	Application::AcquireSolarMutex( nCount );
-		
+	
 	[pool release];
 	
 	return(sal_True);
