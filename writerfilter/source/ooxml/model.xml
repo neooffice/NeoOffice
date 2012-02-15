@@ -18128,13 +18128,13 @@
           </attribute>
         </optional>
         <attribute name="id">
-          <text/>
+          <ref name="ST_DecimalNumber"/>
           <xs:documentation>Footnote/Endnote ID Reference</xs:documentation>
         </attribute>
       </define>
       <define name="CT_FtnEdnSepRef">
         <attribute name="id">
-          <text/>
+          <ref name="ST_DecimalNumber"/>
           <xs:documentation>Footnote/Endnote ID</xs:documentation>
         </attribute>
       </define>
@@ -18149,7 +18149,7 @@
           </attribute>
         </optional>
         <attribute name="id">
-          <text/>
+          <ref name="ST_DecimalNumber"/>
           <xs:documentation>Footnote/Endnote ID</xs:documentation>
         </attribute>
       </define>
