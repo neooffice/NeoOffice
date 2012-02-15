@@ -36,6 +36,7 @@
 
 #import <com/sun/star/lang/Locale.hpp>
 #import <sal/types.h>
+#import "updatehdl.hrc"
 #import "../../../../vcl/inc/vcl/svids.hrc"
 
 #include <premac.h>
@@ -64,6 +65,7 @@ SAL_DLLPRIVATE ::com::sun::star::lang::Locale GetApplicationLocale();
  */
 SAL_DLLPRIVATE NSString *UpdateGetLocalizedString( const sal_Char *key );
 SAL_DLLPRIVATE NSString *UpdateGetLocalizedDecimalSeparator();
+SAL_DLLPRIVATE NSString *UpdateGetUPDResString( int nId );
 SAL_DLLPRIVATE NSString *UpdateGetVCLResString( int nId );
 
 #endif	// _UPDATEI18N_COCOA_HXX

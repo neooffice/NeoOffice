@@ -77,12 +77,15 @@ SLOFILES=\
 	$(SLO)$/updateprotocol.obj \
 	$(SLO)$/updatehdl.obj
         
+.IF "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
+SLOFILES += $(SLO)$/update_java.obj
 .IF "$(GUIBASE)" == "java"
 SLOFILES += \
 	$(SLO)$/update_cocoa.obj \
 	$(SLO)$/updatei18n_cocoa.obj \
 	$(SLO)$/updatewebview_cocoa.obj
 .ENDIF		# "$(GUIBASE)" == "java"
+.ENDIF		# "$(GUIBASE)" == "java" || "$(GUIBASE)" == "WIN"
 
 SHL1NOCHECK=TRUE
 SHL1TARGET=$(TARGET).uno   

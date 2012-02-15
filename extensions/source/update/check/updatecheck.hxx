@@ -101,6 +101,7 @@ public:
     void showDialog(bool forceCheck = false);
 #ifdef USE_JAVA
     void onCloseApp();
+    void shutdownApp();
 #endif	// USE_JAVA
         
     // Returns true if the update dialog is currently showing

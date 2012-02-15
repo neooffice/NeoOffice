@@ -34,8 +34,6 @@
 #import "update_cocoa.hxx"
 #import "updatewebview_cocoa.h"
 
-#import <vcl/svapp.hxx>
-
 using namespace rtl;
 
 //========================================================================
@@ -49,6 +47,19 @@ const NSString *kUpdateVisiblePref = @"updateVisible";
 const NSString *kUpdateServerTypePref = @"updateServerType";
 
 static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
+
+@interface UpdateCreateWebViewImpl : NSObject
+{
+	const NSString*				mpTitle;
+	const NSString*				mpURL;
+	const NSString*				mpUserAgent;
+	MacOSBOOL					mbWebViewShowing;
+}
++ (id)createWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle;
+- (id)initWithURL:(const NSString *)pURL userAgent:(const NSString *)pUserAgent title:(NSString *)pTitle;
+- (MacOSBOOL)isWebViewShowing;
+- (void)showWebView:(id)obj;
+@end
 
 @implementation UpdateCreateWebViewImpl
 
@@ -142,6 +153,54 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 }
 @end
 
+@interface UpdateQuitWebViewImpl : NSObject
+{
+	MacOSBOOL					mbWebViewRequestedQuitApp;
+}
++ (id)create;
+- (id)init;
+- (void)quitWebView:(id)obj;
+- (MacOSBOOL)webViewRequestedQuitApp;
+@end
+
+@implementation UpdateQuitWebViewImpl
+
++ (id)create
+{
+	UpdateQuitWebViewImpl *pRet = [[UpdateQuitWebViewImpl alloc] init];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)init
+{
+	self = [super init];
+
+	mbWebViewRequestedQuitApp = NO;
+
+	return(self);
+}
+
+- (void)quitWebView:(id)obj
+{
+	if (pSharedPanel)
+	{
+ 		if ([pSharedPanel isVisible])
+			[pSharedPanel orderOut:self];
+
+		UpdateWebView *pWebView = [pSharedPanel webView];
+		if(pWebView)
+			mbWebViewRequestedQuitApp = [pWebView requestedQuitApp];
+	}
+}
+
+- (MacOSBOOL)webViewRequestedQuitApp
+{
+	return mbWebViewRequestedQuitApp;
+}
+
+@end
+
 OUString UpdateNSStringToOUString( NSString *pString )
 {
 	if ( !pString )
@@ -158,6 +217,22 @@ OUString UpdateNSStringToOUString( NSString *pString )
 	return OUString( aBuf );
 }
 
+sal_Bool UpdateQuitNativeDownloadWebView()
+{
+	sal_Bool bRet = sal_False;
+
+	NSAutoreleasePool *pool=[[NSAutoreleasePool alloc] init];
+
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	UpdateQuitWebViewImpl *pImp = [UpdateQuitWebViewImpl create];
+	[pImp performSelectorOnMainThread:@selector(quitWebView:) withObject:pImp waitUntilDone:YES modes:pModes];
+	bRet = (sal_Bool)[pImp webViewRequestedQuitApp];
+
+	[pool release];
+
+	return bRet;
+}
+
 sal_Bool UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle )
 {
 	sal_Bool bRet = sal_False;
@@ -171,11 +246,8 @@ sal_Bool UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString 
 	{
 		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 		UpdateCreateWebViewImpl *pImp = [UpdateCreateWebViewImpl createWithURL:pURL userAgent:pUserAgent title:pTitle];
-
-		unsigned long nCount = Application::ReleaseSolarMutex();
 		[pImp performSelectorOnMainThread:@selector(showWebView:) withObject:pImp waitUntilDone:YES modes:pModes];
 		bRet = (sal_Bool)[pImp isWebViewShowing];
-		Application::AcquireSolarMutex( nCount );
 	}
 
 	[pool release];

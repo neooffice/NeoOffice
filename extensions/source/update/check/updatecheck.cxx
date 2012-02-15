@@ -67,18 +67,17 @@
 #include "updateprotocol.hxx"
 #include "updatecheckconfig.hxx"
 
-#ifdef USE_JAVA
-
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
 
-#include "update_cocoa.hxx"
 #include <unotools/bootstrap.hxx>
+#include "update_cocoa.hxx"
+#include "update_java.hxx"
 
 static const rtl::OUString aNoLoadInAppParam( RTL_CONSTASCII_USTRINGPARAM( "noloadurlinapp=" ) );
 
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
 
-#ifdef MACOSX
+#if defined USE_JAVA && defined MACOSX
 
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -86,9 +85,7 @@ static const rtl::OUString aNoLoadInAppParam( RTL_CONSTASCII_USTRINGPARAM( "nolo
 
 static const CFStringRef kUpdateSuppressLaunchAfterInstallationPref = CFSTR( "updateSuppressLaunchAfterInstallation" );
 
-#endif	// MACOSX
-
-#endif	// USE_JAVA
+#endif	// USE_JAVA && MACOSX
 
 namespace awt = com::sun::star::awt ;
 namespace beans = com::sun::star::beans ;
@@ -1294,15 +1291,39 @@ UpdateCheck::showDialog(bool forceCheck)
 }
 
 #ifdef USE_JAVA
+
 //------------------------------------------------------------------------------
 
 void UpdateCheck::onCloseApp()
 {
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
-    // TODO: Display dialog if the user selected the "install later" option
-    // after downloading one or more installers 
+#ifdef MACOSX
+    sal_Bool bInstall = UpdateQuitNativeDownloadWebView();
+#else	// MACOSX
+    sal_Bool bInstall = false;
+#endif	// MACOSX
+
+    if (!bInstall)
+	{
+        // TODO: Display dialog if the user selected the "install later" option
+        // after downloading one or more installers
+	}
+
+    if (bInstall)
+        UpdateInstallNextBatchOfInstallerPackagePaths();
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
 }
+
+//------------------------------------------------------------------------------
+
+void UpdateCheck::shutdownApp()
+{
+    osl::MutexGuard aGuard(m_aMutex);
+    
+    ShutdownThread *pShutdownThread = new ShutdownThread( m_xContext );
+    (void) pShutdownThread;
+}
+
 #endif	// USE_JAVA
 
 //------------------------------------------------------------------------------

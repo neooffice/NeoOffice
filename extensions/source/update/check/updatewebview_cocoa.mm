@@ -32,6 +32,7 @@
  *************************************************************************/
 
 #import "update_cocoa.hxx"
+#import "update_java.hxx"
 #import "updatei18n_cocoa.hxx"
 #import "updatewebview_cocoa.h"
 
@@ -329,8 +330,8 @@ static NSString *updateServerType = nil;
 static NSTimeInterval lastBaseURLIncrementTime = 0;
 static unsigned int baseURLIncrements = 0;
 static MacOSBOOL bWebJavaScriptTextInputPanelSwizzeled = NO;
-static std::map< NSURLDownload*, UpdateDownloadData* > aDownloadDataMap;
-static std::map< NSFileHandle*, UpdateDownloadData* > aFileHandleDataMap;
+static ::std::map< NSURLDownload*, UpdateDownloadData* > aDownloadDataMap;
+static ::std::map< NSFileHandle*, UpdateDownloadData* > aFileHandleDataMap;
 static NSMutableDictionary *pRetryDownloadURLs = nil;
 
 @implementation UpdateWebView
@@ -529,6 +530,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	mpstatusLabel = pStatusLabel;
 	[mpstatusLabel retain];
 
+	mbrequestedQuitApp = NO;
 	mpstartingURL = nil;
 
 	if ( pUserAgent && [pUserAgent length] )
@@ -1542,12 +1544,16 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			std::map< NSFileHandle*, UpdateDownloadData* >::iterator fhit = aFileHandleDataMap.find(pFileHandle);
 			if(fhit!=aFileHandleDataMap.end())
 			{
-				MacOSBOOL bOK = NO;
+				rtl::OUString aFileName;
+				rtl::OUString aDownloadPath;
+				rtl::OUString aPackagePath;
 				NSDictionary *pUserInfo = [pNotification userInfo];
 				if (pUserInfo)
 				{
+					NSString *pFileName = [fhit->second fileName];
+					NSString *pPath = [fhit->second path];
 					NSData *pData = [pUserInfo objectForKey:NSFileHandleNotificationDataItem];
-					if (pData && [pData length])
+					if (pFileName && pPath && pData && [pFileName length] && [pPath length] && [pData length])
 					{
 						NSPropertyListFormat nFormat = 0;
 						NSMutableDictionary *pDict = nil;
@@ -1563,7 +1569,7 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 							{
 								unsigned int i = 0;
 								unsigned int nCount = [pArray count];
-								for (; i < nCount; i++)
+								for (; i < nCount && !aPackagePath.getLength(); i++)
 								{
 									NSDictionary *pDictElement = [pArray objectAtIndex:i];
 									if (pDictElement && [pDictElement isKindOfClass:[NSDictionary class]])
@@ -1571,8 +1577,26 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 										NSString *pMountPoint = [pDictElement objectForKey:@"mount-point"];
 										if (pMountPoint)
 										{
-											// TODO: saving and running installer in mount point
-											bOK = YES;
+											NSFileManager *pFileManager = [NSFileManager defaultManager];
+											if (pFileManager && [pFileManager isReadableFileAtPath:pPath])
+											{
+												NSDirectoryEnumerator *pDirEnum = [pFileManager enumeratorAtPath:pMountPoint];
+												if (pDirEnum)
+												{
+													// Use the first .pkg directory found
+													NSString *pDirItem;
+													while ((pDirItem = [pDirEnum nextObject]))
+													{
+														if ([@"pkg" isEqualToString:[pDirItem pathExtension]])
+														{
+															aFileName = UpdateNSStringToOUString(pFileName);
+															aDownloadPath = UpdateNSStringToOUString(pPath);
+															aPackagePath = UpdateNSStringToOUString([pMountPoint stringByAppendingPathComponent:pDirItem]);
+															break;
+														}
+													}
+												}
+											}
 										}
 									}
 								}
@@ -1581,14 +1605,34 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					}
 				}
 
-				if (!bOK)
+				mbrequestedQuitApp = NO;
+				if (aFileName.getLength() && aDownloadPath.getLength() && aPackagePath.getLength())
+				{
+					UpdateAddInstallerPackage(aFileName, aDownloadPath, aPackagePath);
+					NSAlert *pAlert = [NSAlert alertWithMessageText:UpdateGetUPDResString(RID_UPDATE_STR_BEGIN_INSTALL) defaultButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_NOW) alternateButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_LATER) otherButton:nil informativeTextWithFormat:@""];
+					if (pAlert && [pAlert runModal] == NSAlertDefaultReturn)
+						mbrequestedQuitApp = YES;
+				}
+				else
+				{
 					[self redownloadFile:[fhit->second download] path:[fhit->second path] description:[NSString stringWithFormat:UpdateGetLocalizedString(UPDATEOPENFILEFAILED), [fhit->second fileName]]];
+				}
 
 				[fhit->second release];
 				aFileHandleDataMap.erase(fhit);
 
 				if(!aDownloadDataMap.size() && !aFileHandleDataMap.size())
+				{
 					[mpstatusLabel setString:@""];
+					if (mbrequestedQuitApp)
+					{
+						NSWindow *pWindow = [self window];
+						if (pWindow && [pWindow isVisible])
+							[pWindow orderOut:self];
+
+						UpdateShutdownApp();
+					}
+				}
 			}
 		}
 	}
@@ -1655,6 +1699,11 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			}
 		}
 	}
+}
+
+- (MacOSBOOL)requestedQuitApp
+{
+	return mbrequestedQuitApp;
 }
 
 @end

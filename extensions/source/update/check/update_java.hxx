@@ -31,34 +31,19 @@
  *
  *************************************************************************/
 
-#ifndef _UPDATE_COCOA_HXX
-#define _UPDATE_COCOA_HXX
+#ifndef _UPDATE_JAVA_HXX
+#define _UPDATE_JAVA_HXX
 
 #ifdef __OBJC__
-
+#import <set>
 #import <rtl/ustring.hxx>
-
-#include "premac.h"
-#import <Cocoa/Cocoa.h>
-#include "postmac.h"
-
-extern const NSString *kUpdateLastURLPref;
-extern const NSString *kUpdateXPosPref;
-extern const NSString *kUpdateYPosPref;
-extern const NSString *kUpdateWidthPref;
-extern const NSString *kUpdateHeightPref;
-extern const NSString *kUpdateVisiblePref;
-extern const NSString *kUpdateServerTypePref;
-
-SAL_DLLPRIVATE ::rtl::OUString UpdateNSStringToOUString( NSString *pString );
-
 #else	// __OBJC__
-
-typedef void* id;
-
+#include <set>
+#include <rtl/ustring.hxx>
 #endif	// __OBJC__
 
-SAL_DLLPRIVATE sal_Bool UpdateQuitNativeDownloadWebView();
-SAL_DLLPRIVATE sal_Bool UpdateShowNativeDownloadWebView( ::rtl::OUString aURL, ::rtl::OUString aUserAgent, ::rtl::OUString aTitle );
+SAL_DLLPRIVATE void UpdateAddInstallerPackage(rtl::OUString aName, rtl::OUString aDownloadPath, rtl::OUString aPackagePath);
+SAL_DLLPRIVATE void UpdateInstallNextBatchOfInstallerPackagePaths();
+SAL_DLLPRIVATE void UpdateShutdownApp();
 
-#endif	// _UPDATE_COCOA_HXX
+#endif	// _UPDATE_JAVA_HXX

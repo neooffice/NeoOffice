@@ -44,6 +44,7 @@ static NSDictionary *pPrimaryLocaleDict = nil;
 static NSDictionary *pSecondaryLocaleDict = nil;
 static NSDictionary *pTertiaryLocaleDict = nil;
 static NSString *pDecimalSep = nil;
+static ResMgr *pUPDResMgr = NULL;
 static ResMgr *pVCLResMgr = NULL;
 
 using namespace com::sun::star::lang;
@@ -261,6 +262,25 @@ NSString *UpdateGetLocalizedDecimalSeparator()
 	}
 
 	return pDecimalSep;
+}
+
+NSString *UpdateGetUPDResString( int nId )
+{
+	if ( !pUPDResMgr )
+	{
+		pUPDResMgr = SfxApplication::CreateResManager( "upd" );
+		if ( !pUPDResMgr )
+			return @"";
+	}
+
+	ResId aResId( nId, *pUPDResMgr );
+	aResId.SetRT( RSC_STRING );
+	if ( !pUPDResMgr->IsAvailable( aResId ) )
+		return @"";
+ 
+	XubString aResString( ResId( nId, *pUPDResMgr ) );
+	aResString.EraseAllChars('~');
+	return [NSString stringWithCharacters:aResString.GetBuffer() length:aResString.Len()];
 }
 
 NSString *UpdateGetVCLResString( int nId )
