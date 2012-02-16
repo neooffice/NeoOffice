@@ -36,6 +36,7 @@
 
 #include <list>
 #include <map>
+#include <osl/file.hxx>
 #include <osl/mutex.hxx>
 #include <osl/process.h>
 
@@ -44,7 +45,9 @@ static std::map< rtl::OUString, rtl::OUString > aDownloadPathsMap;
 static std::map< rtl::OUString, rtl::OUString > aPackagePathsMap;
 static osl::Mutex aPackagesMutex;
 
-void UpdateAddInstallerPackage(rtl::OUString aName, rtl::OUString aDownloadPath, rtl::OUString aPackagePath)
+using namespace rtl;
+
+void UpdateAddInstallerPackage(OUString aName, OUString aDownloadPath, OUString aPackagePath)
 {
 	if (aName.getLength() && aDownloadPath.getLength() && aPackagePath.getLength())
 	{
@@ -58,24 +61,35 @@ void UpdateAddInstallerPackage(rtl::OUString aName, rtl::OUString aDownloadPath,
 
 void UpdateInstallNextBatchOfInstallerPackagePaths()
 {
-	rtl::OUString aExeURL;
+	OUString aExeURL;
 	osl_getExecutableFile(&aExeURL.pData);
 	sal_uInt32 nLastIndex = aExeURL.lastIndexOf('/');
 	if (nLastIndex > 0)
 	{
 		aExeURL = aExeURL.copy(0, nLastIndex+1);
-		aExeURL += rtl::OUString(RTL_CONSTASCII_USTRINGPARAM("updchkruninstallers" SAL_PRGEXTENSION));
+		aExeURL += OUString(RTL_CONSTASCII_USTRINGPARAM("updchkruninstallers" SAL_PRGEXTENSION));
 
 		osl::ClearableMutexGuard aGuard(aPackagesMutex);
+
+#ifdef MACOSX
+		OUString aMountPackageExeURL(RTL_CONSTASCII_USTRINGPARAM("file:///usr/bin/hdiutil"));
+		OUString aMountPackageAttachArg(RTL_CONSTASCII_USTRINGPARAM("attach"));
+		OUString aMountPackagePlistArg(RTL_CONSTASCII_USTRINGPARAM("-plist"));
+		rtl_uString *pMountPackageArgs[ 3 ];
+		pMountPackageArgs[ 0 ] = aMountPackageAttachArg.pData;
+		pMountPackageArgs[ 1 ] = aMountPackagePlistArg.pData;
+		pMountPackageArgs[ 2 ] = NULL;
+#endif	// MACOSX
 
 		// Remove first batch of package paths. Note that we assume that any
 		// package path with "Language_Pack" or "Patch" are not full installers
 		// and that we assume that the product and version numbers lower in
 		// sort order should be installed first.
-		const rtl::OUString aLanguagePack(RTL_CONSTASCII_USTRINGPARAM("Language_Pack"));
-		const rtl::OUString aPatch(RTL_CONSTASCII_USTRINGPARAM("Patch"));
-		std::list< rtl::OUString > aPackagePathsRunList;
-		std::set< rtl::OUString >::iterator it = aPackageNamesSet.begin();
+		const OUString aLanguagePack(RTL_CONSTASCII_USTRINGPARAM("Language_Pack"));
+		const OUString aPatch(RTL_CONSTASCII_USTRINGPARAM("Patch"));
+		std::list< oslProcess > aMountPackageProcessList;
+		std::list< OUString > aPackagePathsRunList;
+		std::set< OUString >::iterator it = aPackageNamesSet.begin();
 		while (it != aPackageNamesSet.end())
 		{
 			// Check if this is a full installer
@@ -88,27 +102,66 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 					bFullInstaller = true;
 			}
 
-			std::map< rtl::OUString, rtl::OUString >::iterator pit = aPackagePathsMap.find(*it);
+			bool bPackagePathExists = false;
+			std::map< OUString, OUString >::iterator pit = aPackagePathsMap.find(*it);
 			if (pit != aPackagePathsMap.end())
 			{
+#ifdef MACOSX
+				// Check if package directory exists
+				OUString aURL;
+				osl_getFileURLFromSystemPath(pit->second.pData, &aURL.pData);
+				osl::Directory aDir(aURL);
+				if (aDir.open() == osl::FileBase::E_None)
+					bPackagePathExists = true;
+				aDir.close();
+#endif	// MACOSX
+
 				aPackagePathsRunList.push_back(pit->second);
 				aPackagePathsMap.erase(pit);
 			}
-			std::map< rtl::OUString, rtl::OUString >::iterator dit = aDownloadPathsMap.find(*it);
+			std::map< OUString, OUString >::iterator dit = aDownloadPathsMap.find(*it);
 			if (dit != aDownloadPathsMap.end())
+			{
+#ifdef MACOSX
+				// Run hdiutil command if the package has been unmounted
+				if (!bPackagePathExists)
+				{
+					pMountPackageArgs[ 2 ] = dit->second.pData;
+
+					oslProcess aProcess;
+					if (osl_executeProcess(aMountPackageExeURL.pData, pMountPackageArgs, 3, 0, NULL, NULL, NULL, 0, &aProcess) == osl_Process_E_None)
+						aMountPackageProcessList.push_back(aProcess);
+					else
+						osl_freeProcessHandle(aProcess);
+				}
+#endif	// MACOSX
+
 				aDownloadPathsMap.erase(dit);
+			}
 			aPackageNamesSet.erase(it);
 			it = aPackageNamesSet.begin();
 		}
 
 		aGuard.clear();
 
+		bool bJoin = true;
+		TimeValue aTimeout;
+		aTimeout.Seconds = 10;
+		aTimeout.Nanosec = 0;
+		for (std::list< oslProcess >::iterator mppit = aMountPackageProcessList.begin(); mppit != aMountPackageProcessList.end(); ++mppit)
+		{
+			if (bJoin && osl_joinProcessWithTimeout(*mppit, &aTimeout) == osl_Process_E_TimedOut)
+				bJoin = false;
+			osl_freeProcessHandle(*mppit);
+		}
+		aMountPackageProcessList.clear();
+
 		sal_uInt32 nPaths = aPackagePathsRunList.size();
 		if (nPaths)
 		{
 			rtl_uString *pArgs[nPaths];
 			sal_uInt32 nCurrentItem = 0;
-			for (std::list< ::rtl::OUString >::const_iterator rit = aPackagePathsRunList.begin(); rit != aPackagePathsRunList.end() && nCurrentItem < nPaths; ++rit)
+			for (std::list< OUString >::const_iterator rit = aPackagePathsRunList.begin(); rit != aPackagePathsRunList.end() && nCurrentItem < nPaths; ++rit)
 				pArgs[nCurrentItem++] = (*rit).pData;
 
 			// Open a stdin pipe to the subprocess and don't close it and let
@@ -117,12 +170,13 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 			oslProcess aProcess;
 			oslFileHandle aStdinHandle;
 			osl_executeProcess_WithRedirectedIO(aExeURL.pData, pArgs, nCurrentItem, 0, NULL, NULL, NULL, 0, &aProcess, &aStdinHandle, NULL, NULL);
+			osl_freeProcessHandle(aProcess);
 		}
 	}
 }
 
 void UpdateShutdownApp()
 {
-	rtl::Reference< UpdateCheck > aController(UpdateCheck::get());
+	Reference< UpdateCheck > aController(UpdateCheck::get());
 	aController->shutdownApp();
 }
