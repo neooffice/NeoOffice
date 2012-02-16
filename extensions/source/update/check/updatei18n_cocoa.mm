@@ -67,6 +67,7 @@ static const sal_Char *pEntries_en_US[] = {
 	UPDATEDOWNLOADFAILED, "Download failed",
 	UPDATEDOWNLOADINGFILE, "Downloading file",
 	UPDATEERROR, "Error:",
+	UPDATEINSTALLUPDATES, "Do you want to install the updates that you downloaded?",
 	UPDATELOADING, "Loading…",
 	UPDATEMEGABYTE, "MB",
 	UPDATEOPENFILEFAILED, "Cannot open %@",

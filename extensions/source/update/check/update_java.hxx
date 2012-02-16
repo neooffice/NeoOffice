@@ -42,7 +42,18 @@
 #include <rtl/ustring.hxx>
 #endif	// __OBJC__
 
+#ifdef MACOSX
+
+#include <premac.h>
+#include <CoreFoundation/CoreFoundation.h>
+#include <postmac.h>
+
+static const CFStringRef kUpdateSuppressLaunchAfterInstallationPref = CFSTR( "updateSuppressLaunchAfterInstallation" );
+
+#endif	// MACOSX
+
 SAL_DLLPRIVATE void UpdateAddInstallerPackage(rtl::OUString aName, rtl::OUString aDownloadPath, rtl::OUString aPackagePath);
+SAL_DLLPRIVATE sal_Bool UpdateHasPackagePaths();
 SAL_DLLPRIVATE void UpdateInstallNextBatchOfInstallerPackagePaths();
 SAL_DLLPRIVATE void UpdateShutdownApp();
 

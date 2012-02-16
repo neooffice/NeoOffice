@@ -32,6 +32,8 @@
  *************************************************************************/
 
 #import "update_cocoa.hxx"
+#import "update_java.hxx"
+#import "updatei18n_cocoa.hxx"
 #import "updatewebview_cocoa.h"
 
 using namespace rtl;
@@ -191,6 +193,18 @@ static UpdateNonRecursiveResponderWebPanel *pSharedPanel = nil;
 		UpdateWebView *pWebView = [pSharedPanel webView];
 		if(pWebView)
 			mbWebViewRequestedQuitApp = [pWebView requestedQuitApp];
+	}
+
+	if (!mbWebViewRequestedQuitApp && UpdateHasPackagePaths())
+	{
+		NSAlert *pAlert = [NSAlert alertWithMessageText:UpdateGetLocalizedString(UPDATEINSTALLUPDATES) defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
+		if ( pAlert && [pAlert runModal] == NSAlertDefaultReturn )
+		{
+			mbWebViewRequestedQuitApp = YES;
+			CFPreferencesSetAppValue( kUpdateSuppressLaunchAfterInstallationPref
+, kCFBooleanTrue, kCFPreferencesCurrentApplication );
+			CFPreferencesAppSynchronize( kCFPreferencesCurrentApplication );
+		}
 	}
 }
 

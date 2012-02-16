@@ -48,6 +48,7 @@
 #define UPDATEDOWNLOADFAILED "download.failed"
 #define UPDATEDOWNLOADINGFILE "downloading.file"
 #define UPDATEERROR "error"
+#define UPDATEINSTALLUPDATES "install.updates"
 #define UPDATELOADING "loading"
 #define UPDATEMEGABYTE "megabyte"
 #define UPDATEOPENFILEFAILED "open.file.failed"

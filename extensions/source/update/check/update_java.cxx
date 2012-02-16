@@ -59,6 +59,18 @@ void UpdateAddInstallerPackage(OUString aName, OUString aDownloadPath, OUString 
 	}
 }
 
+sal_Bool UpdateHasPackagePaths()
+{
+	sal_Bool bRet = sal_False;
+
+	osl::ClearableMutexGuard aGuard(aPackagesMutex);
+	if (aPackageNamesSet.size())
+		bRet = sal_True;
+	aGuard.clear();
+
+	return bRet;
+}
+
 void UpdateInstallNextBatchOfInstallerPackagePaths()
 {
 	OUString aExeURL;

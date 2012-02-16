@@ -67,25 +67,18 @@
 #include "updateprotocol.hxx"
 #include "updatecheckconfig.hxx"
 
+#ifdef USE_JAVA
+#include "update_java.hxx"
+#endif	// USE_JAVA
+
 #ifdef USE_NATIVE_DOWNLOAD_WEBVIEW
 
 #include <unotools/bootstrap.hxx>
 #include "update_cocoa.hxx"
-#include "update_java.hxx"
 
 static const rtl::OUString aNoLoadInAppParam( RTL_CONSTASCII_USTRINGPARAM( "noloadurlinapp=" ) );
 
 #endif	// USE_NATIVE_DOWNLOAD_WEBVIEW
-
-#if defined USE_JAVA && defined MACOSX
-
-#include <premac.h>
-#include <CoreFoundation/CoreFoundation.h>
-#include <postmac.h>
-
-static const CFStringRef kUpdateSuppressLaunchAfterInstallationPref = CFSTR( "updateSuppressLaunchAfterInstallation" );
-
-#endif	// USE_JAVA && MACOSX
 
 namespace awt = com::sun::star::awt ;
 namespace beans = com::sun::star::beans ;
@@ -1300,14 +1293,8 @@ void UpdateCheck::onCloseApp()
 #ifdef MACOSX
     sal_Bool bInstall = UpdateQuitNativeDownloadWebView();
 #else	// MACOSX
-    sal_Bool bInstall = false;
+    sal_Bool bInstall = sal_False;
 #endif	// MACOSX
-
-    if (!bInstall)
-	{
-        // TODO: Display dialog if the user selected the "install later" option
-        // after downloading one or more installers
-	}
 
     if (bInstall)
         UpdateInstallNextBatchOfInstallerPackagePaths();
