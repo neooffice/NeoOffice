@@ -126,13 +126,19 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 				// Run hdiutil command if the package has been unmounted
 				if (!bPackagePathExists)
 				{
-					pMountPackageArgs[ 2 ] = dit->second.pData;
+					OUString aURL;
+					osl_getFileURLFromSystemPath(dit->second.pData, &aURL.pData);
+					osl::File aFile(aURL);
+					if (aFile.open(osl_File_OpenFlag_Read | osl_File_OpenFlag_NoLock) == osl::FileBase::E_None)
+					{
+						pMountPackageArgs[ 2 ] = dit->second.pData;
 
-					oslProcess aProcess;
-					if (osl_executeProcess(aMountPackageExeURL.pData, pMountPackageArgs, 3, 0, NULL, NULL, NULL, 0, &aProcess) == osl_Process_E_None)
-						aMountPackageProcessList.push_back(aProcess);
-					else
-						osl_freeProcessHandle(aProcess);
+						oslProcess aProcess;
+						if (osl_executeProcess(aMountPackageExeURL.pData, pMountPackageArgs, 3, 0, NULL, NULL, NULL, 0, &aProcess) == osl_Process_E_None)
+							aMountPackageProcessList.push_back(aProcess);
+						else
+							osl_freeProcessHandle(aProcess);
+					}
 				}
 #endif	// MACOSX
 
@@ -144,18 +150,7 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 
 		aGuard.clear();
 
-		bool bJoin = true;
-		TimeValue aTimeout;
-		aTimeout.Seconds = 10;
-		aTimeout.Nanosec = 0;
-		for (std::list< oslProcess >::iterator mppit = aMountPackageProcessList.begin(); mppit != aMountPackageProcessList.end(); ++mppit)
-		{
-			if (bJoin && osl_joinProcessWithTimeout(*mppit, &aTimeout) == osl_Process_E_TimedOut)
-				bJoin = false;
-			osl_freeProcessHandle(*mppit);
-		}
-		aMountPackageProcessList.clear();
-
+		bool bJoin = false;
 		sal_uInt32 nPaths = aPackagePathsRunList.size();
 		if (nPaths)
 		{
@@ -169,9 +164,21 @@ void UpdateInstallNextBatchOfInstallerPackagePaths()
 			// after the application has quit
 			oslProcess aProcess;
 			oslFileHandle aStdinHandle;
-			osl_executeProcess_WithRedirectedIO(aExeURL.pData, pArgs, nCurrentItem, 0, NULL, NULL, NULL, 0, &aProcess, &aStdinHandle, NULL, NULL);
+			if (osl_executeProcess_WithRedirectedIO(aExeURL.pData, pArgs, nCurrentItem, 0, NULL, NULL, NULL, 0, &aProcess, &aStdinHandle, NULL, NULL) == osl_Process_E_None)
+				bJoin = true;
 			osl_freeProcessHandle(aProcess);
 		}
+
+		TimeValue aTimeout;
+		aTimeout.Seconds = 10;
+		aTimeout.Nanosec = 0;
+		for (std::list< oslProcess >::iterator mppit = aMountPackageProcessList.begin(); mppit != aMountPackageProcessList.end(); ++mppit)
+		{
+			if (bJoin && osl_joinProcessWithTimeout(*mppit, &aTimeout) == osl_Process_E_TimedOut)
+				bJoin = false;
+			osl_freeProcessHandle(*mppit);
+		}
+		aMountPackageProcessList.clear();
 	}
 }
 
