@@ -94,8 +94,8 @@
 - (IBAction)backButtonPressed;
 - (IBAction)cancelButtonPressed;
 - (void)readToEndOfHdiUtilTaskOutput:(NSNotification *)pNotification;
-- (void)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription;
-- (void)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath;
+- (MacOSBOOL)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription;
+- (MacOSBOOL)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath;
 - (MacOSBOOL)requestedQuitApp;
 
 @end

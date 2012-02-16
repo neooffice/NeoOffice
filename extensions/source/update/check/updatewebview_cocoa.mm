@@ -1455,8 +1455,13 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if (!bRetry)
 			{
 				[pRetryDownloadURLs removeObjectForKey:pPath];
-				[self redownloadFile:download path:pPath description:UpdateGetLocalizedString(UPDATEDOWNLOADFAILED)];
-				bRetry = YES;
+				bRetry = [self redownloadFile:download path:pPath description:UpdateGetLocalizedString(UPDATEDOWNLOADFAILED)];
+				if (!bRetry && aDownloadDataMap.size() == 1 && !aFileHandleDataMap.size())
+				{
+					NSWindow *pWindow = [self window];
+					if (pWindow && [pWindow isVisible])
+						[pWindow orderOut:self];
+				}
 			}
 		}
 
@@ -1605,18 +1610,16 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					}
 				}
 
-				if(!aDownloadDataMap.size() && aFileHandleDataMap.size() == 1)
-				{
-					[mpstatusLabel setString:@""];
-
-					NSWindow *pWindow = [self window];
-					if (pWindow && [pWindow isVisible])
-						[pWindow orderOut:self];
-				}
-
 				mbrequestedQuitApp = NO;
 				if (aFileName.getLength() && aDownloadPath.getLength() && aPackagePath.getLength())
 				{
+					if(!aDownloadDataMap.size() && aFileHandleDataMap.size() == 1)
+					{
+						NSWindow *pWindow = [self window];
+						if (pWindow && [pWindow isVisible])
+							[pWindow orderOut:self];
+					}
+
 					UpdateAddInstallerPackage(aFileName, aDownloadPath, aPackagePath);
 					NSAlert *pAlert = [NSAlert alertWithMessageText:UpdateGetUPDResString(RID_UPDATE_STR_BEGIN_INSTALL) defaultButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_NOW) alternateButton:UpdateGetUPDResString(RID_UPDATE_STR_INSTALL_LATER) otherButton:nil informativeTextWithFormat:@""];
 					if (pAlert && [pAlert runModal] == NSAlertDefaultReturn)
@@ -1624,7 +1627,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				}
 				else
 				{
-					[self redownloadFile:[fhit->second download] path:[fhit->second path] description:[NSString stringWithFormat:UpdateGetLocalizedString(UPDATEOPENFILEFAILED), [fhit->second fileName]]];
+					if (![self redownloadFile:[fhit->second download] path:[fhit->second path] description:[NSString stringWithFormat:UpdateGetLocalizedString(UPDATEOPENFILEFAILED), [fhit->second fileName]]] && !aDownloadDataMap.size() && aFileHandleDataMap.size() == 1)
+					{
+						NSWindow *pWindow = [self window];
+						if (pWindow && [pWindow isVisible])
+							[pWindow orderOut:self];
+					}
 				}
 
 				[fhit->second release];
@@ -1637,13 +1645,15 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 	}
 }
 
-- (void)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription
+- (MacOSBOOL)redownloadFile:(NSURLDownload *)pDownload path:(NSString *)pPath description:(NSString *)pDescription
 {
+	MacOSBOOL bRet = NO;
+
 	if (pDownload && pPath && pDescription)
 	{
 		NSAlert *pAlert = [NSAlert alertWithMessageText:[NSString stringWithFormat:@"%@ %@\n%@", UpdateGetLocalizedString(UPDATEERROR), pDescription, UpdateGetLocalizedString(UPDATEREDOWNLOADFILE)] defaultButton:UpdateGetVCLResString(SV_BUTTONTEXT_YES) alternateButton:UpdateGetVCLResString(SV_BUTTONTEXT_NO) otherButton:nil informativeTextWithFormat:@""];
 		if (pAlert && [pAlert runModal] == NSAlertDefaultReturn)
-		{
+ 		{
 			// Cancel any other downloads for the same file that are already
 			// in progress
 			std::map< NSURLDownload*, UpdateDownloadData* >::iterator it = aDownloadDataMap.begin();
@@ -1670,13 +1680,17 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 			if (pRetryDownloadURLs)
 				[pRetryDownloadURLs removeObjectForKey:pPath];
 
-			[self reloadDownload:pDownload path:pPath];
+			bRet = [self reloadDownload:pDownload path:pPath];
 		}
 	}
+
+	return bRet;
 }
 
-- (void)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath
+- (MacOSBOOL)reloadDownload:(NSURLDownload *)pDownload path:(NSString *)pPath
 {
+	MacOSBOOL bRet = NO;
+
 	if (pDownload && pPath)
 	{
 		if (!pRetryDownloadURLs)
@@ -1695,9 +1709,12 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				[pRequest setValue:nil forHTTPHeaderField:@"If-Range"];
 				[pRetryDownloadURLs setObject:[NSNull null] forKey:pPath];
 				[[self mainFrame] loadRequest:pRequest];
+				bRet = YES;
 			}
 		}
 	}
+
+	return bRet;
 }
 
 - (MacOSBOOL)requestedQuitApp
