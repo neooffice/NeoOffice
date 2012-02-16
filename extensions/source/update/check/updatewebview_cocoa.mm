@@ -1605,6 +1605,15 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 					}
 				}
 
+				if(!aDownloadDataMap.size() && aFileHandleDataMap.size() == 1)
+				{
+					[mpstatusLabel setString:@""];
+
+					NSWindow *pWindow = [self window];
+					if (pWindow && [pWindow isVisible])
+						[pWindow orderOut:self];
+				}
+
 				mbrequestedQuitApp = NO;
 				if (aFileName.getLength() && aDownloadPath.getLength() && aPackagePath.getLength())
 				{
@@ -1621,18 +1630,8 @@ static NSMutableDictionary *pRetryDownloadURLs = nil;
 				[fhit->second release];
 				aFileHandleDataMap.erase(fhit);
 
-				if(!aDownloadDataMap.size() && !aFileHandleDataMap.size())
-				{
-					[mpstatusLabel setString:@""];
-					if (mbrequestedQuitApp)
-					{
-						NSWindow *pWindow = [self window];
-						if (pWindow && [pWindow isVisible])
-							[pWindow orderOut:self];
-
-						UpdateShutdownApp();
-					}
-				}
+				if (mbrequestedQuitApp)
+					UpdateShutdownApp();
 			}
 		}
 	}
