@@ -15,6 +15,6 @@ ProductPatch=
 ProductSource=
 UpdateID=OpenOffice.org_3_en-US
 # Custom UpdateURL
-UpdateURL=$(PRODUCT_UPDATE_CHECK_URL)?product=$(PRODUCT_NAME) $(PRODUCT_VERSION)&patch=$(PRODUCT_PATCH_VERSION)&os=${_OS}&arch=${_ARCH}
+UpdateURL=$(PRODUCT_UPDATE_CHECK_URL)?product=$(PRODUCT_NAME) $(PRODUCT_VERSION)&patch=$(PRODUCT_PATCH_VERSION)&os=${_OS}&arch=${_ARCH}&osversion=<OSVERSION>
 UpdateUserAgent=<PRODUCT> (${buildid}; ${_OS}; ${_ARCH}; BundledLanguages=${AllLanguages})
 Vendor=
