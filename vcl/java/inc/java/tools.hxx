@@ -71,6 +71,7 @@ namespace vcl {
 	bool					IsRunningLeopard( );
 	bool					IsRunningSnowLeopard( );
 	bool					IsRunningLion( );
+	bool					IsRunningMountainLion( );
 	
 	bool					IsFullKeyboardAccessEnabled( );
 

@@ -50,6 +50,7 @@ typedef OSErr Gestalt_Type( OSType selector, long *response );
 static bool isLeopard = false;
 static bool isSnowLeopard = false;
 static bool isLion = false;
+static bool isMountainLion = false;
 
 using namespace vcl;
 
@@ -84,6 +85,9 @@ static void InitializeMacOSXVersion()
 						break;
 					case 7:
 						isLion = true;
+						break;
+					case 8:
+						isMountainLion = true;
 						break;
 					default:
 						break;
@@ -149,6 +153,14 @@ bool vcl::IsRunningLion( )
 {
 	InitializeMacOSXVersion();
 	return isLion;
+}
+
+// ----------------------------------------------------------------------------
+
+bool vcl::IsRunningMountainLion( )
+{
+	InitializeMacOSXVersion();
+	return isMountainLion;
 }
 
 // ----------------------------------------------------------------------------
