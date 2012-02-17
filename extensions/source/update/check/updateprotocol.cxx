@@ -49,14 +49,24 @@
 
 #include <cppuhelper/implbase1.hxx>
 
+#ifdef USE_JAVA
+
 // Uncomment this to disable patch checking for non-admin users
 // #define USE_NATIVE_ADMIN_USER_CHECK
 
-#if defined USE_NATIVE_ADMIN_USER_CHECK && defined MACOSX
+#ifdef MACOSX
+
+#include <dlfcn.h>
+
 #include <premac.h>
 #include <CoreServices/CoreServices.h>
 #include <postmac.h>
-#endif	// USE_NATIVE_ADMIN_USER_CHECK && MACOSX
+
+typedef OSErr Gestalt_Type( OSType selector, long *response );
+
+#endif	// MACOSX
+
+#endif	// USE_JAVA
 
 namespace css = com::sun::star ;
 namespace container = css::container ;
@@ -67,6 +77,47 @@ namespace task = css::task ;
 namespace xml = css::xml ;
 
 #define UNISTRING(s) rtl::OUString(RTL_CONSTASCII_USTRINGPARAM(s))
+
+#ifdef USE_JAVA
+
+static const rtl::OUString GetOSVersion()
+{
+    static rtl::OUString aOSVersion;
+    static bool nInitialized = false;
+
+    if ( !nInitialized )
+    {
+#ifdef MACOSX
+        void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+        if ( pLib )
+        {
+            Gestalt_Type *pGestalt = (Gestalt_Type *)dlsym( pLib, "Gestalt" );
+            if ( pGestalt )
+            {
+                SInt32 nMajor = 0;
+                SInt32 nMinor = 0;
+                SInt32 nBugFix = 0;
+                pGestalt( gestaltSystemVersionMajor, &nMajor);
+                pGestalt( gestaltSystemVersionMinor, &nMinor);
+                pGestalt( gestaltSystemVersionBugFix, &nBugFix);
+                aOSVersion = rtl::OUString::valueOf( (sal_Int32)nMajor );
+                aOSVersion += UNISTRING( "." );
+                aOSVersion += rtl::OUString::valueOf( (sal_Int32)nMinor );
+                aOSVersion += UNISTRING( "." );
+                aOSVersion += rtl::OUString::valueOf( (sal_Int32)nBugFix );
+            }
+
+            dlclose( pLib );
+        }
+#endif	// MACOSX
+
+        nInitialized = true;
+    }
+
+    return aOSVersion;
+}
+
+#endif	// USE_JAVA
 
 //------------------------------------------------------------------------------
 
@@ -92,6 +143,19 @@ getBootstrapData(
 
     rtl::OUString aValue( UNISTRING( "${$BRAND_BASE_DIR/program/" SAL_CONFIGFILE("version") ":UpdateURL}" ) );
     rtl::Bootstrap::expandMacros( aValue );
+
+#ifdef USE_JAVA
+    for (sal_Int32 i = 0;;)
+    {
+        i = aValue.indexOfAsciiL(RTL_CONSTASCII_STRINGPARAM("<OSVERSION>"), i);
+        if (i == -1) {
+            break;
+        }
+        rtl::OUString aOSVersion = GetOSVersion();
+        aValue = aValue.replaceAt(i, RTL_CONSTASCII_LENGTH("<OSVERSION>"), aOSVersion);
+        i += aOSVersion.getLength();
+    }
+#endif	// USE_JAVA
 
     if( aValue.getLength() > 0 )
     {
