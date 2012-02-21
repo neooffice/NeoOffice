@@ -38,18 +38,15 @@
 
 #include <map>
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
-#ifndef _VCL_VCLENUM_HXX
+#include <sal/types.h>
 #include <vcl/vclenum.hxx>
-#endif
 
 namespace vcl {
 
 class com_sun_star_vcl_VCLGraphics;
 
-class com_sun_star_vcl_VCLFont : public java_lang_Object
+class SAL_DLLPRIVATE com_sun_star_vcl_VCLFont : public java_lang_Object
 {
 	::rtl::OUString		maName;
 	sal_IntPtr			mnNativeFont;

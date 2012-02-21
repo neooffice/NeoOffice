@@ -36,44 +36,22 @@
 #ifndef _SV_JAVA_TOOLS_HXX
 #define _SV_JAVA_TOOLS_HXX
 
-#ifndef JNI_H
 #include <jni.h>
-#endif
-#ifndef _COM_SUN_STAR_UNO_SEQUENCE_H_
 #include <com/sun/star/uno/Sequence.h>
-#endif
-#ifndef _COM_SUN_STAR_UNO_RUNTIMEEXCEPTION_HPP_
 #include <com/sun/star/uno/RuntimeException.hpp>
-#endif
+#include <sal/types.h>
 
 namespace vcl {
 
-	jstring					StringToJavaString( JNIEnv *pEnv,const ::rtl::OUString& _Temp );
-	::rtl::OUString			JavaString2String( JNIEnv *pEnv,jstring _Str );
+	SAL_DLLPRIVATE jstring		StringToJavaString( JNIEnv *pEnv,const ::rtl::OUString& _Temp );
+	SAL_DLLPRIVATE ::rtl::OUString	JavaString2String( JNIEnv *pEnv,jstring _Str );
 
-	    template< class T, class JT > ::com::sun::star::uno::Sequence< T > copyArrayAndDelete( JNIEnv *pEnv, jobjectArray _Array, const T& _rD1, const JT& _rD2 )
-	{
-		::com::sun::star::uno::Sequence< T > xOut;
-		if ( _Array )
-		{
-			jsize nLen = pEnv->GetArrayLength( _Array );
-			xOut.realloc( nLen );
-			for ( jsize i = 0; i < nLen; ++i )
-			{
-				JT xInfo( pEnv, pEnv->GetObjectArrayElement( _Array, i ) );
-				xOut.getArray()[i] = xInfo;
-			}
-			pEnv->DeleteLocalRef( _Array );
-		}
-		return xOut;
-	}
+	SAL_DLLPRIVATE bool			IsRunningLeopard( );
+	SAL_DLLPRIVATE bool			IsRunningSnowLeopard( );
+	SAL_DLLPRIVATE bool			IsRunningLion( );
+	SAL_DLLPRIVATE bool			IsRunningMountainLion( );
 
-	bool					IsRunningLeopard( );
-	bool					IsRunningSnowLeopard( );
-	bool					IsRunningLion( );
-	bool					IsRunningMountainLion( );
-	
-	bool					IsFullKeyboardAccessEnabled( );
+	SAL_DLLPRIVATE bool			IsFullKeyboardAccessEnabled( );
 
 } // namespace vcl
 

@@ -36,19 +36,16 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_JOBSET_H
+#include <sal/types.h>
 #include <vcl/jobset.h>
-#endif
 
 namespace vcl {
 
 class com_sun_star_vcl_VCLGraphics;
 class com_sun_star_vcl_VCLPageFormat;
 
-class com_sun_star_vcl_VCLPrintJob : public java_lang_Object
+class SAL_DLLPRIVATE com_sun_star_vcl_VCLPrintJob : public java_lang_Object
 {
 protected:
 	static jclass		theClass;

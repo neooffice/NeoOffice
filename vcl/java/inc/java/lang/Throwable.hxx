@@ -36,13 +36,12 @@
 #ifndef _SV_JAVA_LANG_THROWABLE_HXX
 #define _SV_JAVA_LANG_THROWABLE_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
+#include <sal/types.h>
 
 namespace vcl {
 
-class java_lang_Throwable : public java_lang_Object
+class SAL_DLLPRIVATE java_lang_Throwable : public java_lang_Object
 {
 protected:
 	static jclass		theClass;

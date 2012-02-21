@@ -36,18 +36,15 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
 #define _SV_COM_SUN_STAR_VCL_VCLMENUITEMDATA_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_GEN_HXX
+#include <sal/types.h>
 #include <tools/gen.hxx>
-#endif
 
 class Menu;
 
 namespace vcl {
 
-class com_sun_star_vcl_VCLMenuItemData : public java_lang_Object
+class SAL_DLLPRIVATE com_sun_star_vcl_VCLMenuItemData : public java_lang_Object
 {
 protected:
 	static jclass		theClass;

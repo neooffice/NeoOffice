@@ -36,22 +36,15 @@
 #ifndef _SV_JAVA_LANG_OBJECT_HXX
 #define	_SV_JAVA_LANG_OBJECT_HXX
 
-#ifndef _SV_JAVA_TOOLS_HXX
-#include <java/tools.hxx>
-#endif
-#ifndef _COM_SUN_STAR_LANG_XMULTISERVICEFACTORY_HPP_
 #include <com/sun/star/lang/XMultiServiceFactory.hpp>
-#endif
-#ifndef _OSL_DIAGNOSE_H_
+#include <java/tools.hxx>
 #include <osl/diagnose.h>
-#endif
-#ifndef _SV_SV_H
+#include <sal/types.h>
 #include <vcl/sv.h>
-#endif
 
 namespace vcl {
 
-class VCLThreadAttach
+class SAL_DLLPRIVATE VCLThreadAttach
 {
 protected:
 	void				AttachThread();

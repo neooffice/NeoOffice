@@ -36,12 +36,9 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_GEN_HXX
+#include <sal/types.h>
 #include <tools/gen.hxx>
-#endif
 
 // Custom event types
 #define SALEVENT_OPENDOCUMENT		((USHORT)100)
@@ -57,7 +54,7 @@ namespace vcl {
 
 class com_sun_star_vcl_VCLFrame;
 
-class com_sun_star_vcl_VCLEvent: public java_lang_Object
+class SAL_DLLPRIVATE com_sun_star_vcl_VCLEvent: public java_lang_Object
 {
 protected:
 	static jclass		theClass;

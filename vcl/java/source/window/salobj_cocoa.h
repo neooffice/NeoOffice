@@ -36,17 +36,19 @@
 #ifndef __SALOBJ_COCOA_H__
 #define __SALOBJ_COCOA_H__
 
+#include <sal/types.h>
+
 #ifdef __cplusplus
 typedef void* id;
 
 BEGIN_C
 #endif
-id VCLChildView_create();
-void VCLChildView_release( id pVCLChildView );
-void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor );
-void VCLChildView_setBounds( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
-void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
-void VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow );
+SAL_DLLPRIVATE id VCLChildView_create();
+SAL_DLLPRIVATE void VCLChildView_release( id pVCLChildView );
+SAL_DLLPRIVATE void VCLChildView_setBackgroundColor( id pVCLChildView, int nColor );
+SAL_DLLPRIVATE void VCLChildView_setBounds( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
+SAL_DLLPRIVATE void VCLChildView_setClip( id pVCLChildView, long nX, long nY, long nWidth, long nHeight );
+SAL_DLLPRIVATE void VCLChildView_show( id pVCLChildView, id pParentNSWindow, BOOL bShow );
 #ifdef __cplusplus
 END_C
 #endif

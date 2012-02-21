@@ -36,16 +36,15 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLMENUBAR_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
+#include <sal/types.h>
 
 namespace vcl {
 
 class com_sun_star_vcl_VCLFrame;
 class com_sun_star_vcl_VCLMenuItemData;
 
-class com_sun_star_vcl_VCLMenuBar : public java_lang_Object
+class SAL_DLLPRIVATE com_sun_star_vcl_VCLMenuBar : public java_lang_Object
 {
 protected:
 	static jclass		theClass;

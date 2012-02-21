@@ -36,6 +36,8 @@
 #ifndef __VCLFRAME_COCOA_H__
 #define __VCLFRAME_COCOA_H__
 
+#include <sal/types.h>
+
 // Uncomment the following line to enable rounded bottom corners in Java frames
 // #define USE_ROUNDED_BOTTOM_CORNERS_IN_JAVA_FRAMES
 
@@ -47,13 +49,13 @@ typedef void* id;
 
 BEGIN_C
 #endif
-id CWindow_getNSWindow( id pCWindow );
-void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen );
-id CWindow_getNSWindowContentView( id pCWindow, BOOL bTopLevelWindow );
-int CWindow_makeFloatingWindow( id pCWindow );
-void CWindow_makeModalWindow( id pCWindow );
-void CWindow_makeUnshadowedWindow( id pCWindow );
-void CWindow_updateLocation( id pCWindow );
+SAL_DLLPRIVATE id CWindow_getNSWindow( id pCWindow );
+SAL_DLLPRIVATE void CWindow_getNSWindowBounds( id pCWindow, float *pX, float *pY, float *pWidth, float *pHeight, BOOL *pInLiveResize, BOOL bFullScreen );
+SAL_DLLPRIVATE id CWindow_getNSWindowContentView( id pCWindow, BOOL bTopLevelWindow );
+SAL_DLLPRIVATE int CWindow_makeFloatingWindow( id pCWindow );
+SAL_DLLPRIVATE void CWindow_makeModalWindow( id pCWindow );
+SAL_DLLPRIVATE void CWindow_makeUnshadowedWindow( id pCWindow );
+SAL_DLLPRIVATE void CWindow_updateLocation( id pCWindow );
 #ifdef __cplusplus
 END_C
 #endif

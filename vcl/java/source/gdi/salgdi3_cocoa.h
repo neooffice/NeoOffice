@@ -36,19 +36,21 @@
 #ifndef __SALOGL_COCOA_H__
 #define __SALOGL_COCOA_H__
 
+#include <sal/types.h>
+
 #ifdef __cplusplus
 BEGIN_C
 #endif
 #ifndef USE_CORETEXT_TEXT_RENDERING
-ATSFontRef NSFont_getATSFontRef( NSFont *pNSFont );
-CFStringRef NSFont_familyName( NSFont *pNSFont );
+SAL_DLLPRIVATE ATSFontRef NSFont_getATSFontRef( NSFont *pNSFont );
+SAL_DLLPRIVATE CFStringRef NSFont_familyName( NSFont *pNSFont );
 #endif	// !USE_CORETEXT_TEXT_RENDERING
-NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic );
-NSArray *NSFontManager_getAllFonts();
-BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
-BOOL NSFontManager_isItalic( NSFont *pNSFont );
-int NSFontManager_widthOfFont( NSFont *pNSFont );
-int NSFontManager_weightOfFont( NSFont *pNSFont );
+SAL_DLLPRIVATE NSFont *NSFont_findFontWithStyle( NSFont *pNSFont, BOOL bBold, BOOL bItalic );
+SAL_DLLPRIVATE NSArray *NSFontManager_getAllFonts();
+SAL_DLLPRIVATE BOOL NSFontManager_isFixedPitch( NSFont *pNSFont );
+SAL_DLLPRIVATE BOOL NSFontManager_isItalic( NSFont *pNSFont );
+SAL_DLLPRIVATE int NSFontManager_widthOfFont( NSFont *pNSFont );
+SAL_DLLPRIVATE int NSFontManager_weightOfFont( NSFont *pNSFont );
 #ifdef __cplusplus
 END_C
 #endif

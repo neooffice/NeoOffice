@@ -36,13 +36,12 @@
 #ifndef _SV_JAVA_LANG_CLASS_HXX
 #define _SV_JAVA_LANG_CLASS_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
+#include <sal/types.h>
 
 namespace vcl {
 
-class java_lang_Class : public java_lang_Object
+class SAL_DLLPRIVATE java_lang_Class : public java_lang_Object
 {
 protected:
 	static jclass		theClass;

@@ -155,7 +155,7 @@ public:
 
 // Note: this must not be static as the symbol will be loaded by the framework
 // module
-extern "C" sal_Bool SAL_DLLPUBLIC_EXPORT IsShowOnlyMenusWindow( Window *pWindow );
-extern "C" void SAL_DLLPUBLIC_EXPORT ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus );
+extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool IsShowOnlyMenusWindow( Window *pWindow );
+extern "C" SAL_DLLPUBLIC_EXPORT void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus );
 
 #endif // _SV_SALFRAME_H

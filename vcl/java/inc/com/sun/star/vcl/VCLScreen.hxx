@@ -36,19 +36,14 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
 #include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_SALGTYPE_HXX
-#include <vcl/salgtype.hxx>
-#endif
-#ifndef _SV_GEN_HXX
+#include <sal/types.h>
 #include <tools/gen.hxx>
-#endif
+#include <vcl/salgtype.hxx>
 
 namespace vcl {
 
-class com_sun_star_vcl_VCLScreen : public java_lang_Object
+class SAL_DLLPRIVATE com_sun_star_vcl_VCLScreen : public java_lang_Object
 {
 protected:
 	static jclass		theClass;

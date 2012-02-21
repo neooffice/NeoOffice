@@ -116,7 +116,7 @@
 using namespace vcl;
 using namespace rtl;
 
-struct VCLBitmapBuffer : BitmapBuffer
+struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 {
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
 	java_lang_Object*	 	mpData;

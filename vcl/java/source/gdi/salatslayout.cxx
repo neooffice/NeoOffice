@@ -141,7 +141,7 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 inline bool IsNonprintingChar( sal_Unicode nChar ) { return ( nChar == 0x00b6 || nChar == 0x00b7 ); }
 
-struct ImplATSLayoutDataHash {
+struct SAL_DLLPRIVATE ImplATSLayoutDataHash {
 	int					mnLen;
 #ifdef USE_CORETEXT_TEXT_RENDERING
 	CTFontRef			mnFontID;
@@ -161,17 +161,17 @@ struct ImplATSLayoutDataHash {
 						~ImplATSLayoutDataHash();
 };
 
-struct ImplATSLayoutDataHashHash
+struct SAL_DLLPRIVATE ImplATSLayoutDataHashHash
 {
 	size_t				operator()( const ImplATSLayoutDataHash *x ) const { return (size_t)x->mnStrHash; }
 };
 
-struct ImplATSLayoutDataHashEquality
+struct SAL_DLLPRIVATE ImplATSLayoutDataHashEquality
 {
 	bool				operator()( const ImplATSLayoutDataHash *p1, const ImplATSLayoutDataHash *p2 ) const;
 };
 
-struct ImplATSLayoutData {
+struct SAL_DLLPRIVATE ImplATSLayoutData {
 	static ::std::hash_map< ImplATSLayoutDataHash*, ImplATSLayoutData*, ImplATSLayoutDataHashHash, ImplATSLayoutDataHashEquality >	maLayoutCache;
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 	static int			mnLayoutCacheSize;

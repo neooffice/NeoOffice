@@ -119,6 +119,6 @@ public:
 	virtual void*			GetConnectionIdentifier( ConnectionIdentifierType& rReturnedType, int& rReturnedBytes );
 };
 
-void InitJavaAWT();
+SAL_DLLPRIVATE void InitJavaAWT();
 
 #endif // _SV_SALINST_H

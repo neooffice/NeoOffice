@@ -36,6 +36,8 @@
 #ifndef __SALINST_COCOA_H__
 #define __SALINST_COCOA_H__
 
+#include <sal/types.h>
+
 #if defined __cplusplus && !defined __OBJC__
 typedef void* id;
 #endif
@@ -43,10 +45,10 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void NSApplication_dispatchPendingEvents();
-id NSApplication_getModalWindow();
-BOOL VCLInstance_setDragLock( BOOL bLock );
-BOOL VCLInstance_updateNativeMenus();
+SAL_DLLPRIVATE void NSApplication_dispatchPendingEvents();
+SAL_DLLPRIVATE id NSApplication_getModalWindow();
+SAL_DLLPRIVATE BOOL VCLInstance_setDragLock( BOOL bLock );
+SAL_DLLPRIVATE BOOL VCLInstance_updateNativeMenus();
 #ifdef __cplusplus
 END_C
 #endif

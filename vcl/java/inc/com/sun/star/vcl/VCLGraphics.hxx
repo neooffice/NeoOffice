@@ -36,22 +36,13 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 
-#ifndef _SV_JAVA_LANG_OBJECT_HXX
-#include <java/lang/Object.hxx>
-#endif
-#ifndef _SV_SALBTYPE_HXX
-#include <vcl/salbtype.hxx>
-#endif
-#ifndef _SV_SALGTYPE_HXX
-#include <vcl/salgtype.hxx>
-#endif
-#ifndef _SV_SALLAYOUT_HXX
-#include <vcl/sallayout.hxx>
-#endif
 #include <basegfx/vector/b2enums.hxx>
-#ifndef _SV_GEN_HXX
+#include <java/lang/Object.hxx>
+#include <sal/types.h>
 #include <tools/gen.hxx>
-#endif
+#include <vcl/salbtype.hxx>
+#include <vcl/salgtype.hxx>
+#include <vcl/sallayout.hxx>
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>
@@ -67,7 +58,7 @@ class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLImage;
 class com_sun_star_vcl_VCLPath;
 
-class com_sun_star_vcl_VCLGraphics : public java_lang_Object
+class SAL_DLLPRIVATE com_sun_star_vcl_VCLGraphics : public java_lang_Object
 {
 protected:
 	static jclass		theClass;

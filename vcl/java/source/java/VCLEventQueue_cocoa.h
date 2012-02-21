@@ -37,6 +37,7 @@
 #define __VCLEVENTQUEUE_COCOA_H__
 
 #include <jni.h>
+#include <sal/types.h>
 
 #ifdef __cplusplus
 typedef void* id;
@@ -68,18 +69,18 @@ typedef void* id;
 #ifdef __cplusplus
 BEGIN_C
 #endif
-void VCLEventQueue_cancelTermination();
-void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen );
-void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
-BOOL VCLEventQueue_paste( void *pNSWindow );
-BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers, jchar nOriginalKeyChar, short nOriginalModifiers );
-void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );
-void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession );
-void VCLEventQueue_removeCachedEvents();
-BOOL NSApplication_isActive();
-void NSFontManager_acquire();
-void NSFontManager_release();
-void VCLEventQueue_installVCLEventQueueClasses();
+SAL_DLLPRIVATE void VCLEventQueue_cancelTermination();
+SAL_DLLPRIVATE void VCLEventQueue_fullScreen( void *pNSWindow, BOOL bFullScreen );
+SAL_DLLPRIVATE void VCLEventQueue_getTextSelection( void *pNSWindow, CFStringRef *pTextSelection, CFDataRef *pRTFSelection );
+SAL_DLLPRIVATE BOOL VCLEventQueue_paste( void *pNSWindow );
+SAL_DLLPRIVATE BOOL VCLEventQueue_postCommandEvent( jobject aPeer, short nKey, short nModifiers, jchar nOriginalKeyChar, short nOriginalModifiers );
+SAL_DLLPRIVATE void VCLEventQueue_postMouseWheelEvent( jobject aPeer, long nX, long nY, long nRotationX, long nRotationY, BOOL bShiftDown, BOOL bMetaDown, BOOL bAltDown, BOOL bControlDown );
+SAL_DLLPRIVATE void VCLEventQueue_postWindowMoveSessionEvent( jobject aPeer, long nX, long nY, BOOL bStartSession );
+SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
+SAL_DLLPRIVATE BOOL NSApplication_isActive();
+SAL_DLLPRIVATE void NSFontManager_acquire();
+SAL_DLLPRIVATE void NSFontManager_release();
+SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses();
 #ifdef __cplusplus
 END_C
 #endif
