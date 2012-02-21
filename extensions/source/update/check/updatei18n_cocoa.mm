@@ -55,6 +55,10 @@ using namespace rtl;
  */
 static const sal_Char *pEntries_de[] = {
 	UPDATEBACK, "Zurück",
+	UPDATEDOWNLOADCANCELED, "Herunterladen abgebrochen",
+	UPDATEDOWNLOADFAILED, "Herunterladen fehlgeschlagen",
+	UPDATEDOWNLOADINGFILE, "Datei wird heruntergeladen",
+	UPDATEERROR, "Fehler:",
 	nil, nil
 };
 
