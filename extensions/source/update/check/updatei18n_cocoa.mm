@@ -59,6 +59,9 @@ static const sal_Char *pEntries_de[] = {
 	UPDATEDOWNLOADFAILED, "Herunterladen fehlgeschlagen",
 	UPDATEDOWNLOADINGFILE, "Datei wird heruntergeladen",
 	UPDATEERROR, "Fehler:",
+	UPDATEINSTALLUPDATES, "Möchten Sie die heruntergeladenen Updates jetzt installieren?",
+	UPDATELOADING, "Laden…",
+	UPDATEOPENINGFILE, "%@ wird geöffnet…",
 	nil, nil
 };
 
