@@ -61,7 +61,9 @@ static const sal_Char *pEntries_de[] = {
 	UPDATEERROR, "Fehler:",
 	UPDATEINSTALLUPDATES, "Möchten Sie die heruntergeladenen Updates jetzt installieren?",
 	UPDATELOADING, "Laden…",
+	UPDATEOPENFILEFAILED, "%@ kann nicht geöffnet werden",
 	UPDATEOPENINGFILE, "%@ wird geöffnet…",
+	UPDATEREDOWNLOADFILE, "Möchten Sie die Datei erneut herunterladen?",
 	nil, nil
 };
 
