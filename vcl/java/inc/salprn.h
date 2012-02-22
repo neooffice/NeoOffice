@@ -46,16 +46,11 @@
 #include <vcl/prntypes.hxx>
 #endif
 
-// Uncomment the following line to use native printing APIs
-// #define USE_NATIVE_PRINTING
-
-#ifndef USE_NATIVE_PRINTING
 namespace vcl
 {   
 class com_sun_star_vcl_VCLPageFormat;
 class com_sun_star_vcl_VCLPrintJob;
 }
-#endif	// !USE_NATIVE_PRINTING
 
 class JavaSalGraphics;
 
@@ -68,11 +63,7 @@ class JavaSalInfoPrinter : public SalInfoPrinter
 public:
 	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
-#ifdef USE_NATIVE_PRINTING
-	void*					mpPrintInfo;
-#else	// USE_NATIVE_PRINTING
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
-#endif	// USE_NATIVE_PRINTING
 
 							JavaSalInfoPrinter();
 	virtual					~JavaSalInfoPrinter();
@@ -102,13 +93,8 @@ public:
 	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
 	XubString				maJobName;
-#ifdef USE_NATIVE_PRINTING
-	void*					mpPrintInfo;
-	void*					mpPrintOperation;
-#else	// USE_NATIVE_PRINTING
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
-#endif	// USE_NATIVE_PRINTING
 	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;

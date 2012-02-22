@@ -40,6 +40,9 @@
 #include <sal/types.h>
 #include <vcl/jobset.h>
 
+// Uncomment the following line to use native printing APIs
+// #define USE_NATIVE_PRINTING
+
 namespace vcl {
 
 class com_sun_star_vcl_VCLGraphics;
