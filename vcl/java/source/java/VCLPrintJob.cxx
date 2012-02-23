@@ -118,6 +118,9 @@ jclass com_sun_star_vcl_VCLPrintJob::getMyClass()
 // ----------------------------------------------------------------------------
 
 com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object( (jobject)NULL )
+#ifdef USE_NATIVE_PRINTING
+	, mpPrintPanel( NULL )
+#endif	// USE_NATIVE_PRINTING
 {
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -133,6 +136,16 @@ com_sun_star_vcl_VCLPrintJob::com_sun_star_vcl_VCLPrintJob() : java_lang_Object(
 	args[0].l = GetSalData()->mpEventQueue->getJavaObject();
 	jobject tempObj = t.pEnv->NewObjectA( getMyClass(), mID, args );
 	saveRef( tempObj );
+}
+
+// ----------------------------------------------------------------------------
+
+com_sun_star_vcl_VCLPrintJob::~com_sun_star_vcl_VCLPrintJob()
+{
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrintPanel )
+		NSPrintPanel_release( mpPrintPanel );
+#endif	// USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
@@ -264,11 +277,15 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::isFinished()
 
 sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat *_par0, ::rtl::OUString _par1, float _par2, sal_Bool _par3 ) 
 {
-	static jmethodID mID = NULL;
 	sal_Bool out = sal_False;
 
 	if ( _par3 )
 	{
+#ifdef USE_NATIVE_PRINTING
+		if ( mpPrintPanel && NSPrintPanel_printOperation( mpPrintPanel ) )
+			out = sal_True;
+#else	// USE_NATIVE_PRINTING
+		static jmethodID mID = NULL;
 		VCLThreadAttach t;
 		if ( t.pEnv )
 		{
@@ -287,6 +304,7 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 				out = (sal_Bool)t.pEnv->CallNonvirtualBooleanMethodA( object, getMyClass(), mID, args );
 			}
 		}
+#endif	// USE_NATIVE_PRINTING
 	}
 	else
 	{
@@ -328,17 +346,26 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		void *pNSPrintInfo = _par0->getNativePrinterJob();
 		ULONG nCount = pFocusFrame ? 0 : Application::ReleaseSolarMutex();
 		CFStringRef aString = CFStringCreateWithCharactersNoCopy( NULL, _par1.getStr(), _par1.getLength(), kCFAllocatorNull );
-		void *pDialog = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame ? pFocusFrame->mpVCLFrame->getNativeWindow() : NULL, aString );
+		void *pPrintPanel = NSPrintInfo_showPrintDialog( pNSPrintInfo, pFocusFrame ? pFocusFrame->mpVCLFrame->getNativeWindow() : NULL, aString );
 		if ( aString )
 			CFRelease( aString );
 		Application::AcquireSolarMutex( nCount );
 
-		while ( !NSPrintPanel_finished( pDialog ) )
+		while ( !NSPrintPanel_finished( pPrintPanel ) )
 			Application::Yield();
 		pSalData->mbInNativeModalSheet = false;
 		pSalData->mpNativeModalSheetFrame = NULL;
 
-		out = (sal_Bool)NSPrintPanel_result( pDialog );
+		void *pPrintOperation = NSPrintPanel_printOperation( pPrintPanel );
+		if ( pPrintOperation )
+		{
+#ifdef USE_NATIVE_PRINTING
+			mpPrintPanel = pPrintPanel;
+#else	// USE_NATIVE_PRINTING
+			NSPrintPanel_release( pPrintPanel );
+#endif	// USE_NATIVE_PRINTING
+			out = sal_True;
+		}
 	}
 
 	return out;

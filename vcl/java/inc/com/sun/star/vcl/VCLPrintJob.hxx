@@ -50,15 +50,21 @@ class com_sun_star_vcl_VCLPageFormat;
 
 class SAL_DLLPRIVATE com_sun_star_vcl_VCLPrintJob : public java_lang_Object
 {
+#ifdef USE_NATIVE_PRINTING
+	void*				mpPrintPanel;
+#endif	// USE_NATIVE_PRINTING
+
 protected:
 	static jclass		theClass;
 
 public:
 	static jclass		getMyClass();
 
+#ifndef USE_NATIVE_PRINTING
 						com_sun_star_vcl_VCLPrintJob( jobject myObj ) : java_lang_Object( myObj ) {}
+#endif	// !USE_NATIVE_PRINTING
 						com_sun_star_vcl_VCLPrintJob();
-	virtual				~com_sun_star_vcl_VCLPrintJob() {};
+	virtual				~com_sun_star_vcl_VCLPrintJob();
 
 	void				abortJob();
 	void				dispose();

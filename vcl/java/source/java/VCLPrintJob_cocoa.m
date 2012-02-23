@@ -45,19 +45,26 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 	BOOL					mbFinished;
 	NSPrintInfo*			mpInfo;
 	CFStringRef				maJobName;
-	BOOL					mbResult;
+	NSPrintOperation*		mpPrintOperation;
 	NSWindow*				mpWindow;
 }
+- (void)cleanUpPrintOperation:(id)pObject;
 - (void)dealloc;
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(CFStringRef)aJobName;
-- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo;
-- (BOOL)result;
+- (NSPrintOperation *)printOperation;
+- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo;
 - (void)setJobTitle;
 - (void)showPrintDialog:(id)pObject;
 @end
 
 @implementation ShowPrintDialog
+
+- (void)cleanUpPrintOperation:(id)pObject
+{
+	if ( mpPrintOperation )
+		[mpPrintOperation cleanUpOperation];
+}
 
 - (void)dealloc
 {
@@ -66,6 +73,9 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 
 	if ( maJobName )
 		CFRelease( maJobName );
+
+	if ( mpPrintOperation )
+		[mpPrintOperation release];
 
 	if ( mpWindow )
 		[mpWindow release];
@@ -82,7 +92,7 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 {
 	[super init];
 
-	mbFinished = YES;
+	mbFinished = NO;
 	mpInfo = pInfo;
 	if ( mpInfo )
 		[mpInfo retain];
@@ -91,7 +101,7 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 		maJobName = CFSTR( "Untitled" );
 	if ( maJobName )
 		CFRetain( maJobName );
-	mbResult = NO;
+	mpPrintOperation = mpPrintOperation;
 	mpWindow = pWindow;
 	if ( mpWindow )
 		[mpWindow retain];
@@ -99,13 +109,17 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 	return self;
 }
 
-- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(int)nCode contextInfo:(void *)pContextInfo
+- (NSPrintOperation *)printOperation
+{
+	return mpPrintOperation;
+}
+
+- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo
 {
 	mbFinished = YES;
+
 	if ( nCode == NSOKButton )
 	{
-		mbResult = YES;
-
 		// Cache the dialog's print info in its own dictionary as Java seems
 		// to copy the dictionary into a different print info instance when
 		// actually printing so we will retrieve the cached print info when
@@ -127,24 +141,27 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 				[pDictionary setObject:pInfoCopy forKey:(NSString *)VCLPrintInfo_getVCLPrintInfoDictionaryKey()];
 			}
 		}
-	}
-	else
-	{
-		mbResult = NO;
-	}
-}
 
-- (BOOL)result
-{
-	return mbResult;
+		if ( !mpPrintOperation )
+		{
+			NSView *pView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
+			if ( pView )
+			{
+				[pView autorelease];
+
+				mpPrintOperation = [VCLPrintOperation printOperationWithView:pView printInfo:mpInfo];
+				if ( mpPrintOperation )
+				{
+					[mpPrintOperation retain];
+					[mpPrintOperation setJobTitle:(NSString *)maJobName];
+				}
+			}
+		}
+	}
 }
 
 - (void)setJobTitle
 {
-	NSPrintOperation *pOperation = [NSPrintOperation currentOperation];
-	if ( pOperation )
-		[pOperation setJobTitle:(NSString *)maJobName];
-
 	// Also set the job name via the PMPrintSettings so that the Save As
 	// dialog gets the job name
 	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
@@ -164,6 +181,9 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 
 - (void)showPrintDialog:(id)pObject
 {
+	if ( mbFinished )
+		return;
+
 	// Set job title
 	[self setJobTitle];
 
@@ -203,11 +223,13 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 				NSPrintOperation *pOperation = [VCLPrintOperation printOperationWithView:pView printInfo:mpInfo];
 				if ( pOperation )
 				{
+					[pOperation setJobTitle:(NSString *)maJobName];
+
 					NSPrintOperation *pOldOperation = [NSPrintOperation currentOperation];
 					[NSPrintOperation setCurrentOperation:pOperation];
-					// Copy job title to new current operation
-					[self setJobTitle];
-					if ( [pPanel runModal] == NSOKButton )
+
+					NSInteger nButton = [pPanel runModal];
+					if ( nButton == NSOKButton )
 					{
 						// Copy any dictionary changes
 						NSPrintInfo *pInfo = [pOperation printInfo];
@@ -230,10 +252,9 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 								}
 							}
 						}
-
-						[self printPanelDidEnd:pPanel returnCode:NSOKButton contextInfo:nil];
 					}
 
+					[self printPanelDidEnd:pPanel returnCode:nButton contextInfo:nil];
 					[pOperation cleanUpOperation];
 					[NSPrintOperation setCurrentOperation:pOldOperation];
 				}
@@ -242,7 +263,6 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 		else
 		{
 			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
-			mbFinished = NO;
 		}
 	}
 }
@@ -336,19 +356,30 @@ BOOL NSPrintPanel_finished( id pDialog )
 	return bRet;
 }
 
-BOOL NSPrintPanel_result( id pDialog )
+id NSPrintPanel_printOperation( id pDialog )
 {
-	BOOL bRet = NO;
+	id pRet = nil;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-	{
-		bRet = [(ShowPrintDialog *)pDialog result];
-		[(ShowPrintDialog *)pDialog release];
-	}
+		pRet = [(ShowPrintDialog *)pDialog printOperation];
 
 	[pPool release];
 
-	return bRet;
+	return pRet;
+}
+
+void NSPrintPanel_release( id pDialog )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+	{
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[(ShowPrintDialog *)pDialog performSelectorOnMainThread:@selector(cleanUpPrintOperation:) withObject:pDialog waitUntilDone:YES modes:pModes];
+		[pDialog release];
+	}
+
+	[pPool release];
 }
