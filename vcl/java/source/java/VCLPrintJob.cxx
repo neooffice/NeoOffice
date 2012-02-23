@@ -306,7 +306,11 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 		}
 #endif	// USE_NATIVE_PRINTING
 	}
+#ifdef USE_NATIVE_PRINTING
+	else if ( !mpPrintPanel )
+#else	// USE_NATIVE_PRINTING
 	else
+#endif	// USE_NATIVE_PRINTING
 	{
 		SalData *pSalData = GetSalData();
 
@@ -375,11 +379,14 @@ sal_Bool com_sun_star_vcl_VCLPrintJob::startJob( com_sun_star_vcl_VCLPageFormat 
 
 com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage( Orientation _par0 )
 {
-	static jmethodID mID = NULL;
 	com_sun_star_vcl_VCLGraphics *out = NULL;
+#ifdef USE_NATIVE_PRINTING
+	NSPrintPanel_startPage( mpPrintPanel );
+#else	// USE_NATIVE_PRINTING
 	VCLThreadAttach t;
 	if ( t.pEnv )
 	{
+		static jmethodID mID = NULL;
 		if ( !mID )
 		{
 			char *cSignature = "(I)Lcom/sun/star/vcl/VCLGraphics;";
@@ -399,5 +406,6 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage( Orientati
 			}
 		}
 	}
+#endif	// USE_NATIVE_PRINTING
 	return out;
 }

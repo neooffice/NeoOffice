@@ -51,6 +51,7 @@ SAL_DLLPRIVATE id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow, CF
 SAL_DLLPRIVATE BOOL NSPrintPanel_finished( id pDialog );
 SAL_DLLPRIVATE id NSPrintPanel_printOperation( id pDialog );
 SAL_DLLPRIVATE void NSPrintPanel_release( id pDialog );
+SAL_DLLPRIVATE id NSPrintPanel_startPage( id pDialog );
 #ifdef __cplusplus
 END_C
 #endif
