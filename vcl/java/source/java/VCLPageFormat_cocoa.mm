@@ -33,10 +33,13 @@
  *
  ************************************************************************/
 
-#import <sal/types.h>
-
-#import <Cocoa/Cocoa.h>
+#include "premac.h"
 #import <objc/objc-class.h>
+#import <Cocoa/Cocoa.h>
+#include "postmac.h"
+
+#import <sal/types.h>
+#import <tools/solar.h>
 
 #import "VCLPageFormat_cocoa.h"
 
@@ -141,24 +144,24 @@
 
 @interface ShowPageLayoutDialog : NSObject
 {
-	BOOL					mbFinished;
+	MacOSBOOL				mbFinished;
 	NSPrintInfo*			mpInfo;
 	NSPrintingOrientation	mnOrientation;
 	NSSize					maPaperSize;
-	BOOL					mbResult;
+	MacOSBOOL				mbResult;
 	NSWindow*				mpWindow;
 }
-- (BOOL)finished;
+- (MacOSBOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow orientation:(NSPrintingOrientation)nOrientation;
-- (BOOL)orientation;
+- (MacOSBOOL)orientation;
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo;
-- (BOOL)result;
+- (MacOSBOOL)result;
 - (void)showPageLayoutDialog:(id)pObject;
 @end
 
 @implementation ShowPageLayoutDialog
 
-- (BOOL)finished
+- (MacOSBOOL)finished
 {
 	return mbFinished;
 }
@@ -177,7 +180,7 @@
 	return self;
 }
 
-- (BOOL)orientation
+- (MacOSBOOL)orientation
 {
 	return ( mnOrientation == NSLandscapeOrientation ? YES : NO );
 }
@@ -206,7 +209,7 @@
 	}
 }
 
-- (BOOL)result
+- (MacOSBOOL)result
 {
 	return mbResult;
 }
