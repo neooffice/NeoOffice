@@ -36,29 +36,27 @@
 #ifndef __VCLPAGEFORMAT_COCOA_H__
 #define __VCLPAGEFORMAT_COCOA_H__
 
-#include <sal/types.h>
-
-#ifdef __cplusplus
-typedef void* id;
-#else
+#ifdef __OBJC__
 @interface VCLPrintOperation : NSPrintOperation
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView;
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
 + (NSPrintOperation *)poseAsPrintOperationWithView:(NSView *)pView;
 + (NSPrintOperation *)poseAsPrintOperationWithView:(NSView *)pView printInfo:(NSPrintInfo *)pPrintInfo;
 @end
-#endif
+#else	// __OBJC__
+typedef void* id;
+#endif	// __OBJC__
 
 #ifdef __cplusplus
 BEGIN_C
 #endif
-SAL_DLLPRIVATE BOOL NSPageLayout_finished( id pDialog );
-SAL_DLLPRIVATE BOOL NSPageLayout_result( id pDialog, BOOL *bLandscape );
+SAL_DLLPRIVATE sal_Bool NSPageLayout_finished( id pDialog );
+SAL_DLLPRIVATE sal_Bool NSPageLayout_result( id pDialog, sal_Bool *bLandscape );
 SAL_DLLPRIVATE id NSPrintInfo_create();
 SAL_DLLPRIVATE void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *pHeight, float *pImageableX, float *pImageableY, float *pImageableWidth, float *pImageableHeight );
-SAL_DLLPRIVATE BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight );
+SAL_DLLPRIVATE sal_Bool NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight );
 SAL_DLLPRIVATE void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo );
-SAL_DLLPRIVATE id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape );
+SAL_DLLPRIVATE id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, sal_Bool bLandscape );
 SAL_DLLPRIVATE CFStringRef VCLPrintInfo_getVCLPrintInfoDictionaryKey();
 void VCLPrintInfo_installVCLPrintClasses();
 #ifdef __cplusplus

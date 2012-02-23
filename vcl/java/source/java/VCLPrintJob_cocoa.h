@@ -36,19 +36,17 @@
 #ifndef __VCLPRINTJOB_COCOA_H__
 #define __VCLPRINTJOB_COCOA_H__
 
-#include <sal/types.h>
-
-#ifdef __cplusplus
+#ifndef __OBJC__
 typedef void* id;
-#endif
+#endif	// !__OBJC__
 
 #ifdef __cplusplus
 BEGIN_C
 #endif
-SAL_DLLPRIVATE BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
+SAL_DLLPRIVATE sal_Bool NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
 SAL_DLLPRIVATE float NSPrintInfo_scale( id pNSPrintInfo );
 SAL_DLLPRIVATE id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow, CFStringRef aJobName );
-SAL_DLLPRIVATE BOOL NSPrintPanel_finished( id pDialog );
+SAL_DLLPRIVATE sal_Bool NSPrintPanel_finished( id pDialog );
 SAL_DLLPRIVATE id NSPrintPanel_printOperation( id pDialog );
 SAL_DLLPRIVATE void NSPrintPanel_release( id pDialog );
 SAL_DLLPRIVATE id NSPrintPanel_startPage( id pDialog );

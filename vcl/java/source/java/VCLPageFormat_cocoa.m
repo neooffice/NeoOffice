@@ -33,8 +33,11 @@
  *
  ************************************************************************/
 
+#import <sal/types.h>
+
 #import <Cocoa/Cocoa.h>
 #import <objc/objc-class.h>
+
 #import "VCLPageFormat_cocoa.h"
 
 @implementation VCLPrintOperation
@@ -147,7 +150,7 @@
 }
 - (BOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow orientation:(NSPrintingOrientation)nOrientation;
-- (NSPrintingOrientation)orientation;
+- (BOOL)orientation;
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo;
 - (BOOL)result;
 - (void)showPageLayoutDialog:(id)pObject;
@@ -174,9 +177,9 @@
 	return self;
 }
 
-- (NSPrintingOrientation)orientation
+- (BOOL)orientation
 {
-	return mnOrientation;
+	return ( mnOrientation == NSLandscapeOrientation ? YES : NO );
 }
 
 - (void)pageLayoutDidEnd:(NSPageLayout *)pLayout returnCode:(int)nCode contextInfo:(void *)pContextInfo
@@ -224,23 +227,23 @@
 
 @end
 
-BOOL NSPageLayout_finished( id pDialog )
+sal_Bool NSPageLayout_finished( id pDialog )
 {
-	BOOL bRet = YES;
+	sal_Bool bRet = YES;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		bRet = [(ShowPageLayoutDialog *)pDialog finished];
+		bRet = (sal_Bool)[(ShowPageLayoutDialog *)pDialog finished];
 
 	[pPool release];
 
 	return bRet;
 }
 
-BOOL NSPageLayout_result( id pDialog, BOOL *bLandscape )
+sal_Bool NSPageLayout_result( id pDialog, sal_Bool *bLandscape )
 {
-	BOOL bRet = NO;
+	sal_Bool bRet = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -248,7 +251,7 @@ BOOL NSPageLayout_result( id pDialog, BOOL *bLandscape )
 	{
 		bRet = [(ShowPageLayoutDialog *)pDialog result];
 		if ( bLandscape )
-			*bLandscape = [(ShowPageLayoutDialog *)pDialog orientation];
+			*bLandscape = (sal_Bool)[(ShowPageLayoutDialog *)pDialog orientation];
 		[(ShowPageLayoutDialog *)pDialog release];
 	}
 
@@ -320,9 +323,9 @@ void NSPrintInfo_getPrintInfoDimensions( id pNSPrintInfo, float *pWidth, float *
 	[pPool release];
 }
 
-BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
+sal_Bool NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 {
-	BOOL bRet = NO;
+	sal_Bool bRet = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -349,7 +352,7 @@ BOOL NSPrintInfo_setPaperSize( id pNSPrintInfo, long nWidth, long nHeight )
 					double fDiff = pow( (double)aSize.width - nWidth, 2 ) + pow( (double)aSize.height - nHeight, 2 );
 					double fRotatedDiff = pow( (double)aSize.width - nHeight, 2 ) + pow( (double)aSize.height - nWidth, 2 );
 					if ( fDiff > fRotatedDiff )
-						bRet = YES;
+						bRet = sal_True;
 				}
 			}
 
@@ -374,7 +377,7 @@ void NSPrintInfo_setSharedPrintInfo( id pNSPrintInfo )
 	[pPool release];
 }
 
-id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, BOOL bLandscape )
+id NSPrintInfo_showPageLayoutDialog( id pNSPrintInfo, id pNSWindow, sal_Bool bLandscape )
 {
 	ShowPageLayoutDialog *pRet = nil;
 

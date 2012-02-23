@@ -33,8 +33,14 @@
  *
  ************************************************************************/
 
-#include <dlfcn.h>
+#import <dlfcn.h>
+#import <sal/types.h>
+#import <tools/solar.h>
+
+#include "premac.h"
 #import <Cocoa/Cocoa.h>
+#include "postmac.h"
+
 #import "VCLPageFormat_cocoa.h"
 #import "VCLPrintJob_cocoa.h"
 
@@ -44,7 +50,7 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 {
 }
 - (void)drawRect:(NSRect)aRect;
-- (BOOL)knowsPageRange:(NSRangePointer)pRange;
+- (MacOSBOOL)knowsPageRange:(NSRangePointer)pRange;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
 @end
 
@@ -54,9 +60,9 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 {
 }
 
-- (BOOL)knowsPageRange:(NSRangePointer)pRange
+- (MacOSBOOL)knowsPageRange:(NSRangePointer)pRange
 {
-	BOOL bRet = NO;
+	MacOSBOOL bRet = NO;
 
 	if ( pRange )
 	{
@@ -85,17 +91,17 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 
 @interface ShowPrintDialog : NSObject
 {
-	BOOL					mbFinished;
+	MacOSBOOL				mbFinished;
 	NSPrintInfo*			mpInfo;
 	CFStringRef				maJobName;
 	NSPrintOperation*		mpPrintOperation;
 	NSThread*				mpPrintThread;
-	BOOL					mbPrintThreadStarted;
+	MacOSBOOL				mbPrintThreadStarted;
 	NSWindow*				mpWindow;
 }
 - (void)dealloc;
 - (void)endPrintOperation:(id)pObject;
-- (BOOL)finished;
+- (MacOSBOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(CFStringRef)aJobName;
 - (NSPrintOperation *)printOperation;
 - (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo;
@@ -139,7 +145,7 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 		[mpPrintOperation cleanUpOperation];
 }
 
-- (BOOL)finished
+- (MacOSBOOL)finished
 {
 	return mbFinished;
 }
@@ -355,9 +361,9 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 
 @end
 
-BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
+sal_Bool NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 {
-	BOOL bRet = NO;
+	sal_Bool bRet = NO;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -376,7 +382,7 @@ BOOL NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast )
 					*nFirst = [pFirst intValue];
 					*nLast = [pLast intValue];
 					if ( *nFirst > 0 && *nLast >= *nFirst )
-						bRet = YES;
+						bRet = sal_True;
 				}
 			}
 		}
@@ -428,14 +434,14 @@ id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow, CFStringRef aJobN
 	return pRet;
 }
 
-BOOL NSPrintPanel_finished( id pDialog )
+sal_Bool NSPrintPanel_finished( id pDialog )
 {
-	BOOL bRet = YES;
+	sal_Bool bRet = YES;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-		bRet = [(ShowPrintDialog *)pDialog finished];
+		bRet = (sal_Bool)[(ShowPrintDialog *)pDialog finished];
 
 	[pPool release];
 

@@ -730,7 +730,7 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 	{
 		// Ignore any AWT events while the page layout dialog is showing to
 		// emulate a modal dialog
-		BOOL bOldLandscape = ( getOrientation() == ORIENTATION_LANDSCAPE ? TRUE : FALSE );
+		sal_Bool bOldLandscape = ( getOrientation() == ORIENTATION_LANDSCAPE ? sal_True : sal_False );
 		void *pNSPrintInfo = getNativePrinterJob();
 		void *pDialog = NSPrintInfo_showPageLayoutDialog( pNSPrintInfo, pFocusFrame->mpVCLFrame->getNativeWindow(), bOldLandscape );
 
@@ -741,8 +741,8 @@ sal_Bool com_sun_star_vcl_VCLPageFormat::setup()
 		pSalData->mbInNativeModalSheet = false;
 		pSalData->mpNativeModalSheetFrame = NULL;
 
-		BOOL bLandscape = FALSE;
-		out = (sal_Bool)NSPageLayout_result( pDialog, &bLandscape );
+		sal_Bool bLandscape = sal_False;
+		out = NSPageLayout_result( pDialog, &bLandscape );
 		if ( out )
 		{
 			// Always reset the Java orientation before updating to prevent the
@@ -807,7 +807,7 @@ void com_sun_star_vcl_VCLPageFormat::setPaperType( Paper _par0, long _par1, long
 		_par2 = 1224;
 	}
 
-	BOOL bLandscape = NSPrintInfo_setPaperSize( pNSPrintInfo, _par1, _par2 );
+	sal_Bool bLandscape = NSPrintInfo_setPaperSize( pNSPrintInfo, _par1, _par2 );
 
 	updatePageFormat( bLandscape ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT );
 }
