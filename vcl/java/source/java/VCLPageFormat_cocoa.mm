@@ -33,15 +33,15 @@
  *
  ************************************************************************/
 
-#include "premac.h"
-#import <objc/objc-class.h>
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
-#include "postmac.h"
+#import <objc/objc-class.h>
+#include <postmac.h>
 
-#import <sal/types.h>
-#import <tools/solar.h>
+#include <sal/types.h>
+#include <tools/solar.h>
 
-#import "VCLPageFormat_cocoa.h"
+#include "VCLPageFormat_cocoa.h"
 
 @implementation VCLPrintOperation
 

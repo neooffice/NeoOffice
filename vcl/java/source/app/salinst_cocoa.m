@@ -34,7 +34,8 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import "salinst_cocoa.h"
+
+#include "salinst_cocoa.h"
 
 @interface GetModalWindow : NSObject
 {

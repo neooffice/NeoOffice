@@ -34,7 +34,8 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import "VCLGraphics_cocoa.h"
+
+#include "VCLGraphics_cocoa.h"
 
 @interface DrawEPSInRect : NSObject
 {

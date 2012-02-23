@@ -34,8 +34,9 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import "salgdi3_cocoa.h"
-#import "../java/VCLEventQueue_cocoa.h"
+
+#include "salgdi3_cocoa.h"
+#include "../java/VCLEventQueue_cocoa.h"
 
 #ifndef USE_CORETEXT_TEXT_RENDERING
 

@@ -39,13 +39,13 @@
 #import <Carbon/Carbon.h>
 #import <Cocoa/Cocoa.h>
 #import <objc/objc-class.h>
-#import "VCLApplicationDelegate_cocoa.h"
-#import "VCLEventQueue_cocoa.h"
-#import "VCLFont_cocoa.h"
-#import "VCLFrame_cocoa.h"
-#import "VCLGraphics_cocoa.h"
-#import "VCLResponder_cocoa.h"
-#import "../app/salinst_cocoa.h"
+#include "VCLApplicationDelegate_cocoa.h"
+#include "VCLEventQueue_cocoa.h"
+#include "VCLFont_cocoa.h"
+#include "VCLFrame_cocoa.h"
+#include "VCLGraphics_cocoa.h"
+#include "VCLResponder_cocoa.h"
+#include "../app/salinst_cocoa.h"
 
 typedef OSErr Gestalt_Type( OSType selector, long *response );
 typedef OSStatus GetMenuTrackingData_Type( MenuRef aMenu, MenuTrackingData *pData );

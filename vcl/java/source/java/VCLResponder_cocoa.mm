@@ -33,12 +33,14 @@
  *
  ************************************************************************/
 
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
-#import <premac.h>
-#import <vcl/keycod.hxx>
-#import <com/sun/star/awt/Key.hdl>
-#import <postmac.h>
-#import "VCLResponder_cocoa.h"
+#include <postmac.h>
+
+#include <com/sun/star/awt/Key.hdl>
+#include <vcl/keycod.hxx>
+
+#include "VCLResponder_cocoa.h"
 
 using namespace ::com::sun::star::awt;
 

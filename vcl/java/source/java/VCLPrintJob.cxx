@@ -130,7 +130,7 @@ com_sun_star_vcl_VCLPrintJob::~com_sun_star_vcl_VCLPrintJob()
 void com_sun_star_vcl_VCLPrintJob::abortJob()
 {
 #ifdef USE_NATIVE_PRINTING
-	NSPrintPanel_endJob( mpPrintPanel );
+	NSPrintPanel_abortJob( mpPrintPanel );
 #else	// USE_NATIVE_PRINTING
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
@@ -202,6 +202,9 @@ void com_sun_star_vcl_VCLPrintJob::endJob()
 
 void com_sun_star_vcl_VCLPrintJob::endPage()
 {
+#ifdef USE_NATIVE_PRINTING
+	NSPrintPanel_endPage( mpPrintPanel );
+#else	// USE_NATIVE_PRINTING
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -219,6 +222,7 @@ void com_sun_star_vcl_VCLPrintJob::endPage()
 			Application::AcquireSolarMutex( nCount );
 		}
 	}
+#endif	// USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
@@ -366,7 +370,7 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage( Orientati
 {
 	com_sun_star_vcl_VCLGraphics *out = NULL;
 #ifdef USE_NATIVE_PRINTING
-	NSPrintPanel_startPage( mpPrintPanel );
+	out = NSPrintPanel_startPage( mpPrintPanel );
 #else	// USE_NATIVE_PRINTING
 	VCLThreadAttach t;
 	if ( t.pEnv )

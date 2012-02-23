@@ -34,7 +34,8 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import "salgdi_cocoa.h"
+
+#include "salgdi_cocoa.h"
 
 @interface DrawEPSInBitmap : NSObject
 {

@@ -36,12 +36,11 @@
 #include <map>
 #include <jni.h>
 
-#ifndef _OSL_MUTEX_HXX_
-#include <osl/mutex.hxx>
-#endif
-
 #import <Cocoa/Cocoa.h>
-#import "VCLFont_cocoa.h"
+
+#include <osl/mutex.hxx>
+
+#include "VCLFont_cocoa.h"
 
 static ::std::map< CTFontRef, CGFontRef > aFontMap;
 static ::osl::Mutex aFontMutex;

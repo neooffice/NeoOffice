@@ -45,11 +45,11 @@
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
-#include <objc/objc-runtime.h>
+#import <objc/objc-runtime.h>
 #include <postmac.h>
 
 #include "VCLApplicationDelegate_cocoa.h"
-#import "../app/salinst_cocoa.h"
+#include "../app/salinst_cocoa.h"
 
 // Comment out the following line to disable native resume support
 #define USE_NATIVE_RESUME

@@ -34,7 +34,8 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import "salobj_cocoa.h"
+
+#include "salobj_cocoa.h"
 
 static NSString *pNSViewAWTClassName = @"NSViewAWT";
 

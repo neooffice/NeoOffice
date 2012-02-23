@@ -33,20 +33,22 @@
  *
  ************************************************************************/
 
-#import <dlfcn.h>
-#import <com/sun/star/vcl/VCLPrintJob.hxx>
-#import <osl/thread.h>
-#import <sal/types.h>
-#import <tools/solar.h>
+#include <dlfcn.h>
+#include <com/sun/star/vcl/VCLPrintJob.hxx>
+#include <osl/thread.h>
+#include <sal/types.h>
+#include <tools/solar.h>
 
-#include "premac.h"
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
-#include "postmac.h"
+#include <postmac.h>
 
-#import "VCLPageFormat_cocoa.h"
-#import "VCLPrintJob_cocoa.h"
+#include "VCLPageFormat_cocoa.h"
+#include "VCLPrintJob_cocoa.h"
 
 typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
+
+using namespace vcl;
 
 @interface VCLPrintView : NSView
 {
@@ -71,9 +73,10 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 	MacOSBOOL				mbPrintThreadStarted;
 	NSWindow*				mpWindow;
 }
-- (void)abortPrintOperation:(id)pObject;
+- (void)abortJob;
 - (void)dealloc;
-- (void)endPrintOperation:(id)pObject;
+- (void)endJob;
+- (void)endPage;
 - (MacOSBOOL)finished;
 - (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(CFStringRef)aJobName;
 - (NSPrintOperation *)printOperation;
@@ -81,7 +84,7 @@ typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringR
 - (void)runPrintOperation;
 - (void)setJobTitle;
 - (void)showPrintDialog:(id)pObject;
-- (void)startPage:(id)pObject;
+- (void)startPage;
 @end
 
 static void SAL_CALL RunPrintOperation( void *pShowPrintDialog )
@@ -155,12 +158,12 @@ static void SAL_CALL RunPrintOperation( void *pShowPrintDialog )
 
 @implementation ShowPrintDialog
 
-- (void)abortPrintOperation:(id)pObject
+- (void)abortJob
 {
 	if ( mpPrintOperation )
 		[(VCLPrintView *)[mpPrintOperation view] printOperationAborted];
 
-	[self endPrintOperation:pObject];
+	[self endJob];
 }
 
 - (void)dealloc
@@ -186,7 +189,7 @@ static void SAL_CALL RunPrintOperation( void *pShowPrintDialog )
 	[super dealloc];
 }
 
-- (void)endPrintOperation:(id)pObject
+- (void)endJob
 {
 	if ( mpPrintOperation )
 		[(VCLPrintView *)[mpPrintOperation view] printOperationEnded];
@@ -194,15 +197,18 @@ static void SAL_CALL RunPrintOperation( void *pShowPrintDialog )
 	TimeValue aDelay;
 	aDelay.Seconds = 0;
 	aDelay.Nanosec = 50;
+	MacOSBOOL bMainEventLoop = ( CFRunLoopGetCurrent() == CFRunLoopGetMain() );
 	while ( mbPrintThreadStarted && maPrintThread && osl_isThreadRunning( maPrintThread ) )
 	{
 		osl_waitThread( &aDelay );
 
-		CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+		if ( bMainEventLoop )
+			CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
 	}
+}
 
-	if ( mpPrintOperation )
-		[mpPrintOperation cleanUpOperation];
+- (void)endPage
+{
 }
 
 - (MacOSBOOL)finished
@@ -292,7 +298,10 @@ static void SAL_CALL RunPrintOperation( void *pShowPrintDialog )
 	mbPrintThreadStarted = YES;
 
 	if ( mpPrintOperation )
+	{
 		[mpPrintOperation runOperation];
+		[mpPrintOperation cleanUpOperation];
+	}
 }
 
 - (void)setJobTitle
@@ -404,7 +413,7 @@ static void SAL_CALL RunPrintOperation( void *pShowPrintDialog )
 	}
 }
 
-- (void)startPage:(id)pObject
+- (void)startPage
 {
 	if ( !mbPrintThreadStarted && !maPrintThread )
 	{
@@ -495,10 +504,7 @@ void NSPrintPanel_abortJob( id pDialog )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowPrintDialog *)pDialog performSelectorOnMainThread:@selector(abortPrintOperation:) withObject:pDialog waitUntilDone:YES modes:pModes];
-	}
+		[(ShowPrintDialog *)pDialog abortJob];
 
 	[pPool release];
 }
@@ -508,10 +514,17 @@ void NSPrintPanel_endJob( id pDialog )
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowPrintDialog *)pDialog performSelectorOnMainThread:@selector(endPrintOperation:) withObject:pDialog waitUntilDone:YES modes:pModes];
-	}
+		[(ShowPrintDialog *)pDialog endJob];
+
+	[pPool release];
+}
+
+void NSPrintPanel_endPage( id pDialog )
+{
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( pDialog )
+		[(ShowPrintDialog *)pDialog endPage];
 
 	[pPool release];
 }
@@ -550,25 +563,21 @@ void NSPrintPanel_release( id pDialog )
 
 	if ( pDialog )
 	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowPrintDialog *)pDialog performSelectorOnMainThread:@selector(endPrintOperation:) withObject:pDialog waitUntilDone:YES modes:pModes];
+		[(ShowPrintDialog *)pDialog abortJob];
 		[pDialog release];
 	}
 
 	[pPool release];
 }
 
-id NSPrintPanel_startPage( id pDialog )
+com_sun_star_vcl_VCLGraphics *NSPrintPanel_startPage( id pDialog )
 {
-	id pRet = nil;
+	com_sun_star_vcl_VCLGraphics *pRet = NULL;
 
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
 	if ( pDialog )
-	{
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[(ShowPrintDialog *)pDialog performSelectorOnMainThread:@selector(startPage:) withObject:pDialog waitUntilDone:YES modes:pModes];
-	}
+		[(ShowPrintDialog *)pDialog startPage];
 
 	[pPool release];
 

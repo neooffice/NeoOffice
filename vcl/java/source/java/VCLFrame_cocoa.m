@@ -34,8 +34,9 @@
  ************************************************************************/
 
 #import <Cocoa/Cocoa.h>
-#import "VCLEventQueue_cocoa.h"
-#import "VCLFrame_cocoa.h"
+
+#include "VCLEventQueue_cocoa.h"
+#include "VCLFrame_cocoa.h"
 
 #ifndef NSFullScreenWindowMask
 #define NSFullScreenWindowMask ( 1 << 14 )
