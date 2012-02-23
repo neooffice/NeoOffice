@@ -38,6 +38,7 @@
 
 #include <java/lang/Object.hxx>
 #include <sal/types.h>
+#include <osl/mutex.h>
 #include <vcl/jobset.h>
 
 // Uncomment the following line to use native printing APIs
@@ -51,6 +52,7 @@ class com_sun_star_vcl_VCLPageFormat;
 class SAL_DLLPRIVATE com_sun_star_vcl_VCLPrintJob : public java_lang_Object
 {
 #ifdef USE_NATIVE_PRINTING
+	::osl::Mutex		maMutex;
 	void*				mpPrintPanel;
 #endif	// USE_NATIVE_PRINTING
 

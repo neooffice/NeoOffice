@@ -33,43 +33,20 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_CXX
-
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
-#endif
-#ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <vcl/window.hxx>
-#endif
-#ifndef _STRING_HXX
 #include <tools/string.hxx>
-#endif
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
 
 #include "VCLPrintJob_cocoa.h"
 
 using namespace vcl;
-using namespace vos;
 
 // ============================================================================
 
@@ -152,6 +129,9 @@ com_sun_star_vcl_VCLPrintJob::~com_sun_star_vcl_VCLPrintJob()
 
 void com_sun_star_vcl_VCLPrintJob::abortJob()
 {
+#ifdef USE_NATIVE_PRINTING
+	NSPrintPanel_endJob( mpPrintPanel );
+#else	// USE_NATIVE_PRINTING
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -169,6 +149,7 @@ void com_sun_star_vcl_VCLPrintJob::abortJob()
 			Application::AcquireSolarMutex( nCount );
 		}
 	}
+#endif	// USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------
@@ -194,6 +175,9 @@ void com_sun_star_vcl_VCLPrintJob::dispose()
 
 void com_sun_star_vcl_VCLPrintJob::endJob()
 {
+#ifdef USE_NATIVE_PRINTING
+	NSPrintPanel_endJob( mpPrintPanel );
+#else	// USE_NATIVE_PRINTING
 	static jmethodID mID = NULL;
 	VCLThreadAttach t;
 	if ( t.pEnv )
@@ -211,6 +195,7 @@ void com_sun_star_vcl_VCLPrintJob::endJob()
 			Application::AcquireSolarMutex( nCount );
 		}
 	}
+#endif	// USE_NATIVE_PRINTING
 }
 
 // ----------------------------------------------------------------------------

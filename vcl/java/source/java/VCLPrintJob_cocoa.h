@@ -46,6 +46,8 @@ BEGIN_C
 SAL_DLLPRIVATE sal_Bool NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
 SAL_DLLPRIVATE float NSPrintInfo_scale( id pNSPrintInfo );
 SAL_DLLPRIVATE id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow, CFStringRef aJobName );
+SAL_DLLPRIVATE void NSPrintPanel_abortJob( id pDialog );
+SAL_DLLPRIVATE void NSPrintPanel_endJob( id pDialog );
 SAL_DLLPRIVATE sal_Bool NSPrintPanel_finished( id pDialog );
 SAL_DLLPRIVATE id NSPrintPanel_printOperation( id pDialog );
 SAL_DLLPRIVATE void NSPrintPanel_release( id pDialog );

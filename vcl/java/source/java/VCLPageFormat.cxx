@@ -33,35 +33,15 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_CXX
-
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
-#include <vcl/window.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_JAVA_LANG_CLASS_HXX
 #include <java/lang/Class.hxx>
-#endif
-#ifndef _VOS_MODULE_HXX_
 #include <vos/module.hxx>
-#endif
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
 
 #include "VCLPageFormat_cocoa.h"
 #include "VCLPrintJob_cocoa.h"
