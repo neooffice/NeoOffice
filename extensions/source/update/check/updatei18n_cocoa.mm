@@ -31,12 +31,14 @@
  *
  *************************************************************************/
 
-#import "updatei18n_cocoa.hxx"
-#import <map>
-#import <sfx2/app.hxx>
-#import <tools/rcid.h>
-#import <unotools/localedatawrapper.hxx>
-#import <vcl/svapp.hxx>
+#include <map>
+
+#include <sfx2/app.hxx>
+#include <tools/rcid.h>
+#include <unotools/localedatawrapper.hxx>
+#include <vcl/svapp.hxx>
+
+#include "updatei18n_cocoa.hxx"
 
 static ::std::map< ::rtl::OUString, NSDictionary* > aLocalizationMap;
 static NSDictionary *pDefaultLocaleDict = nil;

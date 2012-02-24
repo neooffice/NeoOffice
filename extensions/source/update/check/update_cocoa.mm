@@ -31,10 +31,10 @@
  *
  *************************************************************************/
 
-#import "update_cocoa.hxx"
-#import "update_java.hxx"
-#import "updatei18n_cocoa.hxx"
-#import "updatewebview_cocoa.h"
+#include "update_cocoa.hxx"
+#include "update_java.hxx"
+#include "updatei18n_cocoa.hxx"
+#include "updatewebview_cocoa.h"
 
 using namespace rtl;
 

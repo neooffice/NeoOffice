@@ -36,11 +36,12 @@
 
 #ifdef __OBJC__
 
-#import <rtl/ustring.hxx>
+#include <rtl/ustring.hxx>
+#include <tools/solar.h>
 
-#include "premac.h"
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
-#include "postmac.h"
+#include <postmac.h>
 
 extern const NSString *kUpdateLastURLPref;
 extern const NSString *kUpdateXPosPref;

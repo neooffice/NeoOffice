@@ -34,14 +34,15 @@
 #ifndef _UPDATEI18N_COCOA_HXX
 #define _UPDATEI18N_COCOA_HXX
 
-#import <com/sun/star/lang/Locale.hpp>
-#import <sal/types.h>
-#import "updatehdl.hrc"
-#import "../../../../vcl/inc/vcl/svids.hrc"
-
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
 #include "postmac.h"
+
+#include <com/sun/star/lang/Locale.hpp>
+#include <sal/types.h>
+
+#include "updatehdl.hrc"
+#include "../../../../vcl/inc/vcl/svids.hrc"
 
 #define UPDATEBACK "back"
 #define UPDATEDOWNLOADCANCELED "download.canceled"

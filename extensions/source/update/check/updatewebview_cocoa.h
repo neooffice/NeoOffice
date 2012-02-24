@@ -31,20 +31,10 @@
  *
  *************************************************************************/
 
-#include "premac.h"
+#include <premac.h>
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
-#include "postmac.h"
-
-// Redefine Cocoa YES and NO defines types for convenience
-#ifdef YES
-#undef YES
-#define YES (MacOSBOOL)1
-#endif
-#ifdef NO
-#undef NO
-#define NO (MacOSBOOL)0
-#endif
+#include <postmac.h>
 
 #define kUpdateDefaultBrowserWidth	800
 #define kUpdateDefaultBrowserHeight	620
