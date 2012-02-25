@@ -36,20 +36,22 @@
 #ifndef _SV_SALPRN_H
 #define _SV_SALPRN_H
 
-#ifndef _SV_SALPRN_HXX
-#include <vcl/salprn.hxx>
-#endif
-#ifndef _SV_SV_H
-#include <vcl/sv.h>
-#endif
-#ifndef _SV_PRNTYPES_HXX
+#include <list>
+
+#include <osl/mutex.hxx>
 #include <vcl/prntypes.hxx>
-#endif
+#include <vcl/salprn.hxx>
+#include <vcl/sv.h>
+
+// Uncomment the following line to use native printing APIs
+// #define USE_NATIVE_PRINTING
 
 namespace vcl
 {   
 class com_sun_star_vcl_VCLPageFormat;
+#ifndef USE_NATIVE_PRINTING
 class com_sun_star_vcl_VCLPrintJob;
+#endif	// USE_NATIVE_PRINTING
 }
 
 class JavaSalGraphics;
@@ -60,12 +62,12 @@ class JavaSalGraphics;
 
 class JavaSalInfoPrinter : public SalInfoPrinter
 {
-public:
 	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 
-							JavaSalInfoPrinter();
+public:
+							JavaSalInfoPrinter( ImplJobSetup* pSetupData );
 	virtual					~JavaSalInfoPrinter();
 
 	virtual SalGraphics*	GetGraphics();
@@ -80,6 +82,7 @@ public:
 	virtual void			InitPaperFormats( const ImplJobSetup* pSetupData );
 	virtual int				GetLandscapeAngle( const ImplJobSetup* pSetupData );
 	virtual DuplexMode		GetDuplexMode( const ImplJobSetup* pSetupData );
+	virtual ::vcl::com_sun_star_vcl_VCLPageFormat*	GetVCLPageFormat() { return mpVCLPageFormat; }
 };
 
 // ------------------
@@ -88,18 +91,24 @@ public:
 
 class JavaSalPrinter : public SalPrinter
 {
-public:
 	BOOL					mbStarted;
 	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
 	XubString				maJobName;
-	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
-	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;
+	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
+#ifdef USE_NATIVE_PRINTING
+	::std::list< JavaSalGraphics* >	maGraphicsForNSPrintOperationList;
+	::std::list< JavaSalGraphics* >	maGraphicsForJavaSalPrinterList;
+	::osl::Mutex			maMutex;
+#else	// USE_NATIVE_PRINTING
+	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
+#endif	// !USE_NATIVE_PRINTING
 
-							JavaSalPrinter();
+public:
+							JavaSalPrinter( const ::vcl::com_sun_star_vcl_VCLPageFormat *pVCLPageFormat );
 	virtual					~JavaSalPrinter();
 
 	virtual BOOL			StartJob( const XubString* pFileName, const XubString& rJobName, const XubString& rAppName, ULONG nCopies, BOOL bCollate, ImplJobSetup* pSetupData, BOOL bFirstPass );

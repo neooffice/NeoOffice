@@ -36,8 +36,6 @@
 #ifndef __VCLPRINTJOB_COCOA_H__
 #define __VCLPRINTJOB_COCOA_H__
 
-#include <com/sun/star/vcl/VCLGraphics.hxx>
-
 #ifndef __OBJC__
 typedef void* id;
 #endif	// !__OBJC__
@@ -48,13 +46,8 @@ BEGIN_C
 SAL_DLLPRIVATE sal_Bool NSPrintInfo_pageRange( id pNSPrintInfo, int *nFirst, int *nLast );
 SAL_DLLPRIVATE float NSPrintInfo_scale( id pNSPrintInfo );
 SAL_DLLPRIVATE id NSPrintInfo_showPrintDialog( id pNSPrintInfo, id pNSWindow, CFStringRef aJobName );
-SAL_DLLPRIVATE void NSPrintPanel_abortJob( id pDialog );
-SAL_DLLPRIVATE void NSPrintPanel_endJob( id pDialog );
-SAL_DLLPRIVATE void NSPrintPanel_endPage( id pDialog );
 SAL_DLLPRIVATE sal_Bool NSPrintPanel_finished( id pDialog );
-SAL_DLLPRIVATE id NSPrintPanel_printOperation( id pDialog );
-SAL_DLLPRIVATE void NSPrintPanel_release( id pDialog );
-SAL_DLLPRIVATE ::vcl::com_sun_star_vcl_VCLGraphics *NSPrintPanel_startPage( id pDialog );
+SAL_DLLPRIVATE sal_Bool NSPrintPanel_result( id pDialog );
 #ifdef __cplusplus
 END_C
 #endif

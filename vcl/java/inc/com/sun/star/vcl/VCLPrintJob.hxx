@@ -38,12 +38,7 @@
 
 #include <list>
 #include <java/lang/Object.hxx>
-#include <sal/types.h>
-#include <osl/mutex.h>
 #include <vcl/jobset.h>
-
-// Uncomment the following line to use native printing APIs
-// #define USE_NATIVE_PRINTING
 
 namespace vcl {
 
@@ -52,24 +47,15 @@ class com_sun_star_vcl_VCLPageFormat;
 
 class SAL_DLLPRIVATE com_sun_star_vcl_VCLPrintJob : public java_lang_Object
 {
-#ifdef USE_NATIVE_PRINTING
-	::std::list< com_sun_star_vcl_VCLGraphics* > maGraphicsForNativePrintJobList;
-	::std::list< com_sun_star_vcl_VCLGraphics* > maGraphicsForVCLPrintJobList;
-	::osl::Mutex		maMutex;
-	void*				mpPrintPanel;
-#endif	// USE_NATIVE_PRINTING
-
 protected:
 	static jclass		theClass;
 
 public:
 	static jclass		getMyClass();
 
-#ifndef USE_NATIVE_PRINTING
 						com_sun_star_vcl_VCLPrintJob( jobject myObj ) : java_lang_Object( myObj ) {}
-#endif	// !USE_NATIVE_PRINTING
 						com_sun_star_vcl_VCLPrintJob();
-	virtual				~com_sun_star_vcl_VCLPrintJob();
+	virtual				~com_sun_star_vcl_VCLPrintJob() {}
 
 	void				abortJob();
 	void				dispose();

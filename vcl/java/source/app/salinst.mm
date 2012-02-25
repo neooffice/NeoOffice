@@ -851,9 +851,6 @@ void JavaSalInstance::DeletePrinterQueueInfo( SalPrinterQueueInfo* pInfo )
 SalInfoPrinter* JavaSalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueInfo,
                                                 ImplJobSetup* pSetupData )
 {
-	// Create a dummy printer configuration for our dummy printer
-	JavaSalInfoPrinter *pPrinter = new JavaSalInfoPrinter();
-
 	// Populate data
 	pSetupData->mnSystem = JOBSETUP_SYSTEM_JAVA;
 	pSetupData->maPrinterName = pQueueInfo->maPrinterName;
@@ -867,13 +864,8 @@ SalInfoPrinter* JavaSalInstance::CreateInfoPrinter( SalPrinterQueueInfo* pQueueI
 		pSetupData->mnDriverDataLen = 0;
 	}
 
-	// Create a new page format instance
-	pPrinter->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
-
-	// Update values
-	pPrinter->SetData( 0, pSetupData );
-
-	return pPrinter;
+	// Create a dummy printer configuration for our dummy printer
+	return new JavaSalInfoPrinter( pSetupData );
 }
 
 // -----------------------------------------------------------------------
@@ -910,15 +902,13 @@ XubString JavaSalInstance::GetDefaultPrinter()
 
 SalPrinter* JavaSalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
-	JavaSalPrinter *pPrinter = new JavaSalPrinter();
-
+	const com_sun_star_vcl_VCLPageFormat *pVCLPageFormat = NULL;
 	JavaSalInfoPrinter *pJavaInfoPrinter = (JavaSalInfoPrinter *)pInfoPrinter;
-	if ( pJavaInfoPrinter && pJavaInfoPrinter->mpVCLPageFormat )
-		pPrinter->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pJavaInfoPrinter->mpVCLPageFormat->getJavaObject() );
+	if ( pJavaInfoPrinter )
+		pVCLPageFormat = pJavaInfoPrinter->GetVCLPageFormat();
 	else
-		pPrinter->mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
-
-	return pPrinter;
+		pVCLPageFormat = NULL;
+	return new JavaSalPrinter( pVCLPageFormat );
 }
 
 // -----------------------------------------------------------------------

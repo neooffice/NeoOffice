@@ -48,11 +48,12 @@ using namespace vcl;
 
 // =======================================================================
 
-JavaSalInfoPrinter::JavaSalInfoPrinter()
+JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
+	mpGraphics( new JavaSalGraphics() ),
+	mbGraphics( FALSE ),
+	mpVCLPageFormat( new com_sun_star_vcl_VCLPageFormat() )
 {
-	mpGraphics = new JavaSalGraphics();
-	mbGraphics = FALSE;
-	mpVCLPageFormat = NULL;
+	SetData( 0, pSetupData );
 }
 
 // -----------------------------------------------------------------------
@@ -263,16 +264,22 @@ DuplexMode JavaSalInfoPrinter::GetDuplexMode( const ImplJobSetup* pJobSetup )
 
 // =======================================================================
 
-JavaSalPrinter::JavaSalPrinter()
+JavaSalPrinter::JavaSalPrinter( const com_sun_star_vcl_VCLPageFormat *pVCLPageFormat ) :
+	mbStarted( FALSE ),
+	mpGraphics( NULL ),
+	mbGraphics( FALSE ),
+	mePaperFormat( PAPER_USER ),
+	mnPaperWidth( 0 ),
+	mnPaperHeight( 0 ),
+	mpVCLPageFormat( NULL )
+#ifndef USE_NATIVE_PRINTING
+	, mpVCLPrintJob( new com_sun_star_vcl_VCLPrintJob() )
+#endif	// !USE_NATIVE_PRINTING
 {
-	mbStarted = FALSE;
-	mpGraphics = NULL;
-	mbGraphics = FALSE;
-	mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
-	mpVCLPageFormat = NULL;
-	mePaperFormat = PAPER_USER;
-	mnPaperWidth = 0;
-	mnPaperHeight = 0;
+	if ( pVCLPageFormat )
+		mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pVCLPageFormat->getJavaObject() );
+	else
+		mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat();
 }
 
 // -----------------------------------------------------------------------
@@ -285,11 +292,15 @@ JavaSalPrinter::~JavaSalPrinter()
 		delete mpGraphics;
 	if ( mpVCLPageFormat )
 		delete mpVCLPageFormat;
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::~JavaSalPrinter not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 	if ( mpVCLPrintJob )
 	{
 		mpVCLPrintJob->dispose();
 		delete mpVCLPrintJob;
 	}
+#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -322,7 +333,11 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
 	maJobName = XubString( rJobName );
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::StartJob not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), fScaleFactor, !bFirstPass ? sal_True : mbStarted );
+#endif	// USE_NATIVE_PRINTING
 
 	if ( mbStarted )
 		GetSalData()->mpEventQueue->setShutdownDisabled( sal_True );
@@ -334,7 +349,11 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 BOOL JavaSalPrinter::EndJob()
 {
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::EndPage not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 	mpVCLPrintJob->endJob();
+#endif	// USE_NATIVE_PRINTING
 	GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
 	mbStarted = FALSE;
 	return TRUE;
@@ -344,7 +363,11 @@ BOOL JavaSalPrinter::EndJob()
 
 BOOL JavaSalPrinter::AbortJob()
 {
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::StartPage not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 	mpVCLPrintJob->abortJob();
+#endif	// USE_NATIVE_PRINTING
 	return TRUE;
 }
 
@@ -379,19 +402,33 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 		if ( bEndJob )
 		{
 			EndJob();
+#ifdef USE_NATIVE_PRINTING
+			fprintf( stderr, "JavaSalPrinter::StartPage not implemented\n" );
+			return NULL;
+#else	// USE_NATIVE_PRINTING
 			delete mpVCLPrintJob;
 			mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
 			if ( !StartJob( NULL, maJobName, XubString(), 1, TRUE, pSetupData, FALSE ) )
 				return NULL;
+#endif	// USE_NATIVE_PRINTING
 		}
 	}
 
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::StartPage not implemented\n" );
+	return NULL;
+#else	// USE_NATIVE_PRINTING
 	com_sun_star_vcl_VCLGraphics *pVCLGraphics = mpVCLPrintJob->startPage( pSetupData->meOrientation );
 	if ( !pVCLGraphics )
 		return NULL;
+#endif	// USE_NATIVE_PRINTING
 
 	mpGraphics = new JavaSalGraphics();
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::StartPage not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 	mpGraphics->mpVCLGraphics = pVCLGraphics;
+#endif	// USE_NATIVE_PRINTING
 	mpGraphics->mpPrinter = this;
 	mbGraphics = TRUE;
 
@@ -402,13 +439,19 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 
 BOOL JavaSalPrinter::EndPage()
 {
-	if ( mpGraphics && mpGraphics->mpVCLGraphics )
-		delete mpGraphics->mpVCLGraphics;
 	if ( mpGraphics )
+	{
+		if ( mpGraphics->mpVCLGraphics )
+			delete mpGraphics->mpVCLGraphics;
 		delete mpGraphics;
+	}
 	mpGraphics = NULL;
 	mbGraphics = FALSE;
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::EndPage not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 	mpVCLPrintJob->endPage();
+#endif	// USE_NATIVE_PRINTING
 	return TRUE;
 }
 
@@ -416,15 +459,25 @@ BOOL JavaSalPrinter::EndPage()
 
 ULONG JavaSalPrinter::GetErrorCode()
 {
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::GetErrorCode not implemented\n" );
+	return SAL_PRINTER_ERROR_ABORT;
+#else	// USE_NATIVE_PRINTING
 	if ( !mbStarted || mpVCLPrintJob->isFinished() )
 		return SAL_PRINTER_ERROR_ABORT;
 	else
 		return 0;
+#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 XubString JavaSalPrinter::GetPageRange()
 {
+#ifdef USE_NATIVE_PRINTING
+	fprintf( stderr, "JavaSalPrinter::GetPageRange not implemented\n" );
+	return XubString();
+#else	// USE_NATIVE_PRINTING
 	return mpVCLPrintJob->getPageRange( mpVCLPageFormat );
+#endif	// USE_NATIVE_PRINTING
 }
