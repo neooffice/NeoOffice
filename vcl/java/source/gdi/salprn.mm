@@ -33,29 +33,13 @@
  *
  ************************************************************************/
 
-#define _SV_SALPRN_CXX
-
-#ifndef _SV_SALPRN_H
 #include <salprn.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALPTYPE_HXX
 #include <vcl/salptype.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPAGEFORMAT_HXX
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
-#endif
 
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
 
