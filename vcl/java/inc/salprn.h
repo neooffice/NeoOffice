@@ -91,7 +91,6 @@ public:
 
 class JavaSalPrinter : public SalPrinter
 {
-	BOOL					mbStarted;
 	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
 	XubString				maJobName;
@@ -100,10 +99,13 @@ class JavaSalPrinter : public SalPrinter
 	long					mnPaperHeight;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 #ifdef USE_NATIVE_PRINTING
-	::std::list< JavaSalGraphics* >	maGraphicsForNSPrintOperationList;
-	::std::list< JavaSalGraphics* >	maGraphicsForJavaSalPrinterList;
+	::std::list< JavaSalGraphics* >	maGraphicsForPrintOperationList;
+	::std::list< JavaSalGraphics* >	maGraphicsForSalPrinterList;
 	::osl::Mutex			maMutex;
+	id						mpPrintOperation;
+	oslThread				maPrintThread;
 #else	// USE_NATIVE_PRINTING
+	BOOL					mbStarted;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 #endif	// !USE_NATIVE_PRINTING
 

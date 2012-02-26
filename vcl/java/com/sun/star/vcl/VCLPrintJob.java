@@ -200,8 +200,6 @@ public final class VCLPrintJob implements Pageable, Printable, Runnable {
 		if (pageFormat != null)
 			pageFormat.setEditable(true);
 
-		queue.setShutdownDisabled(false);
-
 	}
 
 	/**
@@ -369,8 +367,6 @@ public final class VCLPrintJob implements Pageable, Printable, Runnable {
 			job = pageFormat.getPrinterJob();
 			jobStarted = true;
 		}
-
-		queue.setShutdownDisabled(jobStarted);
 
 		return jobStarted;
 

@@ -33,18 +33,267 @@
  *
  ************************************************************************/
 
+#include <dlfcn.h>
+
 #include <salprn.h>
 #include <saldata.hxx>
+#include <salframe.h>
 #include <salgdi.h>
+#include <sfx2/sfx.hrc>
+#include <tools/rcid.h>
+#include <vcl/jobset.h>
 #include <vcl/salptype.hxx>
+#include <vcl/svapp.hxx>
+#include <vcl/window.hxx>
+#include <com/sun/star/vcl/VCLFrame.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <com/sun/star/vcl/VCLPageFormat.hxx>
+#ifndef USE_NATIVE_PRINTING
 #include <com/sun/star/vcl/VCLPrintJob.hxx>
+#endif	// !USE_NATIVE_PRINTING
+
+#ifdef USE_NATIVE_PRINTING
+
+#include <premac.h>
+#import <Cocoa/Cocoa.h>
+#include <postmac.h>
+
+typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
+
+#endif	// USE_NATIVE_PRINTING
 
 static rtl::OUString aPageScalingFactorKey( RTL_CONSTASCII_USTRINGPARAM( "PAGE_SCALING_FACTOR" ) );
+static ResMgr *pSfxResMgr = NULL;
 
 using namespace rtl;
 using namespace vcl;
+
+static XubString GetSfxResString( int nId )
+{
+	if ( !pSfxResMgr )
+	{
+		::com::sun::star::lang::Locale aLocale = Application::GetSettings().GetUILocale();
+        pSfxResMgr = ResMgr::SearchCreateResMgr( "sfx", aLocale );
+		if ( !pSfxResMgr )
+			return OUString();
+	}
+
+	ResId aResId( nId, *pSfxResMgr );
+	aResId.SetRT( RSC_STRING );
+	if ( !pSfxResMgr->IsAvailable( aResId ) )
+		return OUString();
+
+	return XubString( ResId( nId, *pSfxResMgr ) );
+}
+
+#ifdef USE_NATIVE_PRINTING
+
+@interface JavaSalPrinterShowPrintDialog : NSObject
+{
+	MacOSBOOL				mbFinished;
+	NSPrintInfo*			mpInfo;
+	NSString*				mpJobName;
+	NSPrintOperation*		mpPrintOperation;
+	NSWindow*				mpWindow;
+}
++ (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
+- (void)dealloc;
+- (MacOSBOOL)finished;
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName;
+- (NSPrintOperation *)printOperation;
+- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo;
+- (void)setJobTitle;
+- (void)showPrintDialog:(id)pObject;
+@end
+
+@implementation JavaSalPrinterShowPrintDialog
+
++ (id)createWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName
+{
+	JavaSalPrinterShowPrintDialog *pRet = [[JavaSalPrinterShowPrintDialog alloc] initWithPrintInfo:pInfo window:pWindow jobName:pJobName];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (void)dealloc
+{
+	if ( mpInfo )
+		[mpInfo release];
+
+	if ( mpJobName )
+		[mpJobName release];
+
+	if ( mpPrintOperation )
+		[mpPrintOperation release];
+
+	if ( mpWindow )
+		[mpWindow release];
+
+	[super dealloc];
+}
+
+- (MacOSBOOL)finished
+{
+	return mbFinished;
+}
+
+- (id)initWithPrintInfo:(NSPrintInfo *)pInfo window:(NSWindow *)pWindow jobName:(NSString *)pJobName
+{
+	[super init];
+
+	mbFinished = NO;
+	mpInfo = pInfo;
+	if ( mpInfo )
+		[mpInfo retain];
+	mpJobName = pJobName;
+	if ( mpJobName )
+		[mpJobName retain];
+	mpPrintOperation = nil;
+	mpWindow = pWindow;
+	if ( mpWindow )
+		[mpWindow retain];
+
+	return self;
+}
+
+- (NSPrintOperation *)printOperation
+{
+	return mpPrintOperation;
+}
+
+- (void)printPanelDidEnd:(NSPrintPanel *)pPanel returnCode:(NSInteger)nCode contextInfo:(void *)pContextInfo
+{
+	mbFinished = YES;
+
+	if ( !mpPrintOperation && nCode == NSOKButton )
+	{
+		NSView *pView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
+		if ( pView )
+		{
+			[pView autorelease];
+
+			mpPrintOperation = [NSPrintOperation printOperationWithView:pView printInfo:mpInfo];
+			if ( mpPrintOperation )
+			{
+				[mpPrintOperation retain];
+				[mpPrintOperation setJobTitle:(NSString *)mpJobName];
+				[mpPrintOperation setShowsPrintPanel:NO];
+				[mpPrintOperation setShowsProgressPanel:NO];
+			}
+		}
+	}
+}
+
+- (void)setJobTitle
+{
+	// Also set the job name via the PMPrintSettings so that the Save As
+	// dialog gets the job name
+	void *pLib = dlopen( NULL, RTLD_LAZY | RTLD_LOCAL );
+	if ( pLib )
+	{
+		PMSetJobNameCFString_Type *pPMSetJobNameCFString = (PMSetJobNameCFString_Type *)dlsym( pLib, "PMSetJobNameCFString" );
+		if ( pPMSetJobNameCFString )
+		{
+			PMPrintSettings aSettings = (PMPrintSettings)[mpInfo PMPrintSettings];
+			if ( aSettings )
+				pPMSetJobNameCFString( aSettings, (CFStringRef)mpJobName );
+		}
+
+		dlclose( pLib );
+	}
+}
+
+- (void)showPrintDialog:(id)pObject
+{
+	if ( mbFinished )
+		return;
+
+	// Set job title
+	[self setJobTitle];
+
+	NSPrintPanel *pPanel = [NSPrintPanel printPanel];
+	if ( pPanel )
+	{
+		// Fix bug 1548 by setting to print all pages
+		NSMutableDictionary *pDictionary = [mpInfo dictionary];
+		if ( pDictionary )
+		{
+			[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintAllPages];
+			[pDictionary setObject:[NSNumber numberWithBool:YES] forKey:NSPrintMustCollate];
+			[pDictionary removeObjectForKey:NSPrintCopies];
+			[pDictionary removeObjectForKey:NSPrintFirstPage];
+			[pDictionary removeObjectForKey:NSPrintLastPage];
+
+			// Fix bug 2030 by resetting the layout
+			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesAcross"];
+			[pDictionary setObject:[NSNumber numberWithUnsignedInt:1] forKey:@"NSPagesDown"];
+		}
+
+		NSPrinter *pPrinter = [NSPrintInfo defaultPrinter];
+		if ( pPrinter )
+			[mpInfo setPrinter:pPrinter];
+
+		// Fix bug 3614 by displaying a modal print dialog if there is no
+		// window to attach a sheet to
+		if ( !mpWindow )
+		{
+			NSView *pView = [[NSView alloc] initWithFrame:NSMakeRect(0, 0, 1, 1)];
+			if ( pView )
+			{
+				[pView autorelease];
+
+				NSPrintOperation *pOperation = [NSPrintOperation printOperationWithView:pView printInfo:mpInfo];
+				if ( pOperation )
+				{
+					[pOperation setJobTitle:(NSString *)mpJobName];
+					[pOperation setShowsPrintPanel:NO];
+					[pOperation setShowsProgressPanel:NO];
+
+					NSPrintOperation *pOldOperation = [NSPrintOperation currentOperation];
+					[NSPrintOperation setCurrentOperation:pOperation];
+
+					NSInteger nButton = [pPanel runModal];
+					if ( nButton == NSOKButton )
+					{
+						// Copy any dictionary changes
+						NSPrintInfo *pInfo = [pOperation printInfo];
+						if ( pInfo && pInfo != mpInfo )
+						{
+							NSMutableDictionary *pSrcDict = [pInfo dictionary];
+							NSMutableDictionary *pDestDict = [mpInfo dictionary];
+							if ( pSrcDict && pDestDict )
+							{
+								NSEnumerator *pSrcKeys = [pSrcDict keyEnumerator];
+								if ( pSrcKeys )
+								{
+									id pKey;
+									while ( ( pKey = [pSrcKeys nextObject] ) )
+									{
+										id pValue = [pSrcDict objectForKey:pKey];
+										if ( pValue )
+											[pDestDict setObject:pValue forKey:pKey];
+									}
+								}
+							}
+						}
+					}
+
+					[self printPanelDidEnd:pPanel returnCode:nButton contextInfo:nil];
+					[pOperation cleanUpOperation];
+					[NSPrintOperation setCurrentOperation:pOldOperation];
+				}
+			}
+		}
+		else
+		{
+			[pPanel beginSheetWithPrintInfo:mpInfo modalForWindow:mpWindow delegate:self didEndSelector:@selector(printPanelDidEnd:returnCode:contextInfo:) contextInfo:nil];
+		}
+	}
+}
+
+@end
+
+#endif	// USE_NATIVE_PRINTING
 
 // =======================================================================
 
@@ -265,16 +514,19 @@ DuplexMode JavaSalInfoPrinter::GetDuplexMode( const ImplJobSetup* pJobSetup )
 // =======================================================================
 
 JavaSalPrinter::JavaSalPrinter( const com_sun_star_vcl_VCLPageFormat *pVCLPageFormat ) :
-	mbStarted( FALSE ),
 	mpGraphics( NULL ),
 	mbGraphics( FALSE ),
 	mePaperFormat( PAPER_USER ),
 	mnPaperWidth( 0 ),
 	mnPaperHeight( 0 ),
-	mpVCLPageFormat( NULL )
-#ifndef USE_NATIVE_PRINTING
-	, mpVCLPrintJob( new com_sun_star_vcl_VCLPrintJob() )
-#endif	// !USE_NATIVE_PRINTING
+	mpVCLPageFormat( NULL ),
+#ifdef USE_NATIVE_PRINTING
+	mpPrintOperation( nil ),
+	maPrintThread( NULL )
+#else	// USE_NATIVE_PRINTING
+	mbStarted( FALSE ),
+	mpVCLPrintJob( new com_sun_star_vcl_VCLPrintJob() )
+#endif	// USE_NATIVE_PRINTING
 {
 	if ( pVCLPageFormat )
 		mpVCLPageFormat = new com_sun_star_vcl_VCLPageFormat( pVCLPageFormat->getJavaObject() );
@@ -286,14 +538,18 @@ JavaSalPrinter::JavaSalPrinter( const com_sun_star_vcl_VCLPageFormat *pVCLPageFo
 
 JavaSalPrinter::~JavaSalPrinter()
 {
-	if ( mbStarted )
-		GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
+	// Make sure that job has completely finished before deletion
+	EndJob();
+
 	if ( mpGraphics )
 		delete mpGraphics;
 	if ( mpVCLPageFormat )
 		delete mpVCLPageFormat;
 #ifdef USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalPrinter::~JavaSalPrinter not implemented\n" );
+	if ( mpPrintOperation )
+		[mpPrintOperation release];
+	if ( maPrintThread )
+		osl_destroyThread( maPrintThread );
 #else	// USE_NATIVE_PRINTING
 	if ( mpVCLPrintJob )
 	{
@@ -332,17 +588,81 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 	// Fix bug by detecting when an OOo printer job is being reused for serial
 	// print jobs
-	maJobName = XubString( rJobName );
+	if ( rJobName.Len() )
+		maJobName = XubString( rJobName );
+	else if ( !maJobName.Len() )
+		maJobName = GetSfxResString( STR_NONAME );
+
 #ifdef USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalPrinter::StartJob not implemented\n" );
+	if ( !mpPrintOperation )
+	{
+		SalData *pSalData = GetSalData();
+		JavaSalFrame *pFocusFrame = NULL;
+
+		// Get the active document window
+		Window *pWindow = Application::GetActiveTopWindow();
+		if ( pWindow )
+			pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+
+		if ( !pFocusFrame )
+			pFocusFrame = pSalData->mpFocusFrame;
+
+		// Fix bug 3294 by not attaching to utility windows
+		while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus ) )
+			pFocusFrame = pFocusFrame->mpParent;
+
+		// Fix bug 1106 If the focus frame is not set or is not visible,
+		// find the first visible non-floating, non-utility frame
+		if ( !pFocusFrame || !pFocusFrame->mbVisible || pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus )
+		{
+			pFocusFrame = NULL;
+			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			{
+				if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
+				{
+					pFocusFrame = *it;
+					break;
+				}
+			}
+		}
+
+		// Ignore any AWT events while the print dialog is showing to
+		// emulate a modal dialog
+		NSPrintInfo *pPrintInfo = (NSPrintInfo *)mpVCLPageFormat->getNativePrinterJob();
+		if ( pPrintInfo )
+		{
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+			pSalData->mpNativeModalSheetFrame = pFocusFrame;
+			pSalData->mbInNativeModalSheet = true;
+
+			ULONG nCount = pFocusFrame ? 0 : Application::ReleaseSolarMutex();
+			NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->mpVCLFrame->getNativeWindow() : NULL );
+
+			JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:pPrintInfo window:pNSWindow jobName:[NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()]];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
+
+			Application::AcquireSolarMutex( nCount );
+
+			while ( ![pJavaSalPrinterShowPrintDialog finished] )
+				Application::Yield();
+			pSalData->mbInNativeModalSheet = false;
+			pSalData->mpNativeModalSheetFrame = NULL;
+			mpPrintOperation = [pJavaSalPrinterShowPrintDialog printOperation];
+			if ( mpPrintOperation )
+				[mpPrintOperation retain];
+
+			[pPool release];
+		}
+	}
+
+	return ( mpPrintOperation ? TRUE : FALSE );
 #else	// USE_NATIVE_PRINTING
 	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), fScaleFactor, !bFirstPass ? sal_True : mbStarted );
-#endif	// USE_NATIVE_PRINTING
-
-	if ( mbStarted )
-		GetSalData()->mpEventQueue->setShutdownDisabled( sal_True );
 
 	return mbStarted;
+#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -353,9 +673,9 @@ BOOL JavaSalPrinter::EndJob()
 	fprintf( stderr, "JavaSalPrinter::EndPage not implemented\n" );
 #else	// USE_NATIVE_PRINTING
 	mpVCLPrintJob->endJob();
+	mbStarted = FALSE;
 #endif	// USE_NATIVE_PRINTING
 	GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
-	mbStarted = FALSE;
 	return TRUE;
 }
 
@@ -364,7 +684,7 @@ BOOL JavaSalPrinter::EndJob()
 BOOL JavaSalPrinter::AbortJob()
 {
 #ifdef USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalPrinter::StartPage not implemented\n" );
+	fprintf( stderr, "JavaSalPrinter::AbortJob not implemented\n" );
 #else	// USE_NATIVE_PRINTING
 	mpVCLPrintJob->abortJob();
 #endif	// USE_NATIVE_PRINTING
@@ -423,6 +743,11 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 		return NULL;
 #endif	// USE_NATIVE_PRINTING
 
+	// The OOo code does not call Printer::EndJob() if the page range is
+	// results in no pages to print so do not disable shutdown until a page
+	// is successfully started
+	GetSalData()->mpEventQueue->setShutdownDisabled( sal_True );
+
 	mpGraphics = new JavaSalGraphics();
 #ifdef USE_NATIVE_PRINTING
 	fprintf( stderr, "JavaSalPrinter::StartPage not implemented\n" );
@@ -475,8 +800,42 @@ ULONG JavaSalPrinter::GetErrorCode()
 XubString JavaSalPrinter::GetPageRange()
 {
 #ifdef USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalPrinter::GetPageRange not implemented\n" );
-	return XubString();
+	XubString aRet;
+
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	NSPrintInfo *pPrintInfo = [mpPrintOperation printInfo];
+	if ( pPrintInfo )
+	{
+		NSMutableDictionary *pDictionary = [pPrintInfo dictionary];
+		if ( pDictionary )
+		{
+			NSNumber *pNumber = [pDictionary objectForKey:NSPrintAllPages];
+			if ( !pNumber || ![pNumber boolValue] )
+			{
+				NSNumber *pFirst = [pDictionary objectForKey:NSPrintFirstPage];
+				NSNumber *pLast = [pDictionary objectForKey:NSPrintLastPage];
+				if ( pFirst && pLast )
+				{
+					int nFirst = [pFirst intValue];
+					int nLast = [pLast intValue];
+					if ( nFirst > 0 )
+					{
+						if ( nLast < nFirst )
+							nLast = nFirst;
+
+						aRet = XubString::CreateFromInt32( nFirst );
+						aRet += '-';
+						aRet += XubString::CreateFromInt32( nLast );
+					}
+				}
+			}
+		}
+	}
+
+	[pPool release];
+
+	return aRet;
 #else	// USE_NATIVE_PRINTING
 	return mpVCLPrintJob->getPageRange( mpVCLPageFormat );
 #endif	// USE_NATIVE_PRINTING
