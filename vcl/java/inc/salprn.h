@@ -105,6 +105,7 @@ class JavaSalPrinter : public SalPrinter
 #ifdef USE_NATIVE_PRINTING
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
+	id						mpPrintView;
 	::std::list< JavaSalGraphics* >	maUnprintedGraphicsList;
 	::osl::Mutex			maUnprintedGraphicsMutex;
 #else	// USE_NATIVE_PRINTING
