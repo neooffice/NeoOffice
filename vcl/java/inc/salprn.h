@@ -46,6 +46,10 @@
 // Uncomment the following line to use native printing APIs
 // #define USE_NATIVE_PRINTING
 
+#ifndef __OBJC__
+typedef void* id;
+#endif	// !__OBJC__
+
 namespace vcl
 {   
 class com_sun_star_vcl_VCLPageFormat;
@@ -99,11 +103,10 @@ class JavaSalPrinter : public SalPrinter
 	long					mnPaperHeight;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 #ifdef USE_NATIVE_PRINTING
-	::std::list< JavaSalGraphics* >	maGraphicsForPrintOperationList;
-	::std::list< JavaSalGraphics* >	maGraphicsForSalPrinterList;
-	::osl::Mutex			maMutex;
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
+	::std::list< JavaSalGraphics* >	maUnprintedGraphicsList;
+	::osl::Mutex			maUnprintedGraphicsMutex;
 #else	// USE_NATIVE_PRINTING
 	BOOL					mbStarted;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
@@ -120,6 +123,9 @@ public:
 	virtual BOOL			EndPage();
 	virtual ULONG			GetErrorCode();
 	virtual XubString		GetPageRange();
+#ifdef USE_NATIVE_PRINTING
+	virtual void			RunPrintOperation();
+#endif	// USE_NATIVE_PRINTING
 };
 
 #endif // _SV_SALPRN_H

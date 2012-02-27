@@ -38,18 +38,11 @@
 
 #include <hash_map>
 
-#ifndef _SV_SALGDI_HXX
+#include <salprn.h>
 #include <vcl/salgdi.hxx>
-#endif
-#ifndef _SV_OUTFONT_HXX
 #include <vcl/outfont.hxx>
-#endif
-#ifndef _SV_SALLAYOUT_HXX
 #include <vcl/sallayout.hxx>
-#endif
-#ifndef _SV_SV_H
 #include <vcl/sv.h>
-#endif 
 
 #include <premac.h>
 #include <ApplicationServices/ApplicationServices.h>

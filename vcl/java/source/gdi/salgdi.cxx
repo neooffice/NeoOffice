@@ -33,29 +33,13 @@
  *
  ************************************************************************/
 
-#define _SV_SALGDI_CXX
-
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 #include <com/sun/star/vcl/VCLBitmap.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFONT_HXX
 #include <com/sun/star/vcl/VCLFont.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLPATH_HXX
 #include <com/sun/star/vcl/VCLPath.hxx>
-#endif
 #include <basegfx/polygon/b2dpolygon.hxx>
 
 #include "salgdi_cocoa.h"
@@ -188,6 +172,14 @@ JavaSalGraphics::~JavaSalGraphics()
 
 void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::GetResolution not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	if ( !mnDPIX || !mnDPIY )
 	{
 		Size aSize( mpVCLGraphics->getResolution() );
@@ -203,6 +195,11 @@ void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 
 USHORT JavaSalGraphics::GetBitCount()
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+		return 32;
+#endif	// USE_NATIVE_PRINTING
+
 	return mpVCLGraphics->getBitCount();
 }
 
@@ -328,6 +325,10 @@ void JavaSalGraphics::SetFillColor( SalColor nSalColor )
 
 void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 {
+	// Don't do anything if this is a printer
+	if ( mpPrinter )
+		return;
+
 	// Ignore the bInvertOnly parameter as it is not used by Windows or X11
 	// platforms
 	mpVCLGraphics->setXORMode( bSet );
@@ -357,6 +358,14 @@ void JavaSalGraphics::SetROPFillColor( SalROPColor nROPColor )
 
 void JavaSalGraphics::drawPixel( long nX, long nY )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawPixel not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	if ( mnLineColor )
 		mpVCLGraphics->setPixel( nX, nY, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
@@ -365,6 +374,14 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 
 void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawPixel2 not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
 
@@ -372,6 +389,14 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 
 void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawLine not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	if ( mnLineColor )
 		mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
@@ -380,6 +405,14 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 
 void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawRect not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	if ( mnFillColor )
 		mpVCLGraphics->drawRect( nX, nY, nWidth, nHeight, mnFillColor, TRUE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	if ( mnLineColor )
@@ -405,6 +438,14 @@ bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight
 
 void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawPolyLine not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	if ( mnLineColor )
 		mpVCLGraphics->drawPolyline( nPoints, pPtAry, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
@@ -413,6 +454,14 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 
 void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawPolygon not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	if ( mnFillColor )
 		mpVCLGraphics->drawPolygon( nPoints, pPtAry, mnFillColor, TRUE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	if ( mnLineColor )
@@ -423,6 +472,14 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 
 void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawPolyPolygon not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	if ( mnFillColor )
 		mpVCLGraphics->drawPolyPolygon( nPoly, pPoints, pPtAry, mnFillColor, TRUE, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	if ( mnLineColor )
@@ -433,6 +490,14 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 
 bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawPolyPolygon2 not implemented\n" );
+		return true;
+	}
+#endif	// USE_NATIVE_PRINTING
+
 	const sal_uInt32 nPoly = rPolyPoly.count();
 	if ( nPoly && ( mnFillColor || mnLineColor ) )
 	{
@@ -504,6 +569,14 @@ sal_Bool JavaSalGraphics::drawPolyPolygonBezier( ULONG nPoly, const ULONG* nPoin
 BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void* pPtr, ULONG nSize )
 {
 	BOOL bRet = FALSE;
+
+#ifdef USE_NATIVE_PRINTING
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawEPS not implemented\n" );
+		return bRet;
+	}
+#endif	// USE_NATIVE_PRINTING
 
 	if ( pPtr && nSize )
 	{

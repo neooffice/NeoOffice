@@ -33,32 +33,14 @@
  *
  ************************************************************************/
 
-#define _SV_SALGDI2_CXX
-
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALBMP_H
 #include <salbmp.h>
-#endif
-#ifndef _SV_SALWTYPE_HXX
 #include <vcl/salwtype.hxx>
-#endif
-#ifndef _SV_SYSDATA_HXX
 #include <vcl/sysdata.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 #include <com/sun/star/vcl/VCLBitmap.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_BMPACC_HXX
 #include <vcl/bmpacc.hxx>
-#endif
 
 using namespace vcl;
 
@@ -185,6 +167,9 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		{
 			if ( mpPrinter )
 			{
+#ifdef USE_NATIVE_PRINTING
+				fprintf( stderr, "JavaSalGraphics::drawBitmap not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 				// Don't delete the bitmap buffer and let the Java native
 				// method print the bitmap buffer directly
 				SalTwoRect aCopyPosAry;
@@ -196,6 +181,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 				if ( pCopyBuffer )
 					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+#endif	// USE_NATIVE_PRINTING
 
 				bDrawn = true;
 			}
@@ -737,21 +723,29 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 
 SalColor JavaSalGraphics::getPixel( long nX, long nY )
 {
-	return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
+	// Don't do anything if this is a printer
+	if ( mpPrinter )
+		return 0xff000000;
+	else
+		return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalInvert nFlags )
 {
-	mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
+	// Don't do anything if this is a printer
+	if ( !mpPrinter )
+		mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags )
 {
-	mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
+	// Don't do anything if this is a printer
+	if ( !mpPrinter )
+		mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
 }
 
 // -----------------------------------------------------------------------

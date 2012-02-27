@@ -33,41 +33,17 @@
  *
  ************************************************************************/
 
-#define _SV_SALGDI3_CXX
-
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALINST_H
 #include <salinst.h>
-#endif
-#ifndef _SV_SALLAYOUT_HXX
 #include <vcl/sallayout.hxx>
-#endif
-#ifndef _SV_IMPFONT_HXX
 #include <vcl/impfont.hxx>
-#endif
-#ifndef _SV_OUTDEV_H
 #include <vcl/outdev.h>
-#endif
-#ifndef _VCL_UNOHELP_HXX
 #include <vcl/unohelp.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _BGFX_POLYGON_B2DPOLYPOLYGON_HXX
 #include <basegfx/polygon/b2dpolypolygon.hxx>
-#endif
-#ifndef _OSL_PROCESS_H_
 #include <rtl/process.h>
-#endif
 
 #include <premac.h>
 #import <Cocoa/Cocoa.h>
@@ -1007,8 +983,12 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 
 	if ( pVCLFont )
 	{
+#ifdef USE_NATIVE_PRINTING
+		fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
 		rRect.Justify();
+#endif	// USE_NATIVE_PRINTING
 	}
 
 	// Fix bug 2191 by always returning true so that the OOo code doesn't

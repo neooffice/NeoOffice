@@ -47,27 +47,13 @@
 #include <sys/sysctl.h>
 #include <unicode/ubidi.h>
 
-#ifndef _SV_SALATSLAYOUT_HXX
 #include <salatslayout.hxx>
-#endif
-#ifndef _SV_SALGDI_H
-#include <salgdi.h>
-#endif
-#ifndef _SV_OUTFONT_HXX
-#include <vcl/outfont.hxx>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
+#include <salgdi.h>
+#include <vcl/outfont.hxx>
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _BGFX_POLYGON_B2DPOLYPOLYGON_HXX
 #include <basegfx/polygon/b2dpolypolygon.hxx>
-#endif
 
 #define MAXEXTRACHARS 100
 #ifdef USE_SUBPIXEL_TEXT_RENDERING
@@ -2543,7 +2529,11 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 					}
 				}
 
+#ifdef USE_NATIVE_PRINTING
+				fprintf( stderr, "SalATSLayout::DrawText not implemented\n" );
+#else	// USE_NATIVE_PRINTING
 				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX, rJavaGraphics.maNativeClipPath ? CGPathCreateCopy( rJavaGraphics.maNativeClipPath ) : NULL );
+#endif	// USE_NATIVE_PRINTING
 			}
 			else
 			{
