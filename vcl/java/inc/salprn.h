@@ -36,9 +36,6 @@
 #ifndef _SV_SALPRN_H
 #define _SV_SALPRN_H
 
-#include <list>
-
-#include <osl/mutex.hxx>
 #include <vcl/prntypes.hxx>
 #include <vcl/salprn.hxx>
 #include <vcl/sv.h>
@@ -106,8 +103,6 @@ class JavaSalPrinter : public SalPrinter
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
 	id						mpPrintView;
-	::std::list< JavaSalGraphics* >	maUnprintedGraphicsList;
-	::osl::Mutex			maUnprintedGraphicsMutex;
 #else	// USE_NATIVE_PRINTING
 	BOOL					mbStarted;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;

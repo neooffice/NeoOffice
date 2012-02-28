@@ -34,11 +34,13 @@
  ************************************************************************/
 
 #include <dlfcn.h>
+#include <list>
 
 #include <salprn.h>
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salgdi.h>
+#include <osl/mutex.hxx>
 #include <sfx2/sfx.hrc>
 #include <tools/rcid.h>
 #include <vcl/jobset.h>
@@ -100,10 +102,11 @@ static void SAL_CALL ImplRunPrintOperation( void *pJavaSalPrinter )
 	MacOSBOOL				mbPrintOperationAborted;
 	MacOSBOOL				mbPrintOperationEnded;
 	std::list< JavaSalGraphics* >*	mpUnprintedGraphicsList;
+	Condition*				mpUnprintedGraphicsCondition;
 	Mutex*					mpUnprintedGraphicsMutex;
 }
 - (void)abortPrintOperation;
-- (void)addUnprintedGraphics:(JavaSalGraphics *)pGraphics;
+- (MacOSBOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics;
 - (void)dealloc;
 - (void)drawRect:(NSRect)aRect;
 - (void)endPrintOperation;
@@ -116,23 +119,36 @@ static void SAL_CALL ImplRunPrintOperation( void *pJavaSalPrinter )
 
 - (void)abortPrintOperation
 {
-	mbPrintOperationAborted = YES;
-}
-
-- (void)addUnprintedGraphics:(JavaSalGraphics *)pGraphics
-{
-	if ( pGraphics && mpUnprintedGraphicsMutex )
+	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsMutex )
 	{
 		mpUnprintedGraphicsMutex->acquire();
-		mpUnprintedGraphicsList = new std::list< JavaSalGraphics* >();
-		if ( mpUnprintedGraphicsList )
-			mpUnprintedGraphicsList->push_back( pGraphics );
+		mbPrintOperationAborted = YES;
+		mpUnprintedGraphicsCondition->set();
 		mpUnprintedGraphicsMutex->release();
 	}
 }
 
+- (MacOSBOOL)addUnprintedGraphics:(JavaSalGraphics *)pGraphics
+{
+	MacOSBOOL bRet = NO;
+
+	if ( pGraphics && mpUnprintedGraphicsCondition && mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
+	{
+		mpUnprintedGraphicsMutex->acquire();
+		mpUnprintedGraphicsList->push_back( pGraphics );
+		mpUnprintedGraphicsCondition->set();
+		mpUnprintedGraphicsMutex->release();
+		bRet = YES;
+	}
+
+	return bRet;
+}
+
 - (void)dealloc
 {
+	if ( mpUnprintedGraphicsCondition )
+		delete mpUnprintedGraphicsCondition;
+
 	if ( mpUnprintedGraphicsList )
 	{
 		while ( mpUnprintedGraphicsList->size() )
@@ -152,11 +168,34 @@ static void SAL_CALL ImplRunPrintOperation( void *pJavaSalPrinter )
 
 - (void)drawRect:(NSRect)aRect
 {
+	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
+	{
+		mpUnprintedGraphicsMutex->acquire();
+		if ( mpUnprintedGraphicsList->size() )
+		{
+			JavaSalGraphics *pGraphics = mpUnprintedGraphicsList->front();
+			fprintf( stderr, "[VCLPrintView drawRect:] not implemented\n" );
+			delete pGraphics;
+			mpUnprintedGraphicsList->pop_front();
+			
+		}
+		else
+		{
+			mbPrintOperationEnded = YES;
+		}
+		mpUnprintedGraphicsMutex->release();
+	}
 }
 
 - (void)endPrintOperation
 {
-	mbPrintOperationEnded = YES;
+	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsMutex )
+	{
+		mpUnprintedGraphicsMutex->acquire();
+		mbPrintOperationEnded = YES;
+		mpUnprintedGraphicsCondition->set();
+		mpUnprintedGraphicsMutex->release();
+	}
 }
 
 - (id)initWithFrame:(NSRect)aFrame
@@ -165,7 +204,10 @@ static void SAL_CALL ImplRunPrintOperation( void *pJavaSalPrinter )
 
 	mbPrintOperationAborted = NO;
 	mbPrintOperationEnded = NO;
-	mpUnprintedGraphicsList = NULL;
+	mpUnprintedGraphicsCondition = new Condition();
+	if ( mpUnprintedGraphicsCondition )
+		mpUnprintedGraphicsCondition->set();
+	mpUnprintedGraphicsList = new std::list< JavaSalGraphics* >();
 	mpUnprintedGraphicsMutex = new Mutex();
 
 	return self;
@@ -187,32 +229,55 @@ static void SAL_CALL ImplRunPrintOperation( void *pJavaSalPrinter )
 
 - (NSRect)rectForPage:(NSInteger)nPageNumber
 {
-	// Aborting has higher priority than ending
-	if ( mbPrintOperationAborted )
+	NSRect aRet = NSZeroRect;
+
+	if ( mpUnprintedGraphicsCondition && mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
 	{
-		if ( mpUnprintedGraphicsMutex && mpUnprintedGraphicsList )
+		MacOSBOOL bContinue = YES;
+		while ( bContinue )
 		{
 			mpUnprintedGraphicsMutex->acquire();
-			while ( mpUnprintedGraphicsList->size() )
+
+			// Aborting has higher priority than ending
+			if ( mbPrintOperationAborted )
 			{
-				delete mpUnprintedGraphicsList->front();
-				mpUnprintedGraphicsList->pop_front();
+				bContinue = NO;
+
+				while ( mpUnprintedGraphicsList->size() )
+				{
+					delete mpUnprintedGraphicsList->front();
+					mpUnprintedGraphicsList->pop_front();
+				}
+
+				// Cancel all print output
+				NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
+				if ( pPrintOperation )
+					[[pPrintOperation printInfo] setJobDisposition:NSPrintCancelJob];
 			}
+			else if ( mpUnprintedGraphicsList && mpUnprintedGraphicsList->size() )
+			{
+				bContinue = NO;
+				aRet = [self bounds];
+			}
+			else if ( mbPrintOperationEnded )
+			{
+				bContinue = NO;
+			}
+			else
+			{
+				// Wait until the JavaSalPrinter instance aborts, ends, or
+				// adds another unprinted graphics
+				mpUnprintedGraphicsCondition->reset();
+				mpUnprintedGraphicsMutex->release();
+				mpUnprintedGraphicsCondition->wait();
+				mpUnprintedGraphicsMutex->acquire();
+			}
+
 			mpUnprintedGraphicsMutex->release();
 		}
-
-		NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
-		if ( pPrintOperation )
-			[[pPrintOperation printInfo] setJobDisposition:NSPrintCancelJob];
-
-		return NSZeroRect;
-	}
-	else if ( mbPrintOperationEnded && ( !mpUnprintedGraphicsList || !mpUnprintedGraphicsList->size() ) )
-	{
-		return NSZeroRect;
 	}
 
-	return [self bounds];
+	return aRet;
 }
 
 @end
@@ -632,8 +697,7 @@ JavaSalPrinter::JavaSalPrinter( const com_sun_star_vcl_VCLPageFormat *pVCLPageFo
 
 JavaSalPrinter::~JavaSalPrinter()
 {
-	// Call EndJob() to join and destroy the print thread and clear the
-	// unprinted graphics list
+	// Call EndJob() to join and destroy the print thread
 	EndJob();
 
 	if ( mpGraphics )
@@ -790,36 +854,29 @@ BOOL JavaSalPrinter::EndJob()
 #ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	if ( mpPrintView )
-		[mpPrintView endPrintOperation];
-
-	TimeValue aDelay;
-	aDelay.Seconds = 0;
-	aDelay.Nanosec = 50;
-	MacOSBOOL bMainEventLoop = ( CFRunLoopGetCurrent() == CFRunLoopGetMain() );
-	while ( maPrintThread && osl_isThreadRunning( maPrintThread ) )
-	{
-		osl_waitThread( &aDelay );
-		if ( bMainEventLoop )
-			CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
-	}
-
-	[pPool release];
-
 	if ( maPrintThread )
 	{
-		osl_joinWithThread( maPrintThread );
+		TimeValue aDelay;
+		aDelay.Seconds = 0;
+		aDelay.Nanosec = 50;
+		MacOSBOOL bMainEventLoop = ( CFRunLoopGetCurrent() == CFRunLoopGetMain() );
+		while ( osl_isThreadRunning( maPrintThread ) )
+		{
+			// Invoke on each pass to ensure that the print view's wait
+			// condition is unblocked
+			if ( mpPrintView )
+				[mpPrintView endPrintOperation];
+
+			osl_waitThread( &aDelay );
+			if ( bMainEventLoop )
+				CFRunLoopRunInMode( CFSTR( "AWTRunLoopMode" ), 0, false );
+		}
+
 		osl_destroyThread( maPrintThread );
 		maPrintThread = NULL;
 	}
 
-	ClearableMutexGuard aGuard( maUnprintedGraphicsMutex );
-	while ( maUnprintedGraphicsList.size() )
-	{
-		delete maUnprintedGraphicsList.front();
-		maUnprintedGraphicsList.pop_front();
-	}
-	aGuard.clear();
+	[pPool release];
 #else	// USE_NATIVE_PRINTING
 	mpVCLPrintJob->endJob();
 	mbStarted = FALSE;
@@ -876,6 +933,8 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 			EndJob();
 
 #ifdef USE_NATIVE_PRINTING
+			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 			if ( mpPrintView )
 			{
 				[mpPrintView release];
@@ -913,6 +972,8 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 				if ( mpPrintOperation )
 					[mpPrintOperation retain];
 			}
+
+			[pPool release];
 #else	// USE_NATIVE_PRINTING
 			delete mpVCLPrintJob;
 			mpVCLPrintJob = new com_sun_star_vcl_VCLPrintJob();
@@ -958,8 +1019,13 @@ BOOL JavaSalPrinter::EndPage()
 	if ( mpGraphics )
 	{
 #ifdef USE_NATIVE_PRINTING
-		MutexGuard aGuard( maUnprintedGraphicsMutex );
-		maUnprintedGraphicsList.push_back( mpGraphics );
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		// Give ownership of graphics to print view
+		if ( !mpPrintView || ![mpPrintView addUnprintedGraphics:mpGraphics] )
+			delete mpGraphics;
+
+		[pPool release];
 #else	// USE_NATIVE_PRINTING
 		if ( mpGraphics->mpVCLGraphics )
 			delete mpGraphics->mpVCLGraphics;
@@ -968,11 +1034,9 @@ BOOL JavaSalPrinter::EndPage()
 	}
 	mpGraphics = NULL;
 	mbGraphics = FALSE;
-#ifdef USE_NATIVE_PRINTING
-	fprintf( stderr, "JavaSalPrinter::EndPage not implemented\n" );
-#else	// USE_NATIVE_PRINTING
+#ifndef USE_NATIVE_PRINTING
 	mpVCLPrintJob->endPage();
-#endif	// USE_NATIVE_PRINTING
+#endif	// !USE_NATIVE_PRINTING
 	return TRUE;
 }
 
