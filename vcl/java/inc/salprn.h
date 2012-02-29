@@ -65,7 +65,12 @@ class JavaSalInfoPrinter : public SalInfoPrinter
 {
 	JavaSalGraphics*		mpGraphics;
 	BOOL					mbGraphics;
+#ifdef USE_NATIVE_PRINTING
+	id						mpInfo;
+	sal_Bool				mbPaperRotated;
+#else	// USE_NATIVE_PRINTING
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
+#endif	// USE_NATIVE_PRINTING
 
 public:
 							JavaSalInfoPrinter( ImplJobSetup* pSetupData );
@@ -83,7 +88,12 @@ public:
 	virtual void			InitPaperFormats( const ImplJobSetup* pSetupData );
 	virtual int				GetLandscapeAngle( const ImplJobSetup* pSetupData );
 	virtual DuplexMode		GetDuplexMode( const ImplJobSetup* pSetupData );
-	virtual ::vcl::com_sun_star_vcl_VCLPageFormat*	GetVCLPageFormat() { return mpVCLPageFormat; }
+#ifdef USE_NATIVE_PRINTING
+	virtual const id		GetPrintInfo() { return mpInfo; }
+	virtual sal_Bool		IsPaperRotated() { return mbPaperRotated; }
+#else	// USE_NATIVE_PRINTING
+	virtual const ::vcl::com_sun_star_vcl_VCLPageFormat*	GetVCLPageFormat() { return mpVCLPageFormat; }
+#endif	// USE_NATIVE_PRINTING
 };
 
 // ------------------
@@ -98,18 +108,20 @@ class JavaSalPrinter : public SalPrinter
 	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;
-	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 #ifdef USE_NATIVE_PRINTING
+	id						mpInfo;
+	sal_Bool				mbPaperRotated;
 	id						mpPrintOperation;
 	oslThread				maPrintThread;
 	id						mpPrintView;
 #else	// USE_NATIVE_PRINTING
 	BOOL					mbStarted;
+	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 #endif	// !USE_NATIVE_PRINTING
 
 public:
-							JavaSalPrinter( const ::vcl::com_sun_star_vcl_VCLPageFormat *pVCLPageFormat );
+							JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter );
 	virtual					~JavaSalPrinter();
 
 	virtual BOOL			StartJob( const XubString* pFileName, const XubString& rJobName, const XubString& rAppName, ULONG nCopies, BOOL bCollate, ImplJobSetup* pSetupData, BOOL bFirstPass );

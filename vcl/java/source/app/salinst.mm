@@ -902,13 +902,7 @@ XubString JavaSalInstance::GetDefaultPrinter()
 
 SalPrinter* JavaSalInstance::CreatePrinter( SalInfoPrinter* pInfoPrinter )
 {
-	const com_sun_star_vcl_VCLPageFormat *pVCLPageFormat = NULL;
-	JavaSalInfoPrinter *pJavaInfoPrinter = (JavaSalInfoPrinter *)pInfoPrinter;
-	if ( pJavaInfoPrinter )
-		pVCLPageFormat = pJavaInfoPrinter->GetVCLPageFormat();
-	else
-		pVCLPageFormat = NULL;
-	return new JavaSalPrinter( pVCLPageFormat );
+	return new JavaSalPrinter( (JavaSalInfoPrinter *)pInfoPrinter );
 }
 
 // -----------------------------------------------------------------------

@@ -49,6 +49,11 @@
 #include <postmac.h>
 #undef check
 
+#ifdef USE_NATIVE_PRINTING
+// Fix bug 3051 by setting the printer resolution to twips
+#define MIN_PRINTER_RESOLUTION 1440
+#endif	// USE_NATIVE_PRINTING
+
 class ImplDevFontAttributes;
 class ImplFontSelectData;
 class JavaSalFrame;
@@ -103,6 +108,9 @@ public:
 	SalColor				mnFillTransparency;
 	SalColor				mnLineTransparency;
 	JavaSalFrame*			mpFrame;
+#ifdef USE_NATIVE_PRINTING
+	JavaSalInfoPrinter*		mpInfoPrinter;
+#endif	// USE_NATIVE_PRINTING
 	JavaSalPrinter*			mpPrinter;
 	JavaSalVirtualDevice*	mpVirDev;
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
@@ -117,6 +125,10 @@ public:
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
 	CGMutablePathRef		maNativeClipPath;
+#ifdef USE_NATIVE_PRINTING
+	Orientation				meOrientation;
+	sal_Bool				mbPaperRotated;
+#endif	// USE_NATIVE_PRINTING
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();
