@@ -219,18 +219,19 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 @interface JavaSalInfoPrinterCreatePrintInfo : NSObject
 {
 	NSPrintInfo*			mpInfo;
+	NSPrintInfo*			mpSourceInfo;
 }
-+ (id)create;
++ (id)createWithPrintInfo:(NSPrintInfo *)pSourceInfo;
 - (void)dealloc;
-- (id)init;
+- (id)initWithPrintInfo:(NSPrintInfo *)pSourceInfo;
 - (NSPrintInfo *)printInfo;
 @end
 
 @implementation JavaSalInfoPrinterCreatePrintInfo
 
-+ (id)create
++ (id)createWithPrintInfo:(NSPrintInfo *)pSourceInfo
 {
-	JavaSalInfoPrinterCreatePrintInfo *pRet = [[JavaSalInfoPrinterCreatePrintInfo alloc] init];
+	JavaSalInfoPrinterCreatePrintInfo *pRet = [[JavaSalInfoPrinterCreatePrintInfo alloc] initWithPrintInfo:pSourceInfo];
 	[pRet autorelease];
 	return pRet;
 }
@@ -239,7 +240,9 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 {
 	if ( !mpInfo )
 	{
-		NSPrintInfo *pInfo = [NSPrintInfo sharedPrintInfo];
+		NSPrintInfo *pInfo = mpSourceInfo;
+		if ( !pInfo )
+			pInfo = [NSPrintInfo sharedPrintInfo];
 		if ( pInfo )
 		{
 			// Fix bug 2573 by not cloning the dictionary as that will cause
@@ -267,11 +270,12 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	[super dealloc];
 }
 
-- (id)init
+- (id)initWithPrintInfo:(NSPrintInfo *)pSourceInfo
 {
 	[super init];
 
 	mpInfo = nil;
+	mpSourceInfo = pSourceInfo;
 
 	return self;
 }
@@ -756,7 +760,7 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 #ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo create];
+	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:nil];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
 	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
@@ -1169,11 +1173,14 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 #ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	// Fix bug 2573 by not cloning the dictionary as that will cause
-	// querying of the printer which, in turn, will cause hanging if
-	// the printer is an unavailable network printer
-	// Do not retain as invoking alloc disables autorelease
-	mpInfo = [[NSPrintInfo alloc] initWithDictionary:[pInfoPrinter->GetPrintInfo() dictionary]];
+	// Create a copy of the info printer's print info to any isolate changes
+	// made by the print job
+	JavaSalInfoPrinterCreatePrintInfo *pJavaSalInfoPrinterCreatePrintInfo = [JavaSalInfoPrinterCreatePrintInfo createWithPrintInfo:pInfoPrinter->GetPrintInfo()];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pJavaSalInfoPrinterCreatePrintInfo performSelectorOnMainThread:@selector(createPrintInfo:) withObject:pJavaSalInfoPrinterCreatePrintInfo waitUntilDone:YES modes:pModes];
+	mpInfo = [pJavaSalInfoPrinterCreatePrintInfo printInfo];
+	if ( mpInfo )
+		[mpInfo retain];
 
 	[pPool release];
 #else	// USE_NATIVE_PRINTING
