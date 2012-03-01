@@ -371,6 +371,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 - (id)initWithFrame:(NSRect)aFrame;
 - (MacOSBOOL)isFlipped;
 - (MacOSBOOL)knowsPageRange:(NSRangePointer)pRange;
+- (NSPoint)locationOfPrintRect:(NSRect)aRect;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
 @end
 
@@ -429,11 +430,22 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 {
 	if ( mpUnprintedGraphicsList && mpUnprintedGraphicsMutex )
 	{
+		JavaSalGraphics *pGraphics = NULL;
+
 		mpUnprintedGraphicsMutex->acquire();
 		if ( mpUnprintedGraphicsList->size() )
 		{
-			JavaSalGraphics *pGraphics = mpUnprintedGraphicsList->front();
+			pGraphics = mpUnprintedGraphicsList->front();
+			mpUnprintedGraphicsList->pop_front();
+		}
+		else
+		{
+			mbPrintOperationEnded = YES;
+		}
+		mpUnprintedGraphicsMutex->release();
 
+		if ( pGraphics )
+		{
 // Temporary test drawing code that will be removed and implemented in the
 // JavaSalGraphics class
 fprintf( stderr, "[VCLPrintView drawRect:] not implemented\n" );
@@ -466,14 +478,7 @@ if ( pContext )
 }
 
 			delete pGraphics;
-			mpUnprintedGraphicsList->pop_front();
-			
 		}
-		else
-		{
-			mbPrintOperationEnded = YES;
-		}
-		mpUnprintedGraphicsMutex->release();
 	}
 }
 
@@ -522,6 +527,11 @@ if ( pContext )
 	return bRet;
 }
 
+- (NSPoint)locationOfPrintRect:(NSRect)aRect
+{
+	return NSMakePoint( 0, 0 );
+}
+
 - (NSRect)rectForPage:(NSInteger)nPageNumber
 {
 	NSRect aRet = NSZeroRect;
@@ -557,7 +567,7 @@ if ( pContext )
 			{
 				bContinue = NO;
 
-				// Set page orientation
+				// Set page orientation and adjust view frame
 				NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
 				if ( pPrintOperation )
 				{
@@ -569,6 +579,9 @@ if ( pContext )
 							[pInfo setOrientation:NSLandscapeOrientation];
 						else
 							[pInfo setOrientation:NSPortraitOrientation];
+
+						NSSize aPaperSize = [pInfo paperSize];
+						[self setFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
 					}
 				}
 
