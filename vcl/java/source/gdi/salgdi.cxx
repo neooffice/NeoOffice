@@ -46,6 +46,21 @@
 
 #ifdef USE_NATIVE_PRINTING
 
+class SAL_DLLPRIVATE JavaSalGraphicsDrawLineOp : public JavaSalGraphicsOp
+{
+	float					mfX1;
+	float					mfY1;
+	float					mfX2;
+	float					mfY2;
+	SalColor				mnColor;
+
+public:
+							JavaSalGraphicsDrawLineOp( const CGPathRef aNativeClipPath, bool bXOR, float fX1, float fY1, float fX2, float fY2, SalColor nColor ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), mfX1( fX1 ), mfY1( fY1 ), mfX2( fX2 ), mfY2( fY2 ), mnColor( nColor ) {}
+	virtual					~JavaSalGraphicsDrawLineOp() {}
+
+	virtual	void			drawOp( CGContextRef aContext );
+};
+
 class SAL_DLLPRIVATE JavaSalGraphicsDrawRectOp : public JavaSalGraphicsOp
 {
 	CGRect					maRect;
@@ -153,26 +168,37 @@ CGColorRef CreateCGColorFromSalColor( SalColor nColor )
 
 // =======================================================================
 
+void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext )
+{
+	if ( !aContext )
+		return;
+
+	saveClipXORGState( aContext );
+
+	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
+	if ( aColor )
+	{
+		CGContextSetStrokeColorWithColor( aContext, aColor );
+		CGContextMoveToPoint( aContext, mfX1, mfY1 );
+		CGContextAddLineToPoint( aContext, mfX2, mfY2 );
+		CGContextStrokePath( aContext );
+
+		CGColorRelease( aColor );
+	}
+
+	restoreGState( aContext );
+}
+
 void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext )
 {
 	if ( !aContext )
 		return;
 
-	CGContextSaveGState( aContext );
-
-	if ( maNativeClipPath )
-	{
-		CGContextBeginPath( aContext );
-		CGContextAddPath( aContext, maNativeClipPath );
-		CGContextClip( aContext );
-	}
+	saveClipXORGState( aContext );
 
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
 	if ( aColor )
 	{
-		if ( mbXOR )
-			CGContextSetBlendMode( aContext, kCGBlendModeXOR );
-
 		if ( mbFill )
 		{
 			CGContextSetFillColorWithColor( aContext, aColor );
@@ -187,7 +213,7 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext )
 		CGColorRelease( aColor );
 	}
 
-	CGContextRestoreGState( aContext );
+	restoreGState( aContext );
 }
 
 #endif	// USE_NATIVE_PRINTING
@@ -518,7 +544,8 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawLine not implemented\n" );
+		if ( mnLineColor )
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawLineOp( maNativeClipPath, false, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -535,12 +562,19 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 	if ( mpInfoPrinter )
 		return;
 
+	CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
+	if ( CGRectIsEmpty( aRect ) )
+	{
+		drawLine( nX, nY, nX + nWidth, nY + nHeight );
+		return;
+	}
+
 	if ( mpPrinter )
 	{
 		if ( mnFillColor )
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, CGRectMake( nX, nY, nWidth, nHeight ), mnFillColor, true ) );
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, aRect, mnFillColor, true ) );
 		if ( mnLineColor )
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, CGRectMake( nX, nY, nWidth, nHeight ), mnLineColor, false ) );
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, aRect, mnLineColor, false ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -849,11 +883,17 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext )
 
 	CGContextSaveGState( aContext );
 
+	// Turn off antialiasing by default since we did the same in the Java code
+	CGContextSetAllowsAntialiasing( aContext, false );
+
 	// Scale context to match OOo resolution
 	long nDPIX;
 	long nDPIY;
 	GetResolution( nDPIX, nDPIY );
 	CGContextScaleCTM( aContext, (float)72 / (float)nDPIX, (float)72 / (float)nDPIY );
+
+	// Scale line width
+	CGContextSetLineWidth( aContext, getNativeLineWidth() );
 
 	while ( aOpsList.size() )
 	{
@@ -864,6 +904,16 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext )
 	}
 
 	CGContextRestoreGState( aContext );
+}
+
+// -----------------------------------------------------------------------
+
+float JavaSalGraphics::getNativeLineWidth()
+{
+	if ( mpInfoPrinter || mpPrinter )
+		return (float)MIN_PRINTER_RESOLUTION / 72;
+	else
+		return 1.0f;
 }
 
 // =======================================================================
@@ -882,6 +932,39 @@ JavaSalGraphicsOp::~JavaSalGraphicsOp()
 {
 	if ( maNativeClipPath )
 		CGPathRelease( maNativeClipPath );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphicsOp::restoreGState( CGContextRef aContext )
+{
+	if ( !aContext )
+		return;
+
+	CGContextRestoreGState( aContext );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext )
+{
+	if ( !aContext )
+		return;
+
+	CGContextSaveGState( aContext );
+
+	// Throw away any incomplete path
+	CGContextBeginPath( aContext );
+
+	if ( maNativeClipPath )
+	{
+		CGContextBeginPath( aContext );
+		CGContextAddPath( aContext, maNativeClipPath );
+		CGContextClip( aContext );
+	}
+
+	if ( mbXOR )
+		CGContextSetBlendMode( aContext, kCGBlendModeXOR );
 }
 
 #endif	// USE_NATIVE_PRINTING
