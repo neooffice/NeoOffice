@@ -446,36 +446,40 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 
 		if ( pGraphics )
 		{
-// Temporary test drawing code that will be removed and implemented in the
-// JavaSalGraphics class
-fprintf( stderr, "[VCLPrintView drawRect:] not implemented\n" );
-NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
-if ( pContext )
-{
-	CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
-	if ( aContext )
-	{
-		float fScaleFactor = 1.0f;
-		NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
-		if ( pPrintOperation )
-		{
-			NSPrintInfo *pInfo = [pPrintOperation printInfo];
-			if ( pInfo )
+			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+			if ( pContext )
 			{
-				NSNumber *pValue = [[pInfo dictionary] objectForKey:NSPrintScalingFactor];
-				if ( pValue )
-					fScaleFactor = [pValue floatValue];
-			}
-		}
+				// Draw undrawn graphics ops to the print context
+				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+				if ( aContext )
+				{
+					float fScaleFactor = 1.0f;
+					NSRect aPageBounds = NSZeroRect;
+					NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
+					if ( pPrintOperation )
+					{
+						NSPrintInfo *pInfo = [pPrintOperation printInfo];
+						if ( pInfo )
+						{
+							NSNumber *pValue = [[pInfo dictionary] objectForKey:NSPrintScalingFactor];
+							if ( pValue )
+								fScaleFactor = [pValue floatValue];
 
-		// Fix bug 1218 by setting the clip here and not in Java
-		CGContextSaveGState( aContext );
-		CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
-		CGContextSetRGBFillColor( aContext, 1.0f, 0, 0, 1.0f );
-		CGContextFillRect( aContext, CGRectMake( aRect.origin.x + 50, aRect.origin.y + 100, aRect.size.width / 2, aRect.size.height / 2 ) );
-		CGContextRestoreGState( aContext );
-	}
-}
+							NSSize aPaperSize = [pInfo paperSize];
+							aPageBounds = [pInfo imageablePageBounds];
+
+							// Flip page bounds
+							aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
+						}
+					}
+
+					CGContextSaveGState( aContext );
+					CGContextTranslateCTM( aContext, aPageBounds.origin.x, aPageBounds.origin.y );
+					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
+					pGraphics->drawUndrawnNativeOps( aContext );
+					CGContextRestoreGState( aContext );
+				}
+			}
 
 			delete pGraphics;
 		}

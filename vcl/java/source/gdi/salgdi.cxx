@@ -44,6 +44,24 @@
 
 #include "salgdi_cocoa.h"
 
+#ifdef USE_NATIVE_PRINTING
+
+class SAL_DLLPRIVATE JavaSalGraphicsDrawRectOp : public JavaSalGraphicsOp
+{
+	CGRect					maRect;
+	SalColor				mnColor;
+	bool					mbFill;
+
+public:
+							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, const CGRect aRect, SalColor nColor, bool bFill ) : JavaSalGraphicsOp( aNativeClipPath ), maRect( aRect ), mnColor( nColor ), mbFill( bFill ) {}
+	virtual					~JavaSalGraphicsDrawRectOp() {}
+
+	virtual	void			drawOp( CGContextRef aContext );
+};
+
+#endif	// USE_NATIVE_PRINTING
+
+using namespace osl;
 using namespace vcl;
 
 // =======================================================================
@@ -124,6 +142,53 @@ static void AddPolyPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutable
 	}
 }
 
+#ifdef USE_NATIVE_PRINTING
+
+// =======================================================================
+
+CGColorRef CreateCGColorFromSalColor( SalColor nColor )
+{
+	return CGColorCreateGenericRGB( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( nColor & 0x000000ff ) / (float)0xff, (float)( ( nColor & 0xff000000 ) >> 24 ) / (float)0xff );
+}
+
+// =======================================================================
+
+void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext )
+{
+	if ( !aContext )
+		return;
+
+	CGContextSaveGState( aContext );
+
+	if ( maNativeClipPath )
+	{
+		CGContextBeginPath( aContext );
+		CGContextAddPath( aContext, maNativeClipPath );
+		CGContextClip( aContext );
+	}
+
+	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
+	if ( aColor )
+	{
+		if ( mbFill )
+		{
+			CGContextSetFillColorWithColor( aContext, aColor );
+			CGContextFillRect( aContext, maRect );
+		}
+		else
+		{
+			CGContextSetStrokeColorWithColor( aContext, aColor );
+			CGContextStrokeRect( aContext, maRect );
+		}
+
+		CGColorRelease( aColor );
+	}
+
+	CGContextRestoreGState( aContext );
+}
+
+#endif	// USE_NATIVE_PRINTING
+
 // =======================================================================
 
 JavaSalGraphics::JavaSalGraphics() :
@@ -172,33 +237,43 @@ JavaSalGraphics::~JavaSalGraphics()
 
 	if ( maNativeClipPath )
 		CFRelease( maNativeClipPath );
+
+#ifdef USE_NATIVE_PRINTING
+	while ( maUndrawnNativeOpsList.size() )
+	{
+		JavaSalGraphicsOp *pOp = maUndrawnNativeOpsList.front();
+		delete pOp;
+		maUndrawnNativeOpsList.pop_front();
+	}
+#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 {
+#ifdef USE_NATIVE_PRINTING
+	if ( mpInfoPrinter || mpPrinter )
+	{
+		rDPIX = MIN_PRINTER_RESOLUTION;
+		rDPIY = MIN_PRINTER_RESOLUTION;
+		return;
+	}
+	else
+	{
+#endif	// USE_NATIVE_PRINTING
 	if ( !mnDPIX || !mnDPIY )
 	{
-#ifdef USE_NATIVE_PRINTING
-		if ( mpInfoPrinter || mpPrinter )
-		{
-			mnDPIX = MIN_PRINTER_RESOLUTION;
-			mnDPIY = MIN_PRINTER_RESOLUTION;
-		}
-		else
-		{
-#endif	// USE_NATIVE_PRINTING
 		Size aSize( mpVCLGraphics->getResolution() );
 		mnDPIX = aSize.Width();
 		mnDPIY = aSize.Height();
-#ifdef USE_NATIVE_PRINTING
-		}
-#endif	// USE_NATIVE_PRINTING
 	}
 
 	rDPIX = mnDPIX;
 	rDPIY = mnDPIY;
+#ifdef USE_NATIVE_PRINTING
+	}
+#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -459,7 +534,10 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawRect not implemented\n" );
+		if ( mnFillColor )
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, CGRectMake( nX, nY, nWidth, nHeight ), mnFillColor, true ) );
+		if ( mnLineColor )
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, CGRectMake( nX, nY, nWidth, nHeight ), mnLineColor, false ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -739,3 +817,67 @@ void JavaSalGraphics::setFillTransparency( sal_uInt8 nTransparency )
 	if ( mnFillColor )
 		SetFillColor( mnFillColor & 0x00ffffff );
 }
+
+#ifdef USE_NATIVE_PRINTING
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::addToUndrawnNativeOps( JavaSalGraphicsOp *pOp )
+{
+	if ( !pOp )
+		return;
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	maUndrawnNativeOpsList.push_back( pOp );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext )
+{
+	if ( !aContext )
+		return;
+
+	ClearableMutexGuard aGuard( maUndrawnNativeOpsMutex );
+	::std::list< JavaSalGraphicsOp* > aOpsList( maUndrawnNativeOpsList );
+	maUndrawnNativeOpsList.clear();
+	aGuard.clear();
+
+	CGContextSaveGState( aContext );
+
+	// Scale context to match OOo resolution
+	long nDPIX;
+	long nDPIY;
+	GetResolution( nDPIX, nDPIY );
+	CGContextScaleCTM( aContext, (float)72 / (float)nDPIX, (float)72 / (float)nDPIY );
+
+	while ( aOpsList.size() )
+	{
+		JavaSalGraphicsOp *pOp = aOpsList.front();
+		pOp->drawOp( aContext );
+		delete pOp;
+		aOpsList.pop_front();
+	}
+
+	CGContextRestoreGState( aContext );
+}
+
+// =======================================================================
+
+JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath ) :
+	maNativeClipPath( NULL )
+{
+	if ( aNativeClipPath )
+		maNativeClipPath = CGPathCreateCopy( aNativeClipPath );
+}
+
+// -----------------------------------------------------------------------
+
+JavaSalGraphicsOp::~JavaSalGraphicsOp()
+{
+	if ( maNativeClipPath )
+		CGPathRelease( maNativeClipPath );
+}
+
+#endif	// USE_NATIVE_PRINTING

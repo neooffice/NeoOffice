@@ -95,6 +95,26 @@ public:
 	virtual sal_IntPtr		GetFontId() const;
 };
 
+#ifdef USE_NATIVE_PRINTING
+
+// ----------------------
+// - JavaSalGraphicsOp -
+// ----------------------
+
+class SAL_DLLPRIVATE JavaSalGraphicsOp
+{
+protected:
+	CGPathRef				maNativeClipPath;
+	
+public:
+							JavaSalGraphicsOp( const CGPathRef aNativeClipPath );
+	virtual					~JavaSalGraphicsOp();
+
+	virtual	void			drawOp( CGContextRef aContext ) {}
+};
+
+#endif	// USE_NATIVE_PRINTING
+
 // -------------------
 // - JavaSalGraphics -
 // -------------------
@@ -126,6 +146,8 @@ public:
 	sal_Int32				mnDPIY;
 	CGMutablePathRef		maNativeClipPath;
 #ifdef USE_NATIVE_PRINTING
+	::osl::Mutex			maUndrawnNativeOpsMutex;
+	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
 #endif	// USE_NATIVE_PRINTING
@@ -201,6 +223,14 @@ public:
 
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
+#ifdef USE_NATIVE_PRINTING
+	void					addToUndrawnNativeOps( JavaSalGraphicsOp *pOp );
+	void					drawUndrawnNativeOps( CGContextRef aContext );
+#endif	// USE_NATIVE_PRINTING
 };
+
+#ifdef USE_NATIVE_PRINTING
+SAL_DLLPRIVATE CGColorRef CreateCGColorFromSalColor( SalColor nColor );
+#endif	// USE_NATIVE_PRINTING
 
 #endif // _SV_SALGDI_H
