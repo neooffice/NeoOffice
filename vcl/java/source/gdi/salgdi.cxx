@@ -53,7 +53,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawRectOp : public JavaSalGraphicsOp
 	bool					mbFill;
 
 public:
-							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, const CGRect aRect, SalColor nColor, bool bFill ) : JavaSalGraphicsOp( aNativeClipPath ), maRect( aRect ), mnColor( nColor ), mbFill( bFill ) {}
+							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, bool bXOR, const CGRect aRect, SalColor nColor, bool bFill ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), maRect( aRect ), mnColor( nColor ), mbFill( bFill ) {}
 	virtual					~JavaSalGraphicsDrawRectOp() {}
 
 	virtual	void			drawOp( CGContextRef aContext );
@@ -170,6 +170,9 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext )
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
 	if ( aColor )
 	{
+		if ( mbXOR )
+			CGContextSetBlendMode( aContext, kCGBlendModeXOR );
+
 		if ( mbFill )
 		{
 			CGContextSetFillColorWithColor( aContext, aColor );
@@ -535,9 +538,9 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 	if ( mpPrinter )
 	{
 		if ( mnFillColor )
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, CGRectMake( nX, nY, nWidth, nHeight ), mnFillColor, true ) );
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, CGRectMake( nX, nY, nWidth, nHeight ), mnFillColor, true ) );
 		if ( mnLineColor )
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, CGRectMake( nX, nY, nWidth, nHeight ), mnLineColor, false ) );
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, CGRectMake( nX, nY, nWidth, nHeight ), mnLineColor, false ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -865,8 +868,9 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext )
 
 // =======================================================================
 
-JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath ) :
-	maNativeClipPath( NULL )
+JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bXOR ) :
+	maNativeClipPath( NULL ),
+	mbXOR( bXOR )
 {
 	if ( aNativeClipPath )
 		maNativeClipPath = CGPathCreateCopy( aNativeClipPath );

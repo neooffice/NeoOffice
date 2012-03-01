@@ -105,9 +105,10 @@ class SAL_DLLPRIVATE JavaSalGraphicsOp
 {
 protected:
 	CGPathRef				maNativeClipPath;
+	bool					mbXOR;
 	
 public:
-							JavaSalGraphicsOp( const CGPathRef aNativeClipPath );
+							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bXOR );
 	virtual					~JavaSalGraphicsOp();
 
 	virtual	void			drawOp( CGContextRef aContext ) {}
