@@ -218,6 +218,38 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	void				Release() const;
 };
 
+#ifdef USE_NATIVE_PRINTING
+
+class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
+{
+	float					mfX;
+	float					mfY;
+	int						mnGlyphCount;
+	CGGlyph*				mpGlyphs;
+	CGSize*					mpAdvances;
+#ifdef USE_CORETEXT_TEXT_RENDERING;
+	CTFontRef				mnFontID;
+#else	// USE_CORETEXT_TEXT_RENDERING;
+	ATSUFontID				mnFontID;
+#endif	// USE_CORETEXT_TEXT_RENDERING;
+	float					mfFontSize;
+	bool					mbAntialiased;
+	SalColor				mnColor;
+	float					mfRotateAngle;
+	float					mfTranslateX;
+	float					mfTranslateY;
+	float					mfScaleX;
+	float					mfScaleY;
+
+public:
+							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
+	virtual					~JavaSalGraphicsDrawGlyphsOp();
+
+	virtual	void			drawOp( CGContextRef aContext );
+};
+
+#endif	// USE_NATIVE_PRINTING
+
 #ifndef USE_CORETEXT_TEXT_RENDERING
 static ATSCubicMoveToUPP pATSCubicMoveToUPP = NULL;
 static ATSCubicLineToUPP pATSCubicLineToUPP = NULL;
@@ -1555,6 +1587,148 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 #endif	// USE_CORETEXT_TEXT_RENDERING
 
+#ifdef USE_NATIVE_PRINTING
+
+// ============================================================================
+
+JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
+	JavaSalGraphicsOp( aNativeClipPath, false ),
+	mfX( fX ),
+	mfY( fY ),
+	mnGlyphCount( nGlyphCount ),
+	mpGlyphs( NULL ),
+	mpAdvances( NULL ),
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	mnFontID( (CTFontRef)pVCLFont->getNativeFont() ),
+#else	// USE_CORETEXT_TEXT_RENDERING
+	mnFontID( (ATSUFontID)pVCLFont->getNativeFont() ),
+#endif	// USE_CORETEXT_TEXT_RENDERING
+	mfFontSize( pVCLFont->getSize() ),
+	mbAntialiased( pVCLFont->isAntialiased() ),
+	mnColor( nColor ),
+	mfRotateAngle( 0.0f ),
+	mfTranslateX( fTranslateX ),
+	mfTranslateY( fTranslateY ),
+	mfScaleX( 1.0f ),
+	mfScaleY( 1.0f )
+{
+	if ( mnGlyphCount > 0 )
+	{
+		mpGlyphs = (CGGlyph *)rtl_allocateMemory( mnGlyphCount * sizeof( CGGlyph ) );
+		if ( mpGlyphs )
+		{
+			for ( int i = 0; i < mnGlyphCount; i++ )
+				mpGlyphs[ i ] = (CGGlyph)pGlyphs[ i ];
+		}
+
+		mpAdvances = (CGSize *)rtl_allocateMemory( mnGlyphCount * sizeof( CGSize ) );
+		if ( mpAdvances )
+		{
+			for ( int i = 0; i < mnGlyphCount; i++ )
+			{
+				mpAdvances[ i ].width = (float)pAdvances[ i ] / UNITS_PER_PIXEL;
+				mpAdvances[ i ].height = 0.0f;
+			}
+		}
+	}
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnFontID )
+		CFRetain( mnFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
+	// Calculate glyph rotation and scale
+	if ( nOrientation )
+		mfRotateAngle += ( (float)nOrientation / 10 * -1 ) * M_PI / 180;
+
+	// Fix bug 2673 by applying font scale here instead of in the native method
+	nGlyphOrientation &= GF_ROTMASK;
+	if ( nGlyphOrientation & GF_ROTMASK )
+	{
+		float fRotateDegrees;
+		if ( nGlyphOrientation == GF_ROTL )
+			fRotateDegrees = -90.0f;
+		else
+			fRotateDegrees = 90.0f;
+		mfRotateAngle += fRotateDegrees * M_PI / 180;
+		mfScaleX *= (float)pVCLFont->getScaleX();
+		mfScaleY *= fGlyphScaleX;
+	}
+	else
+	{
+		mfScaleX *= (float)pVCLFont->getScaleX() * fGlyphScaleX;
+	}
+}
+
+// ----------------------------------------------------------------------------
+
+JavaSalGraphicsDrawGlyphsOp::~JavaSalGraphicsDrawGlyphsOp()
+{
+	if ( mpGlyphs )
+		rtl_freeMemory( mpGlyphs );
+
+	if ( mpAdvances )
+		rtl_freeMemory( mpAdvances );
+
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	if ( mnFontID )
+		CFRelease( mnFontID );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+}
+
+// ----------------------------------------------------------------------------
+
+void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext )
+{
+	if ( !aContext || !mpGlyphs || !mpAdvances )
+		return;
+
+	CGFontRef aFont = NULL;
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	aFont = CTFontCopyGraphicsFont( mnFontID, NULL );
+#else	// USE_CORETEXT_TEXT_RENDERING
+	ATSFontRef aATSFont = SalATSLayout::GetATSFontRefFromNativeFont( mnFontID );
+	if ( aATSFont )
+		aFont = CGFontCreateWithPlatformFont( (void *)&aATSFont );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+
+	if ( !aFont )
+		return;
+
+	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
+	if ( !aColor )
+		return;
+
+	saveClipXORGState( aContext );
+
+	// Enable or disable font antialiasing
+	CGContextSetAllowsAntialiasing( aContext, mbAntialiased );
+
+	CGContextTranslateCTM( aContext, mfX, mfY );
+	CGContextRotateCTM( aContext, mfRotateAngle );
+	CGContextTranslateCTM( aContext, mfTranslateX * mfScaleX, mfTranslateY * mfScaleY );
+	CGContextScaleCTM( aContext, 1.0f, -1.0f );
+
+	// Fix bug 2674 by setting all translation, rotation, and scaling
+	// in the CGContext and not in the text matrix. Fix bug 2957 by
+	// moving the glyph scale back into the font transform.
+	CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+	CGContextSetTextMatrix( aContext, aTransform );
+
+	CGContextSetFillColorWithColor( aContext, aColor );
+	CGContextSetStrokeColorWithColor( aContext, aColor );
+	CGContextSetFont( aContext, aFont );
+	CGContextSetFontSize( aContext, mfFontSize );
+	CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpAdvances, mnGlyphCount );
+
+	CGFontRelease( aFont );
+	CGColorRelease( aColor );
+
+	restoreGState( aContext );
+}
+
+#endif	// USE_NATIVE_PRINTING
+
 // ============================================================================
 
 SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackLevel )
@@ -2412,7 +2586,11 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 	Point aPos;
 	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
+#ifdef USE_NATIVE_PRINTING
+	bool bPrinter = ( rJavaGraphics.mpInfoPrinter || rJavaGraphics.mpPrinter ? true : false );
+#else	// USE_NATIVE_PRINTING
 	bool bPrinter = ( rJavaGraphics.mpPrinter ? true : false );
+#endif	// USE_NATIVE_PRINTING
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{
@@ -2508,6 +2686,9 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 			if ( bPrinter )
 			{
+#ifdef USE_NATIVE_PRINTING
+				rJavaGraphics.addToUndrawnNativeOps( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
+#else	// USE_NATIVE_PRINTING
 				// Don't delete the CGGlyph buffer and let the Java native
 				// method print the buffer directly
 				CGGlyph *pGlyphs = (CGGlyph *)rtl_allocateMemory( nGlyphCount * sizeof( CGGlyph ) );
@@ -2529,9 +2710,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 					}
 				}
 
-#ifdef USE_NATIVE_PRINTING
-				fprintf( stderr, "SalATSLayout::DrawText not implemented\n" );
-#else	// USE_NATIVE_PRINTING
 				rJavaGraphics.mpVCLGraphics->drawGlyphBuffer( aStartPos.X(), aStartPos.Y(), nGlyphCount, pGlyphs, pSizes, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX, rJavaGraphics.maNativeClipPath ? CGPathCreateCopy( rJavaGraphics.maNativeClipPath ) : NULL );
 #endif	// USE_NATIVE_PRINTING
 			}

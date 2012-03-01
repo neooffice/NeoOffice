@@ -173,45 +173,47 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext )
 	if ( !aContext )
 		return;
 
+	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
+	if ( !aColor )
+		return;
+
 	saveClipXORGState( aContext );
 
-	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
-	if ( aColor )
-	{
-		CGContextSetStrokeColorWithColor( aContext, aColor );
-		CGContextMoveToPoint( aContext, mfX1, mfY1 );
-		CGContextAddLineToPoint( aContext, mfX2, mfY2 );
-		CGContextStrokePath( aContext );
+	CGContextSetStrokeColorWithColor( aContext, aColor );
+	CGContextMoveToPoint( aContext, mfX1, mfY1 );
+	CGContextAddLineToPoint( aContext, mfX2, mfY2 );
+	CGContextStrokePath( aContext );
 
-		CGColorRelease( aColor );
-	}
+	CGColorRelease( aColor );
 
 	restoreGState( aContext );
 }
+
+// =======================================================================
 
 void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext )
 {
 	if ( !aContext )
 		return;
 
+	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
+	if ( !aColor )
+		return;
+
 	saveClipXORGState( aContext );
 
-	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
-	if ( aColor )
+	if ( mbFill )
 	{
-		if ( mbFill )
-		{
-			CGContextSetFillColorWithColor( aContext, aColor );
-			CGContextFillRect( aContext, maRect );
-		}
-		else
-		{
-			CGContextSetStrokeColorWithColor( aContext, aColor );
-			CGContextStrokeRect( aContext, maRect );
-		}
-
-		CGColorRelease( aColor );
+		CGContextSetFillColorWithColor( aContext, aColor );
+		CGContextFillRect( aContext, maRect );
 	}
+	else
+	{
+		CGContextSetStrokeColorWithColor( aContext, aColor );
+		CGContextStrokeRect( aContext, maRect );
+	}
+
+	CGColorRelease( aColor );
 
 	restoreGState( aContext );
 }
