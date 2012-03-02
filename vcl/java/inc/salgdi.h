@@ -103,6 +103,7 @@ public:
 
 class SAL_DLLPRIVATE JavaSalGraphicsOp
 {
+protected:
 	CGPathRef				maNativeClipPath;
 	bool					mbXOR;
 	
@@ -110,7 +111,7 @@ public:
 							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bXOR );
 	virtual					~JavaSalGraphicsOp();
 
-	virtual	void			drawOp( CGContextRef aContext ) {}
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds ) {}
 
 protected:
 	void					restoreGState( CGContextRef aContext );
@@ -229,7 +230,7 @@ public:
 	void					setFillTransparency( sal_uInt8 nTransparency );
 #ifdef USE_NATIVE_PRINTING
 	void					addToUndrawnNativeOps( JavaSalGraphicsOp *pOp );
-	void					drawUndrawnNativeOps( CGContextRef aContext );
+	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
 #endif	// USE_NATIVE_PRINTING
 };
