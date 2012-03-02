@@ -476,7 +476,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 					CGContextSaveGState( aContext );
 					CGContextTranslateCTM( aContext, aPageBounds.origin.x, aPageBounds.origin.y );
 					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
-					pGraphics->drawUndrawnNativeOps( aContext );
+					pGraphics->drawUndrawnNativeOps( aContext, CGRectMake( aRect.origin.x - aPageBounds.origin.x, aRect.origin.y - aPageBounds.origin.y, aRect.size.width, aRect.size.height ) );
 					CGContextRestoreGState( aContext );
 				}
 			}

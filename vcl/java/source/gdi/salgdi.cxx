@@ -58,7 +58,7 @@ public:
 							JavaSalGraphicsDrawLineOp( const CGPathRef aNativeClipPath, bool bXOR, float fX1, float fY1, float fX2, float fY2, SalColor nColor ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), mfX1( fX1 ), mfY1( fY1 ), mfX2( fX2 ), mfY2( fY2 ), mnColor( nColor ) {}
 	virtual					~JavaSalGraphicsDrawLineOp() {}
 
-	virtual	void			drawOp( CGContextRef aContext );
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
 
 class SAL_DLLPRIVATE JavaSalGraphicsDrawRectOp : public JavaSalGraphicsOp
@@ -71,7 +71,7 @@ public:
 							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, bool bXOR, const CGRect aRect, SalColor nColor, bool bFill ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), maRect( aRect ), mnColor( nColor ), mbFill( bFill ) {}
 	virtual					~JavaSalGraphicsDrawRectOp() {}
 
-	virtual	void			drawOp( CGContextRef aContext );
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
 
 #endif	// USE_NATIVE_PRINTING
@@ -168,10 +168,18 @@ CGColorRef CreateCGColorFromSalColor( SalColor nColor )
 
 // =======================================================================
 
-void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext )
+void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext, CGRect aBounds )
 {
 	if ( !aContext )
 		return;
+
+	if ( !CGRectIsNull( aBounds ) )
+	{
+		if ( !CGRectContainsPoint( aBounds, CGPointMake( mfX1, mfY1 ) ) && !CGRectContainsPoint( aBounds, CGPointMake( mfX2, mfY2 ) ) )
+			return;
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+			return;
+	}
 
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
 	if ( !aColor )
@@ -191,10 +199,18 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext )
 
 // =======================================================================
 
-void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext )
+void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext, CGRect aBounds )
 {
 	if ( !aContext )
 		return;
+
+	if ( !CGRectIsNull( aBounds ) )
+	{
+		if ( !CGRectIntersectsRect( aBounds, maRect ) )
+			return;
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+			return;
+	}
 
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
 	if ( !aColor )
@@ -873,7 +889,7 @@ void JavaSalGraphics::addToUndrawnNativeOps( JavaSalGraphicsOp *pOp )
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext )
+void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBounds )
 {
 	if ( !aContext )
 		return;
@@ -888,11 +904,21 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext )
 	// Turn off antialiasing by default since we did the same in the Java code
 	CGContextSetAllowsAntialiasing( aContext, false );
 
-	// Scale context to match OOo resolution
-	long nDPIX;
-	long nDPIY;
-	GetResolution( nDPIX, nDPIY );
-	CGContextScaleCTM( aContext, (float)72 / (float)nDPIX, (float)72 / (float)nDPIY );
+	// Scale printer context to match OOo resolution
+	if ( mpInfoPrinter || mpPrinter )
+	{
+		long nDPIX;
+		long nDPIY;
+		GetResolution( nDPIX, nDPIY );
+		if ( nDPIX && nDPIY )
+		{
+			float fScaleX = (float)72 / nDPIX;
+			float fScaleY = (float)72 / nDPIY;
+			CGContextScaleCTM( aContext, fScaleX, fScaleY );
+			if ( !CGRectIsNull( aBounds ) )
+				aBounds = CGRectMake( aBounds.origin.x / fScaleX, aBounds.origin.y / fScaleY, aBounds.size.width / fScaleX, aBounds.size.height / fScaleY );
+		}
+	}
 
 	// Scale line width
 	CGContextSetLineWidth( aContext, getNativeLineWidth() );
@@ -900,7 +926,7 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext )
 	while ( aOpsList.size() )
 	{
 		JavaSalGraphicsOp *pOp = aOpsList.front();
-		pOp->drawOp( aContext );
+		pOp->drawOp( aContext, aBounds );
 		delete pOp;
 		aOpsList.pop_front();
 	}

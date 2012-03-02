@@ -245,7 +245,7 @@ public:
 							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
 	virtual					~JavaSalGraphicsDrawGlyphsOp();
 
-	virtual	void			drawOp( CGContextRef aContext );
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
 
 #endif	// USE_NATIVE_PRINTING
@@ -1678,9 +1678,12 @@ JavaSalGraphicsDrawGlyphsOp::~JavaSalGraphicsDrawGlyphsOp()
 
 // ----------------------------------------------------------------------------
 
-void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext )
+void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext, CGRect aBounds )
 {
 	if ( !aContext || !mpGlyphs || !mpAdvances )
+		return;
+
+	if ( !CGRectIsNull( aBounds ) && maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 		return;
 
 	CGFontRef aFont = NULL;
