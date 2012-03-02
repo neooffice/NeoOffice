@@ -151,6 +151,7 @@ public:
 	sal_Int32				mnDPIY;
 	CGMutablePathRef		maNativeClipPath;
 #ifdef USE_NATIVE_PRINTING
+	bool					mbXOR;
 	::osl::Mutex			maUndrawnNativeOpsMutex;
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	Orientation				meOrientation;

@@ -61,14 +61,28 @@ public:
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
 
+class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
+{
+	SalColor				mnFillColor;
+	SalColor				mnLineColor;
+	ULONG					mnPoints;
+	CGPathRef				maPath;
+
+public:
+							JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath );
+	virtual					~JavaSalGraphicsDrawPathOp();
+
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+};
+
 class SAL_DLLPRIVATE JavaSalGraphicsDrawRectOp : public JavaSalGraphicsOp
 {
 	CGRect					maRect;
-	SalColor				mnColor;
-	bool					mbFill;
+	SalColor				mnFillColor;
+	SalColor				mnLineColor;
 
 public:
-							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, bool bXOR, const CGRect aRect, SalColor nColor, bool bFill ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), maRect( aRect ), mnColor( nColor ), mbFill( bFill ) {}
+							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, bool bXOR, const CGRect aRect, SalColor nFillColor, SalColor nLineColor ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), maRect( aRect ), mnFillColor( nFillColor ), mnLineColor( nLineColor ) {}
 	virtual					~JavaSalGraphicsDrawRectOp() {}
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -182,19 +196,86 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	}
 
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
-	if ( !aColor )
+	if ( aColor )
+	{
+		if ( CGColorGetAlpha( aColor ) )
+		{
+			saveClipXORGState( aContext );
+
+			CGContextSetStrokeColorWithColor( aContext, aColor );
+			CGContextMoveToPoint( aContext, mfX1, mfY1 );
+			CGContextAddLineToPoint( aContext, mfX2, mfY2 );
+			CGContextStrokePath( aContext );
+
+			restoreGState( aContext );
+		}
+
+		CGColorRelease( aColor );
+	}
+}
+
+// =======================================================================
+
+JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath ) :
+	JavaSalGraphicsOp( aNativeClipPath, bXOR ),
+	mnFillColor( nFillColor ),
+	mnLineColor( nLineColor ),
+	maPath( NULL )
+{
+	if ( aPath )
+		maPath = CGPathCreateCopy( aPath );
+}
+
+// -----------------------------------------------------------------------
+
+JavaSalGraphicsDrawPathOp::~JavaSalGraphicsDrawPathOp()
+{	
+	if ( maPath )
+		CGPathRelease( maPath );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
+{
+	if ( !aContext || !maPath )
 		return;
 
-	saveClipXORGState( aContext );
+	if ( !CGRectIsNull( aBounds ) )
+	{
+		if ( !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maPath ) ) )
+			return;
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+			return;
+	}
 
-	CGContextSetStrokeColorWithColor( aContext, aColor );
-	CGContextMoveToPoint( aContext, mfX1, mfY1 );
-	CGContextAddLineToPoint( aContext, mfX2, mfY2 );
-	CGContextStrokePath( aContext );
+	CGColorRef aFillColor = CreateCGColorFromSalColor( mnFillColor );
+	if ( aFillColor )
+	{
+		CGColorRef aLineColor = CreateCGColorFromSalColor( mnLineColor );
+		if ( aLineColor )
+		{
+			saveClipXORGState( aContext );
 
-	CGColorRelease( aColor );
+			CGContextAddPath( aContext, maPath );
+			if ( CGColorGetAlpha( aFillColor ) )
+			{
+				CGContextSetFillColorWithColor( aContext, aFillColor );
+				CGContextEOFillPath( aContext );
+			}
+			if ( CGColorGetAlpha( aLineColor ) )
+			{
+				CGContextSetStrokeColorWithColor( aContext, aLineColor );
+				CGContextStrokePath( aContext );
+			}
 
-	restoreGState( aContext );
+			restoreGState( aContext );
+
+			CGColorRelease( aLineColor );
+		}
+
+		CGColorRelease( aFillColor );
+	}
 }
 
 // =======================================================================
@@ -212,26 +293,32 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext, CGRect aBounds )
 			return;
 	}
 
-	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
-	if ( !aColor )
-		return;
-
-	saveClipXORGState( aContext );
-
-	if ( mbFill )
+	CGColorRef aFillColor = CreateCGColorFromSalColor( mnFillColor );
+	if ( aFillColor )
 	{
-		CGContextSetFillColorWithColor( aContext, aColor );
-		CGContextFillRect( aContext, maRect );
-	}
-	else
-	{
-		CGContextSetStrokeColorWithColor( aContext, aColor );
-		CGContextStrokeRect( aContext, maRect );
-	}
+		CGColorRef aLineColor = CreateCGColorFromSalColor( mnLineColor );
+		if ( aLineColor )
+		{
+			saveClipXORGState( aContext );
 
-	CGColorRelease( aColor );
+			if ( CGColorGetAlpha( aFillColor ) )
+			{
+				CGContextSetFillColorWithColor( aContext, aFillColor );
+				CGContextFillRect( aContext, maRect );
+			}
+			if ( CGColorGetAlpha( aLineColor ) )
+			{
+				CGContextSetStrokeColorWithColor( aContext, aLineColor );
+				CGContextStrokeRect( aContext, maRect );
+			}
 
-	restoreGState( aContext );
+			restoreGState( aContext );
+
+			CGColorRelease( aLineColor );
+		}
+
+		CGColorRelease( aFillColor );
+	}
 }
 
 #endif	// USE_NATIVE_PRINTING
@@ -260,6 +347,7 @@ JavaSalGraphics::JavaSalGraphics() :
 	mnDPIY( 0 ),
 	maNativeClipPath( NULL )
 #ifdef USE_NATIVE_PRINTING
+	, mbXOR( false )
 	, meOrientation( ORIENTATION_PORTRAIT )
 	, mbPaperRotated( sal_False )
 #endif	// USE_NATIVE_PRINTING
@@ -377,9 +465,11 @@ void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
 
 BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
+	BOOL bRet = TRUE;
+
 #ifdef USE_NATIVE_PRINTING
 	if ( mpInfoPrinter )
-		return FALSE;
+		return bRet;
 #endif	// USE_NATIVE_PRINTING
 
 	if ( mpPrinter )
@@ -398,16 +488,18 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 		mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_False );
 	}
 
-	return TRUE;
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
 
 bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPoly )
 {
+	bool bRet = true;
+
 #ifdef USE_NATIVE_PRINTING
 	if ( mpInfoPrinter )
-		return false;
+		return bRet;
 #endif	// USE_NATIVE_PRINTING
 
 	const sal_uInt32 nPoly = rPolyPoly.count();
@@ -434,7 +526,7 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 		}
 	}
 
-	return true;
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
@@ -485,6 +577,10 @@ void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 	// Don't do anything if this is a printer
 #ifdef USE_NATIVE_PRINTING
 	if ( mpInfoPrinter || mpPrinter )
+	{
+		mbXOR = false;
+		return;
+	}
 #else	// USE_NATIVE_PRINTING
 	if ( mpPrinter )
 #endif	// USE_NATIVE_PRINTING
@@ -562,8 +658,7 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 
 	if ( mpPrinter )
 	{
-		if ( mnLineColor )
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawLineOp( maNativeClipPath, false, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
+		addToUndrawnNativeOps( new JavaSalGraphicsDrawLineOp( maNativeClipPath, mbXOR, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -589,10 +684,7 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 
 	if ( mpPrinter )
 	{
-		if ( mnFillColor )
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, aRect, mnFillColor, true ) );
-		if ( mnLineColor )
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, false, aRect, mnLineColor, false ) );
+		addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, aRect, mnFillColor, mnLineColor ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -647,7 +739,21 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawPolygon not implemented\n" );
+		if ( nPoints && pPtAry )
+		{
+			::basegfx::B2DPolygon aPoly;
+			for ( ULONG i = 0 ; i < nPoints; i++ )
+				aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
+			aPoly.setClosed( true );
+
+			CGMutablePathRef aPath = CGPathCreateMutable();
+			if ( aPath )
+			{
+				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
+				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, mnFillColor, mnLineColor, aPath ) );
+				CGPathRelease( aPath );
+			}
+		}
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -668,7 +774,30 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawPolyPolygon not implemented\n" );
+		if ( nPoly && pPoints && pPtAry )
+		{
+			::basegfx::B2DPolyPolygon aPolyPoly;
+			for ( ULONG i = 0 ; i < nPoly; i++ )
+			{
+				PCONSTSALPOINT pPolyPtAry = pPtAry[ i ];
+				if ( pPolyPtAry )
+				{
+					::basegfx::B2DPolygon aPoly;
+					for ( ULONG j = 0 ; j < pPoints[ i ]; j++ )
+						aPoly.append( ::basegfx::B2DPoint( pPolyPtAry[ j ].mnX, pPolyPtAry[ j ].mnY ) );
+					aPoly.setClosed( true );
+					aPolyPoly.append( aPoly );
+				}
+			}
+
+			CGMutablePathRef aPath = CGPathCreateMutable();
+			if ( aPath )
+			{
+				AddPolyPolygonToPaths( NULL, aPath, aPolyPoly );
+				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, mnFillColor, mnLineColor, aPath ) );
+				CGPathRelease( aPath );
+			}
+		}
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -683,14 +812,27 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 
 bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPoly, double fTransparency )
 {
+	bool bRet = true;
+
 #ifdef USE_NATIVE_PRINTING
 	if ( mpInfoPrinter )
-		return true;
+		return bRet;
 
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawPolyPolygon2 not implemented\n" );
-		return true;
+		CGMutablePathRef aPath = CGPathCreateMutable();
+		if ( aPath )
+		{
+			sal_uInt8 nTransparency = (sal_uInt8)( ( fTransparency * 100 ) + 0.5 );
+			setFillTransparency( nTransparency );
+			setLineTransparency( nTransparency );
+			AddPolyPolygonToPaths( NULL, aPath, rPolyPoly );
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, mnFillColor, mnLineColor, aPath ) );
+			setFillTransparency( 0 );
+			setLineTransparency( 0 );
+			CGPathRelease( aPath );
+		}
+		return bRet;
 	}
 #endif	// USE_NATIVE_PRINTING
 
@@ -714,19 +856,28 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 		setLineTransparency( 0 );
 	}
 
-	return true;
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
 
 bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::basegfx::B2DVector& rLineWidths, ::basegfx::B2DLineJoin eLineJoin )
 {
+	bool bRet = true;
+
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
+	if ( mpInfoPrinter )
+		return bRet;
+
+	if ( mpPrinter )
+	{
+		fprintf( stderr, "JavaSalGraphics::drawPolyLine2 not implemented\n" );
+		return bRet;
+	}
 #else	// USE_NATIVE_PRINTING
 	if ( mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return false;
+#endif	// USE_NATIVE_PRINTING
 
 	const sal_uInt32 nCount= rPoly.count();
 	if ( nCount && mnLineColor )
@@ -740,7 +891,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 		mpVCLGraphics->drawPathline( &aPath, mnLineColor, getAntiAliasB2DDraw(), rLineWidths.getX(), eLineJoin, aCGPath, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 	}
 
-	return true;
+	return bRet;
 }
 
 // -----------------------------------------------------------------------
@@ -981,9 +1132,6 @@ void JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext )
 
 	CGContextSaveGState( aContext );
 
-	// Throw away any incomplete path
-	CGContextBeginPath( aContext );
-
 	if ( maNativeClipPath )
 	{
 		CGContextBeginPath( aContext );
@@ -993,6 +1141,9 @@ void JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext )
 
 	if ( mbXOR )
 		CGContextSetBlendMode( aContext, kCGBlendModeXOR );
+
+	// Throw away any incomplete path
+	CGContextBeginPath( aContext );
 }
 
 #endif	// USE_NATIVE_PRINTING
