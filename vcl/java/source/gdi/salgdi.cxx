@@ -72,7 +72,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
 	::basegfx::B2DLineJoin	meLineJoin;
 
 public:
-							JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0.0f, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE );
+							JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0.0f, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE );
 	virtual					~JavaSalGraphicsDrawPathOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -288,8 +288,12 @@ void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
 			CGContextAddPath( aContext, maPath );
 			if ( CGColorGetAlpha( aFillColor ) )
 			{
+				// Smooth out image drawing for bug 2475 image
+				if ( mbXOR && !mbAntialias )
+					CGContextSetAllowsAntialiasing( aContext, true );
 				CGContextSetFillColorWithColor( aContext, aFillColor );
 				CGContextEOFillPath( aContext );
+				CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 			}
 			if ( CGColorGetAlpha( aLineColor ) )
 			{
