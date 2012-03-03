@@ -568,7 +568,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPathline0( JNIEnv *
 	CGPathRef aClipPath = (CGPathRef)_par4;
 	CacheCGPath( aClipPath );
 
-	CGLineJoin nJoin;
+	CGLineJoin nJoin = kCGLineJoinMiter;
 	switch ( _par2 )
 	{
 		case ::basegfx::B2DLINEJOIN_BEVEL:
@@ -578,7 +578,6 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawPathline0( JNIEnv *
 			nJoin = kCGLineJoinRound;
 			break;
 		default:
-			nJoin = kCGLineJoinMiter;
 			break;
 	}
 

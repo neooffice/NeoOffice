@@ -63,13 +63,16 @@ public:
 
 class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
 {
+	bool					mbAntialias;
 	SalColor				mnFillColor;
 	SalColor				mnLineColor;
 	ULONG					mnPoints;
 	CGPathRef				maPath;
+	float					mfLineWidth;
+	::basegfx::B2DLineJoin	meLineJoin;
 
 public:
-							JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath );
+							JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0.0f, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE );
 	virtual					~JavaSalGraphicsDrawPathOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -216,11 +219,14 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext, CGRect aBounds )
 
 // =======================================================================
 
-JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath ) :
+JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin ) :
 	JavaSalGraphicsOp( aNativeClipPath, bXOR ),
+	mbAntialias( bAntialias ),
 	mnFillColor( nFillColor ),
 	mnLineColor( nLineColor ),
-	maPath( NULL )
+	maPath( NULL ),
+	mfLineWidth( fLineWidth ),
+	meLineJoin( eLineJoin )
 {
 	if ( aPath )
 		maPath = CGPathCreateCopy( aPath );
@@ -256,6 +262,28 @@ void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		if ( aLineColor )
 		{
 			saveClipXORGState( aContext );
+
+			// Set line width
+			if ( mfLineWidth > 0 )
+				CGContextSetLineWidth( aContext, mfLineWidth );
+
+			// Set line join
+			CGLineJoin nJoin = kCGLineJoinMiter;
+			switch ( meLineJoin )
+			{
+				case ::basegfx::B2DLINEJOIN_BEVEL:
+					nJoin = kCGLineJoinBevel;
+					break;
+				case ::basegfx::B2DLINEJOIN_ROUND:
+					nJoin = kCGLineJoinRound;
+					break;
+				default:
+					break;
+			}
+			CGContextSetLineJoin( aContext, nJoin );
+
+			// Enable or disable antialiasing
+			CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 
 			CGContextAddPath( aContext, maPath );
 			if ( CGColorGetAlpha( aFillColor ) )
@@ -720,7 +748,21 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawPolyLine not implemented\n" );
+		if ( nPoints && pPtAry )
+		{
+			::basegfx::B2DPolygon aPoly;
+			for ( ULONG i = 0 ; i < nPoints; i++ )
+				aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
+			aPoly.removeDoublePoints();
+
+			CGMutablePathRef aPath = CGPathCreateMutable();
+			if ( aPath )
+			{
+				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
+				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
+				CGPathRelease( aPath );
+			}
+		}
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -744,13 +786,14 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 			::basegfx::B2DPolygon aPoly;
 			for ( ULONG i = 0 ; i < nPoints; i++ )
 				aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
+			aPoly.removeDoublePoints();
 			aPoly.setClosed( true );
 
 			CGMutablePathRef aPath = CGPathCreateMutable();
 			if ( aPath )
 			{
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
-				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, mnFillColor, mnLineColor, aPath ) );
+				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -786,6 +829,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 					for ( ULONG j = 0 ; j < pPoints[ i ]; j++ )
 						aPoly.append( ::basegfx::B2DPoint( pPolyPtAry[ j ].mnX, pPolyPtAry[ j ].mnY ) );
 					aPoly.setClosed( true );
+					aPoly.removeDoublePoints();
 					aPolyPoly.append( aPoly );
 				}
 			}
@@ -794,7 +838,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 			if ( aPath )
 			{
 				AddPolyPolygonToPaths( NULL, aPath, aPolyPoly );
-				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, mnFillColor, mnLineColor, aPath ) );
+				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -827,7 +871,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 			setFillTransparency( nTransparency );
 			setLineTransparency( nTransparency );
 			AddPolyPolygonToPaths( NULL, aPath, rPolyPoly );
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, mnFillColor, mnLineColor, aPath ) );
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
 			setFillTransparency( 0 );
 			setLineTransparency( 0 );
 			CGPathRelease( aPath );
@@ -871,7 +915,13 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawPolyLine2 not implemented\n" );
+		CGMutablePathRef aPath = CGPathCreateMutable();
+		if ( aPath )
+		{
+			AddPolygonToPaths( NULL, aPath, rPoly, rPoly.isClosed() );
+			addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, rLineWidths.getX(), eLineJoin ) );
+			CGPathRelease( aPath );
+		}
 		return bRet;
 	}
 #else	// USE_NATIVE_PRINTING
