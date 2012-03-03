@@ -63,6 +63,8 @@ using namespace vcl;
 
 // =======================================================================
 
+#ifdef USE_NATIVE_PRINTING
+
 JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bXOR, CFDataRef aData, int nDataBitCount, long nDataScanlineSize, long nDataWidth, long nDataHeight, const CGRect aSrcRect, const CGRect aDestRect ) :
 	JavaSalGraphicsOp( aNativeClipPath, bXOR ),
 	maImage( NULL ),
@@ -138,6 +140,8 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 
 	restoreGState( aContext );
 }
+
+#endif	// USE_NATIVE_PRINTING
 
 // =======================================================================
 
