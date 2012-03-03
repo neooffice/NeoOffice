@@ -42,7 +42,102 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <vcl/bmpacc.hxx>
 
+#ifdef USE_NATIVE_PRINTING
+
+class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
+{
+	CGImageRef				maImage;
+	CGRect					maSrcRect;
+	CGRect					maDestRect;
+
+public:
+							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bXOR, CFDataRef aData, int nDataBitCount, long nDataScanlineSize, long nDataWidth, long nDataHeight, const CGRect aSrcRect, const CGRect aDestRect );
+	virtual					~JavaSalGraphicsDrawImageOp();
+
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+};
+
+#endif	// USE_NATIVE_PRINTING
+
 using namespace vcl;
+
+// =======================================================================
+
+JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bXOR, CFDataRef aData, int nDataBitCount, long nDataScanlineSize, long nDataWidth, long nDataHeight, const CGRect aSrcRect, const CGRect aDestRect ) :
+	JavaSalGraphicsOp( aNativeClipPath, bXOR ),
+	maImage( NULL ),
+	maSrcRect( aSrcRect ),
+	maDestRect( aDestRect )
+{
+	if ( aData )
+	{
+		CGDataProviderRef aProvider = CGDataProviderCreateWithCFData( aData );
+		if ( aProvider )
+		{
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
+			{
+				// Adjust bounds to fit within available data
+				if ( maSrcRect.origin.x < 0 )
+				{
+					maDestRect.size.width += maSrcRect.origin.x;
+					maSrcRect.size.width += maSrcRect.origin.x;
+					maDestRect.origin.x -= maSrcRect.origin.x;
+					maSrcRect.origin.x = 0;
+				}
+				if ( aSrcRect.origin.y < 0 )
+				{
+					maDestRect.size.height += maSrcRect.origin.y;
+					maSrcRect.size.height += maSrcRect.origin.y;
+					maDestRect.origin.y -= maSrcRect.origin.y;
+					maSrcRect.origin.y = 0;
+				}
+
+				CGImageRef aImage = CGImageCreate( (size_t)nDataWidth, (size_t)nDataHeight, 8, nDataBitCount, nDataScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
+				if ( aImage )
+				{
+					maImage = CGImageCreateWithImageInRect( aImage, maSrcRect );
+					CGImageRelease( aImage );
+				}
+				CGColorSpaceRelease( aColorSpace );
+			}
+
+			CGDataProviderRelease( aProvider );
+		}
+	}
+}
+
+// -----------------------------------------------------------------------
+
+JavaSalGraphicsDrawImageOp::~JavaSalGraphicsDrawImageOp()
+{
+	if ( maImage )
+		CGImageRelease( maImage );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
+{
+	if ( !aContext || !maImage )
+		return;
+
+	if ( !CGRectIsNull( aBounds ) )
+	{
+		if ( !CGRectIntersectsRect( aBounds, maDestRect ) )
+			return;
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+			return;
+	}
+
+	saveClipXORGState( aContext );
+
+	// CGImage's assume flipped coordinates when drawing so draw from the
+	// bottom up
+	CGContextDrawImage( aContext, CGRectMake( maDestRect.origin.x, maDestRect.origin.y + maDestRect.size.height, maDestRect.size.width, maDestRect.size.height * -1 ), maImage );
+
+	restoreGState( aContext );
+}
 
 // =======================================================================
 
@@ -186,11 +281,6 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		{
 			if ( mpPrinter )
 			{
-#ifdef USE_NATIVE_PRINTING
-				fprintf( stderr, "JavaSalGraphics::drawBitmap not implemented\n" );
-#else	// USE_NATIVE_PRINTING
-				// Don't delete the bitmap buffer and let the Java native
-				// method print the bitmap buffer directly
 				SalTwoRect aCopyPosAry;
 				memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
 				aCopyPosAry.mnDestX = 0;
@@ -199,8 +289,27 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				aCopyPosAry.mnDestHeight = aCopyPosAry.mnSrcHeight;
 				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 				if ( pCopyBuffer )
+				{
+#ifdef USE_NATIVE_PRINTING
+					// Assign ownership of bits to a CFData instance
+					CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, NULL );
+					if ( aData )
+					{
+						addToUndrawnNativeOps( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR, aData, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+						CFRelease( aData );
+					}
+					else
+					{
+						delete[] pCopyBuffer->mpBits;
+					}
+		
+					delete pCopyBuffer;
+#else	// USE_NATIVE_PRINTING
+					// Don't delete the bitmap buffer and let the Java native
+					// method print the bitmap buffer directly
 					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 #endif	// USE_NATIVE_PRINTING
+				}
 
 				bDrawn = true;
 			}
@@ -216,7 +325,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						if ( t.pEnv )
 						{
 							jboolean bCopy( sal_False );
-							jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+							sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 							if ( pBits )
 							{
 								BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
@@ -235,7 +344,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 									t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 							}
 						}
-		
+
 						delete pData;
 					}
 
@@ -362,7 +471,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				if ( t.pEnv )
 				{
 					jboolean bCopy( sal_False );
-					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+					sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 					if ( pBits )
 					{
 						BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
@@ -497,7 +606,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				if ( t.pEnv )
 				{
 					jboolean bCopy( sal_False );
-					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+					sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 					if ( pBits )
 					{
 						BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
@@ -550,7 +659,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 													pBits[ j ] = 0x00000000;
 												}
 											}
-	
+
 											pBits += pDestBuffer->mnWidth;
 											pTransBits += pTransDestBuffer->mnScanlineSize;
 										}
@@ -681,7 +790,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 				if ( t.pEnv )
 				{
 					jboolean bCopy( sal_False );
-					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+					sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 					if ( pBits )
 					{
 						BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
@@ -914,7 +1023,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 					if ( pCopyBuffer )
 					{
-						jint *pBits = (jint *)pCopyBuffer->mpBits;
+						sal_Int32 *pBits = (sal_Int32 *)pCopyBuffer->mpBits;
 						if ( pCopyBuffer->mpBits )
 						{
 							Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
@@ -952,7 +1061,25 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							}
 						}
 
+#ifdef USE_NATIVE_PRINTING
+						// Assign ownership of bits to a CFData instance
+						CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, NULL );
+						if ( aData )
+						{
+							addToUndrawnNativeOps( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR, aData, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+							CFRelease( aData );
+						}
+						else
+						{
+							delete[] pCopyBuffer->mpBits;
+						}
+		
+						delete pCopyBuffer;
+#else	// USE_NATIVE_PRINTING
+						// Don't delete the bitmap buffer and let the Java
+						// native method print the bitmap buffer directly
 						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+#endif	// USE_NATIVE_PRINTING
 					}
 
 					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
