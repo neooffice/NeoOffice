@@ -671,7 +671,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 #ifdef USE_NATIVE_PRINTING
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawPixel not implemented\n" );
+		addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, mnLineColor ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
@@ -687,7 +687,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 #ifdef USE_NATIVE_PRINTING
 	if ( mpPrinter )
 	{
-		fprintf( stderr, "JavaSalGraphics::drawPixel2 not implemented\n" );
+		addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, nSalColor | 0xff000000 ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING
