@@ -46,6 +46,22 @@
 
 #ifdef USE_NATIVE_PRINTING
 
+#include <premac.h>
+#import <Cocoa/Cocoa.h>
+#include <postmac.h>
+
+class SAL_DLLPRIVATE JavaSalGraphicsDrawEPSOp : public JavaSalGraphicsOp
+{
+	CFDataRef				maData;
+	CGRect					maRect;
+
+public:
+							JavaSalGraphicsDrawEPSOp( const CGPathRef aNativeClipPath, CFDataRef aData, const CGRect aRect );
+	virtual					~JavaSalGraphicsDrawEPSOp();
+
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+};
+
 class SAL_DLLPRIVATE JavaSalGraphicsDrawLineOp : public JavaSalGraphicsOp
 {
 	float					mfX1;
@@ -181,6 +197,53 @@ static void AddPolyPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutable
 CGColorRef CreateCGColorFromSalColor( SalColor nColor )
 {
 	return CGColorCreateGenericRGB( (float)( ( nColor & 0x00ff0000 ) >> 16 ) / (float)0xff, (float)( ( nColor & 0x0000ff00 ) >> 8 ) / (float)0xff, (float)( nColor & 0x000000ff ) / (float)0xff, (float)( ( nColor & 0xff000000 ) >> 24 ) / (float)0xff );
+}
+
+// =======================================================================
+
+JavaSalGraphicsDrawEPSOp::JavaSalGraphicsDrawEPSOp( const CGPathRef aNativeClipPath, CFDataRef aData, const CGRect aRect ) :
+	JavaSalGraphicsOp( aNativeClipPath, false ),
+	maData( aData ),
+	maRect( aRect )
+{
+	if ( maData )
+		CFRetain( maData );
+}
+
+// -----------------------------------------------------------------------
+
+JavaSalGraphicsDrawEPSOp::~JavaSalGraphicsDrawEPSOp()
+{
+	if ( maData )
+		CFRelease( maData );
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphicsDrawEPSOp::drawOp( CGContextRef aContext, CGRect aBounds )
+{
+	if ( !aContext || !maData )
+		return;
+
+	if ( !CGRectIsNull( aBounds ) )
+	{
+		if ( !CGRectIntersectsRect( aBounds, maRect ) )
+			return;
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+			return;
+	}
+
+	saveClipXORGState( aContext );
+
+	// CGImage's assume flipped coordinates when drawing so draw from the
+	// bottom up
+	NSImageRep *pImageRep = [NSEPSImageRep imageRepWithData:(NSData *)maData];
+	if ( !pImageRep )
+		pImageRep = [NSPDFImageRep imageRepWithData:(NSData *)maData];
+	if ( pImageRep )
+		[pImageRep drawInRect:NSMakeRect( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 )];
+
+	restoreGState( aContext );
 }
 
 // =======================================================================
@@ -906,14 +969,6 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 {
 	BOOL bRet = FALSE;
 
-#ifdef USE_NATIVE_PRINTING
-	if ( mpPrinter )
-	{
-		fprintf( stderr, "JavaSalGraphics::drawEPS not implemented\n" );
-		return bRet;
-	}
-#endif	// USE_NATIVE_PRINTING
-
 	if ( pPtr && nSize )
 	{
 		if ( mpPrinter )
@@ -921,15 +976,30 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 			void *pPtrCopy = rtl_allocateMemory( nSize );
 			if ( pPtrCopy )
 			{
+				memcpy( pPtrCopy, pPtr, nSize );
+#ifdef USE_NATIVE_PRINTING
+				// Assign ownership of bits to a CFData instance
+				CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, (UInt8 *)pPtrCopy, nSize, NULL );
+				if ( aData )
+				{
+					addToUndrawnNativeOps( new JavaSalGraphicsDrawEPSOp( maNativeClipPath, aData, CGRectMake( nX, nY, nWidth, nHeight ) ) );
+					bRet = TRUE;
+					CFRelease( aData );
+				}
+#else	// USE_NATIVE_PRINTING
 				// Don't delete the copied buffer and let the Java native
 				// method print the buffer directly
-				memcpy( pPtrCopy, pPtr, nSize );
 				mpVCLGraphics->drawEPS( pPtrCopy, nSize, nX, nY, nWidth, nHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 				bRet = TRUE;
+#endif	// USE_NATIVE_PRINTING
 			}
 		}
 
+#ifdef USE_NATIVE_PRINTING
+		if ( !bRet && !mpPrinter )
+#else	// USE_NATIVE_PRINTING
 		if ( !bRet )
+#endif	// USE_NATIVE_PRINTING
 		{
 			com_sun_star_vcl_VCLBitmap aVCLBitmap( nWidth, nHeight, 32 );
 			if ( aVCLBitmap.getJavaObject() )
