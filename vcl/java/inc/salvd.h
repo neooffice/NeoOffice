@@ -36,12 +36,8 @@
 #ifndef _SV_SALVD_H
 #define _SV_SALVD_H
 
-#ifndef _SV_SALVD_HXX
 #include <vcl/salvd.hxx>
-#endif
-#ifndef _SV_SV_H
 #include <vcl/sv.h>
-#endif
 
 namespace vcl
 {
@@ -57,19 +53,19 @@ class SalGraphics;
 
 class JavaSalVirtualDevice : public SalVirtualDevice
 {
-public:
 	::vcl::com_sun_star_vcl_VCLImage*	mpVCLImage;
 	USHORT					mnBitCount;
 	JavaSalGraphics*		mpGraphics; 
 	BOOL					mbGraphics;
 
-							JavaSalVirtualDevice();
+public:
+							JavaSalVirtualDevice( long nDPIX = 0 , long nDPIY = 0 );
 	virtual					~JavaSalVirtualDevice();
 
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
 	virtual BOOL			SetSize( long nNewDX, long nNewDY );
-	virtual void                    GetSize( long& rWidth, long& rHeight );
+	virtual void			GetSize( long& rWidth, long& rHeight );
 };
 
 #endif // _SV_SALVD_H

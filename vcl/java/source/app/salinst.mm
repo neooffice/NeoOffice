@@ -917,7 +917,7 @@ void JavaSalInstance::DestroyPrinter( SalPrinter* pPrinter )
 
 SalVirtualDevice* JavaSalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
                                                     long nDX, long nDY,
-                                                    USHORT nBitCount,
+                                                    USHORT /* nBitCount - ignore as Mac OS X bit count is always 32 */,
                                                     const SystemGraphicsData *pData )
 {
 	JavaSalVirtualDevice *pDevice = NULL;
@@ -925,10 +925,6 @@ SalVirtualDevice* JavaSalInstance::CreateVirtualDevice( SalGraphics* pGraphics,
 	if ( nDX > 0 && nDY > 0 )
 	{
 		pDevice = new JavaSalVirtualDevice();
-
-		if ( pGraphics )
-			nBitCount = pGraphics->GetBitCount();
-		pDevice->mnBitCount = nBitCount;
 
 		if ( !pDevice->SetSize( nDX, nDY ) )
 		{

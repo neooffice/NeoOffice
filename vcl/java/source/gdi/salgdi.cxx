@@ -364,9 +364,6 @@ JavaSalGraphics::JavaSalGraphics() :
 	mnFillTransparency( 0xff000000 ),
 	mnLineTransparency( 0xff000000 ),
 	mpFrame( NULL ),
-#ifdef USE_NATIVE_PRINTING
-	mpInfoPrinter( NULL ),
-#endif	// USE_NATIVE_PRINTING
 	mpPrinter( NULL ),
 	mpVirDev( NULL ),
 	mpVCLGraphics( NULL ),
@@ -419,16 +416,6 @@ JavaSalGraphics::~JavaSalGraphics()
 
 void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 {
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
-	{
-		rDPIX = MIN_PRINTER_RESOLUTION;
-		rDPIY = MIN_PRINTER_RESOLUTION;
-		return;
-	}
-	else
-	{
-#endif	// USE_NATIVE_PRINTING
 	if ( !mnDPIX || !mnDPIY )
 	{
 		Size aSize( mpVCLGraphics->getResolution() );
@@ -438,9 +425,6 @@ void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 
 	rDPIX = mnDPIX;
 	rDPIY = mnDPIY;
-#ifdef USE_NATIVE_PRINTING
-	}
-#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -448,7 +432,7 @@ void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 USHORT JavaSalGraphics::GetBitCount()
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
+	if ( mpPrinter )
 		return 32;
 #endif	// USE_NATIVE_PRINTING
 
@@ -459,11 +443,6 @@ USHORT JavaSalGraphics::GetBitCount()
 
 void JavaSalGraphics::ResetClipRegion()
 {
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-#endif	// USE_NATIVE_PRINTING
-
 	if ( mpPrinter )
 	{
 		if ( maNativeClipPath )
@@ -482,11 +461,6 @@ void JavaSalGraphics::ResetClipRegion()
 
 void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
 {
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-#endif	// USE_NATIVE_PRINTING
-
 	if ( mpPrinter )
 		ResetClipRegion();
 	else
@@ -498,11 +472,6 @@ void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
 BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
 	BOOL bRet = TRUE;
-
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return bRet;
-#endif	// USE_NATIVE_PRINTING
 
 	if ( mpPrinter )
 	{
@@ -528,11 +497,6 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPoly )
 {
 	bool bRet = true;
-
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return bRet;
-#endif	// USE_NATIVE_PRINTING
 
 	const sal_uInt32 nPoly = rPolyPoly.count();
 	if ( nPoly )
@@ -565,11 +529,6 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 
 void JavaSalGraphics::EndSetClipRegion()
 {
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-#endif	// USE_NATIVE_PRINTING
-
 	if ( !mpPrinter )
 		mpVCLGraphics->endSetClipRegion( sal_False );
 }
@@ -607,16 +566,15 @@ void JavaSalGraphics::SetFillColor( SalColor nSalColor )
 void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 {
 	// Don't do anything if this is a printer
+	if ( mpPrinter )
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
 	{
 		mbXOR = false;
 		return;
 	}
 #else	// USE_NATIVE_PRINTING
-	if ( mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return;
+#endif	// USE_NATIVE_PRINTING
 
 	// Ignore the bInvertOnly parameter as it is not used by Windows or X11
 	// platforms
@@ -648,9 +606,6 @@ void JavaSalGraphics::SetROPFillColor( SalROPColor nROPColor )
 void JavaSalGraphics::drawPixel( long nX, long nY )
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-
 	if ( mpPrinter )
 	{
 		fprintf( stderr, "JavaSalGraphics::drawPixel not implemented\n" );
@@ -667,9 +622,6 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-
 	if ( mpPrinter )
 	{
 		fprintf( stderr, "JavaSalGraphics::drawPixel2 not implemented\n" );
@@ -685,9 +637,6 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-
 	if ( mpPrinter )
 	{
 		addToUndrawnNativeOps( new JavaSalGraphicsDrawLineOp( maNativeClipPath, mbXOR, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
@@ -704,9 +653,6 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-
 	CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
 	if ( CGRectIsEmpty( aRect ) )
 	{
@@ -747,9 +693,6 @@ bool JavaSalGraphics::drawAlphaRect( long nX, long nY, long nWidth, long nHeight
 void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-
 	if ( mpPrinter )
 	{
 		if ( nPoints && pPtAry )
@@ -780,9 +723,6 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-
 	if ( mpPrinter )
 	{
 		if ( nPoints && pPtAry )
@@ -816,9 +756,6 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONSTSALPOINT* pPtAry )
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-
 	if ( mpPrinter )
 	{
 		if ( nPoly && pPoints && pPtAry )
@@ -863,9 +800,6 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 	bool bRet = true;
 
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return bRet;
-
 	if ( mpPrinter )
 	{
 		CGMutablePathRef aPath = CGPathCreateMutable();
@@ -914,9 +848,6 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 	bool bRet = true;
 
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return bRet;
-
 	if ( mpPrinter )
 	{
 		CGMutablePathRef aPath = CGPathCreateMutable();
@@ -976,9 +907,6 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 	BOOL bRet = FALSE;
 
 #ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return bRet;
-
 	if ( mpPrinter )
 	{
 		fprintf( stderr, "JavaSalGraphics::drawEPS not implemented\n" );
@@ -1110,7 +1038,7 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 	CGContextSetAllowsAntialiasing( aContext, false );
 
 	// Scale printer context to match OOo resolution
-	if ( mpInfoPrinter || mpPrinter )
+	if ( mpPrinter )
 	{
 		long nDPIX;
 		long nDPIY;
@@ -1143,7 +1071,7 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 
 float JavaSalGraphics::getNativeLineWidth()
 {
-	if ( mpInfoPrinter || mpPrinter )
+	if ( mpPrinter )
 		return (float)MIN_PRINTER_RESOLUTION / 72;
 	else
 		return 1.0f;

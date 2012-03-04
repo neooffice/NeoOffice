@@ -40,6 +40,7 @@
 #include <saldata.hxx>
 #include <salframe.h>
 #include <salgdi.h>
+#include <salvd.h>
 #include <osl/mutex.hxx>
 #include <sfx2/sfx.hrc>
 #include <tools/rcid.h>
@@ -765,12 +766,13 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 // =======================================================================
 
 JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
-	mpGraphics( new JavaSalGraphics() ),
-	mbGraphics( FALSE ),
 #ifdef USE_NATIVE_PRINTING
 	mpInfo( nil ),
-	mbPaperRotated( sal_False )
+	mbPaperRotated( sal_False ),
+	mpVirDev( new JavaSalVirtualDevice( MIN_PRINTER_RESOLUTION, MIN_PRINTER_RESOLUTION ) )
 #else	// USE_NATIVE_PRINTING
+	mpGraphics( new JavaSalGraphics() ),
+	mbGraphics( FALSE ),
 	mpVCLPageFormat( new com_sun_star_vcl_VCLPageFormat() )
 #endif	// USE_NATIVE_PRINTING
 {
@@ -785,6 +787,8 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 		[mpInfo retain];
 
 	[pPool release];
+
+	mpVirDev->SetSize( 1, 1 );
 #endif	// USE_NATIVE_PRINTING
 
 	SetData( 0, pSetupData );
@@ -794,9 +798,6 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 
 JavaSalInfoPrinter::~JavaSalInfoPrinter()
 {
-	if ( mpGraphics )
-		delete mpGraphics;
-
 #ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -804,7 +805,13 @@ JavaSalInfoPrinter::~JavaSalInfoPrinter()
 		[mpInfo release];
 
 	[pPool release];
+
+	if ( mpVirDev )
+		delete mpVirDev;
 #else	// USE_NATIVE_PRINTING
+	if ( mpGraphics )
+		delete mpGraphics;
+
 	if ( mpVCLPageFormat )
 		delete mpVCLPageFormat;
 #endif	// USE_NATIVE_PRINTING
@@ -814,23 +821,26 @@ JavaSalInfoPrinter::~JavaSalInfoPrinter()
 
 SalGraphics* JavaSalInfoPrinter::GetGraphics()
 {
+#ifdef USE_NATIVE_PRINTING
+	return mpVirDev->GetGraphics();
+#else	// USE_NATIVE_PRINTING
 	if ( mbGraphics )
 		return NULL;
 
-#ifdef USE_NATIVE_PRINTING
-	mpGraphics->mpInfoPrinter = this;
-#else	// USE_NATIVE_PRINTING
 	mpGraphics->mpVCLGraphics = mpVCLPageFormat->getGraphics();
-#endif	// USE_NATIVE_PRINTING
 	mbGraphics = TRUE;
 
 	return mpGraphics;
+#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 {
+#ifdef USE_NATIVE_PRINTING
+	mpVirDev->ReleaseGraphics( pGraphics );
+#else	// USE_NATIVE_PRINTING
 	if ( pGraphics != mpGraphics )
 		return;
 
@@ -840,6 +850,7 @@ void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 		mpGraphics->mpVCLGraphics = NULL;
 	}
 	mbGraphics = FALSE;
+#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -1546,6 +1557,8 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 #ifdef USE_NATIVE_PRINTING
 	mpGraphics->meOrientation = pSetupData->meOrientation;
 	mpGraphics->mbPaperRotated = mbPaperRotated;
+	mpGraphics->mnDPIX = MIN_PRINTER_RESOLUTION;
+	mpGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
 #else	// USE_NATIVE_PRINTING
 	mpGraphics->mpVCLGraphics = pVCLGraphics;
 #endif	// !USE_NATIVE_PRINTING

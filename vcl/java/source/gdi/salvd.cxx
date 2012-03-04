@@ -33,35 +33,26 @@
  *
  ************************************************************************/
 
-#define _SV_SALVD_CXX
-
-#ifndef _SV_SALVD_H
 #include <salvd.h>
-#endif
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
-#endif
 
 using namespace vcl;
 
 // =======================================================================
 
-JavaSalVirtualDevice::JavaSalVirtualDevice()
+JavaSalVirtualDevice::JavaSalVirtualDevice( long nDPIX, long nDPIY ) :
+	mpVCLImage( NULL ),
+	mnBitCount( 32 ),
+	mpGraphics( new JavaSalGraphics() ),
+	mbGraphics( FALSE )
 {
-	mpVCLImage = NULL;
-	mnBitCount = 0;
-	mpGraphics = new JavaSalGraphics();
-	mbGraphics = FALSE;
-
 	// By default no mirroring for VirtualDevices
 	mpGraphics->SetLayout( 0 );
 	mpGraphics->mpVirDev = this;
+	mpGraphics->mnDPIX = nDPIX;
+	mpGraphics->mnDPIY = nDPIY;
 }
 
 // -----------------------------------------------------------------------

@@ -2592,11 +2592,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 	Point aPos;
 	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-#ifdef USE_NATIVE_PRINTING
-	bool bPrinter = ( rJavaGraphics.mpInfoPrinter || rJavaGraphics.mpPrinter ? true : false );
-#else	// USE_NATIVE_PRINTING
 	bool bPrinter = ( rJavaGraphics.mpPrinter ? true : false );
-#endif	// USE_NATIVE_PRINTING
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
 	{

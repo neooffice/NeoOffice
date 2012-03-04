@@ -133,9 +133,6 @@ public:
 	SalColor				mnFillTransparency;
 	SalColor				mnLineTransparency;
 	JavaSalFrame*			mpFrame;
-#ifdef USE_NATIVE_PRINTING
-	JavaSalInfoPrinter*		mpInfoPrinter;
-#endif	// USE_NATIVE_PRINTING
 	JavaSalPrinter*			mpPrinter;
 	JavaSalVirtualDevice*	mpVirDev;
 	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;

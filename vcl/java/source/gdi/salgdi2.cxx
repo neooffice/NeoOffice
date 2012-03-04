@@ -147,22 +147,12 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 
 void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGraphics )
 {
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-#endif	// USE_NATIVE_PRINTING
-
 	JavaSalGraphics *pJavaSrcGraphics = (JavaSalGraphics *)pSrcGraphics;
 	if ( !pJavaSrcGraphics )
 		pJavaSrcGraphics = this;
 
 	// Don't do anything if the source is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( pJavaSrcGraphics->mpInfoPrinter || pJavaSrcGraphics->mpPrinter )
-#else	// USE_NATIVE_PRINTING
-	// Don't do anything if the source is a printer
 	if ( pJavaSrcGraphics->mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return;
 
 	if ( mpPrinter || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
@@ -190,11 +180,7 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY, long nSrcWidth, long nSrcHeight, USHORT nFlags )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return;
 
 	mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
@@ -204,11 +190,6 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 
 void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap )
 {
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter )
-		return;
-#endif	// USE_NATIVE_PRINTING
-
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
 
 	SalTwoRect aPosAry;
@@ -386,11 +367,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nTransparentColor )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return;
 
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
@@ -520,11 +497,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, const SalBitmap& rTransparentBitmap )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return;
 
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
@@ -705,11 +678,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSalBitmap, SalColor nMaskColor )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return;
 
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSalBitmap;
@@ -837,11 +806,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter || !nDX || !nDY )
-#else	// USE_NATIVE_PRINTING
 	if ( mpPrinter || !nDX || !nDY )
-#endif	// USE_NATIVE_PRINTING
 		return NULL;
 
 	// Normalize the bounds
@@ -872,11 +837,7 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 SalColor JavaSalGraphics::getPixel( long nX, long nY )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( mpInfoPrinter || mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return 0xff000000;
 	else
 		return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
@@ -887,11 +848,7 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalInvert nFlags )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( !mpInfoPrinter && !mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( !mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
 }
 
@@ -900,11 +857,7 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags )
 {
 	// Don't do anything if this is a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( !mpInfoPrinter && !mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( !mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
 }
 
@@ -913,11 +866,7 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitmap& rSourceBitmap, const SalBitmap& rAlphaBitmap )
 {
 	// Don't do anything if the source is not a printer
-#ifdef USE_NATIVE_PRINTING
-	if ( !mpInfoPrinter && !mpPrinter )
-#else	// USE_NATIVE_PRINTING
 	if ( !mpPrinter )
-#endif	// USE_NATIVE_PRINTING
 		return false;
 
 	JavaSalBitmap *pJavaSalBitmap = (JavaSalBitmap *)&rSourceBitmap;

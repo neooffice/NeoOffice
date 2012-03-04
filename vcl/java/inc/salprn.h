@@ -56,6 +56,9 @@ class com_sun_star_vcl_VCLPrintJob;
 }
 
 class JavaSalGraphics;
+#ifdef USE_NATIVE_PRINTING
+class JavaSalVirtualDevice;
+#endif	// USE_NATIVE_PRINTING
 
 // ----------------------
 // - JavaSalInfoPrinter -
@@ -63,12 +66,13 @@ class JavaSalGraphics;
 
 class JavaSalInfoPrinter : public SalInfoPrinter
 {
-	JavaSalGraphics*		mpGraphics;
-	BOOL					mbGraphics;
 #ifdef USE_NATIVE_PRINTING
 	id						mpInfo;
 	sal_Bool				mbPaperRotated;
+	JavaSalVirtualDevice*	mpVirDev;
 #else	// USE_NATIVE_PRINTING
+	JavaSalGraphics*		mpGraphics;
+	BOOL					mbGraphics;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 #endif	// USE_NATIVE_PRINTING
 
