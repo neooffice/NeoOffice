@@ -487,10 +487,10 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		AcquireYieldMutex( nCount );
 	}
 
-	com_sun_star_vcl_VCLEvent *pEvent;
+	com_sun_star_vcl_VCLEvent *pEvent = NULL;
 
 	// Dispatch next pending non-AWT event
-	if ( ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
+	if ( !Application::IsShutDown() && ( pEvent = pSalData->mpEventQueue->getNextCachedEvent( 0, FALSE ) ) != NULL )
 	{
 		pEvent->dispatch();
 		delete pEvent;
@@ -501,7 +501,7 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 
 	// Dispatch the next pending document event
 	ImplSVData *pSVData = ImplGetSVData();
-	if ( pSalData->maPendingDocumentEventsList.size() && pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
+	if ( !Application::IsShutDown() && pSalData->maPendingDocumentEventsList.size() && pSVData && pSVData->maAppData.mnDispatchLevel == 1 && !pSVData->maWinData.mpLastExecuteDlg && !pSalData->mbInNativeModalSheet )
 	{
 		pEvent = pSalData->maPendingDocumentEventsList.front();
 		pSalData->maPendingDocumentEventsList.pop_front();
