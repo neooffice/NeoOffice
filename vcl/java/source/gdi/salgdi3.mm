@@ -983,12 +983,17 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 
 	if ( pVCLFont )
 	{
+#ifdef USE_CORETEXT_TEXT_RENDERING
+		SalATSLayout::GetGlyphBounds( nIndex, pVCLFont, rRect );
+#else	// USE_CORETEXT_TEXT_RENDERING
 #ifdef USE_NATIVE_PRINTING
-		fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
-#else	// USE_NATIVE_PRINTING
-		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
-		rRect.Justify();
+		if ( mpPrinter )
+			fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
+		else
 #endif	// USE_NATIVE_PRINTING
+		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
+#endif	// USE_CORETEXT_TEXT_RENDERING
+		rRect.Justify();
 	}
 
 	// Fix bug 2191 by always returning true so that the OOo code doesn't

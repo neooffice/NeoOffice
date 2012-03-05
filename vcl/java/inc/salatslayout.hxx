@@ -79,11 +79,13 @@ class SalATSLayout : public GenericSalLayout
 	float				mfGlyphScaleX;
 
 public:
-#ifndef USE_CORETEXT_TEXT_RENDERING
+#ifdef USE_CORETEXT_TEXT_RENDERING
+	static void			GetGlyphBounds( sal_Int32 nGlyph, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, Rectangle &rRect );
+#else	// USE_CORETEXT_TEXT_RENDERING
 	static ATSFontRef	GetATSFontRefFromNativeFont( sal_IntPtr nFont );
 	static sal_IntPtr	GetNativeFontFromATSFontRef( ATSFontRef aFont );
 	static void			SetFontFallbacks();
-#endif	// !USE_CORETEXT_TEXT_RENDERING
+#endif	// USE_CORETEXT_TEXT_RENDERING
 	static void			ClearLayoutDataCache();
 
 						SalATSLayout( JavaSalGraphics *pGraphics, int nFallbackLevel );

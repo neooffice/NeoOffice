@@ -1751,7 +1751,35 @@ SalLayout *JavaSalGraphics::GetTextLayout( ImplLayoutArgs& rArgs, int nFallbackL
 
 // ============================================================================
 
-#ifndef USE_CORETEXT_TEXT_RENDERING
+#ifdef USE_CORETEXT_TEXT_RENDERING
+
+void SalATSLayout::GetGlyphBounds( sal_Int32 nGlyph, com_sun_star_vcl_VCLFont *pVCLFont, Rectangle &rRect )
+{
+	rRect = Rectangle( Point( 0, 0 ), Size( 0, 0 ) );
+
+	if ( pVCLFont )
+	{
+		CTFontRef aFont = CTFontCreateCopyWithAttributes( (CTFontRef)pVCLFont->getNativeFont(), pVCLFont->getSize(), NULL, NULL );
+		if ( aFont )
+		{
+			CGGlyph nGlyphID = (CGGlyph)( nGlyph & GF_IDXMASK );
+			CGRect aRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontDefaultOrientation, &nGlyphID, NULL, 1 );
+			if ( !CGRectIsNull( aRect ) )
+			{
+				double fFontScaleX = pVCLFont->getScaleX();
+				if ( nGlyph & GF_ROTMASK )
+					rRect = Rectangle( Point( Float32ToLong( aRect.origin.x ), Float32ToLong( ( aRect.origin.y + aRect.size.height ) * fFontScaleX * -1 ) ), Size( Float32ToLong( aRect.size.width ), Float32ToLong( aRect.size.height * fFontScaleX ) ) );
+				else
+					rRect = Rectangle( Point( Float32ToLong( aRect.origin.x * fFontScaleX ), Float32ToLong( ( aRect.origin.y + aRect.size.height ) * -1 ) ), Size( Float32ToLong( aRect.size.width * fFontScaleX ), Float32ToLong( aRect.size.height ) ) );
+				rRect.Justify();
+			}
+
+			CFRelease( aFont );
+		}
+	}
+}
+
+#else	// USE_CORETEXT_TEXT_RENDERING
 
 ATSFontRef SalATSLayout::GetATSFontRefFromNativeFont( sal_IntPtr nFont )
 {
@@ -1772,7 +1800,7 @@ void SalATSLayout::SetFontFallbacks()
 	ImplATSLayoutData::SetFontFallbacks();
 }
 
-#endif	// !USE_CORETEXT_TEXT_RENDERING
+#endif	// USE_CORETEXT_TEXT_RENDERING
 
 // ----------------------------------------------------------------------------
 
