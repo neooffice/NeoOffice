@@ -40,8 +40,8 @@
 #include <vcl/salprn.hxx>
 #include <vcl/sv.h>
 
-// Uncomment the following line to use native printing APIs
-// #define USE_NATIVE_PRINTING
+// Comment out the following line to disable native printing APIs
+#define USE_NATIVE_PRINTING
 
 #ifndef __OBJC__
 typedef void* id;
