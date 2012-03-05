@@ -125,7 +125,7 @@ Paper ImplPrintInfoGetPaperType( NSPrintInfo *pInfo, sal_Bool bPaperRotated )
 	return nRet;
 }
 
-sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, float fWidth, float fHeight )
+sal_Bool ImplPrintInfoSetPaperType( NSPrintInfo *pInfo, Paper nPaper, Orientation nOrientation, float fWidth, float fHeight )
 {
 	sal_Bool bRet = sal_False;
 
@@ -968,17 +968,17 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 	if ( ! ( nFlags & SAL_JOBSET_ORIENTATION ) )
 	{
 		NSPrintingOrientation nOrientation = ( mpInfo ? [mpInfo orientation] : NSPortraitOrientation );
-		if ( mbPaperRotated )
-			pSetupData->meOrientation = ( nOrientation == NSLandscapeOrientation ? ORIENTATION_PORTRAIT : ORIENTATION_LANDSCAPE );
+		if ( ( mbPaperRotated && nOrientation == NSPortraitOrientation ) || ( !mbPaperRotated && nOrientation == NSLandscapeOrientation ) )
+			pSetupData->meOrientation = ORIENTATION_LANDSCAPE;
 		else
-			pSetupData->meOrientation = ( nOrientation == NSLandscapeOrientation ? ORIENTATION_LANDSCAPE : ORIENTATION_PORTRAIT );
+			pSetupData->meOrientation = ORIENTATION_PORTRAIT;
 	}
 	else if ( mpInfo )
 	{
-		if ( mbPaperRotated )
-			[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSPortraitOrientation : NSLandscapeOrientation )];
+		if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
+			[mpInfo setOrientation:NSLandscapeOrientation];
 		else
-			[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSLandscapeOrientation : NSPortraitOrientation )];
+			[mpInfo setOrientation:NSPortraitOrientation];
 	}
 #else	// USE_NATIVE_PRINTING
 	if ( ! ( nFlags & SAL_JOBSET_ORIENTATION ) )
@@ -997,7 +997,8 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 		if ( pSetupData->mePaperFormat == PAPER_USER && mpInfo )
 		{
 			NSSize aPaperSize = [mpInfo paperSize];
-			if ( mbPaperRotated )
+			NSPrintingOrientation nOrientation = ( mpInfo ? [mpInfo orientation] : NSPortraitOrientation );
+			if ( ( mbPaperRotated && nOrientation == NSPortraitOrientation ) || ( !mbPaperRotated && nOrientation == NSLandscapeOrientation ) )
 			{
 				pSetupData->mnPaperWidth = (long)( aPaperSize.height * 2540 / 72 );
 				pSetupData->mnPaperHeight = (long)( aPaperSize.width * 2540 / 72 );
@@ -1027,11 +1028,11 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 #ifdef USE_NATIVE_PRINTING
 	else if ( mpInfo )
 	{
-		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
-		if ( mbPaperRotated )
-			[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSPortraitOrientation : NSLandscapeOrientation )];
+		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
+		if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
+			[mpInfo setOrientation:NSLandscapeOrientation];
 		else
-			[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSLandscapeOrientation : NSPortraitOrientation )];
+			[mpInfo setOrientation:NSPortraitOrientation];
 	}
 #else	// USE_NATIVE_PRINTING
 	else
@@ -1104,7 +1105,8 @@ void JavaSalInfoPrinter::GetPageInfo( const ImplJobSetup* pSetupData,
 		// Flip page bounds
 		aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
 
-		if ( mbPaperRotated )
+		NSPrintingOrientation nOrientation = [mpInfo orientation];
+		if ( ( mbPaperRotated && nOrientation == NSPortraitOrientation ) || ( !mbPaperRotated && nOrientation == NSLandscapeOrientation ) )
 		{
 			aSize = Size( (long)( aPaperSize.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPaperSize.width * MIN_PRINTER_RESOLUTION / 72 ) );
 			aRect = Rectangle( Point( (long)( aPageBounds.origin.y * MIN_PRINTER_RESOLUTION / 72  ), (long)( aPageBounds.origin.x * MIN_PRINTER_RESOLUTION / 72  ) ), Size( (long)( aPageBounds.size.height * MIN_PRINTER_RESOLUTION / 72 ), (long)( aPageBounds.size.width * MIN_PRINTER_RESOLUTION / 72 ) ) );
@@ -1365,11 +1367,11 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 		else
 		{
 			// Update print info settings
-			mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
-			if ( mbPaperRotated )
-				[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSPortraitOrientation : NSLandscapeOrientation )];
+			mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, pSetupData->meOrientation, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
+			if ( ( mbPaperRotated && pSetupData->meOrientation == ORIENTATION_PORTRAIT ) || ( !mbPaperRotated && pSetupData->meOrientation == ORIENTATION_LANDSCAPE ) )
+				[mpInfo setOrientation:NSLandscapeOrientation];
 			else
-				[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSLandscapeOrientation : NSPortraitOrientation )];
+				[mpInfo setOrientation:NSPortraitOrientation];
 			mePaperFormat = pSetupData->mePaperFormat;
 			mnPaperWidth = pSetupData->mnPaperWidth;
 			mnPaperHeight = pSetupData->mnPaperHeight;
