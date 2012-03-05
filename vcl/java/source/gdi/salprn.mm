@@ -102,10 +102,6 @@ Paper ImplPrintInfoGetPaperType( NSPrintInfo *pInfo, sal_Bool bPaperRotated )
 
 		// Paper sizes are always portrait dimensions
 		NSSize aPaperSize = [pInfo paperSize];
-		NSPrintingOrientation nOrientation = [pInfo orientation];
-		if ( ( bPaperRotated && nOrientation == NSPortraitOrientation ) || nOrientation == NSLandscapeOrientation )
-			aPaperSize = NSMakeSize( aPaperSize.height, aPaperSize.width );
-
         if (fabs(aPaperSize.width - 842) < 2 && fabs(aPaperSize.height - 1191) < 2)
             return PAPER_A3;
         else if (fabs(aPaperSize.width - 595) < 2 && fabs(aPaperSize.height - 842) < 2)
@@ -580,7 +576,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 					if ( pInfo )
 					{
 						JavaSalGraphics *pGraphics = mpUnprintedGraphicsList->front();
-						if ( ( pGraphics->mbPaperRotated && pGraphics->meOrientation == ORIENTATION_PORTRAIT ) || pGraphics->meOrientation == ORIENTATION_LANDSCAPE )
+						if ( ( pGraphics->mbPaperRotated && pGraphics->meOrientation == ORIENTATION_PORTRAIT ) || ( !pGraphics->mbPaperRotated && pGraphics->meOrientation == ORIENTATION_LANDSCAPE ) )
 							[pInfo setOrientation:NSLandscapeOrientation];
 						else
 							[pInfo setOrientation:NSPortraitOrientation];
@@ -1003,13 +999,13 @@ BOOL JavaSalInfoPrinter::SetData( ULONG nFlags, ImplJobSetup* pSetupData )
 			NSSize aPaperSize = [mpInfo paperSize];
 			if ( mbPaperRotated )
 			{
-				pSetupData->mnPaperWidth = (long)( aPaperSize.height * 2540 / MIN_PRINTER_RESOLUTION );
-				pSetupData->mnPaperHeight = (long)( aPaperSize.width * 2540 / MIN_PRINTER_RESOLUTION );
+				pSetupData->mnPaperWidth = (long)( aPaperSize.height * 2540 / 72 );
+				pSetupData->mnPaperHeight = (long)( aPaperSize.width * 2540 / 72 );
 			}
 			else
 			{
-				pSetupData->mnPaperWidth = (long)( aPaperSize.width * 2540 / MIN_PRINTER_RESOLUTION );
-				pSetupData->mnPaperHeight = (long)( aPaperSize.height * 2540 / MIN_PRINTER_RESOLUTION );
+				pSetupData->mnPaperWidth = (long)( aPaperSize.width * 2540 / 72 );
+				pSetupData->mnPaperHeight = (long)( aPaperSize.height * 2540 / 72 );
 			}
 		}
 #else	// USE_NATIVE_PRINTING
@@ -1186,6 +1182,7 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	mePaperFormat( PAPER_USER ),
 	mnPaperWidth( 0 ),
 	mnPaperHeight( 0 ),
+	mbStarted( FALSE ),
 #ifdef USE_NATIVE_PRINTING
 	mpInfo( nil ),
 	mbPaperRotated( sal_False ),
@@ -1193,7 +1190,6 @@ JavaSalPrinter::JavaSalPrinter( JavaSalInfoPrinter *pInfoPrinter ) :
 	maPrintThread( NULL ),
 	mpPrintView( nil )
 #else	// USE_NATIVE_PRINTING
-	mbStarted( FALSE ),
 	mpVCLPageFormat( NULL ),
 	mpVCLPrintJob( new com_sun_star_vcl_VCLPrintJob() )
 #endif	// USE_NATIVE_PRINTING
@@ -1266,20 +1262,6 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 
 	if ( !mpInfo )
 		return FALSE;
-#endif	// USE_NATIVE_PRINTING
-
-#ifdef USE_NATIVE_PRINTING
-	if ( !bFirstPass )
-	{
-		mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
-		if ( mbPaperRotated )
-			[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSPortraitOrientation : NSLandscapeOrientation )];
-		else
-			[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSLandscapeOrientation : NSPortraitOrientation )];
-		mePaperFormat = pSetupData->mePaperFormat;
-		mnPaperWidth = pSetupData->mnPaperWidth;
-		mnPaperHeight = pSetupData->mnPaperHeight;
-	}
 #else	// USE_NATIVE_PRINTING
 	if ( !bFirstPass )
 	{
@@ -1310,92 +1292,119 @@ BOOL JavaSalPrinter::StartJob( const XubString* pFileName,
 #ifdef USE_NATIVE_PRINTING
 	if ( !mpPrintOperation )
 	{
+		mbStarted = FALSE;
+
 		if ( mpPrintView )
 		{
 			[mpPrintView release];
 			mpPrintView = nil;
 		}
 
-		// Set scaling factor
-		NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
-		if ( pValue )
-			[[mpInfo dictionary] setObject:pValue forKey:NSPrintScalingFactor];
-
-		SalData *pSalData = GetSalData();
-		JavaSalFrame *pFocusFrame = NULL;
-
-		// Get the active document window
-		Window *pWindow = Application::GetActiveTopWindow();
-		if ( pWindow )
-			pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
-
-		if ( !pFocusFrame )
-			pFocusFrame = pSalData->mpFocusFrame;
-
-		// Fix bug 3294 by not attaching to utility windows
-		while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus ) )
-			pFocusFrame = pFocusFrame->mpParent;
-
-		// Fix bug 1106 If the focus frame is not set or is not visible,
-		// find the first visible non-floating, non-utility frame
-		if ( !pFocusFrame || !pFocusFrame->mbVisible || pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus )
+		NSString *pJobName = [NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()];
+		if ( bFirstPass )
 		{
-			pFocusFrame = NULL;
-			for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
+			SalData *pSalData = GetSalData();
+			JavaSalFrame *pFocusFrame = NULL;
+
+			// Get the active document window
+			Window *pWindow = Application::GetActiveTopWindow();
+			if ( pWindow )
+				pFocusFrame = (JavaSalFrame *)pWindow->ImplGetFrame();
+
+			if ( !pFocusFrame )
+				pFocusFrame = pSalData->mpFocusFrame;
+
+			// Fix bug 3294 by not attaching to utility windows
+			while ( pFocusFrame && ( pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus ) )
+				pFocusFrame = pFocusFrame->mpParent;
+
+			// Fix bug 1106 If the focus frame is not set or is not visible,
+			// find the first visible non-floating, non-utility frame
+			if ( !pFocusFrame || !pFocusFrame->mbVisible || pFocusFrame->IsFloatingFrame() || pFocusFrame->IsUtilityWindow() || pFocusFrame->mbShowOnlyMenus )
 			{
-				if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
+				pFocusFrame = NULL;
+				for ( ::std::list< JavaSalFrame* >::const_iterator it = pSalData->maFrameList.begin(); it != pSalData->maFrameList.end(); ++it )
 				{
-					pFocusFrame = *it;
-					break;
+					if ( (*it)->mbVisible && !(*it)->IsFloatingFrame() && !(*it)->IsUtilityWindow() && !(*it)->mbShowOnlyMenus )
+					{
+						pFocusFrame = *it;
+						break;
+					}
 				}
 			}
+
+			// Ignore any AWT events while the print dialog is showing to
+			// emulate a modal dialog
+			pSalData->mpNativeModalSheetFrame = pFocusFrame;
+			pSalData->mbInNativeModalSheet = true;
+
+			NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->mpVCLFrame->getNativeWindow() : NULL );
+
+			JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
+			NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+			[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
+
+			while ( ![pJavaSalPrinterShowPrintDialog finished] )
+				Application::Yield();
+			pSalData->mbInNativeModalSheet = false;
+			pSalData->mpNativeModalSheetFrame = NULL;
+
+			NSPrintInfo *pInfo = [pJavaSalPrinterShowPrintDialog printInfo];
+			if ( pInfo )
+			{
+				if ( pInfo != mpInfo )
+				{
+					[mpInfo release];
+					mpInfo = pInfo;
+					[mpInfo retain];
+				}
+
+				mbStarted = TRUE;
+			}
 		}
-
-		// Ignore any AWT events while the print dialog is showing to
-		// emulate a modal dialog
-		pSalData->mpNativeModalSheetFrame = pFocusFrame;
-		pSalData->mbInNativeModalSheet = true;
-
-		NSWindow *pNSWindow = ( pFocusFrame ? (NSWindow *)pFocusFrame->mpVCLFrame->getNativeWindow() : NULL );
-		NSString *pJobName = [NSString stringWithCharacters:maJobName.GetBuffer() length:maJobName.Len()];
-
-		JavaSalPrinterShowPrintDialog *pJavaSalPrinterShowPrintDialog = [JavaSalPrinterShowPrintDialog createWithPrintInfo:mpInfo window:pNSWindow jobName:pJobName];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pJavaSalPrinterShowPrintDialog performSelectorOnMainThread:@selector(showPrintDialog:) withObject:pJavaSalPrinterShowPrintDialog waitUntilDone:YES modes:pModes];
-
-		while ( ![pJavaSalPrinterShowPrintDialog finished] )
-			Application::Yield();
-		pSalData->mbInNativeModalSheet = false;
-		pSalData->mpNativeModalSheetFrame = NULL;
-		NSPrintInfo *pInfo = [pJavaSalPrinterShowPrintDialog printInfo];
-		if ( pInfo )
+		else
 		{
-			NSSize aPaperSize = [pInfo paperSize];
+			// Update print info settings
+			mbPaperRotated = ImplPrintInfoSetPaperType( mpInfo, pSetupData->mePaperFormat, (float)pSetupData->mnPaperWidth * 72 / 2540, (float)pSetupData->mnPaperHeight * 72 / 2540 );
+			if ( mbPaperRotated )
+				[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSPortraitOrientation : NSLandscapeOrientation )];
+			else
+				[mpInfo setOrientation:( pSetupData->meOrientation == ORIENTATION_LANDSCAPE ? NSLandscapeOrientation : NSPortraitOrientation )];
+			mePaperFormat = pSetupData->mePaperFormat;
+			mnPaperWidth = pSetupData->mnPaperWidth;
+			mnPaperHeight = pSetupData->mnPaperHeight;
+
+			// Set scaling factor
+			NSNumber *pValue = [NSNumber numberWithFloat:fScaleFactor];
+			if ( pValue )
+				[[mpInfo dictionary] setObject:pValue forKey:NSPrintScalingFactor];
+
+			NSSize aPaperSize = [mpInfo paperSize];
 
 			// Do not retain as invoking alloc disables autorelease
 			mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
 			if ( mpPrintView )
 			{
-				mpPrintOperation = [NSPrintOperation printOperationWithView:mpPrintView printInfo:pInfo];
+				mpPrintOperation = [NSPrintOperation printOperationWithView:mpPrintView printInfo:mpInfo];
 				if ( mpPrintOperation )
 				{
 					[mpPrintOperation retain];
 					[mpPrintOperation setJobTitle:pJobName];
 					[mpPrintOperation setShowsPrintPanel:NO];
 					[mpPrintOperation setShowsProgressPanel:NO];
+
+					mbStarted = TRUE;
 				}
 			}
 		}
 	}
 
 	[pPool release];
-
-	return ( mpPrintOperation ? TRUE : FALSE );
 #else	// USE_NATIVE_PRINTING
 	mbStarted = mpVCLPrintJob->startJob( mpVCLPageFormat, OUString( rJobName ), fScaleFactor, !bFirstPass ? sal_True : mbStarted );
+#endif	// USE_NATIVE_PRINTING
 
 	return mbStarted;
-#endif	// USE_NATIVE_PRINTING
 }
 
 // -----------------------------------------------------------------------
@@ -1430,8 +1439,8 @@ BOOL JavaSalPrinter::EndJob()
 	[pPool release];
 #else	// USE_NATIVE_PRINTING
 	mpVCLPrintJob->endJob();
-	mbStarted = FALSE;
 #endif	// USE_NATIVE_PRINTING
+	mbStarted = FALSE;
 
 	GetSalData()->mpEventQueue->setShutdownDisabled( sal_False );
 	return TRUE;
@@ -1486,42 +1495,16 @@ SalGraphics* JavaSalPrinter::StartPage( ImplJobSetup* pSetupData, BOOL bNewJobDa
 #ifdef USE_NATIVE_PRINTING
 			NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
+			if ( mpPrintOperation )
+			{
+				[mpPrintOperation release];
+				mpPrintOperation = nil;
+			}
+
 			if ( mpPrintView )
 			{
 				[mpPrintView release];
 				mpPrintView = nil;
-			}
-
-			// Create print operation with same print info
-			if ( mpPrintOperation )
-			{
-				NSPrintOperation *pNewPrintOperation = nil;
-				NSPrintInfo *pInfo = [mpPrintOperation printInfo];
-				if ( pInfo )
-				{
-					NSSize aPaperSize = [pInfo paperSize];
-
-					// Do not retain as invoking alloc disables autorelease
-					mpPrintView = [[VCLPrintView alloc] initWithFrame:NSMakeRect( 0, 0, aPaperSize.width, aPaperSize.height )];
-					if ( mpPrintView )
-					{
-						[mpPrintView autorelease];
-
-						pNewPrintOperation = [NSPrintOperation printOperationWithView:mpPrintView printInfo:pInfo];
-						if ( pNewPrintOperation )
-						{
-							[pNewPrintOperation retain];
-							[pNewPrintOperation setJobTitle:[mpPrintOperation jobTitle]];
-							[pNewPrintOperation setShowsPrintPanel:NO];
-							[pNewPrintOperation setShowsProgressPanel:NO];
-						}
-					}
-				}
-
-				[mpPrintOperation release];
-				mpPrintOperation = pNewPrintOperation;
-				if ( mpPrintOperation )
-					[mpPrintOperation retain];
 			}
 
 			[pPool release];
@@ -1601,7 +1584,7 @@ BOOL JavaSalPrinter::EndPage()
 ULONG JavaSalPrinter::GetErrorCode()
 {
 #ifdef USE_NATIVE_PRINTING
-	if ( !mpPrintOperation || !maPrintThread || !osl_isThreadRunning( maPrintThread ) )
+	if ( !mbStarted || !mpPrintOperation || !maPrintThread || !osl_isThreadRunning( maPrintThread ) )
 #else	// USE_NATIVE_PRINTING
 	if ( !mbStarted || mpVCLPrintJob->isFinished() )
 #endif	// USE_NATIVE_PRINTING

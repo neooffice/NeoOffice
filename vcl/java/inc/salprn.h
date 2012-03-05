@@ -112,6 +112,7 @@ class JavaSalPrinter : public SalPrinter
 	Paper					mePaperFormat;
 	long					mnPaperWidth;
 	long					mnPaperHeight;
+	BOOL					mbStarted;
 #ifdef USE_NATIVE_PRINTING
 	id						mpInfo;
 	sal_Bool				mbPaperRotated;
@@ -119,7 +120,6 @@ class JavaSalPrinter : public SalPrinter
 	oslThread				maPrintThread;
 	id						mpPrintView;
 #else	// USE_NATIVE_PRINTING
-	BOOL					mbStarted;
 	::vcl::com_sun_star_vcl_VCLPageFormat*	mpVCLPageFormat;
 	::vcl::com_sun_star_vcl_VCLPrintJob*	mpVCLPrintJob;
 #endif	// !USE_NATIVE_PRINTING
