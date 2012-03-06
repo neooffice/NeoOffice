@@ -171,7 +171,11 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	}
 	else
 	{
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+		fprintf( stderr, "JavaSalGraphics::copyBits not implemented\n" );
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 		mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight, sal_True );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	}
 }
 
@@ -183,7 +187,11 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 	if ( mpPrinter )
 		return;
 
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	fprintf( stderr, "JavaSalGraphics::copyArea not implemented\n" );
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 	mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // -----------------------------------------------------------------------
@@ -259,12 +267,20 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	// Scale the bitmap if necessary
 	bool bDrawn = false;
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	if ( mpPrinter || mpVirDev || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpPrinter || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	{
 		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 		if ( pSrcBuffer )
 		{
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+			if ( mpPrinter || mpVirDev )
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 			if ( mpPrinter )
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 			{
 				SalTwoRect aCopyPosAry;
 				memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
@@ -275,25 +291,32 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 				if ( pCopyBuffer )
 				{
-#ifdef USE_NATIVE_PRINTING
-					// Assign ownership of bits to a CFData instance
-					CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, NULL );
-					if ( aData )
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
+					if ( useNativeDrawing() )
 					{
-						addToUndrawnNativeOps( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR, aData, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
-						CFRelease( aData );
+						// Assign ownership of bits to a CFData instance
+						CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, NULL );
+						if ( aData )
+						{
+							addToUndrawnNativeOps( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR, aData, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+							CFRelease( aData );
+						}
+						else
+						{
+							delete[] pCopyBuffer->mpBits;
+						}
+		
+						delete pCopyBuffer;
 					}
 					else
 					{
-						delete[] pCopyBuffer->mpBits;
-					}
-		
-					delete pCopyBuffer;
-#else	// USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 					// Don't delete the bitmap buffer and let the Java native
 					// method print the bitmap buffer directly
 					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_PRINTING
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
+					}
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 				}
 
 				bDrawn = true;
@@ -472,7 +495,11 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 							pBits = NULL;
 
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+							fprintf( stderr, "JavaSalGraphics::drawBitmap2 not implemented\n" );
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight, NULL );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 							delete pDestBuffer;
 						}
@@ -646,7 +673,11 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 										t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 										pBits = NULL;
 
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+										fprintf( stderr, "JavaSalGraphics::drawBitmap3 not implemented\n" );
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 										mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight, NULL );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 									}
 
 									delete pTransDestBuffer;
@@ -783,7 +814,11 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
 							pBits = NULL;
 
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+							fprintf( stderr, "JavaSalGraphics::drawMask not implemented\n" );
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, NULL );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 							delete pDestBuffer;
 						}
@@ -821,6 +856,14 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 		nDY = -nDY;
 	}
 
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	if ( mpVirDev )
+	{
+		fprintf( stderr, "JavaSalGraphics::getBitmap not implemented\n" );
+		return NULL;
+	}
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
+
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 
 	if ( !pBitmap->Create( Point( nX, nY ), Size( nDX, nDY ), mpVCLGraphics, BitmapPalette() ) )
@@ -839,8 +882,16 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
 		return 0xff000000;
-	else
-		return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
+
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	if ( mpVirDev )
+	{
+		fprintf( stderr, "JavaSalGraphics::getPixel not implemented\n" );
+		return 0xff000000;
+	}
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
+
+	return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
 }
 
 // -----------------------------------------------------------------------
@@ -848,8 +899,18 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalInvert nFlags )
 {
 	// Don't do anything if this is a printer
-	if ( !mpPrinter )
-		mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
+	if ( mpPrinter )
+		return;
+
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	if ( mpVirDev )
+	{
+		fprintf( stderr, "JavaSalGraphics::invert not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
+
+	mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
 }
 
 // -----------------------------------------------------------------------
@@ -857,8 +918,18 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert nFlags )
 {
 	// Don't do anything if this is a printer
-	if ( !mpPrinter )
-		mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
+	if ( mpPrinter )
+		return;
+
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	if ( mpVirDev )
+	{
+		fprintf( stderr, "JavaSalGraphics::invert2 not implemented\n" );
+		return;
+	}
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
+
+	mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
 }
 
 // -----------------------------------------------------------------------

@@ -39,6 +39,7 @@
 #include <hash_map>
 
 #include <salprn.h>
+#include <salvd.h>
 #include <vcl/salgdi.hxx>
 #include <vcl/outfont.hxx>
 #include <vcl/sallayout.hxx>
@@ -53,6 +54,10 @@
 // Fix bug 3051 by setting the printer resolution to twips
 #define MIN_PRINTER_RESOLUTION 1440
 #endif	// USE_NATIVE_PRINTING
+
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+#define MIN_SCREEN_RESOLUTION 96
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 class ImplDevFontAttributes;
 class ImplFontSelectData;
@@ -95,7 +100,7 @@ public:
 	virtual sal_IntPtr		GetFontId() const;
 };
 
-#ifdef USE_NATIVE_PRINTING
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 
 // ----------------------
 // - JavaSalGraphicsOp -
@@ -118,7 +123,7 @@ protected:
 	void					saveClipXORGState( CGContextRef aContext );
 };
 
-#endif	// USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 // -------------------
 // - JavaSalGraphics -
@@ -147,13 +152,13 @@ public:
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
 	CGMutablePathRef		maNativeClipPath;
-#ifdef USE_NATIVE_PRINTING
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	bool					mbXOR;
 	::osl::Mutex			maUndrawnNativeOpsMutex;
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
-#endif	// USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();
@@ -226,15 +231,16 @@ public:
 
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
-#ifdef USE_NATIVE_PRINTING
+	bool					useNativeDrawing();
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	void					addToUndrawnNativeOps( JavaSalGraphicsOp *pOp );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
-#endif	// USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 };
 
-#ifdef USE_NATIVE_PRINTING
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 SAL_DLLPRIVATE CGColorRef CreateCGColorFromSalColor( SalColor nColor );
-#endif	// USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 #endif // _SV_SALGDI_H

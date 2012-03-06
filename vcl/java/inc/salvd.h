@@ -39,10 +39,15 @@
 #include <vcl/salvd.hxx>
 #include <vcl/sv.h>
 
+// Uncomment the following line to enable native offscreen drawing APIs
+// #define USE_NATIVE_VIRTUAL_DEVICE
+
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 namespace vcl
 {
 class com_sun_star_vcl_VCLImage;
 }
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 
 class JavaSalGraphics;
 class SalGraphics;
@@ -53,13 +58,18 @@ class SalGraphics;
 
 class JavaSalVirtualDevice : public SalVirtualDevice
 {
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	long					mnWidth;
+	long					mnHeight;
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 	::vcl::com_sun_star_vcl_VCLImage*	mpVCLImage;
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	USHORT					mnBitCount;
 	JavaSalGraphics*		mpGraphics; 
 	BOOL					mbGraphics;
 
 public:
-							JavaSalVirtualDevice( long nDPIX = 0 , long nDPIY = 0 );
+							JavaSalVirtualDevice( long nDPIX = 0, long nDPIY = 0 );
 	virtual					~JavaSalVirtualDevice();
 
 	virtual SalGraphics*	GetGraphics();

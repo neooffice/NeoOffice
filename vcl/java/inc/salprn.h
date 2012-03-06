@@ -47,13 +47,13 @@
 typedef void* id;
 #endif	// !__OBJC__
 
+#ifndef USE_NATIVE_PRINTING
 namespace vcl
 {   
 class com_sun_star_vcl_VCLPageFormat;
-#ifndef USE_NATIVE_PRINTING
 class com_sun_star_vcl_VCLPrintJob;
-#endif	// USE_NATIVE_PRINTING
 }
+#endif	// USE_NATIVE_PRINTING
 
 class JavaSalGraphics;
 #ifdef USE_NATIVE_PRINTING
