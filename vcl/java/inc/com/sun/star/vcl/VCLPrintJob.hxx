@@ -36,9 +36,13 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 
+
 #include <list>
+#include <salprn.h>
 #include <java/lang/Object.hxx>
 #include <vcl/jobset.h>
+
+#ifndef USE_NATIVE_PRINTING
 
 namespace vcl {
 
@@ -68,5 +72,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_PRINTING
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX

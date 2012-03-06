@@ -37,7 +37,10 @@
 #define	_SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 
 #include <java/lang/Object.hxx>
+#include <salvd.h>
 #include <sal/types.h>
+
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 
 class BitmapPalette;
 class SalVirtualDevice;
@@ -65,5 +68,7 @@ public:
 };
 
 } // namespace vcl
+
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 
 #endif // _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX

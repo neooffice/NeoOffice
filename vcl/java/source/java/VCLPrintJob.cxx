@@ -44,6 +44,8 @@
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
+#ifndef USE_NATIVE_PRINTING
+
 #include "VCLPrintJob_cocoa.h"
 
 using namespace vcl;
@@ -350,3 +352,5 @@ com_sun_star_vcl_VCLGraphics *com_sun_star_vcl_VCLPrintJob::startPage( Orientati
 	}
 	return out;
 }
+
+#endif	// !USE_NATIVE_PRINTING

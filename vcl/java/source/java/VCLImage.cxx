@@ -33,14 +33,10 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLIMAGE_CXX
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLIMAGE_HXX
 #include <com/sun/star/vcl/VCLImage.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
+
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 
 using namespace vcl;
 
@@ -171,3 +167,5 @@ long com_sun_star_vcl_VCLImage::getWidth()
 	}
 	return out;
 }
+
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE

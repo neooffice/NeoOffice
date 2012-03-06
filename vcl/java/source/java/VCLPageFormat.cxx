@@ -43,6 +43,8 @@
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
+#ifndef USE_NATIVE_PRINTING
+
 #include "VCLPageFormat_cocoa.h"
 #include "VCLPrintJob_cocoa.h"
 
@@ -831,3 +833,5 @@ void com_sun_star_vcl_VCLPageFormat::updatePageFormat( Orientation _par0 )
 		}
 	}
 }
+
+#endif	// !USE_NATIVE_PRINTING
