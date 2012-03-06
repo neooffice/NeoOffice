@@ -39,6 +39,11 @@
 #include <vcl/salvd.hxx>
 #include <vcl/sv.h>
 
+#include <premac.h>
+#include <ApplicationServices/ApplicationServices.h>
+#include <postmac.h>
+#undef check
+
 // Uncomment the following line to enable native offscreen drawing APIs
 // #define USE_NATIVE_VIRTUAL_DEVICE
 
@@ -61,6 +66,9 @@ class JavaSalVirtualDevice : public SalVirtualDevice
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	long					mnWidth;
 	long					mnHeight;
+	BYTE*					mpBits;
+	CGContextRef			maBitmapContext;
+	CGLayerRef				maBitmapLayer;
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	::vcl::com_sun_star_vcl_VCLImage*	mpVCLImage;
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
@@ -76,6 +84,9 @@ public:
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
 	virtual BOOL			SetSize( long nNewDX, long nNewDY );
 	virtual void			GetSize( long& rWidth, long& rHeight );
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	virtual void			Destroy();
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 };
 
 #endif // _SV_SALVD_H

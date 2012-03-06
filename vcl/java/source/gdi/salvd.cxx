@@ -46,6 +46,9 @@ JavaSalVirtualDevice::JavaSalVirtualDevice( long nDPIX, long nDPIY ) :
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	mnWidth( 0 ),
 	mnHeight( 0 ),
+	mpBits( NULL ),
+	maBitmapContext( NULL ),
+	maBitmapLayer( NULL ),
 #else	// !USE_NATIVE_VIRTUAL_DEVICE
 	mpVCLImage( NULL ),
 #endif	// !USE_NATIVE_VIRTUAL_DEVICE
@@ -77,13 +80,15 @@ JavaSalVirtualDevice::~JavaSalVirtualDevice()
 	if ( mpGraphics )
 		delete mpGraphics;
 
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	Destroy();
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpVCLImage )
 	{
 		mpVCLImage->dispose();
 		delete mpVCLImage;
 	}
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // -----------------------------------------------------------------------
@@ -119,13 +124,47 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	BOOL bRet = FALSE;
 
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	fprintf( stderr, "JavaSalVirtualDevice::SetSize not implemented\n" );
-	if ( nDX > 0 && nDY > 0 )
+	Destroy();
+
+	if ( nDX < 1 )
+		nDX = 1;
+	if ( nDY < 1 )
+		nDY = 1;
+
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( aColorSpace )
 	{
-		mnWidth = nDX;
-		mnHeight = nDY;
+		long nScanlineSize = AlignedWidth4Bytes( mnBitCount * nDX );
+		mpBits = new BYTE[ nScanlineSize * nDY ];
+		if ( mpBits )
+		{
+			memset( mpBits, 0, nScanlineSize * nDY );
+			maBitmapContext = CGBitmapContextCreate( mpBits, nDX, nDY, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+			if ( maBitmapContext )
+			{
+				maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
+				if ( maBitmapLayer )
+				{
+					mnWidth = nDX;
+					mnHeight = nDY;
+					bRet = TRUE;
+				}
+			}
+		}
+	}
+
+	if ( !bRet )
+	{
+		Destroy();
+
+		// Say that we have some positive size so that we don't crash
+		mnWidth = 1;
+		mnHeight = 1;
 		bRet = TRUE;
 	}
+
+	// Update the graphic's layer
+	mpGraphics->setLayer( maBitmapLayer );
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpGraphics->mpVCLGraphics )
 	{
@@ -197,3 +236,33 @@ void JavaSalVirtualDevice::GetSize( long& rWidth, long& rHeight )
 	}
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
+
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+
+// -----------------------------------------------------------------------
+
+void JavaSalVirtualDevice::Destroy()
+{
+	mnWidth = 0;
+	mnHeight = 0;
+
+	if ( maBitmapLayer )
+	{
+		CGLayerRelease( maBitmapLayer );
+		maBitmapLayer = NULL;
+	}
+
+	if ( maBitmapContext )
+	{
+		CGContextRelease( maBitmapContext );
+		maBitmapContext = NULL;
+	}
+
+	if ( mpBits )
+	{
+		delete[] mpBits;
+		mpBits = NULL;
+	}
+}
+
+#endif	// USE_NATIVE_VIRTUAL_DEVICE

@@ -158,6 +158,7 @@ public:
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
+	CGLayerRef				maLayer;
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 							JavaSalGraphics();
@@ -236,6 +237,7 @@ public:
 	void					addToUndrawnNativeOps( JavaSalGraphicsOp *pOp );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
+	void					setLayer( CGLayerRef aLayer );
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 };
 

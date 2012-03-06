@@ -442,6 +442,7 @@ JavaSalGraphics::JavaSalGraphics() :
 	, mbXOR( false )
 	, meOrientation( ORIENTATION_PORTRAIT )
 	, mbPaperRotated( sal_False )
+	, maLayer( NULL )
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 {
 	GetSalData()->maGraphicsList.push_back( this );
@@ -472,6 +473,9 @@ JavaSalGraphics::~JavaSalGraphics()
 		delete pOp;
 		maUndrawnNativeOpsList.pop_front();
 	}
+
+	if ( maLayer )
+		CGLayerRelease( maLayer );
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 }
 
@@ -1136,6 +1140,16 @@ void JavaSalGraphics::addToUndrawnNativeOps( JavaSalGraphicsOp *pOp )
 	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
 	maUndrawnNativeOpsList.push_back( pOp );
+
+	if ( maLayer )
+	{
+		CGContextRef aContext = CGLayerGetContext( maLayer );
+		if ( aContext )
+		{
+			CGSize aSize = CGLayerGetSize( maLayer );
+			drawUndrawnNativeOps( aContext, CGRectMake( 0, 0, aSize.width, aSize.height ) );
+		}
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -1193,6 +1207,19 @@ float JavaSalGraphics::getNativeLineWidth()
 		return (float)MIN_PRINTER_RESOLUTION / 72;
 	else
 		return 1.0f;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::setLayer( CGLayerRef aLayer )
+{
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	if ( maLayer )
+		CGLayerRelease( maLayer );
+	maLayer = aLayer;
+	if ( maLayer )
+		CGLayerRetain( maLayer );
 }
 
 // =======================================================================
