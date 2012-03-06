@@ -701,7 +701,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	if ( useNativeDrawing() )
 	{
-		addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, mnLineColor ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, mnLineColor ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
@@ -717,7 +717,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	if ( useNativeDrawing() )
 	{
-		addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, nSalColor | 0xff000000 ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, nSalColor | 0xff000000 ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
@@ -732,7 +732,7 @@ void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	if ( useNativeDrawing() )
 	{
-		addToUndrawnNativeOps( new JavaSalGraphicsDrawLineOp( maNativeClipPath, mbXOR, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawLineOp( maNativeClipPath, mbXOR, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
@@ -755,7 +755,7 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 			return;
 		}
 
-		addToUndrawnNativeOps( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, aRect, mnFillColor, mnLineColor ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, aRect, mnFillColor, mnLineColor ) );
 		return;
 	}
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
@@ -799,7 +799,7 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 			if ( aPath )
 			{
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
-				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -830,7 +830,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 			if ( aPath )
 			{
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
-				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -872,7 +872,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 			if ( aPath )
 			{
 				AddPolyPolygonToPaths( NULL, aPath, aPolyPoly );
-				addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -902,7 +902,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 			setFillTransparency( nTransparency );
 			setLineTransparency( nTransparency );
 			AddPolyPolygonToPaths( NULL, aPath, rPolyPoly );
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
 			setFillTransparency( 0 );
 			setLineTransparency( 0 );
 			CGPathRelease( aPath );
@@ -947,7 +947,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 		if ( aPath )
 		{
 			AddPolygonToPaths( NULL, aPath, rPoly, rPoly.isClosed() );
-			addToUndrawnNativeOps( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, rLineWidths.getX(), eLineJoin ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, rLineWidths.getX(), eLineJoin ) );
 			CGPathRelease( aPath );
 		}
 		return bRet;
@@ -1016,7 +1016,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 				CFDataRef aData = CFDataCreateWithBytesNoCopy( NULL, (UInt8 *)pPtrCopy, nSize, NULL );
 				if ( aData )
 				{
-					addToUndrawnNativeOps( new JavaSalGraphicsDrawEPSOp( maNativeClipPath, aData, CGRectMake( nX, nY, nWidth, nHeight ) ) );
+					addUndrawnNativeOp( new JavaSalGraphicsDrawEPSOp( maNativeClipPath, aData, CGRectMake( nX, nY, nWidth, nHeight ) ) );
 					bRet = TRUE;
 					CFRelease( aData );
 				}
@@ -1132,7 +1132,7 @@ bool JavaSalGraphics::useNativeDrawing()
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::addToUndrawnNativeOps( JavaSalGraphicsOp *pOp )
+void JavaSalGraphics::addUndrawnNativeOp( JavaSalGraphicsOp *pOp )
 {
 	if ( !pOp )
 		return;

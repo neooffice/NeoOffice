@@ -234,7 +234,7 @@ public:
 	void					setFillTransparency( sal_uInt8 nTransparency );
 	bool					useNativeDrawing();
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
-	void					addToUndrawnNativeOps( JavaSalGraphicsOp *pOp );
+	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
 	void					setLayer( CGLayerRef aLayer );
