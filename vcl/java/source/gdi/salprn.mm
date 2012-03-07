@@ -1602,41 +1602,37 @@ XubString JavaSalPrinter::GetPageRange()
 #ifdef USE_NATIVE_PRINTING
 	XubString aRet;
 
-	if ( mpPrintOperation )
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+	if ( mpInfo )
 	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
-
-		NSPrintInfo *pInfo = [mpPrintOperation printInfo];
-		if ( pInfo )
+		NSMutableDictionary *pDictionary = [mpInfo dictionary];
+		if ( pDictionary )
 		{
-			NSMutableDictionary *pDictionary = [pInfo dictionary];
-			if ( pDictionary )
+			NSNumber *pNumber = [pDictionary objectForKey:NSPrintAllPages];
+			if ( !pNumber || ![pNumber boolValue] )
 			{
-				NSNumber *pNumber = [pDictionary objectForKey:NSPrintAllPages];
-				if ( !pNumber || ![pNumber boolValue] )
+				NSNumber *pFirst = [pDictionary objectForKey:NSPrintFirstPage];
+				NSNumber *pLast = [pDictionary objectForKey:NSPrintLastPage];
+				if ( pFirst && pLast )
 				{
-					NSNumber *pFirst = [pDictionary objectForKey:NSPrintFirstPage];
-					NSNumber *pLast = [pDictionary objectForKey:NSPrintLastPage];
-					if ( pFirst && pLast )
+					int nFirst = [pFirst intValue];
+					int nLast = [pLast intValue];
+					if ( nFirst > 0 )
 					{
-						int nFirst = [pFirst intValue];
-						int nLast = [pLast intValue];
-						if ( nFirst > 0 )
-						{
-							if ( nLast < nFirst )
-								nLast = nFirst;
+						if ( nLast < nFirst )
+							nLast = nFirst;
 
-							aRet = XubString::CreateFromInt32( nFirst );
-							aRet += '-';
-							aRet += XubString::CreateFromInt32( nLast );
-						}
+						aRet = XubString::CreateFromInt32( nFirst );
+						aRet += '-';
+						aRet += XubString::CreateFromInt32( nLast );
 					}
 				}
 			}
 		}
-
-		[pPool release];
 	}
+
+	[pPool release];
 
 	return aRet;
 #else	// USE_NATIVE_PRINTING
