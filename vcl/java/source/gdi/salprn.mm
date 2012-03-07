@@ -366,7 +366,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 - (void)drawRect:(NSRect)aRect;
 - (void)endPrintOperation;
 - (id)initWithFrame:(NSRect)aFrame;
-- (MacOSBOOL)isFlipped;
 - (MacOSBOOL)knowsPageRange:(NSRangePointer)pRange;
 - (NSPoint)locationOfPrintRect:(NSRect)aRect;
 - (NSRect)rectForPage:(NSInteger)nPageNumber;
@@ -451,6 +450,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 				if ( aContext )
 				{
 					float fScaleFactor = 1.0f;
+					NSRect aFrame = [self frame];
 					NSRect aPageBounds = NSZeroRect;
 					NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
 					if ( pPrintOperation )
@@ -465,12 +465,17 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 							NSSize aPaperSize = [pInfo paperSize];
 							aPageBounds = [pInfo imageablePageBounds];
 
-							// Flip page bounds
+							// Flip page bounds to VCL drawing coordinates
 							aPageBounds.origin.y = aPaperSize.height - aPageBounds.origin.y - aPageBounds.size.height;
 						}
 					}
 
 					CGContextSaveGState( aContext );
+
+					// Flip coordinates to VCL drawing coordinates
+					CGContextTranslateCTM( aContext, 0, aFrame.size.height - aFrame.origin.y );
+					CGContextScaleCTM( aContext, 1.0f, -1.0f );
+
 					CGContextTranslateCTM( aContext, aPageBounds.origin.x, aPageBounds.origin.y );
 					CGContextScaleCTM( aContext, fScaleFactor, fScaleFactor );
 					pGraphics->drawUndrawnNativeOps( aContext, CGRectMake( aRect.origin.x - aPageBounds.origin.x, aRect.origin.y - aPageBounds.origin.y, aRect.size.width, aRect.size.height ) );
@@ -507,11 +512,6 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 	mpUnprintedGraphicsMutex = new Mutex();
 
 	return self;
-}
-
-- (MacOSBOOL)isFlipped
-{
-	return YES;
 }
 
 - (MacOSBOOL)knowsPageRange:(NSRangePointer)pRange
