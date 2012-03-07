@@ -45,7 +45,6 @@
 
 struct BitmapBuffer;
 class BitmapPalette;
-class SalGraphics;
 
 namespace vcl
 {
@@ -64,7 +63,7 @@ class JavaSalBitmap : public SalBitmap
 	BYTE*					mpBits;
 	BitmapPalette			maPalette;
 	BitmapBuffer*			mpBuffer;
-	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
+	JavaSalGraphics*		mpGraphics;
 
 public:
 	static ULONG			Get32BitNativeFormat();
@@ -73,10 +72,10 @@ public:
 	virtual					~JavaSalBitmap();
 
 	bool					Create( BitmapBuffer *pBuffer );
-	bool					Create( const Point& rPoint, const Size& rSize, const ::vcl::com_sun_star_vcl_VCLGraphics *pVCLGraphics, const BitmapPalette& rPal );
+	bool					Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pGraphics, const BitmapPalette& rPal );
 	::vcl::com_sun_star_vcl_VCLBitmap*	CreateVCLBitmap( long nX, long nY, long nWidth, long nHeight );
 	Point					GetPoint() const { return maPoint; }
-	::vcl::com_sun_star_vcl_VCLGraphics*	GetVCLGraphics() { return mpVCLGraphics; }
+	::vcl::com_sun_star_vcl_VCLGraphics*	GetVCLGraphics();
 	void					NotifyGraphicsChanged( bool bDisposed );
 	void					ReleaseVCLBitmap( ::vcl::com_sun_star_vcl_VCLBitmap *pVCLBitmap );
 

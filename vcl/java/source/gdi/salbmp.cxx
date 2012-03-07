@@ -67,7 +67,7 @@ JavaSalBitmap::JavaSalBitmap() :
 	mnBitCount( 0 ),
 	mpBits( NULL ),
 	mpBuffer( NULL ),
-	mpVCLGraphics( NULL )
+	mpGraphics( NULL )
 {
 	GetSalData()->maBitmapList.push_back( this );
 }
@@ -225,35 +225,66 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
 
+// ------------------------------------------------------------------
+
+com_sun_star_vcl_VCLGraphics *JavaSalBitmap::GetVCLGraphics()
+{
+	if ( mpGraphics )
+		return mpGraphics->mpVCLGraphics;
+	else
+		return NULL;
+}
 
 // ------------------------------------------------------------------
 
 void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 {
 	// Force copying of the buffer if it has not already been done
-	if ( mpVCLGraphics )
+	if ( mpGraphics )
 	{
-		mpVCLGraphics->removeGraphicsChangeListener( this );
-
-		if ( !bDisposed )
+		if ( mpGraphics->mpVCLGraphics )
 		{
-			long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
-			if ( !mpBits )
+			mpGraphics->mpVCLGraphics->removeGraphicsChangeListener( this );
+
+			if ( !bDisposed )
 			{
-				// Force copying of the buffer
-				mpBits = new BYTE[ nCapacity ];
-				if ( mpBits )
+				long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
+				if ( !mpBits )
 				{
-					memset( mpBits, 0, nCapacity );
-					mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
+					// Force copying of the buffer
+					mpBits = new BYTE[ nCapacity ];
+					if ( mpBits )
+					{
+						memset( mpBits, 0, nCapacity );
+						mpGraphics->mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
+					}
 				}
 			}
 		}
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+		else
+		{
+			mpGraphics->removeGraphicsChangeListener( this );
 
-		delete mpVCLGraphics;
-		mpVCLGraphics = NULL;
+			if ( !bDisposed )
+			{
+				long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
+				if ( !mpBits )
+				{
+					// Force copying of the buffer
+					mpBits = new BYTE[ nCapacity ];
+					if ( mpBits )
+					{
+						memset( mpBits, 0, nCapacity );
+						fprintf( stderr, "JavaSalBitmap::NotifyGraphicsChanged not implemented\n" );
+					}
+				}
+			}
+		}
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 		maPoint = Point( 0, 0 );
+		mpGraphics = NULL;
 	}
 }
 
@@ -296,7 +327,7 @@ bool JavaSalBitmap::Create( BitmapBuffer *pBuffer )
 
 // ------------------------------------------------------------------
 
-bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_sun_star_vcl_VCLGraphics *pVCLGraphics, const BitmapPalette& rPal )
+bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pGraphics, const BitmapPalette& rPal )
 {
 	Destroy();
 
@@ -318,15 +349,12 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 
 	maPoint = Point( nX, nY );
 	maSize = Size( nWidth, nHeight );
+	mpGraphics = pGraphics;
 
-	if ( !pVCLGraphics || maSize.Width() <= 0 || maSize.Height() <= 0 )
+	if ( !mpGraphics || maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
-	mpVCLGraphics = new com_sun_star_vcl_VCLGraphics( pVCLGraphics->getJavaObject() );
-	if ( !mpVCLGraphics )
-		return false;
-
-	mnBitCount = mpVCLGraphics->getBitCount();
+	mnBitCount = mpGraphics->GetBitCount();
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
@@ -336,7 +364,12 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, const com_su
 		maPalette.SetEntryCount( nColors );
 	}
 
-	mpVCLGraphics->addGraphicsChangeListener( this );
+	if ( mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics->addGraphicsChangeListener( this );
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	else
+		mpGraphics->addGraphicsChangeListener( this );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 	return true;
 }
@@ -450,11 +483,15 @@ void JavaSalBitmap::Destroy()
 
 	maPalette.SetEntryCount( 0 );
 
-	if ( mpVCLGraphics )
+	if ( mpGraphics )
 	{
-		mpVCLGraphics->removeGraphicsChangeListener( this );
-		delete mpVCLGraphics;
-		mpVCLGraphics = NULL;
+		if ( mpGraphics->mpVCLGraphics )
+			mpGraphics->mpVCLGraphics->removeGraphicsChangeListener( this );
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+		else
+			mpGraphics->removeGraphicsChangeListener( this );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
+		mpGraphics = NULL;
 	}
 }
 

@@ -849,24 +849,16 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 	{
 		nX += nDX;
 		nDX = -nDX;
-    }
+	}
 	if ( nDY < 0 )
 	{
 		nY += nDY;
 		nDY = -nDY;
 	}
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpVirDev )
-	{
-		fprintf( stderr, "JavaSalGraphics::getBitmap not implemented\n" );
-		return NULL;
-	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 
-	if ( !pBitmap->Create( Point( nX, nY ), Size( nDX, nDY ), mpVCLGraphics, BitmapPalette() ) )
+	if ( !pBitmap->Create( Point( nX, nY ), Size( nDX, nDY ), this, BitmapPalette() ) )
 	{
 		delete pBitmap;
 		pBitmap = NULL;
