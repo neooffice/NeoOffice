@@ -39,6 +39,7 @@
 #include <hash_map>
 
 #include <salprn.h>
+#include <salbmp.h>
 #include <salvd.h>
 #include <vcl/salgdi.hxx>
 #include <vcl/outfont.hxx>
@@ -156,6 +157,7 @@ public:
 	bool					mbXOR;
 	::osl::Mutex			maUndrawnNativeOpsMutex;
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
+	::std::list< JavaSalBitmap* >	maGraphicsChangeListenerList;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
 	CGLayerRef				maLayer;
@@ -234,9 +236,11 @@ public:
 	void					setFillTransparency( sal_uInt8 nTransparency );
 	bool					useNativeDrawing();
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
+	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
+	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					setLayer( CGLayerRef aLayer );
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 };

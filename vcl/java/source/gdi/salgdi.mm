@@ -474,6 +474,14 @@ JavaSalGraphics::~JavaSalGraphics()
 		maUndrawnNativeOpsList.pop_front();
 	}
 
+	// Notify graphics change listeners
+	while ( maGraphicsChangeListenerList.size() )
+	{
+		JavaSalBitmap *pBitmap = maGraphicsChangeListenerList.front();
+		maGraphicsChangeListenerList.pop_front();
+		pBitmap->NotifyGraphicsChanged( true );
+	}
+
 	if ( maLayer )
 		CGLayerRelease( maLayer );
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
@@ -1132,6 +1140,18 @@ bool JavaSalGraphics::useNativeDrawing()
 
 // -----------------------------------------------------------------------
 
+void JavaSalGraphics::addGraphicsChangeListener( JavaSalBitmap *pBitmap )
+{
+	if ( !pBitmap )
+		return;
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	maGraphicsChangeListenerList.push_back( pBitmap );
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalGraphics::addUndrawnNativeOp( JavaSalGraphicsOp *pOp )
 {
 	if ( !pOp )
@@ -1160,8 +1180,18 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 		return;
 
 	ClearableMutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	// Notify graphics change listeners
+	while ( maGraphicsChangeListenerList.size() )
+	{
+		JavaSalBitmap *pBitmap = maGraphicsChangeListenerList.front();
+		maGraphicsChangeListenerList.pop_front();
+		pBitmap->NotifyGraphicsChanged( false );
+	}
+
 	::std::list< JavaSalGraphicsOp* > aOpsList( maUndrawnNativeOpsList );
 	maUndrawnNativeOpsList.clear();
+
 	aGuard.clear();
 
 	CGContextSaveGState( aContext );
@@ -1207,6 +1237,18 @@ float JavaSalGraphics::getNativeLineWidth()
 		return (float)MIN_PRINTER_RESOLUTION / 72;
 	else
 		return 1.0f;
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::removeGraphicsChangeListener( JavaSalBitmap *pBitmap )
+{
+	if ( !pBitmap )
+		return;
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	maGraphicsChangeListenerList.remove( pBitmap );
 }
 
 // -----------------------------------------------------------------------
