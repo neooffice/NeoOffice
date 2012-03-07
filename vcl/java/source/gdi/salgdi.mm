@@ -454,18 +454,6 @@ JavaSalGraphics::~JavaSalGraphics()
 {
 	GetSalData()->maGraphicsList.remove( this );
 
-	if ( mpFontData )
-		delete mpFontData;
-
-	if ( mpVCLFont )
-		delete mpVCLFont;
-
-	for ( ::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
-		delete it->second;
-
-	if ( maNativeClipPath )
-		CFRelease( maNativeClipPath );
-
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	while ( maUndrawnNativeOpsList.size() )
 	{
@@ -481,7 +469,21 @@ JavaSalGraphics::~JavaSalGraphics()
 		maGraphicsChangeListenerList.pop_front();
 		pBitmap->NotifyGraphicsChanged( true );
 	}
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
+	if ( mpFontData )
+		delete mpFontData;
+
+	if ( mpVCLFont )
+		delete mpVCLFont;
+
+	for ( ::std::hash_map< int, com_sun_star_vcl_VCLFont* >::const_iterator it = maFallbackFonts.begin(); it != maFallbackFonts.end(); ++it )
+		delete it->second;
+
+	if ( maNativeClipPath )
+		CFRelease( maNativeClipPath );
+
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	if ( maLayer )
 		CGLayerRelease( maLayer );
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
