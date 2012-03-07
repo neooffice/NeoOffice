@@ -36,12 +36,18 @@
 #ifndef _SV_SALPRN_H
 #define _SV_SALPRN_H
 
+#ifdef __cplusplus
+
 #include <vcl/prntypes.hxx>
 #include <vcl/salprn.hxx>
 #include <vcl/sv.h>
 
+#endif	// __cplusplus
+
 // Comment out the following line to disable native printing APIs
 #define USE_NATIVE_PRINTING
+
+#ifdef __cplusplus
 
 #ifndef __OBJC__
 typedef void* id;
@@ -135,9 +141,12 @@ public:
 	virtual BOOL			EndPage();
 	virtual ULONG			GetErrorCode();
 	virtual XubString		GetPageRange();
+
 #ifdef USE_NATIVE_PRINTING
-	virtual void			RunPrintOperation();
+	void					RunPrintOperation();
 #endif	// USE_NATIVE_PRINTING
 };
+
+#endif	// __cplusplus
 
 #endif // _SV_SALPRN_H

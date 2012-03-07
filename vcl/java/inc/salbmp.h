@@ -36,21 +36,12 @@
 #ifndef _SV_SALBMP_H
 #define _SV_SALBMP_H
 
-#ifndef _SV_SALBMP_HXX
+#include <salgdi.h>
 #include <vcl/salbmp.hxx>
-#endif
-#ifndef _SV_SV_H
 #include <vcl/sv.h>
-#endif
-#ifndef _SV_GEN_HXX
 #include <tools/gen.hxx>
-#endif
-#ifndef _SV_SALBTYPE_HXX
 #include <vcl/salbtype.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 #include <com/sun/star/vcl/VCLBitmap.hxx>
-#endif
 
 struct BitmapBuffer;
 class BitmapPalette;

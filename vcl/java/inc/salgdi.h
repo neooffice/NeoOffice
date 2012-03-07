@@ -62,6 +62,7 @@
 
 class ImplDevFontAttributes;
 class ImplFontSelectData;
+class JavaSalBitmap;
 class JavaSalFrame;
 class JavaSalPrinter;
 class JavaSalVirtualDevice;

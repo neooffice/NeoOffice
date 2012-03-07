@@ -44,9 +44,9 @@
 #include <vcl/svapp.hxx>
 #include <vcl/window.hxx>
 
-#ifndef USE_NATIVE_PRINTING
-
 #include "VCLPrintJob_cocoa.h"
+
+#ifndef USE_NATIVE_PRINTING
 
 using namespace vcl;
 

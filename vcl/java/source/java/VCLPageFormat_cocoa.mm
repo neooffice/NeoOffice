@@ -43,6 +43,8 @@
 
 #include "VCLPageFormat_cocoa.h"
 
+#ifndef USE_NATIVE_PRINTING
+
 @implementation VCLPrintOperation
 
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView
@@ -414,3 +416,5 @@ void VCLPrintInfo_installVCLPrintClasses()
 
 	[pPool release];
 }
+
+#endif	// !USE_NATIVE_PRINTING

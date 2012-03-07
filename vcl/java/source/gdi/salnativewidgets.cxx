@@ -37,40 +37,17 @@
 
 #include <dlfcn.h>
 
-#ifndef _SV_SVSYS_H
-#include <svsys.h>
-#endif
-
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALBMP_H
 #include <salbmp.h>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_SVAPP_HXX
-#include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_DECOVIEW_HXX
-#include <vcl/decoview.hxx>
-#endif
-
-#ifndef _RTL_USTRING_H_
+#include <svsys.h>
 #include <rtl/ustring.h>
-#endif
 #include <osl/module.h>
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
+#include <vcl/svapp.hxx>
+#include <vcl/decoview.hxx>
 #include <com/sun/star/vcl/VCLBitmap.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
 
 #ifdef __cplusplus
 #include <premac.h>
@@ -118,8 +95,10 @@ using namespace rtl;
 
 struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 {
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
 	java_lang_Object*	 	mpData;
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 	CGContextRef			maContext;
 	bool					mbLastDrawToPrintGraphics;
 
@@ -190,7 +169,14 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 // =======================================================================
 
-VCLBitmapBuffer::VCLBitmapBuffer() : BitmapBuffer(), mpVCLBitmap( NULL ), mpData( NULL ), maContext( NULL ), mbLastDrawToPrintGraphics( false )
+VCLBitmapBuffer::VCLBitmapBuffer() :
+	BitmapBuffer(),
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
+	mpVCLBitmap( NULL ),
+	mpData( NULL ),
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
+	maContext( NULL ),
+	mbLastDrawToPrintGraphics( false )
 {
 	mnFormat = 0;
 	mnWidth = 0;
@@ -213,7 +199,11 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 {
 	bool bReused = false;
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	if ( nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	{
 		ReleaseContext();
 		bReused = true;
@@ -221,14 +211,17 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 	else
 	{
 		Destroy();
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
 		if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
 		{
 			Destroy();
 			return FALSE;
 		}
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 	}
 
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 	VCLThreadAttach t;
 	if ( !t.pEnv )
 	{
@@ -243,6 +236,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 		Destroy();
 		return FALSE;
 	}
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 
 	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN;
 	if ( nWidth > mnWidth )
@@ -252,9 +246,14 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 	mnScanlineSize = mnWidth * sizeof( jint );
 	mnBitCount = 32;
 
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	if ( !mpBits )
+		mpBits = new BYTE[ mnScanlineSize * mnHeight ];
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 	jboolean bCopy( sal_False );
 	if ( !mpBits )
 		mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( !mpBits )
 	{
 		Destroy();
@@ -273,11 +272,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 			return FALSE;
 		}
 
-#ifdef POWERPC
-		maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
 		maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
 		CGColorSpaceRelease( aColorSpace );
 	}
 
@@ -311,15 +306,20 @@ void VCLBitmapBuffer::Destroy()
 
 	if ( mpBits )
 	{
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+		delete[] mpBits;
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 		if ( mpData )
 		{
 			VCLThreadAttach t;
 			if ( t.pEnv )
 				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, JNI_ABORT );
 		}
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 		mpBits = NULL;
 	}
 
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpData )
 	{
 		delete mpData;
@@ -332,6 +332,7 @@ void VCLBitmapBuffer::Destroy()
 		delete mpVCLBitmap;
 		mpVCLBitmap = NULL;
 	}
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // -----------------------------------------------------------------------
@@ -344,6 +345,7 @@ void VCLBitmapBuffer::ReleaseContext()
 		maContext = NULL;
 	}
 
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpBits )
 	{
 		if ( mpData )
@@ -360,6 +362,7 @@ void VCLBitmapBuffer::ReleaseContext()
 		delete mpData;
 		mpData = NULL;
 	}
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // =======================================================================

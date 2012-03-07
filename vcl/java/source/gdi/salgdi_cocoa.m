@@ -115,11 +115,7 @@
 						long nPixels = mnDestWidth * mnDestHeight;
 						long i = 0;
 						for ( ; i < nPixels; i++ )
-#ifdef POWERPC
-							mpDestPtr[ i ] = ( ( pBitmapBuffer[ i ] & 0xffffff00 ) >> 8 ) | ( ( pBitmapBuffer[ i ] & 0x000000ff ) << 24 );
-#else	// POWERPC
 							mpDestPtr[ i ] = ( pBitmapBuffer[ i ] & 0xff00ff00 ) | ( ( pBitmapBuffer[ i ] & 0x00ff0000 ) >> 16 ) | ( ( pBitmapBuffer[ i ] & 0x000000ff ) << 16 );
-#endif	// POWERPC
 					}
 
 					mbResult = YES;

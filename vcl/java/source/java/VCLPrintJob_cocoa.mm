@@ -44,6 +44,8 @@
 #include "VCLPageFormat_cocoa.h"
 #include "VCLPrintJob_cocoa.h"
 
+#ifndef USE_NATIVE_PRINTING
+
 typedef OSStatus PMSetJobNameCFString_Type( PMPrintSettings aSettings, CFStringRef aName );
 
 @interface ShowPrintDialog : NSObject
@@ -360,3 +362,5 @@ sal_Bool NSPrintPanel_result( id pDialog )
 
 	return bRet;
 }
+
+#endif	// !USE_NATIVE_PRINTING

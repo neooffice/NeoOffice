@@ -432,11 +432,7 @@ CGContextRef ImplATSLayoutData::GetSharedContext()
 			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 			if ( aColorSpace )
 			{
-#ifdef POWERPC
-				maSharedContext = CGBitmapContextCreate( mpSharedContextData, 1, 1, 8, 4, aColorSpace, kCGImageAlphaPremultipliedFirst );
-#else	// POWERPC
 				maSharedContext = CGBitmapContextCreate( mpSharedContextData, 1, 1, 8, 4, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-#endif	// POWERPC
 				CGColorSpaceRelease( aColorSpace );
 			}
 		}

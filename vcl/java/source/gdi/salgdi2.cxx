@@ -42,7 +42,7 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <vcl/bmpacc.hxx>
 
-#ifdef USE_NATIVE_PRINTING
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 
 class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 {
@@ -57,11 +57,11 @@ public:
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
 
-#endif	// USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 using namespace vcl;
 
-#ifdef USE_NATIVE_PRINTING
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 
 // =======================================================================
 
@@ -134,14 +134,14 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 
 	saveClipXORGState( aContext );
 
-	// CGImage's assume flipped coordinates when drawing so draw from the
+	// CGImage's assume unflipped coordinates when drawing so draw from the
 	// bottom up
 	CGContextDrawImage( aContext, CGRectMake( maDestRect.origin.x, maDestRect.origin.y + maDestRect.size.height, maDestRect.size.width, maDestRect.size.height * -1 ), maImage );
 
 	restoreGState( aContext );
 }
 
-#endif	// USE_NATIVE_PRINTING
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 // =======================================================================
 

@@ -36,6 +36,10 @@
 #ifndef __VCLPRINTJOB_COCOA_H__
 #define __VCLPRINTJOB_COCOA_H__
 
+#include <salprn.h>
+
+#ifndef USE_NATIVE_PRINTING
+
 #ifndef __OBJC__
 typedef void* id;
 #endif	// !__OBJC__
@@ -51,5 +55,7 @@ SAL_DLLPRIVATE sal_Bool NSPrintPanel_result( id pDialog );
 #ifdef __cplusplus
 END_C
 #endif
+
+#endif	// !USE_NATIVE_PRINTING
 
 #endif

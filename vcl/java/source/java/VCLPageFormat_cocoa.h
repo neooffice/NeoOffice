@@ -36,6 +36,10 @@
 #ifndef __VCLPAGEFORMAT_COCOA_H__
 #define __VCLPAGEFORMAT_COCOA_H__
 
+#include <salprn.h>
+
+#ifndef USE_NATIVE_PRINTING
+
 #ifdef __OBJC__
 @interface VCLPrintOperation : NSPrintOperation
 + (NSPrintOperation *)printOperationWithView:(NSView *)pView;
@@ -62,5 +66,7 @@ void VCLPrintInfo_installVCLPrintClasses();
 #ifdef __cplusplus
 END_C
 #endif
+
+#endif	// !USE_NATIVE_PRINTING
 
 #endif

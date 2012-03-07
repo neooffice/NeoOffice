@@ -36,7 +36,6 @@
 #ifndef _SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 #define	_SV_COM_SUN_STAR_VCL_VCLPRINTJOB_HXX
 
-
 #include <list>
 #include <salprn.h>
 #include <java/lang/Object.hxx>

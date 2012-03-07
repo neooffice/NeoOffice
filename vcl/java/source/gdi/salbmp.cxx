@@ -57,11 +57,7 @@ using namespace vcl;
 
 ULONG JavaSalBitmap::Get32BitNativeFormat()
 {
-#ifdef POWERPC
-	return BMP_FORMAT_32BIT_TC_ARGB;
-#else	// POWERPC
 	return BMP_FORMAT_32BIT_TC_BGRA;
-#endif	// POWERPC
 }
 
 // ------------------------------------------------------------------
@@ -88,6 +84,10 @@ JavaSalBitmap::~JavaSalBitmap()
 
 com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, long nWidth, long nHeight )
 {
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	fprintf( stderr, "JavaSalBitmap::CreateVCLBitmap not implemented\n" );
+	return NULL;
+#else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( nWidth < 1 || nHeight < 1 )
 		return NULL;
 
@@ -187,11 +187,7 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 								pBitsOut += nWidth;
 							}
 						}
-#ifdef POWERPC
-						else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_ARGB )
-#else	// POWERPC
 						else if ( pBuffer->mnFormat & BMP_FORMAT_32BIT_TC_BGRA )
-#endif	// POWERPC
 						{
 							long nByteCount = nWidth * sizeof( jint );
 							for ( long i = 0; i < nHeight; i++ )
@@ -226,7 +222,9 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 	}
 
 	return pVCLBitmap;
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
+
 
 // ------------------------------------------------------------------
 

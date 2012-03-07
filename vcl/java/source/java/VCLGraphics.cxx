@@ -313,11 +313,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmap0( JNIEnv *pE
 		return;
 	}
 
-#ifdef POWERPC
-	CGImageRef aImage = CGImageCreate( _par5, _par6, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedFirst, aProvider, NULL, false, kCGRenderingIntentDefault );
-#else	// POWERPC
 	CGImageRef aImage = CGImageCreate( _par5, _par6, 8, sizeof( jint ) * 8, nRowSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
-#endif	// POWERPC
 	CGColorSpaceRelease( aColorSpace );
 	CGDataProviderRelease( aProvider );
 
@@ -398,11 +394,7 @@ JNIEXPORT void JNICALL Java_com_sun_star_vcl_VCLGraphics_drawBitmapBuffer0( JNIE
 		return;
 	}
 
-#ifdef POWERPC
-	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst, aProvider, NULL, false, kCGRenderingIntentDefault );
-#else	// POWERPC
 	CGImageRef aImage = CGImageCreate( _par3, _par4, 8, sizeof( jint ) * 8, pBuffer->mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
-#endif	// POWERPC
 	CGColorSpaceRelease( aColorSpace );
 	CGDataProviderRelease( aProvider );
 

@@ -33,17 +33,9 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLBITMAP_CXX
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLBITMAP_HXX
 #include <com/sun/star/vcl/VCLBitmap.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_SALBTYPE_HXX
-#include <salbtype.hxx>
-#endif
+#include <vcl/salbtype.hxx>
 
 using namespace vcl;
 

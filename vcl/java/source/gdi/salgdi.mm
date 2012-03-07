@@ -1309,7 +1309,11 @@ void JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext )
 	}
 
 	if ( mbXOR )
-		CGContextSetBlendMode( aContext, kCGBlendModeXOR );
+	{
+		// Mac OS X's XOR blend mode does not do real XORing of bits so we
+		// reimplement our own XORing
+		fprintf( stderr, "JavaSalGraphicsOp::saveClipXORGState XOR not implemented\n" );
+	}
 
 	// Throw away any incomplete path
 	CGContextBeginPath( aContext );
