@@ -248,7 +248,13 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( !mpBits )
-		mpBits = new BYTE[ mnScanlineSize * mnHeight ];
+	{
+		try
+		{
+			mpBits = new BYTE[ mnScanlineSize * mnHeight ];
+		}
+		catch( const std::bad_alloc& ) {}
+	}
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	jboolean bCopy( sal_False );
 	if ( !mpBits )

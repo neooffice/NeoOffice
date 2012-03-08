@@ -54,6 +54,16 @@
 using namespace vcl;
 
 // ==================================================================
+ 
+void ReleaseBitmapBufferBytePointerCallback( void *pInfo, const void *pPointer, size_t nSize )
+{
+	BYTE *pBits = (BYTE *)pPointer;
+	if ( pBits )
+		delete[] pBits;
+
+}
+
+// ==================================================================
 
 ULONG JavaSalBitmap::Get32BitNativeFormat()
 {
@@ -84,10 +94,6 @@ JavaSalBitmap::~JavaSalBitmap()
 
 com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, long nWidth, long nHeight )
 {
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	fprintf( stderr, "JavaSalBitmap::CreateVCLBitmap not implemented\n" );
-	return NULL;
-#else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( nWidth < 1 || nHeight < 1 )
 		return NULL;
 
@@ -222,7 +228,6 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 	}
 
 	return pVCLBitmap;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // ------------------------------------------------------------------
@@ -252,7 +257,11 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 				if ( !mpBits )
 				{
 					// Force copying of the buffer
-					mpBits = new BYTE[ nCapacity ];
+					try
+					{
+						mpBits = new BYTE[ nCapacity ];
+					}
+					catch( const std::bad_alloc& ) {}
 					if ( mpBits )
 					{
 						memset( mpBits, 0, nCapacity );
@@ -272,7 +281,11 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 				if ( !mpBits )
 				{
 					// Force copying of the buffer
-					mpBits = new BYTE[ nCapacity ];
+					try
+					{
+						mpBits = new BYTE[ nCapacity ];
+					}
+					catch( const std::bad_alloc& ) {}
 					if ( mpBits )
 					{
 						memset( mpBits, 0, nCapacity );
@@ -545,7 +558,11 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 
 	if ( !mpBits )
 	{
-		mpBits = new BYTE[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
+		try
+		{
+			mpBits = new BYTE[ pBuffer->mnScanlineSize * pBuffer->mnHeight ];
+		}
+		catch( const std::bad_alloc& ) {}
 		if ( mpBits )
 		{
 			memset( mpBits, 0, pBuffer->mnScanlineSize * pBuffer->mnHeight );

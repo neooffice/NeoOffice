@@ -91,4 +91,6 @@ public:
 	virtual bool			GetSystemData( BitmapSystemData& rData );
 };
 
+extern "C" SAL_DLLPRIVATE void ReleaseBitmapBufferBytePointerCallback( void *pInfo, const void *pPointer, size_t nSize );
+
 #endif // _SV_SALBMP_H

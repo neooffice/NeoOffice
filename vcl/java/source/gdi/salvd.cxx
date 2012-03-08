@@ -135,7 +135,11 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( aColorSpace )
 	{
 		long nScanlineSize = AlignedWidth4Bytes( mnBitCount * nDX );
-		mpBits = new BYTE[ nScanlineSize * nDY ];
+		try
+		{
+			mpBits = new BYTE[ nScanlineSize * nDY ];
+		}
+		catch( const std::bad_alloc& ) {}
 		if ( mpBits )
 		{
 			memset( mpBits, 0, nScanlineSize * nDY );
