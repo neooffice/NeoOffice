@@ -421,6 +421,9 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext, CGRect aBounds )
 // =======================================================================
 
 JavaSalGraphics::JavaSalGraphics() :
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
+	maLayer( NULL ),
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 	mnFillColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) | 0xff000000 ),
 	mnLineColor( MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000 ),
 	mnTextColor( MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000 ),
@@ -442,7 +445,6 @@ JavaSalGraphics::JavaSalGraphics() :
 	, mbXOR( false )
 	, meOrientation( ORIENTATION_PORTRAIT )
 	, mbPaperRotated( sal_False )
-	, maLayer( NULL )
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 {
 	GetSalData()->maGraphicsList.push_back( this );
@@ -469,6 +471,9 @@ JavaSalGraphics::~JavaSalGraphics()
 		maGraphicsChangeListenerList.pop_front();
 		pBitmap->NotifyGraphicsChanged( true );
 	}
+
+	if ( maLayer )
+		CGLayerRelease( maLayer );
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 	if ( mpFontData )
@@ -482,11 +487,6 @@ JavaSalGraphics::~JavaSalGraphics()
 
 	if ( maNativeClipPath )
 		CFRelease( maNativeClipPath );
-
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
-	if ( maLayer )
-		CGLayerRelease( maLayer );
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // -----------------------------------------------------------------------

@@ -133,6 +133,14 @@ protected:
 
 class JavaSalGraphics : public SalGraphics
 {
+#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
+private:
+	::osl::Mutex			maUndrawnNativeOpsMutex;
+	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
+	::std::list< JavaSalBitmap* >	maGraphicsChangeListenerList;
+	CGLayerRef				maLayer;
+#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
+
 public:
 	SalColor				mnFillColor;
 	SalColor				mnLineColor;
@@ -156,12 +164,8 @@ public:
 	CGMutablePathRef		maNativeClipPath;
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	bool					mbXOR;
-	::osl::Mutex			maUndrawnNativeOpsMutex;
-	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
-	::std::list< JavaSalBitmap* >	maGraphicsChangeListenerList;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
-	CGLayerRef				maLayer;
 #endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 							JavaSalGraphics();
