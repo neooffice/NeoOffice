@@ -241,7 +241,17 @@ void JavaSalGraphicsDrawEPSOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !pImageRep )
 		pImageRep = [NSPDFImageRep imageRepWithData:(NSData *)maData];
 	if ( pImageRep )
-		[pImageRep drawInRect:NSMakeRect( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 )];
+	{
+		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:aContext flipped:NO];
+		if ( pContext )
+		{
+			
+			NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
+			[NSGraphicsContext setCurrentContext:pContext];
+			[pImageRep drawInRect:NSMakeRect( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 )];
+			[NSGraphicsContext setCurrentContext:pOldContext];
+		}
+	}
 
 	restoreGState( aContext );
 }
@@ -521,7 +531,7 @@ USHORT JavaSalGraphics::GetBitCount()
 void JavaSalGraphics::ResetClipRegion()
 {
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpPrinter || mpVirDev )
+	if ( mpPrinter || useNativeDrawing() )
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpPrinter )
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
@@ -543,7 +553,7 @@ void JavaSalGraphics::ResetClipRegion()
 void JavaSalGraphics::BeginSetClipRegion( ULONG nRectCount )
 {
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpPrinter || mpVirDev )
+	if ( mpPrinter || useNativeDrawing() )
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpPrinter )
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
@@ -559,7 +569,7 @@ BOOL JavaSalGraphics::unionClipRegion( long nX, long nY, long nWidth, long nHeig
 	BOOL bRet = TRUE;
 
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpPrinter || mpVirDev )
+	if ( mpPrinter || useNativeDrawing() )
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpPrinter )
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
@@ -591,7 +601,7 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 	if ( nPoly )
 	{
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-		if ( mpPrinter || mpVirDev )
+		if ( mpPrinter || useNativeDrawing() )
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 		if ( mpPrinter )
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
@@ -623,7 +633,7 @@ bool JavaSalGraphics::unionClipRegion( const ::basegfx::B2DPolyPolygon& rPolyPol
 void JavaSalGraphics::EndSetClipRegion()
 {
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( !mpPrinter && !mpVirDev )
+	if ( !mpPrinter && !useNativeDrawing() )
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( !mpPrinter )
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
@@ -672,7 +682,7 @@ void JavaSalGraphics::SetXORMode( bool bSet, bool bInvertOnly )
 	}
 
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpVirDev )
+	if ( useNativeDrawing() )
 	{
 		mbXOR = bSet;
 		return;
@@ -1012,7 +1022,7 @@ BOOL JavaSalGraphics::drawEPS( long nX, long nY, long nWidth, long nHeight, void
 	if ( pPtr && nSize )
 	{
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-		if ( mpPrinter || mpVirDev )
+		if ( mpPrinter || useNativeDrawing() )
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 		if ( mpPrinter )
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
@@ -1126,14 +1136,17 @@ bool JavaSalGraphics::useNativeDrawing()
 {
 	bool bRet = false;
 
+	if ( !mpVCLGraphics )
+	{
 #ifdef USE_NATIVE_PRINTING
-	if ( mpPrinter )
-		bRet = true;
+		if ( mpPrinter )
+			bRet = true;
 #endif	// USE_NATIVE_PRINTING
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpVirDev )
-		bRet = true;
+		if ( mpVirDev )
+			bRet = true;
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
+	}
 
 	return bRet;
 }
@@ -1176,12 +1189,70 @@ void JavaSalGraphics::addUndrawnNativeOp( JavaSalGraphicsOp *pOp )
 
 // -----------------------------------------------------------------------
 
+void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGPoint aDestPoint, CGSize aDestSize )
+{
+	if ( !pSrcGraphics || !maLayer )
+		return;
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	CGContextRef aContext = CGLayerGetContext( maLayer );
+	if ( aContext )
+	{
+		CGSize aLayerSize = CGLayerGetSize( maLayer );
+		drawUndrawnNativeOps( aContext, CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height ) );
+		pSrcGraphics->copyToContext( aContext, aSrcPoint, aDestPoint, aDestSize );
+	}
+
+}
+
+// -----------------------------------------------------------------------
+
+void JavaSalGraphics::copyToContext( CGContextRef aDestContext, CGPoint aSrcPoint, CGPoint aDestPoint, CGSize aDestSize )
+{
+	if ( !aDestContext || !maLayer )
+		return;
+
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
+	CGSize aLayerSize = CGLayerGetSize( maLayer );
+	drawUndrawnNativeOps( aDestContext, CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height ) );
+
+	// Shrink destination to handle source over or underflow
+	if ( aSrcPoint.x < 0 )
+	{
+		aDestSize.width += aSrcPoint.x;
+		aDestPoint.x -= aSrcPoint.x;
+		aSrcPoint.x = 0;
+	}
+	if ( aSrcPoint.y < 0 )
+	{
+		aDestSize.height += aSrcPoint.y;
+		aDestPoint.y -= aSrcPoint.y;
+		aSrcPoint.y = 0;
+	}
+	if ( aDestSize.width > aLayerSize.width - aSrcPoint.x )
+		aDestSize.width = aLayerSize.width - aSrcPoint.x;
+	if ( aDestSize.height > aLayerSize.height - aSrcPoint.y )
+		aDestSize.height = aLayerSize.height - aSrcPoint.y;
+
+	CGContextSaveGState( aDestContext );
+
+	CGContextClipToRect( aDestContext, CGRectMake( aDestPoint.x, aDestPoint.y, aDestSize.width, aDestSize.height ) );
+	CGContextTranslateCTM( aDestContext, aSrcPoint.x * -1, aSrcPoint.y * -1 );
+	CGContextDrawLayerAtPoint( aDestContext, aDestPoint, maLayer );
+
+	CGContextRestoreGState( aDestContext );
+}
+
+// -----------------------------------------------------------------------
+
 void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBounds )
 {
 	if ( !aContext )
 		return;
 
-	ClearableMutexGuard aGuard( maUndrawnNativeOpsMutex );
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
 	// Notify graphics change listeners
 	while ( maGraphicsChangeListenerList.size() )
@@ -1190,11 +1261,6 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 		maGraphicsChangeListenerList.pop_front();
 		pBitmap->NotifyGraphicsChanged( false );
 	}
-
-	::std::list< JavaSalGraphicsOp* > aOpsList( maUndrawnNativeOpsList );
-	maUndrawnNativeOpsList.clear();
-
-	aGuard.clear();
 
 	CGContextSaveGState( aContext );
 
@@ -1220,12 +1286,12 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 	// Scale line width
 	CGContextSetLineWidth( aContext, getNativeLineWidth() );
 
-	while ( aOpsList.size() )
+	while ( maUndrawnNativeOpsList.size() )
 	{
-		JavaSalGraphicsOp *pOp = aOpsList.front();
+		JavaSalGraphicsOp *pOp = maUndrawnNativeOpsList.front();
+		maUndrawnNativeOpsList.pop_front();
 		pOp->drawOp( aContext, aBounds );
 		delete pOp;
-		aOpsList.pop_front();
 	}
 
 	CGContextRestoreGState( aContext );

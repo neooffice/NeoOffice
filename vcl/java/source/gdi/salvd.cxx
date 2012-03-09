@@ -77,9 +77,6 @@ JavaSalVirtualDevice::JavaSalVirtualDevice( long nDPIX, long nDPIY ) :
 
 JavaSalVirtualDevice::~JavaSalVirtualDevice()
 {
-	if ( mpGraphics )
-		delete mpGraphics;
-
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	Destroy();
 #else	// USE_NATIVE_VIRTUAL_DEVICE
@@ -89,6 +86,9 @@ JavaSalVirtualDevice::~JavaSalVirtualDevice()
 		delete mpVCLImage;
 	}
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
+
+	if ( mpGraphics )
+		delete mpGraphics;
 }
 
 // -----------------------------------------------------------------------
@@ -131,19 +131,20 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( nDY < 1 )
 		nDY = 1;
 
+	// Make a native layer backed by a 1 x 1 pixel native bitmap
 	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 	if ( aColorSpace )
 	{
-		long nScanlineSize = AlignedWidth4Bytes( mnBitCount * nDX );
+		long nScanlineSize = AlignedWidth4Bytes( mnBitCount );
 		try
 		{
-			mpBits = new BYTE[ nScanlineSize * nDY ];
+			mpBits = new BYTE[ nScanlineSize ];
 		}
 		catch( const std::bad_alloc& ) {}
 		if ( mpBits )
 		{
-			memset( mpBits, 0, nScanlineSize * nDY );
-			maBitmapContext = CGBitmapContextCreate( mpBits, nDX, nDY, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+			memset( mpBits, 0, nScanlineSize );
+			maBitmapContext = CGBitmapContextCreate( mpBits, 1, 1, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 			if ( maBitmapContext )
 			{
 				maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
@@ -155,16 +156,6 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 				}
 			}
 		}
-	}
-
-	if ( !bRet )
-	{
-		Destroy();
-
-		// Say that we have some positive size so that we don't crash
-		mnWidth = 1;
-		mnHeight = 1;
-		bRet = TRUE;
 	}
 
 	// Update the graphic's layer
@@ -249,6 +240,8 @@ void JavaSalVirtualDevice::Destroy()
 {
 	mnWidth = 0;
 	mnHeight = 0;
+
+	mpGraphics->setLayer( NULL );
 
 	if ( maBitmapLayer )
 	{

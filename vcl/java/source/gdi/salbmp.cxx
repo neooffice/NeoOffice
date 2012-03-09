@@ -251,22 +251,19 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 		{
 			mpGraphics->mpVCLGraphics->removeGraphicsChangeListener( this );
 
-			if ( !bDisposed )
+			if ( !bDisposed && !mpBits )
 			{
+				// Force copying of the buffer
 				long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
-				if ( !mpBits )
+				try
 				{
-					// Force copying of the buffer
-					try
-					{
-						mpBits = new BYTE[ nCapacity ];
-					}
-					catch( const std::bad_alloc& ) {}
-					if ( mpBits )
-					{
-						memset( mpBits, 0, nCapacity );
-						mpGraphics->mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
-					}
+					mpBits = new BYTE[ nCapacity ];
+				}
+				catch( const std::bad_alloc& ) {}
+				if ( mpBits )
+				{
+					memset( mpBits, 0, nCapacity );
+					mpGraphics->mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
 				}
 			}
 		}
@@ -275,11 +272,13 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 		{
 			mpGraphics->removeGraphicsChangeListener( this );
 
-			if ( !bDisposed )
+			if ( !bDisposed && !mpBits && mpGraphics->useNativeDrawing() )
 			{
-				long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
-				if ( !mpBits )
+				CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+				if ( aColorSpace )
 				{
+					long nScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
+					long nCapacity = nScanlineSize * maSize.Height();
 					// Force copying of the buffer
 					try
 					{
@@ -289,8 +288,21 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 					if ( mpBits )
 					{
 						memset( mpBits, 0, nCapacity );
-						fprintf( stderr, "JavaSalBitmap::NotifyGraphicsChanged not implemented\n" );
+
+						CGContextRef aContext = CGBitmapContextCreate( mpBits, maSize.Width(), maSize.Height(), 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+						if ( aContext )
+						{
+							// Flip coordinates to VCL drawing coordinates
+							CGContextTranslateCTM( aContext, 0, maSize.Height() );
+							CGContextScaleCTM( aContext, 1.0f, -1.0f );
+
+							mpGraphics->copyToContext( aContext, CGPointMake( maPoint.X(), maPoint.Y() ), CGPointMake( 0, 0 ), CGSizeMake( maSize.Width(), maSize.Height() ) );
+
+							CGContextRelease( aContext );
+						}
 					}
+
+					CGColorSpaceRelease( aColorSpace );
 				}
 			}
 		}

@@ -243,6 +243,8 @@ public:
 #if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
+	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGPoint aDestPoint, CGSize aDestSize );
+	void					copyToContext( CGContextRef aDestContext, CGPoint aSrcPoint, CGPoint aDestPoint, CGSize aDestSize );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
