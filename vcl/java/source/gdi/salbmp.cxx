@@ -267,7 +267,6 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 				}
 			}
 		}
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 		else
 		{
 			mpGraphics->removeGraphicsChangeListener( this );
@@ -306,7 +305,6 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 				}
 			}
 		}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 		maPoint = Point( 0, 0 );
 		mpGraphics = NULL;
@@ -391,10 +389,8 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 
 	if ( mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics->addGraphicsChangeListener( this );
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	else
 		mpGraphics->addGraphicsChangeListener( this );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 
 	return true;
 }
@@ -512,10 +508,8 @@ void JavaSalBitmap::Destroy()
 	{
 		if ( mpGraphics->mpVCLGraphics )
 			mpGraphics->mpVCLGraphics->removeGraphicsChangeListener( this );
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 		else
 			mpGraphics->removeGraphicsChangeListener( this );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 		mpGraphics = NULL;
 	}
 }

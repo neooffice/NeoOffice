@@ -42,8 +42,6 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <vcl/bmpacc.hxx>
 
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
-
 class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 {
 	CGImageRef				maImage;
@@ -57,12 +55,8 @@ public:
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
 
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
-
 using namespace osl;
 using namespace vcl;
-
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 
 // =======================================================================
 
@@ -136,8 +130,6 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	restoreGState( aContext );
 }
 
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
-
 // =======================================================================
 
 void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGraphics )
@@ -150,11 +142,7 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	if ( pJavaSrcGraphics->mpPrinter )
 		return;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpPrinter || pJavaSrcGraphics->useNativeDrawing() != useNativeDrawing() || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpPrinter || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	{
 		SalTwoRect aPosAry;
 		memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
@@ -168,13 +156,11 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 			delete pBitmap;
 		}
 	}
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	else if ( useNativeDrawing() && pJavaSrcGraphics->useNativeDrawing() )
 	{
 		pJavaSrcGraphics->copyFromGraphics( pJavaSrcGraphics, CGPointMake( pPosAry->mnSrcX, pPosAry->mnSrcY ), CGPointMake( pPosAry->mnDestX, pPosAry->mnDestY ), CGSizeMake( pPosAry->mnDestWidth, pPosAry->mnDestHeight ) );
 	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-	else
+	else if ( mpVCLGraphics )
 	{
 		mpVCLGraphics->copyBits( pJavaSrcGraphics->mpVCLGraphics, pPosAry->mnSrcX, pPosAry->mnSrcY, pPosAry->mnSrcWidth, pPosAry->mnSrcHeight, pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight, sal_True );
 	}
@@ -188,18 +174,10 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 	if ( mpPrinter )
 		return;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( useNativeDrawing() )
-	{
 		copyFromGraphics( this, CGPointMake( nSrcX, nSrcY ), CGPointMake( nDestX, nDestY ), CGSizeMake( nSrcWidth, nSrcHeight ) );
-	}
-	else
-	{
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	else if ( mpVCLGraphics )
 		mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // -----------------------------------------------------------------------
@@ -275,20 +253,12 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	// Scale the bitmap if necessary
 	bool bDrawn = false;
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpPrinter || useNativeDrawing() || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
-#else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpPrinter || aPosAry.mnSrcWidth != aPosAry.mnDestWidth || aPosAry.mnSrcHeight != aPosAry.mnDestHeight )
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 	{
 		BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 		if ( pSrcBuffer )
 		{
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-			if ( mpPrinter || useNativeDrawing() )
-#else	// USE_NATIVE_VIRTUAL_DEVICE
 			if ( mpPrinter )
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 			{
 				SalTwoRect aCopyPosAry;
 				memcpy( &aCopyPosAry, &aPosAry, sizeof( SalTwoRect ) );
@@ -299,7 +269,6 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 				BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 				if ( pCopyBuffer )
 				{
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 					if ( useNativeDrawing() )
 					{
 						// Assign ownership of bits to a CGDataProvider instance
@@ -316,20 +285,21 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		
 						delete pCopyBuffer;
 					}
-					else
+					else if ( mpVCLGraphics )
 					{
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
-					// Don't delete the bitmap buffer and let the Java native
-					// method print the bitmap buffer directly
-					mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
+						// Don't delete the bitmap buffer and let the Java
+						// native method print the bitmap buffer directly
+						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 					}
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 				}
 
 				bDrawn = true;
 			}
-			else
+			else if ( useNativeDrawing() )
+			{
+				fprintf( stderr, "JavaSalGraphics::drawBitmap not implemented\n" );
+			}
+			else if ( mpVCLGraphics )
 			{
 				com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
 				if ( aVCLBitmap.getJavaObject() )
@@ -374,20 +344,27 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 
 	if ( !bDrawn )
 	{
-		// If the bitmap is backed by a VCLGraphics instance, draw that
-		com_sun_star_vcl_VCLGraphics *pVCLGraphics = pJavaSalBitmap->GetVCLGraphics();
-		if ( pVCLGraphics )
+		if ( useNativeDrawing() )
 		{
-			Point aPoint( pJavaSalBitmap->GetPoint() );
-			mpVCLGraphics->copyBits( pVCLGraphics, aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
+			fprintf( stderr, "JavaSalGraphics::drawBitmap not implemented\n" );
 		}
 		else
 		{
-			com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->CreateVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
-			if ( pVCLBitmap )
+			// If the bitmap is backed by a VCLGraphics instance, draw that
+			com_sun_star_vcl_VCLGraphics *pVCLGraphics = pJavaSalBitmap->GetVCLGraphics();
+			if ( pVCLGraphics )
 			{
-				mpVCLGraphics->drawBitmap( pVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
-				pJavaSalBitmap->ReleaseVCLBitmap( pVCLBitmap );
+				Point aPoint( pJavaSalBitmap->GetPoint() );
+				mpVCLGraphics->copyBits( pVCLGraphics, aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, sal_True );
+			}
+			else
+			{
+				com_sun_star_vcl_VCLBitmap *pVCLBitmap = pJavaSalBitmap->CreateVCLBitmap( aPosAry.mnSrcX, aPosAry.mnSrcY, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight );
+				if ( pVCLBitmap )
+				{
+					mpVCLGraphics->drawBitmap( pVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+					pJavaSalBitmap->ReleaseVCLBitmap( pVCLBitmap );
+				}
 			}
 		}
 	}
@@ -473,54 +450,57 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
-		com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
-		if ( aVCLBitmap.getJavaObject() )
+		if ( useNativeDrawing() )
 		{
-			java_lang_Object *pData = aVCLBitmap.getData();
-			if ( pData )
+			fprintf( stderr, "JavaSalGraphics::drawBitmap2 not implemented\n" );
+		}
+		else if ( mpVCLGraphics )
+		{
+			com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
+			if ( aVCLBitmap.getJavaObject() )
 			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
+				java_lang_Object *pData = aVCLBitmap.getData();
+				if ( pData )
 				{
-					jboolean bCopy( sal_False );
-					sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
-					if ( pBits )
+					VCLThreadAttach t;
+					if ( t.pEnv )
 					{
-						BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
-						if ( pDestBuffer )
+						jboolean bCopy( sal_False );
+						sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+						if ( pBits )
 						{
-							pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
-
-							// Mark all transparent color pixels as transparent
-							nTransparentColor |= 0xff000000;
-							long nBits = pDestBuffer->mnWidth * pDestBuffer->mnHeight;
-							for ( long i = 0; i < nBits; i++ )
+							BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
+							if ( pDestBuffer )
 							{
-								if ( pBits[ i ] == nTransparentColor )
-									pBits[ i ] = 0x00000000;
+								pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
+
+								// Mark all transparent color pixels as transparent
+								nTransparentColor |= 0xff000000;
+								long nBits = pDestBuffer->mnWidth * pDestBuffer->mnHeight;
+								for ( long i = 0; i < nBits; i++ )
+								{
+									if ( pBits[ i ] == nTransparentColor )
+										pBits[ i ] = 0x00000000;
+								}
+
+								t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
+								pBits = NULL;
+
+								mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight, NULL );
+
+								delete pDestBuffer;
 							}
 
-							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
-							pBits = NULL;
-
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-							fprintf( stderr, "JavaSalGraphics::drawBitmap2 not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight, NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-
-							delete pDestBuffer;
+							if ( pBits )
+								t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 						}
-
-						if ( pBits )
-							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 					}
+
+					delete pData;
 				}
 
-				delete pData;
+				aVCLBitmap.dispose();
 			}
-
-			aVCLBitmap.dispose();
 		}
 
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
@@ -608,111 +588,107 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
-		com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
-		if ( aVCLBitmap.getJavaObject() )
+		if ( useNativeDrawing() )
 		{
-			java_lang_Object *pData = aVCLBitmap.getData();
-			if ( pData )
+			fprintf( stderr, "JavaSalGraphics::drawBitmap3 not implemented\n" );
+		}
+		else if ( mpVCLGraphics )
+		{
+			com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
+			if ( aVCLBitmap.getJavaObject() )
 			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
+				java_lang_Object *pData = aVCLBitmap.getData();
+				if ( pData )
 				{
-					jboolean bCopy( sal_False );
-					sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
-					if ( pBits )
+					VCLThreadAttach t;
+					if ( t.pEnv )
 					{
-						BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
-						if ( pDestBuffer )
+						jboolean bCopy( sal_False );
+						sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+						if ( pBits )
 						{
-							BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
-							if ( pTransSrcBuffer )
+							BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
+							if ( pDestBuffer )
 							{
-								// Fix bug 2475 by handling the case where the
-								// transparent bitmap is smaller than the main
-								// bitmap
-								SalTwoRect aTransPosAry;
-								memcpy( &aTransPosAry, &aPosAry, sizeof( SalTwoRect ) );
-								Size aTransSize( pTransJavaSalBitmap->GetSize() );
-								long nTransExcessWidth = aPosAry.mnSrcX + aPosAry.mnSrcWidth - aTransSize.Width();
-								if ( nTransExcessWidth > 0 )
+								BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
+								if ( pTransSrcBuffer )
 								{
-									aTransPosAry.mnSrcWidth -= nTransExcessWidth;
-									aTransPosAry.mnDestWidth = aTransPosAry.mnSrcWidth * aPosAry.mnSrcWidth / aPosAry.mnDestWidth;
-								}
-								long nTransExcessHeight = aPosAry.mnSrcY + aPosAry.mnSrcHeight - aTransSize.Height();
-								if ( nTransExcessHeight > 0 )
-								{
-									aTransPosAry.mnSrcHeight -= nTransExcessHeight;
-									aTransPosAry.mnDestHeight = aTransPosAry.mnSrcHeight * aPosAry.mnSrcHeight / aPosAry.mnDestHeight;
-								}
-								BitmapBuffer *pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aTransPosAry, BMP_FORMAT_1BIT_MSB_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
-								if ( pTransDestBuffer )
-								{
-									if ( pTransDestBuffer->mpBits )
+									// Fix bug 2475 by handling the case where
+									// the transparent bitmap is smaller than
+									// the main bitmap
+									SalTwoRect aTransPosAry;
+									memcpy( &aTransPosAry, &aPosAry, sizeof( SalTwoRect ) );
+									Size aTransSize( pTransJavaSalBitmap->GetSize() );
+									long nTransExcessWidth = aPosAry.mnSrcX + aPosAry.mnSrcWidth - aTransSize.Width();
+									if ( nTransExcessWidth > 0 )
 									{
-										// Mark all non-black pixels in the
-										// transparent bitmap as transparent in
-										// the mask bitmap
-										Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
-										FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_1BIT_MSB_PAL;
-										for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
+										aTransPosAry.mnSrcWidth -= nTransExcessWidth;
+										aTransPosAry.mnDestWidth = aTransPosAry.mnSrcWidth * aPosAry.mnSrcWidth / aPosAry.mnDestWidth;
+									}
+									long nTransExcessHeight = aPosAry.mnSrcY + aPosAry.mnSrcHeight - aTransSize.Height();
+									if ( nTransExcessHeight > 0 )
+									{
+										aTransPosAry.mnSrcHeight -= nTransExcessHeight;
+										aTransPosAry.mnDestHeight = aTransPosAry.mnSrcHeight * aPosAry.mnSrcHeight / aPosAry.mnDestHeight;
+									}
+									BitmapBuffer *pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aTransPosAry, BMP_FORMAT_1BIT_MSB_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
+									if ( pTransDestBuffer )
+									{
+										if ( pTransDestBuffer->mpBits )
 										{
-											bool bTransPixels = ( i < pTransDestBuffer->mnHeight );
-											for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
+											// Mark all non-black pixels in the
+											// transparent bitmap as transparent
+											// in the mask bitmap
+											Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
+											FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_1BIT_MSB_PAL;
+											for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
 											{
-												if ( bTransPixels && j < pTransDestBuffer->mnWidth )
+												bool bTransPixels = ( i < pTransDestBuffer->mnHeight );
+												for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
 												{
-													BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
-                                    				if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
+													if ( bTransPixels && j < pTransDestBuffer->mnWidth )
+													{
+														BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
+                                    					if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
+															pBits[ j ] = 0x00000000;
+													}
+													else
+													{
 														pBits[ j ] = 0x00000000;
+													}
 												}
-												else
-												{
-													pBits[ j ] = 0x00000000;
-												}
+
+												pBits += pDestBuffer->mnWidth;
+												pTransBits += pTransDestBuffer->mnScanlineSize;
 											}
 
-											pBits += pDestBuffer->mnWidth;
-											pTransBits += pTransDestBuffer->mnScanlineSize;
+											delete[] pTransDestBuffer->mpBits;
+
+											t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
+											pBits = NULL;
+
+											mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight, NULL );
 										}
 
-										delete[] pTransDestBuffer->mpBits;
-
-										t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
-										pBits = NULL;
-
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-										if ( useNativeDrawing() )
-										{
-											fprintf( stderr, "JavaSalGraphics::drawBitmap3 not implemented\n" );
-										}
-										else
-										{
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-										mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, pDestBuffer->mnWidth, pDestBuffer->mnHeight, NULL );
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-										}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+										delete pTransDestBuffer;
 									}
 
-									delete pTransDestBuffer;
+									pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, TRUE );
 								}
 
-								pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, TRUE );
+								delete pDestBuffer;
 							}
 
-							delete pDestBuffer;
+							if ( pBits )
+								t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 						}
-
-						if ( pBits )
-							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 					}
+
+					delete pData;
 				}
 
-				delete pData;
+				aVCLBitmap.dispose();
 			}
-
-			aVCLBitmap.dispose();
 		}
 
 		pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
@@ -799,51 +775,54 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 	BitmapBuffer *pSrcBuffer = pJavaSalBitmap->AcquireBuffer( TRUE );
 	if ( pSrcBuffer )
 	{
-		com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
-		if ( aVCLBitmap.getJavaObject() )
+		if ( useNativeDrawing() )
 		{
-			java_lang_Object *pData = aVCLBitmap.getData();
-			if ( pData )
+			fprintf( stderr, "JavaSalGraphics::drawMask not implemented\n" );
+		}
+		else if ( mpVCLGraphics )
+		{
+			com_sun_star_vcl_VCLBitmap aVCLBitmap( aPosAry.mnDestWidth, aPosAry.mnDestHeight, 32 );
+			if ( aVCLBitmap.getJavaObject() )
 			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
+				java_lang_Object *pData = aVCLBitmap.getData();
+				if ( pData )
 				{
-					jboolean bCopy( sal_False );
-					sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
-					if ( pBits )
+					VCLThreadAttach t;
+					if ( t.pEnv )
 					{
-						BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
-						if ( pDestBuffer )
+						jboolean bCopy( sal_False );
+						sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+						if ( pBits )
 						{
-							// Mark all non-black pixels as transparent
-							nMaskColor |= 0xff000000;
-							long nBits = pDestBuffer->mnWidth * pDestBuffer->mnHeight;
-							for ( long i = 0; i < nBits; i++ )
+							BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
+							if ( pDestBuffer )
 							{
-								if ( pBits[ i ] == 0xff000000 )
-									pBits[ i ] = nMaskColor;
-								else
-									pBits[ i ] = 0x00000000;
+								// Mark all non-black pixels as transparent
+								nMaskColor |= 0xff000000;
+								long nBits = pDestBuffer->mnWidth * pDestBuffer->mnHeight;
+								for ( long i = 0; i < nBits; i++ )
+								{
+									if ( pBits[ i ] == 0xff000000 )
+										pBits[ i ] = nMaskColor;
+									else
+										pBits[ i ] = 0x00000000;
+								}
+
+								t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
+								pBits = NULL;
+
+								mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, NULL );
+
+								delete pDestBuffer;
 							}
 
-							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, 0 );
-							pBits = NULL;
-
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-							fprintf( stderr, "JavaSalGraphics::drawMask not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-							mpVCLGraphics->drawBitmap( &aVCLBitmap, 0, 0, aPosAry.mnSrcWidth, aPosAry.mnSrcHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-
-							delete pDestBuffer;
+							if ( pBits )
+								t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 						}
-
-						if ( pBits )
-							t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)pData->getJavaObject(), pBits, JNI_ABORT );
 					}
-				}
 
-				delete pData;
+					delete pData;
+				}
 			}
 		}
 
@@ -890,15 +869,19 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 	if ( mpPrinter )
 		return 0xff000000;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( useNativeDrawing() )
 	{
 		fprintf( stderr, "JavaSalGraphics::getPixel not implemented\n" );
 		return 0xff000000;
 	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-
-	return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
+	else if ( mpVCLGraphics )
+	{
+		return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
+	}
+	else
+	{
+		return 0xff000000;
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -909,15 +892,10 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 	if ( mpPrinter )
 		return;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( useNativeDrawing() )
-	{
 		fprintf( stderr, "JavaSalGraphics::invert not implemented\n" );
-		return;
-	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-
-	mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
+	else if ( mpVCLGraphics )
+		mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
 }
 
 // -----------------------------------------------------------------------
@@ -928,15 +906,10 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 	if ( mpPrinter )
 		return;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( useNativeDrawing() )
-	{
 		fprintf( stderr, "JavaSalGraphics::invert2 not implemented\n" );
-		return;
-	}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-
-	mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
+	else if ( mpVCLGraphics )
+		mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
 }
 
 // -----------------------------------------------------------------------
@@ -1092,25 +1065,29 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							}
 						}
 
-#ifdef USE_NATIVE_PRINTING
-						// Assign ownership of bits to a CGDataProvider instance
-						CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
-						if ( aProvider )
+						if ( useNativeDrawing() )
 						{
-							addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
-							CGDataProviderRelease( aProvider );
-						}
-						else
-						{
-							delete[] pCopyBuffer->mpBits;
-						}
+							// Assign ownership of bits to a CGDataProvider
+							// instance
+							CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
+							if ( aProvider )
+							{
+								addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+								CGDataProviderRelease( aProvider );
+							}
+							else
+							{
+								delete[] pCopyBuffer->mpBits;
+							}
 		
-						delete pCopyBuffer;
-#else	// USE_NATIVE_PRINTING
-						// Don't delete the bitmap buffer and let the Java
-						// native method print the bitmap buffer directly
-						mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_PRINTING
+							delete pCopyBuffer;
+						}
+						else if ( mpVCLGraphics )
+						{
+							// Don't delete the bitmap buffer and let the Java
+							// native method print the bitmap buffer directly
+							mpVCLGraphics->drawBitmapBuffer( pCopyBuffer, 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight, maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
+						}
 					}
 
 					pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );

@@ -218,8 +218,6 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	void				Release() const;
 };
 
-#ifdef USE_NATIVE_PRINTING
-
 class SAL_DLLPRIVATE JavaSalGraphicsDrawGlyphsOp : public JavaSalGraphicsOp
 {
 	float					mfX;
@@ -247,8 +245,6 @@ public:
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
-
-#endif	// USE_NATIVE_PRINTING
 
 #ifndef USE_CORETEXT_TEXT_RENDERING
 static ATSCubicMoveToUPP pATSCubicMoveToUPP = NULL;
@@ -1583,8 +1579,6 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 
 #endif	// USE_CORETEXT_TEXT_RENDERING
 
-#ifdef USE_NATIVE_PRINTING
-
 // ============================================================================
 
 JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
@@ -1728,8 +1722,6 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext, CGRect aBounds 
 		CGColorRelease( aColor );
 	}
 }
-
-#endif	// USE_NATIVE_PRINTING
 
 // ============================================================================
 
@@ -2616,9 +2608,7 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 	Point aPos;
 	JavaSalGraphics& rJavaGraphics = (JavaSalGraphics&)rGraphics;
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	bool bUseNativeDrawing = rJavaGraphics.useNativeDrawing();
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 	bool bPrinter = ( rJavaGraphics.mpPrinter ? true : false );
 	int nFetchGlyphCount = nMaxGlyphs;
 	for ( int nStart = 0; ; )
@@ -2713,15 +2703,11 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 			float fTranslateX = (float)nTranslateX / UNITS_PER_PIXEL;
 			float fTranslateY = (float)nTranslateY / UNITS_PER_PIXEL;
 
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 			if ( bUseNativeDrawing )
 			{
 				rJavaGraphics.addUndrawnNativeOp( new JavaSalGraphicsDrawGlyphsOp( rJavaGraphics.maNativeClipPath, (float)aStartPos.X(), (float)aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aDXArray + nStartGlyph, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX ) );
 			}
-			else
-			{
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
-			if ( bPrinter )
+			else if ( bPrinter )
 			{
 				// Don't delete the CGGlyph buffer and let the Java native
 				// method print the buffer directly
@@ -2754,9 +2740,6 @@ void SalATSLayout::DrawText( SalGraphics& rGraphics ) const
 
 				rJavaGraphics.mpVCLGraphics->drawGlyphs( aStartPos.X(), aStartPos.Y(), nGlyphCount, aGlyphArray + nStartGlyph, aAdvances, mpVCLFont, rJavaGraphics.mnTextColor, GetOrientation(), nGlyphOrientation, fTranslateX, fTranslateY, mfGlyphScaleX );
 			}
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
-			}
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 		}
 	}
 }

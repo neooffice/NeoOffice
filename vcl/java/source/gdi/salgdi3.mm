@@ -986,12 +986,10 @@ BOOL JavaSalGraphics::GetGlyphBoundRect( long nIndex, Rectangle& rRect )
 #ifdef USE_CORETEXT_TEXT_RENDERING
 		SalATSLayout::GetGlyphBounds( nIndex, pVCLFont, rRect );
 #else	// USE_CORETEXT_TEXT_RENDERING
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 		if ( useNativeDrawing() )
 			fprintf( stderr, "JavaSalGraphics::GetGlyphBoundRect not implemented\n" );
-		else
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
-		rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
+		else if ( mpVCLGraphics )
+			rRect = mpVCLGraphics->getGlyphBounds( nIndex & GF_IDXMASK, pVCLFont, nIndex & GF_ROTMASK );
 #endif	// USE_CORETEXT_TEXT_RENDERING
 		rRect.Justify();
 	}

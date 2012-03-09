@@ -102,8 +102,6 @@ public:
 	virtual sal_IntPtr		GetFontId() const;
 };
 
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
-
 // ----------------------
 // - JavaSalGraphicsOp -
 // ----------------------
@@ -125,21 +123,17 @@ protected:
 	void					saveClipXORGState( CGContextRef aContext );
 };
 
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
-
 // -------------------
 // - JavaSalGraphics -
 // -------------------
 
 class JavaSalGraphics : public SalGraphics
 {
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 private:
 	::osl::Mutex			maUndrawnNativeOpsMutex;
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	::std::list< JavaSalBitmap* >	maGraphicsChangeListenerList;
 	CGLayerRef				maLayer;
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 public:
 	SalColor				mnFillColor;
@@ -162,11 +156,9 @@ public:
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
 	CGMutablePathRef		maNativeClipPath;
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	bool					mbXOR;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();
@@ -240,7 +232,6 @@ public:
 	void					setLineTransparency( sal_uInt8 nTransparency );
 	void					setFillTransparency( sal_uInt8 nTransparency );
 	bool					useNativeDrawing();
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGPoint aDestPoint, CGSize aDestSize );
@@ -249,11 +240,8 @@ public:
 	float					getNativeLineWidth();
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					setLayer( CGLayerRef aLayer );
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 };
 
-#if defined USE_NATIVE_PRINTING || defined USE_NATIVE_VIRTUAL_DEVICE
 SAL_DLLPRIVATE CGColorRef CreateCGColorFromSalColor( SalColor nColor );
-#endif	// USE_NATIVE_PRINTING || USE_NATIVE_VIRTUAL_DEVICE
 
 #endif // _SV_SALGDI_H
