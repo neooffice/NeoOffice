@@ -257,11 +257,12 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( maRect.size.width <= 0 || maRect.size.height <= 0 )
 		return;
 
-	if ( !CGRectIsNull( aBounds ) )
+	if ( !CGRectIsEmpty( aBounds ) )
 	{
-		if ( !CGRectIntersectsRect( aBounds, maRect ) )
+		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
+		if ( CGRectIsEmpty( aDrawBounds ) )
 			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 			return;
 	}
 
@@ -322,11 +323,12 @@ void JavaSalGraphicsDrawEPSOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext || !maData )
 		return;
 
-	if ( !CGRectIsNull( aBounds ) )
+	if ( !CGRectIsEmpty( aBounds ) )
 	{
-		if ( !CGRectIntersectsRect( aBounds, maRect ) )
+		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
+		if ( CGRectIsEmpty( aDrawBounds ) )
 			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 			return;
 	}
 
@@ -360,11 +362,12 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext )
 		return;
 
-	if ( !CGRectIsNull( aBounds ) )
+	if ( !CGRectIsEmpty( aBounds ) )
 	{
-		if ( !CGRectContainsPoint( aBounds, CGPointMake( mfX1, mfY1 ) ) && !CGRectContainsPoint( aBounds, CGPointMake( mfX2, mfY2 ) ) )
+		CGRect aDrawBounds = CGRectIntersection( aBounds, CGRectMake( mfX1, mfY1, mfX2 - mfX1, mfY2 - mfY1 ) );
+		if ( CGRectIsEmpty( aDrawBounds ) )
 			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 			return;
 	}
 
@@ -417,11 +420,12 @@ void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext || !maPath )
 		return;
 
-	if ( !CGRectIsNull( aBounds ) )
+	if ( !CGRectIsEmpty( aBounds ) )
 	{
-		if ( !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maPath ) ) )
+		CGRect aDrawBounds = CGRectIntersection( aBounds, CGPathGetBoundingBox( maPath ) );
+		if ( CGRectIsEmpty( aDrawBounds ) )
 			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 			return;
 	}
 
@@ -487,11 +491,12 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext )
 		return;
 
-	if ( !CGRectIsNull( aBounds ) )
+	if ( !CGRectIsEmpty( aBounds ) )
 	{
-		if ( !CGRectIntersectsRect( aBounds, maRect ) )
+		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
+		if ( CGRectIsEmpty( aDrawBounds ) )
 			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 			return;
 	}
 
@@ -1287,7 +1292,7 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 			float fScaleX = (float)72 / nDPIX;
 			float fScaleY = (float)72 / nDPIY;
 			CGContextScaleCTM( aContext, fScaleX, fScaleY );
-			if ( !CGRectIsNull( aBounds ) )
+			if ( !CGRectIsEmpty( aBounds ) )
 				aBounds = CGRectMake( aBounds.origin.x / fScaleX, aBounds.origin.y / fScaleY, aBounds.size.width / fScaleX, aBounds.size.height / fScaleY );
 		}
 	}

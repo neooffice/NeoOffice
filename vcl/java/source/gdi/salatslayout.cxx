@@ -1314,7 +1314,7 @@ const Rectangle& ImplATSLayoutData::GetGlyphBounds()
 		if ( aContext )
 		{
 			CGRect aRect = CTLineGetImageBounds( maLine, aContext );
-			if ( !CGRectIsNull( aRect ) )
+			if ( !CGRectIsEmpty( aRect ) )
 			{
 				maGlyphBounds = Rectangle( Point( Float32ToLong( aRect.origin.x * mpHash->mfFontScaleX ), Float32ToLong( ( aRect.origin.y + aRect.size.height ) * -1 ) ), Size( Float32ToLong( aRect.size.width * mpHash->mfFontScaleX ), Float32ToLong( aRect.size.height ) ) );
 				maGlyphBounds.Justify();
@@ -1673,7 +1673,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext, CGRect aBounds 
 	if ( !aContext || !mpGlyphs || !mpAdvances )
 		return;
 
-	if ( !CGRectIsNull( aBounds ) && maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+	if ( !CGRectIsEmpty( aBounds ) && maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 		return;
 
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
@@ -1752,7 +1752,7 @@ void SalATSLayout::GetGlyphBounds( sal_Int32 nGlyph, com_sun_star_vcl_VCLFont *p
 		{
 			CGGlyph nGlyphID = (CGGlyph)( nGlyph & GF_IDXMASK );
 			CGRect aRect = CTFontGetBoundingRectsForGlyphs( aFont, kCTFontDefaultOrientation, &nGlyphID, NULL, 1 );
-			if ( !CGRectIsNull( aRect ) )
+			if ( !CGRectIsEmpty( aRect ) )
 			{
 				double fFontScaleX = pVCLFont->getScaleX();
 				if ( nGlyph & GF_ROTMASK )

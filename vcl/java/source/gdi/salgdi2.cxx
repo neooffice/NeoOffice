@@ -46,10 +46,10 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 {
 	CGImageRef				maImage;
 	CGRect					maSrcRect;
-	CGRect					maDestRect;
+	CGRect					maRect;
 
 public:
-							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, long nDataScanlineSize, long nDataWidth, long nDataHeight, const CGRect aSrcRect, const CGRect aDestRect );
+							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, long nDataScanlineSize, long nDataWidth, long nDataHeight, const CGRect aSrcRect, const CGRect aRect );
 	virtual					~JavaSalGraphicsDrawImageOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -60,11 +60,11 @@ using namespace vcl;
 
 // =======================================================================
 
-JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, long nDataScanlineSize, long nDataWidth, long nDataHeight, const CGRect aSrcRect, const CGRect aDestRect ) :
+JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, long nDataScanlineSize, long nDataWidth, long nDataHeight, const CGRect aSrcRect, const CGRect aRect ) :
 	JavaSalGraphicsOp( aNativeClipPath, bXOR ),
 	maImage( NULL ),
 	maSrcRect( aSrcRect ),
-	maDestRect( aDestRect )
+	maRect( aRect )
 {
 	if ( aProvider)
 	{
@@ -74,16 +74,16 @@ JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeC
 			// Adjust bounds to fit within available data
 			if ( maSrcRect.origin.x < 0 )
 			{
-				maDestRect.size.width += maSrcRect.origin.x;
+				maRect.size.width += maSrcRect.origin.x;
 				maSrcRect.size.width += maSrcRect.origin.x;
-				maDestRect.origin.x -= maSrcRect.origin.x;
+				maRect.origin.x -= maSrcRect.origin.x;
 				maSrcRect.origin.x = 0;
 			}
 			if ( aSrcRect.origin.y < 0 )
 			{
-				maDestRect.size.height += maSrcRect.origin.y;
+				maRect.size.height += maSrcRect.origin.y;
 				maSrcRect.size.height += maSrcRect.origin.y;
-				maDestRect.origin.y -= maSrcRect.origin.y;
+				maRect.origin.y -= maSrcRect.origin.y;
 				maSrcRect.origin.y = 0;
 			}
 
@@ -113,11 +113,12 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext || !maImage )
 		return;
 
-	if ( !CGRectIsNull( aBounds ) )
+	if ( !CGRectIsEmpty( aBounds ) )
 	{
-		if ( !CGRectIntersectsRect( aBounds, maDestRect ) )
+		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
+		if ( CGRectIsEmpty( aDrawBounds ) )
 			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
+		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
 			return;
 	}
 
@@ -125,7 +126,7 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 
 	// CGImage's assume unflipped coordinates when drawing so draw from the
 	// bottom up
-	CGContextDrawImage( aContext, CGRectMake( maDestRect.origin.x, maDestRect.origin.y + maDestRect.size.height, maDestRect.size.width, maDestRect.size.height * -1 ), maImage );
+	CGContextDrawImage( aContext, CGRectMake( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 ), maImage );
 
 	restoreGState( aContext );
 }
