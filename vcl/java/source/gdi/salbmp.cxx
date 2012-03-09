@@ -295,7 +295,7 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 							CGContextTranslateCTM( aContext, 0, maSize.Height() );
 							CGContextScaleCTM( aContext, 1.0f, -1.0f );
 
-							mpGraphics->copyToContext( aContext, CGPointMake( maPoint.X(), maPoint.Y() ), CGPointMake( 0, 0 ), CGSizeMake( maSize.Width(), maSize.Height() ) );
+							mpGraphics->copyToContext( NULL, false, aContext, CGRectMake( 0, 0, maSize.Width(), maSize.Height() ), CGPointMake( maPoint.X(), maPoint.Y() ), CGRectMake( 0, 0, maSize.Width(), maSize.Height() ) );
 
 							CGContextRelease( aContext );
 						}

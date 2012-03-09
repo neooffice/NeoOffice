@@ -765,7 +765,7 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 #ifdef USE_NATIVE_PRINTING
 	mpInfo( nil ),
 	mbPaperRotated( sal_False ),
-	mpVirDev( new JavaSalVirtualDevice( MIN_PRINTER_RESOLUTION, MIN_PRINTER_RESOLUTION ) )
+	mpVirDev( new JavaSalVirtualDevice() )
 #else	// USE_NATIVE_PRINTING
 	mpGraphics( new JavaSalGraphics() ),
 	mbGraphics( FALSE ),
@@ -785,6 +785,15 @@ JavaSalInfoPrinter::JavaSalInfoPrinter( ImplJobSetup* pSetupData ) :
 	[pPool release];
 
 	mpVirDev->SetSize( 1, 1 );
+
+	// Set graphics resolution to match printer resolution
+	JavaSalGraphics *pGraphics = (JavaSalGraphics *)GetGraphics();
+	if ( pGraphics )
+	{
+		pGraphics->mnDPIX = MIN_PRINTER_RESOLUTION;
+		pGraphics->mnDPIY = MIN_PRINTER_RESOLUTION;
+		ReleaseGraphics( pGraphics );
+	}
 #endif	// USE_NATIVE_PRINTING
 
 	SetData( 0, pSetupData );

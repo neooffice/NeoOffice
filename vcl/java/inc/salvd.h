@@ -77,16 +77,13 @@ class JavaSalVirtualDevice : public SalVirtualDevice
 	BOOL					mbGraphics;
 
 public:
-							JavaSalVirtualDevice( long nDPIX = 0, long nDPIY = 0 );
+							JavaSalVirtualDevice();
 	virtual					~JavaSalVirtualDevice();
 
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
 	virtual BOOL			SetSize( long nNewDX, long nNewDY );
 	virtual void			GetSize( long& rWidth, long& rHeight );
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	virtual void			Destroy();
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 };
 
 #endif // _SV_SALVD_H

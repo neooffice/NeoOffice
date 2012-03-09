@@ -42,7 +42,7 @@ using namespace vcl;
 
 // =======================================================================
 
-JavaSalVirtualDevice::JavaSalVirtualDevice( long nDPIX, long nDPIY ) :
+JavaSalVirtualDevice::JavaSalVirtualDevice() :
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	mnWidth( 0 ),
 	mnHeight( 0 ),
@@ -59,17 +59,9 @@ JavaSalVirtualDevice::JavaSalVirtualDevice( long nDPIX, long nDPIY ) :
 	// By default no mirroring for VirtualDevices
 	mpGraphics->SetLayout( 0 );
 	mpGraphics->mpVirDev = this;
-	if ( nDPIX > 0 )
-		mpGraphics->mnDPIX = nDPIX;
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	else
-		mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
-	if ( nDPIY > 0 )
-		mpGraphics->mnDPIY = nDPIY;
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	else
-		mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
+	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
+	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
 
@@ -77,8 +69,18 @@ JavaSalVirtualDevice::JavaSalVirtualDevice( long nDPIX, long nDPIY ) :
 
 JavaSalVirtualDevice::~JavaSalVirtualDevice()
 {
+	if ( mpGraphics )
+		delete mpGraphics;
+
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	Destroy();
+	if ( maBitmapLayer )
+		CGLayerRelease( maBitmapLayer );
+
+	if ( maBitmapContext )
+		CGContextRelease( maBitmapContext );
+
+	if ( mpBits )
+		delete[] mpBits;
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpVCLImage )
 	{
@@ -86,9 +88,6 @@ JavaSalVirtualDevice::~JavaSalVirtualDevice()
 		delete mpVCLImage;
 	}
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
-
-	if ( mpGraphics )
-		delete mpGraphics;
 }
 
 // -----------------------------------------------------------------------
@@ -124,42 +123,60 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	BOOL bRet = FALSE;
 
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
-	Destroy();
+	mnWidth = 0;
+	mnHeight = 0;
+
+	mpGraphics->setLayer( NULL );
+
+	if ( maBitmapLayer )
+	{
+		CGLayerRelease( maBitmapLayer );
+		maBitmapLayer = NULL;
+	}
 
 	if ( nDX < 1 )
 		nDX = 1;
 	if ( nDY < 1 )
 		nDY = 1;
 
-	// Make a native layer backed by a 1 x 1 pixel native bitmap
-	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-	if ( aColorSpace )
+	if ( !mpBits )
 	{
+		if ( maBitmapContext )
+		{
+			CGContextRelease( maBitmapContext );
+			maBitmapContext = NULL;
+		}
+
 		long nScanlineSize = AlignedWidth4Bytes( mnBitCount );
 		try
 		{
 			mpBits = new BYTE[ nScanlineSize ];
 		}
 		catch( const std::bad_alloc& ) {}
+
+		// Make a native layer backed by a 1 x 1 pixel native bitmap
 		if ( mpBits )
 		{
-			memset( mpBits, 0, nScanlineSize );
-			maBitmapContext = CGBitmapContextCreate( mpBits, 1, 1, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-			if ( maBitmapContext )
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
 			{
-				maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
-				if ( maBitmapLayer )
-				{
-					mnWidth = nDX;
-					mnHeight = nDY;
-					bRet = TRUE;
-				}
+				memset( mpBits, 0, nScanlineSize );
+				maBitmapContext = CGBitmapContextCreate( mpBits, 1, 1, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 			}
 		}
 	}
 
-	// Update the graphic's layer
-	mpGraphics->setLayer( maBitmapLayer );
+	if ( maBitmapContext )
+	{
+		maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
+		if ( maBitmapLayer )
+		{
+			mpGraphics->setLayer( maBitmapLayer );
+			mnWidth = nDX;
+			mnHeight = nDY;
+			bRet = TRUE;
+		}
+	}
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpGraphics->mpVCLGraphics )
 	{
@@ -231,35 +248,3 @@ void JavaSalVirtualDevice::GetSize( long& rWidth, long& rHeight )
 	}
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
 }
-
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-
-// -----------------------------------------------------------------------
-
-void JavaSalVirtualDevice::Destroy()
-{
-	mnWidth = 0;
-	mnHeight = 0;
-
-	mpGraphics->setLayer( NULL );
-
-	if ( maBitmapLayer )
-	{
-		CGLayerRelease( maBitmapLayer );
-		maBitmapLayer = NULL;
-	}
-
-	if ( maBitmapContext )
-	{
-		CGContextRelease( maBitmapContext );
-		maBitmapContext = NULL;
-	}
-
-	if ( mpBits )
-	{
-		delete[] mpBits;
-		mpBits = NULL;
-	}
-}
-
-#endif	// USE_NATIVE_VIRTUAL_DEVICE

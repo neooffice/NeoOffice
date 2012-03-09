@@ -158,7 +158,7 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	}
 	else if ( useNativeDrawing() && pJavaSrcGraphics->useNativeDrawing() )
 	{
-		pJavaSrcGraphics->copyFromGraphics( pJavaSrcGraphics, CGPointMake( pPosAry->mnSrcX, pPosAry->mnSrcY ), CGPointMake( pPosAry->mnDestX, pPosAry->mnDestY ), CGSizeMake( pPosAry->mnDestWidth, pPosAry->mnDestHeight ) );
+		pJavaSrcGraphics->copyFromGraphics( pJavaSrcGraphics, CGPointMake( pPosAry->mnSrcX, pPosAry->mnSrcY ), CGRectMake( pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight ) );
 	}
 	else if ( mpVCLGraphics )
 	{
@@ -175,7 +175,7 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 		return;
 
 	if ( useNativeDrawing() )
-		copyFromGraphics( this, CGPointMake( nSrcX, nSrcY ), CGPointMake( nDestX, nDestY ), CGSizeMake( nSrcWidth, nSrcHeight ) );
+		copyFromGraphics( this, CGPointMake( nSrcX, nSrcY ), CGRectMake( nDestX, nDestY, nSrcWidth, nSrcHeight ) );
 	else if ( mpVCLGraphics )
 		mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
 }

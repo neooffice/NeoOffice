@@ -234,8 +234,8 @@ public:
 	bool					useNativeDrawing();
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
-	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGPoint aDestPoint, CGSize aDestSize );
-	void					copyToContext( CGContextRef aDestContext, CGPoint aSrcPoint, CGPoint aDestPoint, CGSize aDestSize );
+	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect );
+	void					copyToContext( const CGPathRef aNativeClipPath, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
