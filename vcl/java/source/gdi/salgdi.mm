@@ -55,7 +55,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 	CGRect					maRect;
 
 public:
-JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aNativeClipPath, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect );
+JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect );
 	virtual					~JavaSalGraphicsCopyLayerOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -82,7 +82,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawLineOp : public JavaSalGraphicsOp
 	SalColor				mnColor;
 
 public:
-							JavaSalGraphicsDrawLineOp( const CGPathRef aNativeClipPath, bool bXOR, float fX1, float fY1, float fX2, float fY2, SalColor nColor ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), mfX1( fX1 ), mfY1( fY1 ), mfX2( fX2 ), mfY2( fY2 ), mnColor( nColor ) {}
+							JavaSalGraphicsDrawLineOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, float fX1, float fY1, float fX2, float fY2, SalColor nColor ) : JavaSalGraphicsOp( aNativeClipPath, aXORLayer ), mfX1( fX1 ), mfY1( fY1 ), mfX2( fX2 ), mfY2( fY2 ), mnColor( nColor ) {}
 	virtual					~JavaSalGraphicsDrawLineOp() {}
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -99,7 +99,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
 	::basegfx::B2DLineJoin	meLineJoin;
 
 public:
-							JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE );
+							JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE );
 	virtual					~JavaSalGraphicsDrawPathOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -112,7 +112,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawRectOp : public JavaSalGraphicsOp
 	SalColor				mnLineColor;
 
 public:
-							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, bool bXOR, const CGRect aRect, SalColor nFillColor, SalColor nLineColor ) : JavaSalGraphicsOp( aNativeClipPath, bXOR ), maRect( aRect ), mnFillColor( nFillColor ), mnLineColor( nLineColor ) {}
+							JavaSalGraphicsDrawRectOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, const CGRect aRect, SalColor nFillColor, SalColor nLineColor ) : JavaSalGraphicsOp( aNativeClipPath, aXORLayer ), maRect( aRect ), mnFillColor( nFillColor ), mnLineColor( nLineColor ) {}
 	virtual					~JavaSalGraphicsDrawRectOp() {}
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -208,8 +208,8 @@ CGColorRef CreateCGColorFromSalColor( SalColor nColor )
 
 // =======================================================================
 
-JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aNativeClipPath, bool bXOR, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect ) :
-	JavaSalGraphicsOp( aNativeClipPath, bXOR ),
+JavaSalGraphicsCopyLayerOp::JavaSalGraphicsCopyLayerOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, CGLayerRef aSrcLayer, const CGPoint aSrcPoint, const CGRect aRect ) :
+	JavaSalGraphicsOp( aNativeClipPath, aXORLayer ),
 	maSrcLayer( aSrcLayer ),
 	maSrcPoint( aSrcPoint ),
 	maRect( aRect )
@@ -266,7 +266,9 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 			return;
 	}
 
-	saveClipXORGState( aContext );
+	aContext = saveClipXORGState( aContext );
+	if ( !aContext )
+		return;
 
 	CGContextRef aSrcContext = CGLayerGetContext( maSrcLayer );
 	if ( aSrcContext == aContext && maRect.origin.x < aSrcRect.origin.x )
@@ -294,7 +296,7 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - aSrcRect.origin.x, maRect.origin.y - aSrcRect.origin.y ), maSrcLayer );
 	}
 
-	restoreGState( aContext );
+	restoreClipXORGState();
 }
 
 // =======================================================================
@@ -332,7 +334,9 @@ void JavaSalGraphicsDrawEPSOp::drawOp( CGContextRef aContext, CGRect aBounds )
 			return;
 	}
 
-	saveClipXORGState( aContext );
+	aContext = saveClipXORGState( aContext );
+	if ( !aContext )
+		return;
 
 	// CGImage's assume flipped coordinates when drawing so draw from the
 	// bottom up
@@ -352,7 +356,7 @@ void JavaSalGraphicsDrawEPSOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		}
 	}
 
-	restoreGState( aContext );
+	restoreClipXORGState();
 }
 
 // =======================================================================
@@ -376,14 +380,16 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	{
 		if ( CGColorGetAlpha( aColor ) )
 		{
-			saveClipXORGState( aContext );
+			aContext = saveClipXORGState( aContext );
+			if ( aContext )
+			{
+				CGContextSetStrokeColorWithColor( aContext, aColor );
+				CGContextMoveToPoint( aContext, mfX1, mfY1 );
+				CGContextAddLineToPoint( aContext, mfX2, mfY2 );
+				CGContextStrokePath( aContext );
 
-			CGContextSetStrokeColorWithColor( aContext, aColor );
-			CGContextMoveToPoint( aContext, mfX1, mfY1 );
-			CGContextAddLineToPoint( aContext, mfX2, mfY2 );
-			CGContextStrokePath( aContext );
-
-			restoreGState( aContext );
+				restoreClipXORGState();
+			}
 		}
 
 		CGColorRelease( aColor );
@@ -392,8 +398,8 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext, CGRect aBounds )
 
 // =======================================================================
 
-JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin ) :
-	JavaSalGraphicsOp( aNativeClipPath, bXOR ),
+JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin ) :
+	JavaSalGraphicsOp( aNativeClipPath, aXORLayer ),
 	mbAntialias( bAntialias ),
 	mnFillColor( nFillColor ),
 	mnLineColor( nLineColor ),
@@ -435,47 +441,49 @@ void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		CGColorRef aLineColor = CreateCGColorFromSalColor( mnLineColor );
 		if ( aLineColor )
 		{
-			saveClipXORGState( aContext );
-
-			// Set line width
-			if ( mfLineWidth > 0 )
-				CGContextSetLineWidth( aContext, mfLineWidth );
-
-			// Set line join
-			CGLineJoin nJoin = kCGLineJoinMiter;
-			switch ( meLineJoin )
+			aContext = saveClipXORGState( aContext );
+			if ( aContext )
 			{
-				case ::basegfx::B2DLINEJOIN_BEVEL:
-					nJoin = kCGLineJoinBevel;
-					break;
-				case ::basegfx::B2DLINEJOIN_ROUND:
-					nJoin = kCGLineJoinRound;
-					break;
-				default:
-					break;
-			}
-			CGContextSetLineJoin( aContext, nJoin );
+				// Set line width
+				if ( mfLineWidth > 0 )
+					CGContextSetLineWidth( aContext, mfLineWidth );
 
-			// Enable or disable antialiasing
-			CGContextSetAllowsAntialiasing( aContext, mbAntialias );
+				// Set line join
+				CGLineJoin nJoin = kCGLineJoinMiter;
+				switch ( meLineJoin )
+				{
+					case ::basegfx::B2DLINEJOIN_BEVEL:
+						nJoin = kCGLineJoinBevel;
+						break;
+					case ::basegfx::B2DLINEJOIN_ROUND:
+						nJoin = kCGLineJoinRound;
+						break;
+					default:
+						break;
+				}
+				CGContextSetLineJoin( aContext, nJoin );
 
-			CGContextAddPath( aContext, maPath );
-			if ( CGColorGetAlpha( aFillColor ) )
-			{
-				// Smooth out image drawing for bug 2475 image
-				if ( mbXOR && !mbAntialias )
-					CGContextSetAllowsAntialiasing( aContext, true );
-				CGContextSetFillColorWithColor( aContext, aFillColor );
-				CGContextEOFillPath( aContext );
+				// Enable or disable antialiasing
 				CGContextSetAllowsAntialiasing( aContext, mbAntialias );
-			}
-			if ( CGColorGetAlpha( aLineColor ) )
-			{
-				CGContextSetStrokeColorWithColor( aContext, aLineColor );
-				CGContextStrokePath( aContext );
-			}
 
-			restoreGState( aContext );
+				CGContextAddPath( aContext, maPath );
+				if ( CGColorGetAlpha( aFillColor ) )
+				{
+					// Smooth out image drawing for bug 2475 image
+					if ( maXORLayer && !mbAntialias )
+						CGContextSetAllowsAntialiasing( aContext, true );
+					CGContextSetFillColorWithColor( aContext, aFillColor );
+					CGContextEOFillPath( aContext );
+					CGContextSetAllowsAntialiasing( aContext, mbAntialias );
+				}
+				if ( CGColorGetAlpha( aLineColor ) )
+				{
+					CGContextSetStrokeColorWithColor( aContext, aLineColor );
+					CGContextStrokePath( aContext );
+				}
+
+				restoreClipXORGState();
+			}
 
 			CGColorRelease( aLineColor );
 		}
@@ -506,20 +514,25 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		CGColorRef aLineColor = CreateCGColorFromSalColor( mnLineColor );
 		if ( aLineColor )
 		{
-			saveClipXORGState( aContext );
-
-			if ( CGColorGetAlpha( aFillColor ) )
+			if ( CGColorGetAlpha( aFillColor ) || CGColorGetAlpha( aLineColor ) )
 			{
-				CGContextSetFillColorWithColor( aContext, aFillColor );
-				CGContextFillRect( aContext, maRect );
-			}
-			if ( CGColorGetAlpha( aLineColor ) )
-			{
-				CGContextSetStrokeColorWithColor( aContext, aLineColor );
-				CGContextStrokeRect( aContext, maRect );
-			}
+				aContext = saveClipXORGState( aContext );
+				if ( aContext )
+				{
+					if ( CGColorGetAlpha( aFillColor ) )
+					{
+						CGContextSetFillColorWithColor( aContext, aFillColor );
+						CGContextFillRect( aContext, maRect );
+					}
+					if ( CGColorGetAlpha( aLineColor ) )
+					{
+						CGContextSetStrokeColorWithColor( aContext, aLineColor );
+						CGContextStrokeRect( aContext, maRect );
+					}
 
-			restoreGState( aContext );
+					restoreClipXORGState();
+				}
+			}
 
 			CGColorRelease( aLineColor );
 		}
@@ -781,7 +794,7 @@ void JavaSalGraphics::SetROPFillColor( SalROPColor nROPColor )
 void JavaSalGraphics::drawPixel( long nX, long nY )
 {
 	if ( useNativeDrawing() )
-		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, mnLineColor ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR ? maLayer : NULL, CGRectMake( nX, nY, 1, 1 ), 0x00000000, mnLineColor ) );
 	else if ( mnLineColor )
 		mpVCLGraphics->setPixel( nX, nY, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
@@ -791,7 +804,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 {
 	if ( useNativeDrawing() )
-		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, CGRectMake( nX, nY, 1, 1 ), 0x00000000, nSalColor | 0xff000000 ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR ? maLayer : NULL, CGRectMake( nX, nY, 1, 1 ), 0x00000000, nSalColor | 0xff000000 ) );
 	else
 		mpVCLGraphics->setPixel( nX, nY, nSalColor | 0xff000000, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
@@ -801,7 +814,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 void JavaSalGraphics::drawLine( long nX1, long nY1, long nX2, long nY2 )
 {
 	if ( useNativeDrawing() )
-		addUndrawnNativeOp( new JavaSalGraphicsDrawLineOp( maNativeClipPath, mbXOR, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawLineOp( maNativeClipPath, mbXOR ? maLayer : NULL, (float)nX1, (float)nY1, (float)nX2, (float)nY2, mnLineColor ) );
 	else if ( mnLineColor )
 		mpVCLGraphics->drawLine( nX1, nY1, nX2, nY2, mnLineColor, mpPrinter && maNativeClipPath ? CGPathCreateCopy( maNativeClipPath ) : NULL );
 }
@@ -819,7 +832,7 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 			return;
 		}
 
-		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR, aRect, mnFillColor, mnLineColor ) );
+		addUndrawnNativeOp( new JavaSalGraphicsDrawRectOp( maNativeClipPath, mbXOR ? maLayer : NULL, aRect, mnFillColor, mnLineColor ) );
 	}
 	else
 	{
@@ -862,7 +875,7 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 			if ( aPath )
 			{
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
-				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR ? maLayer : NULL, false, 0x00000000, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -891,7 +904,7 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 			if ( aPath )
 			{
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
-				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR ? maLayer : NULL, false, mnFillColor, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -932,7 +945,7 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 			if ( aPath )
 			{
 				AddPolyPolygonToPaths( NULL, aPath, aPolyPoly );
-				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR ? maLayer : NULL, false, mnFillColor, mnLineColor, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -961,7 +974,7 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 			setFillTransparency( nTransparency );
 			setLineTransparency( nTransparency );
 			AddPolyPolygonToPaths( NULL, aPath, rPolyPoly );
-			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR ? maLayer : NULL, getAntiAliasB2DDraw(), mnFillColor, mnLineColor, aPath ) );
 			setFillTransparency( 0 );
 			setLineTransparency( 0 );
 			CGPathRelease( aPath );
@@ -1005,7 +1018,7 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 		if ( aPath )
 		{
 			AddPolygonToPaths( NULL, aPath, rPoly, rPoly.isClosed() );
-			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, rLineWidths.getX(), eLineJoin ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbXOR ? maLayer : NULL, getAntiAliasB2DDraw(), 0x00000000, mnLineColor, aPath, rLineWidths.getX(), eLineJoin ) );
 			CGPathRelease( aPath );
 		}
 	}
@@ -1237,13 +1250,13 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint a
 		CGRect aLayerBounds = CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height );
 		drawUndrawnNativeOps( aContext, aLayerBounds );
 
-		pSrcGraphics->copyToContext( maNativeClipPath, mbXOR, aContext, aLayerBounds, aSrcPoint, aDestRect );
+		pSrcGraphics->copyToContext( maNativeClipPath, mbXOR ? maLayer : NULL, aContext, aLayerBounds, aSrcPoint, aDestRect );
 	}
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphics::copyToContext( const CGPathRef aNativeClipPath, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect )
+void JavaSalGraphics::copyToContext( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect )
 {
 	if ( !aDestContext || !maLayer )
 		return;
@@ -1255,7 +1268,7 @@ void JavaSalGraphics::copyToContext( const CGPathRef aNativeClipPath, bool bXOR,
 	drawUndrawnNativeOps( aDestContext, CGRectMake( 0, 0, aLayerSize.width, aLayerSize.height ) );
 
 	// Do not queue this operation since we are copying to another context
-	JavaSalGraphicsCopyLayerOp aOp( aNativeClipPath, bXOR, maLayer, aSrcPoint, aDestRect );
+	JavaSalGraphicsCopyLayerOp aOp( aNativeClipPath, aXORLayer, maLayer, aSrcPoint, aDestRect );
 	aOp.drawOp( aDestContext, aDestBounds );
 }
 
@@ -1348,55 +1361,80 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 
 // =======================================================================
 
-JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bXOR ) :
+JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer ) :
 	maNativeClipPath( NULL ),
-	mbXOR( bXOR )
+	maXORLayer( NULL ),
+	maSavedContext( NULL ),
+	maXORBitmapContext( NULL ),
+	maXORRect( CGRectNull )
 {
 	if ( aNativeClipPath )
 		maNativeClipPath = CGPathCreateCopy( aNativeClipPath );
+
+	maXORLayer = aXORLayer;
+	if ( maXORLayer )
+		CGLayerRetain( maXORLayer );
 }
 
 // -----------------------------------------------------------------------
 
 JavaSalGraphicsOp::~JavaSalGraphicsOp()
 {
+	restoreClipXORGState();
+
 	if ( maNativeClipPath )
 		CGPathRelease( maNativeClipPath );
+
+	if ( maXORLayer )
+		CGLayerRelease( maXORLayer );
 }
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphicsOp::restoreGState( CGContextRef aContext )
+void JavaSalGraphicsOp::restoreClipXORGState()
 {
-	if ( !aContext )
-		return;
-
-	CGContextRestoreGState( aContext );
-}
-
-// -----------------------------------------------------------------------
-
-void JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext )
-{
-	if ( !aContext )
-		return;
-
-	CGContextSaveGState( aContext );
-
-	if ( maNativeClipPath )
+	if ( maSavedContext )
 	{
-		CGContextBeginPath( aContext );
-		CGContextAddPath( aContext, maNativeClipPath );
-		CGContextClip( aContext );
+		CGContextRestoreGState( maSavedContext );
+		CGContextRelease( maSavedContext );
+		maSavedContext = NULL;
+	}
+}
+
+// -----------------------------------------------------------------------
+
+CGContextRef JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext, CGRect aDrawBounds )
+{
+	CGContextRef aRet = NULL;
+
+	if ( !aContext || maSavedContext || maXORBitmapContext )
+	{
+		restoreClipXORGState();
+		return aRet;
 	}
 
-	if ( mbXOR )
+	if ( maXORLayer )
 	{
 		// Mac OS X's XOR blend mode does not do real XORing of bits so we
 		// reimplement our own XORing
 		fprintf( stderr, "JavaSalGraphicsOp::saveClipXORGState XOR not implemented\n" );
+		restoreClipXORGState();
+		return aRet;
+	}
+
+	maSavedContext = aContext;
+	CGContextRetain( maSavedContext );
+	CGContextSaveGState( maSavedContext );
+
+	if ( maNativeClipPath )
+	{
+		CGContextBeginPath( maSavedContext );
+		CGContextAddPath( maSavedContext, maNativeClipPath );
+		CGContextClip( maSavedContext );
 	}
 
 	// Throw away any incomplete path
-	CGContextBeginPath( aContext );
+	CGContextBeginPath( maSavedContext );
+
+	return maSavedContext;
 }

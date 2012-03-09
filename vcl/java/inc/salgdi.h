@@ -110,17 +110,20 @@ class SAL_DLLPRIVATE JavaSalGraphicsOp
 {
 protected:
 	CGPathRef				maNativeClipPath;
-	bool					mbXOR;
+	CGLayerRef				maXORLayer;
+	CGContextRef			maSavedContext;
+	CGContextRef			maXORBitmapContext;
+	CGRect					maXORRect;
 	
 public:
-							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bXOR );
+							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer );
 	virtual					~JavaSalGraphicsOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds ) {}
 
 protected:
-	void					restoreGState( CGContextRef aContext );
-	void					saveClipXORGState( CGContextRef aContext );
+	void					restoreClipXORGState();
+	CGContextRef			saveClipXORGState( CGContextRef aContext, CGRect aDrawBounds = CGRectNull );
 };
 
 // -------------------
@@ -235,7 +238,7 @@ public:
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect );
-	void					copyToContext( const CGPathRef aNativeClipPath, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
+	void					copyToContext( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );

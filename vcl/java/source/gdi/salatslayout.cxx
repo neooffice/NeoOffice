@@ -1582,7 +1582,7 @@ static OSStatus SalATSCubicClosePathCallback( void *pData )
 // ============================================================================
 
 JavaSalGraphicsDrawGlyphsOp::JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX ) :
-	JavaSalGraphicsOp( aNativeClipPath, false ),
+	JavaSalGraphicsOp( aNativeClipPath, NULL ),
 	mfX( fX ),
 	mfY( fY ),
 	mnGlyphCount( nGlyphCount ),
@@ -1691,29 +1691,32 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext, CGRect aBounds 
 #endif	// USE_CORETEXT_TEXT_RENDERING
 			if ( aFont )
 			{
-				saveClipXORGState( aContext );
+				aContext = saveClipXORGState( aContext );
+				if ( aContext )
+				{
+					// Enable or disable font antialiasing
+					CGContextSetAllowsAntialiasing( aContext, mbAntialiased );
 
-				// Enable or disable font antialiasing
-				CGContextSetAllowsAntialiasing( aContext, mbAntialiased );
+					CGContextTranslateCTM( aContext, mfX, mfY );
+					CGContextRotateCTM( aContext, mfRotateAngle );
+					CGContextTranslateCTM( aContext, mfTranslateX * mfScaleX, mfTranslateY * mfScaleY );
+					CGContextScaleCTM( aContext, 1.0f, -1.0f );
 
-				CGContextTranslateCTM( aContext, mfX, mfY );
-				CGContextRotateCTM( aContext, mfRotateAngle );
-				CGContextTranslateCTM( aContext, mfTranslateX * mfScaleX, mfTranslateY * mfScaleY );
-				CGContextScaleCTM( aContext, 1.0f, -1.0f );
+					// Fix bug 2674 by setting all translation, rotation, and
+					// scaling in the CGContext and not in the text matrix.
+					// Fix bug 2957 by moving the glyph scale back into the
+					// font transform.
+					CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
+					CGContextSetTextMatrix( aContext, aTransform );
 
-				// Fix bug 2674 by setting all translation, rotation, and
-				// scaling in the CGContext and not in the text matrix. Fix bug
-				// 2957 by moving the glyph scale back into the font transform.
-				CGAffineTransform aTransform = CGAffineTransformMakeScale( mfScaleX, mfScaleY );
-				CGContextSetTextMatrix( aContext, aTransform );
+					CGContextSetFillColorWithColor( aContext, aColor );
+					CGContextSetStrokeColorWithColor( aContext, aColor );
+					CGContextSetFont( aContext, aFont );
+					CGContextSetFontSize( aContext, mfFontSize );
+					CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpAdvances, mnGlyphCount );
 
-				CGContextSetFillColorWithColor( aContext, aColor );
-				CGContextSetStrokeColorWithColor( aContext, aColor );
-				CGContextSetFont( aContext, aFont );
-				CGContextSetFontSize( aContext, mfFontSize );
-				CGContextShowGlyphsWithAdvances( aContext, mpGlyphs, mpAdvances, mnGlyphCount );
-
-				restoreGState( aContext );
+					restoreClipXORGState();
+				}
 
 				CGFontRelease( aFont );
 			}
