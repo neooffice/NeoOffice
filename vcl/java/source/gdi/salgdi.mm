@@ -48,6 +48,8 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
+#define XOR_BITMAP_BOUNDS_PADDING 2
+
 class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
 	CGLayerRef				maSrcLayer;
@@ -257,16 +259,15 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( maRect.size.width <= 0 || maRect.size.height <= 0 )
 		return;
 
+	CGRect aDrawBounds = maRect;
 	if ( !CGRectIsEmpty( aBounds ) )
-	{
-		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
-		if ( CGRectIsEmpty( aDrawBounds ) )
-			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
-			return;
-	}
+		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
+	if ( maNativeClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+	if ( CGRectIsEmpty( aDrawBounds ) )
+		return;
 
-	aContext = saveClipXORGState( aContext );
+	aContext = saveClipXORGState( aContext, aDrawBounds );
 	if ( !aContext )
 		return;
 
@@ -283,7 +284,7 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 			if ( aTmpContext )
 			{
 				CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( aSrcRect.origin.x * -1, aSrcRect.origin.y * -1 ), maSrcLayer );
-				CGContextClipToRect( aContext, maRect );
+				CGContextClipToRect( aContext, aDrawBounds);
 				CGContextDrawLayerAtPoint( aContext, maRect.origin, aTmpLayer );
 			}
 
@@ -292,7 +293,7 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	}
 	else
 	{
-		CGContextClipToRect( aContext, maRect );
+		CGContextClipToRect( aContext, aDrawBounds );
 		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - aSrcRect.origin.x, maRect.origin.y - aSrcRect.origin.y ), maSrcLayer );
 	}
 
@@ -325,16 +326,15 @@ void JavaSalGraphicsDrawEPSOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext || !maData )
 		return;
 
+	CGRect aDrawBounds = maRect;
 	if ( !CGRectIsEmpty( aBounds ) )
-	{
-		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
-		if ( CGRectIsEmpty( aDrawBounds ) )
-			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
-			return;
-	}
+		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
+	if ( maNativeClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+	if ( CGRectIsEmpty( aDrawBounds ) )
+		return;
 
-	aContext = saveClipXORGState( aContext );
+	aContext = saveClipXORGState( aContext, aDrawBounds );
 	if ( !aContext )
 		return;
 
@@ -366,21 +366,20 @@ void JavaSalGraphicsDrawLineOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext )
 		return;
 
+	CGRect aDrawBounds = CGRectMake( mfX1, mfY1, mfX2 - mfX1, mfY2 - mfY1 );
 	if ( !CGRectIsEmpty( aBounds ) )
-	{
-		CGRect aDrawBounds = CGRectIntersection( aBounds, CGRectMake( mfX1, mfY1, mfX2 - mfX1, mfY2 - mfY1 ) );
-		if ( CGRectIsEmpty( aDrawBounds ) )
-			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
-			return;
-	}
+		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
+	if ( maNativeClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+	if ( CGRectIsEmpty( aDrawBounds ) )
+		return;
 
 	CGColorRef aColor = CreateCGColorFromSalColor( mnColor );
 	if ( aColor )
 	{
 		if ( CGColorGetAlpha( aColor ) )
 		{
-			aContext = saveClipXORGState( aContext );
+			aContext = saveClipXORGState( aContext, aDrawBounds );
 			if ( aContext )
 			{
 				CGContextSetStrokeColorWithColor( aContext, aColor );
@@ -426,14 +425,13 @@ void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext || !maPath )
 		return;
 
+	CGRect aDrawBounds = CGPathGetBoundingBox( maPath );
 	if ( !CGRectIsEmpty( aBounds ) )
-	{
-		CGRect aDrawBounds = CGRectIntersection( aBounds, CGPathGetBoundingBox( maPath ) );
-		if ( CGRectIsEmpty( aDrawBounds ) )
-			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
-			return;
-	}
+		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
+	if ( maNativeClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+	if ( CGRectIsEmpty( aDrawBounds ) )
+		return;
 
 	CGColorRef aFillColor = CreateCGColorFromSalColor( mnFillColor );
 	if ( aFillColor )
@@ -441,7 +439,7 @@ void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		CGColorRef aLineColor = CreateCGColorFromSalColor( mnLineColor );
 		if ( aLineColor )
 		{
-			aContext = saveClipXORGState( aContext );
+			aContext = saveClipXORGState( aContext, aDrawBounds );
 			if ( aContext )
 			{
 				// Set line width
@@ -499,14 +497,13 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext )
 		return;
 
+	CGRect aDrawBounds = maRect;
 	if ( !CGRectIsEmpty( aBounds ) )
-	{
-		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
-		if ( CGRectIsEmpty( aDrawBounds ) )
-			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
-			return;
-	}
+		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
+	if ( maNativeClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+	if ( CGRectIsEmpty( aDrawBounds ) )
+		return;
 
 	CGColorRef aFillColor = CreateCGColorFromSalColor( mnFillColor );
 	if ( aFillColor )
@@ -516,7 +513,7 @@ void JavaSalGraphicsDrawRectOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		{
 			if ( CGColorGetAlpha( aFillColor ) || CGColorGetAlpha( aLineColor ) )
 			{
-				aContext = saveClipXORGState( aContext );
+				aContext = saveClipXORGState( aContext, aDrawBounds );
 				if ( aContext )
 				{
 					if ( CGColorGetAlpha( aFillColor ) )
@@ -1365,6 +1362,10 @@ JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath, CGLayerRe
 	maNativeClipPath( NULL ),
 	maXORLayer( NULL ),
 	maSavedContext( NULL ),
+	mnBitmapCapacity( 0 ),
+	mpDrawBits( NULL ),
+	maDrawBitmapContext( NULL ),
+	mpXORBits( NULL ),
 	maXORBitmapContext( NULL ),
 	maXORRect( CGRectNull )
 {
@@ -1395,31 +1396,128 @@ void JavaSalGraphicsOp::restoreClipXORGState()
 {
 	if ( maSavedContext )
 	{
+		// If there are XOR bitmaps, XOR them and then draw to this context
+		if ( mnBitmapCapacity && mpDrawBits && maDrawBitmapContext && mpXORBits && maXORBitmapContext )
+		{
+			for ( size_t i = 0; i < mnBitmapCapacity; i++ )
+			{
+				if ( mpXORBits[ i ] & 0xff000000 == 0xff000000 )
+					mpDrawBits[ i ] ^= mpXORBits[ i ] & 0x00ffffff;
+			}
+
+			CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpDrawBits, mnBitmapCapacity, NULL );
+			if ( aProvider )
+			{
+				CGImageRef aImage = CGImageCreate( CGBitmapContextGetWidth( maDrawBitmapContext ), CGBitmapContextGetHeight( maDrawBitmapContext ), CGBitmapContextGetBitsPerComponent( maDrawBitmapContext ), CGBitmapContextGetBitsPerPixel( maDrawBitmapContext ), CGBitmapContextGetBytesPerRow( maDrawBitmapContext ), CGBitmapContextGetColorSpace( maDrawBitmapContext ), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
+				if ( aImage )
+				{
+					CGContextDrawImage( maSavedContext, CGRectMake( maXORRect.origin.x - XOR_BITMAP_BOUNDS_PADDING, maXORRect.origin.y - XOR_BITMAP_BOUNDS_PADDING, CGBitmapContextGetWidth( maDrawBitmapContext ), CGBitmapContextGetHeight( maDrawBitmapContext ) ), aImage );
+					CGImageRelease( aImage );
+				}
+				CGDataProviderRelease( aProvider );
+			}
+		}
+
 		CGContextRestoreGState( maSavedContext );
 		CGContextRelease( maSavedContext );
 		maSavedContext = NULL;
 	}
+
+	mnBitmapCapacity = 0;
+
+	if ( maDrawBitmapContext )
+	{
+		CGContextRelease( maDrawBitmapContext );
+		maDrawBitmapContext = NULL;
+	}
+
+	if ( mpDrawBits )
+	{
+		delete[] mpDrawBits;
+		mpDrawBits = NULL;
+	}
+
+	if ( maXORBitmapContext )
+	{
+		CGContextRelease( maXORBitmapContext );
+		maXORBitmapContext = NULL;
+	}
+
+	if ( mpXORBits )
+	{
+		delete[] mpXORBits;
+		mpXORBits = NULL;
+	}
+
+	maXORRect = CGRectNull;
 }
 
 // -----------------------------------------------------------------------
 
 CGContextRef JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext, CGRect aDrawBounds )
 {
-	CGContextRef aRet = NULL;
+	restoreClipXORGState();
 
-	if ( !aContext || maSavedContext || maXORBitmapContext )
-	{
-		restoreClipXORGState();
-		return aRet;
-	}
+	if ( !aContext )
+		return NULL;
 
+	// Mac OS X's XOR blend mode does not do real XORing of bits so we
+	// reimplement our own XORing
 	if ( maXORLayer )
 	{
-		// Mac OS X's XOR blend mode does not do real XORing of bits so we
-		// reimplement our own XORing
-		fprintf( stderr, "JavaSalGraphicsOp::saveClipXORGState XOR not implemented\n" );
-		restoreClipXORGState();
-		return aRet;
+		bool bXORDrawable = false;
+
+		// Trust that the draw bounds has already been intersected against the
+		// graphics bounds and clip
+		maXORRect = CGRectStandardize( aDrawBounds );
+		if ( !CGRectIsEmpty( maXORRect ) )
+		{
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
+			{
+				CGSize aBitmapSize = CGSizeMake( maXORRect.size.width + ( XOR_BITMAP_BOUNDS_PADDING * 2 ), maXORRect.size.height + ( XOR_BITMAP_BOUNDS_PADDING * 2 ) );
+				long nScanlineSize = AlignedWidth4Bytes( 32 * aBitmapSize.width );
+				mnBitmapCapacity = nScanlineSize * aBitmapSize.height;
+				try
+				{
+					mpDrawBits = new BYTE[ mnBitmapCapacity ];
+					mpXORBits = new BYTE[ mnBitmapCapacity ];
+				}
+				catch( const std::bad_alloc& ) {}
+
+				if ( mpDrawBits && mpXORBits )
+				{
+					memset( mpDrawBits, 0, mnBitmapCapacity );
+					memset( mpXORBits, 0, mnBitmapCapacity );
+					maDrawBitmapContext = CGBitmapContextCreate( mpDrawBits, aBitmapSize.width, aBitmapSize.height, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+					maXORBitmapContext = CGBitmapContextCreate( mpXORBits, aBitmapSize.width, aBitmapSize.height, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+					if ( maDrawBitmapContext && maXORBitmapContext )
+					{
+						// Translate and clip the drawing context
+						CGContextTranslateCTM( maDrawBitmapContext, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.x, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.y );
+						if ( maNativeClipPath )
+						{
+							CGContextBeginPath( maDrawBitmapContext );
+							CGContextAddPath( maDrawBitmapContext, maNativeClipPath );
+							CGContextClip( maDrawBitmapContext );
+						}
+
+						// Copy layer to XOR context
+						CGContextDrawLayerAtPoint( maXORBitmapContext, CGPointMake( XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.x, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.y ), maXORLayer );
+
+						bXORDrawable = true;
+					}
+				}
+
+				CGColorSpaceRelease( aColorSpace );
+			}
+		}
+
+		if ( !bXORDrawable )
+		{
+			restoreClipXORGState();
+			return NULL;
+		}
 	}
 
 	maSavedContext = aContext;
@@ -1436,5 +1534,5 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext, CGRect
 	// Throw away any incomplete path
 	CGContextBeginPath( maSavedContext );
 
-	return maSavedContext;
+	return maDrawBitmapContext ? maDrawBitmapContext : maSavedContext;
 }

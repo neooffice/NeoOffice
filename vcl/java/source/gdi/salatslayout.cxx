@@ -1691,6 +1691,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext, CGRect aBounds 
 #endif	// USE_CORETEXT_TEXT_RENDERING
 			if ( aFont )
 			{
+				// Text draw bounds is never XOR'd so don't pass any bounds
 				aContext = saveClipXORGState( aContext );
 				if ( aContext )
 				{

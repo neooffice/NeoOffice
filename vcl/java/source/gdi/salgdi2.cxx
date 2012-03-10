@@ -113,16 +113,15 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( !aContext || !maImage )
 		return;
 
+	CGRect aDrawBounds = maRect;
 	if ( !CGRectIsEmpty( aBounds ) )
-	{
-		CGRect aDrawBounds = CGRectIntersection( aBounds, maRect );
-		if ( CGRectIsEmpty( aDrawBounds ) )
-			return;
-		else if ( maNativeClipPath && !CGRectIntersectsRect( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) ) )
-			return;
-	}
+		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
+	if ( maNativeClipPath )
+		aDrawBounds = CGRectIntersection( aDrawBounds, CGPathGetBoundingBox( maNativeClipPath ) );
+	if ( CGRectIsEmpty( aDrawBounds ) )
+		return;
 
-	aContext = saveClipXORGState( aContext );
+	aContext = saveClipXORGState( aContext, aDrawBounds );
 	if ( !aContext )
 		return;
 
@@ -178,9 +177,16 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 		return;
 
 	if ( useNativeDrawing() )
+	{
+		bool bOldXOR = mbXOR;
+		mbXOR = false;
 		copyFromGraphics( this, CGPointMake( nSrcX, nSrcY ), CGRectMake( nDestX, nDestY, nSrcWidth, nSrcHeight ) );
+		mbXOR = bOldXOR;
+	}
 	else if ( mpVCLGraphics )
+	{
 		mpVCLGraphics->copyBits( mpVCLGraphics, nSrcX, nSrcY, nSrcWidth, nSrcHeight, nDestX, nDestY, nSrcWidth, nSrcHeight, sal_False );
+	}
 }
 
 // -----------------------------------------------------------------------

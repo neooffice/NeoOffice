@@ -112,6 +112,10 @@ protected:
 	CGPathRef				maNativeClipPath;
 	CGLayerRef				maXORLayer;
 	CGContextRef			maSavedContext;
+	size_t					mnBitmapCapacity;
+	BYTE*					mpDrawBits;
+	CGContextRef			maDrawBitmapContext;
+	BYTE*					mpXORBits;
 	CGContextRef			maXORBitmapContext;
 	CGRect					maXORRect;
 	
