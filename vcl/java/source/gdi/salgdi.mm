@@ -590,6 +590,9 @@ JavaSalGraphics::~JavaSalGraphics()
 	if ( maLayer )
 		CGLayerRelease( maLayer );
 
+	if ( mpVCLGraphics )
+		delete mpVCLGraphics;
+
 	if ( mpFontData )
 		delete mpFontData;
 

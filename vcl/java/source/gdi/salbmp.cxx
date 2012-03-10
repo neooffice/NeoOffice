@@ -77,6 +77,7 @@ JavaSalBitmap::JavaSalBitmap() :
 	mnBitCount( 0 ),
 	mpBits( NULL ),
 	mpBuffer( NULL ),
+	mpVCLGraphics( NULL ),
 	mpGraphics( NULL )
 {
 	GetSalData()->maBitmapList.push_back( this );
@@ -232,29 +233,44 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 
 // ------------------------------------------------------------------
 
-com_sun_star_vcl_VCLGraphics *JavaSalBitmap::GetVCLGraphics()
-{
-	if ( mpGraphics )
-		return mpGraphics->mpVCLGraphics;
-	else
-		return NULL;
-}
-
-// ------------------------------------------------------------------
-
 void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 {
 	// Force copying of the buffer if it has not already been done
-	if ( mpGraphics )
+	if ( mpVCLGraphics )
 	{
-		if ( mpGraphics->mpVCLGraphics )
-		{
-			mpGraphics->mpVCLGraphics->removeGraphicsChangeListener( this );
+		mpVCLGraphics->removeGraphicsChangeListener( this );
 
-			if ( !bDisposed && !mpBits )
+		if ( !bDisposed && !mpBits )
+		{
+			// Force copying of the buffer
+			long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
+			try
 			{
+				mpBits = new BYTE[ nCapacity ];
+			}
+			catch( const std::bad_alloc& ) {}
+			if ( mpBits )
+			{
+				memset( mpBits, 0, nCapacity );
+				mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
+			}
+		}
+
+		delete mpVCLGraphics;
+		mpVCLGraphics = NULL;
+	}
+	else if ( mpGraphics )
+	{
+		mpGraphics->removeGraphicsChangeListener( this );
+
+		if ( !bDisposed && !mpBits && mpGraphics->useNativeDrawing() )
+		{
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
+			{
+				long nScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
+				long nCapacity = nScanlineSize * maSize.Height();
 				// Force copying of the buffer
-				long nCapacity = AlignedWidth4Bytes( mnBitCount * maSize.Width() ) * maSize.Height();
 				try
 				{
 					mpBits = new BYTE[ nCapacity ];
@@ -263,52 +279,27 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 				if ( mpBits )
 				{
 					memset( mpBits, 0, nCapacity );
-					mpGraphics->mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
+
+					CGContextRef aContext = CGBitmapContextCreate( mpBits, maSize.Width(), maSize.Height(), 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+					if ( aContext )
+					{
+						// Flip coordinates to VCL drawing coordinates
+						CGContextTranslateCTM( aContext, 0, maSize.Height() );
+						CGContextScaleCTM( aContext, 1.0f, -1.0f );
+
+						mpGraphics->copyToContext( NULL, false, aContext, CGRectMake( 0, 0, maSize.Width(), maSize.Height() ), CGPointMake( maPoint.X(), maPoint.Y() ), CGRectMake( 0, 0, maSize.Width(), maSize.Height() ) );
+
+						CGContextRelease( aContext );
+					}
 				}
+
+				CGColorSpaceRelease( aColorSpace );
 			}
 		}
-		else
-		{
-			mpGraphics->removeGraphicsChangeListener( this );
-
-			if ( !bDisposed && !mpBits && mpGraphics->useNativeDrawing() )
-			{
-				CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-				if ( aColorSpace )
-				{
-					long nScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
-					long nCapacity = nScanlineSize * maSize.Height();
-					// Force copying of the buffer
-					try
-					{
-						mpBits = new BYTE[ nCapacity ];
-					}
-					catch( const std::bad_alloc& ) {}
-					if ( mpBits )
-					{
-						memset( mpBits, 0, nCapacity );
-
-						CGContextRef aContext = CGBitmapContextCreate( mpBits, maSize.Width(), maSize.Height(), 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-						if ( aContext )
-						{
-							// Flip coordinates to VCL drawing coordinates
-							CGContextTranslateCTM( aContext, 0, maSize.Height() );
-							CGContextScaleCTM( aContext, 1.0f, -1.0f );
-
-							mpGraphics->copyToContext( NULL, false, aContext, CGRectMake( 0, 0, maSize.Width(), maSize.Height() ), CGPointMake( maPoint.X(), maPoint.Y() ), CGRectMake( 0, 0, maSize.Width(), maSize.Height() ) );
-
-							CGContextRelease( aContext );
-						}
-					}
-
-					CGColorSpaceRelease( aColorSpace );
-				}
-			}
-		}
-
-		maPoint = Point( 0, 0 );
-		mpGraphics = NULL;
 	}
+
+	maPoint = Point( 0, 0 );
+	mpGraphics = NULL;
 }
 
 // ------------------------------------------------------------------
@@ -372,12 +363,26 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 
 	maPoint = Point( nX, nY );
 	maSize = Size( nWidth, nHeight );
-	mpGraphics = pGraphics;
 
-	if ( !mpGraphics || maSize.Width() <= 0 || maSize.Height() <= 0 )
+	if ( !pGraphics || maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
-	mnBitCount = mpGraphics->GetBitCount();
+	if ( pGraphics->useNativeDrawing() )
+	{
+		mpGraphics = pGraphics;
+		mnBitCount = mpGraphics->GetBitCount();
+	}
+	else if ( pGraphics->mpVCLGraphics )
+	{
+		mpVCLGraphics = new com_sun_star_vcl_VCLGraphics( pGraphics->mpVCLGraphics->getJavaObject() );
+		if ( !mpVCLGraphics )
+			return false;
+		mnBitCount = mpVCLGraphics->getBitCount();
+	}
+	else
+	{
+		return false;
+	}
 
 	// Save the palette
 	USHORT nColors = ( ( mnBitCount <= 8 ) ? ( 1 << mnBitCount ) : 0 );
@@ -387,9 +392,9 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 		maPalette.SetEntryCount( nColors );
 	}
 
-	if ( mpGraphics->mpVCLGraphics )
-		mpGraphics->mpVCLGraphics->addGraphicsChangeListener( this );
-	else
+	if ( mpVCLGraphics )
+		mpVCLGraphics->addGraphicsChangeListener( this );
+	else if ( mpGraphics )
 		mpGraphics->addGraphicsChangeListener( this );
 
 	return true;
@@ -504,12 +509,16 @@ void JavaSalBitmap::Destroy()
 
 	maPalette.SetEntryCount( 0 );
 
+	if ( mpVCLGraphics )
+	{
+		mpVCLGraphics->removeGraphicsChangeListener( this );
+		delete mpVCLGraphics;
+		mpVCLGraphics = NULL;
+	}
+
 	if ( mpGraphics )
 	{
-		if ( mpGraphics->mpVCLGraphics )
-			mpGraphics->mpVCLGraphics->removeGraphicsChangeListener( this );
-		else
-			mpGraphics->removeGraphicsChangeListener( this );
+		mpGraphics->removeGraphicsChangeListener( this );
 		mpGraphics = NULL;
 	}
 }

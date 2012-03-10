@@ -63,6 +63,7 @@ class JavaSalBitmap : public SalBitmap
 	BYTE*					mpBits;
 	BitmapPalette			maPalette;
 	BitmapBuffer*			mpBuffer;
+	::vcl::com_sun_star_vcl_VCLGraphics*	mpVCLGraphics;
 	JavaSalGraphics*		mpGraphics;
 
 public:
@@ -75,7 +76,7 @@ public:
 	bool					Create( const Point& rPoint, const Size& rSize, JavaSalGraphics *pGraphics, const BitmapPalette& rPal );
 	::vcl::com_sun_star_vcl_VCLBitmap*	CreateVCLBitmap( long nX, long nY, long nWidth, long nHeight );
 	Point					GetPoint() const { return maPoint; }
-	::vcl::com_sun_star_vcl_VCLGraphics*	GetVCLGraphics();
+	::vcl::com_sun_star_vcl_VCLGraphics*	GetVCLGraphics() { return mpVCLGraphics; }
 	void					NotifyGraphicsChanged( bool bDisposed );
 	void					ReleaseVCLBitmap( ::vcl::com_sun_star_vcl_VCLBitmap *pVCLBitmap );
 

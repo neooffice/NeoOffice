@@ -33,52 +33,22 @@
  *
  ************************************************************************/
 
-#define _SV_SALFRAME_CXX
-
 #include <dlfcn.h>
 
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_SALGDI_H
 #include <salgdi.h>
-#endif
-#ifndef _SV_SALOBJ_H
 #include <salobj.h>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALMENU_H
 #include <salmenu.h>
-#endif
-#ifndef _SV_SALSYS_H
 #include <salsys.h>
-#endif
-#ifndef _SV_SETTINGS_HXX
 #include <vcl/settings.hxx>
-#endif
-#ifndef _SV_STATUS_HXX
 #include <vcl/status.hxx>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLSCREEN_HXX
 #include <com/sun/star/vcl/VCLScreen.hxx>
-#endif
-#ifndef _SV_DIALOG_HXX
 #include <vcl/dialog.hxx>
-#endif
 
 #include <premac.h>
 #import <AppKit/AppKit.h>
@@ -300,30 +270,32 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 
 // =======================================================================
 
-JavaSalFrame::JavaSalFrame()
+JavaSalFrame::JavaSalFrame() :
+	mpVCLFrame( NULL ),
+	mpGraphics( new JavaSalGraphics() ),
+	mnStyle( 0 ),
+	mpParent( NULL ),
+	mbGraphics( FALSE ),
+	mbVisible( FALSE ),
+	mbCenter( TRUE ),
+	mbFullScreen( FALSE ),
+	mbPresentation( FALSE ),
+	mpMenuBar( NULL ),
+	mbInSetPosSize( FALSE ),
+	mbInShow( FALSE ),
+	mbShowOnlyMenus( FALSE ),
+	mbInShowOnlyMenus( FALSE ),
+	mbInShowFullScreen( FALSE ),
+	mbInWindowDidExitFullScreen( FALSE ),
+	mbInWindowWillEnterFullScreen( FALSE )
 {
-	memset( &maGeometry, 0, sizeof( maGeometry ) );
-	mpVCLFrame = NULL;
-	mpGraphics = new JavaSalGraphics();
-	mpGraphics->mpFrame = this;
-	mnStyle = 0;
-	mpParent = NULL;
-	mbGraphics = FALSE;
-	mbVisible = FALSE;
 	memset( &maSysData, 0, sizeof( SystemEnvData ) );
 	maSysData.nSize = sizeof( SystemEnvData );
-	mbCenter = TRUE;
+
+	memset( &maGeometry, 0, sizeof( maGeometry ) );
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
-	mbFullScreen = FALSE;
-	mbPresentation = FALSE;
-	mpMenuBar = NULL;
-	mbInSetPosSize = FALSE;
-	mbInShow = FALSE;
-	mbShowOnlyMenus = FALSE;
-	mbInShowOnlyMenus = FALSE;
-	mbInShowFullScreen = FALSE;
-	mbInWindowDidExitFullScreen = FALSE;
-	mbInWindowWillEnterFullScreen = FALSE;
+
+	mpGraphics->mpFrame = this;
 }
 
 // -----------------------------------------------------------------------
@@ -353,7 +325,9 @@ JavaSalFrame::~JavaSalFrame()
 		delete mpVCLFrame;
 	}
 
-	delete mpGraphics;
+	// Delete graphics last as it may be needed by a JavaSalBitmap
+	if ( mpGraphics )
+		delete mpGraphics;
 }
 
 // -----------------------------------------------------------------------

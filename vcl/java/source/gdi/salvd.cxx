@@ -69,9 +69,6 @@ JavaSalVirtualDevice::JavaSalVirtualDevice() :
 
 JavaSalVirtualDevice::~JavaSalVirtualDevice()
 {
-	if ( mpGraphics )
-		delete mpGraphics;
-
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	if ( maBitmapLayer )
 		CGLayerRelease( maBitmapLayer );
@@ -88,6 +85,10 @@ JavaSalVirtualDevice::~JavaSalVirtualDevice()
 		delete mpVCLImage;
 	}
 #endif	// USE_NATIVE_VIRTUAL_DEVICE
+
+	// Delete graphics last as it may be needed by a JavaSalBitmap
+	if ( mpGraphics )
+		delete mpGraphics;
 }
 
 // -----------------------------------------------------------------------

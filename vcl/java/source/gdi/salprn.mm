@@ -832,6 +832,8 @@ SalGraphics* JavaSalInfoPrinter::GetGraphics()
 	if ( mbGraphics )
 		return NULL;
 
+	if ( mpGraphics->mpVCLGraphics )
+		delete mpGraphics->mpVCLGraphics;
 	mpGraphics->mpVCLGraphics = mpVCLPageFormat->getGraphics();
 	mbGraphics = TRUE;
 
@@ -849,11 +851,6 @@ void JavaSalInfoPrinter::ReleaseGraphics( SalGraphics* pGraphics )
 	if ( pGraphics != mpGraphics )
 		return;
 
-	if ( mpGraphics && mpGraphics->mpVCLGraphics )
-	{
-		delete mpGraphics->mpVCLGraphics;
-		mpGraphics->mpVCLGraphics = NULL;
-	}
 	mbGraphics = FALSE;
 #endif	// USE_NATIVE_PRINTING
 }
@@ -1234,9 +1231,6 @@ JavaSalPrinter::~JavaSalPrinter()
 	// Call EndJob() to join and destroy the print thread
 	EndJob();
 
-	if ( mpGraphics )
-		delete mpGraphics;
-
 #ifdef USE_NATIVE_PRINTING
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
@@ -1257,6 +1251,10 @@ JavaSalPrinter::~JavaSalPrinter()
 		delete mpVCLPrintJob;
 	}
 #endif	// USE_NATIVE_PRINTING
+
+	// Delete graphics last as it may be needed by a JavaSalBitmap
+	if ( mpGraphics )
+		delete mpGraphics;
 }
 
 // -----------------------------------------------------------------------
