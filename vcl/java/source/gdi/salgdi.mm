@@ -260,6 +260,13 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		aSrcRect.size.height = aLayerSize.height - aSrcRect.origin.y;
 		maRect.size.height = aSrcRect.size.height;
 	}
+	if ( maRect.origin.x < 0 )
+	{
+		aSrcRect.origin.x -= maRect.origin.x;
+		aSrcRect.size.width += maRect.origin.x;
+		maRect.size.width += maRect.origin.x;
+		maRect.origin.x = 0;
+	}
 	if ( maRect.origin.y < 0 )
 	{
 		aSrcRect.origin.y -= maRect.origin.y;
@@ -475,21 +482,23 @@ void JavaSalGraphicsDrawPathOp::drawOp( CGContextRef aContext, CGRect aBounds )
 				// Enable or disable antialiasing
 				CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 
+				// Smooth out image drawing for bug 2475 image
+				if ( maXORLayer && !mbAntialias )
+					CGContextSetAllowsAntialiasing( aContext, true );
+
 				CGContextAddPath( aContext, maPath );
 				if ( CGColorGetAlpha( aFillColor ) )
 				{
-					// Smooth out image drawing for bug 2475 image
-					if ( maXORLayer && !mbAntialias )
-						CGContextSetAllowsAntialiasing( aContext, true );
 					CGContextSetFillColorWithColor( aContext, aFillColor );
 					CGContextEOFillPath( aContext );
-					CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 				}
 				if ( CGColorGetAlpha( aLineColor ) )
 				{
 					CGContextSetStrokeColorWithColor( aContext, aLineColor );
 					CGContextStrokePath( aContext );
 				}
+
+				CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 
 				restoreClipXORGState();
 			}
@@ -1302,9 +1311,6 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 
 	CGContextSaveGState( aContext );
 
-	// Turn off antialiasing by default since we did the same in the Java code
-	CGContextSetAllowsAntialiasing( aContext, false );
-
 	// Scale printer context to match OOo resolution
 	if ( mpPrinter )
 	{
@@ -1413,22 +1419,51 @@ void JavaSalGraphicsOp::restoreClipXORGState()
 		// If there are XOR bitmaps, XOR them and then draw to this context
 		if ( mnBitmapCapacity && mpDrawBits && maDrawBitmapContext && mpXORBits && maXORBitmapContext )
 		{
-			for ( size_t i = 0; i < mnBitmapCapacity; i++ )
-			{
-				if ( mpXORBits[ i ] & 0xff000000 == 0xff000000 )
-					mpDrawBits[ i ] ^= mpXORBits[ i ] & 0x00ffffff;
-			}
+			size_t nBitmapWidth = CGBitmapContextGetWidth( maDrawBitmapContext );
+			size_t nBitmapHeight = CGBitmapContextGetHeight( maDrawBitmapContext );
+			CGContextRelease( maDrawBitmapContext );
+			maDrawBitmapContext = NULL;
 
-			CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpDrawBits, mnBitmapCapacity, NULL );
-			if ( aProvider )
+			CGContextRelease( maXORBitmapContext );
+			maXORBitmapContext = NULL;
+
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
 			{
-				CGImageRef aImage = CGImageCreate( CGBitmapContextGetWidth( maDrawBitmapContext ), CGBitmapContextGetHeight( maDrawBitmapContext ), CGBitmapContextGetBitsPerComponent( maDrawBitmapContext ), CGBitmapContextGetBitsPerPixel( maDrawBitmapContext ), CGBitmapContextGetBytesPerRow( maDrawBitmapContext ), CGBitmapContextGetColorSpace( maDrawBitmapContext ), kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
-				if ( aImage )
+				size_t nPixels = mnBitmapCapacity / sizeof( sal_uInt32 );
+				sal_uInt32 *pDrawBits = (sal_uInt32 *)mpDrawBits;
+				sal_uInt32 *pXORBits = (sal_uInt32 *)mpXORBits;
+				for ( size_t i = 0; i < nPixels; i++ )
 				{
-					CGContextDrawImage( maSavedContext, CGRectMake( maXORRect.origin.x - XOR_BITMAP_BOUNDS_PADDING, maXORRect.origin.y - XOR_BITMAP_BOUNDS_PADDING, CGBitmapContextGetWidth( maDrawBitmapContext ), CGBitmapContextGetHeight( maDrawBitmapContext ) ), aImage );
-					CGImageRelease( aImage );
+					if ( ( pXORBits[ i ] & 0xff000000 ) == 0xff000000 )
+						pDrawBits[ i ] = ( pDrawBits[ i ] ^ pXORBits[ i ] ) | 0xff000000;
 				}
-				CGDataProviderRelease( aProvider );
+
+				delete[] mpXORBits;
+				mpXORBits = NULL;
+
+				// Assign ownership of bits to a CGDataProvider instance
+				CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpDrawBits, mnBitmapCapacity, ReleaseBitmapBufferBytePointerCallback );
+				if ( aProvider )
+				{
+					mpDrawBits = NULL;
+
+					CGImageRef aImage = CGImageCreate( nBitmapWidth, nBitmapHeight, 8, 32, AlignedWidth4Bytes( 32 * nBitmapWidth ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
+					if ( aImage )
+					{
+						CGContextDrawImage( maSavedContext, CGRectMake( maXORRect.origin.x - XOR_BITMAP_BOUNDS_PADDING, maXORRect.origin.y - XOR_BITMAP_BOUNDS_PADDING, nBitmapWidth, nBitmapHeight ), aImage );
+						CGImageRelease( aImage );
+					}
+
+					CGDataProviderRelease( aProvider );
+				}
+				else
+				{
+					delete[] mpDrawBits;
+					mpDrawBits = NULL;
+				}
+
+				CGColorSpaceRelease( aColorSpace );
 			}
 		}
 
@@ -1507,8 +1542,13 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext, CGRect
 					maXORBitmapContext = CGBitmapContextCreate( mpXORBits, aBitmapSize.width, aBitmapSize.height, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 					if ( maDrawBitmapContext && maXORBitmapContext )
 					{
+						// Turn off antialiasing by default since we did the
+						// same in the Java code
+						CGContextSetAllowsAntialiasing( maDrawBitmapContext, false );
+
 						// Translate and clip the drawing context
 						CGContextTranslateCTM( maDrawBitmapContext, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.x, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.y );
+
 						if ( maNativeClipPath )
 						{
 							CGContextBeginPath( maDrawBitmapContext );
@@ -1537,6 +1577,9 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( CGContextRef aContext, CGRect
 	maSavedContext = aContext;
 	CGContextRetain( maSavedContext );
 	CGContextSaveGState( maSavedContext );
+
+	// Turn off antialiasing by default since we did the same in the Java code
+	CGContextSetAllowsAntialiasing( maSavedContext, false );
 
 	if ( maNativeClipPath )
 	{

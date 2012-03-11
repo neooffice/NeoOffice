@@ -450,7 +450,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 				if ( aContext )
 				{
 					float fScaleFactor = 1.0f;
-					NSRect aFrame = [self frame];
+					NSRect aBounds = [self bounds];
 					NSRect aPageBounds = NSZeroRect;
 					NSPrintOperation *pPrintOperation = [NSPrintOperation currentOperation];
 					if ( pPrintOperation )
@@ -473,7 +473,7 @@ static void SAL_CALL ImplPrintOperationRun( void *pJavaSalPrinter )
 					CGContextSaveGState( aContext );
 
 					// Flip coordinates to VCL drawing coordinates
-					CGContextTranslateCTM( aContext, 0, aFrame.size.height - aFrame.origin.y );
+					CGContextTranslateCTM( aContext, 0, aBounds.size.height );
 					CGContextScaleCTM( aContext, 1.0f, -1.0f );
 
 					CGContextTranslateCTM( aContext, aPageBounds.origin.x, aPageBounds.origin.y );
