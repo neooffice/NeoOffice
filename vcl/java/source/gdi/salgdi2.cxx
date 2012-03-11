@@ -334,7 +334,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						if ( t.pEnv )
 						{
 							jboolean bCopy( sal_False );
-							sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+							sal_uInt32 *pBits = (sal_uInt32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 							if ( pBits )
 							{
 								BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
@@ -494,7 +494,36 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	{
 		if ( useNativeDrawing() )
 		{
-			fprintf( stderr, "JavaSalGraphics::drawBitmap2 not implemented\n" );
+			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+			if ( pDestBuffer )
+			{
+				if ( pDestBuffer->mpBits )
+				{
+					// Mark all transparent color pixels as transparent
+					nTransparentColor |= 0xff000000;
+					long nBits = pDestBuffer->mnWidth * pDestBuffer->mnHeight;
+					sal_uInt32 *pBits = (sal_uInt32 *)pDestBuffer->mpBits;
+					for ( long i = 0; i < nBits; i++ )
+					{
+						if ( pBits[ i ] == nTransparentColor )
+							pBits[ i ] = 0x00000000;
+					}
+
+					// Assign ownership of bits to a CGDataProvider instance
+					CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pDestBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
+					if ( aProvider )
+					{
+						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGPointMake( 0, 0 ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+						CGDataProviderRelease( aProvider );
+					}
+					else
+					{
+						delete[] pDestBuffer->mpBits;
+					}
+				}
+
+				delete pDestBuffer;
+			}
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -508,14 +537,12 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 					if ( t.pEnv )
 					{
 						jboolean bCopy( sal_False );
-						sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+						sal_uInt32 *pBits = (sal_uInt32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 						if ( pBits )
 						{
 							BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
 							if ( pDestBuffer )
 							{
-								pJavaSalBitmap->ReleaseBuffer( pSrcBuffer, TRUE );
-
 								// Mark all transparent color pixels as transparent
 								nTransparentColor |= 0xff000000;
 								long nBits = pDestBuffer->mnWidth * pDestBuffer->mnHeight;
@@ -632,7 +659,88 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 	{
 		if ( useNativeDrawing() )
 		{
-			fprintf( stderr, "JavaSalGraphics::drawBitmap3 not implemented\n" );
+			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+			if ( pDestBuffer )
+			{
+				if ( pDestBuffer->mpBits )
+				{
+					BitmapBuffer *pTransSrcBuffer = pTransJavaSalBitmap->AcquireBuffer( TRUE );
+					if ( pTransSrcBuffer )
+					{
+						// Fix bug 2475 by handling the case where the
+						// transparent bitmap is smaller than the main bitmap
+						SalTwoRect aTransPosAry;
+						memcpy( &aTransPosAry, &aPosAry, sizeof( SalTwoRect ) );
+						Size aTransSize( pTransJavaSalBitmap->GetSize() );
+						long nTransExcessWidth = aPosAry.mnSrcX + aPosAry.mnSrcWidth - aTransSize.Width();
+						if ( nTransExcessWidth > 0 )
+						{
+							aTransPosAry.mnSrcWidth -= nTransExcessWidth;
+							aTransPosAry.mnDestWidth = aTransPosAry.mnSrcWidth * aPosAry.mnSrcWidth / aPosAry.mnDestWidth;
+						}
+						long nTransExcessHeight = aPosAry.mnSrcY + aPosAry.mnSrcHeight - aTransSize.Height();
+						if ( nTransExcessHeight > 0 )
+						{
+							aTransPosAry.mnSrcHeight -= nTransExcessHeight;
+							aTransPosAry.mnDestHeight = aTransPosAry.mnSrcHeight * aPosAry.mnSrcHeight / aPosAry.mnDestHeight;
+						}
+						BitmapBuffer *pTransDestBuffer = StretchAndConvert( *pTransSrcBuffer, aTransPosAry, BMP_FORMAT_1BIT_MSB_PAL | BMP_FORMAT_TOP_DOWN, &pTransSrcBuffer->maPalette );
+						if ( pTransDestBuffer )
+						{
+							if ( pTransDestBuffer->mpBits )
+							{
+								// Mark all non-black pixels in the transparent
+								// bitmap as transparent in the mask bitmap
+								sal_uInt32 *pBits = (sal_uInt32 *)pDestBuffer->mpBits;
+								Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
+								FncGetPixel pFncGetPixel = BitmapReadAccess::GetPixelFor_1BIT_MSB_PAL;
+								for ( int i = 0; i < pDestBuffer->mnHeight; i++ )
+								{
+									bool bTransPixels = ( i < pTransDestBuffer->mnHeight );
+									for ( int j = 0; j < pDestBuffer->mnWidth; j++ )
+									{
+										if ( bTransPixels && j < pTransDestBuffer->mnWidth )
+										{
+											BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
+											if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
+												pBits[ j ] = 0x00000000;
+										}
+										else
+										{
+											pBits[ j ] = 0x00000000;
+										}
+									}
+
+									pBits += pDestBuffer->mnWidth;
+									pTransBits += pTransDestBuffer->mnScanlineSize;
+								}
+
+								delete[] pTransDestBuffer->mpBits;
+
+								// Assign ownership of bits to a CGDataProvider
+								// instance
+								CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pDestBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
+								if ( aProvider )
+								{
+									pDestBuffer->mpBits = NULL;
+
+									addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGPointMake( 0, 0 ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+									CGDataProviderRelease( aProvider );
+								}
+							}
+
+							delete pTransDestBuffer;
+						}
+
+						pTransJavaSalBitmap->ReleaseBuffer( pTransSrcBuffer, TRUE );
+					}
+
+					if ( pDestBuffer->mpBits )
+						delete[] pDestBuffer->mpBits;
+				}
+
+				delete pDestBuffer;
+			}
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -646,7 +754,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 					if ( t.pEnv )
 					{
 						jboolean bCopy( sal_False );
-						sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+						sal_uInt32 *pBits = (sal_uInt32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 						if ( pBits )
 						{
 							BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
@@ -691,7 +799,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 													if ( bTransPixels && j < pTransDestBuffer->mnWidth )
 													{
 														BitmapColor aColor( pTransDestBuffer->maPalette[ pFncGetPixel( pTransBits, j, pTransDestBuffer->maColorMask ) ] );
-                                    					if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
+														if ( ( MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000 ) != 0xff000000 )
 															pBits[ j ] = 0x00000000;
 													}
 													else
@@ -819,7 +927,38 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 	{
 		if ( useNativeDrawing() )
 		{
-			fprintf( stderr, "JavaSalGraphics::drawMask not implemented\n" );
+			BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
+			if ( pDestBuffer )
+			{
+				if ( pDestBuffer->mpBits )
+				{
+					// Mark all non-black pixels as transparent
+					nMaskColor |= 0xff000000;
+					long nBits = pDestBuffer->mnWidth * pDestBuffer->mnHeight;
+					sal_uInt32 *pBits = (sal_uInt32 *)pDestBuffer->mpBits;
+					for ( long i = 0; i < nBits; i++ )
+					{
+						if ( pBits[ i ] == 0xff000000 )
+							pBits[ i ] = nMaskColor;
+						else
+							pBits[ i ] = 0x00000000;
+					}
+
+					// Assign ownership of bits to a CGDataProvider instance
+					CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pDestBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
+					if ( aProvider )
+					{
+						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGPointMake( 0, 0 ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+						CGDataProviderRelease( aProvider );
+					}
+					else
+					{
+						delete[] pDestBuffer->mpBits;
+					}
+				}
+
+				delete pDestBuffer;
+			}
 		}
 		else if ( mpVCLGraphics )
 		{
@@ -833,7 +972,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 					if ( t.pEnv )
 					{
 						jboolean bCopy( sal_False );
-						sal_Int32 *pBits = (sal_Int32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
+						sal_uInt32 *pBits = (sal_uInt32 *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 						if ( pBits )
 						{
 							BitmapBuffer *pDestBuffer = StretchAndConvert( *pSrcBuffer, aPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN, NULL, NULL, (BYTE *)pBits );
@@ -1069,7 +1208,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 					BitmapBuffer *pCopyBuffer = StretchAndConvert( *pSrcBuffer, aCopyPosAry, JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN );
 					if ( pCopyBuffer )
 					{
-						sal_Int32 *pBits = (sal_Int32 *)pCopyBuffer->mpBits;
+						sal_uInt32 *pBits = (sal_uInt32 *)pCopyBuffer->mpBits;
 						if ( pCopyBuffer->mpBits )
 						{
 							Scanline pTransBits = (Scanline)pTransDestBuffer->mpBits;
