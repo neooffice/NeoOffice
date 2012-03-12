@@ -129,7 +129,10 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	if ( pJavaSrcGraphics->mpPrinter )
 		return;
 
-	if ( mpPrinter || pJavaSrcGraphics->useNativeDrawing() != useNativeDrawing() || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+	// If either the source or destination uses native drawing, create and draw
+	// a bitmap as drawing the source's layer will cause fully transparent
+	// to be drawn as partially transparent
+	if ( mpPrinter || useNativeDrawing() || pJavaSrcGraphics->useNativeDrawing() || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
 	{
 		SalTwoRect aPosAry;
 		memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
