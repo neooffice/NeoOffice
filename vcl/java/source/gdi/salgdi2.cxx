@@ -39,6 +39,7 @@
 #include <vcl/sysdata.hxx>
 #include <com/sun/star/vcl/VCLBitmap.hxx>
 #include <com/sun/star/vcl/VCLEvent.hxx>
+#include <com/sun/star/vcl/VCLFrame.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <vcl/bmpacc.hxx>
 
@@ -144,7 +145,7 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	}
 	else if ( useNativeDrawing() && pJavaSrcGraphics->useNativeDrawing() )
 	{
-		copyFromGraphics( pJavaSrcGraphics, CGPointMake( pPosAry->mnSrcX, pPosAry->mnSrcY ), CGRectMake( pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight ) );
+		copyFromGraphics( pJavaSrcGraphics, CGPointMake( pPosAry->mnSrcX, pPosAry->mnSrcY ), CGRectMake( pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight ), true );
 	}
 	else if ( mpVCLGraphics )
 	{
@@ -162,10 +163,7 @@ void JavaSalGraphics::copyArea( long nDestX, long nDestY, long nSrcX, long nSrcY
 
 	if ( useNativeDrawing() )
 	{
-		bool bOldXOR = mbXOR;
-		mbXOR = false;
-		copyFromGraphics( this, CGPointMake( nSrcX, nSrcY ), CGRectMake( nDestX, nDestY, nSrcWidth, nSrcHeight ) );
-		mbXOR = bOldXOR;
+		copyFromGraphics( this, CGPointMake( nSrcX, nSrcY ), CGRectMake( nDestX, nDestY, nSrcWidth, nSrcHeight ), false );
 	}
 	else if ( mpVCLGraphics )
 	{
@@ -333,7 +331,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 		if ( pGraphics )
 		{
 			Point aPoint( pJavaSalBitmap->GetPoint() );
-			copyFromGraphics( pGraphics, CGPointMake( aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) );
+			copyFromGraphics( pGraphics, CGPointMake( aPoint.X() + aPosAry.mnSrcX, aPoint.Y() + aPosAry.mnSrcY ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ), true );
 		}
 		else
 		{
@@ -993,6 +991,11 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 		nY += nDY;
 		nDY = -nDY;
 	}
+
+	// Fix bug 3189 and wipe down presentation transition previews without
+	// causing bug 3191 by flushing in certain cases
+	if ( !useNativeDrawing() )
+		com_sun_star_vcl_VCLFrame::flushAllFrames();
 
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 

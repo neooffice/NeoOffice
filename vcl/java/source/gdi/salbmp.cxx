@@ -395,7 +395,7 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 	if ( mpVCLGraphics )
 		mpVCLGraphics->addGraphicsChangeListener( this );
 	else if ( mpGraphics )
-		mpGraphics->addGraphicsChangeListener( this );
+		NotifyGraphicsChanged( false );
 
 	return true;
 }
