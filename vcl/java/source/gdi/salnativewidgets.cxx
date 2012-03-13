@@ -95,12 +95,11 @@ using namespace rtl;
 
 struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 {
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
 	java_lang_Object*	 	mpData;
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 	CGContextRef			maContext;
 	bool					mbLastDrawToPrintGraphics;
+	bool					mbUseNativeDrawing;
 
 							VCLBitmapBuffer();
 	virtual					~VCLBitmapBuffer();
@@ -171,12 +170,11 @@ inline long Float32ToLong( Float32 f ) { return (long)( f + 0.5 ); }
 
 VCLBitmapBuffer::VCLBitmapBuffer() :
 	BitmapBuffer(),
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
 	mpVCLBitmap( NULL ),
 	mpData( NULL ),
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 	maContext( NULL ),
-	mbLastDrawToPrintGraphics( false )
+	mbLastDrawToPrintGraphics( false ),
+	mbUseNativeDrawing( false )
 {
 	mnFormat = 0;
 	mnWidth = 0;
@@ -199,11 +197,13 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 {
 	bool bReused = false;
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	mbUseNativeDrawing = pGraphics->useNativeDrawing();
+	if ( mbUseNativeDrawing && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
+	{
+		ReleaseContext();
+		bReused = true;
+	}
+	else if ( !mbUseNativeDrawing && mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
 	{
 		ReleaseContext();
 		bReused = true;
@@ -211,32 +211,34 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 	else
 	{
 		Destroy();
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
-		mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
-		if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
+		if ( !mbUseNativeDrawing )
+		{
+			mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
+			if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
+			{
+				Destroy();
+				return FALSE;
+			}
+		}
+	}
+
+	if ( !mbUseNativeDrawing )
+	{
+		VCLThreadAttach t;
+		if ( !t.pEnv )
 		{
 			Destroy();
 			return FALSE;
 		}
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
-	}
 
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
-	VCLThreadAttach t;
-	if ( !t.pEnv )
-	{
-		Destroy();
-		return FALSE;
+		if ( !mpData )
+			mpData = mpVCLBitmap->getData();
+		if ( !mpData )
+		{
+			Destroy();
+			return FALSE;
+		}
 	}
-
-	if ( !mpData )
-		mpData = mpVCLBitmap->getData();
-	if ( !mpData )
-	{
-		Destroy();
-		return FALSE;
-	}
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 
 	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN;
 	if ( nWidth > mnWidth )
@@ -246,20 +248,30 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 	mnScanlineSize = mnWidth * sizeof( jint );
 	mnBitCount = 32;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-	if ( !mpBits )
+	if ( mbUseNativeDrawing )
 	{
-		try
+		if ( !mpBits )
 		{
-			mpBits = new BYTE[ mnScanlineSize * mnHeight ];
+			try
+			{
+				mpBits = new BYTE[ mnScanlineSize * mnHeight ];
+			}
+			catch( const std::bad_alloc& ) {}
 		}
-		catch( const std::bad_alloc& ) {}
 	}
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-	jboolean bCopy( sal_False );
-	if ( !mpBits )
-		mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	else
+	{
+		VCLThreadAttach t;
+		if ( !t.pEnv )
+		{
+			Destroy();
+			return FALSE;
+		}
+
+		jboolean bCopy( sal_False );
+		if ( !mpBits )
+			mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
+	}
 	if ( !mpBits )
 	{
 		Destroy();
@@ -312,33 +324,32 @@ void VCLBitmapBuffer::Destroy()
 
 	if ( mpBits )
 	{
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		delete[] mpBits;
-#else	// USE_NATIVE_VIRTUAL_DEVICE
+		if ( mbUseNativeDrawing )
+			delete[] mpBits;
 		if ( mpData )
 		{
 			VCLThreadAttach t;
 			if ( t.pEnv )
 				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, JNI_ABORT );
 		}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 		mpBits = NULL;
 	}
 
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpData )
+	if ( !mbUseNativeDrawing )
 	{
-		delete mpData;
-		mpData = NULL;
-	}
+		if ( mpData )
+		{
+			delete mpData;
+			mpData = NULL;
+		}
 
-	if ( mpVCLBitmap )
-	{
-		mpVCLBitmap->dispose();
-		delete mpVCLBitmap;
-		mpVCLBitmap = NULL;
+		if ( mpVCLBitmap )
+		{
+			mpVCLBitmap->dispose();
+			delete mpVCLBitmap;
+			mpVCLBitmap = NULL;
+		}
 	}
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // -----------------------------------------------------------------------
@@ -351,24 +362,25 @@ void VCLBitmapBuffer::ReleaseContext()
 		maContext = NULL;
 	}
 
-#ifndef USE_NATIVE_VIRTUAL_DEVICE
-	if ( mpBits )
+	if ( !mbUseNativeDrawing )
 	{
+		if ( mpBits )
+		{
+			if ( mpData )
+			{
+				VCLThreadAttach t;
+				if ( t.pEnv )
+					t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, 0 );
+			}
+			mpBits = NULL;
+		}
+
 		if ( mpData )
 		{
-			VCLThreadAttach t;
-			if ( t.pEnv )
-				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, 0 );
+			delete mpData;
+			mpData = NULL;
 		}
-		mpBits = NULL;
 	}
-
-	if ( mpData )
-	{
-		delete mpData;
-		mpData = NULL;
-	}
-#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // =======================================================================
@@ -953,11 +965,12 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeComboBox not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeComboBox not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1010,11 +1023,12 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeListBox not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeListBox not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return TRUE;
 }
@@ -1080,11 +1094,12 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeScrollBar not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeScrollBar not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1174,11 +1189,12 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		pBuffer->ReleaseContext();
 
 		if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-			fprintf( stderr, "DrawNativeSpinbox not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+		{
+			if ( pGraphics->useNativeDrawing() )
+				fprintf( stderr, "DrawNativeSpinbox not implemented\n" );
+			else
+				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+		}
 	}
 
 	return bRet;
@@ -1237,11 +1253,12 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		pBuffer->ReleaseContext();
 
 		if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-			fprintf( stderr, "DrawNativeSpinbutton not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+		{
+			if ( pGraphics->useNativeDrawing() )
+				fprintf( stderr, "DrawNativeSpinbutton not implemented\n" );
+			else
+				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+		}
 	}
 
 	return bRet;
@@ -1291,11 +1308,12 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeProgressbar not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeProgressbar not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1342,11 +1360,12 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeTab not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeTab not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1386,11 +1405,12 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeTabBoundingBox not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeTabBoundingBox not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1430,11 +1450,12 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativePrimaryGroupBox not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativePrimaryGroupBox not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1471,11 +1492,12 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeMenuBackground not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeMenuBackground not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1518,11 +1540,12 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeEditBox not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeEditBox not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1560,11 +1583,12 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeListBoxFrame not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeListBoxFrame not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1608,11 +1632,12 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeDisclosureBtn not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeDisclosureBtn not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1653,11 +1678,12 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeSeparatorLine not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeSeparatorLine not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1705,11 +1731,12 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		pBuffer->ReleaseContext();
 
 		if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-			fprintf( stderr, "DrawNativeListViewHeader not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+		{
+			if ( pGraphics->useNativeDrawing() )
+				fprintf( stderr, "DrawNativeListViewHeader not implemented\n" );
+			else
+				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+		}
 	}
 
 	return bRet;
@@ -1754,11 +1781,12 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeBevelButton not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeBevelButton not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -1803,11 +1831,12 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	pBuffer->ReleaseContext();
 
 	if ( bRet )
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-		fprintf( stderr, "DrawNativeCheckbox not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-		pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+	{
+		if ( pGraphics->useNativeDrawing() )
+			fprintf( stderr, "DrawNativeCheckbox not implemented\n" );
+		else
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
 
 	return bRet;
 }
@@ -2091,13 +2120,16 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-				fprintf( stderr, "CTRL_PUSHBUTTON not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
+				if ( useNativeDrawing() )
+				{
+					fprintf( stderr, "CTRL_PUSHBUTTON not implemented\n" );
+				}
+				else
+				{
+					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+					mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
+				}
 				bOK = TRUE;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 			}
 			break;
 
@@ -2107,13 +2139,16 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-				fprintf( stderr, "CTRL_RADIOBUTTON not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
+				if ( useNativeDrawing() )
+				{
+					fprintf( stderr, "CTRL_RADIOBUTTON not implemented\n" );
+				}
+				else
+				{
+					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+					mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
+				}
 				bOK = TRUE;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 			}
 			break;
 
@@ -2371,38 +2406,44 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-				fprintf( stderr, "CTRL_PUSHBUTTON not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				Rectangle preferredRect = mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
-				preferredRect.Left() -= FOCUSRING_WIDTH;
-				preferredRect.Top() -= FOCUSRING_WIDTH;
-				preferredRect.Right() += FOCUSRING_WIDTH;
-				preferredRect.Bottom() += FOCUSRING_WIDTH;
-				rNativeBoundingRegion = Region( preferredRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
+				if ( useNativeDrawing() )
+				{
+					fprintf( stderr, "CTRL_PUSHBUTTON not implemented\n" );
+				}
+				else
+				{
+					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+					Rectangle preferredRect = mpVCLGraphics->getPreferredPushButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
+					preferredRect.Left() -= FOCUSRING_WIDTH;
+					preferredRect.Top() -= FOCUSRING_WIDTH;
+					preferredRect.Right() += FOCUSRING_WIDTH;
+					preferredRect.Bottom() += FOCUSRING_WIDTH;
+					rNativeBoundingRegion = Region( preferredRect );
+					rNativeContentRegion = Region( rNativeBoundingRegion );
+				}
 				bReturn = TRUE;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 			}
 			break;
 
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
-				fprintf( stderr, "CTRL_RADIOBUTTON not implemented\n" );
-#else	// USE_NATIVE_VIRTUAL_DEVICE
-				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
-				Rectangle preferredRect = mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
-				preferredRect.Left() -= FOCUSRING_WIDTH;
-				preferredRect.Top() -= FOCUSRING_WIDTH;
-				preferredRect.Right() += FOCUSRING_WIDTH;
-				preferredRect.Bottom() += FOCUSRING_WIDTH;
-				rNativeBoundingRegion = Region( preferredRect );
-				rNativeContentRegion = Region( rNativeBoundingRegion );
+				if ( useNativeDrawing() )
+				{
+					fprintf( stderr, "CTRL_RADIOBUTTON not implemented\n" );
+				}
+				else
+				{
+					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+					Rectangle preferredRect = mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
+					preferredRect.Left() -= FOCUSRING_WIDTH;
+					preferredRect.Top() -= FOCUSRING_WIDTH;
+					preferredRect.Right() += FOCUSRING_WIDTH;
+					preferredRect.Bottom() += FOCUSRING_WIDTH;
+					rNativeBoundingRegion = Region( preferredRect );
+					rNativeContentRegion = Region( rNativeBoundingRegion );
+				}
 				bReturn = TRUE;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
 			}
 			break;
 

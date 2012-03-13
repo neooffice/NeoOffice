@@ -303,7 +303,7 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 			{
 				CGContextDrawLayerAtPoint( aTmpContext, CGPointMake( aSrcRect.origin.x * -1, aSrcRect.origin.y * -1 ), maSrcLayer );
 
-				CGContextClipToRect( aContext, aDrawBounds);
+				CGContextClipToRect( aContext, maRect );
 				CGContextDrawLayerAtPoint( aContext, maRect.origin, aTmpLayer );
 			}
 
@@ -312,7 +312,7 @@ void JavaSalGraphicsCopyLayerOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	}
 	else
 	{
-		CGContextClipToRect( aContext, aDrawBounds );
+		CGContextClipToRect( aContext, maRect );
 		CGContextDrawLayerAtPoint( aContext, CGPointMake( maRect.origin.x - aSrcRect.origin.x, maRect.origin.y - aSrcRect.origin.y ), maSrcLayer );
 	}
 
