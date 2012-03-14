@@ -110,6 +110,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsOp
 {
 protected:
 	CGPathRef				maNativeClipPath;
+	bool					mbInvert;
 	CGLayerRef				maXORLayer;
 	CGContextRef			maSavedContext;
 	size_t					mnBitmapCapacity;
@@ -120,7 +121,7 @@ protected:
 	CGRect					maXORRect;
 	
 public:
-							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer );
+							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert = false, CGLayerRef aXORLayer = NULL );
 	virtual					~JavaSalGraphicsOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds ) {}
@@ -136,7 +137,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 	CGRect					maRect;
 
 public:
-							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, CGLayerRef maXORLayer, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
+							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef maXORLayer, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
 	virtual					~JavaSalGraphicsDrawImageOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
@@ -175,6 +176,7 @@ public:
 	sal_Int32				mnDPIX;
 	sal_Int32				mnDPIY;
 	CGMutablePathRef		maNativeClipPath;
+	bool					mbInvert;
 	bool					mbXOR;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
@@ -254,7 +256,7 @@ public:
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR );
-	void					copyToContext( const CGPathRef aNativeClipPath, CGLayerRef aXORLayer, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
+	void					copyToContext( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef aXORLayer, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	float					getNativeLineWidth();
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
