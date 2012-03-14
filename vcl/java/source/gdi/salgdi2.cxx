@@ -43,18 +43,6 @@
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <vcl/bmpacc.hxx>
 
-class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
-{
-	CGImageRef				maImage;
-	CGRect					maRect;
-
-public:
-							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, CGLayerRef maXORLayer, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
-	virtual					~JavaSalGraphicsDrawImageOp();
-
-	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
-};
-
 using namespace osl;
 using namespace vcl;
 
@@ -260,6 +248,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
 						if ( aProvider )
 						{
+							pCopyBuffer->mpBits = NULL;
 							addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 							CGDataProviderRelease( aProvider );
 						}
@@ -469,6 +458,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 					CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pDestBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
 					if ( aProvider )
 					{
+						pDestBuffer->mpBits = NULL;
 						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 						CGDataProviderRelease( aProvider );
 					}
@@ -679,7 +669,6 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 								if ( aProvider )
 								{
 									pDestBuffer->mpBits = NULL;
-
 									addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 									CGDataProviderRelease( aProvider );
 								}
@@ -904,6 +893,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 					CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pDestBuffer->mpBits, pDestBuffer->mnScanlineSize * pDestBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
 					if ( aProvider )
 					{
+						pDestBuffer->mpBits = NULL;
 						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 						CGDataProviderRelease( aProvider );
 					}
@@ -1214,6 +1204,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, pCopyBuffer->mpBits, pCopyBuffer->mnScanlineSize * pCopyBuffer->mnHeight, ReleaseBitmapBufferBytePointerCallback );
 							if ( aProvider )
 							{
+								pCopyBuffer->mpBits = NULL;
 								addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbXOR ? maLayer : NULL, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 								CGDataProviderRelease( aProvider );
 							}

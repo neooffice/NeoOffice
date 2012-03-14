@@ -130,6 +130,18 @@ protected:
 	CGContextRef			saveClipXORGState( CGContextRef aContext, CGRect aDrawBounds = CGRectNull );
 };
 
+class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
+{
+	CGImageRef				maImage;
+	CGRect					maRect;
+
+public:
+							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, CGLayerRef maXORLayer, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
+	virtual					~JavaSalGraphicsDrawImageOp();
+
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+};
+
 // -------------------
 // - JavaSalGraphics -
 // -------------------

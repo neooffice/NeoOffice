@@ -106,6 +106,7 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 
 	BOOL					Create( long nWidth, long nHeight, JavaSalGraphics *pGraphics );
 	void					Destroy();
+	void					DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect );
 	void					ReleaseContext();
 };
 
@@ -352,6 +353,25 @@ void VCLBitmapBuffer::Destroy()
 	}
 }
 
+// -----------------------------------------------------------------------
+
+void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect )
+{
+	if ( pGraphics && mpBits && pGraphics->useNativeDrawing() )
+	{
+		// Assign ownership of bits to a CGDataProvider instance
+		CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
+		if ( aProvider )
+		{
+			mpBits = NULL;
+			pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, NULL, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect ) );
+			CGDataProviderRelease( aProvider );
+		}
+	}
+
+	Destroy();
+}
+		
 // -----------------------------------------------------------------------
 
 void VCLBitmapBuffer::ReleaseContext()
@@ -967,7 +987,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeComboBox not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1025,7 +1045,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeListBox not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1096,7 +1116,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeScrollBar not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1191,7 +1211,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		if ( bRet )
 		{
 			if ( pGraphics->useNativeDrawing() )
-				fprintf( stderr, "DrawNativeSpinbox not implemented\n" );
+				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 			else
 				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
@@ -1255,7 +1275,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		if ( bRet )
 		{
 			if ( pGraphics->useNativeDrawing() )
-				fprintf( stderr, "DrawNativeSpinbutton not implemented\n" );
+				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 			else
 				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
@@ -1310,7 +1330,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeProgressbar not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1362,7 +1382,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeTab not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1407,7 +1427,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeTabBoundingBox not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1452,7 +1472,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativePrimaryGroupBox not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1494,7 +1514,7 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeMenuBackground not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1542,7 +1562,7 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeEditBox not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1585,7 +1605,7 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeListBoxFrame not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1634,7 +1654,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeDisclosureBtn not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1680,7 +1700,7 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeSeparatorLine not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1733,7 +1753,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		if ( bRet )
 		{
 			if ( pGraphics->useNativeDrawing() )
-				fprintf( stderr, "DrawNativeListViewHeader not implemented\n" );
+				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 			else
 				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
@@ -1783,7 +1803,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeBevelButton not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
@@ -1833,7 +1853,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			fprintf( stderr, "DrawNativeCheckbox not implemented\n" );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
