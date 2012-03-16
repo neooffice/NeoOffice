@@ -1368,6 +1368,16 @@ void JavaSalGraphics::drawUndrawnNativeOps( CGContextRef aContext, CGRect aBound
 
 // -----------------------------------------------------------------------
 
+ULONG JavaSalGraphics::getBitmapDirectionFormat()
+{
+	if ( useNativeDrawing() )
+		return JavaSalBitmap::GetNativeDirectionFormat();
+	else
+		return BMP_FORMAT_TOP_DOWN;
+}
+
+// -----------------------------------------------------------------------
+
 float JavaSalGraphics::getNativeLineWidth()
 {
 	if ( mpPrinter )

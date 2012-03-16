@@ -258,6 +258,7 @@ public:
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR );
 	void					copyToContext( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef aXORLayer, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
+	ULONG					getBitmapDirectionFormat();
 	float					getNativeLineWidth();
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					setLayer( CGLayerRef aLayer );

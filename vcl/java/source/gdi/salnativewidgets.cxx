@@ -98,6 +98,7 @@ struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
 	java_lang_Object*	 	mpData;
 	CGContextRef			maContext;
+	HIThemeOrientation		mnHIThemeOrientationFlags;
 	bool					mbLastDrawToPrintGraphics;
 	bool					mbUseNativeDrawing;
 
@@ -174,6 +175,7 @@ VCLBitmapBuffer::VCLBitmapBuffer() :
 	mpVCLBitmap( NULL ),
 	mpData( NULL ),
 	maContext( NULL ),
+	mnHIThemeOrientationFlags( 0 ),
 	mbLastDrawToPrintGraphics( false ),
 	mbUseNativeDrawing( false )
 {
@@ -198,13 +200,14 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 {
 	bool bReused = false;
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
+	bool bOldUseNativeDrawing = mbUseNativeDrawing;
 	mbUseNativeDrawing = pGraphics->useNativeDrawing();
-	if ( mbUseNativeDrawing && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
+	if ( mbUseNativeDrawing && bOldUseNativeDrawing && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
 	{
 		ReleaseContext();
 		bReused = true;
 	}
-	else if ( !mbUseNativeDrawing && mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
+	else if ( !mbUseNativeDrawing && !bOldUseNativeDrawing && mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
 	{
 		ReleaseContext();
 		bReused = true;
@@ -223,8 +226,14 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 		}
 	}
 
-	if ( !mbUseNativeDrawing )
+	if ( mbUseNativeDrawing )
 	{
+		mnHIThemeOrientationFlags = kHIThemeOrientationNormal;
+	}
+	else
+	{
+		mnHIThemeOrientationFlags = kHIThemeOrientationInverted;
+
 		VCLThreadAttach t;
 		if ( !t.pEnv )
 		{
@@ -241,7 +250,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 		}
 	}
 
-	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | BMP_FORMAT_TOP_DOWN;
+	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | pGraphics->getBitmapDirectionFormat();
 	if ( nWidth > mnWidth )
 		mnWidth = nWidth;
 	if ( nHeight > mnHeight )
@@ -310,6 +319,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 
 void VCLBitmapBuffer::Destroy()
 {
+	mnHIThemeOrientationFlags = 0;
 	mnFormat = 0;
 	mnWidth = 0;
 	mnHeight = 0;
@@ -964,7 +974,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		{
 			CGContextSaveGState( pBuffer->maContext );
 			CGContextClipToRect( pBuffer->maContext, CGRectMake( 0, 0, rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
-			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 			CGContextRestoreGState( pBuffer->maContext );
 
 			if ( bRet )
@@ -972,13 +982,13 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 				CGContextSaveGState( pBuffer->maContext );
 				CGContextClipToRect( pBuffer->maContext, CGRectMake( rDestBounds.GetWidth() - COMBOBOX_BUTTON_WIDTH, 0, COMBOBOX_BUTTON_WIDTH, rDestBounds.GetWidth() ) );
 				destRect.origin.y += COMBOBOX_BUTTON_HEIGHT_SLOP;
-				bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+				bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 				CGContextRestoreGState( pBuffer->maContext );
 			}
 		}
 		else
 		{
-			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 		}
 	}
 
@@ -1037,7 +1047,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		destRect.origin.y = LISTBOX_BUTTON_VERT_TRIMWIDTH + FOCUSRING_WIDTH;
 		destRect.size.width = rDestBounds.GetWidth() - LISTBOX_BUTTON_HORIZ_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
 		destRect.size.height = rDestBounds.GetHeight() - LISTBOX_BUTTON_VERT_TRIMWIDTH - ( FOCUSRING_WIDTH * 2 );
-		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1108,7 +1118,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		if ( pTrackDrawInfo.enableState == kThemeTrackDisabled )
 			pTrackDrawInfo.enableState = kThemeTrackNothingToScroll;
 
-		bRet = ( pHIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawTrack( &pTrackDrawInfo, NULL, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1171,7 +1181,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
 			arrowRect.size.height = spinnerThemeHeight;
 
-			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 
 			if( bRet )
 			{
@@ -1202,7 +1212,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 				else
 					aFrameInfo.isFocused = FALSE;
 
-				bRet = ( pHIThemeDrawFrame( &editRect, &aFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+				bRet = ( pHIThemeDrawFrame( &editRect, &aFrameInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 			}
 		}
 
@@ -1267,7 +1277,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 			arrowRect.size.width = spinnerThemeWidth + ( SPINNER_TRIMWIDTH * 2 );
 			arrowRect.size.height = spinnerThemeHeight;
 
-			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &arrowRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 		}
 
 		pBuffer->ReleaseContext();
@@ -1322,7 +1332,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( pHIThemeDrawTrack( &aTrackDrawInfo, NULL, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawTrack( &aTrackDrawInfo, NULL, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1374,7 +1384,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 
 		HIRect labelRect; // ignored
 
-		bRet = ( pHIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, &labelRect ) == noErr );
+		bRet = ( pHIThemeDrawTab( &destRect, (HIThemeTabDrawInfo *)&pTabDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, &labelRect ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1419,7 +1429,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( pHIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawTabPane( &destRect, (HIThemeTabPaneDrawInfo *)&pTabPaneDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1464,7 +1474,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( pHIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawGroupBox( &destRect, &pGroupBoxDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1506,7 +1516,7 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( pHIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawMenuBackground( &destRect, &pMenuDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1554,7 +1564,7 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		CGContextSetFillColor( pBuffer->maContext, whiteColor );
 		CGContextFillRect( pBuffer->maContext, destRect );
 		// draw frame around the background
-		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1597,7 +1607,7 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 		destRect.size.width = rDestBounds.GetWidth() - 2*LISTVIEWFRAME_TRIMWIDTH;
 		destRect.size.height = rDestBounds.GetHeight() - 2*LISTVIEWFRAME_TRIMWIDTH;
 
-		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawFrame( &destRect, &pFrameInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1646,7 +1656,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1692,7 +1702,7 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
 
-		bRet = ( pHIThemeDrawSeparator( &destRect, &pSepInfo, pBuffer->maContext, kHIThemeOrientationInverted ) == noErr );
+		bRet = ( pHIThemeDrawSeparator( &destRect, &pSepInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1745,7 +1755,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 			destRect.size.width = rDestBounds.GetWidth();
 			destRect.size.height = themeListViewHeaderHeight;
 
-			bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+			bRet = ( pHIThemeDrawButton( &destRect, &pButtonInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 		}
 
 		pBuffer->ReleaseContext();
@@ -1795,7 +1805,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
-		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();
@@ -1845,7 +1855,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
-		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, kHIThemeOrientationInverted, NULL ) == noErr );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 	}
 
 	pBuffer->ReleaseContext();

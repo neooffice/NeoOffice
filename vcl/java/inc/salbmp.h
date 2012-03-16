@@ -68,6 +68,7 @@ class JavaSalBitmap : public SalBitmap
 
 public:
 	static ULONG			Get32BitNativeFormat();
+	static ULONG			GetNativeDirectionFormat();
 
 							JavaSalBitmap();
 	virtual					~JavaSalBitmap();

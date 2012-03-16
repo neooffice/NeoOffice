@@ -72,6 +72,17 @@ ULONG JavaSalBitmap::Get32BitNativeFormat()
 
 // ------------------------------------------------------------------
 
+ULONG JavaSalBitmap::GetNativeDirectionFormat()
+{
+#ifdef USE_NATIVE_VIRTUAL_DEVICE
+	return BMP_FORMAT_BOTTOM_UP;
+#else	// USE_NATIVE_VIRTUAL_DEVICE
+	return BMP_FORMAT_TOP_DOWN;
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
+}
+
+// ------------------------------------------------------------------
+
 JavaSalBitmap::JavaSalBitmap() :
 	maSize( 0, 0 ),
 	mnBitCount( 0 ),
@@ -109,14 +120,17 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 			BitmapBuffer *pBuffer = AcquireBuffer( FALSE );
 			if ( pBuffer )
 			{
+				// Java bitmaps must always have a top down direction
+				bool bFlip = ( pBuffer->mnFormat & BMP_FORMAT_BOTTOM_UP );
+
 				VCLThreadAttach t;
-				if ( t.pEnv )
+				if ( t.pEnv && pBuffer->mpBits && pBuffer->mnWidth && pBuffer->mnHeight )
 				{
 					jboolean bCopy( sal_False );
 					jint *pBits = (jint *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)pData->getJavaObject(), &bCopy );
 					if ( pBits )
 					{
-						Scanline pBitsIn = (Scanline)( pBuffer->mpBits + ( nY * pBuffer->mnScanlineSize ) + ( nX * pBuffer->mnBitCount / 8 ) );
+						Scanline pBitsIn = (Scanline)( pBuffer->mpBits + ( ( nY + ( bFlip ? pBuffer->mnHeight - 1 : 0 ) ) * pBuffer->mnScanlineSize ) + ( nX * pBuffer->mnBitCount / 8 ) );
 						jint *pBitsOut = pBits;
 
 						if ( pBuffer->mnFormat & BMP_FORMAT_1BIT_MSB_PAL )
@@ -129,8 +143,11 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 									BitmapColor aColor( pBuffer->maPalette[ pFncGetPixel( pBitsIn, j, pBuffer->maColorMask ) ] );
 									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
 								}
-		
-								pBitsIn += pBuffer->mnScanlineSize;
+
+								if ( bFlip )
+									pBitsIn -= pBuffer->mnScanlineSize;
+								else
+									pBitsIn += pBuffer->mnScanlineSize;
 								pBitsOut += nWidth;
 							}
 						}
@@ -145,7 +162,10 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
 								}
 		
-								pBitsIn += pBuffer->mnScanlineSize;
+								if ( bFlip )
+									pBitsIn -= pBuffer->mnScanlineSize;
+								else
+									pBitsIn += pBuffer->mnScanlineSize;
 								pBitsOut += nWidth;
 							}
 						}
@@ -160,7 +180,10 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
 								}
 		
-								pBitsIn += pBuffer->mnScanlineSize;
+								if ( bFlip )
+									pBitsIn -= pBuffer->mnScanlineSize;
+								else
+									pBitsIn += pBuffer->mnScanlineSize;
 								pBitsOut += nWidth;
 							}
 						}
@@ -175,7 +198,10 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
 								}
 			
-								pBitsIn += pBuffer->mnScanlineSize;
+								if ( bFlip )
+									pBitsIn -= pBuffer->mnScanlineSize;
+								else
+									pBitsIn += pBuffer->mnScanlineSize;
 								pBitsOut += nWidth;
 							}
 						}
@@ -190,7 +216,10 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 									pBitsOut[ j ] = MAKE_SALCOLOR( aColor.GetRed(), aColor.GetGreen(), aColor.GetBlue() ) | 0xff000000;
 								}
 			
-								pBitsIn += pBuffer->mnScanlineSize;
+								if ( bFlip )
+									pBitsIn -= pBuffer->mnScanlineSize;
+								else
+									pBitsIn += pBuffer->mnScanlineSize;
 								pBitsOut += nWidth;
 							}
 						}
@@ -201,7 +230,10 @@ com_sun_star_vcl_VCLBitmap *JavaSalBitmap::CreateVCLBitmap( long nX, long nY, lo
 							{
 								memcpy( pBitsOut, pBitsIn, nByteCount );
 
-								pBitsIn += pBuffer->mnScanlineSize;
+								if ( bFlip )
+									pBitsIn -= pBuffer->mnScanlineSize;
+								else
+									pBitsIn += pBuffer->mnScanlineSize;
 								pBitsOut += nWidth;
 							}
 						}
@@ -253,6 +285,25 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 			{
 				memset( mpBits, 0, nCapacity );
 				mpVCLGraphics->copyBits( mpBits, nCapacity, maPoint.X(), maPoint.Y(), maSize.Width(), maSize.Height(), 0, 0, maSize.Width(), maSize.Height() );
+
+				// Java bitmaps always have a top down direction
+				if ( JavaSalBitmap::GetNativeDirectionFormat() == BMP_FORMAT_BOTTOM_UP && maSize.Width() && maSize.Height() )
+				{
+					long nScanlineSize = AlignedWidth4Bytes( mnBitCount * maSize.Width() );
+					Scanline aTmpBuf[ nScanlineSize ];
+					Scanline pBitsIn = (Scanline)mpBits;
+					Scanline pBitsOut = (Scanline)( mpBits + ( ( maSize.Height() - 1 ) * nScanlineSize ) );
+					for ( long i = 0; i < maSize.Height() && pBitsIn < pBitsOut; i++ )
+					{
+						// Swap in and out bits
+						memcpy( aTmpBuf, pBitsIn, nScanlineSize );
+						memcpy( pBitsIn, pBitsOut, nScanlineSize );
+						memcpy( pBitsOut, aTmpBuf, nScanlineSize );
+
+						pBitsIn += nScanlineSize;
+						pBitsOut -= nScanlineSize;
+					}
+				}
 			}
 		}
 
@@ -283,10 +334,6 @@ void JavaSalBitmap::NotifyGraphicsChanged( bool bDisposed )
 					CGContextRef aContext = CGBitmapContextCreate( mpBits, maSize.Width(), maSize.Height(), 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 					if ( aContext )
 					{
-						// Flip coordinates to VCL drawing coordinates
-						CGContextTranslateCTM( aContext, 0, maSize.Height() );
-						CGContextScaleCTM( aContext, 1.0f, -1.0f );
-
 						mpGraphics->copyToContext( NULL, false, NULL, aContext, CGRectMake( 0, 0, maSize.Width(), maSize.Height() ), CGPointMake( maPoint.X(), maPoint.Y() ), CGRectMake( 0, 0, maSize.Width(), maSize.Height() ) );
 
 						CGContextRelease( aContext );
@@ -537,7 +584,7 @@ BitmapBuffer* JavaSalBitmap::AcquireBuffer( bool bReadOnly )
 	BitmapBuffer *pBuffer = new BitmapBuffer();
 
 	pBuffer->mnBitCount = mnBitCount;
-	pBuffer->mnFormat = BMP_FORMAT_TOP_DOWN;
+	pBuffer->mnFormat = JavaSalBitmap::GetNativeDirectionFormat();
 	if ( mnBitCount <= 1 )
 	{
 		pBuffer->mnFormat |= BMP_FORMAT_1BIT_MSB_PAL;
