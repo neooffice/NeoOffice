@@ -98,7 +98,10 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 		return;
 
 	CGContextClipToRect( aContext, maRect );
-	CGContextDrawImage( aContext, CGRectMake( maRect.origin.x, maRect.origin.y, maRect.size.width, maRect.size.height ), maImage );
+	if ( JavaSalBitmap::GetNativeDirectionFormat() == BMP_FORMAT_BOTTOM_UP )
+		CGContextDrawImage( aContext, CGRectMake( maRect.origin.x, maRect.origin.y, maRect.size.width, maRect.size.height ), maImage );
+	else
+		CGContextDrawImage( aContext, CGRectMake( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 ), maImage );
 
 	restoreClipXORGState();
 }
