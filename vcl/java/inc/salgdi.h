@@ -72,6 +72,7 @@ namespace vcl
 {
 class com_sun_star_vcl_VCLFont;
 class com_sun_star_vcl_VCLGraphics;
+class com_sun_star_vcl_VCLPath;
 }
 
 // --------------------
@@ -131,6 +132,10 @@ protected:
 	CGContextRef			saveClipXORGState( CGContextRef aContext, CGRect aDrawBounds = CGRectNull );
 };
 
+// ------------------------------
+// - JavaSalGraphicsDrawImageOp -
+// ------------------------------
+
 class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 {
 	CGImageRef				maImage;
@@ -139,6 +144,28 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 public:
 							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef maXORLayer, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
 	virtual					~JavaSalGraphicsDrawImageOp();
+
+	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+};
+
+// -----------------------------
+// - JavaSalGraphicsDrawPathOp -
+// -----------------------------
+
+class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
+{
+	bool					mbAntialias;
+	SalColor				mnFillColor;
+	SalColor				mnLineColor;
+	ULONG					mnPoints;
+	CGPathRef				maPath;
+	float					mfLineWidth;
+	::basegfx::B2DLineJoin	meLineJoin;
+	bool					mbLineDash;
+
+public:
+							JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef aXORLayer, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE, bool bLineDash = false );
+	virtual					~JavaSalGraphicsDrawPathOp();
 
 	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
 };
@@ -265,5 +292,7 @@ public:
 };
 
 SAL_DLLPRIVATE CGColorRef CreateCGColorFromSalColor( SalColor nColor );
+SAL_DLLPRIVATE void AddPolygonToPaths( ::vcl::com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath );
+SAL_DLLPRIVATE void AddPolyPolygonToPaths( ::vcl::com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolyPolygon& rPolyPoly );
 
 #endif // _SV_SALGDI_H

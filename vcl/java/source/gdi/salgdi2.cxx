@@ -42,6 +42,7 @@
 #include <com/sun/star/vcl/VCLFrame.hxx>
 #include <com/sun/star/vcl/VCLGraphics.hxx>
 #include <vcl/bmpacc.hxx>
+#include <basegfx/polygon/b2dpolygon.hxx>
 
 using namespace osl;
 using namespace vcl;
@@ -1047,9 +1048,53 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 		return;
 
 	if ( useNativeDrawing() )
-		fprintf( stderr, "JavaSalGraphics::invert not implemented\n" );
+	{
+		CGMutablePathRef aPath = CGPathCreateMutable();
+		if ( aPath )
+		{
+			CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
+			CGPathAddRect( aPath, NULL, aRect );
+			float fNativeLineWidth = getNativeLineWidth();
+			if ( aRect.size.width <= fNativeLineWidth )
+				aRect.size.width = 0;
+			if ( aRect.size.height <= fNativeLineWidth )
+				aRect.size.height = fNativeLineWidth;
+			if ( nFlags & SAL_INVERT_TRACKFRAME && CGRectIsEmpty( aRect ) )
+			{
+				CGPathRelease( aPath );
+				aPath = CGPathCreateMutable();
+				if ( aPath )
+				{
+					CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
+					CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+				}
+			}
+
+			if ( aPath )
+			{
+				if ( nFlags & SAL_INVERT_50 )
+				{
+					// Fix bug 3443 by filling with gray instead of the
+					// checkerboard pattern
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0xff000000, 0x00000000, aPath ) );
+				}
+				else if ( SAL_INVERT_TRACKFRAME )
+				{
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
+				}
+				else
+				{
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, true, NULL, false, 0xffffffff, 0x00000000, aPath ) );
+				}
+			}
+
+			CGPathRelease( aPath );
+		}
+	}
 	else if ( mpVCLGraphics )
+	{
 		mpVCLGraphics->invert( nX, nY, nWidth, nHeight, nFlags );
+	}
 }
 
 // -----------------------------------------------------------------------
@@ -1061,9 +1106,62 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 		return;
 
 	if ( useNativeDrawing() )
-		fprintf( stderr, "JavaSalGraphics::invert2 not implemented\n" );
+	{
+		if ( nPoints && pPtAry )
+		{
+			::basegfx::B2DPolygon aPoly;
+			for ( ULONG i = 0 ; i < nPoints; i++ )
+				aPoly.append( ::basegfx::B2DPoint( pPtAry[ i ].mnX, pPtAry[ i ].mnY ) );
+			aPoly.removeDoublePoints();
+			aPoly.setClosed( true );
+
+			CGMutablePathRef aPath = CGPathCreateMutable();
+			if ( aPath )
+			{
+				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
+				CGRect aRect = CGPathGetBoundingBox( aPath );
+				float fNativeLineWidth = getNativeLineWidth();
+				if ( aRect.size.width <= fNativeLineWidth )
+					aRect.size.width = 0;
+				if ( aRect.size.height <= fNativeLineWidth )
+					aRect.size.height = fNativeLineWidth;
+				if ( nFlags & SAL_INVERT_TRACKFRAME && CGRectIsEmpty( aRect ) )
+				{
+					CGPathRelease( aPath );
+					aPath = CGPathCreateMutable();
+					if ( aPath )
+					{
+						CGPathMoveToPoint( aPath, NULL, aRect.origin.x, aRect.origin.y );
+						CGPathAddLineToPoint( aPath, NULL, aRect.origin.x + aRect.size.width, aRect.origin.y + aRect.size.height );
+					}
+				}
+
+				if ( aPath )
+				{
+					if ( nFlags & SAL_INVERT_50 )
+					{
+						// Fix bug 3443 by filling with gray instead of the
+						// checkerboard pattern
+						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0xff000000, 0x00000000, aPath ) );
+					}
+					else if ( SAL_INVERT_TRACKFRAME )
+					{
+						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
+					}
+					else
+					{
+						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, true, NULL, false, 0xffffffff, 0x00000000, aPath ) );
+					}
+				}
+
+				CGPathRelease( aPath );
+			}
+		}
+	}
 	else if ( mpVCLGraphics )
+	{
 		mpVCLGraphics->invert( nPoints, pPtAry, nFlags );
+	}
 }
 
 // -----------------------------------------------------------------------
