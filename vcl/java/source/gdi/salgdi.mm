@@ -80,6 +80,37 @@ using namespace vcl;
 
 // =======================================================================
 
+static void SetContextDefaultSettings( CGContextRef aContext, CGPathRef aClipPath, float fLineWidth )
+{
+	if ( !aContext )
+		return;
+
+	if ( fLineWidth <= 0 )
+		fLineWidth = 1.0f;
+
+	// Scale line width, cap, and join. Note that the miter limit matches the
+	// default miter limit specified in the Java 1.5 API BasicStroke class
+	// documentation.
+	CGContextSetLineWidth( aContext, fLineWidth );
+	CGContextSetLineCap( aContext, kCGLineCapSquare );
+	CGContextSetLineJoin( aContext, kCGLineJoinMiter );
+	CGContextSetMiterLimit( aContext, 10.0 );
+
+	// Turn off antialiasing by default since we did the same in the Java code
+	CGContextSetAllowsAntialiasing( aContext, false );
+
+	// Set clip
+	if ( aClipPath )
+	{
+		CGContextBeginPath( aContext );
+		CGContextAddPath( aContext, aClipPath );
+		CGContextClip( aContext );
+	}
+
+	// Throw away any incomplete path
+	CGContextBeginPath( aContext );
+}
+
 void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath )
 {
 	const sal_uInt32 nCount = rPolygon.count();
@@ -390,19 +421,17 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					CGContextSetLineWidth( aContext, mfLineWidth );
 
 				// Set line join
-				CGLineJoin nJoin = kCGLineJoinMiter;
 				switch ( meLineJoin )
 				{
 					case ::basegfx::B2DLINEJOIN_BEVEL:
-						nJoin = kCGLineJoinBevel;
+						CGContextSetLineJoin( aContext, kCGLineJoinBevel );
 						break;
 					case ::basegfx::B2DLINEJOIN_ROUND:
-						nJoin = kCGLineJoinRound;
+						CGContextSetLineJoin( aContext, kCGLineJoinRound );
 						break;
 					default:
 						break;
 				}
-				CGContextSetLineJoin( aContext, nJoin );
 
 				if ( mbLineDash )
 				{
@@ -1612,22 +1641,10 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 						maXORBitmapContext = CGBitmapContextCreate( mpXORBits, aBitmapSize.width, aBitmapSize.height, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 						if ( maDrawBitmapContext && maXORBitmapContext )
 						{
-							// Scale line width
-							CGContextSetLineWidth( maDrawBitmapContext, pGraphics->getNativeLineWidth() );
-
-							// Turn off antialiasing by default since we did
-							// the same in the Java code
-							CGContextSetAllowsAntialiasing( maDrawBitmapContext, false );
-
-							// Translate and clip the drawing context
+							// Translate the drawing context
 							CGContextTranslateCTM( maDrawBitmapContext, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.x, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.y );
 
-							if ( maNativeClipPath )
-							{
-								CGContextBeginPath( maDrawBitmapContext );
-								CGContextAddPath( maDrawBitmapContext, maNativeClipPath );
-								CGContextClip( maDrawBitmapContext );
-							}
+							SetContextDefaultSettings( maDrawBitmapContext, maNativeClipPath, pGraphics->getNativeLineWidth() );
 
 							// Copy layer to XOR context
 							CGContextDrawLayerAtPoint( maXORBitmapContext, CGPointMake( XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.x, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.y ), maXORLayer );
@@ -1652,21 +1669,7 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 	CGContextRetain( maSavedContext );
 	CGContextSaveGState( maSavedContext );
 
-	// Scale line width
-	CGContextSetLineWidth( maSavedContext, pGraphics->getNativeLineWidth() );
-
-	// Turn off antialiasing by default since we did the same in the Java code
-	CGContextSetAllowsAntialiasing( maSavedContext, false );
-
-	if ( maNativeClipPath )
-	{
-		CGContextBeginPath( maSavedContext );
-		CGContextAddPath( maSavedContext, maNativeClipPath );
-		CGContextClip( maSavedContext );
-	}
-
-	// Throw away any incomplete path
-	CGContextBeginPath( maSavedContext );
+	SetContextDefaultSettings( maSavedContext, maNativeClipPath, pGraphics->getNativeLineWidth() );
 
 	if ( mbInvert )
 		CGContextSetBlendMode( maSavedContext, kCGBlendModeDifference );
