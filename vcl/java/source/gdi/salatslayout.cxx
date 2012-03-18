@@ -243,7 +243,7 @@ public:
 							JavaSalGraphicsDrawGlyphsOp( const CGPathRef aNativeClipPath, float fX, float fY, int nGlyphCount, const sal_GlyphId *pGlyphs, const sal_Int32 *pAdvances, ::vcl::com_sun_star_vcl_VCLFont *pVCLFont, SalColor nColor, int nOrientation, int nGlyphOrientation, float fTranslateX, float fTranslateY, float fGlyphScaleX );
 	virtual					~JavaSalGraphicsDrawGlyphsOp();
 
-	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
 };
 
 #ifndef USE_CORETEXT_TEXT_RENDERING
@@ -1668,7 +1668,7 @@ JavaSalGraphicsDrawGlyphsOp::~JavaSalGraphicsDrawGlyphsOp()
 
 // ----------------------------------------------------------------------------
 
-void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext, CGRect aBounds )
+void JavaSalGraphicsDrawGlyphsOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
 	if ( !aContext || !mpGlyphs || !mpAdvances )
 		return;
@@ -1692,7 +1692,7 @@ void JavaSalGraphicsDrawGlyphsOp::drawOp( CGContextRef aContext, CGRect aBounds 
 			if ( aFont )
 			{
 				// Text draw bounds is never XOR'd so don't pass any bounds
-				aContext = saveClipXORGState( aContext );
+				aContext = saveClipXORGState( pGraphics, aContext );
 				if ( aContext )
 				{
 					// Enable or disable font antialiasing

@@ -49,8 +49,8 @@ using namespace vcl;
 
 // =======================================================================
 
-JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef maXORLayer, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect ) :
-	JavaSalGraphicsOp( aNativeClipPath, bInvert, maXORLayer ),
+JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect ) :
+	JavaSalGraphicsOp( aNativeClipPath, bInvert, bXOR ),
 	maImage( NULL ),
 	maRect( aRect )
 {
@@ -81,7 +81,7 @@ JavaSalGraphicsDrawImageOp::~JavaSalGraphicsDrawImageOp()
 
 // -----------------------------------------------------------------------
 
-void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
+void JavaSalGraphicsDrawImageOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds )
 {
 	if ( !aContext || !maImage )
 		return;
@@ -94,7 +94,7 @@ void JavaSalGraphicsDrawImageOp::drawOp( CGContextRef aContext, CGRect aBounds )
 	if ( CGRectIsEmpty( aDrawBounds ) )
 		return;
 
-	aContext = saveClipXORGState( aContext, aDrawBounds );
+	aContext = saveClipXORGState( pGraphics, aContext, aDrawBounds );
 	if ( !aContext )
 		return;
 
@@ -251,7 +251,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						if ( aProvider )
 						{
 							pCopyBuffer->mpBits = NULL;
-							addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR ? maLayer : NULL, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+							addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 							CGDataProviderRelease( aProvider );
 						}
 						else
@@ -341,7 +341,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 						if ( aProvider )
 						{
 							pCopyBuffer->mpBits = NULL;
-							addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR ? maLayer : NULL, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+							addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 							CGDataProviderRelease( aProvider );
 						}
 						else
@@ -480,7 +480,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 					if ( aProvider )
 					{
 						pDestBuffer->mpBits = NULL;
-						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 						CGDataProviderRelease( aProvider );
 					}
 					else
@@ -690,7 +690,7 @@ void JavaSalGraphics::drawBitmap( const SalTwoRect* pPosAry, const SalBitmap& rS
 								if ( aProvider )
 								{
 									pDestBuffer->mpBits = NULL;
-									addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+									addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 									CGDataProviderRelease( aProvider );
 								}
 							}
@@ -915,7 +915,7 @@ void JavaSalGraphics::drawMask( const SalTwoRect* pPosAry, const SalBitmap& rSal
 					if ( aProvider )
 					{
 						pDestBuffer->mpBits = NULL;
-						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR ? maLayer : NULL, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+						addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR, aProvider, pDestBuffer->mnBitCount, pDestBuffer->mnScanlineSize, pDestBuffer->mnWidth, pDestBuffer->mnHeight, CGRectMake( 0, 0, pDestBuffer->mnWidth, pDestBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 						CGDataProviderRelease( aProvider );
 					}
 					else
@@ -1076,15 +1076,15 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 				{
 					// Fix bug 3443 by filling with gray instead of the
 					// checkerboard pattern
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0xff000000, 0x00000000, aPath ) );
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0xff000000, 0x00000000, aPath ) );
 				}
 				else if ( SAL_INVERT_TRACKFRAME )
 				{
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
 				}
 				else
 				{
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, true, NULL, false, 0xffffffff, 0x00000000, aPath ) );
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, true, false, false, 0xffffffff, 0x00000000, aPath ) );
 				}
 			}
 
@@ -1142,15 +1142,15 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 					{
 						// Fix bug 3443 by filling with gray instead of the
 						// checkerboard pattern
-						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0xff000000, 0x00000000, aPath ) );
+						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0xff000000, 0x00000000, aPath ) );
 					}
 					else if ( SAL_INVERT_TRACKFRAME )
 					{
-						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, maLayer, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
+						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, true, false, 0x00000000, 0xff000000, aPath, 0, ::basegfx::B2DLINEJOIN_NONE, true ) );
 					}
 					else
 					{
-						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, true, NULL, false, 0xffffffff, 0x00000000, aPath ) );
+						addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, true, false, false, 0xffffffff, 0x00000000, aPath ) );
 					}
 				}
 
@@ -1325,7 +1325,7 @@ bool JavaSalGraphics::drawAlphaBitmap( const SalTwoRect& rPosAry, const SalBitma
 							if ( aProvider )
 							{
 								pCopyBuffer->mpBits = NULL;
-								addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR ? maLayer : NULL, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
+								addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( maNativeClipPath, mbInvert, mbXOR, aProvider, pCopyBuffer->mnBitCount, pCopyBuffer->mnScanlineSize, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight, CGRectMake( 0, 0, pCopyBuffer->mnWidth, pCopyBuffer->mnHeight ), CGRectMake( aPosAry.mnDestX, aPosAry.mnDestY, aPosAry.mnDestWidth, aPosAry.mnDestHeight ) ) );
 								CGDataProviderRelease( aProvider );
 							}
 							else

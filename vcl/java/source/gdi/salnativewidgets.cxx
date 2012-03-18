@@ -374,7 +374,7 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 		if ( aProvider )
 		{
 			mpBits = NULL;
-			pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, false, NULL, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect ) );
+			pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect ) );
 			CGDataProviderRelease( aProvider );
 		}
 	}

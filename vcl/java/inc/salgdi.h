@@ -99,7 +99,7 @@ public:
 	virtual					~JavaImplFontData();
 
 	virtual ImplFontEntry*	CreateFontInstance( ImplFontSelectData& rData ) const;
-	virtual ImplFontData*   Clone() const;
+	virtual ImplFontData*	Clone() const;
 	virtual sal_IntPtr		GetFontId() const;
 };
 
@@ -112,6 +112,7 @@ class SAL_DLLPRIVATE JavaSalGraphicsOp
 protected:
 	CGPathRef				maNativeClipPath;
 	bool					mbInvert;
+	bool					mbXOR;
 	CGLayerRef				maXORLayer;
 	CGContextRef			maSavedContext;
 	size_t					mnBitmapCapacity;
@@ -122,14 +123,14 @@ protected:
 	CGRect					maXORRect;
 	
 public:
-							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert = false, CGLayerRef aXORLayer = NULL );
+							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert = false, bool bXOR = false );
 	virtual					~JavaSalGraphicsOp();
 
-	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds ) {}
+	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds ) {}
 
 protected:
 	void					restoreClipXORGState();
-	CGContextRef			saveClipXORGState( CGContextRef aContext, CGRect aDrawBounds = CGRectNull );
+	CGContextRef			saveClipXORGState( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aDrawBounds = CGRectNull );
 };
 
 // ------------------------------
@@ -142,10 +143,10 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawImageOp : public JavaSalGraphicsOp
 	CGRect					maRect;
 
 public:
-							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef maXORLayer, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
+							JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect );
 	virtual					~JavaSalGraphicsDrawImageOp();
 
-	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
 };
 
 // -----------------------------
@@ -164,10 +165,10 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
 	bool					mbLineDash;
 
 public:
-							JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef aXORLayer, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE, bool bLineDash = false );
+							JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth = 0, ::basegfx::B2DLineJoin eLineJoin = ::basegfx::B2DLINEJOIN_NONE, bool bLineDash = false );
 	virtual					~JavaSalGraphicsDrawPathOp();
 
-	virtual	void			drawOp( CGContextRef aContext, CGRect aBounds );
+	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds );
 };
 
 // -------------------
@@ -283,9 +284,10 @@ public:
 	void					addGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					addUndrawnNativeOp( JavaSalGraphicsOp *pOp );
 	void					copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint aSrcPoint, CGRect aDestRect, bool bAllowXOR );
-	void					copyToContext( const CGPathRef aNativeClipPath, bool bInvert, CGLayerRef aXORLayer, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
+	void					copyToContext( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect );
 	void					drawUndrawnNativeOps( CGContextRef aContext, CGRect aRect );
 	ULONG					getBitmapDirectionFormat();
+	CGLayerRef				getLayer() { return maLayer; }
 	float					getNativeLineWidth();
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					setLayer( CGLayerRef aLayer );
