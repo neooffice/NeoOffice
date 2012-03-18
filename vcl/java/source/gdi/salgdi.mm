@@ -48,8 +48,6 @@
 #import <Cocoa/Cocoa.h>
 #include <postmac.h>
 
-#define XOR_BITMAP_BOUNDS_PADDING 1
-
 class SAL_DLLPRIVATE JavaSalGraphicsCopyLayerOp : public JavaSalGraphicsOp
 {
 	CGLayerRef				maSrcLayer;
@@ -367,12 +365,11 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 // =======================================================================
 
 JavaSalGraphicsDrawPathOp::JavaSalGraphicsDrawPathOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, bool bAntialias, SalColor nFillColor, SalColor nLineColor, const CGPathRef aPath, float fLineWidth, ::basegfx::B2DLineJoin eLineJoin, bool bLineDash ) :
-	JavaSalGraphicsOp( aNativeClipPath, bInvert, bXOR ),
+	JavaSalGraphicsOp( aNativeClipPath, bInvert, bXOR, fLineWidth ),
 	mbAntialias( bAntialias ),
 	mnFillColor( nFillColor ),
 	mnLineColor( nLineColor ),
 	maPath( NULL ),
-	mfLineWidth( fLineWidth ),
 	meLineJoin( eLineJoin ),
 	mbLineDash( bLineDash )
 {
@@ -395,11 +392,15 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 	if ( !aContext || !maPath )
 		return;
 
+	// Expand draw bounds by the line width
+	float fNativeLineWidth = mfLineWidth;
+	if ( fNativeLineWidth <= 0 )
+		fNativeLineWidth = pGraphics->getNativeLineWidth();
 	CGRect aDrawBounds = CGPathGetBoundingBox( maPath );
-	aDrawBounds.origin.x--;
-	aDrawBounds.origin.y--;
-	aDrawBounds.size.width++;
-	aDrawBounds.size.height++;
+	aDrawBounds.origin.x -= fNativeLineWidth;
+	aDrawBounds.origin.y -= fNativeLineWidth;
+	aDrawBounds.size.width += fNativeLineWidth * 2;
+	aDrawBounds.size.height += fNativeLineWidth * 2;
 	if ( !CGRectIsEmpty( aBounds ) )
 		aDrawBounds = CGRectIntersection( aDrawBounds, aBounds );
 	if ( maNativeClipPath )
@@ -416,10 +417,6 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 			aContext = saveClipXORGState( pGraphics, aContext, aDrawBounds );
 			if ( aContext )
 			{
-				// Set line width
-				if ( mfLineWidth > 0 )
-					CGContextSetLineWidth( aContext, mfLineWidth );
-
 				// Set line join
 				switch ( meLineJoin )
 				{
@@ -1467,10 +1464,12 @@ void JavaSalGraphics::setLayer( CGLayerRef aLayer )
 
 // =======================================================================
 
-JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR ) :
+JavaSalGraphicsOp::JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, float fLineWidth ) :
 	maNativeClipPath( NULL ),
 	mbInvert( bInvert ),
 	mbXOR( bXOR ),
+	mfLineWidth( fLineWidth ),
+	mnXORBitmapPadding( 0 ),
 	maXORLayer( NULL ),
 	maSavedContext( NULL ),
 	mnBitmapCapacity( 0 ),
@@ -1539,7 +1538,7 @@ void JavaSalGraphicsOp::restoreClipXORGState()
 					CGImageRef aImage = CGImageCreate( nBitmapWidth, nBitmapHeight, 8, 32, AlignedWidth4Bytes( 32 * nBitmapWidth ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little, aProvider, NULL, false, kCGRenderingIntentDefault );
 					if ( aImage )
 					{
-						CGContextDrawImage( maSavedContext, CGRectMake( maXORRect.origin.x - XOR_BITMAP_BOUNDS_PADDING, maXORRect.origin.y - XOR_BITMAP_BOUNDS_PADDING, nBitmapWidth, nBitmapHeight ), aImage );
+						CGContextDrawImage( maSavedContext, CGRectMake( maXORRect.origin.x - mnXORBitmapPadding, maXORRect.origin.y - mnXORBitmapPadding, nBitmapWidth, nBitmapHeight ), aImage );
 						CGImageRelease( aImage );
 					}
 
@@ -1604,6 +1603,12 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 	if ( !aContext || !pGraphics )
 		return NULL;
 
+	if ( mfLineWidth <= 0 )
+		mfLineWidth = pGraphics->getNativeLineWidth();
+
+	if ( mfLineWidth > 0 )
+		mnXORBitmapPadding = (sal_uInt32)( mfLineWidth + 0.5 );
+
 	if ( mbXOR )
 	{
 		// Mac OS X's XOR blend mode does not do real XORing of bits so we
@@ -1623,7 +1628,7 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 				CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 				if ( aColorSpace )
 				{
-					CGSize aBitmapSize = CGSizeMake( maXORRect.size.width + ( XOR_BITMAP_BOUNDS_PADDING * 2 ), maXORRect.size.height + ( XOR_BITMAP_BOUNDS_PADDING * 2 ) );
+					CGSize aBitmapSize = CGSizeMake( maXORRect.size.width + ( mnXORBitmapPadding * 2 ), maXORRect.size.height + ( mnXORBitmapPadding * 2 ) );
 					long nScanlineSize = AlignedWidth4Bytes( 32 * aBitmapSize.width );
 					mnBitmapCapacity = nScanlineSize * aBitmapSize.height;
 					try
@@ -1642,12 +1647,12 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 						if ( maDrawBitmapContext && maXORBitmapContext )
 						{
 							// Translate the drawing context
-							CGContextTranslateCTM( maDrawBitmapContext, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.x, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.y );
+							CGContextTranslateCTM( maDrawBitmapContext, mnXORBitmapPadding - maXORRect.origin.x, mnXORBitmapPadding - maXORRect.origin.y );
 
 							SetContextDefaultSettings( maDrawBitmapContext, maNativeClipPath, pGraphics->getNativeLineWidth() );
 
 							// Copy layer to XOR context
-							CGContextDrawLayerAtPoint( maXORBitmapContext, CGPointMake( XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.x, XOR_BITMAP_BOUNDS_PADDING - maXORRect.origin.y ), maXORLayer );
+							CGContextDrawLayerAtPoint( maXORBitmapContext, CGPointMake( mnXORBitmapPadding - maXORRect.origin.x, mnXORBitmapPadding - maXORRect.origin.y ), maXORLayer );
 
 							bXORDrawable = true;
 						}

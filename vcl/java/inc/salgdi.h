@@ -113,6 +113,8 @@ protected:
 	CGPathRef				maNativeClipPath;
 	bool					mbInvert;
 	bool					mbXOR;
+	float					mfLineWidth;
+	size_t					mnXORBitmapPadding;
 	CGLayerRef				maXORLayer;
 	CGContextRef			maSavedContext;
 	size_t					mnBitmapCapacity;
@@ -123,7 +125,7 @@ protected:
 	CGRect					maXORRect;
 	
 public:
-							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert = false, bool bXOR = false );
+							JavaSalGraphicsOp( const CGPathRef aNativeClipPath, bool bInvert = false, bool bXOR = false, float fLineWidth = 0 );
 	virtual					~JavaSalGraphicsOp();
 
 	virtual	void			drawOp( JavaSalGraphics *pGraphics, CGContextRef aContext, CGRect aBounds ) {}
@@ -160,7 +162,6 @@ class SAL_DLLPRIVATE JavaSalGraphicsDrawPathOp : public JavaSalGraphicsOp
 	SalColor				mnLineColor;
 	ULONG					mnPoints;
 	CGPathRef				maPath;
-	float					mfLineWidth;
 	::basegfx::B2DLineJoin	meLineJoin;
 	bool					mbLineDash;
 
