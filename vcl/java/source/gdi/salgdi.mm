@@ -720,7 +720,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY )
 			if ( aPath )
 			{
 				CGPathAddRect( aPath, NULL, CGRectMake( nX, nY, 1, 1 ) );
-				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, mnLineColor, aPath ) );
+				addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, mnLineColor, 0x00000000, aPath ) );
 				CGPathRelease( aPath );
 			}
 		}
@@ -739,7 +739,7 @@ void JavaSalGraphics::drawPixel( long nX, long nY, SalColor nSalColor )
 		if ( aPath )
 		{
 			CGPathAddRect( aPath, NULL, CGRectMake( nX, nY, 1, 1 ) );
-			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, 0x00000000, nSalColor | 0xff000000, aPath ) );
+			addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, nSalColor | 0xff000000, 0x00000000, aPath ) );
 			CGPathRelease( aPath );
 		}
 	}
@@ -785,10 +785,10 @@ void JavaSalGraphics::drawRect( long nX, long nY, long nWidth, long nHeight )
 			CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
 			CGPathAddRect( aPath, NULL, aRect );
 			float fNativeLineWidth = getNativeLineWidth();
-			if ( aRect.size.width <= fNativeLineWidth )
+			if ( aRect.size.width < fNativeLineWidth )
 				aRect.size.width = 0;
-			if ( aRect.size.height <= fNativeLineWidth )
-				aRect.size.height = fNativeLineWidth;
+			if ( aRect.size.height < fNativeLineWidth )
+				aRect.size.height = 0;
 			if ( CGRectIsEmpty( aRect ) )
 			{
 				CGPathRelease( aPath );
@@ -849,10 +849,10 @@ void JavaSalGraphics::drawPolyLine( ULONG nPoints, const SalPoint* pPtAry )
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width <= fNativeLineWidth )
+				if ( aRect.size.width < fNativeLineWidth )
 					aRect.size.width = 0;
-				if ( aRect.size.height <= fNativeLineWidth )
-					aRect.size.height = fNativeLineWidth;
+				if ( aRect.size.height < fNativeLineWidth )
+					aRect.size.height = 0;
 				if ( CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
@@ -897,10 +897,10 @@ void JavaSalGraphics::drawPolygon( ULONG nPoints, const SalPoint* pPtAry )
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width <= fNativeLineWidth )
+				if ( aRect.size.width < fNativeLineWidth )
 					aRect.size.width = 0;
-				if ( aRect.size.height <= fNativeLineWidth )
-					aRect.size.height = fNativeLineWidth;
+				if ( aRect.size.height < fNativeLineWidth )
+					aRect.size.height = 0;
 				if ( CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
@@ -957,10 +957,10 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 				AddPolyPolygonToPaths( NULL, aPath, aPolyPoly );
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width <= fNativeLineWidth )
+				if ( aRect.size.width < fNativeLineWidth )
 					aRect.size.width = 0;
-				if ( aRect.size.height <= fNativeLineWidth )
-					aRect.size.height = fNativeLineWidth;
+				if ( aRect.size.height < fNativeLineWidth )
+					aRect.size.height = 0;
 				if ( CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
@@ -1006,10 +1006,10 @@ bool JavaSalGraphics::drawPolyPolygon( const ::basegfx::B2DPolyPolygon& rPolyPol
 			AddPolyPolygonToPaths( NULL, aPath, rPolyPoly );
 			CGRect aRect = CGPathGetBoundingBox( aPath );
 			float fNativeLineWidth = getNativeLineWidth();
-			if ( aRect.size.width <= fNativeLineWidth )
+			if ( aRect.size.width < fNativeLineWidth )
 				aRect.size.width = 0;
-			if ( aRect.size.height <= fNativeLineWidth )
-				aRect.size.height = fNativeLineWidth;
+			if ( aRect.size.height < fNativeLineWidth )
+				aRect.size.height = 0;
 			if ( CGRectIsEmpty( aRect ) )
 			{
 				CGPathRelease( aPath );
@@ -1071,10 +1071,10 @@ bool JavaSalGraphics::drawPolyLine( const ::basegfx::B2DPolygon& rPoly, const ::
 			float fNativeLineWidth = rLineWidths.getX();
 			if ( fNativeLineWidth <= 0 )
 				fNativeLineWidth = getNativeLineWidth();
-			if ( aRect.size.width <= fNativeLineWidth )
+			if ( aRect.size.width < fNativeLineWidth )
 				aRect.size.width = 0;
-			if ( aRect.size.height <= fNativeLineWidth )
-				aRect.size.height = fNativeLineWidth;
+			if ( aRect.size.height < fNativeLineWidth )
+				aRect.size.height = 0;
 			if ( CGRectIsEmpty( aRect ) )
 			{
 				CGPathRelease( aPath );

@@ -1055,11 +1055,11 @@ void JavaSalGraphics::invert( long nX, long nY, long nWidth, long nHeight, SalIn
 			CGRect aRect = CGRectStandardize( CGRectMake( nX, nY, nWidth, nHeight ) );
 			CGPathAddRect( aPath, NULL, aRect );
 			float fNativeLineWidth = getNativeLineWidth();
-			if ( aRect.size.width <= fNativeLineWidth )
+			if ( aRect.size.width < fNativeLineWidth )
 				aRect.size.width = 0;
-			if ( aRect.size.height <= fNativeLineWidth )
-				aRect.size.height = fNativeLineWidth;
-			if ( nFlags & SAL_INVERT_TRACKFRAME && CGRectIsEmpty( aRect ) )
+			if ( aRect.size.height < fNativeLineWidth )
+				aRect.size.height = 0;
+			if ( CGRectIsEmpty( aRect ) )
 			{
 				CGPathRelease( aPath );
 				aPath = CGPathCreateMutable();
@@ -1121,11 +1121,11 @@ void JavaSalGraphics::invert( ULONG nPoints, const SalPoint* pPtAry, SalInvert n
 				AddPolygonToPaths( NULL, aPath, aPoly, aPoly.isClosed() );
 				CGRect aRect = CGPathGetBoundingBox( aPath );
 				float fNativeLineWidth = getNativeLineWidth();
-				if ( aRect.size.width <= fNativeLineWidth )
+				if ( aRect.size.width < fNativeLineWidth )
 					aRect.size.width = 0;
-				if ( aRect.size.height <= fNativeLineWidth )
-					aRect.size.height = fNativeLineWidth;
-				if ( nFlags & SAL_INVERT_TRACKFRAME && CGRectIsEmpty( aRect ) )
+				if ( aRect.size.height < fNativeLineWidth )
+					aRect.size.height = 0;
+				if ( CGRectIsEmpty( aRect ) )
 				{
 					CGPathRelease( aPath );
 					aPath = CGPathCreateMutable();
