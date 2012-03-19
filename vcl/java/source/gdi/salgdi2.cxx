@@ -1020,23 +1020,51 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 
 SalColor JavaSalGraphics::getPixel( long nX, long nY )
 {
+	SalColor nRet = 0xff000000;
+
 	// Don't do anything if this is a printer
 	if ( mpPrinter )
-		return 0xff000000;
+		return nRet;
 
 	if ( useNativeDrawing() )
 	{
-		fprintf( stderr, "JavaSalGraphics::getPixel not implemented\n" );
-		return 0xff000000;
+		BYTE *pBits = NULL;
+		long nScanlineSize = AlignedWidth4Bytes( GetBitCount() );
+		try
+		{
+			pBits = new BYTE[ nScanlineSize ];
+		}
+		catch( const std::bad_alloc& ) {}
+
+		// Draw to a 1 x 1 pixel native bitmap
+		if ( pBits )
+		{
+			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+			if ( aColorSpace )
+			{
+				memset( pBits, 0, nScanlineSize );
+				CGContextRef aContext = CGBitmapContextCreate( pBits, 1, 1, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+				if ( aContext )
+				{
+					copyToContext( NULL, false, false, aContext, CGRectMake( 0, 0, 1, 1 ), CGPointMake( nX, nY ), CGRectMake( 0, 0, 1, 1 ) );
+					sal_uInt32 *pBitsIn = (sal_uInt32 *)pBits;
+					nRet = pBitsIn[ 0 ] & 0x00ffffff;
+
+					CGContextRelease( aContext );
+				}
+
+				CGColorSpaceRelease( aColorSpace );
+			}
+
+			delete[] pBits;
+		}
 	}
 	else if ( mpVCLGraphics )
 	{
-		return mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
+		nRet = mpVCLGraphics->getPixel( nX, nY ) & 0x00ffffff;
 	}
-	else
-	{
-		return 0xff000000;
-	}
+
+	return nRet;
 }
 
 // -----------------------------------------------------------------------
