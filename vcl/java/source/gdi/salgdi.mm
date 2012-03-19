@@ -438,26 +438,23 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 					CGContextSetLineDash( aContext, 0, aLengths, 2 );
 				}
 
-				// Enable or disable antialiasing
-				CGContextSetAllowsAntialiasing( aContext, mbAntialias );
-
-				// Smooth out image drawing for bug 2475 image
-				if ( mbXOR && !mbAntialias )
-					CGContextSetAllowsAntialiasing( aContext, true );
-
 				CGContextAddPath( aContext, maPath );
 				if ( CGColorGetAlpha( aFillColor ) )
 				{
+					// Smooth out image drawing for bug 2475 image
+					CGContextSetAllowsAntialiasing( aContext, mbXOR || mbAntialias );
+
 					CGContextSetFillColorWithColor( aContext, aFillColor );
 					CGContextEOFillPath( aContext );
 				}
 				if ( CGColorGetAlpha( aLineColor ) )
 				{
+					// Enable or disable antialiasing
+					CGContextSetAllowsAntialiasing( aContext, mbAntialias );
+
 					CGContextSetStrokeColorWithColor( aContext, aLineColor );
 					CGContextStrokePath( aContext );
 				}
-
-				CGContextSetAllowsAntialiasing( aContext, mbAntialias );
 
 				restoreClipXORGState();
 			}
@@ -1001,8 +998,11 @@ void JavaSalGraphics::drawPolyPolygon( ULONG nPoly, const ULONG* pPoints, PCONST
 					}
 				}
 
+				// Always disable invert and XOR for polypolygons like in the
+				// Java code otherwise transparent non-rectangular gradients
+				// will be drawn incorrectly when printed
 				if ( aPath )
-					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, mbInvert, mbXOR, false, mnFillColor, mnLineColor, aPath ) );
+					addUndrawnNativeOp( new JavaSalGraphicsDrawPathOp( maNativeClipPath, false, false, false, mnFillColor, mnLineColor, aPath ) );
 
 				CGPathRelease( aPath );
 			}
