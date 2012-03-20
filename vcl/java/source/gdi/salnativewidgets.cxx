@@ -91,6 +91,7 @@
 #define CHECKBOX_HEIGHT					20
 #define RADIOBUTTON_WIDTH				16
 #define RADIOBUTTON_HEIGHT				16
+#define PUSHBUTTON_HEIGHT				22
 
 using namespace vcl;
 using namespace rtl;
@@ -483,10 +484,13 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
 	else
 		pButtonDrawInfo->state = kThemeStateInactive;
 
-	if ( nState & CTRL_STATE_FOCUSED )
+	if ( nState & CTRL_STATE_DEFAULT )
+		pButtonDrawInfo->adornment = kThemeAdornmentDefault;
+	else if ( nState & CTRL_STATE_FOCUSED )
 		pButtonDrawInfo->adornment = kThemeAdornmentFocus;
 	else
-		pButtonDrawInfo->adornment = kThemeAdornmentDefault;
+		pButtonDrawInfo->adornment = kThemeAdornmentNone;
+
 	return TRUE;
 }
 
@@ -1828,9 +1832,9 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 /**
  * (static) Draw a native checkbox.
  *
- * @param pGraphics		pointer to the graphics object where the button should
+ * @param pGraphics		pointer to the graphics object where the checkbox should
  *						be painted
- * @param rDestBounds	destination drawing rectangle for the disclosure button
+ * @param rDestBounds	destination drawing rectangle for the checkbox
  * @param nState		current control enabled/disabled/focused state
  * @param aValue		control value
  */
@@ -1846,7 +1850,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
-		if ( rDestBounds.GetWidth() < CHECKBOX_WIDTH || rDestBounds.GetHeight() < CHECKBOX_HEIGHT )
+		if ( rDestBounds.GetWidth() < CHECKBOX_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < CHECKBOX_HEIGHT - ( FOCUSRING_WIDTH * 2 ) )
 			aButtonDrawInfo.kind = kThemeCheckBoxSmall;
 		else
 			aButtonDrawInfo.kind = kThemeCheckBox;
@@ -1856,10 +1860,10 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 			aButtonDrawInfo.value = kThemeButtonMixed;
 
 		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+		destRect.origin.x = FOCUSRING_WIDTH;
+		destRect.origin.y = FOCUSRING_WIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - ( FOCUSRING_WIDTH * 2 );
+		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
 		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 	}
 
@@ -1883,7 +1887,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
  *
  * @param pGraphics		pointer to the graphics object where the button should
  *						be painted
- * @param rDestBounds	destination drawing rectangle for the disclosure button
+ * @param rDestBounds	destination drawing rectangle for the button
  * @param nState		current control enabled/disabled/focused state
  * @param aValue		control value
  */
@@ -1899,7 +1903,7 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
-		if ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT )
+		if ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH - ( FOCUSRING_WIDTH * 2 ) || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT - ( FOCUSRING_WIDTH * 2 ) )
 			aButtonDrawInfo.kind = kThemeRadioButtonSmall;
 		else
 			aButtonDrawInfo.kind = kThemeRadioButton;
@@ -1909,10 +1913,78 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
 			aButtonDrawInfo.value = kThemeButtonMixed;
 
 		HIRect destRect;
-		destRect.origin.x = 0;
-		destRect.origin.y = 0;
-		destRect.size.width = rDestBounds.GetWidth();
-		destRect.size.height = rDestBounds.GetHeight();
+		destRect.origin.x = FOCUSRING_WIDTH;
+		destRect.origin.y = FOCUSRING_WIDTH;
+		destRect.size.width = rDestBounds.GetWidth() - ( FOCUSRING_WIDTH * 2 );
+		destRect.size.height = rDestBounds.GetHeight() - ( FOCUSRING_WIDTH * 2 );
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
+	}
+
+	pBuffer->ReleaseContext();
+
+	if ( bRet )
+	{
+		if ( pGraphics->useNativeDrawing() )
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+		else if ( pGraphics->mpVCLGraphics )
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
+ * (static) Draw a native push button.
+ *
+ * @param pGraphics		pointer to the graphics object where the button should
+ *						be painted
+ * @param rDestBounds	destination drawing rectangle for the button
+ * @param nState		current control enabled/disabled/focused state
+ * @param aValue		control value
+ */
+static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+{
+	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
+	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	if ( bRet )
+	{
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
+		HIThemeButtonDrawInfo aButtonDrawInfo;
+		InitButtonDrawInfo( &aButtonDrawInfo, nState );
+
+		// Detect placard buttons
+		if ( PUSHBUTTON_HEIGHT >= rDestBounds.GetWidth() - 1 )
+			aButtonDrawInfo.kind = kThemeBevelButton;
+		else
+			aButtonDrawInfo.kind = kThemePushButton;
+
+		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+			aButtonDrawInfo.value = kThemeButtonOn;
+		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
+			aButtonDrawInfo.value = kThemeButtonMixed;
+
+		HIRect destRect;
+		if ( PUSHBUTTON_HEIGHT >= rDestBounds.GetWidth() - 1 )
+		{
+			destRect.origin.x = 0;
+			destRect.origin.y = 0;
+			destRect.size.width = rDestBounds.GetWidth() - 1;
+			destRect.size.height = rDestBounds.GetHeight() - 1;
+		}
+		else
+		{
+			// Fix bug 1633 by vertically centering button
+			destRect.origin.x = FOCUSRING_WIDTH;
+			destRect.origin.y = FOCUSRING_WIDTH + ( ( rDestBounds.GetHeight() - PUSHBUTTON_HEIGHT ) / 2 );
+			destRect.size.width = rDestBounds.GetWidth() - ( FOCUSRING_WIDTH * 2 );
+			destRect.size.height = PUSHBUTTON_HEIGHT;
+
+		}
+
 		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 	}
 
@@ -2208,15 +2280,20 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				if ( useNativeDrawing() )
 				{
-					fprintf( stderr, "CTRL_PUSHBUTTON not implemented\n" );
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
+				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+				bOK = DrawNativePushButton( this, buttonRect, nState, aValue );
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				}
-				else
+				else if ( mpVCLGraphics )
 				{
 					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 					mpVCLGraphics->drawPushButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), ( nState & CTRL_STATE_DEFAULT ) );
 				}
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 				bOK = TRUE;
 			}
 			break;
@@ -2499,9 +2576,35 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_PUSHBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				if ( useNativeDrawing() )
 				{
-					fprintf( stderr, "CTRL_PUSHBUTTON not implemented\n" );
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
+				// If the button width is less than the preferred height,
+				// assume that it's intended to be a "placard" type button with
+				// an icon. In that case, return the requested height as it
+				// will then draw it as a placard button instead of a rounded
+				// button. This makes buttons used as parts of subcontrols
+				// (combo boxes, small toolbar buttons) draw with the
+				// appropriate style.
+				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+				long buttonWidth = buttonRect.GetWidth();
+				long buttonHeight = PUSHBUTTON_HEIGHT;
+				if ( buttonHeight >= buttonWidth )
+				{
+					buttonWidth++;
+					buttonHeight = buttonRect.GetHeight() + 1;
+				}
+				else if ( buttonHeight != buttonRect.GetHeight() && buttonRect.GetHeight() > 0 )
+				{
+					buttonHeight = buttonRect.GetHeight();
+				}
+				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() + ((buttonRect.GetHeight() - buttonHeight) / 2) - FOCUSRING_WIDTH) );
+				Size boundsSize( (long)buttonWidth + ( FOCUSRING_WIDTH * 2 ), (long)buttonHeight + ( FOCUSRING_WIDTH * 2 ) );
+				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				bReturn = TRUE;
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				}
 				else
 				{
@@ -2515,6 +2618,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					rNativeContentRegion = Region( rNativeBoundingRegion );
 				}
 				bReturn = TRUE;
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 			}
 			break;
 
@@ -2524,10 +2628,10 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 #ifndef USE_NATIVE_VIRTUAL_DEVICE
 				if ( useNativeDrawing() )
 				{
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() - FOCUSRING_WIDTH) );
-				Size boundsSize( (long)RADIOBUTTON_WIDTH + FOCUSRING_WIDTH, (long)RADIOBUTTON_HEIGHT + FOCUSRING_WIDTH );
+				Size boundsSize( (long)RADIOBUTTON_WIDTH + ( FOCUSRING_WIDTH * 2 ), (long)RADIOBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
@@ -2545,7 +2649,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					rNativeContentRegion = Region( rNativeBoundingRegion );
 					bReturn = TRUE;
 				}
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 			}
 			break;
 
@@ -2554,7 +2658,7 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 			{
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() - FOCUSRING_WIDTH) );
-				Size boundsSize( (long)CHECKBOX_WIDTH + FOCUSRING_WIDTH, (long)CHECKBOX_HEIGHT + FOCUSRING_WIDTH );
+				Size boundsSize( (long)CHECKBOX_WIDTH + ( FOCUSRING_WIDTH * 2 ), (long)CHECKBOX_HEIGHT + ( FOCUSRING_WIDTH * 2 ) );
 				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
 				rNativeContentRegion = Region( rNativeBoundingRegion );
 				bReturn = TRUE;
