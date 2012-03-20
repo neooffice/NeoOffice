@@ -209,6 +209,8 @@ public:
 	bool					mbXOR;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
+	sal_uInt32				mnPixelContextData;
+	CGContextRef			maPixelContext;
 
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();

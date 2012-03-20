@@ -66,7 +66,7 @@ class JavaSalVirtualDevice : public SalVirtualDevice
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	long					mnWidth;
 	long					mnHeight;
-	BYTE*					mpBits;
+	sal_uInt32				mnBit;
 	CGContextRef			maBitmapContext;
 	CGLayerRef				maBitmapLayer;
 #else	// USE_NATIVE_VIRTUAL_DEVICE

@@ -162,7 +162,7 @@ struct SAL_DLLPRIVATE ImplATSLayoutData {
 	static ::std::list< ImplATSLayoutData* >	maLayoutCacheList;
 	static int			mnLayoutCacheSize;
 #ifdef USE_CORETEXT_TEXT_RENDERING
-	static BYTE*		mpSharedContextData;
+	static sal_uInt32	mnSharedContextData;
 	static CGContextRef	maSharedContext;
 #else	// USE_CORETEXT_TEXT_RENDERING
 	static ATSUFontFallbacks	maFontFallbacks;
@@ -400,7 +400,7 @@ int ImplATSLayoutData::mnLayoutCacheSize = 0;
 
 #ifdef USE_CORETEXT_TEXT_RENDERING
 
-BYTE *ImplATSLayoutData::mpSharedContextData = NULL;
+sal_uInt32 ImplATSLayoutData::mnSharedContextData = 0;
 
 // ----------------------------------------------------------------------------
 
@@ -420,17 +420,11 @@ CGContextRef ImplATSLayoutData::GetSharedContext()
 {
 	if ( !maSharedContext )
 	{
-		if ( !mpSharedContextData )
-			mpSharedContextData = (BYTE *)rtl_allocateMemory( 4 );
-		
-		if ( mpSharedContextData )
+		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+		if ( aColorSpace )
 		{
-			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
-			if ( aColorSpace )
-			{
-				maSharedContext = CGBitmapContextCreate( mpSharedContextData, 1, 1, 8, 4, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-				CGColorSpaceRelease( aColorSpace );
-			}
+			maSharedContext = CGBitmapContextCreate( &mnSharedContextData, 1, 1, 8, sizeof( mnSharedContextData ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+			CGColorSpaceRelease( aColorSpace );
 		}
 	}
 

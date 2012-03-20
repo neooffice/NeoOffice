@@ -490,7 +490,9 @@ JavaSalGraphics::JavaSalGraphics() :
 	mbInvert( false ),
 	mbXOR( false ),
 	meOrientation( ORIENTATION_PORTRAIT ),
-	mbPaperRotated( sal_False )
+	mbPaperRotated( sal_False ),
+	mnPixelContextData( 0 ),
+	maPixelContext( NULL )
 {
 	GetSalData()->maGraphicsList.push_back( this );
 }
@@ -533,6 +535,9 @@ JavaSalGraphics::~JavaSalGraphics()
 
 	if ( maNativeClipPath )
 		CFRelease( maNativeClipPath );
+
+	if ( maPixelContext )
+		CGContextRelease( maPixelContext );
 }
 
 // -----------------------------------------------------------------------

@@ -46,7 +46,7 @@ JavaSalVirtualDevice::JavaSalVirtualDevice() :
 #ifdef USE_NATIVE_VIRTUAL_DEVICE
 	mnWidth( 0 ),
 	mnHeight( 0 ),
-	mpBits( NULL ),
+	mnBit( 0 ),
 	maBitmapContext( NULL ),
 	maBitmapLayer( NULL ),
 #else	// !USE_NATIVE_VIRTUAL_DEVICE
@@ -75,9 +75,6 @@ JavaSalVirtualDevice::~JavaSalVirtualDevice()
 
 	if ( maBitmapContext )
 		CGContextRelease( maBitmapContext );
-
-	if ( mpBits )
-		delete[] mpBits;
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpVCLImage )
 	{
@@ -140,43 +137,29 @@ BOOL JavaSalVirtualDevice::SetSize( long nDX, long nDY )
 	if ( nDY < 1 )
 		nDY = 1;
 
-	if ( !mpBits )
+	if ( !maBitmapLayer )
 	{
-		if ( maBitmapContext )
-		{
-			CGContextRelease( maBitmapContext );
-			maBitmapContext = NULL;
-		}
-
-		long nScanlineSize = AlignedWidth4Bytes( mnBitCount );
-		try
-		{
-			mpBits = new BYTE[ nScanlineSize ];
-		}
-		catch( const std::bad_alloc& ) {}
-
 		// Make a native layer backed by a 1 x 1 pixel native bitmap
-		if ( mpBits )
+		if ( !maBitmapContext )
 		{
 			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 			if ( aColorSpace )
 			{
-				memset( mpBits, 0, nScanlineSize );
-				maBitmapContext = CGBitmapContextCreate( mpBits, 1, 1, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+				maBitmapContext = CGBitmapContextCreate( &mnBit, 1, 1, 8, sizeof( mnBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+				CGColorSpaceRelease( aColorSpace );
 			}
 		}
+
+		if ( maBitmapContext )
+			maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
 	}
 
-	if ( maBitmapContext )
+	if ( maBitmapLayer )
 	{
-		maBitmapLayer = CGLayerCreateWithContext( maBitmapContext, CGSizeMake( nDX, nDY ), NULL );
-		if ( maBitmapLayer )
-		{
-			mpGraphics->setLayer( maBitmapLayer );
-			mnWidth = nDX;
-			mnHeight = nDY;
-			bRet = TRUE;
-		}
+		mpGraphics->setLayer( maBitmapLayer );
+		mnWidth = nDX;
+		mnHeight = nDY;
+		bRet = TRUE;
 	}
 #else	// USE_NATIVE_VIRTUAL_DEVICE
 	if ( mpGraphics->mpVCLGraphics )

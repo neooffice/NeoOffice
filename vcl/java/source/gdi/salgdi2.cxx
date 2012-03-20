@@ -1028,35 +1028,22 @@ SalColor JavaSalGraphics::getPixel( long nX, long nY )
 
 	if ( useNativeDrawing() )
 	{
-		BYTE *pBits = NULL;
-		long nScanlineSize = AlignedWidth4Bytes( GetBitCount() );
-		try
-		{
-			pBits = new BYTE[ nScanlineSize ];
-		}
-		catch( const std::bad_alloc& ) {}
-
-		// Draw to a 1 x 1 pixel native bitmap
-		if ( pBits )
+		if ( !maPixelContext )
 		{
 			CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 			if ( aColorSpace )
 			{
-				memset( pBits, 0, nScanlineSize );
-				CGContextRef aContext = CGBitmapContextCreate( pBits, 1, 1, 8, nScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
-				if ( aContext )
-				{
-					copyToContext( NULL, false, false, aContext, CGRectMake( 0, 0, 1, 1 ), CGPointMake( nX, nY ), CGRectMake( 0, 0, 1, 1 ) );
-					sal_uInt32 *pBitsIn = (sal_uInt32 *)pBits;
-					nRet = pBitsIn[ 0 ] & 0x00ffffff;
-
-					CGContextRelease( aContext );
-				}
-
+				maPixelContext = CGBitmapContextCreate( &mnPixelContextData, 1, 1, 8, sizeof( mnPixelContextData ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 				CGColorSpaceRelease( aColorSpace );
 			}
+		}
 
-			delete[] pBits;
+		// Draw to a 1 x 1 pixel native bitmap
+		if ( maPixelContext )
+		{
+			mnPixelContextData = 0;
+			copyToContext( NULL, false, false, maPixelContext, CGRectMake( 0, 0, 1, 1 ), CGPointMake( nX, nY ), CGRectMake( 0, 0, 1, 1 ) );
+			nRet = mnPixelContextData & 0x00ffffff;
 		}
 	}
 	else if ( mpVCLGraphics )
