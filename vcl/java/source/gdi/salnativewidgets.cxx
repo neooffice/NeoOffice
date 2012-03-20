@@ -89,12 +89,8 @@
 #define TABITEM_HEIGHT_SLOP				4
 #define CHECKBOX_WIDTH					16
 #define CHECKBOX_HEIGHT					20
-#define CHECKBOX_SMALL_WIDTH			16
-#define CHECKBOX_SMALL_HEIGHT			20
 #define RADIOBUTTON_WIDTH				16
 #define RADIOBUTTON_HEIGHT				16
-#define RADIOBUTTON_SMALL_WIDTH			14
-#define RADIOBUTTON_SMALL_HEIGHT		14
 
 using namespace vcl;
 using namespace rtl;
@@ -1850,7 +1846,10 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 		HIThemeButtonDrawInfo aButtonDrawInfo;
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
-		aButtonDrawInfo.kind = kThemeCheckBox;
+		if ( rDestBounds.GetWidth() < CHECKBOX_WIDTH || rDestBounds.GetHeight() < CHECKBOX_HEIGHT )
+			aButtonDrawInfo.kind = kThemeCheckBoxSmall;
+		else
+			aButtonDrawInfo.kind = kThemeCheckBox;
 		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
 			aButtonDrawInfo.value = kThemeButtonOn;
 		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
