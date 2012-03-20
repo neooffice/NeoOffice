@@ -1351,10 +1351,10 @@ void JavaSalGraphics::copyFromGraphics( JavaSalGraphics *pSrcGraphics, CGPoint a
 
 void JavaSalGraphics::copyToContext( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGContextRef aDestContext, CGRect aDestBounds, CGPoint aSrcPoint, CGRect aDestRect )
 {
+	MutexGuard aGuard( maUndrawnNativeOpsMutex );
+
 	if ( !aDestContext || !maLayer )
 		return;
-
-	MutexGuard aGuard( maUndrawnNativeOpsMutex );
 
 	// Draw any undrawn operations so that we copy the latest bits
 	CGSize aLayerSize = CGLayerGetSize( maLayer );
