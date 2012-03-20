@@ -89,6 +89,12 @@
 #define TABITEM_HEIGHT_SLOP				4
 #define CHECKBOX_WIDTH					16
 #define CHECKBOX_HEIGHT					20
+#define CHECKBOX_SMALL_WIDTH			16
+#define CHECKBOX_SMALL_HEIGHT			20
+#define RADIOBUTTON_WIDTH				16
+#define RADIOBUTTON_HEIGHT				16
+#define RADIOBUTTON_SMALL_WIDTH			14
+#define RADIOBUTTON_SMALL_HEIGHT		14
 
 using namespace vcl;
 using namespace rtl;
@@ -998,7 +1004,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1056,7 +1062,7 @@ static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1127,7 +1133,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1222,7 +1228,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		{
 			if ( pGraphics->useNativeDrawing() )
 				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-			else
+			else if ( pGraphics->mpVCLGraphics )
 				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
 	}
@@ -1286,7 +1292,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		{
 			if ( pGraphics->useNativeDrawing() )
 				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-			else
+			else if ( pGraphics->mpVCLGraphics )
 				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
 	}
@@ -1341,7 +1347,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1393,7 +1399,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1438,7 +1444,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1483,7 +1489,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1525,7 +1531,7 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1573,7 +1579,7 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1616,7 +1622,7 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1665,7 +1671,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1711,7 +1717,7 @@ static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1764,7 +1770,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 		{
 			if ( pGraphics->useNativeDrawing() )
 				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-			else
+			else if ( pGraphics->mpVCLGraphics )
 				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), themeListViewHeaderHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
 	}
@@ -1814,7 +1820,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -1864,7 +1870,60 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 	{
 		if ( pGraphics->useNativeDrawing() )
 			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+		else if ( pGraphics->mpVCLGraphics )
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+	}
+
+	return bRet;
+}
+
+// =======================================================================
+
+/**
+ * (static) Draw a native radio button.
+ *
+ * @param pGraphics		pointer to the graphics object where the button should
+ *						be painted
+ * @param rDestBounds	destination drawing rectangle for the disclosure button
+ * @param nState		current control enabled/disabled/focused state
+ * @param aValue		control value
+ */
+static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
+{
+	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
+	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	if ( bRet )
+	{
+		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+			nState = 0;
+
+		HIThemeButtonDrawInfo aButtonDrawInfo;
+		InitButtonDrawInfo( &aButtonDrawInfo, nState );
+
+		if ( rDestBounds.GetWidth() < RADIOBUTTON_WIDTH || rDestBounds.GetHeight() < RADIOBUTTON_HEIGHT )
+			aButtonDrawInfo.kind = kThemeRadioButtonSmall;
 		else
+			aButtonDrawInfo.kind = kThemeRadioButton;
+		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+			aButtonDrawInfo.value = kThemeButtonOn;
+		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
+			aButtonDrawInfo.value = kThemeButtonMixed;
+
+		HIRect destRect;
+		destRect.origin.x = 0;
+		destRect.origin.y = 0;
+		destRect.size.width = rDestBounds.GetWidth();
+		destRect.size.height = rDestBounds.GetHeight();
+		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
+	}
+
+	pBuffer->ReleaseContext();
+
+	if ( bRet )
+	{
+		if ( pGraphics->useNativeDrawing() )
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+		else if ( pGraphics->mpVCLGraphics )
 			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
@@ -2169,15 +2228,20 @@ BOOL JavaSalGraphics::drawNativeControl( ControlType nType, ControlPart nPart, c
 				if ( mpFrame && !mpFrame->IsFloatingFrame() && mpFrame != GetSalData()->mpFocusFrame )
 					nState = 0;
 
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				if ( useNativeDrawing() )
 				{
-					fprintf( stderr, "CTRL_RADIOBUTTON not implemented\n" );
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
+				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+				bOK = DrawNativeRadioButton( this, buttonRect, nState, aValue );
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				}
-				else
+				else if ( mpVCLGraphics )
 				{
 					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 					mpVCLGraphics->drawRadioButton( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption, ( nState & CTRL_STATE_ENABLED ), ( nState & CTRL_STATE_FOCUSED ), ( nState & CTRL_STATE_PRESSED ), aValue.getTristateVal() );
 				}
+#endif	// !USE_NATIVE_VIRTUAL_DEVICE
 				bOK = TRUE;
 			}
 			break;
@@ -2458,11 +2522,19 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 		case CTRL_RADIOBUTTON:
 			if( nPart == PART_ENTIRE_CONTROL )
 			{
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				if ( useNativeDrawing() )
 				{
-					fprintf( stderr, "CTRL_RADIOBUTTON not implemented\n" );
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
+				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
+				Point topLeft( (long)(buttonRect.Left() - FOCUSRING_WIDTH), (long)(buttonRect.Top() - FOCUSRING_WIDTH) );
+				Size boundsSize( (long)RADIOBUTTON_WIDTH + FOCUSRING_WIDTH, (long)RADIOBUTTON_HEIGHT + FOCUSRING_WIDTH );
+				rNativeBoundingRegion = Region( Rectangle( topLeft, boundsSize ) );
+				rNativeContentRegion = Region( rNativeBoundingRegion );
+				bReturn = TRUE;
+#ifndef USE_NATIVE_VIRTUAL_DEVICE
 				}
-				else
+				else if ( mpVCLGraphics )
 				{
 					Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 					Rectangle preferredRect = mpVCLGraphics->getPreferredRadioButtonBounds( buttonRect.Left(), buttonRect.Top(), buttonRect.GetWidth(), buttonRect.GetHeight(), rCaption );
@@ -2472,8 +2544,9 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 					preferredRect.Bottom() += FOCUSRING_WIDTH;
 					rNativeBoundingRegion = Region( preferredRect );
 					rNativeContentRegion = Region( rNativeBoundingRegion );
+					bReturn = TRUE;
 				}
-				bReturn = TRUE;
+#endif	// USE_NATIVE_VIRTUAL_DEVICE
 			}
 			break;
 
