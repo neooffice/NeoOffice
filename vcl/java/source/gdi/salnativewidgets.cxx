@@ -1167,7 +1167,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
-		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
+		long offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 
 		VCLBitmapBuffer *pBuffer = &aSharedSpinboxBuffer;
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
@@ -1263,7 +1263,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
-		int offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
+		long offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 
 		VCLBitmapBuffer *pBuffer = &aSharedSpinbuttonBuffer;
 		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
@@ -1946,8 +1946,10 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
+	bool bPlacard = ( PUSHBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) >= rDestBounds.GetWidth() - 1 );
+	long offscreenHeight = ( !bPlacard && rDestBounds.GetHeight() < PUSHBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) ? PUSHBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) : rDestBounds.GetHeight() );
 	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1957,7 +1959,7 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 		InitButtonDrawInfo( &aButtonDrawInfo, nState );
 
 		// Detect placard buttons
-		if ( PUSHBUTTON_HEIGHT >= rDestBounds.GetWidth() - 1 )
+		if ( bPlacard )
 			aButtonDrawInfo.kind = kThemeBevelButton;
 		else
 			aButtonDrawInfo.kind = kThemePushButton;
@@ -1968,12 +1970,12 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 			aButtonDrawInfo.value = kThemeButtonMixed;
 
 		HIRect destRect;
-		if ( PUSHBUTTON_HEIGHT >= rDestBounds.GetWidth() - 1 )
+		if ( bPlacard )
 		{
 			destRect.origin.x = 0;
 			destRect.origin.y = 0;
 			destRect.size.width = rDestBounds.GetWidth() - 1;
-			destRect.size.height = rDestBounds.GetHeight() - 1;
+			destRect.size.height = offscreenHeight - 1;
 		}
 		else
 		{
@@ -1993,9 +1995,9 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 	if ( bRet )
 	{
 		if ( pGraphics->useNativeDrawing() )
-			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 		else if ( pGraphics->mpVCLGraphics )
-			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight(), rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
+			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
 	return bRet;
