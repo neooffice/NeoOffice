@@ -93,22 +93,25 @@
 #define RADIOBUTTON_HEIGHT				16
 #define PUSHBUTTON_HEIGHT_SLOP			4
 
-using namespace vcl;
+using namespace osl;
 using namespace rtl;
+using namespace vcl;
 
 struct SAL_DLLPRIVATE VCLBitmapBuffer : BitmapBuffer
 {
 	com_sun_star_vcl_VCLBitmap* 	mpVCLBitmap;
 	java_lang_Object*	 	mpData;
 	CGContextRef			maContext;
+	MutexGuard*				mpGraphicsMutexGuard;
 	HIThemeOrientation		mnHIThemeOrientationFlags;
 	bool					mbLastDrawToPrintGraphics;
 	bool					mbUseNativeDrawing;
+	bool					mbUseLayer;
 
 							VCLBitmapBuffer();
 	virtual					~VCLBitmapBuffer();
 
-	BOOL					Create( long nWidth, long nHeight, JavaSalGraphics *pGraphics );
+	BOOL					Create( long nX, long nY, long nWidth, long nHeight, JavaSalGraphics *pGraphics, bool bUseLayer = true );
 	void					Destroy();
 	void					DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect );
 	void					ReleaseContext();
@@ -178,9 +181,11 @@ VCLBitmapBuffer::VCLBitmapBuffer() :
 	mpVCLBitmap( NULL ),
 	mpData( NULL ),
 	maContext( NULL ),
+	mpGraphicsMutexGuard( NULL ),
 	mnHIThemeOrientationFlags( 0 ),
 	mbLastDrawToPrintGraphics( false ),
-	mbUseNativeDrawing( false )
+	mbUseNativeDrawing( false ),
+	mbUseLayer( false )
 {
 	mnFormat = 0;
 	mnWidth = 0;
@@ -199,7 +204,7 @@ VCLBitmapBuffer::~VCLBitmapBuffer()
 
 // -----------------------------------------------------------------------
 
-BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraphics )
+BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaSalGraphics *pGraphics, bool bUseLayer )
 {
 	if ( nWidth <= 0 || nHeight <= 0 || !pGraphics )
 		return FALSE;
@@ -208,12 +213,10 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
 	bool bOldUseNativeDrawing = mbUseNativeDrawing;
 	mbUseNativeDrawing = pGraphics->useNativeDrawing();
-	if ( mbUseNativeDrawing && bOldUseNativeDrawing && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
-	{
-		ReleaseContext();
-		bReused = true;
-	}
-	else if ( !mbUseNativeDrawing && !bOldUseNativeDrawing && mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
+	mbUseLayer = false;
+
+	// Only reuse context when not using native drawing
+	if ( !mbUseNativeDrawing && !bOldUseNativeDrawing && mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
 	{
 		ReleaseContext();
 		bReused = true;
@@ -221,7 +224,37 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 	else
 	{
 		Destroy();
-		if ( !mbUseNativeDrawing )
+		if ( mbUseNativeDrawing )
+		{
+			// If a layer is requested and there is a layer, draw to it directly
+			if ( bUseLayer )
+			{
+				mpGraphicsMutexGuard = new MutexGuard( &pGraphics->getUndrawnNativeOpsMutex() );
+				if ( mpGraphicsMutexGuard )
+				{
+					CGLayerRef aLayer = pGraphics->getLayer();
+					if ( aLayer )
+					{
+						maContext = CGLayerGetContext( aLayer );
+						if ( maContext )
+						{
+							CGContextRetain( maContext );
+							CGContextSaveGState( maContext );
+							JavaSalGraphics::setContextDefaultSettings( maContext, pGraphics->maNativeClipPath, pGraphics->getNativeLineWidth() );
+							CGContextTranslateCTM( maContext, nX, nY );
+							mbUseLayer = true;
+						}
+					}
+
+					if ( !mbUseLayer )
+					{
+						delete mpGraphicsMutexGuard;
+						mpGraphicsMutexGuard = NULL;
+					}
+				}
+			}
+		}
+		else
 		{
 			mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
 			if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
@@ -266,7 +299,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 
 	if ( mbUseNativeDrawing )
 	{
-		if ( !mpBits )
+		if ( !mpBits && !mbUseLayer )
 		{
 			try
 			{
@@ -288,7 +321,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 		if ( !mpBits )
 			mpBits = (BYTE *)t.pEnv->GetPrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), &bCopy );
 	}
-	if ( !mpBits )
+	if ( !mpBits && !mbUseLayer )
 	{
 		Destroy();
 		return FALSE;
@@ -297,7 +330,7 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 	if ( bReused )
 		memset( mpBits, 0, mnScanlineSize * mnHeight );
 
-	if ( !maContext )
+	if ( !maContext && !mbUseLayer )
 	{
 		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
 		if ( !aColorSpace )
@@ -307,6 +340,9 @@ BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraph
 		}
 
 		maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+		if ( maContext )
+			CGContextSaveGState( maContext );
+
 		CGColorSpaceRelease( aColorSpace );
 	}
 
@@ -332,9 +368,11 @@ void VCLBitmapBuffer::Destroy()
 	mnScanlineSize = 0;
 	mnBitCount = 0;
 	mbLastDrawToPrintGraphics = false;
+	mbUseLayer = false;
 
 	if ( maContext )
 	{
+		CGContextRestoreGState( maContext );
 		CGContextRelease( maContext );
 		maContext = NULL;
 	}
@@ -352,20 +390,23 @@ void VCLBitmapBuffer::Destroy()
 		mpBits = NULL;
 	}
 
-	if ( !mbUseNativeDrawing )
+	if ( mpData )
 	{
-		if ( mpData )
-		{
-			delete mpData;
-			mpData = NULL;
-		}
+		delete mpData;
+		mpData = NULL;
+	}
 
-		if ( mpVCLBitmap )
-		{
-			mpVCLBitmap->dispose();
-			delete mpVCLBitmap;
-			mpVCLBitmap = NULL;
-		}
+	if ( mpVCLBitmap )
+	{
+		mpVCLBitmap->dispose();
+		delete mpVCLBitmap;
+		mpVCLBitmap = NULL;
+	}
+
+	if ( mpGraphicsMutexGuard )
+	{
+		delete mpGraphicsMutexGuard;
+		mpGraphicsMutexGuard = NULL;
 	}
 }
 
@@ -373,7 +414,7 @@ void VCLBitmapBuffer::Destroy()
 
 void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect aSrcRect, CGRect aDestRect )
 {
-	if ( pGraphics && mpBits && pGraphics->useNativeDrawing() )
+	if ( pGraphics && mpBits && !mbUseLayer && pGraphics->useNativeDrawing() )
 	{
 		// Assign ownership of bits to a CGDataProvider instance
 		CGDataProviderRef aProvider = CGDataProviderCreateWithData( NULL, mpBits, mnScanlineSize * mnHeight, ReleaseBitmapBufferBytePointerCallback );
@@ -392,30 +433,34 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 
 void VCLBitmapBuffer::ReleaseContext()
 {
+	mbUseLayer = false;
+
 	if ( maContext )
 	{
+		CGContextRestoreGState( maContext );
 		CGContextRelease( maContext );
 		maContext = NULL;
 	}
 
-	if ( !mbUseNativeDrawing )
+	if ( mpGraphicsMutexGuard )
+	{
+		delete mpGraphicsMutexGuard;
+		mpGraphicsMutexGuard = NULL;
+	}
+
+	if ( mpData )
 	{
 		if ( mpBits )
 		{
-			if ( mpData )
-			{
-				VCLThreadAttach t;
-				if ( t.pEnv )
-					t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, 0 );
-			}
-			mpBits = NULL;
+			VCLThreadAttach t;
+			if ( t.pEnv )
+				t.pEnv->ReleasePrimitiveArrayCritical( (jintArray)mpData->getJavaObject(), mpBits, 0 );
 		}
 
-		if ( mpData )
-		{
-			delete mpData;
-			mpData = NULL;
-		}
+		mpBits = NULL;
+
+		delete mpData;
+		mpData = NULL;
 	}
 }
 
@@ -964,7 +1009,7 @@ static BOOL InitSeparatorDrawInfo( HIThemeSeparatorDrawInfo *pSepInfo, ControlSt
 static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedComboBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1041,7 +1086,7 @@ static BOOL DrawNativeComboBox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 static BOOL DrawNativeListBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const OUString& rCaption )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedListBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1100,7 +1145,7 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
 		pBuffer = &aSharedVerticalScrollBarBuffer;
 	}
 
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1169,7 +1214,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		long offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 
 		VCLBitmapBuffer *pBuffer = &aSharedSpinboxBuffer;
-		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
+		bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), offscreenHeight, pGraphics, offscreenHeight == rDestBounds.GetHeight() );
 		if ( bRet )
 		{
 			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1260,7 +1305,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 		long offscreenHeight = ( ( rDestBounds.GetHeight() > spinnerThemeHeight ) ? rDestBounds.GetHeight() : spinnerThemeHeight );
 
 		VCLBitmapBuffer *pBuffer = &aSharedSpinbuttonBuffer;
-		bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
+		bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), offscreenHeight, pGraphics, offscreenHeight == rDestBounds.GetHeight() );
 		if ( bRet )
 		{
 			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1312,7 +1357,7 @@ static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& r
 static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, ProgressbarValue *pValue, BOOL bSmall )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedProgressbarBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1367,7 +1412,7 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, TabitemValue *pValue )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedTabBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1414,7 +1459,7 @@ static BOOL DrawNativeTab( JavaSalGraphics *pGraphics, const Rectangle& rDestBou
 static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedTabBoundingBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1459,7 +1504,7 @@ static BOOL DrawNativeTabBoundingBox( JavaSalGraphics *pGraphics, const Rectangl
 static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedPrimaryGroupBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1502,7 +1547,7 @@ static BOOL DrawNativePrimaryGroupBox( JavaSalGraphics *pGraphics, const Rectang
 static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedMenuBackgroundBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		HIThemeMenuDrawInfo pMenuDrawInfo;
@@ -1544,7 +1589,7 @@ static BOOL DrawNativeMenuBackground( JavaSalGraphics *pGraphics, const Rectangl
 static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedEditBoxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1592,7 +1637,7 @@ static BOOL DrawNativeEditBox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedListViewFrameBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1641,7 +1686,7 @@ static BOOL DrawNativeListBoxFrame( JavaSalGraphics *pGraphics, const Rectangle&
 static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, DisclosureBtnValue *pValue )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedDisclosureBtnBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1687,7 +1732,7 @@ static BOOL DrawNativeDisclosureBtn( JavaSalGraphics *pGraphics, const Rectangle
 static BOOL DrawNativeSeparatorLine( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedSeparatorLineBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1740,7 +1785,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 	if ( bRet )
 	{
 		VCLBitmapBuffer *pBuffer = &aSharedListViewHeaderBuffer;
-		bRet = pBuffer->Create( rDestBounds.GetWidth(), themeListViewHeaderHeight, pGraphics );
+		bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), themeListViewHeaderHeight, pGraphics );
 		if ( bRet )
 		{
 			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1787,7 +1832,7 @@ static BOOL DrawNativeListViewHeader( JavaSalGraphics *pGraphics, const Rectangl
 static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedBevelButtonBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1835,7 +1880,7 @@ static BOOL DrawNativeBevelButton( JavaSalGraphics *pGraphics, const Rectangle& 
 static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1888,7 +1933,7 @@ static BOOL DrawNativeCheckbox( JavaSalGraphics *pGraphics, const Rectangle& rDe
 static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
 	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
+	BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics );
 	if ( bRet )
 	{
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
@@ -1951,7 +1996,7 @@ static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& r
 			offscreenHeight = rDestBounds.GetHeight();
 
 		VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-		BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
+		BOOL bRet = pBuffer->Create( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), offscreenHeight, pGraphics, offscreenHeight == rDestBounds.GetHeight() );
 		if ( bRet )
 		{
 			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )

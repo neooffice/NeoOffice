@@ -78,37 +78,6 @@ using namespace vcl;
 
 // =======================================================================
 
-static void SetContextDefaultSettings( CGContextRef aContext, CGPathRef aClipPath, float fLineWidth )
-{
-	if ( !aContext )
-		return;
-
-	if ( fLineWidth <= 0 )
-		fLineWidth = 1.0f;
-
-	// Scale line width, cap, and join. Note that the miter limit matches the
-	// default miter limit specified in the Java 1.5 API BasicStroke class
-	// documentation.
-	CGContextSetLineWidth( aContext, fLineWidth );
-	CGContextSetLineCap( aContext, kCGLineCapSquare );
-	CGContextSetLineJoin( aContext, kCGLineJoinMiter );
-	CGContextSetMiterLimit( aContext, 10.0 );
-
-	// Turn off antialiasing by default since we did the same in the Java code
-	CGContextSetAllowsAntialiasing( aContext, false );
-
-	// Set clip
-	if ( aClipPath )
-	{
-		CGContextBeginPath( aContext );
-		CGContextAddPath( aContext, aClipPath );
-		CGContextClip( aContext );
-	}
-
-	// Throw away any incomplete path
-	CGContextBeginPath( aContext );
-}
-
 void AddPolygonToPaths( com_sun_star_vcl_VCLPath *pVCLPath, CGMutablePathRef aCGPath, const ::basegfx::B2DPolygon& rPolygon, bool bClosePath )
 {
 	const sal_uInt32 nCount = rPolygon.count();
@@ -467,6 +436,39 @@ void JavaSalGraphicsDrawPathOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef
 }
 
 // =======================================================================
+
+void JavaSalGraphics::setContextDefaultSettings( CGContextRef aContext, CGPathRef aClipPath, float fLineWidth )
+{
+	if ( !aContext )
+		return;
+
+	if ( fLineWidth <= 0 )
+		fLineWidth = 1.0f;
+
+	// Scale line width, cap, and join. Note that the miter limit matches the
+	// default miter limit specified in the Java 1.5 API BasicStroke class
+	// documentation.
+	CGContextSetLineWidth( aContext, fLineWidth );
+	CGContextSetLineCap( aContext, kCGLineCapSquare );
+	CGContextSetLineJoin( aContext, kCGLineJoinMiter );
+	CGContextSetMiterLimit( aContext, 10.0 );
+
+	// Turn off antialiasing by default since we did the same in the Java code
+	CGContextSetAllowsAntialiasing( aContext, false );
+
+	// Set clip
+	if ( aClipPath )
+	{
+		CGContextBeginPath( aContext );
+		CGContextAddPath( aContext, aClipPath );
+		CGContextClip( aContext );
+	}
+
+	// Throw away any incomplete path
+	CGContextBeginPath( aContext );
+}
+
+// -----------------------------------------------------------------------
 
 JavaSalGraphics::JavaSalGraphics() :
 	maLayer( NULL ),
@@ -1651,7 +1653,7 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 							// Translate the drawing context
 							CGContextTranslateCTM( maDrawBitmapContext, mnXORBitmapPadding - maXORRect.origin.x, mnXORBitmapPadding - maXORRect.origin.y );
 
-							SetContextDefaultSettings( maDrawBitmapContext, maNativeClipPath, pGraphics->getNativeLineWidth() );
+							JavaSalGraphics::setContextDefaultSettings( maDrawBitmapContext, maNativeClipPath, pGraphics->getNativeLineWidth() );
 
 							// Copy layer to XOR context
 							CGContextDrawLayerAtPoint( maXORBitmapContext, CGPointMake( mnXORBitmapPadding - maXORRect.origin.x, mnXORBitmapPadding - maXORRect.origin.y ), maXORLayer );
@@ -1676,7 +1678,7 @@ CGContextRef JavaSalGraphicsOp::saveClipXORGState( JavaSalGraphics *pGraphics, C
 	CGContextRetain( maSavedContext );
 	CGContextSaveGState( maSavedContext );
 
-	SetContextDefaultSettings( maSavedContext, maNativeClipPath, pGraphics->getNativeLineWidth() );
+	JavaSalGraphics::setContextDefaultSettings( maSavedContext, maNativeClipPath, pGraphics->getNativeLineWidth() );
 
 	if ( mbInvert )
 		CGContextSetBlendMode( maSavedContext, kCGBlendModeDifference );

@@ -212,6 +212,8 @@ public:
 	sal_uInt32				mnPixelContextData;
 	CGContextRef			maPixelContext;
 
+	static void				setContextDefaultSettings( CGContextRef aContext, CGPathRef aClipPath, float fLineWidth );
+
 							JavaSalGraphics();
 	virtual					~JavaSalGraphics();
 
@@ -292,6 +294,7 @@ public:
 	ULONG					getBitmapDirectionFormat();
 	CGLayerRef				getLayer() { return maLayer; }
 	float					getNativeLineWidth();
+	::osl::Mutex&			getUndrawnNativeOpsMutex() { return maUndrawnNativeOpsMutex; }
 	void					removeGraphicsChangeListener( JavaSalBitmap *pBitmap );
 	void					setLayer( CGLayerRef aLayer );
 };
