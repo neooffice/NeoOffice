@@ -91,7 +91,7 @@
 #define CHECKBOX_HEIGHT					20
 #define RADIOBUTTON_WIDTH				16
 #define RADIOBUTTON_HEIGHT				16
-#define PUSHBUTTON_HEIGHT				22
+#define PUSHBUTTON_HEIGHT_SLOP			4
 
 using namespace vcl;
 using namespace rtl;
@@ -201,6 +201,9 @@ VCLBitmapBuffer::~VCLBitmapBuffer()
 
 BOOL VCLBitmapBuffer::Create( long nWidth, long nHeight, JavaSalGraphics *pGraphics )
 {
+	if ( nWidth <= 0 || nHeight <= 0 || !pGraphics )
+		return FALSE;
+
 	bool bReused = false;
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
 	bool bOldUseNativeDrawing = mbUseNativeDrawing;
@@ -1157,13 +1160,9 @@ static BOOL DrawNativeScrollBar( JavaSalGraphics *pGraphics, const Rectangle& rD
  */
 static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
-	SInt32 spinnerThemeHeight;
-	BOOL bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
-	if ( !bRet )
-		return bRet;
-
 	SInt32 spinnerThemeWidth;
-	bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
+	SInt32 spinnerThemeHeight;
+	BOOL bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
@@ -1227,7 +1226,7 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
 		if ( bRet )
 		{
 			if ( pGraphics->useNativeDrawing() )
-				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), rDestBounds.GetHeight() ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
 			else if ( pGraphics->mpVCLGraphics )
 				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
@@ -1252,14 +1251,9 @@ static BOOL DrawNativeSpinbox( JavaSalGraphics *pGraphics, const Rectangle& rDes
  */
 static BOOL DrawNativeSpinbutton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, SpinbuttonValue *pValue )
 {
-	SInt32 spinnerThemeHeight;
-	BOOL bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
-	if ( ! bRet )
-		return bRet;
-
 	SInt32 spinnerThemeWidth;
-	bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
-
+	SInt32 spinnerThemeHeight;
+	BOOL bRet = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight) == noErr );
 	if ( bRet )
 	{
 		spinnerThemeHeight += SPINNER_TRIMHEIGHT * 2;
@@ -1946,58 +1940,66 @@ static BOOL DrawNativeRadioButton( JavaSalGraphics *pGraphics, const Rectangle& 
  */
 static BOOL DrawNativePushButton( JavaSalGraphics *pGraphics, const Rectangle& rDestBounds, ControlState nState, const ImplControlValue& aValue )
 {
-	bool bPlacard = ( PUSHBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) >= rDestBounds.GetWidth() - 1 );
-	long offscreenHeight = ( !bPlacard && rDestBounds.GetHeight() < PUSHBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) ? PUSHBUTTON_HEIGHT + ( FOCUSRING_WIDTH * 2 ) : rDestBounds.GetHeight() );
-	VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
-	BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
+    SInt32 pushButtonThemeHeight;
+    BOOL bRet = ( pGetThemeMetric( kThemeMetricPushButtonHeight, &pushButtonThemeHeight) == noErr );
 	if ( bRet )
 	{
-		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
-			nState = 0;
-
-		HIThemeButtonDrawInfo aButtonDrawInfo;
-		InitButtonDrawInfo( &aButtonDrawInfo, nState );
-
-		// Detect placard buttons
+		pushButtonThemeHeight += FOCUSRING_WIDTH * 2;
+		long offscreenHeight = ( rDestBounds.GetHeight() > pushButtonThemeHeight ? rDestBounds.GetHeight() : pushButtonThemeHeight );
+		bool bPlacard = ( offscreenHeight >= rDestBounds.GetWidth() - 1 );
 		if ( bPlacard )
-			aButtonDrawInfo.kind = kThemeBevelButton;
-		else
-			aButtonDrawInfo.kind = kThemePushButton;
+			offscreenHeight = rDestBounds.GetHeight();
 
-		if ( aValue.getTristateVal() == BUTTONVALUE_ON )
-			aButtonDrawInfo.value = kThemeButtonOn;
-		else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
-			aButtonDrawInfo.value = kThemeButtonMixed;
-
-		HIRect destRect;
-		if ( bPlacard )
+		VCLBitmapBuffer *pBuffer = &aSharedCheckboxBuffer;
+		BOOL bRet = pBuffer->Create( rDestBounds.GetWidth(), offscreenHeight, pGraphics );
+		if ( bRet )
 		{
-			destRect.origin.x = 0;
-			destRect.origin.y = 0;
-			destRect.size.width = rDestBounds.GetWidth() - 1;
-			destRect.size.height = offscreenHeight - 1;
+			if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
+				nState = 0;
+
+			HIThemeButtonDrawInfo aButtonDrawInfo;
+			InitButtonDrawInfo( &aButtonDrawInfo, nState );
+
+			// Detect placard buttons
+			if ( bPlacard )
+				aButtonDrawInfo.kind = kThemeBevelButton;
+			else
+				aButtonDrawInfo.kind = kThemePushButton;
+
+			if ( aValue.getTristateVal() == BUTTONVALUE_ON )
+				aButtonDrawInfo.value = kThemeButtonOn;
+			else if ( aValue.getTristateVal() == BUTTONVALUE_MIXED )
+				aButtonDrawInfo.value = kThemeButtonMixed;
+
+			HIRect destRect;
+			if ( bPlacard )
+			{
+				destRect.origin.x = 0;
+				destRect.origin.y = 0;
+				destRect.size.width = rDestBounds.GetWidth() - 1;
+				destRect.size.height = offscreenHeight - 1;
+			}
+			else
+			{
+				// Fix bug 1633 by vertically centering button
+				destRect.origin.x = FOCUSRING_WIDTH;
+				destRect.origin.y = ( ( offscreenHeight - pushButtonThemeHeight ) / 2 ) + PUSHBUTTON_HEIGHT_SLOP;
+				destRect.size.width = rDestBounds.GetWidth() - ( FOCUSRING_WIDTH * 2 );
+				destRect.size.height = pushButtonThemeHeight - ( FOCUSRING_WIDTH * 2 );
+			}
+
+			bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
 		}
-		else
+
+		pBuffer->ReleaseContext();
+
+		if ( bRet )
 		{
-			// Fix bug 1633 by vertically centering button
-			destRect.origin.x = FOCUSRING_WIDTH;
-			destRect.origin.y = FOCUSRING_WIDTH + ( ( rDestBounds.GetHeight() - PUSHBUTTON_HEIGHT ) / 2 );
-			destRect.size.width = rDestBounds.GetWidth() - ( FOCUSRING_WIDTH * 2 );
-			destRect.size.height = PUSHBUTTON_HEIGHT;
-
+			if ( pGraphics->useNativeDrawing() )
+				pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
+			else if ( pGraphics->mpVCLGraphics )
+				pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 		}
-
-		bRet = ( pHIThemeDrawButton( &destRect, &aButtonDrawInfo, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags, NULL ) == noErr );
-	}
-
-	pBuffer->ReleaseContext();
-
-	if ( bRet )
-	{
-		if ( pGraphics->useNativeDrawing() )
-			pBuffer->DrawContextAndDestroy( pGraphics, CGRectMake( 0, 0, rDestBounds.GetWidth(), offscreenHeight ), CGRectMake( rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight() ) );
-		else if ( pGraphics->mpVCLGraphics )
-			pGraphics->mpVCLGraphics->drawBitmap( pBuffer->mpVCLBitmap, 0, 0, rDestBounds.GetWidth(), offscreenHeight, rDestBounds.Left(), rDestBounds.Top(), rDestBounds.GetWidth(), rDestBounds.GetHeight(), pGraphics->mpPrinter && pGraphics->maNativeClipPath ? CGPathCreateCopy( pGraphics->maNativeClipPath ) : NULL );
 	}
 
 	return bRet;
@@ -2589,9 +2591,14 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// button. This makes buttons used as parts of subcontrols
 				// (combo boxes, small toolbar buttons) draw with the
 				// appropriate style.
+    			SInt32 pushButtonThemeHeight;
+    			bReturn = ( pGetThemeMetric( kThemeMetricPushButtonHeight, &pushButtonThemeHeight) == noErr );
+				if ( ! bReturn )
+					return bReturn;
+
 				Rectangle buttonRect = rRealControlRegion.GetBoundRect();
 				long buttonWidth = buttonRect.GetWidth();
-				long buttonHeight = PUSHBUTTON_HEIGHT;
+				long buttonHeight = pushButtonThemeHeight;
 				if ( buttonHeight >= buttonWidth )
 				{
 					buttonWidth++;
@@ -3099,12 +3106,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// leave room for left edge adornments
 
 				SInt32 spinnerThemeWidth;
-				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
-				if ( ! bReturn )
-					return bReturn;
-
 				SInt32 spinnerThemeHeight;
-				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
+				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
 				if ( ! bReturn )
 					return bReturn;
 
@@ -3163,12 +3166,8 @@ BOOL JavaSalGraphics::getNativeControlRegion( ControlType nType, ControlPart nPa
 				// leave room for left edge adornments
 
 				SInt32 spinnerThemeWidth;
-				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr );
-				if ( ! bReturn )
-					return bReturn;
-
 				SInt32 spinnerThemeHeight;
-				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
+				bReturn = ( pGetThemeMetric( kThemeMetricLittleArrowsWidth, &spinnerThemeWidth ) == noErr && pGetThemeMetric( kThemeMetricLittleArrowsHeight, &spinnerThemeHeight ) == noErr );
 				if ( ! bReturn )
 					return bReturn;
 
