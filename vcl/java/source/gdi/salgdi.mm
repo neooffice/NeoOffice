@@ -546,7 +546,7 @@ JavaSalGraphics::~JavaSalGraphics()
 
 void JavaSalGraphics::GetResolution( long& rDPIX, long& rDPIY )
 {
-	if ( !mnDPIX || !mnDPIY )
+	if ( ( !mnDPIX || !mnDPIY ) && mpVCLGraphics )
 	{
 		Size aSize( mpVCLGraphics->getResolution() );
 		mnDPIX = aSize.Width();
