@@ -271,6 +271,9 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 // =======================================================================
 
 JavaSalFrame::JavaSalFrame() :
+#ifdef USE_NATIVE_WINDOW
+	maWindowLayer( NULL ),
+#endif  // USE_NATIVE_WINDOW
 	mpVCLFrame( NULL ),
 	mpGraphics( new JavaSalGraphics() ),
 	mnStyle( 0 ),
@@ -296,6 +299,10 @@ JavaSalFrame::JavaSalFrame() :
 	memset( &maOriginalGeometry, 0, sizeof( maOriginalGeometry ) );
 
 	mpGraphics->mpFrame = this;
+#ifdef USE_NATIVE_WINDOW
+	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
+	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
+#endif  // USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
@@ -318,6 +325,11 @@ JavaSalFrame::~JavaSalFrame()
 
 	// Detach from parent
 	SetParent( NULL );
+
+#ifdef USE_NATIVE_WINDOW
+	if ( maWindowLayer )
+		CGLayerRelease( maWindowLayer );
+#endif  // USE_NATIVE_WINDOW
 
 	if ( mpVCLFrame )
 	{
@@ -388,8 +400,10 @@ SalGraphics* JavaSalFrame::GetGraphics()
 	if ( mbGraphics )
 		return NULL;
 
+#ifndef USE_NATIVE_WINDOW
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+#endif	// !USE_NATIVE_WINDOW
 	mbGraphics = TRUE;
 
 	return mpGraphics;
@@ -487,15 +501,18 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 
 	mbVisible = bVisible;
 
+#ifndef USE_NATIVE_WINDOW
 	// Make sure there is a graphics available to avoid crashing when the OOo
 	// code tries to draw while updating the menus
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+#endif	// !USE_NATIVE_WINDOW
 
 	mpVCLFrame->setVisible( mbVisible, bNoActivate );
 
 	// Reset graphics
-	mpGraphics->mpVCLGraphics->resetGraphics();
+	if ( mpGraphics->mpVCLGraphics )
+		mpGraphics->mpVCLGraphics->resetGraphics();
 
 	if ( mbVisible )
 	{
@@ -1257,7 +1274,11 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, bUtilityWindow );
 		if ( mpVCLFrame )
 		{
+#ifdef USE_NATIVE_WINDOW
+			mpGraphics->mpVCLGraphics = NULL;
+#else	// USE_NATIVE_WINDOW
 			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
+#endif	// USE_NATIVE_WINDOW
 			mpVCLFrame->setTitle( maTitle );
 
 			if ( pOldVCLGraphics )
@@ -1272,7 +1293,11 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		else
 		{
 			mpVCLFrame = pOldVCLFrame;
+#ifdef USE_NATIVE_WINDOW
+			mpGraphics->mpVCLGraphics = NULL;
+#else	// USE_NATIVE_WINDOW
 			mpGraphics->mpVCLGraphics = pOldVCLGraphics;
+#endif	// USE_NATIVE_WINDOW
 		}
 
 		if ( mpParent )
@@ -1387,36 +1412,52 @@ void JavaSalFrame::SetMaxClientSize( long nWidth, long nHeight )
 
 void JavaSalFrame::ResetClipRegion()
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalFrame::ResetClipRegion not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->resetClipRegion( sal_True );
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::BeginSetClipRegion( ULONG nRects )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalFrame::BeginSetClipRegion not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->beginSetClipRegion( sal_True );
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::UnionClipRegion( long nX, long nY, long nWidth, long nHeight )
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalFrame::UnionClipRegion not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->unionClipRegion( nX, nY, nWidth, nHeight, sal_True );
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
 
 void JavaSalFrame::EndSetClipRegion()
 {
+#ifdef USE_NATIVE_WINDOW
+	fprintf( stderr, "JavaSalFrame::EndSetClipRegion not implemented\n" );
+#else	// USE_NATIVE_WINDOW
 	if ( !mpGraphics->mpVCLGraphics )
 		mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 	mpGraphics->mpVCLGraphics->endSetClipRegion( sal_True );
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------

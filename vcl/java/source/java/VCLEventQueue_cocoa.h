@@ -80,7 +80,7 @@ SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
 SAL_DLLPRIVATE BOOL NSApplication_isActive();
 SAL_DLLPRIVATE void NSFontManager_acquire();
 SAL_DLLPRIVATE void NSFontManager_release();
-SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses();
+SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseNativeWindow );
 #ifdef __cplusplus
 END_C
 #endif

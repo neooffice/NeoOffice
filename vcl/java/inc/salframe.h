@@ -51,6 +51,9 @@
 #include <vcl/salgeom.hxx>
 #endif
 
+// Uncomment the following line to enable native window drawing APIs
+// #define USE_NATIVE_WINDOW
+
 namespace vcl
 {
 class com_sun_star_vcl_VCLEvent;
@@ -71,6 +74,9 @@ class SalBitmap;
 class JavaSalFrame : public SalFrame
 {
 public:
+#ifdef USE_NATIVE_WINDOW
+	CGLayerRef				maWindowLayer;
+#endif	// USE_NATIVE_WINDOW
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	JavaSalGraphics*		mpGraphics;
 	ULONG					mnStyle;

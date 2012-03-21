@@ -33,68 +33,26 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_CXX
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENTQUEUE_HXX
 #include <com/sun/star/vcl/VCLEventQueue.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_H
 #include <salframe.h>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _VCL_UNOHELP_HXX
 #include <vcl/unohelp.hxx>
-#endif
-#ifndef _SV_WINDOW_HXX
 #include <vcl/window.hxx>
-#endif
-#ifndef _COMPHELPER_PROCESSFACTORY_HXX_
 #include <comphelper/processfactory.hxx>
-#endif
-#ifndef _TOOLKIT_HELPER_VCLUNOHELPER_HXX_
 #include <toolkit/helper/vclunohelper.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
-#endif
-#ifndef _COM_SUN_STAR_AWT_XWINDOW_HDL_
 #include <com/sun/star/awt/XWindow.hpp>
-#endif
-#ifndef _COM_SUN_STAR_BEANS_PROPERTYVALUE_HDL
 #include <com/sun/star/beans/PropertyValue.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XINDEXACCESS_HDL
 #include <com/sun/star/container/XIndexAccess.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_XTRANSFERABLE_HDL_
 #include <com/sun/star/datatransfer/XTransferable.hpp>
-#endif
-#ifndef _COM_SUN_STAR_DATATRANSFER_CLIPBOARD_XCLIPBOARD_HDL_
 #include <com/sun/star/datatransfer/clipboard/XClipboard.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XDISPATCHHELPER_HDL_
 #include <com/sun/star/frame/XDispatchHelper.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XDISPATCHPROVIDER_HDL_
 #include <com/sun/star/frame/XDispatchProvider.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XFRAME_HDL_
 #include <com/sun/star/frame/XFrame.hpp>
-#endif
-#ifndef _COM_SUN_STAR_FRAME_XFRAMESSUPPLIER_HDL_
 #include <com/sun/star/frame/XFramesSupplier.hpp>
-#endif
 
 #include <premac.h>
 #include <CoreFoundation/CoreFoundation.h>
@@ -480,7 +438,11 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-		VCLEventQueue_installVCLEventQueueClasses();
+#ifdef USE_NATIVE_WINDOW
+		VCLEventQueue_installVCLEventQueueClasses( TRUE );
+#else	// USE_NATIVE_WINDOW
+		VCLEventQueue_installVCLEventQueueClasses( FALSE );
+#endif	// USE_NATIVE_WINDOW
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );

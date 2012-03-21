@@ -357,6 +357,7 @@ static NSString *pCancelInputMethodText = @" ";
 - (NSSize)poseAsBottomCornerSize;
 @end
 
+static BOOL bUseNativeWindow = NO;
 static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
@@ -1374,6 +1375,15 @@ static CFDataRef aRTFSelection = nil;
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
 
+		if ( bUseNativeWindow )
+		{
+			aSelector = @selector(drawRect:);
+			aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+			aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+			if ( aOldMethod && aNewIMP )
+				method_setImplementation( aOldMethod, aNewIMP );
+		}
+
 		aSelector = @selector(performDragOperation:);
 		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
@@ -1582,6 +1592,11 @@ static CFDataRef aRTFSelection = nil;
 		return [super draggingUpdated:pSender];
 	else
 		return NSDragOperationNone;
+}
+
+- (void)drawRect:(NSRect)aRect
+{
+	[super drawRect:aRect];
 }
 
 - (BOOL)ignoreModifierKeysWhileDragging
@@ -1855,25 +1870,28 @@ static CFDataRef aRTFSelection = nil;
 
 @interface InstallVCLEventQueueClasses : NSObject
 {
+	BOOL					mbUseNativeWindow;
 	BOOL					mbUseQuickTimeContentViewHack;
 }
-+ (id)create;
-- (id)init;
++ (id)createWithUseNativeWindow:(BOOL)bUseNativeWindow;
+- (id)initWithUseNativeWindow:(BOOL)bUseNativeWindow;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-+ (id)create
++ (id)createWithUseNativeWindow:(BOOL)bUseNativeWindow
 {
-	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] init];
+	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseNativeWindow:bUseNativeWindow];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)init
+- (id)initWithUseNativeWindow:(BOOL)bUseNativeWindow
 {
 	[super init];
+
+	mbUseNativeWindow = bUseNativeWindow;
 
 	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
 	// or earlier
@@ -1901,6 +1919,7 @@ static CFDataRef aRTFSelection = nil;
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
 	// Initialize statics
+	bUseNativeWindow = mbUseNativeWindow;
 	bUseQuickTimeContentViewHack = mbUseQuickTimeContentViewHack;
 
 	// Do not retain as invoking alloc disables autorelease
@@ -2243,11 +2262,11 @@ void VCLEventQueue_cancelTermination()
 	[pPool release];
 }
 
-void VCLEventQueue_installVCLEventQueueClasses()
+void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseNativeWindow )
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses create];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses createWithUseNativeWindow:bUseNativeWindow];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 
