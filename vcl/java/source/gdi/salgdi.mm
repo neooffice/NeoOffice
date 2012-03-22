@@ -1557,6 +1557,7 @@ void JavaSalGraphicsOp::restoreClipXORGState()
 			}
 		}
 
+		CGContextSetAllowsAntialiasing( maSavedContext, true );
 		CGContextRestoreGState( maSavedContext );
 		CGContextRelease( maSavedContext );
 		maSavedContext = NULL;
