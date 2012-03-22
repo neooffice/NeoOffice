@@ -183,6 +183,8 @@ private:
 	::std::list< JavaSalGraphicsOp* >	maUndrawnNativeOpsList;
 	::std::list< JavaSalBitmap* >	maGraphicsChangeListenerList;
 	CGLayerRef				maLayer;
+	sal_uInt32				mnPixelContextData;
+	CGContextRef			maPixelContext;
 
 public:
 	SalColor				mnFillColor;
@@ -209,8 +211,6 @@ public:
 	bool					mbXOR;
 	Orientation				meOrientation;
 	sal_Bool				mbPaperRotated;
-	sal_uInt32				mnPixelContextData;
-	CGContextRef			maPixelContext;
 
 	static void				setContextDefaultSettings( CGContextRef aContext, CGPathRef aClipPath, float fLineWidth );
 

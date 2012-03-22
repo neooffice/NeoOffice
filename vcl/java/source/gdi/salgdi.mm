@@ -320,7 +320,6 @@ void JavaSalGraphicsDrawEPSOp::drawOp( JavaSalGraphics *pGraphics, CGContextRef 
 		NSGraphicsContext *pContext = [NSGraphicsContext graphicsContextWithGraphicsPort:aContext flipped:NO];
 		if ( pContext )
 		{
-			
 			NSGraphicsContext *pOldContext = [NSGraphicsContext currentContext];
 			[NSGraphicsContext setCurrentContext:pContext];
 			[pImageRep drawInRect:NSMakeRect( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 )];
@@ -472,6 +471,8 @@ void JavaSalGraphics::setContextDefaultSettings( CGContextRef aContext, CGPathRe
 
 JavaSalGraphics::JavaSalGraphics() :
 	maLayer( NULL ),
+	mnPixelContextData( 0 ),
+	maPixelContext( NULL ),
 	mnFillColor( MAKE_SALCOLOR( 0xff, 0xff, 0xff ) | 0xff000000 ),
 	mnLineColor( MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000 ),
 	mnTextColor( MAKE_SALCOLOR( 0, 0, 0 ) | 0xff000000 ),
@@ -492,9 +493,7 @@ JavaSalGraphics::JavaSalGraphics() :
 	mbInvert( false ),
 	mbXOR( false ),
 	meOrientation( ORIENTATION_PORTRAIT ),
-	mbPaperRotated( sal_False ),
-	mnPixelContextData( 0 ),
-	maPixelContext( NULL )
+	mbPaperRotated( sal_False )
 {
 	GetSalData()->maGraphicsList.push_back( this );
 }
