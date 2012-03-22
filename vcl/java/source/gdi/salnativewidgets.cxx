@@ -1363,11 +1363,6 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 		if ( pGraphics->mpFrame && !pGraphics->mpFrame->IsFloatingFrame() && pGraphics->mpFrame != GetSalData()->mpFocusFrame )
 			nState = 0;
 
-		long nPixels = pBuffer->mnWidth * pBuffer->mnHeight;
-		jint *pBits = (jint *)pBuffer->mpBits;
-		for ( long i = 0; i < nPixels; i++ )
-			pBits[ i ] = pGraphics->mnFillColor;
-
 		HIThemeTrackDrawInfo aTrackDrawInfo;
 		InitProgressbarTrackInfo( &aTrackDrawInfo, nState, rDestBounds, pValue, bSmall );
 
@@ -1376,6 +1371,15 @@ static BOOL DrawNativeProgressbar( JavaSalGraphics *pGraphics, const Rectangle& 
 		destRect.origin.y = 0;
 		destRect.size.width = rDestBounds.GetWidth();
 		destRect.size.height = rDestBounds.GetHeight();
+
+		// clear the background of the control with the fill color
+		CGColorRef aFillColor = CreateCGColorFromSalColor( pGraphics->mnFillColor );
+		if ( aFillColor )
+		{
+			CGContextSetFillColorWithColor( pBuffer->maContext, aFillColor );
+			CGContextFillRect( pBuffer->maContext, destRect );
+			CGColorRelease( aFillColor );
+		}
 
 		bRet = ( pHIThemeDrawTrack( &aTrackDrawInfo, NULL, pBuffer->maContext, pBuffer->mnHIThemeOrientationFlags ) == noErr );
 	}
