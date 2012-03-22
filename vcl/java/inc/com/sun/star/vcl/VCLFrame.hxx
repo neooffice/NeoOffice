@@ -37,6 +37,7 @@
 #define	_SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 
 #include <java/lang/Object.hxx>
+#include <salframe.h>
 #include <sal/types.h>
 #include <tools/gen.hxx>
 
@@ -53,7 +54,9 @@ protected:
 
 public:
 	static jclass		getMyClass();
+#ifndef USE_NATIVE_WINDOW
 	static void			flushAllFrames();
+#endif	// USE_NATIVE_WINDOW
 
 						com_sun_star_vcl_VCLFrame( jobject myObj ) : java_lang_Object( myObj ) {}
 						com_sun_star_vcl_VCLFrame( ULONG nSalFrameStyle, const JavaSalFrame *pFrame, const JavaSalFrame *pParent, sal_Bool bShowOnlyMenus, sal_Bool bUtilityWindow );

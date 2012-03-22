@@ -357,7 +357,6 @@ static NSString *pCancelInputMethodText = @" ";
 - (NSSize)poseAsBottomCornerSize;
 @end
 
-static BOOL bUseNativeWindow = NO;
 static BOOL bUseQuickTimeContentViewHack = NO;
 
 @interface VCLView : NSView
@@ -374,6 +373,9 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (id)draggingSourceDelegate;
 - (NSDragOperation)draggingSourceOperationMaskForLocal:(BOOL)bLocal;
 - (NSDragOperation)draggingUpdated:(id < NSDraggingInfo >)pSender;
+#ifdef USE_NATIVE_WINDOW
+- (void)drawRect:(NSRect)aDirtyRect;
+#endif	// USE_NATIVE_WINDOW
 - (BOOL)ignoreModifierKeysWhileDragging;
 - (id)initWithFrame:(NSRect)aFrame;
 - (BOOL)isOpaque;
@@ -500,6 +502,7 @@ static BOOL bUseQuickTimeContentViewHack = NO;
 - (void)poseAsSendEvent:(NSEvent *)pEvent;
 - (void)poseAsSetContentView:(NSView *)pView;
 - (void)poseAsSetLevel:(int)nWindowLevel;
+- (void)poseAsSetBackgroundColor:(NSColor *)pColor;
 @end
 
 @interface VCLWindow (CocoaAppWindow)
@@ -1375,15 +1378,6 @@ static CFDataRef aRTFSelection = nil;
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
 
-		if ( bUseNativeWindow )
-		{
-			aSelector = @selector(drawRect:);
-			aOldMethod = class_getInstanceMethod( [pView class], aSelector );
-			aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
-			if ( aOldMethod && aNewIMP )
-				method_setImplementation( aOldMethod, aNewIMP );
-		}
-
 		aSelector = @selector(performDragOperation:);
 		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
@@ -1459,6 +1453,18 @@ static CFDataRef aRTFSelection = nil;
 		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
 		if ( aOldMethod && aNewIMP )
 			method_setImplementation( aOldMethod, aNewIMP );
+
+#ifdef USE_NATIVE_WINDOW
+
+		// NSViewAWT selectors
+
+		aSelector = @selector(drawRect:);
+		aOldMethod = class_getInstanceMethod( [pView class], aSelector );
+		aNewIMP = [[VCLView class] instanceMethodForSelector:aSelector];
+		if ( aOldMethod && aNewIMP )
+			method_setImplementation( aOldMethod, aNewIMP );
+
+#endif	// USE_NATIVE_WINDOW
 	}
 }
 
@@ -1594,10 +1600,20 @@ static CFDataRef aRTFSelection = nil;
 		return NSDragOperationNone;
 }
 
-- (void)drawRect:(NSRect)aRect
+#ifdef USE_NATIVE_WINDOW
+
+- (void)drawRect:(NSRect)aDirtyRect
 {
-	[super drawRect:aRect];
+	// For some strange reason, Java will ignore all drawing that we do unless
+	// the color is changed in the current graphics context. Also, the new color
+	// cannot be clear, white, or black since we use those colors as the
+	// window background colors in our Java code so we set the color to red.
+	[[NSColor redColor] set];
+
+	JavaSalFrame_drawToNSView( self, aDirtyRect );
 }
+
+#endif	// USE_NATIVE_WINDOW
 
 - (BOOL)ignoreModifierKeysWhileDragging
 {
@@ -1615,9 +1631,9 @@ static CFDataRef aRTFSelection = nil;
 	[VCLView swizzleSelectors:self];
 
 	if ( [super respondsToSelector:@selector(poseAsInitWithFrame:)] )
-		return [super poseAsInitWithFrame:aFrame];
-	else
-		return self;
+		[super poseAsInitWithFrame:aFrame];
+
+	return self;
 }
 
 - (BOOL)isOpaque
@@ -1870,28 +1886,25 @@ static CFDataRef aRTFSelection = nil;
 
 @interface InstallVCLEventQueueClasses : NSObject
 {
-	BOOL					mbUseNativeWindow;
 	BOOL					mbUseQuickTimeContentViewHack;
 }
-+ (id)createWithUseNativeWindow:(BOOL)bUseNativeWindow;
-- (id)initWithUseNativeWindow:(BOOL)bUseNativeWindow;
++ (id)create;
+- (id)init;
 - (void)installVCLEventQueueClasses:(id)pObject;
 @end
 
 @implementation InstallVCLEventQueueClasses
 
-+ (id)createWithUseNativeWindow:(BOOL)bUseNativeWindow
++ (id)create
 {
-	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] initWithUseNativeWindow:bUseNativeWindow];
+	InstallVCLEventQueueClasses *pRet = [[InstallVCLEventQueueClasses alloc] init];
 	[pRet autorelease];
 	return pRet;
 }
 
-- (id)initWithUseNativeWindow:(BOOL)bUseNativeWindow
+- (id)init
 {
 	[super init];
-
-	mbUseNativeWindow = bUseNativeWindow;
 
 	// Fix bug 3159 by only using the QuickTime hack when running QuickTime 7.4
 	// or earlier
@@ -1919,7 +1932,6 @@ static CFDataRef aRTFSelection = nil;
 	pFontManagerLock = [[NSRecursiveLock alloc] init];
 
 	// Initialize statics
-	bUseNativeWindow = mbUseNativeWindow;
 	bUseQuickTimeContentViewHack = mbUseQuickTimeContentViewHack;
 
 	// Do not retain as invoking alloc disables autorelease
@@ -2262,11 +2274,11 @@ void VCLEventQueue_cancelTermination()
 	[pPool release];
 }
 
-void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseNativeWindow )
+void VCLEventQueue_installVCLEventQueueClasses()
 {
 	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses createWithUseNativeWindow:bUseNativeWindow];
+	InstallVCLEventQueueClasses *pInstallVCLEventQueueClasses = [InstallVCLEventQueueClasses create];
 	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
 	[pInstallVCLEventQueueClasses performSelectorOnMainThread:@selector(installVCLEventQueueClasses:) withObject:pInstallVCLEventQueueClasses waitUntilDone:YES modes:pModes];
 

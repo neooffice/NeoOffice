@@ -33,29 +33,12 @@
  *
  ************************************************************************/
 
-#define _SV_COM_SUN_STAR_VCL_VCLFRAME_CXX
-
-#ifndef _SV_COM_SUN_STAR_VCL_VCLFRAME_HXX
 #include <com/sun/star/vcl/VCLFrame.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLEVENT_HXX
 #include <com/sun/star/vcl/VCLEvent.hxx>
-#endif
-#ifndef _SV_COM_SUN_STAR_VCL_VCLGRAPHICS_HXX
 #include <com/sun/star/vcl/VCLGraphics.hxx>
-#endif
-#ifndef _SV_SALDATA_HXX
 #include <saldata.hxx>
-#endif
-#ifndef _SV_SALFRAME_H
-#include <salframe.h>
-#endif
-#ifndef _SV_SVAPP_HXX
 #include <vcl/svapp.hxx>
-#endif
-#ifndef _VOS_MUTEX_HXX_
 #include <vos/mutex.hxx>
-#endif
 
 #include "VCLFrame_cocoa.h"
 
@@ -328,6 +311,8 @@ jclass com_sun_star_vcl_VCLFrame::getMyClass()
 	return theClass;
 }
 
+#ifndef USE_NATIVE_WINDOW
+
 // ----------------------------------------------------------------------------
 
 void com_sun_star_vcl_VCLFrame::flushAllFrames()
@@ -346,6 +331,8 @@ void com_sun_star_vcl_VCLFrame::flushAllFrames()
 			t.pEnv->CallStaticVoidMethod( getMyClass(), mID );
 	}
 }
+
+#endif	// !USE_NATIVE_WINDOW
 
 // ----------------------------------------------------------------------------
 

@@ -1000,10 +1000,12 @@ SalBitmap* JavaSalGraphics::getBitmap( long nX, long nY, long nDX, long nDY )
 		nDY = -nDY;
 	}
 
+#ifndef USE_NATIVE_WINDOW
 	// Fix bug 3189 and wipe down presentation transition previews without
 	// causing bug 3191 by flushing in certain cases
 	if ( !useNativeDrawing() )
 		com_sun_star_vcl_VCLFrame::flushAllFrames();
+#endif	// !USE_NATIVE_WINDOW
 
 	JavaSalBitmap *pBitmap = new JavaSalBitmap();
 

@@ -270,7 +270,11 @@ void OutputDevice::DrawTransparent( const PolyPolygon& rPolyPoly,
 			return;
 
     // debug helper:
+#ifdef USE_JAVA
+    static const char* pDisableNative = NULL;
+#else	// USE_JAVA
     static const char* pDisableNative = getenv( "SAL_DISABLE_NATIVE_ALPHA");
+#endif	// USE_JAVA
 
     // try hard to draw it directly, because the emulation layers are slower
 	if( !pDisableNative

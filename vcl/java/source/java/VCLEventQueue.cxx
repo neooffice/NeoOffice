@@ -55,7 +55,7 @@
 #include <com/sun/star/frame/XFramesSupplier.hpp>
 
 #include <premac.h>
-#include <CoreFoundation/CoreFoundation.h>
+#include <ApplicationServices/ApplicationServices.h>
 #include <postmac.h>
 
 #include "VCLEventQueue_cocoa.h"
@@ -438,11 +438,7 @@ jclass com_sun_star_vcl_VCLEventQueue::getMyClass()
 		// the NSView class. We need to do this because the JVM does not
 		// properly handle key events where a single key press generates more
 		// than one Unicode character.
-#ifdef USE_NATIVE_WINDOW
-		VCLEventQueue_installVCLEventQueueClasses( TRUE );
-#else	// USE_NATIVE_WINDOW
-		VCLEventQueue_installVCLEventQueueClasses( FALSE );
-#endif	// USE_NATIVE_WINDOW
+		VCLEventQueue_installVCLEventQueueClasses();
 
 		jclass tempClass = t.pEnv->FindClass( "com/sun/star/vcl/VCLEventQueue" );
 		OSL_ENSURE( tempClass, "Java : FindClass not found!" );

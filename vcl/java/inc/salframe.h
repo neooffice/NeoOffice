@@ -36,6 +36,8 @@
 #ifndef _SV_SALFRAME_H
 #define _SV_SALFRAME_H
 
+#ifdef __cplusplus
+
 #include <list>
 
 #ifndef _SV_SV_H
@@ -51,8 +53,12 @@
 #include <vcl/salgeom.hxx>
 #endif
 
+#endif	// __cplusplus
+
 // Uncomment the following line to enable native window drawing APIs
 // #define USE_NATIVE_WINDOW
+
+#ifdef __cplusplus
 
 namespace vcl
 {
@@ -73,10 +79,15 @@ class SalBitmap;
 
 class JavaSalFrame : public SalFrame
 {
-public:
 #ifdef USE_NATIVE_WINDOW
-	CGLayerRef				maWindowLayer;
+private:
+	sal_uInt32				mnHiddenBit;
+	CGContextRef			maHiddenContext;
+	CGLayerRef				maHiddenLayer;
+	CGLayerRef				maFrameLayer;
 #endif	// USE_NATIVE_WINDOW
+
+public:
 	::vcl::com_sun_star_vcl_VCLFrame*	mpVCLFrame;
 	JavaSalGraphics*		mpGraphics;
 	ULONG					mnStyle;
@@ -110,6 +121,9 @@ public:
 	bool					IsUtilityWindow();
 	void					RemoveObject( JavaSalObject *pObject, bool bDeleted );
 	void					FlushAllObjects();
+#ifdef USE_NATIVE_WINDOW
+	void					UpdateLayer();
+#endif	// USE_NATIVE_WINDOW
 
 	virtual SalGraphics*	GetGraphics();
 	virtual void			ReleaseGraphics( SalGraphics* pGraphics );
@@ -163,5 +177,7 @@ public:
 // module
 extern "C" SAL_DLLPUBLIC_EXPORT sal_Bool IsShowOnlyMenusWindow( Window *pWindow );
 extern "C" SAL_DLLPUBLIC_EXPORT void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus );
+
+#endif	// __cplusplus
 
 #endif // _SV_SALFRAME_H

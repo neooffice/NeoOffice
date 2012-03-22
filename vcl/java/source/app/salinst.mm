@@ -531,7 +531,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 			gettimeofday( &pSalData->maTimeout, NULL );
 			pSalData->maTimeout += pSalData->mnTimerInterval;
 			pSVData->mpSalTimer->CallCallback();
+#ifndef USE_NATIVE_WINDOW
 			com_sun_star_vcl_VCLFrame::flushAllFrames();
+#endif	// !USE_NATIVE_WINDOW
 
 			// Reduce noticeable pause when opening a new document by delaying
 			// update of submenus until next available timer timeout.
@@ -621,7 +623,9 @@ void JavaSalInstance::Yield( bool bWait, bool bHandleAllCurrentEvents )
 		}
 		delete pEvent;
 
+#ifndef USE_NATIVE_WINDOW
 		com_sun_star_vcl_VCLFrame::flushAllFrames();
+#endif	// !USE_NATIVE_WINDOW
 
 		// Fix bug 2941 without triggering bugs 2962 and 2963 by
 		// breaking if any frames have been created or destroyed

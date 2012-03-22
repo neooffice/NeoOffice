@@ -37,11 +37,12 @@
 #define __VCLEVENTQUEUE_COCOA_H__
 
 #include <jni.h>
+#include <salframe.h>
 #include <sal/types.h>
 
-#ifdef __cplusplus
+#ifndef __OBJC__
 typedef void* id;
-#else
+#else	// __OBJC__
 
 @interface VCLWindow : NSWindow
 + (void)clearModalWindowLevel;
@@ -64,7 +65,18 @@ typedef void* id;
 - (void)windowDidExitFullScreen:(NSNotification *)pNotification;
 - (void)windowWillEnterFullScreen:(NSNotification *)pNotification;
 @end
+
+#ifdef USE_NATIVE_WINDOW
+#ifdef __cplusplus
+BEGIN_C
 #endif
+SAL_DLLPRIVATE void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect );
+#ifdef __cplusplus
+END_C
+#endif
+#endif	// USE_NATIVE_WINDOW
+
+#endif	// __OBJC__
 
 #ifdef __cplusplus
 BEGIN_C
@@ -80,7 +92,7 @@ SAL_DLLPRIVATE void VCLEventQueue_removeCachedEvents();
 SAL_DLLPRIVATE BOOL NSApplication_isActive();
 SAL_DLLPRIVATE void NSFontManager_acquire();
 SAL_DLLPRIVATE void NSFontManager_release();
-SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses( BOOL bUseNativeWindow );
+SAL_DLLPRIVATE void VCLEventQueue_installVCLEventQueueClasses();
 #ifdef __cplusplus
 END_C
 #endif

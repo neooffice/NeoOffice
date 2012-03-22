@@ -56,8 +56,16 @@
 #import <Carbon/Carbon.h>
 #include <postmac.h>
 
+#ifdef USE_NATIVE_WINDOW
+#include "../java/VCLEventQueue_cocoa.h"
+#endif	// USE_NATIVE_WINDOW
+
 typedef UInt32 GetDblTime_Type();
 typedef OSStatus SetSystemUIMode_Type( SystemUIMode nMode, SystemUIOptions nOptions );
+
+#ifdef USE_NATIVE_WINDOW
+static ::std::map< NSWindow*, JavaSalGraphics* > aNativeWindowMap;
+#endif	// USE_NATIVE_WINDOW
 
 using namespace rtl;
 using namespace vcl;
@@ -201,6 +209,110 @@ static NSTimer *pUpdateTimer = nil;
 
 @end
 
+#ifdef USE_NATIVE_WINDOW
+
+@interface VCLGetGraphicsLayer : NSObject
+{
+	JavaSalGraphics*		mpGraphics;
+	CGLayerRef				maLayer;
+	CGSize					maSize;
+	NSView*					mpView;
+}
++ (id)createGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize;
+- (id)initGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize;
+- (void)dealloc;
+- (void)getGraphicsLayer:(id)pObject;
+- (CGLayerRef)layer;
+@end
+
+@implementation VCLGetGraphicsLayer
+
++ (id)createGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize
+{
+	VCLGetGraphicsLayer *pRet = [[VCLGetGraphicsLayer alloc] initGraphicsLayer:pGraphics view:pView size:aSize];
+	[pRet autorelease];
+	return pRet;
+}
+
+- (id)initGraphicsLayer:(JavaSalGraphics *)pGraphics view:(NSView *)pView size:(CGSize)aSize
+{
+	[super init];
+
+	mpGraphics = pGraphics;
+	maLayer = NULL;
+	maSize = aSize;
+	mpView = pView;
+	if ( mpView )
+		[mpView retain];
+
+	return self;
+}
+
+- (void)dealloc
+{
+	if ( maLayer )
+		CGLayerRelease( maLayer );
+
+	if ( mpView )
+		[mpView release];
+
+	[super dealloc];
+}
+
+- (void)getGraphicsLayer:(id)pObject
+{
+	if ( maLayer )
+	{
+		CGLayerRelease( maLayer );
+		maLayer = NULL;
+	}
+
+	if ( !mpGraphics )
+		return;
+
+	// Remove all entries for the graphics
+	::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.begin();
+	while ( it != aNativeWindowMap.end() )
+	{
+		if ( it->second == mpGraphics )
+		{
+			aNativeWindowMap.erase( it );
+			it = aNativeWindowMap.begin();
+			continue;
+		}
+
+		++it;
+	}
+
+	if ( maSize.width > 0 && maSize.height > 0 && mpView )
+	{
+		NSWindow *pWindow = [mpView window];
+		if ( pWindow && [pWindow isVisible] )
+		{
+			NSGraphicsContext *pContext = [pWindow graphicsContext];
+			if ( pContext )
+			{
+				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+				if ( aContext )
+				{
+					maLayer = CGLayerCreateWithContext( aContext, maSize, NULL );
+					if ( maLayer )
+						aNativeWindowMap[ pWindow ] = mpGraphics;
+				}
+			}
+		}
+	}
+}
+
+- (CGLayerRef)layer
+{
+	return maLayer;
+}
+
+@end
+
+#endif	// USE_NATIVE_WINDOW
+
 // =======================================================================
 
 long ImplSalCallbackDummy( void*, SalFrame*, USHORT, const void* )
@@ -268,11 +380,47 @@ void ShowOnlyMenusForWindow( Window *pWindow, sal_Bool bShowOnlyMenus )
 	pFrame->mbInShowOnlyMenus = FALSE;
 }
 
+#ifdef USE_NATIVE_WINDOW
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
+{
+	if ( !pView )
+		return;
+
+	NSWindow *pWindow = [pView window];
+	if ( !pWindow || ![pWindow isVisible] )
+		return;
+
+	::std::map< NSWindow*, JavaSalGraphics* >::iterator it = aNativeWindowMap.find( pWindow );
+	if ( it != aNativeWindowMap.end() && it->second )
+	{
+		CGRect aBounds = CGRectStandardize( NSRectToCGRect( [pView bounds] ) );
+		CGRect aRect = CGRectStandardize( NSRectToCGRect( aDirtyRect ) );
+		if ( !CGRectIsEmpty( CGRectIntersection( aBounds, aRect ) ) )
+		{
+			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
+			if ( pContext )
+			{
+				CGContextRef aContext = (CGContextRef)[pContext graphicsPort];
+				if ( aContext )
+					it->second->copyToContext( NULL, false, false, aContext, aBounds, CGPointMake( 0, 0 ), aRect );
+			}
+		}
+	}
+}
+
+#endif	// USE_NATIVE_WINDOW
+
 // =======================================================================
 
 JavaSalFrame::JavaSalFrame() :
 #ifdef USE_NATIVE_WINDOW
-	maWindowLayer( NULL ),
+	mnHiddenBit( 0 ),
+    maHiddenContext( NULL ),
+    maHiddenLayer( NULL ),
+	maFrameLayer( NULL ),
 #endif  // USE_NATIVE_WINDOW
 	mpVCLFrame( NULL ),
 	mpGraphics( new JavaSalGraphics() ),
@@ -302,6 +450,18 @@ JavaSalFrame::JavaSalFrame() :
 #ifdef USE_NATIVE_WINDOW
 	mpGraphics->mnDPIX = MIN_SCREEN_RESOLUTION;
 	mpGraphics->mnDPIY = MIN_SCREEN_RESOLUTION;
+
+	// Make a native layer backed by a 1 x 1 pixel native bitmap
+	CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
+	if ( aColorSpace )
+	{
+		maHiddenContext = CGBitmapContextCreate( &mnHiddenBit, 1, 1, 8, sizeof( mnHiddenBit ), aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+		if ( maHiddenContext )
+			maHiddenLayer = CGLayerCreateWithContext( maHiddenContext, CGSizeMake( 1, 1 ), NULL );
+		CGColorSpaceRelease( aColorSpace );
+	}
+
+	mpGraphics->setLayer( maHiddenLayer );
 #endif  // USE_NATIVE_WINDOW
 }
 
@@ -309,6 +469,12 @@ JavaSalFrame::JavaSalFrame() :
 
 JavaSalFrame::~JavaSalFrame()
 {
+#ifdef USE_NATIVE_WINDOW
+	// Make sure that no native drawing is possible
+	maSysData.pView = NULL;
+	UpdateLayer();
+#endif	// USE_NATIVE_WINDOW
+
 	Show( FALSE );
 	StartPresentation( FALSE );
 	CaptureMouse( FALSE );
@@ -327,8 +493,14 @@ JavaSalFrame::~JavaSalFrame()
 	SetParent( NULL );
 
 #ifdef USE_NATIVE_WINDOW
-	if ( maWindowLayer )
-		CGLayerRelease( maWindowLayer );
+	if ( maFrameLayer )
+		CGLayerRelease( maFrameLayer );
+
+	if ( maHiddenLayer )
+		CGLayerRelease( maHiddenLayer );
+
+	if ( maHiddenContext )
+		CGContextRelease( maHiddenContext );
 #endif  // USE_NATIVE_WINDOW
 
 	if ( mpVCLFrame )
@@ -392,6 +564,41 @@ void JavaSalFrame::FlushAllObjects()
 			(*it)->Flush();
 	}
 }
+
+#ifdef USE_NATIVE_WINDOW
+
+// -----------------------------------------------------------------------
+
+void JavaSalFrame::UpdateLayer()
+{
+	CGSize aLayerSize = CGSizeMake( maGeometry.nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, maGeometry.nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
+	if ( maFrameLayer && !CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aLayerSize ) )
+	{
+		CGLayerRelease( maFrameLayer );
+		maFrameLayer = NULL;
+	}
+
+	if ( !maFrameLayer && maSysData.pView )
+	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
+		VCLGetGraphicsLayer *pVCLGetGraphicsLayer = [VCLGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.pView size:aLayerSize];
+		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+		[pVCLGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLGetGraphicsLayer waitUntilDone:YES modes:pModes];
+		maFrameLayer = [pVCLGetGraphicsLayer layer];
+		if ( maFrameLayer )
+			CGLayerRetain( maFrameLayer );
+
+		[pPool release];
+	}
+
+	if ( maFrameLayer )
+		mpGraphics->setLayer( maFrameLayer );
+	else
+		mpGraphics->setLayer( maHiddenLayer );
+}
+
+#endif	// USE_NATIVE_WINDOW
 
 // -----------------------------------------------------------------------
 
@@ -604,6 +811,16 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pSalData->mpLastDragFrame == this )
 			pSalData->mpLastDragFrame = NULL;
 
+#ifdef USE_NATIVE_WINDOW
+		if ( maFrameLayer )
+		{
+			CGLayerRelease( maFrameLayer );
+			maFrameLayer = NULL;
+		}
+
+		mpGraphics->setLayer( maHiddenLayer );
+#endif	// USE_NATIVE_WINDOW
+
 		// Fix bug 3032 by showing one of the show only frames if no other
 		// non-floating windows are visible
 		JavaSalFrame *pShowOnlyMenusFrame = NULL;
@@ -623,6 +840,10 @@ void JavaSalFrame::Show( BOOL bVisible, BOOL bNoActivate )
 		if ( pShowOnlyMenusFrame && pShowOnlyMenusFrame != this )
 			pShowOnlyMenusFrame->Show( TRUE, FALSE );
 	}
+
+#ifdef USE_NATIVE_WINDOW
+	UpdateLayer();
+#endif	// USE_NATIVE_WINDOW
 }
 
 // -----------------------------------------------------------------------
@@ -860,6 +1081,8 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 	mbInShowFullScreen = TRUE;
 	if ( !mbInWindowDidExitFullScreen && !mbInWindowWillEnterFullScreen )
 	{
+		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+
 		NSWindow *pNSWindow = (NSWindow *)mpVCLFrame->getNativeWindow();
 		if ( pNSWindow )
 		{
@@ -869,6 +1092,8 @@ void JavaSalFrame::ShowFullScreen( BOOL bFullScreen, sal_Int32 nDisplay )
 			[pVCLToggleFullScreen performSelectorOnMainThread:@selector(toggleFullScreen:) withObject:pVCLToggleFullScreen waitUntilDone:YES modes:pModes];
 		    Application::AcquireSolarMutex( nCount );
 		}
+
+		[pPool release];
 	}
 
 	USHORT nFlags = SAL_FRAME_POSSIZE_X | SAL_FRAME_POSSIZE_Y | SAL_FRAME_POSSIZE_WIDTH | SAL_FRAME_POSSIZE_HEIGHT;
@@ -1274,9 +1499,7 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		mpVCLFrame = new com_sun_star_vcl_VCLFrame( mnStyle, this, mpParent, mbShowOnlyMenus, bUtilityWindow );
 		if ( mpVCLFrame )
 		{
-#ifdef USE_NATIVE_WINDOW
-			mpGraphics->mpVCLGraphics = NULL;
-#else	// USE_NATIVE_WINDOW
+#ifndef USE_NATIVE_WINDOW
 			mpGraphics->mpVCLGraphics = mpVCLFrame->getGraphics();
 #endif	// USE_NATIVE_WINDOW
 			mpVCLFrame->setTitle( maTitle );
@@ -1293,11 +1516,9 @@ void JavaSalFrame::SetParent( SalFrame* pNewParent )
 		else
 		{
 			mpVCLFrame = pOldVCLFrame;
-#ifdef USE_NATIVE_WINDOW
-			mpGraphics->mpVCLGraphics = NULL;
-#else	// USE_NATIVE_WINDOW
+#ifndef USE_NATIVE_WINDOW
 			mpGraphics->mpVCLGraphics = pOldVCLGraphics;
-#endif	// USE_NATIVE_WINDOW
+#endif	// !USE_NATIVE_WINDOW
 		}
 
 		if ( mpParent )
