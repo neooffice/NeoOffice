@@ -74,11 +74,11 @@ ULONG JavaSalBitmap::Get32BitNativeFormat()
 
 ULONG JavaSalBitmap::GetNativeDirectionFormat()
 {
-#ifdef USE_NATIVE_VIRTUAL_DEVICE
+#if defined USE_NATIVE_WINDOW || defined USE_NATIVE_VIRTUAL_DEVICE
 	return BMP_FORMAT_BOTTOM_UP;
-#else	// USE_NATIVE_VIRTUAL_DEVICE
+#else	// USE_NATIVE_WINDOW || USE_NATIVE_VIRTUAL_DEVICE
 	return BMP_FORMAT_TOP_DOWN;
-#endif	// USE_NATIVE_VIRTUAL_DEVICE
+#endif	// USE_NATIVE_WINDOW || USE_NATIVE_VIRTUAL_DEVICE
 }
 
 // ------------------------------------------------------------------
