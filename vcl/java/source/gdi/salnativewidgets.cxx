@@ -336,7 +336,9 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 			return FALSE;
 		}
 
-		maContext = CGBitmapContextCreate( mpBits, mnWidth, mnHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+		// Use requested width and height, not actual width and height of the
+		// bitmap buffer
+		maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 		if ( maContext )
 			CGContextSaveGState( maContext );
 
