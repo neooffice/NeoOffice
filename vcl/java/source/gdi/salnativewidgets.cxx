@@ -224,6 +224,13 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 	else
 	{
 		Destroy();
+
+		mnFormat = JavaSalBitmap::Get32BitNativeFormat() | pGraphics->getBitmapDirectionFormat();
+		mnWidth = nWidth;
+		mnHeight = nHeight;
+		mnScanlineSize = mnWidth * sizeof( sal_uInt32 );
+		mnBitCount = 32;
+
 		if ( mbUseNativeDrawing )
 		{
 			// If a layer is requested and there is a layer, draw to it directly
@@ -256,7 +263,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		}
 		else
 		{
-			mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( nWidth, nHeight, 32 );
+			mpVCLBitmap = new com_sun_star_vcl_VCLBitmap( mnWidth, mnHeight, 32 );
 			if ( !mpVCLBitmap || !mpVCLBitmap->getJavaObject() )
 			{
 				Destroy();
@@ -289,14 +296,6 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		}
 	}
 
-	mnFormat = JavaSalBitmap::Get32BitNativeFormat() | pGraphics->getBitmapDirectionFormat();
-	if ( nWidth > mnWidth )
-		mnWidth = nWidth;
-	if ( nHeight > mnHeight )
-		mnHeight = nHeight;
-	mnScanlineSize = mnWidth * sizeof( jint );
-	mnBitCount = 32;
-
 	if ( mbUseNativeDrawing )
 	{
 		if ( !mpBits && !mbUseLayer )
@@ -327,9 +326,6 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		return FALSE;
 	}
 
-	if ( mpBits )
-		memset( mpBits, 0, mnScanlineSize * mnHeight );
-
 	if ( !maContext && !mbUseLayer )
 	{
 		CGColorSpaceRef aColorSpace = CGColorSpaceCreateDeviceRGB();
@@ -339,7 +335,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 			return FALSE;
 		}
 
-		maContext = CGBitmapContextCreate( mpBits, nWidth, nHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
+		maContext = CGBitmapContextCreate( mpBits, mnWidth, mnHeight, 8, mnScanlineSize, aColorSpace, kCGImageAlphaPremultipliedFirst | kCGBitmapByteOrder32Little );
 		if ( maContext )
 			CGContextSaveGState( maContext );
 
@@ -351,6 +347,9 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		Destroy();
 		return FALSE;
 	}
+
+	if ( mpBits )
+		memset( mpBits, 0, mnScanlineSize * mnHeight );
 
 	mbLastDrawToPrintGraphics = bDrawToPrintGraphics;
 
