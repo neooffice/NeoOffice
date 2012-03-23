@@ -398,7 +398,7 @@ void JavaSalFrame_drawToNSView( NSView *pView, NSRect aDirtyRect )
 	{
 		CGRect aBounds = CGRectStandardize( NSRectToCGRect( [pView bounds] ) );
 		CGRect aRect = CGRectStandardize( NSRectToCGRect( aDirtyRect ) );
-		if ( !CGRectIsEmpty( CGRectIntersection( aBounds, aRect ) ) )
+		if ( CGRectIntersectsRect( aBounds, aRect ) )
 		{
 			NSGraphicsContext *pContext = [NSGraphicsContext currentContext];
 			if ( pContext )

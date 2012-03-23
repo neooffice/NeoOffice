@@ -745,6 +745,11 @@ void com_sun_star_vcl_VCLEvent::dispatch()
 							delete pVCLGraphics;
 						}
 
+#ifdef USE_NATIVE_WINDOW
+						if ( bForceResize || bSizeChanged )
+							pFrame->UpdateLayer();
+#endif	// USE_NATIVE_WINDOW
+
 						pFrame->CallCallback( nID, NULL );
 					}
 				}

@@ -49,10 +49,11 @@ using namespace vcl;
 
 // =======================================================================
 
-JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect ) :
+JavaSalGraphicsDrawImageOp::JavaSalGraphicsDrawImageOp( const CGPathRef aNativeClipPath, bool bInvert, bool bXOR, CGDataProviderRef aProvider, int nDataBitCount, size_t nDataScanlineSize, size_t nDataWidth, size_t nDataHeight, const CGRect aSrcRect, const CGRect aRect, bool bFlip ) :
 	JavaSalGraphicsOp( aNativeClipPath, bInvert, bXOR ),
 	maImage( NULL ),
-	maRect( aRect )
+	maRect( aRect ),
+	mbFlip( bFlip )
 {
 	if ( aProvider && nDataScanlineSize && nDataWidth && nDataHeight && !CGRectIsEmpty( aSrcRect ) && CGRectIntersectsRect( aSrcRect, CGRectMake( 0, 0, nDataWidth, nDataHeight ) ) )
 	{
@@ -99,10 +100,16 @@ void JavaSalGraphicsDrawImageOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		return;
 
 	CGContextClipToRect( aContext, maRect );
-	if ( JavaSalBitmap::GetNativeDirectionFormat() == BMP_FORMAT_BOTTOM_UP )
+	if ( !mbFlip && JavaSalBitmap::GetNativeDirectionFormat() == BMP_FORMAT_BOTTOM_UP )
+	{
 		CGContextDrawImage( aContext, CGRectMake( maRect.origin.x, maRect.origin.y, maRect.size.width, maRect.size.height ), maImage );
+	}
 	else
-		CGContextDrawImage( aContext, CGRectMake( maRect.origin.x, maRect.origin.y + maRect.size.height, maRect.size.width, maRect.size.height * -1 ), maImage );
+	{
+		CGContextTranslateCTM( aContext, maRect.origin.x, maRect.origin.y + maRect.size.height );
+		CGContextScaleCTM( aContext, 1.0f, -1.0f );
+		CGContextDrawImage( aContext, CGRectMake( 0, 0, maRect.size.width, maRect.size.height ), maImage );
+	}
 
 	restoreClipXORGState();
 }

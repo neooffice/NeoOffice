@@ -210,6 +210,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		return FALSE;
 
 	bool bReused = false;
+	bool bDrawToFrameGraphics = ( pGraphics->mpFrame ? true : false );
 	bool bDrawToPrintGraphics = ( pGraphics->mpPrinter ? true : false );
 	bool bOldUseNativeDrawing = mbUseNativeDrawing;
 	mbUseNativeDrawing = pGraphics->useNativeDrawing();
@@ -225,6 +226,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 	{
 		Destroy();
 
+		mnHIThemeOrientationFlags = kHIThemeOrientationInverted;
 		mnFormat = JavaSalBitmap::Get32BitNativeFormat() | pGraphics->getBitmapDirectionFormat();
 		mnWidth = nWidth;
 		mnHeight = nHeight;
@@ -233,8 +235,12 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 
 		if ( mbUseNativeDrawing )
 		{
-			// If a layer is requested and there is a layer, draw to it directly
-			if ( bUseLayer )
+			// If a layer is requested and there is a layer, draw to it
+			// directly. Note that we cannot draw to a frame's layer as it
+			// the native window's flipped graphics context will cause the
+			// HITheme images to be flipped regardless of the HITTheme
+			// orientation or context scaling used.
+			if ( bUseLayer && !bDrawToFrameGraphics && !bDrawToPrintGraphics )
 			{
 				mpGraphicsMutexGuard = new MutexGuard( &pGraphics->getUndrawnNativeOpsMutex() );
 				if ( mpGraphicsMutexGuard )
@@ -249,6 +255,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 							CGContextSaveGState( maContext );
 							JavaSalGraphics::setContextDefaultSettings( maContext, pGraphics->maNativeClipPath, pGraphics->getNativeLineWidth() );
 							CGContextTranslateCTM( maContext, nX, nY );
+							mnHIThemeOrientationFlags = kHIThemeOrientationNormal;
 							mbUseLayer = true;
 						}
 					}
@@ -272,14 +279,8 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		}
 	}
 
-	if ( mbUseNativeDrawing )
+	if ( !mbUseNativeDrawing )
 	{
-		mnHIThemeOrientationFlags = kHIThemeOrientationNormal;
-	}
-	else
-	{
-		mnHIThemeOrientationFlags = kHIThemeOrientationInverted;
-
 		VCLThreadAttach t;
 		if ( !t.pEnv )
 		{
@@ -420,7 +421,7 @@ void VCLBitmapBuffer::DrawContextAndDestroy( JavaSalGraphics *pGraphics, CGRect 
 		if ( aProvider )
 		{
 			mpBits = NULL;
-			pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect ) );
+			pGraphics->addUndrawnNativeOp( new JavaSalGraphicsDrawImageOp( pGraphics->maNativeClipPath, false, false, aProvider, mnBitCount, mnScanlineSize, mnWidth, mnHeight, aSrcRect, aDestRect, true ) );
 			CGDataProviderRelease( aProvider );
 		}
 	}
