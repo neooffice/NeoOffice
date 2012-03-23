@@ -216,6 +216,12 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 	mbUseNativeDrawing = pGraphics->useNativeDrawing();
 	mbUseLayer = false;
 
+	// Note that we cannot draw to a frame's layer as it the native window's
+	// flipped graphics context will cause the HITheme images to be flipped
+	// regardless of the HITTheme orientation or context scaling used
+	if ( bUseLayer && ( bDrawToFrameGraphics || bDrawToPrintGraphics ) )
+		bUseLayer = false;
+
 	// Only reuse context when not using native drawing
 	if ( !mbUseNativeDrawing && !bOldUseNativeDrawing && mpVCLBitmap && mpVCLBitmap->getJavaObject() && nWidth <= mnWidth && nHeight <= mnHeight && !mbLastDrawToPrintGraphics && !bDrawToPrintGraphics )
 	{
@@ -235,12 +241,8 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 
 		if ( mbUseNativeDrawing )
 		{
-			// If a layer is requested and there is a layer, draw to it
-			// directly. Note that we cannot draw to a frame's layer as it
-			// the native window's flipped graphics context will cause the
-			// HITheme images to be flipped regardless of the HITTheme
-			// orientation or context scaling used.
-			if ( bUseLayer && !bDrawToFrameGraphics && !bDrawToPrintGraphics )
+			// If a layer is requested and there is a layer, draw to it directly
+			if ( bUseLayer )
 			{
 				mpGraphicsMutexGuard = new MutexGuard( &pGraphics->getUndrawnNativeOpsMutex() );
 				if ( mpGraphicsMutexGuard )
