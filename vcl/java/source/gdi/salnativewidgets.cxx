@@ -327,7 +327,7 @@ BOOL VCLBitmapBuffer::Create( long nX, long nY, long nWidth, long nHeight, JavaS
 		return FALSE;
 	}
 
-	if ( bReused )
+	if ( mpBits )
 		memset( mpBits, 0, mnScanlineSize * mnHeight );
 
 	if ( !maContext && !mbUseLayer )
