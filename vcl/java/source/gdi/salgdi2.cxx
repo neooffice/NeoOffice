@@ -126,10 +126,7 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 	if ( pJavaSrcGraphics->mpPrinter )
 		return;
 
-	// If either the source or destination uses native drawing, create and draw
-	// a bitmap as drawing the source's layer will cause fully transparent
-	// to be drawn as partially transparent
-	if ( mpPrinter || useNativeDrawing() || pJavaSrcGraphics->useNativeDrawing() || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
+	if ( mpPrinter || useNativeDrawing() != pJavaSrcGraphics->useNativeDrawing() || pPosAry->mnSrcWidth != pPosAry->mnDestWidth || pPosAry->mnSrcHeight != pPosAry->mnDestHeight )
 	{
 		SalTwoRect aPosAry;
 		memcpy( &aPosAry, pPosAry, sizeof( SalTwoRect ) );
@@ -142,6 +139,10 @@ void JavaSalGraphics::copyBits( const SalTwoRect* pPosAry, SalGraphics* pSrcGrap
 			drawBitmap( &aPosAry, *pBitmap );
 			delete pBitmap;
 		}
+	}
+	else if ( useNativeDrawing() )
+	{
+		copyFromGraphics( pJavaSrcGraphics, CGPointMake( pPosAry->mnSrcX, pPosAry->mnSrcY ), CGRectMake( pPosAry->mnDestX, pPosAry->mnDestY, pPosAry->mnDestWidth, pPosAry->mnDestHeight ), true );
 	}
 	else if ( mpVCLGraphics )
 	{
