@@ -537,11 +537,21 @@ static BOOL InitButtonDrawInfo( HIThemeButtonDrawInfo *pButtonDrawInfo, ControlS
 		pButtonDrawInfo->state = kThemeStateInactive;
 
 	if ( nState & CTRL_STATE_DEFAULT )
-		pButtonDrawInfo->adornment = kThemeAdornmentDefault;
+	{
+		// The default adornment hides the pressed state so don't set both
+		if ( pButtonDrawInfo->state != kThemeStatePressed )
+			pButtonDrawInfo->adornment = kThemeAdornmentDefault;
+		else
+			pButtonDrawInfo->adornment = kThemeAdornmentNone;
+	}
 	else if ( nState & CTRL_STATE_FOCUSED )
+	{
 		pButtonDrawInfo->adornment = kThemeAdornmentFocus;
+	}
 	else
+	{
 		pButtonDrawInfo->adornment = kThemeAdornmentNone;
+	}
 
 	return TRUE;
 }
