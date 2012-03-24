@@ -257,10 +257,11 @@ void JavaSalGraphicsCopyLayerOp::drawOp( JavaSalGraphics *pGraphics, CGContextRe
 		return;
 
 	CGContextRef aSrcContext = CGLayerGetContext( maSrcLayer );
-	if ( aSrcContext == aContext && maRect.origin.x < aSrcRect.origin.x )
+	if ( aSrcContext == aContext && ( maRect.origin.x < 0 || CGRectIntersectsRect( maRect, aSrcRect ) ) )
 	{
-		// Drawing to a negative x destination causes drawing to wrap around
-		// to the right edge of the destination layer so make a temporary
+		// Copying within the same context to a negative x destination or a
+		// destination that overlaps with the source causes drawing to wrap
+		// around to the right edge of the destination layer so make a temporary
 		// copy of the source
 		CGLayerRef aTmpLayer = CGLayerCreateWithContext( aContext, maRect.size, NULL );
 		if ( aTmpLayer )
