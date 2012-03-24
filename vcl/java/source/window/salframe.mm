@@ -572,30 +572,38 @@ void JavaSalFrame::FlushAllObjects()
 void JavaSalFrame::UpdateLayer()
 {
 	CGSize aLayerSize = CGSizeMake( maGeometry.nWidth + maGeometry.nLeftDecoration + maGeometry.nRightDecoration, maGeometry.nHeight + maGeometry.nTopDecoration + maGeometry.nBottomDecoration );
-	if ( maFrameLayer && !CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aLayerSize ) )
+	if ( maFrameLayer && maSysData.pView && CGSizeEqualToSize( CGLayerGetSize( maFrameLayer ), aLayerSize ) )
+		return;
+
+	if ( maFrameLayer )
 	{
 		CGLayerRelease( maFrameLayer );
 		maFrameLayer = NULL;
 	}
 
-	if ( !maFrameLayer && maSysData.pView )
-	{
-		NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
+	NSAutoreleasePool *pPool = [[NSAutoreleasePool alloc] init];
 
-		VCLGetGraphicsLayer *pVCLGetGraphicsLayer = [VCLGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.pView size:aLayerSize];
-		NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
-		[pVCLGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLGetGraphicsLayer waitUntilDone:YES modes:pModes];
-		maFrameLayer = [pVCLGetGraphicsLayer layer];
-		if ( maFrameLayer )
-			CGLayerRetain( maFrameLayer );
+	VCLGetGraphicsLayer *pVCLGetGraphicsLayer = [VCLGetGraphicsLayer createGraphicsLayer:mpGraphics view:maSysData.pView size:aLayerSize];
+	NSArray *pModes = [NSArray arrayWithObjects:NSDefaultRunLoopMode, NSEventTrackingRunLoopMode, NSModalPanelRunLoopMode, @"AWTRunLoopMode", nil];
+	[pVCLGetGraphicsLayer performSelectorOnMainThread:@selector(getGraphicsLayer:) withObject:pVCLGetGraphicsLayer waitUntilDone:YES modes:pModes];
+	maFrameLayer = [pVCLGetGraphicsLayer layer];
+	if ( maFrameLayer )
+		CGLayerRetain( maFrameLayer );
 
-		[pPool release];
-	}
+	[pPool release];
 
 	if ( maFrameLayer )
+	{
 		mpGraphics->setLayer( maFrameLayer );
+
+		// Post a paint event
+		com_sun_star_vcl_VCLEvent aEvent( SALEVENT_PAINT, this, new SalPaintEvent( 0, 0, aLayerSize.width, aLayerSize.height ) );
+		GetSalData()->mpEventQueue->postCachedEvent( &aEvent );
+	}
 	else
+	{
 		mpGraphics->setLayer( maHiddenLayer );
+	}
 }
 
 #endif	// USE_NATIVE_WINDOW
