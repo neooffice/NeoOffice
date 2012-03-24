@@ -907,6 +907,14 @@ BOOL ScrollBar::ImplDrawNative( USHORT nDrawFlags )
 #if 1
             Region aCtrlRegion;
 #if defined USE_JAVA && defined MACOSX
+			// Update the native rectangle to fix a scrollbar positioning bug
+			// that happens with the following steps:
+			// 1. Open a presentation document and expand the Slide Transition
+			//    option
+			// 2. Select a different option and then expand the Slide
+			//    Transition option a second time and the scrollbar in the list
+			//    of transitions will be position half way out of the list
+			ImplUpdateRectsNative( FALSE );
 			if( mpData && mpData->mbHasEntireControlRect )
 			{
 				// use platform specific preferred boudns
