@@ -392,26 +392,33 @@ bool JavaSalBitmap::Create( const Point& rPoint, const Size& rSize, JavaSalGraph
 {
 	Destroy();
 
-	// Fix bug 3642 by ensuring that the origin is not negative
+	if ( !pGraphics )
+		return false;
+
 	long nX = rPoint.X();
 	long nY = rPoint.Y();
 	long nWidth = rSize.Width();
 	long nHeight = rSize.Height();
-	if ( nX < 0 )
+
+	// Fix bug 3642 by ensuring that the origin is not negative
+	if ( !pGraphics->useNativeDrawing() )
 	{
-		nWidth += nX;
-		nX = 0;
-	}
-	if ( nY < 0 )
-	{
-		nHeight += nY;
-		nY = 0;
+		if ( nX < 0 )
+		{
+			nWidth += nX;
+			nX = 0;
+		}
+		if ( nY < 0 )
+		{
+			nHeight += nY;
+			nY = 0;
+		}
 	}
 
 	maPoint = Point( nX, nY );
 	maSize = Size( nWidth, nHeight );
 
-	if ( !pGraphics || maSize.Width() <= 0 || maSize.Height() <= 0 )
+	if ( maSize.Width() <= 0 || maSize.Height() <= 0 )
 		return false;
 
 	if ( pGraphics->useNativeDrawing() )
